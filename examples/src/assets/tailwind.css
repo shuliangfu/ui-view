@@ -1,0 +1,18 @@
+/**
+ * TailwindCSS v4 入口
+ * 指定内容扫描路径（含 examples 与 ui-view 组件）
+ * 统一：导航深色 slate-800，主色 accent 用于强调。
+ */
+@source "../**/*.{ts,tsx}";
+@source "../../../src/**/*.{ts,tsx}";
+
+@import "tailwindcss";
+
+/* 主题由头部导航切换，通过 html.dark 控制 */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  /* 文档站主色：teal，区别于后台蓝 */
+  --color-primary-500: #14b8a6;
+  --color-primary-600: #0d9488;
+}

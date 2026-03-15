@@ -1,0 +1,55 @@
+{
+  "name": "@dreamer/ui-view",
+  "version": "0.1.0",
+  "workspace": ["examples"],
+  "license": "Apache-2.0",
+  "description": "View framework UI components for Dreamer. Desktop and mobile with Tailwind v4 and light/dark theme.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/shuliangfu/ui-view.git"
+  },
+  "exports": {
+    ".": "./src/mod.ts",
+    "./mobile": "./src/mobile/mod.ts",
+    "./shared": "./src/shared/mod.ts"
+  },
+  "publish": {
+    "include": [
+      "src/**/*.ts",
+      "src/**/*.tsx",
+      "LICENSE",
+      "NOTICE",
+      "README.md"
+    ],
+    "exclude": [
+      "**/*.test.ts",
+      "**/*.test.tsx",
+      "**/*.spec.ts",
+      "**/tests/**"
+    ]
+  },
+  "tasks": {
+    "test": "deno test -A tests/",
+    "check": "deno check ."
+  },
+  "imports": {
+    "@dreamer/view": "jsr:@dreamer/view@^1.1.5",
+    "chart.js": "npm:chart.js@^4.5.1",
+    "prismjs": "npm:prismjs@^1.29.0",
+    "tailwind-merge": "npm:tailwind-merge@^2.6.0"
+  },
+  "nodeModulesDir": "auto",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "jsr:@dreamer/view",
+    "lib": ["deno.window", "dom"],
+    "types": ["./jsx.d.ts"]
+  },
+  "lint": {
+    "include": ["src/"],
+    "rules": {
+      "tags": ["recommended"],
+      "exclude": ["no-explicit-any"]
+    }
+  }
+}
