@@ -78,47 +78,47 @@ export function NavBar(props: NavBarProps) {
         role="banner"
       >
         <div class="flex min-w-0 flex-1 items-center justify-start">
-          {leftSlot != null ? (
-            <span class="flex items-center">{leftSlot}</span>
-          ) : hasLeft ? (
-            <button
-              type="button"
-              class={twMerge(
-                "flex items-center gap-1 py-2 pr-2 text-base font-medium text-blue-600 dark:text-blue-400 active:opacity-80",
-                leftDisabled && "opacity-50 cursor-not-allowed",
-              )}
-              disabled={leftDisabled}
-              onClick={() => !leftDisabled && onClickLeft?.()}
-              aria-label={leftText ?? "返回"}
-            >
-              {leftArrow && (
-                <IconChevronLeft class="w-5 h-5 shrink-0" />
-              )}
-              {leftText != null && leftText !== "" && (
-                <span>{leftText}</span>
-              )}
-            </button>
-          ) : null}
+          {leftSlot != null
+            ? <span class="flex items-center">{leftSlot}</span>
+            : hasLeft
+            ? (
+              <button
+                type="button"
+                class={twMerge(
+                  "flex items-center gap-1 py-2 pr-2 text-base font-medium text-blue-600 dark:text-blue-400 active:opacity-80",
+                  leftDisabled && "opacity-50 cursor-not-allowed",
+                )}
+                disabled={leftDisabled}
+                onClick={() => !leftDisabled && onClickLeft?.()}
+                aria-label={leftText ?? "返回"}
+              >
+                {leftArrow && <IconChevronLeft class="w-5 h-5 shrink-0" />}
+                {leftText != null && leftText !== "" && <span>{leftText}</span>}
+              </button>
+            )
+            : null}
         </div>
         <h1 class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-base font-semibold truncate max-w-[50%]">
           {title != null && title !== "" ? title : "\u00A0"}
         </h1>
         <div class="flex min-w-0 flex-1 items-center justify-end">
-          {rightSlot != null ? (
-            <span class="flex items-center">{rightSlot}</span>
-          ) : hasRight ? (
-            <button
-              type="button"
-              class={twMerge(
-                "py-2 pl-2 text-base font-medium text-blue-600 dark:text-blue-400 active:opacity-80",
-                rightDisabled && "opacity-50 cursor-not-allowed",
-              )}
-              disabled={rightDisabled}
-              onClick={() => !rightDisabled && onClickRight?.()}
-            >
-              {rightText}
-            </button>
-          ) : null}
+          {rightSlot != null
+            ? <span class="flex items-center">{rightSlot}</span>
+            : hasRight
+            ? (
+              <button
+                type="button"
+                class={twMerge(
+                  "py-2 pl-2 text-base font-medium text-blue-600 dark:text-blue-400 active:opacity-80",
+                  rightDisabled && "opacity-50 cursor-not-allowed",
+                )}
+                disabled={rightDisabled}
+                onClick={() => !rightDisabled && onClickRight?.()}
+              >
+                {rightText}
+              </button>
+            )
+            : null}
         </div>
       </div>
     );
