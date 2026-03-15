@@ -4,12 +4,12 @@
 # 首次启动可挂载 Deno 缓存加速：deno cache 后挂载 runtime/deno-cache
 
 services:
-  examples:
+  docs:
     build:
       context: .
       dockerfile: Dockerfile
       target: base
-    container_name: examples-app
+    container_name: docs-app
     restart: unless-stopped
     stop_grace_period: 5s
     user: "0:0"

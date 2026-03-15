@@ -15,6 +15,7 @@ import "prismjs/components/prism-markup.js";
 import { twMerge } from "tailwind-merge";
 import { IconCopy } from "../basic/icons/mod.ts";
 import { toast } from "../feedback/toast-store.ts";
+import { CODE_BLOCK_PRISM_STYLES } from "./code-block-prism-styles.ts";
 
 /** 常用语言 id，与 Prism 的 language 一致 */
 export type CodeBlockLanguage =
@@ -58,64 +59,6 @@ export interface CodeBlockProps {
   codeClass?: string;
 }
 
-/** 内置 Prism token 样式（与 Tailwind 配色一致，支持 dark） */
-const PRISM_TOKEN_STYLES = `
-.code-block-prism .token.comment,
-.code-block-prism .token.prolog,
-.code-block-prism .token.doctype,
-.code-block-prism .token.cdata { color: #64748b; }
-.code-block-prism .token.punctuation { color: #94a3b8; }
-.code-block-prism .token.property,
-.code-block-prism .token.tag,
-.code-block-prism .token.boolean,
-.code-block-prism .token.number,
-.code-block-prism .token.constant { color: #0ea5e9; }
-.code-block-prism .token.symbol { color: #0ea5e9; }
-.code-block-prism .token.selector,
-.code-block-prism .token.attr-name,
-.code-block-prism .token.string,
-.code-block-prism .token.char,
-.code-block-prism .token.builtin { color: #059669; }
-.code-block-prism .token.operator,
-.code-block-prism .token.entity,
-.code-block-prism .token.url { color: #94a3b8; }
-.code-block-prism .token.atrule,
-.code-block-prism .token.attr-value,
-.code-block-prism .token.keyword { color: #7c3aed; }
-.code-block-prism .token.function,
-.code-block-prism .token.class-name { color: #dc2626; }
-.code-block-prism .token.regex,
-.code-block-prism .token.important,
-.code-block-prism .token.variable { color: #ea580c; }
-.dark .code-block-prism .token.comment,
-.dark .code-block-prism .token.prolog,
-.dark .code-block-prism .token.doctype,
-.dark .code-block-prism .token.cdata { color: #94a3b8; }
-.dark .code-block-prism .token.punctuation { color: #cbd5e1; }
-.dark .code-block-prism .token.property,
-.dark .code-block-prism .token.tag,
-.dark .code-block-prism .token.boolean,
-.dark .code-block-prism .token.number,
-.dark .code-block-prism .token.constant { color: #38bdf8; }
-.dark .code-block-prism .token.symbol { color: #38bdf8; }
-.dark .code-block-prism .token.selector,
-.dark .code-block-prism .token.attr-name,
-.dark .code-block-prism .token.string,
-.dark .code-block-prism .token.char,
-.dark .code-block-prism .token.builtin { color: #34d399; }
-.dark .code-block-prism .token.operator,
-.dark .code-block-prism .token.entity,
-.dark .code-block-prism .token.url { color: #cbd5e1; }
-.dark .code-block-prism .token.atrule,
-.dark .code-block-prism .token.attr-value,
-.dark .code-block-prism .token.keyword { color: #a78bfa; }
-.dark .code-block-prism .token.function,
-.dark .code-block-prism .token.class-name { color: #f87171; }
-.dark .code-block-prism .token.regex,
-.dark .code-block-prism .token.important,
-.dark .code-block-prism .token.variable { color: #fb923c; }
-`;
-
 export function CodeBlock(props: CodeBlockProps) {
   const {
     code,
@@ -142,9 +85,10 @@ export function CodeBlock(props: CodeBlockProps) {
   const lines = code.split("\n");
   const lineCount = lines.length;
 
+  /** 服务端无 DOM，需在 JSX 中直接输出代码文本，供 SSR 可见；客户端由 setCodeRef 替换为高亮结果 */
   const setCodeRef = (el: unknown) => {
     const codeEl = el as HTMLElement | null;
-    if (!codeEl) return;
+    if (!codeEl || typeof globalThis.document === "undefined") return;
     let lang = (language ?? "plaintext").toLowerCase();
     if (lang === "html") lang = "markup";
     if (lang === "shell") lang = "bash";
@@ -187,7 +131,7 @@ export function CodeBlock(props: CodeBlockProps) {
     (wrapper as HTMLElement & { _codeBlockStyle?: boolean })._codeBlockStyle =
       true;
     const style = wrapper.ownerDocument.createElement("style");
-    style.textContent = PRISM_TOKEN_STYLES;
+    style.textContent = CODE_BLOCK_PRISM_STYLES;
     wrapper.insertBefore(style, wrapper.firstChild);
   };
 
@@ -271,6 +215,8 @@ export function CodeBlock(props: CodeBlockProps) {
               codeClass,
             )}
           >
+            {/* SSR 输出 code 文本；客户端 setCodeRef 替换为高亮 */}
+            {code}
           </code>
         </pre>
       </div>

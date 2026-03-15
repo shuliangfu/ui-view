@@ -25,7 +25,7 @@ export interface FormItemProps {
   labelAlign?: FormItemLabelAlign;
   /** 额外 class（作用于容器） */
   class?: string;
-  /** 原生 id（用于 label for，若子控件有 id 可与此一致） */
+  /** 关联控件的 id（label for、子控件需同 id） */
   id?: string;
   /** 子控件（单个输入组件等） */
   children?: unknown;

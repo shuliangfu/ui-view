@@ -122,36 +122,38 @@ export default function Home() {
             为什么选择 ui-view
           </Title>
           <Grid cols={12} gap={6}>
-            {FEATURES.map((item) => (
-              <GridItem
-                key={item.title}
-                span={12}
-                class="sm:col-span-6 lg:col-span-4"
-              >
-                {/* 外层包裹：强制深色模式下边框可见，避免与 Card 内部样式冲突 */}
-                <div class="rounded-2xl border-2 border-slate-200 dark:border-slate-500 bg-white dark:bg-slate-800 shadow-md hover:shadow-lg hover:border-teal-300 dark:hover:border-teal-500 transition-all duration-200 min-h-[180px]">
-                  <Card
-                    hoverable={false}
-                    bordered={false}
-                    class="rounded-2xl bg-transparent dark:bg-transparent shadow-none h-full"
-                    bodyClass="p-6"
-                  >
-                    <span class="text-2xl mb-3 block" aria-hidden>
-                      {item.icon}
-                    </span>
-                    <Title
-                      level={4}
-                      class="mb-2 text-slate-900 dark:text-white wrap-break-word"
+            {FEATURES.map((item) => {
+              return (
+                <GridItem
+                  key={item.title}
+                  span={12}
+                  class="sm:col-span-6 lg:col-span-4"
+                >
+                  {/* 外层包裹：强制深色模式下边框可见，避免与 Card 内部样式冲突 */}
+                  <div class="rounded-2xl border-2 border-slate-200 dark:border-slate-500 bg-white dark:bg-slate-800 shadow-md hover:shadow-lg hover:border-teal-300 dark:hover:border-teal-500 transition-all duration-200 min-h-[180px]">
+                    <Card
+                      hoverable={false}
+                      bordered={false}
+                      class="rounded-2xl bg-transparent dark:bg-transparent shadow-none h-full"
+                      bodyClass="p-6"
                     >
-                      {item.title}
-                    </Title>
-                    <Paragraph class="text-sm text-slate-600 dark:text-slate-400 wrap-break-word leading-relaxed">
-                      {item.desc}
-                    </Paragraph>
-                  </Card>
-                </div>
-              </GridItem>
-            ))}
+                      <span class="text-2xl mb-3 block" aria-hidden>
+                        {item.icon}
+                      </span>
+                      <Title
+                        level={4}
+                        class="mb-2 text-slate-900 dark:text-white wrap-break-word"
+                      >
+                        {item.title}
+                      </Title>
+                      <Paragraph class="text-sm text-slate-600 dark:text-slate-400 wrap-break-word leading-relaxed">
+                        {item.desc}
+                      </Paragraph>
+                    </Card>
+                  </div>
+                </GridItem>
+              );
+            })}
           </Grid>
         </Container>
       </section>

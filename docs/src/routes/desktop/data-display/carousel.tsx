@@ -6,13 +6,22 @@ export default function DataDisplayCarousel() {
   const [current, setCurrent] = createSignal(0);
 
   const slides = [
-    <div key="1" class="h-48 flex items-center justify-center bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 rounded-lg">
+    <div
+      key="1"
+      class="h-48 flex items-center justify-center bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 rounded-lg"
+    >
       幻灯片 1
     </div>,
-    <div key="2" class="h-48 flex items-center justify-center bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 rounded-lg">
+    <div
+      key="2"
+      class="h-48 flex items-center justify-center bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 rounded-lg"
+    >
       幻灯片 2
     </div>,
-    <div key="3" class="h-48 flex items-center justify-center bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 rounded-lg">
+    <div
+      key="3"
+      class="h-48 flex items-center justify-center bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 rounded-lg"
+    >
       幻灯片 3
     </div>,
   ];

@@ -34,8 +34,9 @@ export default function FormInput() {
         {/* 传 value 为 getter（如 valPlaceholder），View applyProps 会对 value 为 getter 时 createEffect 只更新 .value，不替换节点，光标不丢 */}
         <section class="space-y-4">
           <Title level={2}>基础</Title>
-          <FormItem label="placeholder">
+          <FormItem label="placeholder" id="input-placeholder">
             <Input
+              id="input-placeholder"
               value={valPlaceholder}
               onInput={(e) =>
                 setValPlaceholder((e.target as HTMLInputElement).value)}
@@ -46,8 +47,9 @@ export default function FormInput() {
 
         <section class="space-y-4">
           <Title level={2}>required</Title>
-          <FormItem label="必填" required>
+          <FormItem label="必填" required id="input-required">
             <Input
+              id="input-required"
               value={valRequired}
               onInput={(e) =>
                 setValRequired((e.target as HTMLInputElement).value)}
@@ -59,8 +61,9 @@ export default function FormInput() {
 
         <section class="space-y-4">
           <Title level={2}>error</Title>
-          <FormItem label="错误状态" error="请输入有效内容">
+          <FormItem label="错误状态" error="请输入有效内容" id="input-error">
             <Input
+              id="input-error"
               value={valError}
               onInput={(e) => setValError((e.target as HTMLInputElement).value)}
               placeholder="错误时红框"
@@ -71,15 +74,20 @@ export default function FormInput() {
 
         <section class="space-y-4">
           <Title level={2}>readOnly</Title>
-          <FormItem label="只读">
-            <Input value={readOnlyVal} readOnly />
+          <FormItem label="只读" id="input-readonly">
+            <Input id="input-readonly" value={readOnlyVal} readOnly />
           </FormItem>
         </section>
 
         <section class="space-y-4">
           <Title level={2}>disabled</Title>
-          <FormItem label="禁用">
-            <Input placeholder="禁用不可编辑" disabled value="" />
+          <FormItem label="禁用" id="input-disabled">
+            <Input
+              id="input-disabled"
+              placeholder="禁用不可编辑"
+              disabled
+              value=""
+            />
           </FormItem>
         </section>
 
@@ -106,16 +114,28 @@ export default function FormInput() {
                 左对齐
               </Title>
               <div class="space-y-0">
-                <FormItem label="姓名" labelPosition="left" labelAlign="left">
+                <FormItem
+                  label="姓名"
+                  labelPosition="left"
+                  labelAlign="left"
+                  id="left-name"
+                >
                   <Input
+                    id="left-name"
                     value={valLeft1}
                     onInput={(e) =>
                       setValLeft1((e.target as HTMLInputElement).value)}
                     placeholder="请输入姓名"
                   />
                 </FormItem>
-                <FormItem label="手机号" labelPosition="left" labelAlign="left">
+                <FormItem
+                  label="手机号"
+                  labelPosition="left"
+                  labelAlign="left"
+                  id="left-phone"
+                >
                   <Input
+                    id="left-phone"
                     value={valLeft2}
                     onInput={(e) =>
                       setValLeft2((e.target as HTMLInputElement).value)}
@@ -127,8 +147,10 @@ export default function FormInput() {
                   required
                   labelPosition="left"
                   labelAlign="left"
+                  id="left-email"
                 >
                   <Input
+                    id="left-email"
                     value={valLeft3}
                     onInput={(e) =>
                       setValLeft3((e.target as HTMLInputElement).value)}
@@ -145,8 +167,14 @@ export default function FormInput() {
                 右对齐
               </Title>
               <div class="space-y-0">
-                <FormItem label="姓名" labelPosition="left" labelAlign="right">
+                <FormItem
+                  label="姓名"
+                  labelPosition="left"
+                  labelAlign="right"
+                  id="right-name"
+                >
                   <Input
+                    id="right-name"
                     value={valRight1}
                     onInput={(e) =>
                       setValRight1((e.target as HTMLInputElement).value)}
@@ -157,8 +185,10 @@ export default function FormInput() {
                   label="手机号"
                   labelPosition="left"
                   labelAlign="right"
+                  id="right-phone"
                 >
                   <Input
+                    id="right-phone"
                     value={valRight2}
                     onInput={(e) =>
                       setValRight2((e.target as HTMLInputElement).value)}
@@ -170,8 +200,10 @@ export default function FormInput() {
                   required
                   labelPosition="left"
                   labelAlign="right"
+                  id="right-email"
                 >
                   <Input
+                    id="right-email"
                     value={valRight3}
                     onInput={(e) =>
                       setValRight3((e.target as HTMLInputElement).value)}
@@ -185,17 +217,17 @@ export default function FormInput() {
 
         <section class="space-y-4">
           <Title level={2}>size</Title>
-          <FormItem label="xs">
-            <Input size="xs" placeholder="xs" value="" />
+          <FormItem label="xs" id="size-xs">
+            <Input id="size-xs" size="xs" placeholder="xs" value="" />
           </FormItem>
-          <FormItem label="sm">
-            <Input size="sm" placeholder="sm" value="" />
+          <FormItem label="sm" id="size-sm">
+            <Input id="size-sm" size="sm" placeholder="sm" value="" />
           </FormItem>
-          <FormItem label="md（默认）">
-            <Input size="md" placeholder="md" value="" />
+          <FormItem label="md（默认）" id="size-md">
+            <Input id="size-md" size="md" placeholder="md" value="" />
           </FormItem>
-          <FormItem label="lg">
-            <Input size="lg" placeholder="lg" value="" />
+          <FormItem label="lg" id="size-lg">
+            <Input id="size-lg" size="lg" placeholder="lg" value="" />
           </FormItem>
         </section>
       </Form>

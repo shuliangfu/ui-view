@@ -22,7 +22,7 @@ app.registerPlugin(themePlugin({
   defaultMode: "light",
   strategy: "class",
   darkClass: "dark",
-  cookieName: "ui-view-examples-theme",
+  cookieName: "ui-view-docs-theme",
   injectScript: true,
 }));
 
