@@ -1,0 +1,145 @@
+/**
+ * Search 搜索框（View）。
+ * 基于 Input type="search"，支持清除、占位；light/dark 主题。
+ */
+
+import { twMerge } from "tailwind-merge";
+import type { SizeVariant } from "../types.ts";
+
+export interface SearchProps {
+  /** 尺寸 */
+  size?: SizeVariant;
+  /** 是否禁用 */
+  disabled?: boolean;
+  /** 占位文案 */
+  placeholder?: string;
+  /** 输入值（受控可选）；可为 getter 以配合 View 细粒度更新 */
+  value?: string | (() => string);
+  /** 额外 class（作用于包裹容器） */
+  class?: string;
+  /** 输入回调 */
+  onInput?: (e: Event) => void;
+  /** 变更回调 */
+  onChange?: (e: Event) => void;
+  /** 搜索回调（回车或点击搜索时） */
+  onSearch?: (value: string) => void;
+  /** 原生 name */
+  name?: string;
+  /** 原生 id */
+  id?: string;
+}
+
+const sizeClasses: Record<SizeVariant, string> = {
+  xs: "px-2.5 py-1 pl-8 text-xs rounded-md",
+  sm: "px-3 py-1.5 pl-9 text-sm rounded-md",
+  md: "px-3 py-2 pl-9 text-sm rounded-lg",
+  lg: "px-4 py-2.5 pl-10 text-base rounded-lg",
+};
+
+const inputBase =
+  "w-full border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 border-slate-300 dark:border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:focus:ring-blue-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors";
+
+export function Search(props: SearchProps) {
+  const {
+    size = "md",
+    disabled = false,
+    placeholder = "搜索…",
+    value,
+    class: className,
+    onInput,
+    onChange,
+    onSearch,
+    name,
+    id,
+  } = props;
+
+  const sizeCls = sizeClasses[size];
+
+  const hasValue = value != null && value !== "";
+  const btnCls =
+    "absolute top-1/2 -translate-y-1/2 p-1 rounded text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50";
+
+  return () => (
+    <span class={twMerge("relative inline-block w-full max-w-xs", className)}>
+      <span
+        class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500"
+        aria-hidden="true"
+      >
+        <svg
+          class="size-4"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+          />
+        </svg>
+      </span>
+      <input
+        type="search"
+        id={id}
+        name={name}
+        value={value}
+        placeholder={placeholder}
+        disabled={disabled}
+        class={twMerge(inputBase, sizeCls, onSearch && "pr-20")}
+        onInput={onInput}
+        onChange={onChange}
+        onKeyDown={(e: Event) => {
+          const ev = e as KeyboardEvent;
+          if (ev.key === "Enter" && onSearch && ev.target) {
+            onSearch((ev.target as HTMLInputElement).value);
+          }
+        }}
+      />
+      {hasValue && (
+        <button
+          type="button"
+          class={twMerge(btnCls, "right-10")}
+          disabled={disabled}
+          aria-label="清除"
+          onClick={() => {
+            const synthetic = { target: { value: "" } } as unknown as Event;
+            onChange?.(synthetic);
+            onInput?.(synthetic);
+          }}
+        >
+          <svg
+            class="size-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M6 18L18 6M6 6l12 12"
+            />
+          </svg>
+        </button>
+      )}
+      {onSearch && (
+        <button
+          type="button"
+          class={twMerge(btnCls, "right-2")}
+          disabled={disabled}
+          aria-label="搜索"
+          onClick={(e: Event) => {
+            const input = (e.currentTarget as HTMLElement).parentElement
+              ?.querySelector("input") as HTMLInputElement | null;
+            if (input) onSearch(input.value);
+          }}
+        >
+          <span class="text-xs font-medium text-blue-600 dark:text-blue-400">
+            搜索
+          </span>
+        </button>
+      )}
+    </span>
+  );
+}
