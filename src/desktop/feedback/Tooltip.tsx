@@ -83,7 +83,9 @@ export function Tooltip(props: TooltipProps) {
   let tooltipId: string | undefined;
 
   return () => {
-    if (!tooltipId) tooltipId = `tooltip-${Math.random().toString(36).slice(2, 11)}`;
+    if (!tooltipId) {
+      tooltipId = `tooltip-${Math.random().toString(36).slice(2, 11)}`;
+    }
     return (
       <span
         class={twMerge("relative inline-flex group", className)}
