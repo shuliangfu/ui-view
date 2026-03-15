@@ -15,7 +15,7 @@ export default function FormSearch() {
       <div>
         <Title level={1}>Search</Title>
         <Paragraph>
-          搜索框：占位、搜索按钮（回车/点击）、清除按钮、禁用、尺寸等全部用法。
+          搜索框：value、onInput、onChange、onSearch、placeholder、size、disabled、name、id；传 onSearch 时显示搜索与清除按钮。
         </Paragraph>
       </div>
 

@@ -23,7 +23,9 @@ export default function ChartsPie() {
   return (
     <div class="space-y-4">
       <Title level={1}>PieChart</Title>
-      <Paragraph>饼图，用于占比、构成展示。</Paragraph>
+      <Paragraph>
+        饼图：data、options、class、width、height。用于占比、构成展示；data.labels、data.datasets[].data、backgroundColor、borderWidth；options.plugins.legend 控制图例位置。
+      </Paragraph>
       <div class="w-full max-w-md h-64">
         <ChartPie data={sampleData} options={options} class="w-full h-64" />
       </div>

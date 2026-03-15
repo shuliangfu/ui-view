@@ -31,7 +31,9 @@ export default function ChartsBar() {
   return (
     <div class="space-y-4">
       <Title level={1}>ChartBar</Title>
-      <Paragraph>柱状图，用于分类对比，支持水平/垂直、堆叠。</Paragraph>
+      <Paragraph>
+        柱状图：data、options、class、width、height。用于分类对比，支持水平/垂直、堆叠；data.datasets 支持 label、data、backgroundColor；options.scales 控制坐标轴。
+      </Paragraph>
       <div class="w-full max-w-2xl h-64">
         <ChartBar data={sampleData} options={options} class="w-full h-64" />
       </div>

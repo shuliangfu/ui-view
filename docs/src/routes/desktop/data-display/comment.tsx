@@ -5,7 +5,9 @@ export default function DataDisplayComment() {
   return (
     <div class="space-y-6">
       <Title level={1}>Comment</Title>
-      <Paragraph>评论：作者、头像、时间、内容、操作、嵌套回复。</Paragraph>
+      <Paragraph>
+        评论：author、avatar、datetime、children、actions、replies、contentClass。
+      </Paragraph>
       <Comment
         author="用户 A"
         avatar={<Avatar size="sm">A</Avatar>}

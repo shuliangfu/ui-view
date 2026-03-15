@@ -15,7 +15,7 @@ export default function FormPassword() {
       <div>
         <Title level={1}>Password</Title>
         <Paragraph>
-          密码输入：显隐切换、强度提示（showStrength）、禁用、尺寸等全部用法。
+          密码输入：value、onInput、onChange、showStrength、showPassword、onToggleShow、size、disabled、placeholder、name、id。
         </Paragraph>
       </div>
 

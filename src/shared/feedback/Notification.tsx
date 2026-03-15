@@ -1,12 +1,13 @@
 /**
  * Notification 消息通知框容器（View）。
  * 需在应用根挂载 <NotificationContainer />，通过 notification.open() 触发。
- * 桌面常为右上角堆叠，支持 title、description、icon、操作按钮、duration、key 去重。
+ * 支持自定义弹出位置 placement：右上、右下、下中、上中、左上、左下。
  */
 
 import { twMerge } from "tailwind-merge";
 import type {
   NotificationItem,
+  NotificationPlacement,
   NotificationType,
 } from "./notification-store.ts";
 import { closeNotification, notificationList } from "./notification-store.ts";
@@ -101,23 +102,61 @@ function NotificationItemEl({
   );
 }
 
-/** 通知容器：右上角堆叠 */
+const PLACEMENTS: NotificationPlacement[] = [
+  "top-right",
+  "top-center",
+  "top-left",
+  "bottom-right",
+  "bottom-center",
+  "bottom-left",
+];
+
+const placementContainerClasses: Record<NotificationPlacement, string> = {
+  "top-right": "top-4 right-4 items-end",
+  "top-center": "top-4 left-1/2 -translate-x-1/2 items-center",
+  "top-left": "top-4 left-4 items-start",
+  "bottom-right": "bottom-4 right-4 items-end",
+  "bottom-center": "bottom-4 left-1/2 -translate-x-1/2 items-center",
+  "bottom-left": "bottom-4 left-4 items-start",
+};
+
+/** 通知容器：按 placement 分组，各位置独立堆叠 */
 export function NotificationContainer() {
   return () => {
     const list = notificationList();
     if (list.length === 0) return null;
+    const byPlacement = new Map<NotificationPlacement, NotificationItem[]>();
+    for (const item of list) {
+      const p = item.placement ?? "top-right";
+      if (!byPlacement.has(p)) byPlacement.set(p, []);
+      byPlacement.get(p)!.push(item);
+    }
     return (
       <div
-        class="fixed top-4 right-4 z-201 flex flex-col gap-3 pointer-events-none"
+        class="fixed inset-0 pointer-events-none z-201 flex flex-col"
         aria-live="polite"
       >
-        <div class="flex flex-col gap-3 pointer-events-auto">
-          {list.map((item: NotificationItem) => (
-            <div key={item.id}>
-              <NotificationItemEl item={item} onClose={closeNotification} />
+        {PLACEMENTS.map((placement) => {
+          const items = byPlacement.get(placement) ?? [];
+          if (items.length === 0) return null;
+          return (
+            <div
+              key={placement}
+              class={twMerge(
+                "absolute flex flex-col gap-3 pointer-events-none max-w-full px-4",
+                placementContainerClasses[placement],
+              )}
+            >
+              <div class="flex flex-col gap-3 pointer-events-auto">
+                {items.map((item: NotificationItem) => (
+                  <div key={item.id}>
+                    <NotificationItemEl item={item} onClose={closeNotification} />
+                  </div>
+                ))}
+              </div>
             </div>
-          ))}
-        </div>
+          );
+        })}
       </div>
     );
   };

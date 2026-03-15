@@ -1,8 +1,10 @@
 /**
  * Accordion 手风琴折叠（View）。
  * 常见于 FAQ、设置；支持受控/非受控、单开/多开；需配合 createSignal 做 expandedKeys。
+ * 内部维护 fallback state，保证点击展开/收起在受控/非受控下均生效。
  */
 
+import { createSignal } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import { IconChevronDown } from "../basic/icons/mod.ts";
 
@@ -51,76 +53,86 @@ export function Accordion(props: AccordionProps) {
     contentClass,
   } = props;
 
-  const expandedSet = new Set(controlledKeys ?? defaultExpandedKeys);
+  const initialKeys = controlledKeys ?? defaultExpandedKeys ?? [];
+  const [internalKeys, setInternalKeys] = createSignal<string[]>(initialKeys);
+  /** 受控时用 prop，否则用内部 state，保证点击后能立即更新 UI */
+  const getExpandedKeys = (): string[] =>
+    controlledKeys !== undefined ? controlledKeys : internalKeys();
 
   const toggle = (key: string) => {
-    const next = new Set(expandedSet);
+    const current = getExpandedKeys();
+    const next = new Set(current);
     if (next.has(key)) {
       next.delete(key);
     } else {
       if (!allowMultiple) next.clear();
       next.add(key);
     }
-    onChange?.(Array.from(next));
+    const nextArr = Array.from(next);
+    setInternalKeys(nextArr);
+    onChange?.(nextArr);
   };
 
-  return () => (
-    <div
-      class={twMerge(
-        "w-full divide-y divide-slate-200 dark:divide-slate-600 border border-slate-200 dark:border-slate-600 rounded-lg overflow-hidden",
-        className,
-      )}
-    >
-      {items.map((item) => {
-        const isExpanded = expandedSet.has(item.key);
-        return (
-          <div
-            key={item.key}
-            class={twMerge("bg-white dark:bg-slate-800", itemClass)}
-          >
-            <button
-              type="button"
-              class={twMerge(
-                "w-full flex items-center justify-between gap-2 px-4 py-3 text-left text-sm font-medium text-slate-900 dark:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-700/50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors",
-                headerClass,
-              )}
-              disabled={item.disabled}
-              aria-expanded={isExpanded}
-              aria-controls={`accordion-content-${item.key}`}
-              id={`accordion-header-${item.key}`}
-              onClick={() => !item.disabled && toggle(item.key)}
-            >
-              <span>{item.header}</span>
-              <span
-                class={twMerge(
-                  "shrink-0 w-5 h-5 text-slate-500 dark:text-slate-400 transition-transform duration-200",
-                  isExpanded && "rotate-180",
-                )}
-              >
-                <IconChevronDown class="w-full h-full" />
-              </span>
-            </button>
+  return () => {
+    const expandedSet = new Set(getExpandedKeys());
+    return (
+      <div
+        class={twMerge(
+          "w-full divide-y divide-slate-200 dark:divide-slate-600 border border-slate-200 dark:border-slate-600 rounded-lg overflow-hidden",
+          className,
+        )}
+      >
+        {items.map((item) => {
+          const isExpanded = expandedSet.has(item.key);
+          return (
             <div
-              id={`accordion-content-${item.key}`}
-              role="region"
-              aria-labelledby={`accordion-header-${item.key}`}
-              class={twMerge(
-                "overflow-hidden transition-all duration-200",
-                isExpanded ? "max-h-[2000px]" : "max-h-0",
-              )}
+              key={item.key}
+              class={twMerge("bg-white dark:bg-slate-800", itemClass)}
             >
-              <div
+              <button
+                type="button"
                 class={twMerge(
-                  "px-4 py-3 text-sm text-slate-600 dark:text-slate-400 border-t border-slate-100 dark:border-slate-700",
-                  contentClass,
+                  "w-full flex items-center justify-between gap-2 px-4 py-3 text-left text-sm font-medium text-slate-900 dark:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-700/50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors",
+                  headerClass,
+                )}
+                disabled={item.disabled}
+                aria-expanded={isExpanded}
+                aria-controls={`accordion-content-${item.key}`}
+                id={`accordion-header-${item.key}`}
+                onClick={() => !item.disabled && toggle(item.key)}
+              >
+                <span>{item.header}</span>
+                <span
+                  class={twMerge(
+                    "shrink-0 w-5 h-5 text-slate-500 dark:text-slate-400 transition-transform duration-200",
+                    isExpanded && "rotate-180",
+                  )}
+                >
+                  <IconChevronDown class="w-full h-full" />
+                </span>
+              </button>
+              <div
+                id={`accordion-content-${item.key}`}
+                role="region"
+                aria-labelledby={`accordion-header-${item.key}`}
+                class={twMerge(
+                  "overflow-hidden transition-all duration-200",
+                  isExpanded ? "max-h-[2000px]" : "max-h-0",
                 )}
               >
-                {item.children}
+                <div
+                  class={twMerge(
+                    "px-4 py-3 text-sm text-slate-600 dark:text-slate-400 border-t border-slate-100 dark:border-slate-700",
+                    contentClass,
+                  )}
+                >
+                  {item.children}
+                </div>
               </div>
             </div>
-          </div>
-        );
-      })}
-    </div>
-  );
+          );
+        })}
+      </div>
+    );
+  };
 }

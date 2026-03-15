@@ -22,7 +22,7 @@ export default function FormRichTextEditor() {
       <div>
         <Title level={1}>RichTextEditor</Title>
         <Paragraph>
-          富文本编辑器：toolbarPreset（simple/default/full）、placeholder、readOnly、disabled、minHeight、插入/上传/粘贴图片等全部用法。
+          RichTextEditor：value、onChange、toolbarPreset、toolbar、placeholder、disabled、readOnly、minHeight、class、name、id、onInsertImage、onUploadImage、onPasteImage。
         </Paragraph>
       </div>
 

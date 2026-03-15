@@ -1,8 +1,10 @@
 /**
  * Collapse 折叠面板（View）。
  * 与 Accordion 语义接近；支持手风琴/多开、边框、无边框、尺寸、禁用项。
+ * 内部维护 fallback state，保证点击展开/收起在受控/非受控下均生效。
  */
 
+import { createSignal } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import { IconChevronDown } from "../basic/icons/mod.ts";
 import type { SizeVariant } from "../types.ts";
@@ -76,85 +78,97 @@ export function Collapse(props: CollapseProps) {
     contentClass,
   } = props;
 
-  const activeSet = new Set(controlledKeys ?? defaultActiveKey);
+  const initialKeys = controlledKeys ?? defaultActiveKey ?? [];
+  const [internalKeys, setInternalKeys] = createSignal<string[]>(initialKeys);
+  /** 受控时用 prop，否则用内部 state，保证点击后能立即更新 UI */
+  const getActiveKeys = (): string[] =>
+    controlledKeys !== undefined ? controlledKeys : internalKeys();
 
   const toggle = (key: string) => {
+    const current = getActiveKeys();
+    const currentSet = new Set(current);
+    let nextArr: string[];
     if (accordion) {
-      onChange?.(activeSet.has(key) ? [] : [key]);
+      nextArr = currentSet.has(key) ? [] : [key];
     } else {
-      const next = new Set(activeSet);
+      const next = new Set(currentSet);
       if (next.has(key)) next.delete(key);
       else next.add(key);
-      onChange?.(Array.from(next));
+      nextArr = Array.from(next);
     }
+    setInternalKeys(nextArr);
+    onChange?.(nextArr);
   };
 
-  return () => (
-    <div
-      class={twMerge(
-        "collapse",
-        bordered && !ghost &&
-          "border border-slate-200 dark:border-slate-600 rounded-lg overflow-hidden",
-        !bordered && "space-y-1",
-        ghost && "bg-transparent",
-        className,
-      )}
-    >
-      {items.map((item) => {
-        const isActive = activeSet.has(item.key);
-        const showArrow = item.showArrow ?? showArrowProp;
-        const disabled = item.disabled ?? false;
+  return () => {
+    const activeSet = new Set(getActiveKeys());
+    return (
+      <div
+        class={twMerge(
+          "collapse",
+          bordered && !ghost &&
+            "border border-slate-200 dark:border-slate-600 rounded-lg overflow-hidden",
+          !bordered && "space-y-1",
+          ghost && "bg-transparent",
+          className,
+        )}
+      >
+        {items.map((item) => {
+          const isActive = activeSet.has(item.key);
+          const showArrow = item.showArrow ?? showArrowProp;
+          const disabled = item.disabled ?? false;
 
-        return (
-          <div
-            key={item.key}
-            class={twMerge(
-              bordered &&
-                "border-b border-slate-200 dark:border-slate-600 last:border-b-0",
-              itemClass,
-            )}
-          >
-            <button
-              type="button"
+          return (
+            <div
+              key={item.key}
               class={twMerge(
-                "w-full flex items-center justify-between gap-2 text-left font-medium text-slate-700 dark:text-slate-300",
-                sizeClasses[size],
-                "hover:bg-slate-50 dark:hover:bg-slate-700/50",
-                disabled && "opacity-60 cursor-not-allowed",
-                headerClass,
+                bordered &&
+                  "border-b border-slate-200 dark:border-slate-600 last:border-b-0",
+                itemClass,
               )}
-              disabled={disabled}
-              onClick={() => !disabled && toggle(item.key)}
-              aria-expanded={isActive}
             >
-              <span class="min-w-0 truncate">{item.header}</span>
-              {(showArrow && (expandIcon != null || true)) && (
-                <span
+              <button
+                type="button"
+                class={twMerge(
+                  "w-full flex items-center justify-between gap-2 text-left font-medium text-slate-700 dark:text-slate-300",
+                  sizeClasses[size],
+                  "hover:bg-slate-50 dark:hover:bg-slate-700/50",
+                  disabled && "opacity-60 cursor-not-allowed",
+                  headerClass,
+                )}
+                disabled={disabled}
+                onClick={() => !disabled && toggle(item.key)}
+                aria-expanded={isActive}
+              >
+                <span class="min-w-0 truncate">{item.header}</span>
+                {(showArrow && (expandIcon != null || true)) && (
+                  <span
+                    class={twMerge(
+                      "shrink-0 w-4 h-4 transition-transform flex items-center justify-center",
+                      isActive && "rotate-180",
+                    )}
+                  >
+                    {expandIcon != null
+                      ? expandIcon
+                      : <IconChevronDown class="w-full h-full" />}
+                  </span>
+                )}
+              </button>
+              {isActive && (
+                <div
                   class={twMerge(
-                    "shrink-0 w-4 h-4 transition-transform flex items-center justify-center",
-                    isActive && "rotate-180",
+                    "overflow-hidden border-t border-slate-100 dark:border-slate-700",
+                    sizeClasses[size],
+                    contentClass,
                   )}
                 >
-                  {expandIcon != null
-                    ? expandIcon
-                    : <IconChevronDown class="w-full h-full" />}
-                </span>
+                  {item.children}
+                </div>
               )}
-            </button>
-            {isActive && (
-              <div
-                class={twMerge(
-                  "overflow-hidden border-t border-slate-100 dark:border-slate-700",
-                  sizeClasses[size],
-                  contentClass,
-                )}
-              >
-                {item.children}
-              </div>
-            )}
-          </div>
-        );
-      })}
-    </div>
-  );
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
 }

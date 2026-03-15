@@ -8,7 +8,7 @@ export default function DataDisplayTag() {
   return (
     <div class="space-y-6">
       <Title level={1}>Tag</Title>
-      <Paragraph>标签：多色、可关闭、图标、尺寸、圆角。</Paragraph>
+      <Paragraph>标签：variant、size、closable、onClose、icon、disabled、rounded。</Paragraph>
       <div class="flex flex-wrap gap-2">
         <Tag>默认</Tag>
         <Tag variant="primary">Primary</Tag>
@@ -28,6 +28,10 @@ export default function DataDisplayTag() {
           可关闭
         </Tag>
       )}
+      <div class="flex flex-wrap gap-2">
+        <Tag disabled>disabled</Tag>
+        <Tag rounded>rounded</Tag>
+      </div>
     </div>
   );
 }

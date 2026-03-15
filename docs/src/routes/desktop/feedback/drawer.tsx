@@ -10,7 +10,7 @@ export default function FeedbackDrawer() {
     <div class="space-y-6">
       <Title level={1}>Drawer</Title>
       <Paragraph>
-        侧边抽屉：左/右滑出；支持标题、底部、关闭、遮罩关闭、Esc、自定义宽度。
+        侧边抽屉：左/右滑出；支持 placement、width、title、footer、closable、maskClosable、destroyOnClose、keyboard。
       </Paragraph>
 
       <div class="flex gap-2">
@@ -49,6 +49,10 @@ export default function FeedbackDrawer() {
           从左侧滑出的面板，宽度 320px。
         </p>
       </Drawer>
+
+      <Paragraph class="text-sm text-slate-500 dark:text-slate-400">
+        其他用法：closable（默认 true 显示关闭按钮）、maskClosable（默认 true 点击遮罩关闭）、destroyOnClose（关闭后销毁内容）、keyboard（默认 true 支持 Esc 关闭）。
+      </Paragraph>
     </div>
   );
 }

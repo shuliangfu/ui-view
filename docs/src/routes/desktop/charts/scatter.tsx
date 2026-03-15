@@ -38,7 +38,9 @@ export default function ChartsScatter() {
   return (
     <div class="space-y-4">
       <Title level={1}>ScatterChart</Title>
-      <Paragraph>散点图，二维分布、相关性展示。</Paragraph>
+      <Paragraph>
+        散点图：data、options、class、width、height。二维分布、相关性展示；data.datasets[].data 为 { x, y } 数组；options.scales 可设置 beginAtZero。
+      </Paragraph>
       <div class="w-full max-w-2xl h-64">
         <ChartScatter data={sampleData} options={options} class="w-full h-64" />
       </div>

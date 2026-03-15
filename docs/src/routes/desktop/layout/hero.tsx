@@ -6,10 +6,10 @@ export default function LayoutHero() {
     <div class="space-y-8">
       <Title level={1}>Hero</Title>
       <Paragraph>
-        英雄区/首屏：标题、副标题、描述、CTA、可选 media/背景；支持
-        center/left/right 布局。
+        英雄区：title、subtitle、description、extra、media、layout（center/left/right）、fullScreen、background、class、contentClass、children。
       </Paragraph>
 
+      <Title level={2}>layout=center</Title>
       <div class="rounded-xl border border-slate-200 dark:border-slate-600 overflow-hidden">
         <Hero
           layout="center"
@@ -25,6 +25,7 @@ export default function LayoutHero() {
         />
       </div>
 
+      <Title level={2}>layout=left</Title>
       <div class="rounded-xl border border-slate-200 dark:border-slate-600 overflow-hidden">
         <Hero
           layout="left"
@@ -34,6 +35,20 @@ export default function LayoutHero() {
           media={
             <div class="h-48 rounded-lg bg-slate-200 dark:bg-slate-600 flex items-center justify-center text-slate-500">
               插画/图片区
+            </div>
+          }
+        />
+      </div>
+      <Title level={2}>layout=right</Title>
+      <div class="rounded-xl border border-slate-200 dark:border-slate-600 overflow-hidden">
+        <Hero
+          layout="right"
+          title="右文左图"
+          description="右侧文案、左侧可放媒体。"
+          extra={<Button variant="primary">主操作</Button>}
+          media={
+            <div class="h-48 rounded-lg bg-slate-200 dark:bg-slate-600 flex items-center justify-center text-slate-500">
+              媒体区
             </div>
           }
         />

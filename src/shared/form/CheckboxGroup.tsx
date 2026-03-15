@@ -1,6 +1,6 @@
 /**
  * CheckboxGroup 多选组（View）。
- * 选项列表、统一 name、选中值 value 为字符串数组，onChange 回传新数组。
+ * 选项列表、统一 name、选中值 value 为字符串数组，onChange 回传新数组；支持横向/纵向布局。
  */
 
 import { twMerge } from "tailwind-merge";
@@ -11,6 +11,9 @@ export interface CheckboxGroupOption {
   label: string;
   disabled?: boolean;
 }
+
+/** 布局方向：纵向（默认）或横向 */
+export type CheckboxGroupDirection = "vertical" | "horizontal";
 
 export interface CheckboxGroupProps {
   /** 选项列表 */
@@ -25,6 +28,8 @@ export interface CheckboxGroupProps {
   error?: boolean;
   /** 变更回调，回传新选中的 value 数组 */
   onChange?: (value: string[]) => void;
+  /** 布局方向：vertical 纵向、horizontal 横向，默认 "vertical" */
+  direction?: CheckboxGroupDirection;
   /** 额外 class（作用于容器） */
   class?: string;
 }
@@ -37,14 +42,18 @@ export function CheckboxGroup(props: CheckboxGroupProps) {
     disabled = false,
     error = false,
     onChange,
+    direction = "vertical",
     class: className,
   } = props;
+
+  const directionCls =
+    direction === "horizontal" ? "flex-row flex-wrap gap-x-4 gap-y-2" : "flex-col gap-2";
 
   return () => {
     const resolvedValue = typeof value === "function" ? value() : (value ?? []);
     return (
       <div
-        class={twMerge("flex flex-col gap-2", className)}
+        class={twMerge("flex", directionCls, className)}
         role="group"
         aria-label={name}
         aria-invalid={error}

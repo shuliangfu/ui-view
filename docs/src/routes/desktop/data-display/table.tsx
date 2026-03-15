@@ -6,6 +6,7 @@ type Row = { key: string; name: string; age: number; address: string };
 
 export default function DataDisplayTable() {
   const [expandedKeys, setExpandedKeys] = createSignal<string[]>([]);
+  const [selectedKeys, setSelectedKeys] = createSignal<string[]>([]);
 
   const columns = [
     { key: "name", title: "姓名", dataIndex: "name" as const },
@@ -22,8 +23,10 @@ export default function DataDisplayTable() {
     <div class="space-y-6">
       <Title level={1}>Table</Title>
       <Paragraph>
-        表格：列定义、排序、展开行、分页、loading、尺寸、边框。
+        表格：columns、dataSource、rowKey、bordered、size、striped、loading、onRow、expandable、summary、rowSelection、rowClassName、headerClass。
       </Paragraph>
+
+      <Title level={2}>基础 + 边框 + 展开行</Title>
       <Table<Row>
         columns={columns}
         dataSource={dataSource}
@@ -42,6 +45,32 @@ export default function DataDisplayTable() {
           ),
         }}
       />
+
+      <Title level={2}>size / striped / loading</Title>
+      <Table<Row>
+        columns={columns}
+        dataSource={dataSource}
+        size="sm"
+        striped
+      />
+      <Table<Row>
+        columns={columns}
+        dataSource={[]}
+        loading
+      />
+
+      <Title level={2}>rowSelection 行选择</Title>
+      <Table<Row>
+        columns={columns}
+        dataSource={dataSource}
+        rowSelection={{
+          selectedRowKeys: selectedKeys(),
+          onChange: (keys, rows) => setSelectedKeys(keys as string[]),
+        }}
+      />
+      <p class="text-sm text-slate-500">
+        已选行 key: {selectedKeys().join(", ") || "-"}
+      </p>
     </div>
   );
 }

@@ -27,7 +27,10 @@ export default function DataDisplayTree() {
   return (
     <div class="space-y-6">
       <Title level={1}>Tree</Title>
-      <Paragraph>树形：展开/选中/勾选、异步加载、多选。</Paragraph>
+      <Paragraph>
+        树形：treeData、expandedKeys、onExpand、selectedKeys、onSelect、checkedKeys、onCheck、checkable、multiple、blockNode、showLine。
+      </Paragraph>
+      <Title level={2}>展开 / 选中 / 勾选</Title>
       <Tree
         treeData={treeData}
         expandedKeys={expandedKeys()}
@@ -42,6 +45,14 @@ export default function DataDisplayTree() {
         已选: {selectedKeys().join(", ") || "-"} | 已勾选:{" "}
         {checkedKeys().join(", ") || "-"}
       </p>
+
+      <Title level={2}>showLine 连接线</Title>
+      <Tree
+        treeData={treeData}
+        expandedKeys={expandedKeys()}
+        onExpand={setExpandedKeys}
+        showLine
+      />
     </div>
   );
 }

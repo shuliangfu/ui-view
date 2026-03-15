@@ -18,8 +18,7 @@ export default function NavigationBreadcrumb() {
     <div class="space-y-6">
       <Title level={1}>Breadcrumb</Title>
       <Paragraph>
-        面包屑：层级路径，自定义分隔符，最后一项不链化；无 href 时可配合
-        onItemClick 或 item.onClick。
+        面包屑：items（label、href 等）、separator、onItemClick、class。
       </Paragraph>
 
       <Breadcrumb items={items} />

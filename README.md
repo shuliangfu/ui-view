@@ -119,6 +119,7 @@ bunx jsr add @dreamer/ui-view
 - **Card** 卡片
 - **List** 列表
 - **Image** 图片
+- **ImageViewer** 图片查看器（多图切换、缩放、旋转、缩略图、键盘）
 - **Timeline** 时间轴
 - **Collapse** 折叠面板
 - **Carousel** 轮播图

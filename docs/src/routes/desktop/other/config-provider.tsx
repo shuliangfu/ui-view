@@ -15,8 +15,7 @@ export default function OtherConfigProvider() {
     <div class="space-y-6">
       <Title level={1}>ConfigProvider</Title>
       <Paragraph>
-        全局配置：为子树提供 theme、locale、componentSize；子组件通过
-        getConfig() 读取。
+        全局配置：theme（light/dark/system）、locale、componentSize、prefixCls、children、class；子树内通过 getConfig() 读取 theme、locale、componentSize、prefixCls。
       </Paragraph>
 
       <div class="flex flex-wrap gap-3">
@@ -28,6 +27,7 @@ export default function OtherConfigProvider() {
         </Button>
       </div>
 
+      <Title level={2}>theme / locale / componentSize</Title>
       <ConfigProvider theme={theme()} locale="zh-CN" componentSize="md">
         <div class="rounded-lg border border-slate-200 dark:border-slate-600 p-4 space-y-3">
           <p class="text-sm font-medium">子树内（受 ConfigProvider 包裹）</p>
@@ -41,6 +41,7 @@ export default function OtherConfigProvider() {
         </div>
       </ConfigProvider>
 
+      <Title level={2}>getConfig()</Title>
       <div class="rounded-lg border border-slate-200 dark:border-slate-600 p-4">
         <p class="text-sm text-slate-500">
           子树外 getConfig(): theme={getConfig().theme ?? "-"}, locale=

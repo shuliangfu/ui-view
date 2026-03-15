@@ -20,7 +20,9 @@ export default function DataDisplayTransfer() {
   return (
     <div class="space-y-6">
       <Title level={1}>Transfer</Title>
-      <Paragraph>穿梭框：双列选择、搜索、自定义渲染。</Paragraph>
+      <Paragraph>
+        穿梭框：dataSource、targetKeys、onChange、titles、showSearch、searchPlaceholder、searchValue、onSearch、filterOption、render、listStyle、disabled。
+      </Paragraph>
       <Transfer
         dataSource={dataSource}
         targetKeys={targetKeys()}

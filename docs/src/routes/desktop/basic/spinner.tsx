@@ -10,7 +10,9 @@ export default function BasicSpinner() {
     <div class="space-y-8">
       <div>
         <Title level={1}>Spinner 加载</Title>
-        <Paragraph>加载旋转指示器，支持 size、class。</Paragraph>
+        <Paragraph>
+          Spinner：size（xs/sm/md/lg）、class。加载旋转指示器。
+        </Paragraph>
       </div>
 
       <section class="space-y-4">

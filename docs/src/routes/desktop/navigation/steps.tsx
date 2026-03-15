@@ -15,8 +15,7 @@ export default function NavigationSteps() {
     <div class="space-y-8">
       <Title level={1}>Steps</Title>
       <Paragraph>
-        步骤条：current、items(title/description)、水平/垂直方向；传 onChange
-        可点击某步跳转。
+        步骤条：items（title、description、status）、current、onChange、direction（horizontal/vertical）、class。
       </Paragraph>
 
       <Steps
@@ -26,7 +25,18 @@ export default function NavigationSteps() {
         direction="horizontal"
       />
 
+      <Title level={2}>direction=vertical</Title>
       <Steps items={items} current={current()} direction="vertical" />
+
+      <Title level={2}>items 含 status</Title>
+      <Steps
+        items={[
+          { title: "已完成", description: "步骤一", status: "finish" },
+          { title: "进行中", description: "步骤二", status: "process" },
+          { title: "待开始", description: "步骤三", status: "wait" },
+        ]}
+        current={1}
+      />
 
       <div class="flex gap-2">
         <button

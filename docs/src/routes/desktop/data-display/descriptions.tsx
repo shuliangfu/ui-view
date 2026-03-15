@@ -12,9 +12,24 @@ export default function DataDisplayDescriptions() {
   return (
     <div class="space-y-6">
       <Title level={1}>Descriptions</Title>
-      <Paragraph>描述列表：键值对、标题、列数、边框、尺寸、布局。</Paragraph>
+      <Paragraph>
+        描述列表：items、title、column、bordered、size、layout、colon、labelClass、contentClass。
+      </Paragraph>
+      <Title level={2}>标题 + 列数 + 边框</Title>
       <Descriptions title="用户信息" items={items} column={3} bordered />
+      <Title level={2}>layout=vertical 垂直布局</Title>
       <Descriptions items={items.slice(0, 3)} layout="vertical" />
+      <Title level={2}>size=sm / colon=false</Title>
+      <Descriptions
+        items={items.slice(0, 3)}
+        size="sm"
+        title="小尺寸"
+      />
+      <Descriptions
+        items={items.slice(0, 2)}
+        colon={false}
+        title="无冒号"
+      />
     </div>
   );
 }

@@ -10,8 +10,7 @@ export default function FeedbackPopconfirm() {
     <div class="space-y-6">
       <Title level={1}>Popconfirm</Title>
       <Paragraph>
-        气泡确认框：点击触发后显示带标题与「确定/取消」的面板；支持危险样式。需在触发元素上绑定
-        onClick 调用 onOpenChange(true)。
+        气泡确认框：title、onConfirm、onCancel、okText、cancelText；支持 open/onOpenChange 受控、danger、showIcon、placement。
       </Paragraph>
 
       <div class="flex gap-2">
@@ -19,11 +18,14 @@ export default function FeedbackPopconfirm() {
           open={open()}
           onOpenChange={setOpen}
           title="确定要执行该操作吗？"
+          placement="top"
+          okText="确定"
+          cancelText="取消"
           onConfirm={() => setOpen(false)}
           onCancel={() => setOpen(false)}
         >
           <Button variant="default" onClick={() => setOpen(true)}>
-            普通确认
+            普通确认（placement=top）
           </Button>
         </Popconfirm>
         <Popconfirm
@@ -32,6 +34,8 @@ export default function FeedbackPopconfirm() {
           title="删除后无法恢复，确定删除吗？"
           danger
           okText="删除"
+          cancelText="取消"
+          showIcon
           onConfirm={() => setOpenDanger(false)}
           onCancel={() => setOpenDanger(false)}
         >

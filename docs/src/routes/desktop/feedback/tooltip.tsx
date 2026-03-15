@@ -39,6 +39,15 @@ export default function FeedbackTooltip() {
           </span>
         </Tooltip>
       </div>
+
+      <div class="pt-4">
+        <Title level={2}>arrow=false 无箭头</Title>
+        <Tooltip content="不显示箭头的气泡" arrow={false}>
+          <span class="px-3 py-1.5 rounded bg-slate-200 dark:bg-slate-600 cursor-default">
+            无箭头
+          </span>
+        </Tooltip>
+      </div>
     </div>
   );
 }

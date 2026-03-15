@@ -50,6 +50,21 @@ export default function FeedbackProgress() {
           />
         </div>
       </div>
+
+      <div class="space-y-4">
+        <Title level={2}>线性 strokeWidth / strokeColor / trailColor</Title>
+        <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+          线性进度条可设置描边宽度、进度色、轨道色。
+        </Paragraph>
+        <div class="space-y-2 max-w-md">
+          <Progress percent={50} strokeWidth={12} />
+          <Progress
+            percent={60}
+            strokeColor="rgb(34 197 94)"
+            trailColor="rgb(226 232 240)"
+          />
+        </div>
+      </div>
     </div>
   );
 }

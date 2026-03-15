@@ -38,7 +38,7 @@ export default function FormCheck() {
       <div>
         <Title level={1}>勾选与开关</Title>
         <Paragraph>
-          Checkbox、CheckboxGroup、RadioGroup、Switch 示例。
+          Checkbox、CheckboxGroup、RadioGroup、Switch；Switch 支持 checkedChildren、unCheckedChildren、disabled、error。
         </Paragraph>
       </div>
 
@@ -73,6 +73,19 @@ export default function FormCheck() {
             onChange={(e) =>
               setSwitchVal((e.target as HTMLInputElement).checked)}
           />
+        </FormItem>
+        <FormItem label="Switch 自定义文案">
+          <Switch
+            checked={switchVal()}
+            onChange={(e) =>
+              setSwitchVal((e.target as HTMLInputElement).checked)}
+            checkedChildren="开"
+            unCheckedChildren="关"
+          />
+        </FormItem>
+        <FormItem label="Switch disabled">
+          <Switch checked={false} disabled />
+          <Switch checked disabled class="ml-4" />
         </FormItem>
       </Form>
     </div>

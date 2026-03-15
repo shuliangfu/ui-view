@@ -10,7 +10,9 @@ export default function BasicTypography() {
     <div class="space-y-8">
       <div>
         <Title level={1}>Typography 排版</Title>
-        <Paragraph>Title、Text、Paragraph，标题层级与正文。</Paragraph>
+        <Paragraph>
+          Typography：Title（level、class、children）、Text（truncate、class、children）、Paragraph（class、children）。Title 默认 level=2，level 为 1～6 对应 h1～h6。
+        </Paragraph>
       </div>
 
       <section class="space-y-4">

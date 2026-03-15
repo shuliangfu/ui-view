@@ -15,7 +15,7 @@ export default function FormRate() {
       <div>
         <Title level={1}>Rate</Title>
         <Paragraph>
-          评分：count、value、allowHalf、disabled 等全部用法。
+          评分：count、value、onChange、allowHalf、disabled、class。
         </Paragraph>
       </div>
 

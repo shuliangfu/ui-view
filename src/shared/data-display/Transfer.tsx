@@ -1,8 +1,9 @@
 /**
  * Transfer 穿梭框（View）。
- * 双列选择；支持搜索、自定义渲染、禁用项、方向。
+ * 双列选择；支持搜索、自定义渲染、禁用项、方向。列表项可选中（高亮）后通过中间按钮穿梭。
  */
 
+import { createSignal } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 
 export interface TransferItem {
@@ -73,11 +74,18 @@ export function Transfer(props: TransferProps) {
   const leftItems = filterFn(leftRaw, searchValue?.[0] ?? "");
   const rightItems = filterFn(rightRaw, searchValue?.[1] ?? "");
 
+  const [leftSelectedKeys, setLeftSelectedKeys] = createSignal<string[]>([]);
+  const [rightSelectedKeys, setRightSelectedKeys] = createSignal<string[]>([]);
+
   const moveToRight = (keys: string[]) => {
+    if (keys.length === 0) return;
     onChange?.([...new Set([...targetKeys, ...keys])]);
+    setLeftSelectedKeys([]);
   };
   const moveToLeft = (keys: string[]) => {
+    if (keys.length === 0) return;
     onChange?.(targetKeys.filter((k) => !keys.includes(k)));
+    setRightSelectedKeys([]);
   };
 
   return () => (
@@ -97,22 +105,41 @@ export function Transfer(props: TransferProps) {
         onSearch={(v) => onSearch?.("left", v)}
         render={render}
         listStyle={listStyle}
-        onSelect={(keys) => moveToRight(keys)}
+        selectedKeys={leftSelectedKeys()}
+        onToggleSelect={(key) => {
+          setLeftSelectedKeys((prev) =>
+            prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
+          );
+        }}
+        onTransfer={(keys) => moveToRight(keys)}
+        disabled={disabled}
       />
       <div class="flex flex-col justify-center gap-2">
         <button
           type="button"
-          class="px-2 py-1 text-sm border border-slate-300 dark:border-slate-600 rounded hover:bg-slate-100 dark:hover:bg-slate-700"
-          onClick={() => moveToRight(leftItems.map((i) => i.key))}
-          aria-label="全部右移"
+          class="px-2 py-1 text-sm border border-slate-300 dark:border-slate-600 rounded hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          disabled={disabled}
+          onClick={() =>
+            moveToRight(
+              leftSelectedKeys().length > 0
+                ? leftSelectedKeys()
+                : leftItems.filter((i) => !i.disabled).map((i) => i.key),
+            )}
+          aria-label="右移"
         >
           →
         </button>
         <button
           type="button"
-          class="px-2 py-1 text-sm border border-slate-300 dark:border-slate-600 rounded hover:bg-slate-100 dark:hover:bg-slate-700"
-          onClick={() => moveToLeft(rightItems.map((i) => i.key))}
-          aria-label="全部左移"
+          class="px-2 py-1 text-sm border border-slate-300 dark:border-slate-600 rounded hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          disabled={disabled}
+          onClick={() =>
+            moveToLeft(
+              rightSelectedKeys().length > 0
+                ? rightSelectedKeys()
+                : rightItems.filter((i) => !i.disabled).map((i) => i.key),
+            )}
+          aria-label="左移"
         >
           ←
         </button>
@@ -126,7 +153,14 @@ export function Transfer(props: TransferProps) {
         onSearch={(v) => onSearch?.("right", v)}
         render={render}
         listStyle={listStyle}
-        onSelect={(keys) => moveToLeft(keys)}
+        selectedKeys={rightSelectedKeys()}
+        onToggleSelect={(key) => {
+          setRightSelectedKeys((prev) =>
+            prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
+          );
+        }}
+        onTransfer={(keys) => moveToLeft(keys)}
+        disabled={disabled}
       />
     </div>
   );
@@ -142,7 +176,10 @@ function TransferList(
     onSearch?: (value: string) => void;
     render?: (item: TransferItem) => unknown;
     listStyle: { width?: number; height?: number };
-    onSelect: (keys: string[]) => void;
+    selectedKeys: string[];
+    onToggleSelect: (key: string) => void;
+    onTransfer: (keys: string[]) => void;
+    disabled?: boolean;
   },
 ) {
   const {
@@ -154,7 +191,10 @@ function TransferList(
     onSearch,
     render,
     listStyle,
-    onSelect,
+    selectedKeys,
+    onToggleSelect,
+    onTransfer,
+    disabled = false,
   } = listProps;
 
   return () => (
@@ -179,24 +219,40 @@ function TransferList(
         class="overflow-auto flex-1 list-none m-0 p-1"
         style={{ height: listStyle.height ?? 200 }}
       >
-        {items.map((item) => (
-          <li
-            key={item.key}
-            class={twMerge(
-              "px-2 py-1.5 rounded text-sm cursor-pointer",
-              item.disabled
-                ? "opacity-60 cursor-not-allowed"
-                : "hover:bg-slate-100 dark:hover:bg-slate-700",
-            )}
-            data-key={item.key}
-            onClick={() => !item.disabled && onSelect([item.key])}
-          >
-            {render ? render(item) : item.title}
-          </li>
-        ))}
+        {items.map((item) => {
+          const selected = selectedKeys.includes(item.key);
+          return (
+            <li key={item.key} class="list-none m-0 p-0">
+              <button
+                type="button"
+                class={twMerge(
+                  "w-full text-left px-2 py-1.5 rounded text-sm cursor-pointer border-0 bg-transparent",
+                  item.disabled || disabled
+                    ? "opacity-60 cursor-not-allowed"
+                    : "hover:bg-slate-100 dark:hover:bg-slate-700",
+                  selected &&
+                    "bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-200",
+                )}
+                data-key={item.key}
+                disabled={item.disabled || disabled}
+                onClick={() => {
+                  if (item.disabled || disabled) return;
+                  onToggleSelect(item.key);
+                }}
+                onDoubleClick={() => {
+                  if (item.disabled || disabled) return;
+                  onTransfer([item.key]);
+                }}
+              >
+                {render ? render(item) : item.title}
+              </button>
+            </li>
+          );
+        })}
       </ul>
       <div class="px-2 py-1 text-xs text-slate-500 dark:text-slate-400">
         {items.length} 项
+        {selectedKeys.length > 0 && `，已选 ${selectedKeys.length}`}
       </div>
     </div>
   );

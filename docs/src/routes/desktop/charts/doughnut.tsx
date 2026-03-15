@@ -23,7 +23,9 @@ export default function ChartsDoughnut() {
   return (
     <div class="space-y-4">
       <Title level={1}>ChartDoughnut</Title>
-      <Paragraph>环形图，与饼图类似，中间留空。</Paragraph>
+      <Paragraph>
+        环形图：data、options、class、width、height。与饼图类似，中间留空；data 结构与饼图一致。
+      </Paragraph>
       <div class="w-full max-w-md h-64">
         <ChartDoughnut
           data={sampleData}

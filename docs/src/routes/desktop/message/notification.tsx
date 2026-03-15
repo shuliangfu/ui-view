@@ -17,8 +17,7 @@ export default function MessageNotification() {
       <div>
         <Title level={1}>Notification</Title>
         <Paragraph>
-          消息通知框：带标题、描述、类型图标，右上角堆叠，支持 key
-          去重、操作按钮、duration。
+          消息通知框：notification.open(options)、notification.close(id)、notification.destroy()。options：key、type、title、description、icon、duration、btnText、onBtnClick、onClose、placement（top-right/top-center/top-left/bottom-right/bottom-center/bottom-left）。
         </Paragraph>
       </div>
 
@@ -100,6 +99,54 @@ export default function MessageNotification() {
               })}
           >
             同 key 去重
+          </Button>
+        </div>
+      </section>
+      <section class="space-y-4">
+        <Title level={2}>placement 弹出位置</Title>
+        <Paragraph>右上、右下、下中、上中、左上、左下。</Paragraph>
+        <div class="flex flex-wrap gap-2">
+          {(["top-right", "top-center", "top-left", "bottom-right", "bottom-center", "bottom-left"] as const).map((p) => (
+            <Button
+              key={p}
+              type="button"
+              variant="secondary"
+              onClick={() =>
+                notification.open({
+                  title: p,
+                  description: `placement="${p}"`,
+                  type: "info",
+                  placement: p,
+                })}
+            >
+              {p}
+            </Button>
+          ))}
+        </div>
+      </section>
+      <section class="space-y-4">
+        <Title level={2}>duration 与 onClose</Title>
+        <div class="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() =>
+              notification.open({
+                title: "2 秒后关闭",
+                description: "duration=2000，关闭时触发 onClose。",
+                type: "info",
+                duration: 2000,
+                onClose: () => toast.info("通知已关闭"),
+              })}
+          >
+            自定义 duration + onClose
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => notification.destroy()}
+          >
+            notification.destroy()
           </Button>
         </div>
       </section>

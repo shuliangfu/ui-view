@@ -11,8 +11,7 @@ export default function MessageToast() {
       <div>
         <Title level={1}>Toast</Title>
         <Paragraph>
-          轻提示：无标题或仅图标+一句话，可设置 duration 自动关闭，支持多种
-          placement（top-center、bottom-right 等）。
+          轻提示：toast.success/info/error/warning(content, duration?, placement?)、toast.show(type, content, duration?, placement?)、toast.dismiss(id)、toast.destroy()。placement：top/top-center/top-left/top-right、bottom/bottom-center/bottom-left/bottom-right。duration 默认 3000ms，0 表示不自动关闭。
         </Paragraph>
       </div>
 
@@ -52,7 +51,7 @@ export default function MessageToast() {
 
       <section class="space-y-4">
         <Title level={2}>placement</Title>
-        <Paragraph>不同位置：右下角、5 秒后关闭。</Paragraph>
+        <Paragraph>不同位置示例。</Paragraph>
         <div class="flex flex-wrap gap-2">
           <Button
             type="button"
@@ -60,7 +59,30 @@ export default function MessageToast() {
             onClick={() =>
               toast.show("info", "右下角 5 秒", 5000, "bottom-right")}
           >
-            右下角 5s
+            bottom-right 5s
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() =>
+              toast.info("左上角", 3000, "top-left")}
+          >
+            top-left
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() =>
+              toast.show("info", "不自动关闭", 0, "bottom-center")}
+          >
+            duration=0 不自动关闭
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => toast.destroy()}
+          >
+            toast.destroy()
           </Button>
         </div>
       </section>

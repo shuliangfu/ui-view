@@ -191,7 +191,7 @@ export function CodeBlock(props: CodeBlockProps) {
         {showLineNumbers && lineCount > 0
           ? (
             <div
-              class="shrink-0 select-none py-3 pr-3 text-right text-slate-400 dark:text-slate-500 font-mono text-xs leading-relaxed border-r border-slate-200 dark:border-slate-600 bg-slate-100/50 dark:bg-slate-800/50"
+              class="shrink-0 min-w-12 select-none py-3 pl-3 pr-3 text-right text-slate-400 dark:text-slate-500 font-mono text-xs leading-relaxed border-r border-slate-200 dark:border-slate-600 bg-slate-100/50 dark:bg-slate-800/50"
               aria-hidden
             >
               {lines.map((_, i) => <div key={i}>{lineNumberStart + i}</div>)}
@@ -200,7 +200,8 @@ export function CodeBlock(props: CodeBlockProps) {
           : null}
         <pre
           class={twMerge(
-            "m-0 flex-1 overflow-auto p-3 font-mono leading-relaxed",
+            "m-0 flex-1 min-w-0 overflow-auto p-3 font-mono leading-relaxed",
+            showLineNumbers && "pl-4",
             copyable && "pr-12",
             wrapLongLines && "whitespace-pre-wrap wrap-break-word",
             !wrapLongLines && "whitespace-pre",

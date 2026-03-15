@@ -30,10 +30,11 @@
   },
   "tasks": {
     "test": "deno test -A tests/",
-    "check": "deno check ."
+    "check": "deno check .",
+    "fetch-tabler-icons": "deno run -A scripts/fetch-tabler-icons.ts"
   },
   "imports": {
-    "@dreamer/view": "jsr:@dreamer/view@^1.1.8",
+    "@dreamer/view": "jsr:@dreamer/view@^1.1.9",
     "chart.js": "npm:chart.js@^4.5.1",
     "prismjs": "npm:prismjs@^1.30.0",
     "tailwind-merge": "npm:tailwind-merge@^2.6.1"

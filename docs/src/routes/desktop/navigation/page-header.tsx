@@ -6,7 +6,7 @@ export default function NavigationPageHeader() {
     <div class="space-y-6">
       <Title level={1}>PageHeader</Title>
       <Paragraph>
-        页头：title、subTitle、onBack、breadcrumb、extra、footer。
+        页头：title、subTitle、onBack、breadcrumb、extra、footer、class。
       </Paragraph>
 
       <PageHeader

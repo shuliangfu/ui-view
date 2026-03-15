@@ -44,8 +44,7 @@ export default function FormUpload() {
       <div>
         <Title level={1}>Upload</Title>
         <Paragraph>
-          文件上传：拖拽区域（drag +
-          onDrop）、文件列表（fileList）、移除（onRemove）、上传进度（status/progress）、仅选择（无列表）等全部用法。
+          文件上传：multiple、accept、fileList、onChange、onRemove、onDrop、drag、dragPlaceholder、disabled、name、id。
         </Paragraph>
       </div>
 

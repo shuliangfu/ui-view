@@ -17,8 +17,7 @@ export default function FormTextarea() {
       <div>
         <Title level={1}>Textarea</Title>
         <Paragraph>
-          多行输入：rows、maxLength（字数展示）、readOnly、required、error、disabled
-          等全部用法。
+          多行输入：value、onInput、onChange、rows、maxLength、readOnly、required、error、disabled、name、id。
         </Paragraph>
       </div>
 

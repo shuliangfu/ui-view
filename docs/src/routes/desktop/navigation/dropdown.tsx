@@ -33,9 +33,7 @@ export default function NavigationDropdown() {
     <div class="space-y-6">
       <Title level={1}>Dropdown</Title>
       <Paragraph>
-        下拉菜单：trigger(children)、overlay、placement、click/hover、defaultOpen、
-        hoverOpenDelay/hoverCloseDelay 防抖；Esc 关闭需在应用内调用
-        initDropdownEsc()。
+        下拉菜单：children、overlay、open、defaultOpen、onOpenChange、trigger、hoverOpenDelay、hoverCloseDelay、placement、disabled、overlayClass、overlayId。
       </Paragraph>
 
       <Dropdown
@@ -58,6 +56,11 @@ export default function NavigationDropdown() {
         <span class="inline-block px-4 py-2 border border-slate-300 rounded cursor-pointer">
           悬停展开
         </span>
+      </Dropdown>
+
+      <Title level={2}>disabled</Title>
+      <Dropdown overlay={overlay} trigger="click" disabled>
+        <Button variant="default" disabled>禁用下拉</Button>
       </Dropdown>
     </div>
   );

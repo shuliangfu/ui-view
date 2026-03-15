@@ -11,8 +11,7 @@ export default function MessageMessage() {
       <div>
         <Title level={1}>Message</Title>
         <Paragraph>
-          全局提示：与 Toast 类似，固定为顶部居中形态；API 为 message.success /
-          error / info / warning。
+          全局提示（固定顶部居中）：message.success(content, duration?)、message.error/info/warning 同上、message.destroy() 关闭全部。duration 默认 3000ms。
         </Paragraph>
       </div>
 
@@ -46,6 +45,23 @@ export default function MessageMessage() {
             onClick={() => message.warning("请先登录")}
           >
             message.warning
+          </Button>
+        </div>
+        <Title level={2}>duration 与 destroy</Title>
+        <div class="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => message.info("5 秒后关闭", 5000)}
+          >
+            5 秒后关闭
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => message.destroy()}
+          >
+            message.destroy()
           </Button>
         </div>
       </section>

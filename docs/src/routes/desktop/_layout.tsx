@@ -130,6 +130,11 @@ const DATA_DISPLAY_SUBMENU = [
   { path: "/desktop/data-display/empty", label: "Empty", desc: "空状态" },
   { path: "/desktop/data-display/image", label: "Image", desc: "图片" },
   {
+    path: "/desktop/data-display/image-viewer",
+    label: "ImageViewer",
+    desc: "图片查看器",
+  },
+  {
     path: "/desktop/data-display/descriptions",
     label: "Descriptions",
     desc: "描述列表",

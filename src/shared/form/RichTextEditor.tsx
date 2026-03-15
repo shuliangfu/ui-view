@@ -884,7 +884,10 @@ export function RichTextEditor(props: RichTextEditorProps) {
         onKeyDown={handleKeyDown}
         ref={(el: HTMLDivElement | null) => {
           const v = typeof value === "function" ? value() : value;
-          if (el && v !== undefined && el.innerHTML !== v) {
+          if (!el || v === undefined) return;
+          // 正在编辑（编辑器有焦点）时不从 value 覆盖 innerHTML，避免输入时失焦
+          if (globalThis.document?.activeElement === el) return;
+          if (el.innerHTML !== v) {
             el.innerHTML = v;
           }
         }}

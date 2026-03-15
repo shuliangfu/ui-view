@@ -5,7 +5,9 @@ export default function DataDisplayImage() {
   return (
     <div class="space-y-6">
       <Title level={1}>Image</Title>
-      <Paragraph>图片：懒加载、占位、预览、object-fit、fallback。</Paragraph>
+      <Paragraph>
+        图片：src、alt、width、height、fit、placeholder、fallback、lazy、preview、previewDisabled、rounded。
+      </Paragraph>
       <div class="flex gap-4 flex-wrap">
         <Image
           src="https://picsum.photos/200/150"
@@ -22,6 +24,14 @@ export default function DataDisplayImage() {
           width={120}
           height={120}
           fallback="加载失败"
+        />
+        <Image
+          src="https://picsum.photos/100/100"
+          alt="lazy"
+          width={100}
+          height={100}
+          lazy
+          rounded="lg"
         />
       </div>
     </div>

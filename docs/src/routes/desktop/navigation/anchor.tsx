@@ -16,7 +16,7 @@ export default function NavigationAnchor() {
       <aside class="w-40 shrink-0">
         <Title level={2} class="text-base mb-2">Anchor</Title>
         <Paragraph class="text-xs mb-4">
-          锚点导航，点击平滑滚动；可配合 initAnchorSpy 做滚动高亮。
+          links、activeKey、onChange、class；点击平滑滚动，可配合 initAnchorSpy 做滚动高亮。
         </Paragraph>
         <Anchor
           links={links}

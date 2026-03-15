@@ -15,8 +15,7 @@ export default function FormSlider() {
       <div>
         <Title level={1}>Slider</Title>
         <Paragraph>
-          滑块：单值、range 双滑块、vertical 竖排、min/max/step、disabled
-          等全部用法。
+          滑块：value、min、max、step、range、vertical、disabled、onChange、onInput、name、id。
         </Paragraph>
       </div>
 

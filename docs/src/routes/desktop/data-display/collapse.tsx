@@ -26,14 +26,21 @@ export default function DataDisplayCollapse() {
   return (
     <div class="space-y-6">
       <Title level={1}>Collapse</Title>
-      <Paragraph>折叠面板：手风琴/多开、边框、尺寸、showArrow。</Paragraph>
+      <Paragraph>
+        折叠面板：items、activeKey、defaultActiveKey、onChange、accordion、bordered、ghost、size、showArrow、expandIcon。
+      </Paragraph>
+      <Title level={2}>受控 + 多开</Title>
       <Collapse items={items} activeKey={activeKey()} onChange={setActiveKey} />
+      <Title level={2}>accordion 手风琴 + bordered=false</Title>
       <Collapse
         items={items}
         defaultActiveKey={["1"]}
         accordion
         bordered={false}
       />
+      <Title level={2}>showArrow=false / size=sm</Title>
+      <Collapse items={items} defaultActiveKey={[]} showArrow={false} />
+      <Collapse items={items} defaultActiveKey={["1"]} size="sm" />
     </div>
   );
 }
