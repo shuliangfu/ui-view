@@ -108,32 +108,32 @@ export function Popconfirm(props: PopconfirmProps) {
               overlayClass,
             )}
           >
-          <div class="flex gap-2">
-            {showIcon && (
-              <span class="shrink-0 text-slate-400 dark:text-slate-500 mt-0.5">
-                <IconHelpCircle class="w-4 h-4" />
-              </span>
-            )}
-            <div class="flex-1">
-              <div class="text-sm mb-3">{title}</div>
-              <div class="flex justify-end gap-2">
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={(_e: Event) => handleCancel()}
-                >
-                  {cancelText}
-                </Button>
-                <Button
-                  variant={danger ? "danger" : "primary"}
-                  size="sm"
-                  onClick={(_e: Event) => handleConfirm()}
-                >
-                  {okText}
-                </Button>
+            <div class="flex gap-2">
+              {showIcon && (
+                <span class="shrink-0 text-slate-400 dark:text-slate-500 mt-0.5">
+                  <IconHelpCircle class="w-4 h-4" />
+                </span>
+              )}
+              <div class="flex-1">
+                <div class="text-sm mb-3">{title}</div>
+                <div class="flex justify-end gap-2">
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={(_e: Event) => handleCancel()}
+                  >
+                    {cancelText}
+                  </Button>
+                  <Button
+                    variant={danger ? "danger" : "primary"}
+                    size="sm"
+                    onClick={(_e: Event) => handleConfirm()}
+                  >
+                    {okText}
+                  </Button>
+                </div>
               </div>
             </div>
-          </div>
           </span>
         </>
       )}
