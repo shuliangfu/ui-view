@@ -105,7 +105,9 @@ export function PullRefresh(props: PullRefreshProps) {
     const delta = refs.currentY - refs.startY;
     if (delta <= 0) return;
     e.preventDefault();
-    const damp = delta > pullDistance ? pullDistance + (delta - pullDistance) * 0.3 : delta;
+    const damp = delta > pullDistance
+      ? pullDistance + (delta - pullDistance) * 0.3
+      : delta;
     refs.head.style.transform = `translateY(${damp}px)`;
   };
 
