@@ -135,7 +135,9 @@ export function Collapse(props: CollapseProps) {
                     isActive && "rotate-180",
                   )}
                 >
-                  {expandIcon != null ? expandIcon : <IconChevronDown class="w-full h-full" />}
+                  {expandIcon != null
+                    ? expandIcon
+                    : <IconChevronDown class="w-full h-full" />}
                 </span>
               )}
             </button>
