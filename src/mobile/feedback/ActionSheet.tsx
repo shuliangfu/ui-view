@@ -122,11 +122,12 @@ export function ActionSheet(props: ActionSheetProps) {
                   )}
                   <span class="flex-1 min-w-0">
                     <span>{action.label}</span>
-                    {action.description != null && action.description !== "" && (
-                      <div class="text-xs font-normal text-slate-500 dark:text-slate-400 mt-0.5">
-                        {action.description}
-                      </div>
-                    )}
+                    {action.description != null && action.description !== "" &&
+                      (
+                        <div class="text-xs font-normal text-slate-500 dark:text-slate-400 mt-0.5">
+                          {action.description}
+                        </div>
+                      )}
                   </span>
                 </button>
               ))}
