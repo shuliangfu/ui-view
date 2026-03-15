@@ -1,8 +1,15 @@
 /**
- * 导航组件（C 共用）：Pagination、Menu、Steps、PageHeader、Affix、Anchor、BackTop。
+ * 导航组件（C 共用）：Navbar、Pagination、Menu、Steps、PageHeader、Affix、Anchor、BackTop。
  * D：Dropdown、Breadcrumb → desktop/navigation；M：TabBar、NavBar → mobile/navigation。
  */
 export type { BreadcrumbItem } from "./breadcrumb-types.ts";
+export { Navbar, type NavbarProps } from "./Navbar.tsx";
+export {
+  Sidebar,
+  type SidebarItem,
+  type SidebarProps,
+  type SidebarSubItem,
+} from "./Sidebar.tsx";
 export { Pagination, type PaginationProps } from "./Pagination.tsx";
 export { Menu, type MenuItem, type MenuProps } from "./Menu.tsx";
 export {
