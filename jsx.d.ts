@@ -1,5 +1,5 @@
 /**
- * JSX 固有元素类型：供 examples 内 TSX 类型检查使用。
+ * JSX 固有元素类型：供 docs 内 TSX 类型检查使用。
  * 仅扩充常见元素，避免与 @dreamer/view 的 IntrinsicElements 索引签名重复。
  */
 declare global {

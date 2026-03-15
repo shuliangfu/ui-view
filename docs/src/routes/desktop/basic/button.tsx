@@ -9,7 +9,7 @@ export default function BasicButton() {
   return (
     <div class="space-y-8">
       <div>
-        <Title level={1}>Button 按钮</Title>
+        <Title level={1}>Button 按钮 222</Title>
         <Paragraph>支持 variant、size、disabled，与 type 等属性。</Paragraph>
       </div>
 

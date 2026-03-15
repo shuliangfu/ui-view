@@ -13,7 +13,7 @@ interface AppProps {
 
 export default function App({
   children,
-  title = "examples",
+  title = "docs",
   description = "使用 @dreamer/dweb 构建",
 }: AppProps) {
   return (

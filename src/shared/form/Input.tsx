@@ -70,6 +70,42 @@ const ClearIcon = () => (
   </svg>
 );
 
+/**
+ * 右侧清除或后缀：仅在内部读 value()，避免 Input 主体订阅 signal 导致整块重渲染失焦。
+ * 仅此子组件随 value 重跑，reconcile 只更新该槽位，input 节点保留。
+ */
+function InputClearOrSuffix(props: {
+  value?: string | (() => string);
+  allowClear: boolean;
+  disabled: boolean;
+  readOnly: boolean;
+  suffix?: unknown;
+  onClear: () => void;
+}) {
+  const { value, allowClear, disabled, readOnly, suffix, onClear } = props;
+  const val = typeof value === "function" ? value() : value;
+  const showClear = allowClear && val && !disabled && !readOnly;
+  if (showClear) {
+    return (
+      <button
+        type="button"
+        class="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer"
+        onClick={onClear}
+      >
+        <ClearIcon />
+      </button>
+    );
+  }
+  if (suffix) {
+    return (
+      <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-500 dark:text-slate-400">
+        {suffix}
+      </div>
+    );
+  }
+  return null;
+}
+
 export function Input(props: InputProps) {
   const {
     size = "md",
@@ -91,9 +127,8 @@ export function Input(props: InputProps) {
   } = props;
 
   const sizeCls = sizeClasses[size];
-  // 不在组件体内读 value()，否则会订阅 signal、每次输入导致 Input() 重跑并返回新函数引用，
-  // View reconcile 会因 oldItem !== newItem 整块 replaceChild，input 被替换、光标丢失。
-  // showClear 改在返回的函数内按需读取 value，保持返回的 getter 引用稳定，由 View 做 patch 更新。
+  // 禁止在组件体内读 value()：会订阅 signal，导致根 effect 重跑、整树重建、input 被替换失焦。
+  // value 透传给 <input value={value} />，由 View applyProps 对 getter 做 createEffect 仅更新 .value。
 
   const handleClear = () => {
     if (!onInput) return;
@@ -118,57 +153,40 @@ export function Input(props: InputProps) {
       error && errorCls,
       readOnly && readOnlyCls,
       prefix ? "pl-10" : undefined,
-      suffix ? "pr-10" : undefined,
+      suffix || allowClear ? "pr-10" : undefined,
       className,
     ),
     onInput,
     onChange,
   };
 
-  return () => {
-    const val = typeof value === "function" ? value() : value;
-    const showClear = allowClear && val && !disabled && !readOnly;
+  if (!prefix && !suffix && !allowClear) {
+    return () => <input {...inputProps} />;
+  }
 
-    if (!prefix && !suffix && !allowClear) {
-      return (
-        <input
-          {...inputProps}
-          value={val}
-        />
-      );
-    }
-
-    return (
-      <div class="relative w-full">
-        {prefix && (
-          <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-500 dark:text-slate-400">
-            {prefix}
-          </div>
+  return () => (
+    <div class="relative w-full">
+      {prefix && (
+        <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-500 dark:text-slate-400">
+          {prefix}
+        </div>
+      )}
+      <input
+        {...inputProps}
+        class={twMerge(
+          inputProps.class,
+          prefix ? "pl-10" : undefined,
+          suffix || allowClear ? "pr-10" : undefined,
         )}
-        <input
-          {...inputProps}
-          value={val}
-          class={twMerge(
-            inputProps.class,
-            prefix ? "pl-10" : undefined,
-            suffix || showClear ? "pr-10" : undefined,
-          )}
-        />
-        {showClear && (
-          <button
-            type="button"
-            class="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer"
-            onClick={handleClear}
-          >
-            <ClearIcon />
-          </button>
-        )}
-        {!showClear && suffix && (
-          <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-500 dark:text-slate-400">
-            {suffix}
-          </div>
-        )}
-      </div>
-    );
-  };
+      />
+      <InputClearOrSuffix
+        value={value}
+        allowClear={allowClear}
+        disabled={disabled}
+        readOnly={readOnly}
+        suffix={suffix}
+        onClear={handleClear}
+      />
+    </div>
+  );
 }

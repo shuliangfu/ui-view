@@ -1,7 +1,7 @@
 {
   "name": "@dreamer/ui-view",
   "version": "0.1.0",
-  "workspace": ["examples"],
+  "workspace": ["docs"],
   "license": "Apache-2.0",
   "description": "View framework UI components for Dreamer. Desktop and mobile with Tailwind v4 and light/dark theme.",
   "repository": {
@@ -33,10 +33,10 @@
     "check": "deno check ."
   },
   "imports": {
-    "@dreamer/view": "jsr:@dreamer/view@^1.1.5",
+    "@dreamer/view": "jsr:@dreamer/view@^1.1.8",
     "chart.js": "npm:chart.js@^4.5.1",
-    "prismjs": "npm:prismjs@^1.29.0",
-    "tailwind-merge": "npm:tailwind-merge@^2.6.0"
+    "prismjs": "npm:prismjs@^1.30.0",
+    "tailwind-merge": "npm:tailwind-merge@^2.6.1"
   },
   "nodeModulesDir": "auto",
   "compilerOptions": {
@@ -51,5 +51,8 @@
       "tags": ["recommended"],
       "exclude": ["no-explicit-any"]
     }
+  },
+  "fmt": {
+    "exclude": ["src/shared/data-display/CodeBlock.tsx"]
   }
 }

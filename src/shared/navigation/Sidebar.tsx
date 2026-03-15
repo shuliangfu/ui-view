@@ -48,18 +48,19 @@ const linkBase =
   "block rounded-md py-2 pl-3 pr-3 text-sm transition-colors whitespace-nowrap ";
 const linkNormal = linkBase +
   "text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100 ";
+/** active 仅保留字体颜色，无背景色 */
 const linkActive = linkBase +
-  "bg-teal-50 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300 font-medium ";
+  "text-teal-700 dark:text-teal-300 font-medium ";
 const overviewBase =
   "block rounded-md py-2 pl-3 pr-3 text-sm font-medium transition-colors ";
 const overviewNormal = overviewBase +
   "text-slate-700 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 dark:hover:text-slate-100 ";
 const overviewActive = overviewBase +
-  "bg-teal-50 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300 ";
+  "text-teal-700 dark:text-teal-300 ";
 const categoryBtnNormal =
   "flex w-full items-center gap-1 rounded-md py-1.5 pl-3 pr-3 text-left text-sm font-medium text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800 transition-colors";
 const categoryBtnActive =
-  "flex w-full items-center gap-1 rounded-md py-1.5 pl-3 pr-3 text-left text-sm font-medium bg-teal-50 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300";
+  "flex w-full items-center gap-1 rounded-md py-1.5 pl-3 pr-3 text-left text-sm font-medium text-teal-700 dark:text-teal-300";
 
 export function Sidebar(props: SidebarProps) {
   const {
@@ -80,29 +81,31 @@ export function Sidebar(props: SidebarProps) {
     return pathNorm === base || pathNorm.startsWith(base + "/");
   };
 
-  /** 用户点击展开的分类（手风琴） */
-  const [getOpenKeys, setOpenKeys] = createSignal<Set<string>>(new Set());
-  /** 用户手动收起的分类（当前路径在该分类下时仍会先展开，除非被收起） */
-  const [getCollapsedKeys, setCollapsedKeys] = createSignal<Set<string>>(
-    new Set(),
-  );
-
-  /** 分类是否展开：当前路径在该分类下 或 用户点击展开，且未被用户收起 */
-  const isExpanded = (path: string) =>
-    (getOpenKeys().has(path) || isCategoryActive(path)) &&
-    !getCollapsedKeys().has(path);
-
-  const toggleOpen = (path: string) => {
-    if (isExpanded(path)) {
-      setCollapsedKeys((prev) => new Set(prev).add(path));
-    } else {
-      setCollapsedKeys((prev) => {
-        const next = new Set(prev);
-        next.delete(path);
-        return next;
-      });
-      setOpenKeys(new Set([path]));
+  /**
+   * 手风琴：仅一个一级分类展开。
+   * 若为 null，则展开包含当前路径的分类（初始/导航后）；否则仅展开该 key。
+   */
+  const [getExpandedKey, setExpandedKey] = createSignal<string | null>(null);
+  /** 仅当路径变化（发生导航）时清除手动展开，避免用户点击其他分类后立刻被收起 */
+  const [getLastPath, setLastPath] = createSignal<string>(pathNorm);
+  if (getLastPath() !== pathNorm) {
+    setLastPath(pathNorm);
+    const key = getExpandedKey();
+    if (key !== null && !isCategoryActive(key)) {
+      setExpandedKey(null);
     }
+  }
+
+  /** 分类是否展开：当前为手风琴选中项，或（未手动选中时）当前路径在该分类下 */
+  const isExpanded = (path: string) => {
+    const currentKey = getExpandedKey();
+    if (currentKey !== null) return path === currentKey;
+    return isCategoryActive(path);
+  };
+
+  /** 点击一级分类：展开此项并收起其他（手风琴）；再次点击则收起 */
+  const toggleOpen = (path: string) => {
+    setExpandedKey((prev) => (prev === path ? null : path));
   };
 
   const asideClass = twMerge(

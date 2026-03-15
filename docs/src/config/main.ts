@@ -7,7 +7,7 @@ import type { AppConfig } from "@dreamer/dweb";
 
 const config: AppConfig = {
   // ========== Basic ==========
-  name: "examples",
+  name: "docs",
   version: "1.0.0",
   /** 框架语言（根据用户环境自动检测，可改为 "en-US"） （init 时按环境检测，可改为 zh-CN / en-US） */
   language: "zh-CN",
@@ -54,8 +54,9 @@ const config: AppConfig = {
     engine: "view",
     mode: "hybrid",
     // debug: false,
+    /** 关闭客户端激活：不注入 _client.js，仅输出服务端 HTML，链接点击整页跳转，可避免刷新时 hydrate 导致的闪动 */
     // ssr: {
-    //   hydrate: true,
+    //   hydrate: false,
     // },
     // ssg: {
     //   outputDir: "dist/static",
@@ -79,7 +80,7 @@ const config: AppConfig = {
       // excludePaths: ["node_modules", ".bun/install"],
       // debug: false,
     },
-    /** 客户端构建：alias 让打包器解析 @dreamer/ui-view 为上一级 ui-view 的 src（examples 在 ui-view 下） */
+    /** 客户端构建：alias 让打包器解析 @dreamer/ui-view 为上一级 ui-view 的 src（docs 在 ui-view 下） */
     client: {
       output: "dist/client",
       engine: "view",
