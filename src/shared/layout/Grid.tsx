@@ -54,10 +54,14 @@ export function Grid(props: GridProps) {
 }
 
 export interface GridItemProps {
+  /** 列表渲染时的稳定标识（由框架消费，不传入 DOM） */
+  key?: string | number;
   /** 占据列数（1 到 cols），默认 1 */
   span?: number;
-  /** 额外 class */
+  /** 额外 class（与 className 二选一，最终都落到 DOM class） */
   class?: string;
+  /** 额外 class，React 风格，与 class 二选一 */
+  className?: string;
   /** 子节点 */
   children?: unknown;
 }
@@ -84,11 +88,18 @@ function getSpanClass(span: number): string {
 }
 
 export function GridItem(props: GridItemProps) {
-  const { span = 1, class: className, children } = props;
+  const {
+    key,
+    span = 1,
+    class: classProp,
+    className: classNameProp,
+    children,
+  } = props;
   const spanCls = getSpanClass(span);
-
-  return () => (
-    <div class={twMerge(spanCls, className)}>
+  const extraClass = classProp ?? classNameProp ?? "";
+  const combined = twMerge(spanCls, extraClass);
+  return (
+    <div className={combined} key={key}>
       {children}
     </div>
   );
