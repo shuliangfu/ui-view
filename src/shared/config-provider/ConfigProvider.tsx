@@ -44,7 +44,10 @@ export function ConfigProvider(props: ConfigProviderProps) {
   });
 
   const resolvedTheme = theme === "system"
-    ? (typeof globalThis.matchMedia !== "undefined" && globalThis.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
+    ? (typeof globalThis.matchMedia !== "undefined" &&
+        globalThis.matchMedia("(prefers-color-scheme: dark)").matches
+      ? "dark"
+      : "light")
     : theme;
   const themeClass = resolvedTheme === "dark" ? "dark" : "";
 
