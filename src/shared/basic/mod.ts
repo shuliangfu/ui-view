@@ -13,7 +13,7 @@ export type { ParagraphProps, TextProps, TitleProps } from "./Typography.tsx";
 export { Badge } from "./Badge.tsx";
 export type { BadgeProps } from "./Badge.tsx";
 export { Avatar } from "./Avatar.tsx";
-export type { AvatarProps } from "./Avatar.tsx";
+export type { AvatarProps, AvatarSize } from "./Avatar.tsx";
 export { Skeleton } from "./Skeleton.tsx";
 export type { SkeletonProps } from "./Skeleton.tsx";
 export { Spinner } from "./Spinner.tsx";
