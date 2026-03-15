@@ -75,9 +75,14 @@ export function Drawer(props: DrawerProps) {
     elWithFlag._drawerAnimated = true;
     div.style.transition = "transform 0.2s ease-out";
     div.style.transform = isLeft ? "translateX(-100%)" : "translateX(100%)";
-    const raf = (globalThis as unknown as { requestAnimationFrame?: (cb: () => void) => number }).requestAnimationFrame;
-    if (raf) raf(() => { div.style.transform = "translateX(0)"; });
-    else div.style.transform = "translateX(0)";
+    const raf = (globalThis as unknown as {
+      requestAnimationFrame?: (cb: () => void) => number;
+    }).requestAnimationFrame;
+    if (raf) {
+      raf(() => {
+        div.style.transform = "translateX(0)";
+      });
+    } else div.style.transform = "translateX(0)";
   };
 
   return () => {
@@ -94,13 +99,13 @@ export function Drawer(props: DrawerProps) {
         aria-modal="true"
         aria-labelledby={title ? "drawer-title" : undefined}
         tabindex={-1}
-        onKeyDown={handleKeyDown as unknown as (e: Event) => void}
+        onKeyDown={(e: Event) => handleKeyDown(e as KeyboardEvent)}
       >
         <div
           class={twMerge(
             "absolute inset-0 bg-black/50 dark:bg-black/60 backdrop-blur-sm transition-opacity",
           )}
-          onClick={handleMaskClick as unknown as (e: Event) => void}
+          onClick={(e: Event) => handleMaskClick(e)}
           aria-hidden
         />
         <div
