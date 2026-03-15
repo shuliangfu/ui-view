@@ -13,6 +13,8 @@ import "prismjs/components/prism-typescript.js";
 // html 与 plaintext 通常已在 core 或通过 markup
 import "prismjs/components/prism-markup.js";
 import { twMerge } from "tailwind-merge";
+import { IconCopy } from "../basic/icons/mod.ts";
+import { toast } from "../feedback/toast-store.ts";
 
 /** 常用语言 id，与 Prism 的 language 一致 */
 export type CodeBlockLanguage =
@@ -42,6 +44,8 @@ export interface CodeBlockProps {
   title?: string | null;
   /** 是否显示复制按钮，默认 true */
   copyable?: boolean;
+  /** 是否显示左上角三色圆点（仿 macOS 窗口按钮），默认 true */
+  showWindowDots?: boolean;
   /** 复制成功后回调 */
   onCopy?: () => void;
   /** 是否长行自动换行，默认 false（横向滚动） */
@@ -52,18 +56,6 @@ export interface CodeBlockProps {
   preClass?: string;
   /** code 的 class */
   codeClass?: string;
-}
-
-/** 转义 HTML 以便安全显示纯文本 */
-function escapeHtml(text: string): string {
-  const map: Record<string, string> = {
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    '"': "&quot;",
-    "'": "&#39;",
-  };
-  return text.replace(/[&<>"']/g, (ch) => map[ch] ?? ch);
 }
 
 /** 内置 Prism token 样式（与 Tailwind 配色一致，支持 dark） */
@@ -133,6 +125,7 @@ export function CodeBlock(props: CodeBlockProps) {
     maxHeight,
     title,
     copyable = true,
+    showWindowDots = true,
     onCopy,
     wrapLongLines = false,
     class: className,
@@ -140,10 +133,11 @@ export function CodeBlock(props: CodeBlockProps) {
     codeClass,
   } = props;
 
-  const maxHeightStyle =
-    maxHeight != null
-      ? { maxHeight: typeof maxHeight === "number" ? `${maxHeight}px` : maxHeight }
-      : undefined;
+  const maxHeightStyle = maxHeight != null
+    ? {
+      maxHeight: typeof maxHeight === "number" ? `${maxHeight}px` : maxHeight,
+    }
+    : undefined;
 
   const lines = code.split("\n");
   const lineCount = lines.length;
@@ -154,7 +148,10 @@ export function CodeBlock(props: CodeBlockProps) {
     let lang = (language ?? "plaintext").toLowerCase();
     if (lang === "html") lang = "markup";
     if (lang === "shell") lang = "bash";
-    const prism = Prism as { languages?: Record<string, unknown>; highlight: (code: string, grammar: unknown, lang: string) => string };
+    const prism = Prism as {
+      languages?: Record<string, unknown>;
+      highlight: (code: string, grammar: unknown, lang: string) => string;
+    };
     const grammar = prism.languages?.[lang];
     try {
       if (grammar) {
@@ -169,8 +166,14 @@ export function CodeBlock(props: CodeBlockProps) {
 
   const handleCopy = () => {
     if (typeof globalThis.navigator?.clipboard?.writeText === "function") {
-      globalThis.navigator.clipboard.writeText(code).then(() => onCopy?.());
+      globalThis.navigator.clipboard.writeText(code).then(() => {
+        toast.success("复制成功", 2000);
+        onCopy?.();
+      }).catch(() => {
+        toast.error("复制失败", 2000);
+      });
     } else {
+      toast.error("复制失败", 2000);
       onCopy?.();
     }
   };
@@ -178,8 +181,11 @@ export function CodeBlock(props: CodeBlockProps) {
   const setWrapperRef = (el: unknown) => {
     const wrapper = el as HTMLElement | null;
     if (!wrapper) return;
-    if ((wrapper as HTMLElement & { _codeBlockStyle?: boolean })._codeBlockStyle) return;
-    (wrapper as HTMLElement & { _codeBlockStyle?: boolean })._codeBlockStyle = true;
+    if (
+      (wrapper as HTMLElement & { _codeBlockStyle?: boolean })._codeBlockStyle
+    ) return;
+    (wrapper as HTMLElement & { _codeBlockStyle?: boolean })._codeBlockStyle =
+      true;
     const style = wrapper.ownerDocument.createElement("style");
     style.textContent = PRISM_TOKEN_STYLES;
     wrapper.insertBefore(style, wrapper.firstChild);
@@ -193,40 +199,65 @@ export function CodeBlock(props: CodeBlockProps) {
         className,
       )}
     >
-      {(title != null && title !== "") || copyable ? (
-        <div class="flex items-center justify-between px-3 py-2 border-b border-slate-200 dark:border-slate-600 bg-slate-100/80 dark:bg-slate-700/50">
-          {title != null && title !== "" ? (
-            <span class="font-medium text-slate-700 dark:text-slate-300 truncate">
-              {title}
-            </span>
-          ) : (
-            <span />
-          )}
-          {copyable && (
-            <button
-              type="button"
-              class="shrink-0 px-2 py-1 text-xs rounded hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-400"
-              onClick={handleCopy}
-            >
-              复制
-            </button>
-          )}
-        </div>
-      ) : null}
-      <div class="flex overflow-hidden">
-        {showLineNumbers && lineCount > 0 ? (
-          <div
-            class="shrink-0 select-none py-3 pr-3 text-right text-slate-400 dark:text-slate-500 font-mono text-xs leading-relaxed border-r border-slate-200 dark:border-slate-600 bg-slate-100/50 dark:bg-slate-800/50"
-            aria-hidden
-          >
-            {lines.map((_, i) => (
-              <div key={i}>{lineNumberStart + i}</div>
-            ))}
+      {(title != null && title !== "") || showWindowDots
+        ? (
+          <div class="relative flex items-center justify-between gap-3 px-3 py-2 border-b border-slate-200 dark:border-slate-600 bg-slate-100/80 dark:bg-slate-700/50">
+            {/* 左上角三色圆点（仿 macOS 窗口按钮，仅装饰）；可通过 showWindowDots 关闭 */}
+            {showWindowDots && (
+              <div
+                class="relative z-10 flex items-center gap-1.5 shrink-0"
+                aria-hidden
+              >
+                <span
+                  class="w-2.5 h-2.5 rounded-full bg-[#ef4446]"
+                  title="关闭"
+                />
+                <span
+                  class="w-2.5 h-2.5 rounded-full bg-[#e5a00d]"
+                  title="最小化"
+                />
+                <span
+                  class="w-2.5 h-2.5 rounded-full bg-[#34c749]"
+                  title="最大化"
+                />
+              </div>
+            )}
+            {/* 标题相对整条标题栏绝对居中，不受左侧圆点影响 */}
+            {title != null && title !== "" && (
+              <span class="absolute inset-0 flex items-center justify-center pointer-events-none font-medium text-slate-700 dark:text-slate-300 truncate max-w-full px-12">
+                {title}
+              </span>
+            )}
           </div>
-        ) : null}
+        )
+        : null}
+      {/* 代码区域：复制按钮放在右上角，不占标题栏 */}
+      <div class="relative flex overflow-hidden">
+        {copyable && (
+          <button
+            type="button"
+            class="absolute top-2 right-2 z-10 p-2 rounded hover:bg-slate-200/80 dark:hover:bg-slate-600/80 text-slate-600 dark:text-slate-400 transition-colors"
+            onClick={handleCopy}
+            title="复制"
+            aria-label="复制"
+          >
+            <IconCopy class="w-4 h-4" />
+          </button>
+        )}
+        {showLineNumbers && lineCount > 0
+          ? (
+            <div
+              class="shrink-0 select-none py-3 pr-3 text-right text-slate-400 dark:text-slate-500 font-mono text-xs leading-relaxed border-r border-slate-200 dark:border-slate-600 bg-slate-100/50 dark:bg-slate-800/50"
+              aria-hidden
+            >
+              {lines.map((_, i) => <div key={i}>{lineNumberStart + i}</div>)}
+            </div>
+          )
+          : null}
         <pre
           class={twMerge(
             "m-0 flex-1 overflow-auto p-3 font-mono leading-relaxed",
+            copyable && "pr-12",
             wrapLongLines && "whitespace-pre-wrap wrap-break-word",
             !wrapLongLines && "whitespace-pre",
             preClass,
@@ -240,7 +271,6 @@ export function CodeBlock(props: CodeBlockProps) {
               codeClass,
             )}
           >
-            {escapeHtml(code)}
           </code>
         </pre>
       </div>
