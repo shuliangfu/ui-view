@@ -43,7 +43,9 @@ let scrollListenerAttached = false;
 function getScrollTarget(target: BackTopTarget | undefined): Element | null {
   if (target == null) return null;
   if (typeof target === "function") return target();
-  if (typeof target === "string") return globalThis.document?.querySelector(target) ?? null;
+  if (typeof target === "string") {
+    return globalThis.document?.querySelector(target) ?? null;
+  }
   return target;
 }
 
@@ -51,7 +53,8 @@ function getScrollTopFromTarget(target: Element | null): number {
   if (!target) {
     const doc = globalThis.document;
     if (!doc) return 0;
-    return doc.documentElement?.scrollTop ?? doc.body?.scrollTop ?? globalThis.scrollY ?? 0;
+    return doc.documentElement?.scrollTop ?? doc.body?.scrollTop ??
+      globalThis.scrollY ?? 0;
   }
   return (target as HTMLElement).scrollTop ?? 0;
 }
@@ -115,7 +118,10 @@ export function BackTop(props: BackTopProps) {
     if (t) {
       (t as HTMLElement).scrollTo?.({ top: 0, behavior: "smooth" });
     } else {
-      globalThis.document?.documentElement?.scrollTo?.({ top: 0, behavior: "smooth" });
+      globalThis.document?.documentElement?.scrollTo?.({
+        top: 0,
+        behavior: "smooth",
+      });
       globalThis.scrollTo?.({ top: 0, behavior: "smooth" });
     }
   };
