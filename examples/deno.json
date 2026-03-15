@@ -12,6 +12,7 @@
     "@dreamer/plugins": "jsr:@dreamer/plugins@^1.0.9",
     "@dreamer/view": "jsr:@dreamer/view@^1.1.5",
     "@dreamer/ui-view": "../src/mod.ts",
+    "@dreamer/ui-view/mobile": "../src/mobile/mod.ts",
 
     "postcss": "npm:postcss@8.4.39",
     "tailwindcss": "npm:tailwindcss@4.1.18",
