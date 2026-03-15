@@ -92,50 +92,50 @@ src/
 
 ### 3.1 基础组件（Basic）
 
-| 组件       | 说明                       | D/M/C | 备注                     |
-| ---------- | -------------------------- | ----- | ------------------------ |
+| 组件       | 说明                       | D/M/C | 备注                             |
+| ---------- | -------------------------- | ----- | -------------------------------- |
 | Button     | 按钮，支持 variant/size    | C     | 核心，三框架先上；已实现 loading |
-| Link       | 文字/图标链接              | C     | 可基于 `<a>` + 样式      |
-| Icon       | 图标容器/占位              | C     | 或与 icon 包配合         |
-| Typography | 排版：Title/Text/Paragraph | C     | 标题层级、正文、可省略号 |
-| Badge      | 角标、数字徽章             | C     | 常用于导航、购物车       |
-| Avatar     | 头像                       | C     | 尺寸用 SizeVariant       |
-| Skeleton   | 骨架屏                     | C     | 加载态                   |
-| Spinner    | 加载旋转/菊花              | C     | 加载态                   |
+| Link       | 文字/图标链接              | C     | 可基于 `<a>` + 样式              |
+| Icon       | 图标容器/占位              | C     | 或与 icon 包配合                 |
+| Typography | 排版：Title/Text/Paragraph | C     | 标题层级、正文、可省略号         |
+| Badge      | 角标、数字徽章             | C     | 常用于导航、购物车               |
+| Avatar     | 头像                       | C     | 尺寸用 SizeVariant               |
+| Skeleton   | 骨架屏                     | C     | 加载态                           |
+| Spinner    | 加载旋转/菊花              | C     | 加载态                           |
 
 ### 3.2 表单组件（Form）
 
-| 组件               | 说明                   | D/M/C | 备注                                        |
-| ------------------ | ---------------------- | ----- | ------------------------------------------- |
+| 组件               | 说明                   | D/M/C | 备注                                                               |
+| ------------------ | ---------------------- | ----- | ------------------------------------------------------------------ |
 | Input              | 单行输入               | C     | 桌面/移动可共用，移动可加大触控区；已实现 prefix/suffix/allowClear |
-| Search             | 搜索框                 | C     | 带搜索图标、清除，或作为 Input variant      |
-| Password           | 密码输入               | C     | 显隐切换、强度提示可选                      |
-| Textarea           | 多行输入               | C     | 同上                                        |
-| InputNumber        | 数字输入               | C     | 步进、范围、精度                            |
-| Select             | 单选下拉               | D/M   | 桌面下拉，移动可底部滚轮/全屏选择           |
-| MultiSelect        | 多选下拉               | D/M   | 多选、标签展示、全选                        |
-| AutoComplete       | 自动完成               | C     | 输入联想、搜索建议                          |
-| Cascader           | 级联选择               | D/M   | 省市区、分类多级                            |
-| TreeSelect         | 树选择                 | D     | 树形结构单选/多选                           |
-| Checkbox           | 多选勾选               | C     | 移动可放大点击区域                          |
-| CheckboxGroup      | 多选组                 | C     | 与 Checkbox 组合或内置于 Form               |
-| Radio              | 单选                   | C     | 同上                                        |
-| RadioGroup         | 单选组                 | C     | 与 Radio 组合或内置于 Form                  |
-| Switch             | 开关                   | C     | 常用                                        |
-| Slider             | 滑块                   | C     | 移动端手势友好                              |
-| Rate               | 评分                   | C     | 星级评分                                    |
-| DatePicker         | 日期选择               | D/M   | 桌面日历弹层，移动可底部/全屏               |
-| DateRangePicker    | 日期范围               | D/M   | 起止日期，可合并入 DatePicker 的 range 模式 |
-| TimePicker         | 时间选择               | C     | 时分秒                                      |
-| TimeRangePicker    | 时间范围（可选）       | C     | 起止时间                                    |
-| ColorPicker        | 颜色选择               | C     | 色板/取色器，主题、设计器场景               |
-| Upload             | 文件上传               | C     | 拖拽/点击、列表、进度                       |
-| Mentions           | @提及                  | C     | 输入时触发候选（评论、聊天）                |
-| Transfer           | 穿梭框                 | D     | 双列多选，也可用于表单「从候选集选出一批」  |
-| Form               | 表单容器（校验、布局） | C     | 与各表单组件组合                            |
-| FormItem           | 表单项包装             | C     | 标签、必填、错误提示、布局                  |
-| FormList           | 动态表单项（可选）     | C     | 动态增减表单项（如多条联系人）              |
-| **RichTextEditor** | **富文本编辑器**       | C     | 见下方说明                                  |
+| Search             | 搜索框                 | C     | 带搜索图标、清除，或作为 Input variant                             |
+| Password           | 密码输入               | C     | 显隐切换、强度提示可选                                             |
+| Textarea           | 多行输入               | C     | 同上                                                               |
+| InputNumber        | 数字输入               | C     | 步进、范围、精度                                                   |
+| Select             | 单选下拉               | D/M   | 桌面下拉，移动可底部滚轮/全屏选择                                  |
+| MultiSelect        | 多选下拉               | D/M   | 多选、标签展示、全选                                               |
+| AutoComplete       | 自动完成               | C     | 输入联想、搜索建议                                                 |
+| Cascader           | 级联选择               | D/M   | 省市区、分类多级                                                   |
+| TreeSelect         | 树选择                 | D     | 树形结构单选/多选                                                  |
+| Checkbox           | 多选勾选               | C     | 移动可放大点击区域                                                 |
+| CheckboxGroup      | 多选组                 | C     | 与 Checkbox 组合或内置于 Form                                      |
+| Radio              | 单选                   | C     | 同上                                                               |
+| RadioGroup         | 单选组                 | C     | 与 Radio 组合或内置于 Form                                         |
+| Switch             | 开关                   | C     | 常用                                                               |
+| Slider             | 滑块                   | C     | 移动端手势友好                                                     |
+| Rate               | 评分                   | C     | 星级评分                                                           |
+| DatePicker         | 日期选择               | D/M   | 桌面日历弹层，移动可底部/全屏                                      |
+| DateRangePicker    | 日期范围               | D/M   | 起止日期，可合并入 DatePicker 的 range 模式                        |
+| TimePicker         | 时间选择               | C     | 时分秒                                                             |
+| TimeRangePicker    | 时间范围（可选）       | C     | 起止时间                                                           |
+| ColorPicker        | 颜色选择               | C     | 色板/取色器，主题、设计器场景                                      |
+| Upload             | 文件上传               | C     | 拖拽/点击、列表、进度                                              |
+| Mentions           | @提及                  | C     | 输入时触发候选（评论、聊天）                                       |
+| Transfer           | 穿梭框                 | D     | 双列多选，也可用于表单「从候选集选出一批」                         |
+| Form               | 表单容器（校验、布局） | C     | 与各表单组件组合                                                   |
+| FormItem           | 表单项包装             | C     | 标签、必填、错误提示、布局                                         |
+| FormList           | 动态表单项（可选）     | C     | 动态增减表单项（如多条联系人）                                     |
+| **RichTextEditor** | **富文本编辑器**       | C     | 见下方说明                                                         |
 
 **富文本组件（RichTextEditor）说明**：
 
@@ -221,31 +221,35 @@ src/
 
 ### 3.7 数据展示（Data Display）
 
-| 组件         | 说明                | D/M/C | 备注                        |
-| ------------ | ------------------- | ----- | --------------------------- |
-| Table        | 表格                | D     | 桌面为主，移动可卡片化；已实现排序/行选择/展开/分页 |
-| List         | 列表                | C     | 桌面/移动均常用             |
-| Card         | 卡片                | C     | 通用；已实现 actions/onClick/hoverable/cover |
-| Tag          | 标签                | C     | 通用                        |
-| Empty        | 空状态              | C     | 通用                        |
-| Image        | 图片                | C     | 懒加载、占位、预览；已实现 loading/error 状态 |
-| Descriptions | 描述列表            | C     | 键值对展示                  |
-| Timeline     | 时间轴              | C     | 流程、动态                  |
-| Statistic    | 统计数值            | C     | 数字高亮、单位、趋势        |
-| Segmented    | 分段控制器          | C     | 多选一紧凑展示              |
-| Collapse     | 折叠面板            | C     | 与 Accordion 可二选一或统一 |
-| **Carousel** | **轮播图 / 幻灯片** | C     | 见下方说明；已实现 fade 切换效果 |
-| Calendar     | 日历                | C     | 月视图、选日                |
-| Comment      | 评论                | C     | 评论列表+回复结构（可选）   |
-| Tree         | 树形                | D     | 目录、结构数据              |
-| Transfer     | 穿梭框              | D     | 双列选择（可选）            |
-| **CodeBlock**| **代码块**          | C     | 见下方说明                  |
+| 组件          | 说明                | D/M/C | 备注                                                |
+| ------------- | ------------------- | ----- | --------------------------------------------------- |
+| Table         | 表格                | D     | 桌面为主，移动可卡片化；已实现排序/行选择/展开/分页 |
+| List          | 列表                | C     | 桌面/移动均常用                                     |
+| Card          | 卡片                | C     | 通用；已实现 actions/onClick/hoverable/cover        |
+| Tag           | 标签                | C     | 通用                                                |
+| Empty         | 空状态              | C     | 通用                                                |
+| Image         | 图片                | C     | 懒加载、占位、预览；已实现 loading/error 状态       |
+| Descriptions  | 描述列表            | C     | 键值对展示                                          |
+| Timeline      | 时间轴              | C     | 流程、动态                                          |
+| Statistic     | 统计数值            | C     | 数字高亮、单位、趋势                                |
+| Segmented     | 分段控制器          | C     | 多选一紧凑展示                                      |
+| Collapse      | 折叠面板            | C     | 与 Accordion 可二选一或统一                         |
+| **Carousel**  | **轮播图 / 幻灯片** | C     | 见下方说明；已实现 fade 切换效果                    |
+| Calendar      | 日历                | C     | 月视图、选日                                        |
+| Comment       | 评论                | C     | 评论列表+回复结构（可选）                           |
+| Tree          | 树形                | D     | 目录、结构数据                                      |
+| Transfer      | 穿梭框              | D     | 双列选择（可选）                                    |
+| **CodeBlock** | **代码块**          | C     | 见下方说明                                          |
 
 **CodeBlock（代码块）说明**：
 
-- **归属**：3.7 数据展示。用于在页面中展示代码片段，与 Image、Descriptions 等「展示类」组件并列；富文本编辑器（RichTextEditor）内的代码块可复用本组件或同一套高亮能力。
-- **能力**：基于 Prism 的语法高亮；行号、标题（如文件名）、复制按钮、最大高度滚动、长行换行；支持 js/ts/json/html/css/bash/markdown 等常用语言。
-- **实现**：轻量依赖 `prismjs`，内置 token 样式与 Tailwind 亮/暗色一致；可选行号、复制、标题栏。
+- **归属**：3.7 数据展示。用于在页面中展示代码片段，与 Image、Descriptions
+  等「展示类」组件并列；富文本编辑器（RichTextEditor）内的代码块可复用本组件或同一套高亮能力。
+- **能力**：基于 Prism
+  的语法高亮；行号、标题（如文件名）、复制按钮、最大高度滚动、长行换行；支持
+  js/ts/json/html/css/bash/markdown 等常用语言。
+- **实现**：轻量依赖 `prismjs`，内置 token 样式与 Tailwind
+  亮/暗色一致；可选行号、复制、标题栏。
 
 **Carousel（轮播图 / 幻灯片）说明**：
 
@@ -278,20 +282,20 @@ src/
 
 ### 3.9 移动端强化组件（Mobile-specific）
 
-| 组件        | 说明          | 备注                 |
-| ----------- | ------------- | -------------------- |
-| BottomSheet | 底部抽屉/半屏 | 与 Modal 语义对齐；已实现：title/footer/height/animationDuration |
-| ActionSheet | 底部动作列表  | 选择、操作；已实现：title/actions/icon/description/danger/disabled |
-| TabBar      | 底部 Tab 导航 | 主导航；已实现：items/activeKey/onChange/fixed/border/safeAreaInsetBottom |
-| PullRefresh | 下拉刷新      | 列表页；已实现：loading/onRefresh/文案/headHeight/pullDistance/disabled |
-| SwipeCell   | 左滑操作      | 列表项删除/更多；已实现：leftActions/rightActions/actionWidth/onOpen/onClose |
+| 组件        | 说明          | 备注                                                                                                                  |
+| ----------- | ------------- | --------------------------------------------------------------------------------------------------------------------- |
+| BottomSheet | 底部抽屉/半屏 | 与 Modal 语义对齐；已实现：title/footer/height/animationDuration                                                      |
+| ActionSheet | 底部动作列表  | 选择、操作；已实现：title/actions/icon/description/danger/disabled                                                    |
+| TabBar      | 底部 Tab 导航 | 主导航；已实现：items/activeKey/onChange/fixed/border/safeAreaInsetBottom                                             |
+| PullRefresh | 下拉刷新      | 列表页；已实现：loading/onRefresh/文案/headHeight/pullDistance/disabled                                               |
+| SwipeCell   | 左滑操作      | 列表项删除/更多；已实现：leftActions/rightActions/actionWidth/onOpen/onClose                                          |
 | NavBar      | 顶栏          | 标题、返回、右侧操作；已实现：title/leftText/rightText/leftArrow/left/right/fixed/placeholder/safeAreaInsetTop/border |
 
 ### 3.10 其它常用（Other）
 
-| 组件           | 说明     | D/M/C | 备注                       |
-| -------------- | -------- | ----- | -------------------------- |
-| BackTop        | 回到顶部 | C     | 已实现：visibilityHeight/target/visible/onVisibilityChange/right/bottom/onClick/children |
+| 组件           | 说明     | D/M/C | 备注                                                                                                       |
+| -------------- | -------- | ----- | ---------------------------------------------------------------------------------------------------------- |
+| BackTop        | 回到顶部 | C     | 已实现：visibilityHeight/target/visible/onVisibilityChange/right/bottom/onClick/children                   |
 | ConfigProvider | 全局配置 | C     | 已实现：theme（light/dark/system）、locale、componentSize、prefixCls；getConfig()/setConfig() 供子组件读取 |
 
 ---
