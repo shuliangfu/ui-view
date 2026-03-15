@@ -70,10 +70,15 @@ export function BottomSheet(props: BottomSheetProps) {
     elWithFlag._sheetAnimated = true;
     div.style.transition = `transform ${animationDuration}ms ease-out`;
     div.style.transform = "translateY(100%)";
-    const raf = (globalThis as unknown as { requestAnimationFrame?: (cb: () => void) => number })
+    const raf = (globalThis as unknown as {
+      requestAnimationFrame?: (cb: () => void) => number;
+    })
       .requestAnimationFrame;
-    if (raf) raf(() => { div.style.transform = "translateY(0)"; });
-    else div.style.transform = "translateY(0)";
+    if (raf) {
+      raf(() => {
+        div.style.transform = "translateY(0)";
+      });
+    } else div.style.transform = "translateY(0)";
   };
 
   return () => {
@@ -92,7 +97,7 @@ export function BottomSheet(props: BottomSheetProps) {
       >
         <div
           class="absolute inset-0 bg-black/50 dark:bg-black/60 transition-opacity"
-          onClick={handleMaskClick as unknown as (e: Event) => void}
+          onClick={(e: Event) => handleMaskClick(e)}
           aria-hidden
         />
         <div
