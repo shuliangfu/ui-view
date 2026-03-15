@@ -13,6 +13,10 @@ export interface LinkProps {
   /** 是否新窗口打开 */
   target?: "_blank" | "_self" | "_parent" | "_top";
   rel?: string;
+  /** 悬停提示（对应原生 title） */
+  title?: string;
+  /** 无障碍标签（对应原生 aria-label） */
+  "aria-label"?: string;
   onClick?: (e: Event) => void;
   children?: unknown;
 }
@@ -27,6 +31,8 @@ export function Link(props: LinkProps) {
     className: classNameProp,
     target,
     rel = target === "_blank" ? "noopener noreferrer" : undefined,
+    title,
+    "aria-label": ariaLabel,
     onClick,
     children,
   } = props;
@@ -38,6 +44,8 @@ export function Link(props: LinkProps) {
       class={twMerge(baseClasses, className)}
       target={target}
       rel={rel}
+      title={title}
+      aria-label={ariaLabel}
       onClick={onClick}
     >
       {children}
