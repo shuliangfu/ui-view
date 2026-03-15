@@ -79,7 +79,9 @@ function ToastItemEl(
       )}
     >
       <ToastIcon type={item.type} />
-      <span class="text-sm font-medium break-words flex-1">{item.content}</span>
+      <span class="text-sm font-medium wrap-break-word flex-1">
+        {item.content}
+      </span>
       <button
         type="button"
         aria-label="关闭"
