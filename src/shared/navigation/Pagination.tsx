@@ -59,7 +59,7 @@ export function Pagination(props: PaginationProps) {
   const canNext = safeCurrent < totalPages;
 
   const btnCls =
-    "min-w-[2rem] h-8 px-2 inline-flex items-center justify-center rounded-md text-sm font-medium border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed";
+    "min-w-8 h-8 px-2 inline-flex items-center justify-center rounded-md text-sm font-medium border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed";
   const activeCls =
     "border-blue-600 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 pointer-events-none";
 
@@ -113,7 +113,7 @@ export function Pagination(props: PaginationProps) {
             ? (
               <span
                 key={`ellipsis-${i}`}
-                class="min-w-[2rem] h-8 flex items-center justify-center text-slate-400"
+                class="min-w-8 h-8 flex items-center justify-center text-slate-400"
               >
                 …
               </span>
