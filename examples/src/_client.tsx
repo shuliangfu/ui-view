@@ -9,20 +9,14 @@ import { initApp } from "./_client.dep.tsx";
 
 initApp()
   .then((app) => {
-    // 主题由 @dreamer/plugins/theme 在 onResponse 注入脚本并暴露 window.$theme，此处仅绑定按钮
-    const btn = globalThis.document?.querySelector("[data-theme-toggle]");
-    if (
-      btn &&
-      typeof (globalThis as unknown as { $theme?: { toggle: () => string } })
-          .$theme?.toggle === "function"
-    ) {
-      btn.addEventListener(
-        "click",
-        () =>
-          (globalThis as unknown as { $theme: { toggle: () => string } }).$theme
-            .toggle(),
-      );
-    }
+    // 主题：用事件委托绑定 data-theme-toggle，避免路由/重渲染后按钮被替换导致点击失效
+    globalThis.document?.addEventListener("click", (e) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest("[data-theme-toggle]")) return;
+      const theme =
+        (globalThis as unknown as { $theme?: { toggle: () => void } }).$theme;
+      if (typeof theme?.toggle === "function") theme.toggle();
+    });
     // 获取当前路由（两种方式任选其一）
     const pathname = globalThis.location?.pathname || "/";
     const currentRoute = app.router.getCurrentRoute?.() ??
