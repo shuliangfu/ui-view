@@ -117,8 +117,8 @@ export function Input(props: InputProps) {
       sizeCls,
       error && errorCls,
       readOnly && readOnlyCls,
-      prefix && "pl-10",
-      suffix && "pr-10",
+      prefix ? "pl-10" : undefined,
+      suffix ? "pr-10" : undefined,
       className,
     ),
     onInput,
@@ -150,8 +150,8 @@ export function Input(props: InputProps) {
           value={val}
           class={twMerge(
             inputProps.class,
-            prefix && "pl-10",
-            (suffix || showClear) && "pr-10",
+            prefix ? "pl-10" : undefined,
+            suffix || showClear ? "pr-10" : undefined,
           )}
         />
         {showClear && (
