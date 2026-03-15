@@ -65,8 +65,9 @@ export function Transfer(props: TransferProps) {
   const rightRaw = dataSource.filter((i) => targetSet.has(i.key));
   const filterFn = (items: TransferItem[], q: string) => {
     if (!q.trim()) return items;
-    const fn = filterOption ?? ((input: string, item: TransferItem) =>
-      String(item.title).toLowerCase().includes(input.toLowerCase()));
+    const fn = filterOption ??
+      ((input: string, item: TransferItem) =>
+        String(item.title).toLowerCase().includes(input.toLowerCase()));
     return items.filter((i) => fn(q, i));
   };
   const leftItems = filterFn(leftRaw, searchValue?.[0] ?? "");
@@ -170,7 +171,8 @@ function TransferList(
           class="m-2 px-2 py-1 text-sm border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 w-[calc(100%-1rem)]"
           placeholder={searchPlaceholder}
           value={searchValue}
-          onInput={(e: Event) => onSearch?.((e.target as HTMLInputElement).value)}
+          onInput={(e: Event) =>
+            onSearch?.((e.target as HTMLInputElement).value)}
         />
       )}
       <ul
