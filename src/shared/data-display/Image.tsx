@@ -64,7 +64,9 @@ export function Image(props: ImageProps) {
     class: className,
   } = props;
 
-  const [status, setStatus] = createSignal<"loading" | "loaded" | "error">("loading");
+  const [status, setStatus] = createSignal<"loading" | "loaded" | "error">(
+    "loading",
+  );
 
   const style: Record<string, string> = {};
   if (width != null) {
@@ -89,7 +91,8 @@ export function Image(props: ImageProps) {
   const handleClick = () => {
     if (
       status() === "error" ||
-      (preview && !previewDisabled && typeof globalThis.document !== "undefined")
+      (preview && !previewDisabled &&
+        typeof globalThis.document !== "undefined")
     ) {
       if (status() === "error") return;
       const wrap = globalThis.document.createElement("div");
