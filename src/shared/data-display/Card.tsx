@@ -76,7 +76,7 @@ export function Card(props: CardProps) {
       onClick={onClick}
     >
       {cover != null && (
-        <div class="overflow-hidden rounded-t-lg [&:first-child]:rounded-t-lg">
+        <div class="overflow-hidden rounded-t-lg first:rounded-t-lg">
           {cover}
         </div>
       )}
@@ -112,7 +112,8 @@ export function Card(props: CardProps) {
               key={i}
               class={twMerge(
                 "flex-1 flex items-center justify-center py-3 text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 transition-colors cursor-pointer",
-                i < actions.length - 1 && "border-r border-slate-200 dark:border-slate-700",
+                i < actions.length - 1 &&
+                  "border-r border-slate-200 dark:border-slate-700",
               )}
             >
               {action}
