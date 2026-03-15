@@ -78,15 +78,15 @@ export function Carousel(props: CarouselProps) {
 
   const isHorizontal = direction === "horizontal";
   const transitionDuration = `${speed}ms`;
-  
+
   const isFade = effect === "fade";
 
   const trackStyle = isFade
     ? {
-        position: "relative" as const,
-        width: "100%",
-        height: "100%",
-      }
+      position: "relative" as const,
+      width: "100%",
+      height: "100%",
+    }
     : isHorizontal
     ? {
       transform: `translateX(-${current * (100 / slidesToShow)}%)`,
@@ -104,12 +104,12 @@ export function Carousel(props: CarouselProps) {
 
   const slideStyle = isFade
     ? {
-        position: "absolute" as const,
-        inset: 0,
-        width: "100%",
-        height: "100%",
-        transition: `opacity ${transitionDuration} ease-in-out`,
-      }
+      position: "absolute" as const,
+      inset: 0,
+      width: "100%",
+      height: "100%",
+      transition: `opacity ${transitionDuration} ease-in-out`,
+    }
     : isHorizontal
     ? { width: `${100 / slidesToShow}%`, flexShrink: 0 }
     : { height: `${100 / slides.length}%`, flexShrink: 0 };
@@ -127,7 +127,7 @@ export function Carousel(props: CarouselProps) {
         class={twMerge(
           !isFade && "transition-transform ease-out",
           !isFade && (isHorizontal ? "flex h-full" : "flex flex-col"),
-          isFade && "h-full w-full relative"
+          isFade && "h-full w-full relative",
         )}
         style={trackStyle}
       >
