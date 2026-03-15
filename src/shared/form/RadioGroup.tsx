@@ -1,6 +1,6 @@
 /**
  * RadioGroup 单选组（View）。
- * 选项列表、统一 name、当前选中 value，onChange 回传新 value。
+ * 选项列表、统一 name、当前选中 value，onChange 回传新 value；支持横向/纵向布局。
  */
 
 import { twMerge } from "tailwind-merge";
@@ -11,6 +11,9 @@ export interface RadioGroupOption {
   label: string;
   disabled?: boolean;
 }
+
+/** 布局方向：纵向（默认）或横向 */
+export type RadioGroupDirection = "vertical" | "horizontal";
 
 export interface RadioGroupProps {
   /** 选项列表 */
@@ -25,6 +28,8 @@ export interface RadioGroupProps {
   error?: boolean;
   /** 变更回调，回传新选中的 value */
   onChange?: (value: string) => void;
+  /** 布局方向：vertical 纵向、horizontal 横向，默认 "vertical" */
+  direction?: RadioGroupDirection;
   /** 额外 class（作用于容器） */
   class?: string;
 }
@@ -37,30 +42,39 @@ export function RadioGroup(props: RadioGroupProps) {
     disabled = false,
     error = false,
     onChange,
+    direction = "vertical",
     class: className,
   } = props;
 
-  return () => (
-    <div
-      class={twMerge("flex flex-col gap-2", className)}
-      role="radiogroup"
-      aria-label={name}
-      aria-invalid={error}
-    >
-      {options.map((opt) => (
-        <span key={opt.value}>
-          <Radio
-            name={name}
-            value={opt.value}
-            checked={value === opt.value}
-            disabled={disabled || opt.disabled}
-            error={error}
-            onChange={() => onChange?.(opt.value)}
-          >
-            {opt.label}
-          </Radio>
-        </span>
-      ))}
-    </div>
-  );
+  const directionCls =
+    direction === "horizontal"
+      ? "flex-row flex-wrap gap-x-4 gap-y-2"
+      : "flex-col gap-2";
+
+  return () => {
+    const resolvedValue = typeof value === "function" ? value() : (value ?? "");
+    return (
+      <div
+        class={twMerge("flex", directionCls, className)}
+        role="radiogroup"
+        aria-label={name}
+        aria-invalid={error}
+      >
+        {options.map((opt) => (
+          <span key={opt.value}>
+            <Radio
+              name={name}
+              value={opt.value}
+              checked={resolvedValue === opt.value}
+              disabled={disabled || opt.disabled}
+              error={error}
+              onChange={() => onChange?.(opt.value)}
+            >
+              {opt.label}
+            </Radio>
+          </span>
+        ))}
+      </div>
+    );
+  };
 }

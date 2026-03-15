@@ -82,12 +82,11 @@ export function BottomSheet(props: BottomSheetProps) {
   };
 
   return () => {
-    const g = globalThis as unknown as { document?: Document };
     if (!open) {
-      if (g.document?.body) g.document.body.style.overflow = "";
+      document.body.style.overflow = "";
       return null;
     }
-    if (g.document?.body) g.document.body.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
     return (
       <div
         class="fixed inset-0 z-300 flex flex-col justify-end"

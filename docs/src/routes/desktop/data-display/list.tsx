@@ -16,14 +16,18 @@ export default function DataDisplayList() {
     <div class="space-y-6">
       <Title level={1}>List</Title>
       <Paragraph>
-        列表：header、footer、split、loading、bordered、grid。
+        列表：items、renderItem、header、footer、loading、loadMore、split、size、bordered、grid、itemClass。
       </Paragraph>
+      <Title level={2}>header / footer / bordered</Title>
       <List
         header="列表标题"
         items={items}
         footer="共 3 条"
         bordered
       />
+      <Title level={2}>split=false / loading</Title>
+      <List items={items.slice(0, 2)} split={false} />
+      <List header="加载中" items={[]} loading />
     </div>
   );
 }

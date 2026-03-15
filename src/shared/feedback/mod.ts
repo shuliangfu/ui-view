@@ -12,6 +12,7 @@ export { NotificationContainer } from "./Notification.tsx";
 export { notification } from "./notification-store.ts";
 export type {
   NotificationItem,
+  NotificationPlacement,
   NotificationType,
   OpenOptions,
 } from "./notification-store.ts";

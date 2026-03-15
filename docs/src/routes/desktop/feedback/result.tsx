@@ -36,6 +36,22 @@ export default function FeedbackResult() {
       </div>
 
       <div class="space-y-6">
+        <Title level={2}>信息 / 警告</Title>
+        <Result
+          status="info"
+          title="提示"
+          subTitle="当前为信息类结果页。"
+          extra={<Button variant="primary">知道了</Button>}
+        />
+        <Result
+          status="warning"
+          title="注意"
+          subTitle="请确认后再继续操作。"
+          extra={<Button variant="primary">确认</Button>}
+        />
+      </div>
+
+      <div class="space-y-6">
         <Title level={2}>403 / 404</Title>
         <Result
           status="403"

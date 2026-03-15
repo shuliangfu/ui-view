@@ -28,9 +28,7 @@ export default function DataDisplayCodeBlock() {
     <div class="space-y-6">
       <Title level={1}>CodeBlock</Title>
       <Paragraph>
-        代码块：基于 Prism
-        的语法高亮，支持行号、复制、标题、最大高度、长行换行；归属 3.7
-        数据展示。
+        代码块：code、language、showLineNumbers、lineNumberStart、maxHeight、title、copyable、showWindowDots、onCopy、wrapLongLines、preClass、codeClass。
       </Paragraph>
 
       <div class="space-y-4">

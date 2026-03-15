@@ -22,7 +22,7 @@ export default function FormInputNumber() {
       <div>
         <Title level={1}>InputNumber</Title>
         <Paragraph>
-          数字输入：步进按钮 +/-、min、max、step、disabled、size 等全部用法。
+          数字输入：value、onChange、min、max、step、placeholder、size、disabled、name、id。
         </Paragraph>
       </div>
 
@@ -50,6 +50,13 @@ export default function FormInputNumber() {
               step={0.1}
               onChange={(e) => setVal2((e.target as HTMLInputElement).value)}
             />
+          </FormItem>
+        </section>
+
+        <section class="space-y-4">
+          <Title level={2}>placeholder</Title>
+          <FormItem label="占位">
+            <InputNumber placeholder="请输入数量" value="" min={0} max={999} />
           </FormItem>
         </section>
 

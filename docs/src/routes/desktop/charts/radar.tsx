@@ -34,7 +34,9 @@ export default function ChartsRadar() {
   return (
     <div class="space-y-4">
       <Title level={1}>ChartRadar</Title>
-      <Paragraph>雷达图，多维度对比。</Paragraph>
+      <Paragraph>
+        雷达图：data、options、class、width、height。多维度对比；data.labels 为维度名，datasets 含 label、data、borderColor、backgroundColor、pointBackgroundColor。
+      </Paragraph>
       <div class="w-full max-w-md h-64">
         <ChartRadar data={sampleData} options={options} class="w-full h-64" />
       </div>

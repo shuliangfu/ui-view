@@ -5,20 +5,24 @@ import { Button, Dialog, Paragraph, Title } from "@dreamer/ui-view";
 export default function FeedbackDialog() {
   const [open, setOpen] = createSignal(false);
   const [openDanger, setOpenDanger] = createSignal(false);
+  const [openLoading, setOpenLoading] = createSignal(false);
 
   return (
     <div class="space-y-6">
       <Title level={1}>Dialog</Title>
       <Paragraph>
-        确认/取消对话框：标题、内容、确定/取消；支持危险样式、确定 loading。
+        确认/取消对话框：title、content/children、confirmText、cancelText、onConfirm、onCancel；支持 danger、confirmLoading、showFooter。
       </Paragraph>
 
-      <div class="flex gap-2">
+      <div class="flex flex-wrap gap-2">
         <Button variant="primary" onClick={() => setOpen(true)}>
           打开 Dialog
         </Button>
         <Button variant="danger" onClick={() => setOpenDanger(true)}>
           危险操作
+        </Button>
+        <Button variant="secondary" onClick={() => setOpenLoading(true)}>
+          确定 Loading
         </Button>
       </div>
 
@@ -43,6 +47,18 @@ export default function FeedbackDialog() {
         danger
         onConfirm={() => setOpenDanger(false)}
         onCancel={() => setOpenDanger(false)}
+      />
+
+      <Dialog
+        open={openLoading()}
+        onClose={() => setOpenLoading(false)}
+        title="提交中"
+        content="确定后将显示 loading 状态，常用于异步提交。"
+        confirmText="确定"
+        cancelText="取消"
+        confirmLoading
+        onConfirm={() => setOpenLoading(false)}
+        onCancel={() => setOpenLoading(false)}
       />
     </div>
   );

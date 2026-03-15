@@ -9,8 +9,8 @@ export default function BasicButton() {
   return (
     <div class="space-y-8">
       <div>
-        <Title level={1}>Button 按钮 222</Title>
-        <Paragraph>支持 variant、size、disabled，与 type 等属性。</Paragraph>
+        <Title level={1}>Button 按钮</Title>
+        <Paragraph>支持 variant、size、disabled、loading、type、onClick 等属性。</Paragraph>
       </div>
 
       <section class="space-y-4">
@@ -53,7 +53,18 @@ export default function BasicButton() {
       </section>
 
       <section class="space-y-4">
-        <Title level={2}>type</Title>
+        <Title level={2}>loading 加载中</Title>
+        <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+          loading 为 true 时显示旋转图标并禁用点击。
+        </Paragraph>
+        <div class="flex flex-wrap gap-3">
+          <Button variant="primary" loading>加载中</Button>
+          <Button variant="secondary" loading>提交中</Button>
+        </div>
+      </section>
+
+      <section class="space-y-4">
+        <Title level={2}>type 按钮类型</Title>
         <div class="flex flex-wrap gap-3">
           <Button type="button" variant="primary">button</Button>
           <Button type="submit" variant="secondary">submit</Button>

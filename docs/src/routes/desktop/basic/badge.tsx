@@ -11,7 +11,7 @@ export default function BasicBadge() {
       <div>
         <Title level={1}>Badge 角标 / 徽章</Title>
         <Paragraph>
-          数字徽章、count + max、dot 圆点模式，variant / size。
+          数字徽章、count + max、dot 圆点、variant、size；无 count 时可用 children 显示自定义文案。
         </Paragraph>
       </div>
 
@@ -51,6 +51,18 @@ export default function BasicBadge() {
           <Badge variant="primary" size="sm" count={2} />
           <Badge variant="primary" size="md" count={3} />
           <Badge variant="primary" size="lg" count={4} />
+        </div>
+      </section>
+
+      <section class="space-y-4">
+        <Title level={2}>children 自定义文案</Title>
+        <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+          不传 count 时，用 children 作为徽章内显示内容（如 "New"、"Hot"）。
+        </Paragraph>
+        <div class="flex flex-wrap gap-3">
+          <Badge variant="primary">New</Badge>
+          <Badge variant="danger">Hot</Badge>
+          <Badge variant="success">Pro</Badge>
         </div>
       </section>
     </div>

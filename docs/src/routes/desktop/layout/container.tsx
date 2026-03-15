@@ -6,8 +6,7 @@ export default function LayoutContainer() {
     <div class="space-y-6">
       <Title level={1}>Container</Title>
       <Paragraph>
-        最大宽度容器，响应式 max-width；支持
-        sm/md/lg/xl/2xl/full，居中与内边距可选。
+        容器：maxWidth（sm/md/lg/xl/2xl/full）、centered、padded、class、children。
       </Paragraph>
 
       <Container
@@ -25,6 +24,15 @@ export default function LayoutContainer() {
         <p class="text-sm text-slate-600 dark:text-slate-400">
           maxWidth=xl（1280px）
         </p>
+      </Container>
+      <Title level={2}>centered=false / padded=false</Title>
+      <Container
+        maxWidth="md"
+        centered={false}
+        padded={false}
+        class="bg-slate-100 dark:bg-slate-800 rounded-lg py-4"
+      >
+        <p class="text-sm text-slate-600 dark:text-slate-400">不居中、无默认内边距</p>
       </Container>
     </div>
   );

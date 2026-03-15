@@ -1,8 +1,10 @@
 /**
  * Tabs 标签页（View）。
  * 桌面横排，支持受控/非受控、line/card 样式；需配合 createSignal 做 activeKey 状态。
+ * 内部维护 fallback state，保证点击切换在受控/非受控下均生效。
  */
 
+import { createSignal } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 
 export type TabsType = "line" | "card";
@@ -49,7 +51,13 @@ export function Tabs(props: TabsProps) {
     panelClass,
   } = props;
 
-  const activeKey = controlledKey ?? items[0]?.key ?? "";
+  const initialKey = controlledKey ?? items[0]?.key ?? "";
+  const [internalKey, setInternalKey] = createSignal(initialKey);
+  /** 受控时用 prop，否则用内部 state，保证点击后能立即更新 UI */
+  const getActiveKey = () =>
+    controlledKey !== undefined && controlledKey !== ""
+      ? controlledKey
+      : internalKey();
 
   const lineCls = "border-b border-slate-200 dark:border-slate-600 flex gap-1";
   const cardCls = "flex gap-1 p-1 rounded-lg bg-slate-100 dark:bg-slate-800";
@@ -64,45 +72,56 @@ export function Tabs(props: TabsProps) {
     ? "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 data-[active]:bg-white data-[active]:text-slate-900 data-[active]:shadow dark:data-[active]:bg-slate-700 dark:data-[active]:text-slate-100"
     : "";
 
-  return () => (
-    <div class={twMerge("w-full", className)}>
-      <div
-        role="tablist"
-        class={twMerge(
-          type === "line" ? lineCls : cardCls,
-          fullWidth && "w-full",
-          tabListClass,
-        )}
-      >
-        {items.map((item) => (
-          <button
-            key={item.key}
-            type="button"
-            role="tab"
-            aria-selected={activeKey === item.key}
-            aria-controls={`tabpanel-${item.key}`}
-            id={`tab-${item.key}`}
-            disabled={item.disabled}
-            data-active={activeKey === item.key ? "" : undefined}
-            class={twMerge(
-              tabBtnBase,
-              type === "line" ? tabBtnLine : tabBtnCard,
-              fullWidth && "flex-1",
-            )}
-            onClick={() => !item.disabled && onChange?.(item.key)}
-          >
-            {item.label}
-          </button>
-        ))}
+  const handleTabClick = (key: string) => {
+    const item = items.find((i) => i.key === key);
+    if (item?.disabled) return;
+    setInternalKey(key);
+    onChange?.(key);
+  };
+
+  return () => {
+    const activeKey = getActiveKey();
+    return (
+      <div class={twMerge("w-full", className)}>
+        <div
+          role="tablist"
+          class={twMerge(
+            type === "line" ? lineCls : cardCls,
+            fullWidth && "w-full",
+            tabListClass,
+          )}
+        >
+          {items.map((item) => (
+            <button
+              key={item.key}
+              type="button"
+              role="tab"
+              aria-selected={activeKey === item.key}
+              aria-controls={`tabpanel-${item.key}`}
+              id={`tab-${item.key}`}
+              disabled={item.disabled}
+              data-tab-key={item.key}
+              data-active={activeKey === item.key ? "" : undefined}
+              class={twMerge(
+                tabBtnBase,
+                type === "line" ? tabBtnLine : tabBtnCard,
+                fullWidth && "flex-1",
+              )}
+              onClick={() => handleTabClick(item.key)}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+        <div
+          role="tabpanel"
+          id={`tabpanel-${activeKey}`}
+          aria-labelledby={`tab-${activeKey}`}
+          class={twMerge("mt-4", panelClass)}
+        >
+          {items.find((i) => i.key === activeKey)?.children}
+        </div>
       </div>
-      <div
-        role="tabpanel"
-        id={`tabpanel-${activeKey}`}
-        aria-labelledby={`tab-${activeKey}`}
-        class={twMerge("mt-4", panelClass)}
-      >
-        {items.find((i) => i.key === activeKey)?.children}
-      </div>
-    </div>
-  );
+    );
+  };
 }

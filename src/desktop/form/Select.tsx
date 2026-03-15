@@ -1,9 +1,11 @@
 /**
  * Select 单选下拉（桌面版）。
- * 桌面：下拉展示；与 ANALYSIS D/M 约定一致，桌面实现放 desktop/form。
+ * 自定义下拉列表（非原生 select），触发区 + 浮层选项；与 D/M 约定一致，桌面实现放 desktop/form。
  */
 
+import { createSignal } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
+import { IconChevronDown } from "../../shared/basic/icons/mod.ts";
 import type { SizeVariant } from "../../shared/types.ts";
 
 export interface SelectOption {
@@ -24,6 +26,7 @@ export interface SelectProps {
   onChange?: (e: Event) => void;
   name?: string;
   id?: string;
+  /** 仅当未传 options 时使用：渲染原生 select，由 children 提供 option 节点 */
   children?: unknown;
 }
 
@@ -34,8 +37,14 @@ const sizeClasses: Record<SizeVariant, string> = {
   lg: "px-4 py-2.5 text-base rounded-lg",
 };
 
-const base =
-  "w-full border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border-slate-300 dark:border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:focus:ring-blue-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors appearance-none cursor-pointer";
+const triggerBase =
+  "w-full border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border-slate-300 dark:border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:focus:ring-blue-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer flex items-center justify-between gap-2 text-left";
+
+const optionBase =
+  "px-3 py-2 text-sm text-left w-full cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed first:rounded-t-lg last:rounded-b-lg";
+
+/** 与 Dropdown 共用 Esc 关闭注册键，需配合 initDropdownEsc 使用 */
+const DROPDOWN_ESC_KEY = "__lastDropdownClose" as const;
 
 export function Select(props: SelectProps) {
   const {
@@ -50,28 +59,123 @@ export function Select(props: SelectProps) {
     id,
     children,
   } = props;
+
+  const [open, setOpen] = createSignal(false);
   const sizeCls = sizeClasses[size];
+  const resolvedValue = typeof value === "function" ? value() : value;
+  const selectedOption = options?.find((o) => o.value === resolvedValue);
+  const displayText = selectedOption?.label ?? (placeholder ?? "");
+
+  const triggerChange = (newValue: string) => {
+    const synthetic = { target: { value: newValue } } as unknown as Event;
+    onChange?.(synthetic);
+    setOpen(false);
+  };
+
+  const handleBackdropClick = () => setOpen(false);
+
+  /** 有 options 时走自定义下拉；否则走原生 select（兼容 children 传 option） */
+  if (!options) {
+    const base =
+      "w-full border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border-slate-300 dark:border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer";
+    return () => (
+      <select
+        id={id}
+        name={name}
+        value={resolvedValue}
+        disabled={disabled}
+        class={twMerge(base, sizeCls, className)}
+        onChange={onChange}
+      >
+        {children}
+      </select>
+    );
+  }
+
   return () => (
-    <select
-      id={id}
-      name={name}
-      value={value}
-      disabled={disabled}
-      class={twMerge(base, sizeCls, className)}
-      onChange={onChange}
-    >
-      {options
-        ? (
-          <>
-            {placeholder != null && <option value="">{placeholder}</option>}
+    <span class={twMerge("relative inline-block w-full", className)}>
+      <input type="hidden" name={name} value={resolvedValue ?? ""} />
+      <button
+        type="button"
+        id={id}
+        disabled={disabled}
+        aria-haspopup="listbox"
+        aria-expanded={open()}
+        aria-label={displayText || placeholder || "选择"}
+        class={twMerge(triggerBase, sizeCls)}
+        onClick={() => !disabled && setOpen((o) => !o)}
+      >
+        <span
+          class={selectedOption
+            ? "text-slate-900 dark:text-slate-100"
+            : "text-slate-400 dark:text-slate-500"}
+        >
+          {displayText}
+        </span>
+        <IconChevronDown
+          size="sm"
+          class={twMerge(
+            "shrink-0 text-slate-400 dark:text-slate-500 transition-transform",
+            open() && "rotate-180",
+          )}
+        />
+      </button>
+      {open() && (
+        <>
+          {typeof globalThis !== "undefined" &&
+            (() => {
+              const g = globalThis as unknown as Record<
+                string,
+                (() => void) | undefined
+              >;
+              g[DROPDOWN_ESC_KEY] = () => setOpen(false);
+              return null;
+            })()}
+          <div
+            class="fixed inset-0 z-40"
+            aria-hidden
+            onClick={handleBackdropClick}
+          />
+          <div
+            role="listbox"
+            aria-activedescendant={selectedOption?.value}
+            class="absolute z-50 top-full left-0 right-0 mt-1 py-1 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-lg max-h-60 overflow-auto"
+          >
+            {placeholder != null && (
+              <button
+                type="button"
+                role="option"
+                aria-selected={!resolvedValue}
+                class={twMerge(
+                  optionBase,
+                  !resolvedValue &&
+                    "bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300",
+                )}
+                onClick={() => triggerChange("")}
+              >
+                {placeholder}
+              </button>
+            )}
             {options.map((opt) => (
-              <option key={opt.value} value={opt.value} disabled={opt.disabled}>
+              <button
+                key={opt.value}
+                type="button"
+                role="option"
+                aria-selected={resolvedValue === opt.value}
+                disabled={opt.disabled}
+                class={twMerge(
+                  optionBase,
+                  resolvedValue === opt.value &&
+                    "bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300",
+                )}
+                onClick={() => !opt.disabled && triggerChange(opt.value)}
+              >
                 {opt.label}
-              </option>
+              </button>
             ))}
-          </>
-        )
-        : children}
-    </select>
+          </div>
+        </>
+      )}
+    </span>
   );
 }

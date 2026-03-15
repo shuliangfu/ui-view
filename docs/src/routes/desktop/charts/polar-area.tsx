@@ -29,7 +29,9 @@ export default function ChartsPolarArea() {
   return (
     <div class="space-y-4">
       <Title level={1}>PolarAreaChart</Title>
-      <Paragraph>极区图，极坐标下的扇形面积。</Paragraph>
+      <Paragraph>
+        极区图：data、options、class、width、height。极坐标下的扇形面积；data 结构类似饼图，datasets[].data 对应各扇区数值。
+      </Paragraph>
       <div class="w-full max-w-md h-64">
         <ChartPolarArea
           data={sampleData}

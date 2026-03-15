@@ -24,8 +24,7 @@ export default function FormTimeRangePicker() {
       <div>
         <Title level={1}>TimeRangePicker</Title>
         <Paragraph>
-          时间范围：start/end、onChange([start, end])、size、disabled
-          等全部用法。
+          TimeRangePicker：start、end、onChange([start, end])、size、disabled、class、name、id。起止时间为 HH:mm 或 HH:mm:ss。
         </Paragraph>
       </div>
 

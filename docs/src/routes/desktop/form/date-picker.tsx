@@ -15,7 +15,7 @@ export default function FormDatePicker() {
       <div>
         <Title level={1}>DatePicker</Title>
         <Paragraph>
-          日期选择：value、min、max、size、disabled 等全部用法。
+          日期选择：value、onChange、min、max、size、disabled、name、id。
         </Paragraph>
       </div>
 

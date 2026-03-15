@@ -11,8 +11,7 @@ export default function BasicSkeleton() {
       <div>
         <Title level={1}>Skeleton 骨架屏</Title>
         <Paragraph>
-          加载占位，支持 size 与自定义
-          class（宽高）。下方为模拟整页排版的骨架示例。
+          Skeleton：size（xs/sm/md/lg）、class。用于加载占位，可用 class 自定义宽高（如 w-full h-4）。
         </Paragraph>
       </div>
 

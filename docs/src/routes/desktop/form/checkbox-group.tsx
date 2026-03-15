@@ -27,8 +27,7 @@ export default function FormCheckboxGroup() {
       <div>
         <Title level={1}>CheckboxGroup</Title>
         <Paragraph>
-          多选组：options、value 数组、disabled 项、整组 disabled、error
-          等全部用法。
+          多选组：options、value、onChange、name、disabled、error、direction（vertical/horizontal 横向纵向布局）。
         </Paragraph>
       </div>
 
@@ -51,6 +50,18 @@ export default function FormCheckboxGroup() {
               options={options}
               value={val2}
               onChange={(v) => setVal2(v)}
+            />
+          </FormItem>
+        </section>
+
+        <section class="space-y-4">
+          <Title level={2}>direction=horizontal（横向）</Title>
+          <FormItem label="横向多选组">
+            <CheckboxGroup
+              options={options}
+              value={val2}
+              onChange={(v) => setVal2(v)}
+              direction="horizontal"
             />
           </FormItem>
         </section>

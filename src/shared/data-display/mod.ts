@@ -17,6 +17,7 @@ export {
 export { Card, type CardProps } from "./Card.tsx";
 export { List, type ListItemProps, type ListProps } from "./List.tsx";
 export { Image, type ImageProps } from "./Image.tsx";
+export { ImageViewer, type ImageViewerProps } from "./ImageViewer.tsx";
 export {
   Timeline,
   type TimelineItemProps,

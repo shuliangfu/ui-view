@@ -123,6 +123,7 @@ import {
   IconDownload,
   IconDroplet,
   IconEdit,
+  IconExitFullscreen,
   IconExternalLink,
   IconEye,
   IconEyeOff,
@@ -181,7 +182,6 @@ import {
   IconMessageSquare,
   IconMic,
   IconMicOff,
-  IconMinimize2,
   IconMinus,
   IconMinusCircle,
   IconMoon,
@@ -386,7 +386,7 @@ export default function BasicIcon() {
     { Component: IconRotateCw, name: "RotateCw" },
     { Component: IconRotateCcw, name: "RotateCcw" },
     { Component: IconMaximize2, name: "Maximize2" },
-    { Component: IconMinimize2, name: "Minimize2" },
+    { Component: IconExitFullscreen, name: "ExitFullscreen" },
     { Component: IconSettings, name: "Settings" },
     { Component: IconFilter, name: "Filter" },
     { Component: IconArchive, name: "Archive" },
@@ -830,8 +830,7 @@ export default function BasicIcon() {
       <div>
         <Title level={1}>Icon 图标</Title>
         <Paragraph>
-          图标容器 Icon 统一
-          size/class；内置图标按分类展示，每个图标单独导出，按需引入以控制包体积。
+          图标：Icon 容器支持 size（xs/sm/md/lg）、class、children（自定义 SVG）；各内置图标组件（如 IconClose）同样支持 size、class 等 IconComponentProps。内置图标按分类展示，按需引入以控制包体积。
         </Paragraph>
       </div>
 

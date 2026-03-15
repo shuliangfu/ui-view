@@ -21,8 +21,7 @@ export default function FormSelect() {
       <div>
         <Title level={1}>Select</Title>
         <Paragraph>
-          单选下拉：options、placeholder、disabled 项、disabled、size
-          等全部用法。
+          单选下拉：options、value、placeholder、onChange、size、disabled、name、id。
         </Paragraph>
       </div>
 
@@ -55,6 +54,20 @@ export default function FormSelect() {
           <Title level={2}>disabled</Title>
           <FormItem label="禁用">
             <Select options={options} value="a" disabled />
+          </FormItem>
+        </section>
+
+        <section class="space-y-4">
+          <Title level={2}>name / id</Title>
+          <FormItem label="表单字段" id="select-name">
+            <Select
+              id="select-name"
+              name="city"
+              options={options}
+              value={val}
+              onChange={(e) => setVal((e.target as HTMLSelectElement).value)}
+              placeholder="请选择城市"
+            />
           </FormItem>
         </section>
 

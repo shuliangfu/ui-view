@@ -26,12 +26,13 @@ export default function FormSliderRate() {
       <div>
         <Title level={1}>滑块与评分</Title>
         <Paragraph>
-          Slider（单值 / 范围）、Rate 示例。
+          Slider：value、min、max、step、range、vertical、disabled、onChange、onInput、class、name、id。Rate：value、count、allowHalf、disabled、onChange、class。
         </Paragraph>
       </div>
 
       <Form layout="vertical" class="max-w-xl space-y-4">
-        <FormItem label="Slider 单值">
+        <Title level={2}>Slider 单值</Title>
+        <FormItem label="单值">
           {() => (
             <Slider
               value={sliderVal()}
@@ -42,7 +43,8 @@ export default function FormSliderRate() {
             />
           )}
         </FormItem>
-        <FormItem label="Slider 范围">
+        <Title level={2}>Slider 范围</Title>
+        <FormItem label="范围">
           {() => (
             <Slider
               range
@@ -56,13 +58,30 @@ export default function FormSliderRate() {
             />
           )}
         </FormItem>
-        <FormItem label="Rate">
+        <Title level={2}>Rate</Title>
+        <FormItem label="评分">
           {() => (
             <Rate
               value={rateVal()}
               onChange={(v) => setRateVal(v)}
               count={5}
             />
+          )}
+        </FormItem>
+        <Title level={2}>Rate allowHalf / disabled</Title>
+        <FormItem label="半星">
+          {() => (
+            <Rate
+              value={2.5}
+              onChange={() => {}}
+              count={5}
+              allowHalf
+            />
+          )}
+        </FormItem>
+        <FormItem label="禁用">
+          {() => (
+            <Rate value={3} count={5} disabled onChange={() => {}} />
           )}
         </FormItem>
       </Form>

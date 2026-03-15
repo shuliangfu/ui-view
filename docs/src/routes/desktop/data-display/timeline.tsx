@@ -23,10 +23,14 @@ export default function DataDisplayTimeline() {
     <div class="space-y-6">
       <Title level={1}>Timeline</Title>
       <Paragraph>
-        时间轴：流程、动态，支持 left/right/alternate、颜色、pending。
+        时间轴：items（key、label、children、color、dot、pending）、mode（left/right/alternate）、pending。
       </Paragraph>
+      <Title level={2}>mode=left</Title>
       <Timeline items={items} mode="left" />
+      <Title level={2}>mode=alternate</Title>
       <Timeline items={items.slice(0, 3)} mode="alternate" />
+      <Title level={2}>mode=right</Title>
+      <Timeline items={items.slice(0, 2)} mode="right" />
     </div>
   );
 }

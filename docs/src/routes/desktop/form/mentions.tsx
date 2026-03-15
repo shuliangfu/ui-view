@@ -60,9 +60,7 @@ export default function FormMentions() {
       <div>
         <Title level={1}>Mentions</Title>
         <Paragraph>
-          @ 提及：输入 @
-          触发候选（showDropdown/dropdownOptions/onSelectOption）、value/onInput/onChange、placeholder、rows、disabled
-          等全部用法。
+          Mentions：value、onInput、onChange、placeholder、rows、showDropdown、dropdownOptions、onSelectOption、disabled、class。输入 @ 触发候选下拉，选项为 MentionOption[]（value、label）。
         </Paragraph>
       </div>
 

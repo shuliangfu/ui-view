@@ -14,7 +14,7 @@ export default function FormCheckbox() {
       <div>
         <Title level={1}>Checkbox</Title>
         <Paragraph>
-          勾选：checked、disabled、error、children 文案等全部用法。
+          勾选：checked、disabled、error、name、value、id、onChange、children。
         </Paragraph>
       </div>
 
@@ -46,6 +46,22 @@ export default function FormCheckbox() {
           </FormItem>
           <FormItem label="已选禁用">
             <Checkbox checked disabled>禁用已选</Checkbox>
+          </FormItem>
+        </section>
+
+        <section class="space-y-4">
+          <Title level={2}>name / value / id（表单提交与无障碍）</Title>
+          <FormItem label="带 name 和 value">
+            <Checkbox
+              name="agree"
+              value="yes"
+              id="input-agree"
+              checked={checked}
+              onChange={(e) =>
+                setChecked((e.target as HTMLInputElement).checked)}
+            >
+              同意协议
+            </Checkbox>
           </FormItem>
         </section>
       </Form>

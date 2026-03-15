@@ -11,7 +11,7 @@ export default function BasicLink() {
       <div>
         <Title level={1}>Link 链接</Title>
         <Paragraph>
-          基于 &lt;a&gt;，支持 href、target、rel、class 等。
+          基于 &lt;a&gt;，支持 href、target、rel、title、class、onClick 等。
         </Paragraph>
       </div>
 
@@ -23,9 +23,19 @@ export default function BasicLink() {
       </section>
 
       <section class="space-y-4">
-        <Title level={2}>新窗口</Title>
+        <Title level={2}>新窗口 target / rel</Title>
+        <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+          新窗口打开建议加 rel="noopener noreferrer"；title 为悬停提示。
+        </Paragraph>
         <p>
-          <Link href="https://jsr.io" target="_blank">JSR 新窗口打开</Link>
+          <Link
+            href="https://jsr.io"
+            target="_blank"
+            rel="noopener noreferrer"
+            title="打开 JSR 官网"
+          >
+            JSR 新窗口打开
+          </Link>
         </p>
       </section>
 

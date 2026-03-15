@@ -40,7 +40,9 @@ export default function ChartsBubble() {
   return (
     <div class="space-y-4">
       <Title level={1}>ChartBubble</Title>
-      <Paragraph>气泡图，二维坐标 + 气泡大小表示第三维。</Paragraph>
+      <Paragraph>
+        气泡图：data、options、class、width、height。二维坐标 + 气泡大小表示第三维；data.datasets[].data 为 { x, y, r } 数组，r 为半径。
+      </Paragraph>
       <div class="w-full max-w-2xl h-64">
         <ChartBubble data={sampleData} options={options} class="w-full h-64" />
       </div>

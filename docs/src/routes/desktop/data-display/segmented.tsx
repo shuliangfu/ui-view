@@ -15,15 +15,25 @@ export default function DataDisplaySegmented() {
     <div class="space-y-6">
       <Title level={1}>Segmented</Title>
       <Paragraph>
-        分段控制器：多选一紧凑展示，支持 block、size、disabled。
+        分段控制器：options、value、onChange、block、size、disabled。
       </Paragraph>
       <Segmented options={options} value={value()} onChange={setValue} />
+      <Title level={2}>block / size=lg</Title>
       <Segmented
         options={options}
         value={value()}
         onChange={setValue}
         block
         size="lg"
+      />
+      <Title level={2}>disabled 项</Title>
+      <Segmented
+        options={[
+          ...options,
+          { value: "禁用", label: "禁用", disabled: true },
+        ]}
+        value={value()}
+        onChange={setValue}
       />
       <p class="text-sm text-slate-500">当前: {value()}</p>
     </div>

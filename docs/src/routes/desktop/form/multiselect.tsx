@@ -47,8 +47,7 @@ export default function FormMultiSelect() {
       <div>
         <Title level={1}>MultiSelect</Title>
         <Paragraph>
-          多选下拉：全选/清空按钮、options、含 disabled 项、disabled、size
-          等全部用法。
+          多选下拉：options、value、onChange、size、disabled、name、id；选项可设 disabled。
         </Paragraph>
       </div>
 

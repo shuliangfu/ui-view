@@ -50,6 +50,15 @@ export default function FeedbackAlert() {
       </div>
 
       <div class="space-y-3">
+        <Title level={2}>不显示图标（showIcon=false）</Title>
+        <Alert
+          type="info"
+          message="仅文案，不显示左侧图标"
+          showIcon={false}
+        />
+      </div>
+
+      <div class="space-y-3">
         <Title level={2}>横幅样式（banner）</Title>
         <Alert
           type="warning"

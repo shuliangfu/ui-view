@@ -27,6 +27,32 @@ export default function FeedbackPopover() {
             无标题 Bottom
           </span>
         </Popover>
+        <Popover
+          title="左侧"
+          content="placement=left"
+          placement="left"
+        >
+          <span class="px-3 py-1.5 rounded bg-slate-200 dark:bg-slate-600 cursor-default">
+            Left
+          </span>
+        </Popover>
+        <Popover
+          title="右侧"
+          content="placement=right"
+          placement="right"
+        >
+          <span class="px-3 py-1.5 rounded bg-slate-200 dark:bg-slate-600 cursor-default">
+            Right
+          </span>
+        </Popover>
+      </div>
+      <div class="pt-4">
+        <Title level={2}>arrow=false 无箭头</Title>
+        <Popover content="不显示箭头" placement="top" arrow={false}>
+          <span class="px-3 py-1.5 rounded bg-slate-200 dark:bg-slate-600 cursor-default">
+            无箭头
+          </span>
+        </Popover>
       </div>
     </div>
   );

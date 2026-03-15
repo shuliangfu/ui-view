@@ -28,8 +28,7 @@ export default function FormTransfer() {
       <div>
         <Title level={1}>Transfer</Title>
         <Paragraph>
-          穿梭框：双列、批量移动、showSearch 搜索筛选、titles、disabled 项、整组
-          disabled 等全部用法。
+          穿梭框：dataSource、targetKeys、onChange、titles、showSearch、searchPlaceholder、searchValue、onSearch、filterOption、render、listStyle、disabled。
         </Paragraph>
       </div>
 

@@ -24,8 +24,7 @@ export default function NavigationMenu() {
     <div class="space-y-6">
       <Title level={1}>Menu</Title>
       <Paragraph>
-        菜单：多级 items、selectedKeys、openKeys/onOpenChange、垂直/水平、
-        usePopoverSubmenu（水平子菜单弹出）、键盘上下键（focusedKey/onFocusChange）。
+        菜单：items、selectedKeys、onClick、mode、defaultOpenKeys、openKeys、onOpenChange、usePopoverSubmenu、focusedKey、onFocusChange、class。
       </Paragraph>
 
       <div class="flex flex-col gap-8">

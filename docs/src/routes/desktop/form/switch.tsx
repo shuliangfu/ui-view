@@ -14,8 +14,7 @@ export default function FormSwitch() {
       <div>
         <Title level={1}>Switch</Title>
         <Paragraph>
-          开关：checked、disabled、error、checkedChildren/unCheckedChildren
-          等全部用法。
+          开关：checked、onChange、disabled、error、name、id、checkedChildren、unCheckedChildren。
         </Paragraph>
       </div>
 
@@ -40,6 +39,19 @@ export default function FormSwitch() {
                 setChecked((e.target as HTMLInputElement).checked)}
               checkedChildren="开"
               unCheckedChildren="关"
+            />
+          </FormItem>
+        </section>
+
+        <section class="space-y-4">
+          <Title level={2}>name / id</Title>
+          <FormItem label="表单字段">
+            <Switch
+              name="notify"
+              id="switch-notify"
+              checked={checked}
+              onChange={(e) =>
+                setChecked((e.target as HTMLInputElement).checked)}
             />
           </FormItem>
         </section>

@@ -25,8 +25,7 @@ export default function FormInput() {
       <div>
         <Title level={1}>Input</Title>
         <Paragraph>
-          单行输入：placeholder、required、error、readOnly、disabled、size
-          等全部用法展示。
+          单行输入：size、placeholder、value、type、readOnly、required、error、disabled、prefix、suffix、allowClear、onInput、onChange、name、id。
         </Paragraph>
       </div>
 
@@ -213,6 +212,34 @@ export default function FormInput() {
               </div>
             </div>
           </div>
+        </section>
+
+        <section class="space-y-4">
+          <Title level={2}>type / prefix / suffix</Title>
+          <FormItem label="type=email" id="input-email">
+            <Input
+              id="input-email"
+              type="email"
+              placeholder="user@example.com"
+              value=""
+            />
+          </FormItem>
+          <FormItem label="前缀 prefix" id="input-prefix">
+            <Input
+              id="input-prefix"
+              prefix={<span class="text-slate-500 dark:text-slate-400">https://</span>}
+              placeholder="域名"
+              value=""
+            />
+          </FormItem>
+          <FormItem label="后缀 suffix" id="input-suffix">
+            <Input
+              id="input-suffix"
+              suffix={<span class="text-slate-500 dark:text-slate-400">.com</span>}
+              placeholder="名称"
+              value=""
+            />
+          </FormItem>
         </section>
 
         <section class="space-y-4">

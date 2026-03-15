@@ -21,8 +21,7 @@ export default function FormRadioGroup() {
       <div>
         <Title level={1}>RadioGroup</Title>
         <Paragraph>
-          单选组：name、options、value、选项 disabled、整组 disabled、error
-          等全部用法。
+          单选组：name（必填）、options、value、onChange、disabled、error、direction（vertical/horizontal 横向纵向布局）；选项可设 disabled。
         </Paragraph>
       </div>
 
@@ -47,6 +46,19 @@ export default function FormRadioGroup() {
               options={options}
               value={val2}
               onChange={(v) => setVal2(v)}
+            />
+          </FormItem>
+        </section>
+
+        <section class="space-y-4">
+          <Title level={2}>direction=horizontal（横向）</Title>
+          <FormItem label="横向单选组">
+            <RadioGroup
+              name="radio-h"
+              options={options}
+              value={val2}
+              onChange={(v) => setVal2(v)}
+              direction="horizontal"
             />
           </FormItem>
         </section>

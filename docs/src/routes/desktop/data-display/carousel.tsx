@@ -29,13 +29,28 @@ export default function DataDisplayCarousel() {
   return (
     <div class="space-y-6">
       <Title level={1}>Carousel</Title>
-      <Paragraph>轮播图：自动播放、指示点、箭头、一屏多图、循环。</Paragraph>
+      <Paragraph>
+        轮播图：children、current、onChange、autoplay、autoplayInterval、direction、slidesToShow、infinite、dots、arrows、dotPosition、effect、speed。
+      </Paragraph>
+      <Title level={2}>dots + arrows</Title>
       <div class="max-w-xl">
         <Carousel
           current={current()}
           onChange={setCurrent}
           dots
           arrows
+        >
+          {slides}
+        </Carousel>
+      </div>
+      <Title level={2}>autoplay</Title>
+      <div class="max-w-xl">
+        <Carousel
+          current={current()}
+          onChange={setCurrent}
+          dots
+          autoplay
+          autoplayInterval={3000}
         >
           {slides}
         </Carousel>

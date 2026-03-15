@@ -27,10 +27,11 @@ export default function FormDatetime() {
       <div>
         <Title level={1}>日期与时间</Title>
         <Paragraph>
-          DatePicker、TimePicker、TimeRangePicker 示例。
+          DatePicker：value、min、max、size、disabled、onChange、class、name、id。TimePicker：value、size、disabled、onChange、class、name、id。TimeRangePicker：start、end、onChange、size、disabled、class、name、id。
         </Paragraph>
       </div>
 
+      <Title level={2}>基础用法</Title>
       <Form layout="vertical" class="max-w-xl space-y-4">
         <FormItem label="DatePicker">
           <DatePicker

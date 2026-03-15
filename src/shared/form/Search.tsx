@@ -4,6 +4,7 @@
  */
 
 import { twMerge } from "tailwind-merge";
+import { IconSearch } from "../basic/icons/mod.ts";
 import type { SizeVariant } from "../types.ts";
 
 export interface SearchProps {
@@ -54,8 +55,8 @@ export function Search(props: SearchProps) {
   } = props;
 
   const sizeCls = sizeClasses[size];
-
-  const hasValue = value != null && value !== "";
+  const resolvedValue = typeof value === "function" ? value() : value;
+  const hasValue = resolvedValue != null && resolvedValue !== "";
   const btnCls =
     "absolute top-1/2 -translate-y-1/2 p-1 rounded text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50";
 
@@ -83,10 +84,15 @@ export function Search(props: SearchProps) {
         type="search"
         id={id}
         name={name}
-        value={value}
+        value={resolvedValue}
         placeholder={placeholder}
         disabled={disabled}
-        class={twMerge(inputBase, sizeCls, onSearch && "pr-20")}
+        class={twMerge(
+          inputBase,
+          sizeCls,
+          onSearch && "pr-20",
+          hasValue && !onSearch && "pr-9",
+        )}
         onInput={onInput}
         onChange={onChange}
         onKeyDown={(e: Event) => {
@@ -99,7 +105,7 @@ export function Search(props: SearchProps) {
       {hasValue && (
         <button
           type="button"
-          class={twMerge(btnCls, "right-10")}
+          class={twMerge(btnCls, onSearch ? "right-10" : "right-2")}
           disabled={disabled}
           aria-label="清除"
           onClick={() => {
@@ -135,9 +141,7 @@ export function Search(props: SearchProps) {
             if (input) onSearch(input.value);
           }}
         >
-          <span class="text-xs font-medium text-blue-600 dark:text-blue-400">
-            搜索
-          </span>
+          <IconSearch size="sm" class="text-blue-600 dark:text-blue-400" />
         </button>
       )}
     </span>

@@ -15,8 +15,7 @@ export default function NavigationPagination() {
     <div class="space-y-6">
       <Title level={1}>Pagination</Title>
       <Paragraph>
-        分页：current、total、pageSize、onChange；上一页/下一页、快速跳转、showTotal、
-        pageSizeOptions、极简模式（showPageNumbers: false）。
+        分页：current、total、totalPages、pageSize、pageSizeOptions、onChange、showPrevNext、showPageNumbers、showQuickJumper、showTotal、disabled、class。
       </Paragraph>
 
       <Pagination
@@ -37,7 +36,7 @@ export default function NavigationPagination() {
         showPrevNext
       />
 
-      <Paragraph>极简模式（仅上一页/下一页）：</Paragraph>
+      <Title level={2}>极简模式（showPageNumbers=false）</Title>
       <Pagination
         current={page()}
         total={120}
@@ -46,6 +45,14 @@ export default function NavigationPagination() {
         showPrevNext
         showPageNumbers={false}
         showTotal
+      />
+      <Title level={2}>disabled</Title>
+      <Pagination
+        current={2}
+        total={50}
+        pageSize={10}
+        onChange={() => {}}
+        disabled
       />
     </div>
   );

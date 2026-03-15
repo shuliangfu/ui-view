@@ -1,5 +1,6 @@
 /**
- * 最大化图标，24×24 stroke。
+ * 全屏/最大化图标，24×24 stroke。
+ * 四角向外箭头，与 Tabler Icons 的 arrows-maximize 一致，用于「进入全屏」按钮。
  */
 import { Icon } from "../Icon.tsx";
 import type { IconComponentProps } from "../Icon.tsx";
@@ -15,7 +16,14 @@ const svg = (
     class="w-full h-full"
     aria-hidden
   >
-    <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
+    <path d="M16 4l4 0l0 4" />
+    <path d="M14 10l6 -6" />
+    <path d="M8 20l-4 0l0 -4" />
+    <path d="M4 20l6 -6" />
+    <path d="M16 20l4 0l0 -4" />
+    <path d="M14 14l6 6" />
+    <path d="M8 4l-4 0l0 4" />
+    <path d="M4 4l6 6" />
   </svg>
 );
 

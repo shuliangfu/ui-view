@@ -15,7 +15,7 @@ export default function FormTimePicker() {
       <div>
         <Title level={1}>TimePicker</Title>
         <Paragraph>
-          时间选择：value、size、disabled 等全部用法。
+          TimePicker：value、size、disabled、onChange、class、name、id。值为 HH:mm 或 HH:mm:ss。
         </Paragraph>
       </div>
 

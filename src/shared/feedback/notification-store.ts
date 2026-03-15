@@ -1,6 +1,6 @@
 /**
  * Notification 消息通知框 — 全局状态与命令式 API。
- * 支持 title、description、icon、type、duration、key 去重、堆叠（右上角）。
+ * 支持 title、description、icon、type、duration、key 去重、堆叠；支持自定义弹出位置 placement。
  */
 
 import { createSignal } from "@dreamer/view";
@@ -11,6 +11,15 @@ export type NotificationType =
   | "info"
   | "warning"
   | "default";
+
+/** 弹出位置：右上、右下、下中、上中、左上、左下 */
+export type NotificationPlacement =
+  | "top-right"
+  | "top-center"
+  | "top-left"
+  | "bottom-right"
+  | "bottom-center"
+  | "bottom-left";
 
 export interface NotificationItem {
   id: string;
@@ -27,6 +36,8 @@ export interface NotificationItem {
   btnText?: string;
   onBtnClick?: () => void;
   onClose?: () => void;
+  /** 弹出位置，默认 top-right */
+  placement?: NotificationPlacement;
 }
 
 const [getNotificationList, setNotificationList] = createSignal<
@@ -71,6 +82,7 @@ export function openNotification(options: OpenOptions): string {
     btnText: options.btnText,
     onBtnClick: options.onBtnClick,
     onClose: options.onClose,
+    placement: options.placement ?? "top-right",
   };
   setNotificationList([...list, item]);
   if (item.duration > 0) {
