@@ -145,7 +145,7 @@ export function CodeBlock(props: CodeBlockProps) {
     >
       {(title != null && title !== "") || showWindowDots
         ? (
-          <div class="relative flex items-center justify-between gap-3 px-3 py-2 border-b border-slate-200 dark:border-slate-600 bg-slate-100/80 dark:bg-slate-700/50">
+          <div class="relative flex items-center justify-between gap-3 px-3 py-3 border-b border-slate-200 dark:border-slate-600 bg-slate-100/80 dark:bg-slate-700/50">
             {/* 左上角三色圆点（仿 macOS 窗口按钮，仅装饰）；可通过 showWindowDots 关闭 */}
             {showWindowDots && (
               <div
@@ -191,7 +191,7 @@ export function CodeBlock(props: CodeBlockProps) {
         {showLineNumbers && lineCount > 0
           ? (
             <div
-              class="shrink-0 min-w-12 select-none py-3 pl-3 pr-3 text-right text-slate-400 dark:text-slate-500 font-mono text-xs leading-relaxed border-r border-slate-200 dark:border-slate-600 bg-slate-100/50 dark:bg-slate-800/50"
+              class="shrink-0 min-w-10 select-none py-3 px-2 text-center text-slate-400 dark:text-slate-500 font-mono text-xs leading-relaxed border-r border-slate-200 dark:border-slate-600 bg-slate-100/50 dark:bg-slate-800/50"
               aria-hidden
             >
               {lines.map((_, i) => <div key={i}>{lineNumberStart + i}</div>)}
@@ -216,8 +216,6 @@ export function CodeBlock(props: CodeBlockProps) {
               codeClass,
             )}
           >
-            {/* SSR 输出 code 文本；客户端 setCodeRef 替换为高亮 */}
-            {code}
           </code>
         </pre>
       </div>
