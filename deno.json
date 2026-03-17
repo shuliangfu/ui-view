@@ -11,12 +11,16 @@
   "exports": {
     ".": "./src/mod.ts",
     "./mobile": "./src/mobile/mod.ts",
-    "./shared": "./src/shared/mod.ts"
+    "./shared": "./src/shared/mod.ts",
+    "./styles/*": "./styles/*",
+    "./plugin": "./plugin.ts"
   },
   "publish": {
     "include": [
       "src/**/*.ts",
       "src/**/*.tsx",
+      "styles/*.css",
+      "plugin.ts",
       "LICENSE",
       "NOTICE",
       "README.md"
@@ -34,7 +38,12 @@
     "fetch-tabler-icons": "deno run -A scripts/fetch-tabler-icons.ts"
   },
   "imports": {
-    "@dreamer/view": "jsr:@dreamer/view@^1.1.9",
+    "@dreamer/plugin": "jsr:@dreamer/plugin@^1.0.2",
+    "@dreamer/runtime-adapter": "jsr:@dreamer/runtime-adapter@^1.0.18",
+    "@dreamer/service": "jsr:@dreamer/service@^1.0.2",
+    "@dreamer/test": "jsr:@dreamer/test@^1.0.15",
+    "@dreamer/view": "jsr:@dreamer/view@^1.1.12",
+    "tailwindcss": "npm:tailwindcss@4.1.18",
     "chart.js": "npm:chart.js@^4.5.1",
     "prismjs": "npm:prismjs@^1.30.0",
     "tailwind-merge": "npm:tailwind-merge@^2.6.1"
@@ -42,12 +51,12 @@
   "nodeModulesDir": "auto",
   "compilerOptions": {
     "jsx": "react-jsx",
-    "jsxImportSource": "jsr:@dreamer/view",
+    "jsxImportSource": "@dreamer/view",
     "lib": ["deno.window", "dom"],
     "types": ["./jsx.d.ts"]
   },
   "lint": {
-    "include": ["src/"],
+    "include": ["src/", "plugin.ts"],
     "rules": {
       "tags": ["recommended"],
       "exclude": ["no-explicit-any"]
