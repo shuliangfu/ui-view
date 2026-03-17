@@ -1,6 +1,6 @@
 /**
  * Textarea 多行输入（View）。
- * 支持 rows、disabled、placeholder，light/dark 主题。
+ * 对齐 Input：value 可为 getter、主体不读 value()，maxLength 字数由子组件读 value()，避免失焦。light/dark 主题。
  */
 
 import { twMerge } from "tailwind-merge";
@@ -12,9 +12,9 @@ export interface TextareaProps {
   placeholder?: string;
   /** 行数（高度） */
   rows?: number;
-  /** 输入值（受控可选）；可为 getter 以配合 View 细粒度更新 */
+  /** 输入值（受控可选）；可为 getter 以在 View 细粒度下只更新 value 不重建节点，避免失焦 */
   value?: string | (() => string);
-  /** 最大字数（展示已用/总数） */
+  /** 最大字数（展示已用/总数）；由子组件内读 value()，仅该槽位重跑 */
   maxLength?: number;
   /** 是否只读 */
   readOnly?: boolean;
@@ -40,6 +40,26 @@ const errorCls =
   "border-red-500 dark:border-red-500 focus:ring-red-500 dark:focus:ring-red-500";
 const readOnlyCls = "bg-slate-50 dark:bg-slate-800/80 cursor-default";
 
+/**
+ * 仅此子组件读 value() 展示字数，避免 Textarea 主体订阅 signal 导致整块重渲染、textarea 失焦。
+ */
+function TextareaLengthDisplay(props: {
+  value?: string | (() => string);
+  maxLength: number;
+}) {
+  const { value, maxLength } = props;
+  const s = typeof value === "function" ? value() : (value ?? "");
+  const len = s.length;
+  return (
+    <span
+      class="mt-1 block text-right text-xs text-slate-500 dark:text-slate-400"
+      aria-live="polite"
+    >
+      {len} / {maxLength}
+    </span>
+  );
+}
+
 export function Textarea(props: TextareaProps) {
   const {
     disabled = false,
@@ -57,38 +77,32 @@ export function Textarea(props: TextareaProps) {
     id,
   } = props;
 
-  const len = value?.length ?? 0;
+  // 禁止在组件体内读 value()：会订阅 signal，导致整树重跑、textarea 失焦。value 透传给 <textarea value={value} />。
+
+  const textareaProps = {
+    id,
+    name,
+    rows,
+    value,
+    placeholder,
+    disabled,
+    readOnly,
+    maxLength,
+    "aria-required": required,
+    "aria-invalid": error,
+    class: twMerge(base, error && errorCls, readOnly && readOnlyCls, className),
+    onInput,
+    onChange,
+  };
+
+  if (maxLength == null) {
+    return () => <textarea {...textareaProps} />;
+  }
 
   return () => (
     <span class="block">
-      <textarea
-        id={id}
-        name={name}
-        rows={rows}
-        value={value}
-        placeholder={placeholder}
-        disabled={disabled}
-        readOnly={readOnly}
-        maxLength={maxLength}
-        aria-required={required}
-        aria-invalid={error}
-        class={twMerge(
-          base,
-          error && errorCls,
-          readOnly && readOnlyCls,
-          className,
-        )}
-        onInput={onInput}
-        onChange={onChange}
-      />
-      {maxLength != null && (
-        <span
-          class="mt-1 block text-right text-xs text-slate-500 dark:text-slate-400"
-          aria-live="polite"
-        >
-          {len} / {maxLength}
-        </span>
-      )}
+      <textarea {...textareaProps} />
+      <TextareaLengthDisplay value={value} maxLength={maxLength} />
     </span>
   );
 }
