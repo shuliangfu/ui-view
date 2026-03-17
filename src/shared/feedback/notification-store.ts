@@ -61,6 +61,8 @@ export interface OpenOptions {
   btnText?: string;
   onBtnClick?: () => void;
   onClose?: () => void;
+  /** 弹出位置，默认 top-right */
+  placement?: NotificationPlacement;
 }
 
 export function openNotification(options: OpenOptions): string {
