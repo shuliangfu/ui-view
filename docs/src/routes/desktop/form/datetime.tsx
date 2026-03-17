@@ -148,8 +148,9 @@ export default function FormDatetime() {
           DatePicker / TimePicker / TimeRangePicker 日期与时间
         </Title>
         <Paragraph class="mt-2">
-          DatePicker：日期选择，value、min、max、size、disabled、onChange。TimePicker：时间选择，value、size、disabled、onChange。TimeRangePicker：时间范围，start、end、onChange、size、disabled。Tailwind
-          v4 + light/dark。
+          DatePicker：日期选择，value、min、max、size、disabled、onChange。TimePicker：时间选择，value、size、disabled、onChange。TimeRangePicker：时间范围，start、end、onChange、size、disabled。宽度由
+          class 控制，表单中需占满一列时传 class="w-full"。Tailwind v4 +
+          light/dark。
         </Paragraph>
       </section>
 

@@ -31,8 +31,9 @@ const sizeClasses: Record<SizeVariant, string> = {
   lg: "px-4 py-2.5 text-base rounded-lg",
 };
 
+/** 列表容器：不含宽度，需全宽时由调用方加 class="w-full" */
 const listBase =
-  "w-full border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 overflow-auto min-h-[80px] max-h-48";
+  "border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 overflow-auto min-h-[80px] max-h-48";
 
 const btnCls =
   "text-xs px-2 py-1 rounded border border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors";
@@ -106,6 +107,7 @@ export function MultiSelect(props: MultiSelectProps) {
           aria-multiselectable="true"
           aria-label="多选列表"
           class={twMerge(
+            "w-full",
             listBase,
             sizeCls,
             disabled && "opacity-50 pointer-events-none",

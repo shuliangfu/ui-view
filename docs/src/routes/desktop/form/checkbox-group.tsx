@@ -183,6 +183,35 @@ export default function FormCheckboxGroup() {
           </section>
 
           <section class="space-y-4">
+            <Title level={3}>
+              direction=vertical + 紧排（纵向 + class 缩小间距）
+            </Title>
+            <FormItem label="纵向紧排多选组">
+              <CheckboxGroup
+                options={options}
+                value={val2}
+                onChange={(v) => setVal2(v)}
+                direction="vertical"
+                class="gap-1"
+              />
+            </FormItem>
+            <CodeBlock
+              title="代码示例"
+              code={`<CheckboxGroup
+  options={options}
+  value={val2}
+  onChange={(v) => setVal2(v)}
+  direction="vertical"
+  class="gap-1"
+/>`}
+              language="tsx"
+              showLineNumbers
+              copyable
+              wrapLongLines
+            />
+          </section>
+
+          <section class="space-y-4">
             <Title level={3}>error / disabled</Title>
             <FormItem label="错误态">
               <CheckboxGroup

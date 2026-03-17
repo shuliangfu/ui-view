@@ -74,7 +74,7 @@ const exampleTitleExtra =
   <p>卡片内容区域。</p>
 </Card>`;
 
-const exampleFooterHoverable =
+const _exampleFooterHoverable =
   `<Card title="带底部" footer={<span>底部信息</span>}>...</Card>
 <Card hoverable title="悬浮效果">...</Card>`;
 

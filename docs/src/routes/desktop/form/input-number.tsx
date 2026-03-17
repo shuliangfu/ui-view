@@ -85,8 +85,9 @@ export default function FormInputNumber() {
         <Title level={1}>InputNumber 数字输入</Title>
         <Paragraph class="mt-2">
           数字输入框，带步进按钮；支持
-          value、min、max、step、placeholder、size、disabled、onChange。Tailwind
-          v4 + light/dark。
+          value、min、max、step、placeholder、size、disabled、onChange。宽度由
+          class 控制，表单中需占满一列时传 class="w-full"。Tailwind v4 +
+          light/dark。
         </Paragraph>
       </section>
 

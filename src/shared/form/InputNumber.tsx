@@ -38,8 +38,9 @@ const sizeClasses: Record<SizeVariant, string> = {
   lg: "px-4 py-2.5 text-base rounded-lg",
 };
 
+/** 基础样式：不含宽度，需全宽时由调用方加 class="w-full" */
 const base =
-  "w-full border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 border-slate-300 dark:border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:focus:ring-blue-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors";
+  "border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 border-slate-300 dark:border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:focus:ring-blue-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors";
 
 /**
  * 加减按钮：仅在内部读 value() 计算 canDecrease/canIncrease，避免 InputNumber 主体订阅 signal 导致整块重渲染、input 失焦。
@@ -133,7 +134,7 @@ export function InputNumber(props: InputNumberProps) {
   };
 
   return () => (
-    <span class={twMerge("inline-flex items-stretch w-full", className)}>
+    <span class={twMerge("inline-flex items-stretch", className)}>
       <input {...inputProps} />
       <InputNumberButtons
         value={value}

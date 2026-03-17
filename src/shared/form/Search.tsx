@@ -37,8 +37,9 @@ const sizeClasses: Record<SizeVariant, string> = {
   lg: "px-4 py-2.5 pl-10 text-base rounded-lg",
 };
 
+/** 基础样式：不含宽度，需全宽时由调用方加 class="w-full"；默认 max-w-xs 为搜索框常见宽度 */
 const inputBase =
-  "w-full border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 border-slate-300 dark:border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:focus:ring-blue-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors";
+  "border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 border-slate-300 dark:border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:focus:ring-blue-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors";
 
 const btnCls =
   "absolute top-1/2 -translate-y-1/2 p-1 rounded text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50";
@@ -104,6 +105,7 @@ export function Search(props: SearchProps) {
         placeholder={placeholder}
         disabled={disabled}
         class={twMerge(
+          "w-full",
           inputBase,
           sizeCls,
           onSearch ? "pr-20" : "pr-9",

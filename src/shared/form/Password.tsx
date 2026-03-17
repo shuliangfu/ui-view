@@ -40,8 +40,9 @@ const sizeClasses: Record<SizeVariant, string> = {
   lg: "px-4 py-2.5 pr-11 text-base rounded-lg",
 };
 
+/** 基础样式：不含宽度，需全宽时由调用方加 class="w-full" */
 const base =
-  "w-full border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 border-slate-300 dark:border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:focus:ring-blue-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors";
+  "border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 border-slate-300 dark:border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:focus:ring-blue-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors";
 
 /**
  * 强度提示：仅在内部读 value()，避免 Password 主体订阅 signal 导致整块重渲染失焦。
@@ -111,7 +112,7 @@ export function Password(props: PasswordProps) {
       base,
       sizeCls,
       onToggleShow || showStrength ? "pr-10" : undefined,
-      className,
+      !onToggleShow && !showStrength ? className : undefined,
     ),
     onInput,
     onChange,
@@ -122,8 +123,8 @@ export function Password(props: PasswordProps) {
   }
 
   return () => (
-    <div class="relative w-full">
-      <input {...inputProps} />
+    <div class={twMerge("relative", className)}>
+      <input {...inputProps} class={twMerge("w-full", inputProps.class)} />
       {onToggleShow && (
         <button
           type="button"

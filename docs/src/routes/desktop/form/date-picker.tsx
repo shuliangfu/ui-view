@@ -83,8 +83,9 @@ export default function FormDatePicker() {
       <section>
         <Title level={1}>DatePicker 日期选择</Title>
         <Paragraph class="mt-2">
-          日期选择框，支持 value、onChange、min、max、size、disabled。Tailwind
-          v4 + light/dark。
+          日期选择框，支持 value、onChange、min、max、size、disabled。宽度由
+          class 控制，表单中需占满一列时传 class="w-full"。Tailwind v4 +
+          light/dark。
         </Paragraph>
       </section>
 
