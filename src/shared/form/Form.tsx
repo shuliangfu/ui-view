@@ -24,19 +24,24 @@ const layoutClasses: Record<FormLayout, string> = {
   inline: "flex flex-wrap items-end gap-x-4 gap-y-2",
 };
 
+/**
+ * 返回 getter，使 View 为 Form 创建带 data-view-dynamic 的容器；
+ * patch 时复用容器、只更新内容，避免子组件（如 Password）被整棵替换导致失焦。
+ */
 export function Form(props: FormProps) {
-  const { layout = "vertical", onSubmit, class: className, children } = props;
-  const layoutCls = layoutClasses[layout];
-
-  return () => (
-    <form
-      class={twMerge(layoutCls, className)}
-      onSubmit={(e: Event) => {
-        e.preventDefault();
-        onSubmit?.(e);
-      }}
-    >
-      {children}
-    </form>
-  );
+  return () => {
+    const { layout = "vertical", onSubmit, class: className, children } = props;
+    const layoutCls = layoutClasses[layout];
+    return (
+      <form
+        class={twMerge(layoutCls, className)}
+        onSubmit={(e: Event) => {
+          e.preventDefault();
+          onSubmit?.(e);
+        }}
+      >
+        {children}
+      </form>
+    );
+  };
 }
