@@ -1,6 +1,6 @@
 /**
  * Password 密码输入（View）。
- * 支持显隐切换（showPassword + onToggleShow），其余同 Input；light/dark 主题。
+ * 完全对齐 Input：value 可为 getter、主体不读 value()、右侧槽位由子组件读 value()；支持显隐切换、强度提示。light/dark 主题。
  */
 
 import { twMerge } from "tailwind-merge";
@@ -13,7 +13,7 @@ export interface PasswordProps {
   disabled?: boolean;
   /** 占位文案 */
   placeholder?: string;
-  /** 输入值（受控可选）；可为 getter 以配合 View 细粒度更新 */
+  /** 输入值（受控可选）；可为 getter 以在 View 细粒度下只更新 value 不重建节点，避免失焦 */
   value?: string | (() => string);
   /** 是否显示明文（由父组件控制，用于显隐切换） */
   showPassword?: boolean;
@@ -29,7 +29,7 @@ export interface PasswordProps {
   name?: string;
   /** 原生 id */
   id?: string;
-  /** 是否显示强度提示（弱/中/强） */
+  /** 是否显示强度提示（弱/中/强）；由子组件内读 value()，仅该槽位重跑 */
   showStrength?: boolean;
 }
 
@@ -40,8 +40,45 @@ const sizeClasses: Record<SizeVariant, string> = {
   lg: "px-4 py-2.5 pr-11 text-base rounded-lg",
 };
 
-const inputBase =
+const base =
   "w-full border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 border-slate-300 dark:border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:focus:ring-blue-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors";
+
+/**
+ * 强度提示：仅在内部读 value()，避免 Password 主体订阅 signal 导致整块重渲染失焦。
+ * 仅此子组件随 value 重跑，reconcile 只更新该槽位，input 节点保留。与 Input 的 InputClearOrSuffix 同模式。
+ */
+function PasswordStrength(props: {
+  value?: string | (() => string);
+  showStrength: boolean;
+}) {
+  const { value, showStrength } = props;
+  if (!showStrength) return null;
+  const s = typeof value === "function" ? value() : (value ?? "");
+  if (s.length === 0) return null;
+  let score = 0;
+  if (s.length >= 6) score++;
+  if (s.length >= 10) score++;
+  if (/[0-9]/.test(s)) score++;
+  if (/[a-zA-Z]/.test(s)) score++;
+  if (/[^a-zA-Z0-9]/.test(s)) score++;
+  let level: string;
+  let cls: string;
+  if (score <= 2) {
+    level = "弱";
+    cls = "text-red-600 dark:text-red-400";
+  } else if (score <= 4) {
+    level = "中";
+    cls = "text-amber-600 dark:text-amber-400";
+  } else {
+    level = "强";
+    cls = "text-green-600 dark:text-green-400";
+  }
+  return () => (
+    <span class={twMerge("block mt-1 text-xs", cls)} aria-live="polite">
+      强度：{level}
+    </span>
+  );
+}
 
 export function Password(props: PasswordProps) {
   const {
@@ -60,47 +97,33 @@ export function Password(props: PasswordProps) {
   } = props;
 
   const sizeCls = sizeClasses[size];
+  // 禁止在组件体内读 value()：会订阅 signal，导致根 effect 重跑、整树重建、input 被替换失焦。
+  // value 透传给 <input value={value} />，由 View applyProps 对 getter 做 createEffect 仅更新 .value。
 
-  /** 简单强度：长度 + 是否含数字/字母/特殊字符 */
-  const strength = showStrength && value != null
-    ? (() => {
-      const s = typeof value === "function" ? value() : (value ?? "");
-      if (s.length === 0) return null;
-      let score = 0;
-      if (s.length >= 6) score++;
-      if (s.length >= 10) score++;
-      if (/[0-9]/.test(s)) score++;
-      if (/[a-zA-Z]/.test(s)) score++;
-      if (/[^a-zA-Z0-9]/.test(s)) score++;
-      if (score <= 2) {
-        return {
-          level: "弱",
-          cls: "text-red-600 dark:text-red-400",
-        };
-      }
-      if (score <= 4) {
-        return {
-          level: "中",
-          cls: "text-amber-600 dark:text-amber-400",
-        };
-      }
-      return { level: "强", cls: "text-green-600 dark:text-green-400" };
-    })()
-    : null;
+  const inputProps = {
+    type: showPassword ? "text" : "password",
+    id,
+    name,
+    value,
+    placeholder,
+    disabled,
+    class: twMerge(
+      base,
+      sizeCls,
+      onToggleShow || showStrength ? "pr-10" : undefined,
+      className,
+    ),
+    onInput,
+    onChange,
+  };
+
+  if (!onToggleShow && !showStrength) {
+    return () => <input {...inputProps} />;
+  }
 
   return () => (
-    <span class={twMerge("relative inline-block w-full", className)}>
-      <input
-        type={showPassword ? "text" : "password"}
-        id={id}
-        name={name}
-        value={value}
-        placeholder={placeholder}
-        disabled={disabled}
-        class={twMerge(inputBase, sizeCls)}
-        onInput={onInput}
-        onChange={onChange}
-      />
+    <div class="relative w-full">
+      <input {...inputProps} />
       {onToggleShow && (
         <button
           type="button"
@@ -148,14 +171,7 @@ export function Password(props: PasswordProps) {
             )}
         </button>
       )}
-      {strength && (
-        <span
-          class={twMerge("block mt-1 text-xs", strength.cls)}
-          aria-live="polite"
-        >
-          强度：{strength.level}
-        </span>
-      )}
-    </span>
+      <PasswordStrength value={value} showStrength={showStrength} />
+    </div>
   );
 }
