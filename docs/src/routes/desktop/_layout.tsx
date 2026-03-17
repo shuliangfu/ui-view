@@ -159,7 +159,6 @@ const DATA_DISPLAY_SUBMENU = [
   { path: "/desktop/data-display/calendar", label: "Calendar", desc: "日历" },
   { path: "/desktop/data-display/comment", label: "Comment", desc: "评论" },
   { path: "/desktop/data-display/tree", label: "Tree", desc: "树形" },
-  { path: "/desktop/data-display/transfer", label: "Transfer", desc: "穿梭框" },
   {
     path: "/desktop/data-display/code-block",
     label: "CodeBlock",
@@ -226,7 +225,7 @@ interface LayoutProps {
 
 export default function Layout({ children }: LayoutProps) {
   return (
-    <div className="flex flex-1 w-full max-w-[1800px] mx-auto">
+    <div className="flex flex-1 w-full mx-auto">
       <Sidebar
         overview={{ path: "/desktop", label: "组件概览" }}
         sectionTitle="组件"
