@@ -18,8 +18,8 @@ export interface TransferItem {
 export interface TransferProps {
   /** 数据源 */
   dataSource: TransferItem[];
-  /** 右侧（已选）key 列表（受控） */
-  targetKeys: string[];
+  /** 右侧（已选）key 列表（受控）；可为 getter 以在点击时读到最新值，避免闭包陈旧 */
+  targetKeys: string[] | (() => string[]);
   /** 变更回调（targetKeys 更新后） */
   onChange?: (targetKeys: string[]) => void;
   /** 左侧标题 */
@@ -61,9 +61,6 @@ export function Transfer(props: TransferProps) {
     class: className,
   } = props;
 
-  const targetSet = new Set(targetKeys);
-  const leftRaw = dataSource.filter((i) => !targetSet.has(i.key));
-  const rightRaw = dataSource.filter((i) => targetSet.has(i.key));
   const filterFn = (items: TransferItem[], q: string) => {
     if (!q.trim()) return items;
     const fn = filterOption ??
@@ -71,99 +68,116 @@ export function Transfer(props: TransferProps) {
         String(item.title).toLowerCase().includes(input.toLowerCase()));
     return items.filter((i) => fn(q, i));
   };
-  const leftItems = filterFn(leftRaw, searchValue?.[0] ?? "");
-  const rightItems = filterFn(rightRaw, searchValue?.[1] ?? "");
 
   const [leftSelectedKeys, setLeftSelectedKeys] = createSignal<string[]>([]);
   const [rightSelectedKeys, setRightSelectedKeys] = createSignal<string[]>([]);
 
+  /** 在内部和点击时读取当前 targetKeys，支持 getter 避免闭包陈旧 */
+  const getTargetKeys = () =>
+    typeof targetKeys === "function" ? targetKeys() : targetKeys;
+
   const moveToRight = (keys: string[]) => {
     if (keys.length === 0) return;
-    onChange?.([...new Set([...targetKeys, ...keys])]);
+    const current = getTargetKeys();
+    onChange?.([...new Set([...current, ...keys])]);
     setLeftSelectedKeys([]);
   };
   const moveToLeft = (keys: string[]) => {
     if (keys.length === 0) return;
-    onChange?.(targetKeys.filter((k) => !keys.includes(k)));
+    const current = getTargetKeys();
+    onChange?.(current.filter((k) => !keys.includes(k)));
     setRightSelectedKeys([]);
   };
 
-  return () => (
-    <div
-      class={twMerge(
-        "transfer flex items-stretch gap-4",
-        disabled && "opacity-60 pointer-events-none",
-        className,
-      )}
-    >
-      <TransferList
-        title={titles[0]}
-        items={leftItems}
-        searchPlaceholder={searchPlaceholder[0]}
-        showSearch={showSearch}
-        searchValue={searchValue?.[0]}
-        onSearch={(v) => onSearch?.("left", v)}
-        render={render}
-        listStyle={listStyle}
-        selectedKeys={leftSelectedKeys()}
-        onToggleSelect={(key) => {
-          setLeftSelectedKeys((prev) =>
-            prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
-          );
-        }}
-        onTransfer={(keys) => moveToRight(keys)}
-        disabled={disabled}
-      />
-      <div class="flex flex-col justify-center gap-2">
-        <button
-          type="button"
-          class="px-2 py-1 text-sm border border-slate-300 dark:border-slate-600 rounded hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
+  return () => {
+    const currentTargetKeys = getTargetKeys();
+    const targetSet = new Set(currentTargetKeys);
+    const leftRaw = dataSource.filter((i) => !targetSet.has(i.key));
+    const rightRaw = dataSource.filter((i) => targetSet.has(i.key));
+    const leftItems = filterFn(leftRaw, searchValue?.[0] ?? "");
+    const rightItems = filterFn(rightRaw, searchValue?.[1] ?? "");
+
+    return (
+      <div
+        class={twMerge(
+          "transfer flex items-stretch gap-4",
+          disabled && "opacity-60 pointer-events-none",
+          className,
+        )}
+      >
+        <TransferList
+          title={titles[0]}
+          items={leftItems}
+          searchPlaceholder={searchPlaceholder[0]}
+          showSearch={showSearch}
+          searchValue={searchValue?.[0]}
+          onSearch={(v) => onSearch?.("left", v)}
+          render={render}
+          listStyle={listStyle}
+          selectedKeys={leftSelectedKeys()}
+          onToggleSelect={(key) => {
+            setLeftSelectedKeys((prev) =>
+              prev.includes(key)
+                ? prev.filter((k) => k !== key)
+                : [...prev, key]
+            );
+          }}
+          onTransfer={(keys) => moveToRight(keys)}
           disabled={disabled}
-          onClick={() =>
-            moveToRight(
-              leftSelectedKeys().length > 0
-                ? leftSelectedKeys()
-                : leftItems.filter((i) => !i.disabled).map((i) => i.key),
-            )}
-          aria-label="右移"
-        >
-          →
-        </button>
-        <button
-          type="button"
-          class="px-2 py-1 text-sm border border-slate-300 dark:border-slate-600 rounded hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
+        />
+        <div class="flex flex-col justify-center gap-2">
+          <button
+            type="button"
+            class="px-2 py-1 text-sm border border-slate-300 dark:border-slate-600 rounded hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={disabled}
+            onClick={() =>
+              moveToRight(
+                leftSelectedKeys().length > 0
+                  ? leftSelectedKeys()
+                  : leftItems.filter((i) => !i.disabled).map((i) => i.key),
+              )}
+            aria-label="右移"
+          >
+            →
+          </button>
+          <button
+            type="button"
+            class="px-2 py-1 text-sm border border-slate-300 dark:border-slate-600 rounded hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={disabled}
+            onClick={() =>
+              moveToLeft(
+                rightSelectedKeys().length > 0
+                  ? rightSelectedKeys()
+                  : rightItems.filter((i) => !i.disabled).map((i) => i.key),
+              )}
+            aria-label="左移"
+          >
+            ←
+          </button>
+        </div>
+        <TransferList
+          title={titles[1]}
+          items={rightItems}
+          searchPlaceholder={searchPlaceholder[1]}
+          showSearch={showSearch}
+          searchValue={searchValue?.[1]}
+          onSearch={(v) => onSearch?.("right", v)}
+          render={render}
+          listStyle={listStyle}
+          selectedKeys={rightSelectedKeys()}
+          onToggleSelect={(key) => {
+            setRightSelectedKeys((prev) =>
+              prev.includes(key)
+                ? prev.filter((k) => k !== key)
+                : [...prev, key]
+            );
+          }}
+          onTransfer={(keys) => moveToLeft(keys)}
           disabled={disabled}
-          onClick={() =>
-            moveToLeft(
-              rightSelectedKeys().length > 0
-                ? rightSelectedKeys()
-                : rightItems.filter((i) => !i.disabled).map((i) => i.key),
-            )}
-          aria-label="左移"
-        >
-          ←
-        </button>
+        />
       </div>
-      <TransferList
-        title={titles[1]}
-        items={rightItems}
-        searchPlaceholder={searchPlaceholder[1]}
-        showSearch={showSearch}
-        searchValue={searchValue?.[1]}
-        onSearch={(v) => onSearch?.("right", v)}
-        render={render}
-        listStyle={listStyle}
-        selectedKeys={rightSelectedKeys()}
-        onToggleSelect={(key) => {
-          setRightSelectedKeys((prev) =>
-            prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
-          );
-        }}
-        onTransfer={(keys) => moveToLeft(keys)}
-        disabled={disabled}
-      />
-    </div>
-  );
+    );
+  };
 }
 
 function TransferList(
