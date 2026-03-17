@@ -158,7 +158,8 @@ export function ImageViewer(props: ImageViewerProps) {
       }
     };
     document.addEventListener("keydown", handler as EventListener);
-    return () => document.removeEventListener("keydown", handler as EventListener);
+    return () =>
+      document.removeEventListener("keydown", handler as EventListener);
   });
 
   if (!open) {
@@ -233,7 +234,8 @@ export function ImageViewer(props: ImageViewerProps) {
           <div
             class="flex items-center justify-center origin-center cursor-grab active:cursor-grabbing select-none touch-none"
             style={{
-              transform: `translate(${pos.x}px, ${pos.y}px) scale(${scaleVal}) rotate(${rotationVal}deg)`,
+              transform:
+                `translate(${pos.x}px, ${pos.y}px) scale(${scaleVal}) rotate(${rotationVal}deg)`,
             }}
             onMouseDown={handleImageMouseDown as unknown as (e: Event) => void}
             role="presentation"
