@@ -1,6 +1,6 @@
 /**
  * Mentions @提及（View）。
- * 多行输入，支持 @ 触发候选列表与插入片段；候选由父组件根据输入解析后通过 showDropdown/dropdownOptions 传入。
+ * 对齐 Input：value 可为 getter、主体不读 value()；showDropdown/dropdownOptions 由子组件内读，仅下拉槽位重跑，textarea 不失焦。light/dark 主题。
  */
 
 import { twMerge } from "tailwind-merge";
@@ -12,7 +12,7 @@ export interface MentionOption {
 }
 
 export interface MentionsProps {
-  /** 当前值；可为 getter 以配合 View 细粒度更新 */
+  /** 当前值（受控可选）；可为 getter 以在 View 细粒度下只更新 value 不重建节点，避免失焦 */
   value?: string | (() => string);
   /** 占位文案 */
   placeholder?: string;
@@ -24,11 +24,11 @@ export interface MentionsProps {
   onChange?: (e: Event) => void;
   /** 输入回调（父组件可据此解析 @ 与 selectionStart，决定是否展示候选） */
   onInput?: (e: Event) => void;
-  /** 是否展示候选下拉；可为 getter */
+  /** 是否展示候选下拉；可为 getter，由子组件内读 */
   showDropdown?: boolean | (() => boolean);
-  /** 候选列表；可为 getter */
+  /** 候选列表；可为 getter，由子组件内读 */
   dropdownOptions?: MentionOption[] | (() => MentionOption[]);
-  /** 选中某一候选时回调（父组件将 value 中 @xxx 替换为 option.label 并更新 value） */
+  /** 选中某一候选时回调 */
   onSelectOption?: (option: MentionOption) => void;
   /** 额外 class */
   class?: string;
@@ -46,6 +46,39 @@ const dropdownCls =
 const dropdownItemCls =
   "px-3 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer";
 
+/**
+ * 仅此子组件读 showDropdown()/dropdownOptions()，避免 Mentions 主体订阅导致整块重渲染、textarea 失焦。
+ */
+function MentionsDropdown(props: {
+  showDropdown?: boolean | (() => boolean);
+  dropdownOptions?: MentionOption[] | (() => MentionOption[]);
+  onSelectOption?: (option: MentionOption) => void;
+}) {
+  const { showDropdown = false, dropdownOptions = [], onSelectOption } = props;
+  const show = typeof showDropdown === "function"
+    ? showDropdown()
+    : showDropdown;
+  const opts = typeof dropdownOptions === "function"
+    ? dropdownOptions()
+    : (dropdownOptions ?? []);
+  if (!show || opts.length === 0 || !onSelectOption) return null;
+  return (
+    <div class={dropdownCls} role="listbox" aria-label="提及候选">
+      {opts.map((opt) => (
+        <div
+          key={opt.value}
+          role="option"
+          class={dropdownItemCls}
+          onClick={() => onSelectOption(opt)}
+          onMouseDown={(e: Event) => e.preventDefault()}
+        >
+          {opt.label}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function Mentions(props: MentionsProps) {
   const {
     value,
@@ -54,53 +87,36 @@ export function Mentions(props: MentionsProps) {
     disabled = false,
     onChange,
     onInput,
-    showDropdown = false,
-    dropdownOptions = [],
+    showDropdown,
+    dropdownOptions,
     onSelectOption,
     class: className,
     name,
     id,
   } = props;
 
-  return () => {
-    const show = typeof showDropdown === "function"
-      ? showDropdown()
-      : showDropdown;
-    const opts = typeof dropdownOptions === "function"
-      ? dropdownOptions()
-      : (dropdownOptions ?? []);
-    const hasDropdown = show && opts.length > 0 && onSelectOption;
+  // 禁止在组件体内读 value()、showDropdown()、dropdownOptions()：会订阅 signal，导致整树重跑、textarea 失焦。value 透传给 textarea；下拉由子组件读。
 
-    return (
-      <div class={twMerge("relative", className)}>
-        <textarea
-          id={id}
-          name={name}
-          rows={rows}
-          value={value ?? ""}
-          placeholder={placeholder}
-          disabled={disabled}
-          class={base}
-          onChange={onChange}
-          onInput={onInput}
-        />
-        {hasDropdown && (
-          <div class={dropdownCls} role="listbox" aria-label="提及候选">
-            {opts.map((opt) => (
-              <div
-                key={opt.value}
-                role="option"
-                class={dropdownItemCls}
-                onClick={() => onSelectOption(opt)}
-                onMouseDown={(e: Event) =>
-                  e.preventDefault()}
-              >
-                {opt.label}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    );
+  const textareaProps = {
+    id,
+    name,
+    rows,
+    value,
+    placeholder,
+    disabled,
+    class: base,
+    onChange,
+    onInput,
   };
+
+  return () => (
+    <div class={twMerge("relative", className)}>
+      <textarea {...textareaProps} />
+      <MentionsDropdown
+        showDropdown={showDropdown}
+        dropdownOptions={dropdownOptions}
+        onSelectOption={onSelectOption}
+      />
+    </div>
+  );
 }
