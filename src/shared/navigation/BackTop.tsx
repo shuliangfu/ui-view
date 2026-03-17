@@ -126,7 +126,7 @@ export function BackTop(props: BackTopProps) {
     }
   };
 
-  return () => (
+  return (
     <div
       ref={setWrapperRef}
       class={twMerge(
@@ -144,13 +144,16 @@ export function BackTop(props: BackTopProps) {
       <button
         type="button"
         class={twMerge(
-          "flex items-center justify-center w-10 h-10 rounded-full bg-slate-800 dark:bg-slate-200 text-white dark:text-slate-900 shadow-lg hover:opacity-90 active:scale-95 transition",
+          "flex items-center justify-center w-10 h-10 rounded-full shadow-lg hover:opacity-90 active:scale-95 transition",
+          "bg-slate-200 text-slate-900 dark:bg-slate-800 dark:text-white",
           className,
         )}
         onClick={handleClick}
         aria-label="回到顶部"
       >
-        {children != null ? children : <IconChevronUp class="w-5 h-5" />}
+        {children != null
+          ? children
+          : <IconChevronUp class="w-5 h-5 text-inherit" />}
       </button>
     </div>
   );
