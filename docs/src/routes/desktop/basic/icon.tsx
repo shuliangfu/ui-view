@@ -4,6 +4,7 @@
  */
 
 import {
+  CodeBlock,
   Icon,
   IconActivity,
   IconAlertCircle,
@@ -825,46 +826,198 @@ export default function BasicIcon() {
     { Component: IconTokenPepe, name: "PEPE" },
   ];
 
+  const importCode =
+    `import { Icon, IconClose, IconCheck, IconSearch } from "@dreamer/ui-view";
+
+<Icon size="md"><YourSvg /></Icon>
+<IconClose size="md" />
+<IconSearch class="text-teal-500" />`;
+
+  const exampleContainer = `<Icon size="xs"><DotSvg /></Icon>
+<Icon size="sm"><DotSvg /></Icon>
+<Icon size="md"><DotSvg /></Icon>
+<Icon size="lg"><DotSvg /></Icon>`;
+
+  const exampleBuiltinClass = `<IconClose size="md" class="text-red-500" />
+<IconCheckCircle size="md" class="text-green-500" />
+<IconInfo size="md" class="text-blue-500" />`;
+
   return (
     <div class="space-y-10">
-      <div>
+      <section>
         <Title level={1}>Icon 图标</Title>
-        <Paragraph>
-          图标：Icon 容器支持 size（xs/sm/md/lg）、class、children（自定义 SVG）；各内置图标组件（如 IconClose）同样支持 size、class 等 IconComponentProps。内置图标按分类展示，按需引入以控制包体积。
+        <Paragraph class="mt-2">
+          Icon 容器支持 size（xs/sm/md/lg）、class、children（自定义
+          SVG）；内置图标组件（如 IconClose、IconSearch）按需引入，支持
+          size、class。Tailwind v4 + light/dark。
         </Paragraph>
-      </div>
+      </section>
 
-      <section class="space-y-4">
-        <Title level={2}>容器 + 自定义 SVG</Title>
-        <div class="flex flex-wrap items-center gap-6">
-          <Icon size="xs">
-            <DotSvg />
-          </Icon>
-          <Icon size="sm">
-            <DotSvg />
-          </Icon>
-          <Icon size="md">
-            <DotSvg />
-          </Icon>
-          <Icon size="lg">
-            <DotSvg />
-          </Icon>
+      <section class="space-y-3">
+        <Title level={2}>引入</Title>
+        <CodeBlock
+          title="代码示例"
+          code={importCode}
+          language="tsx"
+          showLineNumbers
+          wrapLongLines
+        />
+      </section>
+
+      <section class="space-y-8">
+        <Title level={2}>示例</Title>
+
+        <div class="space-y-4">
+          <Title level={3}>Icon 容器 + 自定义 SVG</Title>
+          <div class="flex flex-wrap items-center gap-6">
+            <Icon size="xs">
+              <DotSvg />
+            </Icon>
+            <Icon size="sm">
+              <DotSvg />
+            </Icon>
+            <Icon size="md">
+              <DotSvg />
+            </Icon>
+            <Icon size="lg">
+              <DotSvg />
+            </Icon>
+          </div>
+          <CodeBlock
+            title="代码示例"
+            code={exampleContainer}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+        </div>
+
+        <div class="space-y-4">
+          <Title level={3}>内置图标 size / class</Title>
+          <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+            内置图标支持 size、class，可用 class 改颜色等。
+          </Paragraph>
+          <div class="flex flex-wrap items-center gap-4">
+            <IconClose size="md" class="text-red-500" />
+            <IconCheckCircle size="md" class="text-green-500" />
+            <IconInfo size="md" class="text-blue-500" />
+            <IconHeart size="md" class="text-pink-500" />
+            <IconStar size="md" class="text-amber-500" />
+          </div>
+          <CodeBlock
+            title="代码示例"
+            code={exampleBuiltinClass}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
         </div>
       </section>
 
-      <section class="space-y-4">
-        <Title level={2}>自定义 class</Title>
-        <div class="flex flex-wrap items-center gap-4">
-          <IconClose size="md" class="text-red-500" />
-          <IconCheckCircle size="md" class="text-green-500" />
-          <IconInfo size="md" class="text-blue-500" />
-          <IconHeart size="md" class="text-pink-500" />
-          <IconStar size="md" class="text-amber-500" />
+      <section class="space-y-3">
+        <Title level={2}>API</Title>
+        <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+          Icon 容器与内置图标（IconComponentProps）属性如下。
+        </Paragraph>
+        <div class="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-600">
+          <table class="w-full min-w-lg text-sm">
+            <thead>
+              <tr class="border-b border-slate-200 bg-slate-50 dark:border-slate-600 dark:bg-slate-800/80">
+                <th class="px-4 py-3 text-left font-medium text-slate-900 dark:text-slate-100">
+                  组件
+                </th>
+                <th class="px-4 py-3 text-left font-medium text-slate-900 dark:text-slate-100">
+                  属性
+                </th>
+                <th class="px-4 py-3 text-left font-medium text-slate-900 dark:text-slate-100">
+                  类型
+                </th>
+                <th class="px-4 py-3 text-left font-medium text-slate-900 dark:text-slate-100">
+                  默认值
+                </th>
+                <th class="px-4 py-3 text-left font-medium text-slate-900 dark:text-slate-100">
+                  说明
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="border-b border-slate-100 dark:border-slate-700">
+                <td class="px-4 py-2.5 text-slate-600 dark:text-slate-400">
+                  Icon
+                </td>
+                <td class="px-4 py-2.5 font-mono text-slate-700 dark:text-slate-300">
+                  size
+                </td>
+                <td class="px-4 py-2.5 text-slate-600 dark:text-slate-400">
+                  SizeVariant
+                </td>
+                <td class="px-4 py-2.5 text-slate-600 dark:text-slate-400">
+                  md
+                </td>
+                <td class="px-4 py-2.5 text-slate-600 dark:text-slate-400">
+                  xs、sm、md、lg
+                </td>
+              </tr>
+              <tr class="border-b border-slate-100 dark:border-slate-700">
+                <td class="px-4 py-2.5 text-slate-600 dark:text-slate-400">
+                  Icon
+                </td>
+                <td class="px-4 py-2.5 font-mono text-slate-700 dark:text-slate-300">
+                  class
+                </td>
+                <td class="px-4 py-2.5 text-slate-600 dark:text-slate-400">
+                  string
+                </td>
+                <td class="px-4 py-2.5 text-slate-600 dark:text-slate-400">
+                  -
+                </td>
+                <td class="px-4 py-2.5 text-slate-600 dark:text-slate-400">
+                  额外 class
+                </td>
+              </tr>
+              <tr class="border-b border-slate-100 dark:border-slate-700">
+                <td class="px-4 py-2.5 text-slate-600 dark:text-slate-400">
+                  Icon
+                </td>
+                <td class="px-4 py-2.5 font-mono text-slate-700 dark:text-slate-300">
+                  children
+                </td>
+                <td class="px-4 py-2.5 text-slate-600 dark:text-slate-400">
+                  unknown
+                </td>
+                <td class="px-4 py-2.5 text-slate-600 dark:text-slate-400">
+                  -
+                </td>
+                <td class="px-4 py-2.5 text-slate-600 dark:text-slate-400">
+                  自定义 SVG 等
+                </td>
+              </tr>
+              <tr class="border-b border-slate-100 dark:border-slate-700 last:border-b-0">
+                <td class="px-4 py-2.5 text-slate-600 dark:text-slate-400">
+                  内置图标
+                </td>
+                <td class="px-4 py-2.5 font-mono text-slate-700 dark:text-slate-300">
+                  size / class
+                </td>
+                <td class="px-4 py-2.5 text-slate-600 dark:text-slate-400">
+                  IconComponentProps
+                </td>
+                <td class="px-4 py-2.5 text-slate-600 dark:text-slate-400">
+                  -
+                </td>
+                <td class="px-4 py-2.5 text-slate-600 dark:text-slate-400">
+                  同 Icon 的 size、class
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </section>
 
       <section class="space-y-10">
-        <Title level={2}>内置图标</Title>
+        <Title level={2}>图标一览</Title>
 
         <div class="space-y-6">
           <Title level={3}>一、操作与导航</Title>
