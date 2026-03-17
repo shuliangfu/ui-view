@@ -6,7 +6,11 @@
 
 import { createSignal } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
-import { IconClose, IconExitFullscreen, IconMaximize2 } from "../../shared/basic/icons/mod.ts";
+import {
+  IconClose,
+  IconExitFullscreen,
+  IconMaximize2,
+} from "../../shared/basic/icons/mod.ts";
 
 export interface ModalProps {
   /** 是否打开（受控） */
@@ -77,7 +81,11 @@ function useDrag(
     };
     const onUp = () => {
       if (rafId) globalThis.cancelAnimationFrame(rafId);
-      document.removeEventListener("mousemove", onMove, { passive: true } as AddEventListenerOptions);
+      document.removeEventListener(
+        "mousemove",
+        onMove,
+        { passive: true } as AddEventListenerOptions,
+      );
       document.removeEventListener("mouseup", onUp);
     };
     document.addEventListener("mousemove", onMove, { passive: true });
@@ -117,7 +125,11 @@ export function Modal(props: ModalProps) {
     if (keyboard && e.key === "Escape") onClose?.();
   };
 
-  const handleTitleMouseDown = useDrag(() => position(), setPosition, draggable);
+  const handleTitleMouseDown = useDrag(
+    () => position(),
+    setPosition,
+    draggable,
+  );
 
   const shouldRender = open || !destroyOnClose;
   if (!shouldRender) return () => null;
@@ -143,7 +155,9 @@ export function Modal(props: ModalProps) {
           }
           : {}),
       };
-    const modalClass = isFullscreen ? "rounded-none" : "rounded-xl max-h-[90vh]";
+    const modalClass = isFullscreen
+      ? "rounded-none"
+      : "rounded-xl max-h-[90vh]";
     const showHeaderActions = fullscreenable || closable;
 
     return (
@@ -185,9 +199,14 @@ export function Modal(props: ModalProps) {
                   "flex items-center justify-between shrink-0 px-6 py-4 border-b border-slate-200 dark:border-slate-600",
                   draggable && "cursor-grab active:cursor-grabbing select-none",
                 )}
-                onMouseDown={handleTitleMouseDown as unknown as (e: Event) => void}
+                onMouseDown={handleTitleMouseDown as unknown as (
+                  e: Event,
+                ) => void}
               >
-                <h2 id="modal-title" class="text-lg font-semibold min-w-0 truncate pr-2">
+                <h2
+                  id="modal-title"
+                  class="text-lg font-semibold min-w-0 truncate pr-2"
+                >
                   {title}
                 </h2>
                 {showHeaderActions && (
@@ -259,7 +278,8 @@ export function Modal(props: ModalProps) {
           <div
             class={twMerge(
               "flex-1 overflow-auto px-6 py-4 min-h-0",
-              !(title != null && title !== "") && showHeaderActions && "pt-12 pr-12",
+              !(title != null && title !== "") && showHeaderActions &&
+                "pt-12 pr-12",
               bodyClass,
             )}
           >
