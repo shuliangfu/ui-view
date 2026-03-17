@@ -1,6 +1,6 @@
 /**
  * Search 搜索框（View）。
- * 基于 Input type="search"，支持清除、占位；light/dark 主题。
+ * 基于 Input type="search"，支持占位、有内容时显示清除按钮、onSearch 时右侧搜索按钮；隐藏浏览器原生 hover 清除图标。light/dark 主题。
  */
 
 import { twMerge } from "tailwind-merge";
@@ -40,6 +40,13 @@ const sizeClasses: Record<SizeVariant, string> = {
 const inputBase =
   "w-full border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 border-slate-300 dark:border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:focus:ring-blue-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors";
 
+const btnCls =
+  "absolute top-1/2 -translate-y-1/2 p-1 rounded text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50";
+
+/** 清除按钮显隐由 CSS :has(input:not(:placeholder-shown)) 控制，不在组件内读 value()，避免订阅 signal 导致整树重跑、input 失焦。 */
+const clearBtnVisibleCls =
+  "search-clear-btn hidden [.search-wrapper:has(input:not(:placeholder-shown))_.search-clear-btn]:inline-flex";
+
 export function Search(props: SearchProps) {
   const {
     size = "md",
@@ -55,13 +62,22 @@ export function Search(props: SearchProps) {
   } = props;
 
   const sizeCls = sizeClasses[size];
-  const resolvedValue = typeof value === "function" ? value() : value;
-  const hasValue = resolvedValue != null && resolvedValue !== "";
-  const btnCls =
-    "absolute top-1/2 -translate-y-1/2 p-1 rounded text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50";
+  // 禁止在组件体内读 value()：会订阅 signal，导致根 effect 重跑、整树重建、input 被替换失焦。
+  // value 透传给 <input value={value} />，由 View applyProps 对 getter 做 createEffect 仅更新 .value。
+
+  const handleClear = () => {
+    const synthetic = { target: { value: "" } } as unknown as Event;
+    onChange?.(synthetic);
+    onInput?.(synthetic);
+  };
 
   return () => (
-    <span class={twMerge("relative inline-block w-full max-w-xs", className)}>
+    <span
+      class={twMerge(
+        "search-wrapper relative inline-block w-full max-w-xs",
+        className,
+      )}
+    >
       <span
         class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500"
         aria-hidden="true"
@@ -84,14 +100,14 @@ export function Search(props: SearchProps) {
         type="search"
         id={id}
         name={name}
-        value={resolvedValue}
+        value={value}
         placeholder={placeholder}
         disabled={disabled}
         class={twMerge(
           inputBase,
           sizeCls,
-          onSearch && "pr-20",
-          hasValue && !onSearch && "pr-9",
+          onSearch ? "pr-20" : "pr-9",
+          "[&::-webkit-search-cancel-button]:appearance-none [&::-webkit-search-cancel-button]:[-webkit-appearance:none]",
         )}
         onInput={onInput}
         onChange={onChange}
@@ -102,33 +118,31 @@ export function Search(props: SearchProps) {
           }
         }}
       />
-      {hasValue && (
-        <button
-          type="button"
-          class={twMerge(btnCls, onSearch ? "right-10" : "right-2")}
-          disabled={disabled}
-          aria-label="清除"
-          onClick={() => {
-            const synthetic = { target: { value: "" } } as unknown as Event;
-            onChange?.(synthetic);
-            onInput?.(synthetic);
-          }}
+      <button
+        type="button"
+        class={twMerge(
+          btnCls,
+          clearBtnVisibleCls,
+          onSearch ? "right-10" : "right-2",
+        )}
+        disabled={disabled}
+        aria-label="清除"
+        onClick={handleClear}
+      >
+        <svg
+          class="size-4"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
         >
-          <svg
-            class="size-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M6 18L18 6M6 6l12 12"
-            />
-          </svg>
-        </button>
-      )}
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M6 18L18 6M6 6l12 12"
+          />
+        </svg>
+      </button>
       {onSearch && (
         <button
           type="button"
