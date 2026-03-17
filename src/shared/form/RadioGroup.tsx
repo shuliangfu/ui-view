@@ -12,7 +12,7 @@ export interface RadioGroupOption {
   disabled?: boolean;
 }
 
-/** 布局方向：纵向（默认）或横向 */
+/** 布局方向：横向（默认）或纵向 */
 export type RadioGroupDirection = "vertical" | "horizontal";
 
 export interface RadioGroupProps {
@@ -28,7 +28,7 @@ export interface RadioGroupProps {
   error?: boolean;
   /** 变更回调，回传新选中的 value */
   onChange?: (value: string) => void;
-  /** 布局方向：vertical 纵向、horizontal 横向，默认 "vertical" */
+  /** 布局方向：horizontal 横向、vertical 纵向，默认 "horizontal" */
   direction?: RadioGroupDirection;
   /** 额外 class（作用于容器） */
   class?: string;
@@ -42,14 +42,13 @@ export function RadioGroup(props: RadioGroupProps) {
     disabled = false,
     error = false,
     onChange,
-    direction = "vertical",
+    direction = "horizontal",
     class: className,
   } = props;
 
-  const directionCls =
-    direction === "horizontal"
-      ? "flex-row flex-wrap gap-x-4 gap-y-2"
-      : "flex-col gap-2";
+  const directionCls = direction === "horizontal"
+    ? "flex-row flex-wrap gap-x-4 gap-y-2"
+    : "flex-col gap-2";
 
   return () => {
     const resolvedValue = typeof value === "function" ? value() : (value ?? "");
