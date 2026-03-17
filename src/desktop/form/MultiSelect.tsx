@@ -53,10 +53,6 @@ export function MultiSelect(props: MultiSelectProps) {
   } = props;
 
   const sizeCls = sizeClasses[size];
-  const allValues = options.map((o) => o.value).filter((v, i, a) => {
-    const opt = options[i];
-    return !opt?.disabled;
-  });
 
   const triggerChange = (newVal: string[]) => {
     const synthetic = { target: { value: newVal } } as unknown as Event;
