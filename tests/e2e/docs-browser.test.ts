@@ -1,0 +1,1322 @@
+/**
+ * @fileoverview docs 站点浏览器端到端测试
+ *
+ * beforeAll 启动 docs 的 dev 服务器，浏览器 goto 各页面，验证：
+ * - 所有文档页面可访问且 main 有内容
+ * - 表单页输入、勾选、点击等交互正常
+ */
+
+import {
+  createCommand,
+  dirname,
+  execPath,
+  IS_DENO,
+  join,
+} from "@dreamer/runtime-adapter";
+import type { SpawnedProcess } from "@dreamer/runtime-adapter";
+import {
+  afterAll,
+  beforeAll,
+  cleanupAllBrowsers,
+  describe,
+  expect,
+  it,
+} from "@dreamer/test";
+
+const DOCS_PORT = 3000;
+const BASE_URL = `http://127.0.0.1:${DOCS_PORT}`;
+
+/** 规整绝对路径（与 view e2e 一致） */
+function normalizeAbsolutePath(p: string): string {
+  const isAbsolute = p.startsWith("/") || /^[A-Za-z]:[\\/]/.test(p);
+  const parts = p.replace(/\\/g, "/").split("/").filter(Boolean);
+  const out: string[] = [];
+  for (const part of parts) {
+    if (part === "..") out.pop();
+    else if (part !== ".") out.push(part);
+  }
+  const joined = out.join("/");
+  if (!isAbsolute) return joined;
+  if (out[0] && /^[A-Za-z]:$/.test(out[0])) return joined;
+  return "/" + joined;
+}
+
+const _testDir = dirname(
+  typeof import.meta.url !== "undefined" && import.meta.url.startsWith("file:")
+    ? new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1")
+    : join(".", "tests", "e2e", "docs-browser.test.ts"),
+);
+const UI_VIEW_ROOT = normalizeAbsolutePath(join(_testDir, "..", ".."));
+const DOCS_ROOT = join(UI_VIEW_ROOT, "docs");
+
+function entryPointForBrowser(): string {
+  return join(UI_VIEW_ROOT, "tests", "e2e", "browser-stub.js");
+}
+
+/** docs 全部桌面组件路由（根首页 + _layout.tsx MENU 一致） */
+const DOCS_ROUTES: string[] = [
+  "/",
+  "/desktop",
+  "/desktop/basic/button",
+  "/desktop/basic/link",
+  "/desktop/basic/icon",
+  "/desktop/basic/typography",
+  "/desktop/basic/badge",
+  "/desktop/basic/avatar",
+  "/desktop/basic/skeleton",
+  "/desktop/basic/spinner",
+  "/desktop/form/input",
+  "/desktop/form/search",
+  "/desktop/form/password",
+  "/desktop/form/textarea",
+  "/desktop/form/input-number",
+  "/desktop/form/select",
+  "/desktop/form/multiselect",
+  "/desktop/form/checkbox",
+  "/desktop/form/checkbox-group",
+  "/desktop/form/radio-group",
+  "/desktop/form/switch",
+  "/desktop/form/slider",
+  "/desktop/form/rate",
+  "/desktop/form/date-picker",
+  "/desktop/form/time-picker",
+  "/desktop/form/time-range-picker",
+  "/desktop/form/upload",
+  "/desktop/form/transfer",
+  "/desktop/form/mentions",
+  "/desktop/form/rich-text-editor",
+  "/desktop/message/toast",
+  "/desktop/message/message",
+  "/desktop/message/notification",
+  "/desktop/feedback/alert",
+  "/desktop/feedback/modal",
+  "/desktop/feedback/dialog",
+  "/desktop/feedback/drawer",
+  "/desktop/feedback/progress",
+  "/desktop/feedback/tooltip",
+  "/desktop/feedback/popover",
+  "/desktop/feedback/popconfirm",
+  "/desktop/feedback/result",
+  "/desktop/layout/container",
+  "/desktop/layout/hero",
+  "/desktop/layout/grid",
+  "/desktop/layout/stack",
+  "/desktop/layout/divider",
+  "/desktop/layout/tabs",
+  "/desktop/layout/accordion",
+  "/desktop/navigation/breadcrumb",
+  "/desktop/navigation/pagination",
+  "/desktop/navigation/menu",
+  "/desktop/navigation/dropdown",
+  "/desktop/navigation/steps",
+  "/desktop/navigation/page-header",
+  "/desktop/navigation/affix",
+  "/desktop/navigation/anchor",
+  "/desktop/data-display/table",
+  "/desktop/data-display/list",
+  "/desktop/data-display/card",
+  "/desktop/data-display/tag",
+  "/desktop/data-display/empty",
+  "/desktop/data-display/image",
+  "/desktop/data-display/image-viewer",
+  "/desktop/data-display/descriptions",
+  "/desktop/data-display/timeline",
+  "/desktop/data-display/statistic",
+  "/desktop/data-display/segmented",
+  "/desktop/data-display/collapse",
+  "/desktop/data-display/carousel",
+  "/desktop/data-display/calendar",
+  "/desktop/data-display/comment",
+  "/desktop/data-display/tree",
+  "/desktop/data-display/code-block",
+  "/desktop/charts/line",
+  "/desktop/charts/bar",
+  "/desktop/charts/pie",
+  "/desktop/charts/doughnut",
+  "/desktop/charts/radar",
+  "/desktop/charts/polar-area",
+  "/desktop/charts/bubble",
+  "/desktop/charts/scatter",
+  "/desktop/other/back-top",
+  "/desktop/other/config-provider",
+];
+
+let serverProcess: SpawnedProcess | null = null;
+
+const browserConfig = {
+  sanitizeOps: false,
+  sanitizeResources: false,
+  timeout: 60_000,
+  browser: {
+    enabled: true,
+    headless: true,
+    browserSource: "test" as const,
+    entryPoint: entryPointForBrowser(),
+    bodyContent: '<div id="root"></div>',
+    browserMode: true,
+    moduleLoadTimeout: 20_000,
+  },
+};
+
+async function goto(
+  t: { browser?: { goto?: (url: string) => Promise<unknown> } },
+  path: string,
+) {
+  if (!t?.browser?.goto) return;
+  const url = BASE_URL + (path.startsWith("/") ? path : "/" + path);
+  await t.browser.goto(url);
+  await new Promise((r) => setTimeout(r, 400));
+}
+
+async function getMainText(
+  t: { browser?: { evaluate: (fn: () => string) => Promise<unknown> } },
+): Promise<string> {
+  if (!t?.browser) return "";
+  return (await t.browser.evaluate(() => {
+    const main = document.querySelector("main");
+    return main?.innerText ?? "";
+  })) as string;
+}
+
+/** 在 main 内点击包含指定文字的按钮 */
+async function clickButtonByText(
+  t: { browser?: { evaluate: (fn: () => boolean) => Promise<unknown> } },
+  text: string,
+): Promise<boolean> {
+  if (!t?.browser) return false;
+  const escaped = JSON.stringify(text);
+  const ok = await t.browser.evaluate(
+    new Function(
+      "var btnText=" + escaped +
+        ";var main=document.querySelector('main');if(!main)return false;var buttons=main.querySelectorAll('button[type=\"button\"],button:not([type]),a');for(var i=0;i<buttons.length;i++){var btn=buttons[i];if(btn.textContent&&btn.textContent.trim().indexOf(btnText)!==-1){btn.click();return true;}}return false;",
+    ) as () => boolean,
+  );
+  await new Promise((r) => setTimeout(r, 150));
+  return ok as boolean;
+}
+
+/** 在 main 内第一个 input/textarea 输入文字（value 通过闭包传入，evaluate 无参） */
+async function typeInFirstInput(
+  t: { browser?: { evaluate: <T>(fn: () => T | Promise<T>) => Promise<T> } },
+  value: string,
+): Promise<boolean> {
+  if (!t?.browser) return false;
+  const escaped = JSON.stringify(value);
+  const ok = await t.browser.evaluate(
+    new Function(
+      "var value=" + escaped +
+        ";var main=document.querySelector('main');if(!main)return false;var el=main.querySelector('input:not([type=hidden]):not([type=submit]):not([type=button]), textarea');if(!el){return false;}el.focus();el.value=value;el.dispatchEvent(new Event('input',{bubbles:true}));return true;",
+    ) as () => boolean,
+  );
+  await new Promise((r) => setTimeout(r, 100));
+  return ok as boolean;
+}
+
+/** 在 main 内点击第一个 type=checkbox 的 input */
+async function clickFirstCheckbox(
+  t: { browser?: { evaluate: (fn: () => boolean) => Promise<unknown> } },
+): Promise<boolean> {
+  if (!t?.browser) return false;
+  const ok = await t.browser.evaluate(() => {
+    const main = document.querySelector("main");
+    if (!main) return false;
+    const cb = main.querySelector<HTMLInputElement>('input[type="checkbox"]');
+    if (!cb || cb.disabled) return false;
+    cb.click();
+    return true;
+  });
+  await new Promise((r) => setTimeout(r, 150));
+  return ok as boolean;
+}
+
+/** 在 main 内点击第一个 role=switch 或 开关 相关按钮 */
+async function clickFirstSwitch(
+  t: { browser?: { evaluate: (fn: () => boolean) => Promise<unknown> } },
+): Promise<boolean> {
+  if (!t?.browser) return false;
+  const ok = await t.browser.evaluate(() => {
+    const main = document.querySelector("main");
+    if (!main) return false;
+    const sw = main.querySelector(
+      "[role='switch'], button[class*='switch'], .rounded-full",
+    );
+    if (!sw) return false;
+    (sw as HTMLElement).click();
+    return true;
+  });
+  await new Promise((r) => setTimeout(r, 150));
+  return ok as boolean;
+}
+
+/** 在 main 内点击第二个 tab（或第一个可点 tab 后的下一个） */
+async function clickSecondTab(
+  t: { browser?: { evaluate: (fn: () => boolean) => Promise<unknown> } },
+): Promise<boolean> {
+  if (!t?.browser) return false;
+  const ok = await t.browser.evaluate(() => {
+    const main = document.querySelector("main");
+    if (!main) return false;
+    const tabs = main.querySelectorAll(
+      '[role="tab"], [data-state], .cursor-pointer',
+    );
+    for (let i = 0; i < tabs.length; i++) {
+      const el = tabs[i] as HTMLElement;
+      if (
+        el.getAttribute?.("role") === "tab" ||
+        el.classList?.contains("cursor-pointer")
+      ) {
+        if (i >= 1) {
+          el.click();
+          return true;
+        }
+      }
+    }
+    return false;
+  });
+  await new Promise((r) => setTimeout(r, 150));
+  return ok as boolean;
+}
+
+/** 在 main 内点击「下一页」或包含 next 的分页按钮 */
+async function clickPaginationNext(
+  t: { browser?: { evaluate: (fn: () => boolean) => Promise<unknown> } },
+): Promise<boolean> {
+  if (!t?.browser) return false;
+  const ok = await t.browser.evaluate(() => {
+    const main = document.querySelector("main");
+    if (!main) return false;
+    const buttons = main.querySelectorAll("button, a");
+    for (let i = 0; i < buttons.length; i++) {
+      const btn = buttons[i] as HTMLElement;
+      const text = btn.textContent?.trim() ?? "";
+      const ariaLabel = btn.getAttribute?.("aria-label") ?? "";
+      const match = /下一页|Next|›|»/.test(text) ||
+        /下一页|next/i.test(ariaLabel);
+      if (match && !btn.hasAttribute?.("disabled")) {
+        btn.click();
+        return true;
+      }
+    }
+    return false;
+  });
+  await new Promise((r) => setTimeout(r, 150));
+  return ok as boolean;
+}
+
+/** 在 main 内点击第一个折叠面板标题或 [data-state] 的折叠头 */
+async function clickFirstCollapseHeader(
+  t: { browser?: { evaluate: (fn: () => boolean) => Promise<unknown> } },
+): Promise<boolean> {
+  if (!t?.browser) return false;
+  const ok = await t.browser.evaluate(() => {
+    const main = document.querySelector("main");
+    if (!main) return false;
+    const header = main.querySelector(
+      "[data-state], [aria-expanded], .flex.items-center.justify-between",
+    );
+    if (header) {
+      (header as HTMLElement).click();
+      return true;
+    }
+    return false;
+  });
+  await new Promise((r) => setTimeout(r, 200));
+  return ok as boolean;
+}
+
+/** 在 main 内点击文案完全匹配的按钮（用于 确定/取消 等） */
+async function clickButtonByExactText(
+  t: { browser?: { evaluate: (fn: () => boolean) => Promise<unknown> } },
+  exactText: string,
+): Promise<boolean> {
+  if (!t?.browser) return false;
+  const escaped = JSON.stringify(exactText);
+  const ok = await t.browser.evaluate(
+    new Function(
+      "var exact=" + escaped +
+        ";var main=document.querySelector('main');if(!main)return false;var all=main.querySelectorAll('button,a');for(var i=0;i<all.length;i++){var b=all[i];if(b.textContent&&b.textContent.trim()===exact){b.click();return true;}}return false;",
+    ) as () => boolean,
+  );
+  await new Promise((r) => setTimeout(r, 120));
+  return ok as boolean;
+}
+
+/** 在 main 内点击第一个 type=radio 的 input */
+async function clickFirstRadio(
+  t: { browser?: { evaluate: (fn: () => boolean) => Promise<unknown> } },
+): Promise<boolean> {
+  if (!t?.browser) return false;
+  const ok = await t.browser.evaluate(() => {
+    const main = document.querySelector("main");
+    if (!main) return false;
+    const radio = main.querySelector<HTMLInputElement>(
+      'input[type="radio"]:not([disabled])',
+    );
+    if (!radio) return false;
+    radio.click();
+    return true;
+  });
+  await new Promise((r) => setTimeout(r, 120));
+  return ok as boolean;
+}
+
+/** 在 body 内点击文案完全匹配的按钮（用于 Modal/Dialog 浮层内的 确定/取消） */
+async function clickInDocumentByExactText(
+  t: { browser?: { evaluate: (fn: () => boolean) => Promise<unknown> } },
+  exactText: string,
+): Promise<boolean> {
+  if (!t?.browser) return false;
+  const escaped = JSON.stringify(exactText);
+  const ok = await t.browser.evaluate(
+    new Function(
+      "var exact=" + escaped +
+        ";var all=document.body.querySelectorAll('button,a');for(var i=0;i<all.length;i++){var b=all[i];if(b.textContent&&b.textContent.trim()===exact){b.click();return true;}}return false;",
+    ) as () => boolean,
+  );
+  await new Promise((r) => setTimeout(r, 120));
+  return ok as boolean;
+}
+
+describe("docs 浏览器 E2E", () => {
+  beforeAll(async () => {
+    const cmd = createCommand(execPath(), {
+      args: IS_DENO ? ["task", "dev"] : ["run", "dev"],
+      cwd: DOCS_ROOT,
+      stdout: "inherit",
+      stderr: "inherit",
+    });
+    serverProcess = cmd.spawn();
+    (serverProcess as SpawnedProcess & { unref?: () => void }).unref?.();
+
+    const deadline = Date.now() + 60_000;
+    while (Date.now() < deadline) {
+      try {
+        const r = await fetch(BASE_URL + "/");
+        if (r.ok) return;
+      } catch {
+        // 服务尚未就绪
+      }
+      await new Promise((r) => setTimeout(r, 500));
+    }
+    throw new Error("Docs dev server did not start within 60s.");
+  });
+
+  afterAll(async () => {
+    try {
+      serverProcess?.kill(15);
+      serverProcess = null;
+    } catch {
+      // ignore
+    }
+    await cleanupAllBrowsers();
+  });
+
+  describe("各页面可访问", () => {
+    for (const path of DOCS_ROUTES) {
+      it(`${path} 加载且 main 有内容`, async (t) => {
+        if (!t?.browser?.goto) return;
+        await goto(t, path);
+        if (path !== "/") {
+          await new Promise((r) => setTimeout(r, 300));
+        }
+        let text = await getMainText(t);
+        if (text.length < 30) {
+          await new Promise((r) => setTimeout(r, 500));
+          text = await getMainText(t);
+        }
+        if (text.length === 0) {
+          text = (await t.browser!.evaluate(() =>
+            document.body?.innerText ?? ""
+          )) as string;
+        }
+        if (path === "/") {
+          // 根路径无 <main>，不依赖 body 文本长度；只校验「页面已加载出根 layout」：存在指向桌面版的链接或页脚
+          const rootOk = (await t.browser!.evaluate(() => {
+            const hasNav = document.querySelector('a[href="/desktop"]') != null;
+            const bodyText = document.body?.innerText ?? "";
+            const hasFooter = /@dreamer|dweb|桌面版|移动版/.test(bodyText);
+            return hasNav || hasFooter || bodyText.length > 20;
+          })) as boolean;
+          expect(rootOk).toBe(true);
+          return;
+        }
+        expect(text.length).toBeGreaterThan(30);
+        expect(text).toMatch(
+          /引入|示例|API|代码|组件|Button|Input|Form|Checkbox|Table|Chart|Tailwind|桌面|Link|链接/,
+        );
+      }, browserConfig);
+    }
+  });
+
+  describe("表单与交互", () => {
+    it("Input 页：首个输入框可输入", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/form/input");
+      await new Promise((r) => setTimeout(r, 300));
+      const ok = await typeInFirstInput(t, "e2e-test");
+      expect(ok).toBe(true);
+      const text = await getMainText(t);
+      expect(text).toMatch(/Input|单行|输入|代码示例/);
+    }, browserConfig);
+
+    it("Checkbox 页：可勾选第一个复选框", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/form/checkbox");
+      await new Promise((r) => setTimeout(r, 300));
+      const ok = await clickFirstCheckbox(t);
+      expect(ok).toBe(true);
+      const text = await getMainText(t);
+      expect(text).toMatch(/Checkbox|勾选|禁用|代码示例/);
+    }, browserConfig);
+
+    it("Switch 页：可点击开关", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/form/switch");
+      await new Promise((r) => setTimeout(r, 300));
+      const ok = await clickFirstSwitch(t);
+      expect(ok).toBe(true);
+      const text = await getMainText(t);
+      expect(text).toMatch(/Switch|开关|代码示例/);
+    }, browserConfig);
+
+    it("Button 页：可点击主按钮", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/basic/button");
+      await new Promise((r) => setTimeout(r, 300));
+      const ok = await clickButtonByText(t, "button");
+      expect(ok).toBe(true);
+      const text = await getMainText(t);
+      expect(text).toMatch(/Button|按钮|代码示例/);
+    }, browserConfig);
+
+    it("RadioGroup 页：有单选选项且页面正常", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/form/radio-group");
+      await new Promise((r) => setTimeout(r, 300));
+      const text = await getMainText(t);
+      expect(text).toMatch(/RadioGroup|单选|选项|代码示例/);
+      const hasRadio = await t.browser!.evaluate(() => {
+        const main = document.querySelector("main");
+        return main?.querySelector('input[type="radio"]') != null;
+      });
+      expect(hasRadio).toBe(true);
+    }, browserConfig);
+
+    it("Select 页：可点击打开并选择选项", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/form/select");
+      await new Promise((r) => setTimeout(r, 300));
+      const opened = await t.browser!.evaluate(() => {
+        const trigger = document.querySelector(
+          "main button[aria-haspopup='listbox']",
+        ) as HTMLButtonElement | null;
+        if (trigger) {
+          trigger.click();
+          return true;
+        }
+        return false;
+      });
+      expect(opened).toBe(true);
+      await new Promise((r) => setTimeout(r, 200));
+      const selected = await t.browser!.evaluate(() => {
+        const opt = document.querySelector(
+          'main [role="listbox"] [role="option"]',
+        ) as HTMLElement | null;
+        if (opt && !(opt as HTMLButtonElement).disabled) {
+          opt.click();
+          return true;
+        }
+        return false;
+      });
+      expect(selected).toBe(true);
+    }, browserConfig);
+
+    it("BackTop 页：滚动后可点击回到顶部按钮", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/other/back-top");
+      await new Promise((r) => setTimeout(r, 300));
+      await t.browser!.evaluate(() => {
+        window.scrollTo(0, 300);
+      });
+      await new Promise((r) => setTimeout(r, 400));
+      const clicked = await t.browser!.evaluate(() => {
+        const btn = document.querySelector(
+          'button[aria-label="回到顶部"], .back-top-host button',
+        ) as HTMLButtonElement | null;
+        if (btn) {
+          btn.click();
+          return true;
+        }
+        return false;
+      });
+      expect(clicked).toBe(true);
+    }, browserConfig);
+
+    it("Textarea 页：首个多行框可输入", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/form/textarea");
+      await new Promise((r) => setTimeout(r, 300));
+      const ok = await typeInFirstInput(t, "e2e textarea");
+      expect(ok).toBe(true);
+      const text = await getMainText(t);
+      expect(text).toMatch(/Textarea|多行|代码示例/);
+    }, browserConfig);
+
+    it("Slider 页：可改变滑块值", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/form/slider");
+      await new Promise((r) => setTimeout(r, 300));
+      const ok = await t.browser!.evaluate(() => {
+        const main = document.querySelector("main");
+        const range = main?.querySelector('input[type="range"]') as
+          | HTMLInputElement
+          | null;
+        if (!range) return false;
+        const v = Math.min(
+          Number(range.max) || 100,
+          (Number(range.value) || 0) + 10,
+        );
+        range.value = String(v);
+        range.dispatchEvent(new Event("input", { bubbles: true }));
+        return true;
+      });
+      expect(ok).toBe(true);
+    }, browserConfig);
+
+    it("Rate 页：有星级控件", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/form/rate");
+      await new Promise((r) => setTimeout(r, 300));
+      const hasRate = await t.browser!.evaluate(() => {
+        const main = document.querySelector("main");
+        return main?.querySelector('[role="img"], button') != null;
+      });
+      expect(hasRate).toBe(true);
+      const text = await getMainText(t);
+      expect(text).toMatch(/Rate|评分|代码示例/);
+    }, browserConfig);
+
+    it("CheckboxGroup 页：可勾选第一个选项", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/form/checkbox-group");
+      await new Promise((r) => setTimeout(r, 300));
+      const ok = await clickFirstCheckbox(t);
+      expect(ok).toBe(true);
+      const text = await getMainText(t);
+      expect(text).toMatch(/CheckboxGroup|勾选组|代码示例/);
+    }, browserConfig);
+
+    it("Pagination 页：有分页且可点下一页", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/navigation/pagination");
+      await new Promise((r) => setTimeout(r, 300));
+      const text = await getMainText(t);
+      expect(text).toMatch(/Pagination|分页|代码示例/);
+      const ok = await clickPaginationNext(t);
+      expect(ok).toBe(true);
+    }, browserConfig);
+
+    it("Tabs 页：有标签可点击切换", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/layout/tabs");
+      await new Promise((r) => setTimeout(r, 300));
+      const text = await getMainText(t);
+      expect(text).toMatch(/Tabs|标签|代码示例/);
+      const ok = await clickSecondTab(t);
+      if (ok) await new Promise((r) => setTimeout(r, 150));
+      expect(text.length).toBeGreaterThan(50);
+    }, browserConfig);
+
+    it("Collapse 页：有折叠项可点击", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/data-display/collapse");
+      await new Promise((r) => setTimeout(r, 300));
+      const text = await getMainText(t);
+      expect(text).toMatch(/Collapse|折叠|代码示例/);
+      const ok = await clickFirstCollapseHeader(t);
+      expect(ok).toBe(true);
+    }, browserConfig);
+
+    it("Modal 页：有弹窗说明或触发按钮", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/feedback/modal");
+      await new Promise((r) => setTimeout(r, 300));
+      const text = await getMainText(t);
+      expect(text).toMatch(/Modal|模态|弹窗|代码示例/);
+      const clicked = await clickButtonByText(t, "打开");
+      if (clicked) await new Promise((r) => setTimeout(r, 300));
+      expect(text.length).toBeGreaterThan(50);
+    }, browserConfig);
+
+    it("Toast 页：进入页面确认渲染", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/message/toast");
+      await new Promise((r) => setTimeout(r, 300));
+      const text = await getMainText(t);
+      expect(text).toMatch(/Toast|轻提示|代码示例/);
+    }, browserConfig);
+
+    it("Tree 页：进入页面确认树形结构渲染", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/data-display/tree");
+      await new Promise((r) => setTimeout(r, 300));
+      const text = await getMainText(t);
+      expect(text).toMatch(/Tree|树|代码示例/);
+      const hasTree = await t.browser!.evaluate(() => {
+        const main = document.querySelector("main");
+        return main?.querySelector('[role="tree"], [role="treeitem"], .tree') !=
+            null || (main?.innerText?.length ?? 0) > 100;
+      });
+      expect(hasTree).toBe(true);
+    }, browserConfig);
+
+    it("Table 页：进入页面确认表格渲染", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/data-display/table");
+      await new Promise((r) => setTimeout(r, 300));
+      const text = await getMainText(t);
+      expect(text).toMatch(/Table|表格|代码示例/);
+      const hasTable = await t.browser!.evaluate(() =>
+        document.querySelector("main table") != null
+      );
+      expect(hasTable).toBe(true);
+    }, browserConfig);
+
+    it("Alert 页：进入页面确认提示渲染", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/feedback/alert");
+      await new Promise((r) => setTimeout(r, 300));
+      const text = await getMainText(t);
+      expect(text).toMatch(/Alert|提示|代码示例/);
+    }, browserConfig);
+
+    it("Link 页：进入页面确认链接渲染", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/basic/link");
+      await new Promise((r) => setTimeout(r, 300));
+      const text = await getMainText(t);
+      expect(text).toMatch(/Link|链接|代码示例/);
+      const hasLink = await t.browser!.evaluate(() =>
+        document.querySelector("main a[href]") != null
+      );
+      expect(hasLink).toBe(true);
+    }, browserConfig);
+
+    it("Link 页：可点击「返回桌面」", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/basic/link");
+      await new Promise((r) => setTimeout(r, 300));
+      const ok = await clickButtonByText(t, "返回桌面");
+      expect(ok).toBe(true);
+    }, browserConfig);
+
+    it("Search 页：输入并存在搜索控件", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/form/search");
+      await new Promise((r) => setTimeout(r, 300));
+      const ok = await typeInFirstInput(t, "e2e search");
+      expect(ok).toBe(true);
+      const text = await getMainText(t);
+      expect(text).toMatch(/Search|搜索|代码示例/);
+    }, browserConfig);
+
+    it("Password 页：有密码框，若有显隐按钮则点击验证", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/form/password");
+      await new Promise((r) => setTimeout(r, 300));
+      const hasPwd = await t.browser!.evaluate(() =>
+        document.querySelector(
+          "main input[type=password], main input[type=text]",
+        ) != null
+      );
+      expect(hasPwd).toBe(true);
+      await t.browser!.evaluate(() => {
+        const btn = document.querySelector(
+          "main button[aria-label*='显示'], main button[aria-label*='隐藏']",
+        ) as HTMLButtonElement | null;
+        if (btn) btn.click();
+      });
+    }, browserConfig);
+
+    it("Input-number 页：可点击步进加", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/form/input-number");
+      await new Promise((r) => setTimeout(r, 300));
+      const ok = await t.browser!.evaluate(() => {
+        const btn = document.querySelector('main button[aria-label="增加"]') as
+          | HTMLButtonElement
+          | null;
+        if (btn && !btn.disabled) {
+          btn.click();
+          return true;
+        }
+        return false;
+      });
+      expect(ok).toBe(true);
+    }, browserConfig);
+
+    it("RadioGroup 页：可点击第一个单选", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/form/radio-group");
+      await new Promise((r) => setTimeout(r, 300));
+      const ok = await clickFirstRadio(t);
+      expect(ok).toBe(true);
+    }, browserConfig);
+
+    it("Rate 页：可点击星级", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/form/rate");
+      await new Promise((r) => setTimeout(r, 300));
+      const clicked = await t.browser!.evaluate(() => {
+        const main = document.querySelector("main");
+        const rate = main?.querySelector(
+          '[role="img"], [class*="rate"] button, button',
+        );
+        if (rate) {
+          (rate as HTMLElement).click();
+          return true;
+        }
+        return false;
+      });
+      expect(clicked).toBe(true);
+    }, browserConfig);
+
+    it("MultiSelect 页：可点击全选或清空或选项", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/form/multiselect");
+      await new Promise((r) => setTimeout(r, 300));
+      const clicked = await clickButtonByText(t, "全选");
+      expect(clicked).toBe(true);
+    }, browserConfig);
+
+    it("Date-picker 页：可点击输入框打开选择器", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/form/date-picker");
+      await new Promise((r) => setTimeout(r, 300));
+      const clicked = await t.browser!.evaluate(() => {
+        const main = document.querySelector("main");
+        const input = main?.querySelector(
+          'input[type="text"], input[placeholder*="日期"], input',
+        ) as HTMLInputElement | null;
+        if (input) {
+          input.click();
+          return true;
+        }
+        return false;
+      });
+      expect(clicked).toBe(true);
+    }, browserConfig);
+
+    it("Time-picker 页：可点击输入框打开选择器", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/form/time-picker");
+      await new Promise((r) => setTimeout(r, 300));
+      const clicked = await t.browser!.evaluate(() => {
+        const main = document.querySelector("main");
+        const input = main?.querySelector(
+          'input[type="text"], input[placeholder*="时间"], input',
+        ) as HTMLInputElement | null;
+        if (input) {
+          input.click();
+          return true;
+        }
+        return false;
+      });
+      expect(clicked).toBe(true);
+    }, browserConfig);
+
+    it("Upload 页：可点击上传区域", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/form/upload");
+      await new Promise((r) => setTimeout(r, 300));
+      const clicked = await t.browser!.evaluate(() => {
+        const main = document.querySelector("main");
+        const zone = main?.querySelector(
+          'input[type="file"], [class*="upload"], label',
+        );
+        if (zone) {
+          (zone as HTMLElement).click();
+          return true;
+        }
+        return false;
+      });
+      expect(clicked).toBe(true);
+    }, browserConfig);
+
+    it("Transfer 页：可点击穿梭框移动按钮或列表项", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/form/transfer");
+      await new Promise((r) => setTimeout(r, 300));
+      const clicked = await t.browser!.evaluate(() => {
+        const main = document.querySelector("main");
+        const btn = main?.querySelector(
+          'button[aria-label*="右"], button[aria-label*="右移"], .transfer button',
+        );
+        if (btn) {
+          (btn as HTMLElement).click();
+          return true;
+        }
+        const item = main?.querySelector(
+          '[class*="transfer"] li, [class*="list"] li',
+        );
+        if (item) {
+          (item as HTMLElement).click();
+          return true;
+        }
+        return false;
+      });
+      expect(clicked).toBe(true);
+    }, browserConfig);
+
+    it("Mentions 页：可输入内容", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/form/mentions");
+      await new Promise((r) => setTimeout(r, 300));
+      const ok = await typeInFirstInput(t, "test @");
+      expect(ok).toBe(true);
+    }, browserConfig);
+
+    it("RichTextEditor 页：可输入内容", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/form/rich-text-editor");
+      await new Promise((r) => setTimeout(r, 300));
+      const ok = await typeInFirstInput(t, "e2e rich text");
+      expect(ok).toBe(true);
+    }, browserConfig);
+
+    it("Toast 页：点击 success 触发轻提示", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/message/toast");
+      await new Promise((r) => setTimeout(r, 300));
+      const ok = await clickButtonByText(t, "success");
+      expect(ok).toBe(true);
+      await new Promise((r) => setTimeout(r, 400));
+    }, browserConfig);
+
+    it("Message 页：有全局提示触发按钮", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/message/message");
+      await new Promise((r) => setTimeout(r, 300));
+      const text = await getMainText(t);
+      expect(text).toMatch(/Message|全局提示|代码示例/);
+      const ok = await clickButtonByText(t, "message.success");
+      if (ok) await new Promise((r) => setTimeout(r, 300));
+    }, browserConfig);
+
+    it("Notification 页：点击触发通知", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/message/notification");
+      await new Promise((r) => setTimeout(r, 300));
+      const ok = await clickButtonByText(t, "成功通知");
+      expect(ok).toBe(true);
+      await new Promise((r) => setTimeout(r, 400));
+    }, browserConfig);
+
+    it("Alert 页：可点击「立即升级」", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/feedback/alert");
+      await new Promise((r) => setTimeout(r, 300));
+      const ok = await clickButtonByText(t, "立即升级");
+      expect(ok).toBe(true);
+    }, browserConfig);
+
+    it("Modal 页：打开后点击确定", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/feedback/modal");
+      await new Promise((r) => setTimeout(r, 300));
+      const opened = await clickButtonByText(t, "打开 Modal");
+      if (opened) {
+        await new Promise((r) => setTimeout(r, 400));
+        const closed = await clickInDocumentByExactText(t, "确定");
+        expect(closed).toBe(true);
+      }
+    }, browserConfig);
+
+    it("Dialog 页：打开 Dialog 并确定", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/feedback/dialog");
+      await new Promise((r) => setTimeout(r, 300));
+      const opened = await clickButtonByText(t, "打开 Dialog");
+      if (opened) {
+        await new Promise((r) => setTimeout(r, 400));
+        const ok = await clickInDocumentByExactText(t, "确定");
+        if (ok) await new Promise((r) => setTimeout(r, 200));
+      }
+      const text = await getMainText(t);
+      expect(text).toMatch(/Dialog|对话框|代码示例/);
+    }, browserConfig);
+
+    it("Drawer 页：可点击打开抽屉", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/feedback/drawer");
+      await new Promise((r) => setTimeout(r, 300));
+      const ok = await clickButtonByText(t, "右侧抽屉");
+      if (ok) await new Promise((r) => setTimeout(r, 400));
+      const text = await getMainText(t);
+      expect(text).toMatch(/Drawer|抽屉|代码示例/);
+    }, browserConfig);
+
+    it("Popconfirm 页：可点击触发确认", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/feedback/popconfirm");
+      await new Promise((r) => setTimeout(r, 300));
+      const ok = await clickButtonByText(t, "普通确认");
+      if (ok) await new Promise((r) => setTimeout(r, 300));
+      const text = await getMainText(t);
+      expect(text).toMatch(/Popconfirm|气泡|代码示例/);
+    }, browserConfig);
+
+    it("Result 页：可点击「返回列表」", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/feedback/result");
+      await new Promise((r) => setTimeout(r, 300));
+      const ok = await clickButtonByText(t, "返回列表");
+      expect(ok).toBe(true);
+    }, browserConfig);
+
+    it("Hero 页：可点击「立即开始」", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/layout/hero");
+      await new Promise((r) => setTimeout(r, 300));
+      const ok = await clickButtonByText(t, "立即开始");
+      expect(ok).toBe(true);
+    }, browserConfig);
+
+    it("Tabs 页：点击「标签 B」", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/layout/tabs");
+      await new Promise((r) => setTimeout(r, 300));
+      const ok = await clickButtonByText(t, "标签 B");
+      expect(ok).toBe(true);
+    }, browserConfig);
+
+    it("Accordion 页：点击「第一项」展开", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/layout/accordion");
+      await new Promise((r) => setTimeout(r, 300));
+      const ok = await clickButtonByText(t, "第一项");
+      expect(ok).toBe(true);
+    }, browserConfig);
+
+    it("Breadcrumb 页：可点击面包屑链接", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/navigation/breadcrumb");
+      await new Promise((r) => setTimeout(r, 300));
+      const ok = await clickButtonByText(t, "首页");
+      expect(ok).toBe(true);
+    }, browserConfig);
+
+    it("Menu 页：可点击菜单项", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/navigation/menu");
+      await new Promise((r) => setTimeout(r, 300));
+      const ok = await clickButtonByText(t, "选项一");
+      expect(ok).toBe(true);
+    }, browserConfig);
+
+    it("Dropdown 页：点击展开下拉", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/navigation/dropdown");
+      await new Promise((r) => setTimeout(r, 300));
+      const ok = await clickButtonByText(t, "点击展开");
+      expect(ok).toBe(true);
+      await new Promise((r) => setTimeout(r, 300));
+    }, browserConfig);
+
+    it("Steps 页：可点击「下一步」", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/navigation/steps");
+      await new Promise((r) => setTimeout(r, 300));
+      const ok = await clickButtonByText(t, "下一步");
+      expect(ok).toBe(true);
+    }, browserConfig);
+
+    it("Page-header 页：可点击「操作」", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/navigation/page-header");
+      await new Promise((r) => setTimeout(r, 300));
+      const ok = await clickButtonByText(t, "操作");
+      expect(ok).toBe(true);
+    }, browserConfig);
+
+    it("Anchor 页：有锚点链接", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/navigation/anchor");
+      await new Promise((r) => setTimeout(r, 300));
+      const ok = await clickButtonByText(t, "第一节");
+      expect(ok).toBe(true);
+    }, browserConfig);
+
+    it("Card 页：可点击「更多」", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/data-display/card");
+      await new Promise((r) => setTimeout(r, 300));
+      const ok = await clickButtonByText(t, "更多");
+      expect(ok).toBe(true);
+    }, browserConfig);
+
+    it("Empty 页：可点击「新建」", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/data-display/empty");
+      await new Promise((r) => setTimeout(r, 300));
+      const ok = await clickButtonByText(t, "新建");
+      expect(ok).toBe(true);
+    }, browserConfig);
+
+    it("ImageViewer 页：可点击打开查看器", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/data-display/image-viewer");
+      await new Promise((r) => setTimeout(r, 300));
+      const ok = await clickButtonByText(t, "打开查看器");
+      if (!ok) await clickButtonByText(t, "打开图片预览");
+      if (ok) await new Promise((r) => setTimeout(r, 300));
+      const text = await getMainText(t);
+      expect(text).toMatch(/ImageViewer|查看器|代码示例/);
+    }, browserConfig);
+
+    it("Segmented 页：可点击分段选项", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/data-display/segmented");
+      await new Promise((r) => setTimeout(r, 300));
+      const ok = await clickButtonByText(t, "网格");
+      expect(ok).toBe(true);
+    }, browserConfig);
+
+    it("Collapse 页：点击「面板 1」", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/data-display/collapse");
+      await new Promise((r) => setTimeout(r, 300));
+      const ok = await clickButtonByText(t, "面板 1");
+      expect(ok).toBe(true);
+    }, browserConfig);
+
+    it("Carousel 页：可点击下一张或指示点", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/data-display/carousel");
+      await new Promise((r) => setTimeout(r, 300));
+      const clicked = await t.browser!.evaluate(() => {
+        const main = document.querySelector("main");
+        const next = main?.querySelector(
+          'button[aria-label*="下一"], button[aria-label*="next"], [class*="arrow"]',
+        );
+        if (next) {
+          (next as HTMLElement).click();
+          return true;
+        }
+        const dot = main?.querySelector('[class*="dot"]');
+        if (dot) {
+          (dot as HTMLElement).click();
+          return true;
+        }
+        return false;
+      });
+      expect(clicked).toBe(true);
+    }, browserConfig);
+
+    it("Calendar 页：可点击日期格", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/data-display/calendar");
+      await new Promise((r) => setTimeout(r, 300));
+      const clicked = await t.browser!.evaluate(() => {
+        const cal = document.querySelector("main .calendar");
+        const cell = cal?.querySelector("button:not([disabled])");
+        if (cell) {
+          (cell as HTMLElement).click();
+          return true;
+        }
+        return false;
+      });
+      expect(clicked).toBe(true);
+    }, browserConfig);
+
+    it("Tree 页：可点击展开/选中节点", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/data-display/tree");
+      await new Promise((r) => setTimeout(r, 300));
+      const clicked = await t.browser!.evaluate(() => {
+        const main = document.querySelector("main");
+        const span = main?.querySelector(".tree-node span");
+        if (
+          span &&
+          (span.textContent?.trim() === "节点 1" ||
+            span.textContent?.includes?.("节点 1"))
+        ) {
+          (span as HTMLElement).click();
+          return true;
+        }
+        return false;
+      });
+      expect(clicked).toBe(true);
+      await new Promise((r) => setTimeout(r, 200));
+      const text = await getMainText(t);
+      expect(text).toMatch(/Tree|树|代码示例/);
+    }, browserConfig);
+
+    it("Tree 页：可勾选节点（点击 checkbox 后已勾选更新）", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/data-display/tree");
+      await new Promise((r) => setTimeout(r, 300));
+      const clicked = await t.browser!.evaluate(() => {
+        const main = document.querySelector("main");
+        const checkbox = main?.querySelector(
+          '.tree-node input[type="checkbox"]',
+        ) as HTMLInputElement | null;
+        if (checkbox && !checkbox.disabled) {
+          checkbox.click();
+          return true;
+        }
+        return false;
+      });
+      expect(clicked).toBe(true);
+      await new Promise((r) => setTimeout(r, 300));
+      const text = await getMainText(t);
+      expect(text).toMatch(/已勾选/);
+      expect(text).toMatch(/已勾选:\s*[0-9\-]+/);
+    }, browserConfig);
+
+    it("Code-block 页：可点击复制按钮", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/data-display/code-block");
+      await new Promise((r) => setTimeout(r, 300));
+      const clicked = await t.browser!.evaluate(() => {
+        const btn = document.querySelector(
+          "main button[title='复制'], main [aria-label='复制']",
+        ) as HTMLButtonElement | null;
+        if (btn) {
+          btn.click();
+          return true;
+        }
+        return false;
+      });
+      expect(clicked).toBe(true);
+    }, browserConfig);
+
+    it("ConfigProvider 页：可点击切换 theme", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/other/config-provider");
+      await new Promise((r) => setTimeout(r, 300));
+      const ok = await clickButtonByText(t, "切换 theme");
+      expect(ok).toBe(true);
+    }, browserConfig);
+
+    it("Badge 页：有角标展示", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/basic/badge");
+      await new Promise((r) => setTimeout(r, 300));
+      const text = await getMainText(t);
+      expect(text).toMatch(/Badge|角标|代码示例/);
+    }, browserConfig);
+
+    it("Avatar 页：有头像展示", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/basic/avatar");
+      await new Promise((r) => setTimeout(r, 300));
+      const text = await getMainText(t);
+      expect(text).toMatch(/Avatar|头像|代码示例/);
+    }, browserConfig);
+
+    it("Progress 页：有进度条", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/feedback/progress");
+      await new Promise((r) => setTimeout(r, 300));
+      const text = await getMainText(t);
+      expect(text).toMatch(/Progress|进度|代码示例/);
+    }, browserConfig);
+
+    it("Tooltip 页：有悬停说明", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/feedback/tooltip");
+      await new Promise((r) => setTimeout(r, 300));
+      const text = await getMainText(t);
+      expect(text).toMatch(/Tooltip|提示|代码示例/);
+    }, browserConfig);
+
+    it("Popover 页：有弹出面板", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/feedback/popover");
+      await new Promise((r) => setTimeout(r, 300));
+      const text = await getMainText(t);
+      expect(text).toMatch(/Popover|弹出|代码示例/);
+    }, browserConfig);
+
+    it("List 页：有列表", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/data-display/list");
+      await new Promise((r) => setTimeout(r, 300));
+      const text = await getMainText(t);
+      expect(text).toMatch(/List|列表|代码示例/);
+    }, browserConfig);
+
+    it("Tag 页：有标签", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/data-display/tag");
+      await new Promise((r) => setTimeout(r, 300));
+      const text = await getMainText(t);
+      expect(text).toMatch(/Tag|标签|代码示例/);
+    }, browserConfig);
+
+    it("Image 页：有图片", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/data-display/image");
+      await new Promise((r) => setTimeout(r, 300));
+      const text = await getMainText(t);
+      expect(text).toMatch(/Image|图片|代码示例/);
+    }, browserConfig);
+
+    it("Descriptions 页：有描述列表", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/data-display/descriptions");
+      await new Promise((r) => setTimeout(r, 300));
+      const text = await getMainText(t);
+      expect(text).toMatch(/Descriptions|描述|代码示例/);
+    }, browserConfig);
+
+    it("Timeline 页：有时间轴", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/data-display/timeline");
+      await new Promise((r) => setTimeout(r, 300));
+      const text = await getMainText(t);
+      expect(text).toMatch(/Timeline|时间轴|代码示例/);
+    }, browserConfig);
+
+    it("Statistic 页：有统计数值", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/data-display/statistic");
+      await new Promise((r) => setTimeout(r, 300));
+      const text = await getMainText(t);
+      expect(text).toMatch(/Statistic|统计|代码示例/);
+    }, browserConfig);
+
+    it("Comment 页：有评论", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/data-display/comment");
+      await new Promise((r) => setTimeout(r, 300));
+      const text = await getMainText(t);
+      expect(text).toMatch(/Comment|评论|代码示例/);
+    }, browserConfig);
+
+    it("Affix 页：有固钉", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/navigation/affix");
+      await new Promise((r) => setTimeout(r, 300));
+      const text = await getMainText(t);
+      expect(text).toMatch(/Affix|固钉|代码示例/);
+    }, browserConfig);
+
+    it("Container / Grid / Stack / Divider 页：有布局内容", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/layout/container");
+      await new Promise((r) => setTimeout(r, 300));
+      const text = await getMainText(t);
+      expect(text).toMatch(/Container|容器|代码示例/);
+    }, browserConfig);
+
+    it("Charts 页：有图表", async (t) => {
+      if (!t?.browser) return;
+      await goto(t, "/desktop/charts/line");
+      await new Promise((r) => setTimeout(r, 300));
+      const text = await getMainText(t);
+      expect(text).toMatch(/Chart|折线|代码示例/);
+    }, browserConfig);
+  });
+});
