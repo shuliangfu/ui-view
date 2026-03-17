@@ -28,7 +28,7 @@ export function Title(props: TitleProps) {
   if (level === 3) return () => <h3 class={cls}>{children}</h3>;
   if (level === 4) return () => <h4 class={cls}>{children}</h4>;
   if (level === 5) return () => <h5 class={cls}>{children}</h5>;
-  return () => <h6 class={cls}>{children}</h6>;
+  return <h6 class={cls}>{children}</h6>;
 }
 
 export interface TextProps {
@@ -42,7 +42,7 @@ export interface TextProps {
 export function Text(props: TextProps) {
   const { class: className, truncate, children } = props;
   const base = "text-gray-700 dark:text-gray-300";
-  return () => (
+  return (
     <span
       class={twMerge(base, truncate && "truncate block", className)}
     >
@@ -60,5 +60,5 @@ export interface ParagraphProps {
 export function Paragraph(props: ParagraphProps) {
   const { class: className, children } = props;
   const base = "text-gray-600 dark:text-gray-400 leading-relaxed";
-  return () => <p class={twMerge(base, className)}>{children}</p>;
+  return <p class={twMerge(base, className)}>{children}</p>;
 }
