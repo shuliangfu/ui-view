@@ -1,8 +1,11 @@
 /**
  * Tree 树形（View）。
  * 目录、结构数据；支持展开/选中/勾选、异步加载、多选、可拖拽（可选）。
+ * expandedKeys/selectedKeys/checkedKeys 可传 getter（如 signal）；用 untrack 读 getter 避免订阅导致整树重跑，
+ * 用 createEffect 同步 DOM 更新勾选/展开/选中状态。
  */
 
+import { createEffect, untrack } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import { IconChevronRight } from "../basic/icons/mod.ts";
 
@@ -26,22 +29,21 @@ export interface TreeNode {
 export interface TreeProps {
   /** 树数据 */
   treeData: TreeNode[];
-  /** 当前展开的 key 列表（受控） */
-  expandedKeys?: string[];
+  /** 当前展开的 key 列表（受控）；可传 getter 如 signal 以减少整树重渲染 */
+  expandedKeys?: string[] | (() => string[]);
   /** 默认展开的 key 列表 */
   defaultExpandedKeys?: string[];
   /** 展开/收起回调 */
   onExpand?: (expandedKeys: string[]) => void;
-  /** 当前选中的 key（受控，单选） */
-  selectedKeys?: string[];
-  /** 当前选中的 key 列表（多选） */
+  /** 当前选中的 key（受控）；可传 getter 以减少整树重渲染 */
+  selectedKeys?: string[] | (() => string[]);
   /** 选中回调 */
   onSelect?: (
     selectedKeys: string[],
     info: { node: TreeNode; selected: boolean },
   ) => void;
-  /** 当前勾选的 key 列表（受控，当 checkable 时） */
-  checkedKeys?: string[];
+  /** 当前勾选的 key 列表（受控，当 checkable 时）；可传 getter 以减少整树重渲染 */
+  checkedKeys?: string[] | (() => string[]);
   /** 勾选回调 */
   onCheck?: (checkedKeys: string[]) => void;
   /** 是否显示 checkbox */
@@ -87,6 +89,7 @@ function renderNode(
   return (
     <div key={node.key} class="tree-node">
       <div
+        data-tree-node-key={node.key}
         class={twMerge(
           "flex items-center gap-1 py-1 pr-2 rounded-md",
           "text-slate-700 dark:text-slate-300",
@@ -100,12 +103,12 @@ function renderNode(
       >
         <button
           type="button"
+          data-tree-expand-key={node.key}
           class={twMerge(
             "shrink-0 w-4 h-4 p-0 flex items-center justify-center rounded",
             !isLeaf && "hover:bg-slate-200 dark:hover:bg-slate-600",
             isLeaf && "invisible",
           )}
-          onClick={() => !isLeaf && !disabled && onExpand(node.key)}
           aria-expanded={hasChildren ? isExpanded : undefined}
         >
           <IconChevronRight
@@ -118,22 +121,25 @@ function renderNode(
         {checkable && (
           <input
             type="checkbox"
-            class="shrink-0 w-4 h-4 rounded border-slate-300 dark:border-slate-600"
+            data-tree-check-key={node.key}
+            class="shrink-0 w-4 h-4 rounded border-slate-300 dark:border-slate-600 cursor-pointer"
             checked={isChecked}
             disabled={disabled}
-            onChange={() => !disabled && onCheck(node.key)}
           />
         )}
         <span
-          class="flex-1 min-w-0 truncate"
-          onClick={() =>
-            node.selectable !== false && !disabled && onSelect(node.key)}
+          data-tree-select-key={node.key}
+          class="flex-1 min-w-0 truncate select-none"
         >
           {node.title}
         </span>
       </div>
-      {hasChildren && isExpanded && (
-        <div class="tree-children">
+      {hasChildren && (
+        <div
+          class="tree-children"
+          data-tree-children-key={node.key}
+          style={{ display: isExpanded ? "" : "none" }}
+        >
           {node.children!.map((child) =>
             renderNode(
               child,
@@ -154,6 +160,15 @@ function renderNode(
   );
 }
 
+/** 将 array 或 getter 规范为 getter */
+function asGetter(
+  value: string[] | (() => string[]) | undefined,
+  fallback: string[],
+): () => string[] {
+  if (typeof value === "function") return value as () => string[];
+  return () => (value ?? fallback);
+}
+
 export function Tree(props: TreeProps) {
   const {
     treeData,
@@ -170,39 +185,151 @@ export function Tree(props: TreeProps) {
     class: className,
   } = props;
 
-  const expandedSet = new Set(controlledExpanded ?? defaultExpandedKeys);
-  const selectedSet = new Set(selectedKeys);
-  const checkedSet = new Set(checkedKeys);
+  const getExpandedKeys = asGetter(controlledExpanded, defaultExpandedKeys);
+  const getSelectedKeys = asGetter(selectedKeys, []);
+  const getCheckedKeys = asGetter(checkedKeys, []);
+
+  /** 用 untrack 读 getter，拿当前值做首屏且不订阅，避免 signal 更新时整树重跑 */
+  const expandedSet = new Set(
+    untrack(() =>
+      typeof controlledExpanded === "function"
+        ? (controlledExpanded as () => string[])()
+        : (controlledExpanded ?? defaultExpandedKeys)
+    ),
+  );
+  const selectedSet = new Set(
+    untrack(() =>
+      typeof selectedKeys === "function"
+        ? (selectedKeys as () => string[])()
+        : (selectedKeys ?? [])
+    ),
+  );
+  const checkedSet = new Set(
+    untrack(() =>
+      typeof checkedKeys === "function"
+        ? (checkedKeys as () => string[])()
+        : (checkedKeys ?? [])
+    ),
+  );
 
   const handleExpand = (key: string) => {
-    const next = new Set(expandedSet);
-    if (next.has(key)) next.delete(key);
-    else next.add(key);
-    onExpand?.(Array.from(next));
+    const cur = new Set(getExpandedKeys());
+    if (cur.has(key)) cur.delete(key);
+    else cur.add(key);
+    onExpand?.(Array.from(cur));
   };
 
   const handleSelect = (key: string) => {
+    const cur = new Set(getSelectedKeys());
     let next: string[];
     if (multiple) {
-      next = selectedSet.has(key)
-        ? [...selectedSet].filter((k) => k !== key)
-        : [...selectedSet, key];
+      next = cur.has(key) ? [...cur].filter((k) => k !== key) : [...cur, key];
     } else {
-      next = selectedSet.has(key) ? [] : [key];
+      next = cur.has(key) ? [] : [key];
     }
     const node = getNodeByKey(treeData, key);
     onSelect?.(next, { node: node!, selected: next.includes(key) });
   };
 
   const handleCheck = (key: string) => {
-    const next = new Set(checkedSet);
-    if (next.has(key)) next.delete(key);
-    else next.add(key);
-    onCheck?.(Array.from(next));
+    const cur = new Set(getCheckedKeys());
+    if (cur.has(key)) cur.delete(key);
+    else cur.add(key);
+    onCheck?.(Array.from(cur));
   };
 
+  const handleTreeClick = (e: Event) => {
+    const target = e.target as HTMLElement;
+    const expandEl = target.closest?.("button[data-tree-expand-key]");
+    if (expandEl) {
+      const key = expandEl.getAttribute("data-tree-expand-key");
+      const node = key ? getNodeByKey(treeData, key) : undefined;
+      if (key && node && !(node.disabled ?? false)) {
+        const isLeaf = node.isLeaf ??
+          !(node.children != null && node.children.length > 0);
+        if (!isLeaf) {
+          e.preventDefault();
+          e.stopPropagation();
+          handleExpand(key);
+        }
+      }
+      return;
+    }
+    const checkEl = target.closest?.("input[data-tree-check-key]");
+    if (checkEl) {
+      const key = (checkEl as HTMLElement).getAttribute("data-tree-check-key");
+      const node = key ? getNodeByKey(treeData, key) : undefined;
+      if (key && node && !(node.disabled ?? false)) {
+        e.preventDefault();
+        e.stopPropagation();
+        handleCheck(key);
+      }
+      return;
+    }
+    const selectEl = target.closest?.("span[data-tree-select-key]");
+    if (selectEl) {
+      const key = selectEl.getAttribute("data-tree-select-key");
+      const node = key ? getNodeByKey(treeData, key) : undefined;
+      if (
+        key && node && !(node.disabled ?? false) && node.selectable !== false
+      ) {
+        e.preventDefault();
+        e.stopPropagation();
+        handleSelect(key);
+      }
+    }
+  };
+
+  let rootEl: HTMLDivElement | null = null;
+  const setRootRef = (el: unknown) => {
+    rootEl = el as HTMLDivElement | null;
+  };
+
+  createEffect(() => {
+    const root = rootEl;
+    if (!root) return;
+    const expanded = new Set(getExpandedKeys());
+    const selected = new Set(getSelectedKeys());
+    const checked = new Set(getCheckedKeys());
+    root.querySelectorAll<HTMLInputElement>("input[data-tree-check-key]")
+      .forEach((input) => {
+        const key = input.getAttribute("data-tree-check-key");
+        if (key) input.checked = checked.has(key);
+      });
+    root.querySelectorAll<HTMLButtonElement>("button[data-tree-expand-key]")
+      .forEach((btn) => {
+        const key = btn.getAttribute("data-tree-expand-key");
+        if (key) {
+          const open = expanded.has(key);
+          btn.setAttribute("aria-expanded", String(open));
+          const icon = btn.querySelector("[class*='transition-transform']");
+          if (icon) (icon as HTMLElement).classList.toggle("rotate-90", open);
+        }
+      });
+    root.querySelectorAll<HTMLElement>("[data-tree-node-key]").forEach(
+      (row) => {
+        const key = row.getAttribute("data-tree-node-key");
+        if (!key) return;
+        const isSelected = selected.has(key);
+        row.classList.toggle("bg-blue-50", isSelected);
+        row.classList.toggle("dark:bg-blue-900/30", isSelected);
+        row.classList.toggle("text-blue-700", isSelected);
+        row.classList.toggle("dark:text-blue-300", isSelected);
+      },
+    );
+    root.querySelectorAll<HTMLElement>(".tree-children").forEach((wrap) => {
+      const key = wrap.getAttribute("data-tree-children-key");
+      wrap.style.display = key && expanded.has(key) ? "" : "none";
+    });
+  });
+
   return () => (
-    <div class={twMerge("tree text-sm", className)} role="tree">
+    <div
+      ref={setRootRef}
+      class={twMerge("tree text-sm", className)}
+      role="tree"
+      onClick={handleTreeClick}
+    >
       {treeData.map((node) =>
         renderNode(
           node,
