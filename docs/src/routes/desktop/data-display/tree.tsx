@@ -110,27 +110,28 @@ function KeysDisplay(props: {
   );
 }
 
+/** 树示例用的展开/选中/勾选 state 提到模块级，避免 state 更新时页面组件重跑导致整树重渲染 */
+const [expandedKeys, setExpandedKeys] = createSignal<string[]>(["1"]);
+const [selectedKeys, setSelectedKeys] = createSignal<string[]>([]);
+const [checkedKeys, setCheckedKeys] = createSignal<string[]>([]);
+
+const treeData: TreeNode[] = [
+  {
+    key: "1",
+    title: "节点 1",
+    children: [
+      { key: "1-1", title: "节点 1-1" },
+      {
+        key: "1-2",
+        title: "节点 1-2",
+        children: [{ key: "1-2-1", title: "节点 1-2-1" }],
+      },
+    ],
+  },
+  { key: "2", title: "节点 2" },
+];
+
 export default function DataDisplayTree() {
-  const [expandedKeys, setExpandedKeys] = createSignal<string[]>(["1"]);
-  const [selectedKeys, setSelectedKeys] = createSignal<string[]>([]);
-  const [checkedKeys, setCheckedKeys] = createSignal<string[]>([]);
-
-  const treeData: TreeNode[] = [
-    {
-      key: "1",
-      title: "节点 1",
-      children: [
-        { key: "1-1", title: "节点 1-1" },
-        {
-          key: "1-2",
-          title: "节点 1-2",
-          children: [{ key: "1-2-1", title: "节点 1-2-1" }],
-        },
-      ],
-    },
-    { key: "2", title: "节点 2" },
-  ];
-
   return (
     <div class="space-y-10">
       <section>
@@ -168,10 +169,13 @@ export default function DataDisplayTree() {
             checkedKeys={checkedKeys}
             onCheck={setCheckedKeys}
           />
-          <KeysDisplay
-            getSelectedKeys={selectedKeys}
-            getCheckedKeys={checkedKeys}
-          />
+          {/* 包成 getter，使 KeysDisplay 在独立 effect 中渲染并读 signal，避免整页 effect 订阅 signal 导致 DataDisplayTree 重跑、Tree 的 data-view-dynamic 槽被 replaceChildren 整树闪动 */}
+          {() => (
+            <KeysDisplay
+              getSelectedKeys={selectedKeys}
+              getCheckedKeys={checkedKeys}
+            />
+          )}
           <CodeBlock
             title="代码示例"
             code={exampleCheckable}
