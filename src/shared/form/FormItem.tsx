@@ -40,68 +40,74 @@ const labelAlignRightCls = "text-right";
 const requiredCls = "text-red-500 dark:text-red-400 ml-0.5";
 const errorCls = "mt-1 text-sm text-red-600 dark:text-red-400";
 
+/**
+ * 返回 getter，使 View 为 FormItem 创建带 data-view-dynamic 的容器；
+ * patch 时复用容器、只更新内容，避免子组件（如 Password）被整棵替换导致失焦。
+ */
 export function FormItem(props: FormItemProps) {
-  const {
-    label,
-    required = false,
-    error,
-    labelPosition = "top",
-    labelAlign = "left",
-    class: className,
-    id,
-    children,
-  } = props;
-  const hasError = Boolean(error);
-  const isLeft = labelPosition === "left";
+  return () => {
+    const {
+      label,
+      required = false,
+      error,
+      labelPosition = "top",
+      labelAlign = "left",
+      class: className,
+      id,
+      children,
+    } = props;
+    const hasError = Boolean(error);
+    const isLeft = labelPosition === "left";
 
-  const labelEl = label != null
-    ? (
-      <label
-        for={id}
+    const labelEl = label != null
+      ? (
+        <label
+          for={id}
+          class={twMerge(
+            labelBaseCls,
+            isLeft
+              ? twMerge(
+                labelLeftCls,
+                labelAlign === "right" ? labelAlignRightCls : labelAlignLeftCls,
+              )
+              : labelTopCls,
+          )}
+        >
+          {label}
+          {required && <span class={requiredCls} aria-hidden="true">*</span>}
+        </label>
+      )
+      : null;
+
+    return (
+      <div
         class={twMerge(
-          labelBaseCls,
-          isLeft
-            ? twMerge(
-              labelLeftCls,
-              labelAlign === "right" ? labelAlignRightCls : labelAlignLeftCls,
-            )
-            : labelTopCls,
+          "flex flex-col my-3",
+          hasError &&
+            "[&_input]:border-red-500 [&_textarea]:border-red-500 dark:[&_input]:border-red-500 dark:[&_textarea]:border-red-500",
+          className,
         )}
+        role={hasError ? "alert" : undefined}
       >
-        {label}
-        {required && <span class={requiredCls} aria-hidden="true">*</span>}
-      </label>
-    )
-    : null;
-
-  return () => (
-    <div
-      class={twMerge(
-        "flex flex-col my-3",
-        hasError &&
-          "[&_input]:border-red-500 [&_textarea]:border-red-500 dark:[&_input]:border-red-500 dark:[&_textarea]:border-red-500",
-        className,
-      )}
-      role={hasError ? "alert" : undefined}
-    >
-      {isLeft && labelEl != null
-        ? (
-          <div class="flex flex-row items-center gap-4 py-0.5">
-            {labelEl}
-            <div class="form-item-input min-w-0 flex-1">{children}</div>
+        {isLeft && labelEl != null
+          ? (
+            <div class="flex flex-row items-center gap-4 py-0.5">
+              {labelEl}
+              <div class="form-item-input min-w-0 flex-1">{children}</div>
+            </div>
+          )
+          : (
+            <>
+              {labelEl}
+              <div class="form-item-input">{children}</div>
+            </>
+          )}
+        {error != null && error !== "" && (
+          <div class={errorCls} id={id ? `${id}-error` : undefined}>
+            {error}
           </div>
-        )
-        : (
-          <>
-            {labelEl}
-            <div class="form-item-input">{children}</div>
-          </>
         )}
-      {error != null && error !== "" && (
-        <div class={errorCls} id={id ? `${id}-error` : undefined}>
-          {error}
-        </div>
-      )}
-    </div>
-  );
+      </div>
+    );
+  };
 }
