@@ -150,7 +150,10 @@ export function NotificationContainer() {
               <div class="flex flex-col gap-3 pointer-events-auto">
                 {items.map((item: NotificationItem) => (
                   <div key={item.id}>
-                    <NotificationItemEl item={item} onClose={closeNotification} />
+                    <NotificationItemEl
+                      item={item}
+                      onClose={closeNotification}
+                    />
                   </div>
                 ))}
               </div>
