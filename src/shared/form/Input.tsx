@@ -86,7 +86,7 @@ function InputClearOrSuffix(props: {
   const val = typeof value === "function" ? value() : value;
   const showClear = allowClear && val && !disabled && !readOnly;
   if (showClear) {
-    return (
+    return () => (
       <button
         type="button"
         class="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer"
@@ -97,7 +97,7 @@ function InputClearOrSuffix(props: {
     );
   }
   if (suffix) {
-    return (
+    return () => (
       <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-500 dark:text-slate-400">
         {suffix}
       </div>
