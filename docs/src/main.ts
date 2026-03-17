@@ -5,11 +5,18 @@
  */
 
 import { App } from "@dreamer/dweb";
+import { uiViewTailwindContentPlugin } from "@dreamer/ui-view/plugin";
 import { staticPlugin } from "@dreamer/plugins/static";
 import { themePlugin } from "@dreamer/plugins/theme";
 import { tailwindPlugin } from "@dreamer/plugins/tailwindcss";
 
 const app = new App();
+
+/** 先注册：收集 @dreamer/ui-view 引用并生成 @source 文件，供 tailwind.css @import */
+app.registerPlugin(uiViewTailwindContentPlugin({
+  outputPath: "src/assets/ui-view-sources.css",
+  scanPath: "src",
+}));
 
 app.registerPlugin(tailwindPlugin({
   output: "dist/client/assets",

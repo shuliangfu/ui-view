@@ -1,10 +1,10 @@
 /**
  * TailwindCSS v4 入口
- * 指定内容扫描路径（含 docs 与 ui-view 组件）
+ * 指定内容扫描路径：本仓库源码 + ui-view 按需 @source（由 uiViewTailwindContentPlugin 生成）
  * 统一：导航深色 slate-800，主色 accent 用于强调。
  */
+@import "./ui-view-sources.css";
 @source "../**/*.{ts,tsx}";
-@source "../../../src/**/*.{ts,tsx}";
 
 @import "tailwindcss";
 
