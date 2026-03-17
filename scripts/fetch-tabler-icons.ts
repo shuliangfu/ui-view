@@ -11,7 +11,10 @@ const TABLER_REPO = "https://github.com/tabler/tabler-icons.git";
 const CLONE_DIR = "tabler-icons-clone";
 const OUT_BASE = "assets/tabler-icons";
 
-async function run(cmd: string[], cwd?: string): Promise<{ ok: boolean; stderr: string }> {
+async function run(
+  cmd: string[],
+  cwd?: string,
+): Promise<{ ok: boolean; stderr: string }> {
   const p = new Deno.Command(cmd[0], {
     args: cmd.slice(1),
     cwd: cwd ?? undefined,
@@ -49,8 +52,12 @@ async function main() {
   const filledDst = `${projectRoot}${OUT_BASE}/filled`;
 
   try {
-    const outlineExists = await Deno.stat(outlineSrc).then(() => true).catch(() => false);
-    const filledExists = await Deno.stat(filledSrc).then(() => true).catch(() => false);
+    const outlineExists = await Deno.stat(outlineSrc).then(() => true).catch(
+      () => false,
+    );
+    const filledExists = await Deno.stat(filledSrc).then(() => true).catch(() =>
+      false
+    );
 
     await Deno.mkdir(outlineDst, { recursive: true });
     await Deno.mkdir(filledDst, { recursive: true });
@@ -63,7 +70,10 @@ async function main() {
           await Deno.copyFile(src, dst);
         }
       }
-      const count = [...await Array.fromAsync(Deno.readDir(outlineDst))].filter((e) => e.name.endsWith(".svg")).length;
+      const count =
+        [...await Array.fromAsync(Deno.readDir(outlineDst))].filter((e) =>
+          e.name.endsWith(".svg")
+        ).length;
       console.log(`Outline: ${count} SVGs -> ${OUT_BASE}/outline/`);
     }
 
@@ -75,7 +85,10 @@ async function main() {
           await Deno.copyFile(src, dst);
         }
       }
-      const count = [...await Array.fromAsync(Deno.readDir(filledDst))].filter((e) => e.name.endsWith(".svg")).length;
+      const count =
+        [...await Array.fromAsync(Deno.readDir(filledDst))].filter((e) =>
+          e.name.endsWith(".svg")
+        ).length;
       console.log(`Filled:  ${count} SVGs -> ${OUT_BASE}/filled/`);
     }
   } finally {
