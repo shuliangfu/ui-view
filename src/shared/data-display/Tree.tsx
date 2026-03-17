@@ -5,7 +5,7 @@
  * 用 createEffect 同步 DOM 更新勾选/展开/选中状态。
  */
 
-import { createEffect, untrack } from "@dreamer/view";
+import { createEffect, createSignal, untrack } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import { IconChevronRight } from "../basic/icons/mod.ts";
 
@@ -86,7 +86,8 @@ function renderNode(
   const isChecked = checkedSet.has(node.key);
   const disabled = node.disabled ?? false;
 
-  return (
+  // 直接返回 JSX，不包一层函数，避免父组件重跑时整树被当作新子组件替换导致「整树沉浸」、无法展开/选中/勾选
+  return () => (
     <div key={node.key} class="tree-node">
       <div
         data-tree-node-key={node.key}
@@ -239,58 +240,66 @@ export function Tree(props: TreeProps) {
   };
 
   const handleTreeClick = (e: Event) => {
-    const target = e.target as HTMLElement;
-    const expandEl = target.closest?.("button[data-tree-expand-key]");
-    if (expandEl) {
-      const key = expandEl.getAttribute("data-tree-expand-key");
-      const node = key ? getNodeByKey(treeData, key) : undefined;
-      if (key && node && !(node.disabled ?? false)) {
-        const isLeaf = node.isLeaf ??
-          !(node.children != null && node.children.length > 0);
-        if (!isLeaf) {
-          e.preventDefault();
-          e.stopPropagation();
-          handleExpand(key);
-        }
+    const me = e as MouseEvent;
+    const root = rootEl();
+    if (!root || !root.contains(me.target as Node)) return;
+    const clientX = me.clientX;
+    const clientY = me.clientY;
+    if (typeof clientX !== "number" || typeof clientY !== "number") return;
+    const doc = globalThis.document;
+    const elementsAtPoint = doc?.elementsFromPoint?.(clientX, clientY) ?? [];
+    let row: Element | null = null;
+    for (const el of elementsAtPoint) {
+      if (!root.contains(el)) break;
+      const r = (el as HTMLElement).closest?.("[data-tree-node-key]");
+      if (r && root.contains(r)) row = r;
+    }
+    const key = row?.getAttribute("data-tree-node-key");
+    if (!key || !row) return;
+    const node = getNodeByKey(treeData, key);
+    if (!node || (node.disabled ?? false)) return;
+    const topEl = (elementsAtPoint[0] as HTMLElement) ?? row;
+    const raw = topEl?.nodeType === 3
+      ? (topEl as unknown as Text).parentElement
+      : topEl;
+    if (!raw?.closest) return;
+    if (row.contains(raw) && raw.closest("button[data-tree-expand-key]")) {
+      const isLeaf = node.isLeaf ??
+        !(node.children != null && node.children.length > 0);
+      if (!isLeaf) {
+        e.preventDefault();
+        e.stopPropagation();
+        handleExpand(key);
       }
       return;
     }
-    const checkEl = target.closest?.("input[data-tree-check-key]");
-    if (checkEl) {
-      const key = (checkEl as HTMLElement).getAttribute("data-tree-check-key");
-      const node = key ? getNodeByKey(treeData, key) : undefined;
-      if (key && node && !(node.disabled ?? false)) {
-        e.preventDefault();
-        e.stopPropagation();
-        handleCheck(key);
-      }
+    if (row.contains(raw) && raw.closest("input[data-tree-check-key]")) {
+      e.preventDefault();
+      e.stopPropagation();
+      handleCheck(key);
+      if (node.selectable !== false) handleSelect(key);
       return;
     }
-    const selectEl = target.closest?.("span[data-tree-select-key]");
-    if (selectEl) {
-      const key = selectEl.getAttribute("data-tree-select-key");
-      const node = key ? getNodeByKey(treeData, key) : undefined;
-      if (
-        key && node && !(node.disabled ?? false) && node.selectable !== false
-      ) {
-        e.preventDefault();
-        e.stopPropagation();
-        handleSelect(key);
-      }
+    if (
+      row.contains(raw) &&
+      (raw.closest("span[data-tree-select-key]") || raw === row)
+    ) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (checkable) handleCheck(key);
+      if (node.selectable !== false) handleSelect(key);
     }
   };
 
-  let rootEl: HTMLDivElement | null = null;
-  const setRootRef = (el: unknown) => {
-    rootEl = el as HTMLDivElement | null;
-  };
+  const [rootEl, setRootRef] = createSignal<HTMLDivElement | null>(null);
 
   createEffect(() => {
-    const root = rootEl;
-    if (!root) return;
+    // 先读 getter 建立订阅，再读 root signal，这样 ref 挂上或 keys 变化时都会重跑并同步 DOM
     const expanded = new Set(getExpandedKeys());
     const selected = new Set(getSelectedKeys());
     const checked = new Set(getCheckedKeys());
+    const root = rootEl();
+    if (!root) return;
     root.querySelectorAll<HTMLInputElement>("input[data-tree-check-key]")
       .forEach((input) => {
         const key = input.getAttribute("data-tree-check-key");
@@ -325,7 +334,7 @@ export function Tree(props: TreeProps) {
 
   return () => (
     <div
-      ref={setRootRef}
+      ref={(el: unknown) => setRootRef(el as HTMLDivElement | null)}
       class={twMerge("tree text-sm", className)}
       role="tree"
       onClick={handleTreeClick}
