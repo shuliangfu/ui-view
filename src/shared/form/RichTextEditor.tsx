@@ -3,8 +3,10 @@
  * WYSIWYG 编辑：加粗/斜体/下划线/删除线、标题、列表、引用、链接、图片（URL/上传）、表格、代码块、对齐、颜色等。
  * 支持粘贴图片到内容区（剪贴板图片转 data URL 或经 onPasteImage 上传后插入）。
  * 工具栏可配置为 simple（简单）、default（默认）、full（全部），或完全自定义。
+ * 使用 untrack 读取 value，避免 value 变化触发 effect 重跑导致 contenteditable 被 patch 而失焦。
  */
 
+import { untrack } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 
 /** 工具栏丰富程度预设 */
@@ -415,24 +417,24 @@ export function RichTextEditor(props: RichTextEditorProps) {
       }
       html += "</tbody></table>";
       document.execCommand("insertHTML", false, html);
-      onChange?.(getEditorHtml());
+      emitChange();
       return;
     }
     if (cmd === "foreColor" || cmd === "backColor") {
       const color = globalThis.prompt?.("输入颜色（如 #333）", val) ?? val;
       if (color) document.execCommand(cmd, false, color);
-      onChange?.(getEditorHtml());
+      emitChange();
       return;
     }
     if (cmd === "insertHorizontalRule") {
       document.execCommand("insertHorizontalRule", false);
-      onChange?.(getEditorHtml());
+      emitChange();
       return;
     }
     if (cmd === "insertSpecialChar" && childValue != null) {
       const toInsert = childValue.startsWith("&") ? childValue : childValue;
       document.execCommand("insertHTML", false, toInsert);
-      onChange?.(getEditorHtml());
+      emitChange();
       return;
     }
     if (cmd === "insertTableWithHeader") {
@@ -460,12 +462,12 @@ export function RichTextEditor(props: RichTextEditorProps) {
       }
       html += "</tbody></table>";
       document.execCommand("insertHTML", false, html);
-      onChange?.(getEditorHtml());
+      emitChange();
       return;
     }
     if (cmd === "superscript" || cmd === "subscript") {
       document.execCommand(cmd, false);
-      onChange?.(getEditorHtml());
+      emitChange();
       return;
     }
     if (cmd === "indentFirstLine") {
@@ -478,7 +480,7 @@ export function RichTextEditor(props: RichTextEditorProps) {
         const p = block?.closest?.("p");
         if (p && !p.style.textIndent) p.style.textIndent = "2em";
       }
-      onChange?.(getEditorHtml());
+      emitChange();
       return;
     }
     if (cmd === "fullscreen") {
@@ -539,7 +541,7 @@ export function RichTextEditor(props: RichTextEditorProps) {
         div.appendChild(fragment);
         const parsed = parseMarkdownInSelection(div.innerHTML);
         document.execCommand("insertHTML", false, parsed);
-        onChange?.(getEditorHtml());
+        emitChange();
       }
       return;
     }
@@ -553,28 +555,39 @@ export function RichTextEditor(props: RichTextEditorProps) {
       const html =
         '<pre class="rte-code-block language-plaintext"><code><br></code></pre>';
       document.execCommand("insertHTML", false, html);
-      onChange?.(getEditorHtml());
+      emitChange();
       return;
     }
     if (cmd === "undo" || cmd === "redo" || cmd === "removeFormat") {
       document.execCommand(cmd, false);
-      onChange?.(getEditorHtml());
+      emitChange();
       return;
     }
 
     document.execCommand(cmd, false, val);
-    onChange?.(getEditorHtml());
+    emitChange();
   };
 
   const handleInput = (e: Event) => {
     const el = e.currentTarget as HTMLDivElement;
-    const html = el.innerHTML;
-    onChange?.(html);
+    emitChange(el.innerHTML);
   };
 
   const getEditorHtml = () => {
     const editor = document.getElementById(editorId) as HTMLDivElement | null;
     return editor?.innerHTML ?? "";
+  };
+
+  /** 通知父组件并同步 hidden input（因 value 用 untrack 不随 signal 更新，需在每次变更时手动写回） */
+  const emitChange = (html?: string) => {
+    const h = html ?? getEditorHtml();
+    onChange?.(h);
+    if (name != null) {
+      const el = document.getElementById(`${editorId}-hidden`) as
+        | HTMLInputElement
+        | null;
+      if (el) el.value = h;
+    }
   };
 
   const handleUploadChange = (e: Event) => {
@@ -583,7 +596,7 @@ export function RichTextEditor(props: RichTextEditorProps) {
     if (!file || !file.type.startsWith("image/")) return;
     const resolveUrl = (url: string) => {
       insertImageUrl(url);
-      onChange?.(getEditorHtml());
+      emitChange();
     };
     if (onUploadImage) {
       Promise.resolve(onUploadImage(file)).then((url) => {
@@ -611,7 +624,7 @@ export function RichTextEditor(props: RichTextEditorProps) {
         ev.preventDefault();
         const resolveUrl = (url: string) => {
           insertImageUrl(url);
-          onChange?.(getEditorHtml());
+          emitChange();
         };
         if (onPasteImage) {
           Promise.resolve(onPasteImage(blob)).then((url) => {
@@ -631,8 +644,9 @@ export function RichTextEditor(props: RichTextEditorProps) {
   };
 
   const showToolbar = !readOnly && toolbarGroups.length > 0;
-  const wordCount = getWordCount(
-    typeof value === "function" ? value() : (value ?? ""),
+  /** 用 untrack 读 value，避免订阅导致 value 变化时 effect 重跑、patch 编辑区失焦 */
+  const wordCount = untrack(() =>
+    getWordCount(typeof value === "function" ? value() : (value ?? ""))
   );
 
   const handleKeyDown = (e: Event) => {
@@ -642,28 +656,28 @@ export function RichTextEditor(props: RichTextEditorProps) {
       if (key === "z") {
         ev.preventDefault();
         document.execCommand(ev.shiftKey ? "redo" : "undo");
-        onChange?.(getEditorHtml());
+        emitChange();
       } else if (key === "y") {
         ev.preventDefault();
         document.execCommand("redo");
-        onChange?.(getEditorHtml());
+        emitChange();
       } else if (key === "b") {
         ev.preventDefault();
         document.execCommand("bold");
-        onChange?.(getEditorHtml());
+        emitChange();
       } else if (key === "i") {
         ev.preventDefault();
         document.execCommand("italic");
-        onChange?.(getEditorHtml());
+        emitChange();
       } else if (key === "u") {
         ev.preventDefault();
         document.execCommand("underline");
-        onChange?.(getEditorHtml());
+        emitChange();
       } else if (key === "k") {
         ev.preventDefault();
         const url = globalThis.prompt?.("输入链接 URL") ?? "";
         if (url) document.execCommand("createLink", false, url);
-        onChange?.(getEditorHtml());
+        emitChange();
       } else if (key === "f") {
         ev.preventDefault();
         const bar = document.getElementById(`${editorId}-findbar`);
@@ -756,7 +770,7 @@ export function RichTextEditor(props: RichTextEditorProps) {
       const sel = document.getSelection();
       if (sel && sel.toString() === find) {
         document.execCommand("insertText", false, replace);
-        onChange?.(getEditorHtml());
+        emitChange();
       } else {
         doFind();
       }
@@ -865,6 +879,7 @@ export function RichTextEditor(props: RichTextEditorProps) {
         </button>
       </div>
       <div
+        key={`${editorId}-body`}
         id={editorId}
         contentEditable={!disabled && !readOnly}
         data-placeholder={placeholder}
@@ -883,8 +898,12 @@ export function RichTextEditor(props: RichTextEditorProps) {
         onPaste={handlePaste}
         onKeyDown={handleKeyDown}
         ref={(el: HTMLDivElement | null) => {
-          const v = typeof value === "function" ? value() : value;
-          if (!el || v === undefined) return;
+          if (!el) return;
+          // 用 untrack 读 value，避免订阅导致 value 变化时 effect 重跑、patch 导致失焦
+          const v = untrack(() =>
+            typeof value === "function" ? value() : value
+          );
+          if (v === undefined) return;
           // 正在编辑（编辑器有焦点）时不从 value 覆盖 innerHTML，避免输入时失焦
           if (globalThis.document?.activeElement === el) return;
           if (el.innerHTML !== v) {
@@ -895,8 +914,11 @@ export function RichTextEditor(props: RichTextEditorProps) {
       {name != null && (
         <input
           type="hidden"
+          id={`${editorId}-hidden`}
           name={name}
-          value={value ?? ""}
+          value={untrack(() =>
+            (typeof value === "function" ? value() : value) ?? ""
+          )}
           readOnly
           aria-hidden="true"
         />
