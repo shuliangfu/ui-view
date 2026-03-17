@@ -1,57 +1,202 @@
 /**
- * 表单 - Rate（展示全部用法）
- * 路由: /form/rate
+ * Rate 组件文档页（标准文档结构：概述、引入、示例、API）
+ * 路由: /desktop/form/rate
  */
 
-import { Form, FormItem, Paragraph, Rate, Title } from "@dreamer/ui-view";
+import {
+  CodeBlock,
+  Form,
+  FormItem,
+  Paragraph,
+  Rate,
+  Title,
+} from "@dreamer/ui-view";
 import { createSignal } from "@dreamer/view";
+
+interface ApiRow {
+  name: string;
+  type: string;
+  default: string;
+  description: string;
+}
+
+const RATE_API: ApiRow[] = [
+  {
+    name: "value",
+    type: "number | (() => number)",
+    default: "-",
+    description: "当前分数；可为 getter",
+  },
+  { name: "count", type: "number", default: "5", description: "星星总数" },
+  {
+    name: "allowHalf",
+    type: "boolean",
+    default: "false",
+    description: "是否允许半星",
+  },
+  {
+    name: "disabled",
+    type: "boolean",
+    default: "false",
+    description: "是否禁用",
+  },
+  { name: "class", type: "string", default: "-", description: "额外 class" },
+  {
+    name: "onChange",
+    type: "(value: number) => void",
+    default: "-",
+    description: "分数变更回调",
+  },
+];
+
+const importCode = `import { Rate, Form, FormItem } from "@dreamer/ui-view";
+import { createSignal } from "@dreamer/view";
+
+const [val, setVal] = createSignal(0);
+<FormItem label="评分">
+  <Rate value={val} onChange={(v) => setVal(v)} count={5} />
+</FormItem>`;
 
 export default function FormRate() {
   const [val, setVal] = createSignal(0);
   const [valHalf, setValHalf] = createSignal(0);
 
   return (
-    <div class="space-y-8">
-      <div>
-        <Title level={1}>Rate</Title>
-        <Paragraph>
-          评分：count、value、onChange、allowHalf、disabled、class。
+    <div class="space-y-10">
+      <section>
+        <Title level={1}>Rate 评分</Title>
+        <Paragraph class="mt-2">
+          星级评分，支持 count、value、onChange、allowHalf、disabled。Tailwind
+          v4 + light/dark。
         </Paragraph>
-      </div>
+      </section>
 
-      <Form layout="vertical" class="max-w-md space-y-6">
-        <section class="space-y-4">
-          <Title level={2}>基础（5 星）</Title>
-          <FormItem label="评分">
-            <Rate value={val} onChange={(v) => setVal(v)} count={5} />
-          </FormItem>
-        </section>
+      <section class="space-y-3">
+        <Title level={2}>引入</Title>
+        <CodeBlock
+          title="代码示例"
+          code={importCode}
+          language="tsx"
+          showLineNumbers
+          wrapLongLines
+        />
+      </section>
 
-        <section class="space-y-4">
-          <Title level={2}>allowHalf 半星</Title>
-          <FormItem label="半星">
-            <Rate
-              value={valHalf}
-              onChange={(v) => setValHalf(v)}
-              count={5}
-              allowHalf
+      <section class="space-y-8">
+        <Title level={2}>示例</Title>
+
+        <Form layout="vertical" class="w-full space-y-6">
+          <section class="space-y-4">
+            <Title level={3}>基础（5 星）</Title>
+            <FormItem label="评分">
+              <Rate value={val} onChange={(v) => setVal(v)} count={5} />
+            </FormItem>
+            <CodeBlock
+              title="代码示例"
+              code={`<Rate value={val} onChange={(v) => setVal(v)} count={5} />`}
+              language="tsx"
+              showLineNumbers
+              copyable
+              wrapLongLines
             />
-          </FormItem>
-        </section>
+          </section>
 
-        <section class="space-y-4">
-          <Title level={2}>count / disabled</Title>
-          <FormItem label="3 星">
-            <Rate value={2} count={3} />
-          </FormItem>
-          <FormItem label="10 星">
-            <Rate value={7} count={10} />
-          </FormItem>
-          <FormItem label="disabled">
-            <Rate value={3} count={5} disabled />
-          </FormItem>
-        </section>
-      </Form>
+          <section class="space-y-4">
+            <Title level={3}>allowHalf 半星</Title>
+            <FormItem label="半星">
+              <Rate
+                value={valHalf}
+                onChange={(v) => setValHalf(v)}
+                count={5}
+                allowHalf
+              />
+            </FormItem>
+            <CodeBlock
+              title="代码示例"
+              code={`<Rate
+  value={valHalf}
+  onChange={(v) => setValHalf(v)}
+  count={5}
+  allowHalf
+/>`}
+              language="tsx"
+              showLineNumbers
+              copyable
+              wrapLongLines
+            />
+          </section>
+
+          <section class="space-y-4">
+            <Title level={3}>count / disabled</Title>
+            <FormItem label="3 星">
+              <Rate value={2} count={3} />
+            </FormItem>
+            <FormItem label="10 星">
+              <Rate value={7} count={10} />
+            </FormItem>
+            <FormItem label="disabled">
+              <Rate value={3} count={5} disabled />
+            </FormItem>
+            <CodeBlock
+              title="代码示例"
+              code={`<Rate value={2} count={3} />
+<Rate value={3} count={5} disabled />`}
+              language="tsx"
+              showLineNumbers
+              copyable
+              wrapLongLines
+            />
+          </section>
+        </Form>
+      </section>
+
+      <section class="space-y-3">
+        <Title level={2}>API</Title>
+        <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+          组件接收以下属性（均为可选）。
+        </Paragraph>
+        <div class="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-600">
+          <table class="w-full min-w-lg text-sm">
+            <thead>
+              <tr class="border-b border-slate-200 bg-slate-50 dark:border-slate-600 dark:bg-slate-800/80">
+                <th class="px-4 py-3 text-left font-medium text-slate-900 dark:text-slate-100">
+                  属性
+                </th>
+                <th class="px-4 py-3 text-left font-medium text-slate-900 dark:text-slate-100">
+                  类型
+                </th>
+                <th class="px-4 py-3 text-left font-medium text-slate-900 dark:text-slate-100">
+                  默认值
+                </th>
+                <th class="px-4 py-3 text-left font-medium text-slate-900 dark:text-slate-100">
+                  说明
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {RATE_API.map((row) => (
+                <tr
+                  key={row.name}
+                  class="border-b border-slate-100 dark:border-slate-700 last:border-b-0"
+                >
+                  <td class="px-4 py-2.5 font-mono text-slate-700 dark:text-slate-300">
+                    {row.name}
+                  </td>
+                  <td class="px-4 py-2.5 text-slate-600 dark:text-slate-400">
+                    {row.type}
+                  </td>
+                  <td class="px-4 py-2.5 text-slate-600 dark:text-slate-400">
+                    {row.default}
+                  </td>
+                  <td class="px-4 py-2.5 text-slate-600 dark:text-slate-400">
+                    {row.description}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
     </div>
   );
 }
