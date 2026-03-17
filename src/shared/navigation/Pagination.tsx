@@ -5,6 +5,7 @@
 
 import { twMerge } from "tailwind-merge";
 import { IconChevronLeft, IconChevronRight } from "../basic/icons/mod.ts";
+import { getPaginationState } from "./pagination-utils.ts";
 
 export interface PaginationProps {
   /** 当前页码（从 1 开始） */
@@ -50,38 +51,20 @@ export function Pagination(props: PaginationProps) {
   } = props;
 
   const pageSize = pageSizeProp;
-
-  const totalPages = totalPagesProp ??
-    (total != null ? Math.max(1, Math.ceil(total / pageSize)) : 1);
-  const safeCurrent = Math.min(totalPages, Math.max(1, current));
-
-  const canPrev = safeCurrent > 1;
-  const canNext = safeCurrent < totalPages;
+  const {
+    totalPages,
+    safeCurrent,
+    from,
+    to,
+    canPrev,
+    canNext,
+    pages,
+  } = getPaginationState(current, pageSize, total, totalPagesProp);
 
   const btnCls =
     "min-w-8 h-8 px-2 inline-flex items-center justify-center rounded-md text-sm font-medium border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed";
   const activeCls =
     "border-blue-600 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 pointer-events-none";
-
-  const pages: number[] = [];
-  const showEllipsisStart = safeCurrent > 3;
-  const showEllipsisEnd = safeCurrent < totalPages - 2;
-  if (totalPages <= 7) {
-    for (let i = 1; i <= totalPages; i++) pages.push(i);
-  } else {
-    if (showEllipsisStart) pages.push(1);
-    if (showEllipsisStart) pages.push(-1);
-    const start = Math.max(1, safeCurrent - 1);
-    const end = Math.min(totalPages, safeCurrent + 1);
-    for (let i = start; i <= end; i++) if (!pages.includes(i)) pages.push(i);
-    if (showEllipsisEnd) pages.push(-2);
-    if (showEllipsisEnd) pages.push(totalPages);
-  }
-
-  const from = total != null ? (safeCurrent - 1) * pageSize + 1 : 0;
-  const to = total != null
-    ? Math.min(safeCurrent * pageSize, total)
-    : safeCurrent * pageSize;
 
   return () => (
     <nav
