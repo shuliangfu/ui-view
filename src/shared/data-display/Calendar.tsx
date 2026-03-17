@@ -4,6 +4,7 @@
  */
 
 import { twMerge } from "tailwind-merge";
+import { getDaysInMonth, MONTHS, WEEKDAYS } from "./calendar-utils.ts";
 
 export type CalendarMode = "month" | "year";
 
@@ -24,36 +25,6 @@ export interface CalendarProps {
   disabledDate?: (date: Date) => boolean;
   /** 额外 class */
   class?: string;
-}
-
-const WEEKDAYS = ["日", "一", "二", "三", "四", "五", "六"];
-const MONTHS = [
-  "1月",
-  "2月",
-  "3月",
-  "4月",
-  "5月",
-  "6月",
-  "7月",
-  "8月",
-  "9月",
-  "10月",
-  "11月",
-  "12月",
-];
-
-function getDaysInMonth(year: number, month: number): Date[] {
-  const first = new Date(year, month, 1);
-  const last = new Date(year, month + 1, 0);
-  const days: Date[] = [];
-  for (let d = 1; d <= last.getDate(); d++) {
-    days.push(new Date(year, month, d));
-  }
-  const startPad = first.getDay();
-  for (let i = 0; i < startPad; i++) {
-    days.unshift(new Date(year, month, -startPad + i + 1));
-  }
-  return days;
 }
 
 export function Calendar(props: CalendarProps) {
