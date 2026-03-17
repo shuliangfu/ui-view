@@ -1,6 +1,6 @@
 /**
  * InputNumber 数字输入（View）。
- * 支持 step、min、max、精度；light/dark 主题。
+ * 对齐 Input：value 可为 getter、主体不读 value()，加减按钮由子组件内读 value() 计算 disabled，避免失焦。light/dark 主题。
  */
 
 import { twMerge } from "tailwind-merge";
@@ -13,7 +13,7 @@ export interface InputNumberProps {
   disabled?: boolean;
   /** 占位文案 */
   placeholder?: string;
-  /** 当前值（受控可选）；可为 getter 以配合 View 细粒度更新 */
+  /** 当前值（受控可选）；可为 getter 以在 View 细粒度下只更新 value 不重建节点，避免失焦 */
   value?: number | string | (() => number) | (() => string);
   /** 步进 */
   step?: number;
@@ -41,6 +41,58 @@ const sizeClasses: Record<SizeVariant, string> = {
 const base =
   "w-full border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 border-slate-300 dark:border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:focus:ring-blue-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors";
 
+/**
+ * 加减按钮：仅在内部读 value() 计算 canDecrease/canIncrease，避免 InputNumber 主体订阅 signal 导致整块重渲染、input 失焦。
+ */
+function InputNumberButtons(props: {
+  value?: number | string | (() => number) | (() => string);
+  step: number;
+  min?: number;
+  max?: number;
+  disabled: boolean;
+  onTriggerChange: (newVal: number) => void;
+}) {
+  const { value, step, min, max, disabled, onTriggerChange } = props;
+  const raw = typeof value === "function" ? value() : value;
+  const val = value === undefined || raw === undefined || raw === ""
+    ? ""
+    : String(raw);
+  const num = val === "" ? NaN : Number(val);
+  const canDecrease = !disabled && (min == null || (num - step) >= min);
+  const canIncrease = !disabled && (max == null || (num + step) <= max);
+
+  return (
+    <span class="flex flex-col min-w-12 w-12 border border-l-0 border-slate-300 dark:border-slate-600 rounded-r-lg overflow-hidden">
+      <button
+        type="button"
+        class="flex-1 min-h-[22px] px-3 border-b border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center justify-center"
+        disabled={!canIncrease}
+        aria-label="增加"
+        onClick={() =>
+          onTriggerChange(
+            Number.isNaN(num) ? step : Math.min(max ?? Infinity, num + step),
+          )}
+      >
+        +
+      </button>
+      <button
+        type="button"
+        class="flex-1 min-h-[22px] px-3 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center justify-center"
+        disabled={!canDecrease}
+        aria-label="减少"
+        onClick={() =>
+          onTriggerChange(
+            Number.isNaN(num)
+              ? min ?? 0
+              : Math.max(min ?? -Infinity, num - step),
+          )}
+      >
+        −
+      </button>
+    </span>
+  );
+}
+
 export function InputNumber(props: InputNumberProps) {
   const {
     size = "md",
@@ -57,59 +109,40 @@ export function InputNumber(props: InputNumberProps) {
   } = props;
 
   const sizeCls = sizeClasses[size];
-  const val = value === undefined || value === "" ? "" : String(value);
-  const num = val === "" ? NaN : Number(val);
-  const canDecrease = !disabled && (min == null || (num - step) >= min);
-  const canIncrease = !disabled && (max == null || (num + step) <= max);
+  // 禁止在组件体内读 value()：会订阅 signal，导致整树重跑、input 失焦。value 透传给 <input value={value} />。
 
-  const triggerChange = (newVal: number) => {
-    const synthetic = { target: { value: String(newVal) } } as unknown as Event;
+  const onTriggerChange = (newVal: number) => {
+    const synthetic = {
+      target: { value: String(newVal) },
+    } as unknown as Event;
     onChange?.(synthetic);
+  };
+
+  const inputProps = {
+    type: "number" as const,
+    id,
+    name,
+    value,
+    placeholder,
+    disabled,
+    step,
+    min,
+    max,
+    class: twMerge(base, sizeCls, "rounded-r-none"),
+    onChange,
   };
 
   return () => (
     <span class={twMerge("inline-flex items-stretch w-full", className)}>
-      <input
-        type="number"
-        id={id}
-        name={name}
-        value={val}
-        placeholder={placeholder}
-        disabled={disabled}
+      <input {...inputProps} />
+      <InputNumberButtons
+        value={value}
         step={step}
         min={min}
         max={max}
-        class={twMerge(base, sizeCls, "rounded-r-none")}
-        onChange={onChange}
+        disabled={disabled}
+        onTriggerChange={onTriggerChange}
       />
-      <span class="flex flex-col min-w-12 w-12 border border-l-0 border-slate-300 dark:border-slate-600 rounded-r-lg overflow-hidden">
-        <button
-          type="button"
-          class="flex-1 min-h-[22px] px-3 border-b border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center justify-center"
-          disabled={!canIncrease}
-          aria-label="增加"
-          onClick={() =>
-            triggerChange(
-              Number.isNaN(num) ? step : Math.min(max ?? Infinity, num + step),
-            )}
-        >
-          +
-        </button>
-        <button
-          type="button"
-          class="flex-1 min-h-[22px] px-3 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center justify-center"
-          disabled={!canDecrease}
-          aria-label="减少"
-          onClick={() =>
-            triggerChange(
-              Number.isNaN(num)
-                ? min ?? 0
-                : Math.max(min ?? -Infinity, num - step),
-            )}
-        >
-          −
-        </button>
-      </span>
     </span>
   );
 }
