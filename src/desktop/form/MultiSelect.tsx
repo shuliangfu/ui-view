@@ -83,9 +83,10 @@ export function MultiSelect(props: MultiSelectProps) {
     return (
       <span class={twMerge("block", className)} id={id}>
         {/* 表单提交：多选用多个同名 hidden input */}
-        {name && resolvedValue.map((v) => (
-          <input key={v} type="hidden" name={name} value={v} />
-        ))}
+        {name &&
+          resolvedValue.map((v) => (
+            <input key={v} type="hidden" name={name} value={v} />
+          ))}
         <div class="flex gap-1 mb-1">
           <button
             type="button"
@@ -108,7 +109,11 @@ export function MultiSelect(props: MultiSelectProps) {
           role="listbox"
           aria-multiselectable="true"
           aria-label="多选列表"
-          class={twMerge(listBase, sizeCls, disabled && "opacity-50 pointer-events-none")}
+          class={twMerge(
+            listBase,
+            sizeCls,
+            disabled && "opacity-50 pointer-events-none",
+          )}
         >
           {options.map((opt) => {
             const selected = resolvedValue.includes(opt.value);
