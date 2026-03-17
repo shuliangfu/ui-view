@@ -125,8 +125,9 @@ export default function FormInput() {
         <Title level={1}>Input 单行输入</Title>
         <Paragraph class="mt-2">
           单行输入框，支持
-          size、placeholder、value、type、readOnly、required、error、disabled、prefix、suffix、allowClear。Tailwind
-          v4 + light/dark。
+          size、placeholder、value、type、readOnly、required、error、disabled、prefix、suffix、allowClear。宽度由
+          class 控制，表单中需占满一列时传 class="w-full"。Tailwind v4 +
+          light/dark。
         </Paragraph>
       </section>
 

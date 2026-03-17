@@ -118,8 +118,9 @@ export default function FormRichTextEditor() {
       <section>
         <Title level={1}>RichTextEditor 富文本</Title>
         <Paragraph class="mt-2">
-          富文本编辑器：value、onChange、toolbarPreset（default/simple/full）、toolbar、placeholder、disabled、readOnly、minHeight、onInsertImage、onUploadImage、onPasteImage。Tailwind
-          v4 + light/dark。
+          富文本编辑器：value、onChange、toolbarPreset（default/simple/full）、toolbar、placeholder、disabled、readOnly、minHeight、onInsertImage、onUploadImage、onPasteImage。宽度由
+          class 控制，表单中需占满一列时传 class="w-full"。Tailwind v4 +
+          light/dark。
         </Paragraph>
       </section>
 

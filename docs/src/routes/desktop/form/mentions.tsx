@@ -148,7 +148,8 @@ export default function FormMentions() {
         <Paragraph class="mt-2">
           提及输入：多行输入框，输入 @
           触发候选下拉；value、onInput、onChange、showDropdown、dropdownOptions、onSelectOption；选项类型为
-          MentionOption（value、label）。Tailwind v4 + light/dark。
+          MentionOption（value、label）。宽度由 class 控制，表单中需占满一列时传
+          class="w-full"。Tailwind v4 + light/dark。
         </Paragraph>
       </section>
 

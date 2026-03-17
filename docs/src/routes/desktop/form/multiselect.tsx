@@ -106,7 +106,8 @@ export default function FormMultiSelect() {
         <Title level={1}>MultiSelect 多选下拉</Title>
         <Paragraph class="mt-2">
           多选下拉：options、value、onChange、size、disabled、name、id；选项可设
-          disabled；上方有全选、清空。Tailwind v4 + light/dark。
+          disabled；上方有全选、清空。宽度由 class 控制，表单中需占满一列时传
+          class="w-full"。Tailwind v4 + light/dark。
         </Paragraph>
       </section>
 

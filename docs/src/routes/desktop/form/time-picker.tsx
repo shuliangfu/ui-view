@@ -72,7 +72,8 @@ export default function FormTimePicker() {
         <Title level={1}>TimePicker 时间选择</Title>
         <Paragraph class="mt-2">
           时间选择框，值为 HH:mm 或 HH:mm:ss；支持
-          value、size、disabled、onChange。Tailwind v4 + light/dark。
+          value、size、disabled、onChange。宽度由 class
+          控制，表单中需占满一列时传 class="w-full"。Tailwind v4 + light/dark。
         </Paragraph>
       </section>
 

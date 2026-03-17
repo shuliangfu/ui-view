@@ -76,7 +76,7 @@ const examplePlacement = `toast.info("右下角 5 秒", 5000, "bottom-right");
 toast.info("左上角", 3000, "top-left");
 toast.show("info", "不自动关闭", 0, "bottom-center");`;
 
-const exampleDestroy = `toast.destroy();`;
+const _exampleDestroy = `toast.destroy();`;
 
 export default function MessageToast() {
   return (

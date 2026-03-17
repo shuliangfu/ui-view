@@ -48,8 +48,9 @@ const sizeClasses: Record<SizeVariant, string> = {
   lg: "px-4 py-2.5 text-base rounded-lg",
 };
 
+/** 基础样式：不含宽度，需全宽时由调用方加 class="w-full" */
 const base =
-  "w-full border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 border-slate-300 dark:border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:focus:ring-blue-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors";
+  "border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 border-slate-300 dark:border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:focus:ring-blue-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors";
 const errorCls =
   "border-red-500 dark:border-red-500 focus:ring-red-500 dark:focus:ring-red-500";
 const readOnlyCls = "bg-slate-50 dark:bg-slate-800/80 cursor-default";
@@ -154,7 +155,7 @@ export function Input(props: InputProps) {
       readOnly && readOnlyCls,
       prefix ? "pl-10" : undefined,
       suffix || allowClear ? "pr-10" : undefined,
-      className,
+      !prefix && !suffix && !allowClear ? className : undefined,
     ),
     onInput,
     onChange,
@@ -165,7 +166,7 @@ export function Input(props: InputProps) {
   }
 
   return () => (
-    <div class="relative w-full">
+    <div class={twMerge("relative", className)}>
       {prefix && (
         <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-500 dark:text-slate-400">
           {prefix}
@@ -174,6 +175,7 @@ export function Input(props: InputProps) {
       <input
         {...inputProps}
         class={twMerge(
+          "w-full",
           inputProps.class,
           prefix ? "pl-10" : undefined,
           suffix || allowClear ? "pr-10" : undefined,

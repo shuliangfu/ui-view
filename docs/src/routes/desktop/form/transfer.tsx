@@ -133,8 +133,9 @@ export default function FormTransfer() {
       <section>
         <Title level={1}>Transfer 穿梭框</Title>
         <Paragraph class="mt-2">
-          穿梭框：dataSource、targetKeys、onChange、titles、showSearch、searchPlaceholder、searchValue、onSearch、filterOption、render、listStyle、disabled。Tailwind
-          v4 + light/dark。
+          穿梭框：dataSource、targetKeys、onChange、titles、showSearch、searchPlaceholder、searchValue、onSearch、filterOption、render、listStyle、disabled。宽度由
+          class 控制，表单中需占满一列时传 class="w-full"。Tailwind v4 +
+          light/dark。
         </Paragraph>
       </section>
 

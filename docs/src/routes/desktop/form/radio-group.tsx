@@ -190,6 +190,33 @@ export default function FormRadioGroup() {
           </section>
 
           <section class="space-y-4">
+            <Title level={3}>direction=vertical（纵向）</Title>
+            <FormItem label="纵向单选组">
+              <RadioGroup
+                name="radio-v"
+                options={options}
+                value={val2}
+                onChange={(v) => setVal2(v)}
+                direction="vertical"
+              />
+            </FormItem>
+            <CodeBlock
+              title="代码示例"
+              code={`<RadioGroup
+  name="radio-v"
+  options={options}
+  value={val2}
+  onChange={(v) => setVal2(v)}
+  direction="vertical"
+/>`}
+              language="tsx"
+              showLineNumbers
+              copyable
+              wrapLongLines
+            />
+          </section>
+
+          <section class="space-y-4">
             <Title level={3}>error / disabled</Title>
             <FormItem label="错误态">
               <RadioGroup

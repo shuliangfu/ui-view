@@ -37,8 +37,9 @@ const sizeClasses: Record<SizeVariant, string> = {
   lg: "px-4 py-2.5 text-base rounded-lg",
 };
 
+/** 触发器基础样式：不含宽度，需全宽时由调用方加 class="w-full" */
 const triggerBase =
-  "w-full border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border-slate-300 dark:border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:focus:ring-blue-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer flex items-center justify-between gap-2 text-left";
+  "border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border-slate-300 dark:border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:focus:ring-blue-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer flex items-center justify-between gap-2 text-left";
 
 const optionBase =
   "px-3 py-2 text-sm text-left w-full cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed first:rounded-t-lg last:rounded-b-lg";
@@ -77,7 +78,7 @@ export function Select(props: SelectProps) {
   /** 有 options 时走自定义下拉；否则走原生 select（兼容 children 传 option） */
   if (!options) {
     const base =
-      "w-full border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border-slate-300 dark:border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer";
+      "border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border-slate-300 dark:border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer";
     return () => (
       <select
         id={id}
@@ -93,7 +94,7 @@ export function Select(props: SelectProps) {
   }
 
   return () => (
-    <span class={twMerge("relative inline-block w-full", className)}>
+    <span class={twMerge("relative inline-block", className)}>
       <input type="hidden" name={name} value={resolvedValue ?? ""} />
       <button
         type="button"
@@ -102,7 +103,7 @@ export function Select(props: SelectProps) {
         aria-haspopup="listbox"
         aria-expanded={open()}
         aria-label={displayText || placeholder || "选择"}
-        class={twMerge(triggerBase, sizeCls)}
+        class={twMerge("w-full", triggerBase, sizeCls)}
         onClick={() => !disabled && setOpen((o) => !o)}
       >
         <span

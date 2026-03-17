@@ -91,7 +91,8 @@ export default function FormSearch() {
         <Title level={1}>Search 搜索框</Title>
         <Paragraph class="mt-2">
           搜索框，支持 value、onInput、onSearch；传 onSearch
-          时显示搜索与清除按钮。Tailwind v4 + light/dark。
+          时显示搜索与清除按钮。宽度由 class 控制，表单中需占满一列时传
+          class="w-full"。Tailwind v4 + light/dark。
         </Paragraph>
       </section>
 

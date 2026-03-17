@@ -34,8 +34,9 @@ export interface TextareaProps {
   id?: string;
 }
 
+/** 基础样式：不含宽度，需全宽时由调用方加 class="w-full" */
 const base =
-  "w-full border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 border-slate-300 dark:border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:focus:ring-blue-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors px-3 py-2 text-sm rounded-lg resize-y min-h-[80px]";
+  "border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 border-slate-300 dark:border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:focus:ring-blue-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors px-3 py-2 text-sm rounded-lg resize-y min-h-[80px]";
 const errorCls =
   "border-red-500 dark:border-red-500 focus:ring-red-500 dark:focus:ring-red-500";
 const readOnlyCls = "bg-slate-50 dark:bg-slate-800/80 cursor-default";

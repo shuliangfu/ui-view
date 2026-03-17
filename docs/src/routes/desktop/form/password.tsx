@@ -103,7 +103,8 @@ export default function FormPassword() {
         <Title level={1}>Password 密码输入</Title>
         <Paragraph class="mt-2">
           密码输入框，支持显隐切换、showStrength
-          强度提示、size、disabled。Tailwind v4 + light/dark。
+          强度提示、size、disabled。宽度由 class 控制，表单中需占满一列时传
+          class="w-full"。Tailwind v4 + light/dark。
         </Paragraph>
       </section>
 

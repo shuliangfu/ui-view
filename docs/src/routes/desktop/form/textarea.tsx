@@ -106,8 +106,9 @@ export default function FormTextarea() {
         <Title level={1}>Textarea 多行输入</Title>
         <Paragraph class="mt-2">
           多行输入框，支持
-          value、onInput、rows、maxLength、readOnly、required、error、disabled。Tailwind
-          v4 + light/dark。
+          value、onInput、rows、maxLength、readOnly、required、error、disabled。宽度由
+          class 控制，表单中需占满一列时传 class="w-full"。Tailwind v4 +
+          light/dark。
         </Paragraph>
       </section>
 

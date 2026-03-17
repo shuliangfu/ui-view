@@ -133,8 +133,9 @@ export default function FormUpload() {
         <Title level={1}>Upload 文件上传</Title>
         <Paragraph class="mt-2">
           文件上传：支持
-          multiple、accept、fileList、onChange、onRemove、onDrop、drag、dragPlaceholder、disabled。Tailwind
-          v4 + light/dark。
+          multiple、accept、fileList、onChange、onRemove、onDrop、drag、dragPlaceholder、disabled。宽度由
+          class 控制，表单中需占满一列时传 class="w-full"。Tailwind v4 +
+          light/dark。
         </Paragraph>
       </section>
 

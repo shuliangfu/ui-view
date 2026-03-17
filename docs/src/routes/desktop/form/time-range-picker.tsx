@@ -82,7 +82,8 @@ export default function FormTimeRangePicker() {
         <Title level={1}>TimeRangePicker 时间范围</Title>
         <Paragraph class="mt-2">
           时间范围选择，start/end 为 HH:mm 或 HH:mm:ss；支持 onChange([start,
-          end])、size、disabled。Tailwind v4 + light/dark。
+          end])、size、disabled。宽度由 class 控制，表单中需占满一列时传
+          class="w-full"。Tailwind v4 + light/dark。
         </Paragraph>
       </section>
 

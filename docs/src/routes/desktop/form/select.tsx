@@ -92,8 +92,8 @@ export default function FormSelect() {
         <Title level={1}>Select 下拉选择</Title>
         <Paragraph class="mt-2">
           单选下拉框，支持
-          options、value、placeholder、onChange、size、disabled。Tailwind v4 +
-          light/dark。
+          options、value、placeholder、onChange、size、disabled。宽度由 class
+          控制，表单中需占满一列时传 class="w-full"。Tailwind v4 + light/dark。
         </Paragraph>
       </section>
 
