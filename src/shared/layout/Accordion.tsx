@@ -55,12 +55,21 @@ export function Accordion(props: AccordionProps) {
 
   const initialKeys = controlledKeys ?? defaultExpandedKeys ?? [];
   const [internalKeys, setInternalKeys] = createSignal<string[]>(initialKeys);
-  /** 受控时用 prop，否则用内部 state，保证点击后能立即更新 UI */
-  const getExpandedKeys = (): string[] =>
-    controlledKeys !== undefined ? controlledKeys : internalKeys();
+  /** 用普通对象存「上次同步的受控 keys」，不参与响应式，避免读 signal 触发重跑导致卡死/点不动 */
+  const lastSyncedRef: { value: string } = { value: "" };
+  const c = controlledKeys !== undefined ? controlledKeys : null;
+  if (c != null) {
+    const cStr = JSON.stringify(c.slice().sort());
+    if (cStr !== lastSyncedRef.value) {
+      lastSyncedRef.value = cStr;
+      setInternalKeys([...c]);
+    }
+  }
+  /** 展示用内部 state，点击即更新；受控时仅当 prop 变化才从上面同步到 internal */
+  const getExpandedKeys = (): string[] => internalKeys();
 
   const toggle = (key: string) => {
-    const current = getExpandedKeys();
+    const current = internalKeys();
     const next = new Set(current);
     if (next.has(key)) {
       next.delete(key);
