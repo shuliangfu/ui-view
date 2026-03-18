@@ -35,7 +35,7 @@ export function PageHeader(props: PageHeaderProps) {
     class: className,
   } = props;
 
-  return () => (
+  return (
     <header
       class={twMerge(
         "border-b border-slate-200 dark:border-slate-600 pb-4",
