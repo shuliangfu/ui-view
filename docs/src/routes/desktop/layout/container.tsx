@@ -42,16 +42,25 @@ const importCode = `import { Container } from "@dreamer/ui-view";
   <p>内容</p>
 </Container>`;
 
-const exampleMaxWidth =
-  `<Container maxWidth="md" class="bg-slate-100 dark:bg-slate-800 rounded-lg py-4">
+const exampleMaxWidth = `<Container
+  maxWidth="md"
+  class="bg-slate-100 dark:bg-slate-800 rounded-lg py-4"
+>
   <p>maxWidth=md（768px）</p>
 </Container>
-<Container maxWidth="xl" class="bg-slate-100 dark:bg-slate-800 rounded-lg py-4">
+<Container
+  maxWidth="xl"
+  class="bg-slate-100 dark:bg-slate-800 rounded-lg py-4"
+>
   <p>maxWidth=xl（1280px）</p>
 </Container>`;
 
-const exampleCenteredPadded =
-  `<Container maxWidth="md" centered={false} padded={false} class="...">
+const exampleCenteredPadded = `<Container
+  maxWidth="md"
+  centered={false}
+  padded={false}
+  class="..."
+>
   <p>不居中、无默认内边距</p>
 </Container>`;
 
