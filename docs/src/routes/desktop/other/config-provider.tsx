@@ -58,12 +58,19 @@ const CONFIG_PROVIDER_API: ApiRow[] = [
 const importCode =
   `import { ConfigProvider, getConfig } from "@dreamer/ui-view";
 
-<ConfigProvider theme="light" locale="zh-CN" componentSize="md">
+<ConfigProvider
+  theme="light"
+  locale="zh-CN"
+  componentSize="md"
+>
   <div>子树内组件可通过 getConfig() 读取 theme、locale、componentSize、prefixCls</div>
 </ConfigProvider>`;
 
-const exampleThemeLocale =
-  `<ConfigProvider theme={theme()} locale="zh-CN" componentSize="md">
+const exampleThemeLocale = `<ConfigProvider
+  theme={theme()}
+  locale="zh-CN"
+  componentSize="md"
+>
   <div class="...">子树内（受 ConfigProvider 包裹）</div>
 </ConfigProvider>`;
 
