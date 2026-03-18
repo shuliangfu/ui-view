@@ -95,7 +95,12 @@ import { Button, Dialog } from "@dreamer/ui-view";
 
 const [open, setOpen] = createSignal(false);
 
-<Button variant="primary" onClick={() => setOpen(true)}>打开</Button>
+<Button
+  variant="primary"
+  onClick={() => setOpen(true)}
+>
+  打开
+</Button>
 <Dialog
   open={open()}
   onClose={() => setOpen(false)}
@@ -147,7 +152,7 @@ export default function FeedbackDialog() {
   const [openDanger, setOpenDanger] = createSignal(false);
   const [openLoading, setOpenLoading] = createSignal(false);
 
-  return (
+  return () => (
     <div class="space-y-10">
       <section>
         <Title level={1}>Dialog 确认对话框</Title>
