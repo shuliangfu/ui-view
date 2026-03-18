@@ -63,8 +63,18 @@ const exampleSrc = `<Avatar
   alt="Avatar"
 />`;
 
-const exampleClass = `<Avatar size="md" class="ring-2 ring-blue-500">A</Avatar>
-<Avatar size="md" class="ring-2 ring-amber-400 ring-offset-2">B</Avatar>`;
+const exampleClass = `<Avatar
+  size="md"
+  class="ring-2 ring-blue-500"
+>
+  A
+</Avatar>
+<Avatar
+  size="md"
+  class="ring-2 ring-amber-400 ring-offset-2"
+>
+  B
+</Avatar>`;
 
 export default function BasicAvatar() {
   return (
