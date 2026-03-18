@@ -64,15 +64,27 @@ const importCode = `import { createSignal } from "@dreamer/view";
 import { Calendar } from "@dreamer/ui-view";
 
 const [value, setValue] = createSignal(new Date());
-<Calendar value={value()} onChange={setValue} />`;
+<Calendar
+  value={value()}
+  onChange={setValue}
+/>`;
 
-const exampleBasic = `<Calendar value={value()} onChange={setValue} />`;
+const exampleBasic = `<Calendar
+  value={value()}
+  onChange={setValue}
+/>`;
 
-const exampleModeYear =
-  `<Calendar value={value()} onChange={setValue} mode="year" />`;
+const exampleModeYear = `<Calendar
+  value={value()}
+  onChange={setValue}
+  mode="year"
+/>`;
 
-const exampleFullscreen =
-  `<Calendar value={value()} onChange={setValue} fullscreen />`;
+const exampleFullscreen = `<Calendar
+  value={value()}
+  onChange={setValue}
+  fullscreen
+/>`;
 
 export default function DataDisplayCalendar() {
   const [value, setValue] = createSignal(new Date());
