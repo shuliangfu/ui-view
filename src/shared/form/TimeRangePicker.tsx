@@ -61,9 +61,14 @@ export function TimeRangePicker(props: TimeRangePickerProps) {
           value={startVal}
           disabled={disabled}
           class={twMerge(base, sizeCls, "min-w-[120px] flex-1")}
+          onInput={(e: Event) => {
+            (e.target as HTMLInputElement).blur();
+          }}
           onChange={(e: Event) => {
-            const v = (e.target as HTMLInputElement).value;
+            const el = e.target as HTMLInputElement;
+            const v = el.value;
             onChange?.([v, endVal]);
+            el.blur();
           }}
         />
         <span class="text-slate-400 dark:text-slate-500" aria-hidden="true">
@@ -76,9 +81,14 @@ export function TimeRangePicker(props: TimeRangePickerProps) {
           value={endVal}
           disabled={disabled}
           class={twMerge(base, sizeCls, "min-w-[120px] flex-1")}
+          onInput={(e: Event) => {
+            (e.target as HTMLInputElement).blur();
+          }}
           onChange={(e: Event) => {
-            const v = (e.target as HTMLInputElement).value;
+            const el = e.target as HTMLInputElement;
+            const v = el.value;
             onChange?.([startVal, v]);
+            el.blur();
           }}
         />
       </div>
