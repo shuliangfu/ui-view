@@ -57,10 +57,17 @@ const CHART_BAR_API: ApiRow[] = [
 const importCode = `import { ChartBar } from "@dreamer/ui-view";
 
 const data = { labels: ["红", "绿", ...], datasets: [{ label: "数量", data: [12, 19, ...], backgroundColor: [...] }] };
-<ChartBar data={data} options={options} class="w-full h-64" />`;
+<ChartBar
+  data={data}
+  options={options}
+  class="w-full h-64"
+/>`;
 
-const exampleBasic =
-  `<ChartBar data={sampleData} options={options} class="w-full h-64" />`;
+const exampleBasic = `<ChartBar
+  data={sampleData}
+  options={options}
+  class="w-full h-64"
+/>`;
 
 export default function ChartsBar() {
   return (
