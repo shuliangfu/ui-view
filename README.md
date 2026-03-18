@@ -136,7 +136,7 @@ The plugin scans all `.ts`/`.tsx` under `scanPath` for named imports from `@drea
 
 **Mobile only:** BottomSheet, ActionSheet, PullRefresh, SwipeCell
 
-### Layout & container
+### 📐 Layout & container
 
 - **Container** max-width container
 - **Hero** hero / above-the-fold
@@ -162,7 +162,7 @@ The plugin scans all `.ts`/`.tsx` under `scanPath` for named imports from `@drea
 
 **Mobile only:** TabBar, NavBar
 
-### Data display
+### 📊 Data display
 
 - **Tag** tag
 - **Empty** empty state
