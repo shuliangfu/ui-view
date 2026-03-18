@@ -1,7 +1,9 @@
 {
   "name": "@dreamer/ui-view",
   "version": "0.1.0",
-  "workspace": ["docs"],
+  "workspace": [
+    "docs"
+  ],
   "license": "Apache-2.0",
   "description": "View framework UI components for Dreamer. Desktop and mobile with Tailwind v4 and light/dark theme.",
   "repository": {
@@ -52,17 +54,31 @@
   "compilerOptions": {
     "jsx": "react-jsx",
     "jsxImportSource": "@dreamer/view",
-    "lib": ["deno.window", "dom"],
-    "types": ["./jsx.d.ts"]
+    "lib": [
+      "deno.window",
+      "dom"
+    ],
+    "types": [
+      "./jsx.d.ts"
+    ]
   },
   "lint": {
-    "include": ["src/", "plugin.ts"],
+    "include": [
+      "src/",
+      "plugin.ts"
+    ],
     "rules": {
-      "tags": ["recommended"],
-      "exclude": ["no-explicit-any"]
+      "tags": [
+        "recommended"
+      ],
+      "exclude": [
+        "no-explicit-any"
+      ]
     }
   },
   "fmt": {
-    "exclude": ["src/shared/data-display/CodeBlock.tsx"]
+    "exclude": [
+      "src/shared/data-display/CodeBlock.tsx"
+    ]
   }
 }
