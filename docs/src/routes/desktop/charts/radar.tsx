@@ -60,10 +60,17 @@ const CHART_RADAR_API: ApiRow[] = [
 const importCode = `import { ChartRadar } from "@dreamer/ui-view";
 
 const data = { labels: ["速度", "力量", ...], datasets: [{ label: "系列 A", data: [65, 59, ...], borderColor: "...", backgroundColor: "..." }] };
-<ChartRadar data={data} options={options} class="w-full h-64" />`;
+<ChartRadar
+  data={data}
+  options={options}
+  class="w-full h-64"
+/>`;
 
-const exampleBasic =
-  `<ChartRadar data={sampleData} options={options} class="w-full h-64" />`;
+const exampleBasic = `<ChartRadar
+  data={sampleData}
+  options={options}
+  class="w-full h-64"
+/>`;
 
 export default function ChartsRadar() {
   return (
