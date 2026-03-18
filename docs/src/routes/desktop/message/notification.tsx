@@ -157,6 +157,14 @@ const exampleDuration = `notification.open({
 });
 notification.destroy();`;
 
+/** 不自动关闭：duration 设为 0，仅用户点击关闭按钮或 destroy 时关闭 */
+const exampleDurationZero = `notification.open({
+  title: "系统通知",
+  description: "此条不自动关闭，需点击右侧 X 或调用 destroy 关闭。",
+  type: "info",
+  duration: 0,
+});`;
+
 export default function MessageNotification() {
   return (
     <div class="space-y-10">
@@ -315,20 +323,21 @@ export default function MessageNotification() {
               "bottom-center",
               "bottom-left",
             ] as const).map((p) => (
-              <Button
-                key={p}
-                type="button"
-                variant="secondary"
-                onClick={() =>
-                  notification.open({
-                    title: p,
-                    description: `placement="${p}"`,
-                    type: "info",
-                    placement: p,
-                  })}
-              >
-                {p}
-              </Button>
+              <span key={p}>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() =>
+                    notification.open({
+                      title: p,
+                      description: `placement="${p}"`,
+                      type: "info",
+                      placement: p,
+                    })}
+                >
+                  {p}
+                </Button>
+              </span>
             ))}
           </div>
           <CodeBlock
@@ -344,7 +353,9 @@ export default function MessageNotification() {
         <div class="space-y-4">
           <Title level={3}>duration 与 onClose / destroy</Title>
           <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
-            自定义 duration、关闭时 onClose；notification.destroy() 关闭全部。
+            自定义 duration、关闭时 onClose；duration 设为 0
+            表示不自动关闭，需用户点击右侧 X 或调用 destroy
+            关闭。notification.destroy() 关闭全部。
           </Paragraph>
           <div class="flex flex-wrap gap-2">
             <Button
@@ -364,14 +375,36 @@ export default function MessageNotification() {
             <Button
               type="button"
               variant="ghost"
+              onClick={() =>
+                notification.open({
+                  title: "系统通知",
+                  description:
+                    "此条不自动关闭，需点击右侧 X 或调用 destroy 关闭。",
+                  type: "info",
+                  duration: 0,
+                })}
+            >
+              不自动关闭（duration=0）
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
               onClick={() => notification.destroy()}
             >
               notification.destroy()
             </Button>
           </div>
           <CodeBlock
-            title="代码示例"
+            title="代码示例（自定义 duration + onClose）"
             code={exampleDuration}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+          <CodeBlock
+            title="代码示例（不自动关闭，duration=0）"
+            code={exampleDurationZero}
             language="tsx"
             showLineNumbers
             copyable
