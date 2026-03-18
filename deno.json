@@ -44,7 +44,7 @@
     "@dreamer/runtime-adapter": "jsr:@dreamer/runtime-adapter@^1.0.18",
     "@dreamer/service": "jsr:@dreamer/service@^1.0.2",
     "@dreamer/test": "jsr:@dreamer/test@^1.0.15",
-    "@dreamer/view": "jsr:@dreamer/view@^1.1.12",
+    "@dreamer/view": "jsr:@dreamer/view@^1.1.13",
     "tailwindcss": "npm:tailwindcss@4.1.18",
     "chart.js": "npm:chart.js@^4.5.1",
     "prismjs": "npm:prismjs@^1.30.0",
