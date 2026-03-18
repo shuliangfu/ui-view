@@ -262,7 +262,11 @@ export default function FormCheck() {
             </FormItem>
             <CodeBlock
               title="代码示例"
-              code={`<CheckboxGroup options={...} value={checkboxGroupVal()} onChange={setCheckboxGroupVal} />`}
+              code={`<CheckboxGroup
+  options={...}
+  value={checkboxGroupVal()}
+  onChange={setCheckboxGroupVal}
+/>`}
               language="tsx"
               showLineNumbers
               copyable
@@ -315,7 +319,10 @@ export default function FormCheck() {
             </FormItem>
             <CodeBlock
               title="代码示例"
-              code={`<Switch checkedChildren="开" unCheckedChildren="关" />`}
+              code={`<Switch
+  checkedChildren="开"
+  unCheckedChildren="关"
+/>`}
               language="tsx"
               showLineNumbers
               copyable
