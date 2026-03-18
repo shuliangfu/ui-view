@@ -17,32 +17,34 @@ const TOAST_API: ApiRow[] = [
   {
     name: "toast.success(content, duration?, placement?)",
     type: "void",
-    default: "-",
-    description: "成功轻提示；duration 默认 3000ms，0 表示不自动关闭",
+    default: "placement 默认 top",
+    description:
+      "成功轻提示；duration 默认 3000ms，0 表示不自动关闭；placement 为 top | bottom | center",
   },
   {
     name: "toast.error(content, duration?, placement?)",
     type: "void",
-    default: "-",
+    default: "placement 默认 top",
     description: "错误轻提示",
   },
   {
     name: "toast.info(content, duration?, placement?)",
     type: "void",
-    default: "-",
+    default: "placement 默认 top",
     description: "信息轻提示",
   },
   {
     name: "toast.warning(content, duration?, placement?)",
     type: "void",
-    default: "-",
+    default: "placement 默认 top",
     description: "警告轻提示",
   },
   {
     name: "toast.show(type, content, duration?, placement?)",
     type: "void",
-    default: "-",
-    description: "通用展示；type 为 success/error/info/warning",
+    default: "placement 默认 top",
+    description:
+      "通用展示；type 为 success/error/info/warning；placement 为 top | bottom | center",
   },
   {
     name: "toast.dismiss(id)",
@@ -64,7 +66,8 @@ toast.success("操作成功");
 toast.error("操作失败");
 toast.info("这是一条信息");
 toast.warning("请注意");
-toast.show("info", "右下角 5 秒", 5000, "bottom-right");
+toast.show("info", "下方 5 秒", 5000, "bottom");
+toast.show("info", "居中", 3000, "center");
 toast.destroy();`;
 
 const exampleTypes = `toast.success("操作成功");
@@ -72,9 +75,10 @@ toast.error("操作失败");
 toast.info("这是一条信息");
 toast.warning("请注意");`;
 
-const examplePlacement = `toast.info("右下角 5 秒", 5000, "bottom-right");
-toast.info("左上角", 3000, "top-left");
-toast.show("info", "不自动关闭", 0, "bottom-center");`;
+const examplePlacement = `toast.info("上方（默认）", 3000);
+toast.info("下方 5 秒", 5000, "bottom");
+toast.show("info", "居中", 3000, "center");
+toast.show("info", "不自动关闭", 0, "bottom");`;
 
 const _exampleDestroy = `toast.destroy();`;
 
@@ -85,7 +89,7 @@ export default function MessageToast() {
       <section>
         <Title level={1}>Toast 轻提示</Title>
         <Paragraph class="mt-2">
-          轻量级提示，支持多种展示位置（top/top-center/top-left/top-right、bottom/bottom-center/bottom-left/bottom-right）。
+          轻量级提示，支持上（top）、下（bottom）、居中（center，水平+垂直居中）三种位置，默认上。
           支持 success、error、info、warning 类型，可配置 duration（默认
           3000ms，0 表示不自动关闭）。使用 Tailwind v4，支持 light/dark 主题。
         </Paragraph>
@@ -155,30 +159,28 @@ export default function MessageToast() {
         <div class="space-y-4">
           <Title level={3}>placement 与 duration</Title>
           <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
-            可指定弹出位置（如 bottom-right、top-left）和显示时长；duration=0
+            仅支持上（top，默认）、下（bottom）；可指定显示时长，duration=0
             表示不自动关闭。
           </Paragraph>
           <div class="flex flex-wrap gap-2">
             <Button
               type="button"
               variant="secondary"
-              onClick={() =>
-                toast.show("info", "右下角 5 秒", 5000, "bottom-right")}
+              onClick={() => toast.info("上方（默认）", 3000)}
             >
-              bottom-right 5s
+              上（默认）
             </Button>
             <Button
               type="button"
               variant="secondary"
-              onClick={() => toast.info("左上角", 3000, "top-left")}
+              onClick={() => toast.show("info", "下方 5 秒", 5000, "bottom")}
             >
-              top-left
+              下 5s
             </Button>
             <Button
               type="button"
               variant="secondary"
-              onClick={() =>
-                toast.show("info", "不自动关闭", 0, "bottom-center")}
+              onClick={() => toast.show("info", "不自动关闭", 0, "bottom")}
             >
               duration=0 不自动关闭
             </Button>
