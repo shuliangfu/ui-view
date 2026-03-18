@@ -3,6 +3,8 @@
  */
 export { Button } from "./Button.tsx";
 export type { ButtonProps } from "./Button.tsx";
+export { ButtonGroup } from "./ButtonGroup.tsx";
+export type { ButtonGroupProps } from "./ButtonGroup.tsx";
 export { Link } from "./Link.tsx";
 export type { LinkProps } from "./Link.tsx";
 export { Icon } from "./Icon.tsx";
