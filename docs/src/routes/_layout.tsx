@@ -8,6 +8,7 @@ import {
   Divider,
   IconBrandGithub,
   Link,
+  MessageContainer,
   Navbar,
   NotificationContainer,
   ToastContainer,
@@ -72,6 +73,7 @@ export default function DesktopLayout({ children }: DesktopLayoutProps) {
       {children}
 
       <ToastContainer />
+      <MessageContainer />
       <NotificationContainer />
 
       <footer className="border-t border-slate-100 dark:border-slate-700 py-6 text-center text-sm text-slate-400 dark:text-slate-400">
