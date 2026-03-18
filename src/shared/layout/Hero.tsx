@@ -76,8 +76,9 @@ export function Hero(props: HeroProps) {
           "relative z-10 flex w-full",
           isCenter &&
             "flex-col items-center justify-center text-center py-16 px-4",
-          isLeft && "flex-row items-center gap-12 py-16 px-4 md:px-8",
-          isRight && "flex-row-reverse items-center gap-12 py-16 px-4 md:px-8",
+          isLeft && "flex-row items-center gap-6 md:gap-8 py-16 px-4 md:px-8",
+          isRight &&
+            "flex-row-reverse items-center gap-6 md:gap-8 py-16 px-4 md:px-8",
         )}
       >
         <div
@@ -101,12 +102,20 @@ export function Hero(props: HeroProps) {
               {description}
             </p>
           )}
-          {extra != null && <div class="flex flex-wrap gap-3 pt-2">{extra}
-          </div>}
+          {extra != null && (
+            <div
+              class={twMerge(
+                "flex flex-wrap gap-3 pt-2",
+                isCenter && "justify-center",
+              )}
+            >
+              {extra}
+            </div>
+          )}
           {children != null && <div class="mt-4">{children}</div>}
         </div>
         {media != null && (isLeft || isRight) && (
-          <div class="flex-1 flex items-center justify-center shrink-0 max-w-md">
+          <div class="flex-1 flex items-center justify-center min-w-0 max-w-2xl">
             {media}
           </div>
         )}
