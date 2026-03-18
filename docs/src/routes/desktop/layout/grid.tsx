@@ -54,12 +54,19 @@ const GRID_ITEM_API: ApiRow[] = [
 
 const importCode = `import { Grid, GridItem } from "@dreamer/ui-view";
 
-<Grid cols={12} gap={4}>
+<Grid
+  cols={12}
+  gap={4}
+>
   <GridItem span={6}>占 6 列</GridItem>
   <GridItem span={6}>占 6 列</GridItem>
 </Grid>`;
 
-const exampleCols12 = `<Grid cols={12} gap={4} class="max-w-2xl">
+const exampleCols12 = `<Grid
+  cols={12}
+  gap={4}
+  class="max-w-2xl"
+>
   <GridItem span={6}>span 6</GridItem>
   <GridItem span={6}>span 6</GridItem>
   <GridItem span={4}>span 4</GridItem>
@@ -67,7 +74,11 @@ const exampleCols12 = `<Grid cols={12} gap={4} class="max-w-2xl">
   <GridItem span={4}>span 4</GridItem>
 </Grid>`;
 
-const exampleCols24 = `<Grid cols={24} gap={2} class="max-w-2xl">
+const exampleCols24 = `<Grid
+  cols={24}
+  gap={2}
+  class="max-w-2xl"
+>
   <GridItem span={12}>span 12</GridItem>
   <GridItem span={12}>span 12</GridItem>
   <GridItem span={8}>span 8</GridItem>
