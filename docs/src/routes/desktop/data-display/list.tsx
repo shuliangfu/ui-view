@@ -61,13 +61,29 @@ const LIST_API: ApiRow[] = [
 const importCode = `import { List } from "@dreamer/ui-view";
 
 const items = [{ key: "1", children: "列表项 1", extra: "详情" }, ...];
-<List header="标题" items={items} footer="共 3 条" bordered />`;
+<List
+  header="标题"
+  items={items}
+  footer="共 3 条"
+  bordered
+/>`;
 
-const exampleHeaderFooter =
-  `<List header="列表标题" items={items} footer="共 3 条" bordered />`;
+const exampleHeaderFooter = `<List
+  header="列表标题"
+  items={items}
+  footer="共 3 条"
+  bordered
+/>`;
 
-const exampleSplitLoading = `<List items={items.slice(0, 2)} split={false} />
-<List header="加载中" items={[]} loading />`;
+const exampleSplitLoading = `<List
+  items={items.slice(0, 2)}
+  split={false}
+/>
+<List
+  header="加载中"
+  items={[]}
+  loading
+/>`;
 
 export default function DataDisplayList() {
   const items = [
