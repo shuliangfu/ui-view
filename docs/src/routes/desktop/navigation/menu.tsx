@@ -88,13 +88,35 @@ const items = [
   { key: "2", label: "选项二" },
   { key: "sub1", label: "子菜单", children: [{ key: "3", label: "子项 3" }, { key: "4", label: "子项 4" }] },
 ];
-<Menu items={items} selectedKeys={[selected()]} onClick={setSelected} openKeys={openKeys()} onOpenChange={setOpenKeys} mode="vertical" />`;
+<Menu
+  items={items}
+  selectedKeys={[selected()]}
+  onClick={setSelected}
+  openKeys={openKeys()}
+  onOpenChange={setOpenKeys}
+  mode="vertical"
+/>`;
 
-const exampleVertical =
-  `<Menu items={items} selectedKeys={[selected()]} onClick={setSelected} mode="vertical" openKeys={openKeys()} onOpenChange={setOpenKeys} focusedKey={focusedKey()} onFocusChange={setFocusedKey} />`;
+const exampleVertical = `<Menu
+  items={items}
+  selectedKeys={[selected()]}
+  onClick={setSelected}
+  mode="vertical"
+  openKeys={openKeys()}
+  onOpenChange={setOpenKeys}
+  focusedKey={focusedKey()}
+  onFocusChange={setFocusedKey}
+/>`;
 
-const exampleHorizontal =
-  `<Menu items={items} selectedKeys={[selected()]} onClick={setSelected} mode="horizontal" openKeys={openKeys()} onOpenChange={setOpenKeys} usePopoverSubmenu />`;
+const exampleHorizontal = `<Menu
+  items={items}
+  selectedKeys={[selected()]}
+  onClick={setSelected}
+  mode="horizontal"
+  openKeys={openKeys()}
+  onOpenChange={setOpenKeys}
+  usePopoverSubmenu
+/>`;
 
 export default function NavigationMenu() {
   const [selected, setSelected] = createSignal("1");
@@ -143,10 +165,10 @@ export default function NavigationMenu() {
           <div class="flex flex-col gap-8">
             <Menu
               items={items}
-              selectedKeys={[selected()]}
+              selectedKeys={() => [selected()]}
               onClick={(k) => setSelected(k)}
               mode="vertical"
-              openKeys={openKeys()}
+              openKeys={openKeys}
               onOpenChange={setOpenKeys}
               focusedKey={focusedKey()}
               onFocusChange={setFocusedKey}
@@ -166,10 +188,10 @@ export default function NavigationMenu() {
           <Title level={3}>mode=horizontal + usePopoverSubmenu</Title>
           <Menu
             items={items}
-            selectedKeys={[selected()]}
+            selectedKeys={() => [selected()]}
             onClick={(k) => setSelected(k)}
             mode="horizontal"
-            openKeys={openKeys()}
+            openKeys={openKeys}
             onOpenChange={setOpenKeys}
             usePopoverSubmenu
           />
