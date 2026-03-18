@@ -3,7 +3,6 @@
  * 路由: /desktop/navigation/pagination
  */
 
-import { createSignal } from "@dreamer/view";
 import { CodeBlock, Pagination, Paragraph, Title } from "@dreamer/ui-view";
 
 /** API 属性行类型 */
@@ -17,9 +16,15 @@ interface ApiRow {
 const PAGINATION_API: ApiRow[] = [
   {
     name: "current",
-    type: "number",
+    type: "number | (() => number)",
     default: "-",
-    description: "当前页码（从 1 开始）",
+    description: "当前页码（受控）；不传则用 defaultCurrent 且组件内部维护",
+  },
+  {
+    name: "defaultCurrent",
+    type: "number",
+    default: "1",
+    description: "非受控时的默认当前页",
   },
   {
     name: "total",
@@ -33,7 +38,18 @@ const PAGINATION_API: ApiRow[] = [
     default: "-",
     description: "总页数（与 total 二选一）",
   },
-  { name: "pageSize", type: "number", default: "10", description: "每页条数" },
+  {
+    name: "pageSize",
+    type: "number | (() => number)",
+    default: "-",
+    description: "每页条数（受控）；不传则用 defaultPageSize 且组件内部维护",
+  },
+  {
+    name: "defaultPageSize",
+    type: "number",
+    default: "10",
+    description: "非受控时的默认每页条数",
+  },
   {
     name: "pageSizeOptions",
     type: "number[]",
@@ -76,34 +92,97 @@ const PAGINATION_API: ApiRow[] = [
     default: "false",
     description: "是否禁用",
   },
+  {
+    name: "syncUrl",
+    type: "boolean",
+    default: "false",
+    description:
+      "为 true 时，页码/每页条数变化会写入 URL（?page=1&pageSize=10），不刷新页面",
+  },
   { name: "class", type: "string", default: "-", description: "额外 class" },
 ];
 
-const importCode = `import { createSignal } from "@dreamer/view";
-import { Pagination } from "@dreamer/ui-view";
+const importCode = `import { Pagination } from "@dreamer/ui-view";
 
-const [page, setPage] = createSignal(1);
-<Pagination current={page()} total={120} pageSize={10} onChange={setPage} showPrevNext showTotal />`;
+<Pagination
+  defaultCurrent={1}
+  defaultPageSize={10}
+  total={120}
+  onChange={() => {}}
+  showPrevNext
+  showTotal
+/>`;
 
-const exampleFull =
-  `<Pagination current={page()} total={120} pageSize={pageSize()} pageSizeOptions={[10, 20, 50]} onChange={handleChange} showPrevNext showTotal showQuickJumper />`;
+const exampleFull = `<Pagination
+  defaultCurrent={1}
+  defaultPageSize={10}
+  total={120}
+  pageSizeOptions={[10, 20, 50]}
+  onChange={handleChange}
+  showPrevNext
+  showTotal
+  showQuickJumper
+/>`;
 
-const exampleTotalPages =
-  `<Pagination current={page()} totalPages={5} onChange={setPage} showPrevNext />`;
+const exampleTotalPages = `<Pagination
+  defaultCurrent={1}
+  totalPages={5}
+  onChange={() => {}}
+  showPrevNext
+/>`;
 
-const exampleMinimal =
-  `<Pagination current={page()} total={120} pageSize={10} onChange={setPage} showPrevNext showPageNumbers={false} showTotal />`;
+const exampleMinimal = `<Pagination
+  defaultCurrent={1}
+  total={120}
+  defaultPageSize={10}
+  onChange={() => {}}
+  showPrevNext
+  showPageNumbers={false}
+  showTotal
+/>`;
 
-const exampleDisabled =
-  `<Pagination current={2} total={50} pageSize={10} onChange={() => {}} disabled />`;
+const exampleDisabled = `<Pagination
+  defaultCurrent={2}
+  total={50}
+  defaultPageSize={10}
+  onChange={() => {}}
+  disabled
+/>`;
+
+const exampleSyncUrl = `<Pagination
+  defaultCurrent={initial.page}
+  defaultPageSize={initial.pageSize}
+  total={120}
+  pageSizeOptions={[10, 20, 50]}
+  onChange={handleChange}
+  showPrevNext
+  showTotal
+  showQuickJumper
+  syncUrl
+/>`;
+
+/** 从当前 URL 读取 page / pageSize（用于 syncUrl 场景的初始值） */
+function getPageFromUrl(): { page: number; pageSize: number } {
+  if (typeof globalThis.location === "undefined") {
+    return { page: 1, pageSize: 10 };
+  }
+  const u = new URL(globalThis.location.href);
+  const page = Math.max(
+    1,
+    parseInt(u.searchParams.get("page") ?? "1", 10) || 1,
+  );
+  const pageSize = Math.max(
+    1,
+    parseInt(u.searchParams.get("pageSize") ?? "10", 10) || 10,
+  );
+  return { page, pageSize };
+}
 
 export default function NavigationPagination() {
-  const [page, setPage] = createSignal(1);
-  const [pageSize, setPageSize] = createSignal(10);
+  const initial = getPageFromUrl();
 
-  const handleChange = (p: number, ps?: number) => {
-    setPage(p);
-    if (ps != null) setPageSize(ps);
+  const handleChange = (_p: number, _ps?: number) => {
+    // 可选：根据业务处理页码/每页条数变化
   };
 
   return (
@@ -111,7 +190,7 @@ export default function NavigationPagination() {
       <section>
         <Title level={1}>Pagination 分页</Title>
         <Paragraph class="mt-2">
-          分页：current、total、totalPages、pageSize、pageSizeOptions、onChange、showPrevNext、showPageNumbers、showQuickJumper、showTotal、disabled、class。
+          分页：current、total、totalPages、pageSize、pageSizeOptions、onChange、showPrevNext、showPageNumbers、showQuickJumper、showTotal、disabled、syncUrl、class。
           使用 Tailwind v4，支持 light/dark 主题。
         </Paragraph>
       </section>
@@ -135,9 +214,9 @@ export default function NavigationPagination() {
             完整（total + pageSizeOptions + showTotal + showQuickJumper）
           </Title>
           <Pagination
-            current={page()}
+            defaultCurrent={1}
+            defaultPageSize={10}
             total={120}
-            pageSize={pageSize()}
             pageSizeOptions={[10, 20, 50]}
             onChange={handleChange}
             showPrevNext
@@ -157,9 +236,9 @@ export default function NavigationPagination() {
         <div class="space-y-4">
           <Title level={3}>totalPages 直接指定总页数</Title>
           <Pagination
-            current={page()}
+            defaultCurrent={1}
             totalPages={5}
-            onChange={setPage}
+            onChange={() => {}}
             showPrevNext
           />
           <CodeBlock
@@ -175,10 +254,10 @@ export default function NavigationPagination() {
         <div class="space-y-4">
           <Title level={3}>极简模式（showPageNumbers=false）</Title>
           <Pagination
-            current={page()}
+            defaultCurrent={1}
             total={120}
-            pageSize={10}
-            onChange={setPage}
+            defaultPageSize={10}
+            onChange={() => {}}
             showPrevNext
             showPageNumbers={false}
             showTotal
@@ -205,6 +284,29 @@ export default function NavigationPagination() {
           <CodeBlock
             title="代码示例"
             code={exampleDisabled}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+        </div>
+
+        <div class="space-y-4">
+          <Title level={3}>syncUrl（与 URL ?page=1&pageSize=10 同步）</Title>
+          <Pagination
+            defaultCurrent={initial.page}
+            defaultPageSize={initial.pageSize}
+            total={120}
+            pageSizeOptions={[10, 20, 50]}
+            onChange={handleChange}
+            showPrevNext
+            showTotal
+            showQuickJumper
+            syncUrl
+          />
+          <CodeBlock
+            title="代码示例"
+            code={exampleSyncUrl}
             language="tsx"
             showLineNumbers
             copyable
