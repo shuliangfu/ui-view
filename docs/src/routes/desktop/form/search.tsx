@@ -173,7 +173,11 @@ export default function FormSearch() {
             </FormItem>
             <CodeBlock
               title="代码示例"
-              code={`<Search placeholder="禁用" disabled value="" />`}
+              code={`<Search
+  placeholder="禁用"
+  disabled
+  value=""
+/>`}
               language="tsx"
               showLineNumbers
               copyable
@@ -197,10 +201,26 @@ export default function FormSearch() {
             </FormItem>
             <CodeBlock
               title="代码示例"
-              code={`<Search size="xs" placeholder="xs" value="" />
-<Search size="sm" placeholder="sm" value="" />
-<Search size="md" placeholder="md" value="" />
-<Search size="lg" placeholder="lg" value="" />`}
+              code={`<Search
+  size="xs"
+  placeholder="xs"
+  value=""
+/>
+<Search
+  size="sm"
+  placeholder="sm"
+  value=""
+/>
+<Search
+  size="md"
+  placeholder="md"
+  value=""
+/>
+<Search
+  size="lg"
+  placeholder="lg"
+  value=""
+/>`}
               language="tsx"
               showLineNumbers
               copyable
