@@ -1,6 +1,7 @@
 # 📦 @dreamer/ui-view
 
-UI component library based on View and Tailwind CSS, with light/dark theme and desktop + mobile support, for enterprise apps and admin dashboards.
+UI component library based on View and Tailwind CSS, with light/dark theme and
+desktop + mobile support, for enterprise apps and admin dashboards.
 
 **简体中文:** [README-zh.md](./README-zh.md)
 
@@ -22,27 +23,37 @@ bunx jsr add @dreamer/ui-view
 
 ## 📂 Entry points
 
-| Entry                       | Description                                                                 |
-| --------------------------- | --------------------------------------------------------------------------- |
-| `@dreamer/ui-view`          | Desktop components (default)                                                |
-| `@dreamer/ui-view/mobile`   | Mobile components                                                            |
-| `@dreamer/ui-view/shared`   | Shared components and types (included in main and mobile; use for tree-shaking) |
+| Entry                     | Description                                                                     |
+| ------------------------- | ------------------------------------------------------------------------------- |
+| `@dreamer/ui-view`        | Desktop components (default)                                                    |
+| `@dreamer/ui-view/mobile` | Mobile components                                                               |
+| `@dreamer/ui-view/shared` | Shared components and types (included in main and mobile; use for tree-shaking) |
 
-The desktop entry includes all shared components plus desktop-only ones; the mobile entry includes shared plus mobile-only ones.
+The desktop entry includes all shared components plus desktop-only ones; the
+mobile entry includes shared plus mobile-only ones.
 
 ---
 
 ## 🎨 Using with Tailwind
 
-Components are styled with Tailwind utility classes. After publishing to JSR, your project’s Tailwind does not scan dependency packages by default; without configuration, those classes are not included in the final CSS and component styles will be missing.
+Components are styled with Tailwind utility classes. After publishing to JSR,
+your project’s Tailwind does not scan dependency packages by default; without
+configuration, those classes are not included in the final CSS and component
+styles will be missing.
 
-There is also a **bundle size** issue: if you add this package’s **entire source** to Tailwind’s content, the build will keep **every** component’s classes, so even if you only use one Button, the final CSS can be large.
+There is also a **bundle size** issue: if you add this package’s **entire
+source** to Tailwind’s content, the build will keep **every** component’s
+classes, so even if you only use one Button, the final CSS can be large.
 
-**We recommend the provided plugin** to collect only the classes you use and generate an @source file for minimal output size.
+**We recommend the provided plugin** to collect only the classes you use and
+generate an @source file for minimal output size.
 
 ### Plugin-based styling
 
-Register the plugin in your app; during initialization (onInit) it scans for imports from `@dreamer/ui-view`, writes the used component source paths into a CSS file, and you `@import` that file in your main Tailwind entry. Single build, **single CSS**, no duplicate theme, smallest size.
+Register the plugin in your app; during initialization (onInit) it scans for
+imports from `@dreamer/ui-view`, writes the used component source paths into a
+CSS file, and you `@import` that file in your main Tailwind entry. Single build,
+**single CSS**, no duplicate theme, smallest size.
 
 **1. Register the plugin in your app entry (before tailwindPlugin):**
 
@@ -77,9 +88,14 @@ app.start();
 @import "tailwindcss";
 ```
 
-If your Tailwind entry or app source paths differ from the example, adjust the `@import` and `@source` paths accordingly.
+If your Tailwind entry or app source paths differ from the example, adjust the
+`@import` and `@source` paths accordingly.
 
-The plugin scans all `.ts`/`.tsx` under `scanPath` for named imports from `@dreamer/ui-view` (or `jsr:@dreamer/ui-view`), collects component names, and writes a CSS file that only contains `@source "path";`. Tailwind then scans only those paths, so the final CSS includes only the classes you use and the theme appears once.
+The plugin scans all `.ts`/`.tsx` under `scanPath` for named imports from
+`@dreamer/ui-view` (or `jsr:@dreamer/ui-view`), collects component names, and
+writes a CSS file that only contains `@source "path";`. Tailwind then scans only
+those paths, so the final CSS includes only the classes you use and the theme
+appears once.
 
 ---
 
@@ -117,13 +133,15 @@ The plugin scans all `.ts`/`.tsx` under `scanPath` for named imports from `@drea
 - **Form / FormItem / FormList** form container and items
 - **RichTextEditor** rich text editor
 
-**Desktop only:** Select, MultiSelect, Cascader, TreeSelect, DatePicker, DateRangePicker, TimePicker
+**Desktop only:** Select, MultiSelect, Cascader, TreeSelect, DatePicker,
+DateRangePicker, TimePicker
 
 ### 💬 Messaging & notification
 
 - **Toast** light hint (ToastContainer + toast)
 - **Message** global message (message)
-- **Notification** notification (NotificationContainer + notification.open / openNotification)
+- **Notification** notification (NotificationContainer + notification.open /
+  openNotification)
 
 ### 💡 Feedback & overlay
 
@@ -186,7 +204,8 @@ The plugin scans all `.ts`/`.tsx` under `scanPath` for named imports from `@drea
 
 ### 📈 Charts
 
-Built on Chart.js: ChartLine, ChartBar, ChartPie, ChartDoughnut, ChartRadar, ChartPolarArea, ChartBubble, ChartScatter
+Built on Chart.js: ChartLine, ChartBar, ChartPie, ChartDoughnut, ChartRadar,
+ChartPolarArea, ChartBubble, ChartScatter
 
 ### ⚙️ Other
 
@@ -196,5 +215,4 @@ Built on Chart.js: ChartLine, ChartBar, ChartPie, ChartDoughnut, ChartRadar, Cha
 
 ## 📄 License
 
-Apache-2.0. See [LICENSE](./LICENSE).
-SE).
+Apache-2.0. See [LICENSE](./LICENSE). SE).
