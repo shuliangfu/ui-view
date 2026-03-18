@@ -149,7 +149,12 @@ export default function FormSelect() {
             </FormItem>
             <CodeBlock
               title="代码示例"
-              code={`<Select options={options} value={val2} onChange={...} placeholder="请选择" />`}
+              code={`<Select
+  options={options}
+  value={val2}
+  onChange={...}
+  placeholder="请选择"
+/>`}
               language="tsx"
               showLineNumbers
               copyable
@@ -164,7 +169,11 @@ export default function FormSelect() {
             </FormItem>
             <CodeBlock
               title="代码示例"
-              code={`<Select options={options} value="a" disabled />`}
+              code={`<Select
+  options={options}
+  value="a"
+  disabled
+/>`}
               language="tsx"
               showLineNumbers
               copyable
@@ -213,7 +222,11 @@ export default function FormSelect() {
             </FormItem>
             <CodeBlock
               title="代码示例"
-              code={`<Select options={options} size="sm" placeholder="sm" />`}
+              code={`<Select
+  options={options}
+  size="sm"
+  placeholder="sm"
+/>`}
               language="tsx"
               showLineNumbers
               copyable
