@@ -87,17 +87,39 @@ const importCode = `import { Table } from "@dreamer/ui-view";
 
 const columns = [{ key: "name", title: "姓名", dataIndex: "name" }, ...];
 const dataSource = [{ key: "1", name: "张三", age: 28 }, ...];
-<Table columns={columns} dataSource={dataSource} bordered />`;
+<Table
+  columns={columns}
+  dataSource={dataSource}
+  bordered
+/>`;
 
-const exampleBasic =
-  `<Table<Row> columns={columns} dataSource={dataSource} bordered expandable={{ expandedRowKeys, onExpand, expandedRowRender: (record) => <p>详情：{record.address}</p> }} />`;
+const exampleBasic = `<Table<Row>
+  columns={columns}
+  dataSource={dataSource}
+  bordered
+  expandable={{
+    expandedRowKeys,
+    onExpand,
+    expandedRowRender: (record) => <p>详情：{record.address}</p>,
+  }}
+/>`;
 
-const exampleSizeStripedLoading =
-  `<Table columns={columns} dataSource={dataSource} size="sm" striped />
+const exampleSizeStripedLoading = `<Table
+  columns={columns}
+  dataSource={dataSource}
+  size="sm"
+  striped
+/>
 <Table columns={columns} dataSource={[]} loading />`;
 
-const exampleRowSelection =
-  `<Table columns={columns} dataSource={dataSource} rowSelection={{ selectedRowKeys: selectedKeys(), onChange: (keys) => setSelectedKeys(keys) }} />`;
+const exampleRowSelection = `<Table
+  columns={columns}
+  dataSource={dataSource}
+  rowSelection={{
+    selectedRowKeys: selectedKeys(),
+    onChange: (keys) => setSelectedKeys(keys),
+  }}
+/>`;
 
 export default function DataDisplayTable() {
   const [expandedKeys, setExpandedKeys] = createSignal<string[]>([]);
