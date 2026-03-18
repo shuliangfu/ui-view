@@ -51,15 +51,24 @@ const EMPTY_API: ApiRow[] = [
 const importCode = `import { Button, Empty } from "@dreamer/ui-view";
 
 <Empty description="暂无数据" />
-<Empty description="没有找到" simple footer={<Button variant="primary">新建</Button>} />`;
+<Empty
+  description="没有找到"
+  simple
+  footer={<Button variant="primary">新建</Button>}
+/>`;
 
 const exampleDefault = `<Empty description="暂无数据" />`;
 
-const exampleSimpleFooter =
-  `<Empty description="没有找到相关结果" simple footer={<Button variant="primary">新建</Button>} />`;
+const exampleSimpleFooter = `<Empty
+  description="没有找到相关结果"
+  simple
+  footer={<Button variant="primary">新建</Button>}
+/>`;
 
-const exampleCustom =
-  `<Empty description="自定义插图可通过 image 传入节点" footer={<Button variant="ghost" size="sm">刷新</Button>} />`;
+const exampleCustom = `<Empty
+  description="自定义插图可通过 image 传入节点"
+  footer={<Button variant="ghost" size="sm">刷新</Button>}
+/>`;
 
 export default function DataDisplayEmpty() {
   return (
