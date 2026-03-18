@@ -252,7 +252,10 @@ export default function FormInput() {
             </Form>
             <div class="w-full">
               <CodeBlock
-                code={`<Input value={readOnlyVal} readOnly />`}
+                code={`<Input
+  value={readOnlyVal}
+  readOnly
+/>`}
                 language="tsx"
                 showLineNumbers
                 copyable
@@ -276,7 +279,11 @@ export default function FormInput() {
             </Form>
             <div class="w-full">
               <CodeBlock
-                code={`<Input placeholder="禁用不可编辑" disabled value="" />`}
+                code={`<Input
+  placeholder="禁用不可编辑"
+  disabled
+  value=""
+/>`}
                 language="tsx"
                 showLineNumbers
                 copyable
@@ -430,7 +437,11 @@ export default function FormInput() {
             </Form>
             <div class="w-full">
               <CodeBlock
-                code={`<FormItem label="姓名" labelPosition="left" labelAlign="left">
+                code={`<FormItem
+  label="姓名"
+  labelPosition="left"
+  labelAlign="left"
+>
   <Input value={val} onInput={...} placeholder="请输入姓名" />
 </FormItem>`}
                 language="tsx"
@@ -478,9 +489,18 @@ export default function FormInput() {
             </Form>
             <div class="w-full">
               <CodeBlock
-                code={`<Input type="email" placeholder="user@example.com" />
-<Input prefix={<span>https://</span>} placeholder="域名" />
-<Input suffix={<span>.com</span>} placeholder="名称" />`}
+                code={`<Input
+  type="email"
+  placeholder="user@example.com"
+/>
+<Input
+  prefix={<span>https://</span>}
+  placeholder="域名"
+/>
+<Input
+  suffix={<span>.com</span>}
+  placeholder="名称"
+/>`}
                 language="tsx"
                 showLineNumbers
                 copyable
