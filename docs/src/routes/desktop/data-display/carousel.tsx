@@ -84,13 +84,33 @@ import { Carousel } from "@dreamer/ui-view";
 
 const [current, setCurrent] = createSignal(0);
 const slides = [<div key="1">幻灯片 1</div>, <div key="2">幻灯片 2</div>];
-<Carousel current={current()} onChange={setCurrent} dots arrows>{slides}</Carousel>`;
+<Carousel
+  current={current()}
+  onChange={setCurrent}
+  dots
+  arrows
+>
+  {slides}
+</Carousel>`;
 
-const exampleDotsArrows =
-  `<Carousel current={current()} onChange={setCurrent} dots arrows>{slides}</Carousel>`;
+const exampleDotsArrows = `<Carousel
+  current={current()}
+  onChange={setCurrent}
+  dots
+  arrows
+>
+  {slides}
+</Carousel>`;
 
-const exampleAutoplay =
-  `<Carousel current={current()} onChange={setCurrent} dots autoplay autoplayInterval={3000}>{slides}</Carousel>`;
+const exampleAutoplay = `<Carousel
+  current={current()}
+  onChange={setCurrent}
+  dots
+  autoplay
+  autoplayInterval={3000}
+>
+  {slides}
+</Carousel>`;
 
 export default function DataDisplayCarousel() {
   const [current, setCurrent] = createSignal(0);
