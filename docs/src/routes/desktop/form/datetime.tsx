@@ -196,9 +196,19 @@ export default function FormDatetime() {
             </FormItem>
             <CodeBlock
               title="代码示例"
-              code={`<DatePicker value={...} onChange={...} />
-<TimePicker value={...} onChange={...} />
-<TimeRangePicker start={...} end={...} onChange={...} />`}
+              code={`<DatePicker
+  value={...}
+  onChange={...}
+/>
+<TimePicker
+  value={...}
+  onChange={...}
+/>
+<TimeRangePicker
+  start={...}
+  end={...}
+  onChange={...}
+/>`}
               language="tsx"
               showLineNumbers
               copyable
