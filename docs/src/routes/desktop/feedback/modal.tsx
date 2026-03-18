@@ -54,9 +54,10 @@ const MODAL_API: ApiRow[] = [
   },
   {
     name: "width",
-    type: "string | number",
-    default: "520px",
-    description: "弹层宽度",
+    type: '"xs" | "sm" | "md" | "lg" | "xl" | string | number',
+    default: "sm",
+    description:
+      "弹层宽度：预设 xs(400px)/sm(520px)/md(640px)/lg(800px)/xl(960px)，或 CSS 字符串（如 80%）、数字（px）",
   },
   {
     name: "centered",
@@ -73,20 +74,20 @@ const MODAL_API: ApiRow[] = [
   {
     name: "keyboard",
     type: "boolean",
-    default: "true",
-    description: "是否支持 Esc 关闭",
+    default: "false",
+    description: "传 true 时支持按 Esc 关闭；不传则不支持 Esc",
   },
   {
     name: "draggable",
     type: "boolean",
-    default: "true",
-    description: "标题栏是否可拖动",
+    default: "false",
+    description: "默认不拖动；传 true 时标题栏可拖动",
   },
   {
     name: "fullscreenable",
     type: "boolean",
-    default: "true",
-    description: "是否显示全屏切换按钮",
+    default: "false",
+    description: "传 true 时显示全屏切换按钮；不传则不显示",
   },
   {
     name: "maskClass",
@@ -136,9 +137,17 @@ export default function FeedbackModal() {
   const [openNoClosable, setOpenNoClosable] = createSignal(false);
   const [openNoMaskClose, setOpenNoMaskClose] = createSignal(false);
   const [openWidth, setOpenWidth] = createSignal(false);
+  const [openWidthPreset, setOpenWidthPreset] = createSignal(false);
+  const [widthPreset, setWidthPreset] = createSignal<
+    "xs" | "sm" | "md" | "lg" | "xl"
+  >("md");
   const [openNotCentered, setOpenNotCentered] = createSignal(false);
   const [openDestroy, setOpenDestroy] = createSignal(false);
   const [openNoKeyboard, setOpenNoKeyboard] = createSignal(false);
+  // 用于「可移动」示例，在下方 return 的 thunk 内使用
+  const [openDraggable, setOpenDraggable] = createSignal(false);
+  const [openFullscreen, setOpenFullscreen] = createSignal(false);
+  const [openKeyboard, setOpenKeyboard] = createSignal(false);
   const [openCustomClass, setOpenCustomClass] = createSignal(false);
 
   return () => (
@@ -146,7 +155,8 @@ export default function FeedbackModal() {
       <section>
         <Title level={1}>Modal 模态弹窗</Title>
         <Paragraph class="mt-2">
-          模态弹窗：遮罩、标题、内容、底部；支持关闭按钮、点击遮罩关闭、Esc、自定义宽度与
+          模态弹窗：遮罩、标题、内容、底部；支持关闭按钮、点击遮罩关闭；传
+          keyboard 可启用 Esc 关闭；自定义宽度与
           footer、居中/顶部对齐、关闭后销毁、自定义样式。使用 Tailwind v4，支持
           light/dark 主题。
         </Paragraph>
@@ -209,7 +219,12 @@ export default function FeedbackModal() {
           </Modal>
           <CodeBlock
             title="代码示例"
-            code={`<Modal open={open()} onClose={() => setOpen(false)} title="弹窗标题" footer={<>...</>}>
+            code={`<Modal
+  open={open()}
+  onClose={() => setOpen(false)}
+  title="弹窗标题"
+  footer={<>...</>}
+>
   <p>弹层内容</p>
 </Modal>`}
             language="tsx"
@@ -244,7 +259,13 @@ export default function FeedbackModal() {
           </Modal>
           <CodeBlock
             title="代码示例"
-            code={`<Modal open={open()} onClose={...} title="仅标题与内容">\n  <p>内容</p>\n</Modal>`}
+            code={`<Modal
+  open={open()}
+  onClose={...}
+  title="仅标题与内容"
+>
+  <p>内容</p>
+</Modal>`}
             language="tsx"
             showLineNumbers
             copyable
@@ -278,7 +299,13 @@ export default function FeedbackModal() {
           </Modal>
           <CodeBlock
             title="代码示例"
-            code={`<Modal open={open()} onClose={...} title={null}>\n  <p>内容</p>\n</Modal>`}
+            code={`<Modal
+  open={open()}
+  onClose={...}
+  title={null}
+>
+  <p>内容</p>
+</Modal>`}
             language="tsx"
             showLineNumbers
             copyable
@@ -290,8 +317,7 @@ export default function FeedbackModal() {
         <section class="space-y-2">
           <Title level={2}>无关闭按钮</Title>
           <Paragraph>
-            closable=false 时不显示右上角关闭按钮，需通过遮罩或 Esc
-            关闭（若开启）。
+            closable=false 时不显示右上角关闭按钮，需通过遮罩关闭。
           </Paragraph>
           <div class="flex gap-2">
             <Button variant="default" onClick={() => setOpenNoClosable(true)}>
@@ -301,11 +327,11 @@ export default function FeedbackModal() {
           <Modal
             open={openNoClosable()}
             onClose={() => setOpenNoClosable(false)}
-            title="只能点遮罩或 Esc 关闭"
+            title="只能点遮罩关闭"
             closable={false}
           >
             <p class="text-sm text-slate-600 dark:text-slate-400">
-              未显示关闭按钮，请点击遮罩或按 Esc 关闭。
+              未显示关闭按钮，请点击遮罩关闭。
             </p>
           </Modal>
         </section>
@@ -331,12 +357,17 @@ export default function FeedbackModal() {
             maskClosable={false}
           >
             <p class="text-sm text-slate-600 dark:text-slate-400">
-              只能通过关闭按钮或 Esc 关闭。
+              只能通过关闭按钮关闭。
             </p>
           </Modal>
           <CodeBlock
             title="代码示例"
-            code={`<Modal ... maskClosable={false}>...</Modal>`}
+            code={`<Modal
+  ...
+  maskClosable={false}
+>
+  ...
+</Modal>`}
             language="tsx"
             showLineNumbers
             copyable
@@ -347,17 +378,45 @@ export default function FeedbackModal() {
         <div class="space-y-4">
           <Title level={3}>自定义宽度</Title>
           <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
-            width 支持字符串（如 "80%"、"400px"）或数字（视为 px）。
+            width 支持预设 xs/sm/md/lg/xl（400/520/640/800/960px）、字符串（如
+            "80%"、"400px"）或数字（视为 px）。
           </Paragraph>
-          <div class="flex gap-2">
+          <div class="flex flex-wrap gap-2">
+            <span class="text-sm text-slate-600 dark:text-slate-400 self-center mr-1">
+              预设：
+            </span>
+            {(["xs", "sm", "md", "lg", "xl"] as const).map((w) => (
+              <Button
+                key={w}
+                type="button"
+                variant="secondary"
+                onClick={() => {
+                  setWidthPreset(w);
+                  setOpenWidthPreset(true);
+                }}
+              >
+                {w}
+              </Button>
+            ))}
             <Button
               type="button"
               variant="default"
               onClick={() => setOpenWidth(true)}
             >
-              宽 80% Modal
+              80%
             </Button>
           </div>
+          <Modal
+            open={openWidthPreset()}
+            onClose={() => setOpenWidthPreset(false)}
+            title={`宽度 ${widthPreset()}`}
+            width={widthPreset()}
+          >
+            <p class="text-sm text-slate-600 dark:text-slate-400">
+              width="{widthPreset()}"：xs 400px / sm 520px / md 640px / lg 800px
+              / xl 960px。
+            </p>
+          </Modal>
           <Modal
             open={openWidth()}
             onClose={() => setOpenWidth(false)}
@@ -369,8 +428,28 @@ export default function FeedbackModal() {
             </p>
           </Modal>
           <CodeBlock
-            title="代码示例"
-            code={`<Modal ... width="80%">...</Modal>`}
+            title="代码示例（预设）"
+            code={`<Modal
+  open={open()}
+  onClose={...}
+  title="标题"
+  width="md"
+>
+  <p>width="md" 为 640px</p>
+</Modal>`}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+          <CodeBlock
+            title="代码示例（百分比）"
+            code={`<Modal
+  ...
+  width="80%"
+>
+  ...
+</Modal>`}
             language="tsx"
             showLineNumbers
             copyable
@@ -404,7 +483,12 @@ export default function FeedbackModal() {
           </Modal>
           <CodeBlock
             title="代码示例"
-            code={`<Modal ... centered={false}>...</Modal>`}
+            code={`<Modal
+  ...
+  centered={false}
+>
+  ...
+</Modal>`}
             language="tsx"
             showLineNumbers
             copyable
@@ -438,7 +522,8 @@ export default function FeedbackModal() {
         <div class="space-y-4">
           <Title level={3}>禁用 Esc 关闭</Title>
           <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
-            keyboard=false 时按 Esc 不触发 onClose。
+            默认不支持 Esc；不传 keyboard 或 keyboard=false 时按 Esc 不触发
+            onClose。
           </Paragraph>
           <div class="flex gap-2">
             <Button
@@ -461,7 +546,135 @@ export default function FeedbackModal() {
           </Modal>
           <CodeBlock
             title="代码示例"
-            code={`<Modal ... keyboard={false}>...</Modal>`}
+            code={`<Modal
+  ...
+  keyboard={false}
+>
+  ...
+</Modal>`}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+        </div>
+
+        <div class="space-y-4">
+          <Title level={3}>可移动</Title>
+          <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+            draggable=true 时可通过拖拽标题栏移动弹层位置。
+          </Paragraph>
+          <div class="flex gap-2">
+            <Button
+              type="button"
+              variant="default"
+              onClick={() => setOpenDraggable(true)}
+            >
+              可移动弹窗
+            </Button>
+          </div>
+          <Modal
+            open={openDraggable()}
+            onClose={() => setOpenDraggable(false)}
+            title="可拖拽标题栏移动"
+            draggable
+          >
+            <p class="text-sm text-slate-600 dark:text-slate-400">
+              拖拽上方标题栏可移动弹层位置。
+            </p>
+          </Modal>
+          <CodeBlock
+            title="代码示例"
+            code={`<Modal
+  open={open()}
+  onClose={...}
+  title="可拖拽标题栏移动"
+  draggable
+>
+  <p>拖拽上方标题栏可移动弹层位置。</p>
+</Modal>`}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+        </div>
+
+        <div class="space-y-4">
+          <Title level={3}>按 Esc 键可关闭</Title>
+          <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+            keyboard=true 时支持按 Esc 键关闭弹窗。
+          </Paragraph>
+          <div class="flex gap-2">
+            <Button
+              type="button"
+              variant="default"
+              onClick={() => setOpenKeyboard(true)}
+            >
+              按 Esc 关闭
+            </Button>
+          </div>
+          <Modal
+            open={openKeyboard()}
+            onClose={() => setOpenKeyboard(false)}
+            title="按 Esc 可关闭"
+            keyboard
+          >
+            <p class="text-sm text-slate-600 dark:text-slate-400">
+              打开后按键盘 Esc 可关闭此弹窗。
+            </p>
+          </Modal>
+          <CodeBlock
+            title="代码示例"
+            code={`<Modal
+  open={open()}
+  onClose={...}
+  title="按 Esc 可关闭"
+  keyboard
+>
+  <p>打开后按键盘 Esc 可关闭此弹窗。</p>
+</Modal>`}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+        </div>
+
+        <div class="space-y-4">
+          <Title level={3}>全屏</Title>
+          <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+            fullscreenable=true 时标题栏显示全屏切换按钮，可切换弹层全屏/还原。
+          </Paragraph>
+          <div class="flex gap-2">
+            <Button
+              type="button"
+              variant="default"
+              onClick={() => setOpenFullscreen(true)}
+            >
+              全屏切换
+            </Button>
+          </div>
+          <Modal
+            open={openFullscreen()}
+            onClose={() => setOpenFullscreen(false)}
+            title="可全屏"
+            fullscreenable
+          >
+            <p class="text-sm text-slate-600 dark:text-slate-400">
+              点击标题栏右侧全屏按钮可切换全屏显示。
+            </p>
+          </Modal>
+          <CodeBlock
+            title="代码示例"
+            code={`<Modal
+  open={open()}
+  onClose={...}
+  title="可全屏"
+  fullscreenable
+>
+  <p>点击标题栏右侧全屏按钮可切换全屏显示。</p>
+</Modal>`}
             language="tsx"
             showLineNumbers
             copyable
@@ -497,7 +710,13 @@ export default function FeedbackModal() {
           </Modal>
           <CodeBlock
             title="代码示例"
-            code={`<Modal ... class="ring-2 ring-blue-500" bodyClass="bg-slate-50">...</Modal>`}
+            code={`<Modal
+  ...
+  class="ring-2 ring-blue-500"
+  bodyClass="bg-slate-50"
+>
+  ...
+</Modal>`}
             language="tsx"
             showLineNumbers
             copyable
