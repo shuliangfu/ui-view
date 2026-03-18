@@ -7,6 +7,8 @@ import { twMerge } from "tailwind-merge";
 import type { ColorVariant, SizeVariant } from "../../shared/types.ts";
 
 export interface ButtonProps {
+  /** 列表渲染时的 key（框架用于 diff）；有值时同时以 data-key 写到原生 button 上便于调试/选择器 */
+  key?: string | number;
   /** 语义变体，对应 shared ColorVariant */
   variant?: ColorVariant;
   /** 尺寸，对应 shared SizeVariant */
@@ -52,6 +54,7 @@ const variantClasses: Record<ColorVariant, string> = {
 
 export function Button(props: ButtonProps) {
   const {
+    key,
     variant = "primary",
     size = "md",
     disabled = false,
@@ -73,6 +76,7 @@ export function Button(props: ButtonProps) {
       class={twMerge(base, sizeCls, variantCls, className)}
       disabled={disabled || loading}
       onClick={onClick}
+      data-key={key !== undefined ? String(key) : undefined}
     >
       {loading && (
         <svg
