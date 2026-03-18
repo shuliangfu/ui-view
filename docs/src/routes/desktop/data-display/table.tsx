@@ -3,13 +3,20 @@
  * 路由: /desktop/data-display/table
  */
 
+import {
+  Button,
+  ButtonGroup,
+  CodeBlock,
+  Paragraph,
+  Table,
+  Title,
+} from "@dreamer/ui-view";
 import { createSignal } from "@dreamer/view";
-import { CodeBlock, Paragraph, Table, Title } from "@dreamer/ui-view";
 
 type Row = { key: string; name: string; age: number; address: string };
 
-/** API 属性行类型 */
-interface ApiRow {
+/** API 属性行类型（extends Record 以满足 Table 泛型约束） */
+interface ApiRow extends Record<string, unknown> {
   name: string;
   type: string;
   default: string;
@@ -63,10 +70,60 @@ const TABLE_API: ApiRow[] = [
     description: "表尾合计行",
   },
   {
-    name: "rowSelection",
-    type: "object",
+    name: "locale",
+    type: "{ emptyText?: string }",
     default: "-",
-    description: "行选择配置",
+    description: "文案配置，如空状态文案 emptyText",
+  },
+  {
+    name: "renderEmpty",
+    type: "() => unknown",
+    default: "-",
+    description:
+      "自定义空状态渲染（无数据时）；不传则用 locale.emptyText 或「暂无数据」",
+  },
+  {
+    name: "title",
+    type: "unknown",
+    default: "-",
+    description: "表格上方标题",
+  },
+  {
+    name: "extra",
+    type: "unknown",
+    default: "-",
+    description: "表格上方右侧区域（筛选、导出等）",
+  },
+  {
+    name: "pagination",
+    type: "false | { current?, pageSize?, total?, onChange? }",
+    default: "-",
+    description:
+      "分页配置；false 不显示；对象时显示分页条并支持 current/pageSize/total/onChange",
+  },
+  {
+    name: "onSelectChange",
+    type: "(selectedRows: T[]) => void",
+    default: "-",
+    description: "选中变化时回调选中的整行数据；传了则显示选择列",
+  },
+  {
+    name: "selectedRowKeys",
+    type: "string[]",
+    default: "-",
+    description: "受控时的选中行 key 列表",
+  },
+  {
+    name: "selectionType",
+    type: '"checkbox" | "radio"',
+    default: "checkbox",
+    description: "选择列类型",
+  },
+  {
+    name: "getCheckboxProps",
+    type: "(record: T) => { disabled?: boolean }",
+    default: "-",
+    description: "某行是否禁用勾选",
   },
   {
     name: "rowClassName",
@@ -75,12 +132,54 @@ const TABLE_API: ApiRow[] = [
     description: "行 class",
   },
   {
+    name: "hoverable",
+    type: "boolean",
+    default: "false",
+    description: "是否开启行悬停高亮",
+  },
+  {
     name: "headerClass",
     type: "string",
     default: "-",
     description: "表头 class",
   },
   { name: "class", type: "string", default: "-", description: "表格 class" },
+];
+
+/** API 表格列定义（属性、类型、默认值、说明） */
+const apiColumns = [
+  {
+    key: "name",
+    title: "属性",
+    dataIndex: "name" as const,
+    render: (_: unknown, r: ApiRow) => (
+      <span class="font-mono text-slate-700 dark:text-slate-300">{r.name}</span>
+    ),
+  },
+  {
+    key: "type",
+    title: "类型",
+    dataIndex: "type" as const,
+    render: (_: unknown, r: ApiRow) => (
+      <span class="text-slate-600 dark:text-slate-400">{r.type}</span>
+    ),
+  },
+  {
+    key: "default",
+    title: "默认值",
+    dataIndex: "default" as const,
+    render: (_: unknown, r: ApiRow) => (
+      <span class="text-slate-600 dark:text-slate-400">{r.default}</span>
+    ),
+  },
+  {
+    key: "description",
+    title: "说明",
+    dataIndex: "description" as const,
+    render: (_: unknown, r: ApiRow) => (
+      <span class="text-slate-600 dark:text-slate-400">{r.description}</span>
+    ),
+  },
 ];
 
 const importCode = `import { Table } from "@dreamer/ui-view";
@@ -115,15 +214,47 @@ const exampleSizeStripedLoading = `<Table
 const exampleRowSelection = `<Table
   columns={columns}
   dataSource={dataSource}
-  rowSelection={{
-    selectedRowKeys: selectedKeys(),
-    onChange: (keys) => setSelectedKeys(keys),
-  }}
+  onSelectChange={(rows) => setSelectedRows(rows)}
+/>`;
+
+const exampleEmpty = `<Table
+  columns={columns}
+  dataSource={[]}
+  locale={{ emptyText: "暂无数据" }}
+/>
+<Table columns={columns} dataSource={[]} renderEmpty={() => <span>自定义空状态</span>} />`;
+
+const exampleTitleExtra = `<Table
+  columns={columns}
+  dataSource={dataSource}
+  title="用户列表"
+  extra={
+    <ButtonGroup>
+      <Button variant="default" size="sm" onClick={() => refresh()}>刷新</Button>
+      <Button variant="primary" size="sm" onClick={() => exportData()}>导出</Button>
+    </ButtonGroup>
+  }
+/>`;
+
+const examplePagination = `<Table
+  columns={columns}
+  dataSource={dataSource}
+  pagination={{ pageSize: 5, onChange: (page) => console.log(page) }}
+/>`;
+
+const exampleFixedColumn = `<Table
+  columns={[
+    { key: "name", title: "姓名", dataIndex: "name", width: 100, fixed: "left" },
+    { key: "age", title: "年龄", dataIndex: "age" },
+    { key: "address", title: "地址", dataIndex: "address" },
+  ]}
+  dataSource={dataSource}
 />`;
 
 export default function DataDisplayTable() {
   const [expandedKeys, setExpandedKeys] = createSignal<string[]>([]);
-  const [selectedKeys, setSelectedKeys] = createSignal<string[]>([]);
+  const [selectedRows, setSelectedRows] = createSignal<Row[]>([]);
+  const [page, setPage] = createSignal(1);
 
   const columns = [
     { key: "name", title: "姓名", dataIndex: "name" as const },
@@ -141,8 +272,8 @@ export default function DataDisplayTable() {
       <section>
         <Title level={1}>Table 表格</Title>
         <Paragraph class="mt-2">
-          表格：columns、dataSource、rowKey、bordered、size、striped、loading、onRow、expandable、summary、rowSelection、rowClassName、headerClass。
-          使用 Tailwind v4，支持 light/dark 主题。
+          表格：columns、dataSource、rowKey、bordered、size、striped、loading、onRow、expandable、summary、locale、renderEmpty、title、extra、pagination、onSelectChange、rowClassName、headerClass、固定列
+          fixed。 使用 Tailwind v4，支持 light/dark 主题。
         </Paragraph>
       </section>
 
@@ -166,8 +297,9 @@ export default function DataDisplayTable() {
             columns={columns}
             dataSource={dataSource}
             bordered
+            stateKey="table-doc-expand"
             expandable={{
-              expandedRowKeys: expandedKeys(),
+              // 不传 expandedRowKeys 时使用 Table 内部展开态；stateKey 避免整树重渲染丢失展开态
               onExpand: (expanded, record) => {
                 setExpandedKeys(
                   expanded
@@ -210,21 +342,144 @@ export default function DataDisplayTable() {
         </div>
 
         <div class="space-y-4">
-          <Title level={3}>rowSelection 行选择</Title>
+          <Title level={3}>行选择 onSelectChange</Title>
           <Table<Row>
             columns={columns}
             dataSource={dataSource}
-            rowSelection={{
-              selectedRowKeys: selectedKeys(),
-              onChange: (keys) => setSelectedKeys(keys as string[]),
-            }}
+            stateKey="table-doc-row-selection"
+            onSelectChange={(rows) => setSelectedRows(rows)}
           />
-          <p class="text-sm text-slate-500">
-            已选行 key: {selectedKeys().join(", ") || "-"}
-          </p>
+          {() => (
+            <p class="text-sm text-slate-500">
+              已选行: {selectedRows().length
+                ? selectedRows().map((r) => r.name).join("、")
+                : "-"}
+            </p>
+          )}
           <CodeBlock
             title="代码示例"
             code={exampleRowSelection}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+        </div>
+
+        <div class="space-y-4">
+          <Title level={3}>空状态 locale / renderEmpty</Title>
+          <Table<Row>
+            columns={columns}
+            dataSource={[]}
+            locale={{ emptyText: "暂无数据" }}
+          />
+          <Table<Row>
+            columns={columns}
+            dataSource={[]}
+            renderEmpty={() => <span class="text-slate-500">自定义空状态</span>}
+          />
+          <CodeBlock
+            title="代码示例"
+            code={exampleEmpty}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+        </div>
+
+        <div class="space-y-4">
+          <Title level={3}>标题与工具栏 title / extra</Title>
+          <Table<Row>
+            columns={columns}
+            dataSource={dataSource}
+            title="用户列表"
+            extra={
+              <ButtonGroup attached>
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() => console.log("刷新")}
+                >
+                  刷新
+                </Button>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => console.log("导出")}
+                >
+                  导出
+                </Button>
+              </ButtonGroup>
+            }
+          />
+          <CodeBlock
+            title="代码示例"
+            code={exampleTitleExtra}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+        </div>
+
+        <div class="space-y-4">
+          <Title level={3}>分页 pagination</Title>
+          <Table<Row>
+            columns={columns}
+            dataSource={[
+              ...dataSource,
+              { key: "3", name: "王五", age: 25, address: "广州" },
+              { key: "4", name: "赵六", age: 30, address: "深圳" },
+              { key: "5", name: "钱七", age: 22, address: "杭州" },
+            ]}
+            pagination={{
+              current: page(),
+              pageSize: 2,
+              onChange: (p) => setPage(p),
+            }}
+          />
+          <CodeBlock
+            title="代码示例"
+            code={examplePagination}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+        </div>
+
+        <div class="space-y-4">
+          <Title level={3}>固定列 fixed</Title>
+          <div class="max-w-md overflow-x-auto border border-slate-200 dark:border-slate-600 rounded-lg">
+            <Table<Row>
+              columns={[
+                {
+                  key: "name",
+                  title: "姓名",
+                  dataIndex: "name" as const,
+                  width: 100,
+                  fixed: "left",
+                },
+                {
+                  key: "age",
+                  title: "年龄",
+                  dataIndex: "age" as const,
+                },
+                {
+                  key: "address",
+                  title: "地址",
+                  dataIndex: "address" as const,
+                  width: 180,
+                },
+              ]}
+              dataSource={dataSource}
+              bordered
+            />
+          </div>
+          <CodeBlock
+            title="代码示例"
+            code={exampleFixedColumn}
             language="tsx"
             showLineNumbers
             copyable
@@ -240,45 +495,19 @@ export default function DataDisplayTable() {
           属性如下。
         </Paragraph>
         <div class="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-600">
-          <table class="w-full min-w-lg text-sm">
-            <thead>
-              <tr class="border-b border-slate-200 bg-slate-50 dark:border-slate-600 dark:bg-slate-800/80">
-                <th class="px-4 py-3 text-left font-medium text-slate-900 dark:text-slate-100">
-                  属性
-                </th>
-                <th class="px-4 py-3 text-left font-medium text-slate-900 dark:text-slate-100">
-                  类型
-                </th>
-                <th class="px-4 py-3 text-left font-medium text-slate-900 dark:text-slate-100">
-                  默认值
-                </th>
-                <th class="px-4 py-3 text-left font-medium text-slate-900 dark:text-slate-100">
-                  说明
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {TABLE_API.map((row) => (
-                <tr
-                  key={row.name}
-                  class="border-b border-slate-100 dark:border-slate-700 last:border-b-0"
-                >
-                  <td class="px-4 py-2.5 font-mono text-slate-700 dark:text-slate-300">
-                    {row.name}
-                  </td>
-                  <td class="px-4 py-2.5 text-slate-600 dark:text-slate-400">
-                    {row.type}
-                  </td>
-                  <td class="px-4 py-2.5 text-slate-600 dark:text-slate-400">
-                    {row.default}
-                  </td>
-                  <td class="px-4 py-2.5 text-slate-600 dark:text-slate-400">
-                    {row.description}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <Table<ApiRow>
+            columns={apiColumns}
+            dataSource={TABLE_API}
+            rowKey="name"
+            bordered
+            striped
+            hoverable
+            size="md"
+            class="min-w-lg text-sm"
+            headerClass="border-b border-slate-200 bg-slate-50 dark:border-slate-600 dark:bg-slate-800/80"
+            rowClassName={() =>
+              "border-b border-slate-100 dark:border-slate-700 last:border-b-0"}
+          />
         </div>
       </section>
     </div>

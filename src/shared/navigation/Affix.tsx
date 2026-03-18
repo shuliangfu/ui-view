@@ -5,6 +5,9 @@
 
 import { twMerge } from "tailwind-merge";
 
+/** 上次 initAffix 的清理函数，重复调用 initAffix 时先执行以免重复绑定监听 */
+let lastAffixCleanup: (() => void) | null = null;
+
 export interface AffixProps {
   /** 子节点 */
   children?: unknown;
@@ -48,10 +51,16 @@ export interface AffixInitOptions {
 /**
  * 在客户端为所有 .affix-host 绑定滚动/resize 监听并切换固定样式。
  * 应在应用启动或布局挂载后调用一次（如 body 挂载后）。
+ * 重复调用会先移除上次的监听再重新绑定（幂等）。
  * 传 options.target 时监听该元素的 scroll，并在此容器内使用 sticky 固定。
+ * @returns 清理函数，用于移除监听；SSR 环境下返回空函数。
  */
-export function initAffix(options?: AffixInitOptions) {
-  if (typeof globalThis.document === "undefined") return;
+export function initAffix(options?: AffixInitOptions): () => void {
+  if (typeof globalThis.document === "undefined") return () => {};
+  if (lastAffixCleanup) {
+    lastAffixCleanup();
+    lastAffixCleanup = null;
+  }
   const getTarget = (): Element | null => {
     if (!options?.target) return null;
     return typeof options.target === "function"
@@ -74,12 +83,15 @@ export function initAffix(options?: AffixInitOptions) {
   }
   globalThis.addEventListener("resize", run);
   run();
-  return () => {
+  const cleanup = () => {
     const t = getTarget();
     if (t) t.removeEventListener("scroll", onScroll);
     else globalThis.removeEventListener("scroll", onScroll);
     globalThis.removeEventListener("resize", run);
+    if (lastAffixCleanup === cleanup) lastAffixCleanup = null;
   };
+  lastAffixCleanup = cleanup;
+  return cleanup;
 }
 
 function updateAffix(el: HTMLElement, scrollTarget: Element | null) {
@@ -124,13 +136,15 @@ function updateAffix(el: HTMLElement, scrollTarget: Element | null) {
       el.style.top = isBottom ? "auto" : `${offset}px`;
       el.style.bottom = isBottom ? `${offset}px` : "auto";
     }
-    if (affixClass) el.classList.add(...affixClass.split(" "));
+    const tokens = (affixClass ?? "").trim().split(/\s+/).filter(Boolean);
+    if (tokens.length) el.classList.add(...tokens);
   } else {
     el.style.position = "";
     el.style.left = "";
     el.style.width = "";
     el.style.top = "";
     el.style.bottom = "";
-    if (affixClass) el.classList.remove(...affixClass.split(" "));
+    const tokens = (affixClass ?? "").trim().split(/\s+/).filter(Boolean);
+    if (tokens.length) el.classList.remove(...tokens);
   }
 }

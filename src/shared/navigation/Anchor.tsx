@@ -25,13 +25,21 @@ export interface AnchorProps {
   class?: string;
 }
 
+/** 客户端用「当前路径 + hash」作为 href，避免 SPA 路由把仅 hash 的链接解析成根路径导致跳到首页 */
+function getAnchorHref(hashHref: string): string {
+  if (typeof globalThis.location === "undefined") return hashHref;
+  const pathname = globalThis.location.pathname ?? "/";
+  return pathname + (hashHref.startsWith("#") ? hashHref : `#${hashHref}`);
+}
+
 export function Anchor(props: AnchorProps) {
   const { links, activeKey, onChange, class: className } = props;
 
   const handleClick = (e: Event, key: string, href: string) => {
     e.preventDefault();
+    const selector = href.startsWith("#") ? href : `#${href}`;
     const el = typeof globalThis.document !== "undefined"
-      ? globalThis.document.querySelector(href)
+      ? globalThis.document.querySelector(selector)
       : null;
     if (el) {
       (el as HTMLElement).scrollIntoView({ behavior: "smooth" });
@@ -49,7 +57,7 @@ export function Anchor(props: AnchorProps) {
         return (
           <a
             key={link.key}
-            href={link.href}
+            href={getAnchorHref(link.href)}
             class={twMerge(
               "py-1 px-2 rounded truncate",
               isActive
