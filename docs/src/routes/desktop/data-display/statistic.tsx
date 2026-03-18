@@ -63,13 +63,37 @@ const STATISTIC_API: ApiRow[] = [
 
 const importCode = `import { Statistic } from "@dreamer/ui-view";
 
-<Statistic title="总销售额" value={112893.5} prefix="¥" precision={2} />
-<Statistic title="访问量" value={8846} suffix="次" groupSeparator="," />`;
+<Statistic
+  title="总销售额"
+  value={112893.5}
+  prefix="¥"
+  precision={2}
+/>
+<Statistic
+  title="访问量"
+  value={8846}
+  suffix="次"
+  groupSeparator=","
+/>`;
 
-const exampleBasic =
-  `<Statistic title="总销售额" value={112893.5} prefix="¥" precision={2} />
-<Statistic title="访问量" value={8846} suffix="次" groupSeparator="," />
-<Statistic title="完成率" value={93.5} suffix="%" precision={1} />`;
+const exampleBasic = `<Statistic
+  title="总销售额"
+  value={112893.5}
+  prefix="¥"
+  precision={2}
+/>
+<Statistic
+  title="访问量"
+  value={8846}
+  suffix="次"
+  groupSeparator=","
+/>
+<Statistic
+  title="完成率"
+  value={93.5}
+  suffix="%"
+  precision={1}
+/>`;
 
 const exampleTrend =
   `<Statistic title="环比" value={12.5} suffix="%" trend="up" />
