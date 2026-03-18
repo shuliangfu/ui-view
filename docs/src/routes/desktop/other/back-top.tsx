@@ -70,14 +70,28 @@ const importCode = `import { createSignal } from "@dreamer/view";
 import { BackTop } from "@dreamer/ui-view";
 
 const [visible, setVisible] = createSignal(false);
-<BackTop visibilityHeight={200} visible={visible()} onVisibilityChange={setVisible} right={24} bottom={24} />`;
+<BackTop
+  visibilityHeight={200}
+  visible={visible()}
+  onVisibilityChange={setVisible}
+  right={24}
+  bottom={24}
+/>`;
 
-const exampleDefault =
-  `<BackTop visibilityHeight={200} visible={visible()} onVisibilityChange={setVisible} right={24} bottom={24} />`;
+const exampleDefault = `<BackTop
+  visibilityHeight={200}
+  visible={visible()}
+  onVisibilityChange={setVisible}
+  right={24}
+  bottom={24}
+/>`;
 
 /** 不传 children 时使用内置箭头图标，仅调整显示阈值与位置 */
-const examplePosition =
-  `<BackTop visibilityHeight={150} right={24} bottom={80} />`;
+const examplePosition = `<BackTop
+  visibilityHeight={150}
+  right={24}
+  bottom={80}
+/>`;
 
 export default function OtherBackTop() {
   const [visible, setVisible] = createSignal(false);
