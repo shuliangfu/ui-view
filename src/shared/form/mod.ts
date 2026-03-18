@@ -30,8 +30,7 @@ export { Slider } from "./Slider.tsx";
 export type { SliderProps } from "./Slider.tsx";
 export { Rate } from "./Rate.tsx";
 export type { RateProps } from "./Rate.tsx";
-export { TimePicker } from "./TimePicker.tsx";
-export type { TimePickerProps } from "./TimePicker.tsx";
+/** TimePicker 由桌面版提供（desktop/form/TimePicker），主包使用自定义下拉实现 */
 export { TimeRangePicker } from "./TimeRangePicker.tsx";
 export type { TimeRangePickerProps } from "./TimeRangePicker.tsx";
 export { Upload } from "./Upload.tsx";
