@@ -49,10 +49,17 @@ const CHART_PIE_API: ApiRow[] = [
 const importCode = `import { ChartPie } from "@dreamer/ui-view";
 
 const data = { labels: ["A", "B", ...], datasets: [{ data: [30, 25, ...], backgroundColor: [...] }] };
-<ChartPie data={data} options={options} class="w-full h-64" />`;
+<ChartPie
+  data={data}
+  options={options}
+  class="w-full h-64"
+/>`;
 
-const exampleBasic =
-  `<ChartPie data={sampleData} options={options} class="w-full h-64" />`;
+const exampleBasic = `<ChartPie
+  data={sampleData}
+  options={options}
+  class="w-full h-64"
+/>`;
 
 export default function ChartsPie() {
   return (
