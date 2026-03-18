@@ -135,7 +135,7 @@ export function CodeBlock(props: CodeBlockProps) {
     wrapper.insertBefore(style, wrapper.firstChild);
   };
 
-  return (
+  return () => (
     <div
       ref={setWrapperRef}
       class={twMerge(
