@@ -4,7 +4,7 @@
  * 支持拖动标题栏、全屏切换；全屏与关闭按钮并排于标题栏右侧。
  */
 
-import { createSignal } from "@dreamer/view";
+import { createEffect, createSignal } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import {
   IconClose,
@@ -27,17 +27,17 @@ export interface ModalProps {
   closable?: boolean;
   /** 点击遮罩是否关闭，默认 true */
   maskClosable?: boolean;
-  /** 弹层宽度（CSS，如 "520px"、"80%"），默认 "520px" */
-  width?: string | number;
+  /** 弹层宽度：预设 "xs"|"sm"|"md"|"lg"|"xl" 或 CSS 字符串（如 "520px"、"80%"）、数字（视为 px），默认 "520px"（等同 sm） */
+  width?: "xs" | "sm" | "md" | "lg" | "xl" | string | number;
   /** 是否垂直居中，默认 true */
   centered?: boolean;
   /** 关闭后是否销毁子节点（不挂载），默认 false */
   destroyOnClose?: boolean;
-  /** 是否支持 Esc 关闭，默认 true */
+  /** 是否支持 Esc 关闭，默认 false；传 true 时按 Esc 触发 onClose */
   keyboard?: boolean;
-  /** 是否可拖动（标题栏拖拽），默认 true */
+  /** 是否可拖动（标题栏拖拽），默认 false；传 true 时可拖移弹层 */
   draggable?: boolean;
-  /** 是否显示全屏切换按钮（与关闭按钮并排），默认 true */
+  /** 是否显示全屏切换按钮（与关闭按钮并排），默认 false；传 true 时显示 */
   fullscreenable?: boolean;
   /** 遮罩 class */
   maskClass?: string;
@@ -50,6 +50,15 @@ export interface ModalProps {
 }
 
 const defaultWidth = "520px";
+
+/** 预设宽度：xs/sm/md/lg/xl 对应 400/520/640/800/960px */
+const WIDTH_PRESETS: Record<string, string> = {
+  xs: "400px",
+  sm: "520px",
+  md: "640px",
+  lg: "800px",
+  xl: "960px",
+};
 
 /**
  * 标题栏按下时开始拖动：与 ImageViewer 的 useImageDrag 一致，不计算偏移，按下位置即起点，只按位移累加。
@@ -105,9 +114,9 @@ export function Modal(props: ModalProps) {
     width = defaultWidth,
     centered: _centered = true,
     destroyOnClose = false,
-    keyboard = true,
-    draggable = true,
-    fullscreenable = true,
+    keyboard = false,
+    draggable = false,
+    fullscreenable = false,
     maskClass,
     wrapClass,
     bodyClass,
@@ -121,9 +130,19 @@ export function Modal(props: ModalProps) {
     if (e.target === e.currentTarget && maskClosable) onClose?.();
   };
 
-  const handleKeyDown = (e: KeyboardEvent) => {
-    if (keyboard && e.key === "Escape") onClose?.();
-  };
+  /** 打开时在 document 上监听 Esc，不依赖弹层获焦；关闭时移除监听 */
+  createEffect(() => {
+    if (!open) return;
+    const handler = (e: KeyboardEvent) => {
+      if (keyboard && e.key === "Escape") {
+        e.preventDefault();
+        onClose?.();
+      }
+    };
+    document.addEventListener("keydown", handler as EventListener);
+    return () =>
+      document.removeEventListener("keydown", handler as EventListener);
+  });
 
   const handleTitleMouseDown = useDrag(
     () => position(),
@@ -140,7 +159,9 @@ export function Modal(props: ModalProps) {
       return null;
     }
     document.body.style.overflow = "hidden";
-    const widthStyle = typeof width === "number" ? `${width}px` : width;
+    const widthStyle = typeof width === "number"
+      ? `${width}px`
+      : (WIDTH_PRESETS[width as string] ?? width);
     const isFullscreen = fullscreen();
     const pos = position();
     const hasOffset = pos.x !== 0 || pos.y !== 0;
@@ -170,8 +191,6 @@ export function Modal(props: ModalProps) {
         role="dialog"
         aria-modal="true"
         aria-labelledby={title ? "modal-title" : undefined}
-        tabindex={-1}
-        onKeyDown={handleKeyDown as unknown as (e: Event) => void}
       >
         {/* 遮罩 */}
         <div
