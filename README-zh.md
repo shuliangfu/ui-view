@@ -1,6 +1,7 @@
 # 📦 @dreamer/ui-view
 
-基于 View 与 Tailwind CSS 的 UI 组件库，支持浅色/深色主题，桌面端与移动端兼备，适用于企业级应用、管理平台等场景。
+基于 View 与 Tailwind CSS 的 UI
+组件库，支持浅色/深色主题，桌面端与移动端兼备，适用于企业级应用、管理平台等场景。
 
 **English:** [README.md](./README.md)
 
@@ -22,10 +23,10 @@ bunx jsr add @dreamer/ui-view
 
 ## 📂 入口
 
-| 入口                      | 说明                                     |
-| ------------------------- | ---------------------------------------- |
-| `@dreamer/ui-view`        | 桌面端组件（默认）                       |
-| `@dreamer/ui-view/mobile` | 移动端组件                               |
+| 入口                      | 说明                                                     |
+| ------------------------- | -------------------------------------------------------- |
+| `@dreamer/ui-view`        | 桌面端组件（默认）                                       |
+| `@dreamer/ui-view/mobile` | 移动端组件                                               |
 | `@dreamer/ui-view/shared` | 共享组件与类型（主入口与 mobile 已包含，可按需单独引用） |
 
 桌面端入口已包含所有 shared 组件 + 桌面专用组件；移动端入口为 shared +
@@ -36,13 +37,15 @@ bunx jsr add @dreamer/ui-view
 ## 与 Tailwind 配合使用
 
 本库组件使用 Tailwind 工具类书写样式。发布为 JSR 包后，用户项目中的 Tailwind
-默认不会扫描依赖包内的 class，若不配置，这些 class 不会被包含进最终 CSS，组件样式会缺失。
+默认不会扫描依赖包内的 class，若不配置，这些 class 不会被包含进最终
+CSS，组件样式会缺失。
 
 同时有一个**体积问题**：若把本库**整包源码**加入 Tailwind
 的扫描范围，构建时会保留**所有组件**用到的 class，即使用户只用了其中一个
 Button，最终 CSS 也会很大。
 
-**推荐使用本库提供的插件**自动收集用到的组件 class 并生成 @source 文件，体积最小。
+**推荐使用本库提供的插件**自动收集用到的组件 class 并生成 @source
+文件，体积最小。
 
 ### 🔌 使用插件处理样式
 
@@ -83,7 +86,8 @@ app.start();
 @import "tailwindcss";
 ```
 
-若 Tailwind 入口文件或项目源码目录与示例不同，请相应调整 `@import` 与 `@source` 的路径。
+若 Tailwind 入口文件或项目源码目录与示例不同，请相应调整 `@import` 与 `@source`
+的路径。
 
 插件在 onInit 时扫描 `scanPath` 下所有 `.ts`/`.tsx` 中从 `@dreamer/ui-view`（或
 `jsr:@dreamer/ui-view`）的命名导入，收集组件名，生成只含 `@source "path";` 的
@@ -133,7 +137,8 @@ Select、MultiSelect、Cascader、TreeSelect、DatePicker、DateRangePicker、Ti
 
 - **Toast** 轻提示（ToastContainer + toast）
 - **Message** 全局提示（message）
-- **Notification** 消息通知框（NotificationContainer + notification.open / openNotification）
+- **Notification** 消息通知框（NotificationContainer + notification.open /
+  openNotification）
 
 ### 💡 反馈与浮层
 
@@ -196,7 +201,8 @@ Select、MultiSelect、Cascader、TreeSelect、DatePicker、DateRangePicker、Ti
 
 ### 📈 图表
 
-基于 Chart.js：ChartLine、ChartBar、ChartPie、ChartDoughnut、ChartRadar、ChartPolarArea、ChartBubble、ChartScatter
+基于
+Chart.js：ChartLine、ChartBar、ChartPie、ChartDoughnut、ChartRadar、ChartPolarArea、ChartBubble、ChartScatter
 
 ### ⚙️ 其它
 
