@@ -65,21 +65,35 @@ const CARD_API: ApiRow[] = [
 
 const importCode = `import { Button, Card } from "@dreamer/ui-view";
 
-<Card title="卡片标题" extra={<Button variant="ghost" size="xs">更多</Button>}>
+<Card
+  title="卡片标题"
+  extra={<Button variant="ghost" size="xs">更多</Button>}
+>
   <p>卡片内容</p>
 </Card>`;
 
-const exampleTitleExtra =
-  `<Card title="卡片标题" extra={<Button variant="ghost" size="xs">更多</Button>}>
+const exampleTitleExtra = `<Card
+  title="卡片标题"
+  extra={<Button variant="ghost" size="xs">更多</Button>}
+>
   <p>卡片内容区域。</p>
 </Card>`;
 
-const _exampleFooterHoverable =
-  `<Card title="带底部" footer={<span>底部信息</span>}>...</Card>
+const _exampleFooterHoverable = `<Card
+  title="带底部"
+  footer={<span>底部信息</span>}
+>
+  ...
+</Card>
 <Card hoverable title="悬浮效果">...</Card>`;
 
 const exampleLoadingBorderedSize = `<Card loading title="加载中">...</Card>
-<Card title="无边框" bordered={false}>...</Card>
+<Card
+  title="无边框"
+  bordered={false}
+>
+  ...
+</Card>
 <Card title="尺寸" size="sm">...</Card>`;
 
 export default function DataDisplayCard() {
