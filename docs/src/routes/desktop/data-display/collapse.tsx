@@ -78,17 +78,35 @@ import { Collapse } from "@dreamer/ui-view";
 
 const [activeKey, setActiveKey] = createSignal<string[]>(["1"]);
 const items = [{ key: "1", header: "面板 1", children: <p>内容一</p> }, ...];
-<Collapse items={items} activeKey={activeKey()} onChange={setActiveKey} />`;
+<Collapse
+  items={items}
+  activeKey={activeKey()}
+  onChange={setActiveKey}
+/>`;
 
-const exampleControlled =
-  `<Collapse items={items} activeKey={activeKey()} onChange={setActiveKey} />`;
+const exampleControlled = `<Collapse
+  items={items}
+  activeKey={activeKey()}
+  onChange={setActiveKey}
+/>`;
 
-const exampleAccordion =
-  `<Collapse items={items} defaultActiveKey={["1"]} accordion bordered={false} />`;
+const exampleAccordion = `<Collapse
+  items={items}
+  defaultActiveKey={["1"]}
+  accordion
+  bordered={false}
+/>`;
 
-const exampleShowArrowSize =
-  `<Collapse items={items} defaultActiveKey={[]} showArrow={false} />
-<Collapse items={items} defaultActiveKey={["1"]} size="sm" />`;
+const exampleShowArrowSize = `<Collapse
+  items={items}
+  defaultActiveKey={[]}
+  showArrow={false}
+/>
+<Collapse
+  items={items}
+  defaultActiveKey={["1"]}
+  size="sm"
+/>`;
 
 export default function DataDisplayCollapse() {
   const [activeKey, setActiveKey] = createSignal<string[]>(["1"]);
