@@ -77,11 +77,15 @@ const exampleDefault = `const items = [
 ];
 <Breadcrumb items={items} />`;
 
-const exampleSeparator =
-  `<Breadcrumb items={items} separator={<span class="mx-1.5 text-slate-400">/</span>} />`;
+const exampleSeparator = `<Breadcrumb
+  items={items}
+  separator={<span class="mx-1.5 text-slate-400">/</span>}
+/>`;
 
-const exampleOnItemClick =
-  `<Breadcrumb items={itemsWithClick} onItemClick={(item, index) => console.log(item.label, index)} />`;
+const exampleOnItemClick = `<Breadcrumb
+  items={itemsWithClick}
+  onItemClick={(item, index) => console.log(item.label, index)}
+/>`;
 
 export default function NavigationBreadcrumb() {
   const items = [
