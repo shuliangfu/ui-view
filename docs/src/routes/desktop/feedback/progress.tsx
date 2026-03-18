@@ -93,10 +93,22 @@ const exampleFormat = `<Progress percent={3} format={(_p) => \`3/10 步\`} />`;
 
 const exampleCircle = `<Progress type="circle" percent={75} />
 <Progress type="circle" percent={100} status="success" />
-<Progress type="circle" percent={30} size={80} strokeWidthCircle={4} />`;
+<Progress
+  type="circle"
+  percent={30}
+  size={80}
+  strokeWidthCircle={4}
+/>`;
 
-const exampleStroke = `<Progress percent={50} strokeWidth={12} />
-<Progress percent={60} strokeColor="rgb(34 197 94)" trailColor="rgb(226 232 240)" />`;
+const exampleStroke = `<Progress
+  percent={50}
+  strokeWidth={12}
+/>
+<Progress
+  percent={60}
+  strokeColor="rgb(34 197 94)"
+  trailColor="rgb(226 232 240)"
+/>`;
 
 export default function FeedbackProgress() {
   return (
