@@ -74,15 +74,43 @@ const items = [
   { key: "1", header: "第一项", children: <p>内容</p> },
   { key: "2", header: "第二项", children: <p>内容</p> },
 ];
-<Accordion items={items} expandedKeys={expandedKeys()} onChange={setExpandedKeys} allowMultiple />`;
+{() => (
+  <Accordion
+    items={items}
+    expandedKeys={expandedKeys()}
+    onChange={setExpandedKeys}
+    allowMultiple
+  />
+)}`;
 
-const exampleMultiple =
-  `<Accordion items={items} expandedKeys={expandedKeys()} onChange={setExpandedKeys} allowMultiple />`;
+const exampleMultiple = `{() => (
+  <Accordion
+    items={items}
+    expandedKeys={expandedKeys()}
+    onChange={setExpandedKeys}
+    allowMultiple
+  />
+)}`;
 
-const exampleSingle =
-  `<Accordion items={items} expandedKeys={expandedKeys()} onChange={setExpandedKeys} allowMultiple={false} />`;
+const exampleSingle = `{() => (
+  <Accordion
+    items={items}
+    expandedKeys={expandedKeys()}
+    onChange={setExpandedKeys}
+    allowMultiple={false}
+  />
+)}`;
 
-const exampleDisabled = `items 中某项设置 disabled: true 即可禁用`;
+const exampleDisabled = `{() => (
+  <Accordion
+    items={[
+      { key: "1", header: "可展开", children: <p>内容</p> },
+      { key: "2", header: "禁用项", disabled: true, children: <p>不可点击</p> },
+    ]}
+    expandedKeys={["1"]}
+    onChange={() => {}}
+  />
+)}`;
 
 export default function LayoutAccordion() {
   const [expandedKeys, setExpandedKeys] = createSignal<string[]>(["1"]);
@@ -126,17 +154,20 @@ export default function LayoutAccordion() {
         />
       </section>
 
+      {/* 必须包成 getter：否则 expandedKeys 变化会触发整树渲染，协调时易用旧 props/整块替换，导致点击无反应；仅示例区依赖 getter 后只更新本块，点击才正常 */}
       <section class="space-y-8">
         <Title level={2}>示例</Title>
 
         <div class="space-y-4">
           <Title level={3}>allowMultiple=true</Title>
-          <Accordion
-            items={items}
-            expandedKeys={expandedKeys()}
-            onChange={setExpandedKeys}
-            allowMultiple
-          />
+          {() => (
+            <Accordion
+              items={items}
+              expandedKeys={expandedKeys()}
+              onChange={setExpandedKeys}
+              allowMultiple
+            />
+          )}
           <CodeBlock
             title="代码示例"
             code={exampleMultiple}
@@ -149,12 +180,14 @@ export default function LayoutAccordion() {
 
         <div class="space-y-4">
           <Title level={3}>allowMultiple=false（单选）</Title>
-          <Accordion
-            items={items}
-            expandedKeys={expandedKeys()}
-            onChange={setExpandedKeys}
-            allowMultiple={false}
-          />
+          {() => (
+            <Accordion
+              items={items}
+              expandedKeys={expandedKeys()}
+              onChange={setExpandedKeys}
+              allowMultiple={false}
+            />
+          )}
           <CodeBlock
             title="代码示例"
             code={exampleSingle}
@@ -167,23 +200,25 @@ export default function LayoutAccordion() {
 
         <div class="space-y-4">
           <Title level={3}>items 含 disabled</Title>
-          <Accordion
-            items={[
-              {
-                key: "1",
-                header: "可展开",
-                children: <p class="text-sm">内容</p>,
-              },
-              {
-                key: "2",
-                header: "禁用项",
-                disabled: true,
-                children: <p class="text-sm">不可点击</p>,
-              },
-            ]}
-            expandedKeys={["1"]}
-            onChange={() => {}}
-          />
+          {() => (
+            <Accordion
+              items={[
+                {
+                  key: "1",
+                  header: "可展开",
+                  children: <p class="text-sm">内容</p>,
+                },
+                {
+                  key: "2",
+                  header: "禁用项",
+                  disabled: true,
+                  children: <p class="text-sm">不可点击</p>,
+                },
+              ]}
+              expandedKeys={["1"]}
+              onChange={() => {}}
+            />
+          )}
           <CodeBlock
             title="代码示例"
             code={exampleDisabled}
