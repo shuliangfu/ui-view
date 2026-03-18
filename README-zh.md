@@ -1,4 +1,4 @@
-# @dreamer/ui-view
+# 📦 @dreamer/ui-view
 
 基于 View 与 Tailwind CSS 的 UI 组件库，支持浅色/深色主题，桌面端与移动端兼备，适用于企业级应用、管理平台等场景。
 
@@ -8,7 +8,7 @@
 
 ---
 
-## 安装
+## ⬇️ 安装
 
 ```bash
 # Deno
@@ -20,7 +20,7 @@ bunx jsr add @dreamer/ui-view
 
 ---
 
-## 入口
+## 📂 入口
 
 | 入口                      | 说明                                     |
 | ------------------------- | ---------------------------------------- |
@@ -44,7 +44,7 @@ Button，最终 CSS 也会很大。
 
 **推荐使用本库提供的插件**自动收集用到的组件 class 并生成 @source 文件，体积最小。
 
-### 使用插件处理样式
+### 🔌 使用插件处理样式
 
 在项目里**注册本库提供的插件**，应用初始化（onInit）时自动扫描对
 `@dreamer/ui-view` 的引用，把用到的组件的源码路径写入一个 CSS 文件；主 Tailwind
@@ -92,9 +92,9 @@ CSS；Tailwind 编译时只会扫描这些路径，最终 CSS 只包含用到的
 
 ---
 
-## 组件一览
+## 📋 组件一览
 
-### 基础
+### 🧱 基础
 
 - **Button** 按钮
 - **Link** 文字/图标链接
@@ -106,7 +106,7 @@ CSS；Tailwind 编译时只会扫描这些路径，最终 CSS 只包含用到的
 - **Spinner** 加载旋转
 - **Icons** 图标集（如 ChevronDown、Close、Calendar 等）
 
-### 表单
+### 📝 表单
 
 - **Input** 单行输入
 - **Search** 搜索框
@@ -129,13 +129,13 @@ CSS；Tailwind 编译时只会扫描这些路径，最终 CSS 只包含用到的
 **桌面专用：**
 Select、MultiSelect、Cascader、TreeSelect、DatePicker、DateRangePicker、TimePicker
 
-### 消息与通知
+### 💬 消息与通知
 
 - **Toast** 轻提示（ToastContainer + toast）
 - **Message** 全局提示（message）
 - **Notification** 消息通知框（NotificationContainer + notification.open / openNotification）
 
-### 反馈与浮层
+### 💡 反馈与浮层
 
 - **Alert** 静态提示条
 - **Drawer** 侧边抽屉
@@ -146,7 +146,7 @@ Select、MultiSelect、Cascader、TreeSelect、DatePicker、DateRangePicker、Ti
 
 **移动专用：** BottomSheet、ActionSheet、PullRefresh、SwipeCell
 
-### 布局与容器
+### 📐 布局与容器
 
 - **Container** 最大宽度容器
 - **Hero** 英雄区/首屏
@@ -156,7 +156,7 @@ Select、MultiSelect、Cascader、TreeSelect、DatePicker、DateRangePicker、Ti
 - **Tabs** 标签页
 - **Accordion** 手风琴折叠
 
-### 导航
+### 🧭 导航
 
 - **Navbar** 顶栏
 - **Sidebar** 侧栏折叠菜单
@@ -194,16 +194,16 @@ Select、MultiSelect、Cascader、TreeSelect、DatePicker、DateRangePicker、Ti
 
 **桌面专用：** Table
 
-### 图表
+### 📈 图表
 
 基于 Chart.js：ChartLine、ChartBar、ChartPie、ChartDoughnut、ChartRadar、ChartPolarArea、ChartBubble、ChartScatter
 
-### 其它
+### ⚙️ 其它
 
 - **ConfigProvider** 全局配置（主题、locale 等）
 
 ---
 
-## License
+## 📄 License
 
 Apache-2.0. See [LICENSE](./LICENSE).
