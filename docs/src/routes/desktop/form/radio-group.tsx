@@ -238,8 +238,20 @@ export default function FormRadioGroup() {
             </FormItem>
             <CodeBlock
               title="代码示例"
-              code={`<RadioGroup name="radio-err" options={options} value="r1" onChange={() => {}} error />
-<RadioGroup name="radio-dis" options={options} value="r1" onChange={() => {}} disabled />`}
+              code={`<RadioGroup
+  name="radio-err"
+  options={options}
+  value="r1"
+  onChange={() => {}}
+  error
+/>
+<RadioGroup
+  name="radio-dis"
+  options={options}
+  value="r1"
+  onChange={() => {}}
+  disabled
+/>`}
               language="tsx"
               showLineNumbers
               copyable
