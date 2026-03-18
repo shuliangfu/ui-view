@@ -88,13 +88,31 @@ import type { TreeNode } from "@dreamer/ui-view";
 const [expandedKeys, setExpandedKeys] = createSignal<string[]>(["1"]);
 const [selectedKeys, setSelectedKeys] = createSignal<string[]>([]);
 const treeData: TreeNode[] = [{ key: "1", title: "节点 1", children: [...] }, ...];
-<Tree treeData={treeData} expandedKeys={expandedKeys()} onExpand={setExpandedKeys} selectedKeys={selectedKeys()} onSelect={setSelectedKeys} />`;
+<Tree
+  treeData={treeData}
+  expandedKeys={expandedKeys()}
+  onExpand={setExpandedKeys}
+  selectedKeys={selectedKeys()}
+  onSelect={setSelectedKeys}
+/>`;
 
-const exampleCheckable =
-  `<Tree treeData={treeData} expandedKeys={expandedKeys()} onExpand={setExpandedKeys} selectedKeys={selectedKeys()} onSelect={setSelectedKeys} checkable checkedKeys={checkedKeys()} onCheck={setCheckedKeys} />`;
+const exampleCheckable = `<Tree
+  treeData={treeData}
+  expandedKeys={expandedKeys()}
+  onExpand={setExpandedKeys}
+  selectedKeys={selectedKeys()}
+  onSelect={setSelectedKeys}
+  checkable
+  checkedKeys={checkedKeys()}
+  onCheck={setCheckedKeys}
+/>`;
 
-const exampleShowLine =
-  `<Tree treeData={treeData} expandedKeys={expandedKeys()} onExpand={setExpandedKeys} showLine />`;
+const exampleShowLine = `<Tree
+  treeData={treeData}
+  expandedKeys={expandedKeys()}
+  onExpand={setExpandedKeys}
+  showLine
+/>`;
 
 /** 仅展示已选/已勾选文案，单独读 signal 避免父组件重渲染导致整树闪动 */
 function KeysDisplay(props: {
