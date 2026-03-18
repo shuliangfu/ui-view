@@ -64,10 +64,17 @@ const CHART_SCATTER_API: ApiRow[] = [
 const importCode = `import { ChartScatter } from "@dreamer/ui-view";
 
 const data = { datasets: [{ label: "系列 A", data: [{ x: 10, y: 20 }, ...], backgroundColor: "...", borderColor: "..." }] };
-<ChartScatter data={data} options={options} class="w-full h-64" />`;
+<ChartScatter
+  data={data}
+  options={options}
+  class="w-full h-64"
+/>`;
 
-const exampleBasic =
-  `<ChartScatter data={sampleData} options={options} class="w-full h-64" />`;
+const exampleBasic = `<ChartScatter
+  data={sampleData}
+  options={options}
+  class="w-full h-64"
+/>`;
 
 export default function ChartsScatter() {
   return (
