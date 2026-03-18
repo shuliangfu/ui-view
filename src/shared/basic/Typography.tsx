@@ -23,11 +23,11 @@ export function Title(props: TitleProps) {
   const { level = 2, class: className, children } = props;
   const base = titleSizeClasses[level];
   const cls = twMerge(base, className);
-  if (level === 1) return () => <h1 class={cls}>{children}</h1>;
-  if (level === 2) return () => <h2 class={cls}>{children}</h2>;
-  if (level === 3) return () => <h3 class={cls}>{children}</h3>;
-  if (level === 4) return () => <h4 class={cls}>{children}</h4>;
-  if (level === 5) return () => <h5 class={cls}>{children}</h5>;
+  if (level === 1) return <h1 class={cls}>{children}</h1>;
+  if (level === 2) return <h2 class={cls}>{children}</h2>;
+  if (level === 3) return <h3 class={cls}>{children}</h3>;
+  if (level === 4) return <h4 class={cls}>{children}</h4>;
+  if (level === 5) return <h5 class={cls}>{children}</h5>;
   return <h6 class={cls}>{children}</h6>;
 }
 
