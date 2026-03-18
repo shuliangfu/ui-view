@@ -176,7 +176,11 @@ value={["a","b"]}`}
             </FormItem>
             <CodeBlock
               title="代码示例"
-              code={`<MultiSelect options={options} value={["a"]} disabled />`}
+              code={`<MultiSelect
+  options={options}
+  value={["a"]}
+  disabled
+/>`}
               language="tsx"
               showLineNumbers
               copyable
