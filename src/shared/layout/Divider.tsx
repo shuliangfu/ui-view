@@ -35,8 +35,10 @@ export function Divider(props: DividerProps) {
         role="separator"
         aria-orientation="vertical"
         class={twMerge(
-          "inline-block self-stretch w-px border-l border-slate-200 dark:border-slate-600",
-          dashed && "border-dashed",
+          "inline-block w-px min-h-4 self-stretch shrink-0",
+          dashed
+            ? "border-l border-dashed border-slate-200 dark:border-slate-600"
+            : "bg-slate-200 dark:bg-slate-600",
           className,
         )}
       />
@@ -44,50 +46,53 @@ export function Divider(props: DividerProps) {
   }
 
   const hasLabel = children != null;
-  const orientationCls = orientation === "left"
-    ? "flex-row"
-    : orientation === "right"
-    ? "flex-row-reverse"
-    : "flex-row";
+  const lineCls = twMerge(
+    "flex-1 border-t border-slate-200 dark:border-slate-600",
+    dashed && "border-dashed",
+  );
+  const labelCls = "shrink-0 px-4 text-sm text-slate-500 dark:text-slate-400";
 
-  return () => (
+  /** 有文案时按 orientation 渲染：left=文案+右线，right=左线+文案，center=左线+文案+右线 */
+  const renderWithLabel = () => {
+    if (orientation === "left") {
+      return (
+        <>
+          <span class={labelCls}>{children}</span>
+          <span class={lineCls} />
+        </>
+      );
+    }
+    if (orientation === "right") {
+      return (
+        <>
+          <span class={lineCls} />
+          <span class={labelCls}>{children}</span>
+        </>
+      );
+    }
+    return (
+      <>
+        <span class={lineCls} />
+        <span class={labelCls}>{children}</span>
+        <span class={lineCls} />
+      </>
+    );
+  };
+
+  return (
     <div
       role="separator"
       aria-orientation="horizontal"
-      class={twMerge(
-        "flex items-center w-full my-4",
-        orientationCls,
-        className,
-      )}
+      class={twMerge("flex items-center w-full my-4", className)}
     >
-      {hasLabel
-        ? (
-          <>
-            <span
-              class={twMerge(
-                "flex-1 border-t border-slate-200 dark:border-slate-600",
-                dashed && "border-dashed",
-              )}
-            />
-            <span class="shrink-0 px-4 text-sm text-slate-500 dark:text-slate-400">
-              {children}
-            </span>
-            <span
-              class={twMerge(
-                "flex-1 border-t border-slate-200 dark:border-slate-600",
-                dashed && "border-dashed",
-              )}
-            />
-          </>
-        )
-        : (
-          <span
-            class={twMerge(
-              "w-full border-t border-slate-200 dark:border-slate-600",
-              dashed && "border-dashed",
-            )}
-          />
-        )}
+      {hasLabel ? renderWithLabel() : (
+        <span
+          class={twMerge(
+            "w-full border-t border-slate-200 dark:border-slate-600",
+            dashed && "border-dashed",
+          )}
+        />
+      )}
     </div>
   );
 }
