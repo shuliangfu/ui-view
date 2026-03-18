@@ -1,7 +1,6 @@
 # @dreamer/ui-view
 
-基于 View 与 Tailwind CSS 的 UI
-组件库，支持浅色/深色主题，桌面端与移动端兼备，适用于企业级应用、管理平台等场景。
+基于 View 与 Tailwind CSS 的 UI 组件库，支持浅色/深色主题，桌面端与移动端兼备，适用于企业级应用、管理平台等场景。
 
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](./LICENSE)
 
@@ -25,7 +24,7 @@ bunx jsr add @dreamer/ui-view
 | ------------------------- | ---------------------------------------- |
 | `@dreamer/ui-view`        | 桌面端组件（默认）                       |
 | `@dreamer/ui-view/mobile` | 移动端组件                               |
-| `@dreamer/ui-view/shared` | 仅共享类型与设计 token（一般不单独引用） |
+| `@dreamer/ui-view/shared` | 共享组件与类型（主入口与 mobile 已包含，可按需单独引用） |
 
 桌面端入口已包含所有 shared 组件 + 桌面专用组件；移动端入口为 shared +
 移动专用组件。
@@ -34,78 +33,16 @@ bunx jsr add @dreamer/ui-view
 
 ## 与 Tailwind 配合使用
 
-本库组件使用 Tailwind 工具类书写样式。发布到 JSR 后，用户项目的 Tailwind
-默认不会扫描依赖包里的 class，若不配置，组件样式会被 purge 掉。
+本库组件使用 Tailwind 工具类书写样式。发布为 JSR 包后，用户项目中的 Tailwind
+默认不会扫描依赖包内的 class，若不配置，这些 class 不会被包含进最终 CSS，组件样式会缺失。
 
 同时有一个**体积问题**：若把本库**整包源码**加入 Tailwind
 的扫描范围，构建时会保留**所有组件**用到的 class，即使用户只用了其中一个
 Button，最终 CSS 也会很大。
 
-推荐三种方式，按需选择：
+**推荐使用本库提供的插件**自动收集用到的组件 class 并生成 @source 文件，体积最小。
 
----
-
-### 方案一：按需引入组件样式（CSS 小）
-
-本库为部分组件提供**单独打包好的
-CSS**，只引入你用到的组件样式，最终只包含该组件用到的 class。
-
-```css
-/* 你的主 CSS 入口，只引入用到的组件 */
-@import "tailwindcss";
-@source "./src/**/*.{ts,tsx}";
-
-/* 只引入 Button 的样式，不会带上 Modal、Table 等未用组件的 class */
-@import "@dreamer/ui-view/styles/button.css";
-```
-
-```ts
-import { Button } from "@dreamer/ui-view";
-```
-
-可用样式入口见下方「按需样式入口」表。未列出的组件暂用方案二。
-
-| 样式入口                                | 说明             |
-| --------------------------------------- | ---------------- |
-| `@dreamer/ui-view/styles/button.css`    | Button 按钮      |
-| `@dreamer/ui-view/styles/link.css`      | Link 链接        |
-| `@dreamer/ui-view/styles/input.css`     | Input 输入框     |
-| `@dreamer/ui-view/styles/modal.css`     | Modal 模态框     |
-| `@dreamer/ui-view/styles/card.css`      | Card 卡片        |
-| `@dreamer/ui-view/styles/alert.css`     | Alert 提示条     |
-| `@dreamer/ui-view/styles/tabs.css`      | Tabs 标签页      |
-| `@dreamer/ui-view/styles/accordion.css` | Accordion 手风琴 |
-
----
-
-### 方案二：扫描本库源码（简单，但 CSS 会偏大）
-
-把本库整包源码加入 Tailwind 的扫描范围，适合**用了很多组件**、能接受较大 CSS
-体积的项目。
-
-**Tailwind v4**（主 CSS 里增加）：
-
-```css
-@import "tailwindcss";
-@source "./src/**/*.{ts,tsx}";
-@source "./node_modules/@dreamer/ui-view/src/**/*.{ts,tsx}";
-```
-
-**Tailwind v3**（`tailwind.config.js` 的 `content`）：
-
-```js
-content: [
-  "./src/**/*.{ts,tsx}",
-  "./node_modules/@dreamer/ui-view/src/**/*.{ts,tsx}",
-],
-```
-
-若通过 Deno 安装且依赖不在 `node_modules`，请将上述路径改为你本地解析到的
-`@dreamer/ui-view` 实际路径。
-
----
-
-### 方案三：插件自动收集 class 并生成 @source 文件（推荐，体积最小）
+### 使用插件处理样式
 
 在项目里**注册本库提供的插件**，应用初始化（onInit）时自动扫描对
 `@dreamer/ui-view` 的引用，把用到的组件的源码路径写入一个 CSS 文件；主 Tailwind
@@ -121,7 +58,7 @@ import { tailwindPlugin } from "@dreamer/plugins/tailwindcss";
 const app = new App();
 
 app.registerPlugin(uiViewTailwindContentPlugin({
-  outputPath: "src/generated/ui-view-sources.css", // 生成的文件路径
+  outputPath: "src/assets/ui-view-sources.css", // 生成的文件路径
   scanPath: "src", // 要扫描的源码目录
   // packageRoot 可选，不传则用插件所在包根（如 node_modules/@dreamer/ui-view）
 }));
@@ -138,11 +75,13 @@ app.start();
 **2. 在主 Tailwind 入口 CSS 中引用生成的文件：**
 
 ```css
-@import "../generated/ui-view-sources.css"; /* 由插件生成，仅含 @source "path"; */
-@source "./src/**/*.{ts,tsx}"; /* 你项目自己的源码 */
+@import "./ui-view-sources.css"; /* 由插件生成，仅含 @source "path";，路径需相对当前 CSS 文件 */
+@source "./src/**/*.{ts,tsx}"; /* 你项目自己的源码，路径按项目调整 */
 
 @import "tailwindcss";
 ```
+
+若 Tailwind 入口文件或项目源码目录与示例不同，请相应调整 `@import` 与 `@source` 的路径。
 
 插件在 onInit 时扫描 `scanPath` 下所有 `.ts`/`.tsx` 中从 `@dreamer/ui-view`（或
 `jsr:@dreamer/ui-view`）的命名导入，收集组件名，生成只含 `@source "path";` 的
@@ -186,13 +125,13 @@ CSS；Tailwind 编译时只会扫描这些路径，最终 CSS 只包含用到的
 - **RichTextEditor** 富文本编辑器
 
 **桌面专用：**
-Select、MultiSelect、Cascader、TreeSelect、DatePicker、DateRangePicker
+Select、MultiSelect、Cascader、TreeSelect、DatePicker、DateRangePicker、TimePicker
 
 ### 消息与通知
 
 - **Toast** 轻提示（ToastContainer + toast）
 - **Message** 全局提示（message）
-- **Notification** 消息通知框（NotificationContainer + openNotification 等）
+- **Notification** 消息通知框（NotificationContainer + notification.open / openNotification）
 
 ### 反馈与浮层
 
@@ -255,8 +194,7 @@ Select、MultiSelect、Cascader、TreeSelect、DatePicker、DateRangePicker
 
 ### 图表
 
-基于
-Chart.js：ChartLine、ChartBar、ChartPie、ChartDoughnut、ChartRadar、ChartPolarArea、ChartBubble、ChartScatter
+基于 Chart.js：ChartLine、ChartBar、ChartPie、ChartDoughnut、ChartRadar、ChartPolarArea、ChartBubble、ChartScatter
 
 ### 其它
 
