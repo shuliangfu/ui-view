@@ -69,7 +69,7 @@ export function Navbar(props: NavbarProps) {
 
   const innerClass = twMerge(defaultContainerInnerClass, containerClass);
 
-  return () => (
+  return (
     <header class={headerClass} role="banner">
       <Container maxWidth={containerMaxWidth} class={innerClass}>
         {brand != null && <div class="shrink-0">{brand}</div>}
