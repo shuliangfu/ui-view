@@ -67,7 +67,10 @@ const BUTTON_API: ApiRow[] = [
 
 const importCode = `import { Button } from "@dreamer/ui-view";
 
-<Button variant="primary" onClick={() => console.log("click")}>
+<Button
+  variant="primary"
+  onClick={() => console.log("click")}
+>
   确定
 </Button>`;
 
@@ -96,9 +99,24 @@ const exampleDisabled = `<Button variant="default" disabled>default</Button>
 const exampleLoading = `<Button variant="primary" loading>加载中</Button>
 <Button variant="secondary" loading>提交中</Button>`;
 
-const exampleType = `<Button type="button" variant="primary">button</Button>
-<Button type="submit" variant="secondary">submit</Button>
-<Button type="reset" variant="ghost">reset</Button>`;
+const exampleType = `<Button
+  type="button"
+  variant="primary"
+>
+  button
+</Button>
+<Button
+  type="submit"
+  variant="secondary"
+>
+  submit
+</Button>
+<Button
+  type="reset"
+  variant="ghost"
+>
+  reset
+</Button>`;
 
 export default function BasicButton() {
   return (
