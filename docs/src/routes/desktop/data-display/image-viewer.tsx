@@ -90,10 +90,24 @@ import { Button, ImageViewer } from "@dreamer/ui-view";
 
 const [open, setOpen] = createSignal(false);
 const [index, setIndex] = createSignal(0);
-<ImageViewer open={open()} onClose={() => setOpen(false)} images={images} currentIndex={index()} onIndexChange={setIndex} />`;
+<ImageViewer
+  open={open()}
+  onClose={() => setOpen(false)}
+  images={images}
+  currentIndex={index()}
+  onIndexChange={setIndex}
+/>`;
 
-const exampleBasic =
-  `<ImageViewer open={open()} onClose={() => setOpen(false)} images={DEMO_IMAGES} currentIndex={index()} onIndexChange={setIndex} maskClosable keyboard showThumbnails />`;
+const exampleBasic = `<ImageViewer
+  open={open()}
+  onClose={() => setOpen(false)}
+  images={DEMO_IMAGES}
+  currentIndex={index()}
+  onIndexChange={setIndex}
+  maskClosable
+  keyboard
+  showThumbnails
+/>`;
 
 export default function DataDisplayImageViewer() {
   const [open, setOpen] = createSignal(false);
