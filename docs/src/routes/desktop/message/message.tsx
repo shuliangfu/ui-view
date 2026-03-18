@@ -15,27 +15,28 @@ interface ApiRow {
 
 const MESSAGE_API: ApiRow[] = [
   {
-    name: "message.success(content, duration?)",
+    name: "message.success(content, duration?, placement?)",
     type: "void",
-    default: "-",
-    description: "成功提示；duration 默认 3000ms",
+    default: "placement 默认 top",
+    description:
+      "成功提示；duration 默认 3000ms；placement 为 top | center（居中）",
   },
   {
-    name: "message.error(content, duration?)",
+    name: "message.error(content, duration?, placement?)",
     type: "void",
-    default: "-",
+    default: "placement 默认 top",
     description: "错误提示",
   },
   {
-    name: "message.info(content, duration?)",
+    name: "message.info(content, duration?, placement?)",
     type: "void",
-    default: "-",
+    default: "placement 默认 top",
     description: "信息提示",
   },
   {
-    name: "message.warning(content, duration?)",
+    name: "message.warning(content, duration?, placement?)",
     type: "void",
-    default: "-",
+    default: "placement 默认 top",
     description: "警告提示",
   },
   {
@@ -59,6 +60,9 @@ message.error("网络错误");
 message.info("已复制到剪贴板");
 message.warning("请先登录");`;
 
+const examplePlacement = `message.info("顶部（默认）", 3000);
+message.info("居中", 3000, "center");`;
+
 const exampleDuration = `message.info("5 秒后关闭", 5000);`;
 
 const exampleDestroy = `message.destroy();`;
@@ -70,9 +74,10 @@ export default function MessageMessage() {
       <section>
         <Title level={1}>Message 全局提示</Title>
         <Paragraph class="mt-2">
-          全局提示，固定顶部居中展示。支持 success、error、info、warning
-          四种类型，可配置 duration（默认 3000ms），调用 message.destroy()
-          可关闭全部。使用 Tailwind v4，支持 light/dark 主题。
+          全局提示，支持顶部居中（top，默认）与视口绝对居中（center，水平+垂直居中）。
+          支持 success、error、info、warning 四种类型，可配置 duration（默认
+          3000ms）， 调用 message.destroy() 可关闭全部。使用 Tailwind v4，支持
+          light/dark 主题。
         </Paragraph>
       </section>
 
@@ -103,33 +108,65 @@ export default function MessageMessage() {
               variant="success"
               onClick={() => message.success("保存成功")}
             >
-              message.success
+              成功
             </Button>
             <Button
               type="button"
               variant="danger"
               onClick={() => message.error("网络错误")}
             >
-              message.error
+              错误
             </Button>
             <Button
               type="button"
               variant="primary"
               onClick={() => message.info("已复制到剪贴板")}
             >
-              message.info
+              信息
             </Button>
             <Button
               type="button"
               variant="warning"
               onClick={() => message.warning("请先登录")}
             >
-              message.warning
+              警告
             </Button>
           </div>
           <CodeBlock
             title="代码示例"
             code={exampleTypes}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+        </div>
+
+        <div class="space-y-4">
+          <Title level={3}>placement 显示位置</Title>
+          <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+            第三参数为
+            placement：top（顶部居中，默认）、center（视口水平+垂直居中）。
+          </Paragraph>
+          <div class="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => message.info("顶部（默认）", 3000)}
+            >
+              顶部
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => message.info("居中", 3000, "center")}
+            >
+              居中
+            </Button>
+          </div>
+          <CodeBlock
+            title="代码示例"
+            code={examplePlacement}
             language="tsx"
             showLineNumbers
             copyable
