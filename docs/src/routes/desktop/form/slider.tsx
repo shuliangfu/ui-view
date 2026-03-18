@@ -188,8 +188,18 @@ export default function FormSlider() {
             </FormItem>
             <CodeBlock
               title="代码示例"
-              code={`<Slider value={30} min={0} max={100} step={10} />
-<Slider value={60} min={0} max={100} disabled />`}
+              code={`<Slider
+  value={30}
+  min={0}
+  max={100}
+  step={10}
+/>
+<Slider
+  value={60}
+  min={0}
+  max={100}
+  disabled
+/>`}
               language="tsx"
               showLineNumbers
               copyable
