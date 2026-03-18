@@ -73,15 +73,39 @@ const ALERT_API: ApiRow[] = [
 
 const importCode = `import { Alert } from "@dreamer/ui-view";
 
-<Alert type="success" message="操作成功" />
-<Alert type="info" message="这是一条信息提示" />
-<Alert type="warning" message="请注意" />
-<Alert type="error" message="操作失败，请重试" />`;
+<Alert
+  type="success"
+  message="操作成功"
+/>
+<Alert
+  type="info"
+  message="这是一条信息提示"
+/>
+<Alert
+  type="warning"
+  message="请注意"
+/>
+<Alert
+  type="error"
+  message="操作失败，请重试"
+/>`;
 
-const exampleTypes = `<Alert type="success" message="操作成功" />
-<Alert type="info" message="这是一条信息提示" />
-<Alert type="warning" message="请注意当前操作可能影响数据" />
-<Alert type="error" message="操作失败，请重试" />`;
+const exampleTypes = `<Alert
+  type="success"
+  message="操作成功"
+/>
+<Alert
+  type="info"
+  message="这是一条信息提示"
+/>
+<Alert
+  type="warning"
+  message="请注意当前操作可能影响数据"
+/>
+<Alert
+  type="error"
+  message="操作失败，请重试"
+/>`;
 
 const exampleDescription = `<Alert
   type="info"
