@@ -3,11 +3,16 @@
  * 路由: /desktop/navigation/dropdown
  */
 
-import { createSignal } from "@dreamer/view";
 import {
+  Avatar,
   Button,
   CodeBlock,
+  Divider,
   Dropdown,
+  IconLogOut,
+  IconSettings,
+  IconUser,
+  IconUserCog,
   Paragraph,
   Title,
 } from "@dreamer/ui-view";
@@ -24,22 +29,10 @@ const DROPDOWN_API: ApiRow[] = [
   { name: "children", type: "unknown", default: "-", description: "触发元素" },
   { name: "overlay", type: "unknown", default: "-", description: "下拉内容" },
   {
-    name: "open",
-    type: "boolean",
-    default: "-",
-    description: "是否打开（受控）",
-  },
-  {
-    name: "defaultOpen",
-    type: "boolean",
-    default: "false",
-    description: "非受控时初始是否打开",
-  },
-  {
     name: "onOpenChange",
     type: "(open: boolean) => void",
     default: "-",
-    description: "打开/关闭回调",
+    description: "打开/关闭时回调（可选，仅通知）",
   },
   {
     name: "trigger",
@@ -61,9 +54,11 @@ const DROPDOWN_API: ApiRow[] = [
   },
   {
     name: "placement",
-    type: "string",
-    default: "bottomLeft",
-    description: "下拉位置",
+    type:
+      "bottom | bottomLeft | bottomRight | bottomAuto | top | topLeft | topRight",
+    default: "bottom",
+    description:
+      "下拉位置；bottom 为正下方居中，bottomAuto 为正下方且根据左右空间自动左/右移",
   },
   {
     name: "disabled",
@@ -86,18 +81,10 @@ const DROPDOWN_API: ApiRow[] = [
   { name: "class", type: "string", default: "-", description: "包装器 class" },
 ];
 
-const importCode = `import { createSignal } from "@dreamer/view";
-import { Button, Dropdown } from "@dreamer/ui-view";
+const importCode = `import { Button, Dropdown } from "@dreamer/ui-view";
 
-const [open, setOpen] = createSignal(false);
 const overlay = <ul class="py-1 list-none m-0">...</ul>;
-<Dropdown
-  open={open()}
-  onOpenChange={setOpen}
-  overlay={overlay}
-  trigger="click"
-  placement="bottomLeft"
->
+<Dropdown overlay={overlay} trigger="click" placement="bottom">
   <Button variant="default">点击展开</Button>
 </Dropdown>`;
 
@@ -112,8 +99,6 @@ const exampleClick = `<Dropdown
 </Dropdown>`;
 
 const exampleHover = `<Dropdown
-  open={openHover()}
-  onOpenChange={setOpenHover}
   overlay={overlay}
   trigger="hover"
   placement="bottom"
@@ -129,17 +114,54 @@ const exampleDisabled = `<Dropdown
   <Button variant="default" disabled>禁用下拉</Button>
 </Dropdown>`;
 
-export default function NavigationDropdown() {
-  const [open, setOpen] = createSignal(false);
-  const [openHover, setOpenHover] = createSignal(false);
+/** overlay 复杂示例的代码字符串（带头像、分割线、图标菜单项） */
+const exampleOverlayRichCode = `const overlayRich = (
+  <div class="min-w-[200px] py-1">
+    {/* 头部：头像 + 名称 */}
+    <div class="flex items-center gap-3 px-3 py-2">
+      <Avatar size="sm" class="shrink-0">用</Avatar>
+      <div class="truncate">
+        <div class="text-sm font-medium text-slate-900 dark:text-slate-100">当前用户</div>
+        <div class="text-xs text-slate-500 dark:text-slate-400">user@example.com</div>
+      </div>
+    </div>
+    <Divider class="my-1" />
+    <ul class="list-none m-0 py-1">
+      <li>
+        <a href="#" class="flex items-center gap-2 px-3 py-2 text-sm ...">
+          <IconUserCog class="w-4 h-4 shrink-0" /> 个人设置
+        </a>
+      </li>
+      <li>
+        <a href="#" class="flex items-center gap-2 px-3 py-2 text-sm ...">
+          <IconSettings class="w-4 h-4 shrink-0" /> 账户安全
+        </a>
+      </li>
+    </ul>
+    <Divider class="my-1" />
+    <ul class="list-none m-0 py-1">
+      <li>
+        <a href="#" class="flex items-center gap-2 px-3 py-2 text-sm ...">
+          <IconLogOut class="w-4 h-4 shrink-0" /> 退出登录
+        </a>
+      </li>
+    </ul>
+  </div>
+);
+<Dropdown overlay={overlayRich} trigger="click" placement="bottom">
+  <Button variant="default">用户菜单</Button>
+</Dropdown>`;
 
+const itemClass =
+  "flex items-center gap-2 px-3 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700";
+
+export default function NavigationDropdown() {
   const overlay = (
     <ul class="py-1 list-none m-0">
       <li>
         <a
           href="#"
           class="block px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
-          onClick={() => setOpen(false)}
         >
           操作一
         </a>
@@ -148,7 +170,6 @@ export default function NavigationDropdown() {
         <a
           href="#"
           class="block px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
-          onClick={() => setOpen(false)}
         >
           操作二
         </a>
@@ -156,12 +177,55 @@ export default function NavigationDropdown() {
     </ul>
   );
 
+  /** 复杂 overlay：头部头像 + 分割线 + 带图标的菜单项 */
+  const overlayRich = (
+    <div class="min-w-[200px] py-1">
+      <div class="flex items-center gap-3 px-3 py-2">
+        <Avatar size="sm" class="shrink-0">
+          用
+        </Avatar>
+        <div class="truncate min-w-0">
+          <div class="text-sm font-medium text-slate-900 dark:text-slate-100">
+            当前用户
+          </div>
+          <div class="text-xs text-slate-500 dark:text-slate-400">
+            user@example.com
+          </div>
+        </div>
+      </div>
+      <Divider class="my-1" />
+      <ul class="list-none m-0 py-1">
+        <li>
+          <a href="#" class={itemClass}>
+            <IconUserCog class="w-4 h-4 shrink-0" />
+            个人设置
+          </a>
+        </li>
+        <li>
+          <a href="#" class={itemClass}>
+            <IconSettings class="w-4 h-4 shrink-0" />
+            账户安全
+          </a>
+        </li>
+      </ul>
+      <Divider class="my-1" />
+      <ul class="list-none m-0 py-1">
+        <li>
+          <a href="#" class={itemClass}>
+            <IconLogOut class="w-4 h-4 shrink-0" />
+            退出登录
+          </a>
+        </li>
+      </ul>
+    </div>
+  );
+
   return (
     <div class="space-y-10">
       <section>
         <Title level={1}>Dropdown 下拉菜单</Title>
         <Paragraph class="mt-2">
-          下拉菜单：children、overlay、open、defaultOpen、onOpenChange、trigger、hoverOpenDelay、hoverCloseDelay、placement、disabled、overlayClass、overlayId。
+          下拉菜单：children、overlay、onOpenChange、trigger、hoverOpenDelay、hoverCloseDelay、placement、disabled、overlayClass、overlayId。展开状态由组件内部维护。
           使用 Tailwind v4，支持 light/dark 主题。
         </Paragraph>
       </section>
@@ -183,8 +247,6 @@ export default function NavigationDropdown() {
         <div class="space-y-4">
           <Title level={3}>trigger=click</Title>
           <Dropdown
-            open={open()}
-            onOpenChange={setOpen}
             overlay={overlay}
             trigger="click"
             placement="bottomLeft"
@@ -204,8 +266,6 @@ export default function NavigationDropdown() {
         <div class="space-y-4">
           <Title level={3}>trigger=hover</Title>
           <Dropdown
-            open={openHover()}
-            onOpenChange={setOpenHover}
             overlay={overlay}
             trigger="hover"
             placement="bottom"
@@ -232,6 +292,34 @@ export default function NavigationDropdown() {
           <CodeBlock
             title="代码示例"
             code={exampleDisabled}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+        </div>
+
+        <div class="space-y-4">
+          <Title level={3}>overlay 复杂示例（头像、分割线、图标菜单项）</Title>
+          <Paragraph class="text-slate-600 dark:text-slate-400">
+            overlay 接受任意 JSX，不限于简单列表。可在头部放头像与用户名、用
+            Divider 分割、菜单项用 Icon + 文案，全部通过 overlay 传入即可。默认
+            placement="bottom" 为正下方居中；贴边时可改用 placement="bottomAuto"
+            根据左右空间自动左/右移。
+          </Paragraph>
+          <Dropdown
+            overlay={overlayRich}
+            trigger="click"
+            placement="bottom"
+          >
+            <Button type="button" variant="default">
+              <IconUser class="w-4 h-4 shrink-0 mr-1" />
+              用户菜单
+            </Button>
+          </Dropdown>
+          <CodeBlock
+            title="代码示例"
+            code={exampleOverlayRichCode}
             language="tsx"
             showLineNumbers
             copyable
