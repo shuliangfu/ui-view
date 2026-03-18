@@ -113,7 +113,7 @@ export function Sidebar(props: SidebarProps) {
     classProp ?? classNameProp,
   );
 
-  return () => (
+  return (
     <aside class={asideClass}>
       <nav className="space-y-3" aria-label="侧栏导航">
         {overview != null && (
