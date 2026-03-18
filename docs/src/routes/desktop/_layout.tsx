@@ -225,7 +225,7 @@ interface LayoutProps {
 
 export default function Layout({ children }: LayoutProps) {
   return (
-    <div className="flex flex-1 w-full mx-auto">
+    <div className="flex flex-1 w-full max-w-[1800px] mx-auto">
       <Sidebar
         overview={{ path: "/desktop", label: "组件概览" }}
         sectionTitle="组件"
