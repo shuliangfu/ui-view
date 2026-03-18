@@ -5,12 +5,6 @@
  */
 
 import { twMerge } from "tailwind-merge";
-import type {
-  NotificationItem,
-  NotificationPlacement,
-  NotificationType,
-} from "./notification-store.ts";
-import { closeNotification, notificationList } from "./notification-store.ts";
 import {
   IconAlertCircle,
   IconBell,
@@ -18,6 +12,12 @@ import {
   IconInfo,
   IconXCircle,
 } from "../basic/icons/mod.ts";
+import type {
+  NotificationItem,
+  NotificationPlacement,
+  NotificationType,
+} from "./notification-store.ts";
+import { closeNotification, notificationList } from "./notification-store.ts";
 
 const typeIconClasses: Record<NotificationType, string> = {
   success: "text-green-600 dark:text-green-400",
@@ -42,18 +42,16 @@ function NotificationIcon({ type }: { type: NotificationType }) {
   return <IconBell class={twMerge(base, iconCls)} />;
 }
 
-/** 单条通知项 */
-function NotificationItemEl({
-  item,
-  onClose,
-}: {
-  item: NotificationItem;
-  onClose: (id: string) => void;
-}) {
-  return () => (
+/** 关闭按钮 data 属性名：用于事件委托选择器与 getAttribute */
+const DATA_CLOSE_ATTR = "data-notification-close";
+const DATA_ID_ATTR = "data-notification-id";
+
+/** 单条通知项：关闭按钮用 data 属性存 id，由容器事件委托统一关闭，避免 patch 后未绑事件导致点击无效 */
+function NotificationItemEl({ item }: { item: NotificationItem }) {
+  return (
     <div
       role="alert"
-      class="flex gap-3 p-4 rounded-lg shadow-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 min-w-[320px] max-w-[420px]"
+      class="flex gap-3 p-4 rounded-lg shadow-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 min-w-[320px] max-w-[420px] select-text"
     >
       <div class="shrink-0 pt-0.5">
         <NotificationIcon type={item.type} />
@@ -82,7 +80,8 @@ function NotificationItemEl({
         type="button"
         aria-label="关闭"
         class="shrink-0 p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400"
-        onClick={() => onClose(item.id)}
+        data-notification-close
+        data-notification-id={item.id}
       >
         <svg
           class="w-4 h-4"
@@ -111,17 +110,31 @@ const PLACEMENTS: NotificationPlacement[] = [
   "bottom-left",
 ];
 
+/** 右边距与上边距一致：靠右的 placement 不加 pr，仅加 pl，避免 right-4+pr 导致右侧比顶部多 1rem */
 const placementContainerClasses: Record<NotificationPlacement, string> = {
-  "top-right": "top-4 right-4 items-end",
-  "top-center": "top-4 left-1/2 -translate-x-1/2 items-center",
-  "top-left": "top-4 left-4 items-start",
-  "bottom-right": "bottom-4 right-4 items-end",
-  "bottom-center": "bottom-4 left-1/2 -translate-x-1/2 items-center",
-  "bottom-left": "bottom-4 left-4 items-start",
+  "top-right": "top-4 right-4 pl-4 items-end",
+  "top-center": "top-4 left-1/2 -translate-x-1/2 px-4 items-center",
+  "top-left": "top-4 left-4 pr-4 items-start",
+  "bottom-right": "bottom-4 right-4 pl-4 items-end",
+  "bottom-center": "bottom-4 left-1/2 -translate-x-1/2 px-4 items-center",
+  "bottom-left": "bottom-4 left-4 pr-4 items-start",
 };
 
-/** 通知容器：按 placement 分组，各位置独立堆叠 */
+/** 与 Toast/Message 同级最高层级，始终挂载确保显示与层级 */
+const NOTIFICATION_Z_INDEX = 2147483647;
+
+/** 通知容器：按 placement 分组，各位置独立堆叠；关闭由容器上事件委托处理，保证点击 X 可靠关闭 */
 export function NotificationContainer() {
+  const handleWrapClick = (e: Event) => {
+    const target = e.target as Element | null;
+    const btn = target?.closest?.(
+      `[${DATA_CLOSE_ATTR}]`,
+    ) as HTMLElement | null | undefined;
+    if (!btn) return;
+    const id = btn.getAttribute?.(DATA_ID_ATTR);
+    if (id) closeNotification(id);
+  };
+
   return () => {
     const list = notificationList();
     if (list.length === 0) return null;
@@ -133,27 +146,35 @@ export function NotificationContainer() {
     }
     return (
       <div
-        class="fixed inset-0 pointer-events-none z-201 flex flex-col"
+        class="fixed inset-0 flex flex-col"
+        style={{ zIndex: NOTIFICATION_Z_INDEX }}
         aria-live="polite"
       >
         {PLACEMENTS.map((placement) => {
           const items = byPlacement.get(placement) ?? [];
           if (items.length === 0) return null;
+          const isBottom = placement === "bottom-right" ||
+            placement === "bottom-center" ||
+            placement === "bottom-left";
+          const placementStyle = isBottom
+            ? { top: "auto", bottom: "1rem" }
+            : { top: "1rem", bottom: "auto" };
           return (
             <div
               key={placement}
               class={twMerge(
-                "absolute flex flex-col gap-3 pointer-events-none max-w-full px-4",
+                "absolute flex flex-col gap-3 max-w-full",
                 placementContainerClasses[placement],
               )}
+              style={placementStyle}
             >
-              <div class="flex flex-col gap-3 pointer-events-auto">
+              <div
+                class="flex flex-col gap-3"
+                onClick={handleWrapClick as (e: Event) => void}
+              >
                 {items.map((item: NotificationItem) => (
                   <div key={item.id}>
-                    <NotificationItemEl
-                      item={item}
-                      onClose={closeNotification}
-                    />
+                    <NotificationItemEl item={item} />
                   </div>
                 ))}
               </div>
