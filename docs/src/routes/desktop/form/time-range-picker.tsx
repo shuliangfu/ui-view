@@ -147,7 +147,11 @@ export default function FormTimeRangePicker() {
             </FormItem>
             <CodeBlock
               title="代码示例"
-              code={`<TimeRangePicker start={() => range2()[0]} end={() => range2()[1]} onChange={(v) => setRange2(v)} />
+              code={`<TimeRangePicker
+  start={() => range2()[0]}
+  end={() => range2()[1]}
+  onChange={(v) => setRange2(v)}
+/>
 <TimeRangePicker start="" end="" size="sm" onChange={() => {}} />
 <TimeRangePicker start="08:00" end="17:00" disabled onChange={() => {}} />`}
               language="tsx"
