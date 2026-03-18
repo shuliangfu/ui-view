@@ -50,7 +50,10 @@ const BADGE_API: ApiRow[] = [
 
 const importCode = `import { Badge } from "@dreamer/ui-view";
 
-<Badge variant="primary" count={5} />
+<Badge
+  variant="primary"
+  count={5}
+/>
 <Badge variant="danger">Hot</Badge>`;
 
 const exampleVariant = `<Badge variant="default" count={1} />
