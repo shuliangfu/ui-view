@@ -50,22 +50,34 @@ const POPOVER_API: ApiRow[] = [
 
 const importCode = `import { Popover } from "@dreamer/ui-view";
 
-<Popover title="标题" content="面板内容" placement="top">
+<Popover
+  title="标题"
+  content="面板内容"
+  placement="top"
+>
   <span>悬停我</span>
 </Popover>`;
 
-const exampleWithTitle =
-  `<Popover title="标题" content="这里是面板内容，可放置简短说明或操作链接。" placement="top">
+const exampleWithTitle = `<Popover
+  title="标题"
+  content="这里是面板内容，可放置简短说明或操作链接。"
+  placement="top"
+>
   <span>带标题 Top</span>
 </Popover>`;
 
-const exampleNoTitle =
-  `<Popover content="无标题的纯内容面板" placement="bottom">
+const exampleNoTitle = `<Popover
+  content="无标题的纯内容面板"
+  placement="bottom"
+>
   <span>无标题 Bottom</span>
 </Popover>`;
 
-const exampleNoArrow =
-  `<Popover content="不显示箭头" placement="top" arrow={false}>
+const exampleNoArrow = `<Popover
+  content="不显示箭头"
+  placement="top"
+  arrow={false}
+>
   <span>无箭头</span>
 </Popover>`;
 
