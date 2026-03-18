@@ -135,7 +135,7 @@ export function CodeBlock(props: CodeBlockProps) {
     wrapper.insertBefore(style, wrapper.firstChild);
   };
 
-  return () => (
+  return (
     <div
       ref={setWrapperRef}
       class={twMerge(
@@ -180,7 +180,7 @@ export function CodeBlock(props: CodeBlockProps) {
         {copyable && (
           <button
             type="button"
-            class="absolute top-2 right-2 z-10 p-2 rounded hover:bg-slate-200/80 dark:hover:bg-slate-600/80 text-slate-600 dark:text-slate-400 transition-colors"
+            class="absolute top-2 right-2 z-0 p-2 rounded hover:bg-slate-200/80 dark:hover:bg-slate-600/80 text-slate-600 dark:text-slate-400 transition-colors"
             onClick={handleCopy}
             title="复制"
             aria-label="复制"
