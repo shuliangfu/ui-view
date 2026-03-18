@@ -38,15 +38,24 @@ const AFFIX_API: ApiRow[] = [
 
 const importCode = `import { Affix } from "@dreamer/ui-view";
 
-<Affix offsetTop={0} affixClass="shadow-md">
+<Affix
+  offsetTop={0}
+  affixClass="shadow-md"
+>
   <div class="...">固定到顶部的内容</div>
 </Affix>`;
 
-const exampleOffsetTop = `<Affix offsetTop={0} affixClass="shadow-md">
+const exampleOffsetTop = `<Affix
+  offsetTop={0}
+  affixClass="shadow-md"
+>
   <div class="...">此区域在滚动时可固定到顶部（需在应用内调用 initAffix()）</div>
 </Affix>`;
 
-const exampleOffsetBottom = `<Affix offsetBottom={0} affixClass="shadow-md">
+const exampleOffsetBottom = `<Affix
+  offsetBottom={0}
+  affixClass="shadow-md"
+>
   <div class="...">可固定到底部（offsetBottom=0）</div>
 </Affix>`;
 
