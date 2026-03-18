@@ -44,13 +44,24 @@ const TIMELINE_API: ApiRow[] = [
 const importCode = `import { Timeline } from "@dreamer/ui-view";
 
 const items = [{ key: "1", label: "2024-01-01", children: "创建项目", color: "primary" }, ...];
-<Timeline items={items} mode="left" />`;
+<Timeline
+  items={items}
+  mode="left"
+/>`;
 
-const exampleLeft = `<Timeline items={items} mode="left" />`;
+const exampleLeft = `<Timeline
+  items={items}
+  mode="left"
+/>`;
 
-const exampleAlternateRight =
-  `<Timeline items={items.slice(0, 3)} mode="alternate" />
-<Timeline items={items.slice(0, 2)} mode="right" />`;
+const exampleAlternateRight = `<Timeline
+  items={items.slice(0, 3)}
+  mode="alternate"
+/>
+<Timeline
+  items={items.slice(0, 2)}
+  mode="right"
+/>`;
 
 export default function DataDisplayTimeline() {
   const items = [
