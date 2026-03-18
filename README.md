@@ -1,4 +1,4 @@
-# @dreamer/ui-view
+# 📦 @dreamer/ui-view
 
 UI component library based on View and Tailwind CSS, with light/dark theme and desktop + mobile support, for enterprise apps and admin dashboards.
 
@@ -20,7 +20,7 @@ bunx jsr add @dreamer/ui-view
 
 ---
 
-## Entry points
+## 📂 Entry points
 
 | Entry                       | Description                                                                 |
 | --------------------------- | --------------------------------------------------------------------------- |
@@ -32,7 +32,7 @@ The desktop entry includes all shared components plus desktop-only ones; the mob
 
 ---
 
-## Using with Tailwind
+## 🎨 Using with Tailwind
 
 Components are styled with Tailwind utility classes. After publishing to JSR, your project’s Tailwind does not scan dependency packages by default; without configuration, those classes are not included in the final CSS and component styles will be missing.
 
@@ -83,9 +83,9 @@ The plugin scans all `.ts`/`.tsx` under `scanPath` for named imports from `@drea
 
 ---
 
-## Component overview
+## 📋 Component overview
 
-### Basic
+### 🧱 Basic
 
 - **Button** button
 - **Link** text/icon link
@@ -97,7 +97,7 @@ The plugin scans all `.ts`/`.tsx` under `scanPath` for named imports from `@drea
 - **Spinner** loading spinner
 - **Icons** icon set (e.g. ChevronDown, Close, Calendar)
 
-### Form
+### 📝 Form
 
 - **Input** single-line input
 - **Search** search input
@@ -119,13 +119,13 @@ The plugin scans all `.ts`/`.tsx` under `scanPath` for named imports from `@drea
 
 **Desktop only:** Select, MultiSelect, Cascader, TreeSelect, DatePicker, DateRangePicker, TimePicker
 
-### Messaging & notification
+### 💬 Messaging & notification
 
 - **Toast** light hint (ToastContainer + toast)
 - **Message** global message (message)
 - **Notification** notification (NotificationContainer + notification.open / openNotification)
 
-### Feedback & overlay
+### 💡 Feedback & overlay
 
 - **Alert** static alert bar
 - **Drawer** side drawer
@@ -146,7 +146,7 @@ The plugin scans all `.ts`/`.tsx` under `scanPath` for named imports from `@drea
 - **Tabs** tabs
 - **Accordion** accordion
 
-### Navigation
+### 🧭 Navigation
 
 - **Navbar** top bar
 - **Sidebar** collapsible sidebar menu
@@ -184,16 +184,17 @@ The plugin scans all `.ts`/`.tsx` under `scanPath` for named imports from `@drea
 
 **Desktop only:** Table
 
-### Charts
+### 📈 Charts
 
 Built on Chart.js: ChartLine, ChartBar, ChartPie, ChartDoughnut, ChartRadar, ChartPolarArea, ChartBubble, ChartScatter
 
-### Other
+### ⚙️ Other
 
 - **ConfigProvider** global config (theme, locale, etc.)
 
 ---
 
-## License
+## 📄 License
 
 Apache-2.0. See [LICENSE](./LICENSE).
+SE).
