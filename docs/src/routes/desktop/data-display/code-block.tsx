@@ -106,16 +106,34 @@ const CODE_BLOCK_API: ApiRow[] = [
 
 const importCode = `import { CodeBlock } from "@dreamer/ui-view";
 
-<CodeBlock code={\`console.log("hello");\`} language="javascript" title="example.js" copyable />`;
+<CodeBlock
+  code={\`console.log("hello");\`}
+  language="javascript"
+  title="example.js"
+  copyable
+/>`;
 
-const exampleTitleCopyable =
-  `<CodeBlock code={sampleJS} language="javascript" title="example.js" copyable onCopy={() => {}} />`;
+const exampleTitleCopyable = `<CodeBlock
+  code={sampleJS}
+  language="javascript"
+  title="example.js"
+  copyable
+  onCopy={() => {}}
+/>`;
 
-const exampleLineNumbersMaxHeight =
-  `<CodeBlock code={sampleJSON} language="json" showLineNumbers lineNumberStart={1} maxHeight="12rem" />`;
+const exampleLineNumbersMaxHeight = `<CodeBlock
+  code={sampleJSON}
+  language="json"
+  showLineNumbers
+  lineNumberStart={1}
+  maxHeight="12rem"
+/>`;
 
-const examplePlaintext =
-  `<CodeBlock code="echo 'no highlight'" language="plaintext" title="plaintext" />`;
+const examplePlaintext = `<CodeBlock
+  code="echo 'no highlight'"
+  language="plaintext"
+  title="plaintext"
+/>`;
 
 export default function DataDisplayCodeBlock() {
   const [copied, setCopied] = createSignal(false);
