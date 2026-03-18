@@ -1,6 +1,6 @@
 /**
  * Menu 菜单列表（View）。
- * 桌面多级、移动可单层/折叠；支持 selectedKeys、onClick、vertical/horizontal、
+ * 桌面多级、移动可单层/折叠；选中态由组件内部维护，支持 onClick、vertical/horizontal、
  * 水平子菜单弹出层（usePopoverSubmenu）、键盘上下键导航（focusedKey/onFocusChange）。
  */
 
@@ -22,9 +22,7 @@ export interface MenuItem {
 export interface MenuProps {
   /** 菜单项（支持多级 children） */
   items: MenuItem[];
-  /** 当前选中的 key 列表；可为 getter 以配合 View 细粒度更新（点击子项后选中态会正确更新） */
-  selectedKeys?: string[] | (() => string[]);
-  /** 点击项回调（key） */
+  /** 点击叶子项回调（key），仅对可点击项生效 */
   onClick?: (key: string) => void;
   /** 模式：垂直 或 水平，默认 "vertical" */
   mode?: "vertical" | "horizontal";
@@ -62,7 +60,8 @@ function renderItem(
   selectedKeys: Set<string>,
   openKeys: Set<string>,
   onOpenChange: (key: string) => void,
-  onClick: ((key: string) => void) | undefined,
+  /** 点击叶子项时调用，用于更新内部选中态并触发 onClick */
+  onSelectKey: (key: string) => void,
   depth: number,
   mode: "vertical" | "horizontal",
   usePopoverSubmenu: boolean,
@@ -76,7 +75,9 @@ function renderItem(
   const isSelected = selectedKeys.has(item.key);
   const isHorizontalPopover = mode === "horizontal" && usePopoverSubmenu;
 
-  const toggleOpen = () => {
+  const toggleOpen = (e: Event) => {
+    e.preventDefault();
+    e.stopPropagation();
     if (hasChildren) onOpenChange(item.key);
   };
 
@@ -85,7 +86,7 @@ function renderItem(
       class={twMerge(
         "min-w-[120px] py-1 rounded-md border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-lg",
         isHorizontalPopover
-          ? "absolute top-full left-0 mt-1 z-50 py-1 px-1.5"
+          ? "absolute top-full left-0 mt-1 z-50 py-1 px-1.5 [overflow-anchor:none]"
           : "px-1 border-l border-slate-200 dark:border-slate-600 ml-2 my-1",
       )}
     >
@@ -95,19 +96,20 @@ function renderItem(
           selectedKeys,
           openKeys,
           onOpenChange,
-          onClick,
+          onSelectKey,
           depth + 1,
           mode,
           usePopoverSubmenu,
           focusedKey,
           onFocusChange,
+          onCloseSubmenu,
         )
       )}
     </div>
   );
 
   if (hasChildren) {
-    const trigger = (
+    const trigger = () => (
       <button
         type="button"
         aria-expanded={isOpen}
@@ -122,6 +124,10 @@ function renderItem(
           item.disabled && "opacity-50 cursor-not-allowed",
         )}
         disabled={item.disabled}
+        onMouseDown={(e: Event) => {
+          e.preventDefault();
+          e.stopPropagation();
+        }}
         onClick={toggleOpen}
       >
         <span>{item.label}</span>
@@ -133,7 +139,7 @@ function renderItem(
         />
       </button>
     );
-    return (
+    return () => (
       <div
         key={item.key}
         class={twMerge(
@@ -150,7 +156,7 @@ function renderItem(
   // 子菜单项（depth > 0）或垂直模式：按钮撑满宽度，选中背景才能铺满整行；子菜单内用直角，避免药丸状
   const fullWidth = mode !== "horizontal" || depth > 0;
   const isInSubmenu = depth > 0;
-  return (
+  return () => (
     <button
       key={item.key}
       type="button"
@@ -167,9 +173,13 @@ function renderItem(
         item.disabled && "opacity-50 cursor-not-allowed",
       )}
       disabled={item.disabled}
+      onMouseDown={(e: Event) => {
+        e.preventDefault();
+        e.stopPropagation();
+      }}
       onClick={() => {
         if (item.disabled) return;
-        onClick?.(item.key);
+        onSelectKey(item.key);
         if (isHorizontalPopover && depth > 0) onCloseSubmenu?.();
       }}
     >
@@ -191,24 +201,34 @@ export function Menu(props: MenuProps) {
     class: className,
   } = props;
 
+  /** 选中态由组件内部维护，点击叶子项时更新 */
+  const [selectedKeys, setSelectedKeys] = createSignal<string[]>([]);
+
   const resolvedInitialOpen = typeof props.openKeys === "function"
     ? props.openKeys()
     : (props.openKeys ?? defaultOpenKeys);
   const [popoverOpenKeys, setPopoverOpenKeys] = createSignal<string[]>(
     resolvedInitialOpen,
   );
+  /** 垂直或水平内联时，未传 openKeys 时的内部展开状态，保证点击子菜单标题可收起/展开 */
+  const [internalOpenKeys, setInternalOpenKeys] = createSignal<string[]>(
+    defaultOpenKeys,
+  );
 
   const handleOpenChange = (key: string) => {
     const openVal = usePopoverSubmenu
       ? popoverOpenKeys()
-      : (typeof props.openKeys === "function"
-        ? props.openKeys()
-        : (props.openKeys ?? defaultOpenKeys));
+      : (props.openKeys !== undefined
+        ? (typeof props.openKeys === "function"
+          ? props.openKeys()
+          : props.openKeys)
+        : internalOpenKeys());
     const next = new Set(openVal);
     if (next.has(key)) next.delete(key);
     else next.add(key);
     const nextArr = Array.from(next);
     if (usePopoverSubmenu) setPopoverOpenKeys(nextArr);
+    else if (props.openKeys === undefined) setInternalOpenKeys(nextArr);
     onOpenChange?.(nextArr);
   };
 
@@ -217,15 +237,19 @@ export function Menu(props: MenuProps) {
     onOpenChange?.([]);
   };
 
-  const selectedKeysVal = typeof props.selectedKeys === "function"
-    ? props.selectedKeys()
-    : (props.selectedKeys ?? []);
+  /** 点击叶子项：更新内部选中态并通知外部 onClick */
+  const handleSelectKey = (key: string) => {
+    setSelectedKeys([key]);
+    onClick?.(key);
+  };
+
   const openKeysVal = usePopoverSubmenu
     ? popoverOpenKeys()
-    : (typeof props.openKeys === "function"
-      ? props.openKeys()
-      : (props.openKeys ?? defaultOpenKeys));
-  const selectedSet = new Set(selectedKeysVal);
+    : (props.openKeys !== undefined
+      ? (typeof props.openKeys === "function"
+        ? props.openKeys()
+        : props.openKeys)
+      : internalOpenKeys());
   const openSet = new Set(openKeysVal);
   const orderedKeys = getOrderedKeys(items, openSet);
 
@@ -241,33 +265,38 @@ export function Menu(props: MenuProps) {
     onFocusChange(orderedKeys[nextIndex] ?? orderedKeys[0]!);
   };
 
-  return () => (
-    <nav
-      class={twMerge(
-        "flex flex-col gap-0.5",
-        mode === "horizontal" && "flex-row flex-wrap items-center",
-        className,
-      )}
-      role="menu"
-      onKeyDown={onFocusChange
-        ? (handleKeyDown as (e: Event) => void)
-        : undefined}
-    >
-      {items.map((item) =>
-        renderItem(
-          item,
-          selectedSet,
-          openSet,
-          handleOpenChange,
-          onClick,
-          0,
-          mode,
-          usePopoverSubmenu,
-          focusedKey,
-          onFocusChange,
-          usePopoverSubmenu ? closePopover : undefined,
-        )
-      )}
-    </nav>
-  );
+  return () => {
+    /** 在渲染函数内读取 selectedKeys，保证选中态更新后 UI 能响应 */
+    const selectedSet = new Set(selectedKeys());
+    return (
+      <nav
+        class={twMerge(
+          "flex flex-col gap-0.5",
+          mode === "horizontal" &&
+            "flex-row flex-wrap items-center [overflow-anchor:none]",
+          className,
+        )}
+        role="menu"
+        onKeyDown={onFocusChange
+          ? (handleKeyDown as (e: Event) => void)
+          : undefined}
+      >
+        {items.map((item) =>
+          renderItem(
+            item,
+            selectedSet,
+            openSet,
+            handleOpenChange,
+            handleSelectKey,
+            0,
+            mode,
+            usePopoverSubmenu,
+            focusedKey,
+            onFocusChange,
+            usePopoverSubmenu ? closePopover : undefined,
+          )
+        )}
+      </nav>
+    );
+  };
 }
