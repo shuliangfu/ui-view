@@ -55,13 +55,25 @@ import { Segmented } from "@dreamer/ui-view";
 
 const [value, setValue] = createSignal("列表");
 const options = [{ value: "列表", label: "列表" }, { value: "网格", label: "网格" }];
-<Segmented options={options} value={value()} onChange={setValue} />`;
+<Segmented
+  options={options}
+  value={value()}
+  onChange={setValue}
+/>`;
 
-const exampleBasic =
-  `<Segmented options={options} value={value()} onChange={setValue} />`;
+const exampleBasic = `<Segmented
+  options={options}
+  value={value()}
+  onChange={setValue}
+/>`;
 
-const exampleBlockSize =
-  `<Segmented options={options} value={value()} onChange={setValue} block size="lg" />`;
+const exampleBlockSize = `<Segmented
+  options={options}
+  value={value()}
+  onChange={setValue}
+  block
+  size="lg"
+/>`;
 
 const exampleDisabled = `options 中某项设置 disabled: true 即可禁用该项`;
 
