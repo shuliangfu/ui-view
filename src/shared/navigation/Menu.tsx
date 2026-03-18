@@ -4,6 +4,7 @@
  * 水平子菜单弹出层（usePopoverSubmenu）、键盘上下键导航（focusedKey/onFocusChange）。
  */
 
+import { createSignal } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import { IconChevronRight } from "../basic/icons/mod.ts";
 
@@ -21,8 +22,8 @@ export interface MenuItem {
 export interface MenuProps {
   /** 菜单项（支持多级 children） */
   items: MenuItem[];
-  /** 当前选中的 key 列表（多选时可为多个） */
-  selectedKeys?: string[];
+  /** 当前选中的 key 列表；可为 getter 以配合 View 细粒度更新（点击子项后选中态会正确更新） */
+  selectedKeys?: string[] | (() => string[]);
   /** 点击项回调（key） */
   onClick?: (key: string) => void;
   /** 模式：垂直 或 水平，默认 "vertical" */
@@ -31,8 +32,8 @@ export interface MenuProps {
   usePopoverSubmenu?: boolean;
   /** 是否展开所有子菜单（vertical 时），默认 false */
   defaultOpenKeys?: string[];
-  /** 受控展开的子菜单 key 列表（可选） */
-  openKeys?: string[];
+  /** 受控展开的子菜单 key 列表；可为 getter 以配合 View 细粒度更新（点击子菜单可收起/展开） */
+  openKeys?: string[] | (() => string[]);
   /** 展开/收起子菜单回调（可选，受控时用） */
   onOpenChange?: (openKeys: string[]) => void;
   /** 键盘导航：当前焦点的 key（由父级维护） */
@@ -67,6 +68,8 @@ function renderItem(
   usePopoverSubmenu: boolean,
   focusedKey: string | undefined,
   onFocusChange: ((key: string) => void) | undefined,
+  /** 水平弹出层下点击叶子项后关闭弹出层（如 onOpenChange([])） */
+  onCloseSubmenu?: () => void,
 ) {
   const hasChildren = item.children != null && item.children.length > 0;
   const isOpen = hasChildren && openKeys.has(item.key);
@@ -82,8 +85,8 @@ function renderItem(
       class={twMerge(
         "min-w-[120px] py-1 rounded-md border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-lg",
         isHorizontalPopover
-          ? "absolute top-full left-0 mt-1 z-50"
-          : "pl-4 border-l border-slate-200 dark:border-slate-600 ml-2 my-1",
+          ? "absolute top-full left-0 mt-1 z-50 py-1 px-1.5"
+          : "px-1 border-l border-slate-200 dark:border-slate-600 ml-2 my-1",
       )}
     >
       {item.children!.map((child) =>
@@ -144,6 +147,9 @@ function renderItem(
     );
   }
 
+  // 子菜单项（depth > 0）或垂直模式：按钮撑满宽度，选中背景才能铺满整行；子菜单内用直角，避免药丸状
+  const fullWidth = mode !== "horizontal" || depth > 0;
+  const isInSubmenu = depth > 0;
   return (
     <button
       key={item.key}
@@ -151,16 +157,21 @@ function renderItem(
       data-menu-key={item.key}
       tabIndex={focusedKey === item.key ? 0 : -1}
       class={twMerge(
-        mode === "horizontal"
-          ? "flex items-center px-3 py-2"
-          : "w-full flex items-center gap-2 px-3 py-2 text-left",
-        "text-sm rounded-md text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700",
+        fullWidth
+          ? "w-full flex items-center gap-2 px-3 py-2 text-left"
+          : "flex items-center px-3 py-2",
+        isInSubmenu ? "rounded-xs" : "rounded-md",
+        "text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700",
         isSelected &&
-          "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-medium",
+          "bg-blue-50 dark:bg-blue-800/50 text-blue-600 dark:text-blue-300 font-medium",
         item.disabled && "opacity-50 cursor-not-allowed",
       )}
       disabled={item.disabled}
-      onClick={() => !item.disabled && onClick?.(item.key)}
+      onClick={() => {
+        if (item.disabled) return;
+        onClick?.(item.key);
+        if (isHorizontalPopover && depth > 0) onCloseSubmenu?.();
+      }}
     >
       {item.label}
     </button>
@@ -170,28 +181,53 @@ function renderItem(
 export function Menu(props: MenuProps) {
   const {
     items,
-    selectedKeys = [],
     onClick,
     mode = "vertical",
     usePopoverSubmenu = false,
     defaultOpenKeys = [],
-    openKeys: controlledOpenKeys,
     onOpenChange,
     focusedKey,
     onFocusChange,
     class: className,
   } = props;
 
-  const selectedSet = new Set(selectedKeys);
-  const openSet = new Set(controlledOpenKeys ?? defaultOpenKeys);
-  const orderedKeys = getOrderedKeys(items, openSet);
+  const resolvedInitialOpen = typeof props.openKeys === "function"
+    ? props.openKeys()
+    : (props.openKeys ?? defaultOpenKeys);
+  const [popoverOpenKeys, setPopoverOpenKeys] = createSignal<string[]>(
+    resolvedInitialOpen,
+  );
 
   const handleOpenChange = (key: string) => {
-    const next = new Set(openSet);
+    const openVal = usePopoverSubmenu
+      ? popoverOpenKeys()
+      : (typeof props.openKeys === "function"
+        ? props.openKeys()
+        : (props.openKeys ?? defaultOpenKeys));
+    const next = new Set(openVal);
     if (next.has(key)) next.delete(key);
     else next.add(key);
-    onOpenChange?.(Array.from(next));
+    const nextArr = Array.from(next);
+    if (usePopoverSubmenu) setPopoverOpenKeys(nextArr);
+    onOpenChange?.(nextArr);
   };
+
+  const closePopover = () => {
+    setPopoverOpenKeys([]);
+    onOpenChange?.([]);
+  };
+
+  const selectedKeysVal = typeof props.selectedKeys === "function"
+    ? props.selectedKeys()
+    : (props.selectedKeys ?? []);
+  const openKeysVal = usePopoverSubmenu
+    ? popoverOpenKeys()
+    : (typeof props.openKeys === "function"
+      ? props.openKeys()
+      : (props.openKeys ?? defaultOpenKeys));
+  const selectedSet = new Set(selectedKeysVal);
+  const openSet = new Set(openKeysVal);
+  const orderedKeys = getOrderedKeys(items, openSet);
 
   const handleKeyDown = (e: Event) => {
     if (!onFocusChange || orderedKeys.length === 0) return;
@@ -229,6 +265,7 @@ export function Menu(props: MenuProps) {
           usePopoverSubmenu,
           focusedKey,
           onFocusChange,
+          usePopoverSubmenu ? closePopover : undefined,
         )
       )}
     </nav>
