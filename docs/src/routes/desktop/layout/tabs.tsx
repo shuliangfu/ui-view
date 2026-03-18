@@ -68,17 +68,42 @@ const items = [
   { key: "a", label: "标签 A", children: <p>内容 A</p> },
   { key: "b", label: "标签 B", children: <p>内容 B</p> },
 ];
-<Tabs items={items} activeKey={activeKey()} onChange={(k) => setActiveKey(k)} type="line" />`;
+{() => (
+  <Tabs
+    items={items}
+    activeKey={activeKey()}
+    onChange={(k) => setActiveKey(k)}
+    type="line"
+  />
+)}`;
 
-const exampleLine =
-  `const items = [{ key: "a", label: "标签 A", children: <p>内容 A</p> }, ...];
-<Tabs items={items} activeKey={activeKey()} onChange={(k) => setActiveKey(k)} type="line" />`;
+const exampleLine = `{() => (
+  <Tabs
+    items={items}
+    activeKey={activeKey()}
+    onChange={(k) => setActiveKey(k)}
+    type="line"
+  />
+)}`;
 
-const exampleCard =
-  `<Tabs items={items} activeKey={activeKey()} onChange={(k) => setActiveKey(k)} type="card" />`;
+const exampleCard = `{() => (
+  <Tabs
+    items={items}
+    activeKey={activeKey()}
+    onChange={(k) => setActiveKey(k)}
+    type="card"
+  />
+)}`;
 
-const exampleFullWidth =
-  `<Tabs items={items} activeKey={activeKey()} onChange={(k) => setActiveKey(k)} type="line" fullWidth />`;
+const exampleFullWidth = `{() => (
+  <Tabs
+    items={items}
+    activeKey={activeKey()}
+    onChange={(k) => setActiveKey(k)}
+    type="line"
+    fullWidth
+  />
+)}`;
 
 const exampleDisabled = `items 中某项设置 disabled: true 即可禁用该标签`;
 
@@ -136,17 +161,20 @@ export default function LayoutTabs() {
         />
       </section>
 
+      {/* 包成 getter，仅示例区随 activeKey 更新，避免整页重跑、data-view-dynamic 整树闪动 */}
       <section class="space-y-8">
         <Title level={2}>示例</Title>
 
         <div class="space-y-4">
           <Title level={3}>type=line</Title>
-          <Tabs
-            items={items}
-            activeKey={activeKey()}
-            onChange={(k) => setActiveKey(k)}
-            type="line"
-          />
+          {() => (
+            <Tabs
+              items={items}
+              activeKey={activeKey()}
+              onChange={(k) => setActiveKey(k)}
+              type="line"
+            />
+          )}
           <CodeBlock
             title="代码示例"
             code={exampleLine}
@@ -159,12 +187,14 @@ export default function LayoutTabs() {
 
         <div class="space-y-4">
           <Title level={3}>type=card</Title>
-          <Tabs
-            items={items}
-            activeKey={activeKey()}
-            onChange={(k) => setActiveKey(k)}
-            type="card"
-          />
+          {() => (
+            <Tabs
+              items={items}
+              activeKey={activeKey()}
+              onChange={(k) => setActiveKey(k)}
+              type="card"
+            />
+          )}
           <CodeBlock
             title="代码示例"
             code={exampleCard}
@@ -177,13 +207,15 @@ export default function LayoutTabs() {
 
         <div class="space-y-4">
           <Title level={3}>fullWidth</Title>
-          <Tabs
-            items={items}
-            activeKey={activeKey()}
-            onChange={(k) => setActiveKey(k)}
-            type="line"
-            fullWidth
-          />
+          {() => (
+            <Tabs
+              items={items}
+              activeKey={activeKey()}
+              onChange={(k) => setActiveKey(k)}
+              type="line"
+              fullWidth
+            />
+          )}
           <CodeBlock
             title="代码示例"
             code={exampleFullWidth}
@@ -196,20 +228,22 @@ export default function LayoutTabs() {
 
         <div class="space-y-4">
           <Title level={3}>items 含 disabled</Title>
-          <Tabs
-            items={[
-              ...items.slice(0, 2),
-              {
-                key: "c",
-                label: "标签 C（禁用）",
-                disabled: true,
-                children: <p class="text-sm">不可选</p>,
-              },
-            ]}
-            activeKey={activeKey()}
-            onChange={(k) => setActiveKey(k)}
-            type="line"
-          />
+          {() => (
+            <Tabs
+              items={[
+                ...items.slice(0, 2),
+                {
+                  key: "c",
+                  label: "标签 C（禁用）",
+                  disabled: true,
+                  children: <p class="text-sm">不可选</p>,
+                },
+              ]}
+              activeKey={activeKey()}
+              onChange={(k) => setActiveKey(k)}
+              type="line"
+            />
+          )}
           <CodeBlock
             title="代码示例"
             code={exampleDisabled}
