@@ -163,7 +163,11 @@ export default function FormDatePicker() {
             </FormItem>
             <CodeBlock
               title="代码示例"
-              code={`<DatePicker value="" size="sm" onChange={() => {}} />
+              code={`<DatePicker
+  value=""
+  size="sm"
+  onChange={() => {}}
+/>
 <DatePicker value="" size="lg" onChange={() => {}} />
 <DatePicker value="2025-06-01" disabled onChange={() => {}} />`}
               language="tsx"
