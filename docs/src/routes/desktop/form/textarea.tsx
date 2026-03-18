@@ -192,7 +192,11 @@ export default function FormTextarea() {
             </FormItem>
             <CodeBlock
               title="代码示例"
-              code={`<FormItem label="必填" required error="内容不能为空">
+              code={`<FormItem
+  label="必填"
+  required
+  error="内容不能为空"
+>
   <Textarea
     value={valError}
     onInput={(e) => setValError((e.target as HTMLTextAreaElement).value)}
@@ -214,7 +218,11 @@ export default function FormTextarea() {
             </FormItem>
             <CodeBlock
               title="代码示例"
-              code={`<Textarea value={readOnlyVal} readOnly rows={2} />`}
+              code={`<Textarea
+  value={readOnlyVal}
+  readOnly
+  rows={2}
+/>`}
               language="tsx"
               showLineNumbers
               copyable
@@ -229,7 +237,12 @@ export default function FormTextarea() {
             </FormItem>
             <CodeBlock
               title="代码示例"
-              code={`<Textarea placeholder="禁用" disabled value="" rows={5} />`}
+              code={`<Textarea
+  placeholder="禁用"
+  disabled
+  value=""
+  rows={5}
+/>`}
               language="tsx"
               showLineNumbers
               copyable
