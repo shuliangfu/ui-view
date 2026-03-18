@@ -6,7 +6,14 @@ export { toast } from "./toast-store.ts";
 export type { ToastItem, ToastPlacement, ToastType } from "./toast-store.ts";
 export { clearToasts, removeToast } from "./toast-store.ts";
 
-export { message } from "./message.ts";
+export { MessageContainer } from "./Message.tsx";
+export { message } from "./message-store.ts";
+export type {
+  MessageItem,
+  MessagePlacement,
+  MessageType,
+} from "./message-store.ts";
+export { clearMessages, removeMessage } from "./message-store.ts";
 
 export { NotificationContainer } from "./Notification.tsx";
 export { notification } from "./notification-store.ts";
