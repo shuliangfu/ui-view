@@ -94,6 +94,7 @@ export function Dialog(props: DialogProps) {
       onClose={onClose}
       title={title}
       footer={defaultFooter}
+      keyboard
       {...restModal}
     >
       {body}
