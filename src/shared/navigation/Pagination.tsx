@@ -3,19 +3,24 @@
  * 桌面/移动通用，移动可简化；支持当前页、总条数、每页条数、跳转、上一页/下一页。
  */
 
+import { createSignal } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import { IconChevronLeft, IconChevronRight } from "../basic/icons/mod.ts";
 import { getPaginationState } from "./pagination-utils.ts";
 
 export interface PaginationProps {
-  /** 当前页码（从 1 开始） */
-  current: number;
+  /** 当前页码（受控）；不传则使用 defaultCurrent 并在组件内部维护状态 */
+  current?: number | (() => number);
+  /** 非受控时的默认当前页，默认 1 */
+  defaultCurrent?: number;
   /** 总条数（用于计算总页数）；与 total 二选一 */
   total?: number;
   /** 总页数（与 total 二选一，传了 total 则据此计算） */
   totalPages?: number;
-  /** 每页条数，默认 10（仅 total 存在时用于计算总页数） */
-  pageSize?: number;
+  /** 每页条数（受控）；不传则使用 defaultPageSize 并在组件内部维护 */
+  pageSize?: number | (() => number);
+  /** 非受控时的默认每页条数，默认 10 */
+  defaultPageSize?: number;
   /** 每页条数选项（如 [10, 20, 50]）；传了则渲染条数切换器，onChange 会收到 (page, pageSize) */
   pageSizeOptions?: number[];
   /** 页码/条数变化回调；当有 pageSizeOptions 时可能收到 (page, pageSize) */
@@ -30,144 +35,199 @@ export interface PaginationProps {
   showTotal?: boolean | ((total: number, range: [number, number]) => unknown);
   /** 是否禁用 */
   disabled?: boolean;
+  /**
+   * 是否与 URL 同步：为 true 时，页码/每页条数变化会写入当前 URL 的 search（如 ?page=1&pageSize=10），
+   * 不刷新页面；默认 false。初始值需由调用方从 URL 读取后传入 current/pageSize。
+   */
+  syncUrl?: boolean;
   /** 额外 class */
   class?: string;
 }
 
+/** 将当前 URL 的 search 与 page/pageSize 合并后写入，不刷新页面 */
+function updateUrlSearch(page: number, pageSize: number) {
+  if (typeof globalThis.location === "undefined") return;
+  const u = new URL(globalThis.location.href);
+  u.searchParams.set("page", String(page));
+  u.searchParams.set("pageSize", String(pageSize));
+  globalThis.history.replaceState(
+    globalThis.history.state,
+    "",
+    u.pathname + u.search,
+  );
+}
+
 export function Pagination(props: PaginationProps) {
   const {
-    current,
-    total,
-    totalPages: totalPagesProp,
-    pageSize: pageSizeProp = 10,
+    pageSize: pageSizeProp,
+    defaultCurrent = 1,
+    defaultPageSize = 10,
     pageSizeOptions,
-    onChange,
+    onChange: onChangeProp,
     showPrevNext = true,
     showPageNumbers = true,
     showQuickJumper = false,
     showTotal = false,
     disabled = false,
+    syncUrl = false,
     class: className,
   } = props;
 
-  const pageSize = pageSizeProp;
-  const {
-    totalPages,
-    safeCurrent,
-    from,
-    to,
-    canPrev,
-    canNext,
-    pages,
-  } = getPaginationState(current, pageSize, total, totalPagesProp);
+  const [internalCurrent, setInternalCurrent] = createSignal(defaultCurrent);
+  const [internalPageSize, setInternalPageSize] = createSignal(defaultPageSize);
 
   const btnCls =
     "min-w-8 h-8 px-2 inline-flex items-center justify-center rounded-md text-sm font-medium border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed";
   const activeCls =
     "border-blue-600 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 pointer-events-none";
 
-  return () => (
-    <nav
-      role="navigation"
-      aria-label="分页"
-      class={twMerge("flex items-center gap-1 flex-wrap", className)}
-    >
-      {showTotal && total != null && (
-        <span class="mr-2 text-sm text-slate-600 dark:text-slate-400 shrink-0">
-          {typeof showTotal === "function"
-            ? showTotal(total, [from, to])
-            : `共 ${total} 条`}
-        </span>
-      )}
-      {showPrevNext && (
-        <button
-          type="button"
-          class={twMerge(btnCls, "shrink-0")}
-          disabled={disabled || !canPrev}
-          aria-label="上一页"
-          onClick={() => onChange(safeCurrent - 1)}
-        >
-          <IconChevronLeft class="w-4 h-4" />
-        </button>
-      )}
-      {showPageNumbers &&
-        pages.map((p, i) =>
-          p < 0
-            ? (
-              <span
-                key={`ellipsis-${i}`}
-                class="min-w-8 h-8 flex items-center justify-center text-slate-400"
-              >
-                …
-              </span>
-            )
-            : (
-              <button
-                key={p}
-                type="button"
-                class={twMerge(btnCls, safeCurrent === p && activeCls)}
-                disabled={disabled}
-                aria-label={`第 ${p} 页`}
-                aria-current={safeCurrent === p ? "page" : undefined}
-                onClick={() => onChange(p)}
-              >
-                {p}
-              </button>
-            )
-        )}
-      {showPrevNext && (
-        <button
-          type="button"
-          class={twMerge(btnCls, "shrink-0")}
-          disabled={disabled || !canNext}
-          aria-label="下一页"
-          onClick={() => onChange(safeCurrent + 1)}
-        >
-          <IconChevronRight class="w-4 h-4" />
-        </button>
-      )}
-      {pageSizeOptions != null && pageSizeOptions.length > 0 && total != null &&
-        (
-          <span class="ml-2 inline-flex items-center gap-1 text-sm text-slate-600 dark:text-slate-400 shrink-0">
-            <select
-              class="h-8 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm"
-              value={String(pageSize)}
-              onChange={(e: Event) => {
-                const v = parseInt((e.target as HTMLSelectElement).value, 10);
-                if (!Number.isNaN(v)) onChange(1, v);
-              }}
-              aria-label="每页条数"
-            >
-              {pageSizeOptions.map((n) => (
-                <option key={n} value={n}>
-                  {n} 条/页
-                </option>
-              ))}
-            </select>
+  const onChange = (page: number, pageSize?: number) => {
+    if (props.current === undefined) setInternalCurrent(page);
+    if (pageSize != null && props.pageSize === undefined) {
+      setInternalPageSize(pageSize);
+    }
+    if (syncUrl) {
+      const ps = pageSize ??
+        (props.pageSize === undefined
+          ? internalPageSize()
+          : (typeof pageSizeProp === "function"
+            ? pageSizeProp()
+            : pageSizeProp) ?? 10);
+      updateUrlSearch(page, ps);
+    }
+    onChangeProp(page, pageSize);
+  };
+
+  return () => {
+    const { total, totalPages: totalPagesProp } = props;
+    const currentVal = props.current !== undefined
+      ? (typeof props.current === "function" ? props.current() : props.current)
+      : internalCurrent();
+    const pageSizeVal = props.pageSize !== undefined
+      ? ((typeof pageSizeProp === "function" ? pageSizeProp() : pageSizeProp) ??
+        defaultPageSize)
+      : internalPageSize();
+    const {
+      totalPages,
+      safeCurrent,
+      from,
+      to,
+      canPrev,
+      canNext,
+      pages,
+    } = getPaginationState(
+      currentVal,
+      pageSizeVal,
+      total,
+      totalPagesProp,
+    );
+
+    return (
+      <nav
+        role="navigation"
+        aria-label="分页"
+        class={twMerge("flex items-center gap-1 flex-wrap", className)}
+      >
+        {showTotal && total != null && (
+          <span class="mr-2 text-sm text-slate-600 dark:text-slate-400 shrink-0">
+            {typeof showTotal === "function"
+              ? showTotal(total, [from, to])
+              : `共 ${total} 条`}
           </span>
         )}
-      {showQuickJumper && (
-        <span class="ml-2 inline-flex items-center gap-1 text-sm text-slate-600 dark:text-slate-400">
-          跳至
-          <input
-            type="number"
-            min={1}
-            max={totalPages}
-            class="w-12 h-8 px-1 text-center rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm"
-            onBlur={(e: Event) => {
-              const v = parseInt((e.target as HTMLInputElement).value, 10);
-              if (!Number.isNaN(v) && v >= 1 && v <= totalPages) onChange(v);
-            }}
-            onKeyDown={(e: KeyboardEvent) => {
-              if (e.key === "Enter") {
+        {showPrevNext && (
+          <button
+            type="button"
+            class={twMerge(btnCls, "shrink-0")}
+            disabled={disabled || !canPrev}
+            aria-label="上一页"
+            onClick={() => onChange(safeCurrent - 1)}
+          >
+            <IconChevronLeft class="w-4 h-4" />
+          </button>
+        )}
+        {showPageNumbers &&
+          pages.map((p, i) =>
+            p < 0
+              ? (
+                <span
+                  key={`ellipsis-${i}`}
+                  class="min-w-8 h-8 flex items-center justify-center text-slate-400"
+                >
+                  …
+                </span>
+              )
+              : (
+                <button
+                  key={p}
+                  type="button"
+                  class={twMerge(btnCls, safeCurrent === p && activeCls)}
+                  disabled={disabled}
+                  aria-label={`第 ${p} 页`}
+                  aria-current={safeCurrent === p ? "page" : undefined}
+                  onClick={() => onChange(p)}
+                >
+                  {p}
+                </button>
+              )
+          )}
+        {showPrevNext && (
+          <button
+            type="button"
+            class={twMerge(btnCls, "shrink-0")}
+            disabled={disabled || !canNext}
+            aria-label="下一页"
+            onClick={() => onChange(safeCurrent + 1)}
+          >
+            <IconChevronRight class="w-4 h-4" />
+          </button>
+        )}
+        {pageSizeOptions != null && pageSizeOptions.length > 0 &&
+          total != null &&
+          (
+            <span class="ml-2 inline-flex items-center gap-1 text-sm text-slate-600 dark:text-slate-400 shrink-0">
+              <select
+                class="h-8 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm"
+                value={String(pageSizeVal)}
+                onChange={(e: Event) => {
+                  const v = parseInt((e.target as HTMLSelectElement).value, 10);
+                  if (!Number.isNaN(v)) onChange(1, v);
+                }}
+                aria-label="每页条数"
+              >
+                {pageSizeOptions.map((n) => (
+                  <option key={n} value={n}>
+                    {n} 条/页
+                  </option>
+                ))}
+              </select>
+            </span>
+          )}
+        {showQuickJumper && (
+          <span class="ml-2 inline-flex items-center gap-1 text-sm text-slate-600 dark:text-slate-400">
+            跳至
+            <input
+              type="number"
+              min={1}
+              max={totalPages}
+              class="w-12 h-8 px-1 text-center rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm"
+              onBlur={(e: Event) => {
                 const v = parseInt((e.target as HTMLInputElement).value, 10);
                 if (!Number.isNaN(v) && v >= 1 && v <= totalPages) onChange(v);
-              }
-            }}
-          />
-          页
-        </span>
-      )}
-    </nav>
-  );
+              }}
+              onKeyDown={(e: KeyboardEvent) => {
+                if (e.key === "Enter") {
+                  const v = parseInt((e.target as HTMLInputElement).value, 10);
+                  if (!Number.isNaN(v) && v >= 1 && v <= totalPages) {
+                    onChange(v);
+                  }
+                }
+              }}
+            />
+            页
+          </span>
+        )}
+      </nav>
+    );
+  };
 }
