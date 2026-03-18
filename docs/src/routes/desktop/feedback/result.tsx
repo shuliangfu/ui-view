@@ -50,21 +50,52 @@ const RESULT_API: ApiRow[] = [
 
 const importCode = `import { Button, Result } from "@dreamer/ui-view";
 
-<Result status="success" title="操作成功" subTitle="描述" extra={<Button variant="primary">返回</Button>} />`;
+<Result
+  status="success"
+  title="操作成功"
+  subTitle="描述"
+  extra={<Button variant="primary">返回</Button>}
+/>`;
 
-const exampleSuccess =
-  `<Result status="success" title="操作成功" subTitle="您的申请已提交，我们将在 1-3 个工作日内处理。" extra={<Button variant="primary">返回列表</Button>} />`;
+const exampleSuccess = `<Result
+  status="success"
+  title="操作成功"
+  subTitle="您的申请已提交，我们将在 1-3 个工作日内处理。"
+  extra={<Button variant="primary">返回列表</Button>}
+/>`;
 
-const exampleError =
-  `<Result status="error" title="提交失败" subTitle="请检查网络后重试，或联系客服。" extra={<><Button variant="default">返回</Button><Button variant="primary">重试</Button></>} />`;
+const exampleError = `<Result
+  status="error"
+  title="提交失败"
+  subTitle="请检查网络后重试，或联系客服。"
+  extra={<><Button variant="default">返回</Button><Button variant="primary">重试</Button></>}
+/>`;
 
-const exampleInfoWarning =
-  `<Result status="info" title="提示" subTitle="当前为信息类结果页。" extra={<Button variant="primary">知道了</Button>} />
-<Result status="warning" title="注意" subTitle="请确认后再继续操作。" extra={<Button variant="primary">确认</Button>} />`;
+const exampleInfoWarning = `<Result
+  status="info"
+  title="提示"
+  subTitle="当前为信息类结果页。"
+  extra={<Button variant="primary">知道了</Button>}
+/>
+<Result
+  status="warning"
+  title="注意"
+  subTitle="请确认后再继续操作。"
+  extra={<Button variant="primary">确认</Button>}
+/>`;
 
-const example403404 =
-  `<Result status="403" title="无权限" subTitle="您没有权限访问该页面。" extra={<Button variant="primary">返回首页</Button>} />
-<Result status="404" title="页面不存在" subTitle="请检查链接或返回首页。" extra={<Button variant="primary">返回首页</Button>} />`;
+const example403404 = `<Result
+  status="403"
+  title="无权限"
+  subTitle="您没有权限访问该页面。"
+  extra={<Button variant="primary">返回首页</Button>}
+/>
+<Result
+  status="404"
+  title="页面不存在"
+  subTitle="请检查链接或返回首页。"
+  extra={<Button variant="primary">返回首页</Button>}
+/>`;
 
 export default function FeedbackResult() {
   return (
