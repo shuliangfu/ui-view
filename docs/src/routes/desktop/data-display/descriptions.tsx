@@ -64,17 +64,35 @@ const DESCRIPTIONS_API: ApiRow[] = [
 const importCode = `import { Descriptions } from "@dreamer/ui-view";
 
 const items = [{ label: "姓名", children: "张三" }, { label: "年龄", children: "28" }, ...];
-<Descriptions title="用户信息" items={items} column={3} bordered />`;
+<Descriptions
+  title="用户信息"
+  items={items}
+  column={3}
+  bordered
+/>`;
 
-const exampleBordered =
-  `<Descriptions title="用户信息" items={items} column={3} bordered />`;
+const exampleBordered = `<Descriptions
+  title="用户信息"
+  items={items}
+  column={3}
+  bordered
+/>`;
 
-const exampleLayout =
-  `<Descriptions items={items.slice(0, 3)} layout="vertical" />`;
+const exampleLayout = `<Descriptions
+  items={items.slice(0, 3)}
+  layout="vertical"
+/>`;
 
-const exampleSizeColon =
-  `<Descriptions items={items} size="sm" title="小尺寸" />
-<Descriptions items={items} colon={false} title="无冒号" />`;
+const exampleSizeColon = `<Descriptions
+  items={items}
+  size="sm"
+  title="小尺寸"
+/>
+<Descriptions
+  items={items}
+  colon={false}
+  title="无冒号"
+/>`;
 
 export default function DataDisplayDescriptions() {
   const items = [
