@@ -66,6 +66,7 @@ export interface GridItemProps {
   children?: unknown;
 }
 
+/** 列跨度 1–24 的静态 class，供 Tailwind 扫描生成（13–24 用任意值） */
 const spanClasses: Record<number, string> = {
   1: "col-span-1",
   2: "col-span-2",
@@ -79,11 +80,22 @@ const spanClasses: Record<number, string> = {
   10: "col-span-10",
   11: "col-span-11",
   12: "col-span-12",
+  13: "col-span-[13]",
+  14: "col-span-[14]",
+  15: "col-span-[15]",
+  16: "col-span-[16]",
+  17: "col-span-[17]",
+  18: "col-span-[18]",
+  19: "col-span-[19]",
+  20: "col-span-[20]",
+  21: "col-span-[21]",
+  22: "col-span-[22]",
+  23: "col-span-[23]",
+  24: "col-span-[24]",
 };
 
 function getSpanClass(span: number): string {
-  if (span >= 1 && span <= 12) return spanClasses[span];
-  if (span >= 13 && span <= 24) return `col-span-[${span}]` as "col-span-12";
+  if (span >= 1 && span <= 24) return spanClasses[span] ?? "col-span-1";
   return "col-span-1";
 }
 
@@ -97,7 +109,7 @@ export function GridItem(props: GridItemProps) {
   } = props;
   const spanCls = getSpanClass(span);
   const extraClass = classProp ?? classNameProp ?? "";
-  const combined = twMerge(spanCls, extraClass);
+  const combined = twMerge("min-w-0", spanCls, extraClass);
   return (
     <div className={combined} key={key}>
       {children}
