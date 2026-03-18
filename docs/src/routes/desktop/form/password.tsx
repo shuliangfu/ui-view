@@ -185,7 +185,11 @@ export default function FormPassword() {
             </FormItem>
             <CodeBlock
               title="代码示例"
-              code={`<Password placeholder="禁用" disabled value="" />`}
+              code={`<Password
+  placeholder="禁用"
+  disabled
+  value=""
+/>`}
               language="tsx"
               showLineNumbers
               copyable
@@ -206,9 +210,21 @@ export default function FormPassword() {
             </FormItem>
             <CodeBlock
               title="代码示例"
-              code={`<Password size="sm" placeholder="sm" value="" />
-<Password size="md" placeholder="md" value="" />
-<Password size="lg" placeholder="lg" value="" />`}
+              code={`<Password
+  size="sm"
+  placeholder="sm"
+  value=""
+/>
+<Password
+  size="md"
+  placeholder="md"
+  value=""
+/>
+<Password
+  size="lg"
+  placeholder="lg"
+  value=""
+/>`}
               language="tsx"
               showLineNumbers
               copyable
