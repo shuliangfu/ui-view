@@ -1,15 +1,17 @@
 /**
  * Dropdown 下拉菜单（View）。
  * 桌面点击/悬停展开；触发元素 + 下拉内容，支持 placement、trigger(click/hover)、
- * 非受控 defaultOpen、Esc 关闭（需 initDropdownEsc）、hover 延迟防抖。
+ * Esc 关闭（需 initDropdownEsc）、hover 延迟防抖。展开状态由组件内部维护，无需传 open。
  */
 
+import { createEffect, createSignal } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 
 export type DropdownPlacement =
   | "bottom"
   | "bottomLeft"
   | "bottomRight"
+  | "bottomAuto"
   | "top"
   | "topLeft"
   | "topRight";
@@ -19,11 +21,7 @@ export interface DropdownProps {
   children?: unknown;
   /** 下拉内容（菜单或自定义节点） */
   overlay: unknown;
-  /** 是否打开（受控）；不传时使用 defaultOpen 作为初始值，需配合 onOpenChange 由父级更新 */
-  open?: boolean;
-  /** 非受控时的初始是否打开，默认 false */
-  defaultOpen?: boolean;
-  /** 打开/关闭回调（受控/非受控均由父级更新 open 以触发重绘） */
+  /** 打开/关闭时回调（可选，仅通知，不参与控制） */
   onOpenChange?: (open: boolean) => void;
   /** 触发方式：click 或 hover，默认 "click" */
   trigger?: "click" | "hover";
@@ -31,7 +29,7 @@ export interface DropdownProps {
   hoverOpenDelay?: number;
   /** hover 时收起延迟（ms），默认 100 */
   hoverCloseDelay?: number;
-  /** 下拉位置，默认 "bottomLeft" */
+  /** 下拉位置，默认 "bottom"（正下方居中）；"bottomAuto" 为正下方且根据左右空间自动左/右移 */
   placement?: DropdownPlacement;
   /** 是否禁用，默认 false */
   disabled?: boolean;
@@ -46,7 +44,7 @@ export interface DropdownProps {
 /** 用于 Esc 关闭时注册当前打开的下拉关闭回调（每帧仅一个） */
 const DROPDOWN_ESC_KEY = "__lastDropdownClose" as const;
 
-/** 在客户端调用一次，监听 Esc 关闭当前已打开的下拉（与 open 受控的 Dropdown 配合） */
+/** 在客户端调用一次，监听 Esc 关闭当前已打开的下拉 */
 export function initDropdownEsc() {
   if (typeof globalThis.document === "undefined") return;
   const g = globalThis as unknown as Record<string, (() => void) | undefined>;
@@ -62,7 +60,10 @@ export function initDropdownEsc() {
   return () => globalThis.document.removeEventListener("keydown", onKeyDown);
 }
 
-const placementClasses: Record<DropdownPlacement, string> = {
+const placementClasses: Record<
+  Exclude<DropdownPlacement, "bottomAuto">,
+  string
+> = {
   bottom: "top-full left-1/2 -translate-x-1/2 mt-1",
   bottomLeft: "top-full left-0 mt-1",
   bottomRight: "top-full right-0 mt-1",
@@ -78,27 +79,100 @@ export function Dropdown(props: DropdownProps) {
   const {
     children,
     overlay,
-    open: controlledOpen,
-    defaultOpen = false,
     onOpenChange,
     trigger = "click",
     hoverOpenDelay = 150,
     hoverCloseDelay = 100,
-    placement = "bottomLeft",
+    placement = "bottom",
     disabled = false,
     class: className,
     overlayClass,
     overlayId,
   } = props;
 
-  const open = controlledOpen ?? defaultOpen;
+  /** 展开状态由组件内部维护 */
+  const [open, setOpenState] = createSignal(false);
+  /** bottomAuto 时根据视口空间计算出的实际位置 */
+  const [autoPlacement, setAutoPlacement] = createSignal<
+    "bottom" | "bottomLeft" | "bottomRight"
+  >("bottom");
+
+  const setOpen = (value: boolean) => {
+    setOpenState(value);
+    onOpenChange?.(value);
+  };
+
   const isHover = trigger === "hover";
-  const posCls = placementClasses[placement];
+  const isAuto = placement === "bottomAuto";
+  const effectivePlacement: Exclude<DropdownPlacement, "bottomAuto"> = isAuto
+    ? autoPlacement()
+    : placement;
+  const posCls = placementClasses[effectivePlacement];
+
+  /** 用于 bottomAuto：测量触发元素与 overlay 后决定左/中/右 */
+  let triggerEl: HTMLElement | null = null;
+  let overlayEl: HTMLElement | null = null;
+  const measureAndSetAuto = () => {
+    if (
+      typeof globalThis.document === "undefined" || !triggerEl || !overlayEl
+    ) {
+      return;
+    }
+    const triggerRect = triggerEl.getBoundingClientRect();
+    const overlayRect = overlayEl.getBoundingClientRect();
+    const vw = globalThis.document.documentElement.clientWidth;
+    const halfW = overlayRect.width / 2;
+    const centerX = triggerRect.left + triggerRect.width / 2;
+    const spaceLeft = centerX;
+    const spaceRight = vw - centerX;
+    if (spaceLeft < halfW && spaceRight >= halfW) {
+      setAutoPlacement("bottomLeft");
+    } else if (spaceRight < halfW && spaceLeft >= halfW) {
+      setAutoPlacement("bottomRight");
+    } else {
+      setAutoPlacement("bottom");
+    }
+  };
+  const scheduleMeasure = () => {
+    if (typeof globalThis.requestAnimationFrame === "undefined") return;
+    globalThis.requestAnimationFrame(() => {
+      measureAndSetAuto();
+    });
+  };
+
+  /** click 模式下用 document 点击外部关闭；冒泡阶段且延迟关闭，避免拦截链接点击与路由导航、避免同步 setState 导致主内容区渲染异常 */
+  let removeClickOutside: (() => void) | null = null;
+  createEffect(() => {
+    if (typeof globalThis.document === "undefined" || isHover || !open()) {
+      return;
+    }
+    const id = globalThis.setTimeout(() => {
+      const onDocClick = (e: MouseEvent) => {
+        const target = e.target as Node | null;
+        if (
+          target &&
+          triggerEl?.contains(target) === false &&
+          overlayEl?.contains(target) === false
+        ) {
+          globalThis.setTimeout(() => setOpen(false), 0);
+        }
+      };
+      globalThis.document.addEventListener("click", onDocClick, false);
+      removeClickOutside = () => {
+        globalThis.document.removeEventListener("click", onDocClick, false);
+        removeClickOutside = null;
+      };
+    }, 0);
+    return () => {
+      globalThis.clearTimeout(id);
+      removeClickOutside?.();
+    };
+  });
 
   const handleTriggerClick = (e: Event) => {
     e.preventDefault();
     if (disabled) return;
-    if (!isHover) onOpenChange?.(!open);
+    if (!isHover) setOpen(!open());
   };
 
   const handleTriggerEnter = () => {
@@ -108,7 +182,7 @@ export function Dropdown(props: DropdownProps) {
       clearTimeout(hoverTimers.close);
       hoverTimers.close = 0;
     }
-    hoverTimers.open = setTimeout(() => onOpenChange?.(true), hoverOpenDelay);
+    hoverTimers.open = setTimeout(() => setOpen(true), hoverOpenDelay);
   };
 
   const handleTriggerLeave = () => {
@@ -117,10 +191,7 @@ export function Dropdown(props: DropdownProps) {
       clearTimeout(hoverTimers.open);
       hoverTimers.open = 0;
     }
-    hoverTimers.close = setTimeout(
-      () => onOpenChange?.(false),
-      hoverCloseDelay,
-    );
+    hoverTimers.close = setTimeout(() => setOpen(false), hoverCloseDelay);
   };
 
   const handleOverlayEnter = () => {
@@ -132,78 +203,81 @@ export function Dropdown(props: DropdownProps) {
 
   const handleOverlayLeave = () => {
     if (isHover) {
-      hoverTimers.close = setTimeout(
-        () => onOpenChange?.(false),
-        hoverCloseDelay,
-      );
+      hoverTimers.close = setTimeout(() => setOpen(false), hoverCloseDelay);
     }
   };
 
-  if (open && typeof globalThis !== "undefined") {
-    const g = globalThis as unknown as Record<string, (() => void) | undefined>;
-    g[DROPDOWN_ESC_KEY] = () => onOpenChange?.(false);
-  }
-
-  return () => (
-    <span
-      class={twMerge("relative inline-flex", className)}
-      onMouseEnter={isHover
-        ? (handleTriggerEnter as (e: Event) => void)
-        : undefined}
-      onMouseLeave={isHover
-        ? (handleTriggerLeave as (e: Event) => void)
-        : undefined}
-    >
+  return () => {
+    const isOpen = open();
+    if (isOpen && typeof globalThis !== "undefined") {
+      const g = globalThis as unknown as Record<
+        string,
+        (() => void) | undefined
+      >;
+      g[DROPDOWN_ESC_KEY] = () => setOpen(false);
+    }
+    return (
       <span
-        role="button"
-        tabIndex={disabled ? -1 : 0}
-        aria-haspopup="true"
-        aria-expanded={open}
-        aria-disabled={disabled}
-        onClick={!isHover
-          ? (handleTriggerClick as (e: Event) => void)
+        ref={(el: HTMLElement) => {
+          triggerEl = el;
+        }}
+        class={twMerge("relative inline-flex", className)}
+        onMouseEnter={isHover
+          ? (handleTriggerEnter as (e: Event) => void)
           : undefined}
-        onKeyDown={!isHover && !disabled
-          ? ((e: Event) => {
-            const k = (e as KeyboardEvent).key;
-            if (k === "Enter" || k === " ") {
-              e.preventDefault();
-              onOpenChange?.(!open);
-            }
-          }) as (e: Event) => void
+        onMouseLeave={isHover
+          ? (handleTriggerLeave as (e: Event) => void)
           : undefined}
-        class={disabled ? "pointer-events-none opacity-50" : "cursor-pointer"}
       >
-        {children}
-      </span>
-      {open && (
-        <>
-          {!isHover && (
+        <span
+          role="button"
+          tabIndex={disabled ? -1 : 0}
+          aria-haspopup="true"
+          aria-expanded={isOpen}
+          aria-disabled={disabled}
+          onClick={!isHover
+            ? (handleTriggerClick as (e: Event) => void)
+            : undefined}
+          onKeyDown={!isHover && !disabled
+            ? ((e: Event) => {
+              const k = (e as KeyboardEvent).key;
+              if (k === "Enter" || k === " ") {
+                e.preventDefault();
+                setOpen(!isOpen);
+              }
+            }) as (e: Event) => void
+            : undefined}
+          class={disabled ? "pointer-events-none opacity-50" : "cursor-pointer"}
+        >
+          {children}
+        </span>
+        {isOpen && (
+          <>
             <div
-              class="fixed inset-0 z-40"
-              aria-hidden
-              onClick={() => onOpenChange?.(false)}
-            />
-          )}
-          <div
-            id={overlayId}
-            role="menu"
-            class={twMerge(
-              "absolute z-50 min-w-[120px] py-1 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-lg",
-              posCls,
-              overlayClass,
-            )}
-            onMouseEnter={isHover
-              ? (handleOverlayEnter as (e: Event) => void)
-              : undefined}
-            onMouseLeave={isHover
-              ? (handleOverlayLeave as (e: Event) => void)
-              : undefined}
-          >
-            {overlay}
-          </div>
-        </>
-      )}
-    </span>
-  );
+              ref={(el: HTMLElement) => {
+                overlayEl = el;
+                if (el && isAuto) scheduleMeasure();
+              }}
+              id={overlayId}
+              role="menu"
+              class={twMerge(
+                "absolute z-50 min-w-[120px] py-1 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-lg",
+                posCls,
+                overlayClass,
+              )}
+              onClick={!isHover ? () => setOpen(false) : undefined}
+              onMouseEnter={isHover
+                ? (handleOverlayEnter as (e: Event) => void)
+                : undefined}
+              onMouseLeave={isHover
+                ? (handleOverlayLeave as (e: Event) => void)
+                : undefined}
+            >
+              {overlay}
+            </div>
+          </>
+        )}
+      </span>
+    );
+  };
 }
