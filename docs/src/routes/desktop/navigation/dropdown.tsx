@@ -91,21 +91,41 @@ import { Button, Dropdown } from "@dreamer/ui-view";
 
 const [open, setOpen] = createSignal(false);
 const overlay = <ul class="py-1 list-none m-0">...</ul>;
-<Dropdown open={open()} onOpenChange={setOpen} overlay={overlay} trigger="click" placement="bottomLeft">
+<Dropdown
+  open={open()}
+  onOpenChange={setOpen}
+  overlay={overlay}
+  trigger="click"
+  placement="bottomLeft"
+>
   <Button variant="default">点击展开</Button>
 </Dropdown>`;
 
-const exampleClick =
-  `<Dropdown open={open()} onOpenChange={setOpen} overlay={overlay} trigger="click" placement="bottomLeft">
+const exampleClick = `<Dropdown
+  open={open()}
+  onOpenChange={setOpen}
+  overlay={overlay}
+  trigger="click"
+  placement="bottomLeft"
+>
   <Button variant="default">点击展开</Button>
 </Dropdown>`;
 
-const exampleHover =
-  `<Dropdown open={openHover()} onOpenChange={setOpenHover} overlay={overlay} trigger="hover" placement="bottom">
+const exampleHover = `<Dropdown
+  open={openHover()}
+  onOpenChange={setOpenHover}
+  overlay={overlay}
+  trigger="hover"
+  placement="bottom"
+>
   <span class="...">悬停展开</span>
 </Dropdown>`;
 
-const exampleDisabled = `<Dropdown overlay={overlay} trigger="click" disabled>
+const exampleDisabled = `<Dropdown
+  overlay={overlay}
+  trigger="click"
+  disabled
+>
   <Button variant="default" disabled>禁用下拉</Button>
 </Dropdown>`;
 
