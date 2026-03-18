@@ -72,13 +72,25 @@ const items = [
   { title: "步骤二", description: "确认订单" },
   { title: "步骤三", description: "完成支付" },
 ];
-<Steps items={items} current={current()} onChange={setCurrent} direction="horizontal" />`;
+<Steps
+  items={items}
+  current={current()}
+  onChange={setCurrent}
+  direction="horizontal"
+/>`;
 
-const exampleHorizontal =
-  `<Steps items={items} current={current()} onChange={setCurrent} direction="horizontal" />`;
+const exampleHorizontal = `<Steps
+  items={items}
+  current={current()}
+  onChange={setCurrent}
+  direction="horizontal"
+/>`;
 
-const exampleVertical =
-  `<Steps items={items} current={current()} direction="vertical" />`;
+const exampleVertical = `<Steps
+  items={items}
+  current={current()}
+  direction="vertical"
+/>`;
 
 const exampleStatus = `<Steps items={[
   { title: "已完成", description: "步骤一", status: "finish" },
