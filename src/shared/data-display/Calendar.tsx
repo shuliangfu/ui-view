@@ -9,8 +9,10 @@ import { getDaysInMonth, MONTHS, WEEKDAYS } from "./calendar-utils.ts";
 export type CalendarMode = "month" | "year";
 
 export interface CalendarProps {
-  /** 当前选中的日期（受控） */
+  /** 当前展示的月份（受控，也用作选中日若未传 selectedDate） */
   value?: Date;
+  /** 当前选中的日期（可选；传入时与 value 解耦，value 仅控制展示月份） */
+  selectedDate?: Date;
   /** 日期变化回调 */
   onChange?: (date: Date) => void;
   /** 模式：月视图 或 年视图，默认 month */
@@ -30,6 +32,7 @@ export interface CalendarProps {
 export function Calendar(props: CalendarProps) {
   const {
     value = new Date(),
+    selectedDate,
     onChange,
     mode = "month",
     dateCellRender,
@@ -101,7 +104,7 @@ export function Calendar(props: CalendarProps) {
       >
         {days.map((d, i) => {
           const isCurrentMonth = d.getMonth() === month;
-          const isSelected = isSameDay(d, value);
+          const isSelected = isSameDay(d, selectedDate ?? value);
           const disabled = disabledDate?.(d) ?? false;
           return (
             <button
