@@ -52,7 +52,7 @@ export function Steps(props: StepsProps) {
 
   const safeCurrent = Math.max(0, Math.min(items.length - 1, current));
 
-  return () => (
+  return (
     <div
       class={twMerge(
         "flex w-full",
