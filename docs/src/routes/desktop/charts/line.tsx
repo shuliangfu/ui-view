@@ -63,10 +63,17 @@ const importCode = `import { ChartLine } from "@dreamer/ui-view";
 
 const data = { labels: ["1月", "2月", ...], datasets: [{ label: "系列 A", data: [12, 19, ...], borderColor: "...", fill: true, tension: 0.3 }] };
 const options = { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "top" } } };
-<ChartLine data={data} options={options} class="w-full h-64" />`;
+<ChartLine
+  data={data}
+  options={options}
+  class="w-full h-64"
+/>`;
 
-const exampleBasic =
-  `<ChartLine data={sampleData} options={options} class="w-full h-64" />`;
+const exampleBasic = `<ChartLine
+  data={sampleData}
+  options={options}
+  class="w-full h-64"
+/>`;
 
 export default function ChartsLine() {
   return (
