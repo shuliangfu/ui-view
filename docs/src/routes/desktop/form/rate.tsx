@@ -93,7 +93,11 @@ export default function FormRate() {
             </FormItem>
             <CodeBlock
               title="代码示例"
-              code={`<Rate value={val} onChange={(v) => setVal(v)} count={5} />`}
+              code={`<Rate
+  value={val}
+  onChange={(v) => setVal(v)}
+  count={5}
+/>`}
               language="tsx"
               showLineNumbers
               copyable
@@ -140,7 +144,11 @@ export default function FormRate() {
             <CodeBlock
               title="代码示例"
               code={`<Rate value={2} count={3} />
-<Rate value={3} count={5} disabled />`}
+<Rate
+  value={3}
+  count={5}
+  disabled
+/>`}
               language="tsx"
               showLineNumbers
               copyable
