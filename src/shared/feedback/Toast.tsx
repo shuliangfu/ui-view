@@ -5,38 +5,35 @@
  */
 
 import { twMerge } from "tailwind-merge";
-import type { ToastItem } from "./toast-store.ts";
+import type { ToastItem, ToastType } from "./toast-store.ts";
 import { toastList } from "./toast-store.ts";
 
-/** 按 placement 分组 */
-const PLACEMENTS = [
-  "top",
-  "top-center",
-  "top-left",
-  "top-right",
-  "bottom",
-  "bottom-center",
-  "bottom-left",
-  "bottom-right",
-] as const;
+/** 按 placement 分组：上、下、居中 */
+const PLACEMENTS = ["top", "bottom", "center"] as const;
 
 const placementContainerClasses: Record<(typeof PLACEMENTS)[number], string> = {
-  "top": "top-4 left-1/2 -translate-x-1/2 items-center",
-  "top-center": "top-4 left-1/2 -translate-x-1/2 items-center",
-  "top-left": "top-4 left-4 items-start",
-  "top-right": "top-4 right-4 items-end",
-  "bottom": "bottom-4 left-1/2 -translate-x-1/2 items-center",
-  "bottom-center": "bottom-4 left-1/2 -translate-x-1/2 items-center",
-  "bottom-left": "bottom-4 left-4 items-start",
-  "bottom-right": "bottom-4 right-4 items-end",
+  "top": "items-center",
+  "bottom": "items-center",
+  "center": "items-center justify-center",
 };
 
-/** 单条 Toast 项：仅简单背景 + 文案，无图标/关闭按钮（自动 duration 关闭） */
+/** 各类型背景色，与 Button 变体一致：success 绿、error 红、info 蓝、warning 橙 */
+const toastTypeClasses: Record<ToastType, string> = {
+  success: "bg-green-600 text-white dark:bg-green-500",
+  error: "bg-red-600 text-white dark:bg-red-500",
+  info: "bg-blue-600 text-white dark:bg-blue-500",
+  warning: "bg-amber-500 text-white dark:bg-amber-500",
+};
+
+/** 单条 Toast 项：按 type 使用与按钮一致的背景色 + 文案（自动 duration 关闭） */
 function ToastItemEl({ item }: { item: ToastItem }) {
   return () => (
     <div
       role="alert"
-      class="px-4 py-3 rounded-lg bg-slate-200/95 dark:bg-slate-700/95 text-slate-800 dark:text-slate-100 text-sm shadow-md backdrop-blur-sm"
+      class={twMerge(
+        "px-4 py-3 rounded-lg text-sm shadow-md backdrop-blur-sm",
+        toastTypeClasses[item.type],
+      )}
     >
       {item.content}
     </div>
@@ -47,6 +44,7 @@ function ToastItemEl({ item }: { item: ToastItem }) {
 export function ToastContainer() {
   return () => {
     const list = toastList();
+    if (list.length === 0) return null;
     const byPlacement = new Map<string, ToastItem[]>();
     for (const item of list) {
       const key = item.placement;
@@ -56,21 +54,56 @@ export function ToastContainer() {
 
     return (
       <div
-        class="fixed inset-0 pointer-events-none z-200 flex flex-col"
+        class="fixed inset-0 pointer-events-none flex flex-col"
+        style={{ zIndex: 2147483647 }}
         aria-live="polite"
       >
         {PLACEMENTS.map((placement) => {
           const items = byPlacement.get(placement) ?? [];
           if (items.length === 0) return null;
+          const isCenter = placement === "center";
+          const placementStyle = isCenter
+            ? {
+              top: "50%",
+              left: "50%",
+              right: "auto",
+              bottom: "auto",
+              transform: "translate(-50%, -50%)",
+              width: "max-content",
+              maxWidth: "24rem",
+              margin: 0,
+            }
+            : placement === "top"
+            ? {
+              top: "3rem",
+              bottom: "auto",
+              left: 0,
+              right: 0,
+              marginLeft: "auto",
+              marginRight: "auto",
+              width: "max-content",
+              maxWidth: "24rem",
+            }
+            : {
+              top: "auto",
+              bottom: "1rem",
+              left: 0,
+              right: 0,
+              marginLeft: "auto",
+              marginRight: "auto",
+              width: "max-content",
+              maxWidth: "24rem",
+            };
           return (
             <div
               key={placement}
               class={twMerge(
-                "absolute flex flex-col gap-2 w-full max-w-sm px-4 pointer-events-none",
+                "absolute flex flex-col gap-2 px-4 pointer-events-none items-center",
                 placementContainerClasses[placement],
               )}
+              style={placementStyle}
             >
-              <div class="flex flex-col gap-2 w-full pointer-events-auto">
+              <div class="flex flex-col gap-2 items-center min-w-0 pointer-events-auto">
                 {items.map((item) => (
                   <div key={item.id}>
                     <ToastItemEl item={item} />
