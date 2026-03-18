@@ -53,11 +53,17 @@ export function Tabs(props: TabsProps) {
 
   const initialKey = controlledKey ?? items[0]?.key ?? "";
   const [internalKey, setInternalKey] = createSignal(initialKey);
-  /** 受控时用 prop，否则用内部 state，保证点击后能立即更新 UI */
-  const getActiveKey = () =>
-    controlledKey !== undefined && controlledKey !== ""
-      ? controlledKey
-      : internalKey();
+  /** 用普通对象存「上次同步的受控 key」，不参与响应式，避免读 signal 触发重跑导致卡死 */
+  const lastSyncedRef: { value: string | undefined } = { value: undefined };
+  const c = controlledKey !== undefined && controlledKey !== ""
+    ? controlledKey
+    : undefined;
+  if (c != null && c !== lastSyncedRef.value) {
+    lastSyncedRef.value = c;
+    setInternalKey(c);
+  }
+  /** 展示用内部 state，点击即更新；受控时仅当 prop 变化才从上面同步到 internal */
+  const getActiveKey = () => internalKey();
 
   const lineCls = "border-b border-slate-200 dark:border-slate-600 flex gap-1";
   const cardCls = "flex gap-1 p-1 rounded-lg bg-slate-100 dark:bg-slate-800";
