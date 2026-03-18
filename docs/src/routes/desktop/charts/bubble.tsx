@@ -66,10 +66,17 @@ const CHART_BUBBLE_API: ApiRow[] = [
 const importCode = `import { ChartBubble } from "@dreamer/ui-view";
 
 const data = { datasets: [{ label: "系列 A", data: [{ x: 20, y: 30, r: 15 }, ...], backgroundColor: "...", borderColor: "..." }] };
-<ChartBubble data={data} options={options} class="w-full h-64" />`;
+<ChartBubble
+  data={data}
+  options={options}
+  class="w-full h-64"
+/>`;
 
-const exampleBasic =
-  `<ChartBubble data={sampleData} options={options} class="w-full h-64" />`;
+const exampleBasic = `<ChartBubble
+  data={sampleData}
+  options={options}
+  class="w-full h-64"
+/>`;
 
 export default function ChartsBubble() {
   return (
