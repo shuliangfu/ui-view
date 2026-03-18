@@ -56,7 +56,7 @@ const config: AppConfig = {
     // debug: false,
     /** 关闭客户端激活：不注入 _client.js，仅输出服务端 HTML，链接点击整页跳转，可避免刷新时 hydrate 导致的闪动 */
     // ssr: {
-    //   hydrate: false,
+    //   // hydrate: false,
     // },
     // ssg: {
     //   outputDir: "dist/static",
