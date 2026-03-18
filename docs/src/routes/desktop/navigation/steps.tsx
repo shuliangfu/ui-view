@@ -3,8 +3,8 @@
  * 路由: /desktop/navigation/steps
  */
 
-import { createSignal } from "@dreamer/view";
 import { CodeBlock, Paragraph, Steps, Title } from "@dreamer/ui-view";
+import { createSignal } from "@dreamer/view";
 
 /** API 属性行类型 */
 interface ApiRow {
@@ -66,7 +66,7 @@ const STEP_ITEM_API: ApiRow[] = [
 const importCode = `import { createSignal } from "@dreamer/view";
 import { Steps } from "@dreamer/ui-view";
 
-const [current, setCurrent] = createSignal(1);
+const [current, setCurrent] = createSignal(0);
 const items = [
   { title: "步骤一", description: "填写基本信息" },
   { title: "步骤二", description: "确认订单" },
@@ -98,9 +98,10 @@ const exampleStatus = `<Steps items={[
   { title: "待开始", description: "步骤三", status: "wait" },
 ]} current={1} />`;
 
-export default function NavigationSteps() {
-  const [current, setCurrent] = createSignal(1);
+/** 模块级 signal，0=第1步、1=第2步、2=第3步，整树重渲染时不被重置 */
+const [current, setCurrent] = createSignal(0);
 
+export default function NavigationSteps() {
   const items = [
     { title: "步骤一", description: "填写基本信息" },
     { title: "步骤二", description: "确认订单" },
@@ -133,26 +134,35 @@ export default function NavigationSteps() {
 
         <div class="space-y-4">
           <Title level={3}>direction=horizontal（可点击）</Title>
-          <Steps
-            items={items}
-            current={current()}
-            onChange={setCurrent}
-            direction="horizontal"
-          />
+          {/* 包裹层限制宽度；className + 内联 style 保证 SSR/CSR 一致输出 class 与 max-width */}
+          <div className="w-full max-w-3xl" style={{ maxWidth: "48rem" }}>
+            <Steps
+              items={items}
+              current={current}
+              onChange={setCurrent}
+              direction="horizontal"
+            />
+          </div>
           <div class="flex gap-2">
             <button
               type="button"
-              class="px-3 py-1.5 text-sm rounded border border-slate-300 dark:border-slate-600"
+              class="px-3 py-1.5 text-sm rounded border border-slate-300 dark:border-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={current() === 0}
               onClick={() => setCurrent((c) => Math.max(0, c - 1))}
             >
               上一步
             </button>
+            {/* current 0/1/2=第1/2/3步进行中，3=全部完成；点击「完成」设为 3，三步都显示绿勾 */}
             <button
               type="button"
-              class="px-3 py-1.5 text-sm rounded bg-blue-600 text-white"
-              onClick={() => setCurrent((c) => Math.min(2, c + 1))}
+              class="px-3 py-1.5 text-sm rounded bg-blue-600 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={current() >= 3}
+              onClick={() =>
+                current() === 2
+                  ? setCurrent(3)
+                  : setCurrent((c) => Math.min(2, c + 1))}
             >
-              下一步
+              {current() >= 3 ? "已完成" : "下一步"}
             </button>
           </div>
           <CodeBlock
@@ -167,7 +177,9 @@ export default function NavigationSteps() {
 
         <div class="space-y-4">
           <Title level={3}>direction=vertical</Title>
-          <Steps items={items} current={current()} direction="vertical" />
+          <div className="w-full max-w-3xl" style={{ maxWidth: "48rem" }}>
+            <Steps items={items} current={current} direction="vertical" />
+          </div>
           <CodeBlock
             title="代码示例"
             code={exampleVertical}
@@ -180,14 +192,16 @@ export default function NavigationSteps() {
 
         <div class="space-y-4">
           <Title level={3}>items 含 status</Title>
-          <Steps
-            items={[
-              { title: "已完成", description: "步骤一", status: "finish" },
-              { title: "进行中", description: "步骤二", status: "process" },
-              { title: "待开始", description: "步骤三", status: "wait" },
-            ]}
-            current={1}
-          />
+          <div className="w-full max-w-3xl" style={{ maxWidth: "48rem" }}>
+            <Steps
+              items={[
+                { title: "已完成", description: "步骤一", status: "finish" },
+                { title: "进行中", description: "步骤二", status: "process" },
+                { title: "待开始", description: "步骤三", status: "wait" },
+              ]}
+              current={1}
+            />
+          </div>
           <CodeBlock
             title="代码示例"
             code={exampleStatus}
