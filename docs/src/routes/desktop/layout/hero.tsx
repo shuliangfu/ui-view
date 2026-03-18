@@ -79,16 +79,37 @@ const HERO_API: ApiRow[] = [
 
 const importCode = `import { Button, Hero } from "@dreamer/ui-view";
 
-<Hero layout="center" title="欢迎使用" subtitle="副标题" description="描述" extra={<Button variant="primary">立即开始</Button>} />`;
+<Hero
+  layout="center"
+  title="欢迎使用"
+  subtitle="副标题"
+  description="描述"
+  extra={<Button variant="primary">立即开始</Button>}
+/>`;
 
-const exampleCenter =
-  `<Hero layout="center" title="欢迎使用产品" subtitle="副标题文案" description="这里是描述段落。" extra={<><Button variant="primary">立即开始</Button><Button variant="default">了解更多</Button></>} />`;
+const exampleCenter = `<Hero
+  layout="center"
+  title="欢迎使用产品"
+  subtitle="副标题文案"
+  description="这里是描述段落。"
+  extra={<><Button variant="primary">立即开始</Button><Button variant="default">了解更多</Button></>}
+/>`;
 
-const exampleLeft =
-  `<Hero layout="left" title="左文右图" description="左侧文案、右侧可放插画或图片。" extra={<Button variant="primary">主操作</Button>} media={<div>插画/图片区</div>} />`;
+const exampleLeft = `<Hero
+  layout="left"
+  title="左文右图"
+  description="左侧文案、右侧可放插画或图片。"
+  extra={<Button variant="primary">主操作</Button>}
+  media={<img src="https://placehold.co/400x300/94a3b8/64748?text=插画" alt="插画占位" class="rounded-lg w-full h-48 object-cover" />}
+/>`;
 
-const exampleRight =
-  `<Hero layout="right" title="右文左图" description="右侧文案、左侧可放媒体。" extra={<Button variant="primary">主操作</Button>} media={<div>媒体区</div>} />`;
+const exampleRight = `<Hero
+  layout="right"
+  title="右文左图"
+  description="右侧文案、左侧可放媒体。"
+  extra={<Button variant="primary">主操作</Button>}
+  media={<img src="https://placehold.co/400x300/94a3b8/64748?text=媒体" alt="媒体占位" class="rounded-lg w-full h-48 object-cover" />}
+/>`;
 
 export default function LayoutHero() {
   return (
@@ -150,9 +171,11 @@ export default function LayoutHero() {
               description="左侧文案、右侧可放插画或图片。"
               extra={<Button type="button" variant="primary">主操作</Button>}
               media={
-                <div class="h-48 rounded-lg bg-slate-200 dark:bg-slate-600 flex items-center justify-center text-slate-500">
-                  插画/图片区
-                </div>
+                <img
+                  src="https://placehold.co/400x300/94a3b8/64748?text=插画"
+                  alt="插画占位"
+                  class="rounded-lg w-full h-48 object-cover"
+                />
               }
             />
           </div>
@@ -175,9 +198,11 @@ export default function LayoutHero() {
               description="右侧文案、左侧可放媒体。"
               extra={<Button type="button" variant="primary">主操作</Button>}
               media={
-                <div class="h-48 rounded-lg bg-slate-200 dark:bg-slate-600 flex items-center justify-center text-slate-500">
-                  媒体区
-                </div>
+                <img
+                  src="https://placehold.co/400x300/94a3b8/64748?text=媒体"
+                  alt="媒体占位"
+                  class="rounded-lg w-full h-48 object-cover"
+                />
               }
             />
           </div>
