@@ -65,14 +65,40 @@ const IMAGE_API: ApiRow[] = [
 
 const importCode = `import { Image } from "@dreamer/ui-view";
 
-<Image src="https://example.com/photo.jpg" alt="示例" width={200} height={150} fit="cover" preview />`;
+<Image
+  src="https://example.com/photo.jpg"
+  alt="示例"
+  width={200}
+  height={150}
+  fit="cover"
+  preview
+/>`;
 
-const exampleBasicPreview =
-  `<Image src="..." alt="示例图" width={200} height={150} fit="cover" rounded preview />`;
+const exampleBasicPreview = `<Image
+  src="..."
+  alt="示例图"
+  width={200}
+  height={150}
+  fit="cover"
+  rounded
+  preview
+/>`;
 
-const exampleFallbackLazy =
-  `<Image src="invalid" alt="失败" width={120} height={120} fallback="加载失败" />
-<Image src="..." alt="lazy" width={100} height={100} lazy rounded="lg" />`;
+const exampleFallbackLazy = `<Image
+  src="invalid"
+  alt="失败"
+  width={120}
+  height={120}
+  fallback="加载失败"
+/>
+<Image
+  src="..."
+  alt="lazy"
+  width={100}
+  height={100}
+  lazy
+  rounded="lg"
+/>`;
 
 export default function DataDisplayImage() {
   return (
