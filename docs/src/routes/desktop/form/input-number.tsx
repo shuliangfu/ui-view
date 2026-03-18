@@ -192,7 +192,12 @@ export default function FormInputNumber() {
             </FormItem>
             <CodeBlock
               title="代码示例"
-              code={`<InputNumber value="99" min={0} max={100} disabled />`}
+              code={`<InputNumber
+  value="99"
+  min={0}
+  max={100}
+  disabled
+/>`}
               language="tsx"
               showLineNumbers
               copyable
@@ -219,7 +224,12 @@ export default function FormInputNumber() {
             </FormItem>
             <CodeBlock
               title="代码示例"
-              code={`<InputNumber size="sm" value="1" min={0} max={10} />
+              code={`<InputNumber
+  size="sm"
+  value="1"
+  min={0}
+  max={10}
+/>
 <InputNumber size="md" value={val3} min={0} max={100} onChange={...} />
 <InputNumber size="lg" value="5" min={0} max={10} />`}
               language="tsx"
