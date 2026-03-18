@@ -61,9 +61,14 @@ export function DateRangePicker(props: DateRangePickerProps) {
         max={end || max}
         disabled={disabled}
         class={twMerge(base, sizeCls, "min-w-[140px] flex-1")}
+        onInput={(e: Event) => {
+          (e.target as HTMLInputElement).blur();
+        }}
         onChange={(e: Event) => {
-          const v = (e.target as HTMLInputElement).value;
+          const el = e.target as HTMLInputElement;
+          const v = el.value;
           onChange?.([v, end]);
+          el.blur();
         }}
       />
       <span class="text-slate-400 dark:text-slate-500">～</span>
@@ -76,9 +81,14 @@ export function DateRangePicker(props: DateRangePickerProps) {
         max={max}
         disabled={disabled}
         class={twMerge(base, sizeCls, "min-w-[140px] flex-1")}
+        onInput={(e: Event) => {
+          (e.target as HTMLInputElement).blur();
+        }}
         onChange={(e: Event) => {
-          const v = (e.target as HTMLInputElement).value;
+          const el = e.target as HTMLInputElement;
+          const v = el.value;
           onChange?.([start, v]);
+          el.blur();
         }}
       />
     </div>
