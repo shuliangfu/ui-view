@@ -44,7 +44,10 @@ const TOOLTIP_API: ApiRow[] = [
 
 const importCode = `import { Tooltip } from "@dreamer/ui-view";
 
-<Tooltip content="上方提示" placement="top">
+<Tooltip
+  content="上方提示"
+  placement="top"
+>
   <span>悬停我</span>
 </Tooltip>`;
 
@@ -59,7 +62,10 @@ const exampleLong =
   <span>长文案</span>
 </Tooltip>`;
 
-const exampleNoArrow = `<Tooltip content="不显示箭头的气泡" arrow={false}>
+const exampleNoArrow = `<Tooltip
+  content="不显示箭头的气泡"
+  arrow={false}
+>
   <span>无箭头</span>
 </Tooltip>`;
 
