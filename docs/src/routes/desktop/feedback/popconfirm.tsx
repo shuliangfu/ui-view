@@ -90,19 +90,48 @@ import { Button, Popconfirm } from "@dreamer/ui-view";
 
 const [open, setOpen] = createSignal(false);
 
-<Popconfirm open={open()} onOpenChange={setOpen} title="确定要执行吗？" onConfirm={() => setOpen(false)} onCancel={() => setOpen(false)}>
-  <Button onClick={() => setOpen(true)}>打开</Button>
-</Popconfirm>`;
+{() => (
+  <Popconfirm
+    open={open()}
+    onOpenChange={setOpen}
+    title="确定要执行吗？"
+    onConfirm={() => setOpen(false)}
+    onCancel={() => setOpen(false)}
+  >
+    <Button onClick={() => setOpen(true)}>打开</Button>
+  </Popconfirm>
+)}`;
 
-const exampleBasic =
-  `<Popconfirm open={open()} onOpenChange={setOpen} title="确定要执行该操作吗？" placement="top" okText="确定" cancelText="取消" onConfirm={() => setOpen(false)} onCancel={() => setOpen(false)}>
-  <Button variant="default" onClick={() => setOpen(true)}>普通确认（placement=top）</Button>
-</Popconfirm>`;
+const exampleBasic = `{() => (
+  <Popconfirm
+    open={open()}
+    onOpenChange={setOpen}
+    title="确定要执行该操作吗？"
+    placement="top"
+    okText="确定"
+    cancelText="取消"
+    onConfirm={() => setOpen(false)}
+    onCancel={() => setOpen(false)}
+  >
+    <Button variant="default" onClick={() => setOpen(true)}>普通确认（placement=top）</Button>
+  </Popconfirm>
+)}`;
 
-const exampleDanger =
-  `<Popconfirm open={openDanger()} onOpenChange={setOpenDanger} title="删除后无法恢复，确定删除吗？" danger okText="删除" cancelText="取消" showIcon onConfirm={() => setOpenDanger(false)} onCancel={() => setOpenDanger(false)}>
-  <Button variant="danger" onClick={() => setOpenDanger(true)}>删除</Button>
-</Popconfirm>`;
+const exampleDanger = `{() => (
+  <Popconfirm
+    open={openDanger()}
+    onOpenChange={setOpenDanger}
+    title="删除后无法恢复，确定删除吗？"
+    danger
+    okText="删除"
+    cancelText="取消"
+    showIcon
+    onConfirm={() => setOpenDanger(false)}
+    onCancel={() => setOpenDanger(false)}
+  >
+    <Button variant="danger" onClick={() => setOpenDanger(true)}>删除</Button>
+  </Popconfirm>
+)}`;
 
 export default function FeedbackPopconfirm() {
   const [open, setOpen] = createSignal(false);
@@ -136,43 +165,47 @@ export default function FeedbackPopconfirm() {
         <div class="space-y-4">
           <Title level={3}>基础用法（受控）</Title>
           <div class="flex gap-2">
-            <Popconfirm
-              open={open()}
-              onOpenChange={setOpen}
-              title="确定要执行该操作吗？"
-              placement="top"
-              okText="确定"
-              cancelText="取消"
-              onConfirm={() => setOpen(false)}
-              onCancel={() => setOpen(false)}
-            >
-              <Button
-                type="button"
-                variant="default"
-                onClick={() => setOpen(true)}
+            {() => (
+              <Popconfirm
+                open={open()}
+                onOpenChange={setOpen}
+                title="确定要执行该操作吗？"
+                placement="top"
+                okText="确定"
+                cancelText="取消"
+                onConfirm={() => setOpen(false)}
+                onCancel={() => setOpen(false)}
               >
-                普通确认（placement=top）
-              </Button>
-            </Popconfirm>
-            <Popconfirm
-              open={openDanger()}
-              onOpenChange={setOpenDanger}
-              title="删除后无法恢复，确定删除吗？"
-              danger
-              okText="删除"
-              cancelText="取消"
-              showIcon
-              onConfirm={() => setOpenDanger(false)}
-              onCancel={() => setOpenDanger(false)}
-            >
-              <Button
-                type="button"
-                variant="danger"
-                onClick={() => setOpenDanger(true)}
+                <Button
+                  type="button"
+                  variant="default"
+                  onClick={() => setOpen(true)}
+                >
+                  普通确认（placement=top）
+                </Button>
+              </Popconfirm>
+            )}
+            {() => (
+              <Popconfirm
+                open={openDanger()}
+                onOpenChange={setOpenDanger}
+                title="删除后无法恢复，确定删除吗？"
+                danger
+                okText="删除"
+                cancelText="取消"
+                showIcon
+                onConfirm={() => setOpenDanger(false)}
+                onCancel={() => setOpenDanger(false)}
               >
-                删除
-              </Button>
-            </Popconfirm>
+                <Button
+                  type="button"
+                  variant="danger"
+                  onClick={() => setOpenDanger(true)}
+                >
+                  删除
+                </Button>
+              </Popconfirm>
+            )}
           </div>
           <CodeBlock
             title="代码示例"
