@@ -13,4 +13,6 @@ export { DatePicker } from "./DatePicker.tsx";
 export type { DatePickerProps } from "./DatePicker.tsx";
 export { DateRangePicker } from "./DateRangePicker.tsx";
 export type { DateRangePickerProps } from "./DateRangePicker.tsx";
+export { TimePicker } from "./TimePicker.tsx";
+export type { TimePickerProps } from "./TimePicker.tsx";
 /** Transfer 使用 shared 的 data-display/Transfer，此处不重复导出避免与 shared 冲突 */
