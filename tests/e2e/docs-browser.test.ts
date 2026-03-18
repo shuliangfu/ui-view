@@ -325,7 +325,7 @@ async function clickFirstCollapseHeader(
 }
 
 /** 在 main 内点击文案完全匹配的按钮（用于 确定/取消 等） */
-async function clickButtonByExactText(
+async function _clickButtonByExactText(
   t: { browser?: { evaluate: (fn: () => boolean) => Promise<unknown> } },
   exactText: string,
 ): Promise<boolean> {
@@ -536,7 +536,7 @@ describe("docs 浏览器 E2E", () => {
       await goto(t, "/desktop/other/back-top");
       await new Promise((r) => setTimeout(r, 300));
       await t.browser!.evaluate(() => {
-        window.scrollTo(0, 300);
+        globalThis.scrollTo(0, 300);
       });
       await new Promise((r) => setTimeout(r, 400));
       const clicked = await t.browser!.evaluate(() => {
