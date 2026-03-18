@@ -231,8 +231,18 @@ export default function FormCheckboxGroup() {
             </FormItem>
             <CodeBlock
               title="代码示例"
-              code={`<CheckboxGroup options={options} value={[]} onChange={() => {}} error />
-<CheckboxGroup options={options} value={["x"]} onChange={() => {}} disabled />`}
+              code={`<CheckboxGroup
+  options={options}
+  value={[]}
+  onChange={() => {}}
+  error
+/>
+<CheckboxGroup
+  options={options}
+  value={["x"]}
+  onChange={() => {}}
+  disabled
+/>`}
               language="tsx"
               showLineNumbers
               copyable
