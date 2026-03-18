@@ -55,10 +55,17 @@ const CHART_POLAR_API: ApiRow[] = [
 const importCode = `import { ChartPolarArea } from "@dreamer/ui-view";
 
 const data = { labels: ["红", "绿", ...], datasets: [{ data: [11, 16, ...], backgroundColor: [...] }] };
-<ChartPolarArea data={data} options={options} class="w-full h-64" />`;
+<ChartPolarArea
+  data={data}
+  options={options}
+  class="w-full h-64"
+/>`;
 
-const exampleBasic =
-  `<ChartPolarArea data={sampleData} options={options} class="w-full h-64" />`;
+const exampleBasic = `<ChartPolarArea
+  data={sampleData}
+  options={options}
+  class="w-full h-64"
+/>`;
 
 export default function ChartsPolarArea() {
   return (
