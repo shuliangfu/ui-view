@@ -41,30 +41,50 @@ const STACK_API: ApiRow[] = [
 
 const importCode = `import { Stack } from "@dreamer/ui-view";
 
-<Stack direction="column" gap={4}>
+<Stack
+  direction="column"
+  gap={4}
+>
   <div>1</div>
   <div>2</div>
 </Stack>`;
 
-const exampleColumn = `<Stack direction="column" gap={4} class="max-w-xs">
+const exampleColumn = `<Stack
+  direction="column"
+  gap={4}
+  class="max-w-xs"
+>
   <div>1</div>
   <div>2</div>
   <div>3</div>
 </Stack>`;
 
-const exampleRowAlign = `<Stack direction="row" gap={2} align="center">
+const exampleRowAlign = `<Stack
+  direction="row"
+  gap={2}
+  align="center"
+>
   <div>A</div>
   <div>B</div>
   <div>C</div>
 </Stack>`;
 
-const exampleJustify =
-  `<Stack direction="row" gap={4} justify="between" class="max-w-md">
+const exampleJustify = `<Stack
+  direction="row"
+  gap={4}
+  justify="between"
+  class="max-w-md"
+>
   <span>左</span>
   <span>右</span>
 </Stack>`;
 
-const exampleWrap = `<Stack direction="row" gap={2} wrap class="max-w-48">
+const exampleWrap = `<Stack
+  direction="row"
+  gap={2}
+  wrap
+  class="max-w-48"
+>
   <div>1</div><div>2</div><div>3</div><div>4</div>
 </Stack>`;
 
