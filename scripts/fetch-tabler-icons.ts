@@ -26,7 +26,8 @@ async function run(
 }
 
 async function main() {
-  const scriptDir = new URL(".", import.meta.url).pathname;
+  const _scriptDir = new URL(".", import.meta.url).pathname;
+  void _scriptDir;
   const projectRoot = new URL("../", import.meta.url).pathname;
 
   console.log("Cloning tabler/tabler-icons (depth 1)...");
