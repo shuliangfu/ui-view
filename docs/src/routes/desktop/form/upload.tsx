@@ -221,7 +221,11 @@ export default function FormUpload() {
             </FormItem>
             <CodeBlock
               title="代码示例"
-              code={`<Upload multiple accept="image/*" onChange={(e) => ...} />`}
+              code={`<Upload
+  multiple
+  accept="image/*"
+  onChange={(e) => ...}
+/>`}
               language="tsx"
               showLineNumbers
               copyable
