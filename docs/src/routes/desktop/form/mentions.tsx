@@ -211,7 +211,11 @@ export default function FormMentions() {
             </FormItem>
             <CodeBlock
               title="代码示例"
-              code={`<Mentions value={val2} onChange={...} rows={4} />`}
+              code={`<Mentions
+  value={val2}
+  onChange={...}
+  rows={4}
+/>`}
               language="tsx"
               showLineNumbers
               copyable
@@ -226,7 +230,10 @@ export default function FormMentions() {
             </FormItem>
             <CodeBlock
               title="代码示例"
-              code={`<Mentions disabled value="" />`}
+              code={`<Mentions
+  disabled
+  value=""
+/>`}
               language="tsx"
               showLineNumbers
               copyable
