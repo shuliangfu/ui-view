@@ -90,19 +90,39 @@ import { Button, Drawer } from "@dreamer/ui-view";
 const [open, setOpen] = createSignal(false);
 
 <Button onClick={() => setOpen(true)}>打开抽屉</Button>
-<Drawer open={open()} onClose={() => setOpen(false)} placement="right" title="标题" footer={<Button onClick={() => setOpen(false)}>确定</Button>}>
-  <p>抽屉内容</p>
-</Drawer>`;
+{() => (
+  <Drawer
+    open={open()}
+    onClose={() => setOpen(false)}
+    placement="right"
+    title="标题"
+    footer={<Button onClick={() => setOpen(false)}>确定</Button>}
+  >
+    <p>抽屉内容</p>
+  </Drawer>
+)}`;
 
-const exampleRight =
-  `<Drawer open={open()} onClose={() => setOpen(false)} placement="right" title="右侧抽屉" footer={<Button variant="primary" onClick={() => setOpen(false)}>确定</Button>}>
+const exampleRight = `<Drawer
+  open={open()}
+  onClose={() => setOpen(false)}
+  placement="right"
+  title="右侧抽屉"
+  footer={<Button variant="primary" onClick={() => setOpen(false)}>确定</Button>}
+>
   <p>抽屉内容区域，可放置表单或列表。</p>
 </Drawer>`;
 
-const exampleLeft =
-  `<Drawer open={open()} onClose={() => setOpen(false)} placement="left" width={320} title="左侧抽屉">
-  <p>从左侧滑出的面板，宽度 320px。</p>
-</Drawer>`;
+const exampleLeft = `{() => (
+  <Drawer
+    open={open()}
+    onClose={() => setOpen(false)}
+    placement="left"
+    width={320}
+    title="左侧抽屉"
+  >
+    <p>从左侧滑出的面板，宽度 320px。</p>
+  </Drawer>
+)}`;
 
 export default function FeedbackDrawer() {
   const [openRight, setOpenRight] = createSignal(false);
@@ -134,15 +154,7 @@ export default function FeedbackDrawer() {
         <Title level={2}>示例</Title>
 
         <div class="space-y-4">
-          <Title level={3}>右侧抽屉</Title>
           <div class="flex gap-2">
-            <Button
-              type="button"
-              variant="primary"
-              onClick={() => setOpenRight(true)}
-            >
-              右侧抽屉
-            </Button>
             <Button
               type="button"
               variant="default"
@@ -150,37 +162,48 @@ export default function FeedbackDrawer() {
             >
               左侧抽屉
             </Button>
+            <Button
+              type="button"
+              variant="primary"
+              onClick={() => setOpenRight(true)}
+            >
+              右侧抽屉
+            </Button>
           </div>
-          <Drawer
-            open={openRight()}
-            onClose={() => setOpenRight(false)}
-            placement="right"
-            title="右侧抽屉"
-            footer={
-              <Button
-                type="button"
-                variant="primary"
-                onClick={() => setOpenRight(false)}
-              >
-                确定
-              </Button>
-            }
-          >
-            <p class="text-sm text-slate-600 dark:text-slate-400">
-              抽屉内容区域，可放置表单或列表。
-            </p>
-          </Drawer>
-          <Drawer
-            open={openLeft()}
-            onClose={() => setOpenLeft(false)}
-            placement="left"
-            width={320}
-            title="左侧抽屉"
-          >
-            <p class="text-sm text-slate-600 dark:text-slate-400">
-              从左侧滑出的面板，宽度 320px。
-            </p>
-          </Drawer>
+          {() => (
+            <Drawer
+              open={openRight()}
+              onClose={() => setOpenRight(false)}
+              placement="right"
+              title="右侧抽屉"
+              footer={
+                <Button
+                  type="button"
+                  variant="primary"
+                  onClick={() => setOpenRight(false)}
+                >
+                  确定
+                </Button>
+              }
+            >
+              <p class="text-sm text-slate-600 dark:text-slate-400">
+                抽屉内容区域，可放置表单或列表。
+              </p>
+            </Drawer>
+          )}
+          {() => (
+            <Drawer
+              open={openLeft()}
+              onClose={() => setOpenLeft(false)}
+              placement="left"
+              width={320}
+              title="左侧抽屉"
+            >
+              <p class="text-sm text-slate-600 dark:text-slate-400">
+                从左侧滑出的面板，宽度 320px。
+              </p>
+            </Drawer>
+          )}
           <CodeBlock
             title="代码示例"
             code={exampleRight}
