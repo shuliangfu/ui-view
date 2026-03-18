@@ -49,10 +49,17 @@ const CHART_DOUGHNUT_API: ApiRow[] = [
 const importCode = `import { ChartDoughnut } from "@dreamer/ui-view";
 
 const data = { labels: ["A", "B", ...], datasets: [{ data: [35, 30, ...], backgroundColor: [...] }] };
-<ChartDoughnut data={data} options={options} class="w-full h-64" />`;
+<ChartDoughnut
+  data={data}
+  options={options}
+  class="w-full h-64"
+/>`;
 
-const exampleBasic =
-  `<ChartDoughnut data={sampleData} options={options} class="w-full h-64" />`;
+const exampleBasic = `<ChartDoughnut
+  data={sampleData}
+  options={options}
+  class="w-full h-64"
+/>`;
 
 export default function ChartsDoughnut() {
   return (
