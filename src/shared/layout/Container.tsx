@@ -38,7 +38,7 @@ export function Container(props: ContainerProps) {
     children,
   } = props;
 
-  return () => (
+  return (
     <div
       class={twMerge(
         "w-full",
