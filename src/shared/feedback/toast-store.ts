@@ -8,16 +8,8 @@ import { createSignal } from "@dreamer/view";
 /** 单条 Toast 类型 */
 export type ToastType = "success" | "error" | "info" | "warning";
 
-/** 可选展示位置：角位或底部 */
-export type ToastPlacement =
-  | "top"
-  | "top-center"
-  | "top-left"
-  | "top-right"
-  | "bottom"
-  | "bottom-center"
-  | "bottom-left"
-  | "bottom-right";
+/** 可选展示位置：上、下、居中（水平+垂直居中），默认上 */
+export type ToastPlacement = "top" | "bottom" | "center";
 
 export interface ToastItem {
   id: string;
@@ -74,28 +66,28 @@ export const toast = {
   success: (
     content: string,
     duration = DEFAULT_DURATION,
-    placement: ToastPlacement = "top-center",
+    placement: ToastPlacement = "top",
   ) => toast.show("success", content, duration, placement),
   error: (
     content: string,
     duration = DEFAULT_DURATION,
-    placement: ToastPlacement = "top-center",
+    placement: ToastPlacement = "top",
   ) => toast.show("error", content, duration, placement),
   info: (
     content: string,
     duration = DEFAULT_DURATION,
-    placement: ToastPlacement = "top-center",
+    placement: ToastPlacement = "top",
   ) => toast.show("info", content, duration, placement),
   warning: (
     content: string,
     duration = DEFAULT_DURATION,
-    placement: ToastPlacement = "top-center",
+    placement: ToastPlacement = "top",
   ) => toast.show("warning", content, duration, placement),
   show: (
     type: ToastType,
     content: string,
     duration = DEFAULT_DURATION,
-    placement: ToastPlacement = "top-center",
+    placement: ToastPlacement = "top",
   ): string => push({ type, content, duration, placement }),
   dismiss: removeToast,
   destroy: clearToasts,
