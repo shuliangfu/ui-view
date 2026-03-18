@@ -3,8 +3,8 @@
  * 路由: /desktop/navigation/menu
  */
 
-import { createSignal } from "@dreamer/view";
 import { CodeBlock, Menu, Paragraph, Title } from "@dreamer/ui-view";
+import { createSignal } from "@dreamer/view";
 
 /** API 属性行类型 */
 interface ApiRow {
@@ -20,12 +20,6 @@ const MENU_API: ApiRow[] = [
     type: "MenuItem[]",
     default: "-",
     description: "菜单项（支持多级 children）",
-  },
-  {
-    name: "selectedKeys",
-    type: "string[]",
-    default: "-",
-    description: "当前选中的 key 列表",
   },
   {
     name: "onClick",
@@ -81,7 +75,6 @@ const MENU_API: ApiRow[] = [
 const importCode = `import { createSignal } from "@dreamer/view";
 import { Menu } from "@dreamer/ui-view";
 
-const [selected, setSelected] = createSignal("1");
 const [openKeys, setOpenKeys] = createSignal<string[]>(["sub1"]);
 const items = [
   { key: "1", label: "选项一" },
@@ -90,37 +83,43 @@ const items = [
 ];
 <Menu
   items={items}
-  selectedKeys={[selected()]}
-  onClick={setSelected}
+  onClick={(k) => {}}
   openKeys={openKeys()}
   onOpenChange={setOpenKeys}
   mode="vertical"
 />`;
 
-const exampleVertical = `<Menu
-  items={items}
-  selectedKeys={[selected()]}
-  onClick={setSelected}
-  mode="vertical"
-  openKeys={openKeys()}
-  onOpenChange={setOpenKeys}
-  focusedKey={focusedKey()}
-  onFocusChange={setFocusedKey}
-/>`;
+const exampleVertical = `{() => (
+  <Menu
+    items={items}
+    onClick={(k) => {}}
+    mode="vertical"
+    openKeys={openKeysVertical}
+    onOpenChange={setOpenKeysVertical}
+    focusedKey={focusedKey()}
+    onFocusChange={setFocusedKey}
+  />
+)}`;
 
-const exampleHorizontal = `<Menu
-  items={items}
-  selectedKeys={[selected()]}
-  onClick={setSelected}
-  mode="horizontal"
-  openKeys={openKeys()}
-  onOpenChange={setOpenKeys}
-  usePopoverSubmenu
-/>`;
+const exampleHorizontal = `{() => (
+  <Menu
+    items={items}
+    onClick={(k) => {}}
+    mode="horizontal"
+    openKeys={openKeysHorizontal}
+    onOpenChange={setOpenKeysHorizontal}
+    usePopoverSubmenu
+  />
+)}`;
 
 export default function NavigationMenu() {
-  const [selected, setSelected] = createSignal("1");
-  const [openKeys, setOpenKeys] = createSignal<string[]>(["sub1"]);
+  // 垂直示例用 defaultOpenKeys 默认展开子菜单；水平 popover 用独立 state 且默认收起
+  const [openKeysVertical, setOpenKeysVertical] = createSignal<string[]>([
+    "sub1",
+  ]);
+  const [openKeysHorizontal, setOpenKeysHorizontal] = createSignal<string[]>(
+    [],
+  );
   const [focusedKey, setFocusedKey] = createSignal<string | undefined>("1");
 
   const items = [
@@ -141,7 +140,7 @@ export default function NavigationMenu() {
       <section>
         <Title level={1}>Menu 菜单列表</Title>
         <Paragraph class="mt-2">
-          菜单：items、selectedKeys、onClick、mode、defaultOpenKeys、openKeys、onOpenChange、usePopoverSubmenu、focusedKey、onFocusChange、class。
+          菜单：items、onClick、mode、defaultOpenKeys、openKeys、onOpenChange、usePopoverSubmenu、focusedKey、onFocusChange、class。选中态由组件内部维护。
           使用 Tailwind v4，支持 light/dark 主题。
         </Paragraph>
       </section>
@@ -163,16 +162,17 @@ export default function NavigationMenu() {
         <div class="space-y-4">
           <Title level={3}>mode=vertical（垂直）</Title>
           <div class="flex flex-col gap-8">
-            <Menu
-              items={items}
-              selectedKeys={() => [selected()]}
-              onClick={(k) => setSelected(k)}
-              mode="vertical"
-              openKeys={openKeys}
-              onOpenChange={setOpenKeys}
-              focusedKey={focusedKey()}
-              onFocusChange={setFocusedKey}
-            />
+            {() => (
+              <Menu
+                items={items}
+                onClick={() => {}}
+                mode="vertical"
+                openKeys={openKeysVertical}
+                onOpenChange={setOpenKeysVertical}
+                focusedKey={focusedKey()}
+                onFocusChange={setFocusedKey}
+              />
+            )}
           </div>
           <CodeBlock
             title="代码示例"
@@ -186,15 +186,16 @@ export default function NavigationMenu() {
 
         <div class="space-y-4">
           <Title level={3}>mode=horizontal + usePopoverSubmenu</Title>
-          <Menu
-            items={items}
-            selectedKeys={() => [selected()]}
-            onClick={(k) => setSelected(k)}
-            mode="horizontal"
-            openKeys={openKeys}
-            onOpenChange={setOpenKeys}
-            usePopoverSubmenu
-          />
+          {() => (
+            <Menu
+              items={items}
+              onClick={() => {}}
+              mode="horizontal"
+              openKeys={openKeysHorizontal}
+              onOpenChange={setOpenKeysHorizontal}
+              usePopoverSubmenu
+            />
+          )}
           <CodeBlock
             title="代码示例"
             code={exampleHorizontal}
