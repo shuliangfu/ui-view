@@ -70,7 +70,7 @@ export function Button(props: ButtonProps) {
   const sizeCls = sizeClasses[size];
   const variantCls = variantClasses[variant];
 
-  return () => (
+  return (
     <button
       type={type}
       class={twMerge(base, sizeCls, variantCls, className)}
