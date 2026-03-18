@@ -46,17 +46,29 @@ const COMMENT_API: ApiRow[] = [
 
 const importCode = `import { Avatar, Comment } from "@dreamer/ui-view";
 
-<Comment author="用户 A" avatar={<Avatar size="sm">A</Avatar>} datetime="2024-01-15 10:00" actions={[<span key="reply">回复</span>]}>
+<Comment
+  author="用户 A"
+  avatar={<Avatar size="sm">A</Avatar>}
+  datetime="2024-01-15 10:00"
+  actions={[<span key="reply">回复</span>]}
+>
   <p>评论内容。</p>
 </Comment>`;
 
-const exampleBasic =
-  `<Comment author="用户 A" avatar={<Avatar size="sm">A</Avatar>} datetime="2024-01-15 10:00" actions={[<span key="reply">回复</span>, <span key="like">点赞</span>]}>
+const exampleBasic = `<Comment
+  author="用户 A"
+  avatar={<Avatar size="sm">A</Avatar>}
+  datetime="2024-01-15 10:00"
+  actions={[<span key="reply">回复</span>, <span key="like">点赞</span>]}
+>
   <p>这是一条评论内容。</p>
 </Comment>`;
 
-const exampleReplies =
-  `<Comment author="用户 B" datetime="2024-01-15 11:00" replies={<Comment author="用户 A" datetime="..."><p>回复内容。</p></Comment>}>
+const exampleReplies = `<Comment
+  author="用户 B"
+  datetime="2024-01-15 11:00"
+  replies={<Comment author="用户 A" datetime="..."><p>回复内容。</p></Comment>}
+>
   <p>带回复的评论。</p>
 </Comment>`;
 
