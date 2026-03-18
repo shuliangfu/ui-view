@@ -43,6 +43,7 @@ const readOnlyCls = "bg-slate-50 dark:bg-slate-800/80 cursor-default";
 
 /**
  * 仅此子组件读 value() 展示字数，避免 Textarea 主体订阅 signal 导致整块重渲染、textarea 失焦。
+ * 在 textarea 下方一行、左侧显示剩余字符数。
  */
 function TextareaLengthDisplay(props: {
   value?: string | (() => string);
@@ -51,12 +52,13 @@ function TextareaLengthDisplay(props: {
   const { value, maxLength } = props;
   const s = typeof value === "function" ? value() : (value ?? "");
   const len = s.length;
+  const remaining = Math.max(0, maxLength - len);
   return (
     <span
-      class="mt-1 block text-right text-xs text-slate-500 dark:text-slate-400"
+      class="mt-1 block text-left text-xs text-slate-500 dark:text-slate-400"
       aria-live="polite"
     >
-      {len} / {maxLength}
+      剩余 {remaining} / {maxLength}
     </span>
   );
 }
@@ -101,9 +103,9 @@ export function Textarea(props: TextareaProps) {
   }
 
   return () => (
-    <span class="block">
+    <div>
       <textarea {...textareaProps} />
       <TextareaLengthDisplay value={value} maxLength={maxLength} />
-    </span>
+    </div>
   );
 }
