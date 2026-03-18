@@ -132,7 +132,10 @@ export default function FormTimePicker() {
             </FormItem>
             <CodeBlock
               title="代码示例"
-              code={`<TimePicker value={val2} onChange={(e) => setVal2((e.target as HTMLInputElement).value)} />
+              code={`<TimePicker
+  value={val2}
+  onChange={(e) => setVal2((e.target as HTMLInputElement).value)}
+/>
 <TimePicker value="" size="sm" onChange={() => {}} />
 <TimePicker value="" size="lg" onChange={() => {}} />
 <TimePicker value="09:00" disabled onChange={() => {}} />`}
