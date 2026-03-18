@@ -39,7 +39,7 @@ export function Anchor(props: AnchorProps) {
     onChange?.(key);
   };
 
-  return () => (
+  return (
     <nav
       class={twMerge("flex flex-col gap-1 text-sm", className)}
       aria-label="锚点导航"
