@@ -47,6 +47,16 @@ export function TimePicker(props: TimePickerProps) {
 
   const sizeCls = sizeClasses[size];
 
+  const handleChange = (e: Event) => {
+    onChange?.(e);
+    (e.target as HTMLInputElement).blur();
+  };
+
+  /** 部分浏览器在滚动选择时先触发 input，在 input 里也 blur 以尽早关闭原生选择框 */
+  const handleInput = (e: Event) => {
+    (e.target as HTMLInputElement).blur();
+  };
+
   return () => (
     <input
       type="time"
@@ -55,7 +65,8 @@ export function TimePicker(props: TimePickerProps) {
       value={value ?? ""}
       disabled={disabled}
       class={twMerge(base, sizeCls, className)}
-      onChange={onChange}
+      onChange={handleChange}
+      onInput={handleInput}
     />
   );
 }
