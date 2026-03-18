@@ -194,7 +194,13 @@ export default function FormSliderRate() {
             </FormItem>
             <CodeBlock
               title="代码示例"
-              code={`<Slider range value={sliderRangeVal()} min={0} max={100} onChange={(e) => setSliderRangeVal(...)} />`}
+              code={`<Slider
+  range
+  value={sliderRangeVal()}
+  min={0}
+  max={100}
+  onChange={(e) => setSliderRangeVal(...)}
+/>`}
               language="tsx"
               showLineNumbers
               copyable
