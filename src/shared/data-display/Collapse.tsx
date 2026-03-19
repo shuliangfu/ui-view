@@ -25,8 +25,8 @@ export interface CollapseItem {
 export interface CollapseProps {
   /** 折叠项列表 */
   items: CollapseItem[];
-  /** 当前展开的 key 列表（受控） */
-  activeKey?: string[];
+  /** 当前展开的 key 列表（受控）；可传 getter 如 activeKey={() => keys()} 以便在 View 中订阅更新 */
+  activeKey?: string[] | (() => string[]);
   /** 默认展开的 key 列表（非受控） */
   defaultActiveKey?: string[];
   /** 展开/收起变化回调 */
@@ -78,11 +78,17 @@ export function Collapse(props: CollapseProps) {
     contentClass,
   } = props;
 
-  const initialKeys = controlledKeys ?? defaultActiveKey ?? [];
+  const initialKeys = typeof controlledKeys === "function"
+    ? (controlledKeys as () => string[])()
+    : (controlledKeys ?? defaultActiveKey ?? []);
   const [internalKeys, setInternalKeys] = createSignal<string[]>(initialKeys);
-  /** 受控时用 prop，否则用内部 state，保证点击后能立即更新 UI */
+  /** 受控时用 prop（或 getter 的返回值），否则用内部 state；读 getter 会建立订阅 */
   const getActiveKeys = (): string[] =>
-    controlledKeys !== undefined ? controlledKeys : internalKeys();
+    controlledKeys === undefined
+      ? internalKeys()
+      : typeof controlledKeys === "function"
+      ? (controlledKeys as () => string[])()
+      : controlledKeys;
 
   const toggle = (key: string) => {
     const current = getActiveKeys();
@@ -100,12 +106,13 @@ export function Collapse(props: CollapseProps) {
     onChange?.(nextArr);
   };
 
+  /** 返回 getter：在 View 的 effect 内读 getActiveKeys()，受控传 getter 时由本 effect 订阅，点击任意面板都会触发本 effect 重跑、三个面板都能更新 */
   return () => {
     const activeSet = new Set(getActiveKeys());
     return (
       <div
         class={twMerge(
-          "collapse",
+          "collapse-panels",
           bordered && !ghost &&
             "border border-slate-200 dark:border-slate-600 rounded-lg overflow-hidden",
           !bordered && "space-y-1",
@@ -154,17 +161,17 @@ export function Collapse(props: CollapseProps) {
                   </span>
                 )}
               </button>
-              {isActive && (
-                <div
-                  class={twMerge(
-                    "overflow-hidden border-t border-slate-100 dark:border-slate-700",
-                    sizeClasses[size],
-                    contentClass,
-                  )}
-                >
-                  {item.children}
-                </div>
-              )}
+              <div
+                class={twMerge(
+                  "overflow-hidden border-t border-slate-100 dark:border-slate-700",
+                  !isActive && "hidden",
+                  sizeClasses[size],
+                  contentClass,
+                )}
+                aria-hidden={!isActive}
+              >
+                {item.children}
+              </div>
             </div>
           );
         })}
