@@ -22,7 +22,7 @@ const ATTACHED_GROUP_CLASS = "dreamer-btn-group-attached";
  * 使用内联 style 覆盖子按钮圆角，避免被 Tailwind 类顺序覆盖。
  */
 export function ButtonGroup(props: ButtonGroupProps) {
-  const { attached = false, class: className, children } = props;
+  const { attached = true, class: className, children } = props;
   const base = "inline-flex items-center";
   const layout = attached ? "gap-0" : "gap-2";
   const groupClass = attached ? ATTACHED_GROUP_CLASS : "";
