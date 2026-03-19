@@ -1,9 +1,15 @@
 /**
- * Button 组件文档页（标准文档结构：概述、引入、API、示例）
+ * Button / ButtonGroup 组件文档页（标准文档结构：概述、引入、示例、API）
  * 路由: /desktop/basic/button
  */
 
-import { Button, CodeBlock, Paragraph, Title } from "@dreamer/ui-view";
+import {
+  Button,
+  ButtonGroup,
+  CodeBlock,
+  Paragraph,
+  Title,
+} from "@dreamer/ui-view";
 
 /** API 属性行类型 */
 interface ApiRow {
@@ -65,14 +71,16 @@ const BUTTON_API: ApiRow[] = [
   },
 ];
 
-const importCode = `import { Button } from "@dreamer/ui-view";
+const importCode = `import { Button, ButtonGroup } from "@dreamer/ui-view";
 
-<Button
-  variant="primary"
-  onClick={() => console.log("click")}
->
+<Button variant="primary" onClick={() => console.log("click")}>
   确定
-</Button>`;
+</Button>
+
+<ButtonGroup>
+  <Button variant="default" size="sm">刷新</Button>
+  <Button variant="primary" size="sm">导出</Button>
+</ButtonGroup>`;
 
 /** 各示例对应代码，便于用户复制 */
 const exampleVariant = `<Button variant="default">default</Button>
@@ -117,6 +125,38 @@ const exampleType = `<Button
 >
   reset
 </Button>`;
+
+const BUTTON_GROUP_API: ApiRow[] = [
+  {
+    name: "attached",
+    type: "boolean",
+    default: "true",
+    description:
+      "是否紧凑相连：true 时中间无间隙、仅首尾圆角，焦点环仅画在外侧；false 时保留间距",
+  },
+  {
+    name: "class",
+    type: "string",
+    default: "-",
+    description: "额外 class",
+  },
+  {
+    name: "children",
+    type: "unknown",
+    default: "-",
+    description: "子节点（通常为多个 Button）",
+  },
+];
+
+const exampleButtonGroupAttached = `<ButtonGroup>
+  <Button variant="default" size="sm" onClick={onRefresh}>刷新</Button>
+  <Button variant="primary" size="sm" onClick={onExport}>导出</Button>
+</ButtonGroup>`;
+
+const exampleButtonGroupSpaced = `<ButtonGroup attached={false}>
+  <Button variant="default" size="sm">刷新</Button>
+  <Button variant="primary" size="sm">导出</Button>
+</ButtonGroup>`;
 
 export default function BasicButton() {
   return (
@@ -244,54 +284,161 @@ export default function BasicButton() {
             wrapLongLines
           />
         </div>
+
+        <div class="space-y-4">
+          <Title level={3}>ButtonGroup 按钮组（默认紧凑相连）</Title>
+          <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+            将多个按钮横向排列为一组，默认
+            attached=true：中间无间隙、仅首尾圆角，焦点环贴边且仅画在外侧。
+          </Paragraph>
+          <div class="flex flex-wrap gap-4">
+            <ButtonGroup>
+              <Button
+                variant="default"
+                size="sm"
+                onClick={() => console.log("刷新")}
+              >
+                刷新
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => console.log("导出")}
+              >
+                导出
+              </Button>
+            </ButtonGroup>
+          </div>
+          <CodeBlock
+            title="代码示例"
+            code={exampleButtonGroupAttached}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+        </div>
+
+        <div class="space-y-4">
+          <Title level={3}>ButtonGroup attached=false（保留间距）</Title>
+          <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+            attached=false 时按钮之间保留 gap，各自保留圆角。
+          </Paragraph>
+          <div class="flex flex-wrap gap-4">
+            <ButtonGroup attached={false}>
+              <Button variant="default" size="sm">刷新</Button>
+              <Button variant="primary" size="sm">导出</Button>
+            </ButtonGroup>
+          </div>
+          <CodeBlock
+            title="代码示例"
+            code={exampleButtonGroupSpaced}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+        </div>
       </section>
 
       {/* 4. API */}
-      <section class="space-y-3">
+      <section class="space-y-6">
         <Title level={2}>API</Title>
-        <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
-          组件接收以下属性（均为可选）。
-        </Paragraph>
-        <div class="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-600">
-          <table class="w-full min-w-lg text-sm">
-            <thead>
-              <tr class="border-b border-slate-200 bg-slate-50 dark:border-slate-600 dark:bg-slate-800/80">
-                <th class="px-4 py-3 text-left font-medium text-slate-900 dark:text-slate-100">
-                  属性
-                </th>
-                <th class="px-4 py-3 text-left font-medium text-slate-900 dark:text-slate-100">
-                  类型
-                </th>
-                <th class="px-4 py-3 text-left font-medium text-slate-900 dark:text-slate-100">
-                  默认值
-                </th>
-                <th class="px-4 py-3 text-left font-medium text-slate-900 dark:text-slate-100">
-                  说明
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {BUTTON_API.map((row) => (
-                <tr
-                  key={row.name}
-                  class="border-b border-slate-100 dark:border-slate-700 last:border-b-0"
-                >
-                  <td class="px-4 py-2.5 font-mono text-slate-700 dark:text-slate-300">
-                    {row.name}
-                  </td>
-                  <td class="px-4 py-2.5 text-slate-600 dark:text-slate-400">
-                    {row.type}
-                  </td>
-                  <td class="px-4 py-2.5 text-slate-600 dark:text-slate-400">
-                    {row.default}
-                  </td>
-                  <td class="px-4 py-2.5 text-slate-600 dark:text-slate-400">
-                    {row.description}
-                  </td>
+
+        <div class="space-y-3">
+          <Title level={3}>Button</Title>
+          <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+            组件接收以下属性（均为可选）。
+          </Paragraph>
+          <div class="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-600">
+            <table class="w-full min-w-lg text-sm">
+              <thead>
+                <tr class="border-b border-slate-200 bg-slate-50 dark:border-slate-600 dark:bg-slate-800/80">
+                  <th class="px-4 py-3 text-left font-medium text-slate-900 dark:text-slate-100">
+                    属性
+                  </th>
+                  <th class="px-4 py-3 text-left font-medium text-slate-900 dark:text-slate-100">
+                    类型
+                  </th>
+                  <th class="px-4 py-3 text-left font-medium text-slate-900 dark:text-slate-100">
+                    默认值
+                  </th>
+                  <th class="px-4 py-3 text-left font-medium text-slate-900 dark:text-slate-100">
+                    说明
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {BUTTON_API.map((row) => (
+                  <tr
+                    key={row.name}
+                    class="border-b border-slate-100 dark:border-slate-700 last:border-b-0"
+                  >
+                    <td class="px-4 py-2.5 font-mono text-slate-700 dark:text-slate-300">
+                      {row.name}
+                    </td>
+                    <td class="px-4 py-2.5 text-slate-600 dark:text-slate-400">
+                      {row.type}
+                    </td>
+                    <td class="px-4 py-2.5 text-slate-600 dark:text-slate-400">
+                      {row.default}
+                    </td>
+                    <td class="px-4 py-2.5 text-slate-600 dark:text-slate-400">
+                      {row.description}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="space-y-3">
+          <Title level={3}>ButtonGroup</Title>
+          <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+            按钮组容器，子节点通常为多个 Button。
+          </Paragraph>
+          <div class="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-600">
+            <table class="w-full min-w-lg text-sm">
+              <thead>
+                <tr class="border-b border-slate-200 bg-slate-50 dark:border-slate-600 dark:bg-slate-800/80">
+                  <th class="px-4 py-3 text-left font-medium text-slate-900 dark:text-slate-100">
+                    属性
+                  </th>
+                  <th class="px-4 py-3 text-left font-medium text-slate-900 dark:text-slate-100">
+                    类型
+                  </th>
+                  <th class="px-4 py-3 text-left font-medium text-slate-900 dark:text-slate-100">
+                    默认值
+                  </th>
+                  <th class="px-4 py-3 text-left font-medium text-slate-900 dark:text-slate-100">
+                    说明
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {BUTTON_GROUP_API.map((row) => (
+                  <tr
+                    key={row.name}
+                    class="border-b border-slate-100 dark:border-slate-700 last:border-b-0"
+                  >
+                    <td class="px-4 py-2.5 font-mono text-slate-700 dark:text-slate-300">
+                      {row.name}
+                    </td>
+                    <td class="px-4 py-2.5 text-slate-600 dark:text-slate-400">
+                      {row.type}
+                    </td>
+                    <td class="px-4 py-2.5 text-slate-600 dark:text-slate-400">
+                      {row.default}
+                    </td>
+                    <td class="px-4 py-2.5 text-slate-600 dark:text-slate-400">
+                      {row.description}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </section>
     </div>
