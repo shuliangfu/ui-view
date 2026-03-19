@@ -54,19 +54,36 @@ export function Timeline(props: TimelineProps) {
     itemClass,
   } = props;
 
+  const axisOnRight = mode === "right" || mode === "alternate";
+
   return () => (
-    <div class={twMerge("timeline flex flex-col", className)}>
+    <div
+      class={twMerge(
+        "timeline relative flex flex-col",
+        (mode === "right" || mode === "alternate") &&
+          "w-max max-w-full ml-auto",
+        className,
+      )}
+    >
+      {/* 一条贯穿首尾的竖线，从第一圆点下方到底部，避免逐段拼接断开 */}
+      <div
+        class={twMerge(
+          "absolute top-3 bottom-0 w-0.5 bg-slate-200 dark:bg-slate-600 pointer-events-none",
+          mode === "left" && "left-[5px]",
+          axisOnRight && "right-[5px]",
+        )}
+        aria-hidden
+      />
       {items.map((item, index) => {
         const isLast = index === items.length - 1;
         const isPending = item.pending ?? (listPending && isLast);
         const color = item.color ?? "primary";
         const dotCls = twMerge(
-          "shrink-0 w-3 h-3 rounded-full border-2 border-white dark:border-slate-800 shadow",
+          "shrink-0 w-3 h-3 rounded-full border-2 border-white dark:border-slate-800 shadow relative z-[1]",
           isPending ? "bg-slate-200 dark:bg-slate-600" : colorClasses[color],
         );
-        const isAlternateLeft = mode === "alternate" && index % 2 === 0;
-        const isAlternateRight = mode === "alternate" && index % 2 === 1;
-        const isRight = mode === "right" || isAlternateRight;
+        const textAlignRight = mode === "right" ||
+          (mode === "alternate" && index % 2 === 1);
 
         return (
           <div
@@ -74,27 +91,21 @@ export function Timeline(props: TimelineProps) {
             class={twMerge(
               "flex gap-3 relative",
               mode === "left" && "flex-row",
-              (mode === "right" || isAlternateRight) && "flex-row-reverse",
-              mode === "alternate" &&
-                (isAlternateLeft ? "flex-row" : "flex-row-reverse"),
+              axisOnRight && "flex-row-reverse justify-start",
               !isLast && "pb-6",
               itemClass,
             )}
           >
-            <div class="flex flex-col items-center">
+            <div class="relative flex flex-col items-center self-stretch">
               <div class={dotCls}>{item.dot}</div>
-              {!isLast && (
-                <div
-                  class={twMerge(
-                    "absolute top-3 left-[5px] w-0.5 flex-1 bg-slate-200 dark:bg-slate-600",
-                    isPending &&
-                      "border-l-2 border-dashed border-slate-300 dark:border-slate-500",
-                  )}
-                  style={{ height: "calc(100% - 0.75rem)" }}
-                />
-              )}
             </div>
-            <div class={twMerge("flex-1 min-w-0", isRight && "text-right")}>
+            <div
+              class={twMerge(
+                mode === "left" && "flex-1 min-w-0",
+                axisOnRight && "shrink-0",
+                textAlignRight && "text-right",
+              )}
+            >
               {item.label != null && (
                 <div class="text-xs text-slate-500 dark:text-slate-400 mb-1">
                   {item.label}
