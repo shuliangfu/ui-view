@@ -3,8 +3,8 @@
  * 路由: /desktop/data-display/collapse
  */
 
-import { createSignal } from "@dreamer/view";
 import { CodeBlock, Collapse, Paragraph, Title } from "@dreamer/ui-view";
+import { createSignal } from "@dreamer/view";
 
 /** API 属性行类型 */
 interface ApiRow {
@@ -108,24 +108,39 @@ const exampleShowArrowSize = `<Collapse
   size="sm"
 />`;
 
-export default function DataDisplayCollapse() {
-  const [activeKey, setActiveKey] = createSignal<string[]>(["1"]);
+/** 受控示例的展开 key：提到模块级，避免页面重跑时 createSignal 被重新执行导致只有第一个面板能切换 */
+const [activeKeyControlled, setActiveKeyControlled] = createSignal<string[]>([
+  "1",
+]);
 
+export default function DataDisplayCollapse() {
   const items = [
     {
       key: "1",
       header: "面板 1",
-      children: <p class="text-sm text-slate-600">内容一</p>,
+      children: (
+        <p class="text-sm text-slate-600 dark:text-slate-400">
+          内容一
+        </p>
+      ),
     },
     {
       key: "2",
       header: "面板 2",
-      children: <p class="text-sm text-slate-600">内容二</p>,
+      children: (
+        <p class="text-sm text-slate-600 dark:text-slate-400">
+          内容二
+        </p>
+      ),
     },
     {
       key: "3",
       header: "面板 3",
-      children: <p class="text-sm text-slate-600">内容三</p>,
+      children: (
+        <p class="text-sm text-slate-600 dark:text-slate-400">
+          内容三
+        </p>
+      ),
     },
   ];
 
@@ -155,11 +170,13 @@ export default function DataDisplayCollapse() {
 
         <div class="space-y-4">
           <Title level={3}>受控 + 多开</Title>
-          <Collapse
-            items={items}
-            activeKey={activeKey()}
-            onChange={setActiveKey}
-          />
+          {() => (
+            <Collapse
+              items={items}
+              activeKey={activeKeyControlled()}
+              onChange={setActiveKeyControlled}
+            />
+          )}
           <CodeBlock
             title="代码示例"
             code={exampleControlled}
@@ -172,12 +189,14 @@ export default function DataDisplayCollapse() {
 
         <div class="space-y-4">
           <Title level={3}>accordion + bordered=false</Title>
-          <Collapse
-            items={items}
-            defaultActiveKey={["1"]}
-            accordion
-            bordered={false}
-          />
+          {() => (
+            <Collapse
+              items={items}
+              defaultActiveKey={["1"]}
+              accordion
+              bordered={false}
+            />
+          )}
           <CodeBlock
             title="代码示例"
             code={exampleAccordion}
@@ -190,8 +209,12 @@ export default function DataDisplayCollapse() {
 
         <div class="space-y-4">
           <Title level={3}>showArrow=false / size=sm</Title>
-          <Collapse items={items} defaultActiveKey={[]} showArrow={false} />
-          <Collapse items={items} defaultActiveKey={["1"]} size="sm" />
+          {() => (
+            <>
+              <Collapse items={items} defaultActiveKey={[]} showArrow={false} />
+              <Collapse items={items} defaultActiveKey={["1"]} size="sm" />
+            </>
+          )}
           <CodeBlock
             title="代码示例"
             code={exampleShowArrowSize}
