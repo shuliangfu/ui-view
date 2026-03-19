@@ -47,6 +47,13 @@ const SEGMENTED_API: ApiRow[] = [
     default: "-",
     description: "自定义子节点",
   },
+  {
+    name: "stateKey",
+    type: "string",
+    default: "-",
+    description:
+      "可选。传值时非受控选中状态按 key 缓存，整树重渲染后仍保留，避免点击无反应",
+  },
   { name: "class", type: "string", default: "-", description: "额外 class" },
 ];
 
@@ -55,30 +62,52 @@ import { Segmented } from "@dreamer/ui-view";
 
 const [value, setValue] = createSignal("列表");
 const options = [{ value: "列表", label: "列表" }, { value: "网格", label: "网格" }];
-<Segmented
-  options={options}
-  value={value()}
-  onChange={setValue}
-/>`;
+{() => (
+  <>
+    <Segmented
+      options={options}
+      value={value}
+      onChange={setValue}
+    />
+    <p>当前: {value()}</p>
+  </>
+)}`;
 
-const exampleBasic = `<Segmented
-  options={options}
-  value={value()}
-  onChange={setValue}
-/>`;
+const exampleBasic = `{() => (
+  <>
+    <Segmented
+      options={options}
+      value={value}
+      onChange={setValue}
+    />
+    <p>当前: {value()}</p>
+  </>
+)}`;
 
-const exampleBlockSize = `<Segmented
-  options={options}
-  value={value()}
-  onChange={setValue}
-  block
-  size="lg"
-/>`;
+const exampleBlockSize = `{() => (
+  <Segmented
+    options={options}
+    value={value}
+    onChange={setValue}
+    block
+    size="lg"
+  />
+)}`;
 
-const exampleDisabled = `options 中某项设置 disabled: true 即可禁用该项`;
+const exampleDisabled = `{() => (
+  <Segmented
+    options={options}
+    value={value}
+    onChange={setValue}
+  />
+)}
+// options 中某项设置 disabled: true 即可禁用该项`;
 
 export default function DataDisplaySegmented() {
-  const [value, setValue] = createSignal("列表");
+  /** 各示例使用独立 signal，互不影响 */
+  const [valueBasic, setValueBasic] = createSignal("列表");
+  const [valueBlock, setValueBlock] = createSignal("列表");
+  const [valueDisabled, setValueDisabled] = createSignal("列表");
 
   const options = [
     { value: "列表", label: "列表" },
@@ -91,8 +120,9 @@ export default function DataDisplaySegmented() {
       <section>
         <Title level={1}>Segmented 分段控制器</Title>
         <Paragraph class="mt-2">
-          分段控制器：options、value、onChange、block、size、disabled。 使用
-          Tailwind v4，支持 light/dark 主题。
+          分段控制器：options、value、onChange、block、size、disabled、stateKey。
+          整树渲染时建议传 stateKey 保留非受控状态；使用 Tailwind v4，支持
+          light/dark 主题。
         </Paragraph>
       </section>
 
@@ -110,10 +140,20 @@ export default function DataDisplaySegmented() {
       <section class="space-y-8">
         <Title level={2}>示例</Title>
 
+        {/* 包成 getter：仅本块订阅 value()，点击时只重跑本块、不重跑整页，避免 createSignal 被重新执行导致选中态重置 */}
         <div class="space-y-4">
           <Title level={3}>基础</Title>
-          <Segmented options={options} value={value()} onChange={setValue} />
-          <p class="text-sm text-slate-500">当前: {value()}</p>
+          {() => (
+            <>
+              <Segmented
+                options={options}
+                value={valueBasic}
+                onChange={setValueBasic}
+                stateKey="segmented-doc-basic"
+              />
+              <p class="text-sm text-slate-500">当前: {valueBasic()}</p>
+            </>
+          )}
           <CodeBlock
             title="代码示例"
             code={exampleBasic}
@@ -126,13 +166,16 @@ export default function DataDisplaySegmented() {
 
         <div class="space-y-4">
           <Title level={3}>block / size=lg</Title>
-          <Segmented
-            options={options}
-            value={value()}
-            onChange={setValue}
-            block
-            size="lg"
-          />
+          {() => (
+            <Segmented
+              options={options}
+              value={valueBlock}
+              onChange={setValueBlock}
+              block
+              size="lg"
+              stateKey="segmented-doc-block"
+            />
+          )}
           <CodeBlock
             title="代码示例"
             code={exampleBlockSize}
@@ -145,15 +188,18 @@ export default function DataDisplaySegmented() {
 
         <div class="space-y-4">
           <Title level={3}>options 含 disabled</Title>
-          <Segmented
-            options={[...options, {
-              value: "禁用",
-              label: "禁用",
-              disabled: true,
-            }]}
-            value={value()}
-            onChange={setValue}
-          />
+          {() => (
+            <Segmented
+              options={[...options, {
+                value: "禁用",
+                label: "禁用",
+                disabled: true,
+              }]}
+              value={valueDisabled}
+              onChange={setValueDisabled}
+              stateKey="segmented-doc-disabled"
+            />
+          )}
           <CodeBlock
             title="代码示例"
             code={exampleDisabled}
