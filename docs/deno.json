@@ -6,7 +6,7 @@
     "start": "deno run -A dist/server.js"
   },
   "imports": {
-    "@dreamer/dweb": "jsr:@dreamer/dweb@^3.1.11",
+    "@dreamer/dweb": "jsr:@dreamer/dweb@^3.2.0",
     "@dreamer/render": "jsr:@dreamer/render@^1.1.1",
     "@dreamer/router": "jsr:@dreamer/router@^1.1.0",
     "@dreamer/plugins": "jsr:@dreamer/plugins@^1.0.9",
