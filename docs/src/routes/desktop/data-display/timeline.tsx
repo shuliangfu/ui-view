@@ -54,15 +54,6 @@ const exampleLeft = `<Timeline
   mode="left"
 />`;
 
-const exampleAlternateRight = `<Timeline
-  items={items.slice(0, 3)}
-  mode="alternate"
-/>
-<Timeline
-  items={items.slice(0, 2)}
-  mode="right"
-/>`;
-
 export default function DataDisplayTimeline() {
   const items = [
     {
@@ -119,12 +110,30 @@ export default function DataDisplayTimeline() {
         </div>
 
         <div class="space-y-4">
-          <Title level={3}>mode=alternate / mode=right</Title>
+          <Title level={3}>mode=alternate</Title>
+          <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+            轴线在右，文案左右对齐交替；整条时间轴靠右。
+          </Paragraph>
           <Timeline items={items.slice(0, 3)} mode="alternate" />
-          <Timeline items={items.slice(0, 2)} mode="right" />
           <CodeBlock
             title="代码示例"
-            code={exampleAlternateRight}
+            code={`<Timeline items={items} mode="alternate" />`}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+        </div>
+
+        <div class="space-y-4">
+          <Title level={3}>mode=right</Title>
+          <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+            轴线在右，文案右对齐；整条时间轴靠右。
+          </Paragraph>
+          <Timeline items={items.slice(0, 3)} mode="right" />
+          <CodeBlock
+            title="代码示例"
+            code={`<Timeline items={items} mode="right" />`}
             language="tsx"
             showLineNumbers
             copyable
