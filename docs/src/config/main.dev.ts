@@ -9,7 +9,7 @@ export default {
     dev: {
       hmr: { enabled: true, path: "/__hmr" },
       watch: {
-        paths: ["./src"],
+        paths: ["./src", "../src"],
         ignore: ["node_modules", ".git", "dist"],
       },
     },
