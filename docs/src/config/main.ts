@@ -26,13 +26,13 @@ const config: AppConfig = {
   // ========== Server ==========
   // host / port 在 main.dev.ts（127.0.0.1:3000）与 main.prod.ts（0.0.0.0:3000）中配置
   server: {
-    dev: {
-      hmr: { enabled: true, path: "/__hmr" },
-      watch: {
-        paths: ["./src"],
-        ignore: ["node_modules", ".git", "dist"],
-      },
-    },
+    // dev: {
+    //   hmr: { enabled: true, path: "/__hmr" },
+    //   watch: {
+    //     paths: ["./src"],
+    //     ignore: ["node_modules", ".git", "dist"],
+    //   },
+    // },
     // mode: "dev",
     // onListen: ({ host, port }) => { console.log(`http://${host}:${port}`); },
     // onError: (error) => { console.error(error); return new Response("Error", { status: 500 }); },
