@@ -16,5 +16,5 @@ export interface ChartBarProps {
 
 /** 柱状图组件 */
 export function ChartBar(props: ChartBarProps) {
-  return () => <ChartBase type="bar" {...props} />;
+  return <ChartBase type="bar" {...props} />;
 }

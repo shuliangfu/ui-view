@@ -88,30 +88,30 @@ const IMAGE_VIEWER_API: ApiRow[] = [
 const importCode = `import { createSignal } from "@dreamer/view";
 import { Button, ImageViewer } from "@dreamer/ui-view";
 
-const [open, setOpen] = createSignal(false);
-const [index, setIndex] = createSignal(0);
+const open = createSignal(false);
+const index = createSignal(0);
 <ImageViewer
-  open={open()}
-  onClose={() => setOpen(false)}
+  open={open.value}
+  onClose={() => open.value = false}
   images={images}
-  currentIndex={index()}
-  onIndexChange={setIndex}
+  currentIndex={index.value}
+  onIndexChange={(i) => index.value = i}
 />`;
 
 const exampleBasic = `<ImageViewer
-  open={open()}
-  onClose={() => setOpen(false)}
+  open={open.value}
+  onClose={() => open.value = false}
   images={DEMO_IMAGES}
-  currentIndex={index()}
-  onIndexChange={setIndex}
+  currentIndex={index.value}
+  onIndexChange={(i) => index.value = i}
   maskClosable
   keyboard
   showThumbnails
 />`;
 
 export default function DataDisplayImageViewer() {
-  const [open, setOpen] = createSignal(false);
-  const [index, setIndex] = createSignal(0);
+  const open = createSignal(false);
+  const index = createSignal(0);
 
   return () => (
     <div class="space-y-10">
@@ -146,8 +146,8 @@ export default function DataDisplayImageViewer() {
                 key={src}
                 class="rounded-lg overflow-hidden border border-slate-200 dark:border-slate-600 hover:ring-2 hover:ring-teal-500 transition-shadow"
                 onClick={() => {
-                  setIndex(i);
-                  setOpen(true);
+                  index.value = i;
+                  open.value = true;
                 }}
               >
                 <img
@@ -161,18 +161,18 @@ export default function DataDisplayImageViewer() {
           <Button
             type="button"
             onClick={() => {
-              setIndex(0);
-              setOpen(true);
+              index.value = 0;
+              open.value = true;
             }}
           >
             打开查看器
           </Button>
           <ImageViewer
-            open={open()}
-            onClose={() => setOpen(false)}
+            open={open.value}
+            onClose={() => open.value = false}
             images={DEMO_IMAGES}
-            currentIndex={index()}
-            onIndexChange={setIndex}
+            currentIndex={index.value}
+            onIndexChange={(i) => index.value = i}
             maskClosable
             keyboard
             showThumbnails

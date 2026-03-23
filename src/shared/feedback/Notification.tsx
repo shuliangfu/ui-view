@@ -5,13 +5,12 @@
  */
 
 import { twMerge } from "tailwind-merge";
-import {
-  IconAlertCircle,
-  IconBell,
-  IconCheckCircle,
-  IconInfo,
-  IconXCircle,
-} from "../basic/icons/mod.ts";
+/** 按需：单文件图标，避免经 icons/mod 拉入全表 */
+import { IconAlertCircle } from "../basic/icons/AlertCircle.tsx";
+import { IconBell } from "../basic/icons/Bell.tsx";
+import { IconCheckCircle } from "../basic/icons/CheckCircle.tsx";
+import { IconInfo } from "../basic/icons/Info.tsx";
+import { IconXCircle } from "../basic/icons/XCircle.tsx";
 import type {
   NotificationItem,
   NotificationPlacement,
@@ -123,7 +122,10 @@ const placementContainerClasses: Record<NotificationPlacement, string> = {
 /** 与 Toast/Message 同级最高层级，始终挂载确保显示与层级 */
 const NOTIFICATION_Z_INDEX = 2147483647;
 
-/** 通知容器：按 placement 分组，各位置独立堆叠；关闭由容器上事件委托处理，保证点击 X 可靠关闭 */
+/**
+ * 通知容器：按 placement 分组，各位置独立堆叠；关闭由容器上事件委托处理，保证点击 X 可靠关闭。
+ * 保留 `return () =>`：在 getter 内读 `notificationList()` 以订阅模块级列表 SignalRef。
+ */
 export function NotificationContainer() {
   const handleWrapClick = (e: Event) => {
     const target = e.target as Element | null;

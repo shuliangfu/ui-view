@@ -1,14 +1,43 @@
 /**
- * 桌面端导航（D）：Dropdown、Breadcrumb
+ * 桌面端导航入口：本目录显式导出；Sidebar/Pagination 等为薄 re-export，Dropdown/Breadcrumb/NavBar 为桌面实现。
  */
+export type { BreadcrumbItem } from "./breadcrumb-types.ts";
+export {
+  Sidebar,
+  type SidebarItem,
+  type SidebarProps,
+  type SidebarSubItem,
+} from "./Sidebar.tsx";
+export { Pagination, type PaginationProps } from "./Pagination.tsx";
+export { Menu, type MenuItem, type MenuProps } from "./Menu.tsx";
+export {
+  type StepItem,
+  Steps,
+  type StepsProps,
+  type StepStatus,
+} from "./Steps.tsx";
+export { PageHeader, type PageHeaderProps } from "./PageHeader.tsx";
+export {
+  Affix,
+  type AffixInitOptions,
+  type AffixProps,
+  initAffix,
+} from "./Affix.tsx";
+export {
+  Anchor,
+  type AnchorLink,
+  type AnchorProps,
+  type AnchorSpyOptions,
+  initAnchorSpy,
+} from "./Anchor.tsx";
+export { BackTop } from "./BackTop.tsx";
+export type { BackTopProps, BackTopTarget } from "./BackTop.tsx";
+
 export {
   Dropdown,
   type DropdownPlacement,
   type DropdownProps,
   initDropdownEsc,
 } from "./Dropdown.tsx";
-export {
-  Breadcrumb,
-  type BreadcrumbItem,
-  type BreadcrumbProps,
-} from "./Breadcrumb.tsx";
+export { Breadcrumb, type BreadcrumbProps } from "./Breadcrumb.tsx";
+export { NavBar, type NavBarProps } from "./NavBar.tsx";

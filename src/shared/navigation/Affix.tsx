@@ -30,7 +30,7 @@ export function Affix(props: AffixProps) {
     affixClass,
   } = props;
 
-  return () => (
+  return (
     <div
       class={twMerge("affix-host", className)}
       data-affix-offset-top={offsetTop ?? ""}

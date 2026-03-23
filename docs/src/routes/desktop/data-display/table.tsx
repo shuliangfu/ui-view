@@ -214,7 +214,7 @@ const exampleSizeStripedLoading = `<Table
 const exampleRowSelection = `<Table
   columns={columns}
   dataSource={dataSource}
-  onSelectChange={(rows) => setSelectedRows(rows)}
+  onSelectChange={(rows) => selectedRows.value = rows}
 />`;
 
 const exampleEmpty = `<Table
@@ -252,9 +252,9 @@ const exampleFixedColumn = `<Table
 />`;
 
 export default function DataDisplayTable() {
-  const [expandedKeys, setExpandedKeys] = createSignal<string[]>([]);
-  const [selectedRows, setSelectedRows] = createSignal<Row[]>([]);
-  const [page, setPage] = createSignal(1);
+  const expandedKeys = createSignal<string[]>([]);
+  const selectedRows = createSignal<Row[]>([]);
+  const page = createSignal(1);
 
   const columns = [
     { key: "name", title: "姓名", dataIndex: "name" as const },
@@ -301,11 +301,9 @@ export default function DataDisplayTable() {
             expandable={{
               // 不传 expandedRowKeys 时使用 Table 内部展开态；stateKey 避免整树重渲染丢失展开态
               onExpand: (expanded, record) => {
-                setExpandedKeys(
-                  expanded
-                    ? [...expandedKeys(), record.key]
-                    : expandedKeys().filter((k) => k !== record.key),
-                );
+                expandedKeys.value = expanded
+                  ? [...expandedKeys.value, record.key]
+                  : expandedKeys.value.filter((k) => k !== record.key);
               },
               expandedRowRender: (record) => (
                 <p class="text-sm text-slate-500">详情：{record.address}</p>
@@ -347,12 +345,12 @@ export default function DataDisplayTable() {
             columns={columns}
             dataSource={dataSource}
             stateKey="table-doc-row-selection"
-            onSelectChange={(rows) => setSelectedRows(rows)}
+            onSelectChange={(rows) => selectedRows.value = rows}
           />
           {() => (
             <p class="text-sm text-slate-500">
-              已选行: {selectedRows().length
-                ? selectedRows().map((r) => r.name).join("、")
+              已选行: {selectedRows.value.length
+                ? selectedRows.value.map((r) => r.name).join("、")
                 : "-"}
             </p>
           )}
@@ -434,9 +432,9 @@ export default function DataDisplayTable() {
               { key: "5", name: "钱七", age: 22, address: "杭州" },
             ]}
             pagination={{
-              current: page(),
+              current: page.value,
               pageSize: 2,
-              onChange: (p) => setPage(p),
+              onChange: (p) => page.value = p,
             }}
           />
           <CodeBlock

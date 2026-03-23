@@ -7,10 +7,12 @@ import {
   CodeBlock,
   Form,
   FormItem,
-  Input,
+  // Input,
   Paragraph,
   Title,
 } from "@dreamer/ui-view";
+import { Input } from "@dreamer/ui-view/form";
+
 import { createSignal } from "@dreamer/view";
 
 interface ApiRow {
@@ -97,27 +99,27 @@ const INPUT_API: ApiRow[] = [
 const importCode = `import { Input, Form, FormItem } from "@dreamer/ui-view";
 import { createSignal } from "@dreamer/view";
 
-const [val, setVal] = createSignal("");
+const val = createSignal("");
 <FormItem label="用户名">
   <Input
-    value={val}
-    onInput={(e) => setVal((e.target as HTMLInputElement).value)}
+    value={() => val.value}
+    onInput={(e) => val.value = (e.target as HTMLInputElement).value}
     placeholder="请输入"
   />
 </FormItem>`;
 
 export default function FormInput() {
-  const [valPlaceholder, setValPlaceholder] = createSignal("");
-  const [valRequired, setValRequired] = createSignal("");
-  const [valError, setValError] = createSignal("");
-  const [readOnlyVal] = createSignal("只读内容");
-  const [valLeft1, setValLeft1] = createSignal("");
-  const [valLeft2, setValLeft2] = createSignal("");
-  const [valLeft3, setValLeft3] = createSignal("");
-  const [valRight1, setValRight1] = createSignal("");
-  const [valRight2, setValRight2] = createSignal("");
-  const [valRight3, setValRight3] = createSignal("");
-  const [valClear, setValClear] = createSignal("");
+  const valPlaceholder = createSignal("");
+  const valRequired = createSignal("");
+  const valError = createSignal("");
+  const readOnlyVal = createSignal("只读内容");
+  const valLeft1 = createSignal("");
+  const valLeft2 = createSignal("");
+  const valLeft3 = createSignal("");
+  const valRight1 = createSignal("");
+  const valRight2 = createSignal("");
+  const valRight3 = createSignal("");
+  const valClear = createSignal("");
 
   return (
     <div class="space-y-10 w-full">
@@ -154,9 +156,9 @@ export default function FormInput() {
               <FormItem label="placeholder" id="input-placeholder">
                 <Input
                   id="input-placeholder"
-                  value={valPlaceholder}
+                  value={() => valPlaceholder.value}
                   onInput={(e) =>
-                    setValPlaceholder((e.target as HTMLInputElement).value)}
+                    valPlaceholder.value = (e.target as HTMLInputElement).value}
                   placeholder="请输入"
                 />
               </FormItem>
@@ -164,8 +166,8 @@ export default function FormInput() {
             <div class="w-full">
               <CodeBlock
                 code={`<Input
-  value={val}
-  onInput={(e) => setVal((e.target as HTMLInputElement).value)}
+  value={() => val.value}
+  onInput={(e) => val.value = (e.target as HTMLInputElement).value}
   placeholder="请输入"
 />`}
                 language="tsx"
@@ -183,9 +185,9 @@ export default function FormInput() {
               <FormItem label="必填" required id="input-required">
                 <Input
                   id="input-required"
-                  value={valRequired}
+                  value={() => valRequired.value}
                   onInput={(e) =>
-                    setValRequired((e.target as HTMLInputElement).value)}
+                    valRequired.value = (e.target as HTMLInputElement).value}
                   placeholder="必填项"
                   required
                 />
@@ -194,8 +196,8 @@ export default function FormInput() {
             <div class="w-full">
               <CodeBlock
                 code={`<Input
-  value={valRequired}
-  onInput={(e) => setValRequired((e.target as HTMLInputElement).value)}
+  value={() => valRequired.value}
+  onInput={(e) => valRequired.value = (e.target as HTMLInputElement).value}
   placeholder="必填项"
   required
 />`}
@@ -218,9 +220,9 @@ export default function FormInput() {
               >
                 <Input
                   id="input-error"
-                  value={valError}
+                  value={() => valError.value}
                   onInput={(e) =>
-                    setValError((e.target as HTMLInputElement).value)}
+                    valError.value = (e.target as HTMLInputElement).value}
                   placeholder="错误时红框"
                   error
                 />
@@ -229,8 +231,8 @@ export default function FormInput() {
             <div class="w-full">
               <CodeBlock
                 code={`<Input
-  value={valError}
-  onInput={(e) => setValError((e.target as HTMLInputElement).value)}
+  value={() => valError.value}
+  onInput={(e) => valError.value = (e.target as HTMLInputElement).value}
   placeholder="错误时红框"
   error
 />`}
@@ -247,13 +249,17 @@ export default function FormInput() {
             <Title level={3}>readOnly</Title>
             <Form layout="vertical" class="w-full">
               <FormItem label="只读" id="input-readonly">
-                <Input id="input-readonly" value={readOnlyVal} readOnly />
+                <Input
+                  id="input-readonly"
+                  value={() => readOnlyVal.value}
+                  readOnly
+                />
               </FormItem>
             </Form>
             <div class="w-full">
               <CodeBlock
                 code={`<Input
-  value={readOnlyVal}
+  value={() => readOnlyVal.value}
   readOnly
 />`}
                 language="tsx"
@@ -298,9 +304,9 @@ export default function FormInput() {
             <Form layout="vertical" class="w-full">
               <FormItem label="输入后右侧显示 X，点击可清空">
                 <Input
-                  value={valClear}
+                  value={() => valClear.value}
                   onInput={(e) =>
-                    setValClear((e.target as HTMLInputElement).value)}
+                    valClear.value = (e.target as HTMLInputElement).value}
                   placeholder="输入内容后出现清除按钮"
                   allowClear
                 />
@@ -309,8 +315,8 @@ export default function FormInput() {
             <div class="w-full">
               <CodeBlock
                 code={`<Input
-  value={valClear}
-  onInput={(e) => setValClear((e.target as HTMLInputElement).value)}
+  value={() => valClear.value}
+  onInput={(e) => valClear.value = (e.target as HTMLInputElement).value}
   placeholder="输入内容后出现清除按钮"
   allowClear
 />`}
@@ -343,9 +349,9 @@ export default function FormInput() {
                     >
                       <Input
                         id="left-name"
-                        value={valLeft1}
+                        value={() => valLeft1.value}
                         onInput={(e) =>
-                          setValLeft1((e.target as HTMLInputElement).value)}
+                          valLeft1.value = (e.target as HTMLInputElement).value}
                         placeholder="请输入姓名"
                       />
                     </FormItem>
@@ -357,9 +363,9 @@ export default function FormInput() {
                     >
                       <Input
                         id="left-phone"
-                        value={valLeft2}
+                        value={() => valLeft2.value}
                         onInput={(e) =>
-                          setValLeft2((e.target as HTMLInputElement).value)}
+                          valLeft2.value = (e.target as HTMLInputElement).value}
                         placeholder="请输入手机号"
                       />
                     </FormItem>
@@ -372,9 +378,9 @@ export default function FormInput() {
                     >
                       <Input
                         id="left-email"
-                        value={valLeft3}
+                        value={() => valLeft3.value}
                         onInput={(e) =>
-                          setValLeft3((e.target as HTMLInputElement).value)}
+                          valLeft3.value = (e.target as HTMLInputElement).value}
                         placeholder="必填"
                       />
                     </FormItem>
@@ -396,9 +402,10 @@ export default function FormInput() {
                     >
                       <Input
                         id="right-name"
-                        value={valRight1}
+                        value={() => valRight1.value}
                         onInput={(e) =>
-                          setValRight1((e.target as HTMLInputElement).value)}
+                          valRight1.value =
+                            (e.target as HTMLInputElement).value}
                         placeholder="请输入姓名"
                       />
                     </FormItem>
@@ -410,9 +417,10 @@ export default function FormInput() {
                     >
                       <Input
                         id="right-phone"
-                        value={valRight2}
+                        value={() => valRight2.value}
                         onInput={(e) =>
-                          setValRight2((e.target as HTMLInputElement).value)}
+                          valRight2.value =
+                            (e.target as HTMLInputElement).value}
                         placeholder="请输入手机号"
                       />
                     </FormItem>
@@ -425,9 +433,10 @@ export default function FormInput() {
                     >
                       <Input
                         id="right-email"
-                        value={valRight3}
+                        value={() => valRight3.value}
                         onInput={(e) =>
-                          setValRight3((e.target as HTMLInputElement).value)}
+                          valRight3.value =
+                            (e.target as HTMLInputElement).value}
                         placeholder="必填"
                       />
                     </FormItem>
@@ -442,7 +451,7 @@ export default function FormInput() {
   labelPosition="left"
   labelAlign="left"
 >
-  <Input value={val} onInput={...} placeholder="请输入姓名" />
+  <Input value={() => val.value} onInput={...} placeholder="请输入姓名" />
 </FormItem>`}
                 language="tsx"
                 showLineNumbers

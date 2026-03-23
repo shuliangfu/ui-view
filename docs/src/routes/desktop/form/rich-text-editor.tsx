@@ -97,11 +97,11 @@ const importCode =
   `import { RichTextEditor, Form, FormItem } from "@dreamer/ui-view";
 import { createSignal } from "@dreamer/view";
 
-const [html, setHtml] = createSignal("<p>初始</p>");
+const html = createSignal("<p>初始</p>");
 <FormItem label="富文本">
   <RichTextEditor
-    value={html}
-    onChange={(v) => setHtml(v)}
+    value={() => html.value}
+    onChange={(v) => html.value = v}
     toolbarPreset="default"
     placeholder="输入内容…"
     minHeight="200px"
@@ -109,9 +109,9 @@ const [html, setHtml] = createSignal("<p>初始</p>");
 </FormItem>`;
 
 export default function FormRichTextEditor() {
-  const [val, setVal] = createSignal("<p>初始内容</p>");
-  const [valSimple, setValSimple] = createSignal("");
-  const [valFull, setValFull] = createSignal("");
+  const val = createSignal("<p>初始内容</p>");
+  const valSimple = createSignal("");
+  const valFull = createSignal("");
 
   return (
     <div class="space-y-10">
@@ -143,8 +143,8 @@ export default function FormRichTextEditor() {
             <Title level={3}>toolbarPreset：default</Title>
             <FormItem label="默认工具栏">
               <RichTextEditor
-                value={val}
-                onChange={(html) => setVal(html)}
+                value={() => val.value}
+                onChange={(html) => val.value = html}
                 toolbarPreset="default"
                 placeholder="输入内容…"
                 minHeight="200px"
@@ -153,8 +153,8 @@ export default function FormRichTextEditor() {
             <CodeBlock
               title="代码示例"
               code={`<RichTextEditor
-  value={val}
-  onChange={setVal}
+  value={() => val.value}
+  onChange={(v) => val.value = v}
   toolbarPreset="default"
   minHeight="200px"
 />`}
@@ -169,8 +169,8 @@ export default function FormRichTextEditor() {
             <Title level={3}>toolbarPreset：simple</Title>
             <FormItem label="简单工具栏（撤销/重做/加粗/斜体/下划线/链接）">
               <RichTextEditor
-                value={valSimple}
-                onChange={(html) => setValSimple(html)}
+                value={() => valSimple.value}
+                onChange={(html) => valSimple.value = html}
                 toolbarPreset="simple"
                 placeholder="简单模式"
                 minHeight="160px"
@@ -190,8 +190,8 @@ export default function FormRichTextEditor() {
             <Title level={3}>toolbarPreset：full</Title>
             <FormItem label="完整工具栏（含表格、代码块、图片等）">
               <RichTextEditor
-                value={valFull}
-                onChange={(html) => setValFull(html)}
+                value={() => valFull.value}
+                onChange={(html) => valFull.value = html}
                 toolbarPreset="full"
                 placeholder="完整模式"
                 minHeight="240px"

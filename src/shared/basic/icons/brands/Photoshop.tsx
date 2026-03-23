@@ -27,5 +27,5 @@ const svg = (
 
 /** Adobe Photoshop 品牌 Logo 图标 */
 export function IconBrandPhotoshop(props?: IconComponentProps) {
-  return () => <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
+  return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

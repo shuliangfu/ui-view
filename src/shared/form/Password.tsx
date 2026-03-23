@@ -54,31 +54,36 @@ function PasswordStrength(props: {
 }) {
   const { value, showStrength } = props;
   if (!showStrength) return null;
-  const s = typeof value === "function" ? value() : (value ?? "");
-  if (s.length === 0) return null;
-  let score = 0;
-  if (s.length >= 6) score++;
-  if (s.length >= 10) score++;
-  if (/[0-9]/.test(s)) score++;
-  if (/[a-zA-Z]/.test(s)) score++;
-  if (/[^a-zA-Z0-9]/.test(s)) score++;
-  let level: string;
-  let cls: string;
-  if (score <= 2) {
-    level = "弱";
-    cls = "text-red-600 dark:text-red-400";
-  } else if (score <= 4) {
-    level = "中";
-    cls = "text-amber-600 dark:text-amber-400";
-  } else {
-    level = "强";
-    cls = "text-green-600 dark:text-green-400";
-  }
-  return () => (
-    <span class={twMerge("block mt-1 text-xs", cls)} aria-live="polite">
-      强度：{level}
-    </span>
-  );
+  /**
+   * 在渲染 getter 内读 `value()`，保证与 SignalRef / getter 同步；避免仅在父级首次执行时算一次强度导致 stale。
+   */
+  return () => {
+    const s = typeof value === "function" ? value() : (value ?? "");
+    if (s.length === 0) return null;
+    let score = 0;
+    if (s.length >= 6) score++;
+    if (s.length >= 10) score++;
+    if (/[0-9]/.test(s)) score++;
+    if (/[a-zA-Z]/.test(s)) score++;
+    if (/[^a-zA-Z0-9]/.test(s)) score++;
+    let level: string;
+    let cls: string;
+    if (score <= 2) {
+      level = "弱";
+      cls = "text-red-600 dark:text-red-400";
+    } else if (score <= 4) {
+      level = "中";
+      cls = "text-amber-600 dark:text-amber-400";
+    } else {
+      level = "强";
+      cls = "text-green-600 dark:text-green-400";
+    }
+    return (
+      <span class={twMerge("block mt-1 text-xs", cls)} aria-live="polite">
+        强度：{level}
+      </span>
+    );
+  };
 }
 
 export function Password(props: PasswordProps) {

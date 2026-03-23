@@ -118,37 +118,37 @@ const MODAL_API: ApiRow[] = [
 const importCode = `import { createSignal } from "@dreamer/view";
 import { Button, Modal } from "@dreamer/ui-view";
 
-const [open, setOpen] = createSignal(false);
+const open = createSignal(false);
 
-<Button variant="primary" onClick={() => setOpen(true)}>打开</Button>
+<Button variant="primary" onClick={() => open.value = true}>打开</Button>
 <Modal
-  open={open()}
-  onClose={() => setOpen(false)}
+  open={open.value}
+  onClose={() => open.value = false}
   title="弹窗标题"
-  footer={<><Button onClick={() => setOpen(false)}>取消</Button><Button variant="primary" onClick={() => setOpen(false)}>确定</Button></>}
+  footer={<><Button onClick={() => open.value = false}>取消</Button><Button variant="primary" onClick={() => open.value = false}>确定</Button></>}
 >
   <p>弹层内容</p>
 </Modal>`;
 
 export default function FeedbackModal() {
-  const [open, setOpen] = createSignal(false);
-  const [openNoFooter, setOpenNoFooter] = createSignal(false);
-  const [openNoTitle, setOpenNoTitle] = createSignal(false);
-  const [openNoClosable, setOpenNoClosable] = createSignal(false);
-  const [openNoMaskClose, setOpenNoMaskClose] = createSignal(false);
-  const [openWidth, setOpenWidth] = createSignal(false);
-  const [openWidthPreset, setOpenWidthPreset] = createSignal(false);
-  const [widthPreset, setWidthPreset] = createSignal<
+  const open = createSignal(false);
+  const openNoFooter = createSignal(false);
+  const openNoTitle = createSignal(false);
+  const openNoClosable = createSignal(false);
+  const openNoMaskClose = createSignal(false);
+  const openWidth = createSignal(false);
+  const openWidthPreset = createSignal(false);
+  const widthPreset = createSignal<
     "xs" | "sm" | "md" | "lg" | "xl"
   >("md");
-  const [openNotCentered, setOpenNotCentered] = createSignal(false);
-  const [openDestroy, setOpenDestroy] = createSignal(false);
-  const [openNoKeyboard, setOpenNoKeyboard] = createSignal(false);
+  const openNotCentered = createSignal(false);
+  const openDestroy = createSignal(false);
+  const openNoKeyboard = createSignal(false);
   // 用于「可移动」示例，在下方 return 的 thunk 内使用
-  const [openDraggable, setOpenDraggable] = createSignal(false);
-  const [openFullscreen, setOpenFullscreen] = createSignal(false);
-  const [openKeyboard, setOpenKeyboard] = createSignal(false);
-  const [openCustomClass, setOpenCustomClass] = createSignal(false);
+  const openDraggable = createSignal(false);
+  const openFullscreen = createSignal(false);
+  const openKeyboard = createSignal(false);
+  const openCustomClass = createSignal(false);
 
   return () => (
     <div class="space-y-10">
@@ -185,28 +185,28 @@ export default function FeedbackModal() {
             <Button
               type="button"
               variant="primary"
-              onClick={() => setOpen(true)}
+              onClick={() => open.value = true}
             >
               打开 Modal
             </Button>
           </div>
           <Modal
-            open={open()}
-            onClose={() => setOpen(false)}
+            open={open.value}
+            onClose={() => open.value = false}
             title="弹窗标题"
             footer={
               <>
                 <Button
                   type="button"
                   variant="default"
-                  onClick={() => setOpen(false)}
+                  onClick={() => open.value = false}
                 >
                   取消
                 </Button>
                 <Button
                   type="button"
                   variant="primary"
-                  onClick={() => setOpen(false)}
+                  onClick={() => open.value = false}
                 >
                   确定
                 </Button>
@@ -220,8 +220,8 @@ export default function FeedbackModal() {
           <CodeBlock
             title="代码示例"
             code={`<Modal
-  open={open()}
-  onClose={() => setOpen(false)}
+  open={open.value}
+  onClose={() => open.value = false}
   title="弹窗标题"
   footer={<>...</>}
 >
@@ -243,14 +243,14 @@ export default function FeedbackModal() {
             <Button
               type="button"
               variant="default"
-              onClick={() => setOpenNoFooter(true)}
+              onClick={() => openNoFooter.value = true}
             >
               无 Footer Modal
             </Button>
           </div>
           <Modal
-            open={openNoFooter()}
-            onClose={() => setOpenNoFooter(false)}
+            open={openNoFooter.value}
+            onClose={() => openNoFooter.value = false}
             title="仅标题与内容"
           >
             <p class="text-sm text-slate-600 dark:text-slate-400">
@@ -260,7 +260,7 @@ export default function FeedbackModal() {
           <CodeBlock
             title="代码示例"
             code={`<Modal
-  open={open()}
+  open={open.value}
   onClose={...}
   title="仅标题与内容"
 >
@@ -283,14 +283,14 @@ export default function FeedbackModal() {
             <Button
               type="button"
               variant="default"
-              onClick={() => setOpenNoTitle(true)}
+              onClick={() => openNoTitle.value = true}
             >
               无标题 Modal
             </Button>
           </div>
           <Modal
-            open={openNoTitle()}
-            onClose={() => setOpenNoTitle(false)}
+            open={openNoTitle.value}
+            onClose={() => openNoTitle.value = false}
             title={null}
           >
             <p class="text-sm text-slate-600 dark:text-slate-400">
@@ -300,7 +300,7 @@ export default function FeedbackModal() {
           <CodeBlock
             title="代码示例"
             code={`<Modal
-  open={open()}
+  open={open.value}
   onClose={...}
   title={null}
 >
@@ -320,13 +320,16 @@ export default function FeedbackModal() {
             closable=false 时不显示右上角关闭按钮，需通过遮罩关闭。
           </Paragraph>
           <div class="flex gap-2">
-            <Button variant="default" onClick={() => setOpenNoClosable(true)}>
+            <Button
+              variant="default"
+              onClick={() => openNoClosable.value = true}
+            >
               无关闭按钮
             </Button>
           </div>
           <Modal
-            open={openNoClosable()}
-            onClose={() => setOpenNoClosable(false)}
+            open={openNoClosable.value}
+            onClose={() => openNoClosable.value = false}
             title="只能点遮罩关闭"
             closable={false}
           >
@@ -345,14 +348,14 @@ export default function FeedbackModal() {
             <Button
               type="button"
               variant="default"
-              onClick={() => setOpenNoMaskClose(true)}
+              onClick={() => openNoMaskClose.value = true}
             >
               遮罩不可关闭
             </Button>
           </div>
           <Modal
-            open={openNoMaskClose()}
-            onClose={() => setOpenNoMaskClose(false)}
+            open={openNoMaskClose.value}
+            onClose={() => openNoMaskClose.value = false}
             title="点击遮罩不关闭"
             maskClosable={false}
           >
@@ -386,40 +389,41 @@ export default function FeedbackModal() {
               预设：
             </span>
             {(["xs", "sm", "md", "lg", "xl"] as const).map((w) => (
-              <Button
-                key={w}
-                type="button"
-                variant="secondary"
-                onClick={() => {
-                  setWidthPreset(w);
-                  setOpenWidthPreset(true);
-                }}
-              >
-                {w}
-              </Button>
+              <span key={w} class="contents">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => {
+                    widthPreset.value = w;
+                    openWidthPreset.value = true;
+                  }}
+                >
+                  {w}
+                </Button>
+              </span>
             ))}
             <Button
               type="button"
               variant="default"
-              onClick={() => setOpenWidth(true)}
+              onClick={() => openWidth.value = true}
             >
               80%
             </Button>
           </div>
           <Modal
-            open={openWidthPreset()}
-            onClose={() => setOpenWidthPreset(false)}
-            title={`宽度 ${widthPreset()}`}
-            width={widthPreset()}
+            open={openWidthPreset.value}
+            onClose={() => openWidthPreset.value = false}
+            title={`宽度 ${widthPreset.value}`}
+            width={widthPreset.value}
           >
             <p class="text-sm text-slate-600 dark:text-slate-400">
-              width="{widthPreset()}"：xs 400px / sm 520px / md 640px / lg 800px
-              / xl 960px。
+              width="{widthPreset.value}"：xs 400px / sm 520px / md 640px / lg
+              800px / xl 960px。
             </p>
           </Modal>
           <Modal
-            open={openWidth()}
-            onClose={() => setOpenWidth(false)}
+            open={openWidth.value}
+            onClose={() => openWidth.value = false}
             title="宽度 80%"
             width="80%"
           >
@@ -430,7 +434,7 @@ export default function FeedbackModal() {
           <CodeBlock
             title="代码示例（预设）"
             code={`<Modal
-  open={open()}
+  open={open.value}
   onClose={...}
   title="标题"
   width="md"
@@ -466,14 +470,14 @@ export default function FeedbackModal() {
             <Button
               type="button"
               variant="default"
-              onClick={() => setOpenNotCentered(true)}
+              onClick={() => openNotCentered.value = true}
             >
               顶部对齐
             </Button>
           </div>
           <Modal
-            open={openNotCentered()}
-            onClose={() => setOpenNotCentered(false)}
+            open={openNotCentered.value}
+            onClose={() => openNotCentered.value = false}
             title="顶部对齐"
             centered={false}
           >
@@ -503,13 +507,13 @@ export default function FeedbackModal() {
             destroyOnClose=true 时关闭后子节点不挂载，再次打开为全新挂载。
           </Paragraph>
           <div class="flex gap-2">
-            <Button variant="default" onClick={() => setOpenDestroy(true)}>
+            <Button variant="default" onClick={() => openDestroy.value = true}>
               关闭后销毁
             </Button>
           </div>
           <Modal
-            open={openDestroy()}
-            onClose={() => setOpenDestroy(false)}
+            open={openDestroy.value}
+            onClose={() => openDestroy.value = false}
             title="关闭后销毁内容"
             destroyOnClose
           >
@@ -529,14 +533,14 @@ export default function FeedbackModal() {
             <Button
               type="button"
               variant="default"
-              onClick={() => setOpenNoKeyboard(true)}
+              onClick={() => openNoKeyboard.value = true}
             >
               不支持 Esc
             </Button>
           </div>
           <Modal
-            open={openNoKeyboard()}
-            onClose={() => setOpenNoKeyboard(false)}
+            open={openNoKeyboard.value}
+            onClose={() => openNoKeyboard.value = false}
             title="按 Esc 无效"
             keyboard={false}
           >
@@ -568,14 +572,14 @@ export default function FeedbackModal() {
             <Button
               type="button"
               variant="default"
-              onClick={() => setOpenDraggable(true)}
+              onClick={() => openDraggable.value = true}
             >
               可移动弹窗
             </Button>
           </div>
           <Modal
-            open={openDraggable()}
-            onClose={() => setOpenDraggable(false)}
+            open={openDraggable.value}
+            onClose={() => openDraggable.value = false}
             title="可拖拽标题栏移动"
             draggable
           >
@@ -586,7 +590,7 @@ export default function FeedbackModal() {
           <CodeBlock
             title="代码示例"
             code={`<Modal
-  open={open()}
+  open={open.value}
   onClose={...}
   title="可拖拽标题栏移动"
   draggable
@@ -609,14 +613,14 @@ export default function FeedbackModal() {
             <Button
               type="button"
               variant="default"
-              onClick={() => setOpenKeyboard(true)}
+              onClick={() => openKeyboard.value = true}
             >
               按 Esc 关闭
             </Button>
           </div>
           <Modal
-            open={openKeyboard()}
-            onClose={() => setOpenKeyboard(false)}
+            open={openKeyboard.value}
+            onClose={() => openKeyboard.value = false}
             title="按 Esc 可关闭"
             keyboard
           >
@@ -627,7 +631,7 @@ export default function FeedbackModal() {
           <CodeBlock
             title="代码示例"
             code={`<Modal
-  open={open()}
+  open={open.value}
   onClose={...}
   title="按 Esc 可关闭"
   keyboard
@@ -650,14 +654,14 @@ export default function FeedbackModal() {
             <Button
               type="button"
               variant="default"
-              onClick={() => setOpenFullscreen(true)}
+              onClick={() => openFullscreen.value = true}
             >
               全屏切换
             </Button>
           </div>
           <Modal
-            open={openFullscreen()}
-            onClose={() => setOpenFullscreen(false)}
+            open={openFullscreen.value}
+            onClose={() => openFullscreen.value = false}
             title="可全屏"
             fullscreenable
           >
@@ -668,7 +672,7 @@ export default function FeedbackModal() {
           <CodeBlock
             title="代码示例"
             code={`<Modal
-  open={open()}
+  open={open.value}
   onClose={...}
   title="可全屏"
   fullscreenable
@@ -692,14 +696,14 @@ export default function FeedbackModal() {
             <Button
               type="button"
               variant="default"
-              onClick={() => setOpenCustomClass(true)}
+              onClick={() => openCustomClass.value = true}
             >
               自定义 class
             </Button>
           </div>
           <Modal
-            open={openCustomClass()}
-            onClose={() => setOpenCustomClass(false)}
+            open={openCustomClass.value}
+            onClose={() => openCustomClass.value = false}
             title="自定义样式"
             class="ring-2 ring-blue-500"
             bodyClass="bg-slate-50 dark:bg-slate-800/50"

@@ -59,7 +59,7 @@ export function Hero(props: HeroProps) {
     }
     : undefined;
 
-  return () => (
+  return (
     <section
       class={twMerge(
         "relative flex w-full overflow-hidden",

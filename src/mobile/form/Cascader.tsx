@@ -52,7 +52,8 @@ export function Cascader(props: CascaderProps) {
     [];
   const childValue = value[1] ?? "";
 
-  return () => (
+  /** 无内部 signal，直接返回 VNode */
+  return (
     <div class={twMerge("flex flex-wrap items-center gap-2", className)}>
       <select
         id={id}

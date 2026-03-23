@@ -30,7 +30,7 @@ export function Divider(props: DividerProps) {
   } = props;
 
   if (type === "vertical") {
-    return () => (
+    return (
       <span
         role="separator"
         aria-orientation="vertical"

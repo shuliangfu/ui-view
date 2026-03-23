@@ -20,5 +20,5 @@ const svg = (
 );
 
 export function IconShuffle(props?: IconComponentProps) {
-  return () => <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
+  return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

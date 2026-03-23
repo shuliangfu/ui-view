@@ -90,7 +90,7 @@ const overlay = <ul class="py-1 list-none m-0">...</ul>;
 
 const exampleClick = `<Dropdown
   open={open()}
-  onOpenChange={setOpen}
+  onOpenChange={(o) => open.value = o}
   overlay={overlay}
   trigger="click"
   placement="bottomLeft"

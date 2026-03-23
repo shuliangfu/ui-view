@@ -16,5 +16,5 @@ export interface ChartBubbleProps {
 
 /** 气泡图组件 */
 export function ChartBubble(props: ChartBubbleProps) {
-  return () => <ChartBase type="bubble" {...props} />;
+  return <ChartBase type="bubble" {...props} />;
 }

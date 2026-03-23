@@ -69,19 +69,19 @@ const BACK_TOP_API: ApiRow[] = [
 const importCode = `import { createSignal } from "@dreamer/view";
 import { BackTop } from "@dreamer/ui-view";
 
-const [visible, setVisible] = createSignal(false);
+const visible = createSignal(false);
 <BackTop
   visibilityHeight={200}
-  visible={visible()}
-  onVisibilityChange={setVisible}
+  visible={visible.value}
+  onVisibilityChange={(v) => visible.value = v}
   right={24}
   bottom={24}
 />`;
 
 const exampleDefault = `<BackTop
   visibilityHeight={200}
-  visible={visible()}
-  onVisibilityChange={setVisible}
+  visible={visible.value}
+  onVisibilityChange={(v) => visible.value = v}
   right={24}
   bottom={24}
 />`;
@@ -94,7 +94,7 @@ const examplePosition = `<BackTop
 />`;
 
 export default function OtherBackTop() {
-  const [visible, setVisible] = createSignal(false);
+  const visible = createSignal(false);
 
   return (
     <div class="space-y-10">
@@ -138,8 +138,8 @@ export default function OtherBackTop() {
           </div>
           <BackTop
             visibilityHeight={200}
-            visible={visible()}
-            onVisibilityChange={setVisible}
+            visible={visible.value}
+            onVisibilityChange={(v) => visible.value = v}
             right={24}
             bottom={24}
           />

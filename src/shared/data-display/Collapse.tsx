@@ -4,9 +4,10 @@
  * 内部维护 fallback state，保证点击展开/收起在受控/非受控下均生效。
  */
 
-import { createSignal } from "@dreamer/view";
+import { createSignal } from "@dreamer/view/signal";
 import { twMerge } from "tailwind-merge";
-import { IconChevronDown } from "../basic/icons/mod.ts";
+/** 按需：单文件图标，避免经 icons/mod 拉入全表 */
+import { IconChevronDown } from "../basic/icons/ChevronDown.tsx";
 import type { SizeVariant } from "../types.ts";
 
 export interface CollapseItem {
@@ -81,11 +82,11 @@ export function Collapse(props: CollapseProps) {
   const initialKeys = typeof controlledKeys === "function"
     ? (controlledKeys as () => string[])()
     : (controlledKeys ?? defaultActiveKey ?? []);
-  const [internalKeys, setInternalKeys] = createSignal<string[]>(initialKeys);
-  /** 受控时用 prop（或 getter 的返回值），否则用内部 state；读 getter 会建立订阅 */
+  const internalKeysRef = createSignal<string[]>(initialKeys);
+  /** 受控时用 prop（或 getter 的返回值），否则用内部 SignalRef；读 `.value` / getter 会建立订阅 */
   const getActiveKeys = (): string[] =>
     controlledKeys === undefined
-      ? internalKeys()
+      ? internalKeysRef.value
       : typeof controlledKeys === "function"
       ? (controlledKeys as () => string[])()
       : controlledKeys;
@@ -102,11 +103,14 @@ export function Collapse(props: CollapseProps) {
       else next.add(key);
       nextArr = Array.from(next);
     }
-    setInternalKeys(nextArr);
+    internalKeysRef.value = nextArr;
     onChange?.(nextArr);
   };
 
-  /** 返回 getter：在 View 的 effect 内读 getActiveKeys()，受控传 getter 时由本 effect 订阅，点击任意面板都会触发本 effect 重跑、三个面板都能更新 */
+  /**
+   * 返回渲染 getter：在 View 的 effect 内读 getActiveKeys()，
+   * 受控传 getter 时由此订阅，点击任意面板都会重跑、各面板同步更新。
+   */
   return () => {
     const activeSet = new Set(getActiveKeys());
     return (

@@ -65,16 +65,16 @@ const SWITCH_API: ApiRow[] = [
 const importCode = `import { Switch, Form, FormItem } from "@dreamer/ui-view";
 import { createSignal } from "@dreamer/view";
 
-const [checked, setChecked] = createSignal(false);
+const checked = createSignal(false);
 <FormItem label="开关">
   <Switch
-    checked={checked}
-    onChange={(e) => setChecked((e.target as HTMLInputElement).checked)}
+    checked={checked.value}
+    onChange={(e) => checked.value = (e.target as HTMLInputElement).checked}
   />
 </FormItem>`;
 
 export default function FormSwitch() {
-  const [checked, setChecked] = createSignal(false);
+  const checked = createSignal(false);
 
   return (
     <div class="space-y-10">
@@ -106,16 +106,16 @@ export default function FormSwitch() {
             <Title level={3}>基础</Title>
             <FormItem label="开关">
               <Switch
-                checked={checked}
+                checked={checked.value}
                 onChange={(e) =>
-                  setChecked((e.target as HTMLInputElement).checked)}
+                  checked.value = (e.target as HTMLInputElement).checked}
               />
             </FormItem>
             <CodeBlock
               title="代码示例"
               code={`<Switch
-  checked={checked}
-  onChange={(e) => setChecked((e.target as HTMLInputElement).checked)}
+  checked={checked.value}
+  onChange={(e) => checked.value = (e.target as HTMLInputElement).checked}
 />`}
               language="tsx"
               showLineNumbers
@@ -128,9 +128,9 @@ export default function FormSwitch() {
             <Title level={3}>checkedChildren / unCheckedChildren</Title>
             <FormItem label="开/关文案">
               <Switch
-                checked={checked}
+                checked={checked.value}
                 onChange={(e) =>
-                  setChecked((e.target as HTMLInputElement).checked)}
+                  checked.value = (e.target as HTMLInputElement).checked}
                 checkedChildren="开"
                 unCheckedChildren="关"
               />
@@ -138,7 +138,7 @@ export default function FormSwitch() {
             <CodeBlock
               title="代码示例"
               code={`<Switch
-  checked={checked}
+  checked={checked.value}
   onChange={...}
   checkedChildren="开"
   unCheckedChildren="关"
@@ -156,9 +156,9 @@ export default function FormSwitch() {
               <Switch
                 name="notify"
                 id="switch-notify"
-                checked={checked}
+                checked={checked.value}
                 onChange={(e) =>
-                  setChecked((e.target as HTMLInputElement).checked)}
+                  checked.value = (e.target as HTMLInputElement).checked}
               />
             </FormItem>
             <CodeBlock
@@ -166,7 +166,7 @@ export default function FormSwitch() {
               code={`<Switch
   name="notify"
   id="switch-notify"
-  checked={checked}
+  checked={checked.value}
   onChange={...}
 />`}
               language="tsx"

@@ -5,7 +5,8 @@
 
 import { createSignal } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
-import { IconChevronDown } from "../../shared/basic/icons/mod.ts";
+/** 按需：单文件图标，避免经 icons/mod 拉入全表 */
+import { IconChevronDown } from "../../shared/basic/icons/ChevronDown.tsx";
 import type { SizeVariant } from "../../shared/types.ts";
 
 export interface TimePickerProps {
@@ -70,27 +71,29 @@ export function TimePicker(props: TimePickerProps) {
   const resolvedValue = typeof value === "function" ? value() : value;
   const parsed = parseTime(resolvedValue);
 
-  const [open, setOpen] = createSignal(false);
-  const [draftHour, setDraftHour] = createSignal(parsed?.[0] ?? 0);
-  const [draftMinute, setDraftMinute] = createSignal(parsed?.[1] ?? 0);
+  const openState = createSignal(false);
+  const draftHour = createSignal(parsed?.[0] ?? 0);
+  const draftMinute = createSignal(parsed?.[1] ?? 0);
 
   const handleOpen = () => {
     if (disabled) return;
     const p = parseTime(resolvedValue);
     if (p) {
-      setDraftHour(p[0]);
-      setDraftMinute(p[1]);
+      draftHour.value = p[0];
+      draftMinute.value = p[1];
     } else {
-      setDraftHour(0);
-      setDraftMinute(0);
+      draftHour.value = 0;
+      draftMinute.value = 0;
     }
-    setOpen(true);
+    openState.value = true;
   };
 
-  const handleBackdropClick = () => setOpen(false);
+  const handleBackdropClick = () => {
+    openState.value = false;
+  };
 
   const handleConfirm = () => {
-    const str = formatTime(draftHour(), draftMinute());
+    const str = formatTime(draftHour.value, draftMinute.value);
     const synthetic = new Event("change", { bubbles: true }) as Event & {
       target: { name?: string; value: string };
     };
@@ -99,10 +102,12 @@ export function TimePicker(props: TimePickerProps) {
       value: str,
     };
     onChange?.(synthetic);
-    setOpen(false);
+    openState.value = false;
   };
 
-  const handleCancel = () => setOpen(false);
+  const handleCancel = () => {
+    openState.value = false;
+  };
 
   const displayText = resolvedValue ?? placeholder;
 
@@ -119,7 +124,7 @@ export function TimePicker(props: TimePickerProps) {
         id={id}
         disabled={disabled}
         aria-haspopup="dialog"
-        aria-expanded={open()}
+        aria-expanded={openState.value}
         aria-label={displayText}
         class={twMerge(triggerBase, sizeCls)}
         onClick={handleOpen}
@@ -135,7 +140,7 @@ export function TimePicker(props: TimePickerProps) {
           size="sm"
           class={twMerge(
             "shrink-0 text-slate-400 dark:text-slate-500 transition-transform",
-            open() && "rotate-180",
+            openState.value && "rotate-180",
           )}
         />
       </button>
@@ -147,7 +152,9 @@ export function TimePicker(props: TimePickerProps) {
                 string,
                 (() => void) | undefined
               >;
-              g[DROPDOWN_ESC_KEY] = () => setOpen(false);
+              g[DROPDOWN_ESC_KEY] = () => {
+                openState.value = false;
+              };
               return null;
             })()}
           <div
@@ -174,9 +181,11 @@ export function TimePicker(props: TimePickerProps) {
                       class={twMerge(
                         listBase,
                         "w-full",
-                        draftHour() === h ? listSelected : "",
+                        draftHour.value === h ? listSelected : "",
                       )}
-                      onClick={() => setDraftHour(h)}
+                      onClick={() => {
+                        draftHour.value = h;
+                      }}
                     >
                       {String(h).padStart(2, "0")}
                     </button>
@@ -196,9 +205,11 @@ export function TimePicker(props: TimePickerProps) {
                       class={twMerge(
                         listBase,
                         "w-full",
-                        draftMinute() === m ? listSelected : "",
+                        draftMinute.value === m ? listSelected : "",
                       )}
-                      onClick={() => setDraftMinute(m)}
+                      onClick={() => {
+                        draftMinute.value = m;
+                      }}
                     >
                       {String(m).padStart(2, "0")}
                     </button>

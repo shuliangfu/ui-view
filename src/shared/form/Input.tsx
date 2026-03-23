@@ -13,7 +13,7 @@ export interface InputProps {
   disabled?: boolean;
   /** 占位文案 */
   placeholder?: string;
-  /** 输入值（受控可选）；可为 getter 以在 View 细粒度下只更新 value 不重建节点，避免失焦 */
+  /** 输入值（受控可选）；可为 getter 或 `() => ref.value`（SignalRef），在 View 细粒度下只更新 value、避免失焦 */
   value?: string | (() => string);
   /** 原生 type，如 text、password、email */
   type?: string;
@@ -72,7 +72,7 @@ const ClearIcon = () => (
 );
 
 /**
- * 右侧清除或后缀：仅在内部读 value()，避免 Input 主体订阅 signal 导致整块重渲染失焦。
+ * 右侧清除或后缀：仅在内部读 `value()`（或 `() => signalRef.value`），避免 Input 主体订阅导致整块重渲染失焦。
  * 仅此子组件随 value 重跑，reconcile 只更新该槽位，input 节点保留。
  */
 function InputClearOrSuffix(props: {
@@ -133,7 +133,9 @@ export function Input(props: InputProps) {
 
   const handleClear = () => {
     if (!onInput) return;
-    const el = document.createElement("input");
+    const doc = globalThis.document;
+    if (!doc?.createElement) return;
+    const el = doc.createElement("input");
     el.value = "";
     onInput({ target: el } as unknown as Event);
   };

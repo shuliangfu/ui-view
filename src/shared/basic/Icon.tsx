@@ -31,7 +31,7 @@ const base =
 
 export function Icon(props: IconProps) {
   const { size = "md", class: className, children } = props;
-  return () => (
+  return (
     <span
       class={twMerge(base, sizeClasses[size], className)}
       role="img"

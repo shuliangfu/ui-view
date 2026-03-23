@@ -7,11 +7,10 @@ import { createSignal } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import { Calendar } from "../../shared/data-display/Calendar.tsx";
 import { MONTHS } from "../../shared/data-display/calendar-utils.ts";
-import {
-  IconChevronDown,
-  IconChevronLeft,
-  IconChevronRight,
-} from "../../shared/basic/icons/mod.ts";
+/** 按需：单文件图标，避免经 icons/mod 拉入全表 */
+import { IconChevronDown } from "../../shared/basic/icons/ChevronDown.tsx";
+import { IconChevronLeft } from "../../shared/basic/icons/ChevronLeft.tsx";
+import { IconChevronRight } from "../../shared/basic/icons/ChevronRight.tsx";
 import type { SizeVariant } from "../../shared/types.ts";
 
 export interface DatePickerProps {
@@ -87,22 +86,24 @@ export function DatePicker(props: DatePickerProps) {
   const resolvedValue = typeof value === "function" ? value() : value;
   const valueDate = parseDate(resolvedValue);
 
-  const [open, setOpen] = createSignal(false);
+  const openState = createSignal(false);
   /** 面板内当前选中的日期（未确定前） */
-  const [draft, setDraft] = createSignal<Date | null>(valueDate);
+  const draft = createSignal<Date | null>(valueDate);
   /** 面板当前展示的月份（用于上一月/下一月） */
-  const [viewDate, setViewDate] = createSignal<Date>(valueDate ?? new Date());
+  const viewDate = createSignal<Date>(valueDate ?? new Date());
 
   /** 打开时同步 draft/viewDate 为当前 value */
   const handleOpen = () => {
     if (disabled) return;
     const v = parseDate(resolvedValue);
-    setDraft(v);
-    setViewDate(v ?? new Date());
-    setOpen(true);
+    draft.value = v;
+    viewDate.value = v ?? new Date();
+    openState.value = true;
   };
 
-  const handleBackdropClick = () => setOpen(false);
+  const handleBackdropClick = () => {
+    openState.value = false;
+  };
 
   const minDate = min != null ? parseDate(min) : null;
   const maxDate = max != null ? parseDate(max) : null;
@@ -115,7 +116,7 @@ export function DatePicker(props: DatePickerProps) {
 
   /** 确定：将 draft 格式化为字符串并触发 onChange 后关闭 */
   const handleConfirm = () => {
-    const d = draft();
+    const d = draft.value;
     if (d != null) {
       const str = formatDate(d);
       const synthetic = new Event("change", { bubbles: true }) as Event & {
@@ -127,120 +128,134 @@ export function DatePicker(props: DatePickerProps) {
       };
       onChange?.(synthetic);
     }
-    setOpen(false);
+    openState.value = false;
   };
 
   /** 取消：仅关闭 */
-  const handleCancel = () => setOpen(false);
+  const handleCancel = () => {
+    openState.value = false;
+  };
 
-  const view = viewDate();
-  const prevMonth = () =>
-    setViewDate(new Date(view.getFullYear(), view.getMonth() - 1));
-  const nextMonth = () =>
-    setViewDate(new Date(view.getFullYear(), view.getMonth() + 1));
-  /** 传给 Calendar 的展示月（当月 1 号），选中日单独用 selectedDate */
-  const calendarValue = new Date(view.getFullYear(), view.getMonth(), 1);
+  const prevMonth = () => {
+    const v = viewDate.value;
+    viewDate.value = new Date(v.getFullYear(), v.getMonth() - 1);
+  };
+  const nextMonth = () => {
+    const v = viewDate.value;
+    viewDate.value = new Date(v.getFullYear(), v.getMonth() + 1);
+  };
 
   const displayText = resolvedValue ?? placeholder;
 
-  return () => (
-    <span class={twMerge("relative inline-block", className)}>
-      <input type="hidden" name={name} value={resolvedValue ?? ""} />
-      <button
-        type="button"
-        id={id}
-        disabled={disabled}
-        aria-haspopup="dialog"
-        aria-expanded={open()}
-        aria-label={displayText}
-        class={twMerge(triggerBase, sizeCls)}
-        onClick={handleOpen}
-      >
-        <span
-          class={resolvedValue
-            ? "text-slate-900 dark:text-slate-100"
-            : "text-slate-400 dark:text-slate-500"}
+  /** 在渲染 getter 内读 viewDate，保证月份切换后 UI 订阅更新 */
+  return () => {
+    const view = viewDate.value;
+    /** 传给 Calendar 的展示月（当月 1 号），选中日单独用 selectedDate */
+    const calendarValue = new Date(view.getFullYear(), view.getMonth(), 1);
+
+    return (
+      <span class={twMerge("relative inline-block", className)}>
+        <input type="hidden" name={name} value={resolvedValue ?? ""} />
+        <button
+          type="button"
+          id={id}
+          disabled={disabled}
+          aria-haspopup="dialog"
+          aria-expanded={openState.value}
+          aria-label={displayText}
+          class={twMerge(triggerBase, sizeCls)}
+          onClick={handleOpen}
         >
-          {displayText}
-        </span>
-        <IconChevronDown
-          size="sm"
-          class={twMerge(
-            "shrink-0 text-slate-400 dark:text-slate-500 transition-transform",
-            open() && "rotate-180",
-          )}
-        />
-      </button>
-      {open() && (
-        <>
-          {typeof globalThis !== "undefined" &&
-            (() => {
-              const g = globalThis as unknown as Record<
-                string,
-                (() => void) | undefined
-              >;
-              g[DROPDOWN_ESC_KEY] = () => setOpen(false);
-              return null;
-            })()}
-          <div
-            class="fixed inset-0 z-40"
-            aria-hidden
-            onClick={handleBackdropClick}
-          />
-          <div
-            role="dialog"
-            aria-label="选择日期"
-            class="absolute z-50 left-0 top-full mt-1 p-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-lg"
+          <span
+            class={resolvedValue
+              ? "text-slate-900 dark:text-slate-100"
+              : "text-slate-400 dark:text-slate-500"}
           >
-            {/* 月份导航 */}
-            <div class="flex items-center justify-between gap-2 mb-2">
-              <button
-                type="button"
-                aria-label="上一月"
-                class="p-1 rounded text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700"
-                onClick={prevMonth}
-              >
-                <IconChevronLeft size="sm" />
-              </button>
-              <span class="text-sm font-medium text-slate-700 dark:text-slate-200">
-                {view.getFullYear()}年 {MONTHS[view.getMonth()]}
-              </span>
-              <button
-                type="button"
-                aria-label="下一月"
-                class="p-1 rounded text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700"
-                onClick={nextMonth}
-              >
-                <IconChevronRight size="sm" />
-              </button>
-            </div>
-            <Calendar
-              value={calendarValue}
-              selectedDate={draft() ?? undefined}
-              onChange={(d) => setDraft(d)}
-              disabledDate={disabledDate}
-              fullscreen={false}
-              class="border-0 p-0 min-h-0"
+            {displayText}
+          </span>
+          <IconChevronDown
+            size="sm"
+            class={twMerge(
+              "shrink-0 text-slate-400 dark:text-slate-500 transition-transform",
+              openState.value && "rotate-180",
+            )}
+          />
+        </button>
+        {openState.value && (
+          <>
+            {typeof globalThis !== "undefined" &&
+              (() => {
+                const g = globalThis as unknown as Record<
+                  string,
+                  (() => void) | undefined
+                >;
+                g[DROPDOWN_ESC_KEY] = () => {
+                  openState.value = false;
+                };
+                return null;
+              })()}
+            <div
+              class="fixed inset-0 z-40"
+              aria-hidden
+              onClick={handleBackdropClick}
             />
-            <div class="flex justify-end gap-2 mt-2 pt-2 border-t border-slate-200 dark:border-slate-600">
-              <button
-                type="button"
-                class="px-3 py-1.5 text-sm rounded border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700"
-                onClick={handleCancel}
-              >
-                取消
-              </button>
-              <button
-                type="button"
-                class="px-3 py-1.5 text-sm rounded bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
-                onClick={handleConfirm}
-              >
-                确定
-              </button>
+            <div
+              role="dialog"
+              aria-label="选择日期"
+              class="absolute z-50 left-0 top-full mt-1 p-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-lg"
+            >
+              {/* 月份导航 */}
+              <div class="flex items-center justify-between gap-2 mb-2">
+                <button
+                  type="button"
+                  aria-label="上一月"
+                  class="p-1 rounded text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700"
+                  onClick={prevMonth}
+                >
+                  <IconChevronLeft size="sm" />
+                </button>
+                <span class="text-sm font-medium text-slate-700 dark:text-slate-200">
+                  {view.getFullYear()}年 {MONTHS[view.getMonth()]}
+                </span>
+                <button
+                  type="button"
+                  aria-label="下一月"
+                  class="p-1 rounded text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700"
+                  onClick={nextMonth}
+                >
+                  <IconChevronRight size="sm" />
+                </button>
+              </div>
+              <Calendar
+                value={calendarValue}
+                selectedDate={draft.value ?? undefined}
+                onChange={(d) => {
+                  draft.value = d;
+                }}
+                disabledDate={disabledDate}
+                fullscreen={false}
+                class="border-0 p-0 min-h-0"
+              />
+              <div class="flex justify-end gap-2 mt-2 pt-2 border-t border-slate-200 dark:border-slate-600">
+                <button
+                  type="button"
+                  class="px-3 py-1.5 text-sm rounded border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700"
+                  onClick={handleCancel}
+                >
+                  取消
+                </button>
+                <button
+                  type="button"
+                  class="px-3 py-1.5 text-sm rounded bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
+                  onClick={handleConfirm}
+                >
+                  确定
+                </button>
+              </div>
             </div>
-          </div>
-        </>
-      )}
-    </span>
-  );
+          </>
+        )}
+      </span>
+    );
+  };
 }

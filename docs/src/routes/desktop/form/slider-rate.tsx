@@ -100,25 +100,25 @@ const importCode =
 import { createSignal } from "@dreamer/view";
 
 // Slider
-const [val, setVal] = createSignal(50);
+const val = createSignal(50);
 <Slider
-  value={val()}
+  value={val.value}
   min={0}
   max={100}
-  onChange={(e) => setVal(Number((e.target as HTMLInputElement).value))}
+  onChange={(e) => val.value = Number((e.target as HTMLInputElement).value)}
 />
 
 // Rate
-const [rate, setRate] = createSignal(0);
-<Rate value={rate()} count={5} onChange={(v) => setRate(v)} />`;
+const rate = createSignal(0);
+<Rate value={rate.value} count={5} onChange={(v) => rate.value = v} />`;
 
 export default function FormSliderRate() {
-  const [sliderVal, setSliderVal] = createSignal(50);
-  const [sliderRangeVal, setSliderRangeVal] = createSignal<[number, number]>([
+  const sliderVal = createSignal(50);
+  const sliderRangeVal = createSignal<[number, number]>([
     20,
     80,
   ]);
-  const [rateVal, setRateVal] = createSignal(0);
+  const rateVal = createSignal(0);
 
   return (
     <div class="space-y-10">
@@ -152,21 +152,23 @@ export default function FormSliderRate() {
             <FormItem label="单值">
               {() => (
                 <Slider
-                  value={sliderVal()}
+                  value={sliderVal.value}
                   min={0}
                   max={100}
                   onChange={(e) =>
-                    setSliderVal(Number((e.target as HTMLInputElement).value))}
+                    sliderVal.value = Number(
+                      (e.target as HTMLInputElement).value,
+                    )}
                 />
               )}
             </FormItem>
             <CodeBlock
               title="代码示例"
               code={`<Slider
-  value={sliderVal()}
+  value={sliderVal.value}
   min={0}
   max={100}
-  onChange={(e) => setSliderVal(Number((e.target as HTMLInputElement).value))}
+  onChange={(e) => sliderVal.value = Number((e.target as HTMLInputElement).value)}
 />`}
               language="tsx"
               showLineNumbers
@@ -181,14 +183,14 @@ export default function FormSliderRate() {
               {() => (
                 <Slider
                   range
-                  value={sliderRangeVal()}
+                  value={sliderRangeVal.value}
                   min={0}
                   max={100}
-                  onChange={(e) =>
-                    setSliderRangeVal(
+                  onChange={(e) => {
+                    sliderRangeVal.value =
                       (e.target as unknown as { value: [number, number] })
-                        .value,
-                    )}
+                        .value;
+                  }}
                 />
               )}
             </FormItem>
@@ -196,10 +198,10 @@ export default function FormSliderRate() {
               title="代码示例"
               code={`<Slider
   range
-  value={sliderRangeVal()}
+  value={sliderRangeVal.value}
   min={0}
   max={100}
-  onChange={(e) => setSliderRangeVal(...)}
+  onChange={(e) => sliderRangeVal.value = ...}
 />`}
               language="tsx"
               showLineNumbers
@@ -213,8 +215,8 @@ export default function FormSliderRate() {
             <FormItem label="评分">
               {() => (
                 <Rate
-                  value={rateVal()}
-                  onChange={(v) => setRateVal(v)}
+                  value={rateVal.value}
+                  onChange={(v) => rateVal.value = v}
                   count={5}
                 />
               )}
@@ -222,8 +224,8 @@ export default function FormSliderRate() {
             <CodeBlock
               title="代码示例"
               code={`<Rate
-  value={rateVal()}
-  onChange={(v) => setRateVal(v)}
+  value={rateVal.value}
+  onChange={(v) => rateVal.value = v}
   count={5}
 />`}
               language="tsx"

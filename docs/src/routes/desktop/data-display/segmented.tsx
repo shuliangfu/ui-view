@@ -60,16 +60,16 @@ const SEGMENTED_API: ApiRow[] = [
 const importCode = `import { createSignal } from "@dreamer/view";
 import { Segmented } from "@dreamer/ui-view";
 
-const [value, setValue] = createSignal("列表");
+const value = createSignal("列表");
 const options = [{ value: "列表", label: "列表" }, { value: "网格", label: "网格" }];
 {() => (
   <>
     <Segmented
       options={options}
-      value={value}
-      onChange={setValue}
+      value={() => value.value}
+      onChange={(v) => value.value = v}
     />
-    <p>当前: {value()}</p>
+    <p>当前: {value.value}</p>
   </>
 )}`;
 
@@ -77,18 +77,18 @@ const exampleBasic = `{() => (
   <>
     <Segmented
       options={options}
-      value={value}
-      onChange={setValue}
+      value={() => value.value}
+      onChange={(v) => value.value = v}
     />
-    <p>当前: {value()}</p>
+    <p>当前: {value.value}</p>
   </>
 )}`;
 
 const exampleBlockSize = `{() => (
   <Segmented
     options={options}
-    value={value}
-    onChange={setValue}
+    value={() => value.value}
+    onChange={(v) => value.value = v}
     block
     size="lg"
   />
@@ -97,17 +97,17 @@ const exampleBlockSize = `{() => (
 const exampleDisabled = `{() => (
   <Segmented
     options={options}
-    value={value}
-    onChange={setValue}
+    value={() => value.value}
+    onChange={(v) => value.value = v}
   />
 )}
 // options 中某项设置 disabled: true 即可禁用该项`;
 
 export default function DataDisplaySegmented() {
   /** 各示例使用独立 signal，互不影响 */
-  const [valueBasic, setValueBasic] = createSignal("列表");
-  const [valueBlock, setValueBlock] = createSignal("列表");
-  const [valueDisabled, setValueDisabled] = createSignal("列表");
+  const valueBasic = createSignal("列表");
+  const valueBlock = createSignal("列表");
+  const valueDisabled = createSignal("列表");
 
   const options = [
     { value: "列表", label: "列表" },
@@ -140,18 +140,18 @@ export default function DataDisplaySegmented() {
       <section class="space-y-8">
         <Title level={2}>示例</Title>
 
-        {/* 包成 getter：仅本块订阅 value()，点击时只重跑本块、不重跑整页，避免 createSignal 被重新执行导致选中态重置 */}
+        {/* 包成 getter：仅本块订阅 value.value，点击时只重跑本块、不重跑整页，避免 createSignal 被重新执行导致选中态重置 */}
         <div class="space-y-4">
           <Title level={3}>基础</Title>
           {() => (
             <>
               <Segmented
                 options={options}
-                value={valueBasic}
-                onChange={setValueBasic}
+                value={() => valueBasic.value}
+                onChange={(v) => valueBasic.value = v}
                 stateKey="segmented-doc-basic"
               />
-              <p class="text-sm text-slate-500">当前: {valueBasic()}</p>
+              <p class="text-sm text-slate-500">当前: {valueBasic.value}</p>
             </>
           )}
           <CodeBlock
@@ -169,8 +169,8 @@ export default function DataDisplaySegmented() {
           {() => (
             <Segmented
               options={options}
-              value={valueBlock}
-              onChange={setValueBlock}
+              value={() => valueBlock.value}
+              onChange={(v) => valueBlock.value = v}
               block
               size="lg"
               stateKey="segmented-doc-block"
@@ -195,8 +195,8 @@ export default function DataDisplaySegmented() {
                 label: "禁用",
                 disabled: true,
               }]}
-              value={valueDisabled}
-              onChange={setValueDisabled}
+              value={() => valueDisabled.value}
+              onChange={(v) => valueDisabled.value = v}
               stateKey="segmented-doc-disabled"
             />
           )}

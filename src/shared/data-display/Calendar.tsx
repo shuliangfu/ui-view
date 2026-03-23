@@ -51,7 +51,7 @@ export function Calendar(props: CalendarProps) {
     a.getDate() === b.getDate();
 
   if (mode === "year") {
-    return () => (
+    return (
       <div class={twMerge("calendar calendar-year", className)}>
         <div class="grid grid-cols-4 gap-2 p-4">
           {MONTHS.map((_, i) => {
@@ -79,7 +79,7 @@ export function Calendar(props: CalendarProps) {
 
   const days = getDaysInMonth(year, month);
 
-  return () => (
+  return (
     <div
       class={twMerge(
         "calendar border border-slate-200 dark:border-slate-600 rounded-lg overflow-hidden",

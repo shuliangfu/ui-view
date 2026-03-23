@@ -1,5 +1,7 @@
 /**
  * 消息与通知（ANALYSIS 3.3）：Toast、Message、Notification。
+ * ToastContainer / MessageContainer / NotificationContainer 使用 `return () => { ... }`，
+ * 在渲染 getter 内读取模块级列表 SignalRef（`toastList()` 等），以便命令式 API 更新时仍能重绘。
  */
 export { ToastContainer } from "./Toast.tsx";
 export { toast } from "./toast-store.ts";

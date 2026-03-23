@@ -24,5 +24,5 @@ const svg = (
 
 /** Adobe Premiere Pro 品牌 Logo 图标 */
 export function IconBrandPremiere(props?: IconComponentProps) {
-  return () => <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
+  return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

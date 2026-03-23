@@ -4,17 +4,17 @@
  * 归属数据展示，与 Image 并列。
  */
 
-import { createEffect, createSignal } from "@dreamer/view";
+import { createEffect } from "@dreamer/view";
+import { createSignal } from "@dreamer/view/signal";
 import { twMerge } from "tailwind-merge";
-import {
-  IconChevronLeft,
-  IconChevronRight,
-  IconClose,
-  IconRotateCcw,
-  IconRotateCw,
-  IconZoomIn,
-  IconZoomOut,
-} from "../basic/icons/mod.ts";
+/** 按需：单文件图标，避免经 icons/mod 拉入全表 */
+import { IconChevronLeft } from "../basic/icons/ChevronLeft.tsx";
+import { IconChevronRight } from "../basic/icons/ChevronRight.tsx";
+import { IconClose } from "../basic/icons/Close.tsx";
+import { IconRotateCcw } from "../basic/icons/RotateCcw.tsx";
+import { IconRotateCw } from "../basic/icons/RotateCw.tsx";
+import { IconZoomIn } from "../basic/icons/ZoomIn.tsx";
+import { IconZoomOut } from "../basic/icons/ZoomOut.tsx";
 
 /**
  * 在容器上按下时开始拖动，通过 document 的 mousemove/mouseup 更新位移。
@@ -25,6 +25,8 @@ function useImageDrag(
 ) {
   return (e: MouseEvent) => {
     e.preventDefault();
+    const doc = globalThis.document;
+    if (!doc) return;
     const startX = e.clientX;
     const startY = e.clientY;
     const startPos = getPosition();
@@ -35,11 +37,11 @@ function useImageDrag(
       });
     };
     const onUp = () => {
-      document.removeEventListener("mousemove", onMove);
-      document.removeEventListener("mouseup", onUp);
+      doc.removeEventListener("mousemove", onMove);
+      doc.removeEventListener("mouseup", onUp);
     };
-    document.addEventListener("mousemove", onMove);
-    document.addEventListener("mouseup", onUp);
+    doc.addEventListener("mousemove", onMove);
+    doc.addEventListener("mouseup", onUp);
   };
 }
 
@@ -91,49 +93,55 @@ export function ImageViewer(props: ImageViewerProps) {
   const list = Array.isArray(imagesProp) ? imagesProp : [imagesProp];
   const hasMultiple = list.length > 1;
 
-  const [internalIndex, setInternalIndex] = createSignal(defaultIndex);
+  const internalIndexRef = createSignal(defaultIndex);
   const getIndex = () =>
-    controlledIndex !== undefined ? controlledIndex : internalIndex();
+    controlledIndex !== undefined ? controlledIndex : internalIndexRef.value;
   const setIndex = (i: number) => {
     const next = Math.max(0, Math.min(i, list.length - 1));
-    if (controlledIndex === undefined) setInternalIndex(next);
+    if (controlledIndex === undefined) internalIndexRef.value = next;
     onIndexChange?.(next);
   };
 
-  const [scale, setScale] = createSignal(1);
-  const [rotation, setRotation] = createSignal(0);
-  const [position, setPosition] = createSignal({ x: 0, y: 0 });
+  const scaleRef = createSignal(1);
+  const rotationRef = createSignal(0);
+  const positionRef = createSignal({ x: 0, y: 0 });
 
   const handlePrev = () => {
     if (!hasMultiple) return;
     setIndex(getIndex() - 1);
-    setScale(1);
-    setRotation(0);
-    setPosition({ x: 0, y: 0 });
+    scaleRef.value = 1;
+    rotationRef.value = 0;
+    positionRef.value = { x: 0, y: 0 };
   };
 
   const handleNext = () => {
     if (!hasMultiple) return;
     setIndex(getIndex() + 1);
-    setScale(1);
-    setRotation(0);
-    setPosition({ x: 0, y: 0 });
+    scaleRef.value = 1;
+    rotationRef.value = 0;
+    positionRef.value = { x: 0, y: 0 };
   };
 
   const handleZoomIn = () =>
-    setScale((s) => Math.min(MAX_SCALE, s + SCALE_STEP));
+    scaleRef.value = (s) => Math.min(MAX_SCALE, s + SCALE_STEP);
   const handleZoomOut = () =>
-    setScale((s) => Math.max(MIN_SCALE, s - SCALE_STEP));
-  const handleRotateCw = () => setRotation((r) => (r + ROTATE_STEP) % 360);
+    scaleRef.value = (s) => Math.max(MIN_SCALE, s - SCALE_STEP);
+  const handleRotateCw = () =>
+    rotationRef.value = (r) => (r + ROTATE_STEP) % 360;
   const handleRotateCcw = () =>
-    setRotation((r) => (r - ROTATE_STEP + 360) % 360);
+    rotationRef.value = (r) => (r - ROTATE_STEP + 360) % 360;
   const handleResetTransform = () => {
-    setScale(1);
-    setRotation(0);
-    setPosition({ x: 0, y: 0 });
+    scaleRef.value = 1;
+    rotationRef.value = 0;
+    positionRef.value = { x: 0, y: 0 };
   };
 
-  const handleImageMouseDown = useImageDrag(() => position(), setPosition);
+  const handleImageMouseDown = useImageDrag(
+    () => positionRef.value,
+    (v) => {
+      positionRef.value = v;
+    },
+  );
 
   const handleMaskClick = (e: Event) => {
     if (e.target === e.currentTarget && maskClosable) onClose?.();
@@ -142,6 +150,8 @@ export function ImageViewer(props: ImageViewerProps) {
   /** 打开时在 document 上绑定键盘事件，避免依赖根节点获焦；关闭时清理 */
   createEffect(() => {
     if (!open) return;
+    const doc = globalThis.document;
+    if (!doc) return;
     const handler = (e: KeyboardEvent) => {
       if (!keyboard) return;
       if (e.key === "Escape") {
@@ -157,23 +167,29 @@ export function ImageViewer(props: ImageViewerProps) {
         handleNext();
       }
     };
-    document.addEventListener("keydown", handler as EventListener);
-    return () =>
-      document.removeEventListener("keydown", handler as EventListener);
+    doc.addEventListener("keydown", handler as EventListener);
+    return () => doc.removeEventListener("keydown", handler as EventListener);
   });
 
+  const docBody = typeof globalThis.document !== "undefined"
+    ? globalThis.document.body
+    : null;
+
   if (!open) {
-    document.body.style.overflow = "";
-    return () => null;
+    if (docBody) docBody.style.overflow = "";
+    return null;
   }
 
   const currentSrc = list[getIndex()] ?? "";
 
+  /**
+   * 渲染 getter：读 scale/rotation/position 与当前索引，保证缩放旋转与切换时视图更新。
+   */
   return () => {
-    document.body.style.overflow = "hidden";
-    const scaleVal = scale();
-    const rotationVal = rotation();
-    const pos = position();
+    if (docBody) docBody.style.overflow = "hidden";
+    const scaleVal = scaleRef.value;
+    const rotationVal = rotationRef.value;
+    const pos = positionRef.value;
 
     return (
       <div

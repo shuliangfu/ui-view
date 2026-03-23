@@ -1,6 +1,6 @@
 /**
  * 头部主题切换按钮（图标由 CSS dark: 控制显隐）。
- * 点击由 _client.tsx 绑定到 window.$theme.toggle()（由 @dreamer/plugins/theme 注入的脚本提供）。
+ * 点击由客户端绑定到主题 API（@dreamer/plugins/theme 注入，通常为 globalThis 上的 toggle）。
  */
 
 /** 太阳图标：浅色主题时显示，点击切深色 */

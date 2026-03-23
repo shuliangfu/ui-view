@@ -4,7 +4,8 @@
  */
 
 import { twMerge } from "tailwind-merge";
-import { IconSearch } from "../basic/icons/mod.ts";
+/** 按需：单文件图标，避免经 icons/mod 拉入全表 */
+import { IconSearch } from "../basic/icons/Search.tsx";
 import type { SizeVariant } from "../types.ts";
 
 export interface SearchProps {
@@ -72,7 +73,7 @@ export function Search(props: SearchProps) {
     onInput?.(synthetic);
   };
 
-  return () => (
+  return (
     <span
       class={twMerge(
         "search-wrapper relative inline-block w-full max-w-xs",

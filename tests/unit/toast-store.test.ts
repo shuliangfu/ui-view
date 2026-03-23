@@ -25,12 +25,12 @@ describe("toast-store", () => {
     expect(list[0].type).toBe("success");
     expect(list[0].content).toBe("保存成功");
     expect(list[0].duration).toBe(0);
-    expect(list[0].placement).toBe("top-center");
+    expect(list[0].placement).toBe("top");
   });
 
-  it("toast.success 默认 placement 为 top-center", () => {
+  it("toast.success 默认 placement 为 top", () => {
     toast.success("ok", 0);
-    expect(toastList()[0].placement).toBe("top-center");
+    expect(toastList()[0].placement).toBe("top");
   });
 
   it("removeToast 移除指定 id", () => {

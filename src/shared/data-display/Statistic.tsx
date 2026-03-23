@@ -62,7 +62,7 @@ export function Statistic(props: StatisticProps) {
     ? formatNumber(value, precision, groupSeparator)
     : String(value);
 
-  return () => (
+  return (
     <div class={twMerge("statistic", className)}>
       {title != null && (
         <div class="text-sm text-slate-500 dark:text-slate-400 mb-1">

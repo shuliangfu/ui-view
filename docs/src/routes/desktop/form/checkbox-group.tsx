@@ -72,18 +72,18 @@ const importCode =
 import { createSignal } from "@dreamer/view";
 
 const options = [{ value: "a", label: "选项 A" }, { value: "b", label: "选项 B" }];
-const [val, setVal] = createSignal<string[]>([]);
+const val = createSignal<string[]>([]);
 <FormItem label="多选组">
   <CheckboxGroup
     options={options}
-    value={val}
-    onChange={(v) => setVal(v)}
+    value={() => val.value}
+    onChange={(v) => val.value = v}
   />
 </FormItem>`;
 
 export default function FormCheckboxGroup() {
-  const [val, setVal] = createSignal<string[]>([]);
-  const [val2, setVal2] = createSignal<string[]>(["x", "y"]);
+  const val = createSignal<string[]>([]);
+  const val2 = createSignal<string[]>(["x", "y"]);
 
   return (
     <div class="space-y-10">
@@ -116,16 +116,16 @@ export default function FormCheckboxGroup() {
             <FormItem label="多选组">
               <CheckboxGroup
                 options={options}
-                value={val}
-                onChange={(v) => setVal(v)}
+                value={() => val.value}
+                onChange={(v) => val.value = v}
               />
             </FormItem>
             <CodeBlock
               title="代码示例"
               code={`<CheckboxGroup
   options={options}
-  value={val}
-  onChange={(v) => setVal(v)}
+  value={() => val.value}
+  onChange={(v) => val.value = v}
 />`}
               language="tsx"
               showLineNumbers
@@ -139,16 +139,16 @@ export default function FormCheckboxGroup() {
             <FormItem label="选项 Z 为 disabled">
               <CheckboxGroup
                 options={options}
-                value={val2}
-                onChange={(v) => setVal2(v)}
+                value={() => val2.value}
+                onChange={(v) => val2.value = v}
               />
             </FormItem>
             <CodeBlock
               title="代码示例"
               code={`<CheckboxGroup
   options={options}
-  value={val2}
-  onChange={(v) => setVal2(v)}
+  value={() => val2.value}
+  onChange={(v) => val2.value = v}
 />`}
               language="tsx"
               showLineNumbers
@@ -162,8 +162,8 @@ export default function FormCheckboxGroup() {
             <FormItem label="横向多选组">
               <CheckboxGroup
                 options={options}
-                value={val2}
-                onChange={(v) => setVal2(v)}
+                value={() => val2.value}
+                onChange={(v) => val2.value = v}
                 direction="horizontal"
               />
             </FormItem>
@@ -171,8 +171,8 @@ export default function FormCheckboxGroup() {
               title="代码示例"
               code={`<CheckboxGroup
   options={options}
-  value={val2}
-  onChange={(v) => setVal2(v)}
+  value={() => val2.value}
+  onChange={(v) => val2.value = v}
   direction="horizontal"
 />`}
               language="tsx"
@@ -189,8 +189,8 @@ export default function FormCheckboxGroup() {
             <FormItem label="纵向紧排多选组">
               <CheckboxGroup
                 options={options}
-                value={val2}
-                onChange={(v) => setVal2(v)}
+                value={() => val2.value}
+                onChange={(v) => val2.value = v}
                 direction="vertical"
                 class="gap-1"
               />
@@ -199,8 +199,8 @@ export default function FormCheckboxGroup() {
               title="代码示例"
               code={`<CheckboxGroup
   options={options}
-  value={val2}
-  onChange={(v) => setVal2(v)}
+  value={() => val2.value}
+  onChange={(v) => val2.value = v}
   direction="vertical"
   class="gap-1"
 />`}

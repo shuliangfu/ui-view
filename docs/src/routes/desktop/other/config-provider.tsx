@@ -67,7 +67,7 @@ const importCode =
 </ConfigProvider>`;
 
 const exampleThemeLocale = `<ConfigProvider
-  theme={theme()}
+  theme={theme.value}
   locale="zh-CN"
   componentSize="md"
 >
@@ -78,7 +78,7 @@ const exampleGetConfig =
   `子树外 getConfig(): theme={getConfig().theme ?? "-"}, locale={getConfig().locale ?? "-"}, componentSize={getConfig().componentSize ?? "-"}`;
 
 export default function OtherConfigProvider() {
-  const [theme, setTheme] = createSignal<"light" | "dark">("light");
+  const theme = createSignal<"light" | "dark">("light");
 
   return (
     <div class="space-y-10">
@@ -111,19 +111,19 @@ export default function OtherConfigProvider() {
             <Button
               type="button"
               onClick={() =>
-                setTheme((t) => (t === "light" ? "dark" : "light"))}
+                theme.value = (t) => (t === "light" ? "dark" : "light")}
             >
-              切换 theme（当前: {theme()}）
+              切换 theme（当前: {theme.value}）
             </Button>
           </div>
-          <ConfigProvider theme={theme()} locale="zh-CN" componentSize="md">
+          <ConfigProvider theme={theme.value} locale="zh-CN" componentSize="md">
             <div class="rounded-lg border border-slate-200 dark:border-slate-600 p-4 space-y-3">
               <p class="text-sm font-medium">
                 子树内（受 ConfigProvider 包裹）
               </p>
               <p class="text-sm text-slate-500">
-                当前
-                theme={theme()}、locale=zh-CN、componentSize=md；子树内组件可
+                当前 theme={theme
+                  .value}、locale=zh-CN、componentSize=md；子树内组件可
                 getConfig() 读取。
               </p>
               <Button type="button" size="sm">小按钮</Button>

@@ -71,7 +71,7 @@ export function Tag(props: TagProps) {
     if (!disabled) onClose?.(e);
   };
 
-  return () => (
+  return (
     <span
       class={twMerge(
         "inline-flex items-center font-medium shrink-0",

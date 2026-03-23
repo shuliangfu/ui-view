@@ -60,22 +60,22 @@ const ANCHOR_LINK_API: ApiRow[] = [
 const importCode = `import { createSignal } from "@dreamer/view";
 import { Anchor } from "@dreamer/ui-view";
 
-const [activeKey, setActiveKey] = createSignal("section1");
+const activeKey = createSignal("section1");
 const links = [
   { key: "section1", href: "#section1", title: "第一节" },
   { key: "section2", href: "#section2", title: "第二节" },
 ];
-<Anchor links={links} activeKey={activeKey()} onChange={setActiveKey} />`;
+<Anchor links={links} activeKey={activeKey.value} onChange={(k) => activeKey.value = k} />`;
 
 const exampleBasic = `const links = [
   { key: "section1", href: "#section1", title: "第一节" },
   { key: "section2", href: "#section2", title: "第二节" },
   { key: "section3", href: "#section3", title: "第三节" },
 ];
-<Anchor links={links} activeKey={activeKey()} onChange={setActiveKey} />`;
+<Anchor links={links} activeKey={activeKey.value} onChange={(k) => activeKey.value = k} />`;
 
 export default function NavigationAnchor() {
-  const [activeKey, setActiveKey] = createSignal("section1");
+  const activeKey = createSignal("section1");
 
   const links = [
     { key: "section1", href: "#section1", title: "第一节" },
@@ -113,8 +113,8 @@ export default function NavigationAnchor() {
             <aside class="w-40 shrink-0">
               <Anchor
                 links={links}
-                activeKey={activeKey()}
-                onChange={setActiveKey}
+                activeKey={activeKey.value}
+                onChange={(k) => activeKey.value = k}
               />
             </aside>
             <div class="flex-1 space-y-12">

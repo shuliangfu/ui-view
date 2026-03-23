@@ -327,14 +327,14 @@ import type { IconComponentProps } from "@dreamer/ui-view";
 /** 图标组件类型：与内置图标签名一致 */
 type IconComponentType = (props?: IconComponentProps) => unknown;
 
-/** 单个图标展示：图标 + 名称 */
+/** 单个图标展示：图标 + 名称（currentColor 继承自容器，dark 下提高对比度） */
 function IconItem(
   { Component, name }: { Component: IconComponentType; name: string },
 ) {
   return (
-    <div class="flex flex-col items-center gap-1.5 p-3 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 min-w-[88px]">
+    <div class="flex flex-col items-center gap-1.5 p-3 rounded-lg border border-slate-200 dark:border-slate-500 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 min-w-[88px]">
       <Component size="md" />
-      <span class="text-xs text-slate-500 dark:text-slate-400 truncate max-w-full">
+      <span class="text-xs text-slate-500 dark:text-slate-300 truncate max-w-full">
         {name}
       </span>
     </div>

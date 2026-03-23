@@ -44,7 +44,8 @@ export function TabBar(props: TabBarProps) {
     class: className,
   } = props;
 
-  return () => (
+  /** 无内部 signal，直接返回 VNode */
+  return (
     <nav
       class={twMerge(
         "flex items-center justify-around bg-white dark:bg-slate-800",

@@ -63,21 +63,21 @@ const importCode =
   `import { InputNumber, Form, FormItem } from "@dreamer/ui-view";
 import { createSignal } from "@dreamer/view";
 
-const [val, setVal] = createSignal("10");
+const val = createSignal("10");
 <FormItem label="数量">
   <InputNumber
-    value={val}
+    value={() => val.value}
     min={0}
     max={100}
     step={5}
-    onChange={(e) => setVal((e.target as HTMLInputElement).value)}
+    onChange={(e) => val.value = (e.target as HTMLInputElement).value}
   />
 </FormItem>`;
 
 export default function FormInputNumber() {
-  const [val, setVal] = createSignal("10");
-  const [val2, setVal2] = createSignal("0");
-  const [val3, setVal3] = createSignal("50");
+  const val = createSignal("10");
+  const val2 = createSignal("0");
+  const val3 = createSignal("50");
 
   return (
     <div class="space-y-10">
@@ -110,21 +110,22 @@ export default function FormInputNumber() {
             <Title level={3}>步进按钮 + min/max/step</Title>
             <FormItem label="0–100，步进 5">
               <InputNumber
-                value={val}
+                value={() => val.value}
                 min={0}
                 max={100}
                 step={5}
-                onChange={(e) => setVal((e.target as HTMLInputElement).value)}
+                onChange={(e) =>
+                  val.value = (e.target as HTMLInputElement).value}
               />
             </FormItem>
             <CodeBlock
               title="代码示例"
               code={`<InputNumber
-  value={val}
+  value={() => val.value}
   min={0}
   max={100}
   step={5}
-  onChange={(e) => setVal((e.target as HTMLInputElement).value)}
+  onChange={(e) => val.value = (e.target as HTMLInputElement).value}
 />`}
               language="tsx"
               showLineNumbers
@@ -137,21 +138,22 @@ export default function FormInputNumber() {
             <Title level={3}>小数步进（step=0.1）</Title>
             <FormItem label="0–10，步进 0.1">
               <InputNumber
-                value={val2}
+                value={() => val2.value}
                 min={0}
                 max={10}
                 step={0.1}
-                onChange={(e) => setVal2((e.target as HTMLInputElement).value)}
+                onChange={(e) =>
+                  val2.value = (e.target as HTMLInputElement).value}
               />
             </FormItem>
             <CodeBlock
               title="代码示例"
               code={`<InputNumber
-  value={val2}
+  value={() => val2.value}
   min={0}
   max={10}
   step={0.1}
-  onChange={(e) => setVal2((e.target as HTMLInputElement).value)}
+  onChange={(e) => val2.value = (e.target as HTMLInputElement).value}
 />`}
               language="tsx"
               showLineNumbers
@@ -213,10 +215,11 @@ export default function FormInputNumber() {
             <FormItem label="md">
               <InputNumber
                 size="md"
-                value={val3}
+                value={() => val3.value}
                 min={0}
                 max={100}
-                onChange={(e) => setVal3((e.target as HTMLInputElement).value)}
+                onChange={(e) =>
+                  val3.value = (e.target as HTMLInputElement).value}
               />
             </FormItem>
             <FormItem label="lg">
@@ -230,7 +233,7 @@ export default function FormInputNumber() {
   min={0}
   max={10}
 />
-<InputNumber size="md" value={val3} min={0} max={100} onChange={...} />
+<InputNumber size="md" value={() => val3.value} min={0} max={100} onChange={...} />
 <InputNumber size="lg" value="5" min={0} max={10} />`}
               language="tsx"
               showLineNumbers

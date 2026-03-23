@@ -72,19 +72,19 @@ const importCode = `import { Select, Form, FormItem } from "@dreamer/ui-view";
 import { createSignal } from "@dreamer/view";
 
 const options = [{ value: "a", label: "选项 A" }, { value: "b", label: "选项 B" }];
-const [val, setVal] = createSignal("");
+const val = createSignal("");
 <FormItem label="请选择">
   <Select
     options={options}
-    value={val}
-    onChange={(e) => setVal((e.target as HTMLSelectElement).value)}
+    value={() => val.value}
+    onChange={(e) => val.value = (e.target as HTMLSelectElement).value}
     placeholder="请选择"
   />
 </FormItem>`;
 
 export default function FormSelect() {
-  const [val, setVal] = createSignal("");
-  const [val2, setVal2] = createSignal("b");
+  const val = createSignal("");
+  const val2 = createSignal("b");
 
   return (
     <div class="space-y-10">
@@ -117,8 +117,9 @@ export default function FormSelect() {
             <FormItem label="请选择">
               <Select
                 options={options}
-                value={val}
-                onChange={(e) => setVal((e.target as HTMLSelectElement).value)}
+                value={() => val.value}
+                onChange={(e) =>
+                  val.value = (e.target as HTMLSelectElement).value}
                 placeholder="请选择"
               />
             </FormItem>
@@ -126,8 +127,8 @@ export default function FormSelect() {
               title="代码示例"
               code={`<Select
   options={options}
-  value={val}
-  onChange={(e) => setVal((e.target as HTMLSelectElement).value)}
+  value={() => val.value}
+  onChange={(e) => val.value = (e.target as HTMLSelectElement).value}
   placeholder="请选择"
 />`}
               language="tsx"
@@ -142,8 +143,9 @@ export default function FormSelect() {
             <FormItem label="选项 C 为 disabled">
               <Select
                 options={options}
-                value={val2}
-                onChange={(e) => setVal2((e.target as HTMLSelectElement).value)}
+                value={() => val2.value}
+                onChange={(e) =>
+                  val2.value = (e.target as HTMLSelectElement).value}
                 placeholder="请选择"
               />
             </FormItem>
@@ -151,7 +153,7 @@ export default function FormSelect() {
               title="代码示例"
               code={`<Select
   options={options}
-  value={val2}
+  value={() => val2.value}
   onChange={...}
   placeholder="请选择"
 />`}
@@ -188,8 +190,9 @@ export default function FormSelect() {
                 id="select-name"
                 name="city"
                 options={options}
-                value={val}
-                onChange={(e) => setVal((e.target as HTMLSelectElement).value)}
+                value={() => val.value}
+                onChange={(e) =>
+                  val.value = (e.target as HTMLSelectElement).value}
                 placeholder="请选择城市"
               />
             </FormItem>
@@ -199,7 +202,7 @@ export default function FormSelect() {
   name="city"
   id="select-name"
   options={options}
-  value={val}
+  value={() => val.value}
   onChange={...}
 />`}
               language="tsx"

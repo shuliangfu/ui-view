@@ -128,7 +128,7 @@ export function SwipeCell(props: SwipeCellProps) {
     snap();
   };
 
-  return () => (
+  return (
     <div
       class={twMerge(
         "swipe-cell overflow-hidden rounded-lg",

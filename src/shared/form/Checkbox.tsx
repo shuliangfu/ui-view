@@ -6,7 +6,7 @@
 import { twMerge } from "tailwind-merge";
 
 export interface CheckboxProps {
-  /** 是否选中；可为 getter 以配合 View 细粒度更新 */
+  /** 是否选中；可为 getter / `() => ref.value`（SignalRef），由 View 对属性做细粒度更新 */
   checked?: boolean | (() => boolean);
   /** 是否禁用 */
   disabled?: boolean;
@@ -45,7 +45,7 @@ export function Checkbox(props: CheckboxProps) {
     children,
   } = props;
 
-  return () => (
+  return (
     <label class={twMerge(labelCls, error && errorCls, className)}>
       <input
         type="checkbox"

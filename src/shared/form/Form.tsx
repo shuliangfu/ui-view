@@ -25,8 +25,9 @@ const layoutClasses: Record<FormLayout, string> = {
 };
 
 /**
- * 返回 getter，使 View 为 Form 创建带 data-view-dynamic 的容器；
+ * 返回渲染 getter，使 View 为 Form 创建带 data-view-dynamic 的容器；
  * patch 时复用容器、只更新内容，避免子组件（如 Password）被整棵替换导致失焦。
+ * 与 `SignalRef` 受控值（子组件 `value={() => ref.value}`）可组合使用。
  */
 export function Form(props: FormProps) {
   return () => {

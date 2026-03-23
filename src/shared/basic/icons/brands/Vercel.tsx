@@ -15,5 +15,5 @@ const svg = (
 
 /** Vercel 品牌 Logo 图标 */
 export function IconBrandVercel(props?: IconComponentProps) {
-  return () => <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
+  return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

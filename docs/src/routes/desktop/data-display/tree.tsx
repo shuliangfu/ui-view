@@ -85,32 +85,32 @@ const importCode = `import { createSignal } from "@dreamer/view";
 import { Tree } from "@dreamer/ui-view";
 import type { TreeNode } from "@dreamer/ui-view";
 
-const [expandedKeys, setExpandedKeys] = createSignal<string[]>(["1"]);
-const [selectedKeys, setSelectedKeys] = createSignal<string[]>([]);
+const expandedKeys = createSignal<string[]>(["1"]);
+const selectedKeys = createSignal<string[]>([]);
 const treeData: TreeNode[] = [{ key: "1", title: "节点 1", children: [...] }, ...];
 <Tree
   treeData={treeData}
-  expandedKeys={expandedKeys()}
-  onExpand={setExpandedKeys}
-  selectedKeys={selectedKeys()}
-  onSelect={setSelectedKeys}
+  expandedKeys={expandedKeys.value}
+  onExpand={(keys) => expandedKeys.value = keys}
+  selectedKeys={selectedKeys.value}
+  onSelect={(keys) => selectedKeys.value = keys}
 />`;
 
 const exampleCheckable = `<Tree
   treeData={treeData}
-  expandedKeys={expandedKeys()}
-  onExpand={setExpandedKeys}
-  selectedKeys={selectedKeys()}
-  onSelect={setSelectedKeys}
+  expandedKeys={expandedKeys.value}
+  onExpand={(keys) => expandedKeys.value = keys}
+  selectedKeys={selectedKeys.value}
+  onSelect={(keys) => selectedKeys.value = keys}
   checkable
-  checkedKeys={checkedKeys()}
-  onCheck={setCheckedKeys}
+  checkedKeys={checkedKeys.value}
+  onCheck={(keys) => checkedKeys.value = keys}
 />`;
 
 const exampleShowLine = `<Tree
   treeData={treeData}
-  expandedKeys={expandedKeys()}
-  onExpand={setExpandedKeys}
+  expandedKeys={expandedKeys.value}
+  onExpand={(keys) => expandedKeys.value = keys}
   showLine
 />`;
 
@@ -129,9 +129,9 @@ function KeysDisplay(props: {
 }
 
 /** 树示例用的展开/选中/勾选 state 提到模块级，避免 state 更新时页面组件重跑导致整树重渲染 */
-const [expandedKeys, setExpandedKeys] = createSignal<string[]>(["1"]);
-const [selectedKeys, setSelectedKeys] = createSignal<string[]>([]);
-const [checkedKeys, setCheckedKeys] = createSignal<string[]>([]);
+const expandedKeys = createSignal<string[]>(["1"]);
+const selectedKeys = createSignal<string[]>([]);
+const checkedKeys = createSignal<string[]>([]);
 
 const treeData: TreeNode[] = [
   {
@@ -179,19 +179,19 @@ export default function DataDisplayTree() {
           <Tree
             treeData={treeData}
             defaultExpandedKeys={["1"]}
-            expandedKeys={expandedKeys}
-            onExpand={setExpandedKeys}
-            selectedKeys={selectedKeys}
-            onSelect={setSelectedKeys}
+            expandedKeys={expandedKeys.value}
+            onExpand={(keys) => expandedKeys.value = keys}
+            selectedKeys={selectedKeys.value}
+            onSelect={(keys) => selectedKeys.value = keys}
             checkable
-            checkedKeys={checkedKeys}
-            onCheck={setCheckedKeys}
+            checkedKeys={checkedKeys.value}
+            onCheck={(keys) => checkedKeys.value = keys}
           />
           {/* 包成 getter，使 KeysDisplay 在独立 effect 中渲染并读 signal，避免整页 effect 订阅 signal 导致 DataDisplayTree 重跑、Tree 的 data-view-dynamic 槽被 replaceChildren 整树闪动 */}
           {() => (
             <KeysDisplay
-              getSelectedKeys={selectedKeys}
-              getCheckedKeys={checkedKeys}
+              getSelectedKeys={() => selectedKeys.value}
+              getCheckedKeys={() => checkedKeys.value}
             />
           )}
           <CodeBlock
@@ -208,8 +208,8 @@ export default function DataDisplayTree() {
           <Title level={3}>showLine 连接线</Title>
           <Tree
             treeData={treeData}
-            expandedKeys={expandedKeys}
-            onExpand={setExpandedKeys}
+            expandedKeys={expandedKeys.value}
+            onExpand={(keys) => expandedKeys.value = keys}
             showLine
           />
           <CodeBlock

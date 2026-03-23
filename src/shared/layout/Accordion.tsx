@@ -1,12 +1,13 @@
 /**
  * Accordion 手风琴折叠（View）。
- * 常见于 FAQ、设置；支持受控/非受控、单开/多开；需配合 createSignal 做 expandedKeys。
+ * 常见于 FAQ、设置；支持受控/非受控、单开/多开；非受控时用 `SignalRef` 维护 expandedKeys。
  * 内部维护 fallback state，保证点击展开/收起在受控/非受控下均生效。
  */
 
-import { createSignal } from "@dreamer/view";
+import { createSignal } from "@dreamer/view/signal";
 import { twMerge } from "tailwind-merge";
-import { IconChevronDown } from "../basic/icons/mod.ts";
+/** 按需：单文件图标，避免经 icons/mod 拉入全表 */
+import { IconChevronDown } from "../basic/icons/ChevronDown.tsx";
 
 export interface AccordionItem {
   /** 唯一 key */
@@ -54,22 +55,22 @@ export function Accordion(props: AccordionProps) {
   } = props;
 
   const initialKeys = controlledKeys ?? defaultExpandedKeys ?? [];
-  const [internalKeys, setInternalKeys] = createSignal<string[]>(initialKeys);
-  /** 用普通对象存「上次同步的受控 keys」，不参与响应式，避免读 signal 触发重跑导致卡死/点不动 */
+  const internalKeysRef = createSignal<string[]>(initialKeys);
+  /** 用普通对象存「上次同步的受控 keys」，不参与响应式，避免读 SignalRef 触发重跑导致卡死/点不动 */
   const lastSyncedRef: { value: string } = { value: "" };
   const c = controlledKeys !== undefined ? controlledKeys : null;
   if (c != null) {
     const cStr = JSON.stringify(c.slice().sort());
     if (cStr !== lastSyncedRef.value) {
       lastSyncedRef.value = cStr;
-      setInternalKeys([...c]);
+      internalKeysRef.value = [...c];
     }
   }
   /** 展示用内部 state，点击即更新；受控时仅当 prop 变化才从上面同步到 internal */
-  const getExpandedKeys = (): string[] => internalKeys();
+  const getExpandedKeys = (): string[] => internalKeysRef.value;
 
   const toggle = (key: string) => {
-    const current = internalKeys();
+    const current = internalKeysRef.value;
     const next = new Set(current);
     if (next.has(key)) {
       next.delete(key);
@@ -78,10 +79,13 @@ export function Accordion(props: AccordionProps) {
       next.add(key);
     }
     const nextArr = Array.from(next);
-    setInternalKeys(nextArr);
+    internalKeysRef.value = nextArr;
     onChange?.(nextArr);
   };
 
+  /**
+   * 渲染 getter：读 `internalKeysRef.value`，展开/收起后触发细粒度更新。
+   */
   return () => {
     const expandedSet = new Set(getExpandedKeys());
     return (

@@ -16,5 +16,5 @@ export interface ChartLineProps {
 
 /** 折线图组件 */
 export function ChartLine(props: ChartLineProps) {
-  return () => <ChartBase type="line" {...props} />;
+  return <ChartBase type="line" {...props} />;
 }

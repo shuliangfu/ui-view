@@ -67,7 +67,7 @@ export function Descriptions(props: DescriptionsProps) {
   );
   const contentCls = twMerge(cellCls, contentClass);
 
-  return () => (
+  return (
     <div class={twMerge("descriptions", className)}>
       {title != null && (
         <div class="text-base font-semibold text-slate-900 dark:text-white mb-3">

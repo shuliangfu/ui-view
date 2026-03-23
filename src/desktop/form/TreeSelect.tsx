@@ -64,7 +64,8 @@ export function TreeSelect(props: TreeSelectProps) {
   } = props;
   const flat = flattenOptions(options);
   const sizeCls = sizeClasses[size];
-  return () => (
+  /** 无内部 signal，直接返回 VNode */
+  return (
     <select
       id={id}
       name={name}

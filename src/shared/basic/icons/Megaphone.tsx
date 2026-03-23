@@ -21,5 +21,5 @@ const svg = (
 );
 
 export function IconMegaphone(props?: IconComponentProps) {
-  return () => <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
+  return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

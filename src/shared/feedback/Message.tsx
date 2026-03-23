@@ -5,12 +5,11 @@
  */
 
 import { twMerge } from "tailwind-merge";
-import {
-  IconAlertCircle,
-  IconCheckCircle,
-  IconInfo,
-  IconXCircle,
-} from "../basic/icons/mod.ts";
+/** 按需：单文件图标，避免经 icons/mod 拉入全表 */
+import { IconAlertCircle } from "../basic/icons/AlertCircle.tsx";
+import { IconCheckCircle } from "../basic/icons/CheckCircle.tsx";
+import { IconInfo } from "../basic/icons/Info.tsx";
+import { IconXCircle } from "../basic/icons/XCircle.tsx";
 import type {
   MessageItem,
   MessagePlacement,
@@ -45,7 +44,7 @@ function MessageIcon({ type }: { type: MessageType }) {
 
 /** 单条 Message 项：带图标、卡片式（边框+阴影），比 Toast 重 */
 function MessageItemEl({ item }: { item: MessageItem }) {
-  return () => (
+  return (
     <div
       role="alert"
       class="flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 w-max min-w-0 max-w-md text-sm"
@@ -59,7 +58,10 @@ function MessageItemEl({ item }: { item: MessageItem }) {
 /** 与 Toast/Notification 同级最高层级 */
 const MESSAGE_Z_INDEX = 2147483647;
 
-/** Message 容器：支持 top / center，结构参考 Toast（先读 list、按 placement 分组渲染） */
+/**
+ * Message 容器：支持 top / center，结构参考 Toast（先读 list、按 placement 分组渲染）。
+ * 保留 `return () =>`：在 getter 内读 `messageList()` 以订阅模块级列表 SignalRef。
+ */
 export function MessageContainer() {
   return () => {
     const list = messageList();

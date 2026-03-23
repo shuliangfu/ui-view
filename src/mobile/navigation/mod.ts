@@ -1,5 +1,37 @@
 /**
- * 移动端导航（M）：TabBar、NavBar
+ * 移动端导航入口：本目录显式导出；共用组件为薄 re-export，TabBar/NavBar 为移动实现。
  */
+export type { BreadcrumbItem } from "./breadcrumb-types.ts";
+export {
+  Sidebar,
+  type SidebarItem,
+  type SidebarProps,
+  type SidebarSubItem,
+} from "./Sidebar.tsx";
+export { Pagination, type PaginationProps } from "./Pagination.tsx";
+export { Menu, type MenuItem, type MenuProps } from "./Menu.tsx";
+export {
+  type StepItem,
+  Steps,
+  type StepsProps,
+  type StepStatus,
+} from "./Steps.tsx";
+export { PageHeader, type PageHeaderProps } from "./PageHeader.tsx";
+export {
+  Affix,
+  type AffixInitOptions,
+  type AffixProps,
+  initAffix,
+} from "./Affix.tsx";
+export {
+  Anchor,
+  type AnchorLink,
+  type AnchorProps,
+  type AnchorSpyOptions,
+  initAnchorSpy,
+} from "./Anchor.tsx";
+export { BackTop } from "./BackTop.tsx";
+export type { BackTopProps, BackTopTarget } from "./BackTop.tsx";
+
 export { TabBar, type TabBarItem, type TabBarProps } from "./TabBar.tsx";
 export { NavBar, type NavBarProps } from "./NavBar.tsx";

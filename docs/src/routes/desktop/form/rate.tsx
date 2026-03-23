@@ -52,14 +52,14 @@ const RATE_API: ApiRow[] = [
 const importCode = `import { Rate, Form, FormItem } from "@dreamer/ui-view";
 import { createSignal } from "@dreamer/view";
 
-const [val, setVal] = createSignal(0);
+const val = createSignal(0);
 <FormItem label="评分">
-  <Rate value={val} onChange={(v) => setVal(v)} count={5} />
+  <Rate value={() => val.value} onChange={(v) => val.value = v} count={5} />
 </FormItem>`;
 
 export default function FormRate() {
-  const [val, setVal] = createSignal(0);
-  const [valHalf, setValHalf] = createSignal(0);
+  const val = createSignal(0);
+  const valHalf = createSignal(0);
 
   return (
     <div class="space-y-10">
@@ -89,13 +89,17 @@ export default function FormRate() {
           <section class="space-y-4">
             <Title level={3}>基础（5 星）</Title>
             <FormItem label="评分">
-              <Rate value={val} onChange={(v) => setVal(v)} count={5} />
+              <Rate
+                value={() => val.value}
+                onChange={(v) => val.value = v}
+                count={5}
+              />
             </FormItem>
             <CodeBlock
               title="代码示例"
               code={`<Rate
-  value={val}
-  onChange={(v) => setVal(v)}
+  value={() => val.value}
+  onChange={(v) => val.value = v}
   count={5}
 />`}
               language="tsx"
@@ -109,8 +113,8 @@ export default function FormRate() {
             <Title level={3}>allowHalf 半星</Title>
             <FormItem label="半星">
               <Rate
-                value={valHalf}
-                onChange={(v) => setValHalf(v)}
+                value={() => valHalf.value}
+                onChange={(v) => valHalf.value = v}
                 count={5}
                 allowHalf
               />
@@ -118,8 +122,8 @@ export default function FormRate() {
             <CodeBlock
               title="代码示例"
               code={`<Rate
-  value={valHalf}
-  onChange={(v) => setValHalf(v)}
+  value={() => valHalf.value}
+  onChange={(v) => valHalf.value = v}
   count={5}
   allowHalf
 />`}

@@ -5,7 +5,8 @@
 
 import { twMerge } from "tailwind-merge";
 import { Link } from "../../shared/basic/Link.tsx";
-import { IconChevronRight } from "../../shared/basic/icons/mod.ts";
+/** 按需：单文件图标，避免经 icons/mod 拉入全表 */
+import { IconChevronRight } from "../../shared/basic/icons/ChevronRight.tsx";
 import type { BreadcrumbItem } from "../../shared/navigation/breadcrumb-types.ts";
 
 export type { BreadcrumbItem };
@@ -33,7 +34,8 @@ export function Breadcrumb(props: BreadcrumbProps) {
   );
   const sep = separator ?? defaultSeparator;
 
-  return () => (
+  /** 无内部 signal，直接返回 VNode */
+  return (
     <nav
       aria-label="Breadcrumb"
       class={twMerge("flex items-center flex-wrap gap-0 text-sm", className)}

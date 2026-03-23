@@ -19,5 +19,5 @@ const svg = (
 );
 
 export function IconTokenUsdc(props?: IconComponentProps) {
-  return () => <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
+  return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

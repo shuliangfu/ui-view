@@ -7,7 +7,7 @@ import { twMerge } from "tailwind-merge";
 import type { SizeVariant } from "../types.ts";
 
 export interface TimePickerProps {
-  /** 当前值，HH:mm 或 HH:mm:ss；可为 getter 以配合 View 细粒度更新 */
+  /** 当前值，HH:mm 或 HH:mm:ss；可为 getter / `() => ref.value`（SignalRef） */
   value?: string | (() => string);
   /** 尺寸 */
   size?: SizeVariant;
@@ -57,7 +57,7 @@ export function TimePicker(props: TimePickerProps) {
     (e.target as HTMLInputElement).blur();
   };
 
-  return () => (
+  return (
     <input
       type="time"
       id={id}

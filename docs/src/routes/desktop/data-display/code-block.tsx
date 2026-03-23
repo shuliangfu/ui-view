@@ -136,7 +136,7 @@ const examplePlaintext = `<CodeBlock
 />`;
 
 export default function DataDisplayCodeBlock() {
-  const [copied, setCopied] = createSignal(false);
+  const copied = createSignal(false);
 
   return (
     <div class="space-y-10">
@@ -170,11 +170,11 @@ export default function DataDisplayCodeBlock() {
             title="example.js"
             copyable
             onCopy={() => {
-              setCopied(true);
-              setTimeout(() => setCopied(false), 1500);
+              copied.value = true;
+              setTimeout(() => copied.value = false, 1500);
             }}
           />
-          {copied() && <p class="text-sm text-green-600">已复制到剪贴板</p>}
+          {copied.value && <p class="text-sm text-green-600">已复制到剪贴板</p>}
           <CodeBlock
             title="代码示例"
             code={exampleTitleCopyable}

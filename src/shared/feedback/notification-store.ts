@@ -3,7 +3,7 @@
  * 支持 title、description、icon、type、duration、key 去重、堆叠；支持自定义弹出位置 placement。
  */
 
-import { createSignal } from "@dreamer/view";
+import { createSignal } from "@dreamer/view/signal";
 
 export type NotificationType =
   | "success"
@@ -40,10 +40,12 @@ export interface NotificationItem {
   placement?: NotificationPlacement;
 }
 
-const [getNotificationList, setNotificationList] = createSignal<
-  NotificationItem[]
->([]);
-export const notificationList = getNotificationList;
+const notificationListRef = createSignal<NotificationItem[]>([]);
+
+/** 供 NotificationContainer 在渲染 getter 内订阅列表 */
+export function notificationList(): NotificationItem[] {
+  return notificationListRef.value;
+}
 
 function nextId(): string {
   return `notification-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
@@ -67,7 +69,7 @@ export interface OpenOptions {
 
 export function openNotification(options: OpenOptions): string {
   const key = options.key;
-  let list = getNotificationList();
+  let list = notificationListRef.value;
   if (key != null && key !== "") {
     list = list.filter((n: NotificationItem) => n.key !== key);
   }
@@ -86,7 +88,7 @@ export function openNotification(options: OpenOptions): string {
     onClose: options.onClose,
     placement: options.placement ?? "top-right",
   };
-  setNotificationList([...list, item]);
+  notificationListRef.value = [...list, item];
   if (item.duration > 0) {
     setTimeout(() => closeNotification(id), item.duration);
   }
@@ -94,15 +96,17 @@ export function openNotification(options: OpenOptions): string {
 }
 
 export function closeNotification(id: string): void {
-  const item = getNotificationList().find((n: NotificationItem) => n.id === id);
+  const item = notificationListRef.value.find((n: NotificationItem) =>
+    n.id === id
+  );
   item?.onClose?.();
-  setNotificationList(
-    getNotificationList().filter((n: NotificationItem) => n.id !== id),
+  notificationListRef.value = notificationListRef.value.filter((n) =>
+    n.id !== id
   );
 }
 
 export function destroyNotifications(): void {
-  setNotificationList([]);
+  notificationListRef.value = [];
 }
 
 export const notification = {

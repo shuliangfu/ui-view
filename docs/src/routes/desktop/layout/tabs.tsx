@@ -63,7 +63,7 @@ const TABS_API: ApiRow[] = [
 const importCode = `import { createSignal } from "@dreamer/view";
 import { Tabs } from "@dreamer/ui-view";
 
-const [activeKey, setActiveKey] = createSignal("a");
+const activeKey = createSignal("a");
 const items = [
   { key: "a", label: "标签 A", children: <p>内容 A</p> },
   { key: "b", label: "标签 B", children: <p>内容 B</p> },
@@ -71,8 +71,8 @@ const items = [
 {() => (
   <Tabs
     items={items}
-    activeKey={activeKey()}
-    onChange={(k) => setActiveKey(k)}
+    activeKey={activeKey.value}
+    onChange={(k) => activeKey.value = k}
     type="line"
   />
 )}`;
@@ -80,8 +80,8 @@ const items = [
 const exampleLine = `{() => (
   <Tabs
     items={items}
-    activeKey={activeKey()}
-    onChange={(k) => setActiveKey(k)}
+    activeKey={activeKey.value}
+    onChange={(k) => activeKey.value = k}
     type="line"
   />
 )}`;
@@ -89,8 +89,8 @@ const exampleLine = `{() => (
 const exampleCard = `{() => (
   <Tabs
     items={items}
-    activeKey={activeKey()}
-    onChange={(k) => setActiveKey(k)}
+    activeKey={activeKey.value}
+    onChange={(k) => activeKey.value = k}
     type="card"
   />
 )}`;
@@ -98,8 +98,8 @@ const exampleCard = `{() => (
 const exampleFullWidth = `{() => (
   <Tabs
     items={items}
-    activeKey={activeKey()}
-    onChange={(k) => setActiveKey(k)}
+    activeKey={activeKey.value}
+    onChange={(k) => activeKey.value = k}
     type="line"
     fullWidth
   />
@@ -108,7 +108,7 @@ const exampleFullWidth = `{() => (
 const exampleDisabled = `items 中某项设置 disabled: true 即可禁用该标签`;
 
 export default function LayoutTabs() {
-  const [activeKey, setActiveKey] = createSignal("a");
+  const activeKey = createSignal("a");
 
   const items = [
     {
@@ -170,8 +170,8 @@ export default function LayoutTabs() {
           {() => (
             <Tabs
               items={items}
-              activeKey={activeKey()}
-              onChange={(k) => setActiveKey(k)}
+              activeKey={activeKey.value}
+              onChange={(k) => activeKey.value = k}
               type="line"
             />
           )}
@@ -190,8 +190,8 @@ export default function LayoutTabs() {
           {() => (
             <Tabs
               items={items}
-              activeKey={activeKey()}
-              onChange={(k) => setActiveKey(k)}
+              activeKey={activeKey.value}
+              onChange={(k) => activeKey.value = k}
               type="card"
             />
           )}
@@ -210,8 +210,8 @@ export default function LayoutTabs() {
           {() => (
             <Tabs
               items={items}
-              activeKey={activeKey()}
-              onChange={(k) => setActiveKey(k)}
+              activeKey={activeKey.value}
+              onChange={(k) => activeKey.value = k}
               type="line"
               fullWidth
             />
@@ -239,8 +239,8 @@ export default function LayoutTabs() {
                   children: <p class="text-sm">不可选</p>,
                 },
               ]}
-              activeKey={activeKey()}
-              onChange={(k) => setActiveKey(k)}
+              activeKey={activeKey.value}
+              onChange={(k) => activeKey.value = k}
               type="line"
             />
           )}

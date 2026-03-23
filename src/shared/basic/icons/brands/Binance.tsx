@@ -15,5 +15,5 @@ const svg = (
 
 /** Binance 币安品牌 Logo 图标 */
 export function IconBrandBinance(props?: IconComponentProps) {
-  return () => <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
+  return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

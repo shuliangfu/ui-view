@@ -36,8 +36,9 @@ export function Avatar(props: AvatarProps) {
   const { size = "md", src, alt = "", class: className, children } = props;
   const sizeCls = sizeClasses[size];
 
+  /** 直接返回 VNode，与 Button/Typography 等基础组件一致，避免多余 getter 层 */
   if (src) {
-    return () => (
+    return (
       <img
         src={src}
         alt={alt}
@@ -46,7 +47,7 @@ export function Avatar(props: AvatarProps) {
     );
   }
 
-  return () => (
+  return (
     <span class={twMerge(base, sizeCls, className)} role="img" aria-hidden>
       {children}
     </span>

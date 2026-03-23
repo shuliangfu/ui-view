@@ -41,7 +41,8 @@ export function DatePicker(props: DatePickerProps) {
     id,
   } = props;
   const sizeCls = sizeClasses[size];
-  return () => (
+  /** 无内部 signal，直接返回 VNode */
+  return (
     <input
       type="date"
       id={id}

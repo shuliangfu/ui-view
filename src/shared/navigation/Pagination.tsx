@@ -3,13 +3,15 @@
  * 桌面/移动通用，移动可简化；支持当前页、总条数、每页条数、跳转、上一页/下一页。
  */
 
-import { createSignal } from "@dreamer/view";
+import { createSignal } from "@dreamer/view/signal";
 import { twMerge } from "tailwind-merge";
-import { IconChevronLeft, IconChevronRight } from "../basic/icons/mod.ts";
+/** 按需：单文件图标，避免经 icons/mod 拉入全表 */
+import { IconChevronLeft } from "../basic/icons/ChevronLeft.tsx";
+import { IconChevronRight } from "../basic/icons/ChevronRight.tsx";
 import { getPaginationState } from "./pagination-utils.ts";
 
 export interface PaginationProps {
-  /** 当前页码（受控）；不传则使用 defaultCurrent 并在组件内部维护状态 */
+  /** 当前页码（受控）；不传则内部 `SignalRef`；可为 getter / `() => ref.value` */
   current?: number | (() => number);
   /** 非受控时的默认当前页，默认 1 */
   defaultCurrent?: number;
@@ -17,7 +19,7 @@ export interface PaginationProps {
   total?: number;
   /** 总页数（与 total 二选一，传了 total 则据此计算） */
   totalPages?: number;
-  /** 每页条数（受控）；不传则使用 defaultPageSize 并在组件内部维护 */
+  /** 每页条数（受控）；不传则内部 `SignalRef`；可为 getter / `() => ref.value` */
   pageSize?: number | (() => number);
   /** 非受控时的默认每页条数，默认 10 */
   defaultPageSize?: number;
@@ -73,8 +75,8 @@ export function Pagination(props: PaginationProps) {
     class: className,
   } = props;
 
-  const [internalCurrent, setInternalCurrent] = createSignal(defaultCurrent);
-  const [internalPageSize, setInternalPageSize] = createSignal(defaultPageSize);
+  const internalCurrentRef = createSignal(defaultCurrent);
+  const internalPageSizeRef = createSignal(defaultPageSize);
 
   const btnCls =
     "min-w-8 h-8 px-2 inline-flex items-center justify-center rounded-md text-sm font-medium border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed";
@@ -82,14 +84,14 @@ export function Pagination(props: PaginationProps) {
     "border-blue-600 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 pointer-events-none";
 
   const onChange = (page: number, pageSize?: number) => {
-    if (props.current === undefined) setInternalCurrent(page);
+    if (props.current === undefined) internalCurrentRef.value = page;
     if (pageSize != null && props.pageSize === undefined) {
-      setInternalPageSize(pageSize);
+      internalPageSizeRef.value = pageSize;
     }
     if (syncUrl) {
       const ps = pageSize ??
         (props.pageSize === undefined
-          ? internalPageSize()
+          ? internalPageSizeRef.value
           : (typeof pageSizeProp === "function"
             ? pageSizeProp()
             : pageSizeProp) ?? 10);
@@ -98,15 +100,18 @@ export function Pagination(props: PaginationProps) {
     onChangeProp(page, pageSize);
   };
 
+  /**
+   * 渲染 getter：读受控 getter 或 `internalCurrentRef` / `internalPageSizeRef`。
+   */
   return () => {
     const { total, totalPages: totalPagesProp } = props;
     const currentVal = props.current !== undefined
       ? (typeof props.current === "function" ? props.current() : props.current)
-      : internalCurrent();
+      : internalCurrentRef.value;
     const pageSizeVal = props.pageSize !== undefined
       ? ((typeof pageSizeProp === "function" ? pageSizeProp() : pageSizeProp) ??
         defaultPageSize)
-      : internalPageSize();
+      : internalPageSizeRef.value;
     const {
       totalPages,
       safeCurrent,

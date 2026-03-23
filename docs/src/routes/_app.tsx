@@ -25,8 +25,16 @@ export default function App({
         <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" />
         <title>{title}</title>
       </head>
-      <body className="bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-100 antialiased">
-        <div id="app">{children}</div>
+      <body className="bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-100 antialiased h-dvh overflow-hidden">
+        {
+          /*
+           * 固定视口高度链：否则根布局 min-h-screen 会随内容无限增高，flex-1 min-h-0 无法收缩，
+           * 侧栏/main 的 overflow-y-auto 不生效，滚轮只能作用在 body（表现为仅顶栏附近能滚动）。
+           */
+        }
+        <div id="app" className="h-full min-h-0 flex flex-col">
+          {children}
+        </div>
       </body>
     </html>
   );

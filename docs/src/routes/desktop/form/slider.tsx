@@ -68,19 +68,19 @@ const SLIDER_API: ApiRow[] = [
 const importCode = `import { Slider, Form, FormItem } from "@dreamer/ui-view";
 import { createSignal } from "@dreamer/view";
 
-const [val, setVal] = createSignal(50);
+const val = createSignal(50);
 <FormItem label="0–100">
   <Slider
-    value={val}
+    value={() => val.value}
     min={0}
     max={100}
-    onChange={(e) => setVal(Number((e.target as HTMLInputElement).value))}
+    onChange={(e) => val.value = Number((e.target as HTMLInputElement).value)}
   />
 </FormItem>`;
 
 export default function FormSlider() {
-  const [val, setVal] = createSignal(50);
-  const [rangeVal, setRangeVal] = createSignal<[number, number]>([20, 80]);
+  const val = createSignal(50);
+  const rangeVal = createSignal<[number, number]>([20, 80]);
 
   return (
     <div class="space-y-10">
@@ -112,20 +112,20 @@ export default function FormSlider() {
             <Title level={3}>单值</Title>
             <FormItem label="0–100">
               <Slider
-                value={val}
+                value={() => val.value}
                 min={0}
                 max={100}
                 onChange={(e) =>
-                  setVal(Number((e.target as HTMLInputElement).value))}
+                  val.value = Number((e.target as HTMLInputElement).value)}
               />
             </FormItem>
             <CodeBlock
               title="代码示例"
               code={`<Slider
-  value={val}
+  value={() => val.value}
   min={0}
   max={100}
-  onChange={(e) => setVal(Number((e.target as HTMLInputElement).value))}
+  onChange={(e) => val.value = Number((e.target as HTMLInputElement).value)}
 />`}
               language="tsx"
               showLineNumbers
@@ -139,23 +139,23 @@ export default function FormSlider() {
             <FormItem label="范围">
               <Slider
                 range
-                value={rangeVal}
+                value={() => rangeVal.value}
                 min={0}
                 max={100}
-                onChange={(e) =>
-                  setRangeVal(
-                    (e.target as unknown as { value: [number, number] }).value,
-                  )}
+                onChange={(e) => {
+                  rangeVal.value =
+                    (e.target as unknown as { value: [number, number] }).value;
+                }}
               />
             </FormItem>
             <CodeBlock
               title="代码示例"
               code={`<Slider
   range
-  value={rangeVal}
+  value={() => rangeVal.value}
   min={0}
   max={100}
-  onChange={(e) => setRangeVal((e.target as unknown as { value: [number, number] }).value)}
+  onChange={(e) => rangeVal.value = (e.target as unknown as { value: [number, number] }).value}
 />`}
               language="tsx"
               showLineNumbers
@@ -168,12 +168,12 @@ export default function FormSlider() {
             <Title level={3}>vertical 竖排</Title>
             <FormItem label="竖排单值">
               <Slider
-                value={val}
+                value={() => val.value}
                 min={0}
                 max={100}
                 vertical
                 onChange={(e) =>
-                  setVal(Number((e.target as HTMLInputElement).value))}
+                  val.value = Number((e.target as HTMLInputElement).value)}
               />
             </FormItem>
           </section>

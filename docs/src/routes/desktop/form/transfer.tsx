@@ -32,7 +32,7 @@ const TRANSFER_API: ApiRow[] = [
     type: "string[] | (() => string[])",
     default: "-",
     description:
-      "已选 key 列表；建议传 getter（如 () => targetKeys()）以便穿梭时读到最新值",
+      "已选 key 列表；建议传 getter（如 () => targetKeys.value）以便穿梭时读到最新值",
   },
   {
     name: "onChange",
@@ -110,20 +110,20 @@ const importCode = `import { Transfer, Form, FormItem } from "@dreamer/ui-view";
 import { createSignal } from "@dreamer/view";
 
 const data = [{ key: "1", title: "选项1" }, { key: "2", title: "选项2" }];
-const [targetKeys, setTargetKeys] = createSignal<string[]>([]);
+const targetKeys = createSignal<string[]>([]);
 <FormItem label="穿梭">
   <Transfer
     dataSource={data}
-    targetKeys={() => targetKeys()}
-    onChange={(keys) => setTargetKeys(keys)}
+    targetKeys={() => targetKeys.value}
+    onChange={(keys) => targetKeys.value = keys}
     titles={["待选", "已选"]}
   />
 </FormItem>`;
 
 export default function FormTransfer() {
-  const [targetKeys, setTargetKeys] = createSignal<string[]>([]);
-  const [targetKeys2, setTargetKeys2] = createSignal<string[]>(["2", "4"]);
-  const [searchValue, setSearchValue] = createSignal<[string, string]>([
+  const targetKeys = createSignal<string[]>([]);
+  const targetKeys2 = createSignal<string[]>(["2", "4"]);
+  const searchValue = createSignal<[string, string]>([
     "",
     "",
   ]);
@@ -159,8 +159,8 @@ export default function FormTransfer() {
             <FormItem label="穿梭">
               <Transfer
                 dataSource={data}
-                targetKeys={() => targetKeys()}
-                onChange={(keys) => setTargetKeys(keys)}
+                targetKeys={() => targetKeys.value}
+                onChange={(keys) => targetKeys.value = keys}
                 titles={["待选", "已选"]}
               />
             </FormItem>
@@ -168,8 +168,8 @@ export default function FormTransfer() {
               title="代码示例"
               code={`<Transfer
   dataSource={data}
-  targetKeys={() => targetKeys()}
-  onChange={(keys) => setTargetKeys(keys)}
+  targetKeys={() => targetKeys.value}
+  onChange={(keys) => targetKeys.value = keys}
   titles={["待选", "已选"]}
 />`}
               language="tsx"
@@ -184,15 +184,14 @@ export default function FormTransfer() {
             <FormItem label="左右列可搜索">
               <Transfer
                 dataSource={data}
-                targetKeys={() => targetKeys2()}
-                onChange={(keys) => setTargetKeys2(keys)}
+                targetKeys={() => targetKeys2.value}
+                onChange={(keys) => targetKeys2.value = keys}
                 titles={["待选", "已选"]}
                 showSearch
-                searchValue={searchValue()}
+                searchValue={searchValue.value}
                 onSearch={(dir, value) =>
-                  setSearchValue((prev) =>
-                    dir === "left" ? [value, prev[1]] : [prev[0], value]
-                  )}
+                  searchValue.value = (prev) =>
+                    dir === "left" ? [value, prev[1]] : [prev[0], value]}
                 searchPlaceholder={["筛选左侧", "筛选右侧"]}
               />
             </FormItem>
@@ -201,7 +200,7 @@ export default function FormTransfer() {
               code={`<Transfer
   ...
   showSearch
-  searchValue={searchValue()}
+  searchValue={searchValue.value}
   onSearch={(dir, value) => ...}
   searchPlaceholder={["左", "右"]}
 />`}

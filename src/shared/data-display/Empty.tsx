@@ -67,7 +67,7 @@ export function Empty(props: EmptyProps) {
       </svg>
     );
 
-  return () => (
+  return (
     <div
       class={twMerge(
         "flex flex-col items-center justify-center py-12 px-4 text-center",

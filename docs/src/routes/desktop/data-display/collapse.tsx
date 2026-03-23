@@ -76,18 +76,18 @@ const COLLAPSE_API: ApiRow[] = [
 const importCode = `import { createSignal } from "@dreamer/view";
 import { Collapse } from "@dreamer/ui-view";
 
-const [activeKey, setActiveKey] = createSignal<string[]>(["1"]);
+const activeKey = createSignal<string[]>(["1"]);
 const items = [{ key: "1", header: "面板 1", children: <p>内容一</p> }, ...];
 <Collapse
   items={items}
-  activeKey={activeKey()}
-  onChange={setActiveKey}
+  activeKey={activeKey.value}
+  onChange={(keys) => activeKey.value = keys}
 />`;
 
 const exampleControlled = `<Collapse
   items={items}
-  activeKey={activeKey()}
-  onChange={setActiveKey}
+  activeKey={activeKey.value}
+  onChange={(keys) => activeKey.value = keys}
 />`;
 
 const exampleAccordion = `<Collapse
@@ -109,7 +109,7 @@ const exampleShowArrowSize = `<Collapse
 />`;
 
 /** 受控示例的展开 key：提到模块级，避免页面重跑时 createSignal 被重新执行导致只有第一个面板能切换 */
-const [activeKeyControlled, setActiveKeyControlled] = createSignal<string[]>([
+const activeKeyControlled = createSignal<string[]>([
   "1",
 ]);
 
@@ -173,8 +173,8 @@ export default function DataDisplayCollapse() {
           {() => (
             <Collapse
               items={items}
-              activeKey={activeKeyControlled()}
-              onChange={setActiveKeyControlled}
+              activeKey={activeKeyControlled.value}
+              onChange={(keys) => activeKeyControlled.value = keys}
             />
           )}
           <CodeBlock

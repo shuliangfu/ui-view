@@ -4,14 +4,13 @@
  */
 
 import { twMerge } from "tailwind-merge";
-import {
-  IconAlertCircle,
-  IconCheckCircle,
-  IconHelpCircle,
-  IconInfo,
-  IconShieldAlert,
-  IconXCircle,
-} from "../basic/icons/mod.ts";
+/** 按需：单文件图标，避免经 icons/mod 拉入全表 */
+import { IconAlertCircle } from "../basic/icons/AlertCircle.tsx";
+import { IconCheckCircle } from "../basic/icons/CheckCircle.tsx";
+import { IconHelpCircle } from "../basic/icons/HelpCircle.tsx";
+import { IconInfo } from "../basic/icons/Info.tsx";
+import { IconShieldAlert } from "../basic/icons/ShieldAlert.tsx";
+import { IconXCircle } from "../basic/icons/XCircle.tsx";
 
 export type ResultStatus =
   | "success"
@@ -70,7 +69,7 @@ export function Result(props: ResultProps) {
   const IconComponent = statusIconMap[status];
   const iconCls = statusIconClasses[status];
 
-  return () => (
+  return (
     <div
       class={twMerge(
         "flex flex-col items-center justify-center py-12 px-4 text-center",

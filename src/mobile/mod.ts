@@ -1,6 +1,7 @@
 /**
  * View 移动端 UI 组件 = 公共组件（shared）+ 移动专用（本目录）。
- * M 组件：feedback（BottomSheet、ActionSheet、PullRefresh、SwipeCell）、navigation（TabBar、NavBar）。
+ * M 组件：feedback（BottomSheet、ActionSheet、PullRefresh、SwipeCell）、navigation（TabBar、NavBar）、form（Select 等）。
+ * 移动端当前无内部 SignalRef：组件以直接返回 VNode 为主；BottomSheet/ActionSheet 等遮罩用 globalThis.document 处理 body 滚动。
  */
 export * from "../shared/mod.ts";
 export * from "./form/mod.ts";

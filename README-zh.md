@@ -96,6 +96,47 @@ CSS；Tailwind 编译时只会扫描这些路径，最终 CSS 只包含用到的
 
 ---
 
+## dweb + View：让依赖包里的 `.tsx` 走 `compileSource`
+
+默认情况下，**dweb** 只对应用 **`src/`** 下的 `.tsx` 跑 `@dreamer/view` 的
+**`compileSource`（jsx-compiler）**。从 **JSR / workspace** 引入的
+`@dreamer/ui-view` 等往往在 **`src` 之外**，esbuild 拉到的仍是 **jsx-runtime →
+VNode** 路径（与原生 `checked={getter}`
+等限制一致，除非写成布尔值或为这些目录打开编译）。
+
+在支持该能力的 **@dreamer/dweb** 中，于配置里设置 **`render.compiler`**：
+写入要让 **jsx-compiler 参与处理**的依赖包**源码根目录**（例如
+`@dreamer/ui-view` 的 `src`，路径可为相对 **cwd()** 的字符串或绝对路径）。
+
+**这不是「把目录下所有 `.tsx` 全编译进产物」**：esbuild 仍按
+**从客户端入口可达的 import 图**
+拉取模块；只有**实际被引用到**（含传递依赖）的文件才会被加载，此时若路径落在上述根目录下，才会对该文件执行
+`compileSource`。未出现在依赖图里的组件源码一般不会进
+bundle，也就不会被编译。若使用**大包一层再全量 re-export** 的
+barrel，可能把更多子模块拉进图里，与平常 tree-shaking 行为一致。
+
+```ts
+// config/main.ts（Deno）
+import type { AppConfig } from "@dreamer/dweb/types";
+
+export default {
+  render: {
+    engine: "view",
+    mode: "hybrid",
+    // ui-view（或其它依赖）的源码根，相对进程 cwd()；请改成你项目下的真实路径
+    compiler: ["./to/path"],
+  },
+} satisfies AppConfig;
+```
+
+框架会把该配置用于 **客户端 bundle**、**生产构建的客户端插件**，以及 **SSR
+单文件路由 bundle**（`loadViewRouteModuleViaSsrBundle`）。
+
+**注意：** 相对路径以**启动应用时的 cwd()** 为基准；须指向依赖包真正的
+`src`（或等价根目录），否则插件不会对其中 `.tsx` 做 `compileSource`。
+
+---
+
 ## 📋 组件一览
 
 ### 🧱 基础
@@ -163,7 +204,7 @@ Select、MultiSelect、Cascader、TreeSelect、DatePicker、DateRangePicker、Ti
 
 ### 🧭 导航
 
-- **Navbar** 顶栏
+- **NavBar** 顶栏
 - **Sidebar** 侧栏折叠菜单
 - **Pagination** 分页
 - **Menu** 菜单列表

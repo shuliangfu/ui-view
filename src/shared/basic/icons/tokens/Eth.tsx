@@ -28,5 +28,5 @@ const svg = (
 );
 
 export function IconTokenEth(props?: IconComponentProps) {
-  return () => <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
+  return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

@@ -50,7 +50,8 @@ export function Select(props: SelectProps) {
     children,
   } = props;
   const sizeCls = sizeClasses[size];
-  return () => (
+  /** 无内部 signal，直接返回 VNode */
+  return (
     <select
       id={id}
       name={name}

@@ -16,5 +16,5 @@ export interface ChartPolarAreaProps {
 
 /** 极区图组件 */
 export function ChartPolarArea(props: ChartPolarAreaProps) {
-  return () => <ChartBase type="polarArea" {...props} />;
+  return <ChartBase type="polarArea" {...props} />;
 }

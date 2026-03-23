@@ -66,13 +66,13 @@ const exampleVariant = `<Tag>默认</Tag>
 
 const exampleSizeClosable =
   `<Tag size="xs">xs</Tag> <Tag size="sm">sm</Tag> <Tag size="md">md</Tag> <Tag size="lg">lg</Tag>
-<Tag closable onClose={() => setClosed(true)}>可关闭</Tag>`;
+<Tag closable onClose={() => closed.value = true}>可关闭</Tag>`;
 
 const exampleDisabledRounded = `<Tag disabled>disabled</Tag>
 <Tag rounded>rounded</Tag>`;
 
 export default function DataDisplayTag() {
-  const [closed, setClosed] = createSignal(false);
+  const closed = createSignal(false);
 
   return (
     <div class="space-y-10">
@@ -126,8 +126,8 @@ export default function DataDisplayTag() {
             <Tag size="md">md</Tag>
             <Tag size="lg">lg</Tag>
           </div>
-          {!closed() && (
-            <Tag closable onClose={() => setClosed(true)}>可关闭</Tag>
+          {!closed.value && (
+            <Tag closable onClose={() => closed.value = true}>可关闭</Tag>
           )}
           <CodeBlock
             title="代码示例"

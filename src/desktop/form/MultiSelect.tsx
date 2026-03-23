@@ -69,8 +69,11 @@ export function MultiSelect(props: MultiSelectProps) {
     triggerChange(next);
   };
 
-  return () => {
-    const resolvedValue = typeof value === "function" ? value() : (value ?? []);
+  /**
+   * 渲染列表与 hidden inputs；与 `return () =>` 分支共用，避免重复 JSX。
+   * @param resolvedValue 当前选中 key 列表（已在调用方从 value / getter 解析）
+   */
+  const renderMultiSelectBody = (resolvedValue: string[]) => {
     const selectableValues = options
       .filter((o) => !o.disabled)
       .map((o) => o.value);
@@ -164,4 +167,13 @@ export function MultiSelect(props: MultiSelectProps) {
       </span>
     );
   };
+
+  /**
+   * `value` 为 getter 时必须返回渲染函数：在 getter 内调用 `value()` 才能登记 View 的 signal 依赖。
+   * 静态 `string[]` 时直接返回 VNode，与 Cascader 等纯 props 组件一致。
+   */
+  if (typeof value === "function") {
+    return () => renderMultiSelectBody(value());
+  }
+  return renderMultiSelectBody(value ?? []);
 }
