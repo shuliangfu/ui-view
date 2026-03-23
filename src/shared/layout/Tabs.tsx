@@ -1,10 +1,10 @@
 /**
  * Tabs 标签页（View）。
- * 桌面横排，支持受控/非受控、line/card 样式；需配合 createSignal 做 activeKey 状态。
+ * 桌面横排，支持受控/非受控、line/card 样式；非受控时用 `SignalRef`（`createSignal` + `.value`）维护 activeKey。
  * 内部维护 fallback state，保证点击切换在受控/非受控下均生效。
  */
 
-import { createSignal } from "@dreamer/view";
+import { createSignal } from "@dreamer/view/signal";
 import { twMerge } from "tailwind-merge";
 
 export type TabsType = "line" | "card";
@@ -52,18 +52,18 @@ export function Tabs(props: TabsProps) {
   } = props;
 
   const initialKey = controlledKey ?? items[0]?.key ?? "";
-  const [internalKey, setInternalKey] = createSignal(initialKey);
-  /** 用普通对象存「上次同步的受控 key」，不参与响应式，避免读 signal 触发重跑导致卡死 */
+  const internalKeyRef = createSignal(initialKey);
+  /** 用普通对象存「上次同步的受控 key」，不参与响应式，避免读 SignalRef 触发重跑导致卡死 */
   const lastSyncedRef: { value: string | undefined } = { value: undefined };
   const c = controlledKey !== undefined && controlledKey !== ""
     ? controlledKey
     : undefined;
   if (c != null && c !== lastSyncedRef.value) {
     lastSyncedRef.value = c;
-    setInternalKey(c);
+    internalKeyRef.value = c;
   }
   /** 展示用内部 state，点击即更新；受控时仅当 prop 变化才从上面同步到 internal */
-  const getActiveKey = () => internalKey();
+  const getActiveKey = () => internalKeyRef.value;
 
   const lineCls = "border-b border-slate-200 dark:border-slate-600 flex gap-1";
   const cardCls = "flex gap-1 p-1 rounded-lg bg-slate-100 dark:bg-slate-800";
@@ -81,10 +81,13 @@ export function Tabs(props: TabsProps) {
   const handleTabClick = (key: string) => {
     const item = items.find((i) => i.key === key);
     if (item?.disabled) return;
-    setInternalKey(key);
+    internalKeyRef.value = key;
     onChange?.(key);
   };
 
+  /**
+   * 渲染 getter：读 `internalKeyRef.value`，点击切换后触发细粒度更新。
+   */
   return () => {
     const activeKey = getActiveKey();
     return (

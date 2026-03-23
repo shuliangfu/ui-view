@@ -85,19 +85,19 @@ const importCode = `import { Upload, Form, FormItem } from "@dreamer/ui-view";
 import type { UploadFile } from "@dreamer/ui-view";
 import { createSignal } from "@dreamer/view";
 
-const [fileList, setFileList] = createSignal<UploadFile[]>([]);
+const fileList = createSignal<UploadFile[]>([]);
 <FormItem label="上传">
   <Upload
     multiple
-    fileList={fileList()}
-    onRemove={(i) => setFileList((prev) => prev.filter((_, idx) => idx !== i))}
+    fileList={fileList.value}
+    onRemove={(i) => fileList.value = (prev) => prev.filter((_, idx) => idx !== i)}
     onChange={(e) => { /* 处理 e.target.files */ }}
   />
 </FormItem>`;
 
 export default function FormUpload() {
-  const [fileList, setFileList] = createSignal<UploadFile[]>([]);
-  const [fileListWithProgress, setFileListWithProgress] = createSignal<
+  const fileList = createSignal<UploadFile[]>([]);
+  const fileListWithProgress = createSignal<
     UploadFile[]
   >([
     { uid: "1", name: "a.txt", status: "pending" },
@@ -115,7 +115,7 @@ export default function FormUpload() {
       name: f.name,
       status: "pending" as const,
     }));
-    setFileList((prev) => [...prev, ...next]);
+    fileList.value = (prev) => [...prev, ...next];
   };
 
   const handleDrop = (files: File[]) => {
@@ -124,7 +124,7 @@ export default function FormUpload() {
       name: f.name,
       status: "pending" as const,
     }));
-    setFileList((prev) => [...prev, ...next]);
+    fileList.value = (prev) => [...prev, ...next];
   };
 
   return (
@@ -159,9 +159,9 @@ export default function FormUpload() {
             <FormItem label="点击或拖拽">
               <Upload
                 multiple
-                fileList={fileList()}
+                fileList={fileList.value}
                 onRemove={(i) =>
-                  setFileList((prev) => prev.filter((_, idx) => idx !== i))}
+                  fileList.value = (prev) => prev.filter((_, idx) => idx !== i)}
                 onDrop={handleDrop}
                 drag
                 dragPlaceholder="点击或拖拽文件到此处"
@@ -172,8 +172,8 @@ export default function FormUpload() {
               title="代码示例"
               code={`<Upload
   multiple
-  fileList={fileList()}
-  onRemove={(i) => setFileList(...)}
+  fileList={fileList.value}
+  onRemove={(i) => fileList.value = ...}
   onDrop={handleDrop}
   drag
   dragPlaceholder="点击或拖拽文件到此处"
@@ -192,11 +192,10 @@ export default function FormUpload() {
             </Title>
             <FormItem label="各状态展示">
               <Upload
-                fileList={fileListWithProgress()}
+                fileList={fileListWithProgress.value}
                 onRemove={(i) =>
-                  setFileListWithProgress((prev) =>
-                    prev.filter((_, idx) => idx !== i)
-                  )}
+                  fileListWithProgress.value = (prev) =>
+                    prev.filter((_, idx) => idx !== i)}
               />
             </FormItem>
             <CodeBlock

@@ -15,5 +15,5 @@ const svg = (
 
 /** 微软品牌 Logo 图标 */
 export function IconBrandMicrosoft(props?: IconComponentProps) {
-  return () => <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
+  return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

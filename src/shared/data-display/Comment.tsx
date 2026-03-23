@@ -36,7 +36,7 @@ export function Comment(props: CommentProps) {
     contentClass,
   } = props;
 
-  return () => (
+  return (
     <div class={twMerge("comment flex gap-3", className)}>
       <div class="shrink-0">
         {avatar != null

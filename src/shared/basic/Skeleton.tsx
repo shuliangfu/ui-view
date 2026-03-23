@@ -21,7 +21,7 @@ const base = "animate-pulse rounded-md bg-gray-200 dark:bg-gray-700";
 
 export function Skeleton(props: SkeletonProps) {
   const { size = "md", class: className } = props;
-  return () => (
+  return (
     <span
       class={twMerge(base, sizeClasses[size], className)}
       role="status"

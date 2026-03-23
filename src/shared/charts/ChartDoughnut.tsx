@@ -16,5 +16,5 @@ export interface ChartDoughnutProps {
 
 /** 环形图组件 */
 export function ChartDoughnut(props: ChartDoughnutProps) {
-  return () => <ChartBase type="doughnut" {...props} />;
+  return <ChartBase type="doughnut" {...props} />;
 }

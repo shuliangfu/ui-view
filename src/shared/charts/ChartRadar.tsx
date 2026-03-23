@@ -16,5 +16,5 @@ export interface ChartRadarProps {
 
 /** 雷达图组件 */
 export function ChartRadar(props: ChartRadarProps) {
-  return () => <ChartBase type="radar" {...props} />;
+  return <ChartBase type="radar" {...props} />;
 }

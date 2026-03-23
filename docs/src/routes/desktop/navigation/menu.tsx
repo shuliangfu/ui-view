@@ -75,7 +75,7 @@ const MENU_API: ApiRow[] = [
 const importCode = `import { createSignal } from "@dreamer/view";
 import { Menu } from "@dreamer/ui-view";
 
-const [openKeys, setOpenKeys] = createSignal<string[]>(["sub1"]);
+const openKeys = createSignal<string[]>(["sub1"]);
 const items = [
   { key: "1", label: "选项一" },
   { key: "2", label: "选项二" },
@@ -84,8 +84,8 @@ const items = [
 <Menu
   items={items}
   onClick={(k) => {}}
-  openKeys={openKeys()}
-  onOpenChange={setOpenKeys}
+  openKeys={openKeys.value}
+  onOpenChange={(keys) => openKeys.value = keys}
   mode="vertical"
 />`;
 
@@ -94,10 +94,10 @@ const exampleVertical = `{() => (
     items={items}
     onClick={(k) => {}}
     mode="vertical"
-    openKeys={openKeysVertical}
-    onOpenChange={setOpenKeysVertical}
-    focusedKey={focusedKey()}
-    onFocusChange={setFocusedKey}
+    openKeys={openKeysVertical.value}
+    onOpenChange={(keys) => openKeysVertical.value = keys}
+    focusedKey={focusedKey.value}
+    onFocusChange={(k) => focusedKey.value = k}
   />
 )}`;
 
@@ -106,21 +106,21 @@ const exampleHorizontal = `{() => (
     items={items}
     onClick={(k) => {}}
     mode="horizontal"
-    openKeys={openKeysHorizontal}
-    onOpenChange={setOpenKeysHorizontal}
+    openKeys={openKeysHorizontal.value}
+    onOpenChange={(keys) => openKeysHorizontal.value = keys}
     usePopoverSubmenu
   />
 )}`;
 
 export default function NavigationMenu() {
   // 垂直示例用 defaultOpenKeys 默认展开子菜单；水平 popover 用独立 state 且默认收起
-  const [openKeysVertical, setOpenKeysVertical] = createSignal<string[]>([
+  const openKeysVertical = createSignal<string[]>([
     "sub1",
   ]);
-  const [openKeysHorizontal, setOpenKeysHorizontal] = createSignal<string[]>(
+  const openKeysHorizontal = createSignal<string[]>(
     [],
   );
-  const [focusedKey, setFocusedKey] = createSignal<string | undefined>("1");
+  const focusedKey = createSignal<string | undefined>("1");
 
   const items = [
     { key: "1", label: "选项一" },
@@ -167,10 +167,10 @@ export default function NavigationMenu() {
                 items={items}
                 onClick={() => {}}
                 mode="vertical"
-                openKeys={openKeysVertical}
-                onOpenChange={setOpenKeysVertical}
-                focusedKey={focusedKey()}
-                onFocusChange={setFocusedKey}
+                openKeys={openKeysVertical.value}
+                onOpenChange={(keys) => openKeysVertical.value = keys}
+                focusedKey={focusedKey.value}
+                onFocusChange={(k) => focusedKey.value = k}
               />
             )}
           </div>
@@ -191,8 +191,8 @@ export default function NavigationMenu() {
               items={items}
               onClick={() => {}}
               mode="horizontal"
-              openKeys={openKeysHorizontal}
-              onOpenChange={setOpenKeysHorizontal}
+              openKeys={openKeysHorizontal.value}
+              onOpenChange={(keys) => openKeysHorizontal.value = keys}
               usePopoverSubmenu
             />
           )}

@@ -16,5 +16,5 @@ export interface ChartPieProps {
 
 /** 饼图组件 */
 export function ChartPie(props: ChartPieProps) {
-  return () => <ChartBase type="pie" {...props} />;
+  return <ChartBase type="pie" {...props} />;
 }

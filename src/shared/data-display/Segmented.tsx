@@ -2,11 +2,10 @@
  * Segmented 分段控制器（View）。
  * 多选一紧凑展示；支持选项列表或子节点、尺寸、禁用、块级。
  * 支持受控（value + onChange）与非受控（内部状态）；传 stateKey 可避免整树渲染导致内部状态被清空。
- * 写法对齐 Tabs/Collapse：返回 getter 并在 getter 内读 signal，保证 effect 订阅后点击能驱动重跑；
- * 同时在容器上通过 ref + createEffect 绑定原生 click 委托并直接更新 DOM，作为整树重渲染导致 effect 被替换时的保底。
+ * 非受控时用 `SignalRef`（`.value`）存选中值；受控且 `value` 为 getter 时由父级重渲染驱动展示。
  */
 
-import { createSignal } from "@dreamer/view";
+import { createSignal } from "@dreamer/view/signal";
 import { twMerge } from "tailwind-merge";
 import type { SizeVariant } from "../types.ts";
 
@@ -88,25 +87,27 @@ export function Segmented<T extends string = string>(props: SegmentedProps<T>) {
     );
   }
 
-  if (options == null || options.length === 0) return () => null;
+  if (options == null || options.length === 0) {
+    return null;
+  }
 
-  const [getVal, setVal] = createSignal<unknown>(
+  const uncontrolledValRef = createSignal<unknown>(
     typeof valueProp === "function"
       ? (valueProp as () => T)()
       : valueProp ?? null,
   );
 
-  /** 当前展示值：受控时用 prop（或 getter 的返回值），非受控用内部 signal；读 getter 会建立订阅。 */
+  /** 当前展示值：受控时用 prop（或 getter），非受控用内部 SignalRef。 */
   const getDisplayValue = (): T | null => {
-    if (valueProp === undefined) return getVal() as T | null;
+    if (valueProp === undefined) return uncontrolledValRef.value as T | null;
     return (typeof valueProp === "function"
       ? (valueProp as () => T)()
       : valueProp) as T | null;
   };
 
-  /** 点击：受控时只回调；非受控时更新内部 signal 并回调。 */
+  /** 点击：受控时只回调；非受控时写 `.value` 并回调。 */
   const handleSelect = (v: T) => {
-    if (valueProp === undefined) setVal(v);
+    if (valueProp === undefined) uncontrolledValRef.value = v;
     onChange?.(v);
   };
 
@@ -125,7 +126,7 @@ export function Segmented<T extends string = string>(props: SegmentedProps<T>) {
       {options.map((opt) => {
         const isSelected = getDisplayValue() === opt.value;
         const isDisabled = disabled || opt.disabled;
-        return () => (
+        return (
           <button
             key={String(opt.value)}
             type="button"

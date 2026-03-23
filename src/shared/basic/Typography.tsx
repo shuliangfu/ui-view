@@ -10,11 +10,12 @@ export interface TitleProps {
 }
 
 const titleSizeClasses: Record<number, string> = {
-  1: "text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-100",
-  2: "text-2xl font-semibold tracking-tight text-gray-900 dark:text-gray-100",
-  3: "text-xl font-semibold text-gray-900 dark:text-gray-100",
-  4: "text-lg font-medium text-gray-800 dark:text-gray-200",
-  5: "text-base font-medium text-gray-800 dark:text-gray-200",
+  1: "text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-200",
+  2: "text-2xl font-semibold tracking-tight text-gray-900 dark:text-gray-200",
+  3: "text-xl font-semibold text-gray-900 dark:text-gray-200",
+  /** h4/h5：dark 与 h2/h3 同级亮度，避免小标题在深色底上过暗 */
+  4: "text-lg font-medium text-gray-800 dark:text-gray-300",
+  5: "text-base font-medium text-gray-800 dark:text-gray-300",
   6: "text-sm font-medium text-gray-700 dark:text-gray-300",
 };
 

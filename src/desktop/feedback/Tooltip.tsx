@@ -80,32 +80,28 @@ export function Tooltip(props: TooltipProps) {
 
   const posCls = placementClasses[placement];
   const arrowCls = arrow ? arrowClass(placement) : "";
-  let tooltipId: string | undefined;
+  /** 实例级稳定 id，供 aria-describedby；无内部 signal，直接返回 VNode */
+  const tooltipId = `tooltip-${Math.random().toString(36).slice(2, 11)}`;
 
-  return () => {
-    if (!tooltipId) {
-      tooltipId = `tooltip-${Math.random().toString(36).slice(2, 11)}`;
-    }
-    return (
+  return (
+    <span
+      class={twMerge("relative inline-flex group", className)}
+      aria-describedby={tooltipId}
+    >
+      {children}
       <span
-        class={twMerge("relative inline-flex group", className)}
-        aria-describedby={tooltipId}
+        id={tooltipId}
+        role="tooltip"
+        class={twMerge(
+          "absolute z-50 px-3 py-1.5 text-xs font-normal text-white whitespace-nowrap rounded-md bg-slate-800 dark:bg-slate-700 shadow-lg",
+          "opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity duration-150 pointer-events-none",
+          posCls,
+          overlayClass,
+        )}
       >
-        {children}
-        <span
-          id={tooltipId}
-          role="tooltip"
-          class={twMerge(
-            "absolute z-50 px-3 py-1.5 text-xs font-normal text-white whitespace-nowrap rounded-md bg-slate-800 dark:bg-slate-700 shadow-lg",
-            "opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity duration-150 pointer-events-none",
-            posCls,
-            overlayClass,
-          )}
-        >
-          {typeof content === "string" ? content : content}
-          {arrow && <span class={arrowCls} />}
-        </span>
+        {typeof content === "string" ? content : content}
+        {arrow && <span class={arrowCls} />}
       </span>
-    );
-  };
+    </span>
+  );
 }

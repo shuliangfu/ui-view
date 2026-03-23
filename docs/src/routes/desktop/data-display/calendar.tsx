@@ -63,31 +63,31 @@ const CALENDAR_API: ApiRow[] = [
 const importCode = `import { createSignal } from "@dreamer/view";
 import { Calendar } from "@dreamer/ui-view";
 
-const [value, setValue] = createSignal(new Date());
+const value = createSignal(new Date());
 <Calendar
-  value={value()}
-  onChange={setValue}
+  value={value.value}
+  onChange={(d) => value.value = d}
 />`;
 
 const exampleBasic = `<Calendar
-  value={value()}
-  onChange={setValue}
+  value={value.value}
+  onChange={(d) => value.value = d}
 />`;
 
 const exampleModeYear = `<Calendar
-  value={value()}
-  onChange={setValue}
+  value={value.value}
+  onChange={(d) => value.value = d}
   mode="year"
 />`;
 
 const exampleFullscreen = `<Calendar
-  value={value()}
-  onChange={setValue}
+  value={value.value}
+  onChange={(d) => value.value = d}
   fullscreen
 />`;
 
 export default function DataDisplayCalendar() {
-  const [value, setValue] = createSignal(new Date());
+  const value = createSignal(new Date());
 
   return (
     <div class="space-y-10">
@@ -116,7 +116,7 @@ export default function DataDisplayCalendar() {
         <div class="space-y-4">
           <Title level={3}>基础选日</Title>
           <div class="w-full">
-            <Calendar value={value()} onChange={setValue} />
+            <Calendar value={value.value} onChange={(d) => value.value = d} />
           </div>
           <CodeBlock
             title="代码示例"
@@ -131,7 +131,11 @@ export default function DataDisplayCalendar() {
         <div class="space-y-4">
           <Title level={3}>mode=year 年视图</Title>
           <div class="w-full">
-            <Calendar value={value()} onChange={setValue} mode="year" />
+            <Calendar
+              value={value.value}
+              onChange={(d) => value.value = d}
+              mode="year"
+            />
           </div>
           <CodeBlock
             title="代码示例"
@@ -146,7 +150,11 @@ export default function DataDisplayCalendar() {
         <div class="space-y-4">
           <Title level={3}>fullscreen</Title>
           <div class="w-full min-h-[280px]">
-            <Calendar value={value()} onChange={setValue} fullscreen />
+            <Calendar
+              value={value.value}
+              onChange={(d) => value.value = d}
+              fullscreen
+            />
           </div>
           <CodeBlock
             title="代码示例"

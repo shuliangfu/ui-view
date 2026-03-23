@@ -21,6 +21,13 @@ interface ApiRow {
 
 const BUTTON_API: ApiRow[] = [
   {
+    name: "itemKey",
+    type: "string | number",
+    default: "-",
+    description:
+      "可选，写入原生 data-key（调试/E2E）；与 JSX 的 key 属性不同，列表 diff 仍用 key={...}",
+  },
+  {
     name: "variant",
     type: "ColorVariant",
     default: "primary",

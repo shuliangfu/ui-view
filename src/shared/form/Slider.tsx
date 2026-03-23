@@ -6,7 +6,7 @@
 import { twMerge } from "tailwind-merge";
 
 export interface SliderProps {
-  /** 当前值（单滑块为 number，range 时为 [minVal, maxVal]）；可为 getter 以配合 View 细粒度更新 */
+  /** 当前值；可为 getter / `() => ref.value`（SignalRef）以配合 View 细粒度更新 */
   value?: number | [number, number] | (() => number) | (() => [number, number]);
   /** 最小值 */
   min?: number;

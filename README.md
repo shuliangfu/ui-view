@@ -99,6 +99,51 @@ appears once.
 
 ---
 
+## dweb + View: `compileSource` for package `.tsx`
+
+By default, **dweb** runs `@dreamer/view`’s **`compileSource` (jsx-compiler)**
+only on your app **`src/`** tree. **JSR / workspace** dependencies such as
+`@dreamer/ui-view` usually live **outside** that tree, so their `.tsx` is
+bundled as plain **jsx-runtime VNode** code (same caveats as `checked={getter}`
+on native inputs unless you use boolean props or enable the compiler for those
+paths).
+
+From **@dreamer/dweb** versions that support `render.compiler`, list **source
+roots** for packages whose `.tsx` should go through **jsx-compiler** (e.g.
+`@dreamer/ui-view`’s `src` folder), as **cwd-relative strings** or absolute
+paths.
+
+**This does not “compile every file under those directories” into the bundle.**
+esbuild still follows the **import graph** from the client entry: only modules
+that are **actually imported** (transitively) get loaded, and **then**—if their
+path falls under one of these roots—`compileSource` runs on that file. Unused
+components are typically never loaded, so they are not compiled into the output.
+**Barrel files** that re-export many components can widen the graph, same as
+usual tree-shaking behavior.
+
+```ts
+// config/main.ts (Deno)
+import type { AppConfig } from "@dreamer/dweb/types";
+
+export default {
+  render: {
+    engine: "view",
+    mode: "hybrid",
+    // Dependency source root(s), relative to process cwd(); set to a real path in your repo
+    compiler: ["./to/path"],
+  },
+} satisfies AppConfig;
+```
+
+Relative entries are resolved from **`cwd()`** when the app runs. The same list
+is used for **client bundle**, **prod `Builder` client plugins**, and **SSR
+route bundling** (`loadViewRouteModuleViaSsrBundle`).
+
+**Note:** Point at the package’s actual `src` (or equivalent) root; if the path
+is wrong, those `.tsx` files won’t get `compileSource`.
+
+---
+
 ## 📋 Component overview
 
 ### 🧱 Basic
@@ -166,7 +211,7 @@ DateRangePicker, TimePicker
 
 ### 🧭 Navigation
 
-- **Navbar** top bar
+- **NavBar** top bar
 - **Sidebar** collapsible sidebar menu
 - **Pagination** pagination
 - **Menu** menu list

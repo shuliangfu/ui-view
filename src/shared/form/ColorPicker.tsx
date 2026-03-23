@@ -33,7 +33,7 @@ export function ColorPicker(props: ColorPickerProps) {
     id,
   } = props;
 
-  return () => (
+  return (
     <input
       type="color"
       id={id}

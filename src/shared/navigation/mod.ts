@@ -1,9 +1,11 @@
 /**
- * 导航组件（C 共用）：Navbar、Pagination、Menu、Steps、PageHeader、Affix、Anchor、BackTop。
+ * 导航组件（C 共用）：NavBar、Pagination、Menu、Steps、PageHeader、Affix、Anchor、BackTop。
  * D：Dropdown、Breadcrumb → desktop/navigation；M：TabBar、NavBar → mobile/navigation。
+ *
+ * `Sidebar` / `Pagination` / `Menu` 内部状态使用 `@dreamer/view/signal` 的 `SignalRef`（`.value`）；
+ * `Steps` 在渲染 getter 内读 `current`（可为 getter）；`Affix` 为纯 data 容器，直接返回 VNode。
  */
 export type { BreadcrumbItem } from "./breadcrumb-types.ts";
-export { Navbar, type NavbarProps } from "./Navbar.tsx";
 export {
   Sidebar,
   type SidebarItem,

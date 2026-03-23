@@ -73,7 +73,7 @@ function ProgressLine(props: {
     : undefined;
   const barCls = strokeColor ? "" : percentCls(status);
 
-  return () => (
+  return (
     <div class={twMerge("flex items-center gap-3 w-full", className)}>
       <div
         class="flex-1 h-full rounded-full overflow-hidden bg-slate-200 dark:bg-slate-600"
@@ -134,7 +134,7 @@ function ProgressCircle(props: {
       ? "#ef4444"
       : "#3b82f6");
 
-  return () => (
+  return (
     <div
       class={twMerge("relative inline-flex", className)}
       style={{ width: size, height: size }}
@@ -192,7 +192,7 @@ export function Progress(props: ProgressProps) {
   } = props;
 
   if (type === "circle") {
-    return () => (
+    return (
       <ProgressCircle
         percent={percent}
         status={status}
@@ -207,7 +207,7 @@ export function Progress(props: ProgressProps) {
     );
   }
 
-  return () => (
+  return (
     <ProgressLine
       percent={percent}
       status={status}

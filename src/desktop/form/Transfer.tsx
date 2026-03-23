@@ -99,16 +99,13 @@ export function Transfer(props: TransferProps) {
     onChange(current.filter((k) => !keys.includes(k)));
   };
 
-  return () => {
-    const keys = typeof targetKeys === "function"
-      ? targetKeys()
-      : (targetKeys ?? []);
-    const fl = typeof filterLeft === "function"
-      ? filterLeft()
-      : (filterLeft ?? "");
-    const fr = typeof filterRight === "function"
-      ? filterRight()
-      : (filterRight ?? "");
+  /**
+   * 双列 UI；由调用方传入已解析的 keys 与筛选关键词。
+   * @param keys 右侧已选 key 列表
+   * @param fl 左侧搜索关键词
+   * @param fr 右侧搜索关键词
+   */
+  const renderTransferBody = (keys: string[], fl: string, fr: string) => {
     const leftSource = dataSource.filter((item) => !keys.includes(item.key));
     const rightSource = dataSource.filter((item) => keys.includes(item.key));
     const leftItems = showSearch
@@ -235,4 +232,30 @@ export function Transfer(props: TransferProps) {
       </div>
     );
   };
+
+  /**
+   * `targetKeys` / `filterLeft` / `filterRight` 任一为 getter 时需返回渲染函数，以便在 View 中订阅 signal。
+   * 全部为静态值时直接返回 VNode。
+   */
+  const needsRenderGetter = typeof targetKeys === "function" ||
+    typeof filterLeft === "function" ||
+    typeof filterRight === "function";
+
+  if (needsRenderGetter) {
+    return () => {
+      const keys = typeof targetKeys === "function" ? targetKeys() : targetKeys;
+      const fl = typeof filterLeft === "function"
+        ? filterLeft()
+        : (filterLeft ?? "");
+      const fr = typeof filterRight === "function"
+        ? filterRight()
+        : (filterRight ?? "");
+      return renderTransferBody(keys, fl, fr);
+    };
+  }
+
+  const keys = targetKeys as string[];
+  const fl = filterLeft ?? "";
+  const fr = filterRight ?? "";
+  return renderTransferBody(keys, fl, fr);
 }

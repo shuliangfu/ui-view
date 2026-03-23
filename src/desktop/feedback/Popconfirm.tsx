@@ -6,7 +6,8 @@
 
 import { twMerge } from "tailwind-merge";
 import { Button } from "../../shared/basic/Button.tsx";
-import { IconHelpCircle } from "../../shared/basic/icons/mod.ts";
+/** 按需：单文件图标，避免经 icons/mod 拉入全表 */
+import { IconHelpCircle } from "../../shared/basic/icons/HelpCircle.tsx";
 
 export type PopconfirmPlacement =
   | "top"
@@ -91,7 +92,8 @@ export function Popconfirm(props: PopconfirmProps) {
     if (e.target === e.currentTarget) onOpenChange?.(false);
   };
 
-  return () => (
+  /** 受控 open 来自 props，无内部 signal，直接返回 VNode */
+  return (
     <span class={twMerge("relative inline-flex", className)}>
       {children}
       {open && (

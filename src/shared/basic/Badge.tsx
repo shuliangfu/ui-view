@@ -51,7 +51,7 @@ export function Badge(props: BadgeProps) {
   const variantCls = variantClasses[variant];
 
   if (dot) {
-    return () => (
+    return (
       <span
         class={twMerge(
           base,
@@ -69,7 +69,7 @@ export function Badge(props: BadgeProps) {
     ? count > max ? `${max}+` : String(count)
     : children;
 
-  return () => (
+  return (
     <span
       class={twMerge(base, sizeCls, variantCls, className)}
       role="status"

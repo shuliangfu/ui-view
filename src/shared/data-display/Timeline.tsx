@@ -56,7 +56,7 @@ export function Timeline(props: TimelineProps) {
 
   const axisOnRight = mode === "right" || mode === "alternate";
 
-  return () => (
+  return (
     <div
       class={twMerge(
         "timeline relative flex flex-col",

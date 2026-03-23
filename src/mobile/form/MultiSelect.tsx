@@ -56,7 +56,8 @@ export function MultiSelect(props: MultiSelectProps) {
     onChange?.(synthetic);
   };
 
-  return () => (
+  /** 无内部 signal，直接返回 VNode */
+  return (
     <span class="block">
       <div class="flex gap-1 mb-1">
         <button

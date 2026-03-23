@@ -19,4 +19,10 @@ export default {
     format: "text",
   },
   hotReload: true,
+
+  render: {
+    // debug: true,
+  },
+  // 服务端 match 调试 + 浏览器 [@dreamer/router/client:click]（由 dweb 注入 __DWEB_ROUTER_DEBUG__，与 render.debug 无关）
+  // router: { debug: true },
 };

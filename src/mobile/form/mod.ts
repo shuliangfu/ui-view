@@ -1,7 +1,69 @@
 /**
- * 移动端表单组件（D/M 中 M 部分）：Select、MultiSelect、Cascader、DatePicker、DateRangePicker。
- * TreeSelect 仅 D，移动端不导出。
+ * 移动端表单入口：逐项从本目录 `./*.tsx` 导出（含 shared 薄 re-export 与移动专有实现）。
+ * TreeSelect 仅桌面提供，本目录无对应文件故不导出。
  */
+export { Input } from "./Input.tsx";
+export type { InputProps } from "./Input.tsx";
+export { Search } from "./Search.tsx";
+export type { SearchProps } from "./Search.tsx";
+export { Password } from "./Password.tsx";
+export type { PasswordProps } from "./Password.tsx";
+export { Textarea } from "./Textarea.tsx";
+export type { TextareaProps } from "./Textarea.tsx";
+export { InputNumber } from "./InputNumber.tsx";
+export type { InputNumberProps } from "./InputNumber.tsx";
+export { AutoComplete } from "./AutoComplete.tsx";
+export type { AutoCompleteProps } from "./AutoComplete.tsx";
+export { Checkbox } from "./Checkbox.tsx";
+export type { CheckboxProps } from "./Checkbox.tsx";
+export { CheckboxGroup } from "./CheckboxGroup.tsx";
+export type {
+  CheckboxGroupOption,
+  CheckboxGroupProps,
+} from "./CheckboxGroup.tsx";
+export { Radio } from "./Radio.tsx";
+export type { RadioProps } from "./Radio.tsx";
+export { RadioGroup } from "./RadioGroup.tsx";
+export type { RadioGroupOption, RadioGroupProps } from "./RadioGroup.tsx";
+export { Switch } from "./Switch.tsx";
+export type { SwitchProps } from "./Switch.tsx";
+export { Slider } from "./Slider.tsx";
+export type { SliderProps } from "./Slider.tsx";
+export { Rate } from "./Rate.tsx";
+export type { RateProps } from "./Rate.tsx";
+export { TimeRangePicker } from "./TimeRangePicker.tsx";
+export type { TimeRangePickerProps } from "./TimeRangePicker.tsx";
+/** 与 shared 共用的下拉式 TimePicker（本目录为薄 re-export） */
+export { TimePicker } from "./TimePicker.tsx";
+export type { TimePickerProps } from "./TimePicker.tsx";
+export { Upload } from "./Upload.tsx";
+export type { UploadFile, UploadFileStatus, UploadProps } from "./Upload.tsx";
+export { ColorPicker } from "./ColorPicker.tsx";
+export type { ColorPickerProps } from "./ColorPicker.tsx";
+export { Mentions } from "./Mentions.tsx";
+export type { MentionOption, MentionsProps } from "./Mentions.tsx";
+export { Form } from "./Form.tsx";
+export type { FormLayout, FormProps } from "./Form.tsx";
+export { FormItem } from "./FormItem.tsx";
+export type {
+  FormItemLabelAlign,
+  FormItemLabelPosition,
+  FormItemProps,
+} from "./FormItem.tsx";
+export { FormList } from "./FormList.tsx";
+export type { FormListProps } from "./FormList.tsx";
+export { RichTextEditor } from "./RichTextEditor.tsx";
+export type {
+  RichTextEditorProps,
+  ToolbarConfig,
+  ToolbarItem,
+  ToolbarPreset,
+} from "./RichTextEditor.tsx";
+/** 与 shared/form/Transfer 共用（本目录薄 re-export） */
+export { Transfer } from "./Transfer.tsx";
+export type { TransferItem, TransferProps } from "./Transfer.tsx";
+
+/** 移动专有选择器与日期（无 TreeSelect） */
 export { Select } from "./Select.tsx";
 export type { SelectOption, SelectProps } from "./Select.tsx";
 export { MultiSelect } from "./MultiSelect.tsx";

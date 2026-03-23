@@ -67,18 +67,18 @@ const importCode =
 import { createSignal } from "@dreamer/view";
 
 const options = [{ value: "a", label: "选项 A" }, { value: "b", label: "选项 B" }];
-const [val, setVal] = createSignal<string[]>([]);
+const val = createSignal<string[]>([]);
 <FormItem label="多选">
   <MultiSelect
     options={options}
-    value={val}
-    onChange={(e) => setVal(...)}
+    value={() => val.value}
+    onChange={(e) => val.value = ...}
   />
 </FormItem>`;
 
 export default function FormMultiSelect() {
-  const [val, setVal] = createSignal<string[]>([]);
-  const [val2, setVal2] = createSignal<string[]>(["a", "b"]);
+  const val = createSignal<string[]>([]);
+  const val2 = createSignal<string[]>(["a", "b"]);
 
   const handleChange = (e: Event) => {
     const t = e.target as HTMLSelectElement & { value?: string[] };
@@ -87,7 +87,7 @@ export default function FormMultiSelect() {
       : Array.from((t as HTMLSelectElement).selectedOptions || []).map((o) =>
         o.value
       );
-    setVal(v);
+    val.value = v;
   };
 
   const handleChange2 = (e: Event) => {
@@ -97,7 +97,7 @@ export default function FormMultiSelect() {
       : Array.from((t as HTMLSelectElement).selectedOptions || []).map((o) =>
         o.value
       );
-    setVal2(v);
+    val2.value = v;
   };
 
   return (
@@ -131,7 +131,7 @@ export default function FormMultiSelect() {
             <FormItem label="多选（上方有全选、清空）">
               <MultiSelect
                 options={options}
-                value={val}
+                value={() => val.value}
                 onChange={handleChange}
               />
             </FormItem>
@@ -139,7 +139,7 @@ export default function FormMultiSelect() {
               title="代码示例"
               code={`<MultiSelect
   options={options}
-  value={val}
+  value={() => val.value}
   onChange={handleChange}
 />`}
               language="tsx"
@@ -154,7 +154,7 @@ export default function FormMultiSelect() {
             <FormItem label="选项 C 为 disabled">
               <MultiSelect
                 options={options}
-                value={val2}
+                value={() => val2.value}
                 onChange={handleChange2}
               />
             </FormItem>

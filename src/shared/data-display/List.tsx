@@ -113,7 +113,7 @@ export function List(props: ListProps) {
     }
     : undefined;
 
-  return () => (
+  return (
     <div
       class={twMerge(
         "list",

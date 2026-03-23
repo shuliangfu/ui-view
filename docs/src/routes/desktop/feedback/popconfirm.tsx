@@ -88,54 +88,54 @@ const POPCONFIRM_API: ApiRow[] = [
 const importCode = `import { createSignal } from "@dreamer/view";
 import { Button, Popconfirm } from "@dreamer/ui-view";
 
-const [open, setOpen] = createSignal(false);
+const open = createSignal(false);
 
 {() => (
   <Popconfirm
-    open={open()}
-    onOpenChange={setOpen}
+    open={open.value}
+    onOpenChange={(o) => open.value = o}
     title="确定要执行吗？"
-    onConfirm={() => setOpen(false)}
-    onCancel={() => setOpen(false)}
+    onConfirm={() => open.value = false}
+    onCancel={() => open.value = false}
   >
-    <Button onClick={() => setOpen(true)}>打开</Button>
+    <Button onClick={() => open.value = true}>打开</Button>
   </Popconfirm>
 )}`;
 
 const exampleBasic = `{() => (
   <Popconfirm
-    open={open()}
-    onOpenChange={setOpen}
+    open={open.value}
+    onOpenChange={(o) => open.value = o}
     title="确定要执行该操作吗？"
     placement="top"
     okText="确定"
     cancelText="取消"
-    onConfirm={() => setOpen(false)}
-    onCancel={() => setOpen(false)}
+    onConfirm={() => open.value = false}
+    onCancel={() => open.value = false}
   >
-    <Button variant="default" onClick={() => setOpen(true)}>普通确认（placement=top）</Button>
+    <Button variant="default" onClick={() => open.value = true}>普通确认（placement=top）</Button>
   </Popconfirm>
 )}`;
 
 const exampleDanger = `{() => (
   <Popconfirm
-    open={openDanger()}
-    onOpenChange={setOpenDanger}
+    open={openDanger.value}
+    onOpenChange={(o) => openDanger.value = o}
     title="删除后无法恢复，确定删除吗？"
     danger
     okText="删除"
     cancelText="取消"
     showIcon
-    onConfirm={() => setOpenDanger(false)}
-    onCancel={() => setOpenDanger(false)}
+    onConfirm={() => openDanger.value = false}
+    onCancel={() => openDanger.value = false}
   >
-    <Button variant="danger" onClick={() => setOpenDanger(true)}>删除</Button>
+    <Button variant="danger" onClick={() => openDanger.value = true}>删除</Button>
   </Popconfirm>
 )}`;
 
 export default function FeedbackPopconfirm() {
-  const [open, setOpen] = createSignal(false);
-  const [openDanger, setOpenDanger] = createSignal(false);
+  const open = createSignal(false);
+  const openDanger = createSignal(false);
 
   return (
     <div class="space-y-10">
@@ -167,19 +167,19 @@ export default function FeedbackPopconfirm() {
           <div class="flex gap-2">
             {() => (
               <Popconfirm
-                open={open()}
-                onOpenChange={setOpen}
+                open={open.value}
+                onOpenChange={(o) => open.value = o}
                 title="确定要执行该操作吗？"
                 placement="top"
                 okText="确定"
                 cancelText="取消"
-                onConfirm={() => setOpen(false)}
-                onCancel={() => setOpen(false)}
+                onConfirm={() => open.value = false}
+                onCancel={() => open.value = false}
               >
                 <Button
                   type="button"
                   variant="default"
-                  onClick={() => setOpen(true)}
+                  onClick={() => open.value = true}
                 >
                   普通确认（placement=top）
                 </Button>
@@ -187,20 +187,20 @@ export default function FeedbackPopconfirm() {
             )}
             {() => (
               <Popconfirm
-                open={openDanger()}
-                onOpenChange={setOpenDanger}
+                open={openDanger.value}
+                onOpenChange={(o) => openDanger.value = o}
                 title="删除后无法恢复，确定删除吗？"
                 danger
                 okText="删除"
                 cancelText="取消"
                 showIcon
-                onConfirm={() => setOpenDanger(false)}
-                onCancel={() => setOpenDanger(false)}
+                onConfirm={() => openDanger.value = false}
+                onCancel={() => openDanger.value = false}
               >
                 <Button
                   type="button"
                   variant="danger"
-                  onClick={() => setOpenDanger(true)}
+                  onClick={() => openDanger.value = true}
                 >
                   删除
                 </Button>

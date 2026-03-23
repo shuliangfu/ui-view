@@ -20,7 +20,7 @@ export interface CheckboxGroupProps {
   options: CheckboxGroupOption[];
   /** 同组 name */
   name?: string;
-  /** 当前选中的 value 数组；可为 getter 以配合 View 细粒度更新 */
+  /** 当前选中的 value 数组；可为 getter / 如 `() => arrRef.value`（SignalRef）以配合 View 细粒度更新 */
   value?: string[] | (() => string[]);
   /** 是否整组禁用 */
   disabled?: boolean;

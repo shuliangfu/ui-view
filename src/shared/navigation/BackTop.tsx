@@ -4,7 +4,8 @@
  */
 
 import { twMerge } from "tailwind-merge";
-import { IconChevronUp } from "../basic/icons/mod.ts";
+/** 按需：单文件图标，避免经 icons/mod 拉入全表 */
+import { IconChevronUp } from "../basic/icons/ChevronUp.tsx";
 
 /** 滚动目标：不传为 window；传字符串为 document.querySelector 选择器；传函数返回元素 */
 export type BackTopTarget = (() => Element | null) | string | Element | null;

@@ -60,18 +60,18 @@ const CHECKBOX_API: ApiRow[] = [
 const importCode = `import { Checkbox, Form, FormItem } from "@dreamer/ui-view";
 import { createSignal } from "@dreamer/view";
 
-const [checked, setChecked] = createSignal(false);
+const checked = createSignal(false);
 <FormItem label="勾选">
   <Checkbox
-    checked={checked}
-    onChange={(e) => setChecked((e.target as HTMLInputElement).checked)}
+    checked={checked.value}
+    onChange={(e) => checked.value = (e.target as HTMLInputElement).checked}
   >
     勾选我
   </Checkbox>
 </FormItem>`;
 
 export default function FormCheckbox() {
-  const [checked, setChecked] = createSignal(false);
+  const checked = createSignal(false);
 
   return (
     <div class="space-y-10">
@@ -103,9 +103,9 @@ export default function FormCheckbox() {
             <Title level={3}>基础</Title>
             <FormItem label="勾选">
               <Checkbox
-                checked={checked}
+                checked={checked.value}
                 onChange={(e) =>
-                  setChecked((e.target as HTMLInputElement).checked)}
+                  checked.value = (e.target as HTMLInputElement).checked}
               >
                 勾选我
               </Checkbox>
@@ -113,8 +113,8 @@ export default function FormCheckbox() {
             <CodeBlock
               title="代码示例"
               code={`<Checkbox
-  checked={checked}
-  onChange={(e) => setChecked((e.target as HTMLInputElement).checked)}
+  checked={checked.value}
+  onChange={(e) => checked.value = (e.target as HTMLInputElement).checked}
 >
   勾选我
 </Checkbox>`}
@@ -165,9 +165,9 @@ export default function FormCheckbox() {
                 name="agree"
                 value="yes"
                 id="input-agree"
-                checked={checked}
+                checked={checked.value}
                 onChange={(e) =>
-                  setChecked((e.target as HTMLInputElement).checked)}
+                  checked.value = (e.target as HTMLInputElement).checked}
               >
                 同意协议
               </Checkbox>
@@ -178,7 +178,7 @@ export default function FormCheckbox() {
   name="agree"
   value="yes"
   id="input-agree"
-  checked={checked}
+  checked={checked.value}
   onChange={...}
 >
   同意协议

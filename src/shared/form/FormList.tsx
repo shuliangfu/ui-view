@@ -41,7 +41,7 @@ export function FormList(props: FormListProps) {
   const length = typeof items === "number" ? items : items.length;
   const renderRow = typeof children === "function" ? children : () => children;
 
-  return () => (
+  return (
     <div class={twMerge(wrapCls, className)} role="group" aria-label="动态列表">
       {Array.from({ length }, (_, index) => (
         <div key={index} class={rowCls}>

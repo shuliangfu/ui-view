@@ -51,7 +51,8 @@ export function ConfigProvider(props: ConfigProviderProps) {
     : theme;
   const themeClass = resolvedTheme === "dark" ? "dark" : "";
 
-  return () => (
+  /** 直接返回 VNode，与 @dreamer/view 及 shared/basic、charts 约定一致 */
+  return (
     <div
       class={twMerge("config-provider", themeClass, className)}
       data-theme={resolvedTheme}

@@ -174,29 +174,29 @@ const importCode =
   `import { Checkbox, CheckboxGroup, RadioGroup, Switch, Form, FormItem } from "@dreamer/ui-view";
 import { createSignal } from "@dreamer/view";
 
-const [cb, setCb] = createSignal(false);
-const [groupVal, setGroupVal] = createSignal<string[]>([]);
-const [radioVal, setRadioVal] = createSignal("r1");
-const [sw, setSw] = createSignal(false);
+const cb = createSignal(false);
+const groupVal = createSignal<string[]>([]);
+const radioVal = createSignal("r1");
+const sw = createSignal(false);
 
 <Checkbox
-  checked={cb()}
-  onChange={(e) => setCb((e.target as HTMLInputElement).checked)}
+  checked={cb.value}
+  onChange={(e) => cb.value = (e.target as HTMLInputElement).checked}
 >
   勾选我
 </Checkbox>
-<CheckboxGroup options={...} value={groupVal()} onChange={setGroupVal} />
-<RadioGroup name="radio-demo" options={...} value={radioVal()} onChange={setRadioVal} />
+<CheckboxGroup options={...} value={groupVal.value} onChange={(v) => groupVal.value = v} />
+<RadioGroup name="radio-demo" options={...} value={radioVal.value} onChange={(v) => radioVal.value = v} />
 <Switch
-  checked={sw()}
-  onChange={(e) => setSw((e.target as HTMLInputElement).checked)}
+  checked={sw.value}
+  onChange={(e) => sw.value = (e.target as HTMLInputElement).checked}
 />`;
 
 export default function FormCheck() {
-  const [checkboxVal, setCheckboxVal] = createSignal(false);
-  const [checkboxGroupVal, setCheckboxGroupVal] = createSignal<string[]>([]);
-  const [radioVal, setRadioVal] = createSignal("r1");
-  const [switchVal, setSwitchVal] = createSignal(false);
+  const checkboxVal = createSignal(false);
+  const checkboxGroupVal = createSignal<string[]>([]);
+  const radioVal = createSignal("r1");
+  const switchVal = createSignal(false);
 
   return (
     <div class="space-y-10">
@@ -229,9 +229,9 @@ export default function FormCheck() {
             <Title level={3}>Checkbox</Title>
             <FormItem label="Checkbox">
               <Checkbox
-                checked={checkboxVal()}
+                checked={checkboxVal.value}
                 onChange={(e) =>
-                  setCheckboxVal((e.target as HTMLInputElement).checked)}
+                  checkboxVal.value = (e.target as HTMLInputElement).checked}
               >
                 勾选我
               </Checkbox>
@@ -239,8 +239,8 @@ export default function FormCheck() {
             <CodeBlock
               title="代码示例"
               code={`<Checkbox
-  checked={checkboxVal()}
-  onChange={(e) => setCheckboxVal((e.target as HTMLInputElement).checked)}
+  checked={checkboxVal.value}
+  onChange={(e) => checkboxVal.value = (e.target as HTMLInputElement).checked}
 >
   勾选我
 </Checkbox>`}
@@ -256,16 +256,16 @@ export default function FormCheck() {
             <FormItem label="CheckboxGroup">
               <CheckboxGroup
                 options={checkboxOptions}
-                value={checkboxGroupVal()}
-                onChange={(v) => setCheckboxGroupVal(v)}
+                value={checkboxGroupVal.value}
+                onChange={(v) => checkboxGroupVal.value = v}
               />
             </FormItem>
             <CodeBlock
               title="代码示例"
               code={`<CheckboxGroup
   options={...}
-  value={checkboxGroupVal()}
-  onChange={setCheckboxGroupVal}
+  value={checkboxGroupVal.value}
+  onChange={(v) => checkboxGroupVal.value = v}
 />`}
               language="tsx"
               showLineNumbers
@@ -280,8 +280,8 @@ export default function FormCheck() {
               <RadioGroup
                 name="radio-demo"
                 options={radioOptions}
-                value={radioVal()}
-                onChange={(v) => setRadioVal(v)}
+                value={radioVal.value}
+                onChange={(v) => radioVal.value = v}
               />
             </FormItem>
             <CodeBlock
@@ -289,8 +289,8 @@ export default function FormCheck() {
               code={`<RadioGroup
   name="radio-demo"
   options={...}
-  value={radioVal()}
-  onChange={setRadioVal}
+  value={radioVal.value}
+  onChange={(v) => radioVal.value = v}
 />`}
               language="tsx"
               showLineNumbers
@@ -303,16 +303,16 @@ export default function FormCheck() {
             <Title level={3}>Switch 基础与自定义文案</Title>
             <FormItem label="Switch">
               <Switch
-                checked={switchVal()}
+                checked={switchVal.value}
                 onChange={(e) =>
-                  setSwitchVal((e.target as HTMLInputElement).checked)}
+                  switchVal.value = (e.target as HTMLInputElement).checked}
               />
             </FormItem>
             <FormItem label="Switch 自定义文案">
               <Switch
-                checked={switchVal()}
+                checked={switchVal.value}
                 onChange={(e) =>
-                  setSwitchVal((e.target as HTMLInputElement).checked)}
+                  switchVal.value = (e.target as HTMLInputElement).checked}
                 checkedChildren="开"
                 unCheckedChildren="关"
               />

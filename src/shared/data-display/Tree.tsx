@@ -5,9 +5,11 @@
  * 用 createEffect 同步 DOM 更新勾选/展开/选中状态。
  */
 
-import { createEffect, createSignal, untrack } from "@dreamer/view";
+import { createEffect, untrack } from "@dreamer/view";
+import { createSignal } from "@dreamer/view/signal";
 import { twMerge } from "tailwind-merge";
-import { IconChevronRight } from "../basic/icons/mod.ts";
+/** 按需：单文件图标，避免经 icons/mod 拉入全表 */
+import { IconChevronRight } from "../basic/icons/ChevronRight.tsx";
 
 export interface TreeNode {
   /** 唯一 key */
@@ -241,7 +243,7 @@ export function Tree(props: TreeProps) {
 
   const handleTreeClick = (e: Event) => {
     const me = e as MouseEvent;
-    const root = rootEl();
+    const root = rootElRef.value;
     if (!root || !root.contains(me.target as Node)) return;
     const clientX = me.clientX;
     const clientY = me.clientY;
@@ -291,14 +293,14 @@ export function Tree(props: TreeProps) {
     }
   };
 
-  const [rootEl, setRootRef] = createSignal<HTMLDivElement | null>(null);
+  const rootElRef = createSignal<HTMLDivElement | null>(null);
 
   createEffect(() => {
-    // 先读 getter 建立订阅，再读 root signal，这样 ref 挂上或 keys 变化时都会重跑并同步 DOM
+    // 先读 getter 建立订阅，再读 root SignalRef，这样 ref 挂上或 keys 变化时都会重跑并同步 DOM
     const expanded = new Set(getExpandedKeys());
     const selected = new Set(getSelectedKeys());
     const checked = new Set(getCheckedKeys());
-    const root = rootEl();
+    const root = rootElRef.value;
     if (!root) return;
     root.querySelectorAll<HTMLInputElement>("input[data-tree-check-key]")
       .forEach((input) => {
@@ -332,9 +334,14 @@ export function Tree(props: TreeProps) {
     });
   });
 
+  /**
+   * 渲染 getter：配合 `createEffect` 内读 `rootElRef.value` 与受控 keys getter，同步 DOM 勾选/展开态。
+   */
   return () => (
     <div
-      ref={(el: unknown) => setRootRef(el as HTMLDivElement | null)}
+      ref={(el: unknown) => {
+        rootElRef.value = el as HTMLDivElement | null;
+      }}
       class={twMerge("tree text-sm", className)}
       role="tree"
       onClick={handleTreeClick}

@@ -38,7 +38,11 @@ export function Link(props: LinkProps) {
   } = props;
 
   const className = classProp ?? classNameProp;
-  return () => (
+  /**
+   * 未传的 target/rel/title/aria-label 为 undefined 时，@dreamer/view compileSource 会生成
+   * setIntrinsicDomAttribute（removeAttribute），不再出现 target="undefined" 字面量。
+   */
+  return (
     <a
       href={href}
       class={twMerge(baseClasses, className)}

@@ -90,22 +90,23 @@ export function Dropdown(props: DropdownProps) {
     overlayId,
   } = props;
 
-  /** 展开状态由组件内部维护 */
-  const [open, setOpenState] = createSignal(false);
+  /** 展开状态由组件内部维护（SignalRef .value） */
+  const openState = createSignal(false);
   /** bottomAuto 时根据视口空间计算出的实际位置 */
-  const [autoPlacement, setAutoPlacement] = createSignal<
+  const autoPlacement = createSignal<
     "bottom" | "bottomLeft" | "bottomRight"
   >("bottom");
 
+  /** 同步内部 open 与 onOpenChange 通知 */
   const setOpen = (value: boolean) => {
-    setOpenState(value);
+    openState.value = value;
     onOpenChange?.(value);
   };
 
   const isHover = trigger === "hover";
   const isAuto = placement === "bottomAuto";
   const effectivePlacement: Exclude<DropdownPlacement, "bottomAuto"> = isAuto
-    ? autoPlacement()
+    ? autoPlacement.value
     : placement;
   const posCls = placementClasses[effectivePlacement];
 
@@ -126,11 +127,11 @@ export function Dropdown(props: DropdownProps) {
     const spaceLeft = centerX;
     const spaceRight = vw - centerX;
     if (spaceLeft < halfW && spaceRight >= halfW) {
-      setAutoPlacement("bottomLeft");
+      autoPlacement.value = "bottomLeft";
     } else if (spaceRight < halfW && spaceLeft >= halfW) {
-      setAutoPlacement("bottomRight");
+      autoPlacement.value = "bottomRight";
     } else {
-      setAutoPlacement("bottom");
+      autoPlacement.value = "bottom";
     }
   };
   const scheduleMeasure = () => {
@@ -143,7 +144,9 @@ export function Dropdown(props: DropdownProps) {
   /** click 模式下用 document 点击外部关闭；冒泡阶段且延迟关闭，避免拦截链接点击与路由导航、避免同步 setState 导致主内容区渲染异常 */
   let removeClickOutside: (() => void) | null = null;
   createEffect(() => {
-    if (typeof globalThis.document === "undefined" || isHover || !open()) {
+    if (
+      typeof globalThis.document === "undefined" || isHover || !openState.value
+    ) {
       return;
     }
     const id = globalThis.setTimeout(() => {
@@ -172,7 +175,7 @@ export function Dropdown(props: DropdownProps) {
   const handleTriggerClick = (e: Event) => {
     e.preventDefault();
     if (disabled) return;
-    if (!isHover) setOpen(!open());
+    if (!isHover) setOpen(!openState.value);
   };
 
   const handleTriggerEnter = () => {
@@ -208,7 +211,7 @@ export function Dropdown(props: DropdownProps) {
   };
 
   return () => {
-    const isOpen = open();
+    const isOpen = openState.value;
     if (isOpen && typeof globalThis !== "undefined") {
       const g = globalThis as unknown as Record<
         string,
@@ -243,7 +246,7 @@ export function Dropdown(props: DropdownProps) {
               const k = (e as KeyboardEvent).key;
               if (k === "Enter" || k === " ") {
                 e.preventDefault();
-                setOpen(!isOpen);
+                setOpen(!openState.value);
               }
             }) as (e: Event) => void
             : undefined}

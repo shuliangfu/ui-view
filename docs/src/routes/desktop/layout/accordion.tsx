@@ -69,7 +69,7 @@ const ACCORDION_API: ApiRow[] = [
 const importCode = `import { createSignal } from "@dreamer/view";
 import { Accordion } from "@dreamer/ui-view";
 
-const [expandedKeys, setExpandedKeys] = createSignal<string[]>(["1"]);
+const expandedKeys = createSignal<string[]>(["1"]);
 const items = [
   { key: "1", header: "第一项", children: <p>内容</p> },
   { key: "2", header: "第二项", children: <p>内容</p> },
@@ -77,8 +77,8 @@ const items = [
 {() => (
   <Accordion
     items={items}
-    expandedKeys={expandedKeys()}
-    onChange={setExpandedKeys}
+    expandedKeys={expandedKeys.value}
+    onChange={(keys) => expandedKeys.value = keys}
     allowMultiple
   />
 )}`;
@@ -86,8 +86,8 @@ const items = [
 const exampleMultiple = `{() => (
   <Accordion
     items={items}
-    expandedKeys={expandedKeys()}
-    onChange={setExpandedKeys}
+    expandedKeys={expandedKeys.value}
+    onChange={(keys) => expandedKeys.value = keys}
     allowMultiple
   />
 )}`;
@@ -95,8 +95,8 @@ const exampleMultiple = `{() => (
 const exampleSingle = `{() => (
   <Accordion
     items={items}
-    expandedKeys={expandedKeys()}
-    onChange={setExpandedKeys}
+    expandedKeys={expandedKeys.value}
+    onChange={(keys) => expandedKeys.value = keys}
     allowMultiple={false}
   />
 )}`;
@@ -113,7 +113,7 @@ const exampleDisabled = `{() => (
 )}`;
 
 export default function LayoutAccordion() {
-  const [expandedKeys, setExpandedKeys] = createSignal<string[]>(["1"]);
+  const expandedKeys = createSignal<string[]>(["1"]);
 
   const items = [
     {
@@ -163,8 +163,8 @@ export default function LayoutAccordion() {
           {() => (
             <Accordion
               items={items}
-              expandedKeys={expandedKeys()}
-              onChange={setExpandedKeys}
+              expandedKeys={expandedKeys.value}
+              onChange={(keys) => expandedKeys.value = keys}
               allowMultiple
             />
           )}
@@ -183,8 +183,8 @@ export default function LayoutAccordion() {
           {() => (
             <Accordion
               items={items}
-              expandedKeys={expandedKeys()}
-              onChange={setExpandedKeys}
+              expandedKeys={expandedKeys.value}
+              onChange={(keys) => expandedKeys.value = keys}
               allowMultiple={false}
             />
           )}

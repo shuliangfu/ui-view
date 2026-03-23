@@ -15,5 +15,5 @@ const svg = (
 
 /** 支付宝品牌 Logo 图标 */
 export function IconBrandAlipay(props?: IconComponentProps) {
-  return () => <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
+  return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

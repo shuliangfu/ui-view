@@ -20,7 +20,7 @@ export interface RadioGroupProps {
   options: RadioGroupOption[];
   /** 同组 name（必填则互斥） */
   name: string;
-  /** 当前选中的 value；可为 getter 以配合 View 细粒度更新 */
+  /** 当前选中的 value；可为 getter / 如 `() => ref.value`（SignalRef）以配合 View 细粒度更新 */
   value?: string | (() => string);
   /** 是否整组禁用 */
   disabled?: boolean;

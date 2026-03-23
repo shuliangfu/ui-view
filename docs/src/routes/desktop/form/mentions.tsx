@@ -85,60 +85,58 @@ import type { MentionOption } from "@dreamer/ui-view";
 import { createSignal } from "@dreamer/view";
 
 const options: MentionOption[] = [{ value: "u1", label: "张三" }];
-const [val, setVal] = createSignal("");
-const [showDropdown, setShowDropdown] = createSignal(false);
-const [opts, setOpts] = createSignal<MentionOption[]>([]);
-// onInput 里根据 @ 后的关键词过滤 options 并 setShowDropdown(true)、setOpts(...)
-// onSelectOption 里插入选中项文案并 setShowDropdown(false)
+const val = createSignal("");
+const showDropdown = createSignal(false);
+const opts = createSignal<MentionOption[]>([]);
+// onInput 里根据 @ 后的关键词过滤 options 并 showDropdown.value = true、opts.value = ...
+// onSelectOption 里插入选中项文案并 showDropdown.value = false
 <Mentions
-  value={val}
+  value={() => val.value}
   onInput={handleInput}
-  onChange={(e) => setVal((e.target as HTMLTextAreaElement).value)}
-  showDropdown={showDropdown}
-  dropdownOptions={opts}
+  onChange={(e) => val.value = (e.target as HTMLTextAreaElement).value}
+  showDropdown={() => showDropdown.value}
+  dropdownOptions={() => opts.value}
   onSelectOption={handleSelect}
 />`;
 
 export default function FormMentions() {
-  const [val, setVal] = createSignal("");
-  const [val2, setVal2] = createSignal("你好 @张三 请查收");
-  const [showDropdown, setShowDropdown] = createSignal(false);
-  const [options, setOptions] = createSignal<MentionOption[]>([]);
+  const val = createSignal("");
+  const val2 = createSignal("你好 @张三 请查收");
+  const showDropdown = createSignal(false);
+  const options = createSignal<MentionOption[]>([]);
 
   const handleInput = (e: Event) => {
     const el = e.target as HTMLTextAreaElement;
     const v = el.value;
     const start = el.selectionStart ?? 0;
-    setVal(v);
+    val.value = v;
     const before = v.slice(0, start);
     const atIdx = before.lastIndexOf("@");
     if (atIdx >= 0) {
       const keyword = before.slice(atIdx + 1).toLowerCase();
-      setOptions(
-        keyword
-          ? mentionOptions.filter(
-            (o) =>
-              o.label.toLowerCase().includes(keyword) ||
-              o.value.toLowerCase().includes(keyword),
-          )
-          : mentionOptions,
-      );
-      setShowDropdown(true);
+      options.value = keyword
+        ? mentionOptions.filter(
+          (o) =>
+            o.label.toLowerCase().includes(keyword) ||
+            o.value.toLowerCase().includes(keyword),
+        )
+        : mentionOptions;
+      showDropdown.value = true;
     } else {
-      setShowDropdown(false);
+      showDropdown.value = false;
     }
   };
 
   const handleSelect = (opt: MentionOption) => {
-    const v = val();
+    const v = val.value;
     const start = (globalThis.document?.activeElement as HTMLTextAreaElement)
       ?.selectionStart ?? v.length;
     const before = v.slice(0, start);
     const atIdx = before.lastIndexOf("@");
     if (atIdx >= 0) {
-      setVal(v.slice(0, atIdx) + opt.label + " " + v.slice(start));
+      val.value = v.slice(0, atIdx) + opt.label + " " + v.slice(start);
     }
-    setShowDropdown(false);
+    showDropdown.value = false;
   };
 
   return (
@@ -172,23 +170,23 @@ export default function FormMentions() {
             <Title level={3}>带候选下拉（输入 @ 触发）</Title>
             <FormItem label="提及">
               <Mentions
-                value={val}
+                value={() => val.value}
                 onInput={handleInput}
                 onChange={(e) =>
-                  setVal((e.target as HTMLTextAreaElement).value)}
+                  val.value = (e.target as HTMLTextAreaElement).value}
                 placeholder="输入 @ 提及"
-                showDropdown={showDropdown}
-                dropdownOptions={options}
+                showDropdown={() => showDropdown.value}
+                dropdownOptions={() => options.value}
                 onSelectOption={handleSelect}
               />
             </FormItem>
             <CodeBlock
               title="代码示例"
               code={`<Mentions
-  value={val}
+  value={() => val.value}
   onInput={handleInput}
-  showDropdown={showDropdown}
-  dropdownOptions={options}
+  showDropdown={() => showDropdown.value}
+  dropdownOptions={() => options.value}
   onSelectOption={handleSelect}
 />`}
               language="tsx"
@@ -202,9 +200,9 @@ export default function FormMentions() {
             <Title level={3}>有默认值 / 无候选（仅多行输入）</Title>
             <FormItem label="仅输入">
               <Mentions
-                value={val2}
+                value={() => val2.value}
                 onChange={(e) =>
-                  setVal2((e.target as HTMLTextAreaElement).value)}
+                  val2.value = (e.target as HTMLTextAreaElement).value}
                 placeholder="无 @ 候选时就是普通 textarea"
                 rows={4}
               />
@@ -212,7 +210,7 @@ export default function FormMentions() {
             <CodeBlock
               title="代码示例"
               code={`<Mentions
-  value={val2}
+  value={() => val2.value}
   onChange={...}
   rows={4}
 />`}

@@ -57,8 +57,8 @@ const IMAGE_API: ApiRow[] = [
   {
     name: "rounded",
     type: "boolean | string",
-    default: "-",
-    description: "圆角",
+    default: "false",
+    description: "圆角，默认 false",
   },
   { name: "class", type: "string", default: "-", description: "额外 class" },
 ];

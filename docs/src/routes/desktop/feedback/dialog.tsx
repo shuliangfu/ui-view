@@ -93,64 +93,64 @@ const DIALOG_API: ApiRow[] = [
 const importCode = `import { createSignal } from "@dreamer/view";
 import { Button, Dialog } from "@dreamer/ui-view";
 
-const [open, setOpen] = createSignal(false);
+const open = createSignal(false);
 
 <Button
   variant="primary"
-  onClick={() => setOpen(true)}
+  onClick={() => open.value = true}
 >
   打开
 </Button>
 <Dialog
-  open={open()}
-  onClose={() => setOpen(false)}
+  open={open.value}
+  onClose={() => open.value = false}
   title="确认操作"
   content="确定要执行该操作吗？"
   confirmText="确定"
   cancelText="取消"
-  onConfirm={() => setOpen(false)}
-  onCancel={() => setOpen(false)}
+  onConfirm={() => open.value = false}
+  onCancel={() => open.value = false}
 />`;
 
 const exampleBasic = `<Dialog
-  open={open()}
-  onClose={() => setOpen(false)}
+  open={open.value}
+  onClose={() => open.value = false}
   title="确认操作"
   content="确定要执行该操作吗？"
   confirmText="确定"
   cancelText="取消"
-  onConfirm={() => setOpen(false)}
-  onCancel={() => setOpen(false)}
+  onConfirm={() => open.value = false}
+  onCancel={() => open.value = false}
 />`;
 
 const exampleDanger = `<Dialog
-  open={openDanger()}
-  onClose={() => setOpenDanger(false)}
+  open={openDanger.value}
+  onClose={() => openDanger.value = false}
   title="删除确认"
   content="删除后无法恢复，确定要删除吗？"
   confirmText="删除"
   cancelText="取消"
   danger
-  onConfirm={() => setOpenDanger(false)}
-  onCancel={() => setOpenDanger(false)}
+  onConfirm={() => openDanger.value = false}
+  onCancel={() => openDanger.value = false}
 />`;
 
 const exampleLoading = `<Dialog
-  open={openLoading()}
-  onClose={() => setOpenLoading(false)}
+  open={openLoading.value}
+  onClose={() => openLoading.value = false}
   title="提交中"
   content="确定后将显示 loading 状态，常用于异步提交。"
   confirmText="确定"
   cancelText="取消"
   confirmLoading
-  onConfirm={() => setOpenLoading(false)}
-  onCancel={() => setOpenLoading(false)}
+  onConfirm={() => openLoading.value = false}
+  onCancel={() => openLoading.value = false}
 />`;
 
 export default function FeedbackDialog() {
-  const [open, setOpen] = createSignal(false);
-  const [openDanger, setOpenDanger] = createSignal(false);
-  const [openLoading, setOpenLoading] = createSignal(false);
+  const open = createSignal(false);
+  const openDanger = createSignal(false);
+  const openLoading = createSignal(false);
 
   return () => (
     <div class="space-y-10">
@@ -183,20 +183,24 @@ export default function FeedbackDialog() {
             <Button
               type="button"
               variant="primary"
-              onClick={() => setOpen(true)}
+              onClick={() => open.value = true}
             >
               打开 Dialog
             </Button>
           </div>
           <Dialog
-            open={open()}
-            onClose={() => setOpen(false)}
+            open={open.value}
+            onClose={() => open.value = false}
             title="确认操作"
             content="确定要执行该操作吗？"
             confirmText="确定"
             cancelText="取消"
-            onConfirm={() => setOpen(false)}
-            onCancel={() => setOpen(false)}
+            onConfirm={() => {
+              open.value = false;
+            }}
+            onCancel={() => {
+              open.value = false;
+            }}
           />
           <CodeBlock
             title="代码示例"
@@ -214,21 +218,25 @@ export default function FeedbackDialog() {
             <Button
               type="button"
               variant="danger"
-              onClick={() => setOpenDanger(true)}
+              onClick={() => openDanger.value = true}
             >
               危险操作
             </Button>
           </div>
           <Dialog
-            open={openDanger()}
-            onClose={() => setOpenDanger(false)}
+            open={openDanger.value}
+            onClose={() => openDanger.value = false}
             title="删除确认"
             content="删除后无法恢复，确定要删除吗？"
             confirmText="删除"
             cancelText="取消"
             danger
-            onConfirm={() => setOpenDanger(false)}
-            onCancel={() => setOpenDanger(false)}
+            onConfirm={() => {
+              openDanger.value = false;
+            }}
+            onCancel={() => {
+              openDanger.value = false;
+            }}
           />
           <CodeBlock
             title="代码示例"
@@ -246,21 +254,25 @@ export default function FeedbackDialog() {
             <Button
               type="button"
               variant="secondary"
-              onClick={() => setOpenLoading(true)}
+              onClick={() => openLoading.value = true}
             >
               确定 Loading
             </Button>
           </div>
           <Dialog
-            open={openLoading()}
-            onClose={() => setOpenLoading(false)}
+            open={openLoading.value}
+            onClose={() => openLoading.value = false}
             title="提交中"
             content="确定后将显示 loading 状态，常用于异步提交。"
             confirmText="确定"
             cancelText="取消"
             confirmLoading
-            onConfirm={() => setOpenLoading(false)}
-            onCancel={() => setOpenLoading(false)}
+            onConfirm={() => {
+              openLoading.value = false;
+            }}
+            onCancel={() => {
+              openLoading.value = false;
+            }}
           />
           <CodeBlock
             title="代码示例"

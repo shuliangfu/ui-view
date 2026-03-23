@@ -3,10 +3,12 @@
  * 用于文档/后台：顶部可选「概览」链接、分组标题、可折叠的一级分类与二级链接；手风琴展开、基于当前路径的 active 高亮。
  */
 
-import { createSignal } from "@dreamer/view";
+import { createSignal } from "@dreamer/view/signal";
 import { twMerge } from "tailwind-merge";
 import { Link } from "../basic/Link.tsx";
-import { IconChevronDown, IconChevronRight } from "../basic/icons/mod.ts";
+/** 按需：单文件图标，避免经 icons/mod 拉入全表 */
+import { IconChevronDown } from "../basic/icons/ChevronDown.tsx";
+import { IconChevronRight } from "../basic/icons/ChevronRight.tsx";
 
 /** 二级子项：path、label、desc（展示为 "label — desc"） */
 export interface SidebarSubItem {
@@ -85,27 +87,29 @@ export function Sidebar(props: SidebarProps) {
    * 手风琴：仅一个一级分类展开。
    * 若为 null，则展开包含当前路径的分类（初始/导航后）；否则仅展开该 key。
    */
-  const [getExpandedKey, setExpandedKey] = createSignal<string | null>(null);
+  const expandedKeyRef = createSignal<string | null>(null);
   /** 仅当路径变化（发生导航）时清除手动展开，避免用户点击其他分类后立刻被收起 */
-  const [getLastPath, setLastPath] = createSignal<string>(pathNorm);
-  if (getLastPath() !== pathNorm) {
-    setLastPath(pathNorm);
-    const key = getExpandedKey();
+  const lastPathRef = createSignal<string>(pathNorm);
+  if (lastPathRef.value !== pathNorm) {
+    lastPathRef.value = pathNorm;
+    const key = expandedKeyRef.value;
     if (key !== null && !isCategoryActive(key)) {
-      setExpandedKey(null);
+      expandedKeyRef.value = null;
     }
   }
 
   /** 分类是否展开：当前为手风琴选中项，或（未手动选中时）当前路径在该分类下 */
   const isExpanded = (path: string) => {
-    const currentKey = getExpandedKey();
+    const currentKey = expandedKeyRef.value;
     if (currentKey !== null) return path === currentKey;
     return isCategoryActive(path);
   };
 
   /** 点击一级分类：展开此项并收起其他（手风琴）；再次点击则收起 */
   const toggleOpen = (path: string) => {
-    setExpandedKey((prev) => (prev === path ? null : path));
+    expandedKeyRef.value = (
+      prev: string | null,
+    ) => (prev === path ? null : path);
   };
 
   const asideClass = twMerge(
@@ -113,6 +117,9 @@ export function Sidebar(props: SidebarProps) {
     classProp ?? classNameProp,
   );
 
+  /**
+   * 渲染 getter：读 `expandedKeyRef`、当前路径相关闭包，手风琴展开与路由联动时细粒度更新。
+   */
   return () => (
     <aside class={asideClass}>
       <nav className="space-y-3" aria-label="侧栏导航">
@@ -135,10 +142,15 @@ export function Sidebar(props: SidebarProps) {
         )}
         <ul className="list-none space-y-1 p-0 m-0 pl-3" role="list">
           {items.map((item) => (
-            <li key={item.path}>
+            <li key={item.path} class="min-w-0">
               {item.children != null && item.children.length > 0
                 ? (
-                  <>
+                  /**
+                   * 不用 Fragment 内嵌 `{() => ...}`：View 对 getter 子节点会走 insertReactive，
+                   * 在侧栏 flex 场景下曾出现子菜单挂错父级、整块跑到主内容右侧的问题。
+                   * 在外层 `return () =>` 里直接读 `isExpanded`（已订阅 expandedKeyRef）条件渲染即可。
+                   */
+                  <div class="flex w-full min-w-0 flex-col gap-0.5">
                     <button
                       type="button"
                       className={isCategoryActive(item.path)
@@ -160,8 +172,8 @@ export function Sidebar(props: SidebarProps) {
                       </span>
                       {item.label}
                     </button>
-                    {() =>
-                      isExpanded(item.path) && item.children && (
+                    {isExpanded(item.path) && item.children
+                      ? (
                         <ul
                           id={`sidebar-group-${item.path.replace(/\//g, "-")}`}
                           className="list-none space-y-0.5 p-0 m-0 pl-6"
@@ -180,8 +192,9 @@ export function Sidebar(props: SidebarProps) {
                             </li>
                           ))}
                         </ul>
-                      )}
-                  </>
+                      )
+                      : null}
+                  </div>
                 )
                 : (
                   <Link

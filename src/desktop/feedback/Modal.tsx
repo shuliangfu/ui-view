@@ -6,11 +6,10 @@
 
 import { createEffect, createSignal } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
-import {
-  IconClose,
-  IconExitFullscreen,
-  IconMaximize2,
-} from "../../shared/basic/icons/mod.ts";
+/** 按需：单文件图标，避免经 icons/mod 拉入全表 */
+import { IconClose } from "../../shared/basic/icons/Close.tsx";
+import { IconExitFullscreen } from "../../shared/basic/icons/ExitFullscreen.tsx";
+import { IconMaximize2 } from "../../shared/basic/icons/Maximize2.tsx";
 
 export interface ModalProps {
   /** 是否打开（受控） */
@@ -62,7 +61,7 @@ const WIDTH_PRESETS: Record<string, string> = {
 
 /**
  * 标题栏按下时开始拖动：与 ImageViewer 的 useImageDrag 一致，不计算偏移，按下位置即起点，只按位移累加。
- * 在 document 上监听 mousemove/mouseup，requestAnimationFrame 节流 + passive，保证跟手。
+ * 在 globalThis.document 上监听 mousemove/mouseup，requestAnimationFrame 节流 + passive，保证跟手。
  * @param getPosition 当前位移 getter
  * @param setPosition 设置位移
  * @param enabled 是否启用拖动
@@ -88,17 +87,23 @@ function useDrag(
         setPosition({ x: nextX, y: nextY });
       });
     };
+    const doc = typeof globalThis.document !== "undefined"
+      ? globalThis.document
+      : null;
     const onUp = () => {
       if (rafId) globalThis.cancelAnimationFrame(rafId);
-      document.removeEventListener(
+      if (!doc) return;
+      doc.removeEventListener(
         "mousemove",
         onMove,
         { passive: true } as AddEventListenerOptions,
       );
-      document.removeEventListener("mouseup", onUp);
+      doc.removeEventListener("mouseup", onUp);
     };
-    document.addEventListener("mousemove", onMove, { passive: true });
-    document.addEventListener("mouseup", onUp);
+    if (doc) {
+      doc.addEventListener("mousemove", onMove, { passive: true });
+      doc.addEventListener("mouseup", onUp);
+    }
   };
 }
 
@@ -123,194 +128,201 @@ export function Modal(props: ModalProps) {
     class: className,
   } = props;
 
-  const [fullscreen, setFullscreen] = createSignal(false);
-  const [position, setPosition] = createSignal({ x: 0, y: 0 });
+  const fullscreen = createSignal(false);
+  const position = createSignal({ x: 0, y: 0 });
 
   const handleMaskClick = (e: Event) => {
     if (e.target === e.currentTarget && maskClosable) onClose?.();
   };
 
-  /** 打开时在 document 上监听 Esc，不依赖弹层获焦；关闭时移除监听 */
+  /** 打开时在 globalThis.document 上监听 Esc，不依赖弹层获焦；关闭时移除监听 */
   createEffect(() => {
     if (!open) return;
+    const doc = typeof globalThis.document !== "undefined"
+      ? globalThis.document
+      : null;
+    if (!doc) return;
     const handler = (e: KeyboardEvent) => {
       if (keyboard && e.key === "Escape") {
         e.preventDefault();
         onClose?.();
       }
     };
-    document.addEventListener("keydown", handler as EventListener);
-    return () =>
-      document.removeEventListener("keydown", handler as EventListener);
+    doc.addEventListener("keydown", handler as EventListener);
+    return () => doc.removeEventListener("keydown", handler as EventListener);
   });
 
   const handleTitleMouseDown = useDrag(
-    () => position(),
-    setPosition,
+    () => position.value,
+    (v) => {
+      position.value = v;
+    },
     draggable,
   );
 
   const shouldRender = open || !destroyOnClose;
-  if (!shouldRender) return () => null;
+  if (!shouldRender) {
+    return null;
+  }
 
-  return () => {
-    if (!open) {
-      document.body.style.overflow = "";
-      return null;
-    }
-    document.body.style.overflow = "hidden";
-    const widthStyle = typeof width === "number"
-      ? `${width}px`
-      : (WIDTH_PRESETS[width as string] ?? width);
-    const isFullscreen = fullscreen();
-    const pos = position();
-    const hasOffset = pos.x !== 0 || pos.y !== 0;
-    const modalStyle = isFullscreen
-      ? { width: "100%", height: "100%", maxWidth: "100vw", maxHeight: "100vh" }
-      : {
-        width: widthStyle,
-        ...(draggable
-          ? {
-            transform: `translate(${pos.x}px, ${pos.y}px)`,
-            ...(hasOffset ? { willChange: "transform" as const } : {}),
-          }
-          : {}),
-      };
-    const modalClass = isFullscreen
-      ? "rounded-none"
-      : "rounded-xl max-h-[90vh]";
-    const showHeaderActions = fullscreenable || closable;
+  const doc = typeof globalThis.document !== "undefined"
+    ? globalThis.document
+    : null;
+  if (!open) {
+    if (doc) doc.body.style.overflow = "";
+    return null;
+  }
+  if (doc) doc.body.style.overflow = "hidden";
 
-    return (
+  const widthStyle = typeof width === "number"
+    ? `${width}px`
+    : (WIDTH_PRESETS[width as string] ?? width);
+  const isFullscreen = fullscreen.value;
+  const pos = position.value;
+  const hasOffset = pos.x !== 0 || pos.y !== 0;
+  const modalStyle = isFullscreen
+    ? { width: "100%", height: "100%", maxWidth: "100vw", maxHeight: "100vh" }
+    : {
+      width: widthStyle,
+      ...(draggable
+        ? {
+          transform: `translate(${pos.x}px, ${pos.y}px)`,
+          ...(hasOffset ? { willChange: "transform" as const } : {}),
+        }
+        : {}),
+    };
+  const modalClass = isFullscreen ? "rounded-none" : "rounded-xl max-h-[90vh]";
+  const showHeaderActions = fullscreenable || closable;
+
+  return (
+    <div
+      class={twMerge(
+        "fixed inset-0 flex items-center justify-center",
+        isFullscreen ? "z-9999" : "z-300",
+        wrapClass,
+      )}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={title ? "modal-title" : undefined}
+    >
+      {/* 遮罩 */}
       <div
         class={twMerge(
-          "fixed inset-0 flex items-center justify-center",
-          isFullscreen ? "z-9999" : "z-300",
-          wrapClass,
+          "absolute inset-0 bg-black/50 dark:bg-black/60 backdrop-blur-sm transition-opacity",
+          maskClass,
         )}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={title ? "modal-title" : undefined}
+        onClick={handleMaskClick as unknown as (e: Event) => void}
+        aria-hidden
+      />
+      {/* 弹层 */}
+      <div
+        class={twMerge(
+          "relative z-10 flex flex-col shadow-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100",
+          modalClass,
+          className,
+        )}
+        style={modalStyle}
+        onClick={(e: Event) => e.stopPropagation()}
       >
-        {/* 遮罩 */}
-        <div
-          class={twMerge(
-            "absolute inset-0 bg-black/50 dark:bg-black/60 backdrop-blur-sm transition-opacity",
-            maskClass,
-          )}
-          onClick={handleMaskClick as unknown as (e: Event) => void}
-          aria-hidden
-        />
-        {/* 弹层 */}
-        <div
-          class={twMerge(
-            "relative z-10 flex flex-col shadow-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100",
-            modalClass,
-            className,
-          )}
-          style={modalStyle}
-          onClick={(e: Event) => e.stopPropagation()}
-        >
-          {(title != null && title !== "")
-            ? (
-              <div
-                class={twMerge(
-                  "flex items-center justify-between shrink-0 px-6 py-4 border-b border-slate-200 dark:border-slate-600",
-                  draggable && "cursor-grab active:cursor-grabbing select-none",
-                )}
-                onMouseDown={handleTitleMouseDown as unknown as (
-                  e: Event,
-                ) => void}
+        {(title != null && title !== "")
+          ? (
+            <div
+              class={twMerge(
+                "flex items-center justify-between shrink-0 px-6 py-4 border-b border-slate-200 dark:border-slate-600",
+                draggable && "cursor-grab active:cursor-grabbing select-none",
+              )}
+              onMouseDown={handleTitleMouseDown as unknown as (
+                e: Event,
+              ) => void}
+            >
+              <h2
+                id="modal-title"
+                class="text-lg font-semibold min-w-0 truncate pr-2"
               >
-                <h2
-                  id="modal-title"
-                  class="text-lg font-semibold min-w-0 truncate pr-2"
-                >
-                  {title}
-                </h2>
-                {showHeaderActions && (
-                  <div class="flex items-center gap-1 shrink-0">
-                    {fullscreenable && (
-                      <button
-                        type="button"
-                        aria-label={isFullscreen ? "退出全屏" : "全屏"}
-                        class="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400"
-                        onMouseDown={(e: Event) => e.stopPropagation()}
-                        onClick={(e: Event) => {
-                          e.stopPropagation();
-                          setFullscreen(!isFullscreen);
-                        }}
-                      >
-                        {isFullscreen
-                          ? <IconExitFullscreen class="w-5 h-5" />
-                          : <IconMaximize2 class="w-5 h-5" />}
-                      </button>
-                    )}
-                    {closable && (
-                      <button
-                        type="button"
-                        aria-label="关闭"
-                        class="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400"
-                        onMouseDown={(e: Event) => e.stopPropagation()}
-                        onClick={() => onClose?.()}
-                      >
-                        <IconClose class="w-5 h-5" />
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-            )
-            : showHeaderActions
-            ? (
-              <div class="absolute top-4 right-4 z-10 flex items-center gap-1">
-                {fullscreenable && (
-                  <button
-                    type="button"
-                    aria-label={isFullscreen ? "退出全屏" : "全屏"}
-                    class="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400"
-                    onMouseDown={(e: Event) => e.stopPropagation()}
-                    onClick={(e: Event) => {
-                      e.stopPropagation();
-                      setFullscreen(!isFullscreen);
-                    }}
-                  >
-                    {isFullscreen
-                      ? <IconExitFullscreen class="w-5 h-5" />
-                      : <IconMaximize2 class="w-5 h-5" />}
-                  </button>
-                )}
-                {closable && (
-                  <button
-                    type="button"
-                    aria-label="关闭"
-                    class="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400"
-                    onMouseDown={(e: Event) => e.stopPropagation()}
-                    onClick={() => onClose?.()}
-                  >
-                    <IconClose class="w-5 h-5" />
-                  </button>
-                )}
-              </div>
-            )
-            : null}
-          <div
-            class={twMerge(
-              "flex-1 overflow-auto px-6 py-4 min-h-0",
-              !(title != null && title !== "") && showHeaderActions &&
-                "pt-12 pr-12",
-              bodyClass,
-            )}
-          >
-            {children}
-          </div>
-          {footer != null && (
-            <div class="shrink-0 flex items-center justify-end gap-2 px-6 py-4 border-t border-slate-200 dark:border-slate-600">
-              {footer}
+                {title}
+              </h2>
+              {showHeaderActions && (
+                <div class="flex items-center gap-1 shrink-0">
+                  {fullscreenable && (
+                    <button
+                      type="button"
+                      aria-label={isFullscreen ? "退出全屏" : "全屏"}
+                      class="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400"
+                      onMouseDown={(e: Event) => e.stopPropagation()}
+                      onClick={(e: Event) => {
+                        e.stopPropagation();
+                        fullscreen.value = !fullscreen.value;
+                      }}
+                    >
+                      {isFullscreen
+                        ? <IconExitFullscreen class="w-5 h-5" />
+                        : <IconMaximize2 class="w-5 h-5" />}
+                    </button>
+                  )}
+                  {closable && (
+                    <button
+                      type="button"
+                      aria-label="关闭"
+                      class="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400"
+                      onMouseDown={(e: Event) => e.stopPropagation()}
+                      onClick={() => onClose?.()}
+                    >
+                      <IconClose class="w-5 h-5" />
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
+          )
+          : showHeaderActions
+          ? (
+            <div class="absolute top-4 right-4 z-10 flex items-center gap-1">
+              {fullscreenable && (
+                <button
+                  type="button"
+                  aria-label={isFullscreen ? "退出全屏" : "全屏"}
+                  class="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400"
+                  onMouseDown={(e: Event) => e.stopPropagation()}
+                  onClick={(e: Event) => {
+                    e.stopPropagation();
+                    fullscreen.value = !fullscreen.value;
+                  }}
+                >
+                  {isFullscreen
+                    ? <IconExitFullscreen class="w-5 h-5" />
+                    : <IconMaximize2 class="w-5 h-5" />}
+                </button>
+              )}
+              {closable && (
+                <button
+                  type="button"
+                  aria-label="关闭"
+                  class="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400"
+                  onMouseDown={(e: Event) => e.stopPropagation()}
+                  onClick={() => onClose?.()}
+                >
+                  <IconClose class="w-5 h-5" />
+                </button>
+              )}
+            </div>
+          )
+          : null}
+        <div
+          class={twMerge(
+            "flex-1 overflow-auto px-6 py-4 min-h-0",
+            !(title != null && title !== "") && showHeaderActions &&
+              "pt-12 pr-12",
+            bodyClass,
           )}
+        >
+          {children}
         </div>
+        {footer != null && (
+          <div class="shrink-0 flex items-center justify-end gap-2 px-6 py-4 border-t border-slate-200 dark:border-slate-600">
+            {footer}
+          </div>
+        )}
       </div>
-    );
-  };
+    </div>
+  );
 }

@@ -15,5 +15,5 @@ const svg = (
 
 /** Facebook 品牌 Logo 图标 */
 export function IconBrandFacebook(props?: IconComponentProps) {
-  return () => <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
+  return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

@@ -64,7 +64,7 @@ export function Card(props: CardProps) {
 
   const paddingCls = sizeClasses[size];
 
-  return () => (
+  return (
     <div
       class={twMerge(
         "rounded-lg bg-white dark:bg-slate-800 overflow-hidden",

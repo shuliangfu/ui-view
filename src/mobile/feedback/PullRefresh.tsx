@@ -122,37 +122,35 @@ export function PullRefresh(props: PullRefreshProps) {
     refs.startY = 0;
   };
 
-  return () => {
-    const status: PullRefreshStatus = loading ? "loading" : "idle";
-    const tip = status === "loading" ? loadingText : pullingText;
+  const status: PullRefreshStatus = loading ? "loading" : "idle";
+  const tip = status === "loading" ? loadingText : pullingText;
 
-    return (
+  return (
+    <div
+      ref={setWrapRef}
+      class={twMerge("pull-refresh relative", className)}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      onTouchCancel={handleTouchEnd}
+    >
       <div
-        ref={setWrapRef}
-        class={twMerge("pull-refresh relative", className)}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        onTouchCancel={handleTouchEnd}
+        ref={setHeadRef}
+        class="absolute left-0 right-0 top-0 flex items-center justify-center text-sm text-slate-500 dark:text-slate-400 transition-transform duration-200"
+        style={{ height: `${headHeight}px`, marginTop: `-${headHeight}px` }}
       >
-        <div
-          ref={setHeadRef}
-          class="absolute left-0 right-0 top-0 flex items-center justify-center text-sm text-slate-500 dark:text-slate-400 transition-transform duration-200"
-          style={{ height: `${headHeight}px`, marginTop: `-${headHeight}px` }}
-        >
-          {status === "loading" && (
-            <span class="inline-block w-4 h-4 border-2 border-slate-300 border-t-blue-500 rounded-full animate-spin mr-2" />
-          )}
-          {tip}
-        </div>
-        <div
-          data-pull-refresh-content
-          class="min-h-full overflow-auto"
-          style={{ minHeight: "100%" }}
-        >
-          {children}
-        </div>
+        {status === "loading" && (
+          <span class="inline-block w-4 h-4 border-2 border-slate-300 border-t-blue-500 rounded-full animate-spin mr-2" />
+        )}
+        {tip}
       </div>
-    );
-  };
+      <div
+        data-pull-refresh-content
+        class="min-h-full overflow-auto"
+        style={{ minHeight: "100%" }}
+      >
+        {children}
+      </div>
+    </div>
+  );
 }

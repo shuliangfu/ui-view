@@ -109,34 +109,34 @@ const importCode =
   `import { DatePicker, TimePicker, TimeRangePicker, Form, FormItem } from "@dreamer/ui-view";
 import { createSignal } from "@dreamer/view";
 
-const [dateVal, setDateVal] = createSignal("");
-const [timeVal, setTimeVal] = createSignal("");
-const [rangeVal, setRangeVal] = createSignal<[string, string]>(["", ""]);
+const dateVal = createSignal("");
+const timeVal = createSignal("");
+const rangeVal = createSignal<[string, string]>(["", ""]);
 
 <FormItem label="日期">
   <DatePicker
-    value={dateVal()}
-    onChange={(e) => setDateVal((e.target as HTMLInputElement).value)}
+    value={dateVal.value}
+    onChange={(e) => dateVal.value = (e.target as HTMLInputElement).value}
   />
 </FormItem>
 <FormItem label="时间">
   <TimePicker
-    value={timeVal()}
-    onChange={(e) => setTimeVal((e.target as HTMLInputElement).value)}
+    value={timeVal.value}
+    onChange={(e) => timeVal.value = (e.target as HTMLInputElement).value}
   />
 </FormItem>
 <FormItem label="时间范围">
   <TimeRangePicker
-    start={() => rangeVal()[0]}
-    end={() => rangeVal()[1]}
-    onChange={(v) => setRangeVal(v)}
+    start={() => rangeVal.value[0]}
+    end={() => rangeVal.value[1]}
+    onChange={(v) => rangeVal.value = v}
   />
 </FormItem>`;
 
 export default function FormDatetime() {
-  const [dateVal, setDateVal] = createSignal("");
-  const [timeVal, setTimeVal] = createSignal("");
-  const [timeRangeVal, setTimeRangeVal] = createSignal<[string, string]>([
+  const dateVal = createSignal("");
+  const timeVal = createSignal("");
+  const timeRangeVal = createSignal<[string, string]>([
     "",
     "",
   ]);
@@ -173,24 +173,24 @@ export default function FormDatetime() {
             <Title level={3}>基础用法</Title>
             <FormItem label="DatePicker">
               <DatePicker
-                value={dateVal()}
+                value={dateVal.value}
                 onChange={(e) =>
-                  setDateVal((e.target as HTMLInputElement).value)}
+                  dateVal.value = (e.target as HTMLInputElement).value}
               />
             </FormItem>
             <FormItem label="TimePicker">
               <TimePicker
-                value={timeVal()}
+                value={timeVal.value}
                 onChange={(e) =>
-                  setTimeVal((e.target as HTMLInputElement).value)}
+                  timeVal.value = (e.target as HTMLInputElement).value}
               />
             </FormItem>
             <FormItem label="TimeRangePicker">
               {() => (
                 <TimeRangePicker
-                  start={timeRangeVal()[0]}
-                  end={timeRangeVal()[1]}
-                  onChange={(v) => setTimeRangeVal(v)}
+                  start={timeRangeVal.value[0]}
+                  end={timeRangeVal.value[1]}
+                  onChange={(v) => timeRangeVal.value = v}
                 />
               )}
             </FormItem>

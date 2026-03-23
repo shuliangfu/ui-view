@@ -23,7 +23,7 @@ export function Spinner(props: SpinnerProps) {
   const { size = "md", class: className } = props;
   const base =
     "inline-block rounded-full border-current border-t-transparent animate-spin text-blue-600 dark:text-blue-400";
-  return () => (
+  return (
     <span
       class={twMerge(base, sizeClasses[size], className)}
       role="status"

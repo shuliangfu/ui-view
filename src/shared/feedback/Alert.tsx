@@ -4,12 +4,11 @@
  */
 
 import { twMerge } from "tailwind-merge";
-import {
-  IconAlertCircle,
-  IconCheckCircle,
-  IconInfo,
-  IconXCircle,
-} from "../basic/icons/mod.ts";
+/** 按需：单文件图标，避免经 icons/mod 拉入全表 */
+import { IconAlertCircle } from "../basic/icons/AlertCircle.tsx";
+import { IconCheckCircle } from "../basic/icons/CheckCircle.tsx";
+import { IconInfo } from "../basic/icons/Info.tsx";
+import { IconXCircle } from "../basic/icons/XCircle.tsx";
 /** Alert 语义类型，与 Toast/Notification 一致 */
 export type AlertType = "success" | "info" | "warning" | "error";
 
@@ -82,7 +81,7 @@ export function Alert(props: AlertProps) {
     "flex gap-3 p-4 rounded-lg border border-l-4 transition-colors";
   const bannerCls = banner ? "rounded-none border-l-4" : "";
 
-  return () => (
+  return (
     <div
       role="alert"
       class={twMerge(baseCls, borderCls, bannerCls, className)}

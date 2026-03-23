@@ -6,7 +6,7 @@
 import { twMerge } from "tailwind-merge";
 
 export interface SwitchProps {
-  /** 是否开启；可为 getter 以配合 View 细粒度更新 */
+  /** 是否开启；可为 getter / `() => ref.value`（SignalRef），由 View 对属性做细粒度更新 */
   checked?: boolean | (() => boolean);
   /** 是否禁用 */
   disabled?: boolean;
@@ -48,7 +48,7 @@ export function Switch(props: SwitchProps) {
     ? "border-red-500 dark:border-red-500 peer-checked:border-red-500"
     : "";
 
-  return () => (
+  return (
     <label
       class={twMerge(
         "relative inline-flex items-center gap-2 cursor-pointer text-sm text-slate-700 dark:text-slate-300",

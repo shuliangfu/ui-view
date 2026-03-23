@@ -88,7 +88,8 @@ export function Dialog(props: DialogProps) {
       )
       : footerOverride;
 
-  return () => (
+  /** 无内部 signal，直接返回 VNode */
+  return (
     <Modal
       open={open}
       onClose={onClose}

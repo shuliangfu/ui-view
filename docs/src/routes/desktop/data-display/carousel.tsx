@@ -3,8 +3,8 @@
  * 路由: /desktop/data-display/carousel
  */
 
-import { createSignal } from "@dreamer/view";
 import { Carousel, CodeBlock, Paragraph, Title } from "@dreamer/ui-view";
+import { createSignal } from "@dreamer/view";
 
 /** API 属性行类型 */
 interface ApiRow {
@@ -15,7 +15,18 @@ interface ApiRow {
 }
 
 const CAROUSEL_API: ApiRow[] = [
-  { name: "children", type: "unknown[]", default: "-", description: "轮播项" },
+  {
+    name: "images",
+    type: "string[]",
+    default: "-",
+    description: "图片地址列表，传此项时内部渲染 img，无需传 children",
+  },
+  {
+    name: "children",
+    type: "unknown[]",
+    default: "-",
+    description: "轮播项（不传 images 时使用）",
+  },
   {
     name: "current",
     type: "number",
@@ -76,35 +87,79 @@ const CAROUSEL_API: ApiRow[] = [
     default: "-",
     description: "指示点位置",
   },
-  { name: "class", type: "string", default: "-", description: "容器 class" },
+  {
+    name: "height",
+    type: "string",
+    default: "横向 h-48，纵向 h-64",
+    description: "容器高度，如 200px、16rem、50%；也可用 class 覆盖",
+  },
+  {
+    name: "contentFit",
+    type: "contain | cover | fill",
+    default: "contain",
+    description:
+      "单项内图片显示方式：contain 完整显示不裁切，cover 铺满裁切，fill 铺满可拉伸",
+  },
+  {
+    name: "class",
+    type: "string",
+    default: "-",
+    description: "容器 class（可覆盖默认高度，如 h-64）",
+  },
+  {
+    name: "lazySlides",
+    type: "boolean",
+    default: "false",
+    description:
+      "是否按需加载图片（仅当前及相邻 slide 加载大图，其余占位以降低内存；默认 false 保证全部显示）",
+  },
+];
+
+/**
+ * 文档示例图片：使用 placehold.co 直接返回 200 图片（无重定向）。
+ * 尺寸适中以控制解码内存（约 800×320 单张约 1MB 解码，避免多张叠加到 1G+）。
+ */
+const DEMO_IMAGE_WIDTH = 800;
+const DEMO_IMAGE_HEIGHT = 320;
+const DEMO_CAROUSEL_HEIGHT = "20rem";
+
+/** 文档示例使用的网络图片 URL 列表（placehold.co 无重定向，直接返回图片） */
+const DEMO_IMAGES = [
+  `https://placehold.co/${DEMO_IMAGE_WIDTH}x${DEMO_IMAGE_HEIGHT}/1e3a5f/fff?text=1`,
+  `https://placehold.co/${DEMO_IMAGE_WIDTH}x${DEMO_IMAGE_HEIGHT}/2d5016/fff?text=2`,
+  `https://placehold.co/${DEMO_IMAGE_WIDTH}x${DEMO_IMAGE_HEIGHT}/4a1c4a/fff?text=3`,
 ];
 
 const importCode = `import { createSignal } from "@dreamer/view";
 import { Carousel } from "@dreamer/ui-view";
 
-const [current, setCurrent] = createSignal(0);
-const slides = [<div key="1">幻灯片 1</div>, <div key="2">幻灯片 2</div>];
+const current = createSignal(0);
+const images = [
+  "https://placehold.co/800x320/1e3a5f/fff?text=1",
+  "https://placehold.co/800x320/2d5016/fff?text=2",
+];
 <Carousel
-  current={current()}
-  onChange={setCurrent}
+  current={current.value}
+  onChange={(i) => current.value = i}
+  images={images}
+  height="20rem"
   dots
   arrows
->
-  {slides}
-</Carousel>`;
+/>`;
 
 const exampleDotsArrows = `<Carousel
-  current={current()}
-  onChange={setCurrent}
+  current={current.value}
+  onChange={(i) => current.value = i}
+  images={images}
+  height="20rem"
   dots
   arrows
->
-  {slides}
-</Carousel>`;
+/>`;
 
 const exampleAutoplay = `<Carousel
-  current={current()}
-  onChange={setCurrent}
+  current={current.value}
+  onChange={(i) => current.value = i}
+  height="20rem"
   dots
   autoplay
   autoplayInterval={3000}
@@ -113,36 +168,31 @@ const exampleAutoplay = `<Carousel
 </Carousel>`;
 
 export default function DataDisplayCarousel() {
-  const [current, setCurrent] = createSignal(0);
-
-  const slides = [
-    <div
-      key="1"
-      class="h-48 flex items-center justify-center bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 rounded-lg"
-    >
-      幻灯片 1
-    </div>,
-    <div
-      key="2"
-      class="h-48 flex items-center justify-center bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 rounded-lg"
-    >
-      幻灯片 2
-    </div>,
-    <div
-      key="3"
-      class="h-48 flex items-center justify-center bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 rounded-lg"
-    >
-      幻灯片 3
-    </div>,
-  ];
+  const current = createSignal(0);
+  /** autoplay 示例用独立 current，避免与 dots+arrows 共用导致双份 patch、闪烁与乱跳 */
+  const currentAutoplay = createSignal(0);
 
   return (
     <div class="space-y-10">
       <section>
         <Title level={1}>Carousel 轮播图</Title>
         <Paragraph class="mt-2">
-          轮播图：children、current、onChange、autoplay、autoplayInterval、direction、slidesToShow、infinite、dots、arrows、dotPosition。
-          使用 Tailwind v4，支持 light/dark 主题。
+          轮播图：children、current、onChange、height（可设置高度）、autoplay、direction、dots、arrows
+          等。宽度随容器，高度通过 height 或 class（如 h-64）设置。示例使用
+          placehold.co 网络图片（直接 200，无重定向），传 images 数组即可。
+        </Paragraph>
+        <Paragraph class="mt-1 text-sm text-slate-600 dark:text-slate-400">
+          图片默认{" "}
+          <code class="px-1 py-0.5 rounded bg-slate-100 dark:bg-slate-700">
+            contentFit="contain"
+          </code>，完整显示不裁切；可传{" "}
+          <code class="px-1 py-0.5 rounded bg-slate-100 dark:bg-slate-700">
+            cover
+          </code>{" "}
+          铺满裁切、<code class="px-1 py-0.5 rounded bg-slate-100 dark:bg-slate-700">
+            fill
+          </code>{" "}
+          铺满可拉伸，图片宽高由使用者自行控制。
         </Paragraph>
       </section>
 
@@ -161,11 +211,19 @@ export default function DataDisplayCarousel() {
         <Title level={2}>示例</Title>
 
         <div class="space-y-4">
-          <Title level={3}>dots + arrows</Title>
+          <Title level={3}>dots + arrows（网络图片，高度可设置）</Title>
           <div class="w-full">
-            <Carousel current={current()} onChange={setCurrent} dots arrows>
-              {slides}
-            </Carousel>
+            {/* 传 current getter，状态在 Carousel 内管理；包一层使展开在 dynamic effect 内，返回的 getter 每次被调用时读 current.value 再渲染，图片才能切换 */}
+            {() => (
+              <Carousel
+                current={current.value}
+                onChange={(i) => current.value = i}
+                images={DEMO_IMAGES}
+                height={DEMO_CAROUSEL_HEIGHT}
+                dots
+                arrows
+              />
+            )}
           </div>
           <CodeBlock
             title="代码示例"
@@ -180,15 +238,17 @@ export default function DataDisplayCarousel() {
         <div class="space-y-4">
           <Title level={3}>autoplay</Title>
           <div class="w-full">
-            <Carousel
-              current={current()}
-              onChange={setCurrent}
-              dots
-              autoplay
-              autoplayInterval={3000}
-            >
-              {slides}
-            </Carousel>
+            {() => (
+              <Carousel
+                current={currentAutoplay.value}
+                onChange={(i) => currentAutoplay.value = i}
+                images={DEMO_IMAGES}
+                height={DEMO_CAROUSEL_HEIGHT}
+                dots
+                autoplay
+                autoplayInterval={3000}
+              />
+            )}
           </div>
           <CodeBlock
             title="代码示例"

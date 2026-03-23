@@ -7,9 +7,9 @@ import { twMerge } from "tailwind-merge";
 import type { SizeVariant } from "../types.ts";
 
 export interface TimeRangePickerProps {
-  /** 起始时间，HH:mm 或 HH:mm:ss；可为 getter 以配合 View 细粒度更新 */
+  /** 起始时间；可为 getter / `() => ref.value`（SignalRef） */
   start?: string | (() => string);
-  /** 结束时间，HH:mm 或 HH:mm:ss；可为 getter 以配合 View 细粒度更新 */
+  /** 结束时间；可为 getter / `() => ref.value`（SignalRef） */
   end?: string | (() => string);
   /** 尺寸 */
   size?: SizeVariant;

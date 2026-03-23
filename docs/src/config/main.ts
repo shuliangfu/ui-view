@@ -53,10 +53,17 @@ const config: AppConfig = {
   render: {
     engine: "view",
     mode: "hybrid",
+    /** 非空：仅这些根走 compileSource；须含 routes、依赖包 src、以及 ./src（_client / components） */
+    compiler: {
+      dirs: ["./src", "../src"],
+      // dirs: ["./src"],
+      client: true,
+      server: true,
+    },
     // debug: false,
     /** 关闭客户端激活：不注入 _client.js，仅输出服务端 HTML，链接点击整页跳转，可避免刷新时 hydrate 导致的闪动 */
     // ssr: {
-    //   // hydrate: false,
+    //   hydrate: false,
     // },
     // ssg: {
     //   outputDir: "dist/static",
@@ -81,15 +88,16 @@ const config: AppConfig = {
       // debug: false,
     },
     /** 客户端构建：alias 让打包器解析 @dreamer/ui-view 为上一级 ui-view 的 src（docs 在 ui-view 下） */
-    client: {
-      output: "dist/client",
-      engine: "view",
-      bundle: {
-        alias: {
-          "@dreamer/ui-view": "../src/mod.ts",
-        },
-      },
-    },
+    // client: {
+    //   output: "dist/client",
+    //   engine: "view",
+    //   bundle: {
+    //     alias: {
+    //       "@dreamer/ui-view": "../src/mod.ts",
+    //       "@dreamer/ui-view/mobile": "../src/mobile/mod.ts",
+    //     },
+    //   },
+    // },
     // client: { entry: "...", output: "dist/client", engine: "view", bundle: {}, html: {}, sourcemap: true, debug: false },
     // assets: { css: { extract: true, minify: true, autoprefix: true }, images: {}, publicDir: "public", assetsDir: "assets" },
     // build: { mode: "prod", clean: true, cache: true, incremental: true, silent: false, logLevel: "info" },

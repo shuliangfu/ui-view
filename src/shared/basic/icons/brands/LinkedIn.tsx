@@ -15,5 +15,5 @@ const svg = (
 
 /** LinkedIn 领英品牌 Logo 图标 */
 export function IconBrandLinkedin(props?: IconComponentProps) {
-  return () => <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
+  return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

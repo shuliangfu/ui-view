@@ -3,12 +3,11 @@
  * 桌面为主，移动可卡片化；支持列定义、排序、固定列、展开行、分页、loading、尺寸、边框、行选择。
  */
 
-import { createEffect, createSignal } from "@dreamer/view";
+import { createEffect, createSignal, type SignalRef } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
-import {
-  IconChevronDown,
-  IconChevronUp,
-} from "../../shared/basic/icons/mod.ts";
+/** 按需：单文件图标，避免经 icons/mod 拉入全表 */
+import { IconChevronDown } from "../../shared/basic/icons/ChevronDown.tsx";
+import { IconChevronUp } from "../../shared/basic/icons/ChevronUp.tsx";
 import type { SizeVariant } from "../../shared/types.ts";
 
 export type SortOrder = "ascend" | "descend" | null;
@@ -104,8 +103,8 @@ export interface TableProps<T = unknown> {
 const stateCache = new Map<
   string,
   {
-    selected: ReturnType<typeof createSignal<Set<string>>>;
-    expanded: ReturnType<typeof createSignal<string[]>>;
+    selected: SignalRef<Set<string>>;
+    expanded: SignalRef<string[]>;
   }
 >();
 
@@ -149,7 +148,7 @@ export function Table<
   } = props;
 
   /** 分页当前页（非受控时使用） */
-  const [internalPage, setInternalPage] = createSignal(1);
+  const internalPage = createSignal(1);
 
   /** 由扁平 props 合成的行选择配置，供内部逻辑复用 */
   const rowSelection = onSelectChange
@@ -165,22 +164,19 @@ export function Table<
   const defaultSortCol = columns.find(
     (c) => c.sorter && c.defaultSortOrder != null,
   );
-  const [sortState, setSortState] = createSignal<
+  const sortState = createSignal<
     { key: string | null; order: SortOrder }
   >({
     key: defaultSortCol?.key ?? null,
     order: defaultSortCol?.defaultSortOrder ?? null,
   });
 
-  // 内部选择/展开状态（非受控时使用）；有 stateKey 时从缓存取，避免整树重渲染丢失
-  let internalSelectedKeys: () => Set<string>;
-  let setInternalSelectedKeys: (
-    v: Set<string> | ((prev: Set<string>) => Set<string>),
-  ) => void;
-  let internalExpandedKeys: () => string[];
-  let setInternalExpandedKeys: (
-    v: string[] | ((prev: string[]) => string[]),
-  ) => void;
+  /**
+   * 内部选择/展开状态（非受控时使用）；有 stateKey 时从缓存取，避免整树重渲染丢失。
+   * 使用 SignalRef（.value 读写），与 @dreamer/view 的 createSignal 一致。
+   */
+  let selectedRef: SignalRef<Set<string>>;
+  let expandedRef: SignalRef<string[]>;
 
   if (stateKey) {
     let cached = stateCache.get(stateKey);
@@ -191,17 +187,11 @@ export function Table<
       };
       stateCache.set(stateKey, cached);
     }
-    internalSelectedKeys = cached.selected[0];
-    setInternalSelectedKeys = cached.selected[1];
-    internalExpandedKeys = cached.expanded[0];
-    setInternalExpandedKeys = cached.expanded[1];
+    selectedRef = cached.selected;
+    expandedRef = cached.expanded;
   } else {
-    const [sel, setSel] = createSignal<Set<string>>(new Set());
-    const [exp, setExp] = createSignal<string[]>([]);
-    internalSelectedKeys = sel;
-    setInternalSelectedKeys = setSel;
-    internalExpandedKeys = exp;
-    setInternalExpandedKeys = setExp;
+    selectedRef = createSignal<Set<string>>(new Set());
+    expandedRef = createSignal<string[]>([]);
   }
 
   const getKey = (record: T, index: number): string => {
@@ -217,13 +207,13 @@ export function Table<
     sorter: boolean | ((a: T, b: T) => number),
   ) => {
     if (!sorter) return;
-    const current = sortState();
+    const current = sortState.value;
     let nextOrder: SortOrder = "ascend";
     if (current.key === key) {
       if (current.order === "ascend") nextOrder = "descend";
       else if (current.order === "descend") nextOrder = null;
     }
-    setSortState({ key: nextOrder ? key : null, order: nextOrder });
+    sortState.value = { key: nextOrder ? key : null, order: nextOrder };
   };
 
   /** 全选/取消全选当前传入的数据；startIndex 为数据在 dataSource 中的起始下标，用于 getKey(record, index) */
@@ -234,7 +224,7 @@ export function Table<
   ) => {
     if (!rowSelection) return;
     const newSelected = new Set(
-      rowSelection.selectedRowKeys ?? internalSelectedKeys(),
+      rowSelection.selectedRowKeys ?? selectedRef.value,
     );
     if (checked) {
       currentData.forEach((record, i) => {
@@ -252,7 +242,7 @@ export function Table<
     }
 
     if (rowSelection.selectedRowKeys === undefined) {
-      setInternalSelectedKeys(newSelected);
+      selectedRef.value = newSelected;
     }
 
     const selectedRows = dataSource.filter((record, index) =>
@@ -265,7 +255,7 @@ export function Table<
     if (!rowSelection) return;
     const key = getKey(record, index);
     const newSelected = new Set(
-      rowSelection.selectedRowKeys ?? internalSelectedKeys(),
+      rowSelection.selectedRowKeys ?? selectedRef.value,
     );
 
     if (rowSelection.type === "radio") {
@@ -277,7 +267,7 @@ export function Table<
     }
 
     if (rowSelection.selectedRowKeys === undefined) {
-      setInternalSelectedKeys(newSelected);
+      selectedRef.value = newSelected;
     }
 
     const selectedRows = dataSource.filter((r, i) =>
@@ -289,14 +279,14 @@ export function Table<
   return () => {
     // 展开行：受控用 props，非受控用内部 signal（在 getter 内读以保证 effect 订阅、点击 + 能更新）
     const expandedKeysSource = expandable?.expandedRowKeys ??
-      internalExpandedKeys();
+      expandedRef.value;
     const expandedSet = new Set(
       Array.isArray(expandedKeysSource) ? expandedKeysSource : [],
     );
 
     // 处理排序
     const data = [...dataSource];
-    const { key: sortKey, order: sortOrder } = sortState();
+    const { key: sortKey, order: sortOrder } = sortState.value;
     if (sortKey && sortOrder) {
       const col = columns.find((c) => c.key === sortKey);
       if (col?.sorter) {
@@ -325,7 +315,7 @@ export function Table<
       ? (paginationConfig?.pageSize ?? 10)
       : data.length || 1;
     const currentPage = paginationEnabled
-      ? (paginationConfig?.current ?? internalPage())
+      ? (paginationConfig?.current ?? internalPage.value)
       : 1;
     const total = paginationEnabled
       ? (paginationConfig?.total ?? data.length)
@@ -337,7 +327,7 @@ export function Table<
 
     // 处理选择状态（基于全量 data 的 key，与当前页 displayData 一致）
     const selectedKeys = new Set(
-      rowSelection?.selectedRowKeys ?? internalSelectedKeys(),
+      rowSelection?.selectedRowKeys ?? selectedRef.value,
     );
     const allSelected = displayData.length > 0 && displayData.every(
       (record, index) => {
@@ -347,11 +337,12 @@ export function Table<
         return props?.disabled || selectedKeys.has(key);
       },
     );
-    const indeterminate = !allSelected &&
-      displayData.some((record, index) => {
-        const originalIndex = (currentPage - 1) * pageSize + index;
-        return selectedKeys.has(getKey(record, originalIndex));
-      });
+
+    /**
+     * 选择列原生 input 的 `checked` 须传布尔，勿传 `() => boolean`：
+     * react-jsx 产出 VNode 后由 `applyIntrinsicVNodeProps` 写 DOM，其中会 `continue` 跳过 function 类型，
+     * 导致勾选态永远不反映到 DOM（onSelectChange 仍会触发）。
+     */
 
     /** 固定列 left 偏移（仅 fixed === "left" 的列有值，用于 sticky 定位） */
     const fixedLeftOffsets: (number | null)[] = [];
@@ -371,7 +362,7 @@ export function Table<
     const handlePageChange = (page: number) => {
       if (paginationConfig !== undefined && paginationConfig !== false) {
         if (paginationConfig.current === undefined) {
-          setInternalPage(page);
+          internalPage.value = page;
         }
         paginationConfig.onChange?.(page, pageSize);
       }
@@ -419,7 +410,7 @@ export function Table<
                         e.preventDefault();
                         e.stopPropagation();
                         const cur = rowSelection?.selectedRowKeys ??
-                          internalSelectedKeys();
+                          selectedRef.value;
                         const set = cur instanceof Set
                           ? cur
                           : new Set((cur as string[]) ?? []);
@@ -445,7 +436,7 @@ export function Table<
                         if (input) {
                           const nextSet =
                             rowSelection?.selectedRowKeys === undefined
-                              ? internalSelectedKeys()
+                              ? selectedRef.value
                               : new Set(
                                 rowSelection?.selectedRowKeys ?? [],
                               );
@@ -471,33 +462,16 @@ export function Table<
                   >
                     {rowSelection.type !== "radio" && (
                       <input
-                        key={`header-cb-${allSelected}-${indeterminate}`}
                         type="checkbox"
                         class="rounded border-slate-300 text-blue-600 focus:ring-blue-500 pointer-events-none"
-                        checked={() => {
-                          const src = rowSelection?.selectedRowKeys ??
-                            internalSelectedKeys();
-                          const set = src instanceof Set
-                            ? src
-                            : new Set((src as string[]) ?? []);
-                          return displayData.length > 0 && displayData.every(
-                            (r, i) => {
-                              const k = getKey(
-                                r,
-                                (currentPage - 1) * pageSize + i,
-                              );
-                              const p = rowSelection?.getCheckboxProps?.(r);
-                              return p?.disabled || set.has(k);
-                            },
-                          );
-                        }}
+                        checked={allSelected}
                         tabIndex={-1}
                         readOnly
                         ref={(el: HTMLInputElement | null) => {
                           if (!el) return;
                           createEffect(() => {
                             const src = rowSelection?.selectedRowKeys ??
-                              internalSelectedKeys();
+                              selectedRef.value;
                             const set = src instanceof Set
                               ? src
                               : new Set((src as string[]) ?? []);
@@ -642,7 +616,7 @@ export function Table<
                             e.preventDefault();
                             e.stopPropagation();
                             const cur = rowSelection?.selectedRowKeys ??
-                              internalSelectedKeys();
+                              selectedRef.value;
                             const set = cur instanceof Set
                               ? cur
                               : new Set((cur as string[]) ?? []);
@@ -661,14 +635,7 @@ export function Table<
                               ? "radio"
                               : "checkbox"}
                             class="rounded border-slate-300 text-blue-600 focus:ring-blue-500 pointer-events-none"
-                            checked={() => {
-                              const src = rowSelection?.selectedRowKeys ??
-                                internalSelectedKeys();
-                              const s = src instanceof Set
-                                ? src
-                                : new Set((src as string[]) ?? []);
-                              return s.has(key);
-                            }}
+                            checked={isSelected}
                             disabled={checkboxProps?.disabled}
                             tabIndex={-1}
                             readOnly
@@ -685,11 +652,10 @@ export function Table<
                                 e.stopPropagation();
                                 // 非受控时更新内部展开态，保证 getter 重跑、UI 更新
                                 if (expandable.expandedRowKeys === undefined) {
-                                  setInternalExpandedKeys((prev) =>
+                                  expandedRef.value = (prev) =>
                                     isExpanded
                                       ? prev.filter((k) => k !== key)
-                                      : [...prev, key]
-                                  );
+                                      : [...prev, key];
                                 }
                                 expandable.onExpand?.(!isExpanded, record);
                               }}

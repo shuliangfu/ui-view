@@ -4,7 +4,8 @@
  */
 
 import { twMerge } from "tailwind-merge";
-import { IconClose } from "../../shared/basic/icons/mod.ts";
+/** 按需：单文件图标，避免经 icons/mod 拉入全表 */
+import { IconClose } from "../../shared/basic/icons/Close.tsx";
 
 export type BottomSheetHeight = "auto" | "half" | "full";
 
@@ -55,7 +56,10 @@ export function BottomSheet(props: BottomSheetProps) {
   } = props;
 
   const shouldRender = open || !destroyOnClose;
-  if (!shouldRender) return () => null;
+  /** 不挂载时直接返回 null（无模块级 signal，无需渲染 getter） */
+  if (!shouldRender) {
+    return null;
+  }
 
   const handleMaskClick = (e: Event) => {
     if (e.target === e.currentTarget && maskClosable) onClose?.();
@@ -81,74 +85,77 @@ export function BottomSheet(props: BottomSheetProps) {
     } else div.style.transform = "translateY(0)";
   };
 
-  return () => {
-    if (!open) {
-      document.body.style.overflow = "";
-      return null;
-    }
-    document.body.style.overflow = "hidden";
-    return (
+  /** 关闭时恢复 body 滚动；打开时锁定（仅浏览器环境） */
+  const doc = typeof globalThis.document !== "undefined"
+    ? globalThis.document
+    : null;
+  if (!open) {
+    if (doc) doc.body.style.overflow = "";
+    return null;
+  }
+  if (doc) doc.body.style.overflow = "hidden";
+
+  return (
+    <div
+      class="fixed inset-0 z-300 flex flex-col justify-end"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={title ? "bottomsheet-title" : undefined}
+    >
       <div
-        class="fixed inset-0 z-300 flex flex-col justify-end"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={title ? "bottomsheet-title" : undefined}
+        class="absolute inset-0 bg-black/50 dark:bg-black/60 transition-opacity"
+        onClick={(e: Event) => handleMaskClick(e)}
+        aria-hidden
+      />
+      <div
+        ref={setSheetRef}
+        class={twMerge(
+          "relative z-10 flex flex-col rounded-t-2xl bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-xl overflow-hidden",
+          heightClasses[height],
+          className,
+        )}
+        onClick={(e: Event) => e.stopPropagation()}
       >
-        <div
-          class="absolute inset-0 bg-black/50 dark:bg-black/60 transition-opacity"
-          onClick={(e: Event) => handleMaskClick(e)}
-          aria-hidden
-        />
-        <div
-          ref={setSheetRef}
-          class={twMerge(
-            "relative z-10 flex flex-col rounded-t-2xl bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-xl overflow-hidden",
-            heightClasses[height],
-            className,
-          )}
-          onClick={(e: Event) => e.stopPropagation()}
-        >
-          {/* 拖拽指示条（移动端常见） */}
-          <div class="shrink-0 flex justify-center pt-2 pb-1">
-            <span class="w-10 h-1 rounded-full bg-slate-300 dark:bg-slate-600" />
-          </div>
-          {title != null && title !== "" && (
-            <div class="flex items-center justify-between shrink-0 px-4 pb-3">
-              <h2 id="bottomsheet-title" class="text-lg font-semibold">
-                {title}
-              </h2>
-              {closable && (
-                <button
-                  type="button"
-                  aria-label="关闭"
-                  class="p-2 -m-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400"
-                  onClick={() => onClose?.()}
-                >
-                  <IconClose class="w-5 h-5" />
-                </button>
-              )}
-            </div>
-          )}
-          {title == null && closable && (
-            <div class="absolute top-3 right-3 z-10">
+        {/* 拖拽指示条（移动端常见） */}
+        <div class="shrink-0 flex justify-center pt-2 pb-1">
+          <span class="w-10 h-1 rounded-full bg-slate-300 dark:bg-slate-600" />
+        </div>
+        {title != null && title !== "" && (
+          <div class="flex items-center justify-between shrink-0 px-4 pb-3">
+            <h2 id="bottomsheet-title" class="text-lg font-semibold">
+              {title}
+            </h2>
+            {closable && (
               <button
                 type="button"
                 aria-label="关闭"
-                class="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400"
+                class="p-2 -m-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400"
                 onClick={() => onClose?.()}
               >
                 <IconClose class="w-5 h-5" />
               </button>
-            </div>
-          )}
-          <div class="flex-1 overflow-auto min-h-0 px-4 pb-6">{children}</div>
-          {footer != null && (
-            <div class="shrink-0 border-t border-slate-200 dark:border-slate-600 px-4 py-3">
-              {footer}
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
+        {title == null && closable && (
+          <div class="absolute top-3 right-3 z-10">
+            <button
+              type="button"
+              aria-label="关闭"
+              class="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400"
+              onClick={() => onClose?.()}
+            >
+              <IconClose class="w-5 h-5" />
+            </button>
+          </div>
+        )}
+        <div class="flex-1 overflow-auto min-h-0 px-4 pb-6">{children}</div>
+        {footer != null && (
+          <div class="shrink-0 border-t border-slate-200 dark:border-slate-600 px-4 py-3">
+            {footer}
+          </div>
+        )}
       </div>
-    );
-  };
+    </div>
+  );
 }

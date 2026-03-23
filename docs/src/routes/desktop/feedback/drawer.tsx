@@ -87,35 +87,35 @@ const DRAWER_API: ApiRow[] = [
 const importCode = `import { createSignal } from "@dreamer/view";
 import { Button, Drawer } from "@dreamer/ui-view";
 
-const [open, setOpen] = createSignal(false);
+const open = createSignal(false);
 
-<Button onClick={() => setOpen(true)}>打开抽屉</Button>
+<Button onClick={() => open.value = true}>打开抽屉</Button>
 {() => (
   <Drawer
-    open={open()}
-    onClose={() => setOpen(false)}
+    open={open.value}
+    onClose={() => open.value = false}
     placement="right"
     title="标题"
-    footer={<Button onClick={() => setOpen(false)}>确定</Button>}
+    footer={<Button onClick={() => open.value = false}>确定</Button>}
   >
     <p>抽屉内容</p>
   </Drawer>
 )}`;
 
 const exampleRight = `<Drawer
-  open={open()}
-  onClose={() => setOpen(false)}
+  open={open.value}
+  onClose={() => open.value = false}
   placement="right"
   title="右侧抽屉"
-  footer={<Button variant="primary" onClick={() => setOpen(false)}>确定</Button>}
+  footer={<Button variant="primary" onClick={() => open.value = false}>确定</Button>}
 >
   <p>抽屉内容区域，可放置表单或列表。</p>
 </Drawer>`;
 
 const exampleLeft = `{() => (
   <Drawer
-    open={open()}
-    onClose={() => setOpen(false)}
+    open={open.value}
+    onClose={() => open.value = false}
     placement="left"
     width={320}
     title="左侧抽屉"
@@ -125,8 +125,8 @@ const exampleLeft = `{() => (
 )}`;
 
 export default function FeedbackDrawer() {
-  const [openRight, setOpenRight] = createSignal(false);
-  const [openLeft, setOpenLeft] = createSignal(false);
+  const openRight = createSignal(false);
+  const openLeft = createSignal(false);
 
   return (
     <div class="space-y-10">
@@ -158,29 +158,29 @@ export default function FeedbackDrawer() {
             <Button
               type="button"
               variant="default"
-              onClick={() => setOpenLeft(true)}
+              onClick={() => openLeft.value = true}
             >
               左侧抽屉
             </Button>
             <Button
               type="button"
               variant="primary"
-              onClick={() => setOpenRight(true)}
+              onClick={() => openRight.value = true}
             >
               右侧抽屉
             </Button>
           </div>
           {() => (
             <Drawer
-              open={openRight()}
-              onClose={() => setOpenRight(false)}
+              open={openRight.value}
+              onClose={() => openRight.value = false}
               placement="right"
               title="右侧抽屉"
               footer={
                 <Button
                   type="button"
                   variant="primary"
-                  onClick={() => setOpenRight(false)}
+                  onClick={() => openRight.value = false}
                 >
                   确定
                 </Button>
@@ -193,8 +193,8 @@ export default function FeedbackDrawer() {
           )}
           {() => (
             <Drawer
-              open={openLeft()}
-              onClose={() => setOpenLeft(false)}
+              open={openLeft.value}
+              onClose={() => openLeft.value = false}
               placement="left"
               width={320}
               title="左侧抽屉"

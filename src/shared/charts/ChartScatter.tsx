@@ -16,5 +16,5 @@ export interface ChartScatterProps {
 
 /** 散点图组件 */
 export function ChartScatter(props: ChartScatterProps) {
-  return () => <ChartBase type="scatter" {...props} />;
+  return <ChartBase type="scatter" {...props} />;
 }

@@ -5,7 +5,8 @@
 
 import { createSignal } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
-import { IconChevronDown } from "../../shared/basic/icons/mod.ts";
+/** 按需：单文件图标，避免经 icons/mod 拉入全表 */
+import { IconChevronDown } from "../../shared/basic/icons/ChevronDown.tsx";
 import type { SizeVariant } from "../../shared/types.ts";
 
 export interface SelectOption {
@@ -61,7 +62,8 @@ export function Select(props: SelectProps) {
     children,
   } = props;
 
-  const [open, setOpen] = createSignal(false);
+  /** 下拉是否展开（SignalRef） */
+  const openState = createSignal(false);
   const sizeCls = sizeClasses[size];
   const resolvedValue = typeof value === "function" ? value() : value;
   const selectedOption = options?.find((o) => o.value === resolvedValue);
@@ -70,16 +72,19 @@ export function Select(props: SelectProps) {
   const triggerChange = (newValue: string) => {
     const synthetic = { target: { value: newValue } } as unknown as Event;
     onChange?.(synthetic);
-    setOpen(false);
+    openState.value = false;
   };
 
-  const handleBackdropClick = () => setOpen(false);
+  const handleBackdropClick = () => {
+    openState.value = false;
+  };
 
   /** 有 options 时走自定义下拉；否则走原生 select（兼容 children 传 option） */
   if (!options) {
     const base =
       "border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border-slate-300 dark:border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer";
-    return () => (
+    /** 无内部 open 状态，直接返回 VNode */
+    return (
       <select
         id={id}
         name={name}
@@ -101,10 +106,12 @@ export function Select(props: SelectProps) {
         id={id}
         disabled={disabled}
         aria-haspopup="listbox"
-        aria-expanded={open()}
+        aria-expanded={openState.value}
         aria-label={displayText || placeholder || "选择"}
         class={twMerge("w-full", triggerBase, sizeCls)}
-        onClick={() => !disabled && setOpen((o) => !o)}
+        onClick={() => {
+          if (!disabled) openState.value = (prev) => !prev;
+        }}
       >
         <span
           class={selectedOption
@@ -117,11 +124,11 @@ export function Select(props: SelectProps) {
           size="sm"
           class={twMerge(
             "shrink-0 text-slate-400 dark:text-slate-500 transition-transform",
-            open() && "rotate-180",
+            openState.value && "rotate-180",
           )}
         />
       </button>
-      {open() && (
+      {openState.value && (
         <>
           {typeof globalThis !== "undefined" &&
             (() => {
@@ -129,7 +136,9 @@ export function Select(props: SelectProps) {
                 string,
                 (() => void) | undefined
               >;
-              g[DROPDOWN_ESC_KEY] = () => setOpen(false);
+              g[DROPDOWN_ESC_KEY] = () => {
+                openState.value = false;
+              };
               return null;
             })()}
           <div

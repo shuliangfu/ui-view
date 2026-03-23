@@ -84,7 +84,8 @@ export function Popover(props: PopoverProps) {
   const posCls = placementClasses[placement];
   const arrowCls = arrow ? arrowClass(placement) : "";
 
-  return () => (
+  /** CSS 悬停展示，无内部 signal，直接返回 VNode */
+  return (
     <span class={twMerge("relative inline-flex group", className)}>
       {children}
       <span

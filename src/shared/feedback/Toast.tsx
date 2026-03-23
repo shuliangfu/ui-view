@@ -27,7 +27,7 @@ const toastTypeClasses: Record<ToastType, string> = {
 
 /** 单条 Toast 项：按 type 使用与按钮一致的背景色 + 文案（自动 duration 关闭） */
 function ToastItemEl({ item }: { item: ToastItem }) {
-  return () => (
+  return (
     <div
       role="alert"
       class={twMerge(
@@ -40,7 +40,11 @@ function ToastItemEl({ item }: { item: ToastItem }) {
   );
 }
 
-/** Toast 容器：固定定位，按 placement 分组渲染，自动关闭由 store 内 setTimeout 处理 */
+/**
+ * Toast 容器：固定定位，按 placement 分组渲染，自动关闭由 store 内 setTimeout 处理。
+ * 外层 `return () => { ... }` 必须保留：在渲染 getter 内调用 `toastList()` 读模块级 SignalRef，
+ * 父组件不会因命令式 `toast()` 而重渲染，仅靠此处订阅列表变化。
+ */
 export function ToastContainer() {
   return () => {
     const list = toastList();

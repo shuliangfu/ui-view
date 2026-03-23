@@ -66,7 +66,7 @@ const STEP_ITEM_API: ApiRow[] = [
 const importCode = `import { createSignal } from "@dreamer/view";
 import { Steps } from "@dreamer/ui-view";
 
-const [current, setCurrent] = createSignal(0);
+const current = createSignal(0);
 const items = [
   { title: "步骤一", description: "填写基本信息" },
   { title: "步骤二", description: "确认订单" },
@@ -74,21 +74,21 @@ const items = [
 ];
 <Steps
   items={items}
-  current={current()}
-  onChange={setCurrent}
+  current={current.value}
+  onChange={(c) => current.value = c}
   direction="horizontal"
 />`;
 
 const exampleHorizontal = `<Steps
   items={items}
-  current={current()}
-  onChange={setCurrent}
+  current={current.value}
+  onChange={(c) => current.value = c}
   direction="horizontal"
 />`;
 
 const exampleVertical = `<Steps
   items={items}
-  current={current()}
+  current={current.value}
   direction="vertical"
 />`;
 
@@ -99,7 +99,7 @@ const exampleStatus = `<Steps items={[
 ]} current={1} />`;
 
 /** 模块级 signal，0=第1步、1=第2步、2=第3步，整树重渲染时不被重置 */
-const [current, setCurrent] = createSignal(0);
+const current = createSignal(0);
 
 export default function NavigationSteps() {
   const items = [
@@ -138,8 +138,8 @@ export default function NavigationSteps() {
           <div className="w-full max-w-3xl" style={{ maxWidth: "48rem" }}>
             <Steps
               items={items}
-              current={current}
-              onChange={setCurrent}
+              current={current.value}
+              onChange={(c) => current.value = c}
               direction="horizontal"
             />
           </div>
@@ -147,8 +147,8 @@ export default function NavigationSteps() {
             <button
               type="button"
               class="px-3 py-1.5 text-sm rounded border border-slate-300 dark:border-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={current() === 0}
-              onClick={() => setCurrent((c) => Math.max(0, c - 1))}
+              disabled={current.value === 0}
+              onClick={() => current.value = (c) => Math.max(0, c - 1)}
             >
               上一步
             </button>
@@ -156,13 +156,13 @@ export default function NavigationSteps() {
             <button
               type="button"
               class="px-3 py-1.5 text-sm rounded bg-blue-600 text-white disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={current() >= 3}
+              disabled={current.value >= 3}
               onClick={() =>
-                current() === 2
-                  ? setCurrent(3)
-                  : setCurrent((c) => Math.min(2, c + 1))}
+                current.value === 2
+                  ? current.value = 3
+                  : current.value = (c) => Math.min(2, c + 1)}
             >
-              {current() >= 3 ? "已完成" : "下一步"}
+              {current.value >= 3 ? "已完成" : "下一步"}
             </button>
           </div>
           <CodeBlock
@@ -178,7 +178,7 @@ export default function NavigationSteps() {
         <div class="space-y-4">
           <Title level={3}>direction=vertical</Title>
           <div className="w-full max-w-3xl" style={{ maxWidth: "48rem" }}>
-            <Steps items={items} current={current} direction="vertical" />
+            <Steps items={items} current={current.value} direction="vertical" />
           </div>
           <CodeBlock
             title="代码示例"

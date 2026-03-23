@@ -50,7 +50,8 @@ export function ChartBase<T extends BaseChartProps["type"]>(
     }
   };
 
-  return () => (
+  /** 直接返回 VNode，与 @dreamer/view 基础组件及 shared/basic 约定一致 */
+  return (
     <div
       class={className ?? "w-full h-64"}
       style={width != null || height != null

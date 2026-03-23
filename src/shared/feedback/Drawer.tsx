@@ -4,7 +4,8 @@
  */
 
 import { twMerge } from "tailwind-merge";
-import { IconClose } from "../basic/icons/mod.ts";
+/** 按需：单文件图标，避免经 icons/mod 拉入全表 */
+import { IconClose } from "../basic/icons/Close.tsx";
 
 export type DrawerPlacement = "left" | "right";
 
@@ -54,7 +55,10 @@ export function Drawer(props: DrawerProps) {
   } = props;
 
   const shouldRender = open || !destroyOnClose;
-  if (!shouldRender) return () => null;
+  /** 不挂载时直接返回 null（无需渲染 getter：无模块级 signal 依赖） */
+  if (!shouldRender) {
+    return null;
+  }
 
   const handleMaskClick = (e: Event) => {
     if (e.target === e.currentTarget && maskClosable) onClose?.();
@@ -85,60 +89,51 @@ export function Drawer(props: DrawerProps) {
     } else div.style.transform = "translateX(0)";
   };
 
-  return () => {
-    if (!open) {
-      document.body.style.overflow = "";
-      return null;
-    }
-    document.body.style.overflow = "hidden";
-    return (
+  /** 关闭时恢复 body 滚动；打开时锁定滚动（仅浏览器环境，避免 SSR 访问 document） */
+  const doc = typeof globalThis.document !== "undefined"
+    ? globalThis.document
+    : null;
+  if (!open) {
+    if (doc) doc.body.style.overflow = "";
+    return null;
+  }
+  if (doc) doc.body.style.overflow = "hidden";
+
+  return (
+    <div
+      class="fixed inset-0 z-300 flex"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={title ? "drawer-title" : undefined}
+      tabindex={-1}
+      onKeyDown={(e: Event) => handleKeyDown(e as KeyboardEvent)}
+    >
       <div
-        class="fixed inset-0 z-300 flex"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={title ? "drawer-title" : undefined}
-        tabindex={-1}
-        onKeyDown={(e: Event) => handleKeyDown(e as KeyboardEvent)}
+        class={twMerge(
+          "absolute inset-0 bg-black/50 dark:bg-black/60 backdrop-blur-sm transition-opacity",
+        )}
+        onClick={(e: Event) => handleMaskClick(e)}
+        aria-hidden
+      />
+      <div
+        ref={setDrawerRef}
+        class={twMerge(
+          "relative z-10 flex flex-col h-full bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-xl",
+          isLeft ? "ml-0" : "ml-auto",
+          className,
+        )}
+        style={{
+          width: widthStyle,
+          maxWidth: "100vw",
+        }}
+        onClick={(e: Event) => e.stopPropagation()}
       >
-        <div
-          class={twMerge(
-            "absolute inset-0 bg-black/50 dark:bg-black/60 backdrop-blur-sm transition-opacity",
-          )}
-          onClick={(e: Event) => handleMaskClick(e)}
-          aria-hidden
-        />
-        <div
-          ref={setDrawerRef}
-          class={twMerge(
-            "relative z-10 flex flex-col h-full bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-xl",
-            isLeft ? "ml-0" : "ml-auto",
-            className,
-          )}
-          style={{
-            width: widthStyle,
-            maxWidth: "100vw",
-          }}
-          onClick={(e: Event) => e.stopPropagation()}
-        >
-          {title != null && title !== "" && (
-            <div class="flex items-center justify-between shrink-0 px-6 py-4 border-b border-slate-200 dark:border-slate-600">
-              <h2 id="drawer-title" class="text-lg font-semibold">
-                {title}
-              </h2>
-              {closable && (
-                <button
-                  type="button"
-                  aria-label="关闭"
-                  class="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400"
-                  onClick={() => onClose?.()}
-                >
-                  <IconClose class="w-5 h-5" />
-                </button>
-              )}
-            </div>
-          )}
-          {title == null && closable && (
-            <div class="absolute top-4 right-4 z-10">
+        {title != null && title !== "" && (
+          <div class="flex items-center justify-between shrink-0 px-6 py-4 border-b border-slate-200 dark:border-slate-600">
+            <h2 id="drawer-title" class="text-lg font-semibold">
+              {title}
+            </h2>
+            {closable && (
               <button
                 type="button"
                 aria-label="关闭"
@@ -147,16 +142,28 @@ export function Drawer(props: DrawerProps) {
               >
                 <IconClose class="w-5 h-5" />
               </button>
-            </div>
-          )}
-          <div class="flex-1 overflow-auto min-h-0 px-6 py-4">{children}</div>
-          {footer != null && (
-            <div class="shrink-0 flex items-center justify-end gap-2 px-6 py-4 border-t border-slate-200 dark:border-slate-600">
-              {footer}
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
+        {title == null && closable && (
+          <div class="absolute top-4 right-4 z-10">
+            <button
+              type="button"
+              aria-label="关闭"
+              class="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400"
+              onClick={() => onClose?.()}
+            >
+              <IconClose class="w-5 h-5" />
+            </button>
+          </div>
+        )}
+        <div class="flex-1 overflow-auto min-h-0 px-6 py-4">{children}</div>
+        {footer != null && (
+          <div class="shrink-0 flex items-center justify-end gap-2 px-6 py-4 border-t border-slate-200 dark:border-slate-600">
+            {footer}
+          </div>
+        )}
       </div>
-    );
-  };
+    </div>
+  );
 }

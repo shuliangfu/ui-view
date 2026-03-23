@@ -4,7 +4,8 @@
  */
 
 import { twMerge } from "tailwind-merge";
-import { IconCheck } from "../basic/icons/mod.ts";
+/** 按需：单文件图标，避免经 icons/mod 拉入全表 */
+import { IconCheck } from "../basic/icons/Check.tsx";
 
 export type StepStatus = "wait" | "process" | "finish" | "error";
 
@@ -20,7 +21,7 @@ export interface StepItem {
 export interface StepsProps {
   /** 步骤项 */
   items: StepItem[];
-  /** 当前步骤（从 0 开始）；可传 number 或 getter () => number 以支持响应式更新 */
+  /** 当前步骤（从 0 开始）；可传 number 或 getter / `() => ref.value`（SignalRef） */
   current?: number | (() => number);
   /** 方向：水平 或 垂直，默认 "horizontal" */
   direction?: "horizontal" | "vertical";

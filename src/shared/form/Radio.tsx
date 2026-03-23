@@ -45,7 +45,7 @@ export function Radio(props: RadioProps) {
     children,
   } = props;
 
-  return () => (
+  return (
     <label class={twMerge(labelCls, error && errorCls, className)}>
       <input
         type="radio"

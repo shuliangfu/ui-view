@@ -1,12 +1,13 @@
 /**
  * Menu 菜单列表（View）。
- * 桌面多级、移动可单层/折叠；选中态由组件内部维护，支持 onClick、vertical/horizontal、
+ * 桌面多级、移动可单层/折叠；选中态由内部 `SignalRef` 维护，支持 onClick、vertical/horizontal、
  * 水平子菜单弹出层（usePopoverSubmenu）、键盘上下键导航（focusedKey/onFocusChange）。
  */
 
-import { createSignal } from "@dreamer/view";
+import { createSignal } from "@dreamer/view/signal";
 import { twMerge } from "tailwind-merge";
-import { IconChevronRight } from "../basic/icons/mod.ts";
+/** 按需：单文件图标，避免经 icons/mod 拉入全表 */
+import { IconChevronRight } from "../basic/icons/ChevronRight.tsx";
 
 export interface MenuItem {
   /** 唯一 key */
@@ -30,7 +31,7 @@ export interface MenuProps {
   usePopoverSubmenu?: boolean;
   /** 是否展开所有子菜单（vertical 时），默认 false */
   defaultOpenKeys?: string[];
-  /** 受控展开的子菜单 key 列表；可为 getter 以配合 View 细粒度更新（点击子菜单可收起/展开） */
+  /** 受控展开的子菜单 key 列表；可为 getter / `() => ref.value`（SignalRef） */
   openKeys?: string[] | (() => string[]);
   /** 展开/收起子菜单回调（可选，受控时用） */
   onOpenChange?: (openKeys: string[]) => void;
@@ -202,54 +203,54 @@ export function Menu(props: MenuProps) {
   } = props;
 
   /** 选中态由组件内部维护，点击叶子项时更新 */
-  const [selectedKeys, setSelectedKeys] = createSignal<string[]>([]);
+  const selectedKeysRef = createSignal<string[]>([]);
 
   const resolvedInitialOpen = typeof props.openKeys === "function"
     ? props.openKeys()
     : (props.openKeys ?? defaultOpenKeys);
-  const [popoverOpenKeys, setPopoverOpenKeys] = createSignal<string[]>(
+  const popoverOpenKeysRef = createSignal<string[]>(
     resolvedInitialOpen,
   );
   /** 垂直或水平内联时，未传 openKeys 时的内部展开状态，保证点击子菜单标题可收起/展开 */
-  const [internalOpenKeys, setInternalOpenKeys] = createSignal<string[]>(
+  const internalOpenKeysRef = createSignal<string[]>(
     defaultOpenKeys,
   );
 
   const handleOpenChange = (key: string) => {
     const openVal = usePopoverSubmenu
-      ? popoverOpenKeys()
+      ? popoverOpenKeysRef.value
       : (props.openKeys !== undefined
         ? (typeof props.openKeys === "function"
           ? props.openKeys()
           : props.openKeys)
-        : internalOpenKeys());
+        : internalOpenKeysRef.value);
     const next = new Set(openVal);
     if (next.has(key)) next.delete(key);
     else next.add(key);
-    const nextArr = Array.from(next);
-    if (usePopoverSubmenu) setPopoverOpenKeys(nextArr);
-    else if (props.openKeys === undefined) setInternalOpenKeys(nextArr);
+    const nextArr = Array.from(next) as string[];
+    if (usePopoverSubmenu) popoverOpenKeysRef.value = nextArr;
+    else if (props.openKeys === undefined) internalOpenKeysRef.value = nextArr;
     onOpenChange?.(nextArr);
   };
 
   const closePopover = () => {
-    setPopoverOpenKeys([]);
+    popoverOpenKeysRef.value = [];
     onOpenChange?.([]);
   };
 
   /** 点击叶子项：更新内部选中态并通知外部 onClick */
   const handleSelectKey = (key: string) => {
-    setSelectedKeys([key]);
+    selectedKeysRef.value = [key];
     onClick?.(key);
   };
 
   const openKeysVal = usePopoverSubmenu
-    ? popoverOpenKeys()
+    ? popoverOpenKeysRef.value
     : (props.openKeys !== undefined
       ? (typeof props.openKeys === "function"
         ? props.openKeys()
         : props.openKeys)
-      : internalOpenKeys());
+      : internalOpenKeysRef.value);
   const openSet = new Set(openKeysVal);
   const orderedKeys = getOrderedKeys(items, openSet);
 
@@ -265,9 +266,12 @@ export function Menu(props: MenuProps) {
     onFocusChange(orderedKeys[nextIndex] ?? orderedKeys[0]!);
   };
 
+  /**
+   * 渲染 getter：读 `selectedKeysRef.value`；子项仍用 `renderItem` 返回的 getter 以稳定子树。
+   */
   return () => {
-    /** 在渲染函数内读取 selectedKeys，保证选中态更新后 UI 能响应 */
-    const selectedSet = new Set(selectedKeys());
+    /** 在渲染函数内读取选中列表，保证选中态更新后 UI 能响应 */
+    const selectedSet = new Set(selectedKeysRef.value);
     return (
       <nav
         class={twMerge(

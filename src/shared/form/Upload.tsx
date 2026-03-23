@@ -112,7 +112,7 @@ export function Upload(props: UploadProps) {
     />
   );
 
-  return () => (
+  return (
     <div class={twMerge("space-y-2", className)}>
       {showDrag
         ? (

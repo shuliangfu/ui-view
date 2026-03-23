@@ -50,7 +50,8 @@ export function DateRangePicker(props: DateRangePickerProps) {
   } = props;
   const sizeCls = sizeClasses[size];
 
-  return () => (
+  /** 无内部 signal，直接返回 VNode */
+  return (
     <div class={twMerge("flex flex-wrap items-center gap-2", className)}>
       <input
         type="date"

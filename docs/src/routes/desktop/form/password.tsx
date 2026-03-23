@@ -83,19 +83,19 @@ const PASSWORD_API: ApiRow[] = [
 const importCode = `import { Password, Form, FormItem } from "@dreamer/ui-view";
 import { createSignal } from "@dreamer/view";
 
-const [val, setVal] = createSignal("");
+const val = createSignal("");
 <FormItem label="密码">
   <Password
-    value={val}
-    onInput={(e) => setVal((e.target as HTMLInputElement).value)}
+    value={() => val.value}
+    onInput={(e) => val.value = (e.target as HTMLInputElement).value}
     placeholder="输入密码"
     showStrength
   />
 </FormItem>`;
 
 export default function FormPassword() {
-  const [val, setVal] = createSignal("");
-  const [valNoStrength, setValNoStrength] = createSignal("");
+  const val = createSignal("");
+  const valNoStrength = createSignal("");
 
   return (
     <div class="space-y-10">
@@ -128,9 +128,11 @@ export default function FormPassword() {
             <FormItem label="密码" id="password-1">
               <Password
                 id="password-1"
-                value={val}
-                onInput={(e) => setVal((e.target as HTMLInputElement).value)}
-                onChange={(e) => setVal((e.target as HTMLInputElement).value)}
+                value={() => val.value}
+                onInput={(e) =>
+                  val.value = (e.target as HTMLInputElement).value}
+                onChange={(e) =>
+                  val.value = (e.target as HTMLInputElement).value}
                 showStrength
                 placeholder="输入密码看强度"
               />
@@ -138,9 +140,9 @@ export default function FormPassword() {
             <CodeBlock
               title="代码示例"
               code={`<Password
-  value={val}
-  onInput={(e) => setVal((e.target as HTMLInputElement).value)}
-  onChange={(e) => setVal((e.target as HTMLInputElement).value)}
+  value={() => val.value}
+  onInput={(e) => val.value = (e.target as HTMLInputElement).value}
+  onChange={(e) => val.value = (e.target as HTMLInputElement).value}
   showStrength
   placeholder="输入密码看强度"
 />`}
@@ -155,20 +157,20 @@ export default function FormPassword() {
             <Title level={2}>无强度提示</Title>
             <FormItem label="密码">
               <Password
-                value={valNoStrength}
+                value={() => valNoStrength.value}
                 onInput={(e) =>
-                  setValNoStrength((e.target as HTMLInputElement).value)}
+                  valNoStrength.value = (e.target as HTMLInputElement).value}
                 onChange={(e) =>
-                  setValNoStrength((e.target as HTMLInputElement).value)}
+                  valNoStrength.value = (e.target as HTMLInputElement).value}
                 placeholder="仅显隐切换"
               />
             </FormItem>
             <CodeBlock
               title="代码示例"
               code={`<Password
-  value={valNoStrength}
-  onInput={(e) => setValNoStrength((e.target as HTMLInputElement).value)}
-  onChange={(e) => setValNoStrength((e.target as HTMLInputElement).value)}
+  value={() => valNoStrength.value}
+  onInput={(e) => valNoStrength.value = (e.target as HTMLInputElement).value}
+  onChange={(e) => valNoStrength.value = (e.target as HTMLInputElement).value}
   placeholder="仅显隐切换"
 />`}
               language="tsx"

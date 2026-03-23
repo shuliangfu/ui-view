@@ -91,7 +91,7 @@ export function Stack(props: StackProps) {
     ? gapMap[gapNum]
     : "gap-4";
 
-  return () => (
+  return (
     <div
       class={twMerge(
         inline ? "inline-flex" : "flex",

@@ -3,7 +3,7 @@
  * 固定顶部居中展示，支持 success/error/info/warning、duration。
  */
 
-import { createSignal } from "@dreamer/view";
+import { createSignal } from "@dreamer/view/signal";
 
 /** 单条 Message 类型 */
 export type MessageType = "success" | "error" | "info" | "warning";
@@ -22,9 +22,13 @@ export interface MessageItem {
   createdAt: number;
 }
 
-/** 全局 Message 列表（模块级 signal） */
-const [getMessageList, setMessageList] = createSignal<MessageItem[]>([]);
-export const messageList = getMessageList;
+/** 全局 Message 列表（模块级 SignalRef） */
+const messageListRef = createSignal<MessageItem[]>([]);
+
+/** 供 MessageContainer 在渲染 getter 内订阅列表 */
+export function messageList(): MessageItem[] {
+  return messageListRef.value;
+}
 
 function nextId(): string {
   return `message-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
@@ -37,8 +41,8 @@ function push(
   },
 ): string {
   const id = nextId();
-  const list = getMessageList();
-  setMessageList([
+  const list = messageListRef.value;
+  messageListRef.value = [
     ...list,
     {
       ...item,
@@ -46,7 +50,7 @@ function push(
       id,
       createdAt: Date.now(),
     },
-  ]);
+  ];
   if (item.duration > 0) {
     setTimeout(() => removeMessage(id), item.duration);
   }
@@ -55,12 +59,14 @@ function push(
 
 /** 移除指定 id 的 Message */
 export function removeMessage(id: string): void {
-  setMessageList(getMessageList().filter((m: MessageItem) => m.id !== id));
+  messageListRef.value = messageListRef.value.filter((m: MessageItem) =>
+    m.id !== id
+  );
 }
 
 /** 关闭全部 Message */
 export function clearMessages(): void {
-  setMessageList([]);
+  messageListRef.value = [];
 }
 
 const DEFAULT_DURATION = 3000;

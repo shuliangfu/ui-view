@@ -4,7 +4,8 @@
  */
 
 import { twMerge } from "tailwind-merge";
-import { IconArrowLeft } from "../basic/icons/mod.ts";
+/** 按需：单文件图标，避免经 icons/mod 拉入全表 */
+import { IconArrowLeft } from "../basic/icons/ArrowLeft.tsx";
 import type { BreadcrumbItem } from "./breadcrumb-types.ts";
 
 export interface PageHeaderProps {

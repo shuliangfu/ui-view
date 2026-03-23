@@ -1,5 +1,9 @@
 /**
  * View 表单组件入口（与 ANALYSIS 3.2 对齐）。
+ *
+ * 受控值可与 `@dreamer/view/signal` 的 `SignalRef` 配合：例如
+ * `value={() => textRef.value}`、`checked={() => checkedRef.value}`，
+ * 由 View 对属性 getter 做细粒度更新；部分组件仍使用 `return () =>` 以稳定 DOM、避免输入失焦（见各文件注释）。
  */
 export { Input } from "./Input.tsx";
 export type { InputProps } from "./Input.tsx";
@@ -33,6 +37,9 @@ export type { RateProps } from "./Rate.tsx";
 /** TimePicker 由桌面版提供（desktop/form/TimePicker），主包使用自定义下拉实现 */
 export { TimeRangePicker } from "./TimeRangePicker.tsx";
 export type { TimeRangePickerProps } from "./TimeRangePicker.tsx";
+/** Transfer 穿梭框（双列选择），归类为表单类组件 */
+export { Transfer } from "./Transfer.tsx";
+export type { TransferItem, TransferProps } from "./Transfer.tsx";
 export { Upload } from "./Upload.tsx";
 export type { UploadFile, UploadFileStatus, UploadProps } from "./Upload.tsx";
 export { ColorPicker } from "./ColorPicker.tsx";

@@ -1,5 +1,9 @@
 /**
  * 3.7 数据展示（Data Display，C 共用）。D：Table → desktop/data-display。
+ *
+ * 内部状态使用 `@dreamer/view/signal` 的 `SignalRef`（`.value` 读写）。
+ * Carousel / Collapse / Tree / Image / ImageViewer 等需在渲染 getter 内读 signal 或父级 getter 的组件保留 `return () =>`；
+ * 纯 props 展示的组件直接 `return` VNode。
  */
 export { Tag, type TagProps } from "./Tag.tsx";
 export { Empty, type EmptyProps } from "./Empty.tsx";
@@ -30,11 +34,6 @@ export {
 } from "./Collapse.tsx";
 export { Carousel, type CarouselProps } from "./Carousel.tsx";
 export { Tree, type TreeNode, type TreeProps } from "./Tree.tsx";
-export {
-  Transfer,
-  type TransferItem,
-  type TransferProps,
-} from "./Transfer.tsx";
 export {
   Calendar,
   type CalendarMode,

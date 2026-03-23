@@ -39,7 +39,7 @@ export function Grid(props: GridProps) {
     ? gapClasses[String(gap)] ?? "gap-4"
     : (gapClasses[String(gap)] ?? "gap-4");
 
-  return () => (
+  return (
     <div
       class={twMerge(
         "grid w-full",

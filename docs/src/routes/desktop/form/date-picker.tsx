@@ -66,17 +66,17 @@ const importCode =
   `import { DatePicker, Form, FormItem } from "@dreamer/ui-view";
 import { createSignal } from "@dreamer/view";
 
-const [val, setVal] = createSignal("");
+const val = createSignal("");
 <FormItem label="日期">
   <DatePicker
-    value={val}
-    onChange={(e) => setVal((e.target as HTMLInputElement).value)}
+    value={() => val.value}
+    onChange={(e) => val.value = (e.target as HTMLInputElement).value}
   />
 </FormItem>`;
 
 export default function FormDatePicker() {
-  const [val, setVal] = createSignal("");
-  const [val2, setVal2] = createSignal("2025-01-15");
+  const val = createSignal("");
+  const val2 = createSignal("2025-01-15");
 
   return (
     <div class="space-y-10">
@@ -108,15 +108,16 @@ export default function FormDatePicker() {
             <Title level={3}>基础</Title>
             <FormItem label="日期">
               <DatePicker
-                value={val}
-                onChange={(e) => setVal((e.target as HTMLInputElement).value)}
+                value={() => val.value}
+                onChange={(e) =>
+                  val.value = (e.target as HTMLInputElement).value}
               />
             </FormItem>
             <CodeBlock
               title="代码示例"
               code={`<DatePicker
-  value={val}
-  onChange={(e) => setVal((e.target as HTMLInputElement).value)}
+  value={() => val.value}
+  onChange={(e) => val.value = (e.target as HTMLInputElement).value}
 />`}
               language="tsx"
               showLineNumbers
@@ -129,8 +130,9 @@ export default function FormDatePicker() {
             <Title level={3}>有默认值 / min / max</Title>
             <FormItem label="限制范围">
               <DatePicker
-                value={val2}
-                onChange={(e) => setVal2((e.target as HTMLInputElement).value)}
+                value={() => val2.value}
+                onChange={(e) =>
+                  val2.value = (e.target as HTMLInputElement).value}
                 min="2025-01-01"
                 max="2025-12-31"
               />
@@ -138,8 +140,8 @@ export default function FormDatePicker() {
             <CodeBlock
               title="代码示例"
               code={`<DatePicker
-  value={val2}
-  onChange={(e) => setVal2((e.target as HTMLInputElement).value)}
+  value={() => val2.value}
+  onChange={(e) => val2.value = (e.target as HTMLInputElement).value}
   min="2025-01-01"
   max="2025-12-31"
 />`}

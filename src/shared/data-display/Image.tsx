@@ -4,9 +4,12 @@
  */
 
 import { twMerge } from "tailwind-merge";
-import { createSignal } from "@dreamer/view";
+import { createEffect, onCleanup } from "@dreamer/view";
+import { createSignal } from "@dreamer/view/signal";
 
 export interface ImageProps {
+  /** 列表渲染时的 key（用于 map 等场景） */
+  key?: string | number;
   /** 图片地址 */
   src: string;
   /** 替代文案 */
@@ -27,7 +30,7 @@ export interface ImageProps {
   preview?: boolean;
   /** 是否禁用预览 */
   previewDisabled?: boolean;
-  /** 圆角 */
+  /** 圆角，默认 false */
   rounded?: boolean | "sm" | "md" | "lg" | "full";
   /** 额外 class */
   class?: string;
@@ -50,6 +53,7 @@ const objectFitClasses: Record<NonNullable<ImageProps["fit"]>, string> = {
 
 export function Image(props: ImageProps) {
   const {
+    key: keyProp,
     src,
     alt = "",
     width,
@@ -60,13 +64,30 @@ export function Image(props: ImageProps) {
     lazy = false,
     preview = false,
     previewDisabled = false,
-    rounded = true,
+    rounded = false,
     class: className,
   } = props;
 
-  const [status, setStatus] = createSignal<"loading" | "loaded" | "error">(
-    "loading",
-  );
+  const statusRef = createSignal<"loading" | "loaded" | "error">("loading");
+  const imgElRef = createSignal<HTMLImageElement | null>(null);
+
+  /** 卸载时清空 img.src 以释放解码位图内存，减轻轮播等多图场景占用 */
+  createEffect(() => {
+    onCleanup(() => {
+      const el = imgElRef.value;
+      if (el && el.src) el.src = "";
+    });
+  });
+
+  /** 重定向后 onLoad 可能不触发，定时检查 img.complete 用于 placeholder 场景和 loaded 状态 */
+  createEffect(() => {
+    const el = imgElRef.value;
+    if (!el || statusRef.value !== "loading") return;
+    const t = setTimeout(() => {
+      if (el.complete) statusRef.value = "loaded";
+    }, 2000);
+    return () => clearTimeout(t);
+  });
 
   const style: Record<string, string> = {};
   if (width != null) {
@@ -81,20 +102,20 @@ export function Image(props: ImageProps) {
     : roundedClasses[rounded] ?? "rounded";
 
   const handleLoad = () => {
-    setStatus("loaded");
+    statusRef.value = "loaded";
   };
 
   const handleError = () => {
-    setStatus("error");
+    statusRef.value = "error";
   };
 
   const handleClick = () => {
     if (
-      status() === "error" ||
+      statusRef.value === "error" ||
       (preview && !previewDisabled &&
         typeof globalThis.document !== "undefined")
     ) {
-      if (status() === "error") return;
+      if (statusRef.value === "error") return;
       const wrap = globalThis.document.createElement("div");
       wrap.className =
         "fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4";
@@ -114,8 +135,12 @@ export function Image(props: ImageProps) {
     }
   };
 
+  /**
+   * 使用渲染 getter：在内部读 `statusRef.value` / `imgElRef`，以便加载态与 ref 更新触发细粒度更新。
+   */
   return () => (
     <div
+      key={keyProp}
       class={twMerge(
         "relative inline-block overflow-hidden bg-slate-100 dark:bg-slate-800",
         roundedCls,
@@ -123,24 +148,28 @@ export function Image(props: ImageProps) {
       )}
       style={style}
     >
-      {status() === "loading" && _placeholder && (
+      {statusRef.value === "loading" && _placeholder && (
         <div class="absolute inset-0 flex items-center justify-center text-slate-400">
           {_placeholder}
         </div>
       )}
-      {status() === "error" && fallback && (
+      {statusRef.value === "error" && fallback && (
         <div class="absolute inset-0 flex items-center justify-center text-slate-500 bg-slate-100 dark:bg-slate-800">
           {fallback}
         </div>
       )}
       <img
+        ref={(el: unknown) => {
+          imgElRef.value = el as HTMLImageElement | null;
+        }}
         src={src}
         alt={alt}
         loading={lazy ? "lazy" : "eager"}
+        referrerPolicy="no-referrer"
         class={twMerge(
           "w-full h-full transition-opacity duration-300",
           objectFitClasses[fit],
-          status() !== "loaded" ? "opacity-0" : "opacity-100",
+          statusRef.value === "error" ? "opacity-0" : "opacity-100",
           preview && !previewDisabled && "cursor-zoom-in",
         )}
         onLoad={handleLoad}
