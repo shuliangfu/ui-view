@@ -1,5 +1,6 @@
 /**
- * 指纹/身份/签名图标，24×24 stroke。安全/生物识别场景。
+ * 指纹/身份/生物识别图标，24×24 stroke。
+ * 矢量与 Lucide `fingerprint` 一致（同心弧脊线，较易识别）。
  */
 import { Icon } from "../Icon.tsx";
 import type { IconComponentProps } from "../Icon.tsx";
@@ -15,17 +16,15 @@ const svg = (
     class="w-full h-full"
     aria-hidden
   >
-    <path d="M12 10a4 4 0 0 1 4 4v6" />
-    <path d="M12 2v2" />
-    <path d="M12 20v2" />
-    <path d="M4.93 4.93l1.41 1.41" />
-    <path d="M17.66 17.66l1.41 1.41" />
-    <path d="M2 12h2" />
-    <path d="M20 12h2" />
-    <path d="M6.34 17.66l-1.41 1.41" />
-    <path d="M19.07 4.93l-1.41 1.41" />
-    <path d="M12 6a6 6 0 0 1 6 6v2" />
-    <path d="M12 14a2 2 0 0 0-2 2v4a2 2 0 0 0 4 0v-4a2 2 0 0 0-2-2z" />
+    <path d="M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4" />
+    <path d="M14 13.12c0 2.38 0 6.38-1 8.88" />
+    <path d="M17.29 21.02c.12-.6.43-2.3.5-3.02" />
+    <path d="M2 12a10 10 0 0 1 18-6" />
+    <path d="M2 16h.01" />
+    <path d="M21.8 16c.2-2 .131-5.354 0-6" />
+    <path d="M5 19.5C5.5 18 6 15 6 12a6 6 0 0 1 .34-2" />
+    <path d="M8.65 22c.21-.66.45-1.32.57-2" />
+    <path d="M9 6.8a6 6 0 0 1 9 5.2v2" />
   </svg>
 );
 

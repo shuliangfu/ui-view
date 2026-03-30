@@ -17,12 +17,7 @@ export {
   type StepStatus,
 } from "./Steps.tsx";
 export { PageHeader, type PageHeaderProps } from "./PageHeader.tsx";
-export {
-  Affix,
-  type AffixInitOptions,
-  type AffixProps,
-  initAffix,
-} from "./Affix.tsx";
+export { Affix, type AffixProps } from "./Affix.tsx";
 export {
   Anchor,
   type AnchorLink,

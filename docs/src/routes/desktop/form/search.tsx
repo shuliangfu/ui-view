@@ -40,6 +40,12 @@ const SEARCH_API: ApiRow[] = [
     description: "是否禁用",
   },
   {
+    name: "hideFocusRing",
+    type: "boolean",
+    default: "false",
+    description: "为 true 时隐藏聚焦时的蓝色激活边框（ring）；默认 false 显示",
+  },
+  {
     name: "placeholder",
     type: "string",
     default: "-",
@@ -57,6 +63,44 @@ const SEARCH_API: ApiRow[] = [
     type: "(e: Event) => void",
     default: "-",
     description: "变更回调",
+  },
+  {
+    name: "onBlur",
+    type: "(e: Event) => void",
+    default: "-",
+    description:
+      "失焦回调；适合在失焦时请求接口，onInput 只更新本地值以减少请求次数",
+  },
+  {
+    name: "onFocus",
+    type: "(e: Event) => void",
+    default: "-",
+    description: "聚焦回调",
+  },
+  {
+    name: "onKeyDown",
+    type: "(e: Event) => void",
+    default: "-",
+    description:
+      "键盘按下；内置在之后若未 preventDefault 且按 Enter 仍会调 onSearch",
+  },
+  {
+    name: "onKeyUp",
+    type: "(e: Event) => void",
+    default: "-",
+    description: "键盘抬起",
+  },
+  {
+    name: "onClick",
+    type: "(e: Event) => void",
+    default: "-",
+    description: "点击输入区域",
+  },
+  {
+    name: "onPaste",
+    type: "(e: Event) => void",
+    default: "-",
+    description: "粘贴",
   },
   {
     name: "onSearch",
@@ -84,15 +128,18 @@ const val = createSignal("");
 export default function FormSearch() {
   const val = createSignal("");
   const val2 = createSignal("");
+  const valBlur = createSignal("");
 
   return (
     <div class="space-y-10">
       <section>
         <Title level={1}>Search 搜索框</Title>
         <Paragraph class="mt-2">
-          搜索框，支持 value、onInput、onSearch；传 onSearch
-          时显示搜索与清除按钮。宽度由 class 控制，表单中需占满一列时传
-          class="w-full"。Tailwind v4 + light/dark。
+          搜索框，支持 value、onInput、onBlur、onKeyDown、onPaste、onSearch
+          等（与 Input 对齐的输入事件均透传）；传 onSearch
+          时显示搜索与清除按钮。若不想在每次键入时调接口，可只在 onInput
+          更新受控值，在 onBlur（或 onSearch 回车/按钮）里再请求。宽度由 class
+          控制，表单中需占满一列时传 class="w-full"。Tailwind v4 + light/dark。
         </Paragraph>
       </section>
 
@@ -162,6 +209,40 @@ export default function FormSearch() {
   onInput={(e) => val2.value = (e.target as HTMLInputElement).value}
   onChange={(e) => val2.value = (e.target as HTMLInputElement).value}
   placeholder="无搜索按钮"
+/>`}
+              language="tsx"
+              showLineNumbers
+              copyable
+              wrapLongLines
+            />
+          </section>
+
+          <section class="space-y-4">
+            <Title level={3}>失焦再请求（onBlur）</Title>
+            <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+              onInput / onChange 只同步输入框内容；真正调搜索 API 写在 onBlur
+              里，避免每敲一字就请求。回车或搜索按钮仍可用 onSearch。
+            </Paragraph>
+            <FormItem label="输入后点框外失焦触发 console">
+              <Search
+                value={() => valBlur.value}
+                onInput={(e) =>
+                  valBlur.value = (e.target as HTMLInputElement).value}
+                onBlur={() => {
+                  console.log("失焦搜索:", valBlur.value);
+                }}
+                placeholder="失焦时打印当前关键词"
+              />
+            </FormItem>
+            <CodeBlock
+              title="代码示例"
+              code={`<Search
+  value={() => q.value}
+  onInput={(e) => q.value = (e.target as HTMLInputElement).value}
+  onBlur={() => {
+    void fetchResults(q.value);
+  }}
+  placeholder="失焦再请求"
 />`}
               language="tsx"
               showLineNumbers

@@ -1,6 +1,8 @@
 /**
  * Drawer 组件文档页（标准文档结构：概述、引入、示例、API）
  * 路由: /desktop/feedback/drawer
+ *
+ * `open` 须传 **SignalRef**：`open={sig}`，勿 `open={sig.value}`（Hybrid/compileSource）。
  */
 
 import { createSignal } from "@dreamer/view";
@@ -17,9 +19,9 @@ interface ApiRow {
 const DRAWER_API: ApiRow[] = [
   {
     name: "open",
-    type: "boolean",
+    type: "boolean | (() => boolean) | SignalRef<boolean>",
     default: "-",
-    description: "是否打开（受控）",
+    description: "是否打开；推荐 open={sig}，勿 open={sig.value}",
   },
   {
     name: "onClose",
@@ -41,9 +43,16 @@ const DRAWER_API: ApiRow[] = [
   },
   {
     name: "title",
-    type: "string | null",
+    type: "DrawerTitleInput",
     default: "-",
-    description: "标题；null 不显示",
+    description:
+      "标题：字符串/数字、TSX、null/false/空串不显示；可 () => … 订阅 signal",
+  },
+  {
+    name: "titleAlign",
+    type: '"left" | "center"',
+    default: "left",
+    description: "标题区对齐；center 时文案居中、关闭钮贴右",
   },
   { name: "children", type: "unknown", default: "-", description: "抽屉内容" },
   {
@@ -89,52 +98,68 @@ import { Button, Drawer } from "@dreamer/ui-view";
 
 const open = createSignal(false);
 
-<Button onClick={() => open.value = true}>打开抽屉</Button>
-{() => (
-  <Drawer
-    open={open.value}
-    onClose={() => open.value = false}
-    placement="right"
-    title="标题"
-    footer={<Button onClick={() => open.value = false}>确定</Button>}
-  >
-    <p>抽屉内容</p>
-  </Drawer>
-)}`;
-
-const exampleRight = `<Drawer
-  open={open.value}
+<Button type="button" onClick={() => open.value = true}>打开抽屉</Button>
+<Drawer
+  open={open}
   onClose={() => open.value = false}
   placement="right"
+  title="标题"
+  titleAlign="left"
+  footer={<Button type="button" onClick={() => open.value = false}>确定</Button>}
+>
+  <p>抽屉内容</p>
+</Drawer>`;
+
+const exampleRight = `<Drawer
+  open={openRight}
+  onClose={() => openRight.value = false}
+  placement="right"
   title="右侧抽屉"
-  footer={<Button variant="primary" onClick={() => open.value = false}>确定</Button>}
+  footer={<Button type="button" variant="primary" onClick={() => openRight.value = false}>确定</Button>}
 >
   <p>抽屉内容区域，可放置表单或列表。</p>
 </Drawer>`;
 
-const exampleLeft = `{() => (
-  <Drawer
-    open={open.value}
-    onClose={() => open.value = false}
-    placement="left"
-    width={320}
-    title="左侧抽屉"
-  >
-    <p>从左侧滑出的面板，宽度 320px。</p>
-  </Drawer>
-)}`;
+const exampleLeft = `<Drawer
+  open={openLeft}
+  onClose={() => openLeft.value = false}
+  placement="left"
+  width={320}
+  title="左侧抽屉"
+  titleAlign="center"
+>
+  <p>从左侧滑出的面板，宽度 320px。</p>
+</Drawer>`;
+
+const exampleCustomTitle = `<Drawer
+  open={openCustom}
+  onClose={() => openCustom.value = false}
+  placement="right"
+  titleAlign="center"
+  title={
+    <span class="flex flex-col items-center gap-0.5 sm:flex-row sm:gap-2">
+      <strong class="text-lg">自定义标题</strong>
+      <span class="text-xs font-normal text-slate-500 dark:text-slate-400">
+        支持 TSX
+      </span>
+    </span>
+  }
+>
+  <p>title 可传入任意 VNode，不限于纯文本。</p>
+</Drawer>`;
 
 export default function FeedbackDrawer() {
   const openRight = createSignal(false);
   const openLeft = createSignal(false);
+  const openCustom = createSignal(false);
 
   return (
     <div class="space-y-10">
       <section>
         <Title level={1}>Drawer 侧边抽屉</Title>
         <Paragraph class="mt-2">
-          侧边抽屉：从左侧或右侧滑出；支持
-          placement、width、title、footer、closable、maskClosable、destroyOnClose、keyboard。
+          侧边抽屉：从左侧或右侧滑出；支持 placement、width、title（含自定义
+          TSX）、titleAlign、footer、closable、maskClosable、destroyOnClose、keyboard。
           使用 Tailwind v4，支持 light/dark 主题。
         </Paragraph>
       </section>
@@ -169,41 +194,63 @@ export default function FeedbackDrawer() {
             >
               右侧抽屉
             </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => openCustom.value = true}
+            >
+              自定义标题（TSX）
+            </Button>
           </div>
-          {() => (
-            <Drawer
-              open={openRight.value}
-              onClose={() => openRight.value = false}
-              placement="right"
-              title="右侧抽屉"
-              footer={
-                <Button
-                  type="button"
-                  variant="primary"
-                  onClick={() => openRight.value = false}
-                >
-                  确定
-                </Button>
-              }
-            >
-              <p class="text-sm text-slate-600 dark:text-slate-400">
-                抽屉内容区域，可放置表单或列表。
-              </p>
-            </Drawer>
-          )}
-          {() => (
-            <Drawer
-              open={openLeft.value}
-              onClose={() => openLeft.value = false}
-              placement="left"
-              width={320}
-              title="左侧抽屉"
-            >
-              <p class="text-sm text-slate-600 dark:text-slate-400">
-                从左侧滑出的面板，宽度 320px。
-              </p>
-            </Drawer>
-          )}
+          <Drawer
+            open={openRight}
+            onClose={() => openRight.value = false}
+            placement="right"
+            title="右侧抽屉"
+            footer={
+              <Button
+                type="button"
+                variant="primary"
+                onClick={() => openRight.value = false}
+              >
+                确定
+              </Button>
+            }
+          >
+            <p class="text-sm text-slate-600 dark:text-slate-400">
+              抽屉内容区域，可放置表单或列表。
+            </p>
+          </Drawer>
+          <Drawer
+            open={openLeft}
+            onClose={() => openLeft.value = false}
+            placement="left"
+            width={320}
+            title="左侧抽屉"
+            titleAlign="center"
+          >
+            <p class="text-sm text-slate-600 dark:text-slate-400">
+              从左侧滑出的面板，宽度 320px。
+            </p>
+          </Drawer>
+          <Drawer
+            open={openCustom}
+            onClose={() => openCustom.value = false}
+            placement="right"
+            titleAlign="center"
+            title={
+              <span class="flex flex-col items-center gap-0.5 sm:flex-row sm:gap-2">
+                <strong class="text-lg">自定义标题</strong>
+                <span class="text-xs font-normal text-slate-500 dark:text-slate-400">
+                  支持 TSX
+                </span>
+              </span>
+            }
+          >
+            <p class="text-sm text-slate-600 dark:text-slate-400">
+              title 可传入任意 VNode，不限于纯文本。
+            </p>
+          </Drawer>
           <CodeBlock
             title="代码示例"
             code={exampleRight}
@@ -213,8 +260,16 @@ export default function FeedbackDrawer() {
             wrapLongLines
           />
           <CodeBlock
-            title="代码示例（左侧 + width）"
+            title="代码示例（左侧 + width + titleAlign）"
             code={exampleLeft}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+          <CodeBlock
+            title="代码示例（自定义 title TSX）"
+            code={exampleCustomTitle}
             language="tsx"
             showLineNumbers
             copyable

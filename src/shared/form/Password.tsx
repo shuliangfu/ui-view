@@ -5,12 +5,15 @@
 
 import { twMerge } from "tailwind-merge";
 import type { SizeVariant } from "../types.ts";
+import { controlBlueFocusRing } from "./input-focus-ring.ts";
 
 export interface PasswordProps {
   /** 尺寸 */
   size?: SizeVariant;
   /** 是否禁用 */
   disabled?: boolean;
+  /** 为 true 时隐藏聚焦激活态边框（输入框与显隐按钮）；默认 false 显示 */
+  hideFocusRing?: boolean;
   /** 占位文案 */
   placeholder?: string;
   /** 输入值（受控可选）；可为 getter 以在 View 细粒度下只更新 value 不重建节点，避免失焦 */
@@ -25,6 +28,18 @@ export interface PasswordProps {
   onInput?: (e: Event) => void;
   /** 变更回调 */
   onChange?: (e: Event) => void;
+  /** 失焦回调 */
+  onBlur?: (e: Event) => void;
+  /** 聚焦回调 */
+  onFocus?: (e: Event) => void;
+  /** 键盘按下 */
+  onKeyDown?: (e: Event) => void;
+  /** 键盘抬起 */
+  onKeyUp?: (e: Event) => void;
+  /** 点击输入区域 */
+  onClick?: (e: Event) => void;
+  /** 粘贴 */
+  onPaste?: (e: Event) => void;
   /** 原生 name */
   name?: string;
   /** 原生 id */
@@ -40,9 +55,9 @@ const sizeClasses: Record<SizeVariant, string> = {
   lg: "px-4 py-2.5 pr-11 text-base rounded-lg",
 };
 
-/** 基础样式：不含宽度，需全宽时由调用方加 class="w-full" */
-const base =
-  "border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 border-slate-300 dark:border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:focus:ring-blue-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors";
+/** 输入区底纹（不含 ring） */
+const inputSurface =
+  "border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 border-slate-300 dark:border-slate-600 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed transition-colors";
 
 /**
  * 强度提示：仅在内部读 value()，避免 Password 主体订阅 signal 导致整块重渲染失焦。
@@ -95,9 +110,16 @@ export function Password(props: PasswordProps) {
     showPassword = false,
     onToggleShow,
     showStrength = false,
+    hideFocusRing = false,
     class: className,
     onInput,
     onChange,
+    onBlur,
+    onFocus,
+    onKeyDown,
+    onKeyUp,
+    onClick,
+    onPaste,
     name,
     id,
   } = props;
@@ -114,13 +136,20 @@ export function Password(props: PasswordProps) {
     placeholder,
     disabled,
     class: twMerge(
-      base,
+      inputSurface,
+      controlBlueFocusRing(!hideFocusRing),
       sizeCls,
       onToggleShow || showStrength ? "pr-10" : undefined,
       !onToggleShow && !showStrength ? className : undefined,
     ),
     onInput,
     onChange,
+    onBlur,
+    onFocus,
+    onKeyDown,
+    onKeyUp,
+    onClick,
+    onPaste,
   };
 
   if (!onToggleShow && !showStrength) {
@@ -133,7 +162,10 @@ export function Password(props: PasswordProps) {
       {onToggleShow && (
         <button
           type="button"
-          class="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          class={twMerge(
+            "absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 focus:outline-none",
+            controlBlueFocusRing(!hideFocusRing),
+          )}
           onClick={onToggleShow}
           aria-label={showPassword ? "隐藏密码" : "显示密码"}
           tabIndex={-1}

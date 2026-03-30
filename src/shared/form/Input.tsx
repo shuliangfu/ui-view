@@ -1,19 +1,28 @@
 /**
  * Input 单行输入（View）。
  * 支持 size、disabled、placeholder、allowClear（右侧清除），light/dark 主题。
+ * prefix / suffix 渲染在输入框 DOM 外侧，与中间 input 同一外壳 flex 连成一体（统一边框与圆角）。
  */
 
 import { twMerge } from "tailwind-merge";
 import type { SizeVariant } from "../types.ts";
+import {
+  compositeShellFocusRingFromInput,
+  controlBlueFocusRing,
+  controlErrorBorder,
+  controlErrorFocusRing,
+} from "./input-focus-ring.ts";
 
 export interface InputProps {
   /** 尺寸 */
   size?: SizeVariant;
   /** 是否禁用 */
   disabled?: boolean;
+  /** 为 true 时隐藏聚焦激活态边框；默认 false 显示 ring */
+  hideFocusRing?: boolean;
   /** 占位文案 */
   placeholder?: string;
-  /** 输入值（受控可选）；可为 getter 或 `() => ref.value`（SignalRef），在 View 细粒度下只更新 value、避免失焦 */
+  /** 输入值（受控可选）；可为 getter 或 `() => ref.value`（SignalRef），由 View 对 getter 细粒度更新 */
   value?: string | (() => string);
   /** 原生 type，如 text、password、email */
   type?: string;
@@ -23,18 +32,30 @@ export interface InputProps {
   required?: boolean;
   /** 错误状态（红框 + aria-invalid） */
   error?: boolean;
-  /** 前缀 */
+  /** 前缀：在输入框左侧、与框体相连（同一外边框） */
   prefix?: unknown;
-  /** 后缀 */
+  /** 后缀：在输入框右侧、与框体相连 */
   suffix?: unknown;
   /** 是否显示右侧清除按钮（有内容且非 disabled/readOnly 时显示） */
   allowClear?: boolean;
-  /** 额外 class */
+  /** 额外 class（作用于最外层：无 addon 时为 input 本身，有 addon 时为组合外壳） */
   class?: string;
   /** 输入回调 */
   onInput?: (e: Event) => void;
   /** 变更回调 */
   onChange?: (e: Event) => void;
+  /** 失焦回调 */
+  onBlur?: (e: Event) => void;
+  /** 聚焦回调 */
+  onFocus?: (e: Event) => void;
+  /** 键盘按下 */
+  onKeyDown?: (e: Event) => void;
+  /** 键盘抬起 */
+  onKeyUp?: (e: Event) => void;
+  /** 点击输入区域 */
+  onClick?: (e: Event) => void;
+  /** 粘贴 */
+  onPaste?: (e: Event) => void;
   /** 原生 name */
   name?: string;
   /** 原生 id */
@@ -48,12 +69,39 @@ const sizeClasses: Record<SizeVariant, string> = {
   lg: "px-4 py-2.5 text-base rounded-lg",
 };
 
-/** 基础样式：不含宽度，需全宽时由调用方加 class="w-full" */
-const base =
-  "border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 border-slate-300 dark:border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:focus:ring-blue-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors";
-const errorCls =
-  "border-red-500 dark:border-red-500 focus:ring-red-500 dark:focus:ring-red-500";
+/** 组合框圆角（与 {@link sizeClasses} 一致） */
+const sizeRoundedClasses: Record<SizeVariant, string> = {
+  xs: "rounded-md",
+  sm: "rounded-md",
+  md: "rounded-lg",
+  lg: "rounded-lg",
+};
+
+/** 组合框中间 input 的纵向与字号（与 {@link sizeClasses} 一致） */
+const sizePadYClasses: Record<SizeVariant, string> = {
+  xs: "py-1 text-xs",
+  sm: "py-1.5 text-sm",
+  md: "py-2 text-sm",
+  lg: "py-2.5 text-base",
+};
+
+const sizeTextClasses: Record<SizeVariant, string> = {
+  xs: "text-xs",
+  sm: "text-sm",
+  md: "text-sm",
+  lg: "text-base",
+};
+
+/** 基础样式：不含宽度与聚焦 ring（由 {@link controlBlueFocusRing}(`!hideFocusRing`) 拼接） */
+const inputSurface =
+  "border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 border-slate-300 dark:border-slate-600 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed transition-colors";
 const readOnlyCls = "bg-slate-50 dark:bg-slate-800/80 cursor-default";
+
+/** 左右缀：与中间输入区分隔线、略浅底，仍在同一外框内 */
+const addonBaseCls =
+  "shrink-0 flex items-center border-slate-300 bg-slate-50 text-slate-500 dark:border-slate-600 dark:bg-slate-900/40 dark:text-slate-400";
+const addonPrefixCls = twMerge(addonBaseCls, "border-r px-3");
+const addonSuffixCls = twMerge(addonBaseCls, "border-l px-3");
 
 /** 清除按钮用的 X 图标（内联 SVG，避免 form 依赖 icons） */
 const ClearIcon = () => (
@@ -64,7 +112,7 @@ const ClearIcon = () => (
     stroke-width="2"
     stroke-linecap="round"
     stroke-linejoin="round"
-    class="w-full h-full"
+    class="h-4 w-4"
     aria-hidden
   >
     <path d="M18 6L6 18M6 6l12 12" />
@@ -72,39 +120,125 @@ const ClearIcon = () => (
 );
 
 /**
- * 右侧清除或后缀：仅在内部读 `value()`（或 `() => signalRef.value`），避免 Input 主体订阅导致整块重渲染失焦。
- * 仅此子组件随 value 重跑，reconcile 只更新该槽位，input 节点保留。
+ * 组合输入：prefix | input | suffix/clear，共用一层 border + 圆角。
+ *
+ * @param showClear - 是否显示清除钮（由调用方读 value 后传入，避免在此订阅 signal）
  */
-function InputClearOrSuffix(props: {
-  value?: string | (() => string);
-  allowClear: boolean;
+function InputGroupShell(props: {
+  size: SizeVariant;
+  shellCls: string;
+  prefix?: unknown;
+  suffix?: unknown;
+  showClear: boolean;
+  type: string;
+  id: string | undefined;
+  name: string | undefined;
+  placeholder: string | undefined;
   disabled: boolean;
   readOnly: boolean;
-  suffix?: unknown;
+  required: boolean;
+  error: boolean;
+  value: string | (() => string) | undefined;
+  onInput: InputProps["onInput"];
+  onChange: InputProps["onChange"];
+  onBlur: InputProps["onBlur"];
+  onFocus: InputProps["onFocus"];
+  onKeyDown: InputProps["onKeyDown"];
+  onKeyUp: InputProps["onKeyUp"];
+  onClick: InputProps["onClick"];
+  onPaste: InputProps["onPaste"];
   onClear: () => void;
 }) {
-  const { value, allowClear, disabled, readOnly, suffix, onClear } = props;
-  const val = typeof value === "function" ? value() : value;
-  const showClear = allowClear && val && !disabled && !readOnly;
-  if (showClear) {
-    return () => (
-      <button
-        type="button"
-        class="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer"
-        onClick={onClear}
-      >
-        <ClearIcon />
-      </button>
-    );
-  }
-  if (suffix) {
-    return () => (
-      <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-500 dark:text-slate-400">
-        {suffix}
-      </div>
-    );
-  }
-  return null;
+  const {
+    size,
+    shellCls,
+    prefix,
+    suffix,
+    showClear,
+    type,
+    id,
+    name,
+    placeholder,
+    disabled,
+    readOnly,
+    required,
+    error,
+    value,
+    onInput,
+    onChange,
+    onBlur,
+    onFocus,
+    onKeyDown,
+    onKeyUp,
+    onClick,
+    onPaste,
+    onClear,
+  } = props;
+
+  const innerInputCls = twMerge(
+    "min-w-0 flex-1 border-0 bg-transparent shadow-none outline-none focus:ring-0",
+    "text-inherit placeholder:text-slate-400 dark:placeholder:text-slate-500",
+    "disabled:cursor-not-allowed",
+    sizePadYClasses[size],
+    "px-3",
+  );
+
+  return (
+    <div class={shellCls}>
+      {prefix != null && prefix !== false && (
+        <div class={twMerge(addonPrefixCls, sizeTextClasses[size])}>
+          {prefix}
+        </div>
+      )}
+      <input
+        type={type}
+        id={id}
+        name={name}
+        placeholder={placeholder}
+        disabled={disabled}
+        readOnly={readOnly}
+        aria-required={required}
+        aria-invalid={error}
+        value={value}
+        class={innerInputCls}
+        onInput={onInput}
+        onChange={onChange}
+        onBlur={onBlur}
+        onFocus={onFocus}
+        onKeyDown={onKeyDown}
+        onKeyUp={onKeyUp}
+        onClick={onClick}
+        onPaste={onPaste}
+      />
+      {showClear
+        ? (
+          <button
+            type="button"
+            class={twMerge(
+              "inline-flex shrink-0 items-center border-l border-slate-300 px-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 dark:border-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-300",
+              sizePadYClasses[size],
+            )}
+            onClick={onClear}
+            aria-label="清除"
+          >
+            <ClearIcon />
+          </button>
+        )
+        : suffix != null && suffix !== false
+        ? (
+          <div
+            class={twMerge(
+              addonSuffixCls,
+              "pointer-events-none",
+              sizeTextClasses[size],
+            )}
+          >
+            {suffix}
+          </div>
+        )
+        : null}
+    </div>
+  );
 }
 
 export function Input(props: InputProps) {
@@ -120,16 +254,21 @@ export function Input(props: InputProps) {
     prefix,
     suffix,
     allowClear = false,
+    hideFocusRing = false,
     class: className,
     onInput,
     onChange,
+    onBlur,
+    onFocus,
+    onKeyDown,
+    onKeyUp,
+    onClick,
+    onPaste,
     name,
     id,
   } = props;
 
   const sizeCls = sizeClasses[size];
-  // 禁止在组件体内读 value()：会订阅 signal，导致根 effect 重跑、整树重建、input 被替换失焦。
-  // value 透传给 <input value={value} />，由 View applyProps 对 getter 做 createEffect 仅更新 .value。
 
   const handleClear = () => {
     if (!onInput) return;
@@ -140,57 +279,90 @@ export function Input(props: InputProps) {
     onInput({ target: el } as unknown as Event);
   };
 
-  const inputProps = {
+  const inputSpreadProps = {
     type,
     id,
     name,
-    value,
     placeholder,
     disabled,
     readOnly,
     "aria-required": required,
     "aria-invalid": error,
     class: twMerge(
-      base,
+      inputSurface,
+      controlBlueFocusRing(!hideFocusRing),
       sizeCls,
-      error && errorCls,
+      !prefix && !suffix && !allowClear ? "w-full min-w-0" : undefined,
+      error && controlErrorBorder,
+      error && !hideFocusRing && controlErrorFocusRing(true),
       readOnly && readOnlyCls,
-      prefix ? "pl-10" : undefined,
-      suffix || allowClear ? "pr-10" : undefined,
       !prefix && !suffix && !allowClear ? className : undefined,
     ),
     onInput,
     onChange,
+    onBlur,
+    onFocus,
+    onKeyDown,
+    onKeyUp,
+    onClick,
+    onPaste,
   };
 
-  if (!prefix && !suffix && !allowClear) {
-    return () => <input {...inputProps} />;
+  const hasAddon = prefix != null && prefix !== false ||
+    suffix != null && suffix !== false ||
+    allowClear;
+
+  if (!hasAddon) {
+    return () => <input {...inputSpreadProps} value={value} />;
   }
 
-  return () => (
-    <div class={twMerge("relative", className)}>
-      {prefix && (
-        <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-500 dark:text-slate-400">
-          {prefix}
-        </div>
-      )}
-      <input
-        {...inputProps}
-        class={twMerge(
-          "w-full",
-          inputProps.class,
-          prefix ? "pl-10" : undefined,
-          suffix || allowClear ? "pr-10" : undefined,
-        )}
-      />
-      <InputClearOrSuffix
-        value={value}
-        allowClear={allowClear}
+  const shellCls = twMerge(
+    "relative flex w-full min-w-0 items-stretch overflow-hidden",
+    inputSurface,
+    sizeRoundedClasses[size],
+    sizeTextClasses[size],
+    !hideFocusRing &&
+      (error
+        ? "has-[input:focus]:ring-2 has-[input:focus]:ring-red-500 dark:has-[input:focus]:ring-red-500 has-[input:focus]:border-transparent dark:has-[input:focus]:border-transparent"
+        : compositeShellFocusRingFromInput(true)),
+    error && controlErrorBorder,
+    readOnly && readOnlyCls,
+    disabled && "opacity-50",
+    className,
+  );
+
+  /** 在 getter 内读 `value()`，与 {@link InputClearOrSuffix} 一致，避免清除钮显隐不随 Signal 更新 */
+  return () => {
+    const val = typeof value === "function" ? value() : value;
+    const showClear = Boolean(
+      allowClear && val && !disabled && !readOnly,
+    );
+    return (
+      <InputGroupShell
+        size={size}
+        shellCls={shellCls}
+        prefix={prefix}
+        suffix={showClear ? undefined : suffix}
+        showClear={showClear}
+        type={type}
+        id={id}
+        name={name}
+        placeholder={placeholder}
         disabled={disabled}
         readOnly={readOnly}
-        suffix={suffix}
+        required={required}
+        error={error}
+        value={value}
+        onInput={onInput}
+        onChange={onChange}
+        onBlur={onBlur}
+        onFocus={onFocus}
+        onKeyDown={onKeyDown}
+        onKeyUp={onKeyUp}
+        onClick={onClick}
+        onPaste={onPaste}
         onClear={handleClear}
       />
-    </div>
-  );
+    );
+  };
 }

@@ -10,14 +10,21 @@ import { twMerge } from "tailwind-merge";
 
 export interface IconProps {
   size?: SizeVariant;
-  /** 额外 class */
+  /** 额外 class（View / compileSource 惯用） */
   class?: string;
+  /**
+   * 与 `class` 等价；自动 JSX（如 `jsxImportSource: "@dreamer/view"`）下部分工具链更常生成 `className`。
+   */
+  className?: string;
   /** 子节点（SVG 或 span 等） */
   children?: unknown;
 }
 
-/** 内置图标组件使用的 props（仅 size/class，无 children） */
-export type IconComponentProps = Pick<IconProps, "size" | "class">;
+/** 内置图标组件使用的 props（无 children） */
+export type IconComponentProps = Pick<
+  IconProps,
+  "size" | "class" | "className"
+>;
 
 const sizeClasses: Record<SizeVariant, string> = {
   xs: "w-4 h-4",
@@ -30,10 +37,12 @@ const base =
   "inline-flex shrink-0 items-center justify-center text-current text-gray-700 dark:text-gray-300";
 
 export function Icon(props: IconProps) {
-  const { size = "md", class: className, children } = props;
+  const { size = "md", class: classProp, className, children } = props;
+  /** class 优先于 className，与业务里混写两种属性时行为确定 */
+  const extraClass = classProp ?? className;
   return (
     <span
-      class={twMerge(base, sizeClasses[size], className)}
+      class={twMerge(base, sizeClasses[size], extraClass)}
       role="img"
       aria-hidden
     >

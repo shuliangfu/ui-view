@@ -4,7 +4,7 @@
  */
 
 import { CodeBlock, Paragraph, Steps, Title } from "@dreamer/ui-view";
-import { createSignal } from "@dreamer/view";
+import { createMemo, createSignal } from "@dreamer/view";
 
 /** API 属性行类型 */
 interface ApiRow {
@@ -23,9 +23,10 @@ const STEPS_API: ApiRow[] = [
   },
   {
     name: "current",
-    type: "number",
-    default: "-",
-    description: "当前步骤（从 0 开始）",
+    type: "number | (() => number) | SignalRef<number>",
+    default: "0",
+    description:
+      "当前步骤（从 0 起）；推荐 current={sig}，勿 current={sig.value}（手写 JSX 快照）",
   },
   {
     name: "direction",
@@ -74,21 +75,21 @@ const items = [
 ];
 <Steps
   items={items}
-  current={current.value}
+  current={current}
   onChange={(c) => current.value = c}
   direction="horizontal"
 />`;
 
 const exampleHorizontal = `<Steps
   items={items}
-  current={current.value}
+  current={current}
   onChange={(c) => current.value = c}
   direction="horizontal"
 />`;
 
 const exampleVertical = `<Steps
   items={items}
-  current={current.value}
+  current={current}
   direction="vertical"
 />`;
 
@@ -98,7 +99,7 @@ const exampleStatus = `<Steps items={[
   { title: "待开始", description: "步骤三", status: "wait" },
 ]} current={1} />`;
 
-/** 模块级 signal，0=第1步、1=第2步、2=第3步，整树重渲染时不被重置 */
+/** 模块级 signal：0/1/2 对应第 1/2/3 步；示例主按钮在末步直接「已完成」，不再写入 current=n */
 const current = createSignal(0);
 
 export default function NavigationSteps() {
@@ -108,13 +109,38 @@ export default function NavigationSteps() {
     { title: "步骤三", description: "完成支付" },
   ];
 
-  return (
+  /** 末步索引（第 n 步对应 n-1）；到达该步时主按钮直接「已完成」，无中间「完成」态 */
+  const lastStepIndex = items.length;
+
+  /**
+   * 主按钮文案 / disabled：须走 {@link createMemo}。仅在 JSX 里写 `{current.value …}` 时，
+   * 部分路由/编译路径下文本节点不订阅 signal，会卡在首帧「下一步」。
+   */
+  const primaryLabel = createMemo(() => {
+    const v = current.value;
+
+    console.log(v, lastStepIndex);
+
+    // 已在末步或更大（如点击步骤条等将 current 推到 n）：统一「已完成」，不再出现「完成」
+    if (v > lastStepIndex) return "已完成";
+    return "下一步";
+  });
+
+  const primaryDisabled = createMemo(() => current.value >= lastStepIndex);
+  const prevDisabled = createMemo(() => current.value === 0);
+
+  /** 零参 getter：与 Steps、上方 memo 同屏刷新 */
+  return () => (
     <div class="space-y-10">
       <section>
         <Title level={1}>Steps 步骤条</Title>
         <Paragraph class="mt-2">
           步骤条：items（title、description、status）、current、onChange、direction（horizontal/vertical）、class。
-          使用 Tailwind v4，支持 light/dark 主题。
+          <code class="text-xs">current</code>
+          须传 <code class="text-xs">createSignal</code> 返回值（如{" "}
+          <code class="text-xs">current={"{"}step{"}"}</code>
+          ）或零参 getter，勿写 <code class="text-xs">current.value</code>
+          。使用 Tailwind v4，支持 light/dark 主题。
         </Paragraph>
       </section>
 
@@ -138,7 +164,7 @@ export default function NavigationSteps() {
           <div className="w-full max-w-3xl" style={{ maxWidth: "48rem" }}>
             <Steps
               items={items}
-              current={current.value}
+              current={current}
               onChange={(c) => current.value = c}
               direction="horizontal"
             />
@@ -147,22 +173,25 @@ export default function NavigationSteps() {
             <button
               type="button"
               class="px-3 py-1.5 text-sm rounded border border-slate-300 dark:border-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={current.value === 0}
-              onClick={() => current.value = (c) => Math.max(0, c - 1)}
+              disabled={() => prevDisabled()}
+              onClick={() => {
+                current.value = Math.max(0, current.value - 1);
+              }}
             >
               上一步
             </button>
-            {/* current 0/1/2=第1/2/3步进行中，3=全部完成；点击「完成」设为 3，三步都显示绿勾 */}
             <button
               type="button"
-              class="px-3 py-1.5 text-sm rounded bg-blue-600 text-white disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={current.value >= 3}
-              onClick={() =>
-                current.value === 2
-                  ? current.value = 3
-                  : current.value = (c) => Math.min(2, c + 1)}
+              class="px-3 py-1.5 text-sm rounded font-medium text-white transition-colors bg-blue-600 hover:bg-blue-700 enabled:cursor-pointer disabled:cursor-not-allowed disabled:pointer-events-none disabled:bg-slate-500 disabled:text-slate-200 disabled:hover:bg-slate-500 dark:disabled:bg-slate-600 dark:disabled:text-slate-300 dark:disabled:hover:bg-slate-600"
+              disabled={() => primaryDisabled()}
+              onClick={() => {
+                const v = current.value;
+                // 末步仅展示「已完成」且 disabled，不再把 current 置为 n（避免出现全绿勾前的「完成」点击）
+                if (v >= lastStepIndex) return;
+                current.value = Math.min(lastStepIndex, v + 1);
+              }}
             >
-              {current.value >= 3 ? "已完成" : "下一步"}
+              {() => primaryLabel()}
             </button>
           </div>
           <CodeBlock
@@ -178,7 +207,7 @@ export default function NavigationSteps() {
         <div class="space-y-4">
           <Title level={3}>direction=vertical</Title>
           <div className="w-full max-w-3xl" style={{ maxWidth: "48rem" }}>
-            <Steps items={items} current={current.value} direction="vertical" />
+            <Steps items={items} current={current} direction="vertical" />
           </div>
           <CodeBlock
             title="代码示例"

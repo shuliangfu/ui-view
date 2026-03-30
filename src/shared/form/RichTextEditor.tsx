@@ -1,13 +1,34 @@
 /**
  * RichTextEditor 富文本编辑器（View）。
- * WYSIWYG 编辑：加粗/斜体/下划线/删除线、标题、列表、引用、链接、图片（URL/上传）、表格、代码块、对齐、颜色等。
+ * WYSIWYG 编辑：加粗/斜体/下划线/删除线、标题、字号、行高、列表、引用、链接、图片（URL/上传）、表格、代码块、对齐、颜色等。
+ * 正文块尽量用 `p`：聚焦时设置 `defaultParagraphSeparator` 为 `p`，并在输入时把根级裸文本包进首段 `p`（浏览器默认常用 `div` 与无包裹首段）。
+ * 前景/背景色使用 {@link ColorPicker} 隐藏触发器 + 命令式 `openFromPointerEvent`；打开前克隆选区，
+ * 确定时再恢复，避免操作取色面板导致选区丢失而无法正确 `execCommand`。
  * 支持粘贴图片到内容区（剪贴板图片转 data URL 或经 onPasteImage 上传后插入）。
  * 工具栏可配置为 simple（简单）、default（默认）、full（全部），或完全自定义。
- * 使用 untrack 读取 value，避免 value 变化触发 effect 重跑导致 contenteditable 被 patch 而失焦。
+ * 受控 HTML 仅在**编辑区未获焦**且非链接弹层打开时由 {@link createEffect} 同步到 DOM；获焦时以浏览器 DOM
+ * 为准，避免写 `innerHTML` 重置选区。`ref` 仅用 `createRef` 持有编辑区节点。
  */
 
-import { untrack } from "@dreamer/view";
+import {
+  createEffect,
+  createMemo,
+  createRef,
+  createRenderEffect,
+  createSignal,
+  For,
+  onCleanup,
+  untrack,
+} from "@dreamer/view";
+import { createPortal } from "@dreamer/view/portal";
 import { twMerge } from "tailwind-merge";
+import { Modal } from "../../desktop/feedback/Modal.tsx";
+import { Button } from "../basic/Button.tsx";
+import { IconType } from "../basic/icons/Type.tsx";
+import { ColorPicker, type ColorPickerHandle } from "./ColorPicker.tsx";
+import { getFormPortalBodyHost } from "./picker-portal-utils.ts";
+import { controlBlueFocusRing } from "./input-focus-ring.ts";
+import { Input } from "./Input.tsx";
 
 /** 工具栏丰富程度预设 */
 export type ToolbarPreset = "simple" | "default" | "full";
@@ -31,32 +52,90 @@ export interface ToolbarItem {
 /** 自定义工具栏：二维数组，内层为同一组 */
 export type ToolbarConfig = ToolbarItem[][] | ToolbarItem[];
 
+/** 第一行：撤销/重做与常用内联格式、链接（simple / default / full 共用） */
+const RTE_TOOLBAR_ROW_BASIC: ToolbarItem[] = [
+  { key: "undo", title: "撤销 (Ctrl+Z)", command: "undo", icon: "↶" },
+  { key: "redo", title: "重做 (Ctrl+Y)", command: "redo", icon: "↷" },
+  { key: "bold", title: "加粗 (Ctrl+B)", command: "bold", icon: "B" },
+  { key: "italic", title: "斜体 (Ctrl+I)", command: "italic", icon: "I" },
+  {
+    key: "underline",
+    title: "下划线 (Ctrl+U)",
+    command: "underline",
+    icon: "U",
+  },
+  {
+    key: "link",
+    title: "插入链接 (Ctrl+K)",
+    command: "createLink",
+    value: "",
+  },
+];
+
+/** 段落与标题（formatBlock）；左侧由工具栏渲染 {@link IconType}，此处保留文案供自定义工具栏回退 */
+const RTE_TOOLBAR_HEADING_ITEM: ToolbarItem = {
+  key: "heading",
+  title: "段落与标题",
+  command: "formatBlock",
+  value: "p",
+  icon: "段落",
+  children: [
+    { value: "p", label: "正文" },
+    { value: "h2", label: "标题 2" },
+    { value: "h3", label: "标题 3" },
+    { value: "h4", label: "标题 4" },
+  ],
+};
+
+/** 字号（自定义 `rteFontSize`，DOM 包 `span` + `data-rte-font-size`） */
+const RTE_TOOLBAR_FONT_SIZE_ITEM: ToolbarItem = {
+  key: "fontSize",
+  title: "字号",
+  command: "rteFontSize",
+  value: "16px",
+  children: [
+    { value: "12px", label: "12px" },
+    { value: "14px", label: "14px" },
+    { value: "16px", label: "16px" },
+    { value: "18px", label: "18px" },
+    { value: "20px", label: "20px" },
+    { value: "24px", label: "24px" },
+    { value: "28px", label: "28px" },
+  ],
+};
+
+/** 行高（自定义 `rteLineHeight`，作用于当前块级容器） */
+const RTE_TOOLBAR_LINE_HEIGHT_ITEM: ToolbarItem = {
+  key: "lineHeight",
+  title: "行高",
+  command: "rteLineHeight",
+  value: "1.5",
+  children: [
+    { value: "1.25", label: "1.25" },
+    { value: "1.5", label: "1.5" },
+    { value: "1.75", label: "1.75" },
+    { value: "2", label: "2" },
+    { value: "2.5", label: "2.5" },
+  ],
+};
+
+/** 第二行：段落标题、字号、行高（simple / default / full 共用） */
+const RTE_TOOLBAR_ROW_TYPOGRAPHY: ToolbarItem[] = [
+  RTE_TOOLBAR_HEADING_ITEM,
+  RTE_TOOLBAR_FONT_SIZE_ITEM,
+  RTE_TOOLBAR_LINE_HEIGHT_ITEM,
+];
+
 /** 根据预设返回工具栏分组 */
 function getToolbarByPreset(preset: ToolbarPreset): ToolbarItem[][] {
   const simple: ToolbarItem[][] = [
-    [
-      { key: "undo", title: "撤销 (Ctrl+Z)", command: "undo", icon: "↶" },
-      { key: "redo", title: "重做 (Ctrl+Y)", command: "redo", icon: "↷" },
-      { key: "bold", title: "加粗 (Ctrl+B)", command: "bold", icon: "B" },
-      { key: "italic", title: "斜体 (Ctrl+I)", command: "italic", icon: "I" },
-      {
-        key: "underline",
-        title: "下划线 (Ctrl+U)",
-        command: "underline",
-        icon: "U",
-      },
-      {
-        key: "link",
-        title: "插入链接 (Ctrl+K)",
-        command: "createLink",
-        value: "",
-        icon: "🔗",
-      },
-    ],
+    RTE_TOOLBAR_ROW_BASIC,
+    RTE_TOOLBAR_ROW_TYPOGRAPHY,
   ];
 
   const defaultPreset: ToolbarItem[][] = [
-    ...simple,
+    RTE_TOOLBAR_ROW_BASIC,
+    RTE_TOOLBAR_ROW_TYPOGRAPHY,
     [
       {
         key: "removeFormat",
@@ -65,24 +144,10 @@ function getToolbarByPreset(preset: ToolbarPreset): ToolbarItem[][] {
         icon: "✕",
       },
       {
-        key: "heading",
-        title: "段落与标题",
-        command: "formatBlock",
-        value: "p",
-        icon: "段落",
-        children: [
-          { value: "p", label: "正文" },
-          { value: "h2", label: "标题 2" },
-          { value: "h3", label: "标题 3" },
-          { value: "h4", label: "标题 4" },
-        ],
-      },
-      {
         key: "blockquote",
         title: "引用",
         command: "formatBlock",
         value: "blockquote",
-        icon: "❝",
       },
       {
         key: "ul",
@@ -102,7 +167,13 @@ function getToolbarByPreset(preset: ToolbarPreset): ToolbarItem[][] {
   const full: ToolbarItem[][] = [
     ...defaultPreset,
     [
-      { key: "strike", title: "删除线", command: "strikeThrough", icon: "S̲" },
+      {
+        key: "strike",
+        title: "删除线",
+        command: "strikeThrough",
+        /** 预设工具栏由 `renderToolbarButtonContent` 的 `strike` 分支绘制 SVG；保留字符供自定义回退 */
+        icon: "S̲",
+      },
       {
         key: "code",
         title: "行内代码",
@@ -121,14 +192,12 @@ function getToolbarByPreset(preset: ToolbarPreset): ToolbarItem[][] {
         title: "插入图片 URL",
         command: "insertImage",
         value: "",
-        icon: "🖼",
       },
       {
         key: "uploadImage",
         title: "上传图片",
         command: "uploadImage",
         value: "",
-        icon: "📤",
       },
       {
         key: "insertTable",
@@ -167,7 +236,6 @@ function getToolbarByPreset(preset: ToolbarPreset): ToolbarItem[][] {
         title: "背景色",
         command: "backColor",
         value: "#ffff00",
-        icon: "🖍",
       },
       {
         key: "hr",
@@ -192,9 +260,9 @@ function getToolbarByPreset(preset: ToolbarPreset): ToolbarItem[][] {
           { value: "—", label: "—" },
           { value: "“", label: "“" },
           { value: '"', label: '"' },
-          { value: "😀", label: "😀" },
-          { value: "👍", label: "👍" },
-          { value: "❤", label: "❤" },
+          { value: "😀", label: "表情 😀" },
+          { value: "👍", label: "赞 👍" },
+          { value: "❤", label: "心形 ❤" },
         ],
       },
       {
@@ -211,11 +279,17 @@ function getToolbarByPreset(preset: ToolbarPreset): ToolbarItem[][] {
         command: "indentFirstLine",
         icon: "¶",
       },
-      { key: "fullscreen", title: "全屏", command: "fullscreen", icon: "⛶" },
-      { key: "find", title: "查找 (Ctrl+F)", command: "find", icon: "🔍" },
-      { key: "replace", title: "替换", command: "replace", icon: "🔄" },
-      { key: "print", title: "打印", command: "print", icon: "🖨" },
-      { key: "export", title: "导出", command: "exportContent", icon: "↓" },
+      {
+        key: "fullscreen",
+        title: "全屏",
+        command: "fullscreen",
+        /** 图标由 `renderToolbarButtonContent` 的 `fullscreen` 分支绘制（全屏后切换为退出形） */
+        icon: "⛶",
+      },
+      { key: "find", title: "查找 (Ctrl+F)", command: "find" },
+      { key: "replace", title: "替换", command: "replace" },
+      { key: "print", title: "打印", command: "print" },
+      { key: "export", title: "导出", command: "exportContent" },
       {
         key: "parseMarkdown",
         title: "解析 Markdown",
@@ -276,6 +350,1222 @@ function getWordCount(html: string): number {
   return text ? text.split(/\s+/).filter(Boolean).length : 0;
 }
 
+/**
+ * 判断编辑区是否处于「用户正在编辑」：焦点在 `contenteditable` 上，或选区锚点仍落在其 DOM 内。
+ * 受控 `value` 触发重绘时，仅比较 `activeElement === el` 在部分 reconciler 时序下会短暂不成立，
+ * 若此时用 props 覆盖 `innerHTML` 会重置选区，光标回到开头。
+ *
+ * @param editor - 富文本编辑区根节点
+ * @returns 为 true 时不应从受控 `value` 同步 `innerHTML`
+ */
+function isEditorActiveOrSelectionInside(editor: HTMLElement): boolean {
+  const doc = globalThis.document;
+  if (!doc || !editor.isConnected) return false;
+  if (doc.activeElement === editor) return true;
+  try {
+    const sel = doc.getSelection();
+    if (!sel || sel.rangeCount === 0) return false;
+    let n: Node | null = sel.anchorNode;
+    if (!n) return false;
+    if (n.nodeType === Node.TEXT_NODE) {
+      n = n.parentNode;
+    }
+    return n != null && editor.contains(n);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * 若当前文档选区完全落在编辑区内，则克隆其第一个 `Range`；否则返回 `null`。
+ * 在取色等浮层抢走焦点前调用，避免用户在面板内操作后 `document.getSelection()` 已折叠/清空，
+ * 导致 `execCommand('foreColor'|'backColor')` 作用在错误位置。
+ *
+ * @param editor - contenteditable 根节点
+ * @returns 可稍后交给 {@link restoreEditorSelectionRange} 的克隆，或 `null`
+ */
+function cloneEditorSelectionRangeIfInside(
+  editor: HTMLElement,
+): Range | null {
+  const doc = globalThis.document;
+  if (!doc) return null;
+  try {
+    const sel = doc.getSelection();
+    if (!sel || sel.rangeCount === 0) return null;
+    const r = sel.getRangeAt(0);
+    if (!editor.contains(r.commonAncestorContainer)) return null;
+    return r.cloneRange();
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 将文档选区恢复为给定 `Range`（须仍挂在编辑区 DOM 内）；失败时静默忽略。
+ *
+ * @param editor - 会先对其 `focus` 的编辑区根节点
+ * @param range - {@link cloneEditorSelectionRangeIfInside} 的返回值，可为 `null`
+ */
+function restoreEditorSelectionRange(
+  editor: HTMLElement,
+  range: Range | null,
+): void {
+  if (range == null) return;
+  const doc = globalThis.document;
+  if (!doc) return;
+  try {
+    if (!editor.contains(range.commonAncestorContainer)) return;
+    editor.focus({ preventScroll: true });
+    const sel = doc.getSelection();
+    if (!sel) return;
+    sel.removeAllRanges();
+    sel.addRange(range);
+  } catch {
+    /* Range 已失效或浏览器拒绝设置选区 */
+  }
+}
+
+/**
+ * 若选区落在已有 RTE 上色 `span` 内，则只改内联样式，避免反复包一层嵌套 `span`。
+ * 自 {@link Range.commonAncestorContainer} 向上找**第一个**带对应 `data-*` 的 `span`（即最内层包裹）。
+ *
+ * @param editor - contenteditable 根，遇此停止向上
+ * @param range - 当前选区
+ * @param cmd - 前景或背景，决定读写的 `data-*` 与 CSS 属性
+ * @param color - 新颜色值
+ * @returns 是否已就地更新并应跳过后续 `surroundContents`
+ */
+function tryUpdateExistingRteColorSpan(
+  editor: HTMLElement,
+  range: Range,
+  cmd: "foreColor" | "backColor",
+  color: string,
+): boolean {
+  const attr = cmd === "foreColor" ? "data-rte-color" : "data-rte-bgcolor";
+  const styleKey = cmd === "foreColor" ? "color" : "backgroundColor";
+  let n: Node | null = range.commonAncestorContainer;
+  if (n.nodeType === Node.TEXT_NODE) n = n.parentNode;
+  while (n != null && n !== editor) {
+    if (n instanceof HTMLSpanElement && n.hasAttribute(attr)) {
+      try {
+        const spanRange = document.createRange();
+        spanRange.selectNodeContents(n);
+        const fullyInside =
+          range.compareBoundaryPoints(Range.START_TO_START, spanRange) >= 0 &&
+          range.compareBoundaryPoints(Range.END_TO_END, spanRange) <= 0;
+        if (fullyInside) {
+          n.style.setProperty(styleKey, color, "important");
+          const sel = document.getSelection();
+          if (sel) {
+            sel.removeAllRanges();
+            const nr = document.createRange();
+            nr.selectNodeContents(n);
+            nr.collapse(false);
+            sel.addRange(nr);
+          }
+          return true;
+        }
+      } catch {
+        /* 继续向上找 */
+      }
+    }
+    n = n.parentNode;
+  }
+  return false;
+}
+
+/**
+ * 用带 `!important` 的内联样式包一层 `span`，避免编辑区 `text-slate-*` 等类通过继承/层叠盖住前景色。
+ * 先 `surroundContents`；跨块选区失败时用 `extractContents` + `insertNode`（与 MDN 对 `surroundContents` 的说明一致）。
+ *
+ * @param range - 须未折叠且边界仍有效
+ * @param styleKey - `color` 或 `backgroundColor`
+ * @param value - CSS 颜色值
+ * @returns 是否已成功写入 DOM
+ */
+function rteSurroundRangeWithImportantStyle(
+  range: Range,
+  styleKey: "color" | "backgroundColor",
+  value: string,
+): boolean {
+  const span = document.createElement("span");
+  span.style.setProperty(styleKey, value, "important");
+  if (styleKey === "color") span.setAttribute("data-rte-color", "");
+  else span.setAttribute("data-rte-bgcolor", "");
+  try {
+    range.surroundContents(span);
+  } catch {
+    try {
+      const frag = range.extractContents();
+      span.appendChild(frag);
+      range.insertNode(span);
+    } catch {
+      return false;
+    }
+  }
+  try {
+    const sel = document.getSelection();
+    if (sel) {
+      sel.removeAllRanges();
+      const nr = document.createRange();
+      nr.selectNodeContents(span);
+      nr.collapse(false);
+      sel.addRange(nr);
+    }
+  } catch {
+    /* 选区收尾失败不影响上色 */
+  }
+  return true;
+}
+
+/** 加粗/斜体/下划线：用 `span` + `style` + `data-rte-*`，不生成 `b`/`i`/`u` */
+type RteInlineDecoKind = "bold" | "italic" | "underline";
+
+/**
+ * 判断是否为本组件维护的内联装饰 `span`（粗/斜/下划线）。
+ *
+ * @param el - 待检测元素
+ */
+function rteSpanHasInlineDecoMark(el: HTMLSpanElement): boolean {
+  return el.hasAttribute("data-rte-bold") ||
+    el.hasAttribute("data-rte-italic") ||
+    el.hasAttribute("data-rte-underline");
+}
+
+/**
+ * 自选区公共祖先向上找**最内层**、且完全包含选区的 RTE 内联装饰 `span`。
+ *
+ * @param editor - contenteditable 根
+ * @param range - 选区
+ */
+function findInnermostRteInlineDecoSpan(
+  editor: HTMLElement,
+  range: Range,
+): HTMLSpanElement | null {
+  let n: Node | null = range.commonAncestorContainer;
+  if (n.nodeType === Node.TEXT_NODE) n = n.parentNode;
+  while (n != null && n !== editor) {
+    if (n instanceof HTMLSpanElement && rteSpanHasInlineDecoMark(n)) {
+      try {
+        const sr = document.createRange();
+        sr.selectNodeContents(n);
+        const inside =
+          range.compareBoundaryPoints(Range.START_TO_START, sr) >= 0 &&
+          range.compareBoundaryPoints(Range.END_TO_END, sr) <= 0;
+        if (inside) return n;
+      } catch {
+        /* 继续 */
+      }
+    }
+    n = n.parentNode;
+  }
+  return null;
+}
+
+/**
+ * 判断选区边界是否与某元素 `selectNodeContents` 完全一致。
+ *
+ * @param range - 选区
+ * @param el - 容器元素
+ */
+function rteSelectionFullyCoversNodeContents(
+  range: Range,
+  el: HTMLElement,
+): boolean {
+  try {
+    const sr = document.createRange();
+    sr.selectNodeContents(el);
+    return range.compareBoundaryPoints(Range.START_TO_START, sr) === 0 &&
+      range.compareBoundaryPoints(Range.END_TO_END, sr) === 0;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * 对应 `data-rte-*` 属性名。
+ *
+ * @param kind - 装饰类型
+ */
+function rteDataAttrForInlineKind(kind: RteInlineDecoKind): string {
+  if (kind === "bold") return "data-rte-bold";
+  if (kind === "italic") return "data-rte-italic";
+  return "data-rte-underline";
+}
+
+/**
+ * 在已有 `span` 上合并一种内联装饰（`!important`）。
+ *
+ * @param span - 目标 `span`
+ * @param kind - 粗/斜/下划
+ */
+function mergeRteInlineDecoKind(
+  span: HTMLSpanElement,
+  kind: RteInlineDecoKind,
+): void {
+  if (kind === "bold") {
+    span.style.setProperty("font-weight", "700", "important");
+    span.setAttribute("data-rte-bold", "");
+  } else if (kind === "italic") {
+    span.style.setProperty("font-style", "italic", "important");
+    span.setAttribute("data-rte-italic", "");
+  } else {
+    span.style.setProperty("text-decoration", "underline", "important");
+    span.setAttribute("data-rte-underline", "");
+  }
+}
+
+/**
+ * 去掉 `span` 上某一种装饰；若不再含任何 RTE 标记且无颜色标记则展开子节点。
+ *
+ * @param span - 目标 `span`
+ * @param kind - 要移除的类型
+ */
+function stripRteInlineDecoKind(
+  span: HTMLSpanElement,
+  kind: RteInlineDecoKind,
+): void {
+  if (kind === "bold") {
+    span.style.removeProperty("font-weight");
+    span.removeAttribute("data-rte-bold");
+  } else if (kind === "italic") {
+    span.style.removeProperty("font-style");
+    span.removeAttribute("data-rte-italic");
+  } else {
+    span.style.removeProperty("text-decoration");
+    span.removeAttribute("data-rte-underline");
+  }
+  const hasDeco = span.hasAttribute("data-rte-bold") ||
+    span.hasAttribute("data-rte-italic") ||
+    span.hasAttribute("data-rte-underline");
+  const hasColor = span.hasAttribute("data-rte-color") ||
+    span.hasAttribute("data-rte-bgcolor");
+  if (!hasDeco && !hasColor) {
+    const parent = span.parentNode;
+    if (parent) {
+      while (span.firstChild) parent.insertBefore(span.firstChild, span);
+      parent.removeChild(span);
+    }
+  }
+}
+
+/**
+ * 将选区折叠到 `node` 内容末尾（`node` 为元素或文本父级）。
+ *
+ * @param node - 参照节点
+ */
+function rteCollapseSelectionToEndOfNode(node: Node): void {
+  try {
+    const sel = document.getSelection();
+    if (!sel) return;
+    const nr = document.createRange();
+    if (node.nodeType === Node.TEXT_NODE) {
+      nr.setStart(node, (node as Text).length);
+      nr.collapse(true);
+    } else {
+      nr.selectNodeContents(node);
+      nr.collapse(false);
+    }
+    sel.removeAllRanges();
+    sel.addRange(nr);
+  } catch {
+    /* ignore */
+  }
+}
+
+/**
+ * 用带某一种内联装饰的 `span` 包裹选区。
+ *
+ * @param range - 非折叠选区
+ * @param kind - 装饰类型
+ */
+function rteSurroundRangeWithInlineDecoKind(
+  range: Range,
+  kind: RteInlineDecoKind,
+): boolean {
+  const span = document.createElement("span");
+  mergeRteInlineDecoKind(span, kind);
+  try {
+    range.surroundContents(span);
+  } catch {
+    try {
+      const frag = range.extractContents();
+      span.appendChild(frag);
+      range.insertNode(span);
+    } catch {
+      return false;
+    }
+  }
+  rteCollapseSelectionToEndOfNode(span);
+  return true;
+}
+
+/**
+ * 折叠选区处插入带零宽字符的样式 `span`，后续输入继承该样式。
+ *
+ * @param kind - 装饰类型
+ * @param range - 折叠选区
+ */
+function rteInsertCollapsedInlineDecoSpan(
+  kind: RteInlineDecoKind,
+  range: Range,
+): boolean {
+  try {
+    const span = document.createElement("span");
+    mergeRteInlineDecoKind(span, kind);
+    const zw = document.createTextNode("\u200b");
+    span.appendChild(zw);
+    range.insertNode(span);
+    const nr = document.createRange();
+    nr.setStart(zw, 1);
+    nr.collapse(true);
+    const sel = document.getSelection();
+    if (sel) {
+      sel.removeAllRanges();
+      sel.addRange(nr);
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * 查找完全包含选区的、**仅**带颜色标记（无粗斜划 `data-rte-*`）的最内层 `span`，用于与字色同层合并。
+ *
+ * @param editor - contenteditable 根
+ * @param range - 选区
+ */
+function findInnermostRteColorOnlySpan(
+  editor: HTMLElement,
+  range: Range,
+): HTMLSpanElement | null {
+  let n: Node | null = range.commonAncestorContainer;
+  if (n.nodeType === Node.TEXT_NODE) n = n.parentNode;
+  while (n != null && n !== editor) {
+    if (
+      n instanceof HTMLSpanElement &&
+      (n.hasAttribute("data-rte-color") ||
+        n.hasAttribute("data-rte-bgcolor")) &&
+      !rteSpanHasInlineDecoMark(n)
+    ) {
+      try {
+        const sr = document.createRange();
+        sr.selectNodeContents(n);
+        const inside =
+          range.compareBoundaryPoints(Range.START_TO_START, sr) >= 0 &&
+          range.compareBoundaryPoints(Range.END_TO_END, sr) <= 0;
+        if (inside) return n;
+      } catch {
+        /* continue */
+      }
+    }
+    n = n.parentNode;
+  }
+  return null;
+}
+
+/**
+ * 对选区施加或切换加粗/斜体/下划线（不调用 `execCommand('bold'|…)`，避免 `b`/`i`/`u`）。
+ *
+ * @param editor - contenteditable 根
+ * @param kind - 装饰类型
+ * @returns 为 `true` 表示已处理，调用方应 `emitChange` 且勿再 `execCommand`
+ */
+function applyRteInlineDecoration(
+  editor: HTMLElement,
+  kind: RteInlineDecoKind,
+): boolean {
+  editor.focus({ preventScroll: true });
+  const sel = document.getSelection();
+  if (!sel || sel.rangeCount === 0) return false;
+  const raw = sel.getRangeAt(0);
+  if (!editor.contains(raw.commonAncestorContainer)) return false;
+
+  const attr = rteDataAttrForInlineKind(kind);
+
+  if (raw.collapsed) {
+    const r = raw.cloneRange();
+    const innerC = findInnermostRteInlineDecoSpan(editor, r);
+    /** 光标已在同类型装饰内：去掉整段包裹（避免再走 `execCommand` 生成 `b`/`i`/`u`） */
+    if (innerC && innerC.hasAttribute(attr)) {
+      const parentC = innerC.parentNode;
+      stripRteInlineDecoKind(innerC, kind);
+      const focusC = innerC.isConnected ? innerC : parentC;
+      if (focusC) rteCollapseSelectionToEndOfNode(focusC);
+      return true;
+    }
+    return rteInsertCollapsedInlineDecoSpan(kind, r);
+  }
+
+  const r = raw.cloneRange();
+  const decoSpan = findInnermostRteInlineDecoSpan(editor, r);
+
+  if (decoSpan && decoSpan.hasAttribute(attr)) {
+    if (rteSelectionFullyCoversNodeContents(r, decoSpan)) {
+      const parentBefore = decoSpan.parentNode;
+      stripRteInlineDecoKind(decoSpan, kind);
+      const anchor = decoSpan.isConnected ? decoSpan : parentBefore;
+      if (anchor) rteCollapseSelectionToEndOfNode(anchor);
+      return true;
+    }
+    const neutral = document.createElement("span");
+    if (kind === "bold") {
+      neutral.style.setProperty("font-weight", "400", "important");
+    } else if (kind === "italic") {
+      neutral.style.setProperty("font-style", "normal", "important");
+    } else {
+      neutral.style.setProperty("text-decoration", "none", "important");
+    }
+    try {
+      r.surroundContents(neutral);
+    } catch {
+      try {
+        const frag = r.extractContents();
+        neutral.appendChild(frag);
+        r.insertNode(neutral);
+      } catch {
+        return false;
+      }
+    }
+    rteCollapseSelectionToEndOfNode(neutral);
+    return true;
+  }
+
+  if (decoSpan && rteSpanHasInlineDecoMark(decoSpan)) {
+    mergeRteInlineDecoKind(decoSpan, kind);
+    rteCollapseSelectionToEndOfNode(decoSpan);
+    return true;
+  }
+
+  const colorSpan = findInnermostRteColorOnlySpan(editor, r);
+  if (colorSpan) {
+    mergeRteInlineDecoKind(colorSpan, kind);
+    rteCollapseSelectionToEndOfNode(colorSpan);
+    return true;
+  }
+
+  return rteSurroundRangeWithInlineDecoKind(r, kind);
+}
+
+/**
+ * 为选区设置前景或背景色：若选区已在 {@link tryUpdateExistingRteColorSpan} 可识别的 `span` 内则只改 `style`；
+ * 否则用 {@link rteSurroundRangeWithImportantStyle} 包一层；最后退回 `execCommand`。
+ *
+ * @param editor - contenteditable 根节点
+ * @param savedRange - 打开取色器前克隆的选区；须仍挂在文档中且未折叠
+ * @param cmd - `foreColor` 或 `backColor`
+ * @param color - 颜色串，如 `#rrggbb`
+ */
+function applyRteForeOrBackColor(
+  editor: HTMLElement,
+  savedRange: Range | null,
+  cmd: "foreColor" | "backColor",
+  color: string,
+): void {
+  editor.focus({ preventScroll: true });
+  /**
+   * 必须先恢复选区再取 Range：`savedRange` 为打开取色器前的克隆，与当前文档选区可能脱节；
+   * 内联粗体等改动后公共祖先也可能变化，仅用克隆会导致 `tryUpdate`/`surroundContents` 误判或失败。
+   */
+  restoreEditorSelectionRange(editor, savedRange);
+
+  const sel = document.getSelection();
+  let r: Range | null = null;
+  if (sel && sel.rangeCount > 0) {
+    const live = sel.getRangeAt(0);
+    if (!live.collapsed && editor.contains(live.commonAncestorContainer)) {
+      r = live.cloneRange();
+    }
+  }
+  if (r == null && savedRange != null) {
+    try {
+      if (
+        !savedRange.collapsed &&
+        editor.contains(savedRange.commonAncestorContainer)
+      ) {
+        r = savedRange.cloneRange();
+      }
+    } catch {
+      r = null;
+    }
+  }
+
+  const styleKey = cmd === "foreColor" ? "color" : "backgroundColor";
+  if (r != null && tryUpdateExistingRteColorSpan(editor, r, cmd, color)) {
+    return;
+  }
+  if (r != null && rteSurroundRangeWithImportantStyle(r, styleKey, color)) {
+    return;
+  }
+  restoreEditorSelectionRange(editor, savedRange);
+  if (typeof document.execCommand === "function") {
+    try {
+      /** DOM 类型定义第三参为 `string`，浏览器对 `styleWithCSS` 接受 `"true"` */
+      document.execCommand("styleWithCSS", false, "true");
+    } catch {
+      /* 忽略 */
+    }
+  }
+  document.execCommand(cmd, false, color);
+}
+
+/**
+ * 若选区完全落在带 `data-rte-font-size` 的 `span` 内，则只更新其 `font-size`，避免重复嵌套。
+ *
+ * @param editor - contenteditable 根
+ * @param range - 当前选区（非折叠）
+ * @param size - 如 `16px`
+ * @returns 是否已就地更新并收起选区到该 `span` 末尾
+ */
+function tryUpdateExistingRteFontSizeSpan(
+  editor: HTMLElement,
+  range: Range,
+  size: string,
+): boolean {
+  let n: Node | null = range.commonAncestorContainer;
+  if (n.nodeType === Node.TEXT_NODE) n = n.parentNode;
+  while (n != null && n !== editor) {
+    if (n instanceof HTMLSpanElement && n.hasAttribute("data-rte-font-size")) {
+      try {
+        const spanRange = document.createRange();
+        spanRange.selectNodeContents(n);
+        const inside =
+          range.compareBoundaryPoints(Range.START_TO_START, spanRange) >= 0 &&
+          range.compareBoundaryPoints(Range.END_TO_END, spanRange) <= 0;
+        if (inside) {
+          n.style.setProperty("font-size", size, "important");
+          rteCollapseSelectionToEndOfNode(n);
+          return true;
+        }
+      } catch {
+        /* 选区与 span 比较失败则继续向上找 */
+      }
+    }
+    n = n.parentNode;
+  }
+  return false;
+}
+
+/**
+ * 用带 `data-rte-font-size` 的 `span` 包裹非折叠选区；`surroundContents` 失败时退回 `extractContents`。
+ *
+ * @param range - 克隆后的选区
+ * @param size - 如 `16px`
+ * @returns 是否成功
+ */
+function rteSurroundRangeWithFontSize(range: Range, size: string): boolean {
+  const span = document.createElement("span");
+  span.style.setProperty("font-size", size, "important");
+  span.setAttribute("data-rte-font-size", "");
+  try {
+    range.surroundContents(span);
+  } catch {
+    try {
+      const frag = range.extractContents();
+      span.appendChild(frag);
+      range.insertNode(span);
+    } catch {
+      return false;
+    }
+  }
+  rteCollapseSelectionToEndOfNode(span);
+  return true;
+}
+
+/**
+ * 折叠选区时在光标处插入零宽占位 + 字号 `span`，便于后续输入继承字号。
+ *
+ * @param size - 如 `16px`
+ * @param range - 折叠选区
+ * @returns 是否成功
+ */
+function rteInsertCollapsedFontSizeSpan(size: string, range: Range): boolean {
+  try {
+    const span = document.createElement("span");
+    span.style.setProperty("font-size", size, "important");
+    span.setAttribute("data-rte-font-size", "");
+    const zw = document.createTextNode("\u200b");
+    span.appendChild(zw);
+    range.insertNode(span);
+    const nr = document.createRange();
+    nr.setStart(zw, 1);
+    nr.collapse(true);
+    const sel = document.getSelection();
+    if (sel) {
+      sel.removeAllRanges();
+      sel.addRange(nr);
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * 为选区设置字号：`span` + `font-size !important` + `data-rte-font-size`（与字色包裹思路一致）。
+ *
+ * @param editor - contenteditable 根
+ * @param size - 如 `16px`
+ */
+function applyRteFontSize(editor: HTMLElement, size: string): void {
+  if (!size.trim()) return;
+  editor.focus({ preventScroll: true });
+  const sel = document.getSelection();
+  if (!sel || sel.rangeCount === 0) return;
+  const raw = sel.getRangeAt(0);
+  if (!editor.contains(raw.commonAncestorContainer)) return;
+
+  if (raw.collapsed) {
+    rteInsertCollapsedFontSizeSpan(size, raw.cloneRange());
+    return;
+  }
+
+  const r = raw.cloneRange();
+  if (tryUpdateExistingRteFontSizeSpan(editor, r, size)) return;
+  rteSurroundRangeWithFontSize(r, size);
+}
+
+/**
+ * 自节点向上在编辑区内查找适合设置行高的块级容器。
+ *
+ * @param editor - contenteditable 根
+ * @param node - 起点（常为选区锚点）
+ */
+function rteFindBlockForLineHeight(
+  editor: HTMLElement,
+  node: Node | null,
+): HTMLElement | null {
+  let n: Node | null = node;
+  if (n?.nodeType === Node.TEXT_NODE) n = n.parentNode;
+  while (n != null && n !== editor) {
+    if (n instanceof HTMLElement) {
+      const t = n.tagName.toLowerCase();
+      if (
+        t === "p" || t === "div" || t === "blockquote" || t === "li" ||
+        t === "pre" || t === "td" || t === "th" || /^h[1-6]$/.test(t)
+      ) {
+        return n;
+      }
+    }
+    n = n.parentNode;
+  }
+  return null;
+}
+
+/**
+ * 为光标所在块设置 `line-height`（`!important`）；若无块则先 `formatBlock` 为 `p` 再尝试。
+ *
+ * @param editor - contenteditable 根
+ * @param value - 如 `1.5`
+ */
+function applyRteLineHeight(editor: HTMLElement, value: string): void {
+  if (!value.trim()) return;
+  editor.focus({ preventScroll: true });
+  const sel = document.getSelection();
+  if (!sel || sel.rangeCount === 0) return;
+  let block = rteFindBlockForLineHeight(editor, sel.anchorNode);
+  if (!block && typeof document.execCommand === "function") {
+    try {
+      document.execCommand("formatBlock", false, "p");
+    } catch {
+      /* 不支持则忽略 */
+    }
+    block = rteFindBlockForLineHeight(editor, sel.anchorNode);
+  }
+  if (block && editor.contains(block)) {
+    block.style.setProperty("line-height", value, "important");
+  }
+}
+
+/**
+ * Chromium 系：将 Enter 新段默认由 `div` 改为 `p`（非标准命令，不支持时静默忽略）。
+ */
+function trySetDefaultParagraphSeparatorToP(): void {
+  if (typeof document.execCommand !== "function") return;
+  try {
+    document.execCommand("defaultParagraphSeparator", false, "p");
+  } catch {
+    /* Safari 等可能不支持 */
+  }
+}
+
+/**
+ * 若编辑区根下以非空文本节点开头，将其包入 `p`，避免在空编辑器里直接输入时首段无块级标签。
+ *
+ * @param editor - contenteditable 根元素
+ * @returns 是否修改过 DOM
+ */
+function wrapRteLeadingRootTextInParagraph(editor: HTMLDivElement): boolean {
+  const first = editor.firstChild;
+  if (!first || first.nodeType !== Node.TEXT_NODE) return false;
+  const tn = first as Text;
+  const raw = tn.textContent ?? "";
+  if (raw === "") return false;
+  const p = document.createElement("p");
+  editor.removeChild(tn);
+  p.appendChild(tn);
+  editor.insertBefore(p, editor.firstChild);
+  try {
+    const sel = document.getSelection();
+    if (sel && sel.anchorNode && editor.contains(sel.anchorNode)) {
+      const range = document.createRange();
+      range.selectNodeContents(p);
+      range.collapse(false);
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+  } catch {
+    /* 选区恢复失败则忽略 */
+  }
+  return true;
+}
+
+/**
+ * 受控 `value` 重绘时是否禁止用 props 覆盖编辑区 `innerHTML`。
+ * 焦点在组件根（工具栏、查找条、编辑区）内时覆盖会破坏「查找/替换」流程，且易与
+ * {@link refreshHistoryNavState} 的焦点抖动叠加成问题。
+ *
+ * @param editorId - 编辑区元素 id（与根节点 `id` 为 `${editorId}-root` 对应）
+ * @param editorEl - contenteditable 根节点
+ */
+function shouldSkipControlledInnerHtmlSync(
+  editorId: string,
+  editorEl: HTMLDivElement,
+): boolean {
+  const doc = globalThis.document;
+  if (!doc) return false;
+  if (isEditorActiveOrSelectionInside(editorEl)) return true;
+  const root = doc.getElementById(`${editorId}-root`);
+  const ae = doc.activeElement;
+  if (root && ae instanceof Node && root.contains(ae)) return true;
+  return false;
+}
+
+/**
+ * 比较两段富文本 HTML 是否在「受控回写」语义下等价：忽略零宽符、`&nbsp;` 与普通空格差异及标签间空白折叠，
+ * 避免浏览器序列化与父级回显字符串严格不等时误判需重写 `innerHTML`（进而重置光标）。
+ *
+ * @param a - 一段 HTML
+ * @param b - 另一段 HTML
+ * @returns 宽松相等时为 true
+ */
+function rteHtmlLooselyEquals(a: string, b: string): boolean {
+  if (a === b) return true;
+  const norm = (s: string) =>
+    s.replace(/\uFEFF/g, "").replace(/&nbsp;/gi, " ").replace(/\s+/g, " ");
+  return norm(a) === norm(b);
+}
+
+/** 工具栏内 SVG 统一尺寸 class */
+const rteToolbarSvgCls = "size-4 shrink-0";
+
+/**
+ * 渲染工具栏按钮内容：预设项用 currentColor 线框 SVG，避免彩色 emoji；未知项回退到 `icon` 或 `key` 文本。
+ *
+ * @param item - 工具栏配置项
+ * @param options - 运行时状态；`rteFullscreen` 为 true 时 `fullscreen` 项显示「退出全屏」图标
+ */
+function renderToolbarButtonContent(
+  item: ToolbarItem,
+  options?: { rteFullscreen?: boolean },
+) {
+  switch (item.key) {
+    /**
+     * 插入链接：原双弧线路径在 16px 下易糊成「一团」；改用与 `IconLink2`（Link2.tsx）
+     * 相同的链环造型，小工具栏上更易辨认。
+     */
+    case "link":
+      return (
+        <svg
+          class={rteToolbarSvgCls}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M9 17H7A5 5 0 0 1 7 7h2"
+          />
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M15 7h2a5 5 0 1 1 0 10h-2"
+          />
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M8 12h8"
+          />
+        </svg>
+      );
+    case "blockquote":
+      return (
+        <svg
+          class={rteToolbarSvgCls}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          <path
+            stroke-width="2"
+            d="M8 6v12M8 8h6a2 2 0 012 2v2a2 2 0 01-2 2H8"
+          />
+        </svg>
+      );
+    case "insertImage":
+      return (
+        <svg
+          class={rteToolbarSvgCls}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          <rect
+            x="3"
+            y="3"
+            width="18"
+            height="18"
+            rx="2"
+            fill="none"
+            stroke-width="2"
+          />
+          <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor" />
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M21 15l-5-5L5 21"
+          />
+        </svg>
+      );
+    case "uploadImage":
+      return (
+        <svg
+          class={rteToolbarSvgCls}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5-5 5 5M12 5v12"
+          />
+        </svg>
+      );
+    case "backColor":
+      return (
+        <svg
+          class={rteToolbarSvgCls}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M4 20h16M6 16l6-12 4 4-6 8"
+          />
+        </svg>
+      );
+    case "find":
+      return (
+        <svg
+          class={rteToolbarSvgCls}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+          />
+        </svg>
+      );
+    case "replace":
+      return (
+        <svg
+          class={rteToolbarSvgCls}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M4 7h12M4 7l3-3m-3 3l3 3M20 17H8m12 0l-3 3m3-3l-3-3"
+          />
+        </svg>
+      );
+    case "print":
+      return (
+        <svg
+          class={rteToolbarSvgCls}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M6 9V5h12v4M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6v-8z"
+          />
+        </svg>
+      );
+    case "export":
+      return (
+        <svg
+          class={rteToolbarSvgCls}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V4"
+          />
+        </svg>
+      );
+    /** 左对齐：与 `IconAlignLeft`（AlignLeft.tsx）路径一致 */
+    case "justifyLeft":
+      return (
+        <svg
+          class={rteToolbarSvgCls}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M4 6h16M4 12h10M4 18h14"
+          />
+        </svg>
+      );
+    /** 居中对齐：与 `IconAlignCenter`（AlignCenter.tsx）路径一致 */
+    case "justifyCenter":
+      return (
+        <svg
+          class={rteToolbarSvgCls}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M4 6h16M7 12h10M5 18h14"
+          />
+        </svg>
+      );
+    /** 右对齐：与 `IconAlignRight`（AlignRight.tsx）路径一致 */
+    case "justifyRight":
+      return (
+        <svg
+          class={rteToolbarSvgCls}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M4 6h16M10 12h10M6 18h14"
+          />
+        </svg>
+      );
+    /**
+     * 删除线：配置里 `S̲` 为文本组合字符，下划线受字距影响易偏右；
+     * 使用与 Lucide「Strikethrough」一致的路径（横线贯穿 S 形中部、几何居中）。
+     */
+    case "strike":
+      return (
+        <svg
+          class={rteToolbarSvgCls}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M16 4H9a3 3 0 0 0-2.83 4"
+          />
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M14 12a4 4 0 0 1 0 8H6"
+          />
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M4 12h16"
+          />
+        </svg>
+      );
+    /**
+     * 全屏：未全屏时与 `IconMaximize2` 同形；全屏后与 `IconExitFullscreen` 同形（四角向内）。
+     */
+    case "fullscreen":
+      if (options?.rteFullscreen) {
+        return (
+          <svg
+            class={rteToolbarSvgCls}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M5 9l4 0l0 -4"
+            />
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M3 3l6 6"
+            />
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M5 15l4 0l0 4"
+            />
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M3 21l6 -6"
+            />
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M19 9l-4 0l0 -4"
+            />
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M15 9l6 -6"
+            />
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M19 15l-4 0l0 4"
+            />
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M15 15l6 6"
+            />
+          </svg>
+        );
+      }
+      return (
+        <svg
+          class={rteToolbarSvgCls}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M16 4l4 0l0 4"
+          />
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M14 10l6 -6"
+          />
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M8 20l-4 0l0 -4"
+          />
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M4 20l6 -6"
+          />
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M16 20l4 0l0 -4"
+          />
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M14 14l6 6"
+          />
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M8 4l-4 0l0 4"
+          />
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M4 4l6 6"
+          />
+        </svg>
+      );
+    default:
+      return (
+        <span class="inline-flex min-w-5 items-center justify-center leading-none">
+          {item.icon ?? item.key}
+        </span>
+      );
+  }
+}
+
 /** 将选区内的 Markdown 风格转为 HTML（** -> bold, * -> italic, ` -> code, # -> 标题） */
 function parseMarkdownInSelection(html: string): string {
   return html
@@ -318,16 +1608,148 @@ export interface RichTextEditorProps {
   onUploadImage?: (file: File) => Promise<string> | string;
   /** 粘贴图片时：不传则用 data URL 插入；传则经此处理（如上传）后插入返回的 URL */
   onPasteImage?: (blob: Blob) => Promise<string> | string;
+  /** 为 true 时隐藏编辑区、工具栏与查找条控件的聚焦激活态边框；默认 false 显示 */
+  hideFocusRing?: boolean;
 }
 
 const toolbarWrapCls =
-  "flex flex-wrap items-center gap-0.5 p-2 border-b border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800/50";
+  "flex flex-wrap items-center gap-1 p-2 border-b border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800/50";
 const toolbarGroupCls =
-  "flex items-center gap-0.5 border-r border-slate-200 dark:border-slate-600 pr-2 last:border-r-0 last:pr-0";
-const toolbarBtnCls =
-  "p-1.5 rounded text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600 hover:text-slate-900 dark:hover:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed min-w-[28px] text-sm font-medium";
-const editorCls =
-  "w-full min-h-[120px] px-3 py-2 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 border border-t-0 border-slate-300 dark:border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:focus:ring-blue-400 overflow-auto [&_h2]:text-xl [&_h2]:font-bold [&_h3]:text-lg [&_h3]:font-semibold [&_h4]:text-base [&_h4]:font-semibold [&_blockquote]:border-l-4 [&_blockquote]:border-slate-300 [&_blockquote]:pl-3 [&_blockquote]:italic [&_pre]:bg-slate-100 [&_pre]:dark:bg-slate-700 [&_pre]:p-2 [&_pre]:rounded [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6 [&_table]:border-collapse [&_table]:w-full [&_th]:border [&_th]:border-slate-300 [&_th]:bg-slate-100 [&_th]:dark:bg-slate-700 [&_th]:p-2 [&_td]:border [&_td]:border-slate-300 [&_td]:p-2";
+  "flex items-center gap-0.5 border-r border-slate-200 dark:border-slate-600 pr-1 last:border-r-0 last:pr-0";
+/** 工具栏按钮底纹（不含聚焦 ring，由 {@link controlBlueFocusRing} 控制） */
+const toolbarBtnBase =
+  "inline-flex items-center justify-center p-1.5 rounded text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600 hover:text-slate-900 dark:hover:text-slate-100 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed min-w-[28px] min-h-[28px] text-sm font-medium";
+
+/** 撤销/重做在「可用」时的强调色（相对默认工具栏灰字加亮） */
+const toolbarHistoryActiveCls =
+  "text-slate-900 dark:text-slate-100 font-semibold";
+/** 撤销/重做在「当前不可用」时的弱化色（暗色背景下 slate-600 + disabled:opacity-50 会几乎看不见，故提亮并减轻 disabled 叠暗） */
+const toolbarHistoryMutedCls =
+  "text-slate-500 dark:text-slate-400 disabled:opacity-80";
+
+/**
+ * 工具栏内原生 `<select>`：默认宽度往往等于**最宽 option**，短标签（如「正文」「空格」）右侧会空一大块；
+ * `field-sizing: content` 按**当前选中项**收缩宽度（Chrome 123+、Safari 17.4+、Firefox 等，旧浏览器回退为较宽）。
+ * 右侧 `padding` 在具体 `select` 上与 `appearance-none` 配合，略小于旧版 `pr-5` 以收紧「正文 / 空格」等短标签右侧空白。
+ * 段落下拉外层勿对子级 select 使用 `flex-1`，否则会强行撑满父级。
+ */
+const rteToolbarSelectFitCls =
+  "text-left [field-sizing:content] w-max min-w-0 max-w-[min(100%,14rem)]";
+
+/** 快捷键说明（工具栏「快捷键」与 {@link RTE_AUX_SHORTCUTS} Modal 共用） */
+const RTE_SHORTCUTS_HELP_TEXT =
+  "快捷键：\nCtrl+Z 撤销\nCtrl+Y 重做\nCtrl+B 加粗\nCtrl+I 斜体\nCtrl+U 下划线\nCtrl+K 插入链接\nCtrl+F 查找";
+
+/**
+ * 无表头表格 HTML（与历史 `insertTable` 行内样式一致）。
+ *
+ * @param rows - 行数
+ * @param cols - 列数
+ */
+function buildRtePlainTableHtml(rows: number, cols: number): string {
+  const tableStyles = "border-collapse:collapse;width:100%;table-layout:fixed";
+  const cellStyles = "border:1px solid #cbd5e1;padding:6px 8px;min-width:60px;";
+  let html = `<table style="${tableStyles}" class="rte-table"><tbody>`;
+  for (let r = 0; r < rows; r++) {
+    html += "<tr>";
+    for (let c = 0; c < cols; c++) {
+      html += `<td style="${cellStyles}">&nbsp;</td>`;
+    }
+    html += "</tr>";
+  }
+  html += "</tbody></table>";
+  return html;
+}
+
+/**
+ * 含表头表格 HTML（与历史 `insertTableWithHeader` 一致）。
+ *
+ * @param rows - 行数（含表头）
+ * @param cols - 列数
+ */
+function buildRteHeaderTableHtml(rows: number, cols: number): string {
+  const tableStyles = "border-collapse:collapse;width:100%;table-layout:fixed";
+  const cellStyles = "border:1px solid #cbd5e1;padding:6px 8px;min-width:60px;";
+  const thStyles = cellStyles +
+    ";font-weight:600;background:rgb(241 245 249);";
+  let html = `<table style="${tableStyles}" class="rte-table"><thead><tr>`;
+  for (let c = 0; c < cols; c++) {
+    html += `<th style="${thStyles}">&nbsp;</th>`;
+  }
+  html += "</tr></thead><tbody>";
+  for (let r = 1; r < rows; r++) {
+    html += "<tr>";
+    for (let c = 0; c < cols; c++) {
+      html += `<td style="${cellStyles}">&nbsp;</td>`;
+    }
+    html += "</tr>";
+  }
+  html += "</tbody></table>";
+  return html;
+}
+
+/**
+ * 根据 {@link ToolbarItem} 与浏览器撤销栈状态，生成工具栏按钮 class（撤销/重做单独高亮/置灰）。
+ *
+ * @param item - 工具项
+ * @param nav - 是否可撤销 / 可重做
+ * @param editorDisabled - 整表禁用
+ * @param showFocusRing - 是否显示聚焦 ring
+ * @returns 合并后的 Tailwind class
+ */
+function toolbarButtonClassForItem(
+  item: ToolbarItem,
+  nav: { canUndo: boolean; canRedo: boolean },
+  editorDisabled: boolean,
+  showFocusRing: boolean,
+): string {
+  const ring = controlBlueFocusRing(showFocusRing);
+  if (item.command === "undo") {
+    const active = !editorDisabled && nav.canUndo;
+    return twMerge(
+      toolbarBtnBase,
+      ring,
+      active ? toolbarHistoryActiveCls : toolbarHistoryMutedCls,
+    );
+  }
+  if (item.command === "redo") {
+    const active = !editorDisabled && nav.canRedo;
+    return twMerge(
+      toolbarBtnBase,
+      ring,
+      active ? toolbarHistoryActiveCls : toolbarHistoryMutedCls,
+    );
+  }
+  return twMerge(toolbarBtnBase, ring);
+}
+
+/**
+ * 是否禁用撤销/重做按钮（无栈时点击无意义，与置灰样式一致）。
+ *
+ * @param item - 工具项
+ * @param nav - 是否可撤销 / 可重做
+ * @param editorDisabled - 整表禁用
+ */
+function isHistoryToolbarDisabled(
+  item: ToolbarItem,
+  nav: { canUndo: boolean; canRedo: boolean },
+  editorDisabled: boolean,
+): boolean {
+  if (editorDisabled) return true;
+  if (item.command === "undo") return !nav.canUndo;
+  if (item.command === "redo") return !nav.canRedo;
+  return false;
+}
+
+/**
+ * 可编辑区底纹（聚焦高亮由根节点 `has-[[data-rte-editor]:focus]` 改边框色，此处聚焦时 `border-transparent` 避免与根双线）。
+ */
+const editorSurface =
+  "w-full min-h-[120px] px-3 py-2 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 border border-t-0 border-slate-300 dark:border-slate-600 focus:outline-none overflow-auto [&_p]:mb-2 [&_p]:mt-0 [&_p:last-child]:mb-0 [&_h2]:text-xl [&_h2]:font-bold [&_h3]:text-lg [&_h3]:font-semibold [&_h4]:text-base [&_h4]:font-semibold [&_blockquote]:border-l-4 [&_blockquote]:border-slate-300 [&_blockquote]:pl-3 [&_blockquote]:italic [&_pre]:bg-slate-100 [&_pre]:dark:bg-slate-700 [&_pre]:p-2 [&_pre]:rounded [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6 [&_table]:border-collapse [&_table]:w-full [&_th]:border [&_th]:border-slate-300 [&_th]:bg-slate-100 [&_th]:dark:bg-slate-700 [&_th]:p-2 [&_td]:border [&_td]:border-slate-300 [&_td]:p-2";
+
+/** 查找条内小型文本框底纹（不含 ring） */
+const findBarInputSurface =
+  "px-2 py-1 border border-slate-300 dark:border-slate-600 rounded text-sm bg-white dark:bg-slate-800 focus:outline-none";
 const editorReadOnlyCls = "cursor-default bg-slate-50 dark:bg-slate-800/80";
 
 export function RichTextEditor(props: RichTextEditorProps) {
@@ -346,231 +1768,378 @@ export function RichTextEditor(props: RichTextEditorProps) {
     onInsertImage,
     onUploadImage,
     onPasteImage,
+    hideFocusRing = false,
   } = props;
 
   const toolbarGroups = customToolbar
     ? normalizeToolbarConfig(customToolbar)
     : getToolbarByPreset(toolbarPreset);
 
+  /**
+   * {@link refreshHistoryNavState} 会临时 focus 编辑区以调用 queryCommandEnabled；
+   * 若同步触发编辑区 onFocus 再 queueMicrotask(refresh)，会与「焦点在查找条」等场景形成无限微任务链导致页面卡死。
+   */
+  let suppressEditorFocusHistoryRefresh = false;
+
   const editorId = id ?? `rte-${Math.random().toString(36).slice(2, 9)}`;
   const uploadInputId = `${editorId}-upload`;
+
+  /**
+   * 工具栏撤销/重做是否可点；与 {@link refreshHistoryNavState} 同步。
+   * 撤销：**不**依赖 `queryCommandEnabled("undo")`（多环境下恒为 false），改为当前 innerHTML 是否与
+   * {@link lastSyncedFromPropsHtml} 不同。重做：`queryCommandEnabled("redo")` 与「刚执行过撤销」标志合取。
+   */
+  const historyNavState = createSignal({
+    canUndo: false,
+    canRedo: false,
+  });
+
+  /**
+   * 最近一次由受控 `value` 写入编辑区的 HTML（首次 effect 时初始化），作撤销对照基准。
+   */
+  let lastSyncedFromPropsHtml: string | null = null;
+
+  /**
+   * 用户通过工具栏或 Ctrl+Z 执行过撤销后为 true，用于在 `queryCommandEnabled("redo")` 不可靠时仍点亮重做。
+   * 新输入、外部改写 innerHTML、执行重做后置 false（或由 finally 在非 undo/redo 工具操作时清除）。
+   */
+  let rteRedoEligibleAfterUndo = false;
+
+  /**
+   * 焦点在 contenteditable 编辑区上时为 true。为 true 时禁止用受控 `value` 写 `innerHTML`，否则浏览器会重置选区
+   * （光标跳行首、首字倒序等）。由编辑区 `onFocus`/`onBlur` 维护；比仅靠 `document.activeElement` 可靠。
+   */
+  let rteEditorHasFocus = false;
+
+  /**
+   * 防止 {@link refreshHistoryNavState} 重入（onFocus / microtask / signal 连锁时同步再入会导致栈溢出或页面卡死）。
+   */
+  let insideRefreshHistoryNav = false;
+
+  /**
+   * 根节点是否处于 `rte-fullscreen`，与全屏按钮的图标、`title` / `aria-label` 同步。
+   */
+  const rteFullscreen = createSignal(false);
+
+  /**
+   * 仅在 canUndo/canRedo 与当前 signal 不同时写入。
+   * `createSignal` 对对象用 `Object.is`：每次 `value = { canUndo, canRedo }` 都是新引用，即使用户未操作也会触发订阅 →
+   * 重渲染 → ref 再 `queueMicrotask(refresh)`，形成更新风暴导致页面极卡。
+   *
+   * @param next - 浏览器查询得到的下一状态
+   */
+  const setHistoryNavIfChanged = (next: {
+    canUndo: boolean;
+    canRedo: boolean;
+  }) => {
+    const prev = historyNavState.value;
+    if (prev.canUndo === next.canUndo && prev.canRedo === next.canRedo) {
+      return;
+    }
+    historyNavState.value = next;
+  };
+
+  /**
+   * 根据当前 DOM 与受控基准更新撤销/重做按钮态；仅对 **redo** 查询 `queryCommandEnabled`（需焦点时短暂 focus 编辑区）。
+   */
+  const refreshHistoryNavState = () => {
+    if (typeof document === "undefined") return;
+    if (insideRefreshHistoryNav) return;
+    insideRefreshHistoryNav = true;
+    try {
+      const editor = document.getElementById(editorId) as HTMLDivElement | null;
+      if (!editor?.isConnected) return;
+      /** 基准未建立前不做比较，避免误亮撤销 */
+      if (lastSyncedFromPropsHtml === null) {
+        setHistoryNavIfChanged({ canUndo: false, canRedo: false });
+        return;
+      }
+
+      const baseline = lastSyncedFromPropsHtml;
+      const currentHtml = editor.innerHTML;
+      const canUndo = baseline === ""
+        ? currentHtml.replace(/\uFEFF/g, "").trim() !== ""
+        : currentHtml !== baseline;
+
+      let qRedo = false;
+      if (typeof document.queryCommandEnabled === "function") {
+        const doc = globalThis.document;
+        const prevActive = doc.activeElement;
+        const root = doc.getElementById(`${editorId}-root`);
+        /**
+         * 焦点在编辑区 **或** 组件根内（工具栏、查找条等）时，不得为查 redo 去 `editor.focus()`：
+         * 否则 `onBlur` 里排的微任务会再把焦点抢回编辑区，与 `onFocus`/受控更新形成高频震荡，页面直接卡死。
+         * 仅当 {@link rteEditorHasFocus} 仍为 true 且焦点已跑出整棵 RTE 外时，才短暂抢焦点查询（极少见）。
+         */
+        const focusInsideRteChrome = prevActive === editor ||
+          (root != null &&
+            prevActive instanceof Node &&
+            root.contains(prevActive));
+        const needStealFocus = rteEditorHasFocus && !focusInsideRteChrome;
+        if (needStealFocus) {
+          suppressEditorFocusHistoryRefresh = true;
+          try {
+            editor.focus({ preventScroll: true });
+          } finally {
+            suppressEditorFocusHistoryRefresh = false;
+          }
+        }
+        try {
+          qRedo = document.queryCommandEnabled("redo");
+        } catch {
+          qRedo = false;
+        }
+        if (needStealFocus && prevActive instanceof HTMLElement) {
+          prevActive.focus({ preventScroll: true });
+        }
+      }
+
+      const canRedo = qRedo || rteRedoEligibleAfterUndo;
+      setHistoryNavIfChanged({ canUndo, canRedo });
+    } finally {
+      insideRefreshHistoryNav = false;
+    }
+  };
+
+  /** 编辑区根节点；模板里只写 `ref={editorHostRef}`，不在 ref 里塞同步逻辑。 */
+  const editorHostRef = createRef<HTMLDivElement>(null);
 
   const insertImageUrl = (url: string) => {
     const editor = document.getElementById(editorId) as HTMLDivElement | null;
     if (editor) {
       editor.focus();
       document.execCommand("insertImage", false, url);
+      rteRedoEligibleAfterUndo = false;
+      emitChange();
+      queueMicrotask(() => refreshHistoryNavState());
     }
   };
 
-  const handleToolbarAction = (item: ToolbarItem, childValue?: string) => {
+  const handleToolbarAction = (
+    item: ToolbarItem,
+    childValue?: string,
+    /** 工具栏点击时传入，用于在指针旁打开取色面板 */
+    fromPointer?: MouseEvent,
+  ) => {
     if (disabled || readOnly) return;
     const editor = document.getElementById(editorId) as HTMLDivElement | null;
     if (!editor) return;
-    editor.focus();
-
+    /** 须在 try 外声明，供 finally 判断是否为撤销/重做（块内 const 在 finally 不可见） */
     const cmd = item.command;
     const val = childValue ?? item.value ?? "";
+    try {
+      editor.focus();
 
-    if (cmd === "createLink") {
-      const url = globalThis.prompt?.("输入链接 URL") ?? "";
-      if (url) document.execCommand(cmd, false, url);
-      return;
-    }
-    if (cmd === "insertImage") {
-      if (onInsertImage) {
-        Promise.resolve(onInsertImage()).then((url) => {
-          if (url) insertImageUrl(url);
-        });
-      } else {
-        const url = globalThis.prompt?.("输入图片 URL") ?? "";
-        if (url) insertImageUrl(url);
+      if (cmd === "createLink") {
+        openLinkUrlModal();
+        return;
       }
-      return;
-    }
-    if (cmd === "uploadImage") {
-      const input = document.getElementById(uploadInputId) as
-        | HTMLInputElement
-        | null;
-      if (input) {
-        input.value = "";
-        input.click();
-      }
-      return;
-    }
-    if (cmd === "insertTable") {
-      const rowsStr = globalThis.prompt?.("行数", "3") ?? "3";
-      const colsStr = globalThis.prompt?.("列数", "3") ?? "3";
-      const rows = Math.max(1, Math.min(20, parseInt(rowsStr, 10) || 3));
-      const cols = Math.max(1, Math.min(10, parseInt(colsStr, 10) || 3));
-      const tableStyles =
-        "border-collapse:collapse;width:100%;table-layout:fixed";
-      const cellStyles =
-        "border:1px solid #cbd5e1;padding:6px 8px;min-width:60px;";
-      let html = `<table style="${tableStyles}" class="rte-table"><tbody>`;
-      for (let r = 0; r < rows; r++) {
-        html += "<tr>";
-        for (let c = 0; c < cols; c++) {
-          html += `<td style="${cellStyles}">&nbsp;</td>`;
+      if (cmd === "insertImage") {
+        if (onInsertImage) {
+          Promise.resolve(onInsertImage()).then((url) => {
+            if (url) insertImageUrl(url);
+          });
+        } else {
+          rteAuxDraft1.value = "";
+          rteAuxKind.value = "imageUrl";
         }
-        html += "</tr>";
+        return;
       }
-      html += "</tbody></table>";
-      document.execCommand("insertHTML", false, html);
-      emitChange();
-      return;
-    }
-    if (cmd === "foreColor" || cmd === "backColor") {
-      const color = globalThis.prompt?.("输入颜色（如 #333）", val) ?? val;
-      if (color) document.execCommand(cmd, false, color);
-      emitChange();
-      return;
-    }
-    if (cmd === "insertHorizontalRule") {
-      document.execCommand("insertHorizontalRule", false);
-      emitChange();
-      return;
-    }
-    if (cmd === "insertSpecialChar" && childValue != null) {
-      const toInsert = childValue.startsWith("&") ? childValue : childValue;
-      document.execCommand("insertHTML", false, toInsert);
-      emitChange();
-      return;
-    }
-    if (cmd === "insertTableWithHeader") {
-      const rowsStr = globalThis.prompt?.("行数（含表头）", "4") ?? "4";
-      const colsStr = globalThis.prompt?.("列数", "3") ?? "3";
-      const rows = Math.max(2, Math.min(20, parseInt(rowsStr, 10) || 4));
-      const cols = Math.max(1, Math.min(10, parseInt(colsStr, 10) || 3));
-      const tableStyles =
-        "border-collapse:collapse;width:100%;table-layout:fixed";
-      const cellStyles =
-        "border:1px solid #cbd5e1;padding:6px 8px;min-width:60px;";
-      const thStyles = cellStyles +
-        ";font-weight:600;background:rgb(241 245 249);";
-      let html = `<table style="${tableStyles}" class="rte-table"><thead><tr>`;
-      for (let c = 0; c < cols; c++) {
-        html += `<th style="${thStyles}">&nbsp;</th>`;
-      }
-      html += "</tr></thead><tbody>";
-      for (let r = 1; r < rows; r++) {
-        html += "<tr>";
-        for (let c = 0; c < cols; c++) {
-          html += `<td style="${cellStyles}">&nbsp;</td>`;
-        }
-        html += "</tr>";
-      }
-      html += "</tbody></table>";
-      document.execCommand("insertHTML", false, html);
-      emitChange();
-      return;
-    }
-    if (cmd === "superscript" || cmd === "subscript") {
-      document.execCommand(cmd, false);
-      emitChange();
-      return;
-    }
-    if (cmd === "indentFirstLine") {
-      document.execCommand("formatBlock", false, "p");
-      const sel = document.getSelection();
-      if (sel && sel.anchorNode) {
-        const block = sel.anchorNode.nodeType === 3
-          ? sel.anchorNode.parentElement
-          : sel.anchorNode as Element;
-        const p = block?.closest?.("p");
-        if (p && !p.style.textIndent) p.style.textIndent = "2em";
-      }
-      emitChange();
-      return;
-    }
-    if (cmd === "fullscreen") {
-      const root = document.getElementById(`${editorId}-root`);
-      if (root) root.classList.toggle("rte-fullscreen");
-      return;
-    }
-    if (cmd === "find") {
-      const bar = document.getElementById(`${editorId}-findbar`);
-      if (bar) bar.classList.toggle("rte-findbar-hidden");
-      return;
-    }
-    if (cmd === "replace") {
-      const bar = document.getElementById(`${editorId}-findbar`);
-      if (bar) {
-        bar.classList.remove("rte-findbar-hidden");
-        const replaceInput = bar.querySelector("[data-replace-input]") as
+      if (cmd === "uploadImage") {
+        const input = document.getElementById(uploadInputId) as
           | HTMLInputElement
           | null;
-        if (replaceInput) replaceInput.focus();
+        if (input) {
+          input.value = "";
+          input.click();
+        }
+        return;
       }
-      return;
-    }
-    if (cmd === "print") {
-      const html = getEditorHtml();
-      const win = globalThis.open("", "_blank");
-      if (win) {
-        win.document.write(
-          `<!DOCTYPE html><html><head><meta charset="utf-8"><title>打印</title></head><body>${html}</body></html>`,
-        );
-        win.document.close();
-        win.focus();
-        win.print();
-        win.close();
+      if (cmd === "insertTable") {
+        rteAuxDraft1.value = "3";
+        rteAuxDraft2.value = "3";
+        rteAuxKind.value = "tablePlain";
+        return;
       }
-      return;
-    }
-    if (cmd === "exportContent") {
-      const html = getEditorHtml();
-      const mode = globalThis.confirm?.("导出为 HTML？取消则导出为纯文本") ??
-        true;
-      const blob = mode
-        ? new Blob([html], { type: "text/html;charset=utf-8" })
-        : new Blob([getPlainText(html)], { type: "text/plain;charset=utf-8" });
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = mode ? "content.html" : "content.txt";
-      a.click();
-      URL.revokeObjectURL(a.href);
-      return;
-    }
-    if (cmd === "parseMarkdown") {
-      const sel = document.getSelection();
-      if (sel && sel.rangeCount > 0) {
-        const range = sel.getRangeAt(0);
-        const fragment = range.cloneContents();
-        const div = document.createElement("div");
-        div.appendChild(fragment);
-        const parsed = parseMarkdownInSelection(div.innerHTML);
-        document.execCommand("insertHTML", false, parsed);
+      /** 字号：自定义 DOM 包裹，不经过 `execCommand` */
+      if (cmd === "rteFontSize" && val) {
+        applyRteFontSize(editor, val);
         emitChange();
+        queueMicrotask(() => refreshHistoryNavState());
+        return;
       }
-      return;
-    }
-    if (cmd === "shortcuts") {
-      const msg =
-        "快捷键：\nCtrl+Z 撤销\nCtrl+Y 重做\nCtrl+B 加粗\nCtrl+I 斜体\nCtrl+U 下划线\nCtrl+K 插入链接\nCtrl+F 查找";
-      globalThis.alert?.(msg);
-      return;
-    }
-    if (cmd === "insertCodeBlock") {
-      const html =
-        '<pre class="rte-code-block language-plaintext"><code><br></code></pre>';
-      document.execCommand("insertHTML", false, html);
-      emitChange();
-      return;
-    }
-    if (cmd === "undo" || cmd === "redo" || cmd === "removeFormat") {
-      document.execCommand(cmd, false);
-      emitChange();
-      return;
-    }
+      /** 行高：作用于当前块级节点 */
+      if (cmd === "rteLineHeight" && val) {
+        applyRteLineHeight(editor, val);
+        emitChange();
+        queueMicrotask(() => refreshHistoryNavState());
+        return;
+      }
+      if (cmd === "foreColor" || cmd === "backColor") {
+        rteAuxColorCmd = cmd;
+        rteAuxDraft1.value = val || "#333333";
+        /**
+         * `click` 触发时选区常已在 `mousedown` 中丢失；优先使用工具栏 {@link onMouseDownCapture} 里已存的克隆。
+         * 无（如键盘触发）时再尝试当前文档选区。
+         */
+        if (rteSavedColorSelectionRange == null) {
+          rteSavedColorSelectionRange = cloneEditorSelectionRangeIfInside(
+            editor,
+          );
+        }
+        const pe = fromPointer ?? rteColorPickerAnchorFallback();
+        rteColorPickerRef.current?.openFromPointerEvent(pe);
+        return;
+      }
+      if (cmd === "insertHorizontalRule") {
+        document.execCommand("insertHorizontalRule", false);
+        emitChange();
+        return;
+      }
+      if (cmd === "insertSpecialChar" && childValue != null) {
+        const toInsert = childValue.startsWith("&") ? childValue : childValue;
+        document.execCommand("insertHTML", false, toInsert);
+        emitChange();
+        return;
+      }
+      if (cmd === "insertTableWithHeader") {
+        rteAuxDraft1.value = "4";
+        rteAuxDraft2.value = "3";
+        rteAuxKind.value = "tableHeader";
+        return;
+      }
+      if (cmd === "superscript" || cmd === "subscript") {
+        document.execCommand(cmd, false);
+        emitChange();
+        return;
+      }
+      if (cmd === "indentFirstLine") {
+        document.execCommand("formatBlock", false, "p");
+        const sel = document.getSelection();
+        if (sel && sel.anchorNode) {
+          const block = sel.anchorNode.nodeType === 3
+            ? sel.anchorNode.parentElement
+            : sel.anchorNode as Element;
+          const p = block?.closest?.("p");
+          if (p && !p.style.textIndent) p.style.textIndent = "2em";
+        }
+        emitChange();
+        return;
+      }
+      if (cmd === "fullscreen") {
+        const root = document.getElementById(`${editorId}-root`);
+        if (root) {
+          root.classList.toggle("rte-fullscreen");
+          /** 切换后同步 signal，工具栏重绘为「退出全屏」图标与文案 */
+          rteFullscreen.value = root.classList.contains("rte-fullscreen");
+        }
+        return;
+      }
+      if (cmd === "find") {
+        const bar = document.getElementById(`${editorId}-findbar`);
+        if (bar) bar.classList.toggle("rte-findbar-hidden");
+        return;
+      }
+      if (cmd === "replace") {
+        const bar = document.getElementById(`${editorId}-findbar`);
+        if (bar) {
+          bar.classList.remove("rte-findbar-hidden");
+          const replaceInput = bar.querySelector("[data-replace-input]") as
+            | HTMLInputElement
+            | null;
+          if (replaceInput) replaceInput.focus();
+        }
+        return;
+      }
+      if (cmd === "print") {
+        const html = getEditorHtml();
+        const win = globalThis.open("", "_blank");
+        if (win) {
+          win.document.write(
+            `<!DOCTYPE html><html><head><meta charset="utf-8"><title>打印</title></head><body>${html}</body></html>`,
+          );
+          win.document.close();
+          win.focus();
+          win.print();
+          win.close();
+        }
+        return;
+      }
+      if (cmd === "exportContent") {
+        rteAuxKind.value = "export";
+        return;
+      }
+      if (cmd === "parseMarkdown") {
+        const sel = document.getSelection();
+        if (sel && sel.rangeCount > 0) {
+          const range = sel.getRangeAt(0);
+          const fragment = range.cloneContents();
+          const div = document.createElement("div");
+          div.appendChild(fragment);
+          const parsed = parseMarkdownInSelection(div.innerHTML);
+          document.execCommand("insertHTML", false, parsed);
+          emitChange();
+        }
+        return;
+      }
+      if (cmd === "shortcuts") {
+        rteAuxMessage.value = RTE_SHORTCUTS_HELP_TEXT;
+        rteAuxKind.value = "shortcuts";
+        return;
+      }
+      if (cmd === "insertCodeBlock") {
+        const html =
+          '<pre class="rte-code-block language-plaintext"><code><br></code></pre>';
+        document.execCommand("insertHTML", false, html);
+        emitChange();
+        return;
+      }
+      if (cmd === "undo") {
+        document.execCommand("undo", false);
+        rteRedoEligibleAfterUndo = true;
+        emitChange();
+        return;
+      }
+      if (cmd === "redo") {
+        document.execCommand("redo", false);
+        rteRedoEligibleAfterUndo = false;
+        emitChange();
+        return;
+      }
+      if (cmd === "removeFormat") {
+        document.execCommand(cmd, false);
+        emitChange();
+        return;
+      }
+      if (cmd === "bold" || cmd === "italic" || cmd === "underline") {
+        const kind: RteInlineDecoKind = cmd === "bold"
+          ? "bold"
+          : cmd === "italic"
+          ? "italic"
+          : "underline";
+        if (applyRteInlineDecoration(editor, kind)) {
+          emitChange();
+          return;
+        }
+      }
 
-    document.execCommand(cmd, false, val);
-    emitChange();
+      document.execCommand(cmd, false, val);
+      emitChange();
+    } finally {
+      /** 除撤销/重做外任意工具操作都会清空浏览器重做栈语义，同步熄灭本地重做门闸 */
+      if (cmd !== "undo" && cmd !== "redo") {
+        rteRedoEligibleAfterUndo = false;
+      }
+      queueMicrotask(() => refreshHistoryNavState());
+    }
   };
 
   const handleInput = (e: Event) => {
     const el = e.currentTarget as HTMLDivElement;
+    wrapRteLeadingRootTextInParagraph(el);
+    rteRedoEligibleAfterUndo = false;
     emitChange(el.innerHTML);
+    queueMicrotask(() => refreshHistoryNavState());
   };
 
   const getEditorHtml = () => {
@@ -590,13 +2159,551 @@ export function RichTextEditor(props: RichTextEditorProps) {
     }
   };
 
+  /** 插入链接弹层开关；实际 {@link Modal} 由下方 `createRenderEffect` + {@link createPortal} 挂载，避免嵌在主 getter 内。 */
+  const linkModalOpen = createSignal(false);
+  const linkUrlDraft = createSignal("");
+
+  /**
+   * 除「插入链接」外的工具栏输入/确认弹层类型（{@link Modal} + Portal，替代原生 prompt/confirm/alert）。
+   */
+  type RteAuxModalKind =
+    | "none"
+    | "imageUrl"
+    | "tablePlain"
+    | "tableHeader"
+    | "export"
+    | "shortcuts"
+    | "info";
+
+  const rteAuxKind = createSignal<RteAuxModalKind>("none");
+  const rteAuxDraft1 = createSignal("");
+  const rteAuxDraft2 = createSignal("");
+  const rteAuxMessage = createSignal("");
+  /** 取色面板「确定」时使用的 `document.execCommand` 子命令 */
+  let rteAuxColorCmd: "foreColor" | "backColor" = "foreColor";
+  /**
+   * 工具栏 `mousedown` 捕获阶段克隆的选区；`onApply` 里交给 {@link applyRteForeOrBackColor} 上色。
+   */
+  let rteSavedColorSelectionRange: Range | null = null;
+  /**
+   * 原生 `<select>` 抢走焦点前在捕获阶段保存的选区；`change` 时先 {@link restoreEditorSelectionRange} 再执行命令，
+   * 否则段落/字号/行高等下拉无法在「有选中文本」时生效。
+   */
+  let rteSavedToolbarSelectRange: Range | null = null;
+  /**
+   * 工具栏原生下拉 `change`：先恢复 `mousedown` 捕获阶段保存的选区，再执行命令（否则焦点在 `select` 上时编辑区选区已丢失）。
+   *
+   * @param item - 对应工具栏项
+   * @param e - `<select>` 的 `change` 事件
+   */
+  const handleToolbarSelectChange = (item: ToolbarItem, e: Event) => {
+    const v = (e.target as HTMLSelectElement).value;
+    const ed = document.getElementById(editorId) as HTMLDivElement | null;
+    if (ed != null && rteSavedToolbarSelectRange != null) {
+      restoreEditorSelectionRange(ed, rteSavedToolbarSelectRange);
+      rteSavedToolbarSelectRange = null;
+    }
+    handleToolbarAction(item, v);
+  };
+  /** 无指针事件时（如下拉 `change`）用于定位取色面板的命令式引用 */
+  const rteColorPickerRef: { current: ColorPickerHandle | null } = {
+    current: null,
+  };
+  /**
+   * 取色面板是否打开；为 true 时与链接 Modal 一样禁止用滞后的受控 `value` 写编辑区 `innerHTML`。
+   */
+  const rteColorPickerOpen = createSignal(false);
+
+  /**
+   * 在编辑区上方附近取一点视口坐标，供 {@link ColorPickerHandle.openFromPointerEvent} 在无 `MouseEvent` 时使用。
+   *
+   * @returns 含 `clientX` / `clientY` 的对象
+   */
+  const rteColorPickerAnchorFallback = (): Pick<
+    PointerEvent,
+    "clientX" | "clientY"
+  > => {
+    const ed = document.getElementById(editorId) as HTMLElement | null;
+    if (ed) {
+      const r = ed.getBoundingClientRect();
+      return {
+        clientX: Math.round(r.left + Math.min(160, r.width / 2)),
+        clientY: Math.round(r.top + 48),
+      };
+    }
+    return { clientX: 200, clientY: 120 };
+  };
+
+  /**
+   * 关闭通用工具栏弹层。
+   */
+  const closeRteAuxModal = () => {
+    rteAuxKind.value = "none";
+  };
+
+  /**
+   * 打开纯文案提示弹层（如查找无结果）。
+   *
+   * @param message - 正文
+   */
+  const openRteAuxInfo = (message: string) => {
+    rteAuxMessage.value = message;
+    rteAuxKind.value = "info";
+  };
+
+  /**
+   * 任意富文本弹层或取色面板打开时禁止受控 `innerHTML` 回写（与 {@link linkModalOpen} 同因）。
+   */
+  const rteAnyOverlayOpen = () =>
+    linkModalOpen.value ||
+    rteAuxKind.value !== "none" ||
+    rteColorPickerOpen.value;
+
+  /**
+   * 确认插入图片 URL（无 `onInsertImage` 时由 Modal 收集）。
+   */
+  const confirmRteAuxImageUrl = () => {
+    const url = rteAuxDraft1.value.trim();
+    closeRteAuxModal();
+    if (url) insertImageUrl(url);
+  };
+
+  /**
+   * 确认插入无表头表格。
+   */
+  const confirmRteAuxTablePlain = () => {
+    const rows = Math.max(
+      1,
+      Math.min(20, parseInt(rteAuxDraft1.value, 10) || 3),
+    );
+    const cols = Math.max(
+      1,
+      Math.min(10, parseInt(rteAuxDraft2.value, 10) || 3),
+    );
+    closeRteAuxModal();
+    const ed = document.getElementById(editorId) as HTMLDivElement | null;
+    if (!ed) return;
+    ed.focus();
+    rteRedoEligibleAfterUndo = false;
+    document.execCommand(
+      "insertHTML",
+      false,
+      buildRtePlainTableHtml(rows, cols),
+    );
+    emitChange();
+    queueMicrotask(() => refreshHistoryNavState());
+  };
+
+  /**
+   * 确认插入含表头表格。
+   */
+  const confirmRteAuxTableHeader = () => {
+    const rows = Math.max(
+      2,
+      Math.min(20, parseInt(rteAuxDraft1.value, 10) || 4),
+    );
+    const cols = Math.max(
+      1,
+      Math.min(10, parseInt(rteAuxDraft2.value, 10) || 3),
+    );
+    closeRteAuxModal();
+    const ed = document.getElementById(editorId) as HTMLDivElement | null;
+    if (!ed) return;
+    ed.focus();
+    rteRedoEligibleAfterUndo = false;
+    document.execCommand(
+      "insertHTML",
+      false,
+      buildRteHeaderTableHtml(rows, cols),
+    );
+    emitChange();
+    queueMicrotask(() => refreshHistoryNavState());
+  };
+
+  /**
+   * 下载导出文件（HTML 或纯文本）。
+   *
+   * @param asHtml - true 为 HTML，false 为纯文本
+   */
+  const performExportDownload = (asHtml: boolean) => {
+    closeRteAuxModal();
+    const html = getEditorHtml();
+    const blob = asHtml
+      ? new Blob([html], { type: "text/html;charset=utf-8" })
+      : new Blob([getPlainText(html)], { type: "text/plain;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = asHtml ? "content.html" : "content.txt";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+
+  /**
+   * 关闭链接 URL 弹层（取消、遮罩、Esc 共用）。
+   */
+  const closeLinkUrlModal = () => {
+    linkModalOpen.value = false;
+  };
+
+  /**
+   * 打开链接 URL 弹层；由工具栏「链接」与 Ctrl+K 调用。
+   */
+  const openLinkUrlModal = () => {
+    linkUrlDraft.value = "";
+    linkModalOpen.value = true;
+  };
+
+  /**
+   * 确认插入链接：写入 `createLink` 并同步受控值。
+   */
+  const confirmLinkUrl = () => {
+    const url = linkUrlDraft.value.trim();
+    closeLinkUrlModal();
+    if (!url) return;
+    const ed = document.getElementById(editorId) as HTMLDivElement | null;
+    if (!ed) return;
+    ed.focus();
+    rteRedoEligibleAfterUndo = false;
+    document.execCommand("createLink", false, url);
+    emitChange();
+    queueMicrotask(() => refreshHistoryNavState());
+  };
+
+  /**
+   * 弹层打开后将焦点移入 URL 输入框，便于键盘操作。
+   */
+  createEffect(() => {
+    if (!linkModalOpen.value) return;
+    const inputId = `${editorId}-rte-link-url`;
+    queueMicrotask(() => {
+      const input = document.getElementById(inputId) as HTMLInputElement | null;
+      input?.focus();
+      input?.select();
+    });
+  });
+
+  /**
+   * 插入链接弹层**不**放在主 `return () =>` 的 VNode 树里：该 getter 会因工具栏
+   * `historyNavState` 等频繁重跑，与内嵌 {@link Modal} 协调时可能导致 FormItem 等父级下子树整段未挂载（表现为
+   * `.form-item-input` 为空）。打开时单独 `createPortal` 挂到 `body`，关闭时 `unmount` 整段移除。
+   */
+  createRenderEffect(() => {
+    if (!linkModalOpen.value) return;
+    const host = getFormPortalBodyHost();
+    if (host == null) return;
+    const root = createPortal(
+      () => (
+        <Modal
+          open
+          onClose={closeLinkUrlModal}
+          title="插入链接"
+          width="sm"
+          keyboard
+          footer={
+            <div class="flex flex-wrap justify-end gap-2">
+              <Button
+                type="button"
+                variant="primary"
+                onClick={() => confirmLinkUrl()}
+              >
+                确定
+              </Button>
+              <Button
+                type="button"
+                variant="default"
+                onClick={() => closeLinkUrlModal()}
+              >
+                取消
+              </Button>
+            </div>
+          }
+        >
+          <label
+            class="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300"
+            for={`${editorId}-rte-link-url`}
+          >
+            链接 URL
+          </label>
+          <Input
+            id={`${editorId}-rte-link-url`}
+            type="url"
+            size="md"
+            placeholder="https://"
+            hideFocusRing={hideFocusRing}
+            class="w-full"
+            value={() => linkUrlDraft.value}
+            onInput={(e: Event) => {
+              linkUrlDraft.value = (e.target as HTMLInputElement).value;
+            }}
+            onKeyDown={(e: Event) => {
+              const kev = e as KeyboardEvent;
+              if (kev.key === "Enter") {
+                kev.preventDefault();
+                confirmLinkUrl();
+              }
+            }}
+          />
+        </Modal>
+      ),
+      host,
+    );
+    onCleanup(() => {
+      root.unmount();
+    });
+  });
+
+  /**
+   * 工具栏通用 Modal：图片 URL、表格、颜色、导出、快捷键说明、纯提示等（替代原生 prompt/confirm/alert）。
+   */
+  createRenderEffect(() => {
+    if (rteAuxKind.value === "none") return;
+    const host = getFormPortalBodyHost();
+    if (host == null) return;
+    const root = createPortal(
+      () => {
+        const k = rteAuxKind.value;
+        const footerOkCancel = (
+          onConfirm: () => void,
+        ) => (
+          <div class="flex flex-wrap justify-end gap-2">
+            <Button type="button" variant="primary" onClick={() => onConfirm()}>
+              确定
+            </Button>
+            <Button
+              type="button"
+              variant="default"
+              onClick={() => closeRteAuxModal()}
+            >
+              取消
+            </Button>
+          </div>
+        );
+
+        if (k === "imageUrl") {
+          return (
+            <Modal
+              open
+              onClose={closeRteAuxModal}
+              title="插入图片"
+              width="sm"
+              keyboard
+              footer={footerOkCancel(confirmRteAuxImageUrl)}
+            >
+              <label
+                class="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                for={`${editorId}-rte-aux-f1`}
+              >
+                图片 URL
+              </label>
+              <Input
+                id={`${editorId}-rte-aux-f1`}
+                type="url"
+                size="md"
+                placeholder="https://"
+                hideFocusRing={hideFocusRing}
+                class="w-full"
+                value={() => rteAuxDraft1.value}
+                onInput={(e: Event) => {
+                  rteAuxDraft1.value = (e.target as HTMLInputElement).value;
+                }}
+                onKeyDown={(e: Event) => {
+                  const kev = e as KeyboardEvent;
+                  if (kev.key === "Enter") {
+                    kev.preventDefault();
+                    confirmRteAuxImageUrl();
+                  }
+                }}
+              />
+            </Modal>
+          );
+        }
+
+        if (k === "tablePlain" || k === "tableHeader") {
+          const onConfirm = k === "tablePlain"
+            ? confirmRteAuxTablePlain
+            : confirmRteAuxTableHeader;
+          return (
+            <Modal
+              open
+              onClose={closeRteAuxModal}
+              title={k === "tableHeader" ? "插入表格（含表头）" : "插入表格"}
+              width="sm"
+              keyboard
+              footer={footerOkCancel(onConfirm)}
+            >
+              <label
+                class="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                for={`${editorId}-rte-aux-f1`}
+              >
+                {k === "tableHeader" ? "行数（含表头）" : "行数"}
+              </label>
+              <Input
+                id={`${editorId}-rte-aux-f1`}
+                type="text"
+                size="md"
+                hideFocusRing={hideFocusRing}
+                class="w-full"
+                value={() => rteAuxDraft1.value}
+                onInput={(e: Event) => {
+                  rteAuxDraft1.value = (e.target as HTMLInputElement).value;
+                }}
+              />
+              <label
+                class="mb-1.5 mt-3 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                for={`${editorId}-rte-aux-f2`}
+              >
+                列数
+              </label>
+              <Input
+                id={`${editorId}-rte-aux-f2`}
+                type="text"
+                size="md"
+                hideFocusRing={hideFocusRing}
+                class="w-full"
+                value={() => rteAuxDraft2.value}
+                onInput={(e: Event) => {
+                  rteAuxDraft2.value = (e.target as HTMLInputElement).value;
+                }}
+                onKeyDown={(e: Event) => {
+                  const kev = e as KeyboardEvent;
+                  if (kev.key === "Enter") {
+                    kev.preventDefault();
+                    onConfirm();
+                  }
+                }}
+              />
+            </Modal>
+          );
+        }
+
+        if (k === "export") {
+          return (
+            <Modal
+              open
+              onClose={closeRteAuxModal}
+              title="导出内容"
+              width="sm"
+              keyboard
+              footer={
+                <div class="flex flex-wrap justify-end gap-2">
+                  <Button
+                    type="button"
+                    variant="primary"
+                    onClick={() => performExportDownload(true)}
+                  >
+                    导出 HTML
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="default"
+                    onClick={() => performExportDownload(false)}
+                  >
+                    导出纯文本
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="default"
+                    onClick={() => closeRteAuxModal()}
+                  >
+                    取消
+                  </Button>
+                </div>
+              }
+            >
+              <p class="text-sm text-slate-600 dark:text-slate-300">
+                选择导出格式：HTML 保留标签与样式线索；纯文本仅保留可见文字。
+              </p>
+            </Modal>
+          );
+        }
+
+        if (k === "shortcuts") {
+          return (
+            <Modal
+              open
+              onClose={closeRteAuxModal}
+              title="快捷键"
+              width="sm"
+              keyboard
+              footer={
+                <div class="flex flex-wrap justify-end gap-2">
+                  <Button
+                    type="button"
+                    variant="primary"
+                    onClick={() => closeRteAuxModal()}
+                  >
+                    知道了
+                  </Button>
+                </div>
+              }
+            >
+              <pre class="whitespace-pre-wrap text-sm text-slate-700 dark:text-slate-200 font-sans">
+                {rteAuxMessage.value}
+              </pre>
+            </Modal>
+          );
+        }
+
+        if (k === "info") {
+          return (
+            <Modal
+              open
+              onClose={closeRteAuxModal}
+              title="提示"
+              width="sm"
+              keyboard
+              footer={
+                <div class="flex flex-wrap justify-end gap-2">
+                  <Button
+                    type="button"
+                    variant="primary"
+                    onClick={() => closeRteAuxModal()}
+                  >
+                    确定
+                  </Button>
+                </div>
+              }
+            >
+              <p class="text-sm text-slate-700 dark:text-slate-200">
+                {rteAuxMessage.value}
+              </p>
+            </Modal>
+          );
+        }
+
+        return null;
+      },
+      host,
+    );
+    onCleanup(() => {
+      root.unmount();
+    });
+  });
+
+  /**
+   * 通用工具栏 Modal 打开后聚焦首个输入框（导出/说明类无输入则跳过）。
+   */
+  createEffect(() => {
+    const k = rteAuxKind.value;
+    if (
+      k === "none" || k === "export" || k === "shortcuts" || k === "info"
+    ) {
+      return;
+    }
+    const focusId = `${editorId}-rte-aux-f1`;
+    queueMicrotask(() => {
+      const input = document.getElementById(focusId) as HTMLInputElement | null;
+      input?.focus();
+      input?.select();
+    });
+  });
+
   const handleUploadChange = (e: Event) => {
     const input = e.target as HTMLInputElement;
     const file = input.files?.[0];
     if (!file || !file.type.startsWith("image/")) return;
     const resolveUrl = (url: string) => {
       insertImageUrl(url);
-      emitChange();
     };
     if (onUploadImage) {
       Promise.resolve(onUploadImage(file)).then((url) => {
@@ -624,7 +2731,6 @@ export function RichTextEditor(props: RichTextEditorProps) {
         ev.preventDefault();
         const resolveUrl = (url: string) => {
           insertImageUrl(url);
-          emitChange();
         };
         if (onPasteImage) {
           Promise.resolve(onPasteImage(blob)).then((url) => {
@@ -643,11 +2749,77 @@ export function RichTextEditor(props: RichTextEditorProps) {
     }
   };
 
+  /**
+   * 是否展示工具栏与页脚字数行（非只读且存在工具项时为 true）。
+   * 隐藏时用 Tailwind `hidden` 类，避免 HTML `hidden` 属性在 hybrid 水合中与客户端不一致。
+   */
   const showToolbar = !readOnly && toolbarGroups.length > 0;
-  /** 用 untrack 读 value，避免订阅导致 value 变化时 effect 重跑、patch 编辑区失焦 */
-  const wordCount = untrack(() =>
-    getWordCount(typeof value === "function" ? value() : (value ?? ""))
-  );
+
+  /**
+   * 页脚「字数」单独成 getter 子树：在 {@link createMemo} 内读受控 `value`，依赖仅驱动本段 `insertReactive`。
+   *
+   * **禁止**在 {@link RichTextEditor} 同步函数体顶层调用 `value()` 算字数：`mountVNodeTree` 会在此阶段执行
+   * `RichTextEditor(props)`，此时读 signal 会把依赖挂到**外层**（如 FormItem）的 insertReactive；用户输入触发
+   * `onChange` → 父级 `val` 更新 → 整块表单项 detach/重挂 → contenteditable 失焦（表现像整段 `section` 被换掉）。
+   * 与 {@link RteToolbarReactiveIsland} 的 `historyNavState` 隔离同因。
+   */
+  function RteWordCountReactiveIsland() {
+    const wordCountMemo = createMemo(() =>
+      getWordCount(
+        typeof value === "function" ? value() : (value ?? ""),
+      )
+    );
+    return () => (
+      <div
+        class={twMerge(
+          "px-2 py-1 text-xs text-slate-500 dark:text-slate-400 border-t border-slate-200 dark:border-slate-600",
+          !showToolbar && "hidden",
+        )}
+        data-rte-wordcount
+        aria-hidden={showToolbar ? undefined : true}
+        aria-live="polite"
+      >
+        字数：{wordCountMemo()}
+      </div>
+    );
+  }
+
+  /**
+   * 将受控 `value`（HTML 字符串）同步到 contenteditable。
+   * `value` 为无参函数时在此追踪 signal；`ref` 仅用 `createRef` 持有节点。
+   * **获焦时不同步**：由 {@link rteEditorHasFocus} 与 {@link rteAnyOverlayOpen}（链接 Modal + 工具栏通用 Modal）门禁，杜绝写 `innerHTML` 导致选区丢失。
+   *
+   * @see editorHostRef
+   */
+  createEffect(() => {
+    const el = editorHostRef.current;
+    if (!el) return;
+    const v = typeof value === "function" ? value() : value;
+    if (v === undefined) return;
+    /** 尚未从 props 记过基准时，用当前 DOM 或 v 初始化；随后刷新工具栏态（避免 null 基准期一直灰） */
+    if (lastSyncedFromPropsHtml === null) {
+      lastSyncedFromPropsHtml = el.innerHTML !== "" ? el.innerHTML : v;
+      queueMicrotask(() => refreshHistoryNavState());
+    }
+    /**
+     * 编辑区获焦时 DOM 只能由用户输入 / execCommand 维护；任何受控回写都会重置选区（光标跳行首等）。
+     * 链接弹层在 portal 内，焦点离开编辑区时也不能用可能滞后的 `value` 覆盖正文。
+     */
+    if (rteEditorHasFocus || rteAnyOverlayOpen()) {
+      /** 勿在此每帧 `queueMicrotask(refresh)`：`value` 与 {@link historyNavState} 连锁会打爆主线程；撤销态由 onInput/onFocus/工具栏路径刷新即可 */
+      return;
+    }
+    const skipSync = shouldSkipControlledInnerHtmlSync(editorId, el);
+    if (skipSync) {
+      return;
+    }
+    if (!rteHtmlLooselyEquals(el.innerHTML, v)) {
+      el.innerHTML = v;
+      lastSyncedFromPropsHtml = v;
+      rteRedoEligibleAfterUndo = false;
+      queueMicrotask(() => refreshHistoryNavState());
+    }
+  });
 
   const handleKeyDown = (e: Event) => {
     const ev = e as KeyboardEvent;
@@ -655,29 +2827,51 @@ export function RichTextEditor(props: RichTextEditorProps) {
       const key = ev.key.toLowerCase();
       if (key === "z") {
         ev.preventDefault();
-        document.execCommand(ev.shiftKey ? "redo" : "undo");
+        if (ev.shiftKey) {
+          document.execCommand("redo", false);
+          rteRedoEligibleAfterUndo = false;
+        } else {
+          document.execCommand("undo", false);
+          rteRedoEligibleAfterUndo = true;
+        }
         emitChange();
+        queueMicrotask(() => refreshHistoryNavState());
       } else if (key === "y") {
         ev.preventDefault();
         document.execCommand("redo");
+        rteRedoEligibleAfterUndo = false;
         emitChange();
+        queueMicrotask(() => refreshHistoryNavState());
       } else if (key === "b") {
         ev.preventDefault();
-        document.execCommand("bold");
+        rteRedoEligibleAfterUndo = false;
+        const ed = document.getElementById(editorId) as HTMLDivElement | null;
+        if (!ed || !applyRteInlineDecoration(ed, "bold")) {
+          document.execCommand("bold");
+        }
         emitChange();
+        queueMicrotask(() => refreshHistoryNavState());
       } else if (key === "i") {
         ev.preventDefault();
-        document.execCommand("italic");
+        rteRedoEligibleAfterUndo = false;
+        const ed = document.getElementById(editorId) as HTMLDivElement | null;
+        if (!ed || !applyRteInlineDecoration(ed, "italic")) {
+          document.execCommand("italic");
+        }
         emitChange();
+        queueMicrotask(() => refreshHistoryNavState());
       } else if (key === "u") {
         ev.preventDefault();
-        document.execCommand("underline");
+        rteRedoEligibleAfterUndo = false;
+        const ed = document.getElementById(editorId) as HTMLDivElement | null;
+        if (!ed || !applyRteInlineDecoration(ed, "underline")) {
+          document.execCommand("underline");
+        }
         emitChange();
+        queueMicrotask(() => refreshHistoryNavState());
       } else if (key === "k") {
         ev.preventDefault();
-        const url = globalThis.prompt?.("输入链接 URL") ?? "";
-        if (url) document.execCommand("createLink", false, url);
-        emitChange();
+        openLinkUrlModal();
       } else if (key === "f") {
         ev.preventDefault();
         const bar = document.getElementById(`${editorId}-findbar`);
@@ -699,7 +2893,7 @@ export function RichTextEditor(props: RichTextEditorProps) {
     const text = getPlainText(editor.innerHTML);
     const idx = text.indexOf(query);
     if (idx === -1) {
-      globalThis.alert?.("未找到");
+      openRteAuxInfo("未找到");
       return;
     }
     try {
@@ -735,7 +2929,7 @@ export function RichTextEditor(props: RichTextEditorProps) {
         }
       }
     } catch {
-      globalThis.alert?.("未找到");
+      openRteAuxInfo("未找到");
     }
   };
 
@@ -750,6 +2944,7 @@ export function RichTextEditor(props: RichTextEditorProps) {
       | null;
     const find = findInput?.value ?? "";
     const replace = replaceInput?.value ?? "";
+    /** 查找串为空时不替换，避免 split/join 异常或误操作 */
     if (!find) return;
     const editor = document.getElementById(editorId) as HTMLDivElement | null;
     if (!editor) return;
@@ -765,81 +2960,239 @@ export function RichTextEditor(props: RichTextEditorProps) {
           node.textContent = text.split(find).join(replace);
         }
       }
-      onChange?.(editor.innerHTML);
+      rteRedoEligibleAfterUndo = false;
+      emitChange(editor.innerHTML);
+      queueMicrotask(() => refreshHistoryNavState());
     } else {
       const sel = document.getSelection();
       if (sel && sel.toString() === find) {
+        rteRedoEligibleAfterUndo = false;
         document.execCommand("insertText", false, replace);
         emitChange();
+        queueMicrotask(() => refreshHistoryNavState());
       } else {
         doFind();
       }
     }
   };
 
+  /**
+   * 含 {@link For} 与撤销/全屏 signal：单独成组件后，仅本段 `insertReactive` 随 `historyNavState` 重跑。
+   * 若在外层根 `return` 里读 `historyNavState`，`ir-clean` 在「嵌套 insertReactive 非空」时会整段 detach 根节点，
+   * contenteditable 被摘下导致一输入就失焦（见 `view/compiler/ir-clean.ts`）。
+   */
+  function RteToolbarReactiveIsland() {
+    return () => {
+      const rteHistoryNav = historyNavState.value;
+      const rteFs = rteFullscreen.value;
+      return (
+        <div
+          class={twMerge(
+            toolbarWrapCls,
+            !showToolbar && "hidden",
+          )}
+          data-rte-toolbar
+          aria-hidden={showToolbar ? undefined : true}
+          role={showToolbar ? "toolbar" : undefined}
+          aria-label={showToolbar ? "编辑工具栏" : undefined}
+          onMouseDown={(e: Event) => {
+            /**
+             * 对按钮等阻止默认可保留编辑区选区；若对原生 `<select>` 也 `preventDefault`，下拉无法展开（段落/字号/行高无反应）。
+             */
+            const t = e.target;
+            if (t instanceof Element && t.closest("select")) return;
+            e.preventDefault();
+          }}
+        >
+          {
+            /*
+             * hybrid + compileSource：`.map` 列表在 `return () => …` 内曾编译成「分组 div 在、子项全空」。
+             * `<For>` 走编译器 {@link buildListRenderStmts}，对 render prop 做 `transformExpressionJsxToCalls`，与 mapArray 运行时一致。
+             */
+          }
+          <For each={toolbarGroups}>
+            {(group, gi) => (
+              <div key={gi} class={toolbarGroupCls}>
+                <For each={group}>
+                  {(item) =>
+                    item.children && item.children.length > 0
+                      ? (
+                        item.key === "heading"
+                          ? (
+                            <span
+                              key={item.key}
+                              class="inline-flex shrink-0 items-center"
+                              title={item.title}
+                            >
+                              {
+                                /*
+                                 * `disabled` 时 select 不冒泡 hover，外包一层 span 并写 `title` 以便仍能看到说明。
+                                 */
+                              }
+                              <div
+                                class={twMerge(
+                                  toolbarBtnBase,
+                                  controlBlueFocusRing(!hideFocusRing),
+                                  /** 按内容收缩，避免 select 被 flex-1 撑满后右侧大片空白 */
+                                  "w-fit max-w-36 cursor-pointer gap-1 justify-start px-1",
+                                )}
+                              >
+                                {
+                                  /*
+                                   * 段落下拉左侧 IconType；配置里 icon 文字不会在 select 上单独绘制。
+                                   */
+                                }
+                                <span
+                                  class="inline-flex shrink-0 text-slate-600 dark:text-slate-400"
+                                  aria-hidden="true"
+                                >
+                                  <IconType size="xs" class="text-current" />
+                                </span>
+                                <select
+                                  class={twMerge(
+                                    rteToolbarSelectFitCls,
+                                    "cursor-pointer appearance-none border-0 bg-transparent p-0 pr-2.5 text-sm font-medium text-slate-900 dark:text-slate-100 focus:outline-none",
+                                  )}
+                                  disabled={disabled}
+                                  aria-label={item.title}
+                                  onMouseDownCapture={() => {
+                                    const ed = document.getElementById(
+                                      editorId,
+                                    ) as HTMLDivElement | null;
+                                    if (ed) {
+                                      rteSavedToolbarSelectRange =
+                                        cloneEditorSelectionRangeIfInside(ed);
+                                    }
+                                  }}
+                                  onChange={(e: Event) =>
+                                    handleToolbarSelectChange(item, e)}
+                                >
+                                  <For each={item.children}>
+                                    {(c) => (
+                                      <option key={c.value} value={c.value}>
+                                        {c.label}
+                                      </option>
+                                    )}
+                                  </For>
+                                </select>
+                              </div>
+                            </span>
+                          )
+                          : (
+                            <span
+                              key={item.key}
+                              class="inline-flex shrink-0 items-center"
+                              title={item.title}
+                            >
+                              <select
+                                class={twMerge(
+                                  toolbarBtnBase,
+                                  controlBlueFocusRing(!hideFocusRing),
+                                  rteToolbarSelectFitCls,
+                                  "cursor-pointer appearance-none pr-2.5",
+                                )}
+                                disabled={disabled}
+                                aria-label={item.title}
+                                onMouseDownCapture={() => {
+                                  const ed = document.getElementById(
+                                    editorId,
+                                  ) as HTMLDivElement | null;
+                                  if (ed) {
+                                    rteSavedToolbarSelectRange =
+                                      cloneEditorSelectionRangeIfInside(ed);
+                                  }
+                                }}
+                                onChange={(e: Event) =>
+                                  handleToolbarSelectChange(item, e)}
+                              >
+                                <For each={item.children}>
+                                  {(c) => (
+                                    <option key={c.value} value={c.value}>
+                                      {c.label}
+                                    </option>
+                                  )}
+                                </For>
+                              </select>
+                            </span>
+                          )
+                      )
+                      : (
+                        <span
+                          key={item.key}
+                          class="inline-flex shrink-0 items-center"
+                          title={item.key === "fullscreen" && rteFs
+                            ? "退出全屏"
+                            : item.title}
+                        >
+                          {
+                            /*
+                             * 禁用态下原生 button 不冒泡 hover：外包 span 写 `title` 以便仍能显示说明。
+                             */
+                          }
+                          <button
+                            type="button"
+                            class={toolbarButtonClassForItem(
+                              item,
+                              rteHistoryNav,
+                              disabled,
+                              !hideFocusRing,
+                            )}
+                            disabled={isHistoryToolbarDisabled(
+                              item,
+                              rteHistoryNav,
+                              disabled,
+                            )}
+                            aria-label={item.key === "fullscreen" && rteFs
+                              ? "退出全屏"
+                              : item.title}
+                            onMouseDownCapture={item.command === "foreColor" ||
+                                item.command === "backColor"
+                              ? () => {
+                                const ed = document.getElementById(
+                                  editorId,
+                                ) as HTMLDivElement | null;
+                                if (ed) {
+                                  rteSavedColorSelectionRange =
+                                    cloneEditorSelectionRangeIfInside(ed);
+                                }
+                              }
+                              : undefined}
+                            onMouseDown={(e: Event) => e.preventDefault()}
+                            onClick={(e: Event) =>
+                              handleToolbarAction(
+                                item,
+                                undefined,
+                                e as MouseEvent,
+                              )}
+                          >
+                            {renderToolbarButtonContent(item, {
+                              rteFullscreen: rteFs,
+                            })}
+                          </button>
+                        </span>
+                      )}
+                </For>
+              </div>
+            )}
+          </For>
+        </div>
+      );
+    };
+  }
+
   return () => (
     <div
       id={`${editorId}-root`}
       class={twMerge(
         "rounded-lg overflow-hidden border border-slate-300 dark:border-slate-600 relative",
+        /** 编辑区获焦时整格外框变蓝，与 Input 系一致；不画内层 ring，避免套在外框里一圈缝 */
+        !hideFocusRing &&
+          "has-[[data-rte-editor]:focus]:border-blue-500 dark:has-[[data-rte-editor]:focus]:border-blue-400",
         "[&.rte-fullscreen]:fixed [&.rte-fullscreen]:inset-0 [&.rte-fullscreen]:z-9999 [&.rte-fullscreen]:bg-white [&.rte-fullscreen]:dark:bg-slate-900 [&.rte-fullscreen]:flex [&.rte-fullscreen]:flex-col",
         className,
       )}
     >
-      {showToolbar && (
-        <div
-          class={toolbarWrapCls}
-          role="toolbar"
-          aria-label="编辑工具栏"
-          onMouseDown={(e: Event) => e.preventDefault()}
-        >
-          {toolbarGroups.map((group, gi) => (
-            <div key={gi} class={toolbarGroupCls}>
-              {group.map((item) =>
-                item.children && item.children.length > 0
-                  ? (
-                    <select
-                      key={item.key}
-                      class={twMerge(
-                        toolbarBtnCls,
-                        "cursor-pointer appearance-none pr-6",
-                      )}
-                      disabled={disabled}
-                      title={item.title}
-                      aria-label={item.title}
-                      onMouseDown={(e: Event) => e.preventDefault()}
-                      onChange={(e: Event) => {
-                        const v = (e.target as HTMLSelectElement).value;
-                        handleToolbarAction(item, v);
-                      }}
-                    >
-                      {item.children.map((c) => (
-                        <option key={c.value} value={c.value}>
-                          {c.label}
-                        </option>
-                      ))}
-                    </select>
-                  )
-                  : (
-                    <button
-                      type="button"
-                      key={item.key}
-                      class={toolbarBtnCls}
-                      disabled={disabled}
-                      title={item.title}
-                      aria-label={item.title}
-                      onMouseDown={(e: Event) => e.preventDefault()}
-                      onClick={() =>
-                        handleToolbarAction(item)}
-                    >
-                      {item.icon ?? item.key}
-                    </button>
-                  )
-              )}
-            </div>
-          ))}
-        </div>
-      )}
+      <RteToolbarReactiveIsland />
       <div
         id={`${editorId}-findbar`}
         class={twMerge(
@@ -852,27 +3205,52 @@ export function RichTextEditor(props: RichTextEditorProps) {
           type="text"
           data-find-input
           placeholder="查找"
-          class="px-2 py-1 border border-slate-300 dark:border-slate-600 rounded text-sm bg-white dark:bg-slate-800"
+          class={twMerge(
+            findBarInputSurface,
+            controlBlueFocusRing(!hideFocusRing),
+          )}
         />
-        <button type="button" class={toolbarBtnCls} onClick={() => doFind()}>
+        <button
+          type="button"
+          class={twMerge(
+            toolbarBtnBase,
+            controlBlueFocusRing(!hideFocusRing),
+          )}
+          title="查找下一处匹配"
+          aria-label="查找下一处匹配"
+          onClick={() => doFind()}
+        >
           查找
         </button>
         <input
           type="text"
           data-replace-input
           placeholder="替换为"
-          class="px-2 py-1 border border-slate-300 dark:border-slate-600 rounded text-sm bg-white dark:bg-slate-800"
+          class={twMerge(
+            findBarInputSurface,
+            controlBlueFocusRing(!hideFocusRing),
+          )}
         />
         <button
           type="button"
-          class={toolbarBtnCls}
+          class={twMerge(
+            toolbarBtnBase,
+            controlBlueFocusRing(!hideFocusRing),
+          )}
+          title="替换当前匹配项"
+          aria-label="替换当前匹配项"
           onClick={() => doReplace(false)}
         >
           替换
         </button>
         <button
           type="button"
-          class={toolbarBtnCls}
+          class={twMerge(
+            toolbarBtnBase,
+            controlBlueFocusRing(!hideFocusRing),
+          )}
+          title="替换文档内全部匹配项"
+          aria-label="替换文档内全部匹配项"
           onClick={() => doReplace(true)}
         >
           全部替换
@@ -883,8 +3261,10 @@ export function RichTextEditor(props: RichTextEditorProps) {
         id={editorId}
         contentEditable={!disabled && !readOnly}
         data-placeholder={placeholder}
+        data-rte-editor
         class={twMerge(
-          editorCls,
+          editorSurface,
+          !hideFocusRing && "focus:border-transparent",
           readOnly && editorReadOnlyCls,
           "empty:before:content-[attr(data-placeholder)] empty:before:text-slate-400 dark:empty:before:text-slate-500",
         )}
@@ -897,19 +3277,24 @@ export function RichTextEditor(props: RichTextEditorProps) {
         onInput={handleInput}
         onPaste={handlePaste}
         onKeyDown={handleKeyDown}
-        ref={(el: HTMLDivElement | null) => {
-          if (!el) return;
-          // 用 untrack 读 value，避免订阅导致 value 变化时 effect 重跑、patch 导致失焦
-          const v = untrack(() =>
-            typeof value === "function" ? value() : value
-          );
-          if (v === undefined) return;
-          // 正在编辑（编辑器有焦点）时不从 value 覆盖 innerHTML，避免输入时失焦
-          if (globalThis.document?.activeElement === el) return;
-          if (el.innerHTML !== v) {
-            el.innerHTML = v;
-          }
+        /**
+         * 聚焦时刷新撤销/重做可用状态。此处不必先 `queueMicrotask`：此时焦点已在编辑区，
+         * `refreshHistoryNavState` 内 `hadEditorFocus === true` 不会再次 `focus` 编辑区，也就不会与
+         * `suppressEditorFocusHistoryRefresh` 形成死循环（该标志仅在为查 queryCommand 而临时抢焦点时使用）。
+         */
+        onFocus={() => {
+          /** 须先于 `suppress` 分支执行，否则查询 redo 时临时 focus 也会跳过置位 */
+          rteEditorHasFocus = true;
+          /** Enter 新段用 `p` 而非浏览器默认的 `div`（Chromium 系） */
+          trySetDefaultParagraphSeparatorToP();
+          if (suppressEditorFocusHistoryRefresh) return;
+          refreshHistoryNavState();
         }}
+        onBlur={() => {
+          rteEditorHasFocus = false;
+          queueMicrotask(() => refreshHistoryNavState());
+        }}
+        ref={editorHostRef}
       />
       {name != null && (
         <input
@@ -931,14 +3316,37 @@ export function RichTextEditor(props: RichTextEditorProps) {
         aria-hidden="true"
         onChange={handleUploadChange}
       />
-      {showToolbar && (
-        <div
-          class="px-2 py-1 text-xs text-slate-500 dark:text-slate-400 border-t border-slate-200 dark:border-slate-600"
-          aria-live="polite"
-        >
-          字数：{wordCount}
-        </div>
-      )}
+      <ColorPicker
+        hideTrigger
+        pickerRef={rteColorPickerRef}
+        id={`${editorId}-rte-cp`}
+        value={rteAuxDraft1.value}
+        hideFocusRing={hideFocusRing}
+        class="w-0 min-w-0"
+        onInput={(e: Event) => {
+          rteAuxDraft1.value = (e.target as HTMLInputElement).value;
+        }}
+        onChange={(e: Event) => {
+          rteAuxDraft1.value = (e.target as HTMLInputElement).value;
+        }}
+        onOpenChange={(open: boolean) => {
+          rteColorPickerOpen.value = open;
+        }}
+        onApply={(hex: string) => {
+          const cmd = rteAuxColorCmd;
+          const color = hex.trim();
+          if (!color) return;
+          const ed = document.getElementById(editorId) as HTMLDivElement | null;
+          if (!ed) return;
+          const saved = rteSavedColorSelectionRange;
+          rteSavedColorSelectionRange = null;
+          rteRedoEligibleAfterUndo = false;
+          applyRteForeOrBackColor(ed, saved, cmd, color);
+          emitChange();
+          queueMicrotask(() => refreshHistoryNavState());
+        }}
+      />
+      <RteWordCountReactiveIsland />
     </div>
   );
 }

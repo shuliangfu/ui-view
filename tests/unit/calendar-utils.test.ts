@@ -4,7 +4,13 @@
 
 import { describe, expect, it } from "@dreamer/test";
 import {
+  calendarDayStart,
+  compareCalendarDays,
+  defaultPickerDayWhenNoValue,
+  firstSelectableDayInMonth,
   getDaysInMonth,
+  isMonthFullyOutsideMinMax,
+  isYearFullyOutsideMinMax,
   MONTHS,
   WEEKDAYS,
 } from "../../src/shared/data-display/calendar-utils.ts";
@@ -86,6 +92,100 @@ describe("calendar-utils", () => {
       for (let i = 0; i < idx; i++) {
         expect(days[i].getMonth()).not.toBe(5);
       }
+    });
+
+    it("月末补足后长度恒为 7 的倍数（满行网格）", () => {
+      for (let m = 0; m < 12; m++) {
+        expect(getDaysInMonth(2025, m).length % 7).toBe(0);
+        expect(getDaysInMonth(2024, m).length % 7).toBe(0);
+      }
+    });
+  });
+
+  describe("compareCalendarDays", () => {
+    it("同日为 0，早于为负，晚于正", () => {
+      const a = new Date(2025, 0, 10, 23, 59);
+      const b = new Date(2025, 0, 10, 1, 0);
+      const c = new Date(2025, 0, 11);
+      expect(compareCalendarDays(a, b)).toBe(0);
+      expect(compareCalendarDays(a, c)).toBe(-1);
+      expect(compareCalendarDays(c, a)).toBe(1);
+    });
+  });
+
+  describe("calendarDayStart", () => {
+    it("去掉时分秒，保留本地年月日", () => {
+      const d = new Date(2026, 7, 15, 14, 30, 45);
+      const s = calendarDayStart(d);
+      expect(s.getFullYear()).toBe(2026);
+      expect(s.getMonth()).toBe(7);
+      expect(s.getDate()).toBe(15);
+      expect(s.getHours()).toBe(0);
+    });
+  });
+
+  describe("isMonthFullyOutsideMinMax", () => {
+    const min = new Date(2025, 5, 1);
+    const max = new Date(2025, 8, 30);
+    it("整月在 min 之前为 true", () => {
+      expect(isMonthFullyOutsideMinMax(2025, 0, min, max)).toBe(true);
+    });
+    it("与范围相交的月为 false", () => {
+      expect(isMonthFullyOutsideMinMax(2025, 5, min, max)).toBe(false);
+      expect(isMonthFullyOutsideMinMax(2025, 7, min, max)).toBe(false);
+    });
+    it("整月在 max 之后为 true", () => {
+      expect(isMonthFullyOutsideMinMax(2025, 10, min, max)).toBe(true);
+    });
+    it("无 min/max 时均为 false", () => {
+      expect(isMonthFullyOutsideMinMax(2020, 0, null, null)).toBe(false);
+    });
+  });
+
+  describe("firstSelectableDayInMonth", () => {
+    it("返回当月首个未被 isDisabled 的日期", () => {
+      const anchor = new Date(2026, 2, 15);
+      const d = firstSelectableDayInMonth(anchor, () => false);
+      expect(d).not.toBeNull();
+      expect(d!.getFullYear()).toBe(2026);
+      expect(d!.getMonth()).toBe(2);
+      expect(d!.getDate()).toBe(1);
+    });
+    it("1 号禁用时返回后续首个可选日", () => {
+      const anchor = new Date(2026, 2, 1);
+      const d = firstSelectableDayInMonth(
+        anchor,
+        (x) => x.getDate() <= 2,
+      );
+      expect(d!.getDate()).toBe(3);
+    });
+  });
+
+  describe("defaultPickerDayWhenNoValue", () => {
+    it("今天在本锚点月且可选时返回今天", () => {
+      const now = new Date();
+      const d = defaultPickerDayWhenNoValue(now, () => false);
+      expect(d).not.toBeNull();
+      expect(d!.getFullYear()).toBe(now.getFullYear());
+      expect(d!.getMonth()).toBe(now.getMonth());
+      expect(d!.getDate()).toBe(now.getDate());
+    });
+    it("今天被禁用时回退到 firstSelectableDayInMonth", () => {
+      const anchor = new Date(2026, 2, 1);
+      const d = defaultPickerDayWhenNoValue(anchor, () => true);
+      expect(d).toBeNull();
+    });
+  });
+
+  describe("isYearFullyOutsideMinMax", () => {
+    const min = new Date(2025, 0, 1);
+    const max = new Date(2025, 11, 31);
+    it("整年在范围外为 true", () => {
+      expect(isYearFullyOutsideMinMax(2024, min, max)).toBe(true);
+      expect(isYearFullyOutsideMinMax(2026, min, max)).toBe(true);
+    });
+    it("与范围相交为 false", () => {
+      expect(isYearFullyOutsideMinMax(2025, min, max)).toBe(false);
     });
   });
 });

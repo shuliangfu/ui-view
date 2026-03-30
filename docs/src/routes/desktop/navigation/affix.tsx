@@ -18,45 +18,50 @@ const AFFIX_API: ApiRow[] = [
   {
     name: "offsetTop",
     type: "number",
-    default: "-",
-    description: "距离视口顶部的偏移（px）",
+    default: "0",
+    description: "距视口顶部偏移（px）",
   },
   {
-    name: "offsetBottom",
-    type: "number",
+    name: "class",
+    type: "string",
     default: "-",
-    description: "距离视口底部的偏移（px），与 offsetTop 二选一",
+    description: "原位包装器 class",
   },
-  { name: "class", type: "string", default: "-", description: "包装器 class" },
   {
     name: "affixClass",
     type: "string",
     default: "-",
-    description: "固定时的 class（如 shadow）",
+    description: "固钉浮层 class（如 shadow）",
+  },
+  {
+    name: "scrollTarget",
+    type: "Element | (() => Element | null)",
+    default: "-",
+    description:
+      "额外绑定 scroll 的容器；默认会收集父链上所有纵向可滚动层并监听 window",
+  },
+  {
+    name: "respectFixedHeader",
+    type: "boolean",
+    default: "true",
+    description: "避让全站顶栏；false 时仅按 offsetTop 相对视口顶",
+  },
+  {
+    name: "headerGap",
+    type: "number",
+    default: "8",
+    description: "测到顶栏时与顶栏底之间的额外间距（px）；无顶栏时不叠加",
   },
 ];
 
 const importCode = `import { Affix } from "@dreamer/ui-view";
 
-<Affix
-  offsetTop={0}
-  affixClass="shadow-md"
->
-  <div class="...">固定到顶部的内容</div>
+<Affix offsetTop={0} affixClass="shadow-md">
+  <div class="...">滚动后钉在视口顶部的内容</div>
 </Affix>`;
 
-const exampleOffsetTop = `<Affix
-  offsetTop={0}
-  affixClass="shadow-md"
->
-  <div class="...">此区域在滚动时可固定到顶部（需在应用内调用 initAffix()）</div>
-</Affix>`;
-
-const exampleOffsetBottom = `<Affix
-  offsetBottom={0}
-  affixClass="shadow-md"
->
-  <div class="...">可固定到底部（offsetBottom=0）</div>
+const exampleAffixTop = `<Affix offsetTop={0} affixClass="shadow-md">
+  <div class="...">此区域在滚动时可固定到视口顶部</div>
 </Affix>`;
 
 export default function NavigationAffix() {
@@ -65,8 +70,15 @@ export default function NavigationAffix() {
       <section>
         <Title level={1}>Affix 固钉</Title>
         <Paragraph class="mt-2">
-          固钉：children、offsetTop、offsetBottom、class、affixClass。滚动时固定到视口顶部或底部，需在应用内调用
-          initAffix() 绑定滚动监听。 使用 Tailwind v4，支持 light/dark 主题。
+          固钉用于长页滚动时把工具条、筛选条等「钉」在视口顶部或底部。进入固钉态后，子节点通过
+          {" "}
+          <code class="text-xs">createPortal</code>
+          挂到 <code class="text-xs">body</code>
+          ，避免被父级 <code class="text-xs">overflow</code>
+          裁切；原位保留占位高度。组件内部会监听滚动（默认向上查找纵向可滚动祖先，否则
+          {" "}
+          <code class="text-xs">window</code>
+          ），无需再调用全局初始化函数。使用 Tailwind v4，支持 light/dark 主题。
         </Paragraph>
       </section>
 
@@ -85,39 +97,17 @@ export default function NavigationAffix() {
         <Title level={2}>示例</Title>
 
         <div class="space-y-4">
-          <Title level={3}>offsetTop 固定到顶部</Title>
+          <Title level={3}>视口顶部固钉</Title>
           <Affix offsetTop={0} affixClass="shadow-md">
             <div class="border border-slate-200 dark:border-slate-600 rounded-lg p-4 bg-white dark:bg-slate-800 shadow">
               <span class="text-sm font-medium">
-                此区域在滚动时可固定到顶部（需在应用内调用 initAffix()）
+                向下滚动主内容区，此条会钉在视口顶边（示例 offsetTop=0）
               </span>
             </div>
           </Affix>
           <CodeBlock
             title="代码示例"
-            code={exampleOffsetTop}
-            language="tsx"
-            showLineNumbers
-            copyable
-            wrapLongLines
-          />
-        </div>
-
-        <div class="space-y-4">
-          <Title level={3}>offsetBottom 固定到底部</Title>
-          <div class="h-40 flex items-center justify-center border border-dashed border-slate-300 dark:border-slate-600 rounded">
-            占位区域
-          </div>
-          <Affix offsetBottom={0} affixClass="shadow-md">
-            <div class="border border-slate-200 dark:border-slate-600 rounded-lg p-4 bg-white dark:bg-slate-800">
-              <span class="text-sm font-medium">
-                可固定到底部（offsetBottom=0）
-              </span>
-            </div>
-          </Affix>
-          <CodeBlock
-            title="代码示例"
-            code={exampleOffsetBottom}
+            code={exampleAffixTop}
             language="tsx"
             showLineNumbers
             copyable
@@ -133,8 +123,8 @@ export default function NavigationAffix() {
       <section class="space-y-3">
         <Title level={2}>API</Title>
         <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
-          组件接收以下属性。需在应用内调用 initAffix()
-          绑定滚动监听后固钉才生效。
+          以下为组件属性。固钉态下子树在 body
+          上渲染，切换固钉/子节点变化时可能重挂载，复杂表单内状态需注意。
         </Paragraph>
         <div class="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-600">
           <table class="w-full min-w-lg text-sm">

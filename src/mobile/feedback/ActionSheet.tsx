@@ -3,6 +3,7 @@
  * 移动端选择/操作：底部弹出若干选项 + 取消；支持标题、危险项、禁用项。
  */
 
+import { getDocument } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 
 export interface ActionSheetAction {
@@ -60,15 +61,13 @@ export function ActionSheet(props: ActionSheetProps) {
     if (e.target === e.currentTarget && maskClosable) onClose?.();
   };
 
-  /** 关闭时恢复 body 滚动；打开时锁定（仅浏览器环境） */
-  const doc = typeof globalThis.document !== "undefined"
-    ? globalThis.document
-    : null;
+  /** `body.style` 在部分 SSR document 上不存在 */
+  const bodyStyle = getDocument()?.body?.style;
   if (!open) {
-    if (doc) doc.body.style.overflow = "";
+    if (bodyStyle != null) bodyStyle.overflow = "";
     return null;
   }
-  if (doc) doc.body.style.overflow = "hidden";
+  if (bodyStyle != null) bodyStyle.overflow = "hidden";
 
   return (
     <div

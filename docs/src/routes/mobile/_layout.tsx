@@ -42,11 +42,6 @@ const FORM_SUBMENU = [
   { path: "/mobile/form/select", label: "Select", desc: "单选" },
   { path: "/mobile/form/multiselect", label: "MultiSelect", desc: "多选" },
   { path: "/mobile/form/date-picker", label: "DatePicker", desc: "日期" },
-  {
-    path: "/mobile/form/date-range-picker",
-    label: "DateRangePicker",
-    desc: "日期范围",
-  },
   { path: "/mobile/form/cascader", label: "Cascader", desc: "级联" },
 ] as const;
 

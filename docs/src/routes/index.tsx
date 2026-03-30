@@ -82,11 +82,8 @@ export default function Home() {
           class="relative py-20 sm:py-24 lg:py-32"
           title={
             <span class="inline-flex flex-col sm:flex-row sm:items-baseline sm:gap-3">
-              <span class="rounded-xl bg-linear-to-r from-teal-500 to-emerald-600 px-4 py-2 text-white dark:from-teal-500 dark:to-emerald-500 text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight shadow-lg shadow-teal-500/25">
+              <span class="rounded-xl bg-linear-to-r from-teal-500 to-emerald-600 px-4 py-2 text-white dark:text-gray-200 dark:from-teal-500 dark:to-emerald-500 text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight shadow-lg shadow-teal-500/25">
                 ui-view
-              </span>
-              <span class="mt-2 sm:mt-0 text-lg sm:text-xl font-semibold text-slate-600 dark:text-slate-300">
-                组件库文档
               </span>
             </span>
           }
@@ -100,32 +97,64 @@ export default function Home() {
           background={<HeroBackground />}
           extra={
             <div class="flex w-full flex-wrap items-center justify-center gap-3 sm:gap-4">
+              {
+                /*
+                 * Hero CTA：button + variant + size 负责布局、过渡与基准样式；
+                 * className 只补站点主色（teal）与圆角/描边/阴影，不写与组件重复的 inline-flex、text-sm 等。
+                 */
+              }
               <Link
                 href="/desktop"
-                className="inline-flex items-center justify-center rounded-xl bg-teal-600 px-6 py-3.5 text-base font-semibold text-white shadow-lg shadow-teal-600/30 hover:bg-teal-500 hover:text-white transition-all duration-200"
+                button
+                variant="primary"
+                size="lg"
+                className="rounded-xl bg-teal-600 px-6 py-3.5 font-semibold shadow-lg shadow-teal-600/30 hover:bg-teal-500 dark:text-gray-200"
               >
                 桌面版文档
               </Link>
               <Link
                 href="/mobile"
-                className="inline-flex items-center justify-center rounded-xl border-2 border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-6 py-3.5 text-base font-semibold text-slate-800 dark:text-slate-100 hover:border-teal-400 hover:bg-teal-50/50 dark:hover:bg-slate-800 transition-all duration-200"
+                button
+                size="lg"
+                variant="ghost"
+                className="rounded-xl border-2 border-slate-300 bg-white px-6 py-3.5 font-semibold hover:border-teal-400 hover:bg-teal-50/50 dark:border-slate-600 dark:bg-slate-900 dark:hover:bg-slate-800"
               >
                 移动版文档
               </Link>
-              <Link
+              {
+                /* <Link
                 href="https://jsr.io/@dreamer/ui-view"
                 target="_blank"
-                className="inline-flex items-center justify-center rounded-xl px-5 py-3 text-sm font-semibold text-teal-700 dark:text-teal-300 hover:bg-teal-50 dark:hover:bg-slate-800 transition-colors"
+                button
+                size="lg"
+                variant="ghost"
+                className="rounded-xl px-6 py-3.5 font-semibold text-teal-700 hover:bg-teal-50 hover:text-teal-800 dark:hover:bg-slate-800"
               >
                 JSR 包页 →
-              </Link>
+              </Link> */
+              }
+              {
+                /*
+                 * 图标 + 文案：包在 span 内作为单一子节点，避免 View 下 Link 多子挂载偶发只渲染外框。
+                 * inline-flex + gap 放在 span 上，与前两颗 CTA 同 lg + px-6 py-3.5。
+                 */
+              }
               <Link
                 href="https://github.com/shuliangfu/ui-view"
                 target="_blank"
-                className="inline-flex items-center gap-2 rounded-xl border-2 border-slate-200 dark:border-slate-700 px-5 py-3 text-base font-medium text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-500 transition-colors"
+                rel="noopener noreferrer"
+                button
+                size="lg"
+                variant="ghost"
+                className="rounded-xl px-6 py-3.5 font-semibold"
               >
-                <IconBrandGithub class="w-5 h-5" />
-                GitHub
+                <span class="inline-flex items-center gap-2">
+                  <IconBrandGithub
+                    size="sm"
+                    class="h-5 w-5 shrink-0 text-current"
+                  />
+                  GitHub
+                </span>
               </Link>
             </div>
           }
@@ -219,13 +248,13 @@ import { BottomSheet, TabBar, NavBar } from "@dreamer/ui-view/mobile";`}
             <div class="flex flex-wrap justify-center gap-3">
               <Link
                 href="/desktop"
-                className="inline-flex items-center rounded-xl bg-teal-600 px-8 py-3.5 text-base font-semibold text-white hover:bg-teal-500 transition-colors"
+                className="inline-flex items-center rounded-xl bg-teal-600 px-8 py-3.5 text-base font-semibold text-white dark:text-gray-200 hover:bg-teal-500 dark:hover:text-gray-200 transition-colors"
               >
                 桌面组件 →
               </Link>
               <Link
                 href="/mobile"
-                className="inline-flex items-center rounded-xl border-2 border-slate-300 dark:border-slate-600 px-8 py-3.5 text-base font-semibold text-slate-700 dark:text-slate-200 hover:border-teal-400 transition-colors"
+                className="inline-flex items-center rounded-xl border-2 border-slate-300 dark:border-slate-600 px-8 py-3.5 text-base font-semibold text-slate-700 dark:text-gray-200 hover:border-teal-400 transition-colors"
               >
                 移动组件 →
               </Link>

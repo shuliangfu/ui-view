@@ -44,6 +44,38 @@ const LINK_API: ApiRow[] = [
     description: "无障碍标签",
   },
   {
+    name: "underline",
+    type: "boolean",
+    default: "false",
+    description:
+      "为 true 时鼠标悬停显示下划线；默认 false（常态与悬停均无下划线；文字链与 button 模式均适用）",
+  },
+  {
+    name: "button",
+    type: "boolean",
+    default: "false",
+    description:
+      "为 true 时渲染链接按钮（与 Button 同源 variant/size 类名，仍用 <a href>）",
+  },
+  {
+    name: "variant",
+    type: "ColorVariant",
+    default: "button 模式下 primary",
+    description: "链接按钮语义配色；仅 button=true 时参与合并",
+  },
+  {
+    name: "size",
+    type: "SizeVariant",
+    default: "button 模式下 md",
+    description: "链接按钮尺寸；仅 button=true 时参与合并",
+  },
+  {
+    name: "disabled",
+    type: "boolean",
+    default: "false",
+    description: "禁用（阻止导航，建议仅在链接按钮上使用）",
+  },
+  {
     name: "class",
     type: "string",
     default: "-",
@@ -83,15 +115,22 @@ const exampleClass =
   绿色加粗链接
 </Link>`;
 
+const exampleUnderline = `<Link href="/desktop" underline>
+  带下划线的链接
+</Link>`;
+
+const exampleLinkButton =
+  `<Link href="/desktop" button variant="primary" size="md">
+  链接按钮（主色）
+</Link>`;
+
 export default function BasicLink() {
   return (
     <div class="space-y-10">
       <section>
         <Title level={1}>Link 链接</Title>
         <Paragraph class="mt-2">
-          基于 &lt;a&gt; 的链接组件，支持
-          href、target、rel、title、class、onClick 等，适用于导航、外链。使用
-          Tailwind v4，支持 light/dark 主题。
+          {"基于 <a> 的链接组件，支持 href、target、rel、title、class、onClick 等，适用于导航、外链。使用 Tailwind v4，支持 light/dark 主题。"}
         </Paragraph>
       </section>
 
@@ -159,6 +198,54 @@ export default function BasicLink() {
           <CodeBlock
             title="代码示例"
             code={exampleClass}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+        </div>
+
+        <div class="space-y-4">
+          <Title level={3}>underline（下划线）</Title>
+          <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+            默认常态与悬停都无下划线；传 <code class="text-xs">underline</code>
+            {" "}
+            后仅在鼠标移上时显示下划线（文字链与{" "}
+            <code class="text-xs">button</code> 模式均适用）。
+          </Paragraph>
+          <p class="flex flex-wrap items-center gap-4">
+            <Link href="/desktop">默认（无下划线）</Link>
+            <Link href="/desktop" underline>
+              underline
+            </Link>
+          </p>
+          <CodeBlock
+            title="代码示例"
+            code={exampleUnderline}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+        </div>
+
+        <div class="space-y-4">
+          <Title level={3}>链接按钮 button + variant + size</Title>
+          <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+            与 Button 共用 ColorVariant / SizeVariant；可用 class
+            覆盖配色（如品牌色）。
+          </Paragraph>
+          <p class="flex flex-wrap items-center gap-3">
+            <Link href="/desktop" button variant="primary" size="md">
+              主色 md
+            </Link>
+            <Link href="/desktop" button variant="ghost" size="sm">
+              幽灵 sm
+            </Link>
+          </p>
+          <CodeBlock
+            title="代码示例"
+            code={exampleLinkButton}
             language="tsx"
             showLineNumbers
             copyable

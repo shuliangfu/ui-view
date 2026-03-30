@@ -8,7 +8,7 @@ import { CodeBlock, Link, Paragraph, Title } from "@dreamer/ui-view";
 /** 跳转到常用分类的快速链接 */
 const QUICK = [
   { href: "/desktop/basic/button", label: "基础 · Button" },
-  { href: "/desktop/form/input", label: "表单 · Input" },
+  { href: "/desktop/form/form-containers", label: "表单 · Form 容器" },
   { href: "/desktop/feedback/modal", label: "反馈 · Modal" },
   { href: "/desktop/data-display/table", label: "数据 · Table" },
   { href: "/desktop/charts/line", label: "图表 · 折线图" },

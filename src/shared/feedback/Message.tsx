@@ -2,8 +2,11 @@
  * Message 全局提示容器（View）。
  * 需在应用根节点挂载 <MessageContainer />，通过 message.success/error/info/warning 触发。
  * 比 Toast 重：带类型图标、卡片式边框与阴影，固定顶部居中；结构参考 Toast 保证响应式更新。
+ * 有 `document.body` 时用 {@link createPortal} 挂到 `body`。
  */
 
+import { createRenderEffect, onCleanup, type VNode } from "@dreamer/view";
+import { createPortal } from "@dreamer/view/portal";
 import { twMerge } from "tailwind-merge";
 /** 按需：单文件图标，避免经 icons/mod 拉入全表 */
 import { IconAlertCircle } from "../basic/icons/AlertCircle.tsx";
@@ -16,6 +19,7 @@ import type {
   MessageType,
 } from "./message-store.ts";
 import { messageList } from "./message-store.ts";
+import { getBrowserBodyPortalHost } from "./portal-host.ts";
 
 /** 按 placement 分组：top、center（结构参考 Toast） */
 const MESSAGE_PLACEMENTS: MessagePlacement[] = ["top", "center"];
@@ -59,67 +63,94 @@ function MessageItemEl({ item }: { item: MessageItem }) {
 const MESSAGE_Z_INDEX = 2147483647;
 
 /**
- * Message 容器：支持 top / center，结构参考 Toast（先读 list、按 placement 分组渲染）。
- * 保留 `return () =>`：在 getter 内读 `messageList()` 以订阅模块级列表 SignalRef。
+ * 浮层 VNode：在 Portal getter 或 SSR 回退内读 `messageList()` 以订阅列表。
+ */
+function renderMessageOverlay(): VNode | null {
+  const list = messageList();
+  if (list.length === 0) return null;
+  const byPlacement = new Map<MessagePlacement, MessageItem[]>();
+  for (const item of list) {
+    const p = item.placement ?? "top";
+    if (!byPlacement.has(p)) byPlacement.set(p, []);
+    byPlacement.get(p)!.push(item);
+  }
+  return (
+    <div
+      class="fixed inset-0 pointer-events-none flex flex-col"
+      style={{ zIndex: MESSAGE_Z_INDEX }}
+      aria-live="polite"
+    >
+      {MESSAGE_PLACEMENTS.map((placement) => {
+        const items = byPlacement.get(placement) ?? [];
+        if (items.length === 0) return null;
+        const isCenter = placement === "center";
+        const placementStyle = isCenter
+          ? {
+            top: "50%",
+            left: "50%",
+            right: "auto",
+            bottom: "auto",
+            transform: "translate(-50%, -50%)",
+            width: "max-content",
+            maxWidth: "24rem",
+            margin: 0,
+          }
+          : {
+            top: "3rem",
+            bottom: "auto",
+            left: 0,
+            right: 0,
+            marginLeft: "auto",
+            marginRight: "auto",
+            width: "max-content",
+            maxWidth: "24rem",
+          };
+        return (
+          <div
+            key={placement}
+            class="absolute flex flex-col gap-2 px-4 pointer-events-none items-center"
+            style={placementStyle}
+          >
+            <div class="flex flex-col gap-2 items-center min-w-0 pointer-events-auto">
+              {items.map((item) => (
+                <div key={item.id}>
+                  <MessageItemEl item={item} />
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/**
+ * Message 容器：有 `body` 时 Portal 挂 `body`；无 `body` 时回退根内 getter。
  */
 export function MessageContainer() {
-  return () => {
-    const list = messageList();
-    if (list.length === 0) return null;
-    const byPlacement = new Map<MessagePlacement, MessageItem[]>();
-    for (const item of list) {
-      const p = item.placement ?? "top";
-      if (!byPlacement.has(p)) byPlacement.set(p, []);
-      byPlacement.get(p)!.push(item);
-    }
+  /**
+   * 仅在有待展示条目时创建 Portal，避免列表为空时 `body` 下残留空 `view-portal` 包装（与 Toast 同向）。
+   */
+  createRenderEffect(() => {
+    const host = getBrowserBodyPortalHost();
+    if (host == null) return;
+    if (messageList().length === 0) return;
+    const root = createPortal(() => renderMessageOverlay(), host);
+    onCleanup(() => {
+      root.unmount();
+    });
+  });
+
+  const portalHostOk = getBrowserBodyPortalHost() != null;
+  if (portalHostOk) {
     return (
-      <div
-        class="fixed inset-0 pointer-events-none flex flex-col"
-        style={{ zIndex: MESSAGE_Z_INDEX }}
-        aria-live="polite"
-      >
-        {MESSAGE_PLACEMENTS.map((placement) => {
-          const items = byPlacement.get(placement) ?? [];
-          if (items.length === 0) return null;
-          const isCenter = placement === "center";
-          const placementStyle = isCenter
-            ? {
-              top: "50%",
-              left: "50%",
-              right: "auto",
-              bottom: "auto",
-              transform: "translate(-50%, -50%)",
-              width: "max-content",
-              maxWidth: "24rem",
-              margin: 0,
-            }
-            : {
-              top: "3rem",
-              bottom: "auto",
-              left: 0,
-              right: 0,
-              marginLeft: "auto",
-              marginRight: "auto",
-              width: "max-content",
-              maxWidth: "24rem",
-            };
-          return (
-            <div
-              key={placement}
-              class="absolute flex flex-col gap-2 px-4 pointer-events-none items-center"
-              style={placementStyle}
-            >
-              <div class="flex flex-col gap-2 items-center min-w-0 pointer-events-auto">
-                {items.map((item) => (
-                  <div key={item.id}>
-                    <MessageItemEl item={item} />
-                  </div>
-                ))}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+      <span
+        style="display:none;width:0;height:0;overflow:hidden;position:absolute;clip:rect(0,0,0,0)"
+        aria-hidden="true"
+        data-dreamer-message-portal-anchor=""
+      />
     );
-  };
+  }
+  return () => renderMessageOverlay();
 }

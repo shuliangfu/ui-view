@@ -2,8 +2,11 @@
  * Notification 消息通知框容器（View）。
  * 需在应用根挂载 <NotificationContainer />，通过 notification.open() 触发。
  * 支持自定义弹出位置 placement：右上、右下、下中、上中、左上、左下。
+ * 有 `document.body` 时用 {@link createPortal} 挂到 `body`。
  */
 
+import { createRenderEffect, onCleanup, type VNode } from "@dreamer/view";
+import { createPortal } from "@dreamer/view/portal";
 import { twMerge } from "tailwind-merge";
 /** 按需：单文件图标，避免经 icons/mod 拉入全表 */
 import { IconAlertCircle } from "../basic/icons/AlertCircle.tsx";
@@ -17,6 +20,7 @@ import type {
   NotificationType,
 } from "./notification-store.ts";
 import { closeNotification, notificationList } from "./notification-store.ts";
+import { getBrowserBodyPortalHost } from "./portal-host.ts";
 
 const typeIconClasses: Record<NotificationType, string> = {
   success: "text-green-600 dark:text-green-400",
@@ -45,7 +49,18 @@ function NotificationIcon({ type }: { type: NotificationType }) {
 const DATA_CLOSE_ATTR = "data-notification-close";
 const DATA_ID_ATTR = "data-notification-id";
 
-/** 单条通知项：关闭按钮用 data 属性存 id，由容器事件委托统一关闭，避免 patch 后未绑事件导致点击无效 */
+/** 容器上事件委托：避免 patch 后关闭钮未绑事件 */
+function handleNotificationWrapClick(e: Event) {
+  const target = e.target as Element | null;
+  const btn = target?.closest?.(
+    `[${DATA_CLOSE_ATTR}]`,
+  ) as HTMLElement | null | undefined;
+  if (!btn) return;
+  const id = btn.getAttribute?.(DATA_ID_ATTR);
+  if (id) closeNotification(id);
+}
+
+/** 单条通知项 */
 function NotificationItemEl({ item }: { item: NotificationItem }) {
   return (
     <div
@@ -119,71 +134,89 @@ const placementContainerClasses: Record<NotificationPlacement, string> = {
   "bottom-left": "bottom-4 left-4 pr-4 items-start",
 };
 
-/** 与 Toast/Message 同级最高层级，始终挂载确保显示与层级 */
+/** 与 Toast/Message 同级最高层级 */
 const NOTIFICATION_Z_INDEX = 2147483647;
 
 /**
- * 通知容器：按 placement 分组，各位置独立堆叠；关闭由容器上事件委托处理，保证点击 X 可靠关闭。
- * 保留 `return () =>`：在 getter 内读 `notificationList()` 以订阅模块级列表 SignalRef。
+ * 浮层 VNode：在 Portal getter 或 SSR 回退内读 `notificationList()`。
+ * 不使用 `fixed inset-0` 全屏层，各 placement 独立 `fixed`，避免透明挡点击。
+ */
+function renderNotificationOverlay(): VNode | null {
+  const list = notificationList();
+  if (list.length === 0) return null;
+  const byPlacement = new Map<NotificationPlacement, NotificationItem[]>();
+  for (const item of list) {
+    const p = item.placement ?? "top-right";
+    if (!byPlacement.has(p)) byPlacement.set(p, []);
+    byPlacement.get(p)!.push(item);
+  }
+  let attachLiveRegion = true;
+  return (
+    <>
+      {PLACEMENTS.map((placement) => {
+        const items = byPlacement.get(placement) ?? [];
+        if (items.length === 0) return null;
+        const isBottom = placement === "bottom-right" ||
+          placement === "bottom-center" ||
+          placement === "bottom-left";
+        const placementStyle = isBottom
+          ? { top: "auto", bottom: "1rem", zIndex: NOTIFICATION_Z_INDEX }
+          : { top: "1rem", bottom: "auto", zIndex: NOTIFICATION_Z_INDEX };
+        const withLive = attachLiveRegion;
+        attachLiveRegion = false;
+        return (
+          <div
+            key={placement}
+            class={twMerge(
+              "fixed flex flex-col gap-3 max-w-full pointer-events-none",
+              placementContainerClasses[placement],
+            )}
+            style={placementStyle}
+            aria-live={withLive ? "polite" : undefined}
+          >
+            <div
+              class="flex flex-col gap-3 pointer-events-auto"
+              onClick={handleNotificationWrapClick as (e: Event) => void}
+            >
+              {items.map((item: NotificationItem) => (
+                <div key={item.id}>
+                  <NotificationItemEl item={item} />
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </>
+  );
+}
+
+/**
+ * 通知容器：有 `body` 时 Portal 挂 `body`；无 `body` 时回退根内 getter。
  */
 export function NotificationContainer() {
-  const handleWrapClick = (e: Event) => {
-    const target = e.target as Element | null;
-    const btn = target?.closest?.(
-      `[${DATA_CLOSE_ATTR}]`,
-    ) as HTMLElement | null | undefined;
-    if (!btn) return;
-    const id = btn.getAttribute?.(DATA_ID_ATTR);
-    if (id) closeNotification(id);
-  };
+  /**
+   * 仅在有待展示条目时创建 Portal，避免列表为空时 `body` 下残留空 `view-portal` 包装（与 Toast/Message 同向）。
+   */
+  createRenderEffect(() => {
+    const host = getBrowserBodyPortalHost();
+    if (host == null) return;
+    if (notificationList().length === 0) return;
+    const root = createPortal(() => renderNotificationOverlay(), host);
+    onCleanup(() => {
+      root.unmount();
+    });
+  });
 
-  return () => {
-    const list = notificationList();
-    if (list.length === 0) return null;
-    const byPlacement = new Map<NotificationPlacement, NotificationItem[]>();
-    for (const item of list) {
-      const p = item.placement ?? "top-right";
-      if (!byPlacement.has(p)) byPlacement.set(p, []);
-      byPlacement.get(p)!.push(item);
-    }
+  const portalHostOk = getBrowserBodyPortalHost() != null;
+  if (portalHostOk) {
     return (
-      <div
-        class="fixed inset-0 flex flex-col"
-        style={{ zIndex: NOTIFICATION_Z_INDEX }}
-        aria-live="polite"
-      >
-        {PLACEMENTS.map((placement) => {
-          const items = byPlacement.get(placement) ?? [];
-          if (items.length === 0) return null;
-          const isBottom = placement === "bottom-right" ||
-            placement === "bottom-center" ||
-            placement === "bottom-left";
-          const placementStyle = isBottom
-            ? { top: "auto", bottom: "1rem" }
-            : { top: "1rem", bottom: "auto" };
-          return (
-            <div
-              key={placement}
-              class={twMerge(
-                "absolute flex flex-col gap-3 max-w-full",
-                placementContainerClasses[placement],
-              )}
-              style={placementStyle}
-            >
-              <div
-                class="flex flex-col gap-3"
-                onClick={handleWrapClick as (e: Event) => void}
-              >
-                {items.map((item: NotificationItem) => (
-                  <div key={item.id}>
-                    <NotificationItemEl item={item} />
-                  </div>
-                ))}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+      <span
+        style="display:none;width:0;height:0;overflow:hidden;position:absolute;clip:rect(0,0,0,0)"
+        aria-hidden="true"
+        data-dreamer-notification-portal-anchor=""
+      />
     );
-  };
+  }
+  return () => renderNotificationOverlay();
 }

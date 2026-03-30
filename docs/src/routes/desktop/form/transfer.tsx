@@ -32,7 +32,7 @@ const TRANSFER_API: ApiRow[] = [
     type: "string[] | (() => string[])",
     default: "-",
     description:
-      "已选 key 列表；建议传 getter（如 () => targetKeys.value）以便穿梭时读到最新值",
+      "已选 key 列表；须 getter（如 () => sig.value）+ onChange 更新 state，勿写死数组否则无法穿梭",
   },
   {
     name: "onChange",
@@ -62,13 +62,14 @@ const TRANSFER_API: ApiRow[] = [
     name: "searchValue",
     type: "[string, string]",
     default: "-",
-    description: "受控搜索值",
+    description:
+      "可选：左右搜索框初始文案（仅实例创建时生效）；勿做每键更新的受控绑定，以免失焦",
   },
   {
     name: "onSearch",
     type: "(dir: 'left'|'right', value: string) => void",
     default: "-",
-    description: "搜索变更",
+    description: "用户输入搜索时的通知回调（筛选在组件内部完成）",
   },
   {
     name: "filterOption",
@@ -93,6 +94,13 @@ const TRANSFER_API: ApiRow[] = [
     type: "boolean",
     default: "false",
     description: "整组禁用",
+  },
+  {
+    name: "hideFocusRing",
+    type: "boolean",
+    default: "false",
+    description:
+      "为 true 时隐藏列头搜索框与穿梭操作按钮的聚焦蓝色 ring；默认 false 显示",
   },
   { name: "class", type: "string", default: "-", description: "额外 class" },
 ];
@@ -123,17 +131,16 @@ const targetKeys = createSignal<string[]>([]);
 export default function FormTransfer() {
   const targetKeys = createSignal<string[]>([]);
   const targetKeys2 = createSignal<string[]>(["2", "4"]);
-  const searchValue = createSignal<[string, string]>([
-    "",
-    "",
-  ]);
+  /** 含 disabled 项示例：须与基础示例一样用 signal + onChange，勿写死 targetKeys / 空 onChange */
+  const targetKeysWithDisabled = createSignal<string[]>(["1"]);
 
   return (
     <div class="space-y-10">
       <section>
         <Title level={1}>Transfer 穿梭框</Title>
         <Paragraph class="mt-2">
-          穿梭框：dataSource、targetKeys、onChange、titles、showSearch、searchPlaceholder、searchValue、onSearch、filterOption、render、listStyle、disabled。宽度由
+          穿梭框：dataSource、targetKeys、onChange、titles、showSearch、searchPlaceholder、可选
+          searchValue（仅初始文案）、onSearch（输入通知）、filterOption、render、listStyle、disabled。宽度由
           class 控制，表单中需占满一列时传 class="w-full"。Tailwind v4 +
           light/dark。
         </Paragraph>
@@ -188,10 +195,6 @@ export default function FormTransfer() {
                 onChange={(keys) => targetKeys2.value = keys}
                 titles={["待选", "已选"]}
                 showSearch
-                searchValue={searchValue.value}
-                onSearch={(dir, value) =>
-                  searchValue.value = (prev) =>
-                    dir === "left" ? [value, prev[1]] : [prev[0], value]}
                 searchPlaceholder={["筛选左侧", "筛选右侧"]}
               />
             </FormItem>
@@ -200,8 +203,6 @@ export default function FormTransfer() {
               code={`<Transfer
   ...
   showSearch
-  searchValue={searchValue.value}
-  onSearch={(dir, value) => ...}
   searchPlaceholder={["左", "右"]}
 />`}
               language="tsx"
@@ -216,8 +217,8 @@ export default function FormTransfer() {
             <FormItem label="草莓为 disabled">
               <Transfer
                 dataSource={data}
-                targetKeys={["1"]}
-                onChange={() => {}}
+                targetKeys={() => targetKeysWithDisabled.value}
+                onChange={(keys) => targetKeysWithDisabled.value = keys}
                 titles={["源", "目标"]}
               />
             </FormItem>
@@ -231,7 +232,14 @@ export default function FormTransfer() {
             </FormItem>
             <CodeBlock
               title="代码示例"
-              code={`dataSource 项可设 disabled: true；<Transfer disabled /> 整组禁用`}
+              code={`// 项级 disabled：仍须受控 targetKeys + onChange（勿静态数组 + 空 onChange）
+const targetKeys = createSignal<string[]>(["1"]);
+<Transfer
+  dataSource={[{ key: "a", title: "可选" }, { key: "b", title: "禁用", disabled: true }]}
+  targetKeys={() => targetKeys.value}
+  onChange={(keys) => (targetKeys.value = keys)}
+/>
+// 整组：<Transfer disabled />`}
               language="tsx"
               showLineNumbers
               copyable

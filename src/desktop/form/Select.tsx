@@ -7,6 +7,11 @@ import { createSignal } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 /** 按需：单文件图标，避免经 icons/mod 拉入全表 */
 import { IconChevronDown } from "../../shared/basic/icons/ChevronDown.tsx";
+import {
+  controlBlueFocusRing,
+  nativeSelectSurface,
+  pickerTriggerSurface,
+} from "../../shared/form/input-focus-ring.ts";
 import type { SizeVariant } from "../../shared/types.ts";
 
 export interface SelectOption {
@@ -29,6 +34,8 @@ export interface SelectProps {
   id?: string;
   /** 仅当未传 options 时使用：渲染原生 select，由 children 提供 option 节点 */
   children?: unknown;
+  /** 为 true 时隐藏聚焦激活态边框；默认 false 显示 ring */
+  hideFocusRing?: boolean;
 }
 
 const sizeClasses: Record<SizeVariant, string> = {
@@ -37,10 +44,6 @@ const sizeClasses: Record<SizeVariant, string> = {
   md: "px-3 py-2 text-sm rounded-lg",
   lg: "px-4 py-2.5 text-base rounded-lg",
 };
-
-/** 触发器基础样式：不含宽度，需全宽时由调用方加 class="w-full" */
-const triggerBase =
-  "border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border-slate-300 dark:border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:focus:ring-blue-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer flex items-center justify-between gap-2 text-left";
 
 const optionBase =
   "px-3 py-2 text-sm text-left w-full cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed first:rounded-t-lg last:rounded-b-lg";
@@ -60,6 +63,7 @@ export function Select(props: SelectProps) {
     name,
     id,
     children,
+    hideFocusRing = false,
   } = props;
 
   /** 下拉是否展开（SignalRef） */
@@ -81,8 +85,6 @@ export function Select(props: SelectProps) {
 
   /** 有 options 时走自定义下拉；否则走原生 select（兼容 children 传 option） */
   if (!options) {
-    const base =
-      "border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border-slate-300 dark:border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer";
     /** 无内部 open 状态，直接返回 VNode */
     return (
       <select
@@ -90,7 +92,12 @@ export function Select(props: SelectProps) {
         name={name}
         value={resolvedValue}
         disabled={disabled}
-        class={twMerge(base, sizeCls, className)}
+        class={twMerge(
+          nativeSelectSurface,
+          controlBlueFocusRing(!hideFocusRing),
+          sizeCls,
+          className,
+        )}
         onChange={onChange}
       >
         {children}
@@ -108,7 +115,12 @@ export function Select(props: SelectProps) {
         aria-haspopup="listbox"
         aria-expanded={openState.value}
         aria-label={displayText || placeholder || "选择"}
-        class={twMerge("w-full", triggerBase, sizeCls)}
+        class={twMerge(
+          "w-full",
+          pickerTriggerSurface,
+          controlBlueFocusRing(!hideFocusRing),
+          sizeCls,
+        )}
         onClick={() => {
           if (!disabled) openState.value = (prev) => !prev;
         }}

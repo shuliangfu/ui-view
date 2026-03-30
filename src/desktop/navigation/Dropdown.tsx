@@ -2,6 +2,7 @@
  * Dropdown 下拉菜单（View）。
  * 桌面点击/悬停展开；触发元素 + 下拉内容，支持 placement、trigger(click/hover)、
  * Esc 关闭（需 initDropdownEsc）、hover 延迟防抖。展开状态由组件内部维护，无需传 open。
+ * 浮层容器使用 **`p-1`**（四边等距），避免仅 `py-1` 时左右贴边、与内部再写 `py-1` 叠出过高顶距。
  */
 
 import { createEffect, createSignal } from "@dreamer/view";
@@ -264,7 +265,7 @@ export function Dropdown(props: DropdownProps) {
               id={overlayId}
               role="menu"
               class={twMerge(
-                "absolute z-50 min-w-[120px] py-1 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-lg",
+                "absolute z-50 min-w-[120px] p-1 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-lg",
                 posCls,
                 overlayClass,
               )}

@@ -23,9 +23,10 @@ interface ApiRow {
 const POPCONFIRM_API: ApiRow[] = [
   {
     name: "open",
-    type: "boolean",
+    type: "boolean | (() => boolean) | SignalRef<boolean>",
     default: "-",
-    description: "是否打开（受控）",
+    description:
+      "是否打开；推荐 open={sig}，勿 open={sig.value}（手写 JSX 快照）",
   },
   {
     name: "onOpenChange",
@@ -38,13 +39,14 @@ const POPCONFIRM_API: ApiRow[] = [
     name: "onConfirm",
     type: "() => void",
     default: "-",
-    description: "确定回调",
+    description:
+      "确定后回调；关闭浮层由组件内部完成（写回 open / onOpenChange(false)），此处只写业务逻辑",
   },
   {
     name: "onCancel",
     type: "() => void",
     default: "-",
-    description: "取消回调",
+    description: "取消后回调；关闭由组件内部完成，此处只写业务逻辑（可不传）",
   },
   {
     name: "okText",
@@ -62,7 +64,13 @@ const POPCONFIRM_API: ApiRow[] = [
     name: "danger",
     type: "boolean",
     default: "false",
-    description: "危险操作（确定按钮红色）",
+    description: "危险操作（确定按钮红色）；与 warning 同时为 true 时优先本项",
+  },
+  {
+    name: "warning",
+    type: "boolean",
+    default: "false",
+    description: "警告类确认（确定按钮琥珀色）；与 danger 互斥语义二选一",
   },
   {
     name: "showIcon",
@@ -74,7 +82,14 @@ const POPCONFIRM_API: ApiRow[] = [
     name: "placement",
     type: "string",
     default: "top",
-    description: "气泡位置",
+    description:
+      "气泡相对触发器的位置：top / topLeft / topRight / bottom / bottomLeft / bottomRight / left / right",
+  },
+  {
+    name: "arrow",
+    type: "boolean",
+    default: "true",
+    description: "是否显示指向触发器的小箭头（与 Popover 同向）",
   },
   {
     name: "children",
@@ -90,51 +105,92 @@ import { Button, Popconfirm } from "@dreamer/ui-view";
 
 const open = createSignal(false);
 
-{() => (
-  <Popconfirm
-    open={open.value}
-    onOpenChange={(o) => open.value = o}
-    title="确定要执行吗？"
-    onConfirm={() => open.value = false}
-    onCancel={() => open.value = false}
-  >
-    <Button onClick={() => open.value = true}>打开</Button>
-  </Popconfirm>
-)}`;
+<Popconfirm
+  open={open}
+  onOpenChange={(o) => {
+    open.value = o;
+  }}
+  title="确定要执行吗？"
+  onConfirm={() => {
+    console.log("确认");
+  }}
+  onCancel={() => {
+    console.log("取消");
+  }}
+>
+  <Button type="button" onClick={() => {
+    open.value = true;
+  }}>打开</Button>
+</Popconfirm>`;
 
-const exampleBasic = `{() => (
-  <Popconfirm
-    open={open.value}
-    onOpenChange={(o) => open.value = o}
-    title="确定要执行该操作吗？"
-    placement="top"
-    okText="确定"
-    cancelText="取消"
-    onConfirm={() => open.value = false}
-    onCancel={() => open.value = false}
-  >
-    <Button variant="default" onClick={() => open.value = true}>普通确认（placement=top）</Button>
-  </Popconfirm>
-)}`;
+const exampleBasic = `<Popconfirm
+  open={open}
+  onOpenChange={(o) => {
+    open.value = o;
+  }}
+  title="确定要执行该操作吗？"
+  placement="right"
+  okText="确定"
+  cancelText="取消"
+  onConfirm={() => {
+    console.log("普通确认：已确定");
+  }}
+  onCancel={() => {
+    console.log("普通确认：已取消");
+  }}
+>
+  <Button type="button" variant="default" onClick={() => {
+    open.value = true;
+  }}>普通确认</Button>
+</Popconfirm>`;
 
-const exampleDanger = `{() => (
-  <Popconfirm
-    open={openDanger.value}
-    onOpenChange={(o) => openDanger.value = o}
-    title="删除后无法恢复，确定删除吗？"
-    danger
-    okText="删除"
-    cancelText="取消"
-    showIcon
-    onConfirm={() => openDanger.value = false}
-    onCancel={() => openDanger.value = false}
-  >
-    <Button variant="danger" onClick={() => openDanger.value = true}>删除</Button>
-  </Popconfirm>
-)}`;
+const exampleWarning = `<Popconfirm
+  open={openWarning}
+  onOpenChange={(o) => {
+    openWarning.value = o;
+  }}
+  title="该操作可能影响性能或产生额外费用，是否继续？"
+  warning
+  okText="继续"
+  cancelText="取消"
+  showIcon
+  onConfirm={() => {
+    console.log("警告确认：已继续");
+  }}
+  onCancel={() => {
+    console.log("警告确认：已取消");
+  }}
+>
+  <Button type="button" variant="warning" onClick={() => {
+    openWarning.value = true;
+  }}>warning</Button>
+</Popconfirm>`;
+
+const exampleDanger = `<Popconfirm
+  open={openDanger}
+  onOpenChange={(o) => {
+    openDanger.value = o;
+  }}
+  title="删除后无法恢复，确定删除吗？"
+  danger
+  okText="删除"
+  cancelText="取消"
+  showIcon
+  onConfirm={() => {
+    console.log("危险操作：已确认删除");
+  }}
+  onCancel={() => {
+    console.log("危险操作：已取消删除");
+  }}
+>
+  <Button type="button" variant="danger" onClick={() => {
+    openDanger.value = true;
+  }}>删除</Button>
+</Popconfirm>`;
 
 export default function FeedbackPopconfirm() {
   const open = createSignal(false);
+  const openWarning = createSignal(false);
   const openDanger = createSignal(false);
 
   return (
@@ -143,8 +199,21 @@ export default function FeedbackPopconfirm() {
         <Title level={1}>Popconfirm 气泡确认框</Title>
         <Paragraph class="mt-2">
           气泡确认框：title、onConfirm、onCancel、okText、cancelText；支持
-          open/onOpenChange 受控、danger、showIcon、placement。 使用 Tailwind
-          v4，支持 light/dark 主题。
+          open/onOpenChange
+          受控、danger、warning、showIcon、placement、arrow。点击确定或取消后
+          {" "}
+          <strong>关闭浮层由组件内部完成</strong>（写回{" "}
+          <code class="text-xs">open</code>
+          与 <code class="text-xs">onOpenChange(false)</code>
+          ），<code class="text-xs">onConfirm</code> /{" "}
+          <code class="text-xs">onCancel</code>
+          中只需写业务逻辑，不必再设{" "}
+          <code class="text-xs">open.value = false</code>
+          。open 须传 createSignal 返回值（如{" "}
+          <code class="text-xs">open={"{"}open{"}"}</code>
+          ），勿写 <code class="text-xs">open.value</code>
+          ，否则手写 JSX 只求一次快照、点击打不开。使用 Tailwind v4，支持
+          light/dark 主题。
         </Paragraph>
       </section>
 
@@ -163,68 +232,123 @@ export default function FeedbackPopconfirm() {
         <Title level={2}>示例</Title>
 
         <div class="space-y-4">
-          <Title level={3}>基础用法（受控）</Title>
-          <div class="flex gap-2">
-            {() => (
-              <Popconfirm
-                open={open.value}
-                onOpenChange={(o) => open.value = o}
-                title="确定要执行该操作吗？"
-                placement="top"
-                okText="确定"
-                cancelText="取消"
-                onConfirm={() => open.value = false}
-                onCancel={() => open.value = false}
+          <Title level={3}>受控示例：普通 / 警告 / 危险</Title>
+          <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+            「普通确认」使用{" "}
+            <code class="text-xs">placement=&quot;right&quot;</code>
+            ，气泡在按钮右侧，避免靠左贴边裁切；其余两个为默认{" "}
+            <code class="text-xs">top</code>
+            。确定钮依次为
+            primary、warning（琥珀色）、danger（红色）；问号图标颜色与语义略同向。
+            默认带指向触发器的小箭头（<code class="text-xs">arrow</code>
+            可关）。气泡挂在触发器外包的 <code class="text-xs">relative</code>
+            内，用 <code class="text-xs">absolute</code>
+            定位，与按钮同滚动子树。若祖先{" "}
+            <code class="text-xs">overflow: hidden</code>
+            可能裁切面板。演示条使用 <code class="text-xs">sticky</code> 与{" "}
+            <code class="text-xs">overflow-visible</code>
+            便于展示。
+          </Paragraph>
+          <div class="sticky top-3 z-20 flex flex-wrap gap-2 overflow-visible rounded-lg border border-slate-200 bg-white/90 px-3 py-3 backdrop-blur-sm dark:border-slate-600 dark:bg-slate-900/90">
+            <Popconfirm
+              open={open}
+              onOpenChange={(o) => {
+                open.value = o;
+              }}
+              title="确定要执行该操作吗？"
+              placement="right"
+              okText="确定"
+              cancelText="取消"
+              onConfirm={() => {
+                console.log("普通确认：已确定");
+              }}
+              onCancel={() => {
+                console.log("普通确认：已取消");
+              }}
+            >
+              <Button
+                type="button"
+                variant="default"
+                onClick={() => {
+                  open.value = true;
+                }}
               >
-                <Button
-                  type="button"
-                  variant="default"
-                  onClick={() => open.value = true}
-                >
-                  普通确认（placement=top）
-                </Button>
-              </Popconfirm>
-            )}
-            {() => (
-              <Popconfirm
-                open={openDanger.value}
-                onOpenChange={(o) => openDanger.value = o}
-                title="删除后无法恢复，确定删除吗？"
-                danger
-                okText="删除"
-                cancelText="取消"
-                showIcon
-                onConfirm={() => openDanger.value = false}
-                onCancel={() => openDanger.value = false}
+                普通确认
+              </Button>
+            </Popconfirm>
+            <Popconfirm
+              open={openWarning}
+              onOpenChange={(o) => {
+                openWarning.value = o;
+              }}
+              title="该操作可能影响性能或产生额外费用，是否继续？"
+              warning
+              okText="继续"
+              cancelText="取消"
+              showIcon
+              onConfirm={() => {
+                console.log("警告确认：已继续");
+              }}
+              onCancel={() => {
+                console.log("警告确认：已取消");
+              }}
+            >
+              <Button
+                type="button"
+                variant="warning"
+                onClick={() => {
+                  openWarning.value = true;
+                }}
               >
-                <Button
-                  type="button"
-                  variant="danger"
-                  onClick={() => openDanger.value = true}
-                >
-                  删除
-                </Button>
-              </Popconfirm>
-            )}
+                warning
+              </Button>
+            </Popconfirm>
+            <Popconfirm
+              open={openDanger}
+              onOpenChange={(o) => {
+                openDanger.value = o;
+              }}
+              title="删除后无法恢复，确定删除吗？"
+              danger
+              okText="删除"
+              cancelText="取消"
+              showIcon
+              onConfirm={() => {
+                console.log("危险操作：已确认删除");
+              }}
+              onCancel={() => {
+                console.log("危险操作：已取消删除");
+              }}
+            >
+              <Button
+                type="button"
+                variant="danger"
+                onClick={() => {
+                  openDanger.value = true;
+                }}
+              >
+                删除
+              </Button>
+            </Popconfirm>
           </div>
           <CodeBlock
-            title="代码示例"
+            title="代码示例（普通 · 右侧 placement）"
             code={exampleBasic}
             language="tsx"
             showLineNumbers
             copyable
             wrapLongLines
           />
-        </div>
-
-        <div class="space-y-4">
-          <Title level={3}>危险操作（danger + showIcon）</Title>
-          <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
-            上例中右侧「删除」按钮使用
-            danger、showIcon，确定按钮为红色并显示问号图标。
-          </Paragraph>
           <CodeBlock
-            title="代码示例"
+            title="代码示例（warning）"
+            code={exampleWarning}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+          <CodeBlock
+            title="代码示例（danger）"
             code={exampleDanger}
             language="tsx"
             showLineNumbers
@@ -237,8 +361,9 @@ export default function FeedbackPopconfirm() {
       <section class="space-y-3">
         <Title level={2}>API</Title>
         <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
-          组件接收以下属性，title 为必填；需在触发元素 onClick 中调用
-          onOpenChange(true) 打开。
+          组件接收以下属性，title 为必填；触发器 onClick 中设置 signal 为 true
+          或调用 onOpenChange(true)；open 请传 SignalRef，勿传
+          .value。确定/取消关闭 由组件处理，onConfirm、onCancel 仅作业务回调。
         </Paragraph>
         <div class="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-600">
           <table class="w-full min-w-lg text-sm">

@@ -33,10 +33,17 @@ export { Alert } from "./Alert.tsx";
 export type { AlertProps, AlertType } from "./Alert.tsx";
 
 export { Drawer } from "./Drawer.tsx";
-export type { DrawerPlacement, DrawerProps } from "./Drawer.tsx";
+export type {
+  DrawerOpenInput,
+  DrawerPlacement,
+  DrawerProps,
+  DrawerTitleAlign,
+  DrawerTitleInput,
+} from "./Drawer.tsx";
 
 export { Progress } from "./Progress.tsx";
 export type {
+  ProgressPercentInput,
   ProgressProps,
   ProgressStatus,
   ProgressType,
@@ -46,7 +53,14 @@ export { Result } from "./Result.tsx";
 export type { ResultProps, ResultStatus } from "./Result.tsx";
 
 export { Modal } from "./Modal.tsx";
-export type { ModalProps } from "./Modal.tsx";
+export type {
+  ModalOpenInput,
+  ModalProps,
+  ModalTitleAlign,
+  ModalTitleInput,
+  ModalWidthInput,
+  ModalWidthPrimitive,
+} from "./Modal.tsx";
 export { Dialog } from "./Dialog.tsx";
 export type { DialogProps } from "./Dialog.tsx";
 export { Tooltip } from "./Tooltip.tsx";
@@ -54,4 +68,8 @@ export type { TooltipPlacement, TooltipProps } from "./Tooltip.tsx";
 export { Popover } from "./Popover.tsx";
 export type { PopoverPlacement, PopoverProps } from "./Popover.tsx";
 export { Popconfirm } from "./Popconfirm.tsx";
-export type { PopconfirmPlacement, PopconfirmProps } from "./Popconfirm.tsx";
+export type {
+  PopconfirmOpenInput,
+  PopconfirmPlacement,
+  PopconfirmProps,
+} from "./Popconfirm.tsx";

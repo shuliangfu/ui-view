@@ -32,6 +32,7 @@ export { Carousel, type CarouselProps } from "./Carousel.tsx";
 export { Tree, type TreeNode, type TreeProps } from "./Tree.tsx";
 export {
   Calendar,
+  type CalendarDaySelectionMode,
   type CalendarMode,
   type CalendarProps,
 } from "./Calendar.tsx";

@@ -83,7 +83,7 @@ const DROPDOWN_API: ApiRow[] = [
 
 const importCode = `import { Button, Dropdown } from "@dreamer/ui-view";
 
-const overlay = <ul class="py-1 list-none m-0">...</ul>;
+const overlay = <ul class="list-none m-0">...</ul>;
 <Dropdown overlay={overlay} trigger="click" placement="bottom">
   <Button variant="default">点击展开</Button>
 </Dropdown>`;
@@ -116,7 +116,7 @@ const exampleDisabled = `<Dropdown
 
 /** overlay 复杂示例的代码字符串（带头像、分割线、图标菜单项） */
 const exampleOverlayRichCode = `const overlayRich = (
-  <div class="min-w-[200px] py-1">
+  <div class="min-w-[200px]">
     {/* 头部：头像 + 名称 */}
     <div class="flex items-center gap-3 px-3 py-2">
       <Avatar size="sm" class="shrink-0">用</Avatar>
@@ -126,7 +126,7 @@ const exampleOverlayRichCode = `const overlayRich = (
       </div>
     </div>
     <Divider class="my-1" />
-    <ul class="list-none m-0 py-1">
+    <ul class="list-none m-0">
       <li>
         <a href="#" class="flex items-center gap-2 px-3 py-2 text-sm ...">
           <IconUserCog class="w-4 h-4 shrink-0" /> 个人设置
@@ -139,7 +139,7 @@ const exampleOverlayRichCode = `const overlayRich = (
       </li>
     </ul>
     <Divider class="my-1" />
-    <ul class="list-none m-0 py-1">
+    <ul class="list-none m-0">
       <li>
         <a href="#" class="flex items-center gap-2 px-3 py-2 text-sm ...">
           <IconLogOut class="w-4 h-4 shrink-0" /> 退出登录
@@ -152,25 +152,32 @@ const exampleOverlayRichCode = `const overlayRich = (
   <Button variant="default">用户菜单</Button>
 </Dropdown>`;
 
-const itemClass =
-  "flex items-center gap-2 px-3 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700";
+/**
+ * 下拉菜单项 hover / focus-visible：与 Menu 叶子项**选中态**同向（浅蓝底 + 主色字），
+ * 便于与导航 Menu 视觉一致。
+ */
+/**
+ * 使用 `dark:hover:` / `dark:focus-visible:`（勿写 `hover:dark:`），否则暗色主题下 hover 可能不生效。
+ */
+const dropdownMenuItemInteractive =
+  "rounded-md px-3 py-2 text-sm text-slate-700 dark:text-slate-300 transition-colors hover:bg-blue-50 dark:hover:bg-blue-800/50 hover:text-blue-600 dark:hover:text-blue-300 focus:outline-none focus-visible:bg-blue-50 dark:focus-visible:bg-blue-800/50 focus-visible:text-blue-600 dark:focus-visible:text-blue-300";
+
+/** 纯文案链（block） */
+const dropdownMenuItemLinkClass = `block w-full ${dropdownMenuItemInteractive}`;
+
+/** 带图标的行（flex） */
+const itemClass = `flex items-center gap-2 ${dropdownMenuItemInteractive}`;
 
 export default function NavigationDropdown() {
   const overlay = (
-    <ul class="py-1 list-none m-0">
+    <ul class="list-none m-0">
       <li>
-        <a
-          href="#"
-          class="block px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
-        >
+        <a href="#" class={dropdownMenuItemLinkClass}>
           操作一
         </a>
       </li>
       <li>
-        <a
-          href="#"
-          class="block px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
-        >
+        <a href="#" class={dropdownMenuItemLinkClass}>
           操作二
         </a>
       </li>
@@ -179,7 +186,7 @@ export default function NavigationDropdown() {
 
   /** 复杂 overlay：头部头像 + 分割线 + 带图标的菜单项 */
   const overlayRich = (
-    <div class="min-w-[200px] py-1">
+    <div class="min-w-[200px]">
       <div class="flex items-center gap-3 px-3 py-2">
         <Avatar size="sm" class="shrink-0">
           用
@@ -194,7 +201,7 @@ export default function NavigationDropdown() {
         </div>
       </div>
       <Divider class="my-1" />
-      <ul class="list-none m-0 py-1">
+      <ul class="list-none m-0">
         <li>
           <a href="#" class={itemClass}>
             <IconUserCog class="w-4 h-4 shrink-0" />
@@ -209,7 +216,7 @@ export default function NavigationDropdown() {
         </li>
       </ul>
       <Divider class="my-1" />
-      <ul class="list-none m-0 py-1">
+      <ul class="list-none m-0">
         <li>
           <a href="#" class={itemClass}>
             <IconLogOut class="w-4 h-4 shrink-0" />
@@ -226,7 +233,15 @@ export default function NavigationDropdown() {
         <Title level={1}>Dropdown 下拉菜单</Title>
         <Paragraph class="mt-2">
           下拉菜单：children、overlay、onOpenChange、trigger、hoverOpenDelay、hoverCloseDelay、placement、disabled、overlayClass、overlayId。展开状态由组件内部维护。
-          使用 Tailwind v4，支持 light/dark 主题。
+          overlay 内菜单项建议 hover/focus 样式与{" "}
+          <a
+            href="/desktop/navigation/menu"
+            class="text-blue-600 dark:text-blue-400 underline"
+          >
+            Menu
+          </a>
+          叶子选中态一致（本页示例已对齐浅蓝底 + 主色字）。使用 Tailwind
+          v4，支持 light/dark 主题。
         </Paragraph>
       </section>
 

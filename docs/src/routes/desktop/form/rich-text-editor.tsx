@@ -59,6 +59,13 @@ const RICH_TEXT_EDITOR_API: ApiRow[] = [
     description: "是否禁用",
   },
   {
+    name: "hideFocusRing",
+    type: "boolean",
+    default: "false",
+    description:
+      "为 true 时隐藏编辑区、工具栏与查找条的聚焦蓝色 ring；默认 false 显示",
+  },
+  {
     name: "readOnly",
     type: "boolean",
     default: "false",
@@ -195,17 +202,16 @@ export default function FormRichTextEditor() {
                 toolbarPreset="full"
                 placeholder="完整模式"
                 minHeight="240px"
-                onInsertImage={() => {
-                  const url = globalThis.prompt?.("输入图片 URL");
-                  return url ?? "";
-                }}
               />
             </FormItem>
             <CodeBlock
               title="代码示例"
               code={`<RichTextEditor
   toolbarPreset="full"
-  onInsertImage={() => prompt("URL") ?? ""}
+  onInsertImage={async () => {
+    /* 自定义图片来源，例如 await fetchUploadUrl() */
+    return "";
+  }}
 />`}
               language="tsx"
               showLineNumbers

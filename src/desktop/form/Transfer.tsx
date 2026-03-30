@@ -4,6 +4,7 @@
  */
 
 import { twMerge } from "tailwind-merge";
+import { controlBlueFocusRing } from "../../shared/form/input-focus-ring.ts";
 
 export interface TransferItem {
   key: string;
@@ -44,6 +45,8 @@ export interface TransferProps {
   searchPlaceholder?: [string, string];
   /** 额外 class（作用于容器） */
   class?: string;
+  /** 为 true 时隐藏搜索框与操作按钮的聚焦激活态边框；默认 false 显示 */
+  hideFocusRing?: boolean;
 }
 
 /** 默认按 label 包含关键词（不区分大小写） */
@@ -55,13 +58,15 @@ const panelCls =
   "border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 overflow-hidden flex flex-col min-w-[200px] max-w-[280px]";
 const headerCls =
   "px-3 py-2 border-b border-slate-200 dark:border-slate-600 text-sm font-medium text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-800";
-const searchInputCls =
-  "w-full mt-1 px-2 py-1 text-sm border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500";
+/** 列头搜索框底纹（不含 ring，由 {@link controlBlueFocusRing} 控制） */
+const searchInputSurface =
+  "w-full mt-1 px-2 py-1 text-sm border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none";
 const listCls = "flex-1 overflow-auto p-1 max-h-[240px]";
 const itemCls =
   "flex items-center justify-between gap-2 px-2 py-1.5 rounded text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700";
-const btnCls =
-  "shrink-0 p-1 rounded text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-500";
+/** 单项/批量移动按钮底纹（不含 ring） */
+const transferBtnSurface =
+  "shrink-0 p-1 rounded text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none";
 const centerCls = "flex flex-col justify-center gap-2 px-2";
 
 export function Transfer(props: TransferProps) {
@@ -79,6 +84,7 @@ export function Transfer(props: TransferProps) {
     filterOption = defaultFilterOption,
     searchPlaceholder = ["搜索", "搜索"],
     class: className,
+    hideFocusRing = false,
   } = props;
 
   const moveToRight = (keys: string[]) => {
@@ -128,7 +134,10 @@ export function Transfer(props: TransferProps) {
             {showSearch && (
               <input
                 type="search"
-                class={searchInputCls}
+                class={twMerge(
+                  searchInputSurface,
+                  controlBlueFocusRing(!hideFocusRing),
+                )}
                 placeholder={searchPlaceholder[0]}
                 value={fl}
                 disabled={disabled}
@@ -150,7 +159,10 @@ export function Transfer(props: TransferProps) {
                     <span>{item.label}</span>
                     <button
                       type="button"
-                      class={btnCls}
+                      class={twMerge(
+                        transferBtnSurface,
+                        controlBlueFocusRing(!hideFocusRing),
+                      )}
                       disabled={disabled || item.disabled}
                       onClick={() => moveToRight([item.key])}
                       aria-label={`将 ${item.label} 移至右侧`}
@@ -167,7 +179,10 @@ export function Transfer(props: TransferProps) {
         <div class={centerCls}>
           <button
             type="button"
-            class={btnCls}
+            class={twMerge(
+              transferBtnSurface,
+              controlBlueFocusRing(!hideFocusRing),
+            )}
             disabled={disabled || leftItems.length === 0}
             onClick={() =>
               moveToRight(
@@ -179,7 +194,10 @@ export function Transfer(props: TransferProps) {
           </button>
           <button
             type="button"
-            class={btnCls}
+            class={twMerge(
+              transferBtnSurface,
+              controlBlueFocusRing(!hideFocusRing),
+            )}
             disabled={disabled || rightItems.length === 0}
             onClick={() => moveToLeft(rightItems.map((i) => i.key))}
             aria-label="全部移至左侧"
@@ -195,7 +213,10 @@ export function Transfer(props: TransferProps) {
             {showSearch && (
               <input
                 type="search"
-                class={searchInputCls}
+                class={twMerge(
+                  searchInputSurface,
+                  controlBlueFocusRing(!hideFocusRing),
+                )}
                 placeholder={searchPlaceholder[1]}
                 value={fr}
                 disabled={disabled}
@@ -217,7 +238,10 @@ export function Transfer(props: TransferProps) {
                     <span>{item.label}</span>
                     <button
                       type="button"
-                      class={btnCls}
+                      class={twMerge(
+                        transferBtnSurface,
+                        controlBlueFocusRing(!hideFocusRing),
+                      )}
                       disabled={disabled || item.disabled}
                       onClick={() => moveToLeft([item.key])}
                       aria-label={`将 ${item.label} 移至左侧`}

@@ -7,6 +7,9 @@ import {
   CodeBlock,
   Form,
   FormItem,
+  IconLock,
+  IconUser,
+  Link,
   // Input,
   Paragraph,
   Title,
@@ -15,6 +18,7 @@ import { Input } from "@dreamer/ui-view/form";
 
 import { createSignal } from "@dreamer/view";
 
+/** 本页 API 表行（与其它表单文档页结构一致） */
 interface ApiRow {
   name: string;
   type: string;
@@ -71,6 +75,12 @@ const INPUT_API: ApiRow[] = [
     default: "false",
     description: "错误状态（红框）",
   },
+  {
+    name: "hideFocusRing",
+    type: "boolean",
+    default: "false",
+    description: "为 true 时隐藏聚焦时的蓝色激活边框（ring）；默认 false 显示",
+  },
   { name: "prefix", type: "unknown", default: "-", description: "前缀节点" },
   { name: "suffix", type: "unknown", default: "-", description: "后缀节点" },
   {
@@ -92,6 +102,42 @@ const INPUT_API: ApiRow[] = [
     default: "-",
     description: "变更回调",
   },
+  {
+    name: "onBlur",
+    type: "(e: Event) => void",
+    default: "-",
+    description: "失焦回调",
+  },
+  {
+    name: "onFocus",
+    type: "(e: Event) => void",
+    default: "-",
+    description: "聚焦回调",
+  },
+  {
+    name: "onKeyDown",
+    type: "(e: Event) => void",
+    default: "-",
+    description: "键盘按下",
+  },
+  {
+    name: "onKeyUp",
+    type: "(e: Event) => void",
+    default: "-",
+    description: "键盘抬起",
+  },
+  {
+    name: "onClick",
+    type: "(e: Event) => void",
+    default: "-",
+    description: "点击输入区域",
+  },
+  {
+    name: "onPaste",
+    type: "(e: Event) => void",
+    default: "-",
+    description: "粘贴",
+  },
   { name: "name", type: "string", default: "-", description: "原生 name" },
   { name: "id", type: "string", default: "-", description: "原生 id" },
 ];
@@ -111,6 +157,8 @@ const val = createSignal("");
 export default function FormInput() {
   const valPlaceholder = createSignal("");
   const valRequired = createSignal("");
+  /** 演示 FormItem.hideRequiredMark：仍为必填但不显示标签旁 * */
+  const valHideMark = createSignal("");
   const valError = createSignal("");
   const readOnlyVal = createSignal("只读内容");
   const valLeft1 = createSignal("");
@@ -160,6 +208,7 @@ export default function FormInput() {
                   onInput={(e) =>
                     valPlaceholder.value = (e.target as HTMLInputElement).value}
                   placeholder="请输入"
+                  hideFocusRing
                 />
               </FormItem>
             </Form>
@@ -201,6 +250,55 @@ export default function FormInput() {
   placeholder="必填项"
   required
 />`}
+                language="tsx"
+                showLineNumbers
+                copyable
+                title="代码示例"
+                wrapLongLines
+              />
+            </div>
+          </section>
+
+          <section class="space-y-4">
+            <Title level={3}>FormItem：hideRequiredMark</Title>
+            <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+              业务上仍必填、但不想在标签旁显示红色 * 时，设{" "}
+              <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">
+                hideRequiredMark
+              </code>
+              ；子级 Input 可继续传{" "}
+              <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">
+                required
+              </code>
+              。
+            </Paragraph>
+            <Form layout="vertical" class="w-full">
+              <FormItem
+                label="无星号但仍必填"
+                required
+                hideRequiredMark
+                id="input-hide-mark"
+              >
+                <Input
+                  id="input-hide-mark"
+                  value={() => valHideMark.value}
+                  onInput={(e) =>
+                    valHideMark.value = (e.target as HTMLInputElement).value}
+                  placeholder="标签无 *，原生仍可 required"
+                  required
+                />
+              </FormItem>
+            </Form>
+            <div class="w-full">
+              <CodeBlock
+                code={`<FormItem label="邮箱" required hideRequiredMark id="email">
+  <Input
+    id="email"
+    value={() => val.value}
+    onInput={(e) => val.value = (e.target as HTMLInputElement).value}
+    required
+  />
+</FormItem>`}
                 language="tsx"
                 showLineNumbers
                 copyable
@@ -495,10 +593,39 @@ export default function FormInput() {
                   value=""
                 />
               </FormItem>
+              <FormItem label="前缀 IconUser" id="input-prefix-user">
+                <Input
+                  id="input-prefix-user"
+                  prefix={
+                    <IconUser
+                      size="sm"
+                      class="text-slate-500 dark:text-slate-400"
+                    />
+                  }
+                  placeholder="用户名"
+                  value=""
+                />
+              </FormItem>
+              <FormItem label="前缀 IconLock" id="input-prefix-lock">
+                <Input
+                  id="input-prefix-lock"
+                  type="password"
+                  prefix={
+                    <IconLock
+                      size="sm"
+                      class="text-slate-500 dark:text-slate-400"
+                    />
+                  }
+                  placeholder="请输入密码"
+                  value=""
+                />
+              </FormItem>
             </Form>
             <div class="w-full">
               <CodeBlock
-                code={`<Input
+                code={`import { Input, IconUser, IconLock } from "@dreamer/ui-view";
+
+<Input
   type="email"
   placeholder="user@example.com"
 />
@@ -509,6 +636,19 @@ export default function FormInput() {
 <Input
   suffix={<span>.com</span>}
   placeholder="名称"
+/>
+<Input
+  prefix={
+    <IconUser size="sm" class="text-slate-500 dark:text-slate-400" />
+  }
+  placeholder="用户名"
+/>
+<Input
+  type="password"
+  prefix={
+    <IconLock size="sm" class="text-slate-500 dark:text-slate-400" />
+  }
+  placeholder="请输入密码"
 />`}
                 language="tsx"
                 showLineNumbers
@@ -555,7 +695,17 @@ export default function FormInput() {
       <section class="space-y-3">
         <Title level={2}>API</Title>
         <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
-          组件接收以下属性（均为可选）。
+          下表为 <strong>Input</strong> 属性（均为可选）。 <strong>Form</strong>
+          {" "}
+          / <strong>FormItem</strong> / <strong>FormList</strong>{" "}
+          的说明与属性表见{" "}
+          <Link
+            href="/desktop/form/form-containers"
+            className="text-teal-600 hover:underline dark:text-teal-400"
+          >
+            表单容器（Form · FormItem · FormList）
+          </Link>
+          。
         </Paragraph>
         <div class="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-600">
           <table class="w-full min-w-lg text-sm">

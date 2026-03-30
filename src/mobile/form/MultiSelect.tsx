@@ -4,6 +4,10 @@
  */
 
 import { twMerge } from "tailwind-merge";
+import {
+  controlBlueFocusRing,
+  nativeSelectSurface,
+} from "../../shared/form/input-focus-ring.ts";
 import type { SizeVariant } from "../../shared/types.ts";
 
 export interface MultiSelectOption {
@@ -21,6 +25,8 @@ export interface MultiSelectProps {
   class?: string;
   name?: string;
   id?: string;
+  /** 为 true 时隐藏聚焦激活态边框；默认 false 显示 ring */
+  hideFocusRing?: boolean;
 }
 
 const sizeClasses: Record<SizeVariant, string> = {
@@ -30,8 +36,6 @@ const sizeClasses: Record<SizeVariant, string> = {
   lg: "px-5 py-3.5 text-base rounded-lg min-h-[96px]",
 };
 
-const base =
-  "w-full border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border-slate-300 dark:border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors appearance-none cursor-pointer touch-manipulation";
 const btnCls =
   "text-xs px-2 py-1 rounded border border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 disabled:opacity-50";
 
@@ -45,6 +49,7 @@ export function MultiSelect(props: MultiSelectProps) {
     class: className,
     name,
     id,
+    hideFocusRing = false,
   } = props;
   const sizeCls = sizeClasses[size];
   const allValues = options.map((o) => o.value);
@@ -82,7 +87,13 @@ export function MultiSelect(props: MultiSelectProps) {
         id={id}
         name={name}
         disabled={disabled}
-        class={twMerge(base, sizeCls, className)}
+        class={twMerge(
+          "w-full touch-manipulation",
+          nativeSelectSurface,
+          controlBlueFocusRing(!hideFocusRing),
+          sizeCls,
+          className,
+        )}
         onChange={onChange}
       >
         {options.map((opt) => (

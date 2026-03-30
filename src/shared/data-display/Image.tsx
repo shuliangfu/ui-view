@@ -118,7 +118,7 @@ export function Image(props: ImageProps) {
       if (statusRef.value === "error") return;
       const wrap = globalThis.document.createElement("div");
       wrap.className =
-        "fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4";
+        "fixed inset-0 z-100 flex items-center justify-center bg-black/70 p-4";
       wrap.setAttribute("aria-modal", "true");
       wrap.setAttribute("role", "dialog");
       const img = globalThis.document.createElement("img");

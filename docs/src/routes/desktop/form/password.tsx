@@ -40,6 +40,12 @@ const PASSWORD_API: ApiRow[] = [
     description: "是否禁用",
   },
   {
+    name: "hideFocusRing",
+    type: "boolean",
+    default: "false",
+    description: "为 true 时隐藏聚焦时的蓝色激活边框（ring）；默认 false 显示",
+  },
+  {
     name: "placeholder",
     type: "string",
     default: "-",
@@ -75,6 +81,42 @@ const PASSWORD_API: ApiRow[] = [
     type: "(e: Event) => void",
     default: "-",
     description: "变更回调",
+  },
+  {
+    name: "onBlur",
+    type: "(e: Event) => void",
+    default: "-",
+    description: "失焦回调（透传至原生 password input）",
+  },
+  {
+    name: "onFocus",
+    type: "(e: Event) => void",
+    default: "-",
+    description: "聚焦回调（透传至原生 password input）",
+  },
+  {
+    name: "onKeyDown",
+    type: "(e: Event) => void",
+    default: "-",
+    description: "键盘按下（透传至原生 password input）",
+  },
+  {
+    name: "onKeyUp",
+    type: "(e: Event) => void",
+    default: "-",
+    description: "键盘抬起（透传至原生 password input）",
+  },
+  {
+    name: "onClick",
+    type: "(e: Event) => void",
+    default: "-",
+    description: "点击（透传至原生 password input）",
+  },
+  {
+    name: "onPaste",
+    type: "(e: Event) => void",
+    default: "-",
+    description: "粘贴（透传至原生 password input）",
   },
   { name: "name", type: "string", default: "-", description: "原生 name" },
   { name: "id", type: "string", default: "-", description: "原生 id" },
@@ -200,11 +242,14 @@ export default function FormPassword() {
           </section>
 
           <section class="space-y-4">
-            <Title level={2}>size</Title>
+            <Title level={2}>size（xs / sm / md / lg）</Title>
+            <FormItem label="xs">
+              <Password size="xs" placeholder="xs" value="" />
+            </FormItem>
             <FormItem label="sm">
               <Password size="sm" placeholder="sm" value="" />
             </FormItem>
-            <FormItem label="md">
+            <FormItem label="md（默认）">
               <Password size="md" placeholder="md" value="" />
             </FormItem>
             <FormItem label="lg">
@@ -212,21 +257,10 @@ export default function FormPassword() {
             </FormItem>
             <CodeBlock
               title="代码示例"
-              code={`<Password
-  size="sm"
-  placeholder="sm"
-  value=""
-/>
-<Password
-  size="md"
-  placeholder="md"
-  value=""
-/>
-<Password
-  size="lg"
-  placeholder="lg"
-  value=""
-/>`}
+              code={`<Password size="xs" placeholder="xs" value="" />
+<Password size="sm" placeholder="sm" value="" />
+<Password size="md" placeholder="md" value="" />
+<Password size="lg" placeholder="lg" value="" />`}
               language="tsx"
               showLineNumbers
               copyable

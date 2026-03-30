@@ -80,7 +80,6 @@ const DOCS_ROUTES: string[] = [
   "/desktop/form/rate",
   "/desktop/form/date-picker",
   "/desktop/form/time-picker",
-  "/desktop/form/time-range-picker",
   "/desktop/form/upload",
   "/desktop/form/transfer",
   "/desktop/form/mentions",
@@ -781,10 +780,21 @@ describe("docs 浏览器 E2E", () => {
       expect(clicked).toBe(true);
     }, browserConfig);
 
-    it("MultiSelect 页：可点击全选或清空或选项", async (t) => {
+    it("MultiSelect 页：展开浮层后可点击全选", async (t) => {
       if (!t?.browser) return;
       await goto(t, "/desktop/form/multiselect");
       await new Promise((r) => setTimeout(r, 300));
+      const opened = await t.browser.evaluate(() => {
+        const main = document.querySelector("main");
+        const trigger = main?.querySelector(
+          'button[aria-haspopup="listbox"]',
+        ) as HTMLButtonElement | null;
+        if (!trigger) return false;
+        trigger.click();
+        return true;
+      });
+      expect(opened).toBe(true);
+      await new Promise((r) => setTimeout(r, 150));
       const clicked = await clickButtonByText(t, "全选");
       expect(clicked).toBe(true);
     }, browserConfig);
