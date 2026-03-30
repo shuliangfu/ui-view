@@ -1,10 +1,10 @@
 /**
  * Modal 组件文档页（标准文档结构：概述、引入、示例、API）
  * 路由: /desktop/feedback/modal
- * 组件返回 thunk () => VNode，使 open 等 signal 的订阅发生在子 effect 内，避免根 effect 重跑导致整棵 #app 重渲染、全屏闪烁。
+ * `Modal` 的 `open`：请传 **`createSignal` 返回值**或零参 getter；**`width`/`title`** 随 signal 变时请用 **`width={() => …}`**、**`title={() => …}`**（Modal 内 memo 订阅，勿只写 `width={sig.value}` 快照）。**`children`** 普通写 `<p>…</p>` 即可；仅当弹窗**已打开**时仍要正文随同一 signal 刷新，再传 **`children={() => …}`**。Hybrid/SSR 下 body/Portal 用 `globalThis.document`。
  */
-import { createSignal } from "@dreamer/view";
 import { Button, CodeBlock, Modal, Paragraph, Title } from "@dreamer/ui-view";
+import { createSignal } from "@dreamer/view";
 
 /** API 属性行类型 */
 interface ApiRow {
@@ -17,9 +17,10 @@ interface ApiRow {
 const MODAL_API: ApiRow[] = [
   {
     name: "open",
-    type: "boolean",
+    type: "boolean | (() => boolean) | SignalRef<boolean>",
     default: "-",
-    description: "是否打开（受控）",
+    description:
+      "是否打开；推荐 open={x}（SignalRef），勿 open={x.value}；嵌套 state 用 open={() => x.value.open}",
   },
   {
     name: "onClose",
@@ -29,11 +30,24 @@ const MODAL_API: ApiRow[] = [
   },
   {
     name: "title",
-    type: "string | null",
+    type: "string | null | false | (() => string | null | false)",
     default: "-",
-    description: "标题；null 不显示标题栏",
+    description: "标题；null/false 不显示；随 signal 变用 `title={() => …}`",
   },
-  { name: "children", type: "unknown", default: "-", description: "弹层内容" },
+  {
+    name: "titleAlign",
+    type: '"left" | "center"',
+    default: "center",
+    description:
+      "标题对齐：center 相对弹层居中（关闭等仍贴右）；left 与操作区两端排布",
+  },
+  {
+    name: "children",
+    type: "unknown | (() => unknown)",
+    default: "-",
+    description:
+      "弹层内容；通常直接写子节点即可；打开态下正文也要随 signal 变时用 `children={() => …}`",
+  },
   {
     name: "footer",
     type: "unknown",
@@ -53,11 +67,18 @@ const MODAL_API: ApiRow[] = [
     description: "点击遮罩是否关闭",
   },
   {
-    name: "width",
-    type: '"xs" | "sm" | "md" | "lg" | "xl" | string | number',
-    default: "sm",
+    name: "mask",
+    type: "boolean",
+    default: "true",
     description:
-      "弹层宽度：预设 xs(400px)/sm(520px)/md(640px)/lg(800px)/xl(960px)，或 CSS 字符串（如 80%）、数字（px）",
+      "是否显示半透明遮罩；false 时不渲染遮罩，maskClosable 无效，请用关闭按钮或 keyboard",
+  },
+  {
+    name: "width",
+    type: "预设 | string | number | (() => 同上)",
+    default: "520px（sm）",
+    description:
+      "弹层宽度；随 signal 变时请用 `width={() => sig.value.preset}`（Modal 内订阅），勿只写 `width={sig.value}`",
   },
   {
     name: "centered",
@@ -75,7 +96,8 @@ const MODAL_API: ApiRow[] = [
     name: "keyboard",
     type: "boolean",
     default: "false",
-    description: "传 true 时支持按 Esc 关闭；不传则不支持 Esc",
+    description:
+      "默认 false；传 keyboard 或 keyboard={true} 时支持按 Esc 触发 onClose",
   },
   {
     name: "draggable",
@@ -84,16 +106,24 @@ const MODAL_API: ApiRow[] = [
     description: "默认不拖动；传 true 时标题栏可拖动",
   },
   {
+    name: "fullscreen",
+    type: "boolean",
+    default: "false",
+    description:
+      "为 true 时每次打开弹层即全屏布局；关闭后重置，与 fullscreenable 独立",
+  },
+  {
     name: "fullscreenable",
     type: "boolean",
     default: "false",
-    description: "传 true 时显示全屏切换按钮；不传则不显示",
+    description:
+      "是否在标题栏显示全屏切换按钮；一开打是否全屏由 fullscreen 决定",
   },
   {
     name: "maskClass",
     type: "string",
     default: "-",
-    description: "遮罩 class",
+    description: "遮罩 class；仅 `mask` 为 true（默认）时生效",
   },
   {
     name: "wrapClass",
@@ -120,12 +150,23 @@ import { Button, Modal } from "@dreamer/ui-view";
 
 const open = createSignal(false);
 
-<Button variant="primary" onClick={() => open.value = true}>打开</Button>
+<Button type="button" variant="primary" onClick={() => open.value = true}>
+  打开
+</Button>
 <Modal
-  open={open.value}
+  open={open}
   onClose={() => open.value = false}
   title="弹窗标题"
-  footer={<><Button onClick={() => open.value = false}>取消</Button><Button variant="primary" onClick={() => open.value = false}>确定</Button></>}
+  footer={
+    <>
+      <Button type="button" variant="primary" onClick={() => open.value = false}>
+        确定
+      </Button>
+      <Button type="button" variant="default" onClick={() => open.value = false}>
+        取消
+      </Button>
+    </>
+  }
 >
   <p>弹层内容</p>
 </Modal>`;
@@ -136,27 +177,37 @@ export default function FeedbackModal() {
   const openNoTitle = createSignal(false);
   const openNoClosable = createSignal(false);
   const openNoMaskClose = createSignal(false);
+  /** 无遮罩：`mask={false}`，需按钮或 Esc 关闭 */
+  const openNoMask = createSignal(false);
   const openWidth = createSignal(false);
-  const openWidthPreset = createSignal(false);
-  const widthPreset = createSignal<
-    "xs" | "sm" | "md" | "lg" | "xl"
-  >("md");
+  /**
+   * 预设宽度：单一对象 signal 一次写入 `{ open, preset }`。
+   * `open` / `width` / `title` 用零参 getter；正文普通写即可（勿只传 `width={sig.value}` 快照）。
+   */
+  const widthPresetDemo = createSignal<{
+    open: boolean;
+    preset: "xs" | "sm" | "md" | "lg" | "xl";
+  }>({
+    open: false,
+    preset: "md",
+  });
   const openNotCentered = createSignal(false);
   const openDestroy = createSignal(false);
-  const openNoKeyboard = createSignal(false);
   // 用于「可移动」示例，在下方 return 的 thunk 内使用
   const openDraggable = createSignal(false);
   const openFullscreen = createSignal(false);
+  /** `fullscreen`：每次打开即为全屏布局 */
+  const openFullscreenInitial = createSignal(false);
   const openKeyboard = createSignal(false);
   const openCustomClass = createSignal(false);
 
-  return () => (
+  return (
     <div class="space-y-10">
       <section>
         <Title level={1}>Modal 模态弹窗</Title>
         <Paragraph class="mt-2">
-          模态弹窗：遮罩、标题、内容、底部；支持关闭按钮、点击遮罩关闭；传
-          keyboard 可启用 Esc 关闭；自定义宽度与
+          模态弹窗：遮罩、标题、内容、底部；支持关闭按钮、点击遮罩关闭；默认不按
+          Esc 关闭，传 keyboard 可启用 Esc；自定义宽度与
           footer、居中/顶部对齐、关闭后销毁、自定义样式。使用 Tailwind v4，支持
           light/dark 主题。
         </Paragraph>
@@ -185,30 +236,32 @@ export default function FeedbackModal() {
             <Button
               type="button"
               variant="primary"
-              onClick={() => open.value = true}
+              onClick={() => {
+                open.value = true;
+              }}
             >
               打开 Modal
             </Button>
           </div>
           <Modal
-            open={open.value}
+            open={open}
             onClose={() => open.value = false}
             title="弹窗标题"
             footer={
               <>
                 <Button
                   type="button"
-                  variant="default"
-                  onClick={() => open.value = false}
-                >
-                  取消
-                </Button>
-                <Button
-                  type="button"
                   variant="primary"
                   onClick={() => open.value = false}
                 >
                   确定
+                </Button>
+                <Button
+                  type="button"
+                  variant="default"
+                  onClick={() => open.value = false}
+                >
+                  取消
                 </Button>
               </>
             }
@@ -220,10 +273,19 @@ export default function FeedbackModal() {
           <CodeBlock
             title="代码示例"
             code={`<Modal
-  open={open.value}
+  open={open}
   onClose={() => open.value = false}
   title="弹窗标题"
-  footer={<>...</>}
+  footer={
+    <>
+      <Button type="button" variant="primary" onClick={() => open.value = false}>
+        确定
+      </Button>
+      <Button type="button" variant="default" onClick={() => open.value = false}>
+        取消
+      </Button>
+    </>
+  }
 >
   <p>弹层内容</p>
 </Modal>`}
@@ -249,7 +311,7 @@ export default function FeedbackModal() {
             </Button>
           </div>
           <Modal
-            open={openNoFooter.value}
+            open={openNoFooter}
             onClose={() => openNoFooter.value = false}
             title="仅标题与内容"
           >
@@ -260,7 +322,7 @@ export default function FeedbackModal() {
           <CodeBlock
             title="代码示例"
             code={`<Modal
-  open={open.value}
+  open={openNoFooter}
   onClose={...}
   title="仅标题与内容"
 >
@@ -289,7 +351,7 @@ export default function FeedbackModal() {
             </Button>
           </div>
           <Modal
-            open={openNoTitle.value}
+            open={openNoTitle}
             onClose={() => openNoTitle.value = false}
             title={null}
           >
@@ -300,7 +362,7 @@ export default function FeedbackModal() {
           <CodeBlock
             title="代码示例"
             code={`<Modal
-  open={open.value}
+  open={openNoTitle}
   onClose={...}
   title={null}
 >
@@ -321,6 +383,7 @@ export default function FeedbackModal() {
           </Paragraph>
           <div class="flex gap-2">
             <Button
+              type="button"
               variant="default"
               onClick={() => openNoClosable.value = true}
             >
@@ -328,7 +391,7 @@ export default function FeedbackModal() {
             </Button>
           </div>
           <Modal
-            open={openNoClosable.value}
+            open={openNoClosable}
             onClose={() => openNoClosable.value = false}
             title="只能点遮罩关闭"
             closable={false}
@@ -354,7 +417,7 @@ export default function FeedbackModal() {
             </Button>
           </div>
           <Modal
-            open={openNoMaskClose.value}
+            open={openNoMaskClose}
             onClose={() => openNoMaskClose.value = false}
             title="点击遮罩不关闭"
             maskClosable={false}
@@ -379,10 +442,64 @@ export default function FeedbackModal() {
         </div>
 
         <div class="space-y-4">
+          <Title level={3}>无遮罩</Title>
+          <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+            传{" "}
+            <code class="rounded bg-slate-200/80 px-1 font-mono text-xs dark:bg-slate-600/80">
+              mask=&#123;false&#125;
+            </code>{" "}
+            不渲染遮罩层，背后可点击；宜配合{" "}
+            <code class="rounded bg-slate-200/80 px-1 font-mono text-xs dark:bg-slate-600/80">
+              keyboard
+            </code>{" "}
+            与关闭按钮。若仅要透明暗底仍占位，可保留默认 mask 并用{" "}
+            <code class="rounded bg-slate-200/80 px-1 font-mono text-xs dark:bg-slate-600/80">
+              maskClass
+            </code>
+            。
+          </Paragraph>
+          <div class="flex gap-2">
+            <Button
+              type="button"
+              variant="default"
+              onClick={() => openNoMask.value = true}
+            >
+              打开无遮罩 Modal
+            </Button>
+          </div>
+          <Modal
+            open={openNoMask}
+            onClose={() => openNoMask.value = false}
+            title="无遮罩"
+            mask={false}
+            keyboard
+          >
+            <p class="text-sm text-slate-600 dark:text-slate-400">
+              无遮罩层，可看到背后文档；请点右上角关闭或按 Esc。
+            </p>
+          </Modal>
+          <CodeBlock
+            title="代码示例"
+            code={`<Modal
+  open={open}
+  onClose={() => open.value = false}
+  title="无遮罩"
+  mask={false}
+  keyboard
+>
+  <p>无暗色底，请用关闭按钮或 Esc</p>
+</Modal>`}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+        </div>
+
+        <div class="space-y-4">
           <Title level={3}>自定义宽度</Title>
           <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
-            width 支持预设 xs/sm/md/lg/xl（400/520/640/800/960px）、字符串（如
-            "80%"、"400px"）或数字（视为 px）。
+            {`width 支持预设 xs/sm/md/lg/xl（400/520/640/800/960px）、字符串（如 "80%"、"400px"）或数字（视为 px）。须用 width={() => …}、title={() => …} 与 signal 同步；正文可照常写 <p>…</p>，只有「不关弹窗、连续切换预设还要改正文」时才需要 children={() => …}。`}
           </Paragraph>
           <div class="flex flex-wrap gap-2">
             <span class="text-sm text-slate-600 dark:text-slate-400 self-center mr-1">
@@ -394,8 +511,8 @@ export default function FeedbackModal() {
                   type="button"
                   variant="secondary"
                   onClick={() => {
-                    widthPreset.value = w;
-                    openWidthPreset.value = true;
+                    // 一次写入 open + preset，避免分两路 signal 时「已打开仍用上一档 width」的竞态
+                    widthPresetDemo.value = { open: true, preset: w };
                   }}
                 >
                   {w}
@@ -411,18 +528,51 @@ export default function FeedbackModal() {
             </Button>
           </div>
           <Modal
-            open={openWidthPreset.value}
-            onClose={() => openWidthPreset.value = false}
-            title={`宽度 ${widthPreset.value}`}
-            width={widthPreset.value}
+            open={() => widthPresetDemo.value.open}
+            onClose={() => {
+              widthPresetDemo.value = {
+                ...widthPresetDemo.value,
+                open: false,
+              };
+            }}
+            title={() => `宽度 ${widthPresetDemo.value.preset}`}
+            width={() => widthPresetDemo.value.preset}
+            footer={
+              <>
+                <Button
+                  type="button"
+                  variant="primary"
+                  onClick={() => {
+                    widthPresetDemo.value = {
+                      ...widthPresetDemo.value,
+                      open: false,
+                    };
+                  }}
+                >
+                  确定
+                </Button>
+                <Button
+                  type="button"
+                  variant="default"
+                  onClick={() => {
+                    widthPresetDemo.value = {
+                      ...widthPresetDemo.value,
+                      open: false,
+                    };
+                  }}
+                >
+                  取消
+                </Button>
+              </>
+            }
           >
             <p class="text-sm text-slate-600 dark:text-slate-400">
-              width="{widthPreset.value}"：xs 400px / sm 520px / md 640px / lg
-              800px / xl 960px。
+              width="{widthPresetDemo.value.preset}"：xs 400px / sm 520px / md
+              640px / lg 800px / xl 960px。
             </p>
           </Modal>
           <Modal
-            open={openWidth.value}
+            open={openWidth}
             onClose={() => openWidth.value = false}
             title="宽度 80%"
             width="80%"
@@ -433,13 +583,19 @@ export default function FeedbackModal() {
           </Modal>
           <CodeBlock
             title="代码示例（预设）"
-            code={`<Modal
-  open={open.value}
-  onClose={...}
-  title="标题"
-  width="md"
+            code={`import { createSignal } from "@dreamer/view";
+const demo = createSignal({
+  open: false,
+  preset: "md" as "xs" | "sm" | "md" | "lg" | "xl",
+});
+demo.value = { open: true, preset: "lg" };
+<Modal
+  open={() => demo.value.open}
+  onClose={() => { demo.value = { ...demo.value, open: false }; }}
+  title={() => \`宽度 \${demo.value.preset}\`}
+  width={() => demo.value.preset}
 >
-  <p>width="md" 为 640px</p>
+  <p>正文可静态写；宽度与标题已由 getter 同步</p>
 </Modal>`}
             language="tsx"
             showLineNumbers
@@ -449,10 +605,12 @@ export default function FeedbackModal() {
           <CodeBlock
             title="代码示例（百分比）"
             code={`<Modal
-  ...
+  open={open}
+  onClose={() => { open.value = false; }}
+  title="宽度 80%"
   width="80%"
 >
-  ...
+  <p>占视口宽度 80%</p>
 </Modal>`}
             language="tsx"
             showLineNumbers
@@ -464,7 +622,15 @@ export default function FeedbackModal() {
         <div class="space-y-4">
           <Title level={3}>不垂直居中</Title>
           <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
-            centered=false 时弹层靠上对齐（默认 pt-16）。
+            传{" "}
+            <code class="rounded bg-slate-200/80 px-1 font-mono text-xs dark:bg-slate-600/80">
+              centered=&#123;false&#125;
+            </code>{" "}
+            使弹层靠上（内置顶距）；仍可用{" "}
+            <code class="rounded bg-slate-200/80 px-1 font-mono text-xs dark:bg-slate-600/80">
+              wrapClass
+            </code>{" "}
+            微调。
           </Paragraph>
           <div class="flex gap-2">
             <Button
@@ -476,7 +642,7 @@ export default function FeedbackModal() {
             </Button>
           </div>
           <Modal
-            open={openNotCentered.value}
+            open={openNotCentered}
             onClose={() => openNotCentered.value = false}
             title="顶部对齐"
             centered={false}
@@ -488,10 +654,12 @@ export default function FeedbackModal() {
           <CodeBlock
             title="代码示例"
             code={`<Modal
-  ...
+  open={open}
+  onClose={() => open.value = false}
+  title="顶部对齐"
   centered={false}
 >
-  ...
+  <p>靠上展示</p>
 </Modal>`}
             language="tsx"
             showLineNumbers
@@ -507,12 +675,16 @@ export default function FeedbackModal() {
             destroyOnClose=true 时关闭后子节点不挂载，再次打开为全新挂载。
           </Paragraph>
           <div class="flex gap-2">
-            <Button variant="default" onClick={() => openDestroy.value = true}>
+            <Button
+              type="button"
+              variant="default"
+              onClick={() => openDestroy.value = true}
+            >
               关闭后销毁
             </Button>
           </div>
           <Modal
-            open={openDestroy.value}
+            open={openDestroy}
             onClose={() => openDestroy.value = false}
             title="关闭后销毁内容"
             destroyOnClose
@@ -522,46 +694,6 @@ export default function FeedbackModal() {
             </p>
           </Modal>
         </section>
-
-        <div class="space-y-4">
-          <Title level={3}>禁用 Esc 关闭</Title>
-          <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
-            默认不支持 Esc；不传 keyboard 或 keyboard=false 时按 Esc 不触发
-            onClose。
-          </Paragraph>
-          <div class="flex gap-2">
-            <Button
-              type="button"
-              variant="default"
-              onClick={() => openNoKeyboard.value = true}
-            >
-              不支持 Esc
-            </Button>
-          </div>
-          <Modal
-            open={openNoKeyboard.value}
-            onClose={() => openNoKeyboard.value = false}
-            title="按 Esc 无效"
-            keyboard={false}
-          >
-            <p class="text-sm text-slate-600 dark:text-slate-400">
-              请使用关闭按钮或点击遮罩关闭。
-            </p>
-          </Modal>
-          <CodeBlock
-            title="代码示例"
-            code={`<Modal
-  ...
-  keyboard={false}
->
-  ...
-</Modal>`}
-            language="tsx"
-            showLineNumbers
-            copyable
-            wrapLongLines
-          />
-        </div>
 
         <div class="space-y-4">
           <Title level={3}>可移动</Title>
@@ -578,10 +710,28 @@ export default function FeedbackModal() {
             </Button>
           </div>
           <Modal
-            open={openDraggable.value}
+            open={openDraggable}
             onClose={() => openDraggable.value = false}
             title="可拖拽标题栏移动"
             draggable
+            footer={
+              <>
+                <Button
+                  type="button"
+                  variant="primary"
+                  onClick={() => openDraggable.value = false}
+                >
+                  确定
+                </Button>
+                <Button
+                  type="button"
+                  variant="default"
+                  onClick={() => openDraggable.value = false}
+                >
+                  取消
+                </Button>
+              </>
+            }
           >
             <p class="text-sm text-slate-600 dark:text-slate-400">
               拖拽上方标题栏可移动弹层位置。
@@ -590,7 +740,7 @@ export default function FeedbackModal() {
           <CodeBlock
             title="代码示例"
             code={`<Modal
-  open={open.value}
+  open={open}
   onClose={...}
   title="可拖拽标题栏移动"
   draggable
@@ -605,9 +755,17 @@ export default function FeedbackModal() {
         </div>
 
         <div class="space-y-4">
-          <Title level={3}>按 Esc 键可关闭</Title>
+          <Title level={3}>支持 ESC</Title>
           <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
-            keyboard=true 时支持按 Esc 键关闭弹窗。
+            默认 keyboard 为 false，不按 Esc 关闭；需要时加上属性{" "}
+            <code class="rounded bg-slate-200/80 px-1 font-mono text-xs dark:bg-slate-600/80">
+              keyboard
+            </code>
+            （布尔简写，等同 true）或显式{" "}
+            <code class="rounded bg-slate-200/80 px-1 font-mono text-xs dark:bg-slate-600/80">
+              {"keyboard={true}"}
+            </code>
+            ，按 Esc 触发 onClose。
           </Paragraph>
           <div class="flex gap-2">
             <Button
@@ -619,7 +777,7 @@ export default function FeedbackModal() {
             </Button>
           </div>
           <Modal
-            open={openKeyboard.value}
+            open={openKeyboard}
             onClose={() => openKeyboard.value = false}
             title="按 Esc 可关闭"
             keyboard
@@ -631,7 +789,7 @@ export default function FeedbackModal() {
           <CodeBlock
             title="代码示例"
             code={`<Modal
-  open={open.value}
+  open={open}
   onClose={...}
   title="按 Esc 可关闭"
   keyboard
@@ -648,36 +806,61 @@ export default function FeedbackModal() {
         <div class="space-y-4">
           <Title level={3}>全屏</Title>
           <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
-            fullscreenable=true 时标题栏显示全屏切换按钮，可切换弹层全屏/还原。
+            <code class="rounded bg-slate-200/80 px-1 font-mono text-xs dark:bg-slate-600/80">
+              fullscreenable
+            </code>{" "}
+            为 true 时标题栏显示全屏切换按钮；{" "}
+            <code class="rounded bg-slate-200/80 px-1 font-mono text-xs dark:bg-slate-600/80">
+              fullscreen
+            </code>{" "}
+            为 true 时每次打开即为全屏布局，关闭后重置。
           </Paragraph>
-          <div class="flex gap-2">
+          <div class="flex flex-wrap gap-2">
             <Button
               type="button"
               variant="default"
               onClick={() => openFullscreen.value = true}
             >
-              全屏切换
+              可全屏（标题栏切换）
+            </Button>
+            <Button
+              type="button"
+              variant="default"
+              onClick={() => openFullscreenInitial.value = true}
+            >
+              打开即全屏
             </Button>
           </div>
           <Modal
-            open={openFullscreen.value}
+            open={openFullscreen}
             onClose={() => openFullscreen.value = false}
             title="可全屏"
             fullscreenable
           >
             <p class="text-sm text-slate-600 dark:text-slate-400">
-              点击标题栏右侧全屏按钮可切换全屏显示。
+              点击标题栏右侧按钮可进入/退出全屏。
+            </p>
+          </Modal>
+          <Modal
+            open={openFullscreenInitial}
+            onClose={() => openFullscreenInitial.value = false}
+            title="打开即全屏"
+            fullscreen
+            fullscreenable
+          >
+            <p class="text-sm text-slate-600 dark:text-slate-400">
+              打开时已是全屏，仍可用标题栏按钮退出全屏。
             </p>
           </Modal>
           <CodeBlock
             title="代码示例"
-            code={`<Modal
-  open={open.value}
-  onClose={...}
-  title="可全屏"
-  fullscreenable
->
-  <p>点击标题栏右侧全屏按钮可切换全屏显示。</p>
+            code={`<!-- 标题栏切换 -->
+<Modal open={open} onClose={...} title="可全屏" fullscreenable>
+  <p>点标题栏按钮切换全屏</p>
+</Modal>
+<!-- 每次打开即为全屏 -->
+<Modal open={open2} onClose={...} title="打开即全屏" fullscreen fullscreenable>
+  <p>关闭后再开仍从全屏起</p>
 </Modal>`}
             language="tsx"
             showLineNumbers
@@ -702,7 +885,7 @@ export default function FeedbackModal() {
             </Button>
           </div>
           <Modal
-            open={openCustomClass.value}
+            open={openCustomClass}
             onClose={() => openCustomClass.value = false}
             title="自定义样式"
             class="ring-2 ring-blue-500"

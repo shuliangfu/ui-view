@@ -164,15 +164,19 @@ export default {
 - **Switch** 开关
 - **Slider** 滑块
 - **Rate** 评分
-- **TimePicker / TimeRangePicker** 时间 / 时间范围选择
+- **DatePicker** 日期选择（`single` / `range` / `multiple`）
+- **DateTimePicker** 日期时间（`single` / `range` / `multiple`）
+- **TimePicker** 时间选择（`single` / `range` / `multiple`）
 - **Upload** 文件上传
 - **ColorPicker** 颜色选择
 - **Mentions** @ 提及
-- **Form / FormItem / FormList** 表单容器与表单项
+- **Form / FormItem / FormList** 表单容器与表单项（`FormItem` 支持
+  `hideRequiredMark`：保留必填语义但不显示标签旁红色 *，见文档站 **表单 · Form
+  容器**）
 - **RichTextEditor** 富文本编辑器
 
 **桌面专用：**
-Select、MultiSelect、Cascader、TreeSelect、DatePicker、DateRangePicker、TimePicker
+Select、MultiSelect、Cascader、TreeSelect、DatePicker、DateTimePicker、TimePicker
 
 ### 💬 消息与通知
 

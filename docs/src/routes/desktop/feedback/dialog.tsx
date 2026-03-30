@@ -1,6 +1,9 @@
 /**
  * Dialog 组件文档页（标准文档结构：概述、引入、示例、API）
  * 路由: /desktop/feedback/dialog
+ *
+ * 示例含：基础确认、警告确认（warning）、危险（danger）、loading、自定义 footer。
+ * `open` 须传 **SignalRef**（如 `open={dialogOpen}`），勿写 `open={dialogOpen.value}`；底层 Modal 在 Hybrid 下需订阅 `.value`。
  */
 
 import { createSignal } from "@dreamer/view";
@@ -17,9 +20,10 @@ interface ApiRow {
 const DIALOG_API: ApiRow[] = [
   {
     name: "open",
-    type: "boolean",
+    type: "boolean | (() => boolean) | SignalRef<boolean>",
     default: "-",
-    description: "是否打开（受控）",
+    description:
+      "是否打开；推荐 `open={sig}`（createSignal 返回值），勿 `open={sig.value}` 快照",
   },
   {
     name: "onClose",
@@ -74,13 +78,22 @@ const DIALOG_API: ApiRow[] = [
     name: "danger",
     type: "boolean",
     default: "false",
-    description: "危险操作（确定按钮 danger 样式）",
+    description:
+      "危险操作（确定按钮 danger 红色）；与 warning 同时为 true 时优先 danger",
+  },
+  {
+    name: "warning",
+    type: "boolean",
+    default: "false",
+    description:
+      "警告类确认（确定按钮 warning 橙色）；与 danger 同时为 true 时以 danger 为准",
   },
   {
     name: "confirmLoading",
     type: "boolean",
     default: "false",
-    description: "确定按钮 loading 态",
+    description:
+      "确定 loading（转圈 + 主色）；为 true 时确定与取消均禁用，完成后置 false",
   },
   {
     name: "showFooter",
@@ -95,14 +108,11 @@ import { Button, Dialog } from "@dreamer/ui-view";
 
 const open = createSignal(false);
 
-<Button
-  variant="primary"
-  onClick={() => open.value = true}
->
+<Button type="button" variant="primary" onClick={() => open.value = true}>
   打开
 </Button>
 <Dialog
-  open={open.value}
+  open={open}
   onClose={() => open.value = false}
   title="确认操作"
   content="确定要执行该操作吗？"
@@ -113,7 +123,7 @@ const open = createSignal(false);
 />`;
 
 const exampleBasic = `<Dialog
-  open={open.value}
+  open={open}
   onClose={() => open.value = false}
   title="确认操作"
   content="确定要执行该操作吗？"
@@ -123,8 +133,20 @@ const exampleBasic = `<Dialog
   onCancel={() => open.value = false}
 />`;
 
+const exampleWarning = `<Dialog
+  open={openWarning}
+  onClose={() => openWarning.value = false}
+  title="警告"
+  content="该操作可能影响其他用户，是否继续？"
+  confirmText="仍要继续"
+  cancelText="取消"
+  warning
+  onConfirm={() => openWarning.value = false}
+  onCancel={() => openWarning.value = false}
+/>`;
+
 const exampleDanger = `<Dialog
-  open={openDanger.value}
+  open={openDanger}
   onClose={() => openDanger.value = false}
   title="删除确认"
   content="删除后无法恢复，确定要删除吗？"
@@ -136,7 +158,7 @@ const exampleDanger = `<Dialog
 />`;
 
 const exampleLoading = `<Dialog
-  open={openLoading.value}
+  open={openLoading}
   onClose={() => openLoading.value = false}
   title="提交中"
   content="确定后将显示 loading 状态，常用于异步提交。"
@@ -149,16 +171,17 @@ const exampleLoading = `<Dialog
 
 export default function FeedbackDialog() {
   const open = createSignal(false);
+  const openWarning = createSignal(false);
   const openDanger = createSignal(false);
   const openLoading = createSignal(false);
 
-  return () => (
+  return (
     <div class="space-y-10">
       <section>
         <Title level={1}>Dialog 确认对话框</Title>
         <Paragraph class="mt-2">
-          确认/取消对话框，基于
-          Modal：标题、正文、确定/取消按钮；支持危险操作样式、确定按钮
+          确认对话框，基于
+          Modal：标题、正文；支持警告确认（橙色确定）、危险操作（红色确定）、确定按钮
           loading、自定义 footer。使用 Tailwind v4，支持 light/dark 主题。
         </Paragraph>
       </section>
@@ -189,7 +212,7 @@ export default function FeedbackDialog() {
             </Button>
           </div>
           <Dialog
-            open={open.value}
+            open={open}
             onClose={() => open.value = false}
             title="确认操作"
             content="确定要执行该操作吗？"
@@ -213,6 +236,46 @@ export default function FeedbackDialog() {
         </div>
 
         <div class="space-y-4">
+          <Title level={3}>警告确认（warning）</Title>
+          <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+            需要用户留意后果但非不可逆删除时，使用{" "}
+            <code class="text-xs">warning</code>，确定按钮为橙色 warning 样式。
+          </Paragraph>
+          <div class="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="warning"
+              onClick={() => openWarning.value = true}
+            >
+              警告确认
+            </Button>
+          </div>
+          <Dialog
+            open={openWarning}
+            onClose={() => openWarning.value = false}
+            title="警告"
+            content="该操作可能影响其他用户，是否继续？"
+            confirmText="仍要继续"
+            cancelText="取消"
+            warning
+            onConfirm={() => {
+              openWarning.value = false;
+            }}
+            onCancel={() => {
+              openWarning.value = false;
+            }}
+          />
+          <CodeBlock
+            title="代码示例"
+            code={exampleWarning}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+        </div>
+
+        <div class="space-y-4">
           <Title level={3}>危险操作（danger）</Title>
           <div class="flex flex-wrap gap-2">
             <Button
@@ -224,7 +287,7 @@ export default function FeedbackDialog() {
             </Button>
           </div>
           <Dialog
-            open={openDanger.value}
+            open={openDanger}
             onClose={() => openDanger.value = false}
             title="删除确认"
             content="删除后无法恢复，确定要删除吗？"
@@ -250,6 +313,9 @@ export default function FeedbackDialog() {
 
         <div class="space-y-4">
           <Title level={3}>确定 Loading（confirmLoading）</Title>
+          <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+            {`确定钮为 primary + 转圈；confirmLoading 为 true 时「确定」「取消」均不可点，提交结束后再置回 false。若还要禁止标题栏/Esc/点遮罩关闭，可透传 closable、keyboard、maskClosable。`}
+          </Paragraph>
           <div class="flex flex-wrap gap-2">
             <Button
               type="button"
@@ -260,7 +326,7 @@ export default function FeedbackDialog() {
             </Button>
           </div>
           <Dialog
-            open={openLoading.value}
+            open={openLoading}
             onClose={() => openLoading.value = false}
             title="提交中"
             content="确定后将显示 loading 状态，常用于异步提交。"

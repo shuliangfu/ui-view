@@ -23,15 +23,23 @@ interface ApiRow {
 const SWITCH_API: ApiRow[] = [
   {
     name: "checked",
-    type: "boolean | (() => boolean)",
+    type: "boolean | (() => boolean) | SignalRef<boolean>",
     default: "-",
-    description: "是否开启；可为 getter",
+    description:
+      "是否开启；推荐 `checked={createSignal(...)}` 返回值，或 `() => sig.value`；勿 `checked={sig.value}` 快照",
   },
   {
     name: "disabled",
     type: "boolean",
     default: "false",
     description: "是否禁用",
+  },
+  {
+    name: "hideFocusRing",
+    type: "boolean",
+    default: "false",
+    description:
+      "为 true 时隐藏开关轨道在获焦时的 peer 蓝色 ring；默认 false 显示",
   },
   {
     name: "error",
@@ -45,6 +53,42 @@ const SWITCH_API: ApiRow[] = [
     type: "(e: Event) => void",
     default: "-",
     description: "变更回调",
+  },
+  {
+    name: "onBlur",
+    type: "(e: Event) => void",
+    default: "-",
+    description: "失焦回调（透传至内部 input）",
+  },
+  {
+    name: "onFocus",
+    type: "(e: Event) => void",
+    default: "-",
+    description: "聚焦回调（透传至内部 input）",
+  },
+  {
+    name: "onKeyDown",
+    type: "(e: Event) => void",
+    default: "-",
+    description: "键盘按下（透传至内部 input）",
+  },
+  {
+    name: "onKeyUp",
+    type: "(e: Event) => void",
+    default: "-",
+    description: "键盘抬起（透传至内部 input）",
+  },
+  {
+    name: "onClick",
+    type: "(e: Event) => void",
+    default: "-",
+    description: "点击（透传至内部 input）",
+  },
+  {
+    name: "onPaste",
+    type: "(e: Event) => void",
+    default: "-",
+    description: "粘贴（透传至内部 input）",
   },
   { name: "name", type: "string", default: "-", description: "原生 name" },
   { name: "id", type: "string", default: "-", description: "原生 id" },
@@ -68,7 +112,7 @@ import { createSignal } from "@dreamer/view";
 const checked = createSignal(false);
 <FormItem label="开关">
   <Switch
-    checked={checked.value}
+    checked={checked}
     onChange={(e) => checked.value = (e.target as HTMLInputElement).checked}
   />
 </FormItem>`;
@@ -82,8 +126,13 @@ export default function FormSwitch() {
         <Title level={1}>Switch 开关</Title>
         <Paragraph class="mt-2">
           开关组件，支持
-          checked、onChange、disabled、error、checkedChildren、unCheckedChildren。Tailwind
-          v4 + light/dark。
+          checked、onChange、disabled、error、checkedChildren、unCheckedChildren。
+          动态选中态请使用{" "}
+          <code class="text-sm">checked=&#123;createSignal(...)&#125;</code>
+          {" "}
+          返回值，勿写{" "}
+          <code class="text-sm">checked=&#123;sig.value&#125;</code>{" "}
+          快照。Tailwind v4 + light/dark。
         </Paragraph>
       </section>
 
@@ -106,7 +155,7 @@ export default function FormSwitch() {
             <Title level={3}>基础</Title>
             <FormItem label="开关">
               <Switch
-                checked={checked.value}
+                checked={checked}
                 onChange={(e) =>
                   checked.value = (e.target as HTMLInputElement).checked}
               />
@@ -114,7 +163,7 @@ export default function FormSwitch() {
             <CodeBlock
               title="代码示例"
               code={`<Switch
-  checked={checked.value}
+  checked={checked}
   onChange={(e) => checked.value = (e.target as HTMLInputElement).checked}
 />`}
               language="tsx"
@@ -128,7 +177,7 @@ export default function FormSwitch() {
             <Title level={3}>checkedChildren / unCheckedChildren</Title>
             <FormItem label="开/关文案">
               <Switch
-                checked={checked.value}
+                checked={checked}
                 onChange={(e) =>
                   checked.value = (e.target as HTMLInputElement).checked}
                 checkedChildren="开"
@@ -156,7 +205,7 @@ export default function FormSwitch() {
               <Switch
                 name="notify"
                 id="switch-notify"
-                checked={checked.value}
+                checked={checked}
                 onChange={(e) =>
                   checked.value = (e.target as HTMLInputElement).checked}
               />

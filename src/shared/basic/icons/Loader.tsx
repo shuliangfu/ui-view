@@ -1,5 +1,6 @@
 /**
  * 加载/旋转图标，24×24 stroke，用于加载状态。
+ * 矢量与 Lucide「Loader2」一致；本库导出为 {@link IconLoader}（无单独 Loader 图标，故不用 Loader2 命名）。
  */
 import { Icon } from "../Icon.tsx";
 import type { IconComponentProps } from "../Icon.tsx";
@@ -26,6 +27,9 @@ const svg = (
   </svg>
 );
 
-export function IconLoader2(props?: IconComponentProps) {
+export function IconLoader(props?: IconComponentProps) {
   return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }
+
+/** 旧名兼容：与 Lucide 文件名 Loader2 对齐时的导入习惯 */
+export { IconLoader as IconLoader2 };

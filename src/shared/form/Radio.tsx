@@ -4,6 +4,7 @@
  */
 
 import { twMerge } from "tailwind-merge";
+import { controlBlueFocusRing } from "./input-focus-ring.ts";
 
 export interface RadioProps {
   /** 是否选中 */
@@ -18,16 +19,31 @@ export interface RadioProps {
   class?: string;
   /** 变更回调 */
   onChange?: (e: Event) => void;
+  /** 失焦回调 */
+  onBlur?: (e: Event) => void;
+  /** 聚焦回调 */
+  onFocus?: (e: Event) => void;
+  /** 键盘按下 */
+  onKeyDown?: (e: Event) => void;
+  /** 键盘抬起 */
+  onKeyUp?: (e: Event) => void;
+  /** 点击控件 */
+  onClick?: (e: Event) => void;
+  /** 粘贴 */
+  onPaste?: (e: Event) => void;
   /** 原生 id */
   id?: string;
   /** 错误状态（红框/红字） */
   error?: boolean;
   /** 文案或子节点 */
   children?: unknown;
+  /** 为 true 时隐藏聚焦激活态边框；默认 false 显示 ring */
+  hideFocusRing?: boolean;
 }
 
-const inputCls =
-  "h-4 w-4 rounded-full border-slate-300 dark:border-slate-600 text-blue-600 focus:ring-2 focus:ring-blue-500 dark:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer";
+/** 单选圆钮底纹（不含 ring） */
+const radioInputSurface =
+  "h-4 w-4 rounded-full border-slate-300 dark:border-slate-600 text-blue-600 focus:outline-none dark:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer";
 const labelCls =
   "inline-flex items-center gap-2 cursor-pointer text-sm text-slate-700 dark:text-slate-300";
 const errorCls = "[&_input]:border-red-500 text-red-600 dark:text-red-400";
@@ -37,10 +53,17 @@ export function Radio(props: RadioProps) {
     checked = false,
     disabled = false,
     error = false,
+    hideFocusRing = false,
     name,
     value,
     class: className,
     onChange,
+    onBlur,
+    onFocus,
+    onKeyDown,
+    onKeyUp,
+    onClick,
+    onPaste,
     id,
     children,
   } = props;
@@ -55,8 +78,14 @@ export function Radio(props: RadioProps) {
         checked={checked}
         disabled={disabled}
         aria-invalid={error}
-        class={inputCls}
+        class={twMerge(radioInputSurface, controlBlueFocusRing(!hideFocusRing))}
         onChange={onChange}
+        onBlur={onBlur}
+        onFocus={onFocus}
+        onKeyDown={onKeyDown}
+        onKeyUp={onKeyUp}
+        onClick={onClick}
+        onPaste={onPaste}
       />
       {children}
     </label>

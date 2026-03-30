@@ -9,6 +9,10 @@ import { uiViewTailwindPlugin } from "@dreamer/ui-view/plugin";
 import { staticPlugin } from "@dreamer/plugins/static";
 import { themePlugin } from "@dreamer/plugins/theme";
 import { tailwindPlugin } from "@dreamer/plugins/tailwindcss";
+import {
+  deleteExpiredUploadFiles,
+  startUploadCleanupScheduler,
+} from "./routes/api/upload/cleanup-schedule.ts";
 
 const app = new App();
 
@@ -40,4 +44,8 @@ app.registerPlugin(staticPlugin({
   ],
 }));
 
-app.start();
+void app.start().then(() => {
+  // 演示上传目录：约 10 分钟前的文件由 cleanup-schedule 每分钟扫描删除
+  startUploadCleanupScheduler();
+  void deleteExpiredUploadFiles();
+});

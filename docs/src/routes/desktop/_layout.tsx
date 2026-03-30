@@ -20,8 +20,16 @@ const BASIC_SUBMENU = [
   { path: "/desktop/basic/spinner", label: "Spinner", desc: "加载旋转" },
 ] as const;
 
-/** 表单组件下的二级子菜单，对应路由 /form/xxx，每页一个组件不写长 */
+/**
+ * 表单二级菜单：与 `src/desktop/form/mod.ts` 导出顺序大致一致（含文档路由）；
+ * `Radio` 单控件见 RadioGroup 示例；`check` 为旧合订页未列入侧栏。
+ */
 const FORM_SUBMENU = [
+  {
+    path: "/desktop/form/form-containers",
+    label: "Form",
+    desc: "表单容器",
+  },
   { path: "/desktop/form/input", label: "Input", desc: "单行输入" },
   { path: "/desktop/form/search", label: "Search", desc: "搜索框" },
   { path: "/desktop/form/password", label: "Password", desc: "密码" },
@@ -31,8 +39,15 @@ const FORM_SUBMENU = [
     label: "InputNumber",
     desc: "数字输入",
   },
+  {
+    path: "/desktop/form/autocomplete",
+    label: "AutoComplete",
+    desc: "自动完成",
+  },
   { path: "/desktop/form/select", label: "Select", desc: "单选下拉" },
   { path: "/desktop/form/multiselect", label: "MultiSelect", desc: "多选下拉" },
+  { path: "/desktop/form/tree-select", label: "TreeSelect", desc: "树选择" },
+  { path: "/desktop/form/cascader", label: "Cascader", desc: "级联选择" },
   { path: "/desktop/form/checkbox", label: "Checkbox", desc: "勾选" },
   {
     path: "/desktop/form/checkbox-group",
@@ -44,12 +59,13 @@ const FORM_SUBMENU = [
   { path: "/desktop/form/slider", label: "Slider", desc: "滑块" },
   { path: "/desktop/form/rate", label: "Rate", desc: "评分" },
   { path: "/desktop/form/date-picker", label: "DatePicker", desc: "日期选择" },
-  { path: "/desktop/form/time-picker", label: "TimePicker", desc: "时间选择" },
   {
-    path: "/desktop/form/time-range-picker",
-    label: "TimeRangePicker",
-    desc: "时间范围",
+    path: "/desktop/form/datetime-picker",
+    label: "DateTimePicker",
+    desc: "日期时间",
   },
+  { path: "/desktop/form/time-picker", label: "TimePicker", desc: "时间选择" },
+  { path: "/desktop/form/color-picker", label: "ColorPicker", desc: "颜色" },
   { path: "/desktop/form/upload", label: "Upload", desc: "文件上传" },
   { path: "/desktop/form/transfer", label: "Transfer", desc: "穿梭框" },
   { path: "/desktop/form/mentions", label: "Mentions", desc: "@ 提及" },

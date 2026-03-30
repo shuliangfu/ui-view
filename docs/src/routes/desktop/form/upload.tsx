@@ -1,17 +1,17 @@
 /**
- * Upload 组件文档页（标准文档结构：概述、引入、示例、API）
+ * Upload 组件文档页
  * 路由: /desktop/form/upload
  */
 
 import {
   CodeBlock,
+  DEFAULT_UPLOAD_CHUNK_SIZE,
   Form,
   FormItem,
   Paragraph,
   Title,
   Upload,
 } from "@dreamer/ui-view";
-import type { UploadFile } from "@dreamer/ui-view";
 import { createSignal } from "@dreamer/view";
 
 interface ApiRow {
@@ -23,28 +23,72 @@ interface ApiRow {
 
 const UPLOAD_API: ApiRow[] = [
   {
-    name: "fileList",
-    type: "UploadFile[] | (() => UploadFile[])",
+    name: "action",
+    type: "string",
     default: "-",
-    description: "受控文件列表（uid、name、status、progress）",
+    description:
+      "与 requestUpload 至少其一。整文件 multipart；大文件同 URL 使用 ?phase=init|chunk|complete",
   },
   {
-    name: "onChange",
-    type: "(e: Event) => void",
+    name: "requestUpload",
+    type: "(file, signal) => Promise<string>",
     default: "-",
-    description: "选择文件变更（e.target.files）",
+    description:
+      "自定义上传，返回值写入隐藏域；若与 action 同时存在则优先用此函数",
   },
   {
-    name: "onRemove",
-    type: "(index: number) => void",
-    default: "-",
-    description: "移除某一项",
+    name: "method / headers / withCredentials",
+    type: "…",
+    default: "POST / - / false",
+    description: "内置 fetch 时的请求选项",
   },
   {
-    name: "onDrop",
-    type: "(files: File[]) => void",
+    name: "fileFieldName",
+    type: "string",
+    default: "file",
+    description: "非分片时 multipart 字段名",
+  },
+  {
+    name: "maxFileSize / maxCount",
+    type: "number",
     default: "-",
-    description: "拖拽放下回调",
+    description: "单文件最大字节；多选最大条数",
+  },
+  {
+    name: "chunked",
+    type: 'boolean | "auto"',
+    default: "auto",
+    description: "分片策略；auto 表示大于 chunkThreshold 走 phase 分片",
+  },
+  {
+    name: "chunkThreshold / chunkSize",
+    type: "number",
+    default: "2MiB / 2MiB",
+    description: "auto 阈值与单片大小",
+  },
+  {
+    name: "getValueFromResponse",
+    type: "(res) => Promise<string>",
+    default: "内置",
+    description: "从响应解析隐藏域字符串（仅 action 内置路径）",
+  },
+  {
+    name: "multipleValueMode",
+    type: '"json" | "comma"',
+    default: "json",
+    description: "多文件隐藏域格式",
+  },
+  {
+    name: "value / defaultValue / onValueChange",
+    type: "…",
+    default: "-",
+    description: "隐藏域受控与回调",
+  },
+  {
+    name: "onUploadSuccess / onUploadError",
+    type: "…",
+    default: "-",
+    description: "单文件成功或失败",
   },
   {
     name: "multiple",
@@ -56,86 +100,94 @@ const UPLOAD_API: ApiRow[] = [
     name: "accept",
     type: "string",
     default: "-",
-    description: "原生 accept（如 image/*）",
+    description: "类型限制（选择 + 拖拽均校验）",
   },
   {
     name: "drag",
     type: "boolean",
-    default: "false",
-    description: "是否启用拖拽区域",
+    default: "true",
+    description: "是否显示拖拽区；false 时仅文件选择按钮",
   },
   {
     name: "dragPlaceholder",
     type: "string",
     default: "-",
-    description: "拖拽区占位文案",
+    description: "拖拽模式占位文案（图标在上）",
+  },
+  {
+    name: "showTriggerIcon",
+    type: "boolean",
+    default: "true",
+    description: "是否显示 IconUpload（拖拽区 / 非拖拽触发条）",
+  },
+  {
+    name: "triggerLabel",
+    type: "string",
+    default: "选择文件",
+    description: "drag=false 时触发条文案，如「上传图片」",
+  },
+  {
+    name: "hideFocusRing",
+    type: "boolean",
+    default: "false",
+    description: "关闭 focus-within 蓝色 ring",
+  },
+  {
+    name: "preview",
+    type: "boolean",
+    default: "false",
+    description:
+      "上传成功且 URL 可判为图片时展示缩略图；accept 含 image 时放宽判定",
   },
   {
     name: "disabled",
     type: "boolean",
     default: "false",
-    description: "是否禁用",
+    description: "禁用",
   },
-  { name: "name", type: "string", default: "-", description: "原生 name" },
-  { name: "id", type: "string", default: "-", description: "原生 id" },
-  { name: "class", type: "string", default: "-", description: "额外 class" },
+  {
+    name: "name",
+    type: "string",
+    default: "-",
+    description: "隐藏域 name（可见 file input 无 name）",
+  },
+  {
+    name: "id",
+    type: "string",
+    default: "-",
+    description: "可见 file input id；隐藏域为 `${id}-value`",
+  },
+  { name: "class", type: "string", default: "-", description: "容器 class" },
 ];
 
 const importCode = `import { Upload, Form, FormItem } from "@dreamer/ui-view";
-import type { UploadFile } from "@dreamer/ui-view";
-import { createSignal } from "@dreamer/view";
 
-const fileList = createSignal<UploadFile[]>([]);
-<FormItem label="上传">
-  <Upload
-    multiple
-    fileList={fileList.value}
-    onRemove={(i) => fileList.value = (prev) => prev.filter((_, idx) => idx !== i)}
-    onChange={(e) => { /* 处理 e.target.files */ }}
-  />
+<FormItem label="头像">
+  <Upload name="avatarUrl" action="/api/upload" maxFileSize={5 * 1024 * 1024} />
 </FormItem>`;
 
 export default function FormUpload() {
-  const fileList = createSignal<UploadFile[]>([]);
-  const fileListWithProgress = createSignal<
-    UploadFile[]
-  >([
-    { uid: "1", name: "a.txt", status: "pending" },
-    { uid: "2", name: "b.pdf", status: "uploading", progress: 60 },
-    { uid: "3", name: "c.jpg", status: "done" },
-    { uid: "4", name: "d.zip", status: "error" },
-  ]);
-
-  const handleChange = (e: Event) => {
-    const el = e.target as HTMLInputElement;
-    const files = el.files;
-    if (!files?.length) return;
-    const next: UploadFile[] = Array.from(files).map((f, i) => ({
-      uid: `f-${Date.now()}-${i}`,
-      name: f.name,
-      status: "pending" as const,
-    }));
-    fileList.value = (prev) => [...prev, ...next];
-  };
-
-  const handleDrop = (files: File[]) => {
-    const next: UploadFile[] = files.map((f, i) => ({
-      uid: `d-${Date.now()}-${i}`,
-      name: f.name,
-      status: "pending" as const,
-    }));
-    fileList.value = (prev) => [...prev, ...next];
-  };
+  const hiddenPreview = createSignal("");
 
   return (
     <div class="space-y-10">
       <section>
         <Title level={1}>Upload 文件上传</Title>
         <Paragraph class="mt-2">
-          文件上传：支持
-          multiple、accept、fileList、onChange、onRemove、onDrop、drag、dragPlaceholder、disabled。宽度由
-          class 控制，表单中需占满一列时传 class="w-full"。Tailwind v4 +
-          light/dark。
+          必须提供 <code class="text-xs">action</code> 或{" "}
+          <code class="text-xs">requestUpload</code>
+          ：选文件后自动校验并上传；触发区使用内置{" "}
+          <code class="text-xs">IconUpload</code>
+          （可用 <code class="text-xs">{"showTriggerIcon={false}"}</code>{" "}
+          关闭），结果写入{" "}
+          <code class="text-xs">type="hidden"</code>。本文档示例默认{" "}
+          <code class="text-xs">action="/api/upload"</code>{" "}
+          对接本站 docs 后台演示接口。大文件可走同 URL 的{" "}
+          <code class="text-xs">phase</code>{" "}
+          分片协议（与 @dreamer/upload/server
+          一致）。需要完全自定义协议时可使用包内{" "}
+          <code class="text-xs">runChunkedUpload</code> 自行接{" "}
+          <code class="text-xs">fetch</code>（不必经过本组件）。
         </Paragraph>
       </section>
 
@@ -155,52 +207,76 @@ export default function FormUpload() {
 
         <Form layout="vertical" class="w-full space-y-6">
           <section class="space-y-4">
-            <Title level={3}>拖拽 + 列表 + 移除</Title>
-            <FormItem label="点击或拖拽">
+            <Title level={3}>action：后台演示 API</Title>
+            <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+              使用同源 <code class="text-xs">POST /api/upload</code>
+              （docs 在 <code class="text-xs">src/routes/api/upload</code>{" "}
+              提供，基于 @dreamer/upload）。需先在本目录{" "}
+              <code class="text-xs">deno task dev</code>{" "}
+              启动站点后上传才可成功。隐藏域{" "}
+              <code class="text-xs">name="fileUrl"</code>
+              ，当前值：
+              <code class="ml-1 text-xs">
+                {hiddenPreview.value || "（空）"}
+              </code>
+            </Paragraph>
+            <FormItem label="图片 ≤5MB（整文件 multipart + preview）">
               <Upload
+                name="fileUrl"
+                id="doc-upload"
+                action="/api/upload"
+                maxFileSize={5 * 1024 * 1024}
+                accept="image/*"
+                chunked={false}
+                preview
                 multiple
-                fileList={fileList.value}
-                onRemove={(i) =>
-                  fileList.value = (prev) => prev.filter((_, idx) => idx !== i)}
-                onDrop={handleDrop}
-                drag
-                dragPlaceholder="点击或拖拽文件到此处"
-                onChange={handleChange}
+                onValueChange={(v) => hiddenPreview.value = v}
               />
             </FormItem>
-            <CodeBlock
-              title="代码示例"
-              code={`<Upload
-  multiple
-  fileList={fileList.value}
-  onRemove={(i) => fileList.value = ...}
-  onDrop={handleDrop}
-  drag
-  dragPlaceholder="点击或拖拽文件到此处"
-  onChange={handleChange}
-/>`}
-              language="tsx"
-              showLineNumbers
-              copyable
-              wrapLongLines
-            />
           </section>
 
           <section class="space-y-4">
             <Title level={3}>
-              文件列表（pending/uploading/done/error + progress）
+              action + 分片（与 @dreamer/upload/server 一致）
             </Title>
-            <FormItem label="各状态展示">
+            <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+              同一 <code class="text-xs">action</code>：{" "}
+              <code class="text-xs">POST ?phase=init</code>，JSON{" "}
+              <code class="text-xs">
+                filename, fileSize, mimeType, chunks
+              </code>{" "}
+              → <code class="text-xs">uploadId, key</code>；{" "}
+              <code class="text-xs">POST ?phase=chunk</code>，FormData{" "}
+              <code class="text-xs">uploadId, key, index, file</code>；{" "}
+              <code class="text-xs">POST ?phase=complete</code>，JSON{" "}
+              <code class="text-xs">
+                {"uploadId, key, chunks: [{ index, etag }], filename"}
+              </code>{" "}
+              → 响应含 <code class="text-xs">url</code> 或{" "}
+              <code class="text-xs">data.url</code>。大文件示例见下方{" "}
+              <code class="text-xs">chunked="auto"</code>。
+            </Paragraph>
+            <FormItem
+              label={`大文件分片（auto，阈值 ${DEFAULT_UPLOAD_CHUNK_SIZE} 字节）`}
+            >
               <Upload
-                fileList={fileListWithProgress.value}
-                onRemove={(i) =>
-                  fileListWithProgress.value = (prev) =>
-                    prev.filter((_, idx) => idx !== i)}
+                name="largeFileUrl"
+                action="/api/upload"
+                chunked="auto"
+                chunkThreshold={DEFAULT_UPLOAD_CHUNK_SIZE}
+                chunkSize={DEFAULT_UPLOAD_CHUNK_SIZE}
+                maxFileSize={50 * 1024 * 1024}
               />
             </FormItem>
             <CodeBlock
-              title="代码示例"
-              code={`fileList: [{ uid, name, status: "pending"|"uploading"|"done"|"error", progress?: number }]`}
+              title="典型用法"
+              code={`<Upload
+  name="fileUrl"
+  action="/api/upload"
+  chunked="auto"
+  chunkThreshold={${DEFAULT_UPLOAD_CHUNK_SIZE}}
+  headers={{ Authorization: "Bearer ..." }}
+/>`}
               language="tsx"
               showLineNumbers
               copyable
@@ -209,50 +285,75 @@ export default function FormUpload() {
           </section>
 
           <section class="space-y-4">
-            <Title level={3}>仅选择（无 drag、无 fileList）</Title>
-            <FormItem label="原生 file input">
+            <Title level={3}>多选 + 关闭拖拽区（IconUpload + 上传图片）</Title>
+            <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+              <code class="text-xs">{"drag={false}"}</code> 时为图标 +{" "}
+              <code class="text-xs">triggerLabel</code>{" "}
+              触发条，不再使用浏览器原生「选择文件」按钮样式。
+            </Paragraph>
+            <FormItem label="multiple、drag=false、accept=image/*">
               <Upload
+                name="files"
+                action="/api/upload"
                 multiple
+                maxCount={3}
+                drag={false}
                 accept="image/*"
-                onChange={(e) =>
-                  console.log("选中", (e.target as HTMLInputElement).files)}
+                triggerLabel="上传图片"
               />
             </FormItem>
-            <CodeBlock
-              title="代码示例"
-              code={`<Upload
-  multiple
-  accept="image/*"
-  onChange={(e) => ...}
-/>`}
-              language="tsx"
-              showLineNumbers
-              copyable
-              wrapLongLines
-            />
           </section>
 
           <section class="space-y-4">
             <Title level={3}>disabled</Title>
             <FormItem label="禁用">
-              <Upload disabled />
+              <Upload
+                disabled
+                action="/api/upload"
+                name="disabledDemo"
+              />
             </FormItem>
-            <CodeBlock
-              title="代码示例"
-              code={`<Upload disabled />`}
-              language="tsx"
-              showLineNumbers
-              copyable
-              wrapLongLines
-            />
           </section>
         </Form>
       </section>
 
       <section class="space-y-3">
+        <Title level={2}>进阶</Title>
+        <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+          若后端不是上述 phase 协议，可实现{" "}
+          <code class="text-xs">requestUpload</code>，或在包外使用{" "}
+          <code class="text-xs">runChunkedUpload</code> 自行更新 UI 状态。
+        </Paragraph>
+        <CodeBlock
+          title="runChunkedUpload（自建请求）"
+          code={`import { runChunkedUpload, DEFAULT_UPLOAD_CHUNK_SIZE } from "@dreamer/ui-view";
+
+await runChunkedUpload({
+  file,
+  chunkSize: DEFAULT_UPLOAD_CHUNK_SIZE,
+  signal,
+  onProgress: (loaded, total) => { /* 更新进度 */ },
+  uploadChunk: async ({ chunk, chunkIndex }) => {
+    // await fetch(...);
+  },
+  complete: async () => { /* await fetch 合并 */ },
+});`}
+          language="tsx"
+          showLineNumbers
+          copyable
+          wrapLongLines
+        />
+      </section>
+
+      <section class="space-y-3">
         <Title level={2}>API</Title>
         <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
-          组件接收以下属性（均为可选）。UploadFile：uid、name、status（pending|uploading|done|error）、progress?。
+          类型 <code class="text-xs">UploadProps</code> 要求{" "}
+          <code class="text-xs">action</code> 与{" "}
+          <code class="text-xs">requestUpload</code> 至少其一。另导出{" "}
+          <code class="text-xs">UploadFile</code>、
+          <code class="text-xs">UploadCoreProps</code>、
+          <code class="text-xs">formatUploadFileSize</code> 等。
         </Paragraph>
         <div class="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-600">
           <table class="w-full min-w-lg text-sm">

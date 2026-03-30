@@ -1,16 +1,33 @@
 /**
  * Progress 进度条/环形（View）。
  * 支持线性、环形；百分比、状态（成功/异常/进行中）、是否显示文案、自定义颜色。
+ *
+ * **手写 JSX**：`percent={sig.value}` 会在创建 VNode 时变成快照、不订阅；须传 **`percent={sig}`**（SignalRef）
+ * 或 **`percent={() => n}`**（零参 getter）。有可用 `document`（浏览器或 SSR 影子 document）且 `percent` 为响应式时，
+ * 本组件用 {@link createMemo} 返回子树走 `insertReactive`；**纯 SSR 无 document** 时退回同步 VNode，避免
+ * `createReactiveInsertFragment` 调用 {@link getActiveDocument} 抛错。
  */
 
+import {
+  createMemo,
+  getDocument,
+  isSignalRef,
+  type SignalRef,
+} from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 
 export type ProgressType = "line" | "circle";
 export type ProgressStatus = "normal" | "success" | "exception" | "active";
 
+/** 进度值：快照、`createSignal` 容器，或零参 getter（与 Drawer `open` 同向） */
+export type ProgressPercentInput =
+  | number
+  | SignalRef<number>
+  | (() => number);
+
 export interface ProgressProps {
-  /** 进度 0–100 */
-  percent?: number;
+  /** 进度 0–100；推荐 `percent={sig}`，勿仅 `percent={sig.value}`（手写路径无订阅） */
+  percent?: ProgressPercentInput;
   /** 线性 或 环形，默认 line */
   type?: ProgressType;
   /** 状态：正常/成功/异常/进行中（条纹动画） */
@@ -43,6 +60,53 @@ function percentCls(status: ProgressStatus): string {
   if (status === "exception") return statusExceptionCls;
   if (status === "active") return statusActiveCls;
   return statusNormalCls;
+}
+
+/**
+ * 将 `percent` prop 规范为 0–100 数字；读 SignalRef / 零参 getter 时建立订阅。
+ *
+ * @param v - {@link ProgressProps.percent}
+ * @returns  clamp 后的百分比
+ */
+function readProgressPercentInput(
+  v: ProgressPercentInput | undefined,
+): number {
+  if (v === undefined) return 0;
+  if (isSignalRef(v)) {
+    const n = Number(v.value);
+    return clampProgressPercent(n);
+  }
+  if (typeof v === "function") {
+    if ((v as () => unknown).length !== 0) return 0;
+    const n = Number((v as () => number)());
+    return clampProgressPercent(n);
+  }
+  return clampProgressPercent(Number(v));
+}
+
+/**
+ * 将数值限制在 [0,100]；非有限数视为 0。
+ *
+ * @param n - 原始读数
+ * @returns 合法百分比
+ */
+function clampProgressPercent(n: number): number {
+  if (!Number.isFinite(n)) return 0;
+  return Math.min(100, Math.max(0, n));
+}
+
+/**
+ * 是否应走 `createMemo` + `insertReactive`（仅在有 DOM / 影子 document 时安全）。
+ *
+ * @param v - {@link ProgressProps.percent}
+ * @returns 为 SignalRef 或零参 getter 时为 true
+ */
+function percentPropIsReactive(
+  v: ProgressPercentInput | undefined,
+): boolean {
+  if (v === undefined) return false;
+  if (isSignalRef(v)) return true;
+  return typeof v === "function" && (v as () => unknown).length === 0;
 }
 
 /** 线性进度条 */
@@ -176,9 +240,12 @@ function ProgressCircle(props: {
   );
 }
 
+/**
+ * 渲染进度 UI；响应式 `percent` 在**有** {@link getDocument} 时返回 `createMemo` 子树，否则返回同步 VNode（Hybrid SSR 安全）。
+ */
 export function Progress(props: ProgressProps) {
   const {
-    percent = 0,
+    percent: percentIn,
     type = "line",
     status = "normal",
     showInfo = true,
@@ -191,32 +258,42 @@ export function Progress(props: ProgressProps) {
     class: className,
   } = props;
 
-  if (type === "circle") {
+  const canUseReactiveSubtree = percentPropIsReactive(percentIn) &&
+    getDocument() != null;
+
+  const renderResolved = (percent: number) => {
+    if (type === "circle") {
+      return (
+        <ProgressCircle
+          percent={percent}
+          status={status}
+          showInfo={showInfo}
+          size={size}
+          strokeWidth={strokeWidthCircle}
+          strokeColor={strokeColor}
+          trailColor={trailColor}
+          format={format}
+          class={className}
+        />
+      );
+    }
     return (
-      <ProgressCircle
+      <ProgressLine
         percent={percent}
         status={status}
         showInfo={showInfo}
-        size={size}
-        strokeWidth={strokeWidthCircle}
+        strokeWidth={strokeWidth}
         strokeColor={strokeColor}
         trailColor={trailColor}
         format={format}
         class={className}
       />
     );
+  };
+
+  if (!canUseReactiveSubtree) {
+    return renderResolved(readProgressPercentInput(percentIn));
   }
 
-  return (
-    <ProgressLine
-      percent={percent}
-      status={status}
-      showInfo={showInfo}
-      strokeWidth={strokeWidth}
-      strokeColor={strokeColor}
-      trailColor={trailColor}
-      format={format}
-      class={className}
-    />
-  );
+  return createMemo(() => renderResolved(readProgressPercentInput(percentIn)));
 }

@@ -52,11 +52,19 @@ const config: AppConfig = {
   // 完整说明见 docs/zh-CN/APP_CONFIG.md 或 docs/en-US/APP_CONFIG.md（含 SSR/SSG 客户端激活）
   render: {
     engine: "view",
+    // mode: "ssr",
     mode: "hybrid",
-    /** 非空：仅这些根走 compileSource；须含 routes、依赖包 src、以及 ./src（_client / components） */
+    /**
+     * 非空：列出的**源码根**下的 `.tsx` 在 SSR 与客户端 bundle 中走同一套 `compileSource`（jsx-compiler）。
+     *
+     * **必须保留 `../src`**（本仓库即 ui-view 包根下的 `src`）：`deno.json` 把 `@dreamer/ui-view` 指到 `../src/mod.ts`，
+     * 若 `dirs` 只有 `./src`，则仅文档路由被编译、组件库仍是另一套 JSX 管线 → **hybrid 水合与事件委托不一致**，
+     * 表现为点击 Switch/链接后界面卡死、无响应。**勿**改成仅 `["./src"]`。
+     *
+     * 详见 dweb `docs/zh-CN/APP_CONFIG.md` → `render.compiler.dirs`。
+     */
     compiler: {
       dirs: ["./src", "../src"],
-      // dirs: ["./src"],
       client: true,
       server: true,
     },

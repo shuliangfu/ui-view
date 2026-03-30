@@ -1,6 +1,8 @@
 /**
- * Dialog 确认/取消对话框（View）。
- * 可视为 Modal 简化版：标题、内容、确定/取消按钮；支持危险操作（红色确定）、加载态。
+ * Dialog 确认对话框（View）。
+ * 可视为 Modal 简化版：标题、内容、确定/取消按钮；支持警告（橙色确定）、危险操作（红色确定）、加载态。
+ *
+ * **`open`**：与 {@link Modal} 一致，请传 **`createSignal` 返回值** `open={sig}`，勿传 `open={sig.value}` 快照。
  */
 
 import { Button } from "../../shared/basic/Button.tsx";
@@ -12,8 +14,6 @@ export interface DialogProps extends
     ModalProps,
     "footer" | "children"
   > {
-  /** 是否打开（受控） */
-  open?: boolean;
   /** 关闭回调 */
   onClose?: () => void;
   /** 标题 */
@@ -34,7 +34,16 @@ export interface DialogProps extends
   onCancel?: () => void;
   /** 是否为危险操作（确定按钮 danger 样式），默认 false */
   danger?: boolean;
-  /** 确定按钮 loading 态，默认 false */
+  /**
+   * 是否为警告类确认（确定按钮 warning 橙色样式），默认 false。
+   * 与 {@link danger} 同时为 true 时以 danger 为准。
+   */
+  warning?: boolean;
+  /**
+   * 确定按钮 loading：走 Button 的 `loading`（转圈 + 主色保持）；
+   * 为 true 时**确定与取消**均禁用，避免提交过程中重复操作或中途取消（完成后由业务将本项置回 false）。
+   * 若仍允许点遮罩/标题栏/Esc 关闭，请自行控制 Modal 的 `closable`、`maskClosable`、`keyboard` 等透传属性。
+   */
   confirmLoading?: boolean;
   /** 是否显示底部（确定/取消）；传 false 则完全不显示 footer */
   showFooter?: boolean;
@@ -53,6 +62,7 @@ export function Dialog(props: DialogProps) {
     onConfirm,
     onCancel,
     danger = false,
+    warning = false,
     confirmLoading = false,
     showFooter = true,
     ...restModal
@@ -62,26 +72,32 @@ export function Dialog(props: DialogProps) {
   const hasCancel = cancelText != null && cancelText !== "";
   const hasConfirm = onConfirm != null;
 
+  /** 确定钮语义：危险 > 警告 > 主色 */
+  const confirmVariant = danger ? "danger" : warning ? "warning" : "primary";
+
+  /** 默认底部：确定与取消按钮（可由 footer 覆盖） */
   const defaultFooter =
     showFooter && (hasConfirm || hasCancel) && footerOverride === undefined
       ? (
         <>
-          {hasCancel && (
-            <Button
-              variant="default"
-              onClick={(_e: Event) => (onCancel ?? onClose)?.()}
-              disabled={confirmLoading}
-            >
-              {cancelText}
-            </Button>
-          )}
           {hasConfirm && (
             <Button
-              variant={danger ? "danger" : "primary"}
+              type="button"
+              variant={confirmVariant}
+              loading={confirmLoading}
               onClick={(_e: Event) => onConfirm?.()}
-              disabled={confirmLoading}
             >
-              {confirmLoading ? "加载中…" : confirmText}
+              {confirmText}
+            </Button>
+          )}
+          {hasCancel && (
+            <Button
+              type="button"
+              variant="default"
+              disabled={confirmLoading}
+              onClick={(_e: Event) => (onCancel ?? onClose)?.()}
+            >
+              {cancelText}
             </Button>
           )}
         </>

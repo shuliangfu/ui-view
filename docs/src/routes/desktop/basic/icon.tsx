@@ -169,7 +169,7 @@ import {
   IconLink,
   IconLink2,
   IconList,
-  IconLoader2,
+  IconLoader,
   IconLock,
   IconLogIn,
   IconLogOut,
@@ -193,6 +193,7 @@ import {
   IconNewspaper,
   IconNotebookPen,
   IconPackage,
+  IconPalette,
   IconPaperClip,
   IconParkingCircle,
   IconPause,
@@ -428,6 +429,7 @@ export default function BasicIcon() {
     { Component: IconFolderOpen, name: "FolderOpen" },
     { Component: IconImage, name: "Image" },
     { Component: IconImagePlus, name: "ImagePlus" },
+    { Component: IconPalette, name: "Palette" },
     { Component: IconLink, name: "Link" },
     { Component: IconLink2, name: "Link2" },
     { Component: IconMail, name: "Mail" },
@@ -462,7 +464,7 @@ export default function BasicIcon() {
     { Component: IconShieldAlert, name: "ShieldAlert" },
     { Component: IconShieldCheck, name: "ShieldCheck" },
     { Component: IconBan, name: "Ban" },
-    { Component: IconLoader2, name: "Loader2" },
+    { Component: IconLoader, name: "Loader" },
     { Component: IconTimer, name: "Timer" },
   ];
 
@@ -595,11 +597,17 @@ export default function BasicIcon() {
     { Component: IconShoppingCart, name: "ShoppingCart" },
     { Component: IconPackage, name: "Package" },
     { Component: IconCreditCard, name: "CreditCard" },
+    /** 钱包 / 法币符号 / 折扣占比，原「Web3」分类并入门户场景 */
+    { Component: IconWallet, name: "Wallet" },
+    { Component: IconCircleDollarSign, name: "CircleDollarSign" },
+    { Component: IconPercent, name: "Percent" },
     { Component: IconTruck, name: "Truck" },
     { Component: IconStore, name: "Store" },
     { Component: IconTag, name: "Tag" },
     { Component: IconGift, name: "Gift" },
     { Component: IconReceipt, name: "Receipt" },
+    /** 扫码框与条码扫描并列（收银、核销） */
+    { Component: IconScan, name: "Scan" },
     { Component: IconScanBarcode, name: "ScanBarcode" },
   ];
   const 搜索发现 = [
@@ -609,6 +617,8 @@ export default function BasicIcon() {
     { Component: IconList, name: "List" },
     { Component: IconSlidersHorizontal, name: "SlidersHorizontal" },
     { Component: IconSparkles, name: "Sparkles" },
+    /** 热门 / 热度，原「Web3」分类并入发现场景 */
+    { Component: IconFlame, name: "Flame" },
     { Component: IconTrendingUp, name: "TrendingUp" },
     { Component: IconClock, name: "Clock" },
   ];
@@ -618,6 +628,8 @@ export default function BasicIcon() {
     { Component: IconUserPlus, name: "UserPlus" },
     { Component: IconBookmark, name: "Bookmark" },
     { Component: IconCrown, name: "Crown" },
+    /** 会员权益 / 虚拟资产展示，原「Web3」分类并入会员场景 */
+    { Component: IconGem, name: "Gem" },
     { Component: IconTicket, name: "Ticket" },
     { Component: IconAward, name: "Award" },
     { Component: IconBadgeCheck, name: "BadgeCheck" },
@@ -639,25 +651,8 @@ export default function BasicIcon() {
     { Component: IconUserCog, name: "UserCog" },
     { Component: IconSun, name: "Sun" },
     { Component: IconMoon, name: "Moon" },
-  ];
-
-  /** Web3：钱包/链、代币、链上、安全 */
-  const Web3 = [
-    { Component: IconLink2, name: "Link2" },
-    { Component: IconBraces, name: "Braces" },
-    { Component: IconCircleDollarSign, name: "CircleDollarSign" },
-    { Component: IconFlame, name: "Flame" },
-    { Component: IconScan, name: "Scan" },
-    { Component: IconFingerprint, name: "Fingerprint" },
-    { Component: IconShieldCheck, name: "ShieldCheck" },
-    { Component: IconVote, name: "Vote" },
-    { Component: IconWallet, name: "Wallet" },
-    { Component: IconKey, name: "Key" },
-    { Component: IconGem, name: "Gem" },
-    { Component: IconImagePlus, name: "ImagePlus" },
-    { Component: IconSparkles, name: "Sparkles" },
-    { Component: IconLayers, name: "Layers" },
-    { Component: IconPercent, name: "Percent" },
+    /** 主题色 / 取色（如 ColorPicker 后缀、外观设置） */
+    { Component: IconPalette, name: "Palette" },
   ];
 
   /** 五、其它通用场景（按 ICON_ANALYSIS 小标题拆分展示） */
@@ -758,7 +753,7 @@ export default function BasicIcon() {
     { Component: IconXCircle, name: "XCircle" },
     { Component: IconInfo, name: "Info" },
     { Component: IconHelpCircle, name: "HelpCircle" },
-    { Component: IconLoader2, name: "Loader2" },
+    { Component: IconLoader, name: "Loader" },
     { Component: IconBan, name: "Ban" },
   ];
   const 其它零散 = [
@@ -793,7 +788,7 @@ export default function BasicIcon() {
     { Component: IconAward, name: "Award" },
   ];
 
-  /** Web3 常见代币 Logo（品牌色，24×24） */
+  /** 常见链上代币 Logo（品牌色，24×24） */
   const 代币Logo = [
     { Component: IconTokenBtc, name: "BTC" },
     { Component: IconTokenEth, name: "ETH" },
@@ -827,11 +822,12 @@ export default function BasicIcon() {
   ];
 
   const importCode =
-    `import { Icon, IconClose, IconCheck, IconSearch } from "@dreamer/ui-view";
+    `import { Icon, IconClose, IconCheck, IconSearch, IconPalette } from "@dreamer/ui-view";
 
 <Icon size="md"><YourSvg /></Icon>
 <IconClose size="md" />
-<IconSearch class="text-teal-500" />`;
+<IconSearch class="text-teal-500" />
+<IconPalette size="md" />`;
 
   const exampleContainer = `<Icon size="xs"><DotSvg /></Icon>
 <Icon size="sm"><DotSvg /></Icon>
@@ -1054,12 +1050,7 @@ export default function BasicIcon() {
         </div>
 
         <div class="space-y-6">
-          <Title level={3}>五、Web3</Title>
-          <IconGroup title="钱包 / 链 / 代币 / 安全" items={Web3} level={4} />
-        </div>
-
-        <div class="space-y-6">
-          <Title level={3}>六、其它通用场景</Title>
+          <Title level={3}>五、其它通用场景</Title>
           <IconGroup title="安全 / 合规" items={安全合规} level={4} />
           <IconGroup title="文档 / 合同" items={文档合同} level={4} />
           <IconGroup title="教育 / 学习" items={教育学习} level={4} />
@@ -1229,7 +1220,7 @@ export default function BasicIcon() {
         </div>
 
         <div class="space-y-6">
-          <Title level={3}>八、Web3 代币 Logo</Title>
+          <Title level={3}>七、常见代币 Logo</Title>
           <IconGroup title="常见代币（品牌色）" items={代币Logo} level={4} />
         </div>
       </section>

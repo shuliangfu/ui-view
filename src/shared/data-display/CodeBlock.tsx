@@ -3,21 +3,21 @@
  * 展示代码并支持语法高亮（基于 Prism）、行号、复制、标题、最大高度滚动；归属 3.7 数据展示。
  */
 
-import Prism from "prismjs";
-import "prismjs/components/prism-bash.js";
-import "prismjs/components/prism-css.js";
-import "prismjs/components/prism-javascript.js";
-import "prismjs/components/prism-json.js";
-import "prismjs/components/prism-jsx.js";
-import "prismjs/components/prism-markdown.js";
-import "prismjs/components/prism-tsx.js";
-import "prismjs/components/prism-typescript.js";
+import Prism from "prismjs"
+import "prismjs/components/prism-bash.js"
+import "prismjs/components/prism-css.js"
+import "prismjs/components/prism-javascript.js"
+import "prismjs/components/prism-json.js"
+import "prismjs/components/prism-jsx.js"
+import "prismjs/components/prism-markdown.js"
+import "prismjs/components/prism-tsx.js"
+import "prismjs/components/prism-typescript.js"
 // html 与 plaintext 通常已在 core 或通过 markup
-import "prismjs/components/prism-markup.js";
-import { twMerge } from "tailwind-merge";
+import "prismjs/components/prism-markup.js"
+import { twMerge } from "tailwind-merge"
 /** 按需：单文件图标，避免经 icons/mod 拉入全表 */
-import { IconCopy } from "../basic/icons/Copy.tsx";
-import { toast } from "../feedback/toast-store.ts";
+import { IconCopy } from "../basic/icons/Copy.tsx"
+import { toast } from "../feedback/toast-store.ts"
 
 /**
  * Prism 语法高亮 token 样式（与 Tailwind 配色一致，支持 dark）。
@@ -283,10 +283,17 @@ export function CodeBlock(props: CodeBlockProps) {
         {showLineNumbers && lineCount > 0
           ? (
             <div
-              class="shrink-0 min-w-10 select-none py-3 px-2 text-center text-slate-400 dark:text-slate-500 font-mono text-xs leading-relaxed border-r border-slate-200 dark:border-slate-600 bg-slate-100/50 dark:bg-slate-800/50"
+              class="shrink-0 min-w-10 select-none py-3 px-2 font-mono text-xs text-slate-400 dark:text-slate-500 border-r border-slate-200 dark:border-slate-600 bg-slate-100/50 dark:bg-slate-800/50"
               aria-hidden
             >
-              {lines.map((_, i) => <div key={i}>{lineNumberStart + i}</div>)}
+              {lines.map((_, i) => (
+                <div
+                  key={i}
+                  class="flex w-full min-h-[calc(0.875rem*1.625)] items-center justify-center tabular-nums"
+                >
+                  {lineNumberStart + i}
+                </div>
+              ))}
             </div>
           )
           : null}

@@ -34,6 +34,12 @@ const MULTISELECT_API: ApiRow[] = [
     description: "当前选中值数组；可为 getter",
   },
   {
+    name: "placeholder",
+    type: "string",
+    default: '"请选择"',
+    description: "未选任何项时触发条上的占位文案",
+  },
+  {
     name: "onChange",
     type: "(e: Event) => void",
     default: "-",
@@ -50,6 +56,12 @@ const MULTISELECT_API: ApiRow[] = [
     type: "boolean",
     default: "false",
     description: "是否禁用",
+  },
+  {
+    name: "hideFocusRing",
+    type: "boolean",
+    default: "false",
+    description: "为 true 时隐藏聚焦时的蓝色激活边框（ring）；默认 false 显示",
   },
   { name: "name", type: "string", default: "-", description: "原生 name" },
   { name: "id", type: "string", default: "-", description: "原生 id" },
@@ -105,9 +117,12 @@ export default function FormMultiSelect() {
       <section>
         <Title level={1}>MultiSelect 多选下拉</Title>
         <Paragraph class="mt-2">
-          多选下拉：options、value、onChange、size、disabled、name、id；选项可设
-          disabled；上方有全选、清空。宽度由 class 控制，表单中需占满一列时传
-          class="w-full"。Tailwind v4 + light/dark。
+          与单选 Select
+          相同：默认收起，点击触发条展开浮层，浮层内有全选、清空、完成（收起；点选即写入
+          value）与勾选列表；未选时触发条显示
+          placeholder（默认「请选择」），已选时展示已选项标签（顿号分隔）。宽度由
+          class 控制，表单中需占满一列时传 class="w-full"。Tailwind v4 +
+          light/dark。
         </Paragraph>
       </section>
 
@@ -128,7 +143,7 @@ export default function FormMultiSelect() {
         <Form layout="vertical" class="w-full space-y-6">
           <section class="space-y-4">
             <Title level={3}>全选 / 清空</Title>
-            <FormItem label="多选（上方有全选、清空）">
+            <FormItem label="多选（点击展开，浮层内全选/清空）">
               <MultiSelect
                 options={options}
                 value={() => val.value}
@@ -189,16 +204,31 @@ value={["a","b"]}`}
           </section>
 
           <section class="space-y-4">
-            <Title level={3}>size</Title>
-            <FormItem label="sm">
-              <MultiSelect options={options} value={[]} size="sm" />
-            </FormItem>
-            <FormItem label="lg">
-              <MultiSelect options={options} value={[]} size="lg" />
-            </FormItem>
+            <Title level={3}>size（xs / sm / md / lg）</Title>
+            <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+              与 <code class="text-xs">Input</code> 相同四种{" "}
+              <code class="text-xs">SizeVariant</code>，触发条内边距与圆角一致。
+            </Paragraph>
+            <div class="w-full max-w-lg space-y-3">
+              <FormItem label="xs">
+                <MultiSelect options={options} value={[]} size="xs" />
+              </FormItem>
+              <FormItem label="sm">
+                <MultiSelect options={options} value={[]} size="sm" />
+              </FormItem>
+              <FormItem label="md（默认）">
+                <MultiSelect options={options} value={[]} size="md" />
+              </FormItem>
+              <FormItem label="lg">
+                <MultiSelect options={options} value={[]} size="lg" />
+              </FormItem>
+            </div>
             <CodeBlock
               title="代码示例"
-              code={`<MultiSelect size="sm" /> / <MultiSelect size="lg" />`}
+              code={`<MultiSelect options={options} value={[]} size="xs" />
+<MultiSelect options={options} value={[]} size="sm" />
+<MultiSelect options={options} value={[]} size="md" />
+<MultiSelect options={options} value={[]} size="lg" />`}
               language="tsx"
               showLineNumbers
               copyable

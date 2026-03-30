@@ -4,6 +4,7 @@
  */
 
 import { twMerge } from "tailwind-merge";
+import { controlBlueFocusRing } from "./input-focus-ring.ts";
 
 /** 候选选项 */
 export interface MentionOption {
@@ -24,6 +25,18 @@ export interface MentionsProps {
   onChange?: (e: Event) => void;
   /** 输入回调（父组件可据此解析 @ 与 selectionStart，决定是否展示候选） */
   onInput?: (e: Event) => void;
+  /** 失焦回调 */
+  onBlur?: (e: Event) => void;
+  /** 聚焦回调 */
+  onFocus?: (e: Event) => void;
+  /** 键盘按下 */
+  onKeyDown?: (e: Event) => void;
+  /** 键盘抬起 */
+  onKeyUp?: (e: Event) => void;
+  /** 点击文本区 */
+  onClick?: (e: Event) => void;
+  /** 粘贴 */
+  onPaste?: (e: Event) => void;
   /** 是否展示候选下拉；可为 getter，由子组件内读 */
   showDropdown?: boolean | (() => boolean);
   /** 候选列表；可为 getter，由子组件内读 */
@@ -32,15 +45,17 @@ export interface MentionsProps {
   onSelectOption?: (option: MentionOption) => void;
   /** 额外 class */
   class?: string;
+  /** 为 true 时隐藏聚焦激活态边框；默认 false 显示 ring */
+  hideFocusRing?: boolean;
   /** 原生 name */
   name?: string;
   /** 原生 id */
   id?: string;
 }
 
-/** 基础样式：不含宽度，需全宽时由调用方加 class="w-full" */
-const base =
-  "border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 border-slate-300 dark:border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors px-3 py-2 text-sm rounded-lg resize-y min-h-[80px]";
+/** 文本区底纹（不含 ring） */
+const textareaSurface =
+  "border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 border-slate-300 dark:border-slate-600 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed transition-colors px-3 py-2 text-sm rounded-lg resize-y min-h-[80px]";
 
 const dropdownCls =
   "absolute z-10 mt-1 w-full min-w-[160px] max-h-48 overflow-auto rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-lg py-1";
@@ -88,10 +103,17 @@ export function Mentions(props: MentionsProps) {
     disabled = false,
     onChange,
     onInput,
+    onBlur,
+    onFocus,
+    onKeyDown,
+    onKeyUp,
+    onClick,
+    onPaste,
     showDropdown,
     dropdownOptions,
     onSelectOption,
     class: className,
+    hideFocusRing = false,
     name,
     id,
   } = props;
@@ -105,9 +127,15 @@ export function Mentions(props: MentionsProps) {
     value,
     placeholder,
     disabled,
-    class: base,
+    class: twMerge(textareaSurface, controlBlueFocusRing(!hideFocusRing)),
     onChange,
     onInput,
+    onBlur,
+    onFocus,
+    onKeyDown,
+    onKeyUp,
+    onClick,
+    onPaste,
   };
 
   return () => (

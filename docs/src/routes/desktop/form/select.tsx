@@ -51,6 +51,12 @@ const SELECT_API: ApiRow[] = [
     default: "false",
     description: "是否禁用",
   },
+  {
+    name: "hideFocusRing",
+    type: "boolean",
+    default: "false",
+    description: "为 true 时隐藏聚焦时的蓝色激活边框（ring）；默认 false 显示",
+  },
   { name: "class", type: "string", default: "-", description: "额外 class" },
   {
     name: "onChange",
@@ -213,11 +219,18 @@ export default function FormSelect() {
           </section>
 
           <section class="space-y-4">
-            <Title level={3}>size</Title>
+            <Title level={3}>size（xs / sm / md / lg）</Title>
+            <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+              与 <code class="text-xs">Input</code> 相同四种{" "}
+              <code class="text-xs">SizeVariant</code>。
+            </Paragraph>
+            <FormItem label="xs">
+              <Select options={options} value="" size="xs" placeholder="xs" />
+            </FormItem>
             <FormItem label="sm">
               <Select options={options} value="" size="sm" placeholder="sm" />
             </FormItem>
-            <FormItem label="md">
+            <FormItem label="md（默认）">
               <Select options={options} value="" size="md" placeholder="md" />
             </FormItem>
             <FormItem label="lg">
@@ -225,11 +238,10 @@ export default function FormSelect() {
             </FormItem>
             <CodeBlock
               title="代码示例"
-              code={`<Select
-  options={options}
-  size="sm"
-  placeholder="sm"
-/>`}
+              code={`<Select options={options} value="" size="xs" placeholder="xs" />
+<Select options={options} value="" size="sm" placeholder="sm" />
+<Select options={options} value="" size="md" placeholder="md" />
+<Select options={options} value="" size="lg" placeholder="lg" />`}
               language="tsx"
               showLineNumbers
               copyable

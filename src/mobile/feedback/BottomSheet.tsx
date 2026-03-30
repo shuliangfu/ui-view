@@ -3,6 +3,7 @@
  * 移动端典型：从底部滑出面板；支持标题、高度（自动/半屏/全屏）、关闭。
  */
 
+import { getDocument } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 /** 按需：单文件图标，避免经 icons/mod 拉入全表 */
 import { IconClose } from "../../shared/basic/icons/Close.tsx";
@@ -65,35 +66,36 @@ export function BottomSheet(props: BottomSheetProps) {
     if (e.target === e.currentTarget && maskClosable) onClose?.();
   };
 
-  /** 面板挂载时执行进入动画，避免 JSX 内联 ref 中的类型断言导致解析错误 */
+  /**
+   * 面板挂载动画；SSR 下 ref 节点可能无 `style`，须判空后再写。
+   */
   const setSheetRef = (el: unknown) => {
-    const div = el as HTMLDivElement | null;
-    if (!div) return;
-    const elWithFlag = div as HTMLDivElement & { _sheetAnimated?: boolean };
+    if (el == null || typeof el !== "object") return;
+    const st = (el as HTMLElement).style;
+    if (st == null) return;
+    const elWithFlag = el as HTMLElement & { _sheetAnimated?: boolean };
     if (elWithFlag._sheetAnimated) return;
     elWithFlag._sheetAnimated = true;
-    div.style.transition = `transform ${animationDuration}ms ease-out`;
-    div.style.transform = "translateY(100%)";
+    st.transition = `transform ${animationDuration}ms ease-out`;
+    st.transform = "translateY(100%)";
     const raf = (globalThis as unknown as {
       requestAnimationFrame?: (cb: () => void) => number;
     })
       .requestAnimationFrame;
     if (raf) {
       raf(() => {
-        div.style.transform = "translateY(0)";
+        st.transform = "translateY(0)";
       });
-    } else div.style.transform = "translateY(0)";
+    } else st.transform = "translateY(0)";
   };
 
-  /** 关闭时恢复 body 滚动；打开时锁定（仅浏览器环境） */
-  const doc = typeof globalThis.document !== "undefined"
-    ? globalThis.document
-    : null;
+  /** `body.style` 在部分 SSR document 上不存在 */
+  const bodyStyle = getDocument()?.body?.style;
   if (!open) {
-    if (doc) doc.body.style.overflow = "";
+    if (bodyStyle != null) bodyStyle.overflow = "";
     return null;
   }
-  if (doc) doc.body.style.overflow = "hidden";
+  if (bodyStyle != null) bodyStyle.overflow = "hidden";
 
   return (
     <div

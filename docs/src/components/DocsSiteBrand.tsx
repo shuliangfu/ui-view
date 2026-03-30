@@ -4,22 +4,17 @@
 
 import { Link } from "@dreamer/ui-view";
 
-/** 渲染「ui-view + 文档」首页链接 */
+/** 顶栏品牌：仅展示 ui-view；避免在 Link 子树里用 JSX 块注释夹正文，compileSource 下可能闪屏 */
 export default function DocsSiteBrand() {
   return (
     <Link
       href="/"
-      class="shrink-0 flex items-center gap-2 group no-underline hover:no-underline"
+      class="shrink-0 inline-flex items-center group no-underline hover:no-underline"
       aria-label="返回首页"
     >
       <span class="rounded-xl bg-linear-to-br from-teal-500 to-emerald-600 px-3 py-1.5 font-mono text-sm font-bold text-white shadow-md shadow-teal-500/20 group-hover:shadow-teal-500/35 transition-shadow">
         ui-view
       </span>
-      {
-        /* <span class="hidden sm:inline text-sm font-medium text-slate-600 dark:text-slate-300">
-        文档
-      </span> */
-      }
     </Link>
   );
 }

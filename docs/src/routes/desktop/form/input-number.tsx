@@ -11,7 +11,7 @@ import {
   Paragraph,
   Title,
 } from "@dreamer/ui-view";
-import { createSignal } from "@dreamer/view";
+import { createReactive } from "@dreamer/view/reactive";
 
 interface ApiRow {
   name: string;
@@ -25,7 +25,8 @@ const INPUT_NUMBER_API: ApiRow[] = [
     name: "value",
     type: "string | (() => string)",
     default: "-",
-    description: "当前值；可为 getter",
+    description:
+      "当前值；可为 getter（如 createReactive 的 value={() => model.field}）",
   },
   { name: "min", type: "number", default: "-", description: "最小值" },
   { name: "max", type: "number", default: "-", description: "最大值" },
@@ -48,6 +49,12 @@ const INPUT_NUMBER_API: ApiRow[] = [
     default: "false",
     description: "是否禁用",
   },
+  {
+    name: "hideFocusRing",
+    type: "boolean",
+    default: "false",
+    description: "为 true 时隐藏聚焦时的蓝色激活边框（ring）；默认 false 显示",
+  },
   { name: "class", type: "string", default: "-", description: "额外 class" },
   {
     name: "onChange",
@@ -55,29 +62,74 @@ const INPUT_NUMBER_API: ApiRow[] = [
     default: "-",
     description: "变更回调",
   },
+  {
+    name: "onInput",
+    type: "(e: Event) => void",
+    default: "-",
+    description: "输入过程回调（透传至内层 number input）",
+  },
+  {
+    name: "onBlur",
+    type: "(e: Event) => void",
+    default: "-",
+    description: "失焦回调（透传至内层 number input）",
+  },
+  {
+    name: "onFocus",
+    type: "(e: Event) => void",
+    default: "-",
+    description: "聚焦回调（透传至内层 number input）",
+  },
+  {
+    name: "onKeyDown",
+    type: "(e: Event) => void",
+    default: "-",
+    description: "键盘按下（透传至内层 number input）",
+  },
+  {
+    name: "onKeyUp",
+    type: "(e: Event) => void",
+    default: "-",
+    description: "键盘抬起（透传至内层 number input）",
+  },
+  {
+    name: "onClick",
+    type: "(e: Event) => void",
+    default: "-",
+    description: "点击（透传至内层 number input）",
+  },
+  {
+    name: "onPaste",
+    type: "(e: Event) => void",
+    default: "-",
+    description: "粘贴（透传至内层 number input）",
+  },
   { name: "name", type: "string", default: "-", description: "原生 name" },
   { name: "id", type: "string", default: "-", description: "原生 id" },
 ];
 
 const importCode =
   `import { InputNumber, Form, FormItem } from "@dreamer/ui-view";
-import { createSignal } from "@dreamer/view";
+import { createReactive } from "@dreamer/view/reactive";
 
-const val = createSignal("10");
+const model = createReactive({ qty: "10" });
 <FormItem label="数量">
   <InputNumber
-    value={() => val.value}
+    value={() => model.qty}
     min={0}
     max={100}
     step={5}
-    onChange={(e) => val.value = (e.target as HTMLInputElement).value}
+    onChange={(e) => model.qty = (e.target as HTMLInputElement).value}
   />
 </FormItem>`;
 
 export default function FormInputNumber() {
-  const val = createSignal("10");
-  const val2 = createSignal("0");
-  const val3 = createSignal("50");
+  /** 表单 model：createReactive 单对象多字段，与 createEffect 联动；无需 createSignal */
+  const model = createReactive({
+    qtyStep5: "10",
+    qtyDecimal: "0",
+    qtySizeMd: "50",
+  });
 
   return (
     <div class="space-y-10">
@@ -87,7 +139,13 @@ export default function FormInputNumber() {
           数字输入框，带步进按钮；支持
           value、min、max、step、placeholder、size、disabled、onChange。宽度由
           class 控制，表单中需占满一列时传 class="w-full"。Tailwind v4 +
-          light/dark。
+          light/dark。下方示例用 <code class="text-sm">createReactive</code>
+          {" "}
+          作表单 model（<code class="text-sm">
+            {"value={() => model.xxx}"}
+          </code>{" "}
+          + onChange 写回字段）；若用单值状态也可改用{" "}
+          <code class="text-sm">createSignal</code>。
         </Paragraph>
       </section>
 
@@ -110,22 +168,22 @@ export default function FormInputNumber() {
             <Title level={3}>步进按钮 + min/max/step</Title>
             <FormItem label="0–100，步进 5">
               <InputNumber
-                value={() => val.value}
+                value={() => model.qtyStep5}
                 min={0}
                 max={100}
                 step={5}
                 onChange={(e) =>
-                  val.value = (e.target as HTMLInputElement).value}
+                  model.qtyStep5 = (e.target as HTMLInputElement).value}
               />
             </FormItem>
             <CodeBlock
               title="代码示例"
               code={`<InputNumber
-  value={() => val.value}
+  value={() => model.qtyStep5}
   min={0}
   max={100}
   step={5}
-  onChange={(e) => val.value = (e.target as HTMLInputElement).value}
+  onChange={(e) => model.qtyStep5 = (e.target as HTMLInputElement).value}
 />`}
               language="tsx"
               showLineNumbers
@@ -138,22 +196,22 @@ export default function FormInputNumber() {
             <Title level={3}>小数步进（step=0.1）</Title>
             <FormItem label="0–10，步进 0.1">
               <InputNumber
-                value={() => val2.value}
+                value={() => model.qtyDecimal}
                 min={0}
                 max={10}
                 step={0.1}
                 onChange={(e) =>
-                  val2.value = (e.target as HTMLInputElement).value}
+                  model.qtyDecimal = (e.target as HTMLInputElement).value}
               />
             </FormItem>
             <CodeBlock
               title="代码示例"
               code={`<InputNumber
-  value={() => val2.value}
+  value={() => model.qtyDecimal}
   min={0}
   max={10}
   step={0.1}
-  onChange={(e) => val2.value = (e.target as HTMLInputElement).value}
+  onChange={(e) => model.qtyDecimal = (e.target as HTMLInputElement).value}
 />`}
               language="tsx"
               showLineNumbers
@@ -208,18 +266,26 @@ export default function FormInputNumber() {
           </section>
 
           <section class="space-y-4">
-            <Title level={3}>size</Title>
+            <Title level={3}>size（xs / sm / md / lg）</Title>
+            <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+              与 <code class="text-xs">Input</code>{" "}
+              相同四种字号与内边距；外框圆角与{" "}
+              <code class="text-xs">Input</code> 一致由尺寸映射。
+            </Paragraph>
+            <FormItem label="xs">
+              <InputNumber size="xs" value="0" min={0} max={10} />
+            </FormItem>
             <FormItem label="sm">
               <InputNumber size="sm" value="1" min={0} max={10} />
             </FormItem>
-            <FormItem label="md">
+            <FormItem label="md（默认）">
               <InputNumber
                 size="md"
-                value={() => val3.value}
+                value={() => model.qtySizeMd}
                 min={0}
                 max={100}
                 onChange={(e) =>
-                  val3.value = (e.target as HTMLInputElement).value}
+                  model.qtySizeMd = (e.target as HTMLInputElement).value}
               />
             </FormItem>
             <FormItem label="lg">
@@ -227,13 +293,9 @@ export default function FormInputNumber() {
             </FormItem>
             <CodeBlock
               title="代码示例"
-              code={`<InputNumber
-  size="sm"
-  value="1"
-  min={0}
-  max={10}
-/>
-<InputNumber size="md" value={() => val3.value} min={0} max={100} onChange={...} />
+              code={`<InputNumber size="xs" value="0" min={0} max={10} />
+<InputNumber size="sm" value="1" min={0} max={10} />
+<InputNumber size="md" value={() => model.qtySizeMd} min={0} max={100} onChange={...} />
 <InputNumber size="lg" value="5" min={0} max={10} />`}
               language="tsx"
               showLineNumbers

@@ -13,6 +13,11 @@ import {
 } from "@dreamer/ui-view";
 import { createSignal } from "@dreamer/view";
 
+/** 从 TimePicker 合成事件中读取 value（含 JSON） */
+function pickerInputValue(e: Event): string {
+  return (e.target as EventTarget & { value?: string }).value ?? "";
+}
+
 interface ApiRow {
   name: string;
   type: string;
@@ -22,10 +27,18 @@ interface ApiRow {
 
 const TIMEPICKER_API: ApiRow[] = [
   {
+    name: "mode",
+    type: `"single" | "range" | "multiple"`,
+    default: "single",
+    description:
+      "single：单时刻；range：起止两串（JSON）；multiple：多串（JSON 数组）。range/multiple 要求时间至少到「时+分」；若 format 仅为单列（HH / mm / ss）会回退 HH:mm 并 warn",
+  },
+  {
     name: "value",
-    type: "string | (() => string)",
+    type: "见 mode",
     default: "-",
-    description: "当前值（HH:mm 或 HH:mm:ss）；可为 getter",
+    description:
+      "single → string | getter，形态与 format 一致；range → `{ start?, end? }` 或 getter；multiple → string[] 或 getter",
   },
   {
     name: "size",
@@ -39,12 +52,32 @@ const TIMEPICKER_API: ApiRow[] = [
     default: "false",
     description: "是否禁用",
   },
+  {
+    name: "hideFocusRing",
+    type: "boolean",
+    default: "false",
+    description: "为 true 时隐藏聚焦时的蓝色激活边框（ring）；默认 false 显示",
+  },
+  {
+    name: "placeholder",
+    type: "string",
+    default: `"请选择时间"`,
+    description: "无值时触发器占位文案",
+  },
+  {
+    name: "format",
+    type: "string",
+    default: "HH:mm",
+    description:
+      "可为单独 `HH`、`mm`、`ss` 或前缀链 `HH`→`mm`→`ss`（不可跳级如 HH-ss）。面板只展示出现的列。分须小写 `mm`，与日期 `MM`（月）区分",
+  },
   { name: "class", type: "string", default: "-", description: "额外 class" },
   {
     name: "onChange",
     type: "(e: Event) => void",
     default: "-",
-    description: "变更回调",
+    description:
+      "变更回调；single 为时间串，range / multiple 为 JSON 字符串（与隐藏域一致）",
   },
   { name: "name", type: "string", default: "-", description: "原生 name" },
   { name: "id", type: "string", default: "-", description: "原生 id" },
@@ -65,15 +98,37 @@ const val = createSignal("");
 export default function FormTimePicker() {
   const val = createSignal("");
   const val2 = createSignal("14:30");
+  /** format="HH:mm:ss" */
+  const valWithSec = createSignal("14:30:05");
+  /** format="HH"（仅 single 推荐；range/multiple 会回退到含分） */
+  const valHourOnly = createSignal("09");
+  /** format="mm"：仅分列 */
+  const valMinuteOnly = createSignal("30");
+  /** format="ss"：仅秒列 */
+  const valSecondOnly = createSignal("05");
+  const valRange = createSignal<{ start: string; end: string }>({
+    start: "09:00",
+    end: "18:00",
+  });
+  const valMulti = createSignal<string[]>(["09:00", "12:00", "18:00"]);
 
   return (
     <div class="space-y-10">
       <section>
         <Title level={1}>TimePicker 时间选择</Title>
         <Paragraph class="mt-2">
-          时间选择框，值为 HH:mm 或 HH:mm:ss；支持
-          value、size、disabled、onChange。宽度由 class
-          控制，表单中需占满一列时传 class="w-full"。Tailwind v4 + light/dark。
+          时间选择框，支持{" "}
+          <code class="text-sm">mode</code>（单日 / 区间 /
+          多选时刻）、<code class="text-sm">format</code>（
+          <code class="text-sm">HH</code> / <code class="text-sm">mm</code> /
+          {" "}
+          <code class="text-sm">ss</code> / <code class="text-sm">HH:mm</code> /
+          {" "}
+          <code class="text-sm">HH:mm:ss</code>
+          等）、value、size、disabled、onChange、placeholder。区间与多选时
+          onChange 的 value 为 JSON。时间区间请使用{" "}
+          <code class="text-sm">mode="range"</code>
+          。Tailwind v4 + light/dark。
         </Paragraph>
       </section>
 
@@ -115,7 +170,7 @@ export default function FormTimePicker() {
           </section>
 
           <section class="space-y-4">
-            <Title level={3}>有默认值 / size / disabled</Title>
+            <Title level={3}>有默认值</Title>
             <FormItem label="默认 14:30">
               <TimePicker
                 value={() => val2.value}
@@ -123,8 +178,104 @@ export default function FormTimePicker() {
                   val2.value = (e.target as HTMLInputElement).value}
               />
             </FormItem>
+            <CodeBlock
+              title="代码示例"
+              code={`<TimePicker
+  value={() => val2.value}
+  onChange={(e) => val2.value = (e.target as HTMLInputElement).value}
+/>`}
+              language="tsx"
+              showLineNumbers
+              copyable
+              wrapLongLines
+            />
+          </section>
+
+          <section class="space-y-4">
+            <Title level={3}>format：秒 / 单列时、分、秒</Title>
+            <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+              分须为小写 <code class="text-xs">mm</code>；秒为{" "}
+              <code class="text-xs">ss</code>。可单独{" "}
+              <code class="text-xs">HH</code>、<code class="text-xs">mm</code>
+              {" "}
+              或 <code class="text-xs">ss</code>，面板只显示对应一列。
+            </Paragraph>
+            <FormItem label='format="HH:mm:ss"'>
+              <TimePicker
+                format="HH:mm:ss"
+                value={() => valWithSec.value}
+                onChange={(e) =>
+                  valWithSec.value = (e.target as HTMLInputElement).value}
+              />
+            </FormItem>
+            <FormItem label='format="HH"'>
+              <TimePicker
+                format="HH"
+                value={() => valHourOnly.value}
+                onChange={(e) =>
+                  valHourOnly.value = (e.target as HTMLInputElement).value}
+              />
+            </FormItem>
+            <FormItem label='format="mm"'>
+              <TimePicker
+                format="mm"
+                value={() => valMinuteOnly.value}
+                onChange={(e) =>
+                  valMinuteOnly.value = (e.target as HTMLInputElement).value}
+              />
+            </FormItem>
+            <FormItem label='format="ss"'>
+              <TimePicker
+                format="ss"
+                value={() => valSecondOnly.value}
+                onChange={(e) =>
+                  valSecondOnly.value = (e.target as HTMLInputElement).value}
+              />
+            </FormItem>
+            <CodeBlock
+              title="代码示例"
+              code={`<TimePicker
+  format="HH:mm:ss"
+  value={() => valWithSec.value}
+  onChange={(e) => valWithSec.value = (e.target as HTMLInputElement).value}
+/>
+<TimePicker
+  format="HH"
+  value={() => valHourOnly.value}
+  onChange={(e) => valHourOnly.value = (e.target as HTMLInputElement).value}
+/>
+<TimePicker
+  format="mm"
+  value={() => valMinuteOnly.value}
+  onChange={(e) => valMinuteOnly.value = (e.target as HTMLInputElement).value}
+/>
+<TimePicker
+  format="ss"
+  value={() => valSecondOnly.value}
+  onChange={(e) => valSecondOnly.value = (e.target as HTMLInputElement).value}
+/>`}
+              language="tsx"
+              showLineNumbers
+              copyable
+              wrapLongLines
+            />
+          </section>
+
+          <section class="space-y-4">
+            <Title level={3}>size（xs / sm / md / lg）与 disabled</Title>
+            <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+              与 <code class="text-xs">Input</code>{" "}
+              相同四种尺寸；右侧时钟图标较触发器小一档（与 DatePicker 共用{" "}
+              <code class="text-xs">picker-trigger-icon</code> 规则）。
+            </Paragraph>
+            <FormItem label="xs">
+              <TimePicker value="" size="xs" onChange={() => {}} />
+            </FormItem>
             <FormItem label="sm">
               <TimePicker value="" size="sm" onChange={() => {}} />
+            </FormItem>
+            <FormItem label="md（默认）">
+              <TimePicker value="" size="md" onChange={() => {}} />
             </FormItem>
             <FormItem label="lg">
               <TimePicker value="" size="lg" onChange={() => {}} />
@@ -134,13 +285,97 @@ export default function FormTimePicker() {
             </FormItem>
             <CodeBlock
               title="代码示例"
-              code={`<TimePicker
-  value={() => val2.value}
-  onChange={(e) => val2.value = (e.target as HTMLInputElement).value}
-/>
+              code={`<TimePicker value="" size="xs" onChange={() => {}} />
 <TimePicker value="" size="sm" onChange={() => {}} />
+<TimePicker value="" size="md" onChange={() => {}} />
 <TimePicker value="" size="lg" onChange={() => {}} />
 <TimePicker value="09:00" disabled onChange={() => {}} />`}
+              language="tsx"
+              showLineNumbers
+              copyable
+              wrapLongLines
+            />
+          </section>
+
+          <section class="space-y-4">
+            <Title level={3}>mode="range" 时间区间</Title>
+            <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+              面板内分「开始」「结束」两组时/分；确定后 onChange 的 value 为
+              JSON 对象字符串。
+            </Paragraph>
+            <FormItem label="时间区间">
+              <TimePicker
+                mode="range"
+                value={() => valRange.value}
+                onChange={(e) => {
+                  const raw = pickerInputValue(e);
+                  try {
+                    const o = JSON.parse(raw) as {
+                      start?: string;
+                      end?: string;
+                    };
+                    valRange.value = {
+                      start: o.start ?? "",
+                      end: o.end ?? "",
+                    };
+                  } catch {
+                    /* 保持原值 */
+                  }
+                }}
+              />
+            </FormItem>
+            <CodeBlock
+              title="代码示例"
+              code={`const valRange = createSignal({ start: "09:00", end: "18:00" });
+
+<TimePicker
+  mode="range"
+  value={() => valRange.value}
+  onChange={(e) => {
+    const raw = (e.target as EventTarget & { value?: string }).value ?? "";
+    const o = JSON.parse(raw) as { start?: string; end?: string };
+    valRange.value = { start: o.start ?? "", end: o.end ?? "" };
+  }}
+/>`}
+              language="tsx"
+              showLineNumbers
+              copyable
+              wrapLongLines
+            />
+          </section>
+
+          <section class="space-y-4">
+            <Title level={3}>mode="multiple" 多个时刻</Title>
+            <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+              选好时、分后点「加入已选」；已选标签可点按移除；确定为 JSON
+              数组字符串。
+            </Paragraph>
+            <FormItem label="多时刻">
+              <TimePicker
+                mode="multiple"
+                value={() => valMulti.value}
+                onChange={(e) => {
+                  const raw = pickerInputValue(e);
+                  try {
+                    valMulti.value = JSON.parse(raw) as string[];
+                  } catch {
+                    valMulti.value = [];
+                  }
+                }}
+              />
+            </FormItem>
+            <CodeBlock
+              title="代码示例"
+              code={`const valMulti = createSignal<string[]>(["09:00", "12:00"]);
+
+<TimePicker
+  mode="multiple"
+  value={() => valMulti.value}
+  onChange={(e) => {
+    const raw = (e.target as EventTarget & { value?: string }).value ?? "";
+    valMulti.value = JSON.parse(raw) as string[];
+  }}
+/>`}
               language="tsx"
               showLineNumbers
               copyable

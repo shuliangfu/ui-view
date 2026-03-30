@@ -30,12 +30,30 @@ export { Slider } from "./Slider.tsx";
 export type { SliderProps } from "./Slider.tsx";
 export { Rate } from "./Rate.tsx";
 export type { RateProps } from "./Rate.tsx";
-export { TimeRangePicker } from "./TimeRangePicker.tsx";
-export type { TimeRangePickerProps } from "./TimeRangePicker.tsx";
 export { Upload } from "./Upload.tsx";
-export type { UploadFile, UploadFileStatus, UploadProps } from "./Upload.tsx";
+export type {
+  UploadCoreProps,
+  UploadFile,
+  UploadFileStatus,
+  UploadMultipleValueMode,
+  UploadProps,
+} from "./Upload.tsx";
+export {
+  DEFAULT_UPLOAD_CHUNK_SIZE,
+  defaultGetUploadResultUrl,
+  fileMatchesAccept,
+  formatUploadFileSize,
+  runChunkedUpload,
+  uploadActionWithPhase,
+  uploadFilePhasedChunks,
+  uploadFileSimple,
+} from "../../shared/form/mod.ts";
+export type {
+  ChunkedUploadOptions,
+  ChunkUploadContext,
+} from "../../shared/form/mod.ts";
 export { ColorPicker } from "./ColorPicker.tsx";
-export type { ColorPickerProps } from "./ColorPicker.tsx";
+export type { ColorPickerHandle, ColorPickerProps } from "./ColorPicker.tsx";
 export { Mentions } from "./Mentions.tsx";
 export type { MentionOption, MentionsProps } from "./Mentions.tsx";
 export { Form } from "./Form.tsx";
@@ -67,7 +85,7 @@ export { TreeSelect } from "./TreeSelect.tsx";
 export type { TreeSelectOption, TreeSelectProps } from "./TreeSelect.tsx";
 export { DatePicker } from "./DatePicker.tsx";
 export type { DatePickerProps } from "./DatePicker.tsx";
-export { DateRangePicker } from "./DateRangePicker.tsx";
-export type { DateRangePickerProps } from "./DateRangePicker.tsx";
+export { DateTimePicker } from "./DateTimePicker.tsx";
+export type { DateTimePickerProps } from "./DateTimePicker.tsx";
 export { TimePicker } from "./TimePicker.tsx";
 export type { TimePickerProps } from "./TimePicker.tsx";

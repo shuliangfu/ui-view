@@ -4,7 +4,6 @@
  */
 
 import { CodeBlock, Menu, Paragraph, Title } from "@dreamer/ui-view";
-import { createSignal } from "@dreamer/view";
 
 /** API 属性行类型 */
 interface ApiRow {
@@ -84,44 +83,40 @@ const items = [
 <Menu
   items={items}
   onClick={(k) => {}}
-  openKeys={openKeys.value}
+  openKeys={() => openKeys.value}
   onOpenChange={(keys) => openKeys.value = keys}
   mode="vertical"
 />`;
 
-const exampleVertical = `{() => (
-  <Menu
-    items={items}
-    onClick={(k) => {}}
-    mode="vertical"
-    openKeys={openKeysVertical.value}
-    onOpenChange={(keys) => openKeysVertical.value = keys}
-    focusedKey={focusedKey.value}
-    onFocusChange={(k) => focusedKey.value = k}
-  />
-)}`;
+const exampleVertical = `import { createSignal } from "@dreamer/view";
 
-const exampleHorizontal = `{() => (
-  <Menu
-    items={items}
-    onClick={(k) => {}}
-    mode="horizontal"
-    openKeys={openKeysHorizontal.value}
-    onOpenChange={(keys) => openKeysHorizontal.value = keys}
-    usePopoverSubmenu
-  />
-)}`;
+const openKeysVertical = createSignal<string[]>(["sub1"]);
+const focusedKey = createSignal<string | undefined>("1");
+
+<Menu
+  items={items}
+  onClick={(k) => {}}
+  mode="vertical"
+  openKeys={() => openKeysVertical.value}
+  onOpenChange={(keys) => (openKeysVertical.value = keys)}
+  focusedKey={focusedKey.value}
+  onFocusChange={(k) => (focusedKey.value = k)}
+/>`;
+
+const exampleHorizontal = `import { createSignal } from "@dreamer/view";
+
+const openKeysHorizontal = createSignal<string[]>([]);
+
+<Menu
+  items={items}
+  onClick={(k) => {}}
+  mode="horizontal"
+  openKeys={() => openKeysHorizontal.value}
+  onOpenChange={(keys) => (openKeysHorizontal.value = keys)}
+  usePopoverSubmenu
+/>`;
 
 export default function NavigationMenu() {
-  // 垂直示例用 defaultOpenKeys 默认展开子菜单；水平 popover 用独立 state 且默认收起
-  const openKeysVertical = createSignal<string[]>([
-    "sub1",
-  ]);
-  const openKeysHorizontal = createSignal<string[]>(
-    [],
-  );
-  const focusedKey = createSignal<string | undefined>("1");
-
   const items = [
     { key: "1", label: "选项一" },
     { key: "2", label: "选项二" },
@@ -135,6 +130,10 @@ export default function NavigationMenu() {
     },
   ];
 
+  /**
+   * 示例区用 defaultOpenKeys / 非受控展开，避免根级 `return () =>` 与深层 Menu 受控 state 在 SSR/文档壳下偶发不挂载；
+   * 受控写法见下方 CodeBlock。
+   */
   return (
     <div class="space-y-10">
       <section>
@@ -161,18 +160,13 @@ export default function NavigationMenu() {
 
         <div class="space-y-4">
           <Title level={3}>mode=vertical（垂直）</Title>
-          <div class="flex flex-col gap-8">
-            {() => (
-              <Menu
-                items={items}
-                onClick={() => {}}
-                mode="vertical"
-                openKeys={openKeysVertical.value}
-                onOpenChange={(keys) => openKeysVertical.value = keys}
-                focusedKey={focusedKey.value}
-                onFocusChange={(k) => focusedKey.value = k}
-              />
-            )}
+          <div class="flex flex-col gap-8 min-h-[120px]">
+            <Menu
+              items={items}
+              onClick={() => {}}
+              mode="vertical"
+              defaultOpenKeys={["sub1"]}
+            />
           </div>
           <CodeBlock
             title="代码示例"
@@ -186,16 +180,14 @@ export default function NavigationMenu() {
 
         <div class="space-y-4">
           <Title level={3}>mode=horizontal + usePopoverSubmenu</Title>
-          {() => (
+          <div class="min-h-[48px]">
             <Menu
               items={items}
               onClick={() => {}}
               mode="horizontal"
-              openKeys={openKeysHorizontal.value}
-              onOpenChange={(keys) => openKeysHorizontal.value = keys}
               usePopoverSubmenu
             />
-          )}
+          </div>
           <CodeBlock
             title="代码示例"
             code={exampleHorizontal}

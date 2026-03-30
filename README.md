@@ -171,15 +171,19 @@ is wrong, those `.tsx` files won’t get `compileSource`.
 - **Switch** switch
 - **Slider** slider
 - **Rate** rating
-- **TimePicker / TimeRangePicker** time / time range
+- **DatePicker** date selection (`single` / `range` / `multiple`)
+- **DateTimePicker** date + time (`single` / `range` / `multiple`)
+- **TimePicker** time selection (`single` / `range` / `multiple`)
 - **Upload** file upload
 - **ColorPicker** color picker
 - **Mentions** @ mentions
-- **Form / FormItem / FormList** form container and items
+- **Form / FormItem / FormList** form container and items (`FormItem` supports
+  `hideRequiredMark` to hide the red asterisk while keeping `required` for
+  inputs / validation—see docs **Form → Form 容器**)
 - **RichTextEditor** rich text editor
 
 **Desktop only:** Select, MultiSelect, Cascader, TreeSelect, DatePicker,
-DateRangePicker, TimePicker
+DateTimePicker, TimePicker
 
 ### 💬 Messaging & notification
 

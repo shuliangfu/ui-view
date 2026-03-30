@@ -4,10 +4,17 @@
  */
 
 import { twMerge } from "tailwind-merge";
+import {
+  controlBlueFocusRing,
+  controlErrorBorder,
+  controlErrorFocusRing,
+} from "./input-focus-ring.ts";
 
 export interface TextareaProps {
   /** 是否禁用 */
   disabled?: boolean;
+  /** 为 true 时隐藏聚焦激活态边框；默认 false 显示 ring */
+  hideFocusRing?: boolean;
   /** 占位文案 */
   placeholder?: string;
   /** 行数（高度） */
@@ -28,17 +35,27 @@ export interface TextareaProps {
   onInput?: (e: Event) => void;
   /** 变更回调 */
   onChange?: (e: Event) => void;
+  /** 失焦回调 */
+  onBlur?: (e: Event) => void;
+  /** 聚焦回调 */
+  onFocus?: (e: Event) => void;
+  /** 键盘按下 */
+  onKeyDown?: (e: Event) => void;
+  /** 键盘抬起 */
+  onKeyUp?: (e: Event) => void;
+  /** 点击控件 */
+  onClick?: (e: Event) => void;
+  /** 粘贴 */
+  onPaste?: (e: Event) => void;
   /** 原生 name */
   name?: string;
   /** 原生 id */
   id?: string;
 }
 
-/** 基础样式：不含宽度，需全宽时由调用方加 class="w-full" */
-const base =
-  "border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 border-slate-300 dark:border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:focus:ring-blue-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors px-3 py-2 text-sm rounded-lg resize-y min-h-[80px]";
-const errorCls =
-  "border-red-500 dark:border-red-500 focus:ring-red-500 dark:focus:ring-red-500";
+/** 基础底纹（不含 ring） */
+const textareaSurface =
+  "border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 border-slate-300 dark:border-slate-600 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed transition-colors px-3 py-2 text-sm rounded-lg resize-y min-h-[80px]";
 const readOnlyCls = "bg-slate-50 dark:bg-slate-800/80 cursor-default";
 
 /**
@@ -73,9 +90,16 @@ export function Textarea(props: TextareaProps) {
     readOnly = false,
     required = false,
     error = false,
+    hideFocusRing = false,
     class: className,
     onInput,
     onChange,
+    onBlur,
+    onFocus,
+    onKeyDown,
+    onKeyUp,
+    onClick,
+    onPaste,
     name,
     id,
   } = props;
@@ -93,9 +117,22 @@ export function Textarea(props: TextareaProps) {
     maxLength,
     "aria-required": required,
     "aria-invalid": error,
-    class: twMerge(base, error && errorCls, readOnly && readOnlyCls, className),
+    class: twMerge(
+      textareaSurface,
+      controlBlueFocusRing(!hideFocusRing),
+      error && controlErrorBorder,
+      error && !hideFocusRing && controlErrorFocusRing(true),
+      readOnly && readOnlyCls,
+      className,
+    ),
     onInput,
     onChange,
+    onBlur,
+    onFocus,
+    onKeyDown,
+    onKeyUp,
+    onClick,
+    onPaste,
   };
 
   if (maxLength == null) {

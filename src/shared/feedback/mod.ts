@@ -1,7 +1,7 @@
 /**
  * 消息与通知（ANALYSIS 3.3）：Toast、Message、Notification。
- * ToastContainer / MessageContainer / NotificationContainer 使用 `return () => { ... }`，
- * 在渲染 getter 内读取模块级列表 SignalRef（`toastList()` 等），以便命令式 API 更新时仍能重绘。
+ * 三者在有 `document.body` 且**列表非空**时才 `createPortal` 挂到 `body`（避免空列表时残留 `view-portal` 包装节点）；
+ * 纯 SSR 无 `body` 时回退为根内 getter；Portal 内 getter 读各 `*List()` 以订阅模块级列表。
  */
 export { ToastContainer } from "./Toast.tsx";
 export { toast } from "./toast-store.ts";
@@ -39,10 +39,17 @@ export { Alert } from "./Alert.tsx";
 export type { AlertProps, AlertType } from "./Alert.tsx";
 
 export { Drawer } from "./Drawer.tsx";
-export type { DrawerPlacement, DrawerProps } from "./Drawer.tsx";
+export type {
+  DrawerOpenInput,
+  DrawerPlacement,
+  DrawerProps,
+  DrawerTitleAlign,
+  DrawerTitleInput,
+} from "./Drawer.tsx";
 
 export { Progress } from "./Progress.tsx";
 export type {
+  ProgressPercentInput,
   ProgressProps,
   ProgressStatus,
   ProgressType,

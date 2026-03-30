@@ -4,6 +4,10 @@
  */
 
 import { twMerge } from "tailwind-merge";
+import {
+  controlBlueFocusRing,
+  nativeSelectSurface,
+} from "../../shared/form/input-focus-ring.ts";
 import type { SizeVariant } from "../../shared/types.ts";
 
 export interface SelectOption {
@@ -24,6 +28,8 @@ export interface SelectProps {
   name?: string;
   id?: string;
   children?: unknown;
+  /** 为 true 时隐藏聚焦激活态边框；默认 false 显示 ring */
+  hideFocusRing?: boolean;
 }
 
 const sizeClasses: Record<SizeVariant, string> = {
@@ -32,9 +38,6 @@ const sizeClasses: Record<SizeVariant, string> = {
   md: "px-4 py-3 text-base rounded-lg min-h-[48px]",
   lg: "px-5 py-3.5 text-base rounded-lg min-h-[52px]",
 };
-
-const base =
-  "w-full border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border-slate-300 dark:border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors appearance-none cursor-pointer touch-manipulation";
 
 export function Select(props: SelectProps) {
   const {
@@ -48,6 +51,7 @@ export function Select(props: SelectProps) {
     name,
     id,
     children,
+    hideFocusRing = false,
   } = props;
   const sizeCls = sizeClasses[size];
   /** 无内部 signal，直接返回 VNode */
@@ -57,7 +61,13 @@ export function Select(props: SelectProps) {
       name={name}
       value={value}
       disabled={disabled}
-      class={twMerge(base, sizeCls, className)}
+      class={twMerge(
+        "w-full touch-manipulation",
+        nativeSelectSurface,
+        controlBlueFocusRing(!hideFocusRing),
+        sizeCls,
+        className,
+      )}
       onChange={onChange}
     >
       {options

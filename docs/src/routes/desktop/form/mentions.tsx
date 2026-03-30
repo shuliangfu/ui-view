@@ -41,6 +41,42 @@ const MENTIONS_API: ApiRow[] = [
     description: "内容变更（e.target.value）",
   },
   {
+    name: "onBlur",
+    type: "(e: Event) => void",
+    default: "-",
+    description: "失焦回调（透传至原生 textarea）",
+  },
+  {
+    name: "onFocus",
+    type: "(e: Event) => void",
+    default: "-",
+    description: "聚焦回调（透传至原生 textarea）",
+  },
+  {
+    name: "onKeyDown",
+    type: "(e: Event) => void",
+    default: "-",
+    description: "键盘按下（透传至原生 textarea）",
+  },
+  {
+    name: "onKeyUp",
+    type: "(e: Event) => void",
+    default: "-",
+    description: "键盘抬起（透传至原生 textarea）",
+  },
+  {
+    name: "onClick",
+    type: "(e: Event) => void",
+    default: "-",
+    description: "点击（透传至原生 textarea）",
+  },
+  {
+    name: "onPaste",
+    type: "(e: Event) => void",
+    default: "-",
+    description: "粘贴（透传至原生 textarea）",
+  },
+  {
     name: "placeholder",
     type: "string",
     default: "-",
@@ -70,6 +106,12 @@ const MENTIONS_API: ApiRow[] = [
     type: "boolean",
     default: "false",
     description: "是否禁用",
+  },
+  {
+    name: "hideFocusRing",
+    type: "boolean",
+    default: "false",
+    description: "为 true 时隐藏聚焦时的蓝色激活边框（ring）；默认 false 显示",
   },
   { name: "class", type: "string", default: "-", description: "额外 class" },
 ];

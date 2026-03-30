@@ -3,6 +3,7 @@
  * 路由: /desktop/feedback/alert
  */
 
+import { createSignal } from "@dreamer/view";
 import { Alert, Button, CodeBlock, Paragraph, Title } from "@dreamer/ui-view";
 
 /** API 属性行类型 */
@@ -48,7 +49,8 @@ const ALERT_API: ApiRow[] = [
     name: "onClose",
     type: "() => void",
     default: "-",
-    description: "关闭回调",
+    description:
+      "关闭回调；Alert 不内置隐藏状态，须在回调里改 state/signal 并不再渲染本组件",
   },
   {
     name: "banner",
@@ -62,7 +64,13 @@ const ALERT_API: ApiRow[] = [
     default: "-",
     description: "自定义操作区",
   },
-  { name: "class", type: "string", default: "-", description: "额外 class" },
+  {
+    name: "class",
+    type: "string",
+    default: "-",
+    description:
+      "额外 class；根节点默认 w-full，需窄条时可传 w-auto max-w-* 等覆盖",
+  },
   {
     name: "children",
     type: "unknown",
@@ -113,12 +121,18 @@ const exampleDescription = `<Alert
   description="这里是补充描述，可多行说明当前状态或后续操作建议。"
 />`;
 
-const exampleClosable = `<Alert
-  type="warning"
-  message="可关闭的提示"
-  closable
-  onClose={() => {}}
-/>`;
+const exampleClosable = `import { createSignal } from "@dreamer/view";
+
+const visible = createSignal(true);
+
+{visible.value && (
+  <Alert
+    type="warning"
+    message="可关闭的提示"
+    closable
+    onClose={() => { visible.value = false; }}
+  />
+)}`;
 
 const exampleAction = `<Alert
   type="info"
@@ -140,6 +154,9 @@ const exampleBanner = `<Alert
 />`;
 
 export default function FeedbackAlert() {
+  /** 可关闭示例：Alert 仅触发 onClose，是否隐藏由父级 signal 决定 */
+  const closableAlertVisible = createSignal(true);
+
   return (
     <div class="space-y-10">
       <section>
@@ -201,12 +218,42 @@ export default function FeedbackAlert() {
 
         <div class="space-y-4">
           <Title level={3}>可关闭</Title>
-          <Alert
-            type="warning"
-            message="可关闭的提示"
-            closable
-            onClose={() => {}}
-          />
+          <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+            点击关闭仅触发{" "}
+            <code class="rounded bg-slate-200/80 px-1 font-mono text-xs dark:bg-slate-600/80">
+              onClose
+            </code>
+            ，须由父级（如{" "}
+            <code class="rounded bg-slate-200/80 px-1 font-mono text-xs dark:bg-slate-600/80">
+              createSignal
+            </code>
+            ）控制是否继续渲染。
+          </Paragraph>
+          {/* 容器 w-full，与 Alert 默认 w-full 一致，占满文档内容区 */}
+          <div class="flex w-full flex-wrap items-stretch gap-2">
+            {closableAlertVisible.value
+              ? (
+                <Alert
+                  type="warning"
+                  message="可关闭的提示"
+                  closable
+                  onClose={() => {
+                    closableAlertVisible.value = false;
+                  }}
+                />
+              )
+              : (
+                <Button
+                  type="button"
+                  variant="default"
+                  onClick={() => {
+                    closableAlertVisible.value = true;
+                  }}
+                >
+                  重新显示提示
+                </Button>
+              )}
+          </div>
           <CodeBlock
             title="代码示例"
             code={exampleClosable}

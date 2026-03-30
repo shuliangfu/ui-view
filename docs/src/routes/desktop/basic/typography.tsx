@@ -55,7 +55,12 @@ const exampleText = `<Text>这是一段正文（Text）。</Text>
 </Text>`;
 
 const exampleParagraph = `<Paragraph>
-  这是 Paragraph 组件，用于多行段落，行高与颜色已适配 light/dark。
+  Paragraph 渲染为语义化 <p>，默认使用 relaxed 行高与灰阶正文色，在 light / dark
+  下对比度已区分，适合说明文、帮助文案与文档正文等需要成段阅读的场景。
+</Paragraph>
+<Paragraph>
+  多个 Paragraph 纵向堆叠时，可通过外层容器（如 space-y-*）控制段间距；需要首行缩进、
+  两端对齐等版式时，请通过 class 传入 Tailwind 工具类覆盖默认样式。
 </Paragraph>`;
 
 export default function BasicTypography() {
@@ -127,7 +132,10 @@ export default function BasicTypography() {
         <div class="space-y-4">
           <Title level={3}>Paragraph 段落</Title>
           <Paragraph>
-            这是 Paragraph 组件，用于多行段落，行高与颜色已适配 light/dark。
+            {`Paragraph 渲染为语义化 <p>，默认使用 relaxed 行高与灰阶正文色，在 light / dark 下对比度已区分，适合说明文、帮助文案与文档正文等需要成段阅读的场景。`}
+          </Paragraph>
+          <Paragraph>
+            {`多个 Paragraph 纵向堆叠时，可通过外层容器（如 space-y-*）控制段间距；需要首行缩进、两端对齐等版式时，请通过 class 传入 Tailwind 工具类覆盖默认样式。`}
           </Paragraph>
           <CodeBlock
             title="代码示例"

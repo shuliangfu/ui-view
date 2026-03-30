@@ -1,6 +1,6 @@
 /**
  * FormItem 表单项包装（View）。
- * 提供标签、必填星号、错误提示；支持标签在上方或左侧，左侧时可左对齐/右对齐。
+ * 提供标签、必填星号（可单独关闭显示）、错误提示；支持标签在上方或左侧，左侧时可左对齐/右对齐。
  * 可配合 Form 使用，将 error/required 通过 class 影响子控件样式。
  */
 
@@ -15,8 +15,13 @@ export type FormItemLabelAlign = "left" | "right";
 export interface FormItemProps {
   /** 表单项标签 */
   label?: string;
-  /** 是否必填（显示 *） */
+  /** 是否必填（默认会显示红色 *；若只想语义必填、不显示星号，见 `hideRequiredMark`） */
   required?: boolean;
+  /**
+   * 为 true 时不渲染标签旁的红色 *，即使 `required` 为 true。
+   * 适用于：仍传 `required` 给子控件或业务校验，但标签上不抢视觉。
+   */
+  hideRequiredMark?: boolean;
   /** 错误文案（展示在下方并给容器加 error 样式） */
   error?: string;
   /** 标签位置：上方 或 左侧 */
@@ -27,17 +32,33 @@ export interface FormItemProps {
   class?: string;
   /** 关联控件的 id（label for、子控件需同 id） */
   id?: string;
+  /**
+   * 与主控件同一行、排在输入区域右侧（如 FormList 的「删除」）。
+   * 使用 `flex` + `items-center`，与输入框占同一水平线，避免删除挂在整块表单项外侧导致上下错位。
+   */
+  trailing?: unknown;
   /** 子控件（单个输入组件等） */
   children?: unknown;
 }
 
-const labelBaseCls = "text-sm font-medium text-slate-700 dark:text-slate-300";
-const labelTopCls = "block mb-1";
-/** 标签在左侧：固定列宽便于多行对齐，垂直居中与输入框齐平 */
-const labelLeftCls = "shrink-0 w-28 min-w-[7rem]";
-const labelAlignLeftCls = "text-left";
-const labelAlignRightCls = "text-right";
-const requiredCls = "text-red-500 dark:text-red-400 ml-0.5";
+/** text-sm + leading-5 与下方星号容器 h-5 一致，避免行高不一致导致对齐飘移 */
+const labelBaseCls =
+  "text-sm font-medium leading-5 text-slate-700 dark:text-slate-300";
+/** 标签在上方：横向 flex，交叉轴居中，* 与「必填」等字垂直对齐 */
+const labelTopCls = "mb-1 flex items-center gap-1";
+/** 标签在左侧：固定列宽；justify 控制标签+* 在列内左/右贴齐 */
+const labelLeftCls = "flex w-28 min-w-[7rem] shrink-0 items-center gap-1";
+const labelAlignLeftCls = "justify-start";
+const labelAlignRightCls = "justify-end";
+/** 标签文案：与星号同一条 flex 行、统一行高 */
+const labelTextCls = "shrink-0 leading-5";
+/**
+ * 星号外层：高度等于 text-sm 默认行高（h-5），内部 flex 垂直居中；
+ * 星号字形在多数字体里偏上，内层略下移（top）贴合汉字视觉中线。
+ */
+const requiredOuterCls =
+  "inline-flex h-5 shrink-0 items-center justify-center text-red-500 dark:text-red-400";
+const requiredMarkCls = "relative top-[0.1em] text-sm font-medium leading-none";
 const errorCls = "mt-1 text-sm text-red-600 dark:text-red-400";
 
 /**
@@ -49,15 +70,21 @@ export function FormItem(props: FormItemProps) {
     const {
       label,
       required = false,
+      hideRequiredMark = false,
       error,
       labelPosition = "top",
       labelAlign = "left",
       class: className,
       id,
+      trailing,
       children,
     } = props;
     const hasError = Boolean(error);
     const isLeft = labelPosition === "left";
+    /** 有 trailing 时控件行限制宽度，避免 flex-1 撑满整行导致删除被甩到视口最右侧 */
+    const hasTrailing = trailing != null && trailing !== false;
+    /** 是否绘制必填星号：必填且未显式隐藏 */
+    const showRequiredAsterisk = required && !hideRequiredMark;
 
     const labelEl = label != null
       ? (
@@ -73,8 +100,12 @@ export function FormItem(props: FormItemProps) {
               : labelTopCls,
           )}
         >
-          {label}
-          {required && <span class={requiredCls} aria-hidden="true">*</span>}
+          <span class={labelTextCls}>{label}</span>
+          {showRequiredAsterisk && (
+            <span class={requiredOuterCls} aria-hidden="true">
+              <span class={requiredMarkCls}>*</span>
+            </span>
+          )}
         </label>
       )
       : null;
@@ -91,15 +122,35 @@ export function FormItem(props: FormItemProps) {
       >
         {isLeft && labelEl != null
           ? (
-            <div class="flex flex-row items-center gap-4 py-0.5">
+            <div class="flex flex-row items-center gap-4 py-0.5 min-w-0">
               {labelEl}
-              <div class="form-item-input min-w-0 flex-1">{children}</div>
+              <div
+                class={twMerge(
+                  "flex min-w-0 flex-row flex-wrap items-center gap-1.5",
+                  hasTrailing ? "max-w-md flex-1" : "flex-1",
+                )}
+              >
+                <div class="form-item-input min-w-0 flex-1">{children}</div>
+                {hasTrailing && (
+                  <div class="form-item-trailing shrink-0">{trailing}</div>
+                )}
+              </div>
             </div>
           )
           : (
             <>
               {labelEl}
-              <div class="form-item-input">{children}</div>
+              <div
+                class={twMerge(
+                  "flex min-w-0 flex-row flex-wrap items-center gap-1.5",
+                  hasTrailing && "w-full max-w-md",
+                )}
+              >
+                <div class="form-item-input min-w-0 flex-1">{children}</div>
+                {hasTrailing && (
+                  <div class="form-item-trailing shrink-0">{trailing}</div>
+                )}
+              </div>
             </>
           )}
         {error != null && error !== "" && (

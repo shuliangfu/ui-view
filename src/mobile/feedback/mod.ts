@@ -33,10 +33,17 @@ export { Alert } from "./Alert.tsx";
 export type { AlertProps, AlertType } from "./Alert.tsx";
 
 export { Drawer } from "./Drawer.tsx";
-export type { DrawerPlacement, DrawerProps } from "./Drawer.tsx";
+export type {
+  DrawerOpenInput,
+  DrawerPlacement,
+  DrawerProps,
+  DrawerTitleAlign,
+  DrawerTitleInput,
+} from "./Drawer.tsx";
 
 export { Progress } from "./Progress.tsx";
 export type {
+  ProgressPercentInput,
   ProgressProps,
   ProgressStatus,
   ProgressType,

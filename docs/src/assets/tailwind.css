@@ -23,8 +23,14 @@
   --color-primary-600: #0d9488; */
   /* 中文与拉丁混排：系统栈 + 思源黑体回退（无则忽略） */
   --font-sans:
-    ui-sans-serif, system-ui, "Segoe UI", "PingFang SC", "Hiragino Sans GB",
-    "Microsoft YaHei", "Noto Sans SC", sans-serif;
+    ui-sans-serif,
+    system-ui,
+    "Segoe UI",
+    "PingFang SC",
+    "Hiragino Sans GB",
+    "Microsoft YaHei",
+    "Noto Sans SC",
+    sans-serif;
 
   /* 默认颜色 */
   --color-default-50: #f9fafb;

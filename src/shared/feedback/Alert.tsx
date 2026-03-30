@@ -1,6 +1,7 @@
 /**
  * Alert 静态提示条（View）。
  * 成功/警告/错误/信息等，常驻于页面内；支持标题、描述、可关闭、自定义操作。
+ * 根节点默认 `w-full`，在 flex 父级下仍占满一行；若需随内容收缩可传 `class="w-auto"` 等覆盖。
  */
 
 import { twMerge } from "tailwind-merge";
@@ -23,7 +24,10 @@ export interface AlertProps {
   showIcon?: boolean;
   /** 是否显示关闭按钮，默认 false */
   closable?: boolean;
-  /** 关闭回调（closable 时点击关闭触发） */
+  /**
+   * 关闭回调（closable 时点击关闭触发）。
+   * 本组件不维护「已关闭」状态，父级应在回调中更新 state/signal 并条件渲染以真正隐藏。
+   */
   onClose?: () => void;
   /** 是否使用横幅样式（圆角更小、常作整行提示），默认 false */
   banner?: boolean;
@@ -77,8 +81,9 @@ export function Alert(props: AlertProps) {
   const IconComponent = typeIconMap[type];
   const iconCls = typeIconClasses[type];
   const borderCls = typeBorderClasses[type];
+  /** `w-full`：避免放在 `flex`/`inline-flex` 父级时随文案收缩成窄条 */
   const baseCls =
-    "flex gap-3 p-4 rounded-lg border border-l-4 transition-colors";
+    "flex w-full max-w-full gap-3 p-4 rounded-lg border border-l-4 transition-colors box-border";
   const bannerCls = banner ? "rounded-none border-l-4" : "";
 
   return (

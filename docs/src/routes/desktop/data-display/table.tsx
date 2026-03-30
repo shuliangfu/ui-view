@@ -9,6 +9,7 @@ import {
   CodeBlock,
   Paragraph,
   Table,
+  type TableColumn,
   Title,
 } from "@dreamer/ui-view";
 import { createSignal } from "@dreamer/view";
@@ -28,7 +29,8 @@ const TABLE_API: ApiRow[] = [
     name: "columns",
     type: "TableColumn<T>[]",
     default: "-",
-    description: "列定义",
+    description:
+      "列定义；列可设 editable（双击进入编辑；text/number/email/url/tel/date/time/select/checkbox/radio），与 render 互斥",
   },
   { name: "dataSource", type: "T[]", default: "-", description: "数据源" },
   {
@@ -144,6 +146,13 @@ const TABLE_API: ApiRow[] = [
     description: "表头 class",
   },
   { name: "class", type: "string", default: "-", description: "表格 class" },
+  {
+    name: "onCellChange",
+    type: "(payload: TableCellChangePayload<T>) => void",
+    default: "-",
+    description:
+      "可编辑列变更（双击单元格进入编辑、失焦退出）；父组件受控更新 dataSource。不传则不可进入编辑",
+  },
 ];
 
 /** API 表格列定义（属性、类型、默认值、说明） */
@@ -251,21 +260,312 @@ const exampleFixedColumn = `<Table
   dataSource={dataSource}
 />`;
 
+/** 可编辑示例行：覆盖全部 editable 类型（无 textarea） */
+type EditableDocRow = {
+  key: string;
+  name: string;
+  age: number;
+  email: string;
+  website: string;
+  phone: string;
+  birth: string;
+  workStart: string;
+  city: string;
+  active: boolean;
+  level: string;
+};
+
+const exampleEditable = `import type { TableColumn } from "@dreamer/ui-view";
+import { createSignal } from "@dreamer/view";
+import { Table } from "@dreamer/ui-view";
+
+type EditableRow = {
+  key: string;
+  name: string;
+  age: number;
+  email: string;
+  website: string;
+  phone: string;
+  birth: string;
+  workStart: string;
+  city: string;
+  active: boolean;
+  level: string;
+};
+
+const editableColumns: TableColumn<EditableRow>[] = [
+  { key: "name", title: "文本 text", dataIndex: "name", editable: { type: "text", placeholder: "姓名" } },
+  { key: "age", title: "数字 number", dataIndex: "age", editable: { type: "number", min: 0, max: 150, step: 1 } },
+  { key: "email", title: "email", dataIndex: "email", editable: { type: "email", placeholder: "a@b.c" } },
+  { key: "website", title: "url", dataIndex: "website", editable: { type: "url", placeholder: "https://" } },
+  { key: "phone", title: "tel", dataIndex: "phone", editable: { type: "tel", placeholder: "手机号" } },
+  { key: "birth", title: "date", dataIndex: "birth", editable: { type: "date" } },
+  { key: "workStart", title: "time", dataIndex: "workStart", editable: { type: "time" } },
+  {
+    key: "city",
+    title: "select",
+    dataIndex: "city",
+    editable: {
+      type: "select",
+      placeholder: "请选择",
+      options: [
+        { label: "北京", value: "北京" },
+        { label: "上海", value: "上海" },
+        { label: "广州", value: "广州" },
+      ],
+    },
+  },
+  { key: "active", title: "checkbox", dataIndex: "active", editable: { type: "checkbox" } },
+  {
+    key: "level",
+    title: "radio",
+    dataIndex: "level",
+    editable: {
+      type: "radio",
+      options: [
+        { label: "高", value: "高" },
+        { label: "中", value: "中" },
+        { label: "低", value: "低" },
+      ],
+    },
+  },
+];
+
+const rows = createSignal<EditableRow[]>([
+  {
+    key: "1",
+    name: "张三",
+    age: 28,
+    email: "zhang@example.com",
+    website: "https://example.com",
+    phone: "13800138000",
+    birth: "1990-01-15",
+    workStart: "09:00",
+    city: "北京",
+    active: true,
+    level: "高",
+  },
+  {
+    key: "2",
+    name: "李四",
+    age: 32,
+    email: "li@example.com",
+    website: "https://demo.org",
+    phone: "13900139000",
+    birth: "1992-06-01",
+    workStart: "10:30",
+    city: "上海",
+    active: false,
+    level: "中",
+  },
+]);
+
+// 默认可编辑列为只读文案；双击单元格进入编辑，失焦退出
+<Table<EditableRow>
+  bordered
+  striped
+  size="sm"
+  columns={editableColumns}
+  dataSource={rows.value}
+  onCellChange={({ dataIndex, value, rowIndex }) => {
+    rows.value = rows.value.map((row, i) =>
+      i === rowIndex ? { ...row, [dataIndex as keyof EditableRow]: value as never } : row,
+    );
+  }}
+/>`;
+
+/** 与页面演示一致的列配置（可编辑全类型） */
+const editableDocColumns: TableColumn<EditableDocRow>[] = [
+  {
+    key: "name",
+    title: "文本 text",
+    dataIndex: "name",
+    editable: { type: "text", placeholder: "姓名" },
+  },
+  {
+    key: "age",
+    title: "数字 number",
+    dataIndex: "age",
+    editable: { type: "number", min: 0, max: 150, step: 1 },
+  },
+  {
+    key: "email",
+    title: "email",
+    dataIndex: "email",
+    editable: { type: "email", placeholder: "a@b.c" },
+  },
+  {
+    key: "website",
+    title: "url",
+    dataIndex: "website",
+    editable: { type: "url", placeholder: "https://" },
+  },
+  {
+    key: "phone",
+    title: "tel",
+    dataIndex: "phone",
+    editable: { type: "tel", placeholder: "手机号" },
+  },
+  {
+    key: "birth",
+    title: "date",
+    dataIndex: "birth",
+    editable: { type: "date" },
+  },
+  {
+    key: "workStart",
+    title: "time",
+    dataIndex: "workStart",
+    editable: { type: "time" },
+  },
+  {
+    key: "city",
+    title: "select",
+    dataIndex: "city",
+    editable: {
+      type: "select",
+      placeholder: "请选择",
+      options: [
+        { label: "北京", value: "北京" },
+        { label: "上海", value: "上海" },
+        { label: "广州", value: "广州" },
+      ],
+    },
+  },
+  {
+    key: "active",
+    title: "checkbox",
+    dataIndex: "active",
+    editable: { type: "checkbox" },
+  },
+  {
+    key: "level",
+    title: "radio",
+    dataIndex: "level",
+    editable: {
+      type: "radio",
+      options: [
+        { label: "高", value: "高" },
+        { label: "中", value: "中" },
+        { label: "低", value: "低" },
+      ],
+    },
+  },
+];
+
+/** 文档示例通用三列（根页 JSX 中勿绑定会频繁变的 signal，否则整页 insertReactive 重挂 main 内大块 DOM） */
+const DOC_TABLE_BASIC_COLUMNS: TableColumn<Row>[] = [
+  { key: "name", title: "姓名", dataIndex: "name" as const },
+  { key: "age", title: "年龄", dataIndex: "age" as const },
+  { key: "address", title: "地址", dataIndex: "address" as const },
+];
+
+const DOC_TABLE_DEMO_ROWS: Row[] = [
+  { key: "1", name: "张三", age: 28, address: "北京" },
+  { key: "2", name: "李四", age: 32, address: "上海" },
+];
+
+const DOC_TABLE_PAGINATION_ROWS: Row[] = [
+  ...DOC_TABLE_DEMO_ROWS,
+  { key: "3", name: "王五", age: 25, address: "广州" },
+  { key: "4", name: "赵六", age: 30, address: "深圳" },
+  { key: "5", name: "钱七", age: 22, address: "杭州" },
+];
+
+const DOC_TABLE_EDITABLE_INITIAL: EditableDocRow[] = [
+  {
+    key: "e1",
+    name: "张三",
+    age: 28,
+    email: "zhang@example.com",
+    website: "https://example.com",
+    phone: "13800138000",
+    birth: "1990-01-15",
+    workStart: "09:00",
+    city: "北京",
+    active: true,
+    level: "高",
+  },
+  {
+    key: "e2",
+    name: "李四",
+    age: 32,
+    email: "li@example.com",
+    website: "https://demo.org",
+    phone: "13900139000",
+    birth: "1992-06-01",
+    workStart: "10:30",
+    city: "上海",
+    active: false,
+    level: "中",
+  },
+];
+
+/**
+ * 分页示例独立子组件：`pagination.current` 若在文档根 getter 里读 `page.value`，
+ * 换页时根级 insertReactive 会重挂整页，main 滚动归零。将 `page` 关进子组件可缩小更新范围。
+ *
+ * **须用 `{() => <Table ... />}` 包裹：** `compileSource` 下组件 MountFn 里对 props 同步求值一次；
+ * 若直接写 `current: page.value`，首帧后换页不会更新。函数子节点让 `page.value` 在 `insertReactive` 内读取。
+ */
+function TableDocPaginationDemo() {
+  const page = createSignal(1);
+  return (
+    <div class="contents">
+      {() => (
+        <Table<Row>
+          columns={DOC_TABLE_BASIC_COLUMNS}
+          dataSource={DOC_TABLE_PAGINATION_ROWS}
+          pagination={{
+            current: page.value,
+            pageSize: 2,
+            onChange: (p) => {
+              page.value = p;
+            },
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+/**
+ * 可编辑示例独立子组件：在此读取 `editableRows.value`。
+ * 若在 `DataDisplayTable` 根 getter 中读取，受控更新会触发根插入点整段替换，
+ * `main.overflow-y-auto` 下子树闪动且 scrollTop 被重置（视口回顶）。
+ *
+ * **须用 `{() => <Table ... />}` 包裹：** `compileSource` 生成的子组件 MountFn 会在挂载时同步合并 props，
+ * 直接写 `dataSource={editableRows.value}` 只取首帧快照，后续输入不订阅 signal，还会导致整页重挂异常。
+ */
+function TableDocEditableDemo() {
+  const editableRows = createSignal<EditableDocRow[]>(
+    DOC_TABLE_EDITABLE_INITIAL,
+  );
+  return (
+    <div class="max-w-full overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-600">
+      {() => (
+        <Table<EditableDocRow>
+          bordered
+          striped
+          size="sm"
+          columns={editableDocColumns}
+          dataSource={editableRows.value}
+          stateKey="table-doc-editable"
+          onCellChange={({ dataIndex, value, rowIndex }) => {
+            const field = dataIndex as keyof EditableDocRow;
+            editableRows.value = editableRows.value.map((row, i) =>
+              i === rowIndex ? { ...row, [field]: value as never } : row
+            );
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
 export default function DataDisplayTable() {
   const expandedKeys = createSignal<string[]>([]);
   const selectedRows = createSignal<Row[]>([]);
-  const page = createSignal(1);
-
-  const columns = [
-    { key: "name", title: "姓名", dataIndex: "name" as const },
-    { key: "age", title: "年龄", dataIndex: "age" as const },
-    { key: "address", title: "地址", dataIndex: "address" as const },
-  ];
-
-  const dataSource: Row[] = [
-    { key: "1", name: "张三", age: 28, address: "北京" },
-    { key: "2", name: "李四", age: 32, address: "上海" },
-  ];
 
   return (
     <div class="space-y-10">
@@ -273,7 +573,8 @@ export default function DataDisplayTable() {
         <Title level={1}>Table 表格</Title>
         <Paragraph class="mt-2">
           表格：columns、dataSource、rowKey、bordered、size、striped、loading、onRow、expandable、summary、locale、renderEmpty、title、extra、pagination、onSelectChange、rowClassName、headerClass、固定列
-          fixed。 使用 Tailwind v4，支持 light/dark 主题。
+          fixed、列级可编辑 editable 与 onCellChange。使用 Tailwind v4，支持
+          light/dark 主题。
         </Paragraph>
       </section>
 
@@ -294,8 +595,8 @@ export default function DataDisplayTable() {
         <div class="space-y-4">
           <Title level={3}>基础 + 边框 + 展开行</Title>
           <Table<Row>
-            columns={columns}
-            dataSource={dataSource}
+            columns={DOC_TABLE_BASIC_COLUMNS}
+            dataSource={DOC_TABLE_DEMO_ROWS}
             bordered
             stateKey="table-doc-expand"
             expandable={{
@@ -323,12 +624,16 @@ export default function DataDisplayTable() {
         <div class="space-y-4">
           <Title level={3}>size / striped / loading</Title>
           <Table<Row>
-            columns={columns}
-            dataSource={dataSource}
+            columns={DOC_TABLE_BASIC_COLUMNS}
+            dataSource={DOC_TABLE_DEMO_ROWS}
             size="sm"
             striped
           />
-          <Table<Row> columns={columns} dataSource={[]} loading />
+          <Table<Row>
+            columns={DOC_TABLE_BASIC_COLUMNS}
+            dataSource={[]}
+            loading
+          />
           <CodeBlock
             title="代码示例"
             code={exampleSizeStripedLoading}
@@ -342,8 +647,8 @@ export default function DataDisplayTable() {
         <div class="space-y-4">
           <Title level={3}>行选择 onSelectChange</Title>
           <Table<Row>
-            columns={columns}
-            dataSource={dataSource}
+            columns={DOC_TABLE_BASIC_COLUMNS}
+            dataSource={DOC_TABLE_DEMO_ROWS}
             stateKey="table-doc-row-selection"
             onSelectChange={(rows) => selectedRows.value = rows}
           />
@@ -367,12 +672,12 @@ export default function DataDisplayTable() {
         <div class="space-y-4">
           <Title level={3}>空状态 locale / renderEmpty</Title>
           <Table<Row>
-            columns={columns}
+            columns={DOC_TABLE_BASIC_COLUMNS}
             dataSource={[]}
             locale={{ emptyText: "暂无数据" }}
           />
           <Table<Row>
-            columns={columns}
+            columns={DOC_TABLE_BASIC_COLUMNS}
             dataSource={[]}
             renderEmpty={() => <span class="text-slate-500">自定义空状态</span>}
           />
@@ -389,8 +694,8 @@ export default function DataDisplayTable() {
         <div class="space-y-4">
           <Title level={3}>标题与工具栏 title / extra</Title>
           <Table<Row>
-            columns={columns}
-            dataSource={dataSource}
+            columns={DOC_TABLE_BASIC_COLUMNS}
+            dataSource={DOC_TABLE_DEMO_ROWS}
             title="用户列表"
             extra={
               <ButtonGroup attached>
@@ -423,20 +728,7 @@ export default function DataDisplayTable() {
 
         <div class="space-y-4">
           <Title level={3}>分页 pagination</Title>
-          <Table<Row>
-            columns={columns}
-            dataSource={[
-              ...dataSource,
-              { key: "3", name: "王五", age: 25, address: "广州" },
-              { key: "4", name: "赵六", age: 30, address: "深圳" },
-              { key: "5", name: "钱七", age: 22, address: "杭州" },
-            ]}
-            pagination={{
-              current: page.value,
-              pageSize: 2,
-              onChange: (p) => page.value = p,
-            }}
-          />
+          <TableDocPaginationDemo />
           <CodeBlock
             title="代码示例"
             code={examplePagination}
@@ -471,7 +763,7 @@ export default function DataDisplayTable() {
                   width: 180,
                 },
               ]}
-              dataSource={dataSource}
+              dataSource={DOC_TABLE_DEMO_ROWS}
               bordered
             />
           </div>
@@ -484,13 +776,49 @@ export default function DataDisplayTable() {
             wrapLongLines
           />
         </div>
+
+        <div class="space-y-4">
+          <Title level={3}>可编辑列 editable + onCellChange</Title>
+          <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+            列上设置 <code class="text-xs">editable: {"{ type, ... }"}</code>
+            {" "}
+            后默认只读展示，<strong>双击</strong>进入编辑、控件<strong>
+              失焦
+            </strong>退出；忽略 <code class="text-xs">render</code>。须传入{" "}
+            <code class="text-xs">onCellChange</code>{" "}
+            并不可变更新行数据，否则不可激活编辑。不包含
+            textarea（长文建议弹层编辑）。radio 为行内单选组，每行独立一组
+            name。
+          </Paragraph>
+          <TableDocEditableDemo />
+          <CodeBlock
+            title="完整示例（含全部 editable 类型）"
+            code={exampleEditable}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+        </div>
       </section>
 
       <section class="space-y-3">
         <Title level={2}>API</Title>
         <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
-          TableColumn：key、title、dataIndex、render、width、align、fixed、sorter、ellipsis。Table
-          属性如下。
+          TableColumn：key、title、dataIndex、render、
+          <strong>editable</strong>
+          （
+          <code class="text-xs">
+            text | number | email | url | tel | date | time | select | checkbox
+            | radio
+          </code>
+          ，可选 <code class="text-xs">disabled</code>{" "}
+          布尔或函数）、width、align、fixed、sorter、ellipsis。类型导出：
+          <code class="text-xs">TableColumnEditable</code>、
+          <code class="text-xs">TableCellChangePayload</code>、
+          <code class="text-xs">
+            TableEditableOption
+          </code>。可编辑列默认只读，双击进入编辑。Table 属性如下。
         </Paragraph>
         <div class="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-600">
           <Table<ApiRow>

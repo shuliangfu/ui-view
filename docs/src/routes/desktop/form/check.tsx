@@ -42,6 +42,12 @@ const CHECKBOX_API: ApiRow[] = [
     default: "false",
     description: "是否禁用",
   },
+  {
+    name: "hideFocusRing",
+    type: "boolean",
+    default: "false",
+    description: "为 true 时隐藏聚焦时的蓝色激活边框（ring）；默认 false 显示",
+  },
   { name: "name", type: "string", default: "-", description: "原生 name" },
   { name: "class", type: "string", default: "-", description: "额外 class" },
   { name: "children", type: "any", default: "-", description: "标签内容" },
@@ -154,6 +160,13 @@ const SWITCH_API: ApiRow[] = [
     default: "false",
     description: "是否禁用",
   },
+  {
+    name: "hideFocusRing",
+    type: "boolean",
+    default: "false",
+    description:
+      "为 true 时隐藏开关轨道在获焦时的 peer 蓝色 ring；默认 false 显示",
+  },
   { name: "error", type: "boolean", default: "false", description: "错误状态" },
   { name: "class", type: "string", default: "-", description: "额外 class" },
 ];
@@ -188,7 +201,7 @@ const sw = createSignal(false);
 <CheckboxGroup options={...} value={groupVal.value} onChange={(v) => groupVal.value = v} />
 <RadioGroup name="radio-demo" options={...} value={radioVal.value} onChange={(v) => radioVal.value = v} />
 <Switch
-  checked={sw.value}
+  checked={sw}
   onChange={(e) => sw.value = (e.target as HTMLInputElement).checked}
 />`;
 
@@ -303,14 +316,14 @@ export default function FormCheck() {
             <Title level={3}>Switch 基础与自定义文案</Title>
             <FormItem label="Switch">
               <Switch
-                checked={switchVal.value}
+                checked={switchVal}
                 onChange={(e) =>
                   switchVal.value = (e.target as HTMLInputElement).checked}
               />
             </FormItem>
             <FormItem label="Switch 自定义文案">
               <Switch
-                checked={switchVal.value}
+                checked={switchVal}
                 onChange={(e) =>
                   switchVal.value = (e.target as HTMLInputElement).checked}
                 checkedChildren="开"
