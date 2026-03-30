@@ -5,7 +5,8 @@
  * 前景/背景色使用 {@link ColorPicker} 隐藏触发器 + 命令式 `openFromPointerEvent`；打开前克隆选区，
  * 确定时再恢复，避免操作取色面板导致选区丢失而无法正确 `execCommand`。
  * 支持粘贴图片到内容区（剪贴板图片转 data URL 或经 onPasteImage 上传后插入）。
- * 工具栏可配置为 simple（简单）、default（默认）、full（全部），或完全自定义。
+ * 工具栏可配置为 simple（简单）、default（默认）、full（全部），或完全自定义；文字颜色与背景色在三档预设中均提供。
+ * 各预设工具栏首位为「编辑源码」：在 HTML 源码与可视化编辑之间切换；进入源码时会对 `innerHTML` 做缩进排版（类 Elements 结构）便于编辑。
  * 受控 HTML 仅在**编辑区未获焦**且非链接弹层打开时由 {@link createEffect} 同步到 DOM；获焦时以浏览器 DOM
  * 为准，避免写 `innerHTML` 重置选区。`ref` 仅用 `createRef` 持有编辑区节点。
  */
@@ -52,8 +53,19 @@ export interface ToolbarItem {
 /** 自定义工具栏：二维数组，内层为同一组 */
 export type ToolbarConfig = ToolbarItem[][] | ToolbarItem[];
 
-/** 第一行：撤销/重做与常用内联格式、链接（simple / default / full 共用） */
+/**
+ * 可视化 ↔ HTML 源码切换；须排在撤销之前，便于先切源码再编辑。
+ */
+const RTE_TOOLBAR_SOURCE_ITEM: ToolbarItem = {
+  key: "sourceHtml",
+  title: "编辑源码",
+  command: "rteToggleSourceHtml",
+  icon: "HTML",
+};
+
+/** 第一行：源码切换、撤销/重做与常用内联格式、链接（各预设共用） */
 const RTE_TOOLBAR_ROW_BASIC: ToolbarItem[] = [
+  RTE_TOOLBAR_SOURCE_ITEM,
   { key: "undo", title: "撤销 (Ctrl+Z)", command: "undo", icon: "↶" },
   { key: "redo", title: "重做 (Ctrl+Y)", command: "redo", icon: "↷" },
   { key: "bold", title: "加粗 (Ctrl+B)", command: "bold", icon: "B" },
@@ -126,11 +138,31 @@ const RTE_TOOLBAR_ROW_TYPOGRAPHY: ToolbarItem[] = [
   RTE_TOOLBAR_LINE_HEIGHT_ITEM,
 ];
 
+/**
+ * 文字颜色与背景色（各预设均展示，与 {@link ColorPicker}、`foreColor`/`backColor` 命令联动）。
+ */
+const RTE_TOOLBAR_ROW_COLORS: ToolbarItem[] = [
+  {
+    key: "foreColor",
+    title: "文字颜色",
+    command: "foreColor",
+    value: "#000000",
+    icon: "A",
+  },
+  {
+    key: "backColor",
+    title: "背景色",
+    command: "backColor",
+    value: "#ffff00",
+  },
+];
+
 /** 根据预设返回工具栏分组 */
 function getToolbarByPreset(preset: ToolbarPreset): ToolbarItem[][] {
   const simple: ToolbarItem[][] = [
     RTE_TOOLBAR_ROW_BASIC,
     RTE_TOOLBAR_ROW_TYPOGRAPHY,
+    RTE_TOOLBAR_ROW_COLORS,
   ];
 
   const defaultPreset: ToolbarItem[][] = [
@@ -162,6 +194,7 @@ function getToolbarByPreset(preset: ToolbarPreset): ToolbarItem[][] {
         icon: "1.",
       },
     ],
+    RTE_TOOLBAR_ROW_COLORS,
   ];
 
   const full: ToolbarItem[][] = [
@@ -223,19 +256,6 @@ function getToolbarByPreset(preset: ToolbarPreset): ToolbarItem[][] {
         title: "右对齐",
         command: "justifyRight",
         icon: "≡",
-      },
-      {
-        key: "foreColor",
-        title: "文字颜色",
-        command: "foreColor",
-        value: "#000000",
-        icon: "A",
-      },
-      {
-        key: "backColor",
-        title: "背景色",
-        command: "backColor",
-        value: "#ffff00",
       },
       {
         key: "hr",
@@ -350,6 +370,119 @@ function getWordCount(html: string): number {
   return text ? text.split(/\s+/).filter(Boolean).length : 0;
 }
 
+/** 序列化时按 void 处理、不输出闭合标签的 HTML 元素 */
+const RTE_VOID_HTML_TAGS = new Set([
+  "area",
+  "base",
+  "br",
+  "col",
+  "embed",
+  "hr",
+  "img",
+  "input",
+  "link",
+  "meta",
+  "param",
+  "source",
+  "track",
+  "wbr",
+]);
+
+/**
+ * 属性值写回双引号属性时的转义。
+ *
+ * @param s - 原始属性值
+ */
+function rteEscapeAttrValueForSource(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/\n/g, "&#10;")
+    .replace(/\r/g, "&#13;");
+}
+
+/**
+ * 生成元素开始标签（含属性）。
+ *
+ * @param el - DOM 元素
+ */
+function rteSerializeOpenTag(el: Element): string {
+  const name = el.tagName.toLowerCase();
+  let tag = `<${name}`;
+  for (let i = 0; i < el.attributes.length; i++) {
+    const a = el.attributes[i]!;
+    tag += ` ${a.name}="${rteEscapeAttrValueForSource(a.value)}"`;
+  }
+  return `${tag}>`;
+}
+
+/**
+ * 将编辑区 `innerHTML` 格式化为带 2 空格缩进的多行源码，便于在源码模式下编辑（结构类似开发者工具 Elements，无语法高亮）。
+ * 解析失败或非浏览器环境时返回原串。
+ *
+ * @param html - 原始 HTML
+ */
+function rtePrettyPrintHtmlSource(html: string): string {
+  const raw = html ?? "";
+  if (raw.trim() === "") return "";
+  try {
+    const doc = globalThis.document;
+    if (!doc) return raw;
+    const tpl = doc.createElement("template");
+    tpl.innerHTML = raw;
+    const lines: string[] = [];
+    /**
+     * 深度优先输出节点，每层一级缩进。
+     *
+     * @param node - 当前节点
+     * @param depth - 缩进层级
+     */
+    const walk = (node: Node, depth: number): void => {
+      const ind = "  ".repeat(depth);
+      if (node.nodeType === Node.TEXT_NODE) {
+        // 标签之间的换行/空白在 DOM 里常变成独立文本节点；若整段含 \n 直接 push，
+        // 换行后 textarea 会从第 0 列起画，看起来像「内容没缩进」且多出空行。
+        const raw = node.textContent ?? "";
+        const trimmed = raw.replace(/^\s+|\s+$/g, "");
+        if (trimmed === "") return;
+        const parts = trimmed.split(/\r\n|\r|\n/);
+        for (const part of parts) {
+          if (part === "") continue;
+          lines.push(ind + part);
+        }
+        return;
+      }
+      if (node.nodeType === Node.COMMENT_NODE) {
+        lines.push(`${ind}<!--${node.textContent ?? ""}-->`);
+        return;
+      }
+      if (node.nodeType !== Node.ELEMENT_NODE) return;
+      const el = node as Element;
+      const name = el.tagName.toLowerCase();
+      const open = rteSerializeOpenTag(el);
+      if (RTE_VOID_HTML_TAGS.has(name)) {
+        lines.push(ind + open);
+        return;
+      }
+      if (el.childNodes.length === 0) {
+        lines.push(ind + open + `</${name}>`);
+        return;
+      }
+      lines.push(ind + open);
+      for (const c of el.childNodes) {
+        walk(c, depth + 1);
+      }
+      lines.push(ind + `</${name}>`);
+    };
+    for (const c of tpl.content.childNodes) {
+      walk(c, 0);
+    }
+    return lines.join("\n");
+  } catch {
+    return raw;
+  }
+}
+
 /**
  * 判断编辑区是否处于「用户正在编辑」：焦点在 `contenteditable` 上，或选区锚点仍落在其 DOM 内。
  * 受控 `value` 触发重绘时，仅比较 `activeElement === el` 在部分 reconciler 时序下会短暂不成立，
@@ -423,6 +556,76 @@ function restoreEditorSelectionRange(
   } catch {
     /* Range 已失效或浏览器拒绝设置选区 */
   }
+}
+
+/**
+ * 折叠光标处插入可见文案为「链接」、`href` 为 `url` 的锚点（不把 URL 写进正文）。
+ *
+ * @param editor - contenteditable 根
+ * @param url - 链接地址
+ */
+function rteInsertLinkPlaceholderAtCaret(
+  editor: HTMLElement,
+  url: string,
+): void {
+  const a = document.createElement("a");
+  a.href = url;
+  a.textContent = "链接";
+  const sel = document.getSelection();
+  if (sel != null && sel.rangeCount > 0) {
+    const cr = sel.getRangeAt(0);
+    if (editor.contains(cr.commonAncestorContainer)) {
+      try {
+        cr.insertNode(a);
+        rteCollapseSelectionToEndOfNode(a);
+        return;
+      } catch {
+        /* 退回 insertHTML */
+      }
+    }
+  }
+  try {
+    const safe = url.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
+    document.execCommand("insertHTML", false, `<a href="${safe}">链接</a>`);
+  } catch {
+    /* ignore */
+  }
+}
+
+/**
+ * 应用超链接：有非空选区时用 `createLink`（锚文本为选中文字，URL 仅作 `href`）；
+ * 折叠或无选区时在光标插入「链接」二字锚点，避免浏览器把 URL 当可见正文插入。
+ *
+ * @param editor - contenteditable 根
+ * @param url - 用户输入的 URL
+ * @param savedRange - 打开链接弹层前克隆的选区，可为 `null`
+ */
+function rteApplyLinkUrl(
+  editor: HTMLElement,
+  url: string,
+  savedRange: Range | null,
+): void {
+  const u = url.trim();
+  if (!u) return;
+  editor.focus({ preventScroll: true });
+  restoreEditorSelectionRange(editor, savedRange);
+
+  const sel = document.getSelection();
+  if (!sel || sel.rangeCount === 0) {
+    rteInsertLinkPlaceholderAtCaret(editor, u);
+    return;
+  }
+  const r = sel.getRangeAt(0);
+  if (!editor.contains(r.commonAncestorContainer)) {
+    rteInsertLinkPlaceholderAtCaret(editor, u);
+    return;
+  }
+  const hasText = !r.collapsed && (r.toString() ?? "").length > 0;
+  if (hasText) {
+    document.execCommand("createLink", false, u);
+    return;
+  }
+  rteInsertLinkPlaceholderAtCaret(editor, u);
 }
 
 /**
@@ -1436,6 +1639,32 @@ function renderToolbarButtonContent(
         </svg>
       );
     /**
+     * HTML 源码切换：尖括号 + 斜杠，与「行内代码」的 `</>` 文本配置区分图形。
+     */
+    case "sourceHtml":
+      return (
+        <svg
+          class={rteToolbarSvgCls}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M8 9l-4 4 4 4M16 9l4 4-4 4"
+          />
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M14.5 6l-5 12"
+          />
+        </svg>
+      );
+    /**
      * 全屏：未全屏时与 `IconMaximize2` 同形；全屏后与 `IconExitFullscreen` 同形（四角向内）。
      */
     case "fullscreen":
@@ -1620,6 +1849,22 @@ const toolbarGroupCls =
 const toolbarBtnBase =
   "inline-flex items-center justify-center p-1.5 rounded text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600 hover:text-slate-900 dark:hover:text-slate-100 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed min-w-[28px] min-h-[28px] text-sm font-medium";
 
+/**
+ * 整表禁用或源码模式下（除「源码切换」外）下拉不可用；段落下拉外层 `div` 无 `disabled`，须单独套灰度与弱色字。
+ *
+ * @param rteSource - 当前是否 HTML 源码模式
+ * @param editorDisabled - `RichTextEditor` 的 `disabled`
+ * @param item - 工具项
+ */
+function rteToolbarDropdownDisabled(
+  rteSource: boolean,
+  editorDisabled: boolean,
+  item: ToolbarItem,
+): boolean {
+  return editorDisabled ||
+    (rteSource && item.command !== "rteToggleSourceHtml");
+}
+
 /** 撤销/重做在「可用」时的强调色（相对默认工具栏灰字加亮） */
 const toolbarHistoryActiveCls =
   "text-slate-900 dark:text-slate-100 font-semibold";
@@ -1638,7 +1883,7 @@ const rteToolbarSelectFitCls =
 
 /** 快捷键说明（工具栏「快捷键」与 {@link RTE_AUX_SHORTCUTS} Modal 共用） */
 const RTE_SHORTCUTS_HELP_TEXT =
-  "快捷键：\nCtrl+Z 撤销\nCtrl+Y 重做\nCtrl+B 加粗\nCtrl+I 斜体\nCtrl+U 下划线\nCtrl+K 插入链接\nCtrl+F 查找";
+  "快捷键：\nCtrl+Z 撤销\nCtrl+Y 重做\nCtrl+B 加粗\nCtrl+I 斜体\nCtrl+U 下划线\nCtrl+K 插入链接\nCtrl+F 查找\n工具栏「编辑源码」可切换 HTML 源码与可视化";
 
 /**
  * 无表头表格 HTML（与历史 `insertTable` 行内样式一致）。
@@ -1810,6 +2055,11 @@ export function RichTextEditor(props: RichTextEditorProps) {
    * （光标跳行首、首字倒序等）。由编辑区 `onFocus`/`onBlur` 维护；比仅靠 `document.activeElement` 可靠。
    */
   let rteEditorHasFocus = false;
+  /**
+   * 从源码切回可视后、`queueMicrotask` 里 `focus` 执行前，受控 `value` 往往尚未随 {@link emitChange} 更新；
+   * {@link createEffect} 若此时用旧 `value`（如空串）写 `innerHTML` 会清空刚写入的正文。为 true 时跳过 props→innerHTML。
+   */
+  let rteBlockPropsInnerHtmlAfterSourceExit = false;
 
   /**
    * 防止 {@link refreshHistoryNavState} 重入（onFocus / microtask / signal 连锁时同步再入会导致栈溢出或页面卡死）。
@@ -1820,6 +2070,14 @@ export function RichTextEditor(props: RichTextEditorProps) {
    * 根节点是否处于 `rte-fullscreen`，与全屏按钮的图标、`title` / `aria-label` 同步。
    */
   const rteFullscreen = createSignal(false);
+  /**
+   * 为 true 时主区域显示 HTML 源码 `<textarea>`，与 {@link rteSourceHtml} 同步；为 false 时为 contenteditable 可视化编辑。
+   */
+  const rteSourceMode = createSignal(false);
+  /**
+   * 源码模式下的 HTML 字符串；进入源码时从编辑区 `innerHTML` 拷贝，编辑中经 `onInput` 与父级 `onChange` 同步。
+   */
+  const rteSourceHtml = createSignal("");
 
   /**
    * 仅在 canUndo/canRedo 与当前 signal 不同时写入。
@@ -1856,6 +2114,18 @@ export function RichTextEditor(props: RichTextEditorProps) {
       }
 
       const baseline = lastSyncedFromPropsHtml;
+      /**
+       * 源码模式：用 {@link rteSourceHtml} 比基准判断撤销；不重试 `queryCommandEnabled(redo)`（避免为查 redo 抢焦点离开 `<textarea>`）。
+       */
+      if (rteSourceMode.value) {
+        const srcHtml = rteSourceHtml.value;
+        const canUndo = baseline === ""
+          ? srcHtml.replace(/\uFEFF/g, "").trim() !== ""
+          : srcHtml !== baseline;
+        setHistoryNavIfChanged({ canUndo, canRedo: false });
+        return;
+      }
+
       const currentHtml = editor.innerHTML;
       const canUndo = baseline === ""
         ? currentHtml.replace(/\uFEFF/g, "").trim() !== ""
@@ -1922,11 +2192,70 @@ export function RichTextEditor(props: RichTextEditorProps) {
     fromPointer?: MouseEvent,
   ) => {
     if (disabled || readOnly) return;
-    const editor = document.getElementById(editorId) as HTMLDivElement | null;
-    if (!editor) return;
     /** 须在 try 外声明，供 finally 判断是否为撤销/重做（块内 const 在 finally 不可见） */
     const cmd = item.command;
+    /** 源码模式下仅允许「源码/可视化」切换，避免对隐藏 contenteditable 执行无效命令 */
+    if (rteSourceMode.value && cmd !== "rteToggleSourceHtml") return;
+    const editor = document.getElementById(editorId) as HTMLDivElement | null;
+    if (!editor) return;
     const val = childValue ?? item.value ?? "";
+
+    /**
+     * 可视化 ↔ HTML 源码：切到源码时快照 `innerHTML`；切回时写回并触发 {@link emitChange}。
+     */
+    if (cmd === "rteToggleSourceHtml") {
+      if (rteSourceMode.value) {
+        /**
+         * 以 `<textarea>` 的 **DOM 值**为准：部分 reconciler 下 `onInput` 与 signal 可能不同步，仅用 `rteSourceHtml` 会读到旧串；
+         * 且 `rteSourceMode` 置 false 后子树可能先提交 DOM，须在微任务里对 **当前** `getElementById(editorId)` 写 `innerHTML`，
+         * 勿依赖本函数开头缓存的 `editor` 引用（可能是即将被替换的节点）。
+         */
+        const ta = document.getElementById(`${editorId}-source`) as
+          | HTMLTextAreaElement
+          | null;
+        const html = ta != null ? ta.value : rteSourceHtml.value;
+        rteSourceHtml.value = html;
+        lastSyncedFromPropsHtml = html;
+        rteRedoEligibleAfterUndo = false;
+        /**
+         * 先拦 props 同步再关源码模式：否则 effect 与 `emitChange` 同一轮里用滞后 `value` 覆盖可视区 `innerHTML`。
+         */
+        rteBlockPropsInnerHtmlAfterSourceExit = true;
+        rteSourceMode.value = false;
+        emitChange(html);
+        /**
+         * 双层微任务：等 {@link RteEditorBodyReactiveIsland} 等对 `rteSourceMode` 的 DOM 更新落盘后再写 `innerHTML` 与 `focus`。
+         */
+        queueMicrotask(() => {
+          queueMicrotask(() => {
+            const ed = document.getElementById(editorId) as
+              | HTMLDivElement
+              | null;
+            if (ed) {
+              ed.innerHTML = html;
+            }
+            lastSyncedFromPropsHtml = html;
+            rteEditorHasFocus = true;
+            rteBlockPropsInnerHtmlAfterSourceExit = false;
+            ed?.focus({ preventScroll: true });
+            refreshHistoryNavState();
+          });
+        });
+      } else {
+        rteSourceHtml.value = rtePrettyPrintHtmlSource(editor.innerHTML);
+        rteRedoEligibleAfterUndo = false;
+        rteSourceMode.value = true;
+        queueMicrotask(() => {
+          const ta = document.getElementById(`${editorId}-source`) as
+            | HTMLTextAreaElement
+            | null;
+          ta?.focus({ preventScroll: true });
+          refreshHistoryNavState();
+        });
+      }
+      return;
+    }
+
     try {
       editor.focus();
 
@@ -2186,6 +2515,10 @@ export function RichTextEditor(props: RichTextEditorProps) {
    */
   let rteSavedColorSelectionRange: Range | null = null;
   /**
+   * 打开「插入链接」弹层前克隆的选区；确定时用 {@link rteApplyLinkUrl} 恢复后再 `createLink`，避免焦点进 Modal 后选区丢失而把 URL 插成可见正文。
+   */
+  let rteSavedLinkSelectionRange: Range | null = null;
+  /**
    * 原生 `<select>` 抢走焦点前在捕获阶段保存的选区；`change` 时先 {@link restoreEditorSelectionRange} 再执行命令，
    * 否则段落/字号/行高等下拉无法在「有选中文本」时生效。
    */
@@ -2343,28 +2676,34 @@ export function RichTextEditor(props: RichTextEditorProps) {
    */
   const closeLinkUrlModal = () => {
     linkModalOpen.value = false;
+    rteSavedLinkSelectionRange = null;
   };
 
   /**
    * 打开链接 URL 弹层；由工具栏「链接」与 Ctrl+K 调用。
+   * 若工具栏 `mousedown` 已写入 {@link rteSavedLinkSelectionRange} 则不再覆盖，以免 click 时选区已丢。
    */
   const openLinkUrlModal = () => {
+    const ed = document.getElementById(editorId) as HTMLDivElement | null;
+    if (rteSavedLinkSelectionRange == null && ed != null) {
+      rteSavedLinkSelectionRange = cloneEditorSelectionRangeIfInside(ed);
+    }
     linkUrlDraft.value = "";
     linkModalOpen.value = true;
   };
 
   /**
-   * 确认插入链接：写入 `createLink` 并同步受控值。
+   * 确认插入链接：恢复选区后 {@link rteApplyLinkUrl}（有选中文本则仅其为锚文，URL 不进正文）。
    */
   const confirmLinkUrl = () => {
     const url = linkUrlDraft.value.trim();
+    const saved = rteSavedLinkSelectionRange;
     closeLinkUrlModal();
     if (!url) return;
     const ed = document.getElementById(editorId) as HTMLDivElement | null;
     if (!ed) return;
-    ed.focus();
     rteRedoEligibleAfterUndo = false;
-    document.execCommand("createLink", false, url);
+    rteApplyLinkUrl(ed, url, saved);
     emitChange();
     queueMicrotask(() => refreshHistoryNavState());
   };
@@ -2794,6 +3133,10 @@ export function RichTextEditor(props: RichTextEditorProps) {
   createEffect(() => {
     const el = editorHostRef.current;
     if (!el) return;
+    /** 源码模式由 {@link rteSourceHtml} 与 `<textarea>` 维护，勿用受控 `value` 覆盖可视区 `innerHTML` */
+    if (rteSourceMode.value) return;
+    /** 见 {@link rteBlockPropsInnerHtmlAfterSourceExit}：避免切回可视瞬间被旧 `value` 清空 */
+    if (rteBlockPropsInnerHtmlAfterSourceExit) return;
     const v = typeof value === "function" ? value() : value;
     if (v === undefined) return;
     /** 尚未从 props 记过基准时，用当前 DOM 或 v 初始化；随后刷新工具栏态（避免 null 基准期一直灰） */
@@ -2985,6 +3328,8 @@ export function RichTextEditor(props: RichTextEditorProps) {
     return () => {
       const rteHistoryNav = historyNavState.value;
       const rteFs = rteFullscreen.value;
+      /** 源码模式时除「切换回可视化」外禁用工具项，避免命令作用在隐藏的 contenteditable 上 */
+      const rteSource = rteSourceMode.value;
       return (
         <div
           class={twMerge(
@@ -3032,9 +3377,23 @@ export function RichTextEditor(props: RichTextEditorProps) {
                               <div
                                 class={twMerge(
                                   toolbarBtnBase,
-                                  controlBlueFocusRing(!hideFocusRing),
+                                  controlBlueFocusRing(
+                                    !hideFocusRing &&
+                                      !rteToolbarDropdownDisabled(
+                                        rteSource,
+                                        disabled,
+                                        item,
+                                      ),
+                                  ),
                                   /** 按内容收缩，避免 select 被 flex-1 撑满后右侧大片空白 */
-                                  "w-fit max-w-36 cursor-pointer gap-1 justify-start px-1",
+                                  "w-fit max-w-36 gap-1 justify-start px-1",
+                                  rteToolbarDropdownDisabled(
+                                      rteSource,
+                                      disabled,
+                                      item,
+                                    )
+                                    ? "pointer-events-none cursor-not-allowed opacity-50"
+                                    : "cursor-pointer",
                                 )}
                               >
                                 {
@@ -3043,7 +3402,16 @@ export function RichTextEditor(props: RichTextEditorProps) {
                                    */
                                 }
                                 <span
-                                  class="inline-flex shrink-0 text-slate-600 dark:text-slate-400"
+                                  class={twMerge(
+                                    "inline-flex shrink-0",
+                                    rteToolbarDropdownDisabled(
+                                        rteSource,
+                                        disabled,
+                                        item,
+                                      )
+                                      ? "text-slate-400 dark:text-slate-500"
+                                      : "text-slate-600 dark:text-slate-400",
+                                  )}
                                   aria-hidden="true"
                                 >
                                   <IconType size="xs" class="text-current" />
@@ -3051,9 +3419,20 @@ export function RichTextEditor(props: RichTextEditorProps) {
                                 <select
                                   class={twMerge(
                                     rteToolbarSelectFitCls,
-                                    "cursor-pointer appearance-none border-0 bg-transparent p-0 pr-2.5 text-sm font-medium text-slate-900 dark:text-slate-100 focus:outline-none",
+                                    "appearance-none border-0 bg-transparent p-0 pr-2.5 text-sm font-medium focus:outline-none",
+                                    rteToolbarDropdownDisabled(
+                                        rteSource,
+                                        disabled,
+                                        item,
+                                      )
+                                      ? "cursor-not-allowed text-slate-500 dark:text-slate-400"
+                                      : "cursor-pointer text-slate-900 dark:text-slate-100",
                                   )}
-                                  disabled={disabled}
+                                  disabled={rteToolbarDropdownDisabled(
+                                    rteSource,
+                                    disabled,
+                                    item,
+                                  )}
                                   aria-label={item.title}
                                   onMouseDownCapture={() => {
                                     const ed = document.getElementById(
@@ -3087,11 +3466,28 @@ export function RichTextEditor(props: RichTextEditorProps) {
                               <select
                                 class={twMerge(
                                   toolbarBtnBase,
-                                  controlBlueFocusRing(!hideFocusRing),
+                                  controlBlueFocusRing(
+                                    !hideFocusRing &&
+                                      !rteToolbarDropdownDisabled(
+                                        rteSource,
+                                        disabled,
+                                        item,
+                                      ),
+                                  ),
                                   rteToolbarSelectFitCls,
-                                  "cursor-pointer appearance-none pr-2.5",
+                                  rteToolbarDropdownDisabled(
+                                      rteSource,
+                                      disabled,
+                                      item,
+                                    )
+                                    ? "cursor-not-allowed appearance-none pr-2.5"
+                                    : "cursor-pointer appearance-none pr-2.5",
                                 )}
-                                disabled={disabled}
+                                disabled={rteToolbarDropdownDisabled(
+                                  rteSource,
+                                  disabled,
+                                  item,
+                                )}
                                 aria-label={item.title}
                                 onMouseDownCapture={() => {
                                   const ed = document.getElementById(
@@ -3120,7 +3516,9 @@ export function RichTextEditor(props: RichTextEditorProps) {
                         <span
                           key={item.key}
                           class="inline-flex shrink-0 items-center"
-                          title={item.key === "fullscreen" && rteFs
+                          title={item.key === "sourceHtml" && rteSource
+                            ? "返回可视化编辑"
+                            : item.key === "fullscreen" && rteFs
                             ? "退出全屏"
                             : item.title}
                         >
@@ -3134,15 +3532,21 @@ export function RichTextEditor(props: RichTextEditorProps) {
                             class={toolbarButtonClassForItem(
                               item,
                               rteHistoryNav,
-                              disabled,
+                              disabled ||
+                                (rteSource &&
+                                  item.command !== "rteToggleSourceHtml"),
                               !hideFocusRing,
                             )}
                             disabled={isHistoryToolbarDisabled(
                               item,
                               rteHistoryNav,
-                              disabled,
+                              disabled ||
+                                (rteSource &&
+                                  item.command !== "rteToggleSourceHtml"),
                             )}
-                            aria-label={item.key === "fullscreen" && rteFs
+                            aria-label={item.key === "sourceHtml" && rteSource
+                              ? "返回可视化编辑"
+                              : item.key === "fullscreen" && rteFs
                               ? "退出全屏"
                               : item.title}
                             onMouseDownCapture={item.command === "foreColor" ||
@@ -3153,6 +3557,16 @@ export function RichTextEditor(props: RichTextEditorProps) {
                                 ) as HTMLDivElement | null;
                                 if (ed) {
                                   rteSavedColorSelectionRange =
+                                    cloneEditorSelectionRangeIfInside(ed);
+                                }
+                              }
+                              : item.command === "createLink"
+                              ? () => {
+                                const ed = document.getElementById(
+                                  editorId,
+                                ) as HTMLDivElement | null;
+                                if (ed) {
+                                  rteSavedLinkSelectionRange =
                                     cloneEditorSelectionRangeIfInside(ed);
                                 }
                               }
@@ -3180,6 +3594,92 @@ export function RichTextEditor(props: RichTextEditorProps) {
     };
   }
 
+  /**
+   * 可视 contenteditable 与源码 `<textarea>` 并列挂载；{@link rteSourceMode} 必须在本岛的内层 `return () =>` 中读取，
+   * 才会订阅 signal 并更新 `hidden`、`contentEditable`。若只在外层根 getter 里读 `rteSourceMode.value`，切换后样式不刷新，
+   * 表现为工具栏已按源码态禁用，正文区仍显示富文本且可点（与 {@link RteToolbarReactiveIsland} 同理）。
+   */
+  function RteEditorBodyReactiveIsland() {
+    return () => {
+      const srcOn = rteSourceMode.value;
+      return (
+        <div class="contents">
+          <div
+            key={`${editorId}-body`}
+            id={editorId}
+            contentEditable={!srcOn && !disabled && !readOnly}
+            data-placeholder={placeholder}
+            data-rte-editor
+            class={twMerge(
+              editorSurface,
+              srcOn && "hidden",
+              !hideFocusRing && "focus:border-transparent",
+              readOnly && editorReadOnlyCls,
+              "empty:before:content-[attr(data-placeholder)] empty:before:text-slate-400 dark:empty:before:text-slate-500",
+            )}
+            style={minHeight ? { minHeight } : undefined}
+            role="textbox"
+            aria-multiline="true"
+            aria-label={placeholder}
+            aria-readonly={readOnly}
+            aria-hidden={srcOn ? true : undefined}
+            aria-disabled={disabled}
+            onInput={handleInput}
+            onPaste={handlePaste}
+            onKeyDown={handleKeyDown}
+            /**
+             * 聚焦时刷新撤销/重做可用状态。此处不必先 `queueMicrotask`：此时焦点已在编辑区，
+             * `refreshHistoryNavState` 内 `hadEditorFocus === true` 不会再次 `focus` 编辑区，也就不会与
+             * `suppressEditorFocusHistoryRefresh` 形成死循环（该标志仅在为查 redo 而临时抢焦点时使用）。
+             */
+            onFocus={() => {
+              /** 须先于 `suppress` 分支执行，否则查询 redo 时临时 focus 也会跳过置位 */
+              rteEditorHasFocus = true;
+              /** Enter 新段用 `p` 而非浏览器默认的 `div`（Chromium 系） */
+              trySetDefaultParagraphSeparatorToP();
+              if (suppressEditorFocusHistoryRefresh) return;
+              refreshHistoryNavState();
+            }}
+            onBlur={() => {
+              rteEditorHasFocus = false;
+              queueMicrotask(() => refreshHistoryNavState());
+            }}
+            ref={editorHostRef}
+          />
+          {
+            /*
+             * 源码模式：等宽文本区直接编辑 HTML；`onInput` 与 {@link emitChange} 同步父级与隐藏 `name` 字段。
+             */
+          }
+          <textarea
+            id={`${editorId}-source`}
+            data-rte-source-editor
+            class={twMerge(
+              editorSurface,
+              "resize-y font-mono text-xs whitespace-pre-wrap wrap-break-word tab-size-2",
+              !srcOn && "hidden",
+              !hideFocusRing && "focus:border-transparent",
+              readOnly && editorReadOnlyCls,
+            )}
+            style={minHeight ? { minHeight } : undefined}
+            spellcheck={false}
+            disabled={disabled}
+            readOnly={readOnly}
+            aria-label="HTML 源码"
+            aria-hidden={!srcOn ? true : undefined}
+            value={() => rteSourceHtml.value}
+            onInput={(e: Event) => {
+              const v = (e.target as HTMLTextAreaElement).value;
+              rteSourceHtml.value = v;
+              emitChange(v);
+              queueMicrotask(() => refreshHistoryNavState());
+            }}
+          />
+        </div>
+      );
+    };
+  }
+
   return () => (
     <div
       id={`${editorId}-root`}
@@ -3187,7 +3687,7 @@ export function RichTextEditor(props: RichTextEditorProps) {
         "rounded-lg overflow-hidden border border-slate-300 dark:border-slate-600 relative",
         /** 编辑区获焦时整格外框变蓝，与 Input 系一致；不画内层 ring，避免套在外框里一圈缝 */
         !hideFocusRing &&
-          "has-[[data-rte-editor]:focus]:border-blue-500 dark:has-[[data-rte-editor]:focus]:border-blue-400",
+          "has-[[data-rte-editor]:focus]:border-blue-500 dark:has-[[data-rte-editor]:focus]:border-blue-400 has-[[data-rte-source-editor]:focus]:border-blue-500 dark:has-[[data-rte-source-editor]:focus]:border-blue-400",
         "[&.rte-fullscreen]:fixed [&.rte-fullscreen]:inset-0 [&.rte-fullscreen]:z-9999 [&.rte-fullscreen]:bg-white [&.rte-fullscreen]:dark:bg-slate-900 [&.rte-fullscreen]:flex [&.rte-fullscreen]:flex-col",
         className,
       )}
@@ -3256,46 +3756,7 @@ export function RichTextEditor(props: RichTextEditorProps) {
           全部替换
         </button>
       </div>
-      <div
-        key={`${editorId}-body`}
-        id={editorId}
-        contentEditable={!disabled && !readOnly}
-        data-placeholder={placeholder}
-        data-rte-editor
-        class={twMerge(
-          editorSurface,
-          !hideFocusRing && "focus:border-transparent",
-          readOnly && editorReadOnlyCls,
-          "empty:before:content-[attr(data-placeholder)] empty:before:text-slate-400 dark:empty:before:text-slate-500",
-        )}
-        style={minHeight ? { minHeight } : undefined}
-        role="textbox"
-        aria-multiline="true"
-        aria-label={placeholder}
-        aria-readonly={readOnly}
-        aria-disabled={disabled}
-        onInput={handleInput}
-        onPaste={handlePaste}
-        onKeyDown={handleKeyDown}
-        /**
-         * 聚焦时刷新撤销/重做可用状态。此处不必先 `queueMicrotask`：此时焦点已在编辑区，
-         * `refreshHistoryNavState` 内 `hadEditorFocus === true` 不会再次 `focus` 编辑区，也就不会与
-         * `suppressEditorFocusHistoryRefresh` 形成死循环（该标志仅在为查 queryCommand 而临时抢焦点时使用）。
-         */
-        onFocus={() => {
-          /** 须先于 `suppress` 分支执行，否则查询 redo 时临时 focus 也会跳过置位 */
-          rteEditorHasFocus = true;
-          /** Enter 新段用 `p` 而非浏览器默认的 `div`（Chromium 系） */
-          trySetDefaultParagraphSeparatorToP();
-          if (suppressEditorFocusHistoryRefresh) return;
-          refreshHistoryNavState();
-        }}
-        onBlur={() => {
-          rteEditorHasFocus = false;
-          queueMicrotask(() => refreshHistoryNavState());
-        }}
-        ref={editorHostRef}
-      />
+      <RteEditorBodyReactiveIsland />
       {name != null && (
         <input
           type="hidden"
