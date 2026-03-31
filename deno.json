@@ -54,6 +54,8 @@
     "fetch-tabler-icons": "deno run -A scripts/fetch-tabler-icons.ts"
   },
   "imports": {
+    "@dreamer/markdown": "../markdown/src/mod.ts",
+    "@dreamer/markdown/types": "../markdown/src/types.ts",
     "@dreamer/plugin": "jsr:@dreamer/plugin@^1.0.2",
     "@dreamer/runtime-adapter": "jsr:@dreamer/runtime-adapter@^1.0.18",
     "@dreamer/service": "jsr:@dreamer/service@^1.0.2",
@@ -78,6 +80,7 @@
     "@dreamer/view/hybrid": "../view/src/mod-hybrid.ts",
     "@dreamer/view/directive": "../view/src/directive.ts",
     "@dreamer/view/reactive": "../view/src/reactive.ts",
+    "typescript": "npm:typescript@5.9.3",
 
     "tailwindcss": "npm:tailwindcss@4.1.18",
     "tailwind-merge": "npm:tailwind-merge@^2.6.1",

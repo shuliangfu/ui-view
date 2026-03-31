@@ -77,6 +77,11 @@ export type {
   ToolbarItem,
   ToolbarPreset,
 } from "./RichTextEditor.tsx";
+export { MarkdownEditor } from "./MarkdownEditor.tsx";
+export type {
+  MarkdownEditorPreviewMode,
+  MarkdownEditorProps,
+} from "./MarkdownEditor.tsx";
 /** 与 shared/form/Transfer 共用（本目录薄 re-export） */
 export { Transfer } from "./Transfer.tsx";
 export type { TransferItem, TransferProps } from "./Transfer.tsx";

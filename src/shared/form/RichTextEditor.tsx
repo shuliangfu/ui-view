@@ -24,12 +24,13 @@ import {
 import { createPortal } from "@dreamer/view/portal";
 import { twMerge } from "tailwind-merge";
 import { Modal } from "../../desktop/feedback/Modal.tsx";
+import { Tooltip } from "../../desktop/feedback/Tooltip.tsx";
 import { Button } from "../basic/Button.tsx";
 import { IconType } from "../basic/icons/Type.tsx";
 import { ColorPicker, type ColorPickerHandle } from "./ColorPicker.tsx";
-import { getFormPortalBodyHost } from "./picker-portal-utils.ts";
 import { controlBlueFocusRing } from "./input-focus-ring.ts";
 import { Input } from "./Input.tsx";
+import { getFormPortalBodyHost } from "./picker-portal-utils.ts";
 
 /** 工具栏丰富程度预设 */
 export type ToolbarPreset = "simple" | "default" | "full";
@@ -52,6 +53,40 @@ export interface ToolbarItem {
 
 /** 自定义工具栏：二维数组，内层为同一组 */
 export type ToolbarConfig = ToolbarItem[][] | ToolbarItem[];
+
+/**
+ * 工具栏与查找条悬停说明：使用 {@link Tooltip} 统一气泡样式；**不再**写原生 `title`，避免与自定义气泡叠两层。
+ * 编辑器全屏根节点为 `z-9999`，而 Tooltip Portal 默认 `z-1070`，浮层会落在全屏层下方，故用 `overlayClass` 抬高 z-index。
+ *
+ * @param props.content - 提示文案；`trim` 后为空则仅渲染子节点、不包裹 Tooltip
+ * @param props.children - 触发区域（外包结构保持与原先一致，避免影响 `mousedown` 选区保留逻辑）
+ * @param props.class - 额外 class 合并到 Tooltip 触发器外层
+ * @returns 包装后的节点
+ */
+function RteToolbarItemTip(props: {
+  /** 列表项稳定 key，供 {@link For} 协调；不参与 Tooltip 逻辑 */
+  key?: string | number;
+  content: string;
+  children?: unknown;
+  class?: string;
+}) {
+  const c = props.content.trim();
+  if (!c) {
+    return <>{props.children}</>;
+  }
+  // 工具栏多在编辑区上方，placement 取 bottom 减少贴顶溢出
+  return (
+    <Tooltip
+      content={c}
+      placement="top"
+      class={twMerge("shrink-0 items-center", props.class)}
+      overlayClass="z-10050"
+      arrow
+    >
+      {props.children}
+    </Tooltip>
+  );
+}
 
 /**
  * 可视化 ↔ HTML 源码切换；须排在撤销之前，便于先切源码再编辑。
@@ -310,12 +345,6 @@ function getToolbarByPreset(preset: ToolbarPreset): ToolbarItem[][] {
       { key: "replace", title: "替换", command: "replace" },
       { key: "print", title: "打印", command: "print" },
       { key: "export", title: "导出", command: "exportContent" },
-      {
-        key: "parseMarkdown",
-        title: "解析 Markdown",
-        command: "parseMarkdown",
-        icon: "Md",
-      },
       {
         key: "shortcuts",
         title: "快捷键帮助",
@@ -1049,6 +1078,118 @@ function applyRteInlineDecoration(
   }
 
   return rteSurroundRangeWithInlineDecoKind(r, kind);
+}
+
+/** 插入代码块时使用的 HTML，与工具栏命令保持一致 */
+const RTE_CODE_BLOCK_INSERT_HTML =
+  '<pre class="rte-code-block language-plaintext"><code><br></code></pre>';
+
+/**
+ * 从节点沿父链走向编辑根，取路径上**最外层**（最靠近根）的 `pre.rte-code-block`。
+ * 若误用「最内层」`pre` 且其父为 `<code>`，在其后 `insertBefore` 仍会把新块留在同一 `<code>` 内，嵌套无法消除。
+ *
+ * @param editor - contenteditable 根
+ * @param node - 选区相关节点（可为文本节点）
+ * @returns 最外层 RTE 代码块 `pre` 或 `null`
+ */
+function findOutermostRteCodeBlockPre(
+  editor: HTMLElement,
+  node: Node,
+): HTMLPreElement | null {
+  const start = node.nodeType === Node.TEXT_NODE ? node.parentNode : node;
+  let n: Node | null = start;
+  /** 沿祖先链可能经过多层 `pre.rte-code-block`（错误嵌套时），保留最后一次命中的即最外层 */
+  let outer: HTMLPreElement | null = null;
+  while (n != null && n !== editor) {
+    if (n instanceof HTMLPreElement && n.classList.contains("rte-code-block")) {
+      outer = n;
+    }
+    n = n.parentNode;
+  }
+  return outer;
+}
+
+/**
+ * 折叠选区是否落在 `el` 内容末尾（与 `selectNodeContents(el).collapse(false)` 同界）。
+ *
+ * @param range - 当前选区
+ * @param el - 通常为 `code`
+ */
+function rteRangeCollapsedAtEndOfElement(
+  range: Range,
+  el: Node,
+): boolean {
+  if (!range.collapsed) return false;
+  try {
+    const endProbe = document.createRange();
+    endProbe.selectNodeContents(el);
+    endProbe.collapse(false);
+    return range.compareBoundaryPoints(Range.START_TO_START, endProbe) === 0;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * 若 `pre` 在父节点中没有下一个兄弟，则追加空段 `<p><br></p>`，避免代码块贴底时无法点击或方向键移出。
+ *
+ * @param pre - RTE 代码块根 `pre`
+ */
+function rteEnsureParagraphAfterPreIfLast(pre: HTMLPreElement): void {
+  if (pre.nextSibling != null) return;
+  const parent = pre.parentNode;
+  if (parent == null) return;
+  const p = document.createElement("p");
+  p.appendChild(document.createElement("br"));
+  parent.appendChild(p);
+}
+
+/**
+ * 插入 RTE 代码块。光标若已在代码块内，继续用 `insertHTML` 会把新的 `pre` 插进当前 `code` 造成无限嵌套；
+ * 此时在**最外层** `pre.rte-code-block` 之后插入兄弟块（脱离错误的 `pre>code>pre` 链），并把光标移入新块首行。
+ *
+ * @param editor - contenteditable 根
+ */
+function insertRteCodeBlockAtSelection(editor: HTMLElement): void {
+  editor.focus({ preventScroll: true });
+  const sel = document.getSelection();
+  if (sel == null || sel.rangeCount < 1) return;
+
+  const range = sel.getRangeAt(0);
+  if (!editor.contains(range.commonAncestorContainer)) return;
+
+  const enclosing = findOutermostRteCodeBlockPre(
+    editor,
+    range.startContainer,
+  );
+
+  if (enclosing != null && enclosing.parentNode != null) {
+    const wrap = document.createElement("div");
+    wrap.innerHTML = RTE_CODE_BLOCK_INSERT_HTML;
+    const newPre = wrap.firstElementChild;
+    if (!(newPre instanceof HTMLPreElement)) return;
+    enclosing.parentNode.insertBefore(newPre, enclosing.nextSibling);
+    const code = newPre.querySelector("code");
+    if (code != null) {
+      const caret = document.createRange();
+      caret.selectNodeContents(code);
+      caret.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(caret);
+    }
+    rteEnsureParagraphAfterPreIfLast(newPre);
+  } else if (typeof document.execCommand === "function") {
+    document.execCommand("insertHTML", false, RTE_CODE_BLOCK_INSERT_HTML);
+    if (sel.rangeCount > 0) {
+      const after = findOutermostRteCodeBlockPre(
+        editor,
+        sel.getRangeAt(0).startContainer,
+      );
+      if (after != null) {
+        rteEnsureParagraphAfterPreIfLast(after);
+      }
+    }
+  }
 }
 
 /**
@@ -1795,19 +1936,6 @@ function renderToolbarButtonContent(
   }
 }
 
-/** 将选区内的 Markdown 风格转为 HTML（** -> bold, * -> italic, ` -> code, # -> 标题） */
-function parseMarkdownInSelection(html: string): string {
-  return html
-    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-    .replace(/\*(.+?)\*/g, "<em>$1</em>")
-    .replace(/__(.+?)__/g, "<strong>$1</strong>")
-    .replace(/_(.+?)_/g, "<em>$1</em>")
-    .replace(/`(.+?)`/g, "<code>$1</code>")
-    .replace(/^### (.+)$/gm, "<h3>$1</h3>")
-    .replace(/^## (.+)$/gm, "<h2>$1</h2>")
-    .replace(/^# (.+)$/gm, "<h1>$1</h1>");
-}
-
 export interface RichTextEditorProps {
   /** 当前内容（HTML 字符串）；作为受控值或初始值；可为 getter 以配合 View 细粒度更新 */
   value?: string | (() => string);
@@ -2398,28 +2526,13 @@ export function RichTextEditor(props: RichTextEditorProps) {
         rteAuxKind.value = "export";
         return;
       }
-      if (cmd === "parseMarkdown") {
-        const sel = document.getSelection();
-        if (sel && sel.rangeCount > 0) {
-          const range = sel.getRangeAt(0);
-          const fragment = range.cloneContents();
-          const div = document.createElement("div");
-          div.appendChild(fragment);
-          const parsed = parseMarkdownInSelection(div.innerHTML);
-          document.execCommand("insertHTML", false, parsed);
-          emitChange();
-        }
-        return;
-      }
       if (cmd === "shortcuts") {
         rteAuxMessage.value = RTE_SHORTCUTS_HELP_TEXT;
         rteAuxKind.value = "shortcuts";
         return;
       }
       if (cmd === "insertCodeBlock") {
-        const html =
-          '<pre class="rte-code-block language-plaintext"><code><br></code></pre>';
-        document.execCommand("insertHTML", false, html);
+        insertRteCodeBlockAtSelection(editor);
         emitChange();
         return;
       }
@@ -3166,6 +3279,40 @@ export function RichTextEditor(props: RichTextEditorProps) {
 
   const handleKeyDown = (e: Event) => {
     const ev = e as KeyboardEvent;
+    /**
+     * 代码块为最后一个块且无后续 `p` 时，浏览器常无法把光标移出；插入时已补空段，此处用 ArrowDown 在块尾显式落到下一段。
+     */
+    if (!ev.ctrlKey && !ev.metaKey && ev.key === "ArrowDown") {
+      if (!disabled && !readOnly && !rteSourceMode.value) {
+        const ed = document.getElementById(editorId) as HTMLDivElement | null;
+        const sel = document.getSelection();
+        if (ed != null && sel != null && sel.rangeCount > 0) {
+          const range = sel.getRangeAt(0);
+          const pre = findOutermostRteCodeBlockPre(ed, range.startContainer);
+          if (pre != null) {
+            const codeEl = pre.querySelector("code");
+            if (
+              codeEl != null &&
+              rteRangeCollapsedAtEndOfElement(range, codeEl)
+            ) {
+              rteEnsureParagraphAfterPreIfLast(pre);
+              const next = pre.nextSibling;
+              if (next instanceof HTMLParagraphElement) {
+                ev.preventDefault();
+                const r = document.createRange();
+                r.selectNodeContents(next);
+                r.collapse(true);
+                sel.removeAllRanges();
+                sel.addRange(r);
+                emitChange();
+                queueMicrotask(() => refreshHistoryNavState());
+                return;
+              }
+            }
+          }
+        }
+      }
+    }
     if (ev.ctrlKey || ev.metaKey) {
       const key = ev.key.toLowerCase();
       if (key === "z") {
@@ -3364,14 +3511,13 @@ export function RichTextEditor(props: RichTextEditorProps) {
                       ? (
                         item.key === "heading"
                           ? (
-                            <span
+                            <RteToolbarItemTip
                               key={item.key}
-                              class="inline-flex shrink-0 items-center"
-                              title={item.title}
+                              content={item.title}
                             >
                               {
                                 /*
-                                 * `disabled` 时 select 不冒泡 hover，外包一层 span 并写 `title` 以便仍能看到说明。
+                                 * `disabled` 时原生 select 的 hover 行为不一致；由 {@link RteToolbarItemTip} 在外层触发器上处理悬停。
                                  */
                               }
                               <div
@@ -3455,13 +3601,12 @@ export function RichTextEditor(props: RichTextEditorProps) {
                                   </For>
                                 </select>
                               </div>
-                            </span>
+                            </RteToolbarItemTip>
                           )
                           : (
-                            <span
+                            <RteToolbarItemTip
                               key={item.key}
-                              class="inline-flex shrink-0 items-center"
-                              title={item.title}
+                              content={item.title}
                             >
                               <select
                                 class={twMerge(
@@ -3509,14 +3654,13 @@ export function RichTextEditor(props: RichTextEditorProps) {
                                   )}
                                 </For>
                               </select>
-                            </span>
+                            </RteToolbarItemTip>
                           )
                       )
                       : (
-                        <span
+                        <RteToolbarItemTip
                           key={item.key}
-                          class="inline-flex shrink-0 items-center"
-                          title={item.key === "sourceHtml" && rteSource
+                          content={item.key === "sourceHtml" && rteSource
                             ? "返回可视化编辑"
                             : item.key === "fullscreen" && rteFs
                             ? "退出全屏"
@@ -3524,7 +3668,7 @@ export function RichTextEditor(props: RichTextEditorProps) {
                         >
                           {
                             /*
-                             * 禁用态下原生 button 不冒泡 hover：外包 span 写 `title` 以便仍能显示说明。
+                             * 禁用态下 button 仍包在 Tooltip 触发器内，由外层 `span` 接收 `mouseenter`/`mouseleave`。
                              */
                           }
                           <button
@@ -3583,7 +3727,7 @@ export function RichTextEditor(props: RichTextEditorProps) {
                               rteFullscreen: rteFs,
                             })}
                           </button>
-                        </span>
+                        </RteToolbarItemTip>
                       )}
                 </For>
               </div>
@@ -3710,18 +3854,19 @@ export function RichTextEditor(props: RichTextEditorProps) {
             controlBlueFocusRing(!hideFocusRing),
           )}
         />
-        <button
-          type="button"
-          class={twMerge(
-            toolbarBtnBase,
-            controlBlueFocusRing(!hideFocusRing),
-          )}
-          title="查找下一处匹配"
-          aria-label="查找下一处匹配"
-          onClick={() => doFind()}
-        >
-          查找
-        </button>
+        <RteToolbarItemTip content="查找下一处匹配">
+          <button
+            type="button"
+            class={twMerge(
+              toolbarBtnBase,
+              controlBlueFocusRing(!hideFocusRing),
+            )}
+            aria-label="查找下一处匹配"
+            onClick={() => doFind()}
+          >
+            查找
+          </button>
+        </RteToolbarItemTip>
         <input
           type="text"
           data-replace-input
@@ -3731,30 +3876,32 @@ export function RichTextEditor(props: RichTextEditorProps) {
             controlBlueFocusRing(!hideFocusRing),
           )}
         />
-        <button
-          type="button"
-          class={twMerge(
-            toolbarBtnBase,
-            controlBlueFocusRing(!hideFocusRing),
-          )}
-          title="替换当前匹配项"
-          aria-label="替换当前匹配项"
-          onClick={() => doReplace(false)}
-        >
-          替换
-        </button>
-        <button
-          type="button"
-          class={twMerge(
-            toolbarBtnBase,
-            controlBlueFocusRing(!hideFocusRing),
-          )}
-          title="替换文档内全部匹配项"
-          aria-label="替换文档内全部匹配项"
-          onClick={() => doReplace(true)}
-        >
-          全部替换
-        </button>
+        <RteToolbarItemTip content="替换当前匹配项">
+          <button
+            type="button"
+            class={twMerge(
+              toolbarBtnBase,
+              controlBlueFocusRing(!hideFocusRing),
+            )}
+            aria-label="替换当前匹配项"
+            onClick={() => doReplace(false)}
+          >
+            替换
+          </button>
+        </RteToolbarItemTip>
+        <RteToolbarItemTip content="替换文档内全部匹配项">
+          <button
+            type="button"
+            class={twMerge(
+              toolbarBtnBase,
+              controlBlueFocusRing(!hideFocusRing),
+            )}
+            aria-label="替换文档内全部匹配项"
+            onClick={() => doReplace(true)}
+          >
+            全部替换
+          </button>
+        </RteToolbarItemTip>
       </div>
       <RteEditorBodyReactiveIsland />
       {name != null && (

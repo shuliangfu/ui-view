@@ -48,7 +48,13 @@ const LIST_API: ApiRow[] = [
     default: "false",
     description: "是否带边框容器",
   },
-  { name: "grid", type: "object", default: "-", description: "栅格模式" },
+  {
+    name: "grid",
+    type: "{ column?, xs?, sm?, md?, lg? }",
+    default: "-",
+    description:
+      "栅格多列：仅 column 则各断点同列；设 xs/sm/md/lg 任一项则移动优先（列数 1–12）",
+  },
   {
     name: "itemClass",
     type: "string",
@@ -85,6 +91,13 @@ const exampleSplitLoading = `<List
   loading
 />`;
 
+const exampleGrid = `<List
+  items={gridItems}
+  grid={{ column: 2, md: 3 }}
+  split={false}
+  bordered
+/>`;
+
 export default function DataDisplayList() {
   const items = [
     { key: "1", children: "列表项 1", extra: "详情" },
@@ -96,12 +109,25 @@ export default function DataDisplayList() {
     { key: "3", children: "列表项 3", disabled: true },
   ];
 
+  /** 栅格示例：独立 key，避免与上方列表演示混淆 */
+  const gridItems = [
+    { key: "g1", children: "栅格项 A" },
+    { key: "g2", children: "栅格项 B" },
+    { key: "g3", children: "栅格项 C" },
+    { key: "g4", children: "栅格项 D" },
+  ];
+
   return (
     <div class="space-y-10">
       <section>
         <Title level={1}>List 列表</Title>
         <Paragraph class="mt-2">
-          列表：items、renderItem、header、footer、loading、loadMore、split、size、bordered、grid、itemClass。
+          适用于<strong>设置页/个人中心</strong>（主文案 + 右侧操作）、<strong>
+            轻量消息或通知行
+          </strong>（thumb + extra）、<strong>
+            带头尾的简单清单
+          </strong>等；数据量很大时需自行虚拟列表或分页。支持
+          items、renderItem、header、footer、loading、loadMore、split、size、bordered、grid、itemClass。
           使用 Tailwind v4，支持 light/dark 主题。
         </Paragraph>
       </section>
@@ -140,6 +166,28 @@ export default function DataDisplayList() {
           <CodeBlock
             title="代码示例"
             code={exampleSplitLoading}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+        </div>
+
+        <div class="space-y-4">
+          <Title level={3}>grid（多列 + 响应式）</Title>
+          <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+            小屏 2 列、md 及以上 3 列；栅格多列示例关闭
+            split，避免与单列「行间分割线」语义混淆。
+          </Paragraph>
+          <List
+            items={gridItems}
+            grid={{ column: 2, md: 3 }}
+            split={false}
+            bordered
+          />
+          <CodeBlock
+            title="代码示例"
+            code={exampleGrid}
             language="tsx"
             showLineNumbers
             copyable

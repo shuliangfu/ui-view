@@ -31,9 +31,10 @@ interface ApiRow {
 const IMAGE_VIEWER_API: ApiRow[] = [
   {
     name: "open",
-    type: "boolean",
+    type: "boolean | (() => boolean) | SignalRef<boolean>",
     default: "-",
-    description: "是否打开（受控）",
+    description:
+      "是否打开（受控）；推荐传 SignalRef 或 getter，勿仅依赖 open={sig.value} 以免 Hybrid 下不更新",
   },
   {
     name: "onClose",
@@ -91,19 +92,19 @@ import { Button, ImageViewer } from "@dreamer/ui-view";
 const open = createSignal(false);
 const index = createSignal(0);
 <ImageViewer
-  open={open.value}
-  onClose={() => open.value = false}
+  open={open}
+  onClose={() => { open.value = false; }}
   images={images}
-  currentIndex={index.value}
-  onIndexChange={(i) => index.value = i}
+  currentIndex={index}
+  onIndexChange={(i) => { index.value = i; }}
 />`;
 
 const exampleBasic = `<ImageViewer
-  open={open.value}
-  onClose={() => open.value = false}
+  open={open}
+  onClose={() => { open.value = false; }}
   images={DEMO_IMAGES}
-  currentIndex={index.value}
-  onIndexChange={(i) => index.value = i}
+  currentIndex={index}
+  onIndexChange={(i) => { index.value = i; }}
   maskClosable
   keyboard
   showThumbnails
@@ -168,11 +169,15 @@ export default function DataDisplayImageViewer() {
             打开查看器
           </Button>
           <ImageViewer
-            open={open.value}
-            onClose={() => open.value = false}
+            open={open}
+            onClose={() => {
+              open.value = false;
+            }}
             images={DEMO_IMAGES}
-            currentIndex={index.value}
-            onIndexChange={(i) => index.value = i}
+            currentIndex={index}
+            onIndexChange={(i) => {
+              index.value = i;
+            }}
             maskClosable
             keyboard
             showThumbnails

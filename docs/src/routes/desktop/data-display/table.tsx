@@ -201,7 +201,12 @@ const dataSource = [{ key: "1", name: "张三", age: 28 }, ...];
   bordered
 />`;
 
-const exampleBasic = `<Table<Row>
+/**
+ * 展开行示例代码字符串：首行勿写 `<Table<Row>`，否则 Prism TSX 会把 `Table` 后的 `<` 误判为嵌套标签，高亮失败整段发白。
+ * 泛型在注释里说明即可，与页面 `type Row` 一致。
+ */
+const exampleBasic = `// Table<Row>，Row 见上文 type 定义
+<Table
   columns={columns}
   dataSource={dataSource}
   bordered
@@ -361,7 +366,8 @@ const rows = createSignal<EditableRow[]>([
 ]);
 
 // 默认可编辑列为只读文案；双击单元格进入编辑，失焦退出
-<Table<EditableRow>
+// <Table<EditableRow>
+<Table
   bordered
   striped
   size="sm"
