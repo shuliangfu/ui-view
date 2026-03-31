@@ -85,6 +85,7 @@ export interface UiViewTailwindContentPluginOptions {
  * - Input、Select、DatePicker 等依赖 `input-focus-ring.ts` 中的 `focus:ring-*`、`has-[input:focus]:*`、`pickerTriggerSurface` 等类名字符串，映射中须同时列出该文件（与 button-variants 同理）。
  * - DatePicker / DateTimePicker / TimePicker 依赖 `picker-portal-utils.ts` 中的 `pickerTimeListScrollClass`（含隐藏滚动条、列宽等任意类），须一并扫描，否则按需构建会丢样式。
  * - RichTextEditor 从同文件引用 `getFormPortalBodyHost`，若需该文件内其它类名亦须映射。
+ * - MarkdownEditor 使用 `@dreamer/markdown` 的 `parse` 与桌面 `Tooltip`；须映射 `MarkdownEditor.tsx`、`Tooltip.tsx`、`input-focus-ring.ts`。
  * - 单文件图标（`icons/*.tsx`）、`Calendar.tsx`、`ChartBase.tsx` 等被组件 import 时须写入对应组件的路径列表；`getContentPaths` 会去重。
  * - 纯函数 / store（message、toast、getConfig 等）不含 Tailwind class，无需映射。
  */
@@ -473,6 +474,12 @@ const COMPONENT_PATHS: Record<string, string[]> = {
   ],
   "Mentions": [
     "src/shared/form/Mentions.tsx",
+    "src/shared/form/input-focus-ring.ts",
+  ],
+  /** 工具栏与 RichTextEditor 同款样式类 + Tooltip；运行时依赖 `jsr:@dreamer/markdown` */
+  "MarkdownEditor": [
+    "src/shared/form/MarkdownEditor.tsx",
+    "src/desktop/feedback/Tooltip.tsx",
     "src/shared/form/input-focus-ring.ts",
   ],
   "Password": [

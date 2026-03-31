@@ -3,6 +3,11 @@
  * 桌面为主，移动可卡片化；支持列定义、排序、固定列、展开行、分页、loading、尺寸、边框、行选择、
  * 列级可编辑（text/number/email/url/tel/date/time/select/checkbox/radio，受控 onCellChange；默认只读展示，双击进入编辑，失焦退出）。
  * date/time 使用 {@link DatePicker}、{@link TimePicker}（自研浮层 + 确定），非浏览器原生控件。
+ *
+ * **数据源与 View 函数槽 patch：** 首轮挂载后父级 VNode patch 只会 merge 同一 `liveProps` 对象并 bump 子树，
+ * **不会再次调用** `Table()`；若在组件体顶层解构 `dataSource`，内层 `return () =>` 会永远读到首帧数组，
+ * `onCellChange` 更新父级后表格仍展示旧数据。故 **`dataSource` 须在每次渲染 getter 内从 `props.dataSource` 读取**
+ * （或行选择回调里读 `props.dataSource`）；运行时见 `@dreamer/view` 的 `reconcileIntrinsicFunctionChild`（`vnode-mount.ts`）。
  */
 
 import { createEffect, createSignal, type SignalRef } from "@dreamer/view";
@@ -489,12 +494,18 @@ function renderEditableCell<T extends Record<string, unknown>>(
   const disabled = !onCellChange || disabledByProp;
   const h = editableHeightCls[size];
   /**
-   * 发出受控变更：须先于 `onCellChange` 递增 `pendingEditRefocusCount`，
+   * `refocusAfter: false`：仅同步 `onCellChange`，不递增 `pendingEditRefocusCount`、不调用 `afterCellChange`。
+   * 用于失焦提交，避免与「退出编辑 / 重聚焦」队列打架；为 true（默认）时行为与原先一致。
+   */
+  type EditableEmitOpts = { refocusAfter?: boolean };
+  /**
+   * 发出受控变更：在需要重聚焦时须先于 `onCellChange` 递增 `pendingEditRefocusCount`，
    * 否则受控重挂时子控件 `focusout` 冒泡会在 `afterCellChange` 排队之前把计数仍为 0，误退出编辑态。
    */
-  const emit = (value: unknown) => {
+  const emit = (value: unknown, opts?: EditableEmitOpts) => {
     if (!onCellChange || disabledByProp) return;
-    if (pendingEditRefocusCountRef) {
+    const refocusAfter = opts?.refocusAfter !== false;
+    if (refocusAfter && pendingEditRefocusCountRef) {
       pendingEditRefocusCountRef.current++;
     }
     try {
@@ -506,7 +517,7 @@ function renderEditableCell<T extends Record<string, unknown>>(
         rowIndex,
       });
     } catch (err) {
-      if (pendingEditRefocusCountRef) {
+      if (refocusAfter && pendingEditRefocusCountRef) {
         pendingEditRefocusCountRef.current = Math.max(
           0,
           pendingEditRefocusCountRef.current - 1,
@@ -514,7 +525,27 @@ function renderEditableCell<T extends Record<string, unknown>>(
       }
       throw err;
     }
-    afterCellChange?.();
+    if (refocusAfter) afterCellChange?.();
+  };
+  /**
+   * 失焦时再提交当前输入值（不重聚焦）：部分运行时或中文输入法结束时，末次变更未必触发 `input`，
+   * 受控 `value` 仍为先前快照，仅清 `editingCell` 会表现为「弹回旧数据」。
+   */
+  const emitCurrentTextInputBlur = (el: HTMLInputElement) => {
+    if (disabled) return;
+    emit(el.value, { refocusAfter: false });
+  };
+  /**
+   * 数字列失焦提交：与 {@link emit} 的 `onInput` 分支同一套空串 / `Number` 解析规则。
+   */
+  const emitCurrentNumberInputBlur = (el: HTMLInputElement) => {
+    if (disabled) return;
+    const v = el.value;
+    if (v === "") emit(null, { refocusAfter: false });
+    else {
+      const n = Number(v);
+      emit(Number.isFinite(n) ? n : v, { refocusAfter: false });
+    }
   };
   const stop = (e: Event) => e.stopPropagation();
   const justifyCheckbox = cellAlign === "right"
@@ -543,6 +574,16 @@ function renderEditableCell<T extends Record<string, unknown>>(
                 pendingTextSelectionRef.current = captureTextInputSelection(el);
               }
               emit(el.value);
+            }}
+            onCompositionEnd={(e: Event) => {
+              const el = e.target as HTMLInputElement;
+              if (pendingTextSelectionRef) {
+                pendingTextSelectionRef.current = captureTextInputSelection(el);
+              }
+              emit(el.value);
+            }}
+            onBlur={(e: Event) => {
+              emitCurrentTextInputBlur(e.target as HTMLInputElement);
             }}
           />
         </div>
@@ -577,6 +618,9 @@ function renderEditableCell<T extends Record<string, unknown>>(
                 emit(Number.isFinite(n) ? n : v);
               }
             }}
+            onBlur={(e: Event) => {
+              emitCurrentNumberInputBlur(e.target as HTMLInputElement);
+            }}
           />
         </div>
       );
@@ -601,6 +645,16 @@ function renderEditableCell<T extends Record<string, unknown>>(
                 pendingTextSelectionRef.current = captureTextInputSelection(el);
               }
               emit(el.value);
+            }}
+            onCompositionEnd={(e: Event) => {
+              const el = e.target as HTMLInputElement;
+              if (pendingTextSelectionRef) {
+                pendingTextSelectionRef.current = captureTextInputSelection(el);
+              }
+              emit(el.value);
+            }}
+            onBlur={(e: Event) => {
+              emitCurrentTextInputBlur(e.target as HTMLInputElement);
             }}
           />
         </div>
@@ -668,6 +722,13 @@ function renderEditableCell<T extends Record<string, unknown>>(
               const v = sel.value;
               const hit = ed.options.find((o) => String(o.value) === v);
               emit(hit ? hit.value : v);
+            }}
+            onBlur={(e: Event) => {
+              if (disabled) return;
+              const sel = e.target as HTMLSelectElement;
+              const v = sel.value;
+              const hit = ed.options.find((o) => String(o.value) === v);
+              emit(hit ? hit.value : v, { refocusAfter: false });
             }}
           >
             {ed.placeholder != null && ed.placeholder !== "" && (
@@ -841,7 +902,6 @@ export function Table<
 ) {
   const {
     columns,
-    dataSource,
     rowKey = "key",
     bordered = false,
     size = "md",
@@ -1013,7 +1073,8 @@ export function Table<
       selectedRef.value = newSelected;
     }
 
-    const selectedRows = dataSource.filter((record, index) =>
+    /** 须读 `props.dataSource`：函数槽 patch 会更新 `liveProps`，顶层解构的数组会停留在首帧 */
+    const selectedRows = props.dataSource.filter((record, index) =>
       newSelected.has(getKey(record, index))
     );
     rowSelection.onChange?.(selectedRows);
@@ -1038,13 +1099,18 @@ export function Table<
       selectedRef.value = newSelected;
     }
 
-    const selectedRows = dataSource.filter((r, i) =>
+    const selectedRows = props.dataSource.filter((r, i) =>
       newSelected.has(getKey(r, i))
     );
     rowSelection.onChange?.(selectedRows);
   };
 
   return () => {
+    /**
+     * 每次子槽 bump 后重跑须从 `props` 取最新数据源（与运行时 `liveProps` 同一引用，patch 时会 assign 覆盖）。
+     * 禁止依赖组件首次调用时在闭包内缓存的 `dataSource` 常量。
+     */
+    const dataSource = props.dataSource;
     // 展开行：受控用 props，非受控用内部 signal（在 getter 内读以保证 effect 订阅、点击 + 能更新）
     const expandedKeysSource = expandable?.expandedRowKeys ??
       expandedRef.value;

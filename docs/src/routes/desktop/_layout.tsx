@@ -74,6 +74,11 @@ const FORM_SUBMENU = [
     label: "RichTextEditor",
     desc: "富文本",
   },
+  {
+    path: "/desktop/form/markdown-editor",
+    label: "MarkdownEditor",
+    desc: "Markdown",
+  },
 ] as const;
 
 /** 消息与通知下的二级子菜单，对应路由 /message/xxx */

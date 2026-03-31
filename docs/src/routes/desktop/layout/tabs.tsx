@@ -37,7 +37,7 @@ const TABS_API: ApiRow[] = [
     name: "type",
     type: "line | card",
     default: "line",
-    description: "样式类型",
+    description: "line：文件夹式贴线标签；card：浅槽内卡片式",
   },
   {
     name: "fullWidth",
@@ -146,7 +146,19 @@ export default function LayoutTabs() {
         <Title level={1}>Tabs 标签页</Title>
         <Paragraph class="mt-2">
           标签页：items（key、label、disabled、children）、activeKey、onChange、type（line/card）、fullWidth、class、tabListClass、panelClass。
-          使用 Tailwind v4，支持 light/dark 主题。
+          <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">line</code>
+          {" "}
+          为文件夹式：激活项左/上/右边框、无底边，底色与根容器一致（默认{" "}
+          <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">
+            bg-slate-50 / dark:bg-slate-950
+          </code>
+          ，可用{" "}
+          <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">class</code>
+          {" "}
+          覆盖以贴合页面）；{" "}
+          <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">card</code>
+          {" "}
+          为槽内卡片式。使用 Tailwind v4，支持 light/dark 主题。
         </Paragraph>
       </section>
 

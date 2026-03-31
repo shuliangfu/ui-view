@@ -75,6 +75,11 @@ export type {
   ToolbarItem,
   ToolbarPreset,
 } from "./RichTextEditor.tsx";
+export { MarkdownEditor } from "./MarkdownEditor.tsx";
+export type {
+  MarkdownEditorPreviewMode,
+  MarkdownEditorProps,
+} from "./MarkdownEditor.tsx";
 export { Transfer } from "./Transfer.tsx";
 export type { TransferItem, TransferProps } from "./Transfer.tsx";
 export {

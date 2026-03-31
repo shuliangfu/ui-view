@@ -73,6 +73,11 @@ export type {
   ToolbarItem,
   ToolbarPreset,
 } from "./RichTextEditor.tsx";
+export { MarkdownEditor } from "./MarkdownEditor.tsx";
+export type {
+  MarkdownEditorPreviewMode,
+  MarkdownEditorProps,
+} from "./MarkdownEditor.tsx";
 
 /** 桌面专有：选择器、日期时间；另见本目录 `Transfer.tsx`（桌面 API，`label` 字段）按需直接路径引入，不在此 barrel 导出以免与 shared 通用 Transfer 冲突 */
 export { Select } from "./Select.tsx";

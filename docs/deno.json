@@ -54,6 +54,8 @@
     "@dreamer/ui-view/mobile/navigation": "../src/mobile/navigation/mod.ts",
     "@dreamer/ui-view/mobile/charts": "../src/mobile/charts/mod.ts",
     "@dreamer/ui-view/plugin": "../plugin.ts",
+    "@dreamer/markdown": "../../markdown/src/mod.ts",
+    "@dreamer/markdown/types": "../../markdown/src/types.ts",
     "postcss": "npm:postcss@8.4.39",
     "tailwindcss": "npm:tailwindcss@4.1.18",
     "@tailwindcss/postcss": "npm:@tailwindcss/postcss@4.1.18"
