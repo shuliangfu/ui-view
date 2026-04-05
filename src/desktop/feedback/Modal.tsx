@@ -35,7 +35,7 @@ function isViewSignal(v: unknown): v is Signal<unknown> {
   return f.__VIEW_SIGNAL === true &&
     Object.prototype.hasOwnProperty.call(f, "value");
 }
-import { createPortal } from "@dreamer/view/portal";
+import { createPortal } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 /** 按需：单文件图标，避免经 icons/mod 拉入全表 */
 import { IconClose } from "../../shared/basic/icons/Close.tsx";

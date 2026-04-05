@@ -6,23 +6,11 @@
  * 1. 外层 `return ()` **不读取** `leftSearchRef` / `rightSearchRef`，也**不读取** `selectedKeysRef.value`，
  *    仅追踪 `targetKeys`（及 dataSource 等），否则每点选一项或每键入一字都会重建整棵 `div.transfer`（含中间箭头区），导致失焦。
  * 2. 左右列 + 中间箭头为**同级 JSX**（flex 一行），避免「两列各包一层 **函数子响应式插入**、中间是本征 div」时浏览器分段绘制。
- * 3. 列表的 **函数子响应式插入** **不订阅** `searchRef`：列内 `localQuery` + `listVersion` 作刷新节拍，
+ * 3. 列表区用 **JSX 函数子** `{() => …}` **不订阅** 外层 `searchRef`：列内 `localQuery` + `listVersion` 作刷新节拍，
  *    输入时 bump `listVersion`；仍把 `searchRef.value` 同步给中间箭头 onClick。`onSearch` 用 `queueMicrotask` 推迟。
  */
 
-import {
-  createEffect,
-  createRef,
-  createRenderEffect,
-  createRoot,
-  createSignal,
-  getDocument,
-  insert,
-  type InsertCurrent,
-  type InsertValue,
-  onCleanup,
-  type Signal,
-} from "@dreamer/view";
+import { createSignal, getDocument, type Signal } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 
 export interface TransferItem {
@@ -123,26 +111,45 @@ function TransferColumn(props: TransferColumnProps) {
 
   const localQuery = createSignal(searchRef.value);
   const listVersion = createSignal(0);
-  /** 列表挂载点；使用 `createRef` 以便 ref 写入时触发下方 effect（与 ImageViewer 一致） */
-  const bodyMountRef = createRef<HTMLDivElement>(null);
 
-  createRenderEffect(() => {
-    const mount = bodyMountRef.current;
-    if (mount == null) return;
-    const dispose = createRoot((disposeRoot) => {
-      let current: InsertCurrent;
-      createEffect(() => {
-        listVersion.value;
-        const filtered = filterTransferItems(
-          items,
-          localQuery.value,
-          filterOption,
-        );
-        const selectedKeys = selectedKeysRef.value;
-        const listHeight = listStyle.height ?? 200;
-        current = insert(
-          mount,
-          (
+  return (
+    <div
+      class={twMerge(transferListShellCls, "min-w-0 shrink-0")}
+      style={{ width: `${listStyle.width ?? 200}px` }}
+    >
+      <div class="px-3 py-2 border-b border-slate-200 dark:border-slate-600 font-medium text-slate-700 dark:text-slate-300">
+        {title}
+      </div>
+      {showSearch && (
+        <input
+          type="text"
+          role="searchbox"
+          autocomplete="off"
+          class="m-2 px-2 py-1 text-sm border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 w-[calc(100%-1rem)]"
+          placeholder={searchPlaceholder}
+          value={() => localQuery.value}
+          onInput={(e: Event) => {
+            const v = (e.target as HTMLInputElement).value;
+            localQuery.value = v;
+            searchRef.value = v;
+            listVersion.value = listVersion.value + 1;
+            if (onSearch != null) {
+              queueMicrotask(() => onSearch(v));
+            }
+          }}
+        />
+      )}
+      <div class="flex flex-col flex-1 min-h-0">
+        {() => {
+          listVersion.value;
+          const filtered = filterTransferItems(
+            items,
+            localQuery.value,
+            filterOption,
+          );
+          const selectedKeys = selectedKeysRef.value;
+          const listHeight = listStyle.height ?? 200;
+          return (
             <div class="contents">
               <ul
                 class="overflow-auto flex-1 min-h-0 list-none m-0 p-1"
@@ -184,43 +191,9 @@ function TransferColumn(props: TransferColumnProps) {
                 {selectedKeys.length > 0 && `，已选 ${selectedKeys.length}`}
               </div>
             </div>
-          ) as InsertValue,
-          current,
-        );
-      });
-      return disposeRoot;
-    });
-    onCleanup(() => dispose());
-  });
-
-  return (
-    <div
-      class={twMerge(transferListShellCls, "min-w-0 shrink-0")}
-      style={{ width: `${listStyle.width ?? 200}px` }}
-    >
-      <div class="px-3 py-2 border-b border-slate-200 dark:border-slate-600 font-medium text-slate-700 dark:text-slate-300">
-        {title}
+          );
+        }}
       </div>
-      {showSearch && (
-        <input
-          type="text"
-          role="searchbox"
-          autocomplete="off"
-          class="m-2 px-2 py-1 text-sm border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 w-[calc(100%-1rem)]"
-          placeholder={searchPlaceholder}
-          value={() => localQuery.value}
-          onInput={(e: Event) => {
-            const v = (e.target as HTMLInputElement).value;
-            localQuery.value = v;
-            searchRef.value = v;
-            listVersion.value = listVersion.value + 1;
-            if (onSearch != null) {
-              queueMicrotask(() => onSearch(v));
-            }
-          }}
-        />
-      )}
-      <div class="flex flex-col flex-1 min-h-0" ref={bodyMountRef} />
     </div>
   );
 }

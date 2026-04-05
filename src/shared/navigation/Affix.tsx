@@ -5,7 +5,7 @@
  */
 
 import { createRenderEffect, createSignal, onCleanup } from "@dreamer/view";
-import { createPortal } from "@dreamer/view/portal";
+import { createPortal } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 
 /** 浮层 z-index，需高于常见顶栏（如 z-50） */

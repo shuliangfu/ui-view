@@ -10,7 +10,7 @@ import {
   type JSXRenderable,
   onCleanup,
 } from "@dreamer/view";
-import { createPortal } from "@dreamer/view/portal";
+import { createPortal } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import type { ToastItem, ToastType } from "./toast-store.ts";
 import { toastList } from "./toast-store.ts";

@@ -5,7 +5,7 @@
  * **手写 JSX**：`percent={sig.value}` 会在创建 VNode 时变成快照、不订阅；须传 **`percent={sig}`**（`Signal<number>`，`createSignal` 返回值）
  * 或 **`percent={() => n}`**（零参 getter）。有可用 `document`（浏览器或 SSR 影子 document）且 `percent` 为响应式时，
  * 本组件用 {@link createMemo} 返回子树走 **函数子响应式插入**；**纯 SSR 无 document** 时退回同步 VNode，避免
- * 无可用 document 时 `insert()` 路径访问 DOM 抛错。
+ * 无可用 document 时走浏览器渲染路径会访问 DOM 抛错。
  */
 
 import { createMemo, getDocument, type Signal } from "@dreamer/view";

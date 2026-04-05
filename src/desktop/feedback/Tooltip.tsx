@@ -8,7 +8,7 @@
  */
 
 import { createRenderEffect, createSignal, onCleanup } from "@dreamer/view";
-import { createPortal } from "@dreamer/view/portal";
+import { createPortal } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 
 export type TooltipPlacement =

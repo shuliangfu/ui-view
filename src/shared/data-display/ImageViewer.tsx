@@ -9,7 +9,7 @@
  * **关闭态**：浏览器内存在真实 `document.body` 时须返回**隐藏占位 `span`**（与 {@link Modal} 一致），勿对该槽位 `return null`，否则 Hybrid 水合 `replaceSlot` 与更新链异常 → 点击后 `open` 已变但界面不打开。
  * 勿在组件顶层 `open === false` 时提前 `return` 跳过 `createEffect`/`createRenderEffect` 注册。
  * **根返回值须为 `return () => …` 渲染 getter**（与 {@link Image}、Carousel 一致），在 getter 内读 {@link isOpen}；若直接 `return` 静态 VNode，首帧关闭会永远卡在占位节点，点击后 `open` 已为 true 仍不显示查看器。
- * **勿在根 getter 里读 `currentIndex` / 主图 `src`**：否则每次切图整棵 `fixed` 壳重算，主图与缩略图会一起闪断；主图/缩略条/张数指示应挂在占位节点上，由 **函数子响应式插入**（`@dreamer/view` 的 **`insert()`** 对 getter 建 effect）单独订阅。
+ * **勿在根 getter 里读 `currentIndex` / 主图 `src`**：否则每次切图整棵 `fixed` 壳重算，主图与缩略图会一起闪断；主图/缩略条/张数指示应挂在占位节点上，由 **JSX 函数子**（`{() => …}`，运行时与 `insert` 同源）单独订阅，避免与外壳同一渲染节拍。
  * **为何单 `img` 改 `src` 会「先空再出」**：浏览器在赋值新 URL 后会立刻释放旧位图，新图未 `load/decode` 前没有像素可画；主图用双缓冲预载到底层再切换叠放。缩略条若 getter 订阅了当前索引，会整行 DOM 重挂载，小图也会闪；结构只跟列表走、高亮单独改 `class`。
  * **换图动画**：`imageTransition="fade"`（默认）在双缓冲上做**叠化**（新图在上层 `opacity 0→1`，旧图在下层保持不透明）；`slide` / `slideFade` 仍为**瞬时切层**以免整层平移露出黑底。系统开启「减少动态效果」时一律瞬时切换。
  */
@@ -19,11 +19,7 @@ import {
   createMemo,
   createRef,
   createRenderEffect,
-  createRoot,
   createSignal,
-  insert,
-  type InsertCurrent,
-  type InsertValue,
   onCleanup,
   type Signal,
 } from "@dreamer/view";
@@ -329,7 +325,7 @@ export function ImageViewer(props: ImageViewerProps) {
   const hasMultipleImages = createMemo(() => imageList().length > 1);
 
   /**
-   * 主图 / 缩略条 / 顶栏张数 的占位节点：内容由 **函数子响应式插入**（`insert()`）注入，与外壳 DOM 解耦。
+   * 主图 / 缩略条 / 顶栏张数 的占位节点：缩略条用 **JSX 函数子** 注入；主图由 ref + effect 写双缓冲，与外壳 DOM 解耦。
    */
   const mainImageMountRef = createRef<HTMLDivElement>(null);
   /** 主图双缓冲：预载到「隐藏」层，`decode` 后再切 `opacity/z-index`，避免单 `img` 改 `src` 时浏览器先清空旧位图 → 闪一下。 */
@@ -505,27 +501,6 @@ export function ImageViewer(props: ImageViewerProps) {
       </div>
     );
   };
-
-  /**
-   * 缩略条：仅随列表 / `showThumbnails` 变；索引变化不触发本 insert。
-   */
-  createEffect(() => {
-    if (!isOpen()) return;
-    const mount = thumbnailStripMountRef.current;
-    if (mount == null) return;
-    const dispose = createRoot((disposeRoot) => {
-      let current: InsertCurrent;
-      createEffect(() => {
-        current = insert(
-          mount,
-          renderThumbnailStripBody() as InsertValue,
-          current,
-        );
-      });
-      return disposeRoot;
-    });
-    onCleanup(() => dispose());
-  });
 
   /**
    * 根据当前索引更新缩略按钮样式；用 `queueMicrotask` 排在 **函数子响应式插入** 挂载按钮之后执行，避免首帧选不到节点。
@@ -915,7 +890,10 @@ export function ImageViewer(props: ImageViewerProps) {
             ref={thumbnailStripMountRef}
             class="absolute bottom-14 left-0 right-0 z-10 min-h-0 pointer-events-auto flex justify-center"
             aria-hidden={!showThumbnails}
-          />
+          >
+            {/* 仅随列表 / showThumbnails 变；勿在子 getter 内读当前索引，避免整行重挂载 */}
+            {() => renderThumbnailStripBody()}
+          </div>
         )}
 
         {hasMultipleImages() && (

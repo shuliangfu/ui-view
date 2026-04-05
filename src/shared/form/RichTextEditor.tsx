@@ -21,7 +21,7 @@ import {
   onCleanup,
   untrack,
 } from "@dreamer/view";
-import { createPortal } from "@dreamer/view/portal";
+import { createPortal } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import { Modal } from "../../desktop/feedback/Modal.tsx";
 import { Tooltip } from "../../desktop/feedback/Tooltip.tsx";

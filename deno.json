@@ -62,7 +62,6 @@
     "@dreamer/test": "jsr:@dreamer/test@^1.0.15",
 
     "@dreamer/view": "../view/src/mod.ts",
-    "@dreamer/view/portal": "../view/src/portal.ts",
     "@dreamer/view/ssr": "../view/src/mod-ssr.ts",
     "@dreamer/view/csr": "../view/src/mod.ts",
     "@dreamer/view/hybrid": "../view/src/mod.ts",
