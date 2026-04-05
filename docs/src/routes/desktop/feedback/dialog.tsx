@@ -3,7 +3,7 @@
  * 路由: /desktop/feedback/dialog
  *
  * 示例含：基础确认、警告确认（warning）、危险（danger）、loading、自定义 footer。
- * `open` 须传 **SignalRef**（如 `open={dialogOpen}`），勿写 `open={dialogOpen.value}`；底层 Modal 在 Hybrid 下需订阅 `.value`。
+ * `open` 须传 **`Signal<boolean>`**（`createSignal` 返回值，如 `open={dialogOpen}`），勿写 `open={dialogOpen.value}`；底层 Modal 在 Hybrid 下需订阅 `.value`。
  */
 
 import { createSignal } from "@dreamer/view";
@@ -20,7 +20,7 @@ interface ApiRow {
 const DIALOG_API: ApiRow[] = [
   {
     name: "open",
-    type: "boolean | (() => boolean) | SignalRef<boolean>",
+    type: "boolean | (() => boolean) | Signal<boolean>",
     default: "-",
     description:
       "是否打开；推荐 `open={sig}`（createSignal 返回值），勿 `open={sig.value}` 快照",

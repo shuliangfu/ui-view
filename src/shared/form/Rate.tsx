@@ -9,7 +9,7 @@ export interface RateProps {
   /** 星数，默认 5 */
   count?: number;
   /** 当前分数，0～count */
-  /** 当前星级；可为 getter / `() => ref.value`（SignalRef） */
+  /** 当前星级；可为 getter / `() => ref.value`（`Signal`） */
   value?: number | (() => number);
   /** 是否允许半星 */
   allowHalf?: boolean;

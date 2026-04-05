@@ -145,7 +145,7 @@ export function TreeSelect(props: TreeSelectProps) {
             sizeCls,
           )}
           onClick={() => {
-            if (!disabled) openState.value = (prev) => !prev;
+            if (!disabled) openState((prev) => !prev);
           }}
         >
           <span

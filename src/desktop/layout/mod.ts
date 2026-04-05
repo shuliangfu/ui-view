@@ -1,7 +1,7 @@
 /**
  * 布局与容器（ANALYSIS 3.5）：Container、Hero、Grid、GridItem、Stack、Divider、Tabs、Accordion。
  *
- * `Tabs` / `Accordion` 非受控内部状态使用 `@dreamer/view/signal` 的 `SignalRef`（`.value`）；
+ * `Tabs` / `Accordion` 非受控内部状态使用 `@dreamer/view` 的 **`Signal`**（`createSignal`，`.value`）；
  * `Container`、`Hero`、`Grid`、`Stack`、`Divider` 为纯 props，直接返回 VNode。
  */
 

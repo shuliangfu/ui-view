@@ -63,7 +63,7 @@ export function computePickerPortalStyle(
  * 判断两段浮层定位是否在布局上等价（仅比较 `top` / `left` / `zIndex` 字符串）。
  *
  * {@link computePickerPortalStyle} 每次返回**新对象**，若不经比较就写入 signal，`Object.is` 恒为不等，
- * 会反复触发依赖该 signal 的整段 `insertReactive` 重算；滚动/resize 回调与 DOM 几何写回交错时，
+ * 会反复触发依赖该 signal 的整段 **函数子响应式插入** 重算；滚动/resize 回调与 DOM 几何写回交错时，
  * 可能形成高密度同步更新甚至反馈环，表现为点击打开日期面板后主线程长时间占用（像「卡死」）。
  *
  * @param prev - 上一帧已提交到 signal 或 DOM 的样式
@@ -413,7 +413,7 @@ export function scrollPickerTimeColumnsByDraftValues(
 export type PickerTimePanelRootGetter = () => HTMLElement | null;
 
 /**
- * 在子树与布局就绪后再滚时间列：父级 `ref` 往往早于 `insertReactive` 子节点提交，首帧 `querySelector` 常为空；
+ * 在子树与布局就绪后再滚时间列：父级 `ref` 往往早于 **函数子响应式插入** 子节点提交，首帧 `querySelector` 常为空；
  * 故用微任务 + 多帧 `requestAnimationFrame` 重试，直到各列均有选中项或达到上限。
  *
  * @param panelRoot - 浮层根；或传入 getter（如 `() => outsidePanelEl.current`）以便每帧取最新节点

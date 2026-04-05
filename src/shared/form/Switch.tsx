@@ -3,15 +3,15 @@
  * 支持 disabled、checked，light/dark 主题；label + 隐藏 input + peer 样式。
  */
 
-import type { SignalRef } from "@dreamer/view";
+import type { Signal } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 
 export interface SwitchProps {
   /**
-   * 是否开启。支持：`boolean`、零参 getter、`createSignal` 的返回值（`SignalRef<boolean>`，可直接 `checked={sig}`）。
+   * 是否开启。支持：`boolean`、零参 getter、`createSignal` 的返回值（`Signal<boolean>`，可直接 `checked={sig}`）。
    * 内部透传至原生 `input`，由 View 对 `checked` 做细粒度绑定。
    */
-  checked?: boolean | (() => boolean) | SignalRef<boolean>;
+  checked?: boolean | (() => boolean) | Signal<boolean>;
   /** 是否禁用 */
   disabled?: boolean;
   /** 额外 class（作用于 label） */

@@ -17,7 +17,7 @@ import { createEffect, createRef } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 
 export interface SliderProps {
-  /** 当前值；可为 getter / `() => ref.value`（SignalRef）以配合 View 细粒度更新 */
+  /** 当前值；可为 getter / `() => ref.value`（`Signal`）以配合 View 细粒度更新 */
   value?: number | [number, number] | (() => number) | (() => [number, number]);
   /** 最小值 */
   min?: number;
@@ -67,7 +67,7 @@ const rangeOverlayThumbCls =
  * 横向 range 蓝色区间条：直接写 DOM，拖动中父级 committed 未变时也能跟手更新。
  */
 function paintRangeFillBar(
-  el: HTMLDivElement | null,
+  el: HTMLDivElement | null | undefined,
   low: number,
   high: number,
   min: number,

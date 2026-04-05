@@ -3,7 +3,7 @@
  * 支持 title、description、icon、type、duration、key 去重、堆叠；支持自定义弹出位置 placement。
  */
 
-import { createSignal } from "@dreamer/view/signal";
+import { createSignal } from "@dreamer/view";
 
 export type NotificationType =
   | "success"
@@ -100,8 +100,8 @@ export function closeNotification(id: string): void {
     n.id === id
   );
   item?.onClose?.();
-  notificationListRef.value = notificationListRef.value.filter((n) =>
-    n.id !== id
+  notificationListRef.value = notificationListRef.value.filter(
+    (n: NotificationItem) => n.id !== id,
   );
 }
 

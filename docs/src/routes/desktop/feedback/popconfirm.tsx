@@ -23,7 +23,7 @@ interface ApiRow {
 const POPCONFIRM_API: ApiRow[] = [
   {
     name: "open",
-    type: "boolean | (() => boolean) | SignalRef<boolean>",
+    type: "boolean | (() => boolean) | Signal<boolean>",
     default: "-",
     description:
       "是否打开；推荐 open={sig}，勿 open={sig.value}（手写 JSX 快照）",
@@ -362,8 +362,9 @@ export default function FeedbackPopconfirm() {
         <Title level={2}>API</Title>
         <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
           组件接收以下属性，title 为必填；触发器 onClick 中设置 signal 为 true
-          或调用 onOpenChange(true)；open 请传 SignalRef，勿传
-          .value。确定/取消关闭 由组件处理，onConfirm、onCancel 仅作业务回调。
+          或调用 onOpenChange(true)；open 请传 Signal（createSignal
+          返回值），勿传 .value。确定/取消关闭 由组件处理，onConfirm、onCancel
+          仅作业务回调。
         </Paragraph>
         <div class="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-600">
           <table class="w-full min-w-lg text-sm">

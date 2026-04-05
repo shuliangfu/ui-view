@@ -10,7 +10,7 @@
  * （或行选择回调里读 `props.dataSource`）；运行时见 `@dreamer/view` 的 `reconcileIntrinsicFunctionChild`（`vnode-mount.ts`）。
  */
 
-import { createEffect, createSignal, type SignalRef } from "@dreamer/view";
+import { createEffect, createSignal, type Signal } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import { DatePicker } from "../form/DatePicker.tsx";
 import { TimePicker } from "../form/TimePicker.tsx";
@@ -186,9 +186,9 @@ type TableEditingTarget = { rowKey: string; columnKey: string };
  * `scheduleTableEditRefocus` 永远找不到 input，而 `focusout` 闭包里的 `pending` 仍是 0，立刻清空 `editingCell`。
  */
 type TableStateCacheEntry = {
-  selected: SignalRef<Set<string>>;
-  expanded: SignalRef<string[]>;
-  editing: SignalRef<TableEditingTarget | null>;
+  selected: Signal<Set<string>>;
+  expanded: Signal<string[]>;
+  editing: Signal<TableEditingTarget | null>;
   tableEditRootRef: { current: HTMLElement | null };
   pendingEditRefocusCount: { current: number };
   pendingEditTextSelectionRef: {
@@ -367,7 +367,7 @@ type ScheduleTableEditRefocusOptions = {
 };
 
 /**
- * 受控 `onCellChange` 触发后，外层 insertReactive 可能整段重挂表体，原 `input` 被摘掉，
+ * 受控 `onCellChange` 触发后，外层 **函数子响应式插入** 可能整段重挂表体，原 `input` 被摘掉，
  * 焦点落到 `document.body`，在可滚动 `main` 内常表现为视口跳到顶部。
  * 在微任务 + 连续两帧 `requestAnimationFrame` 之后：若焦点已不在当前 `data-view-table-edit-slot` 内，
  * 则对槽内控件执行 `focus({ preventScroll: true })`（与初次进入编辑的 effect 时机对齐）。
@@ -953,12 +953,12 @@ export function Table<
 
   /**
    * 内部选择/展开状态（非受控时使用）；有 stateKey 时从缓存取，避免整树重渲染丢失。
-   * 使用 SignalRef（.value 读写），与 @dreamer/view 的 createSignal 一致。
+   * 使用 Signal（.value 读写），与 @dreamer/view 的 createSignal 一致。
    */
-  let selectedRef: SignalRef<Set<string>>;
-  let expandedRef: SignalRef<string[]>;
+  let selectedRef: Signal<Set<string>>;
+  let expandedRef: Signal<string[]>;
   /** 当前正在编辑的单元格（rowKey + columnKey）；有 stateKey 时与选中/展开一并缓存，避免父级重挂 Table 后丢失 */
-  let editingCell: SignalRef<TableEditingTarget | null>;
+  let editingCell: Signal<TableEditingTarget | null>;
 
   /** 可编辑聚焦与失焦竞态用 ref；有 stateKey 时必须来自 stateCache，与 `editingCell` 同寿命 */
   let tableEditRootRef: { current: HTMLElement | null };
@@ -1525,10 +1525,13 @@ export function Table<
                                     if (
                                       expandable.expandedRowKeys === undefined
                                     ) {
-                                      expandedRef.value = (prev) =>
+                                      expandedRef((prev) =>
                                         isExpanded
-                                          ? prev.filter((k) => k !== key)
-                                          : [...prev, key];
+                                          ? prev.filter((k: string) =>
+                                            k !== key
+                                          )
+                                          : [...prev, key]
+                                      );
                                     }
                                     expandable.onExpand?.(!isExpanded, record);
                                   }}

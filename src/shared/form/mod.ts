@@ -1,9 +1,9 @@
 /**
  * View 表单组件入口（与 ANALYSIS 3.2 对齐）。
  *
- * 受控值可与 `@dreamer/view/signal` 的 `SignalRef` 配合：例如 `value={() => textRef.value}`，
+ * 受控值可与 `@dreamer/view` 的 **`Signal`** 配合：例如 `value={() => textRef.value}`，
  * **Switch** 的 `checked` 可直接传 `createSignal` 返回值（`checked={sig}`），亦可 `checked={() => sig.value}`；
- * 由 View 对 getter / SignalRef 做细粒度更新；部分组件仍使用 `return () =>` 以稳定 DOM、避免输入失焦（见各文件注释）。
+ * 由 View 对 getter / `Signal` 做细粒度更新；部分组件仍使用 `return () =>` 以稳定 DOM、避免输入失焦（见各文件注释）。
  */
 export { AutoComplete } from "./AutoComplete.tsx";
 export type { AutoCompleteProps } from "./AutoComplete.tsx";

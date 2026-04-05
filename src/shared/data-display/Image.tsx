@@ -5,7 +5,7 @@
 
 import { twMerge } from "tailwind-merge";
 import { createEffect, onCleanup } from "@dreamer/view";
-import { createSignal } from "@dreamer/view/signal";
+import { createSignal } from "@dreamer/view";
 
 export interface ImageProps {
   /** 列表渲染时的 key（用于 map 等场景） */

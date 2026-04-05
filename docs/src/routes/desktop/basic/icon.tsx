@@ -324,9 +324,10 @@ import {
   Title,
 } from "@dreamer/ui-view";
 import type { IconComponentProps } from "@dreamer/ui-view";
+import type { JSXRenderable } from "@dreamer/view";
 
-/** 图标组件类型：与内置图标签名一致 */
-type IconComponentType = (props?: IconComponentProps) => unknown;
+/** 图标组件类型：与内置图标签名一致（与 ui-view 图标返回类型一致） */
+type IconComponentType = (props?: IconComponentProps) => JSXRenderable;
 
 /** 单个图标展示：图标 + 名称（currentColor 继承自容器，dark 下提高对比度） */
 function IconItem(

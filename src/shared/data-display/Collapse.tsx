@@ -4,7 +4,7 @@
  * 内部维护 fallback state，保证点击展开/收起在受控/非受控下均生效。
  */
 
-import { createSignal } from "@dreamer/view/signal";
+import { createSignal } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 /** 按需：单文件图标，避免经 icons/mod 拉入全表 */
 import { IconChevronDown } from "../basic/icons/ChevronDown.tsx";
@@ -26,7 +26,10 @@ export interface CollapseItem {
 export interface CollapseProps {
   /** 折叠项列表 */
   items: CollapseItem[];
-  /** 当前展开的 key 列表（受控）；可传 getter 如 activeKey={() => keys()} 以便在 View 中订阅更新 */
+  /**
+   * 当前展开的 key 列表（受控）。
+   * 在细粒度更新场景请传 getter（如 `() => sig.value`），避免只传 `sig.value` 快照导致子树拿不到最新展开态。
+   */
   activeKey?: string[] | (() => string[]);
   /** 默认展开的 key 列表（非受控） */
   defaultActiveKey?: string[];
@@ -64,7 +67,6 @@ const sizeClasses: Record<SizeVariant, string> = {
 export function Collapse(props: CollapseProps) {
   const {
     items,
-    activeKey: controlledKeys,
     defaultActiveKey = [],
     onChange,
     accordion = false,
@@ -79,17 +81,27 @@ export function Collapse(props: CollapseProps) {
     contentClass,
   } = props;
 
-  const initialKeys = typeof controlledKeys === "function"
-    ? (controlledKeys as () => string[])()
-    : (controlledKeys ?? defaultActiveKey ?? []);
+  /**
+   * 初次内部 state：与首次 `props.activeKey` / `defaultActiveKey` 对齐（勿把受控 key 解构到闭包变量里）。
+   */
+  const initialKeys = (() => {
+    const ck = props.activeKey;
+    if (ck === undefined) return defaultActiveKey ?? [];
+    if (typeof ck === "function") return (ck as () => string[])();
+    return ck;
+  })();
   const internalKeysRef = createSignal<string[]>(initialKeys);
-  /** 受控时用 prop（或 getter 的返回值），否则用内部 SignalRef；读 `.value` / getter 会建立订阅 */
-  const getActiveKeys = (): string[] =>
-    controlledKeys === undefined
-      ? internalKeysRef.value
-      : typeof controlledKeys === "function"
-      ? (controlledKeys as () => string[])()
-      : controlledKeys;
+
+  /**
+   * 当前展开 key 列表：非受控读内部 ref；受控时**每次**从 `props.activeKey`（或 getter）读取。
+   * 若在 setup 里解构 `activeKey`，返回的渲染 getter 重跑时仍会得到初值，受控表现为点不开（与 Menu 读 `props.openKeys` 同理）。
+   */
+  const getActiveKeys = (): string[] => {
+    const ck = props.activeKey;
+    if (ck === undefined) return internalKeysRef.value;
+    if (typeof ck === "function") return (ck as () => string[])();
+    return ck;
+  };
 
   const toggle = (key: string) => {
     const current = getActiveKeys();

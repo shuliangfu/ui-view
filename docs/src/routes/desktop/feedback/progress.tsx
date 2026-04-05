@@ -23,7 +23,7 @@ interface ApiRow {
 const PROGRESS_API: ApiRow[] = [
   {
     name: "percent",
-    type: "number | SignalRef<number> | () => number",
+    type: "number | Signal<number> | () => number",
     default: "0",
     description:
       "进度 0–100；手写 JSX 须 percent={sig} 或 percent={()=>n}，勿 percent={sig.value}",
@@ -192,7 +192,7 @@ export default function FeedbackProgress() {
         <Paragraph class="mt-2">
           进度条（线性/环形）；支持百分比、状态（正常/成功/异常/进行中）、是否显示文案、自定义颜色与
           format；动态进度请对 percent 传入 createSignal
-          的返回值（SignalRef），勿写 .value（手写 JSX 会快照不更新）。使用
+          的返回值（Signal），勿写 .value（手写 JSX 会快照不更新）。使用
           Tailwind v4，支持 light/dark 主题。
         </Paragraph>
       </section>

@@ -1,11 +1,11 @@
 /**
  * Tabs 标签页（View）。
- * 桌面横排，支持受控/非受控、line/card 样式；非受控时用 `SignalRef`（`createSignal` + `.value`）维护 activeKey。
+ * 桌面横排，支持受控/非受控、line/card 样式；非受控时用 **`Signal`**（`createSignal` + `.value`）维护 activeKey。
  * `line`：激活项为「文件夹」式——左/上/右边框、无底边，底沿与标签栏分隔线对齐并盖住线；`card`：浅槽内卡片式。
  * 内部维护 fallback state，保证点击切换在受控/非受控下均生效。
  */
 
-import { createSignal } from "@dreamer/view/signal";
+import { createSignal } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 
 export type TabsType = "line" | "card";
@@ -54,7 +54,7 @@ export function Tabs(props: TabsProps) {
 
   const initialKey = controlledKey ?? items[0]?.key ?? "";
   const internalKeyRef = createSignal(initialKey);
-  /** 用普通对象存「上次同步的受控 key」，不参与响应式，避免读 SignalRef 触发重跑导致卡死 */
+  /** 用普通对象存「上次同步的受控 key」，不参与响应式，避免读 `Signal` 触发重跑导致卡死 */
   const lastSyncedRef: { value: string | undefined } = { value: undefined };
   const c = controlledKey !== undefined && controlledKey !== ""
     ? controlledKey

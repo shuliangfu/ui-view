@@ -3,7 +3,7 @@
  * 用于文档/后台：顶部可选「概览」链接、分组标题、可折叠的一级分类与二级链接；手风琴展开、基于当前路径的 active 高亮。
  */
 
-import { createSignal } from "@dreamer/view/signal";
+import { createSignal } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import { Link } from "../basic/Link.tsx";
 /** 按需：单文件图标，避免经 icons/mod 拉入全表 */
@@ -107,9 +107,7 @@ export function Sidebar(props: SidebarProps) {
 
   /** 点击一级分类：展开此项并收起其他（手风琴）；再次点击则收起 */
   const toggleOpen = (path: string) => {
-    expandedKeyRef.value = (
-      prev: string | null,
-    ) => (prev === path ? null : path);
+    expandedKeyRef((prev: string | null) => prev === path ? null : path);
   };
 
   const asideClass = twMerge(
@@ -146,7 +144,7 @@ export function Sidebar(props: SidebarProps) {
               {item.children != null && item.children.length > 0
                 ? (
                   /**
-                   * 不用 Fragment 内嵌 `{() => ...}`：View 对 getter 子节点会走 insertReactive，
+                   * 不用 Fragment 内嵌 `{() => ...}`：View 对 getter 子节点会走 **函数子响应式插入**，
                    * 在侧栏 flex 场景下曾出现子菜单挂错父级、整块跑到主内容右侧的问题。
                    * 在外层 `return () =>` 里直接读 `isExpanded`（已订阅 expandedKeyRef）条件渲染即可。
                    */

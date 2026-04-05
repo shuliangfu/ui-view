@@ -23,7 +23,7 @@ const STEPS_API: ApiRow[] = [
   },
   {
     name: "current",
-    type: "number | (() => number) | SignalRef<number>",
+    type: "number | (() => number) | Signal<number>",
     default: "0",
     description:
       "当前步骤（从 0 起）；推荐 current={sig}，勿 current={sig.value}（手写 JSX 快照）",

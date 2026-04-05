@@ -3,7 +3,7 @@
  * 使用 Tailwind v4 类名，支持 light/dark 主题（需应用层在根节点使用 .dark 切换）。
  */
 
-import { createContext } from "@dreamer/view/context";
+import { createContext, useContext } from "@dreamer/view/context";
 import { twMerge } from "tailwind-merge";
 import type { ColorVariant, SizeVariant } from "../../shared/types.ts";
 import {
@@ -39,10 +39,9 @@ export interface ButtonProps {
 }
 
 /** 默认不在任何 ButtonGroup 内；Provider 注入 { attached: true } 时子级 Button 切换为组内样式 */
-const ButtonGroupContext = createContext<{ attached: boolean }>(
-  { attached: false },
-  "dreamer.ui-view.ButtonGroup",
-);
+const ButtonGroupContext = createContext<{ attached: boolean }>({
+  attached: false,
+});
 
 /** ButtonGroup 容器 props（与 {@link Button} 同文件）。 */
 export interface ButtonGroupProps {
@@ -92,7 +91,7 @@ export function Button(props: ButtonProps) {
     children,
   } = props;
 
-  const { attached: inAttachedGroup } = ButtonGroupContext.useContext();
+  const { attached: inAttachedGroup } = useContext(ButtonGroupContext);
 
   /** 默认带蓝色焦点环；在紧凑组内去掉 ring，改由 variant 的 focus/active 背景提示 */
   const base = inAttachedGroup

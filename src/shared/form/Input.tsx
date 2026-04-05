@@ -22,7 +22,7 @@ export interface InputProps {
   hideFocusRing?: boolean;
   /** 占位文案 */
   placeholder?: string;
-  /** 输入值（受控可选）；可为 getter 或 `() => ref.value`（SignalRef），由 View 对 getter 细粒度更新 */
+  /** 输入值（受控可选）；可为 getter 或 `() => ref.value`（`Signal`），由 View 对 getter 细粒度更新 */
   value?: string | (() => string);
   /** 原生 type，如 text、password、email */
   type?: string;

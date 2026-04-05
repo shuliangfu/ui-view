@@ -110,8 +110,10 @@ export default function OtherConfigProvider() {
           <div class="flex flex-wrap gap-3">
             <Button
               type="button"
-              onClick={() =>
-                theme.value = (t) => (t === "light" ? "dark" : "light")}
+              onClick={() => {
+                const t = theme();
+                theme.value = t === "light" ? "dark" : "light";
+              }}
             >
               切换 theme（当前: {theme.value}）
             </Button>

@@ -2,27 +2,31 @@
  * Progress 进度条/环形（View）。
  * 支持线性、环形；百分比、状态（成功/异常/进行中）、是否显示文案、自定义颜色。
  *
- * **手写 JSX**：`percent={sig.value}` 会在创建 VNode 时变成快照、不订阅；须传 **`percent={sig}`**（SignalRef）
+ * **手写 JSX**：`percent={sig.value}` 会在创建 VNode 时变成快照、不订阅；须传 **`percent={sig}`**（`Signal<number>`，`createSignal` 返回值）
  * 或 **`percent={() => n}`**（零参 getter）。有可用 `document`（浏览器或 SSR 影子 document）且 `percent` 为响应式时，
- * 本组件用 {@link createMemo} 返回子树走 `insertReactive`；**纯 SSR 无 document** 时退回同步 VNode，避免
- * `createReactiveInsertFragment` 调用 {@link getActiveDocument} 抛错。
+ * 本组件用 {@link createMemo} 返回子树走 **函数子响应式插入**；**纯 SSR 无 document** 时退回同步 VNode，避免
+ * 无可用 document 时 `insert()` 路径访问 DOM 抛错。
  */
 
-import {
-  createMemo,
-  getDocument,
-  isSignalRef,
-  type SignalRef,
-} from "@dreamer/view";
+import { createMemo, getDocument, type Signal } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 
 export type ProgressType = "line" | "circle";
 export type ProgressStatus = "normal" | "success" | "exception" | "active";
 
+/** 是否为 `createSignal` 返回的、可读 `.value` 的访问器 */
+function isViewSignal(v: unknown): v is Signal<unknown> {
+  if (typeof v !== "function") return false;
+  // Signal 为函数形态，与 Record 无直接重叠，经 unknown 再收窄以满足 TS2352
+  const f = v as unknown as Record<PropertyKey, unknown>;
+  return f.__VIEW_SIGNAL === true &&
+    Object.prototype.hasOwnProperty.call(f, "value");
+}
+
 /** 进度值：快照、`createSignal` 容器，或零参 getter（与 Drawer `open` 同向） */
 export type ProgressPercentInput =
   | number
-  | SignalRef<number>
+  | Signal<number>
   | (() => number);
 
 export interface ProgressProps {
@@ -63,7 +67,7 @@ function percentCls(status: ProgressStatus): string {
 }
 
 /**
- * 将 `percent` prop 规范为 0–100 数字；读 SignalRef / 零参 getter 时建立订阅。
+ * 将 `percent` prop 规范为 0–100 数字；读 `Signal` / 零参 getter 时建立订阅。
  *
  * @param v - {@link ProgressProps.percent}
  * @returns  clamp 后的百分比
@@ -72,7 +76,7 @@ function readProgressPercentInput(
   v: ProgressPercentInput | undefined,
 ): number {
   if (v === undefined) return 0;
-  if (isSignalRef(v)) {
+  if (isViewSignal(v)) {
     const n = Number(v.value);
     return clampProgressPercent(n);
   }
@@ -96,16 +100,16 @@ function clampProgressPercent(n: number): number {
 }
 
 /**
- * 是否应走 `createMemo` + `insertReactive`（仅在有 DOM / 影子 document 时安全）。
+ * 是否应走 `createMemo` + **函数子响应式插入**（仅在有 DOM / 影子 document 时安全）。
  *
  * @param v - {@link ProgressProps.percent}
- * @returns 为 SignalRef 或零参 getter 时为 true
+ * @returns 为 `Signal` 或零参 getter 时为 true
  */
 function percentPropIsReactive(
   v: ProgressPercentInput | undefined,
 ): boolean {
   if (v === undefined) return false;
-  if (isSignalRef(v)) return true;
+  if (isViewSignal(v)) return true;
   return typeof v === "function" && (v as () => unknown).length === 0;
 }
 

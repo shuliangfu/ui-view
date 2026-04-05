@@ -11,8 +11,7 @@ import {
   Slider,
   Title,
 } from "@dreamer/ui-view";
-import { createEffect, createRef } from "@dreamer/view";
-import { createReactive } from "@dreamer/view/reactive";
+import { createEffect, createRef, createSignal } from "@dreamer/view";
 
 interface ApiRow {
   name: string;
@@ -69,20 +68,19 @@ const SLIDER_API: ApiRow[] = [
 ];
 
 const importCode = `import { Slider, Form, FormItem } from "@dreamer/ui-view";
-import { createEffect, createRef } from "@dreamer/view";
-import { createReactive } from "@dreamer/view/reactive";
+import { createEffect, createRef, createSignal } from "@dreamer/view";
 
-/** 仅 committed 走响应式并绑 Slider；文案用 ref 写 DOM，拖动时不走模板插值 */
-const slider = createReactive({ committed: 50 });
+/** 仅提交值走 Signal 并绑 Slider；文案用 ref 写 DOM，拖动时不走模板插值 */
+const committed = createSignal(50);
 const hintRef = createRef<HTMLSpanElement>();
 createEffect(() => {
   const el = hintRef.current;
-  if (el) el.textContent = \`当前值：\${slider.committed}\`;
+  if (el) el.textContent = \`当前值：\${committed()}\`;
 });
 <FormItem label="0–100">
   <div class="flex w-full min-w-0 flex-col gap-1">
     <Slider
-      value={() => slider.committed}
+      value={() => committed()}
       min={0}
       max={100}
       onInput={(e) => {
@@ -90,7 +88,7 @@ createEffect(() => {
         if (el) el.textContent = \`当前值：\${(e.target as HTMLInputElement).value}\`;
       }}
       onChange={(e) => {
-        slider.committed = Number((e.target as HTMLInputElement).value);
+        committed.value = Number((e.target as HTMLInputElement).value);
       }}
     />
     <span
@@ -105,20 +103,26 @@ const sliderValueHintCls =
   "text-sm tabular-nums text-slate-600 dark:text-slate-400";
 
 /** 单值行：仅改 DOM 文案 */
-function writeSingleValueHint(el: HTMLElement | null, v: number): void {
+function writeSingleValueHint(
+  el: HTMLElement | null | undefined,
+  v: number,
+): void {
   if (el != null) el.textContent = `当前值：${v}`;
 }
 
-/** 竖排行：带「共用 reactive」说明 */
-function writeVerticalValueHint(el: HTMLElement | null, v: number): void {
+/** 竖排行：带「共用 Signal」说明 */
+function writeVerticalValueHint(
+  el: HTMLElement | null | undefined,
+  v: number,
+): void {
   if (el != null) {
-    el.textContent = `当前值：${v}（与上方「单值」共用 reactive）`;
+    el.textContent = `当前值：${v}（与上方「单值」共用 Signal）`;
   }
 }
 
 /** range 行文案 */
 function writeRangeValueHint(
-  el: HTMLElement | null,
+  el: HTMLElement | null | undefined,
   a: number,
   b: number,
 ): void {
@@ -126,37 +130,38 @@ function writeRangeValueHint(
 }
 
 /** step 示例文案 */
-function writeStepValueHint(el: HTMLElement | null, v: number): void {
+function writeStepValueHint(
+  el: HTMLElement | null | undefined,
+  v: number,
+): void {
   if (el != null) el.textContent = `当前值：${v}（步长 10）`;
 }
 
 export default function FormSlider() {
-  /** 仅 committed 响应式；拖动中数字靠 ref 写 span，避免模板插值触发兄弟节点更新 */
-  const singleSlider = createReactive({ committed: 50 });
-  const rangeSlider = createReactive({
-    committed: [20, 80] as [number, number],
-  });
-  const stepSlider = createReactive({ committed: 30 });
+  /** 仅提交值走 Signal；拖动中数字靠 ref 写 span，避免模板插值触发兄弟节点更新 */
+  const singleVal = createSignal(50);
+  const rangeVal = createSignal<[number, number]>([20, 80]);
+  const stepVal = createSignal(30);
 
   const singleRowHintRef = createRef<HTMLSpanElement>();
   const verticalRowHintRef = createRef<HTMLSpanElement>();
   const rangeHintRef = createRef<HTMLSpanElement>();
   const stepHintRef = createRef<HTMLSpanElement>();
 
-  /** committed 变化时同步两处文案（含挂载后 ref 就绪） */
+  /** Signal 变化时同步两处文案（含挂载后 ref 就绪） */
   createEffect(() => {
-    const v = singleSlider.committed;
+    const v = singleVal();
     writeSingleValueHint(singleRowHintRef.current, v);
     writeVerticalValueHint(verticalRowHintRef.current, v);
   });
 
   createEffect(() => {
-    const c = rangeSlider.committed;
+    const c = rangeVal();
     writeRangeValueHint(rangeHintRef.current, c[0], c[1]);
   });
 
   createEffect(() => {
-    writeStepValueHint(stepHintRef.current, stepSlider.committed);
+    writeStepValueHint(stepHintRef.current, stepVal());
   });
 
   return (
@@ -179,7 +184,7 @@ export default function FormSlider() {
         </Paragraph>
         <Paragraph class="mt-2 text-sm text-slate-600 dark:text-slate-400">
           <strong>响应式与 DOM：</strong>
-          任意 signal / reactive 字段变化都会调度<strong>
+          任意 <code class="text-xs">Signal</code> 变化都会调度<strong>
             依赖它的视图更新
           </strong>
           （理想情况下只更新对应文本或节点，不是整页）。但在模板里写{" "}
@@ -188,8 +193,8 @@ export default function FormSlider() {
           里常见父级、兄弟节点<strong>
             高亮
           </strong>，极端情况下可能影响滑块。本页示例用{" "}
-          <code class="text-xs">createReactive</code> 只存{" "}
-          <code class="text-xs">committed</code>（供{" "}
+          <code class="text-xs">createSignal</code> 只存{" "}
+          <code class="text-xs">提交值</code>（供{" "}
           <code class="text-xs">
             value
           </code>，仅 <code class="text-xs">onChange</code> 写），拖动中的读数用
@@ -230,7 +235,7 @@ export default function FormSlider() {
             <FormItem label="0–100">
               <div class="flex w-full min-w-0 flex-col gap-1">
                 <Slider
-                  value={() => singleSlider.committed}
+                  value={() => singleVal()}
                   min={0}
                   max={100}
                   onInput={(e) => {
@@ -239,7 +244,7 @@ export default function FormSlider() {
                     writeVerticalValueHint(verticalRowHintRef.current, n);
                   }}
                   onChange={(e) => {
-                    singleSlider.committed = Number(
+                    singleVal.value = Number(
                       (e.target as HTMLInputElement).value,
                     );
                   }}
@@ -249,18 +254,17 @@ export default function FormSlider() {
             </FormItem>
             <CodeBlock
               title="代码示例"
-              code={`import { createEffect, createRef } from "@dreamer/view";
-import { createReactive } from "@dreamer/view/reactive";
+              code={`import { createEffect, createRef, createSignal } from "@dreamer/view";
 
-const slider = createReactive({ committed: 50 });
+const committed = createSignal(50);
 const hintRef = createRef<HTMLSpanElement>();
 createEffect(() => {
   const el = hintRef.current;
-  if (el) el.textContent = \`当前值：\${slider.committed}\`;
+  if (el) el.textContent = \`当前值：\${committed()}\`;
 });
 <div class="flex w-full min-w-0 flex-col gap-1">
   <Slider
-    value={() => slider.committed}
+    value={() => committed()}
     min={0}
     max={100}
     onInput={(e) => {
@@ -270,7 +274,7 @@ createEffect(() => {
       }
     }}
     onChange={(e) => {
-      slider.committed = Number((e.target as HTMLInputElement).value);
+      committed.value = Number((e.target as HTMLInputElement).value);
     }}
   />
   <span
@@ -291,7 +295,7 @@ createEffect(() => {
               <div class="flex w-full min-w-0 flex-col gap-1">
                 <Slider
                   range
-                  value={() => rangeSlider.committed}
+                  value={() => rangeVal()}
                   min={0}
                   max={100}
                   onInput={(e) => {
@@ -304,7 +308,7 @@ createEffect(() => {
                     const t =
                       (e.target as unknown as { value: [number, number] })
                         .value;
-                    rangeSlider.committed = [t[0], t[1]];
+                    rangeVal.value = [t[0], t[1]];
                   }}
                 />
                 <span ref={rangeHintRef} class={sliderValueHintCls} />
@@ -312,22 +316,19 @@ createEffect(() => {
             </FormItem>
             <CodeBlock
               title="代码示例"
-              code={`import { createEffect, createRef } from "@dreamer/view";
-import { createReactive } from "@dreamer/view/reactive";
+              code={`import { createEffect, createRef, createSignal } from "@dreamer/view";
 
-const range = createReactive({
-  committed: [20, 80] as [number, number],
-});
+const range = createSignal<[number, number]>([20, 80]);
 const hintRef = createRef<HTMLSpanElement>();
 createEffect(() => {
   const el = hintRef.current;
-  const c = range.committed;
+  const c = range();
   if (el) el.textContent = \`当前范围：\${c[0]} – \${c[1]}\`;
 });
 <div class="flex w-full min-w-0 flex-col gap-1">
   <Slider
     range
-    value={() => range.committed}
+    value={() => range()}
     min={0}
     max={100}
     onInput={(e) => {
@@ -337,7 +338,7 @@ createEffect(() => {
     }}
     onChange={(e) => {
       const t = (e.target as unknown as { value: [number, number] }).value;
-      range.committed = [t[0], t[1]];
+      range.value = [t[0], t[1]];
     }}
   />
   <span
@@ -357,7 +358,7 @@ createEffect(() => {
             <FormItem label="竖排单值">
               <div class="flex w-full min-w-0 flex-col gap-2 sm:flex-row sm:items-end sm:gap-4">
                 <Slider
-                  value={() => singleSlider.committed}
+                  value={() => singleVal()}
                   min={0}
                   max={100}
                   vertical
@@ -367,7 +368,7 @@ createEffect(() => {
                     writeVerticalValueHint(verticalRowHintRef.current, n);
                   }}
                   onChange={(e) => {
-                    singleSlider.committed = Number(
+                    singleVal.value = Number(
                       (e.target as HTMLInputElement).value,
                     );
                   }}
@@ -385,7 +386,7 @@ createEffect(() => {
             <FormItem label="step=10">
               <div class="flex w-full min-w-0 flex-col gap-1">
                 <Slider
-                  value={() => stepSlider.committed}
+                  value={() => stepVal()}
                   min={0}
                   max={100}
                   step={10}
@@ -396,7 +397,7 @@ createEffect(() => {
                     );
                   }}
                   onChange={(e) => {
-                    stepSlider.committed = Number(
+                    stepVal.value = Number(
                       (e.target as HTMLInputElement).value,
                     );
                   }}
@@ -414,18 +415,17 @@ createEffect(() => {
             </FormItem>
             <CodeBlock
               title="代码示例"
-              code={`import { createEffect, createRef } from "@dreamer/view";
-import { createReactive } from "@dreamer/view/reactive";
+              code={`import { createEffect, createRef, createSignal } from "@dreamer/view";
 
-const step = createReactive({ committed: 30 });
+const step = createSignal(30);
 const hintRef = createRef<HTMLSpanElement>();
 createEffect(() => {
   const el = hintRef.current;
-  if (el) el.textContent = \`当前值：\${step.committed}（步长 10）\`;
+  if (el) el.textContent = \`当前值：\${step()}（步长 10）\`;
 });
 <div class="flex w-full min-w-0 flex-col gap-1">
   <Slider
-    value={() => step.committed}
+    value={() => step()}
     min={0}
     max={100}
     step={10}
@@ -436,7 +436,7 @@ createEffect(() => {
       }
     }}
     onChange={(e) => {
-      step.committed = Number((e.target as HTMLInputElement).value);
+      step.value = Number((e.target as HTMLInputElement).value);
     }}
   />
   <span

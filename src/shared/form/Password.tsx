@@ -70,7 +70,7 @@ function PasswordStrength(props: {
   const { value, showStrength } = props;
   if (!showStrength) return null;
   /**
-   * 在渲染 getter 内读 `value()`，保证与 SignalRef / getter 同步；避免仅在父级首次执行时算一次强度导致 stale。
+   * 在渲染 getter 内读 `value()`，保证与 `Signal` / getter 同步；避免仅在父级首次执行时算一次强度导致 stale。
    */
   return () => {
     const s = typeof value === "function" ? value() : (value ?? "");

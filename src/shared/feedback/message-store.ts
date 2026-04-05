@@ -3,7 +3,7 @@
  * 固定顶部居中展示，支持 success/error/info/warning、duration。
  */
 
-import { createSignal } from "@dreamer/view/signal";
+import { createSignal } from "@dreamer/view";
 
 /** 单条 Message 类型 */
 export type MessageType = "success" | "error" | "info" | "warning";
@@ -22,7 +22,7 @@ export interface MessageItem {
   createdAt: number;
 }
 
-/** 全局 Message 列表（模块级 SignalRef） */
+/** 全局 Message 列表（模块级 `Signal`，`createSignal`） */
 const messageListRef = createSignal<MessageItem[]>([]);
 
 /** 供 MessageContainer 在渲染 getter 内订阅列表 */

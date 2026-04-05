@@ -31,10 +31,10 @@ interface ApiRow {
 const IMAGE_VIEWER_API: ApiRow[] = [
   {
     name: "open",
-    type: "boolean | (() => boolean) | SignalRef<boolean>",
+    type: "boolean | (() => boolean) | Signal<boolean>",
     default: "-",
     description:
-      "是否打开（受控）；推荐传 SignalRef 或 getter，勿仅依赖 open={sig.value} 以免 Hybrid 下不更新",
+      "是否打开（受控）；推荐传 Signal（createSignal 返回值）或 getter，勿仅依赖 open={sig.value} 以免 Hybrid 下不更新",
   },
   {
     name: "onClose",

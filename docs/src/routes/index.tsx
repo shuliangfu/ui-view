@@ -42,7 +42,7 @@ const FEATURES = [
     icon: "📱",
   },
   {
-    title: "View + SignalRef",
+    title: "View + Signal",
     desc:
       "与 @dreamer/view 协同：`createSignal` 返回 `.value` 读写容器；复杂组件用渲染 getter 订阅状态，表单 props 可传 getter 减少整块更新。",
     icon: "⚡",

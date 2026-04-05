@@ -66,7 +66,7 @@ export function Select(props: SelectProps) {
     hideFocusRing = false,
   } = props;
 
-  /** 下拉是否展开（SignalRef） */
+  /** 下拉是否展开（`Signal<boolean>`，内部 `createSignal`） */
   const openState = createSignal(false);
   const sizeCls = sizeClasses[size];
   const resolvedValue = typeof value === "function" ? value() : value;
@@ -122,7 +122,7 @@ export function Select(props: SelectProps) {
           sizeCls,
         )}
         onClick={() => {
-          if (!disabled) openState.value = (prev) => !prev;
+          if (!disabled) openState((prev) => !prev);
         }}
       >
         <span

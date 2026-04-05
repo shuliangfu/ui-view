@@ -459,7 +459,7 @@ const editableDocColumns: TableColumn<EditableDocRow>[] = [
   },
 ];
 
-/** 文档示例通用三列（根页 JSX 中勿绑定会频繁变的 signal，否则整页 insertReactive 重挂 main 内大块 DOM） */
+/** 文档示例通用三列（根页 JSX 中勿绑定会频繁变的 signal，否则整页 **函数子响应式插入** 重挂 main 内大块 DOM） */
 const DOC_TABLE_BASIC_COLUMNS: TableColumn<Row>[] = [
   { key: "name", title: "姓名", dataIndex: "name" as const },
   { key: "age", title: "年龄", dataIndex: "age" as const },
@@ -509,10 +509,10 @@ const DOC_TABLE_EDITABLE_INITIAL: EditableDocRow[] = [
 
 /**
  * 分页示例独立子组件：`pagination.current` 若在文档根 getter 里读 `page.value`，
- * 换页时根级 insertReactive 会重挂整页，main 滚动归零。将 `page` 关进子组件可缩小更新范围。
+ * 换页时根级 **函数子响应式插入** 会重挂整页，main 滚动归零。将 `page` 关进子组件可缩小更新范围。
  *
  * **须用 `{() => <Table ... />}` 包裹：** `compileSource` 下组件 MountFn 里对 props 同步求值一次；
- * 若直接写 `current: page.value`，首帧后换页不会更新。函数子节点让 `page.value` 在 `insertReactive` 内读取。
+ * 若直接写 `current: page.value`，首帧后换页不会更新。函数子节点让 `page.value` 在 **函数子响应式插入**（`insert()`）内读取。
  */
 function TableDocPaginationDemo() {
   const page = createSignal(1);

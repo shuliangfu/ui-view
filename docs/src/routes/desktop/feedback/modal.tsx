@@ -17,10 +17,10 @@ interface ApiRow {
 const MODAL_API: ApiRow[] = [
   {
     name: "open",
-    type: "boolean | (() => boolean) | SignalRef<boolean>",
+    type: "boolean | (() => boolean) | Signal<boolean>",
     default: "-",
     description:
-      "是否打开；推荐 open={x}（SignalRef），勿 open={x.value}；嵌套 state 用 open={() => x.value.open}",
+      "是否打开；推荐 open={x}（Signal，createSignal 返回值），勿 open={x.value}；嵌套 state 用 open={() => x.value.open}",
   },
   {
     name: "onClose",

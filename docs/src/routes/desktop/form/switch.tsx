@@ -23,7 +23,7 @@ interface ApiRow {
 const SWITCH_API: ApiRow[] = [
   {
     name: "checked",
-    type: "boolean | (() => boolean) | SignalRef<boolean>",
+    type: "boolean | (() => boolean) | Signal<boolean>",
     default: "-",
     description:
       "是否开启；推荐 `checked={createSignal(...)}` 返回值，或 `() => sig.value`；勿 `checked={sig.value}` 快照",

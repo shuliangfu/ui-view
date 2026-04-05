@@ -3208,10 +3208,10 @@ export function RichTextEditor(props: RichTextEditorProps) {
   const showToolbar = !readOnly && toolbarGroups.length > 0;
 
   /**
-   * 页脚「字数」单独成 getter 子树：在 {@link createMemo} 内读受控 `value`，依赖仅驱动本段 `insertReactive`。
+   * 页脚「字数」单独成 getter 子树：在 {@link createMemo} 内读受控 `value`，依赖仅驱动本段 **函数子响应式插入**。
    *
    * **禁止**在 {@link RichTextEditor} 同步函数体顶层调用 `value()` 算字数：`mountVNodeTree` 会在此阶段执行
-   * `RichTextEditor(props)`，此时读 signal 会把依赖挂到**外层**（如 FormItem）的 insertReactive；用户输入触发
+   * `RichTextEditor(props)`，此时读 signal 会把依赖挂到**外层**（如 FormItem）的 **函数子响应式插入**；用户输入触发
    * `onChange` → 父级 `val` 更新 → 整块表单项 detach/重挂 → contenteditable 失焦（表现像整段 `section` 被换掉）。
    * 与 {@link RteToolbarReactiveIsland} 的 `historyNavState` 隔离同因。
    */
@@ -3467,8 +3467,8 @@ export function RichTextEditor(props: RichTextEditorProps) {
   };
 
   /**
-   * 含 {@link For} 与撤销/全屏 signal：单独成组件后，仅本段 `insertReactive` 随 `historyNavState` 重跑。
-   * 若在外层根 `return` 里读 `historyNavState`，`ir-clean` 在「嵌套 insertReactive 非空」时会整段 detach 根节点，
+   * 含 {@link For} 与撤销/全屏 signal：单独成组件后，仅本段 **函数子响应式插入** 随 `historyNavState` 重跑。
+   * 若在外层根 `return` 里读 `historyNavState`，`ir-clean` 在「嵌套 **函数子响应式插入** 非空」时会整段 detach 根节点，
    * contenteditable 被摘下导致一输入就失焦（见 `view/compiler/ir-clean.ts`）。
    */
   function RteToolbarReactiveIsland() {
@@ -3502,10 +3502,10 @@ export function RichTextEditor(props: RichTextEditorProps) {
              * `<For>` 走编译器 {@link buildListRenderStmts}，对 render prop 做 `transformExpressionJsxToCalls`，与 mapArray 运行时一致。
              */
           }
-          <For each={toolbarGroups}>
+          <For each={() => toolbarGroups}>
             {(group, gi) => (
               <div key={gi} class={toolbarGroupCls}>
-                <For each={group}>
+                <For each={() => group}>
                   {(item) =>
                     item.children && item.children.length > 0
                       ? (
@@ -3592,7 +3592,7 @@ export function RichTextEditor(props: RichTextEditorProps) {
                                   onChange={(e: Event) =>
                                     handleToolbarSelectChange(item, e)}
                                 >
-                                  <For each={item.children}>
+                                  <For each={() => item.children ?? []}>
                                     {(c) => (
                                       <option key={c.value} value={c.value}>
                                         {c.label}
@@ -3646,7 +3646,7 @@ export function RichTextEditor(props: RichTextEditorProps) {
                                 onChange={(e: Event) =>
                                   handleToolbarSelectChange(item, e)}
                               >
-                                <For each={item.children}>
+                                <For each={() => item.children ?? []}>
                                   {(c) => (
                                     <option key={c.value} value={c.value}>
                                       {c.label}

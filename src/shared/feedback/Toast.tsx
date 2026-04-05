@@ -5,7 +5,11 @@
  * 有 `document.body` 时用 {@link createPortal} 挂到 `body`，避免应用根 `overflow` 裁切。
  */
 
-import { createRenderEffect, onCleanup, type VNode } from "@dreamer/view";
+import {
+  createRenderEffect,
+  type JSXRenderable,
+  onCleanup,
+} from "@dreamer/view";
 import { createPortal } from "@dreamer/view/portal";
 import { twMerge } from "tailwind-merge";
 import type { ToastItem, ToastType } from "./toast-store.ts";
@@ -47,7 +51,7 @@ function ToastItemEl({ item }: { item: ToastItem }) {
 /**
  * 浮层 VNode：在 Portal getter 或 SSR 回退 getter 内调用，读 `toastList()` 以订阅列表。
  */
-function renderToastOverlay(): VNode | null {
+function renderToastOverlay(): JSXRenderable {
   const list = toastList();
   if (list.length === 0) return null;
   const byPlacement = new Map<string, ToastItem[]>();

@@ -6,7 +6,15 @@
  * 否则手写 JSX 只快照首帧，onChange 更新后步骤条不重渲。
  */
 
-import { isSignalRef, type SignalRef } from "@dreamer/view";
+import type { Signal } from "@dreamer/view";
+
+function isViewSignal(v: unknown): v is Signal<unknown> {
+  if (typeof v !== "function") return false;
+  // Signal 为函数形态，与 Record 无直接重叠，经 unknown 再收窄以满足 TS2352
+  const f = v as unknown as Record<PropertyKey, unknown>;
+  return f.__VIEW_SIGNAL === true &&
+    Object.prototype.hasOwnProperty.call(f, "value");
+}
 import { twMerge } from "tailwind-merge";
 /** 按需：单文件图标，避免经 icons/mod 拉入全表 */
 import { IconCheck } from "../basic/icons/Check.tsx";
@@ -26,10 +34,10 @@ export interface StepsProps {
   /** 步骤项 */
   items: StepItem[];
   /**
-   * 当前步骤（从 0 开始）。可传 `number`、无参 getter `() => number`，或 **`createSignal` 返回值（SignalRef）**；
+   * 当前步骤（从 0 开始）。可传 `number`、无参 getter `() => number`，或 **`createSignal` 返回的 `Signal<number>`**；
    * 推荐 `current={stepRef}`，勿 `current={stepRef.value}`。
    */
-  current?: number | (() => number) | SignalRef<number>;
+  current?: number | (() => number) | Signal<number>;
   /** 方向：水平 或 垂直，默认 "horizontal" */
   direction?: "horizontal" | "vertical";
   /** 点击某步时回调（可选，用于可点击跳转的步骤条） */
@@ -53,16 +61,16 @@ function getStatus(
 }
 
 /**
- * 解析受控 `current`：在组件返回的 getter 内调用，以订阅 `SignalRef` / 零参 getter。
+ * 解析受控 `current`：在组件返回的 getter 内调用，以订阅 `Signal` / 零参 getter。
  *
  * @param v - props.current
  * @returns 当前步索引（从 0 起）
  */
 function readStepsCurrent(
-  v: number | (() => number) | SignalRef<number> | undefined,
+  v: number | (() => number) | Signal<number> | undefined,
 ): number {
   if (v === undefined) return 0;
-  if (isSignalRef(v)) return Number(v.value);
+  if (isViewSignal(v)) return Number(v.value);
   if (typeof v === "function") {
     if ((v as () => unknown).length !== 0) return 0;
     return Number((v as () => number)());
@@ -78,7 +86,7 @@ export function Steps(props: StepsProps) {
     class: className,
   } = props;
 
-  /** 渲染 getter：内联读 `readStepsCurrent`，随 SignalRef / 零参 getter 更新 */
+  /** 渲染 getter：内联读 `readStepsCurrent`，随 `Signal` / 零参 getter 更新 */
   return () => {
     const currentVal = readStepsCurrent(props.current);
 
