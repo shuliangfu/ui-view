@@ -1,7 +1,7 @@
 /**
  * Drawer 侧边抽屉（View）。
  *
- * **@dreamer/view 无独立 Drawer 组件**；官方在 {@link https://jsr.io/@dreamer/view 文档} 中建议用 **`createPortal`** 将浮层挂到 `body`（`portal` 模块注释含弹窗/抽屉场景）。
+ * **@dreamer/view 无独立 Drawer 组件**；用主包 **`createPortal`** 将浮层挂到 `body`（与声明式 {@link Portal} 互补）。
  * 本组件在 **`createPortal` + `createRenderEffect`** 上与 {@link Modal} 对齐，保证 `open={createSignal}` 时子 effect 订阅 `open`，避免 compileSource MountFn 只跑首帧导致「点不开」。
  *
  * 左/右拉出；支持标题（字符串或自定义 TSX）、`titleAlign`、底部、遮罩、Esc、宽度；客户端有真实 `document.body` 时走 Portal，SSR/无 body 时内联快照。
@@ -9,11 +9,15 @@
 
 import {
   createMemo,
+  createPortal,
   createRenderEffect,
   onCleanup,
   type Signal,
 } from "@dreamer/view";
 
+/**
+ * 判断是否为 `createSignal` 返回的 `Signal`（`.value` 可读写）。
+ */
 function isViewSignal(v: unknown): v is Signal<unknown> {
   if (typeof v !== "function") return false;
   // Signal 为函数形态，与 Record 无直接重叠，经 unknown 再收窄以满足 TS2352
@@ -21,7 +25,6 @@ function isViewSignal(v: unknown): v is Signal<unknown> {
   return f.__VIEW_SIGNAL === true &&
     Object.prototype.hasOwnProperty.call(f, "value");
 }
-import { createPortal } from "@dreamer/view/portal";
 import { twMerge } from "tailwind-merge";
 /** 按需：单文件图标，避免经 icons/mod 拉入全表 */
 import { IconClose } from "../basic/icons/Close.tsx";
