@@ -3,7 +3,7 @@
  * 桌面/移动通用，移动可简化；支持当前页、总条数、每页条数、跳转、上一页/下一页。
  */
 
-import { createSignal } from "@dreamer/view/signal";
+import { createSignal } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 /** 按需：单文件图标，避免经 icons/mod 拉入全表 */
 import { IconChevronLeft } from "../basic/icons/ChevronLeft.tsx";
@@ -11,7 +11,7 @@ import { IconChevronRight } from "../basic/icons/ChevronRight.tsx";
 import { getPaginationState } from "./pagination-utils.ts";
 
 export interface PaginationProps {
-  /** 当前页码（受控）；不传则内部 `SignalRef`；可为 getter / `() => ref.value` */
+  /** 当前页码（受控）；不传则内部 `Signal`（`createSignal`）；可为 getter / `() => ref.value` */
   current?: number | (() => number);
   /** 非受控时的默认当前页，默认 1 */
   defaultCurrent?: number;
@@ -19,7 +19,7 @@ export interface PaginationProps {
   total?: number;
   /** 总页数（与 total 二选一，传了 total 则据此计算） */
   totalPages?: number;
-  /** 每页条数（受控）；不传则内部 `SignalRef`；可为 getter / `() => ref.value` */
+  /** 每页条数（受控）；不传则内部 `Signal`（`createSignal`）；可为 getter / `() => ref.value` */
   pageSize?: number | (() => number);
   /** 非受控时的默认每页条数，默认 10 */
   defaultPageSize?: number;

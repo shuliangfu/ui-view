@@ -3,7 +3,7 @@
  * 供 Toast 容器消费，支持 success/error/info/warning、duration、placement。
  */
 
-import { createSignal } from "@dreamer/view/signal";
+import { createSignal } from "@dreamer/view";
 
 /** 单条 Toast 类型 */
 export type ToastType = "success" | "error" | "info" | "warning";
@@ -21,7 +21,7 @@ export interface ToastItem {
   createdAt: number;
 }
 
-/** 全局 Toast 列表（模块级 SignalRef，命令式 API 写 `.value`） */
+/** 全局 Toast 列表（模块级 `Signal`，`createSignal`；命令式 API 写 `.value`） */
 const toastListRef = createSignal<ToastItem[]>([]);
 
 /**

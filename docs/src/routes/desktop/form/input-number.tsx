@@ -11,7 +11,7 @@ import {
   Paragraph,
   Title,
 } from "@dreamer/ui-view";
-import { createReactive } from "@dreamer/view/reactive";
+import { createSignal } from "@dreamer/view";
 
 interface ApiRow {
   name: string;
@@ -26,7 +26,7 @@ const INPUT_NUMBER_API: ApiRow[] = [
     type: "string | (() => string)",
     default: "-",
     description:
-      "当前值；可为 getter（如 createReactive 的 value={() => model.field}）",
+      "当前值；可为 getter（如 `createSignal` 的 value={() => qty()}）",
   },
   { name: "min", type: "number", default: "-", description: "最小值" },
   { name: "max", type: "number", default: "-", description: "最大值" },
@@ -110,26 +110,24 @@ const INPUT_NUMBER_API: ApiRow[] = [
 
 const importCode =
   `import { InputNumber, Form, FormItem } from "@dreamer/ui-view";
-import { createReactive } from "@dreamer/view/reactive";
+import { createSignal } from "@dreamer/view";
 
-const model = createReactive({ qty: "10" });
+const qty = createSignal("10");
 <FormItem label="数量">
   <InputNumber
-    value={() => model.qty}
+    value={() => qty()}
     min={0}
     max={100}
     step={5}
-    onChange={(e) => model.qty = (e.target as HTMLInputElement).value}
+    onChange={(e) => qty.value = (e.target as HTMLInputElement).value}
   />
 </FormItem>`;
 
 export default function FormInputNumber() {
-  /** 表单 model：createReactive 单对象多字段，与 createEffect 联动；无需 createSignal */
-  const model = createReactive({
-    qtyStep5: "10",
-    qtyDecimal: "0",
-    qtySizeMd: "50",
-  });
+  /** 多字段示例：各字段一个 `createSignal`，与 InputNumber 的 getter/value 写法一致 */
+  const qtyStep5 = createSignal("10");
+  const qtyDecimal = createSignal("0");
+  const qtySizeMd = createSignal("50");
 
   return (
     <div class="space-y-10">
@@ -139,13 +137,13 @@ export default function FormInputNumber() {
           数字输入框，带步进按钮；支持
           value、min、max、step、placeholder、size、disabled、onChange。宽度由
           class 控制，表单中需占满一列时传 class="w-full"。Tailwind v4 +
-          light/dark。下方示例用 <code class="text-sm">createReactive</code>
+          light/dark。下方示例用多个 <code class="text-sm">createSignal</code>
           {" "}
-          作表单 model（<code class="text-sm">
-            {"value={() => model.xxx}"}
+          作表单字段（<code class="text-sm">
+            {"value={() => qtyStep5()}"}
           </code>{" "}
-          + onChange 写回字段）；若用单值状态也可改用{" "}
-          <code class="text-sm">createSignal</code>。
+          + onChange 写回{" "}
+          <code class="text-sm">.value</code>）；也可用 store 等组合状态。
         </Paragraph>
       </section>
 
@@ -168,22 +166,22 @@ export default function FormInputNumber() {
             <Title level={3}>步进按钮 + min/max/step</Title>
             <FormItem label="0–100，步进 5">
               <InputNumber
-                value={() => model.qtyStep5}
+                value={() => qtyStep5()}
                 min={0}
                 max={100}
                 step={5}
                 onChange={(e) =>
-                  model.qtyStep5 = (e.target as HTMLInputElement).value}
+                  qtyStep5.value = (e.target as HTMLInputElement).value}
               />
             </FormItem>
             <CodeBlock
               title="代码示例"
               code={`<InputNumber
-  value={() => model.qtyStep5}
+  value={() => qtyStep5()}
   min={0}
   max={100}
   step={5}
-  onChange={(e) => model.qtyStep5 = (e.target as HTMLInputElement).value}
+  onChange={(e) => qtyStep5.value = (e.target as HTMLInputElement).value}
 />`}
               language="tsx"
               showLineNumbers
@@ -196,22 +194,22 @@ export default function FormInputNumber() {
             <Title level={3}>小数步进（step=0.1）</Title>
             <FormItem label="0–10，步进 0.1">
               <InputNumber
-                value={() => model.qtyDecimal}
+                value={() => qtyDecimal()}
                 min={0}
                 max={10}
                 step={0.1}
                 onChange={(e) =>
-                  model.qtyDecimal = (e.target as HTMLInputElement).value}
+                  qtyDecimal.value = (e.target as HTMLInputElement).value}
               />
             </FormItem>
             <CodeBlock
               title="代码示例"
               code={`<InputNumber
-  value={() => model.qtyDecimal}
+  value={() => qtyDecimal()}
   min={0}
   max={10}
   step={0.1}
-  onChange={(e) => model.qtyDecimal = (e.target as HTMLInputElement).value}
+  onChange={(e) => qtyDecimal.value = (e.target as HTMLInputElement).value}
 />`}
               language="tsx"
               showLineNumbers
@@ -281,11 +279,11 @@ export default function FormInputNumber() {
             <FormItem label="md（默认）">
               <InputNumber
                 size="md"
-                value={() => model.qtySizeMd}
+                value={() => qtySizeMd()}
                 min={0}
                 max={100}
                 onChange={(e) =>
-                  model.qtySizeMd = (e.target as HTMLInputElement).value}
+                  qtySizeMd.value = (e.target as HTMLInputElement).value}
               />
             </FormItem>
             <FormItem label="lg">
@@ -295,7 +293,7 @@ export default function FormInputNumber() {
               title="代码示例"
               code={`<InputNumber size="xs" value="0" min={0} max={10} />
 <InputNumber size="sm" value="1" min={0} max={10} />
-<InputNumber size="md" value={() => model.qtySizeMd} min={0} max={100} onChange={...} />
+<InputNumber size="md" value={() => qtySizeMd()} min={0} max={100} onChange={...} />
 <InputNumber size="lg" value="5" min={0} max={10} />`}
               language="tsx"
               showLineNumbers

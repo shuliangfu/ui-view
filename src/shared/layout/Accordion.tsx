@@ -1,10 +1,10 @@
 /**
  * Accordion 手风琴折叠（View）。
- * 常见于 FAQ、设置；支持受控/非受控、单开/多开；非受控时用 `SignalRef` 维护 expandedKeys。
+ * 常见于 FAQ、设置；支持受控/非受控、单开/多开；非受控时用 **`Signal`**（`createSignal`）维护 expandedKeys。
  * 内部维护 fallback state，保证点击展开/收起在受控/非受控下均生效。
  */
 
-import { createSignal } from "@dreamer/view/signal";
+import { createSignal } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 /** 按需：单文件图标，避免经 icons/mod 拉入全表 */
 import { IconChevronDown } from "../basic/icons/ChevronDown.tsx";
@@ -56,7 +56,7 @@ export function Accordion(props: AccordionProps) {
 
   const initialKeys = controlledKeys ?? defaultExpandedKeys ?? [];
   const internalKeysRef = createSignal<string[]>(initialKeys);
-  /** 用普通对象存「上次同步的受控 keys」，不参与响应式，避免读 SignalRef 触发重跑导致卡死/点不动 */
+  /** 用普通对象存「上次同步的受控 keys」，不参与响应式，避免读 `Signal` 触发重跑导致卡死/点不动 */
   const lastSyncedRef: { value: string } = { value: "" };
   const c = controlledKeys !== undefined ? controlledKeys : null;
   if (c != null) {

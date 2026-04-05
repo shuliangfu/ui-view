@@ -7,7 +7,7 @@ import { twMerge } from "tailwind-merge";
 import { controlBlueFocusRing } from "./input-focus-ring.ts";
 
 export interface CheckboxProps {
-  /** 是否选中；可为 getter / `() => ref.value`（SignalRef），由 View 对属性做细粒度更新 */
+  /** 是否选中；可为 getter / `() => ref.value`（`Signal`），由 View 对属性做细粒度更新 */
   checked?: boolean | (() => boolean);
   /** 是否禁用 */
   disabled?: boolean;

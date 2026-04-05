@@ -1,12 +1,11 @@
 /**
  * Menu 菜单列表（View）。
- * 桌面多级、移动可单层/折叠；选中态由内部 `SignalRef` 维护，支持 onClick、vertical/horizontal、
+ * 桌面多级、移动可单层/折叠；选中态由内部 **`Signal`**（`createSignal`）维护，支持 onClick、vertical/horizontal、
  * 水平子菜单弹出层（usePopoverSubmenu）、键盘上下键导航（focusedKey/onFocusChange）。
  */
 
 import type { VNode } from "@dreamer/view";
-import { createEffect, createRef } from "@dreamer/view";
-import { createSignal } from "@dreamer/view/signal";
+import { createEffect, createRef, createSignal } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 /** 按需：单文件图标，避免经 icons/mod 拉入全表 */
 import { IconChevronRight } from "../basic/icons/ChevronRight.tsx";
@@ -33,7 +32,7 @@ export interface MenuProps {
   usePopoverSubmenu?: boolean;
   /** 是否展开所有子菜单（vertical 时），默认 false */
   defaultOpenKeys?: string[];
-  /** 受控展开的子菜单 key 列表；可为 getter / `() => ref.value`（SignalRef） */
+  /** 受控展开的子菜单 key 列表；可为 getter / `() => ref.value`（`Signal`） */
   openKeys?: string[] | (() => string[]);
   /** 展开/收起子菜单回调（可选，受控时用） */
   onOpenChange?: (openKeys: string[]) => void;
@@ -358,7 +357,7 @@ export function Menu(props: MenuProps) {
       >
         {items.map((item) => {
           /**
-           * `renderItem` 返回零参 getter；若把 getter 原样放进 `nav` 的 children，会走「每项一个 insertReactive」。
+           * `renderItem` 返回零参 getter；若把 getter 原样放进 `nav` 的 children，会走「每项一次函数子响应式插入」。
            * 在 SSR / 文档站等路径下，外层序列化或 effect 嵌套时序可能导致子 effect 未把节点挂进 nav，表现为 `<nav>` 空壳。
            * 在此处同步调用 getter 得到 VNode，由 `mountVNodeTree` 直接挂子树；父级 `return () =>` 仍会在 signal 变化时整段重算。
            */

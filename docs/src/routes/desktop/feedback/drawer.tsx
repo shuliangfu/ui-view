@@ -2,7 +2,7 @@
  * Drawer 组件文档页（标准文档结构：概述、引入、示例、API）
  * 路由: /desktop/feedback/drawer
  *
- * `open` 须传 **SignalRef**：`open={sig}`，勿 `open={sig.value}`（Hybrid/compileSource）。
+ * `open` 须传 **`Signal<boolean>`**（`createSignal` 返回值）：`open={sig}`，勿 `open={sig.value}`（Hybrid/compileSource）。
  */
 
 import { createSignal } from "@dreamer/view";
@@ -19,7 +19,7 @@ interface ApiRow {
 const DRAWER_API: ApiRow[] = [
   {
     name: "open",
-    type: "boolean | (() => boolean) | SignalRef<boolean>",
+    type: "boolean | (() => boolean) | Signal<boolean>",
     default: "-",
     description: "是否打开；推荐 open={sig}，勿 open={sig.value}",
   },

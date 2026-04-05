@@ -2,10 +2,10 @@
  * Segmented 分段控制器（View）。
  * 多选一紧凑展示；支持选项列表或子节点、尺寸、禁用、块级。
  * 支持受控（value + onChange）与非受控（内部状态）；传 stateKey 可避免整树渲染导致内部状态被清空。
- * 非受控时用 `SignalRef`（`.value`）存选中值；受控且 `value` 为 getter 时由父级重渲染驱动展示。
+ * 非受控时用 **`Signal`**（`createSignal`，`.value`）存选中值；受控且 `value` 为 getter 时由父级重渲染驱动展示。
  */
 
-import { createSignal } from "@dreamer/view/signal";
+import { createSignal } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import type { SizeVariant } from "../types.ts";
 
@@ -97,7 +97,7 @@ export function Segmented<T extends string = string>(props: SegmentedProps<T>) {
       : valueProp ?? null,
   );
 
-  /** 当前展示值：受控时用 prop（或 getter），非受控用内部 SignalRef。 */
+  /** 当前展示值：受控时用 prop（或 getter），非受控用内部 `Signal`。 */
   const getDisplayValue = (): T | null => {
     if (valueProp === undefined) return uncontrolledValRef.value as T | null;
     return (typeof valueProp === "function"

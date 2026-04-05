@@ -3,7 +3,7 @@
  * 避免仅靠左右箭头逐月翻动。
  */
 
-import type { SignalRef } from "@dreamer/view";
+import type { Signal } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import { IconChevronLeft } from "../basic/icons/ChevronLeft.tsx";
 import { IconChevronRight } from "../basic/icons/ChevronRight.tsx";
@@ -24,11 +24,11 @@ export type PickerCalendarHeaderPanel = "day" | "month" | "year";
 
 export interface PickerCalendarNavProps {
   /** 面板当前展示的年月（与下方日网格一致） */
-  viewDate: SignalRef<Date>;
+  viewDate: Signal<Date>;
   /** 当前子面板：日网格 / 月宫格 / 年宫格 */
-  panelMode: SignalRef<PickerCalendarHeaderPanel>;
+  panelMode: Signal<PickerCalendarHeaderPanel>;
   /** 年视图中一组 12 年的起始年（含） */
-  yearPageStart: SignalRef<number>;
+  yearPageStart: Signal<number>;
   minDate: Date | null;
   maxDate: Date | null;
   /** 日视图中已选日期（未选可为 undefined） */
@@ -37,7 +37,7 @@ export interface PickerCalendarNavProps {
    * single 模式：优先于 {@link selectedDate}。在内层 getter 读 `.value`，订阅 `draft` 等 signal，
    * 避免父级仅 `Object.assign` 更新 `selectedDate` 时子树不重跑、日格高亮卡在首帧。
    */
-  selectedDaySignal?: SignalRef<Date | null>;
+  selectedDaySignal?: Signal<Date | null>;
   /** 日网格选择语义，透传 {@link Calendar}；默认 single */
   daySelectionMode?: CalendarDaySelectionMode;
   /** range 模式：起点 */
@@ -45,9 +45,9 @@ export interface PickerCalendarNavProps {
   /** range 模式：终点 */
   rangeEnd?: Date;
   /** range 模式：与 {@link rangeEndSignal} 成对；内层读 `.value` 以订阅稿起点 */
-  rangeStartSignal?: SignalRef<Date | null>;
+  rangeStartSignal?: Signal<Date | null>;
   /** range 模式：与 {@link rangeStartSignal} 成对；内层读 `.value` 以订阅稿终点 */
-  rangeEndSignal?: SignalRef<Date | null>;
+  rangeEndSignal?: Signal<Date | null>;
   /** multiple 模式：已选自然日列表 */
   selectedDates?: readonly Date[];
   /** 用户点选某日 */
@@ -75,7 +75,7 @@ const gridCellBase =
 /**
  * 返回响应式 getter：建议写为 `<PickerCalendarNav … />`，以便与 View 组件分支一致；须读 panelMode / viewDate 以订阅更新。
  *
- * **compileSource + 父级本征 patch：** `@dreamer/view` 对函数子槽会 `Object.assign` 到**同一** `props` 对象并 bump 子 insertReactive，
+ * **compileSource + 父级本征 patch：** `@dreamer/view` 对函数子槽会 `Object.assign` 到**同一** `props` 对象并 bump 子级 **函数子响应式插入**，
  * **不会**再次调用本组件函数。若在**外层**解构 `props`，零参 getter 闭包会永远持有首轮快照，`selectedDate` / `onSelectDay` 等无法更新，
  * 表现为日历点选无反应或高亮错乱。因此必须在**内层 getter 每次执行时**从 `props` 解构（见下方实现）。
  * 对「仅 merge 标量日期」仍可能不 bump 内层时，请传 {@link PickerCalendarNavProps.selectedDaySignal} / `range*Signal` 让本层直接订阅 signal。

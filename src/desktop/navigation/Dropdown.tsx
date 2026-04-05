@@ -91,7 +91,7 @@ export function Dropdown(props: DropdownProps) {
     overlayId,
   } = props;
 
-  /** 展开状态由组件内部维护（SignalRef .value） */
+  /** 展开状态由组件内部维护（`Signal`，`.value`） */
   const openState = createSignal(false);
   /** bottomAuto 时根据视口空间计算出的实际位置 */
   const autoPlacement = createSignal<

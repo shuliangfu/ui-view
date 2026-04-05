@@ -6,7 +6,7 @@
  */
 
 import { createEffect, untrack } from "@dreamer/view";
-import { createSignal } from "@dreamer/view/signal";
+import { createSignal } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 /** 按需：单文件图标，避免经 icons/mod 拉入全表 */
 import { IconChevronRight } from "../basic/icons/ChevronRight.tsx";
@@ -296,7 +296,7 @@ export function Tree(props: TreeProps) {
   const rootElRef = createSignal<HTMLDivElement | null>(null);
 
   createEffect(() => {
-    // 先读 getter 建立订阅，再读 root SignalRef，这样 ref 挂上或 keys 变化时都会重跑并同步 DOM
+    // 先读 getter 建立订阅，再读 root `Signal`，这样 ref 挂上或 keys 变化时都会重跑并同步 DOM
     const expanded = new Set(getExpandedKeys());
     const selected = new Set(getSelectedKeys());
     const checked = new Set(getCheckedKeys());

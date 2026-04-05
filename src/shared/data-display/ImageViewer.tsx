@@ -3,13 +3,13 @@
  * 全屏遮罩内大图查看：多图切换、缩放、旋转、拖动平移、缩略图、键盘与遮罩关闭。
  * 归属数据展示，与 Image 并列。
  *
- * **打开态与 {@link Modal} 对齐**：`open` 支持 `boolean`、零参 getter 或 `SignalRef`（推荐 `open={sig}`），
+ * **打开态与 {@link Modal} 对齐**：`open` 支持 `boolean`、零参 getter 或 **`Signal<boolean>`**（`createSignal` 返回值，推荐 `open={sig}`），
  * 勿仅依赖 `open={sig.value}` 在 Hybrid/函数槽 patch 下可能不触发子树更新。
  * 全屏层为 **`fixed inset-0` 内联渲染**（不再挂 `body` Portal），避免 `view-portal` 与双槽过渡带来的整段重绘与黑底闪屏。
  * **关闭态**：浏览器内存在真实 `document.body` 时须返回**隐藏占位 `span`**（与 {@link Modal} 一致），勿对该槽位 `return null`，否则 Hybrid 水合 `replaceSlot` 与更新链异常 → 点击后 `open` 已变但界面不打开。
  * 勿在组件顶层 `open === false` 时提前 `return` 跳过 `createEffect`/`createRenderEffect` 注册。
  * **根返回值须为 `return () => …` 渲染 getter**（与 {@link Image}、Carousel 一致），在 getter 内读 {@link isOpen}；若直接 `return` 静态 VNode，首帧关闭会永远卡在占位节点，点击后 `open` 已为 true 仍不显示查看器。
- * **勿在根 getter 里读 `currentIndex` / 主图 `src`**：否则每次切图整棵 `fixed` 壳重算，主图与缩略图会一起闪断；主图/缩略条/张数指示应挂在占位节点上用 {@link insertReactive} 单独订阅。
+ * **勿在根 getter 里读 `currentIndex` / 主图 `src`**：否则每次切图整棵 `fixed` 壳重算，主图与缩略图会一起闪断；主图/缩略条/张数指示应挂在占位节点上，由 **函数子响应式插入**（`@dreamer/view` 的 **`insert()`** 对 getter 建 effect）单独订阅。
  * **为何单 `img` 改 `src` 会「先空再出」**：浏览器在赋值新 URL 后会立刻释放旧位图，新图未 `load/decode` 前没有像素可画；主图用双缓冲预载到底层再切换叠放。缩略条若 getter 订阅了当前索引，会整行 DOM 重挂载，小图也会闪；结构只跟列表走、高亮单独改 `class`。
  * **换图动画**：`imageTransition="fade"`（默认）在双缓冲上做**叠化**（新图在上层 `opacity 0→1`，旧图在下层保持不透明）；`slide` / `slideFade` 仍为**瞬时切层**以免整层平移露出黑底。系统开启「减少动态效果」时一律瞬时切换。
  */
@@ -19,11 +19,13 @@ import {
   createMemo,
   createRef,
   createRenderEffect,
+  createRoot,
   createSignal,
-  insertReactive,
-  isSignalRef,
+  insert,
+  type InsertCurrent,
+  type InsertValue,
   onCleanup,
-  type SignalRef,
+  type Signal,
 } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 /** 按需：单文件图标，避免经 icons/mod 拉入全表 */
@@ -36,14 +38,25 @@ import { IconZoomIn } from "../basic/icons/ZoomIn.tsx";
 import { IconZoomOut } from "../basic/icons/ZoomOut.tsx";
 import { getBrowserBodyPortalHost } from "../feedback/portal-host.ts";
 
-/** `open` 合法形态：布尔快照、`SignalRef`、或返回 boolean 的零参 getter */
+/**
+ * 判断是否为 `createSignal` 返回的、可读 `.value` 的函数对象（用于 `open`/`currentIndex` 联合类型收窄）。
+ */
+function isViewSignal(v: unknown): v is Signal<unknown> {
+  if (typeof v !== "function") return false;
+  // Signal 为函数形态，与 Record 无直接重叠，经 unknown 再收窄以满足 TS2352
+  const f = v as unknown as Record<PropertyKey, unknown>;
+  return f.__VIEW_SIGNAL === true &&
+    Object.prototype.hasOwnProperty.call(f, "value");
+}
+
+/** `open` 合法形态：布尔快照、`Signal<boolean>`、或返回 boolean 的零参 getter */
 export type ImageViewerOpenInput =
   | boolean
   | (() => boolean)
-  | SignalRef<boolean>;
+  | Signal<boolean>;
 
-/** `currentIndex` 受控时的合法形态：数字快照、`SignalRef`、或返回 number 的零参 getter */
-export type ImageViewerIndexInput = number | (() => number) | SignalRef<number>;
+/** `currentIndex` 受控时的合法形态：数字快照、`Signal<number>`、或返回 number 的零参 getter */
+export type ImageViewerIndexInput = number | (() => number) | Signal<number>;
 
 /**
  * 主图切换动画：`fade` 仅淡出旧图露出已解码的新图；`slide` 横向划入/划出（方向随索引增减）；
@@ -52,7 +65,7 @@ export type ImageViewerIndexInput = number | (() => number) | SignalRef<number>;
 export type ImageViewerImageTransition = "fade" | "slide" | "slideFade";
 
 /**
- * 解析 `open` prop（在 {@link createMemo} 内调用以订阅 SignalRef / getter）。
+ * 解析 `open` prop（在 {@link createMemo} 内调用以订阅 `Signal` / getter）。
  *
  * @param v - {@link ImageViewerProps.open}
  */
@@ -60,7 +73,7 @@ function readImageViewerOpenInput(
   v: ImageViewerOpenInput | undefined,
 ): boolean {
   if (v === undefined) return false;
-  if (isSignalRef(v)) return !!v.value;
+  if (isViewSignal(v)) return !!v.value;
   if (typeof v === "function") {
     if ((v as () => unknown).length !== 0) return false;
     return !!(v as () => boolean)();
@@ -69,13 +82,13 @@ function readImageViewerOpenInput(
 }
 
 /**
- * 解析受控 `currentIndex`（在 {@link createMemo} 内调用以订阅 SignalRef / getter）。
+ * 解析受控 `currentIndex`（在 {@link createMemo} 内调用以订阅 `Signal` / getter）。
  *
  * @param v - {@link ImageViewerProps.currentIndex}（已排除 `undefined`）
  */
 function readImageViewerIndexInput(v: ImageViewerIndexInput): number {
   let n: number;
-  if (isSignalRef(v)) n = Number(v.value);
+  if (isViewSignal(v)) n = Number(v.value);
   else if (typeof v === "function") {
     if ((v as () => unknown).length !== 0) return 0;
     n = Number((v as () => number)());
@@ -267,7 +280,7 @@ export function ImageViewer(props: ImageViewerProps) {
   const internalIndexRef = createSignal(defaultIndexProp);
 
   /**
-   * 受控模式下从 `currentIndex` 解析出的索引；未传 `currentIndex` 时为 `undefined`（在 memo 内订阅 SignalRef / getter）。
+   * 受控模式下从 `currentIndex` 解析出的索引；未传 `currentIndex` 时为 `undefined`（在 memo 内订阅 `Signal` / getter）。
    */
   const resolvedControlledIndex = createMemo((): number | undefined => {
     if (props.currentIndex === undefined) return undefined;
@@ -316,7 +329,7 @@ export function ImageViewer(props: ImageViewerProps) {
   const hasMultipleImages = createMemo(() => imageList().length > 1);
 
   /**
-   * 主图 / 缩略条 / 顶栏张数 的占位节点：内容由 {@link insertReactive} 注入，与外壳 DOM 解耦。
+   * 主图 / 缩略条 / 顶栏张数 的占位节点：内容由 **函数子响应式插入**（`insert()`）注入，与外壳 DOM 解耦。
    */
   const mainImageMountRef = createRef<HTMLDivElement>(null);
   /** 主图双缓冲：预载到「隐藏」层，`decode` 后再切 `opacity/z-index`，避免单 `img` 改 `src` 时浏览器先清空旧位图 → 闪一下。 */
@@ -394,14 +407,14 @@ export function ImageViewer(props: ImageViewerProps) {
     setDisplayIndex(wrapImageListIndex(getDisplayIndex() + 1, len));
   };
 
+  /** 函数式更新须用 `sig(fn)`：`Signal` 的 `.value` 在类型上仅为 `T`，与 setter 对齐 */
   const handleZoomIn = () =>
-    scaleRef.value = (s) => Math.min(MAX_SCALE, s + SCALE_STEP);
+    scaleRef((s) => Math.min(MAX_SCALE, s + SCALE_STEP));
   const handleZoomOut = () =>
-    scaleRef.value = (s) => Math.max(MIN_SCALE, s - SCALE_STEP);
-  const handleRotateCw = () =>
-    rotationRef.value = (r) => (r + ROTATE_STEP) % 360;
+    scaleRef((s) => Math.max(MIN_SCALE, s - SCALE_STEP));
+  const handleRotateCw = () => rotationRef((r) => (r + ROTATE_STEP) % 360);
   const handleRotateCcw = () =>
-    rotationRef.value = (r) => (r - ROTATE_STEP + 360) % 360;
+    rotationRef((r) => (r - ROTATE_STEP + 360) % 360);
   const handleResetTransform = () => {
     scaleRef.value = 1;
     rotationRef.value = 0;
@@ -500,12 +513,22 @@ export function ImageViewer(props: ImageViewerProps) {
     if (!isOpen()) return;
     const mount = thumbnailStripMountRef.current;
     if (mount == null) return;
-    const dispose = insertReactive(mount, () => renderThumbnailStripBody());
+    const dispose = createRoot((disposeRoot) => {
+      let current: InsertCurrent;
+      createEffect(() => {
+        current = insert(
+          mount,
+          renderThumbnailStripBody() as InsertValue,
+          current,
+        );
+      });
+      return disposeRoot;
+    });
     onCleanup(() => dispose());
   });
 
   /**
-   * 根据当前索引更新缩略按钮样式；用 `queueMicrotask` 排在 {@link insertReactive} 挂载按钮之后执行，避免首帧选不到节点。
+   * 根据当前索引更新缩略按钮样式；用 `queueMicrotask` 排在 **函数子响应式插入** 挂载按钮之后执行，避免首帧选不到节点。
    */
   createEffect(() => {
     if (!isOpen()) return;
@@ -911,7 +934,7 @@ export function ImageViewer(props: ImageViewerProps) {
   };
 
   /**
-   * 渲染 getter：在回调内读 {@link isOpen}，父级 `insertReactive` 才能随 `open` 重算；否则首帧选中的分支（占位或全屏）会固定不变。
+   * 渲染 getter：在回调内读 {@link isOpen}，父级 **函数子响应式插入** 才能随 `open` 重算；否则首帧选中的分支（占位或全屏）会固定不变。
    * 有 `body` 时关闭态用隐藏 `span` 占槽（与 {@link Modal}、Hybrid `replaceSlot` 约定一致）；无 `body`（纯 SSR）时关闭可 `null`。
    */
   return () => {

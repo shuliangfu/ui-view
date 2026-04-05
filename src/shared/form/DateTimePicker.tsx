@@ -6,12 +6,7 @@
  * 弹层为包裹层内 `absolute top-full left-0`，相对触发器定位，随滚动跟移。
  */
 
-import {
-  batch,
-  createEffect,
-  createSignal,
-  type SignalRef,
-} from "@dreamer/view";
+import { batch, createEffect, createSignal, type Signal } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 /** 触发器右侧用日历图标（日期+时间仍以日期为主视觉） */
 import { IconCalendar } from "../basic/icons/Calendar.tsx";
@@ -292,16 +287,16 @@ function getDateTimePickerDerivatives(props: DateTimePickerProps) {
 interface DateTimePickerTimeStripProps {
   mode: DateTimePickerMode;
   dtFormatSpec: ParsedDateTimeFormat;
-  editingRangeEnd: SignalRef<boolean>;
-  draftHour: SignalRef<number>;
-  draftMinute: SignalRef<number>;
-  draftSecond: SignalRef<number>;
-  draftStartHour: SignalRef<number>;
-  draftStartMinute: SignalRef<number>;
-  draftStartSecond: SignalRef<number>;
-  draftEndHour: SignalRef<number>;
-  draftEndMinute: SignalRef<number>;
-  draftEndSecond: SignalRef<number>;
+  editingRangeEnd: Signal<boolean>;
+  draftHour: Signal<number>;
+  draftMinute: Signal<number>;
+  draftSecond: Signal<number>;
+  draftStartHour: Signal<number>;
+  draftStartMinute: Signal<number>;
+  draftStartSecond: Signal<number>;
+  draftEndHour: Signal<number>;
+  draftEndMinute: Signal<number>;
+  draftEndSecond: Signal<number>;
 }
 
 /**

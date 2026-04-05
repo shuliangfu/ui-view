@@ -10,10 +10,17 @@
 import {
   createMemo,
   createRenderEffect,
-  isSignalRef,
   onCleanup,
-  type SignalRef,
+  type Signal,
 } from "@dreamer/view";
+
+function isViewSignal(v: unknown): v is Signal<unknown> {
+  if (typeof v !== "function") return false;
+  // Signal 为函数形态，与 Record 无直接重叠，经 unknown 再收窄以满足 TS2352
+  const f = v as unknown as Record<PropertyKey, unknown>;
+  return f.__VIEW_SIGNAL === true &&
+    Object.prototype.hasOwnProperty.call(f, "value");
+}
 import { createPortal } from "@dreamer/view/portal";
 import { twMerge } from "tailwind-merge";
 /** 按需：单文件图标，避免经 icons/mod 拉入全表 */
@@ -35,8 +42,8 @@ export type DrawerTitleInput =
   | unknown
   | (() => DrawerTitleInput | undefined);
 
-/** `open`：布尔快照、`SignalRef` 或零参 getter（嵌套 state 用 getter） */
-export type DrawerOpenInput = boolean | (() => boolean) | SignalRef<boolean>;
+/** `open`：布尔快照、`Signal<boolean>`（`createSignal` 返回值）或零参 getter（嵌套 state 用 getter） */
+export type DrawerOpenInput = boolean | (() => boolean) | Signal<boolean>;
 
 /** 解析后的标题：无栏 / 纯文本 / 自定义节点 */
 type DrawerTitleResolved =
@@ -80,14 +87,14 @@ export interface DrawerProps {
 const defaultWidth = "360px";
 
 /**
- * 解析 `open`；在 {@link createMemo} 内调用以订阅 `SignalRef` / 零参 getter。
+ * 解析 `open`；在 {@link createMemo} 内调用以订阅 `Signal` / 零参 getter。
  *
  * @param v - `DrawerProps.open`
  * @returns 当前是否视为打开
  */
 function readDrawerOpenInput(v: DrawerOpenInput | undefined): boolean {
   if (v === undefined) return false;
-  if (isSignalRef(v)) return !!v.value;
+  if (isViewSignal(v)) return !!v.value;
   if (typeof v === "function") {
     if ((v as () => unknown).length !== 0) return false;
     return !!(v as () => boolean)();
@@ -171,7 +178,7 @@ export function Drawer(props: DrawerProps) {
   } = props;
 
   /**
-   * 须无条件调用：`createRenderEffect` 内读 {@link isOpen}，订阅 `open` 的 SignalRef。
+   * 须无条件调用：`createRenderEffect` 内读 {@link isOpen}，订阅 `open` 的 `Signal`。
    */
   const isOpen = createMemo(() => readDrawerOpenInput(props.open));
 

@@ -364,7 +364,7 @@ export function ColorPicker(props: ColorPickerProps) {
   const bDraft = createSignal(0);
 
   /**
-   * 触发按钮 DOM 引用（勿用 createRef：其内部 signal 可能被编译路径订阅，叠加 insertReactive 易重复挂载）。
+   * 触发按钮 DOM 引用（勿用 createRef：其内部 signal 可能被编译路径订阅，叠加 **函数子响应式插入** 易重复挂载）。
    */
   const triggerRef: { current: HTMLButtonElement | null } = {
     current: null,

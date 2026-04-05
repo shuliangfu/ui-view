@@ -5,7 +5,11 @@
  * 有 `document.body` 时用 {@link createPortal} 挂到 `body`。
  */
 
-import { createRenderEffect, onCleanup, type VNode } from "@dreamer/view";
+import {
+  createRenderEffect,
+  type JSXRenderable,
+  onCleanup,
+} from "@dreamer/view";
 import { createPortal } from "@dreamer/view/portal";
 import { twMerge } from "tailwind-merge";
 /** 按需：单文件图标，避免经 icons/mod 拉入全表 */
@@ -65,7 +69,7 @@ const MESSAGE_Z_INDEX = 2147483647;
 /**
  * 浮层 VNode：在 Portal getter 或 SSR 回退内读 `messageList()` 以订阅列表。
  */
-function renderMessageOverlay(): VNode | null {
+function renderMessageOverlay(): JSXRenderable {
   const list = messageList();
   if (list.length === 0) return null;
   const byPlacement = new Map<MessagePlacement, MessageItem[]>();

@@ -18,10 +18,17 @@
 import {
   createMemo,
   createRenderEffect,
-  isSignalRef,
   onCleanup,
-  type SignalRef,
+  type Signal,
 } from "@dreamer/view";
+
+function isViewSignal(v: unknown): v is Signal<unknown> {
+  if (typeof v !== "function") return false;
+  // Signal 为函数形态，与 Record 无直接重叠，经 unknown 再收窄以满足 TS2352
+  const f = v as unknown as Record<PropertyKey, unknown>;
+  return f.__VIEW_SIGNAL === true &&
+    Object.prototype.hasOwnProperty.call(f, "value");
+}
 import { twMerge } from "tailwind-merge";
 import { Button } from "../../shared/basic/Button.tsx";
 /** 按需：单文件图标，避免经 icons/mod 拉入全表 */
@@ -37,11 +44,11 @@ export type PopconfirmPlacement =
   | "left"
   | "right";
 
-/** `open`：布尔快照、`SignalRef` 或零参 getter（与 Modal `open` 同向） */
+/** `open`：布尔快照、`Signal<boolean>`（`createSignal` 返回值）或零参 getter（与 Modal `open` 同向） */
 export type PopconfirmOpenInput =
   | boolean
   | (() => boolean)
-  | SignalRef<boolean>;
+  | Signal<boolean>;
 
 export interface PopconfirmProps {
   /** 是否打开（受控）；推荐 `open={createSignal 返回值}`，勿 `open={sig.value}` */
@@ -123,14 +130,14 @@ function popconfirmArrowClass(placement: PopconfirmPlacement): string {
 }
 
 /**
- * 解析受控 `open`；在 {@link createMemo} 内调用以订阅 `SignalRef` / 零参 getter。
+ * 解析受控 `open`；在 {@link createMemo} 内调用以订阅 `Signal` / 零参 getter。
  *
  * @param v - 受控打开状态
  * @returns 是否视为打开
  */
 function readPopconfirmOpenInput(v: PopconfirmOpenInput | undefined): boolean {
   if (v === undefined) return false;
-  if (isSignalRef(v)) return !!v.value;
+  if (isViewSignal(v)) return !!v.value;
   if (typeof v === "function") {
     if ((v as () => unknown).length !== 0) return false;
     return !!(v as () => boolean)();
@@ -249,12 +256,12 @@ export function Popconfirm(props: PopconfirmProps) {
   let floatingEl: HTMLElement | null = null;
 
   /**
-   * 关闭浮层：若 `open` 为 {@link SignalRef} 则写回 `false`（仅传 `open={sig}` 未配 `onOpenChange` 时也能关），
+   * 关闭浮层：若 `open` 为 **`Signal<boolean>`**（`createSignal` 返回值）则写回 `false`（仅传 `open={sig}` 未配 `onOpenChange` 时也能关），
    * 再调用 `onOpenChange(false)`。
    */
   const requestClose = () => {
     const o = props.open;
-    if (isSignalRef(o)) o.value = false;
+    if (isViewSignal(o)) o.value = false;
     onOpenChange?.(false);
   };
 
@@ -350,7 +357,7 @@ export function Popconfirm(props: PopconfirmProps) {
 
   /**
    * 零参 getter：`mountVNodeTree` 对手写函数组件在返回值为 `() => unknown` 时走
-   * `insertReactiveForVnodeSubtree`，getter 内调用 `isOpen()` 才会在 `open` 变化时重渲面板。
+   * View 对子树 getter 的响应式包裹下，须在 getter 内调用 `isOpen()`，`open` 变化时才会重渲面板。
    */
   return () =>
     buildPopconfirmTree(

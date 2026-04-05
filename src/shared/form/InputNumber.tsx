@@ -1,7 +1,7 @@
 /**
  * InputNumber 数字输入（View）。
  * 对齐带前后缀的 {@link Input}：`value` 可为 getter、组件同步体不读 `value()`；外壳用**普通 VNode**（勿 `return () => <span>`），
- * 避免整段被外层 `insertReactive` 包住后与 input 受控 `value` 的 effect 争用导致不显示数字；步进区仅由 {@link InputNumberButtons} 的 getter 细粒度更新。
+ * 避免整段被外层 **函数子响应式插入** 包住后与 input 受控 `value` 的 effect 争用导致不显示数字；步进区仅由 {@link InputNumberButtons} 的 getter 细粒度更新。
  */
 
 import { twMerge } from "tailwind-merge";
@@ -120,7 +120,7 @@ const wrapShellCls =
  * 加减按钮：左右并排（与输入区同高，避免纵向堆叠撑高表单）。
  *
  * **须返回零参 getter `() => VNode`，勿在组件同步体内读 `value()`**：否则会把包裹整棵 InputNumber 的外层
- * `insertReactive` 订阅到 signal，与 input 上受控 `value` 的 effect 争用，表现为初值不显示、点击无数字等。
+ * **函数子响应式插入** 订阅到 signal，与 input 上受控 `value` 的 effect 争用，表现为初值不显示、点击无数字等。
  * 与 {@link Input} 的 `InputClearOrSuffix` 写法一致：仅在 getter 内读 `value()`，细粒度只更新步进区。
  */
 function InputNumberButtons(props: {
@@ -261,7 +261,7 @@ export function InputNumber(props: InputNumberProps) {
   };
 
   /**
-   * 必须直接返回 `<span>`，不可包成 `() => <span>`：后者会使整棵 InputNumber 落入 `insertReactive`，
+   * 必须直接返回 `<span>`，不可包成 `() => <span>`：后者会使整棵 InputNumber 落入 **函数子响应式插入**，
    * 与 `<input value={getter}>` 的 `bindIntrinsicReactiveDomProps` 叠加后易出现初值/输入不显示（与仅让步进子树用 getter 的策略一致）。
    */
   return (

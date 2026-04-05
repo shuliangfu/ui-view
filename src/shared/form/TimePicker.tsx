@@ -6,12 +6,7 @@
  * 弹层在包裹层内 `absolute top-full left-0`，相对触发器定位，随滚动跟移，不用视口 `fixed` + 坐标计算。
  */
 
-import {
-  batch,
-  createEffect,
-  createSignal,
-  type SignalRef,
-} from "@dreamer/view";
+import { batch, createEffect, createSignal, type Signal } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 /** 触发器右侧使用时钟图标 */
 import { IconClock } from "../basic/icons/Clock.tsx";
@@ -240,9 +235,9 @@ function logTimeStripColumnClick(
   column: "hour" | "minute" | "second",
   picked: number,
   ctx: string | undefined,
-  hourSig: SignalRef<number>,
-  minuteSig: SignalRef<number>,
-  secondSig: SignalRef<number>,
+  hourSig: Signal<number>,
+  minuteSig: Signal<number>,
+  secondSig: Signal<number>,
   phase: "before" | "after",
 ): void {
   console.log(TIME_PICKER_DEBUG_TAG, `column ${column} ${phase}`, {
@@ -263,9 +258,9 @@ function logTimeStripColumnClick(
  */
 function logTimeStripSignalsAfterMicrotask(
   label: string,
-  hourSig: SignalRef<number>,
-  minuteSig: SignalRef<number>,
-  secondSig: SignalRef<number>,
+  hourSig: Signal<number>,
+  minuteSig: Signal<number>,
+  secondSig: Signal<number>,
 ): void {
   if (typeof globalThis.queueMicrotask !== "function") return;
   globalThis.queueMicrotask(() => {
@@ -372,9 +367,9 @@ function buildTimePickerOpenTimeScrollDrafts(
  */
 interface TimePickerTimeStripProps {
   timeFormatSpec: ParsedTimeFormat;
-  hourSig: SignalRef<number>;
-  minuteSig: SignalRef<number>;
-  secondSig: SignalRef<number>;
+  hourSig: Signal<number>;
+  minuteSig: Signal<number>;
+  secondSig: Signal<number>;
   /** 调试用：如 `range-start` / `range-end`，区分双轨 */
   debugContext?: string;
 }

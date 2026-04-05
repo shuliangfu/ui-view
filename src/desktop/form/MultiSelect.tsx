@@ -141,7 +141,7 @@ export function MultiSelect(props: MultiSelectProps) {
             sizeCls,
           )}
           onClick={() => {
-            if (!disabled) openState.value = (prev) => !prev;
+            if (!disabled) openState((prev) => !prev);
           }}
         >
           <span
