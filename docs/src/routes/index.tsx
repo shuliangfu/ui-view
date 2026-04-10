@@ -50,7 +50,7 @@ const FEATURES = [
   {
     title: "Tailwind v4 按需扫描",
     desc:
-      "提供 uiViewTailwindContentPlugin：按引用生成 @source，主 CSS 一次 @import 即可，体积小、theme 不重复。",
+      "提供 uiViewTailwindPlugin：按引用生成 @source，主 CSS 一次 @import 即可，体积小、theme 不重复。",
     icon: "🎨",
   },
   {

@@ -9,7 +9,7 @@ node_modules
 dist/
 build/
 
-# 由 uiViewTailwindContentPlugin 生成的 @source 文件（每次构建会重新生成）
+# 由 uiViewTailwindPlugin 生成的 @source 文件（每次构建会重新生成）
 ui-view-sources.css
 
 # dweb 自动生成（每次构建/启动会重新生成）
