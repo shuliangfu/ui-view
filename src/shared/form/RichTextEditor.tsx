@@ -503,12 +503,12 @@ function rtePrettyPrintHtmlSource(html: string): string {
         return;
       }
       lines.push(ind + open);
-      for (const c of el.childNodes) {
+      for (const c of Array.from(el.childNodes)) {
         walk(c, depth + 1);
       }
       lines.push(ind + `</${name}>`);
     };
-    for (const c of tpl.content.childNodes) {
+    for (const c of Array.from(tpl.content.childNodes)) {
       walk(c, 0);
     }
     return lines.join("\n");
