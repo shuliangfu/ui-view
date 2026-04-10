@@ -173,7 +173,9 @@ function measureTopObstruction(): number {
 
   const body = doc.body;
   if (body) {
-    for (const el of body.querySelectorAll("header, [role='banner']")) {
+    for (const el of Array.from(
+      body.querySelectorAll("header, [role='banner']"),
+    )) {
       if (!(el instanceof HTMLElement)) continue;
       if (el.closest("[view-portal]")) continue;
       const r = el.getBoundingClientRect();
