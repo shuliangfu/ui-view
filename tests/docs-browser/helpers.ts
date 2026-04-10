@@ -8,6 +8,7 @@ import {
   createCommand,
   dirname,
   execPath,
+  getEnv,
   getEnvAll,
   IS_DENO,
   join,
@@ -20,6 +21,20 @@ const hostFetch = globalThis.fetch.bind(globalThis);
 
 /** 与 `docs/src/config/main.dev.ts` 默认一致；实际端口在 `start()` 内探测 */
 const PREFERRED_DOCS_PORT = 3000;
+
+/**
+ * docs dev 子进程从 spawn 到根路径 `GET /` 成功的最长等待（毫秒）。
+ * 纯展示等用例会为**每个** `describe` 启停一次 dev，冷编译 + 慢盘时 60s 易超时；
+ * CI 或本机可调大：`UI_VIEW_DOCS_DEV_START_MS=180000`。
+ */
+function docsDevStartupDeadlineMs(): number {
+  const raw = getEnv("UI_VIEW_DOCS_DEV_START_MS");
+  if (raw != null && raw !== "") {
+    const n = Number.parseInt(raw, 10);
+    if (Number.isFinite(n) && n >= 15_000) return n;
+  }
+  return 120_000;
+}
 
 /**
  * 按进程 PID 偏移首选端口，减轻多 worker / 并行 `deno test --jobs>1` 时同时抢 3000 的竞态。
@@ -230,7 +245,8 @@ export function createDocsBrowserTestEnv() {
     });
     serverProcess = cmd.spawn();
 
-    const deadline = Date.now() + 60_000;
+    const deadlineMs = docsDevStartupDeadlineMs();
+    const deadline = Date.now() + deadlineMs;
     let ready = false;
     while (Date.now() < deadline) {
       try {
@@ -242,10 +258,12 @@ export function createDocsBrowserTestEnv() {
       } catch {
         // 服务尚未就绪
       }
-      await new Promise((r) => setTimeout(r, 500));
+      await new Promise((r) => setTimeout(r, 300));
     }
     if (!ready) {
-      throw new Error("Docs dev server did not start within 60s.");
+      throw new Error(
+        `Docs dev server did not start within ${deadlineMs}ms (set UI_VIEW_DOCS_DEV_START_MS to override).`,
+      );
     }
     const settleMs = platform() === "windows" ? 2000 : 4000;
     await new Promise((r) => setTimeout(r, settleMs));
@@ -279,8 +297,8 @@ export function createDocsBrowserTestEnv() {
     } catch {
       // ignore
     }
-    /** 给内核释放套接字一点时间，减少与下一次 `findAvailablePort` 的竞态 */
-    await new Promise((r) => setTimeout(r, 150));
+    /** 给内核释放套接字一点时间，减少与下一次 `findAvailablePort` 的竞态（连跑多段 describe 时略加长） */
+    await new Promise((r) => setTimeout(r, 300));
   }
 
   /**
