@@ -2,6 +2,7 @@
  * 计算器图标，24×24 stroke，用于金融/工具。
  */
 import { Icon } from "../Icon.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { IconComponentProps } from "../Icon.tsx";
 
 const svg = (
@@ -29,6 +30,6 @@ const svg = (
   </svg>
 );
 
-export function IconCalculator(props?: IconComponentProps) {
+export function IconCalculator(props?: IconComponentProps): JSXRenderable {
   return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

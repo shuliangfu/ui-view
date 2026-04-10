@@ -14,6 +14,7 @@
  */
 
 import { createEffect, createRef } from "@dreamer/view";
+import type { JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import { commitMaybeSignal, type MaybeSignal } from "./maybe-signal.ts";
 
@@ -125,7 +126,7 @@ function armPointerDragEnd(flag: { current: boolean }) {
   globalThis.addEventListener("pointercancel", end, true);
 }
 
-export function Slider(props: SliderProps) {
+export function Slider(props: SliderProps): JSXRenderable {
   const singleInputRef = createRef<HTMLInputElement>();
   const rangeLowRef = createRef<HTMLInputElement>();
   const rangeHighRef = createRef<HTMLInputElement>();

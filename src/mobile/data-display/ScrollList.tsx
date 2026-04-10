@@ -5,6 +5,7 @@
  */
 
 import { createEffect, createMemo, onCleanup } from "@dreamer/view";
+import type { JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import {
   type ControlledOpenInput,
@@ -122,7 +123,7 @@ function bindLoadMoreObserver(
  *
  * @param props - 列表数据、刷新/加载回调与透传配置
  */
-export function ScrollList(props: ScrollListProps) {
+export function ScrollList(props: ScrollListProps): JSXRenderable {
   const {
     class: className,
     listClass,

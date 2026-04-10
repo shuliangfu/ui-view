@@ -12,6 +12,7 @@
  */
 
 import { createSignal, getDocument, type Signal } from "@dreamer/view";
+import type { JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import { commitMaybeSignal, type MaybeSignal } from "./maybe-signal.ts";
 
@@ -200,7 +201,7 @@ function TransferColumn(props: TransferColumnProps) {
   );
 }
 
-export function Transfer(props: TransferProps) {
+export function Transfer(props: TransferProps): JSXRenderable {
   const {
     dataSource,
     targetKeys,

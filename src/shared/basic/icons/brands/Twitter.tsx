@@ -2,6 +2,7 @@
  * X (Twitter) 品牌 Logo，24×24。
  */
 import { Icon } from "../../Icon.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { IconComponentProps } from "../../Icon.tsx";
 
 const svg = (
@@ -16,6 +17,6 @@ const svg = (
 );
 
 /** X (Twitter) 品牌 Logo 图标 */
-export function IconBrandTwitter(props?: IconComponentProps) {
+export function IconBrandTwitter(props?: IconComponentProps): JSXRenderable {
   return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

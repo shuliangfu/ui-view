@@ -3,6 +3,7 @@
  * Path 来自 Wikimedia Commons (Adobe XD CC icon.svg)，深紫底 #470137 + 粉 #FF61F6。
  */
 import { Icon } from "../../Icon.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { IconComponentProps } from "../../Icon.tsx";
 
 const svg = (
@@ -23,6 +24,6 @@ const svg = (
 );
 
 /** Adobe XD 品牌 Logo 图标 */
-export function IconBrandAdobexd(props?: IconComponentProps) {
+export function IconBrandAdobexd(props?: IconComponentProps): JSXRenderable {
   return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

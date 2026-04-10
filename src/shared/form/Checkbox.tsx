@@ -5,6 +5,7 @@
  */
 
 import { isSignal, type Signal } from "@dreamer/view";
+import type { JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import { controlBlueFocusRing } from "./input-focus-ring.ts";
 import type { MaybeSignal } from "./maybe-signal.ts";
@@ -53,7 +54,7 @@ const labelCls =
   "inline-flex items-center gap-2 cursor-pointer text-sm text-slate-700 dark:text-slate-300";
 const errorCls = "[&_input]:border-red-500 text-red-600 dark:text-red-400";
 
-export function Checkbox(props: CheckboxProps) {
+export function Checkbox(props: CheckboxProps): JSXRenderable {
   const {
     checked: checkedMaybe,
     disabled = false,

@@ -2,6 +2,7 @@
  * 学士帽/教育图标，24×24 stroke。教育场景。
  */
 import { Icon } from "../Icon.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { IconComponentProps } from "../Icon.tsx";
 
 const svg = (
@@ -20,6 +21,6 @@ const svg = (
   </svg>
 );
 
-export function IconGraduationCap(props?: IconComponentProps) {
+export function IconGraduationCap(props?: IconComponentProps): JSXRenderable {
   return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

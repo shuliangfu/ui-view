@@ -2,6 +2,7 @@
  * 飞机/出行图标，24×24 stroke。出行场景。
  */
 import { Icon } from "../Icon.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { IconComponentProps } from "../Icon.tsx";
 
 const svg = (
@@ -19,6 +20,6 @@ const svg = (
   </svg>
 );
 
-export function IconPlane(props?: IconComponentProps) {
+export function IconPlane(props?: IconComponentProps): JSXRenderable {
   return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

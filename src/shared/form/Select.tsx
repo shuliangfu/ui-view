@@ -5,6 +5,7 @@
  */
 
 import { createSignal, Show } from "@dreamer/view";
+import type { JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import { IconChevronDown } from "../basic/icons/ChevronDown.tsx";
 import {
@@ -338,7 +339,7 @@ function SelectDropdownBranch(props: Omit<SelectProps, "appearance">) {
 /**
  * 单选下拉：默认浮层；`appearance="native"` 时走原生大触控 select。
  */
-export function Select(props: SelectProps) {
+export function Select(props: SelectProps): JSXRenderable {
   const { appearance = "dropdown", ...rest } = props;
   if (appearance === "native") {
     return SelectNativeBranch(rest);

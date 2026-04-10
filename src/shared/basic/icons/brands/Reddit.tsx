@@ -3,6 +3,7 @@
  * Path 来自 Simple Icons (https://simpleicons.org)，CC0-1.0，品牌橙 #FF4500。
  */
 import { Icon } from "../../Icon.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { IconComponentProps } from "../../Icon.tsx";
 
 const svg = (
@@ -15,6 +16,6 @@ const svg = (
 );
 
 /** Reddit 品牌 Logo 图标 */
-export function IconBrandReddit(props?: IconComponentProps) {
+export function IconBrandReddit(props?: IconComponentProps): JSXRenderable {
   return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

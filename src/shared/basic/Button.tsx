@@ -4,6 +4,7 @@
  */
 
 import { createContext, useContext } from "@dreamer/view";
+import type { JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import type { ColorVariant, SizeVariant } from "../../shared/types.ts";
 import {
@@ -58,7 +59,7 @@ export interface ButtonGroupProps {
  * - `attached` 时下面 `class` 直接写 Tailwind，只负责子项圆角与相邻边框；焦点/按下样式由子级 {@link Button} 通过 Context 自行合并。
  * - 勿用模块级变量传递「是否在组内」，请始终用本组件 + Provider。
  */
-export function ButtonGroup(props: ButtonGroupProps) {
+export function ButtonGroup(props: ButtonGroupProps): JSXRenderable {
   const { attached = true, class: className, children } = props;
   return (
     <ButtonGroupContext.Provider value={{ attached }}>
@@ -78,7 +79,7 @@ export function ButtonGroup(props: ButtonGroupProps) {
   );
 }
 
-export function Button(props: ButtonProps) {
+export function Button(props: ButtonProps): JSXRenderable {
   const {
     itemKey,
     variant = "primary",

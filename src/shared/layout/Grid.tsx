@@ -4,6 +4,7 @@
  */
 
 import { twMerge } from "tailwind-merge";
+import type { JSXRenderable } from "@dreamer/view";
 
 export interface GridProps {
   /** 列数，默认 12 */
@@ -33,7 +34,7 @@ const gapClasses: Record<string, string> = {
   8: "gap-8",
 };
 
-export function Grid(props: GridProps) {
+export function Grid(props: GridProps): JSXRenderable {
   const { cols = 12, gap = 4, class: className, children } = props;
   const gapCls = typeof gap === "number"
     ? gapClasses[String(gap)] ?? "gap-4"
@@ -99,7 +100,7 @@ function getSpanClass(span: number): string {
   return "col-span-1";
 }
 
-export function GridItem(props: GridItemProps) {
+export function GridItem(props: GridItemProps): JSXRenderable {
   const {
     key,
     span = 1,

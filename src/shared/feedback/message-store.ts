@@ -77,22 +77,22 @@ export const message = {
     content: string,
     duration = DEFAULT_DURATION,
     placement: MessagePlacement = "top",
-  ) => message.show("success", content, duration, placement),
+  ): string => message.show("success", content, duration, placement),
   error: (
     content: string,
     duration = DEFAULT_DURATION,
     placement: MessagePlacement = "top",
-  ) => message.show("error", content, duration, placement),
+  ): string => message.show("error", content, duration, placement),
   info: (
     content: string,
     duration = DEFAULT_DURATION,
     placement: MessagePlacement = "top",
-  ) => message.show("info", content, duration, placement),
+  ): string => message.show("info", content, duration, placement),
   warning: (
     content: string,
     duration = DEFAULT_DURATION,
     placement: MessagePlacement = "top",
-  ) => message.show("warning", content, duration, placement),
+  ): string => message.show("warning", content, duration, placement),
   show: (
     type: MessageType,
     content: string,

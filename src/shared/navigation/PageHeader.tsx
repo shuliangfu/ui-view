@@ -4,6 +4,7 @@
  */
 
 import { twMerge } from "tailwind-merge";
+import type { JSXRenderable } from "@dreamer/view";
 /** 按需：单文件图标，避免经 icons/mod 拉入全表 */
 import { IconArrowLeft } from "../basic/icons/ArrowLeft.tsx";
 import type { BreadcrumbItem } from "./breadcrumb-types.ts";
@@ -25,7 +26,7 @@ export interface PageHeaderProps {
   class?: string;
 }
 
-export function PageHeader(props: PageHeaderProps) {
+export function PageHeader(props: PageHeaderProps): JSXRenderable {
   const {
     title,
     subTitle,

@@ -2,6 +2,7 @@
  * 附件（回形针）图标，24×24 stroke。
  */
 import { Icon } from "../Icon.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { IconComponentProps } from "../Icon.tsx";
 
 const svg = (
@@ -19,6 +20,6 @@ const svg = (
   </svg>
 );
 
-export function IconPaperClip(props?: IconComponentProps) {
+export function IconPaperClip(props?: IconComponentProps): JSXRenderable {
   return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

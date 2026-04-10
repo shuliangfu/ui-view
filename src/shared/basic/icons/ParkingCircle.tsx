@@ -2,6 +2,7 @@
  * 停车场/P 图标，24×24 stroke，用于停车/地图。
  */
 import { Icon } from "../Icon.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { IconComponentProps } from "../Icon.tsx";
 
 const svg = (
@@ -21,6 +22,6 @@ const svg = (
   </svg>
 );
 
-export function IconParkingCircle(props?: IconComponentProps) {
+export function IconParkingCircle(props?: IconComponentProps): JSXRenderable {
   return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

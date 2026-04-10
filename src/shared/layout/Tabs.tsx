@@ -6,6 +6,7 @@
  */
 
 import { createSignal } from "@dreamer/view";
+import type { JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 
 export type TabsType = "line" | "card";
@@ -40,7 +41,7 @@ export interface TabsProps {
   panelClass?: string;
 }
 
-export function Tabs(props: TabsProps) {
+export function Tabs(props: TabsProps): JSXRenderable {
   const {
     items,
     activeKey: controlledKey,

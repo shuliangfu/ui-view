@@ -4,6 +4,7 @@
  */
 
 import { twMerge } from "tailwind-merge";
+import type { JSXRenderable } from "@dreamer/view";
 /** 按需：单文件图标，避免经 icons/mod 拉入全表 */
 import { IconChevronUp } from "../basic/icons/ChevronUp.tsx";
 
@@ -80,7 +81,7 @@ function attachScrollListener(target: Element | null) {
   }
 }
 
-export function BackTop(props: BackTopProps) {
+export function BackTop(props: BackTopProps): JSXRenderable {
   const {
     visibilityHeight = 200,
     target: targetProp,

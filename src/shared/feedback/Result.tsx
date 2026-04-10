@@ -4,6 +4,7 @@
  */
 
 import { twMerge } from "tailwind-merge";
+import type { JSXRenderable } from "@dreamer/view";
 /** 按需：单文件图标，避免经 icons/mod 拉入全表 */
 import { IconAlertCircle } from "../basic/icons/AlertCircle.tsx";
 import { IconCheckCircle } from "../basic/icons/CheckCircle.tsx";
@@ -55,7 +56,7 @@ const statusIconClasses: Record<ResultStatus, string> = {
   "404": "text-slate-500 dark:text-slate-400",
 };
 
-export function Result(props: ResultProps) {
+export function Result(props: ResultProps): JSXRenderable {
   const {
     status = "info",
     title,

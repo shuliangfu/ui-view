@@ -7,6 +7,7 @@
  */
 
 import { isSignal, type Signal } from "@dreamer/view";
+import type { JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 /** 按需：单文件图标，避免经 icons/mod 拉入全表 */
 import { IconCheck } from "../basic/icons/Check.tsx";
@@ -70,7 +71,7 @@ function readStepsCurrent(
   return Number(v);
 }
 
-export function Steps(props: StepsProps) {
+export function Steps(props: StepsProps): JSXRenderable {
   const {
     items,
     direction = "horizontal",

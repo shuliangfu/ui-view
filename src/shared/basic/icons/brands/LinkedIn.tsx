@@ -2,6 +2,7 @@
  * LinkedIn 领英品牌 Logo，24×24，品牌蓝 #0A66C2。
  */
 import { Icon } from "../../Icon.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { IconComponentProps } from "../../Icon.tsx";
 
 const svg = (
@@ -14,6 +15,6 @@ const svg = (
 );
 
 /** LinkedIn 领英品牌 Logo 图标 */
-export function IconBrandLinkedin(props?: IconComponentProps) {
+export function IconBrandLinkedin(props?: IconComponentProps): JSXRenderable {
   return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

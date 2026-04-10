@@ -4,6 +4,7 @@
  */
 
 import { twMerge } from "tailwind-merge";
+import type { JSXRenderable } from "@dreamer/view";
 import { controlBlueFocusRing } from "./input-focus-ring.ts";
 import { commitMaybeSignal, type MaybeSignal } from "./maybe-signal.ts";
 
@@ -96,7 +97,7 @@ function MentionsDropdown(props: {
   );
 }
 
-export function Mentions(props: MentionsProps) {
+export function Mentions(props: MentionsProps): JSXRenderable {
   const {
     value,
     placeholder = "输入 @ 提及",

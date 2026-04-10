@@ -74,22 +74,22 @@ export const toast = {
     content: string,
     duration = DEFAULT_DURATION,
     placement: ToastPlacement = "top",
-  ) => toast.show("success", content, duration, placement),
+  ): string => toast.show("success", content, duration, placement),
   error: (
     content: string,
     duration = DEFAULT_DURATION,
     placement: ToastPlacement = "top",
-  ) => toast.show("error", content, duration, placement),
+  ): string => toast.show("error", content, duration, placement),
   info: (
     content: string,
     duration = DEFAULT_DURATION,
     placement: ToastPlacement = "top",
-  ) => toast.show("info", content, duration, placement),
+  ): string => toast.show("info", content, duration, placement),
   warning: (
     content: string,
     duration = DEFAULT_DURATION,
     placement: ToastPlacement = "top",
-  ) => toast.show("warning", content, duration, placement),
+  ): string => toast.show("warning", content, duration, placement),
   show: (
     type: ToastType,
     content: string,

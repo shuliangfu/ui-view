@@ -1,7 +1,11 @@
 /**
- * Charts 图表组件
- * 基于 Chart.js，提供 ChartLine / ChartBar / ChartPie / ChartDoughnut / ChartRadar / ChartPolarArea / ChartBubble / ChartScatter。
- * 各组件直接返回 VNode（与 @dreamer/view 及 shared/basic 约定一致）。
+ * @module @dreamer/ui-view/charts
+ * @description
+ * **JSR**：`import … from "@dreamer/ui-view/charts"`。基于 **Chart.js** 的图表：`ChartLine`、`ChartBar`、`ChartPie`、`ChartDoughnut`、`ChartRadar`、`ChartPolarArea`、`ChartBubble`、`ChartScatter` 及内部基座 `ChartBase`。
+ *
+ * 类型：`ChartData`、`ChartOptions`、`BaseChartProps`、`ChartType` 等从 `./types.ts` 导出。各图表组件 props 与画布生命周期见对应 `.tsx`。
+ *
+ * @see {@link ./ChartBase.tsx} 统一创建/更新/销毁
  */
 
 export type {

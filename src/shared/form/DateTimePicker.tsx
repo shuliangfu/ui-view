@@ -11,6 +11,7 @@ import {
   batch,
   createEffect,
   createSignal,
+  type JSXRenderable,
   Show,
   type Signal,
 } from "@dreamer/view";
@@ -651,7 +652,7 @@ function DateTimePickerTimeStrip(props: DateTimePickerTimeStripProps) {
   };
 }
 
-export function DateTimePicker(props: DateTimePickerProps) {
+export function DateTimePicker(props: DateTimePickerProps): JSXRenderable {
   const openState = createSignal(false);
   /** single */
   const draftDay = createSignal<Date | null>(null);

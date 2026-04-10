@@ -4,6 +4,7 @@
  */
 
 import { ChartBase } from "./ChartBase.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { ChartData, ChartOptions } from "./types.ts";
 
 export interface ChartPolarAreaProps {
@@ -15,6 +16,6 @@ export interface ChartPolarAreaProps {
 }
 
 /** 极区图组件 */
-export function ChartPolarArea(props: ChartPolarAreaProps) {
+export function ChartPolarArea(props: ChartPolarAreaProps): JSXRenderable {
   return <ChartBase type="polarArea" {...props} />;
 }

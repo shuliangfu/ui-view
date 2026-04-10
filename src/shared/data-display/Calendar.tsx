@@ -5,6 +5,7 @@
  */
 
 import { createMemo, createSignal } from "@dreamer/view";
+import type { JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import {
   commitMaybeSignal,
@@ -58,7 +59,7 @@ export interface CalendarProps {
   class?: string;
 }
 
-export function Calendar(props: CalendarProps) {
+export function Calendar(props: CalendarProps): JSXRenderable {
   const {
     selectedDate,
     onChange,

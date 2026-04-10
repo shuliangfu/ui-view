@@ -2,6 +2,7 @@
  * Facebook 品牌 Logo，24×24，品牌蓝 #1877F2。
  */
 import { Icon } from "../../Icon.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { IconComponentProps } from "../../Icon.tsx";
 
 const svg = (
@@ -14,6 +15,6 @@ const svg = (
 );
 
 /** Facebook 品牌 Logo 图标 */
-export function IconBrandFacebook(props?: IconComponentProps) {
+export function IconBrandFacebook(props?: IconComponentProps): JSXRenderable {
   return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

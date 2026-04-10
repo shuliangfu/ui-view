@@ -2,6 +2,7 @@
  * 纸币图标，24×24 stroke，用于金融/支付场景。
  */
 import { Icon } from "../Icon.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { IconComponentProps } from "../Icon.tsx";
 
 const svg = (
@@ -21,6 +22,6 @@ const svg = (
   </svg>
 );
 
-export function IconBanknote(props?: IconComponentProps) {
+export function IconBanknote(props?: IconComponentProps): JSXRenderable {
   return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

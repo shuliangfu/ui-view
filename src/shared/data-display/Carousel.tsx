@@ -26,6 +26,7 @@ import {
   createEffect,
   createSignal,
   getDocument,
+  type JSXRenderable,
   onCleanup,
 } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
@@ -503,7 +504,7 @@ function carouselResolveCurrentIndex(
   return carouselNormalizeIndex(num, count);
 }
 
-export function Carousel(props: CarouselProps) {
+export function Carousel(props: CarouselProps): JSXRenderable {
   /** 非受控（未传 `current`）时的内部当前页 */
   const internalIndexRef = createSignal(0);
   /**

@@ -4,6 +4,7 @@
  */
 
 import { twMerge } from "tailwind-merge";
+import type { JSXRenderable } from "@dreamer/view";
 import { commitMaybeSignal, type MaybeSignal } from "./maybe-signal.ts";
 
 export interface RateProps {
@@ -46,7 +47,7 @@ function scoreFromStarClick(
   return ox < w / 2 ? idx - 0.5 : idx;
 }
 
-export function Rate(props: RateProps) {
+export function Rate(props: RateProps): JSXRenderable {
   const {
     count = 5,
     value,

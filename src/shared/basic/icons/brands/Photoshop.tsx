@@ -3,6 +3,7 @@
  * Path 来自 Wikimedia Commons (Adobe Photoshop CC icon.svg)，蓝底 #31A8FF + 白字 Ps。
  */
 import { Icon } from "../../Icon.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { IconComponentProps } from "../../Icon.tsx";
 
 const svg = (
@@ -26,6 +27,6 @@ const svg = (
 );
 
 /** Adobe Photoshop 品牌 Logo 图标 */
-export function IconBrandPhotoshop(props?: IconComponentProps) {
+export function IconBrandPhotoshop(props?: IconComponentProps): JSXRenderable {
   return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

@@ -1,5 +1,12 @@
 /**
- * 桌面端导航入口：本目录显式导出；Sidebar/Pagination 等为薄 re-export，Dropdown/Breadcrumb/NavBar 为桌面实现。
+ * @module @dreamer/ui-view/navigation
+ * @description
+ * **JSR**：`import … from "@dreamer/ui-view/navigation"`。桌面端**导航**：侧边栏、分页、菜单、步骤条、页头、固钉、锚点、回到顶部、下拉菜单、面包屑、顶栏等。
+ *
+ * **初始化函数**：`initDropdownEsc()` 在客户端注册一次 Esc 关闭当前下拉；`initAnchorSpy(setActiveKey, options?)` 实现滚动高亮锚点（返回可选清理函数）。
+ * 详见对应 `.tsx` 内 JSDoc。
+ *
+ * @see {@link ./Dropdown.tsx} 下拉与 Esc
  */
 export type { BreadcrumbItem } from "./breadcrumb-types.ts";
 export {

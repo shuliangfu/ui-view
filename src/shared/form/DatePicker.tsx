@@ -10,6 +10,7 @@
  */
 
 import { batch, createSignal, Show } from "@dreamer/view";
+import type { JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 /** 触发器右侧使用日历图标，与纯下拉区分 */
 import { IconCalendar } from "../basic/icons/Calendar.tsx";
@@ -265,7 +266,7 @@ function getDatePickerDerivatives(props: DatePickerProps) {
   return { mode, dateFormatSpec, minDate, maxDate, disabledDate };
 }
 
-export function DatePicker(props: DatePickerProps) {
+export function DatePicker(props: DatePickerProps): JSXRenderable {
   const openState = createSignal(false);
 
   /** single：面板草稿日 */

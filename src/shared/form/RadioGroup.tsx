@@ -5,6 +5,7 @@
  */
 
 import { isSignal, type Signal } from "@dreamer/view";
+import type { JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import type { MaybeSignal } from "./maybe-signal.ts";
 import { Radio } from "./Radio.tsx";
@@ -39,7 +40,7 @@ export interface RadioGroupProps {
   class?: string;
 }
 
-export function RadioGroup(props: RadioGroupProps) {
+export function RadioGroup(props: RadioGroupProps): JSXRenderable {
   const {
     options,
     name,

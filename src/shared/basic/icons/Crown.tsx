@@ -2,6 +2,7 @@
  * 皇冠/VIP 会员图标，24×24 stroke，用于等级/权益。
  */
 import { Icon } from "../Icon.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { IconComponentProps } from "../Icon.tsx";
 
 const svg = (
@@ -19,6 +20,6 @@ const svg = (
   </svg>
 );
 
-export function IconCrown(props?: IconComponentProps) {
+export function IconCrown(props?: IconComponentProps): JSXRenderable {
   return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

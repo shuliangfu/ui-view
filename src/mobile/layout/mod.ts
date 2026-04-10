@@ -1,8 +1,9 @@
 /**
- * 布局与容器（ANALYSIS 3.5）：Container、Hero、Grid、GridItem、Stack、Divider、Tabs、Accordion。
+ * @module @dreamer/ui-view/mobile/layout
+ * @description
+ * **JSR**：`import … from "@dreamer/ui-view/mobile/layout"`。移动端**布局**（Container、Grid、Tabs、Accordion 等与桌面同源 re-export）。
  *
- * `Tabs` / `Accordion` 非受控内部状态使用 `@dreamer/view` 的 **`Signal`**（`createSignal`，`.value`）；
- * `Container`、`Hero`、`Grid`、`Stack`、`Divider` 为纯 props，直接返回 VNode。
+ * `Tabs` / `Accordion` 内部非受控状态使用 `createSignal`；其余多为纯布局 props。
  */
 
 export { Container } from "./Container.tsx";

@@ -5,6 +5,7 @@
  */
 
 import { createEffect, createRef, createSignal } from "@dreamer/view";
+import type { JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import type { SizeVariant } from "../types.ts";
 import { controlBlueFocusRing } from "./input-focus-ring.ts";
@@ -144,7 +145,7 @@ function AutoCompletePanel(props: {
   };
 }
 
-export function AutoComplete(props: AutoCompleteProps) {
+export function AutoComplete(props: AutoCompleteProps): JSXRenderable {
   const {
     options = [],
     value,

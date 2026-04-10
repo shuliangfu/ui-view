@@ -4,6 +4,7 @@
  */
 
 import { twMerge } from "tailwind-merge";
+import type { JSXRenderable } from "@dreamer/view";
 
 export interface AnchorLink {
   /** 唯一 key，与 activeKey 对应 */
@@ -32,7 +33,7 @@ function getAnchorHref(hashHref: string): string {
   return pathname + (hashHref.startsWith("#") ? hashHref : `#${hashHref}`);
 }
 
-export function Anchor(props: AnchorProps) {
+export function Anchor(props: AnchorProps): JSXRenderable {
   const { links, activeKey, onChange, class: className } = props;
 
   const handleClick = (e: Event, key: string, href: string) => {
@@ -93,7 +94,7 @@ export interface AnchorSpyOptions {
 export function initAnchorSpy(
   setActiveKey: (key: string) => void,
   options?: AnchorSpyOptions,
-) {
+): (() => void) | undefined {
   if (typeof globalThis.document === "undefined") return;
   const offset = options?.offset ?? 100;
   const getTarget = (): Element | null => {

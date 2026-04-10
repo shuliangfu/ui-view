@@ -2,6 +2,7 @@
  * Dropbox 品牌 Logo，24×24，品牌蓝 #0061FF。
  */
 import { Icon } from "../../Icon.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { IconComponentProps } from "../../Icon.tsx";
 
 const svg = (
@@ -14,6 +15,6 @@ const svg = (
 );
 
 /** Dropbox 品牌 Logo 图标 */
-export function IconBrandDropbox(props?: IconComponentProps) {
+export function IconBrandDropbox(props?: IconComponentProps): JSXRenderable {
   return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

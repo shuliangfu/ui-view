@@ -132,7 +132,7 @@ function renderMessageOverlay(): JSXRenderable {
 /**
  * Message 容器：有 `body` 时 Portal 挂 `body`；无 `body` 时回退根内 getter。
  */
-export function MessageContainer() {
+export function MessageContainer(): JSXRenderable {
   /**
    * 仅在有待展示条目时创建 Portal，避免列表为空时 `body` 下残留空 `view-portal` 包装（与 Toast 同向）。
    */

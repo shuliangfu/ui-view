@@ -11,6 +11,7 @@ import {
   batch,
   createEffect,
   createSignal,
+  type JSXRenderable,
   Show,
   type Signal,
 } from "@dreamer/view";
@@ -631,7 +632,7 @@ function TimePickerTimeStrip(props: TimePickerTimeStripProps) {
   };
 }
 
-export function TimePicker(props: TimePickerProps) {
+export function TimePicker(props: TimePickerProps): JSXRenderable {
   const mode: TimePickerMode = props.mode ?? "single";
   const timeFormatSpec = resolveTimePickerFormatSpec(props.format, mode);
 

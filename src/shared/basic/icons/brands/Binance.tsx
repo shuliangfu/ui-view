@@ -2,6 +2,7 @@
  * Binance 币安品牌 Logo，24×24，品牌金 #F3BA2F。
  */
 import { Icon } from "../../Icon.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { IconComponentProps } from "../../Icon.tsx";
 
 const svg = (
@@ -14,6 +15,6 @@ const svg = (
 );
 
 /** Binance 币安品牌 Logo 图标 */
-export function IconBrandBinance(props?: IconComponentProps) {
+export function IconBrandBinance(props?: IconComponentProps): JSXRenderable {
   return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

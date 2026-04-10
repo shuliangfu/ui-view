@@ -3,6 +3,7 @@
  * Path 来自 Vector Logo Zone (Skype icon)，品牌蓝 #00AFF0。
  */
 import { Icon } from "../../Icon.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { IconComponentProps } from "../../Icon.tsx";
 
 const svg = (
@@ -15,6 +16,6 @@ const svg = (
 );
 
 /** Skype 品牌 Logo 图标 */
-export function IconBrandSkype(props?: IconComponentProps) {
+export function IconBrandSkype(props?: IconComponentProps): JSXRenderable {
   return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

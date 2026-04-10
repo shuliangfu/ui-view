@@ -2,6 +2,7 @@
  * Git 分支图标，24×24 stroke，用于开发/版本控制。
  */
 import { Icon } from "../Icon.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { IconComponentProps } from "../Icon.tsx";
 
 const svg = (
@@ -22,6 +23,6 @@ const svg = (
   </svg>
 );
 
-export function IconGitBranch(props?: IconComponentProps) {
+export function IconGitBranch(props?: IconComponentProps): JSXRenderable {
   return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

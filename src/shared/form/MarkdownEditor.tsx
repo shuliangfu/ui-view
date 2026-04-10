@@ -12,6 +12,7 @@ import {
   createRenderEffect,
   createSignal,
   isSignal,
+  type JSXRenderable,
   onMount,
   type Signal,
 } from "@dreamer/view";
@@ -412,7 +413,7 @@ const previewProseCls =
 const MD_CHAR_COUNT_BADGE_CLS =
   "pointer-events-none absolute bottom-2 left-2 z-10 rounded border border-slate-200/80 bg-white/90 px-1.5 py-0.5 text-left text-xs text-slate-600 shadow-sm backdrop-blur-sm dark:border-slate-600/80 dark:bg-slate-950/90 dark:text-slate-400";
 
-export function MarkdownEditor(props: MarkdownEditorProps) {
+export function MarkdownEditor(props: MarkdownEditorProps): JSXRenderable {
   /** 须在解构前取 props，保证 `id` / `value`（Signal）与文档实例稳定对齐 */
   const activeTab = takeMarkdownEditorActiveTab(props);
   const {

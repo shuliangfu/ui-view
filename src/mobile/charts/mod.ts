@@ -1,7 +1,9 @@
 /**
- * Charts 图表组件
- * 基于 Chart.js，提供 ChartLine / ChartBar / ChartPie / ChartDoughnut / ChartRadar / ChartPolarArea / ChartBubble / ChartScatter。
- * 各组件直接返回 VNode（与 @dreamer/view 及 shared/basic 约定一致）。
+ * @module @dreamer/ui-view/mobile/charts
+ * @description
+ * **JSR**：`import … from "@dreamer/ui-view/mobile/charts"`。与桌面 **charts** 相同的 Chart.js 封装（re-export）。
+ *
+ * @see {@link ../../desktop/charts/mod.ts} 图表清单与类型
  */
 
 export type {

@@ -4,6 +4,7 @@
  */
 
 import { twMerge } from "tailwind-merge";
+import type { JSXRenderable } from "@dreamer/view";
 import type { SizeVariant } from "../types.ts";
 import { setConfig } from "./config-store.ts";
 import type { ThemeMode } from "./config-store.ts";
@@ -26,7 +27,7 @@ export interface ConfigProviderProps {
   class?: string;
 }
 
-export function ConfigProvider(props: ConfigProviderProps) {
+export function ConfigProvider(props: ConfigProviderProps): JSXRenderable {
   const {
     theme = "light",
     locale,

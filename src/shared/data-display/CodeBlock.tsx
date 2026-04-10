@@ -4,6 +4,7 @@
  */
 
 import Prism from "prismjs"
+import type { JSXRenderable } from "@dreamer/view";
 import "prismjs/components/prism-bash.js"
 import "prismjs/components/prism-css.js"
 import "prismjs/components/prism-javascript.js"
@@ -80,7 +81,7 @@ export interface CodeBlockProps {
   codeClass?: string;
 }
 
-export function CodeBlock(props: CodeBlockProps) {
+export function CodeBlock(props: CodeBlockProps): JSXRenderable {
   const {
     code,
     language = "plaintext",

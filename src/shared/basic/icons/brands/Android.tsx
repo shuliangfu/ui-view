@@ -2,6 +2,7 @@
  * Android 安卓品牌 Logo，24×24，机器人头。
  */
 import { Icon } from "../../Icon.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { IconComponentProps } from "../../Icon.tsx";
 
 const svg = (
@@ -14,6 +15,6 @@ const svg = (
 );
 
 /** 安卓品牌 Logo 图标 */
-export function IconBrandAndroid(props?: IconComponentProps) {
+export function IconBrandAndroid(props?: IconComponentProps): JSXRenderable {
   return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

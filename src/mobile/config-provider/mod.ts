@@ -1,6 +1,9 @@
 /**
- * ConfigProvider 与全局配置（ANALYSIS 3.10）。
- * ConfigProvider 直接返回 VNode（与 @dreamer/view 及 shared/basic 约定一致）。
+ * @module @dreamer/ui-view/mobile/config-provider
+ * @description
+ * **JSR**：`import … from "@dreamer/ui-view/mobile/config-provider"`。与桌面版相同的全局 **ConfigProvider** 与 `getConfig` / `setConfig`（re-export）。
+ *
+ * @see {@link ../../desktop/config-provider/mod.ts} 桌面同路径
  */
 export { ConfigProvider } from "./ConfigProvider.tsx";
 export type { ConfigProviderProps } from "./ConfigProvider.tsx";

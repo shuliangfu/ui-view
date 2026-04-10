@@ -4,6 +4,7 @@
  */
 
 import { twMerge } from "tailwind-merge";
+import type { JSXRenderable } from "@dreamer/view";
 import type { ColorVariant, SizeVariant } from "../types.ts";
 
 export interface TagProps {
@@ -53,7 +54,7 @@ const variantClasses: Record<ColorVariant | "outline", string> = {
     "bg-transparent text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-600",
 };
 
-export function Tag(props: TagProps) {
+export function Tag(props: TagProps): JSXRenderable {
   const {
     children,
     variant = "default",

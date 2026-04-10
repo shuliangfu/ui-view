@@ -4,6 +4,7 @@
  */
 
 import { ChartBase } from "./ChartBase.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { ChartData, ChartOptions } from "./types.ts";
 
 export interface ChartBubbleProps {
@@ -15,6 +16,6 @@ export interface ChartBubbleProps {
 }
 
 /** 气泡图组件 */
-export function ChartBubble(props: ChartBubbleProps) {
+export function ChartBubble(props: ChartBubbleProps): JSXRenderable {
   return <ChartBase type="bubble" {...props} />;
 }

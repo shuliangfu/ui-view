@@ -1,5 +1,9 @@
 /**
- * 移动端导航入口：本目录显式导出；共用组件为薄 re-export，TabBar/NavBar 为移动实现。
+ * @module @dreamer/ui-view/mobile/navigation
+ * @description
+ * **JSR**：`import … from "@dreamer/ui-view/mobile/navigation"`。移动端**导航**：**TabBar**、**NavBar** 为移动实现；菜单、分页、锚点等与桌面共用的组件为薄 re-export。
+ *
+ * `initAnchorSpy`、`initDropdownEsc` 等与桌面行为一致，见对应 `.tsx` JSDoc。
  */
 export type { BreadcrumbItem } from "./breadcrumb-types.ts";
 export {

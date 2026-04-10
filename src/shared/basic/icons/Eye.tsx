@@ -3,6 +3,7 @@
  * 单独导出，按需引入以控制包体积。
  */
 import { Icon } from "../Icon.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { IconComponentProps } from "../Icon.tsx";
 
 const svg = (
@@ -21,6 +22,6 @@ const svg = (
   </svg>
 );
 
-export function IconEye(props?: IconComponentProps) {
+export function IconEye(props?: IconComponentProps): JSXRenderable {
   return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

@@ -2,6 +2,7 @@
  * Zoom 品牌 Logo，24×24，来源 Simple Icons，品牌蓝 #2D8CFF。
  */
 import { Icon } from "../../Icon.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { IconComponentProps } from "../../Icon.tsx";
 
 const svg = (
@@ -14,6 +15,6 @@ const svg = (
 );
 
 /** Zoom 品牌 Logo 图标 */
-export function IconBrandZoom(props?: IconComponentProps) {
+export function IconBrandZoom(props?: IconComponentProps): JSXRenderable {
   return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

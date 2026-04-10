@@ -2,6 +2,7 @@
  * 盾牌带勾/验证通过图标，24×24 stroke，用于安全/认证。
  */
 import { Icon } from "../Icon.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { IconComponentProps } from "../Icon.tsx";
 
 const svg = (
@@ -20,6 +21,6 @@ const svg = (
   </svg>
 );
 
-export function IconShieldCheck(props?: IconComponentProps) {
+export function IconShieldCheck(props?: IconComponentProps): JSXRenderable {
   return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

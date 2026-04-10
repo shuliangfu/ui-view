@@ -4,6 +4,7 @@
  */
 
 import { ChartBase } from "./ChartBase.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { ChartData, ChartOptions } from "./types.ts";
 
 export interface ChartScatterProps {
@@ -15,6 +16,6 @@ export interface ChartScatterProps {
 }
 
 /** 散点图组件 */
-export function ChartScatter(props: ChartScatterProps) {
+export function ChartScatter(props: ChartScatterProps): JSXRenderable {
   return <ChartBase type="scatter" {...props} />;
 }

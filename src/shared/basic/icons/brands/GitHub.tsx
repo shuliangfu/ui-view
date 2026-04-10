@@ -2,6 +2,7 @@
  * GitHub 品牌 Logo，24×24。
  */
 import { Icon } from "../../Icon.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { IconComponentProps } from "../../Icon.tsx";
 
 const svg = (
@@ -16,7 +17,7 @@ const svg = (
 );
 
 /** GitHub 品牌 Logo 图标 */
-export function IconBrandGithub(props?: IconComponentProps) {
+export function IconBrandGithub(props?: IconComponentProps): JSXRenderable {
   return (
     <Icon
       size={props?.size}

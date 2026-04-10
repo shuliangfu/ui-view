@@ -60,9 +60,9 @@
   },
   "tasks": {
     "test": "deno test -A",
-    "test:docs-browser": "deno test -A tests/docs-sidebar-reconcile.test.ts tests/docs-browser/ --jobs=1",
     "check": "deno check .",
-    "fetch-tabler-icons": "deno run -A scripts/fetch-tabler-icons.ts"
+    "publish:jsr": "deno publish",
+    "publish:jsr:dry-run": "deno publish --dry-run --allow-dirty"
   },
   "imports": {
     "@dreamer/markdown": "jsr:@dreamer/markdown@^1.0.1",
@@ -85,9 +85,6 @@
     "lib": [
       "deno.window",
       "dom"
-    ],
-    "types": [
-      "./jsx.d.ts"
     ]
   },
   "lint": {

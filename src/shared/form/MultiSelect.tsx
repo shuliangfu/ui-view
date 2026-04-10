@@ -3,6 +3,7 @@
  */
 
 import { createSignal, Show } from "@dreamer/view";
+import type { JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import { IconChevronDown } from "../basic/icons/ChevronDown.tsx";
 import {
@@ -422,7 +423,7 @@ function MultiSelectDropdownBranch(
 /**
  * 多选：默认浮层；`appearance="native"` 时原生 multiple + 全选/清空。
  */
-export function MultiSelect(props: MultiSelectProps) {
+export function MultiSelect(props: MultiSelectProps): JSXRenderable {
   const { appearance = "dropdown", ...rest } = props;
   if (appearance === "native") {
     return MultiSelectNativeBranch(rest);

@@ -4,6 +4,7 @@
  */
 
 import { twMerge } from "tailwind-merge";
+import type { JSXRenderable } from "@dreamer/view";
 import {
   controlBlueFocusRing,
   controlErrorBorder,
@@ -81,7 +82,7 @@ function TextareaLengthDisplay(props: {
   );
 }
 
-export function Textarea(props: TextareaProps) {
+export function Textarea(props: TextareaProps): JSXRenderable {
   const {
     disabled = false,
     placeholder,

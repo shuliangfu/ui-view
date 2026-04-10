@@ -2,6 +2,7 @@
  * 徽章带勾/认证图标，24×24 stroke。门户认证场景。
  */
 import { Icon } from "../Icon.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { IconComponentProps } from "../Icon.tsx";
 
 const svg = (
@@ -20,6 +21,6 @@ const svg = (
   </svg>
 );
 
-export function IconBadgeCheck(props?: IconComponentProps) {
+export function IconBadgeCheck(props?: IconComponentProps): JSXRenderable {
   return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

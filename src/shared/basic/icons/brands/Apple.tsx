@@ -2,6 +2,7 @@
  * Apple 苹果品牌 Logo，24×24，品牌灰。
  */
 import { Icon } from "../../Icon.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { IconComponentProps } from "../../Icon.tsx";
 
 const svg = (
@@ -14,6 +15,6 @@ const svg = (
 );
 
 /** 苹果品牌 Logo 图标 */
-export function IconBrandApple(props?: IconComponentProps) {
+export function IconBrandApple(props?: IconComponentProps): JSXRenderable {
   return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

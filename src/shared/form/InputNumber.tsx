@@ -5,6 +5,7 @@
  */
 
 import { twMerge } from "tailwind-merge";
+import type { JSXRenderable } from "@dreamer/view";
 import type { SizeVariant } from "../types.ts";
 import { compositeShellFocusRingFromInput } from "./input-focus-ring.ts";
 import { commitMaybeSignal, type MaybeSignal } from "./maybe-signal.ts";
@@ -199,7 +200,7 @@ function InputNumberButtons(props: {
   };
 }
 
-export function InputNumber(props: InputNumberProps) {
+export function InputNumber(props: InputNumberProps): JSXRenderable {
   const {
     size = "md",
     disabled = false,

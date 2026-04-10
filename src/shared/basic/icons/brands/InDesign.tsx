@@ -3,6 +3,7 @@
  * Path 来自 Wikimedia Commons (Adobe InDesign CC icon.svg)，深红底 #49021F + #FF3366。
  */
 import { Icon } from "../../Icon.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { IconComponentProps } from "../../Icon.tsx";
 
 const svg = (
@@ -23,6 +24,6 @@ const svg = (
 );
 
 /** Adobe InDesign 品牌 Logo 图标 */
-export function IconBrandIndesign(props?: IconComponentProps) {
+export function IconBrandIndesign(props?: IconComponentProps): JSXRenderable {
   return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

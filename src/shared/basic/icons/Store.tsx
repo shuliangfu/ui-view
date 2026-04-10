@@ -2,6 +2,7 @@
  * 店铺图标，24×24 stroke，用于电商/门户。
  */
 import { Icon } from "../Icon.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { IconComponentProps } from "../Icon.tsx";
 
 const svg = (
@@ -20,6 +21,6 @@ const svg = (
   </svg>
 );
 
-export function IconStore(props?: IconComponentProps) {
+export function IconStore(props?: IconComponentProps): JSXRenderable {
   return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

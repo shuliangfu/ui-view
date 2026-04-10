@@ -4,6 +4,7 @@
  */
 
 import { twMerge } from "tailwind-merge";
+import type { JSXRenderable } from "@dreamer/view";
 
 /** 单侧的一个操作项 */
 export interface SwipeCellAction {
@@ -47,7 +48,7 @@ const ACTION_STYLE_CLASSES: Record<"default" | "primary" | "danger", string> = {
 
 const ACTION_WIDTH = 64;
 
-export function SwipeCell(props: SwipeCellProps) {
+export function SwipeCell(props: SwipeCellProps): JSXRenderable {
   const {
     leftActions = [],
     rightActions = [],

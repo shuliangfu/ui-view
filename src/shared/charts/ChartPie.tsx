@@ -4,6 +4,7 @@
  */
 
 import { ChartBase } from "./ChartBase.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { ChartData, ChartOptions } from "./types.ts";
 
 export interface ChartPieProps {
@@ -15,6 +16,6 @@ export interface ChartPieProps {
 }
 
 /** 饼图组件 */
-export function ChartPie(props: ChartPieProps) {
+export function ChartPie(props: ChartPieProps): JSXRenderable {
   return <ChartBase type="pie" {...props} />;
 }

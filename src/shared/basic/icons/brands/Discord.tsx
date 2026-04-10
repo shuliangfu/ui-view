@@ -2,6 +2,7 @@
  * Discord 品牌 Logo，24×24，品牌紫 #5865F2。
  */
 import { Icon } from "../../Icon.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { IconComponentProps } from "../../Icon.tsx";
 
 const svg = (
@@ -14,6 +15,6 @@ const svg = (
 );
 
 /** Discord 品牌 Logo 图标 */
-export function IconBrandDiscord(props?: IconComponentProps) {
+export function IconBrandDiscord(props?: IconComponentProps): JSXRenderable {
   return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

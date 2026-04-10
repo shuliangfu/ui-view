@@ -4,6 +4,7 @@
  */
 
 import { twMerge } from "tailwind-merge";
+import type { JSXRenderable } from "@dreamer/view";
 import type { SizeVariant } from "../types.ts";
 
 export interface CardProps {
@@ -44,7 +45,7 @@ const sizeClasses: Record<SizeVariant, string> = {
   lg: "p-6 text-base",
 };
 
-export function Card(props: CardProps) {
+export function Card(props: CardProps): JSXRenderable {
   const {
     title,
     extra,

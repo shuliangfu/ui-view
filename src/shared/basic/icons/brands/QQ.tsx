@@ -3,6 +3,7 @@
  * Path 来自 Simple Icons (https://simpleicons.org)，CC0-1.0，品牌蓝 #1EBAFC。
  */
 import { Icon } from "../../Icon.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { IconComponentProps } from "../../Icon.tsx";
 
 const svg = (
@@ -15,6 +16,6 @@ const svg = (
 );
 
 /** 腾讯 QQ 品牌 Logo 图标 */
-export function IconBrandQq(props?: IconComponentProps) {
+export function IconBrandQq(props?: IconComponentProps): JSXRenderable {
   return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

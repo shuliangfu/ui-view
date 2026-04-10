@@ -137,7 +137,7 @@ function renderToastOverlay(): JSXRenderable {
 /**
  * Toast 容器：有 `body` 时内容经 Portal 挂到 `body`；纯 SSR 无 `body` 时回退为根内 getter。
  */
-export function ToastContainer() {
+export function ToastContainer(): JSXRenderable {
   /**
    * 仅在有待展示条目时创建 Portal：`createPortal` 会立刻在 `body` 下插入包装节点，
    * 若首帧即 `createPortal` 而 `renderToastOverlay` 为 null，会留下空 `view-portal` div。

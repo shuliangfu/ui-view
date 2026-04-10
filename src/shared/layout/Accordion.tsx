@@ -5,6 +5,7 @@
  */
 
 import { createSignal } from "@dreamer/view";
+import type { JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 /** 按需：单文件图标，避免经 icons/mod 拉入全表 */
 import { IconChevronDown } from "../basic/icons/ChevronDown.tsx";
@@ -41,7 +42,7 @@ export interface AccordionProps {
   contentClass?: string;
 }
 
-export function Accordion(props: AccordionProps) {
+export function Accordion(props: AccordionProps): JSXRenderable {
   const {
     items,
     expandedKeys: controlledKeys,

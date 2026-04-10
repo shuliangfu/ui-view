@@ -2,6 +2,7 @@
  * 图片加/铸造/NFT 图标，24×24 stroke，用于上传或 NFT 铸造。
  */
 import { Icon } from "../Icon.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { IconComponentProps } from "../Icon.tsx";
 
 const svg = (
@@ -21,6 +22,6 @@ const svg = (
   </svg>
 );
 
-export function IconImagePlus(props?: IconComponentProps) {
+export function IconImagePlus(props?: IconComponentProps): JSXRenderable {
   return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

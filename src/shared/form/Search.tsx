@@ -5,6 +5,7 @@
  */
 
 import { twMerge } from "tailwind-merge";
+import type { JSXRenderable } from "@dreamer/view";
 /** 按需：单文件图标，避免经 icons/mod 拉入全表 */
 import { IconSearch } from "../basic/icons/Search.tsx";
 import type { SizeVariant } from "../types.ts";
@@ -67,7 +68,7 @@ const btnSurface =
 const clearBtnVisibleCls =
   "search-clear-btn hidden [.search-wrapper:has(input:not(:placeholder-shown))_.search-clear-btn]:inline-flex";
 
-export function Search(props: SearchProps) {
+export function Search(props: SearchProps): JSXRenderable {
   const {
     size = "md",
     disabled = false,

@@ -4,6 +4,7 @@
  */
 
 import { ChartBase } from "./ChartBase.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { ChartData, ChartOptions } from "./types.ts";
 
 export interface ChartDoughnutProps {
@@ -15,6 +16,6 @@ export interface ChartDoughnutProps {
 }
 
 /** 环形图组件 */
-export function ChartDoughnut(props: ChartDoughnutProps) {
+export function ChartDoughnut(props: ChartDoughnutProps): JSXRenderable {
   return <ChartBase type="doughnut" {...props} />;
 }

@@ -1,6 +1,12 @@
 /**
- * ConfigProvider 与全局配置（ANALYSIS 3.10）。
- * ConfigProvider 直接返回 VNode（与 @dreamer/view 及 shared/basic 约定一致）。
+ * @module @dreamer/ui-view/config-provider
+ * @description
+ * **JSR**：`import … from "@dreamer/ui-view/config-provider"`。全局 **ConfigProvider** 与 **`getConfig` / `setConfig`** 存取（主题模式、尺寸等）。
+ *
+ * **导出**：`ConfigProvider` 组件；`ConfigProviderProps`；`getConfig`、`setConfig`；`ConfigProviderConfig`、`ThemeMode`。
+ * 组件树包裹 Provider 后子组件可读取配置；具体字段含义见 `ConfigProvider.tsx` 与 `config-store.ts` 内注释。
+ *
+ * @see {@link ./ConfigProvider.tsx} 组件实现与 JSDoc
  */
 export { ConfigProvider } from "./ConfigProvider.tsx";
 export type { ConfigProviderProps } from "./ConfigProvider.tsx";

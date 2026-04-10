@@ -2,6 +2,7 @@
  * 文件带勾/审核通过图标，24×24 stroke，用于保单/合规。
  */
 import { Icon } from "../Icon.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { IconComponentProps } from "../Icon.tsx";
 
 const svg = (
@@ -21,6 +22,6 @@ const svg = (
   </svg>
 );
 
-export function IconFileCheck(props?: IconComponentProps) {
+export function IconFileCheck(props?: IconComponentProps): JSXRenderable {
   return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

@@ -11,6 +11,7 @@ import {
   createEffect,
   createRef,
   createSignal,
+  type JSXRenderable,
   onCleanup,
   Show,
   type Signal,
@@ -661,7 +662,7 @@ function ColorPickerPanelInterior(props: ColorPickerPanelInteriorProps) {
   };
 }
 
-export function ColorPicker(props: ColorPickerProps) {
+export function ColorPicker(props: ColorPickerProps): JSXRenderable {
   const {
     disabled = false,
     onChange,

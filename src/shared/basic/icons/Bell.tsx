@@ -2,6 +2,7 @@
  * 铃铛/通知图标，24×24 stroke。
  */
 import { Icon } from "../Icon.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { IconComponentProps } from "../Icon.tsx";
 
 const svg = (
@@ -20,6 +21,6 @@ const svg = (
   </svg>
 );
 
-export function IconBell(props?: IconComponentProps) {
+export function IconBell(props?: IconComponentProps): JSXRenderable {
   return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

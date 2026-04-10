@@ -2,6 +2,7 @@
  * 盖章/印章图标，24×24 stroke，用于政府/合同。
  */
 import { Icon } from "../Icon.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { IconComponentProps } from "../Icon.tsx";
 
 const svg = (
@@ -22,6 +23,6 @@ const svg = (
   </svg>
 );
 
-export function IconStamp(props?: IconComponentProps) {
+export function IconStamp(props?: IconComponentProps): JSXRenderable {
   return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

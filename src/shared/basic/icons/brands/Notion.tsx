@@ -2,6 +2,7 @@
  * Notion 品牌 Logo，24×24，来源 Simple Icons，currentColor。
  */
 import { Icon } from "../../Icon.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { IconComponentProps } from "../../Icon.tsx";
 
 const svg = (
@@ -14,6 +15,6 @@ const svg = (
 );
 
 /** Notion 品牌 Logo 图标 */
-export function IconBrandNotion(props?: IconComponentProps) {
+export function IconBrandNotion(props?: IconComponentProps): JSXRenderable {
   return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

@@ -21,6 +21,7 @@ import {
   createRef,
   createSignal,
   isSignal,
+  type JSXRenderable,
   onCleanup,
   Show,
   type Signal,
@@ -366,7 +367,7 @@ function viewerImagePrefersReducedMotion(): boolean {
   }
 }
 
-export function ImageViewer(props: ImageViewerProps) {
+export function ImageViewer(props: ImageViewerProps): JSXRenderable {
   const {
     onClose,
     defaultIndex: defaultIndexProp = 0,

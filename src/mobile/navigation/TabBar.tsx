@@ -5,6 +5,7 @@
  */
 
 import { createMemo } from "@dreamer/view";
+import type { JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import {
   type ControlledStringInput,
@@ -39,7 +40,7 @@ export interface TabBarProps {
   class?: string;
 }
 
-export function TabBar(props: TabBarProps) {
+export function TabBar(props: TabBarProps): JSXRenderable {
   const {
     items,
     onChange,

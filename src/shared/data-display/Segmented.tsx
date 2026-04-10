@@ -6,6 +6,7 @@
  */
 
 import { createSignal } from "@dreamer/view";
+import type { JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import type { SizeVariant } from "../types.ts";
 
@@ -49,7 +50,9 @@ const sizeClasses: Record<SizeVariant, string> = {
   lg: "text-base px-4 py-2.5",
 };
 
-export function Segmented<T extends string = string>(props: SegmentedProps<T>) {
+export function Segmented<T extends string = string>(
+  props: SegmentedProps<T>,
+): JSXRenderable {
   const {
     options,
     value: valueProp,

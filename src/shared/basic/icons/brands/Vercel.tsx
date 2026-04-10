@@ -2,6 +2,7 @@
  * Vercel 品牌 Logo，24×24，黑白三角。
  */
 import { Icon } from "../../Icon.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { IconComponentProps } from "../../Icon.tsx";
 
 const svg = (
@@ -14,6 +15,6 @@ const svg = (
 );
 
 /** Vercel 品牌 Logo 图标 */
-export function IconBrandVercel(props?: IconComponentProps) {
+export function IconBrandVercel(props?: IconComponentProps): JSXRenderable {
   return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

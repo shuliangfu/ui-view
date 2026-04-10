@@ -3,6 +3,7 @@
  * 红底 #EE1F24 + 白色 “A”，与官方 Acrobat 图标一致（Commons 同款圆角矩形 + 字母）。
  */
 import { Icon } from "../../Icon.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { IconComponentProps } from "../../Icon.tsx";
 
 const svg = (
@@ -20,6 +21,6 @@ const svg = (
 );
 
 /** Adobe Acrobat 品牌 Logo 图标 */
-export function IconBrandAcrobat(props?: IconComponentProps) {
+export function IconBrandAcrobat(props?: IconComponentProps): JSXRenderable {
   return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

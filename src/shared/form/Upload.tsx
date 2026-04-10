@@ -5,6 +5,7 @@
  */
 
 import { createSignal, getOwner, type Owner, type Signal } from "@dreamer/view";
+import type { JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import { IconUpload } from "../basic/icons/Upload.tsx";
 import { DEFAULT_UPLOAD_CHUNK_SIZE } from "./chunked-upload.ts";
@@ -282,7 +283,7 @@ function canPreviewUploadedImage(url: string, accept?: string): boolean {
 /**
  * 自动上传：校验、分片/整包、列表、隐藏域。
  */
-export function Upload(props: UploadProps) {
+export function Upload(props: UploadProps): JSXRenderable {
   const {
     multiple = false,
     accept,

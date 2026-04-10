@@ -3,6 +3,7 @@
  * 四角向外箭头，与 Tabler Icons 的 arrows-maximize 一致，用于「进入全屏」按钮。
  */
 import { Icon } from "../Icon.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { IconComponentProps } from "../Icon.tsx";
 
 const svg = (
@@ -27,6 +28,6 @@ const svg = (
   </svg>
 );
 
-export function IconMaximize2(props?: IconComponentProps) {
+export function IconMaximize2(props?: IconComponentProps): JSXRenderable {
   return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

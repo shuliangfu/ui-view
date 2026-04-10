@@ -2,6 +2,7 @@
  * 灯泡/提示/帮助图标，24×24 stroke，用于提示或帮助说明。
  */
 import { Icon } from "../Icon.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { IconComponentProps } from "../Icon.tsx";
 
 const svg = (
@@ -21,6 +22,6 @@ const svg = (
   </svg>
 );
 
-export function IconLamp(props?: IconComponentProps) {
+export function IconLamp(props?: IconComponentProps): JSXRenderable {
   return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }
