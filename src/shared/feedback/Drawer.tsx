@@ -11,20 +11,10 @@ import {
   createMemo,
   createPortal,
   createRenderEffect,
+  isSignal,
   onCleanup,
   type Signal,
 } from "@dreamer/view";
-
-/**
- * 判断是否为 `createSignal` 返回的 `Signal`（`.value` 可读写）。
- */
-function isViewSignal(v: unknown): v is Signal<unknown> {
-  if (typeof v !== "function") return false;
-  // Signal 为函数形态，与 Record 无直接重叠，经 unknown 再收窄以满足 TS2352
-  const f = v as unknown as Record<PropertyKey, unknown>;
-  return f.__VIEW_SIGNAL === true &&
-    Object.prototype.hasOwnProperty.call(f, "value");
-}
 import { twMerge } from "tailwind-merge";
 /** 按需：单文件图标，避免经 icons/mod 拉入全表 */
 import { IconClose } from "../basic/icons/Close.tsx";
@@ -85,6 +75,15 @@ export interface DrawerProps {
   keyboard?: boolean;
   /** 额外 class（作用于抽屉面板） */
   class?: string;
+  /**
+   * 标题栏容器 class（默认含 px-6 py-4）；全屏导航等可改为 `px-3 py-3` 等收紧留白。
+   */
+  titleBarClass?: string;
+  /**
+   * 包裹 `children` 的滚动区内层 class（默认 `flex-1 overflow-auto min-h-0 px-6 py-4`）；
+   * 铺满背景的导航可传 `p-0 min-h-0 flex-1 overflow-hidden flex flex-col` 等去掉内边距。
+   */
+  contentClass?: string;
 }
 
 const defaultWidth = "360px";
@@ -97,7 +96,7 @@ const defaultWidth = "360px";
  */
 function readDrawerOpenInput(v: DrawerOpenInput | undefined): boolean {
   if (v === undefined) return false;
-  if (isViewSignal(v)) return !!v.value;
+  if (isSignal(v)) return !!(v as Signal<boolean>).value;
   if (typeof v === "function") {
     if ((v as () => unknown).length !== 0) return false;
     return !!(v as () => boolean)();
@@ -178,6 +177,8 @@ export function Drawer(props: DrawerProps) {
     keyboard = true,
     titleAlign = "left",
     class: className,
+    titleBarClass,
+    contentClass,
   } = props;
 
   /**
@@ -199,6 +200,9 @@ export function Drawer(props: DrawerProps) {
   const drawerPanelStyle: Record<string, string> = {
     width: widthStyle,
     maxWidth: "100vw",
+    /** 与 `max-h-[100dvh]` 配合，避免移动浏览器地址栏导致高度不足 */
+    height: "100%",
+    maxHeight: "100dvh",
   };
   const isLeft = placement === "left";
 
@@ -242,16 +246,20 @@ export function Drawer(props: DrawerProps) {
 
     return (
       <div
-        class="fixed inset-0 z-300 flex"
+        class={twMerge(
+          "fixed inset-0 z-300 flex min-h-0",
+          isLeft ? "justify-start" : "justify-end",
+        )}
         role="dialog"
         aria-modal="true"
         aria-labelledby={showTitleBar ? "drawer-title" : undefined}
         tabindex={-1}
         onKeyDown={(e: Event) => handleKeyDown(e as KeyboardEvent)}
       >
+        {/** 与文档站顶栏全宽下拉同一视觉：`bg-slate-900/35`，偏冷灰、不另加 dark 分段与毛玻璃 */}
         <div
           class={twMerge(
-            "absolute inset-0 bg-black/50 dark:bg-black/60 backdrop-blur-sm transition-opacity",
+            "absolute inset-0 bg-slate-900/35 transition-opacity",
           )}
           onClick={(e: Event) => handleMaskClick(e)}
           aria-hidden
@@ -259,7 +267,7 @@ export function Drawer(props: DrawerProps) {
         <div
           ref={setDrawerRef}
           class={twMerge(
-            "relative z-10 flex flex-col h-full bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-xl",
+            "relative z-10 flex min-h-0 flex-col h-full max-h-[100dvh] bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-xl",
             isLeft ? "ml-0" : "ml-auto",
             className,
           )}
@@ -269,10 +277,11 @@ export function Drawer(props: DrawerProps) {
           {showTitleBar && (
             <div
               class={twMerge(
-                "shrink-0 px-6 py-4 border-b border-slate-200 dark:border-slate-600",
+                "shrink-0 border-b border-slate-200 px-6 py-4 dark:border-slate-600",
                 titleAlign === "center"
                   ? "relative flex min-h-14 items-center justify-center"
                   : "flex items-center justify-between gap-2",
+                titleBarClass,
               )}
             >
               {t.kind === "text"
@@ -334,7 +343,14 @@ export function Drawer(props: DrawerProps) {
               </button>
             </div>
           )}
-          <div class="flex-1 overflow-auto min-h-0 px-6 py-4">{children}</div>
+          <div
+            class={twMerge(
+              "min-h-0 flex-1 overflow-auto px-6 py-4",
+              contentClass,
+            )}
+          >
+            {children}
+          </div>
           {footer != null && (
             <div class="shrink-0 flex items-center justify-end gap-2 px-6 py-4 border-t border-slate-200 dark:border-slate-600">
               {footer}

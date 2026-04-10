@@ -7,6 +7,7 @@
 import { twMerge } from "tailwind-merge";
 import type { SizeVariant } from "../types.ts";
 import { compositeShellFocusRingFromInput } from "./input-focus-ring.ts";
+import { commitMaybeSignal, type MaybeSignal } from "./maybe-signal.ts";
 
 export interface InputNumberProps {
   /** 尺寸 */
@@ -17,8 +18,8 @@ export interface InputNumberProps {
   hideFocusRing?: boolean;
   /** 占位文案 */
   placeholder?: string;
-  /** 当前值（受控可选）；可为 getter 以在 View 细粒度下只更新 value 不重建节点，避免失焦 */
-  value?: number | string | (() => number) | (() => string);
+  /** 当前值（受控可选）；见 {@link MaybeSignal}（`number | string` 联合） */
+  value?: MaybeSignal<number | string>;
   /** 步进 */
   step?: number;
   /** 最小值 */
@@ -124,7 +125,7 @@ const wrapShellCls =
  * 与 {@link Input} 的 `InputClearOrSuffix` 写法一致：仅在 getter 内读 `value()`，细粒度只更新步进区。
  */
 function InputNumberButtons(props: {
-  value?: number | string | (() => number) | (() => string);
+  value?: MaybeSignal<number | string>;
   step: number;
   min?: number;
   max?: number;
@@ -226,10 +227,32 @@ export function InputNumber(props: InputNumberProps) {
 
   const onTriggerChange = (newVal: number) => {
     const normalized = roundByStepPrecision(newVal, step);
+    const str = String(normalized);
+    commitMaybeSignal(value, str);
     const synthetic = {
-      target: { value: String(normalized) },
+      target: { value: str },
     } as unknown as Event;
     onChange?.(synthetic);
+  };
+
+  /**
+   * 受控 `value` 为 Signal 时由组件写回，再调用外部 `onInput`。
+   *
+   * @param e - 原生 input 事件
+   */
+  const handleInput = (e: Event) => {
+    commitMaybeSignal(value, (e.target as HTMLInputElement).value);
+    onInput?.(e);
+  };
+
+  /**
+   * 受控 `value` 为 Signal 时由组件写回，再调用外部 `onChange`。
+   *
+   * @param e - 原生 change 事件
+   */
+  const handleChange = (e: Event) => {
+    commitMaybeSignal(value, (e.target as HTMLInputElement).value);
+    onChange?.(e);
   };
 
   /**
@@ -250,8 +273,8 @@ export function InputNumber(props: InputNumberProps) {
       sizeCls,
       hideNativeNumberSpinner,
     ),
-    onChange,
-    onInput,
+    onChange: handleChange,
+    onInput: handleInput,
     onBlur,
     onFocus,
     onKeyDown,

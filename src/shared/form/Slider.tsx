@@ -9,16 +9,17 @@
  * 做法：原生 `input` **不写** `value` prop（避免编译器/补丁按受控值写回）；用 `ref` + `createEffect`
  * 在「非指针按下」时把 props 同步到 `el.value`；指针拖动期间跳过同步，由浏览器跟手。
  *
- * **重要**：仅传 `onChange` 时，拖动中**不得**用 rAF 反复调用 `onChange` 去更新父级 signal，否则父级重绘会 patch/替换
- * `input` 节点，指针落在已卸载的 DOM 上会表现为「拖不动」。拖动过程请用 `onInput`；`onChange` 对齐原生，只在松手 `change` 时触发。
+ * **重要**：`onChange` 对齐原生，只在松手时触发；拖动中**不得**用 `onChange` 按帧更新父级，否则易换掉 `input` 拖不动。
+ * 父级传 `createSignal` 时，拖动中由内部 rAF 调用 `commitMaybeSignal` 更新该 Signal（**无需**再传 `onInput` 才能跟手）；`onInput` 仅用于额外回调（合成事件等）。
  */
 
 import { createEffect, createRef } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
+import { commitMaybeSignal, type MaybeSignal } from "./maybe-signal.ts";
 
 export interface SliderProps {
-  /** 当前值；可为 getter / `() => ref.value`（`Signal`）以配合 View 细粒度更新 */
-  value?: number | [number, number] | (() => number) | (() => [number, number]);
+  /** 当前值；见 {@link MaybeSignal}（单值或 range 元组） */
+  value?: MaybeSignal<number | [number, number]>;
   /** 最小值 */
   min?: number;
   /** 最大值 */
@@ -43,6 +44,18 @@ export interface SliderProps {
   name?: string;
   /** 原生 id */
   id?: string;
+}
+
+/**
+ * 在下一帧同步 DOM（双轨 ref 挂载时机）；浏览器用 rAF，SSR/Hybrid（Deno 等）无 rAF 时用 microtask，避免 `requestAnimationFrame is not a function`。
+ */
+function scheduleAfterPaint(fn: () => void): void {
+  const raf = globalThis.requestAnimationFrame;
+  if (typeof raf === "function") {
+    raf.call(globalThis, fn);
+  } else {
+    queueMicrotask(fn);
+  }
 }
 
 const trackCls =
@@ -126,26 +139,52 @@ export function Slider(props: SliderProps) {
   let singleRaf: number | null = null;
   let pendingSingleEvent: Event | null = null;
 
-  const scheduleSingleNotify = (handler: (e: Event) => void, e: Event) => {
+  /**
+   * 拖动中合并 input：始终 {@link commitMaybeSignal}（父级传 Signal 时首屏绑文案可不传 onInput）；
+   * `userOnInput` 仅作可选回调，与 commit 解耦。
+   */
+  const scheduleSingleNotify = (
+    e: Event,
+    userOnInput?: (e: Event) => void,
+  ) => {
     pendingSingleEvent = e;
     if (singleRaf !== null) return;
     singleRaf = globalThis.requestAnimationFrame(() => {
       singleRaf = null;
       const ev = pendingSingleEvent;
       pendingSingleEvent = null;
-      if (ev) handler(ev);
+      if (ev) {
+        const min = props.min ?? 0;
+        const max = props.max ?? 100;
+        const clampN = (v: number) => Math.min(max, Math.max(min, v));
+        const n = clampN(
+          parseFloat((ev.target as HTMLInputElement).value) || min,
+        );
+        commitMaybeSignal(props.value, n);
+        if (userOnInput) userOnInput(ev);
+      }
     });
   };
 
-  /** 取消待处理的 rAF，并把积压的 input 事件只交给 onInput（绝不走 onChange，防止拖动中更新父级导致重挂载 input）。 */
+  /**
+   * 取消待处理的 rAF：松手时先把积压帧写入 Signal，再可选调用 onInput（不走 onChange）。
+   */
   const flushSingleRaf = () => {
     if (singleRaf !== null) {
       globalThis.cancelAnimationFrame(singleRaf);
       singleRaf = null;
     }
     const move = props.onInput;
-    if (pendingSingleEvent && move) {
-      move(pendingSingleEvent);
+    if (pendingSingleEvent) {
+      const min = props.min ?? 0;
+      const max = props.max ?? 100;
+      const clampN = (v: number) => Math.min(max, Math.max(min, v));
+      const n = clampN(
+        parseFloat((pendingSingleEvent.target as HTMLInputElement).value) ||
+          min,
+      );
+      commitMaybeSignal(props.value, n);
+      if (move) move(pendingSingleEvent);
       pendingSingleEvent = null;
     }
   };
@@ -153,9 +192,12 @@ export function Slider(props: SliderProps) {
   let rangeRaf: number | null = null;
   let pendingRangePayload: [number, number] | null = null;
 
+  /**
+   * range 拖动合并：始终 commit；无 `onInput` 时仍更新父级 Signal（与单轨一致）。
+   */
   const scheduleRangeNotify = (
     payload: [number, number],
-    handler: (e: Event) => void,
+    userOnInput?: (e: Event) => void,
   ) => {
     pendingRangePayload = payload;
     if (rangeRaf !== null) return;
@@ -163,7 +205,10 @@ export function Slider(props: SliderProps) {
       rangeRaf = null;
       const p = pendingRangePayload;
       pendingRangePayload = null;
-      if (p) emitRangeTuple(p, handler);
+      if (p) {
+        commitMaybeSignal(props.value, p);
+        emitRangeTuple(p, userOnInput);
+      }
     });
   };
 
@@ -173,8 +218,9 @@ export function Slider(props: SliderProps) {
       rangeRaf = null;
     }
     const move = props.onInput;
-    if (pendingRangePayload && move) {
-      emitRangeTuple(pendingRangePayload, move);
+    if (pendingRangePayload) {
+      commitMaybeSignal(props.value, pendingRangePayload);
+      if (move) emitRangeTuple(pendingRangePayload, move);
       pendingRangePayload = null;
     }
   };
@@ -200,20 +246,33 @@ export function Slider(props: SliderProps) {
       const low = clampLocal(typeof v0 === "number" ? v0 : min);
       const high = clampLocal(typeof v1 === "number" ? v1 : max);
       const ordered: [number, number] = low <= high ? [low, high] : [high, low];
-      const lo = rangeLowRef.current;
-      const hi = rangeHighRef.current;
       const s0 = String(ordered[0]);
       const s1 = String(ordered[1]);
-      if (lo && lo.value !== s0) lo.value = s0;
-      if (hi && hi.value !== s1) hi.value = s1;
-      if (!vertical) {
-        paintRangeFillBar(
-          rangeFillBarRef.current,
-          ordered[0],
-          ordered[1],
-          min,
-          max,
-        );
+      /**
+       * 双轨 input 的 ref 可能在首次 effect 时尚未挂上；若跳过写入，浏览器对无 value 的 range 默认取 (min+max)/2，
+       * 两枚 thumb 会叠在同一点，看起来像「只有一个滑点」。下一帧再同步一次即可。
+       */
+      const applyRangeDom = () => {
+        const lo = rangeLowRef.current;
+        const hi = rangeHighRef.current;
+        if (lo && lo.value !== s0) lo.value = s0;
+        if (hi && hi.value !== s1) hi.value = s1;
+        if (!vertical) {
+          paintRangeFillBar(
+            rangeFillBarRef.current,
+            ordered[0],
+            ordered[1],
+            min,
+            max,
+          );
+        }
+      };
+      applyRangeDom();
+      if (!rangeLowRef.current || !rangeHighRef.current) {
+        scheduleAfterPaint(() => {
+          if (pointerDraggingRange.current) return;
+          applyRangeDom();
+        });
       }
     } else {
       if (pointerDraggingSingle.current) return;
@@ -221,9 +280,18 @@ export function Slider(props: SliderProps) {
         ? resolved
         : (resolved as [number, number])[0];
       const n = clampLocal(typeof num === "number" ? num : min);
-      const el = singleInputRef.current;
       const s = String(n);
-      if (el && el.value !== s) el.value = s;
+      const applySingleDom = () => {
+        const el = singleInputRef.current;
+        if (el && el.value !== s) el.value = s;
+      };
+      applySingleDom();
+      if (!singleInputRef.current) {
+        scheduleAfterPaint(() => {
+          if (pointerDraggingSingle.current) return;
+          applySingleDom();
+        });
+      }
     }
   });
 
@@ -263,7 +331,7 @@ export function Slider(props: SliderProps) {
           paintRangeFillBar(rangeFillBarRef.current, o0, o1, min, max);
         }
         const next: [number, number] = [o0, o1];
-        if (rangeOnMove) scheduleRangeNotify(next, rangeOnMove);
+        scheduleRangeNotify(next, rangeOnMove);
       };
       const onLowChange = (e: Event) => {
         pointerDraggingRange.current = false;
@@ -278,7 +346,9 @@ export function Slider(props: SliderProps) {
         if (!vertical) {
           paintRangeFillBar(rangeFillBarRef.current, o0, o1, min, max);
         }
-        emitRangeTuple([o0, o1], onChange);
+        const tuple: [number, number] = [o0, o1];
+        commitMaybeSignal(props.value, tuple);
+        emitRangeTuple(tuple, onChange);
       };
 
       const onHighInput = (e: Event) => {
@@ -293,7 +363,7 @@ export function Slider(props: SliderProps) {
           paintRangeFillBar(rangeFillBarRef.current, o0, o1, min, max);
         }
         const next: [number, number] = [o0, o1];
-        if (rangeOnMove) scheduleRangeNotify(next, rangeOnMove);
+        scheduleRangeNotify(next, rangeOnMove);
       };
       const onHighChange = (e: Event) => {
         pointerDraggingRange.current = false;
@@ -308,7 +378,9 @@ export function Slider(props: SliderProps) {
         if (!vertical) {
           paintRangeFillBar(rangeFillBarRef.current, o0, o1, min, max);
         }
-        emitRangeTuple([o0, o1], onChange);
+        const tupleH: [number, number] = [o0, o1];
+        commitMaybeSignal(props.value, tupleH);
+        emitRangeTuple(tupleH, onChange);
       };
 
       const onRangePointerDown = () => {
@@ -418,15 +490,18 @@ export function Slider(props: SliderProps) {
       : "";
 
     /**
-     * 拖动中仅在有 onInput 时经 rAF 通知父级；勿在仅有 onChange 时于 input 阶段调用 onChange。
+     * 拖动中始终经 rAF 提交 Signal；`onInput` 可选，仅作额外回调。
      */
     const handleSingleInput = (e: Event) => {
-      if (onInput) scheduleSingleNotify(onInput, e);
+      scheduleSingleNotify(e, onInput);
     };
 
     const handleSingleChange = (e: Event) => {
       pointerDraggingSingle.current = false;
       flushSingleRaf();
+      const el = e.target as HTMLInputElement;
+      const n = clamp(parseFloat(el.value) || min);
+      commitMaybeSignal(props.value, n);
       if (onChange) onChange(e);
     };
 
@@ -453,7 +528,7 @@ export function Slider(props: SliderProps) {
         )}
         onPointerDown={onSinglePointerDown}
         onChange={handleSingleChange}
-        onInput={onInput ? handleSingleInput : undefined}
+        onInput={handleSingleInput}
       />
     );
 

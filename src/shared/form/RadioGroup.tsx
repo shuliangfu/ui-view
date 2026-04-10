@@ -1,9 +1,12 @@
 /**
  * RadioGroup 单选组（View）。
  * 选项列表、统一 name、当前选中 value，onChange 回传新 value；支持横向/纵向布局。
+ * `value` 为 `createSignal` 返回值时，会先写入 Signal，可不写 `onChange` 仅做同步。
  */
 
+import { isSignal, type Signal } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
+import type { MaybeSignal } from "./maybe-signal.ts";
 import { Radio } from "./Radio.tsx";
 
 export interface RadioGroupOption {
@@ -20,13 +23,15 @@ export interface RadioGroupProps {
   options: RadioGroupOption[];
   /** 同组 name（必填则互斥） */
   name: string;
-  /** 当前选中的 value；可为 getter / 如 `() => ref.value`（`Signal`）以配合 View 细粒度更新 */
-  value?: string | (() => string);
+  /** 当前选中的 value；见 {@link MaybeSignal} */
+  value?: MaybeSignal<string>;
   /** 是否整组禁用 */
   disabled?: boolean;
   /** 错误状态（传递给每个 Radio） */
   error?: boolean;
-  /** 变更回调，回传新选中的 value */
+  /**
+   * 变更回调。`value` 为 Signal 时组件会先自动写入；仍可传以做其它副作用。
+   */
   onChange?: (value: string) => void;
   /** 布局方向：horizontal 横向、vertical 纵向，默认 "horizontal" */
   direction?: RadioGroupDirection;
@@ -38,7 +43,7 @@ export function RadioGroup(props: RadioGroupProps) {
   const {
     options,
     name,
-    value = "",
+    value: valueProp,
     disabled = false,
     error = false,
     onChange,
@@ -51,7 +56,24 @@ export function RadioGroup(props: RadioGroupProps) {
     : "flex-col gap-2";
 
   return () => {
-    const resolvedValue = typeof value === "function" ? value() : (value ?? "");
+    const resolvedValue = valueProp === undefined
+      ? ""
+      : typeof valueProp === "function"
+      ? (valueProp as () => string)()
+      : valueProp;
+
+    /**
+     * 将新选中 value 写回受控源：`value` 为 Signal 时赋值，再调 `onChange`。
+     *
+     * @param next - 新选中的选项 value
+     */
+    const commitValue = (next: string) => {
+      if (valueProp !== undefined && isSignal(valueProp)) {
+        (valueProp as Signal<string>).value = next;
+      }
+      onChange?.(next);
+    };
+
     return (
       <div
         class={twMerge("flex", directionCls, className)}
@@ -67,7 +89,7 @@ export function RadioGroup(props: RadioGroupProps) {
               checked={resolvedValue === opt.value}
               disabled={disabled || opt.disabled}
               error={error}
-              onChange={() => onChange?.(opt.value)}
+              onChange={() => commitValue(opt.value)}
             >
               {opt.label}
             </Radio>

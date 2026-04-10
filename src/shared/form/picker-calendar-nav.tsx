@@ -48,8 +48,26 @@ export interface PickerCalendarNavProps {
   rangeStartSignal?: Signal<Date | null>;
   /** range 模式：与 {@link rangeStartSignal} 成对；内层读 `.value` 以订阅稿终点 */
   rangeEndSignal?: Signal<Date | null>;
+  /**
+   * {@link DateTimePicker} 等：区间模式但日网格为 `daySelectionMode="single"` 时，内层读 `.value` 表示当前编辑「结束」槽（否则为开始槽），
+   * 与 {@link rangeStartSignal} / {@link rangeEndSignal} 组合得到 {@link Calendar} 的 `selectedDate`，避免父级条件浮层子工厂只跑一帧后高亮冻结。
+   */
+  rangeDatetimeActiveEndSignal?: Signal<boolean>;
   /** multiple 模式：已选自然日列表 */
   selectedDates?: readonly Date[];
+  /**
+   * multiple 模式：优先于 {@link selectedDates}；内层读 `.value` 以订阅多选稿。
+   * 供父级用 {@link Show} 等仅按「开/关」挂载浮层时，避免 `selectedDates` 快照不随稿更新。
+   */
+  multipleYmdSignal?: Signal<string[]>;
+  /**
+   * multiple 模式：每项为父级约定的日期时间串；内层读 `.value` 以订阅稿，与 {@link multipleItemsToDays} 搭配。
+   * 供 {@link DateTimePicker} 等在浮层内用完整时间串列表、而非 `YYYY-MM-DD` 稿时使用。
+   * 若同时传 {@link multipleYmdSignal}，优先使用 YMD 列表（{@link DatePicker}）。
+   */
+  multipleItemsSignal?: Signal<string[]>;
+  /** 将 {@link multipleItemsSignal} 的串列表解析为自然日 `Date[]`，供日网格多选高亮 */
+  multipleItemsToDays?: (items: readonly string[]) => Date[];
   /** 用户点选某日 */
   onSelectDay: (d: Date) => void;
   /** 与 Calendar 一致：按日禁用 */
@@ -61,6 +79,26 @@ export interface PickerCalendarNavProps {
    * 与 {@link DatePicker} 的 `format` 一致。
    */
   dateGranularity?: PickerDateGranularity;
+}
+
+/**
+ * 将 `YYYY-MM-DD` 串列表解析为本地日历日（非法项跳过）。
+ *
+ * @param ymds - 与 DatePicker multiple 稿一致的全日串
+ */
+function parseYmdStringsToDates(ymds: readonly string[]): Date[] {
+  const out: Date[] = [];
+  for (const s of ymds) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) continue;
+    const [y, m, d] = s.split("-").map(Number);
+    const dt = new Date(y, m - 1, d);
+    if (
+      isNaN(dt.getTime()) || dt.getFullYear() !== y ||
+      dt.getMonth() !== m - 1 || dt.getDate() !== d
+    ) continue;
+    out.push(dt);
+  }
+  return out;
 }
 
 /** 宫格内未选中单元格 */
@@ -78,7 +116,9 @@ const gridCellBase =
  * **compileSource + 父级本征 patch：** `@dreamer/view` 对函数子槽会 `Object.assign` 到**同一** `props` 对象并 bump 子级 **函数子响应式插入**，
  * **不会**再次调用本组件函数。若在**外层**解构 `props`，零参 getter 闭包会永远持有首轮快照，`selectedDate` / `onSelectDay` 等无法更新，
  * 表现为日历点选无反应或高亮错乱。因此必须在**内层 getter 每次执行时**从 `props` 解构（见下方实现）。
- * 对「仅 merge 标量日期」仍可能不 bump 内层时，请传 {@link PickerCalendarNavProps.selectedDaySignal} / `range*Signal` 让本层直接订阅 signal。
+ * 对「仅 merge 标量日期」仍可能不 bump 内层时，请传 {@link PickerCalendarNavProps.selectedDaySignal} / `range*Signal` 让本层直接订阅 signal；
+ * multiple 且父级用条件挂载浮层时请传 {@link PickerCalendarNavProps.multipleYmdSignal} 或
+ * `multipleItemsSignal` + {@link PickerCalendarNavProps.multipleItemsToDays}（日期时间串稿）。
  */
 export function PickerCalendarNav(props: PickerCalendarNavProps) {
   return () => {
@@ -95,7 +135,11 @@ export function PickerCalendarNav(props: PickerCalendarNavProps) {
       rangeEnd,
       rangeStartSignal,
       rangeEndSignal,
+      rangeDatetimeActiveEndSignal,
       selectedDates,
+      multipleYmdSignal,
+      multipleItemsSignal,
+      multipleItemsToDays,
       onSelectDay,
       disabledDate,
       calendarClass,
@@ -110,8 +154,15 @@ export function PickerCalendarNav(props: PickerCalendarNavProps) {
     const calValue = new Date(y, m, 1);
     const ys = yearPageStart.value;
 
-    /** 透传 {@link Calendar}：signal 优先，避免 merge `selectedDate` 不触发重绘 */
-    const calendarSelectedDate = selectedDaySignal != null
+    /** 透传 {@link Calendar}：区间时间稿的「当前槽」signal 优先，其次 single 的 selectedDaySignal，最后 props */
+    const calendarSelectedDate = rangeDatetimeActiveEndSignal != null &&
+        daySelectionMode === "single" &&
+        rangeStartSignal != null &&
+        rangeEndSignal != null
+      ? (rangeDatetimeActiveEndSignal.value
+        ? (rangeEndSignal.value ?? undefined)
+        : (rangeStartSignal.value ?? undefined))
+      : selectedDaySignal != null
       ? (selectedDaySignal.value ?? undefined)
       : selectedDate;
     const calendarRangeStart = rangeStartSignal != null
@@ -120,6 +171,16 @@ export function PickerCalendarNav(props: PickerCalendarNavProps) {
     const calendarRangeEnd = rangeEndSignal != null
       ? (rangeEndSignal.value ?? undefined)
       : rangeEnd;
+
+    /** multiple：YMD signal → 日期时间串 signal+映射 → 否则 props 快照 */
+    const calendarSelectedDatesResolved =
+      daySelectionMode === "multiple" && multipleYmdSignal != null
+        ? parseYmdStringsToDates(multipleYmdSignal.value)
+        : daySelectionMode === "multiple" &&
+            multipleItemsSignal != null &&
+            multipleItemsToDays != null
+        ? multipleItemsToDays(multipleItemsSignal.value)
+        : selectedDates;
 
     /** 日视图：左右为上一月 / 下一月 */
     const goPrevMonth = () => {
@@ -301,7 +362,7 @@ export function PickerCalendarNav(props: PickerCalendarNavProps) {
             daySelectionMode={daySelectionMode}
             rangeStart={calendarRangeStart}
             rangeEnd={calendarRangeEnd}
-            selectedDates={selectedDates}
+            selectedDates={calendarSelectedDatesResolved}
             onChange={onSelectDay}
             disabledDate={disabledDate}
             fullscreen={false}

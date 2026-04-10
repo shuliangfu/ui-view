@@ -8,12 +8,13 @@ import { createEffect, createRef, createSignal } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import type { SizeVariant } from "../types.ts";
 import { controlBlueFocusRing } from "./input-focus-ring.ts";
+import { commitMaybeSignal, type MaybeSignal } from "./maybe-signal.ts";
 
 export interface AutoCompleteProps {
   /** 建议选项（用于过滤展示；非空输入时按子串匹配，空输入时展示全部） */
   options?: string[];
-  /** 当前输入值（受控可选）；可为 getter 以在 View 细粒度下只更新 value 不重建节点，避免失焦 */
-  value?: string | (() => string);
+  /** 当前输入值（受控可选）；见 {@link MaybeSignal} */
+  value?: MaybeSignal<string>;
   /** 尺寸 */
   size?: SizeVariant;
   /** 是否禁用 */
@@ -197,6 +198,7 @@ export function AutoComplete(props: AutoCompleteProps) {
    */
   const pickOption = (opt: string) => {
     panelFilterQuery.value = opt;
+    commitMaybeSignal(value, opt);
     const synthetic = {
       target: { value: opt },
     } as unknown as Event;
@@ -213,6 +215,7 @@ export function AutoComplete(props: AutoCompleteProps) {
     activeIndex.value = -1;
     panelOpen.value = true;
     const v = el?.value ?? "";
+    commitMaybeSignal(value, v);
     onInput?.(e);
     if (onSelect && options.includes(v)) onSelect(v);
   };
@@ -222,6 +225,7 @@ export function AutoComplete(props: AutoCompleteProps) {
     panelFilterQuery.value = el?.value ?? "";
     activeIndex.value = -1;
     const v = el?.value ?? "";
+    commitMaybeSignal(value, v);
     onChange?.(e);
     if (onSelect && options.includes(v)) onSelect(v);
   };

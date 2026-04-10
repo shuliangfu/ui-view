@@ -257,6 +257,8 @@ export function CodeBlock(props: CodeBlockProps) {
             ref={setCodeRef}
             class={twMerge(
               `language-${(language ?? "plaintext").toLowerCase()}`,
+              /** 窄屏下避免父级 flex/min-width 把 pre 压成极窄导致逐字竖排；保持单行预格式化并横向滚动 */
+              "inline-block min-w-full w-max whitespace-pre text-left break-normal [overflow-wrap:normal] [word-break:normal]",
               codeClass,
             )}
           >

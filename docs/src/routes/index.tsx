@@ -21,7 +21,7 @@ import SiteFooter from "../components/SiteFooter.tsx";
 /** Hero 背景：渐变 + 细网格，提升层次且不抢眼 */
 function HeroBackground() {
   return (
-    <div class="absolute inset-0 -z-10 overflow-hidden" aria-hidden>
+    <div class="absolute inset-0 overflow-hidden" aria-hidden>
       <div class="absolute inset-0 bg-[radial-gradient(ellipse_90%_50%_at_50%_-30%,rgba(20,184,166,0.22),transparent)] dark:bg-[radial-gradient(ellipse_90%_50%_at_50%_-30%,rgba(20,184,166,0.14),transparent)]" />
       <div
         class="absolute inset-0 opacity-[0.35] dark:opacity-[0.2]"

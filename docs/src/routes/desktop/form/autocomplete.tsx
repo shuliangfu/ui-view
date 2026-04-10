@@ -30,9 +30,10 @@ const AUTOCOMPLETE_API: ApiRow[] = [
   },
   {
     name: "value",
-    type: "string | (() => string)",
+    type: "string | (() => string) | Signal<string>",
     default: "-",
-    description: "受控值；可为 getter，避免细粒度更新下失焦",
+    description:
+      "受控输入文本。与全库表单一致为 MaybeSignal：字面量、`() => T`、`createSignal` 返回值；勿直接绑 `sig.value`（快照失步或误订阅）。",
   },
   {
     name: "size",
@@ -149,10 +150,9 @@ import { createSignal } from "@dreamer/view";
 const q = createSignal("");
 <FormItem label="搜索">
   <AutoComplete
-    value={() => q.value}
+    value={q}
     options={["北京", "上海", "广州", "深圳"]}
     placeholder="输入城市"
-    onChange={(e) => q.value = (e.target as HTMLInputElement).value}
     class="w-full max-w-md"
   />
 </FormItem>`}
@@ -167,16 +167,28 @@ const q = createSignal("");
         <Form layout="vertical" class="w-full max-w-lg space-y-4">
           <FormItem label="城市（建议）">
             <AutoComplete
-              value={() => q.value}
+              value={q}
               options={["北京", "上海", "广州", "深圳", "杭州"]}
               placeholder="输入或选择"
-              onChange={(e) => {
-                q.value = (e.target as HTMLInputElement).value;
-              }}
               class="w-full"
             />
           </FormItem>
         </Form>
+        <CodeBlock
+          title="代码示例"
+          code={`<FormItem label="城市（建议）">
+  <AutoComplete
+    value={q}
+    options={["北京", "上海", "广州", "深圳", "杭州"]}
+    placeholder="输入或选择"
+    class="w-full"
+  />
+</FormItem>`}
+          language="tsx"
+          showLineNumbers
+          copyable
+          wrapLongLines
+        />
       </section>
 
       <section class="space-y-4">
@@ -191,55 +203,43 @@ const q = createSignal("");
           <FormItem label="xs">
             <AutoComplete
               size="xs"
-              value={() => qSizeXs.value}
+              value={qSizeXs}
               options={SIZE_DEMO_OPTIONS}
               placeholder="xs"
-              onChange={(e) => {
-                qSizeXs.value = (e.target as HTMLInputElement).value;
-              }}
               class="w-full"
             />
           </FormItem>
           <FormItem label="sm">
             <AutoComplete
               size="sm"
-              value={() => qSizeSm.value}
+              value={qSizeSm}
               options={SIZE_DEMO_OPTIONS}
               placeholder="sm"
-              onChange={(e) => {
-                qSizeSm.value = (e.target as HTMLInputElement).value;
-              }}
               class="w-full"
             />
           </FormItem>
           <FormItem label="md（默认）">
             <AutoComplete
               size="md"
-              value={() => qSizeMd.value}
+              value={qSizeMd}
               options={SIZE_DEMO_OPTIONS}
               placeholder="md"
-              onChange={(e) => {
-                qSizeMd.value = (e.target as HTMLInputElement).value;
-              }}
               class="w-full"
             />
           </FormItem>
           <FormItem label="lg">
             <AutoComplete
               size="lg"
-              value={() => qSizeLg.value}
+              value={qSizeLg}
               options={SIZE_DEMO_OPTIONS}
               placeholder="lg"
-              onChange={(e) => {
-                qSizeLg.value = (e.target as HTMLInputElement).value;
-              }}
               class="w-full"
             />
           </FormItem>
         </Form>
         <CodeBlock
           title="代码示例"
-          code={`<AutoComplete size="xs" value={() => q1.value} options={opts} placeholder="xs" onChange={...} class="w-full" />
+          code={`<AutoComplete size="xs" value={q1} options={opts} placeholder="xs" onChange={...} class="w-full" />
 <AutoComplete size="sm" ... placeholder="sm" />
 <AutoComplete size="md" ... placeholder="md" />
 <AutoComplete size="lg" ... placeholder="lg" />`}

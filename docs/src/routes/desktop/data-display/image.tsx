@@ -34,7 +34,13 @@ const IMAGE_API: ApiRow[] = [
     name: "fallback",
     type: "string | unknown",
     default: "-",
-    description: "加载失败时显示",
+    description: "兼容保留，组件内不再渲染文案",
+  },
+  {
+    name: "fallbackSrc",
+    type: "string",
+    default: "内置 SVG",
+    description: "非空时覆盖组件内置缺省图（CDN/站内资源/data URI）",
   },
   {
     name: "lazy",
@@ -89,8 +95,8 @@ const exampleFallbackLazy = `<Image
   alt="失败"
   width={120}
   height={120}
-  fallback="加载失败"
 />
+<!-- 可选 fallbackSrc="/static/error.png" 覆盖内置山水占位图 -->
 <Image
   src="..."
   alt="lazy"
@@ -106,8 +112,9 @@ export default function DataDisplayImage() {
       <section>
         <Title level={1}>Image 图片</Title>
         <Paragraph class="mt-2">
-          图片：src、alt、width、height、fit、placeholder、fallback、lazy、preview、previewDisabled、rounded。
-          使用 Tailwind v4，支持 light/dark 主题。
+          图片：src、alt、width、height、fit、placeholder、fallback（兼容）、fallbackSrc、lazy、preview、previewDisabled、rounded。
+          加载失败时主图换成内置灰调山水占位（无网络、无「加载失败」条）；非空
+          fallbackSrc 可覆盖。使用 Tailwind v4，支持 light/dark 主题。
         </Paragraph>
       </section>
 
@@ -156,7 +163,6 @@ export default function DataDisplayImage() {
               alt="失败"
               width={120}
               height={120}
-              fallback="加载失败"
             />
             <Image
               src="https://picsum.photos/100/100"

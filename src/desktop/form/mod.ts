@@ -1,6 +1,8 @@
 /**
  * 桌面端表单入口：逐项从本目录 `./*.tsx` 导出（含 shared 薄 re-export 与桌面专有实现）。
  */
+export type { MaybeSignal } from "../../shared/form/maybe-signal.ts";
+export { readMaybeSignal } from "../../shared/form/maybe-signal.ts";
 export { Input } from "./Input.tsx";
 export type { InputProps } from "./Input.tsx";
 export { Search } from "./Search.tsx";
@@ -79,7 +81,7 @@ export type {
   MarkdownEditorProps,
 } from "./MarkdownEditor.tsx";
 
-/** 桌面专有：选择器、日期时间；另见本目录 `Transfer.tsx`（桌面 API，`label` 字段）按需直接路径引入，不在此 barrel 导出以免与 shared 通用 Transfer 冲突 */
+/** 桌面专有：日期时间。Select/MultiSelect/Cascader/TreeSelect 实现均在 `shared/form`，本目录 re-export；默认 `appearance="dropdown"`。`Transfer` 由 `../shared` 提供 */
 export { Select } from "./Select.tsx";
 export type { SelectOption, SelectProps } from "./Select.tsx";
 export { MultiSelect } from "./MultiSelect.tsx";

@@ -46,9 +46,9 @@ const MENU_API: ApiRow[] = [
   },
   {
     name: "openKeys",
-    type: "string[]",
+    type: "string[] | (() => string[])",
     default: "-",
-    description: "受控展开的 key 列表",
+    description: "受控展开的 key 列表；传 getter 可与 Signal 联动",
   },
   {
     name: "onOpenChange",
@@ -58,9 +58,9 @@ const MENU_API: ApiRow[] = [
   },
   {
     name: "focusedKey",
-    type: "string",
+    type: "string | (() => string | undefined)",
     default: "-",
-    description: "键盘导航当前焦点 key",
+    description: "键盘导航当前焦点 key；传 getter 可与 Signal 联动",
   },
   {
     name: "onFocusChange",
@@ -84,7 +84,7 @@ const items = [
   items={items}
   onClick={(k) => {}}
   openKeys={() => openKeys.value}
-  onOpenChange={(keys) => openKeys.value = keys}
+  onOpenChange={(keys) => { openKeys.value = keys; }}
   mode="vertical"
 />`;
 
@@ -99,7 +99,7 @@ const focusedKey = createSignal<string | undefined>("1");
   mode="vertical"
   openKeys={() => openKeysVertical.value}
   onOpenChange={(keys) => (openKeysVertical.value = keys)}
-  focusedKey={focusedKey.value}
+  focusedKey={() => focusedKey.value}
   onFocusChange={(k) => (focusedKey.value = k)}
 />`;
 

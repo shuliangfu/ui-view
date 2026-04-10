@@ -33,13 +33,6 @@ function localYearMonth(): string {
   return d.getFullYear() + "-" + pad(d.getMonth() + 1);
 }
 
-/**
- * 从 DatePicker 等组件的合成 change 事件中读取 `target.value`（含 JSON 字符串）。
- */
-function pickerInputValue(e: Event): string {
-  return (e.target as EventTarget & { value?: string }).value ?? "";
-}
-
 interface ApiRow {
   name: string;
   type: string;
@@ -130,8 +123,7 @@ function localTodayYmd() {
 const val = createSignal(localTodayYmd());
 <FormItem label="日期">
   <DatePicker
-    value={() => val.value}
-    onChange={(e) => val.value = (e.target as HTMLInputElement).value}
+    value={val}
   />
 </FormItem>`;
 
@@ -202,16 +194,13 @@ export default function FormDatePicker() {
             <Title level={3}>基础</Title>
             <FormItem label="日期">
               <DatePicker
-                value={() => val.value}
-                onChange={(e) =>
-                  val.value = (e.target as HTMLInputElement).value}
+                value={val}
               />
             </FormItem>
             <CodeBlock
               title="代码示例"
               code={`<DatePicker
-  value={() => val.value}
-  onChange={(e) => val.value = (e.target as HTMLInputElement).value}
+  value={val}
 />`}
               language="tsx"
               showLineNumbers
@@ -224,9 +213,7 @@ export default function FormDatePicker() {
             <Title level={3}>有默认值 / min / max</Title>
             <FormItem label="限制范围">
               <DatePicker
-                value={() => val2.value}
-                onChange={(e) =>
-                  val2.value = (e.target as HTMLInputElement).value}
+                value={val2}
                 min={`${rangeYear}-01-01`}
                 max={`${rangeYear}-12-31`}
               />
@@ -234,8 +221,7 @@ export default function FormDatePicker() {
             <CodeBlock
               title="代码示例"
               code={`<DatePicker
-  value={() => val2.value}
-  onChange={(e) => val2.value = (e.target as HTMLInputElement).value}
+  value={val2}
   min="${rangeYear}-01-01"
   max="${rangeYear}-12-31"
 />`}
@@ -255,34 +241,26 @@ export default function FormDatePicker() {
             </Paragraph>
             <FormItem label="xs">
               <DatePicker
-                value={() => valSizeXs.value}
+                value={valSizeXs}
                 size="xs"
-                onChange={(e) =>
-                  valSizeXs.value = (e.target as HTMLInputElement).value}
               />
             </FormItem>
             <FormItem label="sm">
               <DatePicker
-                value={() => valSizeSm.value}
+                value={valSizeSm}
                 size="sm"
-                onChange={(e) =>
-                  valSizeSm.value = (e.target as HTMLInputElement).value}
               />
             </FormItem>
             <FormItem label="md（默认）">
               <DatePicker
-                value={() => valSizeMd.value}
+                value={valSizeMd}
                 size="md"
-                onChange={(e) =>
-                  valSizeMd.value = (e.target as HTMLInputElement).value}
               />
             </FormItem>
             <FormItem label="lg">
               <DatePicker
-                value={() => valSizeLg.value}
+                value={valSizeLg}
                 size="lg"
-                onChange={(e) =>
-                  valSizeLg.value = (e.target as HTMLInputElement).value}
               />
             </FormItem>
             <FormItem label="禁用">
@@ -300,10 +278,10 @@ const valXs = createSignal(today);
 const valSm = createSignal(today);
 const valMd = createSignal(today);
 const valLg = createSignal(today);
-<DatePicker value={() => valXs.value} size="xs" onChange={(e) => valXs.value = (e.target as HTMLInputElement).value} />
-<DatePicker value={() => valSm.value} size="sm" onChange={(e) => valSm.value = (e.target as HTMLInputElement).value} />
-<DatePicker value={() => valMd.value} size="md" onChange={(e) => valMd.value = (e.target as HTMLInputElement).value} />
-<DatePicker value={() => valLg.value} size="lg" onChange={(e) => valLg.value = (e.target as HTMLInputElement).value} />
+<DatePicker value={valXs} size="xs" />
+<DatePicker value={valSm} size="sm" />
+<DatePicker value={valMd} size="md" />
+<DatePicker value={valLg} size="lg" />
 <DatePicker value={today} disabled onChange={() => {}} />`}
               language="tsx"
               showLineNumbers
@@ -324,43 +302,34 @@ const valLg = createSignal(today);
             <FormItem label='format="YYYY"（仅年）'>
               <DatePicker
                 format="YYYY"
-                value={() => valFmtYear.value}
-                onChange={(e) =>
-                  valFmtYear.value = (e.target as HTMLInputElement).value}
+                value={valFmtYear}
               />
             </FormItem>
             <FormItem label='format="YYYY-MM"（年月）'>
               <DatePicker
                 format="YYYY-MM"
-                value={() => valFmtYm.value}
-                onChange={(e) =>
-                  valFmtYm.value = (e.target as HTMLInputElement).value}
+                value={valFmtYm}
               />
             </FormItem>
             <FormItem label='format="YYYY/MM/DD"'>
               <DatePicker
                 format="YYYY/MM/DD"
-                value={() => valFmtSlash.value}
-                onChange={(e) =>
-                  valFmtSlash.value = (e.target as HTMLInputElement).value}
+                value={valFmtSlash}
               />
             </FormItem>
             <CodeBlock
               title="代码示例"
               code={`<DatePicker
   format="YYYY"
-  value={() => valFmtYear.value}
-  onChange={(e) => valFmtYear.value = (e.target as HTMLInputElement).value}
+  value={valFmtYear}
 />
 <DatePicker
   format="YYYY-MM"
-  value={() => valFmtYm.value}
-  onChange={(e) => valFmtYm.value = (e.target as HTMLInputElement).value}
+  value={valFmtYm}
 />
 <DatePicker
   format="YYYY/MM/DD"
-  value={() => valFmtSlash.value}
-  onChange={(e) => valFmtSlash.value = (e.target as HTMLInputElement).value}
+  value={valFmtSlash}
 />`}
               language="tsx"
               showLineNumbers
@@ -381,22 +350,7 @@ const valLg = createSignal(today);
             <FormItem label="区间（JSON 受控）">
               <DatePicker
                 mode="range"
-                value={() => valRange.value}
-                onChange={(e) => {
-                  const raw = pickerInputValue(e);
-                  try {
-                    const o = JSON.parse(raw) as {
-                      start?: string;
-                      end?: string;
-                    };
-                    valRange.value = {
-                      start: o.start ?? "",
-                      end: o.end ?? "",
-                    };
-                  } catch {
-                    /* 解析失败则保持原值 */
-                  }
-                }}
+                value={valRange}
                 min={`${rangeYear}-01-01`}
                 max={`${rangeYear}-12-31`}
               />
@@ -405,15 +359,7 @@ const valLg = createSignal(today);
               title="代码示例"
               code={`const valRange = createSignal({ start: "2026-01-01", end: "2026-01-31" });
 
-<DatePicker
-  mode="range"
-  value={() => valRange.value}
-  onChange={(e) => {
-    const raw = (e.target as EventTarget & { value?: string }).value ?? "";
-    const o = JSON.parse(raw) as { start?: string; end?: string };
-    valRange.value = { start: o.start ?? "", end: o.end ?? "" };
-  }}
-/>`}
+<DatePicker mode="range" value={valRange} />`}
               language="tsx"
               showLineNumbers
               copyable
@@ -430,15 +376,7 @@ const valLg = createSignal(today);
             <FormItem label="多选">
               <DatePicker
                 mode="multiple"
-                value={() => valMulti.value}
-                onChange={(e) => {
-                  const raw = pickerInputValue(e);
-                  try {
-                    valMulti.value = JSON.parse(raw) as string[];
-                  } catch {
-                    valMulti.value = [];
-                  }
-                }}
+                value={valMulti}
                 min={`${rangeYear}-01-01`}
                 max={`${rangeYear}-12-31`}
               />
@@ -447,14 +385,7 @@ const valLg = createSignal(today);
               title="代码示例"
               code={`const valMulti = createSignal<string[]>(["2026-01-01", "2026-01-15"]);
 
-<DatePicker
-  mode="multiple"
-  value={() => valMulti.value}
-  onChange={(e) => {
-    const raw = (e.target as EventTarget & { value?: string }).value ?? "";
-    valMulti.value = JSON.parse(raw) as string[];
-  }}
-/>`}
+<DatePicker mode="multiple" value={valMulti} />`}
               language="tsx"
               showLineNumbers
               copyable

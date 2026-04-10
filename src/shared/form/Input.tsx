@@ -12,6 +12,7 @@ import {
   controlErrorBorder,
   controlErrorFocusRing,
 } from "./input-focus-ring.ts";
+import { commitMaybeSignal, type MaybeSignal } from "./maybe-signal.ts";
 
 export interface InputProps {
   /** 尺寸 */
@@ -22,8 +23,8 @@ export interface InputProps {
   hideFocusRing?: boolean;
   /** 占位文案 */
   placeholder?: string;
-  /** 输入值（受控可选）；可为 getter 或 `() => ref.value`（`Signal`），由 View 对 getter 细粒度更新 */
-  value?: string | (() => string);
+  /** 输入值（受控可选）；见 {@link MaybeSignal}，`value={sig}` 与 `value={() => sig()}` 均可 */
+  value?: MaybeSignal<string>;
   /** 原生 type，如 text、password、email */
   type?: string;
   /** 是否只读 */
@@ -270,13 +271,33 @@ export function Input(props: InputProps) {
 
   const sizeCls = sizeClasses[size];
 
+  /**
+   * 受控 `value` 为 Signal 时由组件写回，再调用外部 `onInput`。
+   *
+   * @param e - 原生 input 事件
+   */
+  const handleInput = (e: Event) => {
+    commitMaybeSignal(value, (e.target as HTMLInputElement).value);
+    onInput?.(e);
+  };
+
+  /**
+   * 受控 `value` 为 Signal 时由组件写回，再调用外部 `onChange`。
+   *
+   * @param e - 原生 change 事件
+   */
+  const handleChange = (e: Event) => {
+    commitMaybeSignal(value, (e.target as HTMLInputElement).value);
+    onChange?.(e);
+  };
+
   const handleClear = () => {
-    if (!onInput) return;
+    commitMaybeSignal(value, "");
     const doc = globalThis.document;
     if (!doc?.createElement) return;
     const el = doc.createElement("input");
     el.value = "";
-    onInput({ target: el } as unknown as Event);
+    handleInput({ target: el } as unknown as Event);
   };
 
   const inputSpreadProps = {
@@ -298,8 +319,8 @@ export function Input(props: InputProps) {
       readOnly && readOnlyCls,
       !prefix && !suffix && !allowClear ? className : undefined,
     ),
-    onInput,
-    onChange,
+    onInput: handleInput,
+    onChange: handleChange,
     onBlur,
     onFocus,
     onKeyDown,
@@ -353,8 +374,8 @@ export function Input(props: InputProps) {
         required={required}
         error={error}
         value={value}
-        onInput={onInput}
-        onChange={onChange}
+        onInput={handleInput}
+        onChange={handleChange}
         onBlur={onBlur}
         onFocus={onFocus}
         onKeyDown={onKeyDown}

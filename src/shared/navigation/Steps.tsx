@@ -6,15 +6,7 @@
  * 否则手写 JSX 只快照首帧，onChange 更新后步骤条不重渲。
  */
 
-import type { Signal } from "@dreamer/view";
-
-function isViewSignal(v: unknown): v is Signal<unknown> {
-  if (typeof v !== "function") return false;
-  // Signal 为函数形态，与 Record 无直接重叠，经 unknown 再收窄以满足 TS2352
-  const f = v as unknown as Record<PropertyKey, unknown>;
-  return f.__VIEW_SIGNAL === true &&
-    Object.prototype.hasOwnProperty.call(f, "value");
-}
+import { isSignal, type Signal } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 /** 按需：单文件图标，避免经 icons/mod 拉入全表 */
 import { IconCheck } from "../basic/icons/Check.tsx";
@@ -70,7 +62,7 @@ function readStepsCurrent(
   v: number | (() => number) | Signal<number> | undefined,
 ): number {
   if (v === undefined) return 0;
-  if (isViewSignal(v)) return Number(v.value);
+  if (isSignal(v)) return Number((v as Signal<number>).value);
   if (typeof v === "function") {
     if ((v as () => unknown).length !== 0) return 0;
     return Number((v as () => number)());

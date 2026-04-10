@@ -23,9 +23,10 @@ interface ApiRow {
 const SEARCH_API: ApiRow[] = [
   {
     name: "value",
-    type: "string | (() => string)",
+    type: "string | (() => string) | Signal<string>",
     default: "-",
-    description: "受控值；可为 getter",
+    description:
+      "搜索框受控文本。与全库表单一致为 MaybeSignal：字面量、`() => T`、`createSignal` 返回值；勿直接绑 `sig.value`（快照失步或误订阅）。",
   },
   {
     name: "size",
@@ -118,8 +119,7 @@ import { createSignal } from "@dreamer/view";
 const val = createSignal("");
 <FormItem label="搜索">
   <Search
-    value={() => val.value}
-    onInput={(e) => val.value = (e.target as HTMLInputElement).value}
+    value={val}
     onSearch={(v) => val.value = v}
     placeholder="搜索…"
   />
@@ -162,11 +162,7 @@ export default function FormSearch() {
             <Title level={3}>基础（带 onSearch 时显示搜索与清除）</Title>
             <FormItem label="搜索">
               <Search
-                value={() => val.value}
-                onInput={(e) =>
-                  val.value = (e.target as HTMLInputElement).value}
-                onChange={(e) =>
-                  val.value = (e.target as HTMLInputElement).value}
+                value={val}
                 onSearch={(v) => {
                   val.value = v;
                   console.log("搜索:", v);
@@ -177,9 +173,7 @@ export default function FormSearch() {
             <CodeBlock
               title="代码示例"
               code={`<Search
-  value={() => val.value}
-  onInput={(e) => val.value = (e.target as HTMLInputElement).value}
-  onChange={(e) => val.value = (e.target as HTMLInputElement).value}
+  value={val}
   onSearch={(v) => val.value = v}
   placeholder="搜索…"
 />`}
@@ -194,20 +188,14 @@ export default function FormSearch() {
             <Title level={3}>仅输入（无 onSearch，无搜索/清除按钮）</Title>
             <FormItem label="仅输入">
               <Search
-                value={() => val2.value}
-                onInput={(e) =>
-                  val2.value = (e.target as HTMLInputElement).value}
-                onChange={(e) =>
-                  val2.value = (e.target as HTMLInputElement).value}
+                value={val2}
                 placeholder="无搜索按钮"
               />
             </FormItem>
             <CodeBlock
               title="代码示例"
               code={`<Search
-  value={() => val2.value}
-  onInput={(e) => val2.value = (e.target as HTMLInputElement).value}
-  onChange={(e) => val2.value = (e.target as HTMLInputElement).value}
+  value={val2}
   placeholder="无搜索按钮"
 />`}
               language="tsx"
@@ -225,9 +213,7 @@ export default function FormSearch() {
             </Paragraph>
             <FormItem label="输入后点框外失焦触发 console">
               <Search
-                value={() => valBlur.value}
-                onInput={(e) =>
-                  valBlur.value = (e.target as HTMLInputElement).value}
+                value={valBlur}
                 onBlur={() => {
                   console.log("失焦搜索:", valBlur.value);
                 }}
@@ -237,8 +223,7 @@ export default function FormSearch() {
             <CodeBlock
               title="代码示例"
               code={`<Search
-  value={() => q.value}
-  onInput={(e) => q.value = (e.target as HTMLInputElement).value}
+  value={q}
   onBlur={() => {
     void fetchResults(q.value);
   }}

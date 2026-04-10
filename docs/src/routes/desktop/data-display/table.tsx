@@ -512,7 +512,7 @@ const DOC_TABLE_EDITABLE_INITIAL: EditableDocRow[] = [
  * 换页时根级 **函数子响应式插入** 会重挂整页，main 滚动归零。将 `page` 关进子组件可缩小更新范围。
  *
  * **须用 `{() => <Table ... />}` 包裹：** `compileSource` 下组件 MountFn 里对 props 同步求值一次；
- * 若直接写 `current: page.value`，首帧后换页不会更新。函数子节点让 `page.value` 在 **函数子响应式插入**（`insert()`）内读取。
+ * 若直接写 `current: page.value`，首帧后换页不会更新。用 **JSX 函数子** `{() => …}` 让 `page.value` 在子 getter 内被追踪（与 `@dreamer/view` 主包运行时一致，内部由 `insert` 驱动 DOM，业务代码勿直接调 `insert`）。
  */
 function TableDocPaginationDemo() {
   const page = createSignal(1);

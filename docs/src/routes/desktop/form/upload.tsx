@@ -262,6 +262,7 @@ export default function FormUpload() {
               <Upload
                 name="largeFileUrl"
                 action="/api/upload"
+                multiple
                 chunked="auto"
                 chunkThreshold={DEFAULT_UPLOAD_CHUNK_SIZE}
                 chunkSize={DEFAULT_UPLOAD_CHUNK_SIZE}

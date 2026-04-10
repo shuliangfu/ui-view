@@ -5,8 +5,12 @@
  */
 
 import { Sidebar } from "@dreamer/ui-view";
-import type { VNode } from "@dreamer/view";
+import { onCleanup, onMount, type VNode } from "@dreamer/view";
 import SiteFooter from "../../components/SiteFooter.tsx";
+import {
+  docsNavDrawerOpen,
+  docsNavSidebarAttached,
+} from "../../state/docs-nav-drawer.ts";
 
 /** 基础组件下的二级子菜单：组件名 + 中文描述，对应路由 /basic/xxx */
 const BASIC_SUBMENU = [
@@ -252,19 +256,36 @@ interface LayoutProps {
 }
 
 export default function Layout({ children }: LayoutProps) {
-  /* 占满根布局中间 flex-1 区域高度，h-full 形成明确高度上限，侧栏与 main 的 overflow-y-auto 才能独立接滚轮 */
+  /**
+   * 须在 onMount 里置位：若在渲染函数体里每次写 `docsNavSidebarAttached.value = true`，
+   * 根 `_layout` 又订阅该 signal（顶栏 `centerNudgeX` / `Show`），会与 View 更新顺序叠加造成反复刷新甚至卡死。
+   */
+  onMount(() => {
+    docsNavSidebarAttached.value = true;
+  });
+  onCleanup(() => {
+    docsNavSidebarAttached.value = false;
+    docsNavDrawerOpen.value = false;
+  });
+
+  /* 占满根布局中间 flex-1 区域高度；max-w-[1800px] mx-auto 与根布局顶栏 NavBar 同宽居中，避免超宽屏仅顶栏收窄、正文贴左 */
   return (
-    <div className="flex h-full min-h-0 flex-1 w-full max-w-[1800px] mx-auto overflow-hidden">
+    <div className="relative mx-auto flex h-full min-h-0 w-full max-w-[1800px] flex-1 overflow-hidden">
       {
         /*
          * 侧栏仅菜单：回首页见根布局顶栏 DocsSiteBrand，避免与顶栏重复。
+         * drawerOpen 与根布局顶栏 `start` 内按钮共用，小屏为 Drawer + 顶栏汉堡。
          */
       }
       <Sidebar
         overview={{ path: "/desktop", label: "组件概览" }}
         sectionTitle="组件"
         items={MENU}
-        className="min-h-0 overflow-y-auto overscroll-y-contain"
+        accordionGroupName="docs-desktop-sidebar"
+        drawerOpen={docsNavDrawerOpen}
+        drawerTitle="组件导航"
+        drawerAccordionGroupName="docs-desktop-drawer"
+        className="min-h-0 overscroll-y-contain"
       />
       {
         /*
@@ -273,7 +294,7 @@ export default function Layout({ children }: LayoutProps) {
          * flex-auto 在短文时仍可 flex-grow 垫高，长文时随内容变高，整列滚动、页脚跟在正文后。
          */
       }
-      <main className="flex flex-1 min-h-0 min-w-0 flex-col overflow-y-auto overscroll-y-contain py-8 px-4 sm:px-6 lg:px-10">
+      <main className="flex min-h-0 min-w-0 w-full flex-1 flex-col overflow-y-auto overscroll-y-contain px-3 py-6 sm:px-6 sm:py-8 lg:px-10">
         <div className="flex flex-auto flex-col">{children}</div>
         <SiteFooter />
       </main>

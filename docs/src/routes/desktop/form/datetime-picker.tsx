@@ -13,11 +13,6 @@ import {
 } from "@dreamer/ui-view";
 import { createSignal } from "@dreamer/view";
 
-/** 从合成 change 事件中读取 value（含 JSON 字符串） */
-function pickerInputValue(e: Event): string {
-  return (e.target as EventTarget & { value?: string }).value ?? "";
-}
-
 /**
  * 文档示例：当前本地日期时间，格式 `YYYY-MM-DD HH:mm`（与默认 format 一致）。
  */
@@ -153,8 +148,7 @@ function localNowDateTime() {
 const val = createSignal(localNowDateTime());
 <FormItem label="日期时间">
   <DateTimePicker
-    value={() => val.value}
-    onChange={(e) => val.value = (e.target as EventTarget & { value?: string }).value ?? ""}
+    value={val}
   />
 </FormItem>`;
 
@@ -215,20 +209,12 @@ export default function FormDateTimePickerDoc() {
             <Title level={3}>基础（mode="single"）</Title>
             <FormItem label="日期时间">
               <DateTimePicker
-                value={() => val.value}
-                onChange={(e) => {
-                  val.value = pickerInputValue(e);
-                }}
+                value={val}
               />
             </FormItem>
             <CodeBlock
               title="代码示例"
-              code={`<DateTimePicker
-  value={() => val.value}
-  onChange={(e) => {
-    val.value = (e.target as EventTarget & { value?: string }).value ?? "";
-  }}
-/>`}
+              code={`<DateTimePicker value={val} />`}
               language="tsx"
               showLineNumbers
               copyable
@@ -250,53 +236,26 @@ export default function FormDateTimePickerDoc() {
             <FormItem label='format="YYYY-MM-DD HH:mm:ss"'>
               <DateTimePicker
                 format="YYYY-MM-DD HH:mm:ss"
-                value={() => valWithSeconds.value}
-                onChange={(e) => {
-                  valWithSeconds.value = pickerInputValue(e);
-                }}
+                value={valWithSeconds}
               />
             </FormItem>
             <FormItem label='format="YYYY HH:mm"（single：仅选年 + 时分）'>
               <DateTimePicker
                 format="YYYY HH:mm"
-                value={() => valYearTime.value}
-                onChange={(e) => {
-                  valYearTime.value = pickerInputValue(e);
-                }}
+                value={valYearTime}
               />
             </FormItem>
             <FormItem label='format="YY-MM-DD HH"（两位年 + 仅小时）'>
               <DateTimePicker
                 format="YY-MM-DD HH"
-                value={() => valYyMmDdHour.value}
-                onChange={(e) => {
-                  valYyMmDdHour.value = pickerInputValue(e);
-                }}
+                value={valYyMmDdHour}
               />
             </FormItem>
             <CodeBlock
               title="代码示例"
-              code={`<DateTimePicker
-  format="YYYY-MM-DD HH:mm:ss"
-  value={() => valWithSeconds.value}
-  onChange={(e) => {
-    valWithSeconds.value = (e.target as EventTarget & { value?: string }).value ?? "";
-  }}
-/>
-<DateTimePicker
-  format="YYYY HH:mm"
-  value={() => valYearTime.value}
-  onChange={(e) => {
-    valYearTime.value = (e.target as EventTarget & { value?: string }).value ?? "";
-  }}
-/>
-<DateTimePicker
-  format="YY-MM-DD HH"
-  value={() => valYyMmDdHour.value}
-  onChange={(e) => {
-    valYyMmDdHour.value = (e.target as EventTarget & { value?: string }).value ?? "";
-  }}
-/>`}
+              code={`<DateTimePicker format="YYYY-MM-DD HH:mm:ss" value={valWithSeconds} />
+<DateTimePicker format="YYYY HH:mm" value={valYearTime} />
+<DateTimePicker format="YY-MM-DD HH" value={valYyMmDdHour} />`}
               language="tsx"
               showLineNumbers
               copyable
@@ -308,10 +267,7 @@ export default function FormDateTimePickerDoc() {
             <Title level={3}>min / max（限制可选「日」）</Title>
             <FormItem label="限制在当年">
               <DateTimePicker
-                value={() => val2.value}
-                onChange={(e) => {
-                  val2.value = pickerInputValue(e);
-                }}
+                value={val2}
                 min={`${rangeYear}-01-01`}
                 max={`${rangeYear}-12-31`}
               />
@@ -319,8 +275,7 @@ export default function FormDateTimePickerDoc() {
             <CodeBlock
               title="代码示例"
               code={`<DateTimePicker
-  value={() => val2.value}
-  onChange={(e) => { val2.value = (e.target as EventTarget & { value?: string }).value ?? ""; }}
+  value={val2}
   min="${rangeYear}-01-01"
   max="${rangeYear}-12-31"
 />`}
@@ -340,38 +295,26 @@ export default function FormDateTimePickerDoc() {
             </Paragraph>
             <FormItem label="xs">
               <DateTimePicker
-                value={() => valSizeXs.value}
+                value={valSizeXs}
                 size="xs"
-                onChange={(e) => {
-                  valSizeXs.value = pickerInputValue(e);
-                }}
               />
             </FormItem>
             <FormItem label="sm">
               <DateTimePicker
-                value={() => valSizeSm.value}
+                value={valSizeSm}
                 size="sm"
-                onChange={(e) => {
-                  valSizeSm.value = pickerInputValue(e);
-                }}
               />
             </FormItem>
             <FormItem label="md（默认）">
               <DateTimePicker
-                value={() => valSizeMd.value}
+                value={valSizeMd}
                 size="md"
-                onChange={(e) => {
-                  valSizeMd.value = pickerInputValue(e);
-                }}
               />
             </FormItem>
             <FormItem label="lg">
               <DateTimePicker
-                value={() => valSizeLg.value}
+                value={valSizeLg}
                 size="lg"
-                onChange={(e) => {
-                  valSizeLg.value = pickerInputValue(e);
-                }}
               />
             </FormItem>
             <FormItem label="禁用">
@@ -379,10 +322,10 @@ export default function FormDateTimePickerDoc() {
             </FormItem>
             <CodeBlock
               title="代码示例"
-              code={`<DateTimePicker value={() => valXs.value} size="xs" onChange={(e) => { valXs.value = pickerInputValue(e); }} />
-<DateTimePicker value={() => valSm.value} size="sm" onChange={(e) => { valSm.value = pickerInputValue(e); }} />
-<DateTimePicker value={() => valMd.value} size="md" onChange={(e) => { valMd.value = pickerInputValue(e); }} />
-<DateTimePicker value={() => valLg.value} size="lg" onChange={(e) => { valLg.value = pickerInputValue(e); }} />
+              code={`<DateTimePicker value={valXs} size="xs" />
+<DateTimePicker value={valSm} size="sm" />
+<DateTimePicker value={valMd} size="md" />
+<DateTimePicker value={valLg} size="lg" />
 <DateTimePicker value={now} disabled onChange={() => {}} />`}
               language="tsx"
               showLineNumbers
@@ -401,23 +344,7 @@ export default function FormDateTimePickerDoc() {
             <FormItem label="区间">
               <DateTimePicker
                 mode="range"
-                value={() =>
-                  valRange.value}
-                onChange={(e) => {
-                  const raw = pickerInputValue(e);
-                  try {
-                    const o = JSON.parse(raw) as {
-                      start?: string;
-                      end?: string;
-                    };
-                    valRange.value = {
-                      start: o.start ?? "",
-                      end: o.end ?? "",
-                    };
-                  } catch {
-                    /* 保持原值 */
-                  }
-                }}
+                value={valRange}
                 min={`${rangeYear}-01-01`}
                 max={`${rangeYear}-12-31`}
               />
@@ -429,15 +356,7 @@ export default function FormDateTimePickerDoc() {
   end: "2026-01-31 18:00",
 });
 
-<DateTimePicker
-  mode="range"
-  value={() => valRange.value}
-  onChange={(e) => {
-    const raw = (e.target as EventTarget & { value?: string }).value ?? "";
-    const o = JSON.parse(raw) as { start?: string; end?: string };
-    valRange.value = { start: o.start ?? "", end: o.end ?? "" };
-  }}
-/>`}
+<DateTimePicker mode="range" value={valRange} />`}
               language="tsx"
               showLineNumbers
               copyable
@@ -455,15 +374,7 @@ export default function FormDateTimePickerDoc() {
             <FormItem label="多选">
               <DateTimePicker
                 mode="multiple"
-                value={() => valMulti.value}
-                onChange={(e) => {
-                  const raw = pickerInputValue(e);
-                  try {
-                    valMulti.value = JSON.parse(raw) as string[];
-                  } catch {
-                    valMulti.value = [];
-                  }
-                }}
+                value={valMulti}
                 min={`${rangeYear}-01-01`}
                 max={`${rangeYear}-12-31`}
               />
@@ -472,14 +383,7 @@ export default function FormDateTimePickerDoc() {
               title="代码示例"
               code={`const valMulti = createSignal<string[]>(["2026-01-01 10:00", "2026-01-15 10:00"]);
 
-<DateTimePicker
-  mode="multiple"
-  value={() => valMulti.value}
-  onChange={(e) => {
-    const raw = (e.target as EventTarget & { value?: string }).value ?? "";
-    valMulti.value = JSON.parse(raw) as string[];
-  }}
-/>`}
+<DateTimePicker mode="multiple" value={valMulti} />`}
               language="tsx"
               showLineNumbers
               copyable

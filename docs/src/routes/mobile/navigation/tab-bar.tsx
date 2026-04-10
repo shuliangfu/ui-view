@@ -1,54 +1,210 @@
 /**
- * TabBar 文档与示例。路由: /mobile/navigation/tab-bar
+ * TabBar 文档页（概述、引入、示例、API）。路由: /mobile/navigation/tab-bar
  */
 
 import { TabBar } from "@dreamer/ui-view/mobile";
-import { CodeBlock, Paragraph, Title } from "@dreamer/ui-view";
+import {
+  CodeBlock,
+  IconHome,
+  IconInbox,
+  IconUser,
+  Paragraph,
+  Title,
+} from "@dreamer/ui-view";
 import { createSignal } from "@dreamer/view";
+import {
+  DocsApiTable,
+  type DocsApiTableRow,
+} from "../../../components/DocsApiTable.tsx";
+import { MobileDocDemo } from "../../../components/MobileDocDemo.tsx";
+
+const TAB_BAR_API: DocsApiTableRow[] = [
+  {
+    name: "items",
+    type: "TabBarItem[]",
+    default: "-",
+    description: "标签项：key、label、可选 icon、badge",
+  },
+  {
+    name: "activeKey",
+    type: "Signal | () => string",
+    default: "-",
+    description: "当前选中 key；须 `activeKey={sig}` 或 getter",
+  },
+  {
+    name: "onChange",
+    type: "(key: string) => void",
+    default: "-",
+    description: "切换标签时回调",
+  },
+  {
+    name: "fixed",
+    type: "boolean",
+    default: "true",
+    description: "是否 fixed 贴底；文档示例常用 false 避免挡布局",
+  },
+  {
+    name: "border",
+    type: "boolean",
+    default: "true",
+    description: "是否显示顶部分割线",
+  },
+  {
+    name: "safeAreaInsetBottom",
+    type: "boolean",
+    default: "true",
+    description: "底部安全区占位（如 iPhone Home 指示条）",
+  },
+  { name: "class", type: "string", default: "-", description: "根节点 class" },
+];
+
+const TAB_BAR_ITEM_API: DocsApiTableRow[] = [
+  { name: "key", type: "string", default: "-", description: "唯一标识" },
+  {
+    name: "label",
+    type: "string | VNode",
+    default: "-",
+    description: "展示文案或节点",
+  },
+  { name: "icon", type: "VNode", default: "-", description: "图标（可选）" },
+  {
+    name: "badge",
+    type: "number | string | VNode",
+    default: "-",
+    description: "角标",
+  },
+];
+
+const importCode = `import { TabBar } from "@dreamer/ui-view/mobile";
+import { createSignal } from "@dreamer/view";
+
+const activeKey = createSignal("home");
+
+<TabBar
+  items={[
+    { key: "home", label: "首页" },
+    { key: "list", label: "列表" },
+  ]}
+  activeKey={activeKey}
+  onChange={(k) => (activeKey.value = k)}
+/>`;
 
 export default function MobileTabBarDoc() {
   const activeKey = createSignal("home");
+  const activeKey2 = createSignal("home");
 
   return () => (
-    <div class="w-full max-w-lg space-y-8">
-      <div>
-        <Title level={1} class="text-2xl sm:text-3xl">
-          TabBar
-        </Title>
-        <Paragraph class="mt-2 text-slate-600 dark:text-slate-400">
-          底部标签导航；当前示例使用 <code class="text-sm">fixed={false}</code>
-          {" "}
-          以免遮挡文档布局。
+    <div class="w-full max-w-3xl space-y-10">
+      <section>
+        <Title level={1}>TabBar 底部标签栏</Title>
+        <Paragraph class="mt-2">
+          移动端底部主导航；默认 <code class="text-sm">fixed</code>{" "}
+          贴底并适配安全区。文档示例中常设{" "}
+          <code class="text-sm">fixed=false</code> 以免遮挡页面滚动布局。
         </Paragraph>
-      </div>
+      </section>
 
-      <div class="rounded-xl border border-slate-200 dark:border-slate-600 p-4 bg-white dark:bg-slate-900 relative min-h-[120px]">
-        <p class="text-sm text-slate-500 mb-2">
-          当前：<span class="font-mono">{activeKey.value}</span>
-        </p>
-        <TabBar
-          fixed={false}
-          items={[
-            { key: "home", label: "首页" },
-            { key: "list", label: "列表" },
-            { key: "me", label: "我的" },
-          ]}
-          activeKey={activeKey.value}
-          onChange={(k) => (activeKey.value = k)}
+      <section class="space-y-3">
+        <Title level={2}>引入</Title>
+        <CodeBlock
+          title="代码示例"
+          code={importCode}
+          language="tsx"
+          showLineNumbers
+          wrapLongLines
         />
-      </div>
+      </section>
 
-      <CodeBlock
-        language="tsx"
-        copyable
-        code={`import { TabBar } from "@dreamer/ui-view/mobile";
+      <section class="space-y-8">
+        <Title level={2}>示例</Title>
 
-<TabBar
-  items={[{ key: "a", label: "首页" }]}
-  activeKey={activeKey.value}
-  onChange={(k) => (activeKey.value = k)}
-/>`}
-      />
+        <div class="space-y-4">
+          <Title level={3}>文案标签（fixed=false）</Title>
+          <MobileDocDemo class="relative flex min-h-[200px] flex-col p-4">
+            <p class="mb-2 text-sm text-slate-500 dark:text-slate-400">
+              当前：
+              {
+                /*
+                 * 使用函数子节点：`insert` 会包 effect，内读 `activeKey()` 才能随 Tab 切换更新；
+                 * 静态 `{activeKey.value}` 在部分渲染路径下可能不订阅。
+                 */
+              }
+              <span class="font-mono">{() => activeKey()}</span>
+            </p>
+            <div class="mt-auto">
+              <TabBar
+                fixed={false}
+                items={[
+                  { key: "home", label: "首页" },
+                  { key: "list", label: "列表" },
+                  { key: "me", label: "我的" },
+                ]}
+                activeKey={activeKey}
+                onChange={(k) => (activeKey.value = k)}
+              />
+            </div>
+          </MobileDocDemo>
+          <CodeBlock
+            title="代码示例"
+            code={importCode}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+        </div>
+
+        <div class="space-y-4">
+          <Title level={3}>图标 + 角标</Title>
+          <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+            <code class="text-sm">icon</code>、<code class="text-sm">
+              badge
+            </code>{" "}
+            均为可选项；未传 <code class="text-sm">icon</code>{" "}
+            时不会出现图标占位，并非渲染失败。
+          </Paragraph>
+          <MobileDocDemo class="relative flex min-h-[200px] flex-col p-4">
+            <div class="mt-auto">
+              <TabBar
+                fixed={false}
+                border
+                items={[
+                  {
+                    key: "home",
+                    label: "首页",
+                    icon: <IconHome class="h-5 w-5" aria-hidden />,
+                    badge: 2,
+                  },
+                  {
+                    key: "inbox",
+                    label: "消息",
+                    icon: <IconInbox class="h-5 w-5" aria-hidden />,
+                  },
+                  {
+                    key: "me",
+                    label: "我的",
+                    icon: <IconUser class="h-5 w-5" aria-hidden />,
+                  },
+                ]}
+                activeKey={activeKey2}
+                onChange={(k) => (activeKey2.value = k)}
+              />
+            </div>
+          </MobileDocDemo>
+        </div>
+      </section>
+
+      <section class="space-y-6">
+        <Title level={2}>API</Title>
+        <div class="space-y-3">
+          <Title level={3}>TabBar</Title>
+          <DocsApiTable rows={TAB_BAR_API} />
+        </div>
+        <div class="space-y-3">
+          <Title level={3}>TabBarItem</Title>
+          <DocsApiTable rows={TAB_BAR_ITEM_API} />
+        </div>
+      </section>
     </div>
   );
 }

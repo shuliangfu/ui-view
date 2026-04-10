@@ -53,7 +53,10 @@ export { Result } from "./Result.tsx";
 export type { ResultProps, ResultStatus } from "./Result.tsx";
 
 export { BottomSheet } from "./BottomSheet.tsx";
-export type { BottomSheetHeight, BottomSheetProps } from "./BottomSheet.tsx";
+export type {
+  BottomSheetHeightMode,
+  BottomSheetProps,
+} from "./BottomSheet.tsx";
 export { ActionSheet } from "./ActionSheet.tsx";
 export type { ActionSheetAction, ActionSheetProps } from "./ActionSheet.tsx";
 export { PullRefresh } from "./PullRefresh.tsx";

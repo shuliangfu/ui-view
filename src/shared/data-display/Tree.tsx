@@ -301,7 +301,8 @@ export function Tree(props: TreeProps) {
     const selected = new Set(getSelectedKeys());
     const checked = new Set(getCheckedKeys());
     const root = rootElRef.value;
-    if (!root) return;
+    // SSR 时 ref 可能为占位对象，无 DOM API；仅在有真实 Element 时同步勾选/展开态
+    if (!root || typeof root.querySelectorAll !== "function") return;
     root.querySelectorAll<HTMLInputElement>("input[data-tree-check-key]")
       .forEach((input) => {
         const key = input.getAttribute("data-tree-check-key");

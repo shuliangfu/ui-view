@@ -1,9 +1,15 @@
 /**
  * PullRefresh 下拉刷新（View）。
  * 移动端列表页常用：下拉触发 onRefresh，支持自定义提示文案、禁用、阈值与动画时长。
+ * `loading` 支持 `Signal` / 零参 getter，勿仅传 `sig.value`（Hybrid 下可能不更新）。
  */
 
+import { createMemo } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
+import {
+  type ControlledOpenInput,
+  readControlledOpenInput,
+} from "../../shared/feedback/controlled-open.ts";
 
 export type PullRefreshStatus =
   | "idle"
@@ -13,8 +19,8 @@ export type PullRefreshStatus =
   | "success";
 
 export interface PullRefreshProps {
-  /** 是否处于加载中（由父级在 onRefresh 内设为 true，完成后设为 false） */
-  loading?: boolean;
+  /** 是否处于加载中；推荐 `loading={sig}`，勿 `loading={sig.value}` */
+  loading?: ControlledOpenInput;
   /** 下拉释放后触发的刷新回调；父级应在回调内拉取数据并随后将 loading 设为 false */
   onRefresh?: () => void | Promise<void>;
   /** 下拉过程提示文案 */
@@ -37,6 +43,11 @@ export interface PullRefreshProps {
   children?: unknown;
   /** 额外 class（作用于最外层） */
   class?: string;
+  /**
+   * 内层可滚动容器（`data-pull-refresh-content`）挂载/卸载时回调；
+   * 供 {@link ScrollList} 等组合组件挂 `IntersectionObserver` 或 `scroll` 做上拉加载。
+   */
+  scrollContainerRef?: (el: HTMLDivElement | null) => void;
 }
 
 const DEFAULT_PULLING = "下拉即可刷新…";
@@ -45,7 +56,6 @@ const DEFAULT_LOADING = "加载中…";
 
 export function PullRefresh(props: PullRefreshProps) {
   const {
-    loading = false,
     onRefresh,
     pullingText = DEFAULT_PULLING,
     loosingText: _loosingText = DEFAULT_LOOSING,
@@ -57,7 +67,11 @@ export function PullRefresh(props: PullRefreshProps) {
     disabled = false,
     children,
     class: className,
+    scrollContainerRef,
   } = props;
+
+  /** 在 memo 内读 `Signal` / getter，触摸与展示态与父级受控同步 */
+  const isLoading = createMemo(() => readControlledOpenInput(props.loading));
 
   const pullDistance = pullDistanceProp ?? headHeight;
 
@@ -92,13 +106,13 @@ export function PullRefresh(props: PullRefreshProps) {
   };
 
   const handleTouchStart = (e: TouchEvent) => {
-    if (disabled || loading) return;
+    if (disabled || isLoading()) return;
     refs.startY = e.touches[0].clientY;
     refs.startScrollTop = getScrollTop();
   };
 
   const handleTouchMove = (e: TouchEvent) => {
-    if (disabled || loading || !refs.head) return;
+    if (disabled || isLoading() || !refs.head) return;
     const scrollTop = getScrollTop();
     if (scrollTop > 0) return;
     refs.currentY = e.touches[0].clientY;
@@ -112,7 +126,7 @@ export function PullRefresh(props: PullRefreshProps) {
   };
 
   const handleTouchEnd = () => {
-    if (disabled || loading || !refs.head) return;
+    if (disabled || isLoading() || !refs.head) return;
     const delta = refs.currentY - refs.startY;
     refs.head.style.transform = "";
     if (refs.startScrollTop === 0 && delta >= pullDistance && onRefresh) {
@@ -122,7 +136,7 @@ export function PullRefresh(props: PullRefreshProps) {
     refs.startY = 0;
   };
 
-  const status: PullRefreshStatus = loading ? "loading" : "idle";
+  const status: PullRefreshStatus = isLoading() ? "loading" : "idle";
   const tip = status === "loading" ? loadingText : pullingText;
 
   return (
@@ -146,6 +160,9 @@ export function PullRefresh(props: PullRefreshProps) {
       </div>
       <div
         data-pull-refresh-content
+        ref={(el: HTMLDivElement | null) => {
+          scrollContainerRef?.(el);
+        }}
         class="min-h-full overflow-auto"
         style={{ minHeight: "100%" }}
       >

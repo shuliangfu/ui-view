@@ -8,20 +8,11 @@
  * 无可用 document 时走浏览器渲染路径会访问 DOM 抛错。
  */
 
-import { createMemo, getDocument, type Signal } from "@dreamer/view";
+import { createMemo, getDocument, isSignal, type Signal } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 
 export type ProgressType = "line" | "circle";
 export type ProgressStatus = "normal" | "success" | "exception" | "active";
-
-/** 是否为 `createSignal` 返回的、可读 `.value` 的访问器 */
-function isViewSignal(v: unknown): v is Signal<unknown> {
-  if (typeof v !== "function") return false;
-  // Signal 为函数形态，与 Record 无直接重叠，经 unknown 再收窄以满足 TS2352
-  const f = v as unknown as Record<PropertyKey, unknown>;
-  return f.__VIEW_SIGNAL === true &&
-    Object.prototype.hasOwnProperty.call(f, "value");
-}
 
 /** 进度值：快照、`createSignal` 容器，或零参 getter（与 Drawer `open` 同向） */
 export type ProgressPercentInput =
@@ -76,8 +67,8 @@ function readProgressPercentInput(
   v: ProgressPercentInput | undefined,
 ): number {
   if (v === undefined) return 0;
-  if (isViewSignal(v)) {
-    const n = Number(v.value);
+  if (isSignal(v)) {
+    const n = Number((v as Signal<number>).value);
     return clampProgressPercent(n);
   }
   if (typeof v === "function") {
@@ -109,7 +100,7 @@ function percentPropIsReactive(
   v: ProgressPercentInput | undefined,
 ): boolean {
   if (v === undefined) return false;
-  if (isViewSignal(v)) return true;
+  if (isSignal(v)) return true;
   return typeof v === "function" && (v as () => unknown).length === 0;
 }
 

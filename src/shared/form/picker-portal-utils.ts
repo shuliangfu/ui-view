@@ -1,8 +1,9 @@
 /**
  * 日期/时间选择器浮层工具：点击外部关闭、时/分列表隐藏滚动条等。
  *
- * **DatePicker / TimePicker / DateTimePicker**：弹层在组件根 `relative` 内 `absolute top-full left-0`，相对触发器定位，随滚动跟移。
- * 若宿主仍有 `overflow: hidden` 裁切弹层，需调整布局或改用 `fixed` + {@link computePickerPortalStyle}（本文件仍提供工具与 {@link subscribePickerAnchorScrollAndResize} 供其它场景）。
+ * **DatePicker / TimePicker / DateTimePicker / ColorPicker（锚定触发器）**：弹层与触发器同处 **`relative` 子树**，用 `position:fixed` + {@link computePickerPortalStyle} 贴触发器，
+ * 并由 {@link subscribePickerAnchorScrollAndResize} 跟随滚动（不用 `createPortal`，减轻与页面滚动不同步的延迟感）。
+ * 注册点外关闭须与几何同步一并延后到 **`queueMicrotask`**（见 {@link registerPickerFixedOverlayPositionAndOutsideClick}）。
  * {@link getFormPortalBodyHost} 给仍需挂 `document.body` 的浮层（如富文本）用。
  */
 
@@ -506,16 +507,20 @@ export function schedulePickerTimeDraftColumnsScroll(
 export function getFormPortalBodyHost(): HTMLElement | null {
   try {
     if (typeof globalThis.document === "undefined") return null;
-    const b = globalThis.document.body;
-    if (b == null || b.nodeType !== 1) return null;
-    return b as HTMLElement;
+    const doc = globalThis.document;
+    const b = doc.body;
+    if (b != null && b.nodeType === 1) return b as HTMLElement;
+    /** 解析完成前 `body` 可能仍为 null；挂到 `documentElement` 仍可脱离表单 overflow 子树 */
+    const de = doc.documentElement;
+    if (de != null && de.nodeType === 1) return de as HTMLElement;
+    return null;
   } catch {
     return null;
   }
 }
 
-/** `scroll`：`passive` 减少主线程滚动阻塞 */
-const pickerScrollListenerOpts: AddEventListenerOptions = { passive: true };
+/** `scroll` / `resize`：`passive` 减少主线程滚动阻塞 */
+const pickerPassiveListenerOpts: AddEventListenerOptions = { passive: true };
 
 /**
  * 将 {@link computePickerPortalStyle} 的结果同步写到浮层根节点，避免仅靠 signal 在滚动帧晚一拍到 DOM。
@@ -537,30 +542,31 @@ export function applyPickerPortalGeometryToElement(
 }
 
 /**
- * 在触发器祖先链、`documentElement`、`visualViewport` 等上订阅 `scroll`，订阅 `resize`，并在浮层打开期间用
- * `requestAnimationFrame` **每帧**调用 `onSync`，与合成帧对齐，避免仅靠 `scroll` 时漏监容器或晚一拍。
+ * 在触发器祖先链、`documentElement`、`visualViewport` 等上订阅 `scroll`，并订阅 `window.resize` 与
+ * `visualViewport.resize`：`onSync` 在事件回调内**同步**执行，与滚动/视口变化同一步骤尽早读 `getBoundingClientRect`
+ * 写回 `fixed` 浮层，避免常驻 `requestAnimationFrame` 每帧抢主线程、与合成滚动错位产生「跟手延迟」。
  *
- * @param anchor - 触发器；`null` 时退化只挂 `globalThis` 的 `scroll` + `resize` + rAF
+ * @param anchor - 触发器；`null` 时退化只挂 `globalThis` 的 `scroll` + `resize`
  * @param onSync - 位置同步回调（须幂等、轻量：读 `getBoundingClientRect` 写浮层 `style`）
- * @returns 取消全部监听与 rAF 循环
+ * @returns 取消全部监听
  */
 export function subscribePickerAnchorScrollAndResize(
   anchor: HTMLElement | null,
   onSync: () => void,
 ): () => void {
-  const seen = new Set<EventTarget>();
+  const seenScroll = new Set<EventTarget>();
   const cleanups: (() => void)[] = [];
 
   /**
    * @param t - 监听目标
    */
   const addScrollTarget = (t: EventTarget | null | undefined) => {
-    if (t == null || seen.has(t)) return;
-    seen.add(t);
+    if (t == null || seenScroll.has(t)) return;
+    seenScroll.add(t);
     const fn = () => onSync();
-    t.addEventListener("scroll", fn, pickerScrollListenerOpts);
+    t.addEventListener("scroll", fn, pickerPassiveListenerOpts);
     cleanups.push(() =>
-      t.removeEventListener("scroll", fn, pickerScrollListenerOpts)
+      t.removeEventListener("scroll", fn, pickerPassiveListenerOpts)
     );
   };
 
@@ -572,35 +578,38 @@ export function subscribePickerAnchorScrollAndResize(
       p = p.parentElement;
     }
     const doc = anchor.ownerDocument;
+    const win = doc.defaultView;
     addScrollTarget(doc.documentElement);
     addScrollTarget(doc.body);
-    addScrollTarget(doc.defaultView);
-    const vv = doc.defaultView?.visualViewport;
-    if (vv != null) addScrollTarget(vv);
+    addScrollTarget(win);
+    const vv = win?.visualViewport;
+    if (vv != null) {
+      addScrollTarget(vv);
+      /** 地址栏伸缩、缩放导致视口矩形变化；`scroll` 已由上一行覆盖 */
+      const onVvResize = () => onSync();
+      vv.addEventListener("resize", onVvResize, pickerPassiveListenerOpts);
+      cleanups.push(() =>
+        vv.removeEventListener("resize", onVvResize, pickerPassiveListenerOpts)
+      );
+    }
   } else {
     addScrollTarget(globalThis);
   }
 
-  /** 与显示器刷新对齐，滚动条拖动、触控惯性、遗漏的滚动容器均能每帧贴齐触发器 */
-  let rafStopped = false;
-  let rafId = 0;
-  /**
-   * 单帧：同步一次并在下一帧继续，直到 dispose。
-   */
-  const rafTick = (): void => {
-    if (rafStopped) return;
-    onSync();
-    rafId = globalThis.requestAnimationFrame(rafTick);
-  };
-  rafId = globalThis.requestAnimationFrame(rafTick);
-  cleanups.push(() => {
-    rafStopped = true;
-    globalThis.cancelAnimationFrame(rafId);
-  });
-
   const onResize = () => onSync();
-  globalThis.addEventListener("resize", onResize);
-  cleanups.push(() => globalThis.removeEventListener("resize", onResize));
+  globalThis.addEventListener("resize", onResize, pickerPassiveListenerOpts);
+  cleanups.push(() =>
+    globalThis.removeEventListener(
+      "resize",
+      onResize,
+      pickerPassiveListenerOpts,
+    )
+  );
+
+  /** 无 rAF 的运行时（部分 SSR）：补一次异步对齐 */
+  if (typeof globalThis.requestAnimationFrame !== "function") {
+    queueMicrotask(() => onSync());
+  }
 
   return () => {
     for (const c of cleanups) c();
@@ -688,13 +697,161 @@ export function runTimeStripPrimaryPointerPick(
 }
 
 /**
- * 在 document 捕获阶段监听 `pointerdown`：若落点不在 `panel` 内则调用 `close`。
+ * 在浮层已挂载的前提下，解析「应视为内部」的触发按钮。
+ * View 在 signal flush 重绘时，触发器 `ref` 可能短暂为 `null`；若仅依赖 `triggerRef.current`，
+ * `pointerdown` 落在按钮上会被误判为外部并立刻 `close()`，表现为 `openState` 先 true 再 false、浮层闪没。
+ *
+ * @param panel - 一般为 `role="dialog"` 的浮层根（与触发器同属 `relative` 父容器）
+ * @param triggerRef - 组件内可变 ref，可能暂时未挂上
+ * @returns 用于 `contains(target)` 的按钮元素，或 null
+ */
+function resolvePickerTriggerForOutsideClick(
+  panel: HTMLElement,
+  triggerRef?: { current: HTMLElement | null },
+): HTMLElement | null {
+  const refEl = triggerRef?.current;
+  if (refEl?.isConnected) return refEl;
+  const host = panel.parentElement;
+  if (!(host instanceof HTMLElement)) return refEl ?? null;
+  /** DatePicker / DateTimePicker / TimePicker / ColorPicker：触发器为父级下带 dialog 语义的 button */
+  const scoped = host.querySelector(":scope > button[aria-haspopup='dialog']");
+  if (scoped instanceof HTMLElement) return scoped;
+  const nested = host.querySelector("button[aria-haspopup='dialog']");
+  return nested instanceof HTMLElement ? nested : refEl ?? null;
+}
+
+/**
+ * 刚挂上 document 监听后的极短毫秒数：此窗口内忽略 `close`，减轻同一手势尾段或 flush 后误派的 pointer 事件误关浮层。
+ * 与各 Picker 内「打开后拒绝非 forced 关闭」互补；数值过大拖慢用户「打开即点外关」的体验。
+ */
+const POINTER_OUTSIDE_ARM_MS = 80;
+
+/**
+ * 判断 `pointerdown` 等事件的**路径**是否落在 `root` 上或其子树内。
+ * 优先用 {@link PointerEvent.composedPath}，再回退 {@link PointerEvent.target}；
+ * 避免「路径非空但无一命中」时直接判假（部分环境下路径与 `contains` 组合会漏掉浮层内节点）。
+ *
+ * @param ev - 一般为捕获阶段 `pointerdown`
+ * @param root - 浮层根、宿主包裹层或触发器按钮等
+ */
+function pointerEventPathTouchesRoot(ev: Event, root: Node): boolean {
+  const pe = ev as PointerEvent;
+  const t = pe.target;
+  if (typeof pe.composedPath === "function") {
+    const path = pe.composedPath();
+    if (path != null && path.length > 0) {
+      for (let i = 0; i < path.length; i++) {
+        const x = path[i];
+        if (x === root) return true;
+        if (x instanceof Node && root.contains(x)) return true;
+      }
+    }
+  }
+  return t instanceof Node && root.contains(t);
+}
+
+/**
+ * 用视口坐标判断指针是否落在元素轴对齐包围盒内；不依赖 `composedPath`/`contains`，
+ * 作取色器等「路径判断失败仍应视为浮层内」的兜底。
+ *
+ * @param el - 一般为 `role="dialog"` 根节点
+ * @param clientX - `PointerEvent.clientX`
+ * @param clientY - `PointerEvent.clientY`
+ */
+function clientPointInsideElementAabb(
+  el: Element,
+  clientX: number,
+  clientY: number,
+): boolean {
+  if (!Number.isFinite(clientX) || !Number.isFinite(clientY)) return false;
+  const r = el.getBoundingClientRect();
+  if (r.width === 0 && r.height === 0) return false;
+  return (
+    clientX >= r.left &&
+    clientX <= r.right &&
+    clientY >= r.top &&
+    clientY <= r.bottom
+  );
+}
+
+/**
+ * 用 `elementsFromPoint` / `elementFromPoint` 判断视口坐标下命中栈是否在 `root` 子树内。
+ * 作为 {@link pointerEventPathTouchesRoot} 与 {@link clientPointInsideElementAabb} 的补充：
+ * capture 阶段个别环境下 `composedPath`/`target` 不完整，或首帧布局尚未完成导致父级包围盒为 0×0 时，
+ * 仍会把 ColorPicker 等面板内的点选误判为「外部」而关闭浮层。
+ *
+ * @param root - 浮层根（一般为 `role="dialog"`）
+ * @param clientX - `PointerEvent.clientX`
+ * @param clientY - `PointerEvent.clientY`
+ */
+function clientPointHitsElementSubtree(
+  root: HTMLElement,
+  clientX: number,
+  clientY: number,
+): boolean {
+  if (!Number.isFinite(clientX) || !Number.isFinite(clientY)) return false;
+  const doc = root.ownerDocument;
+  if (doc == null) return false;
+  const stackFn = (doc as Document & {
+    elementsFromPoint?: (x: number, y: number) => Element[];
+  }).elementsFromPoint;
+  if (typeof stackFn === "function") {
+    const stack = stackFn.call(doc, clientX, clientY);
+    if (stack != null) {
+      for (let i = 0; i < stack.length; i++) {
+        const hit = stack[i];
+        if (hit instanceof Element && root.contains(hit)) return true;
+      }
+    }
+  }
+  const top = doc.elementFromPoint(clientX, clientY);
+  return top != null && root.contains(top);
+}
+
+/**
+ * 当 `PointerEvent.target` 已从文档移除时，`Node.contains(target)` 与路径判断对该 target 恒不可用。
+ * 仅用视口坐标判断指针是否仍落在面板、宿主包裹层或触发器上（与 {@link registerPointerDownOutside} 的 host/trigger 规则一致）。
+ * 用于修复：document 冒泡阶段本监听器晚于 View 委托执行时，取色面板内 `pointerdown` 已把命中节点同步换掉，导致误关浮层。
+ *
+ * @param panel - 浮层根节点
+ * @param triggerRef - 可选触发器 ref
+ * @param clientX - `PointerEvent.clientX`
+ * @param clientY - `PointerEvent.clientY`
+ */
+function pointerCoordsInsidePickerChrome(
+  panel: HTMLElement,
+  triggerRef: { current: HTMLElement | null } | undefined,
+  clientX: number,
+  clientY: number,
+): boolean {
+  if (clientPointInsideElementAabb(panel, clientX, clientY)) return true;
+  if (clientPointHitsElementSubtree(panel, clientX, clientY)) return true;
+  const host = panel.parentElement;
+  if (host instanceof HTMLElement) {
+    if (clientPointInsideElementAabb(host, clientX, clientY)) return true;
+    if (clientPointHitsElementSubtree(host, clientX, clientY)) return true;
+  }
+  const trig = resolvePickerTriggerForOutsideClick(panel, triggerRef);
+  if (trig instanceof HTMLElement) {
+    if (clientPointInsideElementAabb(trig, clientX, clientY)) return true;
+    if (clientPointHitsElementSubtree(trig, clientX, clientY)) return true;
+  }
+  return false;
+}
+
+/**
+ * 在 document **冒泡**阶段监听 `pointerdown`：若落点不在 `panel` 内则调用 `close`。
+ * 历史上曾用**捕获**阶段，在部分环境下早于目标节点完成命中，`composedPath`/`target` 与 `elementFromPoint`
+ * 与取色面板内点击不同步，导致 ColorPicker 内点选仍走 `close`；冒泡阶段在目标处理之后再判断，与 View 的
+ * document 委托（默认冒泡）一致，更稳。
  * 用于替代「全屏 pointer-events-auto 遮罩」，避免挡住背后页面的滚轮滚动。
+ * 注册后 {@link POINTER_OUTSIDE_ARM_MS} 毫秒内忽略回调，减轻误关。
  *
  * @param panel 弹层面板根节点（一般为 `role="dialog"` 容器）
  * @param close 关闭浮层（须幂等）
  * @returns 取消监听的函数；须在关闭浮层或 panel 卸载时调用
  */
+
 export function registerPointerDownOutside(
   panel: HTMLElement,
   close: () => void,
@@ -702,18 +859,188 @@ export function registerPointerDownOutside(
   triggerRef?: { current: HTMLElement | null },
 ): () => void {
   if (typeof globalThis === "undefined") return () => {};
-  const doc = (globalThis as { document?: Document }).document;
+  /** 与浮层同一文档，避免 iframe / 多文档下误绑顶层 window.document */
+  const doc = panel.ownerDocument ??
+    (globalThis as { document?: Document }).document;
   if (doc == null) return () => {};
 
+  /** 本监听器生效时刻；仅用于首段防抖，不替代业务层 forced 关闭 */
+  const armUntil = typeof globalThis.performance !== "undefined" &&
+      typeof globalThis.performance.now === "function"
+    ? globalThis.performance.now() + POINTER_OUTSIDE_ARM_MS
+    : 0;
+
   const onDown = (ev: Event) => {
-    const t = (ev as PointerEvent).target;
-    if (!(t instanceof Node)) return;
-    if (panel.contains(t)) return;
-    const tr = triggerRef?.current;
-    if (tr != null && tr.contains(t)) return;
+    if (
+      armUntil !== 0 &&
+      typeof globalThis.performance !== "undefined" &&
+      typeof globalThis.performance.now === "function" &&
+      globalThis.performance.now() < armUntil
+    ) {
+      return;
+    }
+    /**
+     * flush 重绘瞬间浮层可能短暂脱离文档；此时不应 close，否则 openState 会 true→false、面板闪没。
+     */
+    if (!panel.isConnected) return;
+    const pe = ev as PointerEvent;
+    const rawTarget = pe.target;
+    /**
+     * View 的 document 委托先于本监听器处理 `pointerdown`；ColorPicker 等会在同步 flush 中替换 SV 等命中节点，
+     * 使 `event.target` 脱离文档。此时 `contains`/`composedPath` 对该 target 为假，必须仅用坐标对照 panel/host/trigger。
+     */
+    if (rawTarget instanceof Node && !rawTarget.isConnected) {
+      if (
+        pointerCoordsInsidePickerChrome(
+          panel,
+          triggerRef,
+          pe.clientX,
+          pe.clientY,
+        )
+      ) {
+        return;
+      }
+      close();
+      return;
+    }
+    if (pointerEventPathTouchesRoot(ev, panel)) return;
+    /** 坐标兜底：路径/target 在个别浏览器或 flush 瞬间不可靠时，仍把「落在面板矩形内」视为内部 */
+    if (clientPointInsideElementAabb(panel, pe.clientX, pe.clientY)) {
+      return;
+    }
+    /** 命中栈兜底：AABB 首帧为 0 或路径缺失时，仍以实际堆叠命中判断是否点在面板子树内 */
+    if (clientPointHitsElementSubtree(panel, pe.clientX, pe.clientY)) {
+      return;
+    }
+    /**
+     * 触发器与浮层通常同属 `panel.parentElement`（如 DatePicker 的 `data-ui-datepicker-root` 包裹层）。
+     * 比单独 `triggerRef` / querySelector 更稳：重排时 ref 可能 `isConnected: false`，但事件 target 仍在同一 host 子树内。
+     */
+    const host = panel.parentElement;
+    if (host instanceof HTMLElement && pointerEventPathTouchesRoot(ev, host)) {
+      return;
+    }
+    const trig = resolvePickerTriggerForOutsideClick(panel, triggerRef);
+    if (trig != null && pointerEventPathTouchesRoot(ev, trig)) return;
     close();
   };
 
-  doc.addEventListener("pointerdown", onDown, true);
-  return () => doc.removeEventListener("pointerdown", onDown, true);
+  /** `false`：冒泡阶段，避免捕获阶段命中信息未就绪时误关（尤其 ColorPicker SV 区域） */
+  doc.addEventListener("pointerdown", onDown, false);
+  return () => doc.removeEventListener("pointerdown", onDown, false);
+}
+
+/** 与 {@link registerPickerFixedOverlayPositionAndOutsideClick} 配合：存 dispose 的槽位形态 */
+export type PickerOverlayDisposeSlot = { dispose: (() => void) | null };
+
+/**
+ * {@link registerPickerFixedOverlayPositionAndOutsideClick} 的布局模式：视口 `fixed` 与「相对宿主」二选一。
+ */
+export type PickerOverlayLayoutOptions = {
+  /**
+   * 默认 `true`：`position:fixed` + {@link computePickerPortalStyle} + {@link subscribePickerAnchorScrollAndResize}。
+   * 为 `false` 时不写视口几何、不挂滚动同步；浮层应由宿主用含 `position:relative` 的祖先 + 自身 `absolute`
+   * （如 `top-full left-0`）定位，随表单/滚动容器一起走，避免以浏览器窗口为参照的错位感。
+   */
+  fixedToViewport?: boolean;
+};
+
+/**
+ * 弹层挂载后：注册「点外部关闭」+ 可选的 `fixed` 视口几何贴 {@link triggerRef} 与滚动/视口同步。
+ * 须在 **`queueMicrotask`** 中调用，并与 {@link registerPointerDownOutside} 的延后注册配合，减轻打开瞬间误关浮层。
+ *
+ * @param panel - 浮层根（一般为 `role="dialog"`）
+ * @param triggerRef - 触发器 ref；`hideTrigger` 场景可传空对象
+ * @param close - 关闭回调（与 Esc、确定等一致）
+ * @param outsideSlot - 存放 {@link registerPointerDownOutside} 的 dispose
+ * @param anchorScrollSlot - 存放 {@link subscribePickerAnchorScrollAndResize} 的 dispose（锚定模式时为 `null`）
+ * @param portalOpts - 传给 {@link computePickerPortalStyle}（如 `panelMinWidth`）；仅 `fixedToViewport` 时生效
+ * @param layoutOpts - {@link PickerOverlayLayoutOptions}
+ */
+export function registerPickerFixedOverlayPositionAndOutsideClick(
+  panel: HTMLElement,
+  triggerRef: { current: HTMLElement | null },
+  close: () => void,
+  outsideSlot: PickerOverlayDisposeSlot,
+  anchorScrollSlot: PickerOverlayDisposeSlot,
+  portalOpts?: Parameters<typeof computePickerPortalStyle>[1],
+  layoutOpts?: PickerOverlayLayoutOptions,
+): void {
+  outsideSlot.dispose?.();
+  anchorScrollSlot.dispose?.();
+
+  /** 待取消的 rAF id；dispose 时一并清掉，避免卸载后仍注册监听 */
+  const pendingRaf = { id1: 0, id2: 0 };
+  let removeOutsideListener: (() => void) | null = null;
+
+  const raf = globalThis.requestAnimationFrame;
+  const caf = globalThis.cancelAnimationFrame;
+
+  const cancelPendingOutsideRegistration = (): void => {
+    if (typeof caf === "function") {
+      if (pendingRaf.id1 !== 0) {
+        caf.call(globalThis, pendingRaf.id1);
+        pendingRaf.id1 = 0;
+      }
+      if (pendingRaf.id2 !== 0) {
+        caf.call(globalThis, pendingRaf.id2);
+        pendingRaf.id2 = 0;
+      }
+    }
+  };
+
+  const disposeOutside = (): void => {
+    cancelPendingOutsideRegistration();
+    removeOutsideListener?.();
+    removeOutsideListener = null;
+  };
+
+  const fixedToViewport = layoutOpts?.fixedToViewport !== false;
+
+  if (fixedToViewport) {
+    /**
+     * 几何与滚动同步立即挂上；点外 `pointerdown` 延后双 rAF 再注册，
+     * 让 View 把浮层/触发器插回文档后再监听，减少 flush 内误关。
+     */
+    const sync = (): void => {
+      applyPickerPortalGeometryToElement(
+        panel,
+        computePickerPortalStyle(triggerRef.current, portalOpts),
+      );
+    };
+    sync();
+    anchorScrollSlot.dispose = subscribePickerAnchorScrollAndResize(
+      triggerRef.current,
+      sync,
+    );
+  } else {
+    /** 避免上次 fixed 会话残留的 inline 覆盖 CSS 锚定 */
+    panel.style.removeProperty("top");
+    panel.style.removeProperty("left");
+    panel.style.removeProperty("z-index");
+    anchorScrollSlot.dispose = null;
+  }
+
+  outsideSlot.dispose = disposeOutside;
+
+  if (typeof raf === "function") {
+    pendingRaf.id1 = raf.call(globalThis, () => {
+      pendingRaf.id1 = 0;
+      pendingRaf.id2 = raf.call(globalThis, () => {
+        pendingRaf.id2 = 0;
+        if (!panel.isConnected) return;
+        removeOutsideListener = registerPointerDownOutside(
+          panel,
+          close,
+          triggerRef,
+        );
+      });
+    });
+  } else {
+    removeOutsideListener = registerPointerDownOutside(
+      panel,
+      close,
+      triggerRef,
+    );
+  }
 }

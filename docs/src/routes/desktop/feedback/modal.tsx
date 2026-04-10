@@ -1,7 +1,7 @@
 /**
  * Modal 组件文档页（标准文档结构：概述、引入、示例、API）
  * 路由: /desktop/feedback/modal
- * `Modal` 的 `open`：请传 **`createSignal` 返回值**或零参 getter；**`width`/`title`** 随 signal 变时请用 **`width={() => …}`**、**`title={() => …}`**（Modal 内 memo 订阅，勿只写 `width={sig.value}` 快照）。**`children`** 普通写 `<p>…</p>` 即可；仅当弹窗**已打开**时仍要正文随同一 signal 刷新，再传 **`children={() => …}`**。Hybrid/SSR 下 body/Portal 用 `globalThis.document`。
+ * `Modal` 的 `open`：请传 **`createSignal` 返回值**或零参 getter；**`width`/`title`** 随 signal 变时请用 **`width={() => …}`**、**`title={() => …}`**（Modal 内 memo 订阅，勿只写 `width={sig.value}` 快照）。**`children`** 普通写 `<p>…</p>` 即可；仅当弹窗**已打开**时仍要正文随同一 signal 刷新，再传 **`children={() => …}`**。客户端浮层通过 **`@dreamer/view` 的 `createPortal`** 挂到 `globalThis.document.body`（hybrid/SSR 下需存在真实 document）。
  */
 import { Button, CodeBlock, Modal, Paragraph, Title } from "@dreamer/ui-view";
 import { createSignal } from "@dreamer/view";
@@ -171,36 +171,39 @@ const open = createSignal(false);
   <p>弹层内容</p>
 </Modal>`;
 
-export default function FeedbackModal() {
-  const open = createSignal(false);
-  const openNoFooter = createSignal(false);
-  const openNoTitle = createSignal(false);
-  const openNoClosable = createSignal(false);
-  const openNoMaskClose = createSignal(false);
-  /** 无遮罩：`mask={false}`，需按钮或 Esc 关闭 */
-  const openNoMask = createSignal(false);
-  const openWidth = createSignal(false);
-  /**
-   * 预设宽度：单一对象 signal 一次写入 `{ open, preset }`。
-   * `open` / `width` / `title` 用零参 getter；正文普通写即可（勿只传 `width={sig.value}` 快照）。
-   */
-  const widthPresetDemo = createSignal<{
-    open: boolean;
-    preset: "xs" | "sm" | "md" | "lg" | "xl";
-  }>({
-    open: false,
-    preset: "md",
-  });
-  const openNotCentered = createSignal(false);
-  const openDestroy = createSignal(false);
-  // 用于「可移动」示例，在下方 return 的 thunk 内使用
-  const openDraggable = createSignal(false);
-  const openFullscreen = createSignal(false);
-  /** `fullscreen`：每次打开即为全屏布局 */
-  const openFullscreenInitial = createSignal(false);
-  const openKeyboard = createSignal(false);
-  const openCustomClass = createSignal(false);
+/**
+ * 本页全部示例用 open / 复合 state：必须模块级。
+ * 父级 data-view-dynamic 重跑时若在此函数内 `createSignal`，每次新实例，按钮只改旧 signal → 预设宽度等弹窗「打不开」。
+ */
+const open = createSignal(false);
+const openNoFooter = createSignal(false);
+const openNoTitle = createSignal(false);
+const openNoClosable = createSignal(false);
+const openNoMaskClose = createSignal(false);
+/** 无遮罩：`mask={false}`，需按钮或 Esc 关闭 */
+const openNoMask = createSignal(false);
+const openWidth = createSignal(false);
+/**
+ * 预设宽度：单一对象 signal 一次写入 `{ open, preset }`。
+ * `open` / `width` / `title` 用零参 getter；正文普通写即可（勿只传 `width={sig.value}` 快照）。
+ */
+const widthPresetDemo = createSignal<{
+  open: boolean;
+  preset: "xs" | "sm" | "md" | "lg" | "xl";
+}>({
+  open: false,
+  preset: "md",
+});
+const openNotCentered = createSignal(false);
+const openDestroy = createSignal(false);
+const openDraggable = createSignal(false);
+const openFullscreen = createSignal(false);
+/** `fullscreen`：每次打开即为全屏布局 */
+const openFullscreenInitial = createSignal(false);
+const openKeyboard = createSignal(false);
+const openCustomClass = createSignal(false);
 
+export default function FeedbackModal() {
   return (
     <div class="space-y-10">
       <section>
@@ -209,7 +212,11 @@ export default function FeedbackModal() {
           模态弹窗：遮罩、标题、内容、底部；支持关闭按钮、点击遮罩关闭；默认不按
           Esc 关闭，传 keyboard 可启用 Esc；自定义宽度与
           footer、居中/顶部对齐、关闭后销毁、自定义样式。使用 Tailwind v4，支持
-          light/dark 主题。
+          light/dark 主题。本页示例的{" "}
+          <code class="rounded bg-slate-200/80 px-1 font-mono text-xs dark:bg-slate-600/80">
+            open
+          </code>{" "}
+          等均在模块级创建，避免文档路由重跑后按钮无效。
         </Paragraph>
       </section>
 
@@ -584,6 +591,7 @@ export default function FeedbackModal() {
           <CodeBlock
             title="代码示例（预设）"
             code={`import { createSignal } from "@dreamer/view";
+// 页面会重跑时请把 demo 放在模块级，勿在组件函数内每次 new
 const demo = createSignal({
   open: false,
   preset: "md" as "xs" | "sm" | "md" | "lg" | "xl",

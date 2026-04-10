@@ -36,8 +36,8 @@ export interface MenuProps {
   openKeys?: string[] | (() => string[]);
   /** 展开/收起子菜单回调（可选，受控时用） */
   onOpenChange?: (openKeys: string[]) => void;
-  /** 键盘导航：当前焦点的 key（由父级维护） */
-  focusedKey?: string;
+  /** 键盘导航：当前焦点的 key（由父级维护）；可为 getter 与 `Signal` 联动 */
+  focusedKey?: string | (() => string | undefined);
   /** 键盘上下键切换焦点时回调 */
   onFocusChange?: (key: string) => void;
   /** 额外 class */
@@ -55,6 +55,61 @@ function getOrderedKeys(items: MenuItem[], openKeys: Set<string>): string[] {
   }
   walk(items);
   return out;
+}
+
+/**
+ * 刚挂上 document `click` 监听后的忽略窗口（毫秒），减轻 flush 重绘尾段或同手势误派事件触发误关。
+ * 与 {@link ../form/picker-portal-utils.ts} 中 Picker 的 arm 思路一致。
+ */
+const MENU_DOC_CLICK_ARM_MS = 90;
+
+/**
+ * 判断 document 冒泡阶段的 `click` 是否应视为落在菜单根 `nav` 内。
+ * Signal flush 替换子树时，`event.target` 可能已脱离文档，`root.contains(target)` 恒假，会误判「点外」导致子菜单一闪即关；
+ * 故用 `composedPath`，并对已卸载的 target 用坐标命中栈兜底。
+ * @param e - 一般为 `document` 上的 `MouseEvent`
+ * @param root - `menuRootRef` 指向的 `nav`
+ */
+function clickEventTouchesMenuRoot(e: MouseEvent, root: HTMLElement): boolean {
+  if (!root.isConnected) return false;
+  const t = e.target;
+  if (t instanceof Node && t.isConnected && root.contains(t)) {
+    return true;
+  }
+  if (typeof e.composedPath === "function") {
+    try {
+      const path = e.composedPath();
+      for (let i = 0; i < path.length; i++) {
+        const n = path[i];
+        if (n === root) return true;
+        if (n instanceof Node && root.contains(n)) return true;
+      }
+    } catch {
+      /* 个别环境 composedPath 抛错时走下方兜底 */
+    }
+  }
+  if (t instanceof Node && !t.isConnected) {
+    const x = e.clientX;
+    const y = e.clientY;
+    if (Number.isFinite(x) && Number.isFinite(y)) {
+      const doc = root.ownerDocument ??
+        (globalThis as { document?: Document }).document;
+      const stackFn = doc &&
+        (doc as Document & {
+          elementsFromPoint?: (x: number, y: number) => Element[];
+        }).elementsFromPoint;
+      if (typeof stackFn === "function") {
+        const stack = stackFn.call(doc, x, y);
+        if (stack != null) {
+          for (let i = 0; i < stack.length; i++) {
+            const el = stack[i];
+            if (el != null && root.contains(el)) return true;
+          }
+        }
+      }
+    }
+  }
+  return false;
 }
 
 function renderItem(
@@ -217,20 +272,40 @@ export function Menu(props: MenuProps) {
     defaultOpenKeys,
   );
 
-  const handleOpenChange = (key: string) => {
-    const openVal = usePopoverSubmenu
-      ? popoverOpenKeysRef.value
-      : (props.openKeys !== undefined
-        ? (typeof props.openKeys === "function"
+  /**
+   * 读取当前展开列表：popover + 非受控时用内部 ref；受控时用 `openKeys`（含 getter）。
+   */
+  const readOpenKeysArray = (): string[] => {
+    if (usePopoverSubmenu) {
+      if (props.openKeys !== undefined) {
+        return typeof props.openKeys === "function"
           ? props.openKeys()
-          : props.openKeys)
-        : internalOpenKeysRef.value);
+          : props.openKeys;
+      }
+      return popoverOpenKeysRef.value;
+    }
+    if (props.openKeys !== undefined) {
+      return typeof props.openKeys === "function"
+        ? props.openKeys()
+        : props.openKeys;
+    }
+    return internalOpenKeysRef.value;
+  };
+
+  /**
+   * 切换子菜单展开：非受控时写内部 Signal；受控时仅 `onOpenChange`，由父级更新 `openKeys`。
+   */
+  const handleOpenChange = (key: string) => {
+    const openVal = readOpenKeysArray();
     const next = new Set(openVal);
     if (next.has(key)) next.delete(key);
     else next.add(key);
     const nextArr = Array.from(next) as string[];
-    if (usePopoverSubmenu) popoverOpenKeysRef.value = nextArr;
-    else if (props.openKeys === undefined) internalOpenKeysRef.value = nextArr;
+    if (usePopoverSubmenu) {
+      if (props.openKeys === undefined) popoverOpenKeysRef.value = nextArr;
+    } else if (props.openKeys === undefined) {
+      internalOpenKeysRef.value = nextArr;
+    }
     onOpenChange?.(nextArr);
   };
 
@@ -264,42 +339,63 @@ export function Menu(props: MenuProps) {
   const menuRootRef = createRef<HTMLElement>(null);
 
   /**
-   * 存在任意展开子菜单时监听 document 冒泡 click；点在 `nav` 外则关闭。
-   * `setTimeout(0)` 再注册，避免「打开子菜单」的同一次点击冒泡到 document 立刻触发关闭（与 Dropdown 一致）。
+   * 存在任意展开子菜单时监听 document 冒泡 `click`；点在 `nav` 外则关闭。
+   * 使用 `queueMicrotask` 再注册（与 Cascader 一致），排在当前次响应式 flush 之后，避免与「打开」同 tick 交错；
+   * 命中判断用 {@link clickEventTouchesMenuRoot}，避免 flush 后 `target` 脱离文档导致误判关菜单。
    */
   createEffect(() => {
-    const openKeysVal = usePopoverSubmenu
-      ? (props.openKeys !== undefined
-        ? (typeof props.openKeys === "function"
-          ? props.openKeys()
-          : props.openKeys)
-        : popoverOpenKeysRef.value)
-      : (props.openKeys !== undefined
-        ? (typeof props.openKeys === "function"
-          ? props.openKeys()
-          : props.openKeys)
-        : internalOpenKeysRef.value);
-    if (typeof globalThis.document === "undefined") return;
+    const openKeysVal = readOpenKeysArray();
+    const doc = globalThis.document;
+    if (
+      doc == null ||
+      typeof doc.addEventListener !== "function"
+    ) return;
     if (openKeysVal.length === 0) return;
 
     let removeDocClick: (() => void) | null = null;
-    const timerId = globalThis.setTimeout(() => {
+    let disposed = false;
+
+    const attach = () => {
+      if (disposed) return;
+      const armUntil = typeof globalThis.performance !== "undefined" &&
+          typeof globalThis.performance.now === "function"
+        ? globalThis.performance.now() + MENU_DOC_CLICK_ARM_MS
+        : 0;
+
       const onDocClick = (e: MouseEvent) => {
-        const target = e.target as Node | null;
-        const root = menuRootRef.current;
-        if (target != null && root != null && !root.contains(target)) {
-          globalThis.setTimeout(() => closeAllOpenSubmenus(), 0);
+        if (typeof e.button === "number" && e.button !== 0) {
+          return;
         }
+        if (
+          armUntil !== 0 &&
+          typeof globalThis.performance !== "undefined" &&
+          typeof globalThis.performance.now === "function" &&
+          globalThis.performance.now() < armUntil
+        ) {
+          return;
+        }
+        const root = menuRootRef.current;
+        if (
+          root == null ||
+          typeof (root as HTMLElement).contains !== "function"
+        ) {
+          return;
+        }
+        if (clickEventTouchesMenuRoot(e, root)) return;
+        globalThis.setTimeout(() => closeAllOpenSubmenus(), 0);
       };
-      globalThis.document.addEventListener("click", onDocClick, false);
+
+      doc.addEventListener("click", onDocClick, false);
       removeDocClick = () => {
-        globalThis.document.removeEventListener("click", onDocClick, false);
+        doc.removeEventListener("click", onDocClick, false);
         removeDocClick = null;
       };
-    }, 0);
+    };
+
+    globalThis.queueMicrotask(attach);
 
     return () => {
-      globalThis.clearTimeout(timerId);
+      disposed = true;
       removeDocClick?.();
     };
   });
@@ -311,55 +407,73 @@ export function Menu(props: MenuProps) {
   };
 
   /**
-   * 渲染 getter：每次执行读 `selectedKeysRef`、受控 `openKeys`、父传入的 `focusedKey`，
-   * 避免仅在 Menu 首次调用时算死 `openSet`（文档页受控示例无法展开/收起）。
+   * 键盘导航依赖当帧的 `orderedKeys` / `focusedKey`；`onKeyDown` 挂在静态 `nav` 上，
+   * 故用 ref 承载子级 effect 每轮写入的最新值（与 Pagination 同理，避免外层 `return () =>` 订阅内部 Signal）。
    */
-  return () => {
-    const openKeysVal = usePopoverSubmenu
-      ? popoverOpenKeysRef.value
-      : (props.openKeys !== undefined
-        ? (typeof props.openKeys === "function"
-          ? props.openKeys()
-          : props.openKeys)
-        : internalOpenKeysRef.value);
-    const openSet = new Set(openKeysVal);
-    const orderedKeys = getOrderedKeys(items, openSet);
-    const selectedSet = new Set(selectedKeysRef.value);
-    const focusKeyNow = props.focusedKey;
+  const keyboardNavRef: {
+    orderedKeys: string[];
+    focusKey: string | undefined;
+    onFocusChange: ((key: string) => void) | undefined;
+  } = {
+    orderedKeys: [],
+    focusKey: undefined,
+    onFocusChange: undefined,
+  };
 
-    const handleKeyDownInner = (e: Event) => {
-      if (!onFocusChange || orderedKeys.length === 0) return;
-      const ev = e as KeyboardEvent;
-      if (ev.key !== "ArrowDown" && ev.key !== "ArrowUp") return;
-      ev.preventDefault();
-      const current = focusKeyNow != null
-        ? orderedKeys.indexOf(focusKeyNow)
-        : -1;
-      const nextIndex = ev.key === "ArrowDown"
-        ? Math.min(orderedKeys.length - 1, current + 1)
-        : Math.max(0, current - 1);
-      onFocusChange(orderedKeys[nextIndex] ?? orderedKeys[0]!);
-    };
+  /**
+   * `nav` 上的键盘委托：实际索引与回调来自 {@link keyboardNavRef}。
+   */
+  const handleKeyDownNav = (e: Event) => {
+    const onFC = keyboardNavRef.onFocusChange;
+    const orderedKeys = keyboardNavRef.orderedKeys;
+    if (!onFC || orderedKeys.length === 0) return;
+    const ev = e as KeyboardEvent;
+    if (ev.key !== "ArrowDown" && ev.key !== "ArrowUp") return;
+    ev.preventDefault();
+    const focusKeyNow = keyboardNavRef.focusKey;
+    const current = focusKeyNow != null ? orderedKeys.indexOf(focusKeyNow) : -1;
+    const nextIndex = ev.key === "ArrowDown"
+      ? Math.min(orderedKeys.length - 1, current + 1)
+      : Math.max(0, current - 1);
+    onFC(orderedKeys[nextIndex] ?? orderedKeys[0]!);
+  };
 
-    return (
-      <nav
-        ref={menuRootRef}
-        class={twMerge(
-          "flex flex-col gap-0.5",
-          mode === "horizontal" &&
-            "flex-row flex-wrap items-center [overflow-anchor:none]",
-          className,
-        )}
-        role="menu"
-        onKeyDown={onFocusChange
-          ? (handleKeyDownInner as (e: Event) => void)
-          : undefined}
-      >
-        {items.map((item) => {
+  /**
+   * 根 `nav` 固定返回，展开态在 **children 函数**内读 Signal / 受控 `openKeys`，
+   * 避免父级 `insert` 的外层 effect 订阅 `internalOpenKeysRef` 或 `popoverOpenKeysRef` 后 `cleanNode` 导致整组件重跑、`createSignal(defaultOpenKeys)` 反复初始化（垂直无法收起、水平 popover 无法展开）。
+   */
+  return (
+    <nav
+      ref={menuRootRef}
+      class={twMerge(
+        "flex flex-col gap-0.5",
+        mode === "horizontal" &&
+          "flex-row flex-wrap items-center [overflow-anchor:none]",
+        className,
+      )}
+      role="menu"
+      onKeyDown={onFocusChange
+        ? (handleKeyDownNav as (e: Event) => void)
+        : undefined}
+    >
+      {() => {
+        const openKeysVal = readOpenKeysArray();
+        const openSet = new Set(openKeysVal);
+        const orderedKeys = getOrderedKeys(items, openSet);
+        const selectedSet = new Set(selectedKeysRef.value);
+        const focusKeyNow = typeof props.focusedKey === "function"
+          ? props.focusedKey()
+          : props.focusedKey;
+
+        keyboardNavRef.orderedKeys = orderedKeys;
+        keyboardNavRef.focusKey = focusKeyNow;
+        keyboardNavRef.onFocusChange = onFocusChange;
+
+        return items.map((item) => {
           /**
            * `renderItem` 返回零参 getter；若把 getter 原样放进 `nav` 的 children，会走「每项一次函数子响应式插入」。
            * 在 SSR / 文档站等路径下，外层序列化或 effect 嵌套时序可能导致子 effect 未把节点挂进 nav，表现为 `<nav>` 空壳。
-           * 在此处同步调用 getter 得到 VNode，由 `mountVNodeTree` 直接挂子树；父级 `return () =>` 仍会在 signal 变化时整段重算。
+           * 在此处同步调用 getter 得到 VNode，由 `mountVNodeTree` 直接挂子树。
            */
           const row = renderItem(
             item,
@@ -375,8 +489,8 @@ export function Menu(props: MenuProps) {
             usePopoverSubmenu ? closePopover : undefined,
           );
           return typeof row === "function" ? (row as () => VNode)() : row;
-        })}
-      </nav>
-    );
-  };
+        });
+      }}
+    </nav>
+  );
 }

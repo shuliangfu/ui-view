@@ -40,15 +40,16 @@ const HERO_API: ApiRow[] = [
   },
   {
     name: "media",
-    type: "unknown",
+    type: "string | unknown",
     default: "-",
-    description: "插画/图片区（left 时左侧，right 时右侧）",
+    description: "全幅背景图（URL 或节点，cover 铺满）",
   },
   {
     name: "layout",
     type: "center | left | right",
     default: "center",
-    description: "布局",
+    description:
+      "居中 / 左（右侧 pr 40% 留白）/ 右（左侧 pl 40%）；块内字与按钮仍居中（同 center）",
   },
   {
     name: "fullScreen",
@@ -60,14 +61,25 @@ const HERO_API: ApiRow[] = [
     name: "background",
     type: "string | unknown",
     default: "-",
-    description: "背景图 URL 或节点",
+    description: "无 media 时为底层背景；与 media 并存时叠在 media 之上",
   },
-  { name: "class", type: "string", default: "-", description: "最外层 class" },
+  {
+    name: "class",
+    type: "string",
+    default: "-",
+    description: "最外层 section class",
+  },
   {
     name: "contentClass",
     type: "string",
     default: "-",
-    description: "内容区 class",
+    description: "文案外包层 class",
+  },
+  {
+    name: "overlayClass",
+    type: "string",
+    default: "（默认半透明）",
+    description: "背景与文案间遮罩；传空字符串可关闭默认遮罩",
   },
   {
     name: "children",
@@ -95,20 +107,23 @@ const exampleCenter = `<Hero
   extra={<><Button variant="primary">立即开始</Button><Button variant="default">了解更多</Button></>}
 />`;
 
+const bgUrl =
+  "https://placehold.co/1600x640/334155/94a3b8?text=Hero+Background";
+
 const exampleLeft = `<Hero
   layout="left"
-  title="左文右图"
-  description="左侧文案、右侧可放插画或图片。"
+  title="文案左对齐"
+  description="整块在左侧区域，字与按钮在块内仍居中（与 center 一致）。"
   extra={<Button variant="primary">主操作</Button>}
-  media={<img src="https://placehold.co/400x300/94a3b8/64748?text=插画" alt="插画占位" class="rounded-lg w-full h-48 object-cover" />}
+  media="${bgUrl}"
 />`;
 
 const exampleRight = `<Hero
   layout="right"
-  title="右文左图"
-  description="右侧文案、左侧可放媒体。"
+  title="文案右对齐"
+  description="整块在右侧区域，块内仍为居中排版。"
   extra={<Button variant="primary">主操作</Button>}
-  media={<img src="https://placehold.co/400x300/94a3b8/64748?text=媒体" alt="媒体占位" class="rounded-lg w-full h-48 object-cover" />}
+  media="${bgUrl}"
 />`;
 
 export default function LayoutHero() {
@@ -117,8 +132,12 @@ export default function LayoutHero() {
       <section>
         <Title level={1}>Hero 英雄区 / 首屏</Title>
         <Paragraph class="mt-2">
-          英雄区：title、subtitle、description、extra、media、layout（center/left/right）、fullScreen、background、class、contentClass、children。
-          使用 Tailwind v4，支持 light/dark 主题。
+          英雄区：`media` 作为**整幅背景**（cover）；`layout`
+          只决定文案块在左/中/右：`left` 靠左、右侧约 40%
+          留白（`pr-[40%]`）；`right` 靠右、左侧约 40%
+          留白（`pl-[40%]`）。块内标题与按钮仍**居中排版**（与 center
+          一致）。可与 `background` 叠层、`overlayClass` 控制读字遮罩。使用
+          Tailwind v4，支持 light/dark。
         </Paragraph>
       </section>
 
@@ -137,7 +156,7 @@ export default function LayoutHero() {
         <Title level={2}>示例</Title>
 
         <div class="space-y-4">
-          <Title level={3}>layout=center</Title>
+          <Title level={3}>layout=center（无背景图）</Title>
           <div class="rounded-xl border border-slate-200 dark:border-slate-600 overflow-hidden">
             <Hero
               layout="center"
@@ -163,20 +182,14 @@ export default function LayoutHero() {
         </div>
 
         <div class="space-y-4">
-          <Title level={3}>layout=left（左文右图）</Title>
+          <Title level={3}>layout=left（文案左对齐 + 背景图）</Title>
           <div class="rounded-xl border border-slate-200 dark:border-slate-600 overflow-hidden">
             <Hero
               layout="left"
-              title="左文右图"
-              description="左侧文案、右侧可放插画或图片。"
+              title="文案左对齐"
+              description="整块在左侧区域，字与按钮在块内仍居中（与 center 一致）。"
               extra={<Button type="button" variant="primary">主操作</Button>}
-              media={
-                <img
-                  src="https://placehold.co/400x300/94a3b8/64748?text=插画"
-                  alt="插画占位"
-                  class="rounded-lg w-full h-48 object-cover"
-                />
-              }
+              media={bgUrl}
             />
           </div>
           <CodeBlock
@@ -190,20 +203,14 @@ export default function LayoutHero() {
         </div>
 
         <div class="space-y-4">
-          <Title level={3}>layout=right（右文左图）</Title>
+          <Title level={3}>layout=right（文案右对齐 + 背景图）</Title>
           <div class="rounded-xl border border-slate-200 dark:border-slate-600 overflow-hidden">
             <Hero
               layout="right"
-              title="右文左图"
-              description="右侧文案、左侧可放媒体。"
+              title="文案右对齐"
+              description="整块在右侧区域，块内仍为居中排版。"
               extra={<Button type="button" variant="primary">主操作</Button>}
-              media={
-                <img
-                  src="https://placehold.co/400x300/94a3b8/64748?text=媒体"
-                  alt="媒体占位"
-                  class="rounded-lg w-full h-48 object-cover"
-                />
-              }
+              media={bgUrl}
             />
           </div>
           <CodeBlock

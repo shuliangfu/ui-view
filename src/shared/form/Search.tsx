@@ -9,6 +9,7 @@ import { twMerge } from "tailwind-merge";
 import { IconSearch } from "../basic/icons/Search.tsx";
 import type { SizeVariant } from "../types.ts";
 import { controlBlueFocusRing } from "./input-focus-ring.ts";
+import { commitMaybeSignal, type MaybeSignal } from "./maybe-signal.ts";
 
 export interface SearchProps {
   /** 尺寸 */
@@ -19,8 +20,8 @@ export interface SearchProps {
   hideFocusRing?: boolean;
   /** 占位文案 */
   placeholder?: string;
-  /** 输入值（受控可选）；可为 getter 以配合 View 细粒度更新 */
-  value?: string | (() => string);
+  /** 输入值（受控可选）；见 {@link MaybeSignal} */
+  value?: MaybeSignal<string>;
   /** 额外 class（作用于包裹容器） */
   class?: string;
   /** 输入回调 */
@@ -91,10 +92,31 @@ export function Search(props: SearchProps) {
   // 禁止在组件体内读 value()：会订阅 signal，导致根 effect 重跑、整树重建、input 被替换失焦。
   // value 透传给 <input value={value} />，由 View applyProps 对 getter 做 createEffect 仅更新 .value。
 
+  /**
+   * 受控 `value` 为 Signal 时由组件写回，再调用外部 `onInput`。
+   *
+   * @param e - 原生 input 事件
+   */
+  const handleInput = (e: Event) => {
+    commitMaybeSignal(value, (e.target as HTMLInputElement).value);
+    onInput?.(e);
+  };
+
+  /**
+   * 受控 `value` 为 Signal 时由组件写回，再调用外部 `onChange`。
+   *
+   * @param e - 原生 change 事件
+   */
+  const handleChange = (e: Event) => {
+    commitMaybeSignal(value, (e.target as HTMLInputElement).value);
+    onChange?.(e);
+  };
+
   const handleClear = () => {
+    commitMaybeSignal(value, "");
     const synthetic = { target: { value: "" } } as unknown as Event;
-    onChange?.(synthetic);
-    onInput?.(synthetic);
+    handleChange(synthetic);
+    handleInput(synthetic);
   };
 
   return (
@@ -137,8 +159,8 @@ export function Search(props: SearchProps) {
           onSearch ? "pr-20" : "pr-9",
           "[&::-webkit-search-cancel-button]:appearance-none [&::-webkit-search-cancel-button]:[-webkit-appearance:none]",
         )}
-        onInput={onInput}
-        onChange={onChange}
+        onInput={handleInput}
+        onChange={handleChange}
         onBlur={onBlur}
         onFocus={onFocus}
         onKeyUp={onKeyUp}

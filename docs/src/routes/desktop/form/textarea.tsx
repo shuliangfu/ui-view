@@ -23,9 +23,10 @@ interface ApiRow {
 const TEXTAREA_API: ApiRow[] = [
   {
     name: "value",
-    type: "string | (() => string)",
+    type: "string | (() => string) | Signal<string>",
     default: "-",
-    description: "受控值；可为 getter",
+    description:
+      "受控文本。与全库表单一致为 MaybeSignal：字面量、`() => T`、`createSignal` 返回值；勿直接绑 `sig.value`（快照失步或误订阅）。",
   },
   { name: "rows", type: "number", default: "-", description: "行数（高度）" },
   {
@@ -129,8 +130,7 @@ import { createSignal } from "@dreamer/view";
 const val = createSignal("");
 <FormItem label="多行">
   <Textarea
-    value={() => val.value}
-    onInput={(e) => val.value = (e.target as HTMLTextAreaElement).value}
+    value={val}
     placeholder="多行输入"
     rows={3}
   />
@@ -173,9 +173,7 @@ export default function FormTextarea() {
             <Title level={3}>基础</Title>
             <FormItem label="多行">
               <Textarea
-                value={() => valBase.value}
-                onInput={(e) =>
-                  valBase.value = (e.target as HTMLTextAreaElement).value}
+                value={valBase}
                 placeholder="多行输入"
                 rows={3}
               />
@@ -183,8 +181,7 @@ export default function FormTextarea() {
             <CodeBlock
               title="代码示例"
               code={`<Textarea
-  value={() => valBase.value}
-  onInput={(e) => valBase.value = (e.target as HTMLTextAreaElement).value}
+  value={valBase}
   placeholder="多行输入"
   rows={3}
 />`}
@@ -199,9 +196,7 @@ export default function FormTextarea() {
             <Title level={2}>maxLength（展示已用/总数）</Title>
             <FormItem label="最多 200 字">
               <Textarea
-                value={() => valMaxLength.value}
-                onInput={(e) =>
-                  valMaxLength.value = (e.target as HTMLTextAreaElement).value}
+                value={valMaxLength}
                 placeholder="输入会显示字数"
                 maxLength={200}
               />
@@ -209,8 +204,7 @@ export default function FormTextarea() {
             <CodeBlock
               title="代码示例"
               code={`<Textarea
-  value={() => valMaxLength.value}
-  onInput={(e) => valMaxLength.value = (e.target as HTMLTextAreaElement).value}
+  value={valMaxLength}
   placeholder="输入会显示字数"
   maxLength={200}
 />`}
@@ -225,9 +219,7 @@ export default function FormTextarea() {
             <Title level={3}>required / error</Title>
             <FormItem label="必填" required error="内容不能为空">
               <Textarea
-                value={() => valError.value}
-                onInput={(e) =>
-                  valError.value = (e.target as HTMLTextAreaElement).value}
+                value={valError}
                 placeholder="错误态红框"
                 error
               />
@@ -240,8 +232,7 @@ export default function FormTextarea() {
   error="内容不能为空"
 >
   <Textarea
-    value={() => valError.value}
-    onInput={(e) => valError.value = (e.target as HTMLTextAreaElement).value}
+    value={valError}
     placeholder="错误态红框"
     error
   />
@@ -256,12 +247,12 @@ export default function FormTextarea() {
           <section class="space-y-4">
             <Title level={3}>readOnly</Title>
             <FormItem label="只读">
-              <Textarea value={() => readOnlyVal.value} readOnly rows={2} />
+              <Textarea value={readOnlyVal} readOnly rows={2} />
             </FormItem>
             <CodeBlock
               title="代码示例"
               code={`<Textarea
-  value={() => readOnlyVal.value}
+  value={readOnlyVal}
   readOnly
   rows={2}
 />`}

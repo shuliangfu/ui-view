@@ -23,9 +23,10 @@ interface ApiRow {
 const RICH_TEXT_EDITOR_API: ApiRow[] = [
   {
     name: "value",
-    type: "string | (() => string)",
+    type: "string | (() => string) | Signal<string>",
     default: "-",
-    description: "HTML 内容；可为 getter",
+    description:
+      "HTML 内容。与全库表单一致为 MaybeSignal：字面量、`() => T`、`createSignal` 返回值；勿直接绑 `sig.value`（快照失步或误订阅）。",
   },
   {
     name: "onChange",
@@ -107,8 +108,7 @@ import { createSignal } from "@dreamer/view";
 const html = createSignal("<p>初始</p>");
 <FormItem label="富文本">
   <RichTextEditor
-    value={() => html.value}
-    onChange={(v) => html.value = v}
+    value={html}
     toolbarPreset="default"
     placeholder="输入内容…"
     minHeight="200px"
@@ -150,8 +150,7 @@ export default function FormRichTextEditor() {
             <Title level={3}>toolbarPreset：default</Title>
             <FormItem label="默认工具栏">
               <RichTextEditor
-                value={() => val.value}
-                onChange={(html) => val.value = html}
+                value={val}
                 toolbarPreset="default"
                 placeholder="输入内容…"
                 minHeight="200px"
@@ -160,8 +159,7 @@ export default function FormRichTextEditor() {
             <CodeBlock
               title="代码示例"
               code={`<RichTextEditor
-  value={() => val.value}
-  onChange={(v) => val.value = v}
+  value={val}
   toolbarPreset="default"
   minHeight="200px"
 />`}
@@ -176,8 +174,7 @@ export default function FormRichTextEditor() {
             <Title level={3}>toolbarPreset：simple</Title>
             <FormItem label="简单工具栏（撤销/重做/加粗/斜体/下划线/链接）">
               <RichTextEditor
-                value={() => valSimple.value}
-                onChange={(html) => valSimple.value = html}
+                value={valSimple}
                 toolbarPreset="simple"
                 placeholder="简单模式"
                 minHeight="160px"
@@ -197,8 +194,7 @@ export default function FormRichTextEditor() {
             <Title level={3}>toolbarPreset：full</Title>
             <FormItem label="完整工具栏（含表格、代码块、图片等）">
               <RichTextEditor
-                value={() => valFull.value}
-                onChange={(html) => valFull.value = html}
+                value={valFull}
                 toolbarPreset="full"
                 placeholder="完整模式"
                 minHeight="240px"

@@ -1,19 +1,24 @@
 /**
  * Checkbox 多选勾选（View）。
  * 支持 disabled、checked，light/dark 主题。
+ * `checked` 为 `createSignal` 返回值时，变更会先写入 Signal，可不写 `onChange` 仅做同步。
  */
 
+import { isSignal, type Signal } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import { controlBlueFocusRing } from "./input-focus-ring.ts";
+import type { MaybeSignal } from "./maybe-signal.ts";
 
 export interface CheckboxProps {
-  /** 是否选中；可为 getter / `() => ref.value`（`Signal`），由 View 对属性做细粒度更新 */
-  checked?: boolean | (() => boolean);
+  /** 是否选中；见 {@link MaybeSignal} */
+  checked?: MaybeSignal<boolean>;
   /** 是否禁用 */
   disabled?: boolean;
   /** 额外 class（作用于包裹的 label） */
   class?: string;
-  /** 变更回调 */
+  /**
+   * 变更回调。`checked` 为 Signal 时组件会先自动写入，无需仅为同步状态再传；仍可传以做其它副作用。
+   */
   onChange?: (e: Event) => void;
   /** 失焦回调 */
   onBlur?: (e: Event) => void;
@@ -50,12 +55,12 @@ const errorCls = "[&_input]:border-red-500 text-red-600 dark:text-red-400";
 
 export function Checkbox(props: CheckboxProps) {
   const {
-    checked = false,
+    checked: checkedMaybe,
     disabled = false,
     error = false,
     hideFocusRing = false,
     class: className,
-    onChange,
+    onChange: onChangeProp,
     onBlur,
     onFocus,
     onKeyDown,
@@ -68,6 +73,23 @@ export function Checkbox(props: CheckboxProps) {
     children,
   } = props;
 
+  /**
+   * 用户切换时：若 `checked` 为 Signal 则回写；再调用外部 `onChange`。
+   *
+   * @param e - 原生 change 事件
+   */
+  const handleChange = (e: Event) => {
+    const el = e.target as HTMLInputElement;
+    const next = el.checked;
+    if (checkedMaybe !== undefined && isSignal(checkedMaybe)) {
+      (checkedMaybe as Signal<boolean>).value = next;
+    }
+    onChangeProp?.(e);
+  };
+
+  /** 未传 `checked` 时按 false 受控，与原先默认一致 */
+  const checkedForInput = checkedMaybe === undefined ? false : checkedMaybe;
+
   return (
     <label class={twMerge(labelCls, error && errorCls, className)}>
       <input
@@ -75,14 +97,14 @@ export function Checkbox(props: CheckboxProps) {
         id={id}
         name={name}
         value={value}
-        checked={checked}
+        checked={checkedForInput}
         disabled={disabled}
         aria-invalid={error}
         class={twMerge(
           checkboxInputSurface,
           controlBlueFocusRing(!hideFocusRing),
         )}
-        onChange={onChange}
+        onChange={handleChange}
         onBlur={onBlur}
         onFocus={onFocus}
         onKeyDown={onKeyDown}

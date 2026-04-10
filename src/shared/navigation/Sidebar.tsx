@@ -1,13 +1,22 @@
 /**
  * Sidebar 侧栏折叠菜单（View）。
- * 用于文档/后台：顶部可选「概览」链接、分组标题、可折叠的一级分类与二级链接；手风琴展开、基于当前路径的 active 高亮。
+ * 用于文档/后台：顶部可选「概览」链接、分组标题、可折叠的一级分类与二级链接；手风琴、基于当前路径的 active 高亮。
+ *
+ * **为何不用 Signal 控制展开**：用 `button` + `createSignal` 时，只要在 `insert` 的任意 effect 里订阅了展开态，
+ * 一次点击就会触发子树重插，整段 `aside` 在开发者工具里会像「整节点闪烁」；与是否把 `nav` 放进函数子无关（父链仍可能重跑）。
+ * 一级分类改为原生 `<details>` + 相同 **`name`**：由浏览器做互斥展开，无框架级重渲染，二级链接仍在 `details` 内静态输出。
+ *
+ * **路径**：在组件函数体内同步调用 `getCurrentPath()`；dweb 客户端路由切换会重建布局树，侧栏会重新执行，高亮与 `open` 会与 URL 对齐。
+ *
+ * **小屏适配**：传入 `drawerOpen`（与顶栏按钮共用 `Signal`）时，max-md 下隐藏固定侧栏，导航移入左侧 {@link Drawer}；
+ * 大屏仍为固定 `aside`；抽屉内 `accordionGroupName` 与侧栏不同，避免两处 DOM 手风琴串线。
  */
 
-import { createSignal } from "@dreamer/view";
+import type { Signal } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
+import { Drawer } from "../feedback/Drawer.tsx";
 import { Link } from "../basic/Link.tsx";
 /** 按需：单文件图标，避免经 icons/mod 拉入全表 */
-import { IconChevronDown } from "../basic/icons/ChevronDown.tsx";
 import { IconChevronRight } from "../basic/icons/ChevronRight.tsx";
 
 /** 二级子项：path、label、desc（展示为 "label — desc"） */
@@ -36,6 +45,22 @@ export interface SidebarProps {
   /** 根节点（aside）额外 class */
   class?: string;
   className?: string;
+  /**
+   * 有子菜单的一级项使用 `<details name={accordionGroupName}>` 互斥展开；
+   * 同一页若会挂载多个 Sidebar，请传入不同字符串以免两组 details 互相牵连。
+   */
+  accordionGroupName?: string;
+  /**
+   * 与顶栏「菜单」等共用：为真时 max-md 下将导航收入左侧 Drawer，固定侧栏仅 md+ 显示。
+   */
+  drawerOpen?: Signal<boolean>;
+  /** Drawer 标题；不传则用 `overview.label`，再无则「导航」 */
+  drawerTitle?: string;
+  /**
+   * 抽屉内 details 的 `name`，须与 `accordionGroupName` 不同；
+   * 默认在 `accordionGroupName` 后追加 `-drawer`。
+   */
+  drawerAccordionGroupName?: string;
 }
 
 const defaultGetCurrentPath = (): string => {
@@ -59,11 +84,183 @@ const overviewNormal = overviewBase +
   "text-slate-700 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 dark:hover:text-slate-100 ";
 const overviewActive = overviewBase +
   "text-teal-700 dark:text-teal-300 ";
+/** summary 本体用 block；flex 排布放在唯一子节点上，见下「summary 单子节点」注释 */
 const categoryBtnNormal =
-  "flex w-full items-center gap-1 rounded-md py-1.5 pl-3 pr-3 text-left text-sm font-medium text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800 transition-colors";
+  "block w-full cursor-pointer list-none rounded-md py-1.5 pl-3 pr-3 text-left text-sm font-medium text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800 transition-colors [&::-webkit-details-marker]:hidden";
 const categoryBtnActive =
-  "flex w-full items-center gap-1 rounded-md py-1.5 pl-3 pr-3 text-left text-sm font-medium text-teal-700 dark:text-teal-300";
+  "block w-full cursor-pointer list-none rounded-md py-1.5 pl-3 pr-3 text-left text-sm font-medium text-teal-700 dark:text-teal-300 [&::-webkit-details-marker]:hidden";
+/** 图标 + 文案的 flex 行（作为 summary 的唯一直接子元素） */
+const summaryInnerRow = "flex w-full min-w-0 items-center gap-1";
 
+/**
+ * 侧栏与文档主区常用底纹（与 docs 根布局 `bg-slate-50 dark:bg-slate-950` 一致），
+ * 固定 `aside` 与小屏 {@link Drawer} 共用，避免 Drawer 默认 `bg-white / dark:bg-slate-800` 与电脑端侧栏色差。
+ */
+const sidebarChromeBg = "bg-slate-50 dark:bg-slate-950";
+
+/** 抽屉内导航：去块间距；左缘与列表对齐由 leafLink/summary 控制 */
+const drawerNavExtras = {
+  nav:
+    "min-h-0 w-full flex-1 space-y-0 overflow-y-auto overscroll-y-contain py-0",
+  overviewWrap:
+    "mb-0 shrink-0 border-b border-slate-200 dark:border-slate-700/90",
+  overviewLink: "rounded-none px-4 py-3",
+  sectionTitle: "m-0 px-4 py-2",
+  ul: "m-0 space-y-0 p-0 pl-0",
+  summary: "rounded-none py-2 pl-4 pr-4",
+  /** 二级项仅保留必要左缩进，不再加额外外边距 */
+  subUl: "m-0 space-y-0 border-0 p-0 py-0 pl-4",
+  leafLink: "rounded-none px-4 py-2.5",
+} as const;
+
+/** 导航树（不含 aside），供固定侧栏与抽屉内复用 */
+function SidebarNavigation(props: {
+  overview?: { path: string; label: string };
+  sectionTitle?: string;
+  items: ReadonlyArray<SidebarItem>;
+  getCurrentPath: () => string;
+  accordionGroupName: string;
+  /** `drawer`：全宽铺满、无块级间距，用于小屏 {@link Drawer} */
+  variant?: "default" | "drawer";
+}) {
+  const {
+    overview,
+    sectionTitle,
+    items,
+    getCurrentPath,
+    accordionGroupName,
+    variant = "default",
+  } = props;
+
+  const pathNorm = getCurrentPath();
+  const norm = (p: string) => p.replace(/\/$/, "") || "/";
+
+  const isActiveExact = (path: string) => pathNorm === norm(path);
+  const isCategoryActive = (path: string) => {
+    const base = norm(path);
+    return pathNorm === base || pathNorm.startsWith(base + "/");
+  };
+
+  const d = variant === "drawer";
+
+  return (
+    <nav
+      class={twMerge("space-y-3", d ? drawerNavExtras.nav : "")}
+      aria-label="侧栏导航"
+    >
+      {overview != null && (
+        <div class={d ? drawerNavExtras.overviewWrap : "mb-4"}>
+          <Link
+            href={overview.path}
+            class={twMerge(
+              pathNorm === norm(overview.path)
+                ? overviewActive
+                : overviewNormal,
+              d ? drawerNavExtras.overviewLink : "",
+            )}
+          >
+            {overview.label}
+          </Link>
+        </div>
+      )}
+      {sectionTitle != null && (
+        <p
+          class={twMerge(
+            "px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400",
+            d ? drawerNavExtras.sectionTitle : "",
+          )}
+        >
+          {sectionTitle}
+        </p>
+      )}
+      <ul
+        class={twMerge(
+          "m-0 list-none space-y-1 p-0 pl-3",
+          d ? drawerNavExtras.ul : "",
+        )}
+        role="list"
+      >
+        {items.map((item) => (
+          <li key={item.path} class="min-w-0">
+            {item.children != null && item.children.length > 0
+              ? (
+                /**
+                 * `name` 相同的一组 details 在支持该特性的浏览器中互斥展开（手风琴）。
+                 * 当前 URL 落在此分类下时设 `open`，否则不设置，保留用户在本页手动展开/收起的空间。
+                 */
+                <details
+                  name={accordionGroupName}
+                  class="group min-w-0"
+                  open={isCategoryActive(item.path) ? true : undefined}
+                >
+                  {
+                    /*
+                     * summary 下须为唯一直接子节点：两个兄弟会走数组 insert，view 会插 display:contents 壳，
+                     * 破坏原生 details/summary，浏览器会显示「详情」而非 item.label。
+                     */
+                  }
+                  <summary
+                    class={twMerge(
+                      isCategoryActive(item.path)
+                        ? categoryBtnActive
+                        : categoryBtnNormal,
+                      d ? drawerNavExtras.summary : "",
+                    )}
+                  >
+                    <span class={summaryInnerRow}>
+                      <span
+                        class="shrink-0 w-4 h-4 flex items-center justify-center text-slate-500 transition-transform group-open:rotate-90 dark:text-slate-400"
+                        aria-hidden
+                      >
+                        <IconChevronRight class="w-4 h-4" />
+                      </span>
+                      <span class="min-w-0 truncate">{item.label}</span>
+                    </span>
+                  </summary>
+                  <ul
+                    class={twMerge(
+                      "m-0 list-none space-y-0.5 p-0 pl-6 pt-0.5",
+                      d ? drawerNavExtras.subUl : "",
+                    )}
+                    role="list"
+                  >
+                    {item.children.map((sub) => (
+                      <li key={sub.path}>
+                        <Link
+                          href={sub.path}
+                          class={twMerge(
+                            isActiveExact(sub.path) ? linkActive : linkNormal,
+                            d ? drawerNavExtras.leafLink : "",
+                          )}
+                        >
+                          {sub.label} — {sub.desc}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              )
+              : (
+                <Link
+                  href={item.path}
+                  class={twMerge(
+                    isActiveExact(item.path) ? linkActive : linkNormal,
+                    d ? drawerNavExtras.leafLink : "",
+                  )}
+                >
+                  {item.label}
+                </Link>
+              )}
+          </li>
+        ))}
+      </ul>
+    </nav>
+  );
+}
+
+/**
+ * 侧栏：概览链接、分组标题、可折叠分类（details）与叶子链接；可选小屏 Drawer。
+ */
 export function Sidebar(props: SidebarProps) {
   const {
     overview,
@@ -72,140 +269,106 @@ export function Sidebar(props: SidebarProps) {
     getCurrentPath = defaultGetCurrentPath,
     class: classProp,
     className: classNameProp,
+    accordionGroupName = "dreamer-ui-view-sidebar",
+    drawerOpen,
+    drawerTitle: drawerTitleProp,
+    drawerAccordionGroupName,
   } = props;
 
-  const pathNorm = getCurrentPath();
-  const norm = (p: string) => p.replace(/\/$/, "") || p;
-
-  const isActiveExact = (path: string) => pathNorm === norm(path);
-  const isCategoryActive = (path: string) => {
-    const base = norm(path);
-    return pathNorm === base || pathNorm.startsWith(base + "/");
-  };
-
-  /**
-   * 手风琴：仅一个一级分类展开。
-   * 若为 null，则展开包含当前路径的分类（初始/导航后）；否则仅展开该 key。
-   */
-  const expandedKeyRef = createSignal<string | null>(null);
-  /** 仅当路径变化（发生导航）时清除手动展开，避免用户点击其他分类后立刻被收起 */
-  const lastPathRef = createSignal<string>(pathNorm);
-  if (lastPathRef.value !== pathNorm) {
-    lastPathRef.value = pathNorm;
-    const key = expandedKeyRef.value;
-    if (key !== null && !isCategoryActive(key)) {
-      expandedKeyRef.value = null;
-    }
-  }
-
-  /** 分类是否展开：当前为手风琴选中项，或（未手动选中时）当前路径在该分类下 */
-  const isExpanded = (path: string) => {
-    const currentKey = expandedKeyRef.value;
-    if (currentKey !== null) return path === currentKey;
-    return isCategoryActive(path);
-  };
-
-  /** 点击一级分类：展开此项并收起其他（手风琴）；再次点击则收起 */
-  const toggleOpen = (path: string) => {
-    expandedKeyRef((prev: string | null) => prev === path ? null : path);
-  };
-
   const asideClass = twMerge(
+    sidebarChromeBg,
     "w-72 shrink-0 border-r border-slate-100 dark:border-slate-700 py-8 pl-6 pr-4",
     classProp ?? classNameProp,
   );
 
-  /**
-   * 渲染 getter：读 `expandedKeyRef`、当前路径相关闭包，手风琴展开与路由联动时细粒度更新。
-   */
-  return () => (
-    <aside class={asideClass}>
-      <nav className="space-y-3" aria-label="侧栏导航">
-        {overview != null && (
-          <div className="mb-4">
-            <Link
-              href={overview.path}
-              class={pathNorm === norm(overview.path)
-                ? overviewActive
-                : overviewNormal}
+  const navShared = {
+    overview,
+    sectionTitle,
+    items,
+    getCurrentPath,
+  };
+
+  if (drawerOpen != null) {
+    const drawerTitle = drawerTitleProp ?? overview?.label ?? "导航";
+    const drawerGroup = drawerAccordionGroupName ??
+      `${accordionGroupName}-drawer`;
+
+    const closeDrawerOnLink = (ev: Event) => {
+      const t = ev.target;
+      if (t == null || typeof t !== "object") return;
+      const el = t as HTMLElement;
+      if (el.closest?.("a[href]")) {
+        drawerOpen.value = false;
+      }
+    };
+
+    return (
+      <div class="relative h-full min-h-0 w-0 shrink-0 overflow-visible md:w-72 md:shrink-0">
+        {
+          /*
+           * 大屏固定侧栏；小屏不占横向宽度（w-0），避免与正文并排挤压。
+           */
+        }
+        <aside
+          class={twMerge(
+            asideClass,
+            "hidden h-full min-h-0 overflow-y-auto overscroll-y-contain md:block",
+          )}
+        >
+          <SidebarNavigation
+            {...navShared}
+            accordionGroupName={accordionGroupName}
+          />
+        </aside>
+        {
+          /*
+           * 小屏：Drawer 挂在此节点（通常不占布局流宽度）；面板经 Portal 挂到 body。
+           */
+        }
+        <div class="md:hidden">
+          {
+            /*
+             * 宽度 `calc(100vw - 3rem)`：右侧留一条缝见遮罩后正文；背景与固定侧栏同为 `sidebarChromeBg`。
+             */
+          }
+          <Drawer
+            open={drawerOpen}
+            onClose={() => {
+              drawerOpen.value = false;
+            }}
+            placement="left"
+            width="calc(100vw - 8rem)"
+            title={drawerTitle}
+            destroyOnClose
+            class={twMerge(
+              "rounded-none border-0 shadow-none",
+              sidebarChromeBg,
+            )}
+            titleBarClass="shrink-0 border-slate-200 px-3 py-3 dark:border-slate-700"
+            contentClass="min-h-0 flex-1 overflow-hidden p-0"
+          >
+            <div
+              class="flex min-h-0 max-h-full min-w-0 flex-1 flex-col bg-inherit"
+              onClick={closeDrawerOnLink}
             >
-              {overview.label}
-            </Link>
-          </div>
-        )}
-        {sectionTitle != null && (
-          <p className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-            {sectionTitle}
-          </p>
-        )}
-        <ul className="list-none space-y-1 p-0 m-0 pl-3" role="list">
-          {items.map((item) => (
-            <li key={item.path} class="min-w-0">
-              {item.children != null && item.children.length > 0
-                ? (
-                  /**
-                   * 不用 Fragment 内嵌 `{() => ...}`：View 对 getter 子节点会走 **函数子响应式插入**，
-                   * 在侧栏 flex 场景下曾出现子菜单挂错父级、整块跑到主内容右侧的问题。
-                   * 在外层 `return () =>` 里直接读 `isExpanded`（已订阅 expandedKeyRef）条件渲染即可。
-                   */
-                  <div class="flex w-full min-w-0 flex-col gap-0.5">
-                    <button
-                      type="button"
-                      className={isCategoryActive(item.path)
-                        ? categoryBtnActive
-                        : categoryBtnNormal}
-                      onClick={() => toggleOpen(item.path)}
-                      aria-expanded={isExpanded(item.path)}
-                      aria-controls={`sidebar-group-${
-                        item.path.replace(/\//g, "-")
-                      }`}
-                    >
-                      <span
-                        className="shrink-0 w-4 h-4 flex items-center justify-center text-slate-500 dark:text-slate-400"
-                        aria-hidden
-                      >
-                        {isExpanded(item.path)
-                          ? <IconChevronDown class="w-4 h-4" />
-                          : <IconChevronRight class="w-4 h-4" />}
-                      </span>
-                      {item.label}
-                    </button>
-                    {isExpanded(item.path) && item.children
-                      ? (
-                        <ul
-                          id={`sidebar-group-${item.path.replace(/\//g, "-")}`}
-                          className="list-none space-y-0.5 p-0 m-0 pl-6"
-                          role="list"
-                        >
-                          {item.children.map((sub) => (
-                            <li key={sub.path}>
-                              <Link
-                                href={sub.path}
-                                class={isActiveExact(sub.path)
-                                  ? linkActive
-                                  : linkNormal}
-                              >
-                                {sub.label} — {sub.desc}
-                              </Link>
-                            </li>
-                          ))}
-                        </ul>
-                      )
-                      : null}
-                  </div>
-                )
-                : (
-                  <Link
-                    href={item.path}
-                    class={isActiveExact(item.path) ? linkActive : linkNormal}
-                  >
-                    {item.label}
-                  </Link>
-                )}
-            </li>
-          ))}
-        </ul>
-      </nav>
+              <SidebarNavigation
+                {...navShared}
+                accordionGroupName={drawerGroup}
+                variant="drawer"
+              />
+            </div>
+          </Drawer>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <aside class={asideClass}>
+      <SidebarNavigation
+        {...navShared}
+        accordionGroupName={accordionGroupName}
+      />
     </aside>
   );
 }

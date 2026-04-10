@@ -27,6 +27,7 @@ export interface AlertProps {
   /**
    * 关闭回调（closable 时点击关闭触发）。
    * 本组件不维护「已关闭」状态，父级应在回调中更新 state/signal 并条件渲染以真正隐藏。
+   * 若父级整段函数会重跑，用于显隐的 signal 须稳定（如模块级或 Map 键），勿每次重跑都 `createSignal(true)`，否则关闭只更新旧闭包。
    */
   onClose?: () => void;
   /** 是否使用横幅样式（圆角更小、常作整行提示），默认 false */

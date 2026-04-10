@@ -16,6 +16,8 @@ const users: Record<string, { name: string; email: string; role: string }> = {
   "1": { name: "张三", email: "user1@example.com", role: "管理员" },
   "2": { name: "李四", email: "user2@example.com", role: "用户" },
   "3": { name: "王五", email: "user3@example.com", role: "访客" },
+  /** 与 `collect-desktop-routes` 中 `[id].tsx` → `e2e-1` 占位一致，供文档/E2E 访问 */
+  "e2e-1": { name: "E2E 用户", email: "e2e@example.com", role: "演示" },
 };
 
 /**

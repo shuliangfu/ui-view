@@ -5,6 +5,7 @@
 
 import { twMerge } from "tailwind-merge";
 import { controlBlueFocusRing } from "./input-focus-ring.ts";
+import { commitMaybeSignal, type MaybeSignal } from "./maybe-signal.ts";
 
 /** 候选选项 */
 export interface MentionOption {
@@ -13,8 +14,8 @@ export interface MentionOption {
 }
 
 export interface MentionsProps {
-  /** 当前值（受控可选）；可为 getter 以在 View 细粒度下只更新 value 不重建节点，避免失焦 */
-  value?: string | (() => string);
+  /** 当前值（受控可选）；见 {@link MaybeSignal} */
+  value?: MaybeSignal<string>;
   /** 占位文案 */
   placeholder?: string;
   /** 行数 */
@@ -120,6 +121,26 @@ export function Mentions(props: MentionsProps) {
 
   // 禁止在组件体内读 value()、showDropdown()、dropdownOptions()：会订阅 signal，导致整树重跑、textarea 失焦。value 透传给 textarea；下拉由子组件读。
 
+  /**
+   * 受控 `value` 为 Signal 时由组件写回，再调用外部 `onInput`。
+   *
+   * @param e - 原生 input 事件
+   */
+  const handleInput = (e: Event) => {
+    commitMaybeSignal(value, (e.target as HTMLTextAreaElement).value);
+    onInput?.(e);
+  };
+
+  /**
+   * 受控 `value` 为 Signal 时由组件写回，再调用外部 `onChange`。
+   *
+   * @param e - 原生 change 事件
+   */
+  const handleChange = (e: Event) => {
+    commitMaybeSignal(value, (e.target as HTMLTextAreaElement).value);
+    onChange?.(e);
+  };
+
   const textareaProps = {
     id,
     name,
@@ -128,8 +149,8 @@ export function Mentions(props: MentionsProps) {
     placeholder,
     disabled,
     class: twMerge(textareaSurface, controlBlueFocusRing(!hideFocusRing)),
-    onChange,
-    onInput,
+    onChange: handleChange,
+    onInput: handleInput,
     onBlur,
     onFocus,
     onKeyDown,

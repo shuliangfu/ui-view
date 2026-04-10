@@ -23,9 +23,10 @@ interface ApiRow {
 const COLOR_PICKER_API: ApiRow[] = [
   {
     name: "value",
-    type: "string",
+    type: "string | (() => string) | Signal<string>",
     default: "#000000",
-    description: "当前颜色 #rrggbb",
+    description:
+      "当前颜色（如 #rrggbb）。与全库表单一致为 MaybeSignal：字面量、`() => T`、`createSignal` 返回值；勿直接绑 `sig.value`（快照失步或误订阅）。",
   },
   {
     name: "disabled",
@@ -115,7 +116,12 @@ export default function FormColorPickerDoc() {
           自绘饱和度/明度、色相条与 RGB/HEX 输入；弹层在组件根{" "}
           <code class="text-xs">relative</code> 内{" "}
           <code class="text-xs">absolute left-0 top-full mt-1</code>，与
-          DatePicker 相同，随页面滚动跟移。属性{" "}
+          DatePicker 相同，随页面滚动跟移。受控时请传{" "}
+          <code class="text-xs">createSignal</code> 返回值本身，如{" "}
+          <code class="text-xs">{"value={hex}"}</code>；勿写{" "}
+          <code class="text-xs">{"value={hex.value}"}</code>
+          （仅为求值瞬间的快照，无法被组件写回且易失步）。亦可用{" "}
+          <code class="text-xs">{"value={() => hex.value}"}</code>。属性{" "}
           <code class="text-xs">value</code> 为 #rrggbb，隐藏{" "}
           <code class="text-xs">input</code> 随调色更新。右侧默认展示{" "}
           <code class="text-xs">IconPalette</code>；不需要时可传{" "}
@@ -142,9 +148,7 @@ export default function FormColorPickerDoc() {
 const hex = createSignal("#3b82f6");
 
 <ColorPicker
-  value={hex.value}
-  onInput={(e) => { hex.value = (e.target as HTMLInputElement).value; }}
-  onChange={(e) => { hex.value = (e.target as HTMLInputElement).value; }}
+  value={hex}
 />`}
           language="tsx"
           showLineNumbers
@@ -162,21 +166,10 @@ const hex = createSignal("#3b82f6");
             <code class="text-xs">default</code>，占满父级宽度（可用{" "}
             <code class="text-xs">class</code> 覆盖）。
           </Paragraph>
-          <CodeBlock
-            title="代码"
-            code={`<ColorPicker
-  value={hex.value}
-  onInput={(e) => { hex.value = (e.target as HTMLInputElement).value; }}
-  onChange={(e) => { hex.value = (e.target as HTMLInputElement).value; }}
-/>`}
-            language="tsx"
-            showLineNumbers
-            wrapLongLines
-          />
           <Form layout="vertical" class="w-full max-w-xs">
             <FormItem label="主题色">
               <ColorPicker
-                value={defaultHex.value}
+                value={defaultHex}
                 onInput={bindColorInput((v) => {
                   defaultHex.value = v;
                 })}
@@ -186,6 +179,15 @@ const hex = createSignal("#3b82f6");
               />
             </FormItem>
           </Form>
+          <CodeBlock
+            title="代码"
+            code={`<ColorPicker
+  value={hex}
+/>`}
+            language="tsx"
+            showLineNumbers
+            wrapLongLines
+          />
         </div>
 
         <div class="space-y-4">
@@ -195,23 +197,11 @@ const hex = createSignal("#3b82f6");
           <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
             约 40×40 色块，外层 <code class="text-xs">inline-block</code>。
           </Paragraph>
-          <CodeBlock
-            title="代码"
-            code={`<ColorPicker
-  variant="swatch"
-  value={hex.value}
-  onInput={(e) => { hex.value = (e.target as HTMLInputElement).value; }}
-  onChange={(e) => { hex.value = (e.target as HTMLInputElement).value; }}
-/>`}
-            language="tsx"
-            showLineNumbers
-            wrapLongLines
-          />
           <Form layout="vertical" class="w-full max-w-xs">
             <FormItem label="仅色块">
               <ColorPicker
                 variant="swatch"
-                value={swatchHex.value}
+                value={swatchHex}
                 onInput={bindColorInput((v) => {
                   swatchHex.value = v;
                 })}
@@ -221,6 +211,16 @@ const hex = createSignal("#3b82f6");
               />
             </FormItem>
           </Form>
+          <CodeBlock
+            title="代码"
+            code={`<ColorPicker
+  variant="swatch"
+  value={hex}
+/>`}
+            language="tsx"
+            showLineNumbers
+            wrapLongLines
+          />
         </div>
 
         <div class="space-y-4">
@@ -230,23 +230,11 @@ const hex = createSignal("#3b82f6");
           <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
             显示屏幕取色、圆形预览与「拖动方格与色相条选择颜色」说明。
           </Paragraph>
-          <CodeBlock
-            title="代码"
-            code={`<ColorPicker
-  showToolbar
-  value={hex.value}
-  onInput={(e) => { hex.value = (e.target as HTMLInputElement).value; }}
-  onChange={(e) => { hex.value = (e.target as HTMLInputElement).value; }}
-/>`}
-            language="tsx"
-            showLineNumbers
-            wrapLongLines
-          />
           <Form layout="vertical" class="w-full max-w-xs">
             <FormItem label="带顶栏">
               <ColorPicker
                 showToolbar
-                value={toolbarHex.value}
+                value={toolbarHex}
                 onInput={bindColorInput((v) => {
                   toolbarHex.value = v;
                 })}
@@ -256,6 +244,16 @@ const hex = createSignal("#3b82f6");
               />
             </FormItem>
           </Form>
+          <CodeBlock
+            title="代码"
+            code={`<ColorPicker
+  showToolbar
+  value={hex}
+/>`}
+            language="tsx"
+            showLineNumbers
+            wrapLongLines
+          />
         </div>
 
         <div class="space-y-4">
@@ -263,23 +261,11 @@ const hex = createSignal("#3b82f6");
             <code class="text-base">showSuffixIcon={false}</code>{" "}
             隐藏右侧调色板图标
           </Title>
-          <CodeBlock
-            title="代码"
-            code={`<ColorPicker
-  showSuffixIcon={false}
-  value={hex.value}
-  onInput={(e) => { hex.value = (e.target as HTMLInputElement).value; }}
-  onChange={(e) => { hex.value = (e.target as HTMLInputElement).value; }}
-/>`}
-            language="tsx"
-            showLineNumbers
-            wrapLongLines
-          />
           <Form layout="vertical" class="w-full max-w-xs">
             <FormItem label="无后缀图标">
               <ColorPicker
                 showSuffixIcon={false}
-                value={noSuffixHex.value}
+                value={noSuffixHex}
                 onInput={bindColorInput((v) => {
                   noSuffixHex.value = v;
                 })}
@@ -289,6 +275,16 @@ const hex = createSignal("#3b82f6");
               />
             </FormItem>
           </Form>
+          <CodeBlock
+            title="代码"
+            code={`<ColorPicker
+  showSuffixIcon={false}
+  value={hex}
+/>`}
+            language="tsx"
+            showLineNumbers
+            wrapLongLines
+          />
         </div>
 
         <div class="space-y-4">
@@ -300,23 +296,11 @@ const hex = createSignal("#3b82f6");
             <code class="text-xs">max-w-*</code> /{" "}
             <code class="text-xs">w-*</code> 可收窄触发条。
           </Paragraph>
-          <CodeBlock
-            title="代码"
-            code={`<ColorPicker
-  class="max-w-[200px]"
-  value={hex.value}
-  onInput={(e) => { hex.value = (e.target as HTMLInputElement).value; }}
-  onChange={(e) => { hex.value = (e.target as HTMLInputElement).value; }}
-/>`}
-            language="tsx"
-            showLineNumbers
-            wrapLongLines
-          />
           <Form layout="vertical" class="w-full max-w-xs">
             <FormItem label="最大宽度 200px">
               <ColorPicker
                 class="max-w-[200px]"
-                value={narrowHex.value}
+                value={narrowHex}
                 onInput={bindColorInput((v) => {
                   narrowHex.value = v;
                 })}
@@ -326,29 +310,27 @@ const hex = createSignal("#3b82f6");
               />
             </FormItem>
           </Form>
+          <CodeBlock
+            title="代码"
+            code={`<ColorPicker
+  class="max-w-[200px]"
+  value={hex}
+/>`}
+            language="tsx"
+            showLineNumbers
+            wrapLongLines
+          />
         </div>
 
         <div class="space-y-4">
           <Title level={3}>
             <code class="text-base">disabled</code>
           </Title>
-          <CodeBlock
-            title="代码"
-            code={`<ColorPicker
-  disabled
-  value={hex.value}
-  onInput={(e) => { hex.value = (e.target as HTMLInputElement).value; }}
-  onChange={(e) => { hex.value = (e.target as HTMLInputElement).value; }}
-/>`}
-            language="tsx"
-            showLineNumbers
-            wrapLongLines
-          />
           <Form layout="vertical" class="w-full max-w-xs">
             <FormItem label="禁用">
               <ColorPicker
                 disabled
-                value={disabledHex.value}
+                value={disabledHex}
                 onInput={bindColorInput((v) => {
                   disabledHex.value = v;
                 })}
@@ -358,29 +340,27 @@ const hex = createSignal("#3b82f6");
               />
             </FormItem>
           </Form>
+          <CodeBlock
+            title="代码"
+            code={`<ColorPicker
+  disabled
+  value={hex}
+/>`}
+            language="tsx"
+            showLineNumbers
+            wrapLongLines
+          />
         </div>
 
         <div class="space-y-4">
           <Title level={3}>
             <code class="text-base">hideFocusRing</code> 无聚焦蓝环
           </Title>
-          <CodeBlock
-            title="代码"
-            code={`<ColorPicker
-  hideFocusRing
-  value={hex.value}
-  onInput={(e) => { hex.value = (e.target as HTMLInputElement).value; }}
-  onChange={(e) => { hex.value = (e.target as HTMLInputElement).value; }}
-/>`}
-            language="tsx"
-            showLineNumbers
-            wrapLongLines
-          />
           <Form layout="vertical" class="w-full max-w-xs">
             <FormItem label="隐藏 focus ring">
               <ColorPicker
                 hideFocusRing
-                value={hideRingHex.value}
+                value={hideRingHex}
                 onInput={bindColorInput((v) => {
                   hideRingHex.value = v;
                 })}
@@ -390,6 +370,16 @@ const hex = createSignal("#3b82f6");
               />
             </FormItem>
           </Form>
+          <CodeBlock
+            title="代码"
+            code={`<ColorPicker
+  hideFocusRing
+  value={hex}
+/>`}
+            language="tsx"
+            showLineNumbers
+            wrapLongLines
+          />
         </div>
 
         <div class="space-y-4">
@@ -397,19 +387,6 @@ const hex = createSignal("#3b82f6");
             组合：<code class="text-base">swatch</code> +{" "}
             <code class="text-base">showToolbar</code>
           </Title>
-          <CodeBlock
-            title="代码"
-            code={`<ColorPicker
-  variant="swatch"
-  showToolbar
-  value={hex.value}
-  onInput={(e) => { hex.value = (e.target as HTMLInputElement).value; }}
-  onChange={(e) => { hex.value = (e.target as HTMLInputElement).value; }}
-/>`}
-            language="tsx"
-            showLineNumbers
-            wrapLongLines
-          />
           <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
             小触发器打开后仍可在面板内使用顶栏取色与说明。
           </Paragraph>
@@ -418,7 +395,7 @@ const hex = createSignal("#3b82f6");
               <ColorPicker
                 variant="swatch"
                 showToolbar
-                value={comboHex.value}
+                value={comboHex}
                 onInput={bindColorInput((v) => {
                   comboHex.value = v;
                 })}
@@ -428,6 +405,17 @@ const hex = createSignal("#3b82f6");
               />
             </FormItem>
           </Form>
+          <CodeBlock
+            title="代码"
+            code={`<ColorPicker
+  variant="swatch"
+  showToolbar
+  value={hex}
+/>`}
+            language="tsx"
+            showLineNumbers
+            wrapLongLines
+          />
         </div>
       </section>
 

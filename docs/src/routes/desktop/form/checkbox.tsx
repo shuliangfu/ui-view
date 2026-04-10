@@ -50,7 +50,7 @@ const CHECKBOX_API: ApiRow[] = [
     name: "onChange",
     type: "(e: Event) => void",
     default: "-",
-    description: "变更回调",
+    description: "可选。`checked` 为 Signal 时组件已回写；需副作用时再传",
   },
   {
     name: "onBlur",
@@ -104,12 +104,7 @@ import { createSignal } from "@dreamer/view";
 
 const checked = createSignal(false);
 <FormItem label="勾选">
-  <Checkbox
-    checked={checked.value}
-    onChange={(e) => checked.value = (e.target as HTMLInputElement).checked}
-  >
-    勾选我
-  </Checkbox>
+  <Checkbox checked={checked}>勾选我</Checkbox>
 </FormItem>`;
 
 export default function FormCheckbox() {
@@ -121,8 +116,11 @@ export default function FormCheckbox() {
         <Title level={1}>Checkbox 复选框</Title>
         <Paragraph class="mt-2">
           勾选框，支持
-          checked、disabled、error、name、value、id、onChange、children。Tailwind
-          v4 + light/dark。
+          checked、disabled、error、name、value、id、onChange、children。动态选中态请传
+          {" "}
+          <code class="text-sm">checked=&#123;createSignal(...)&#125;</code>
+          ，勿绑 <code class="text-sm">sig.value</code>{" "}
+          快照。Tailwind v4 + light/dark。
         </Paragraph>
       </section>
 
@@ -144,22 +142,11 @@ export default function FormCheckbox() {
           <section class="space-y-4">
             <Title level={3}>基础</Title>
             <FormItem label="勾选">
-              <Checkbox
-                checked={checked.value}
-                onChange={(e) =>
-                  checked.value = (e.target as HTMLInputElement).checked}
-              >
-                勾选我
-              </Checkbox>
+              <Checkbox checked={checked}>勾选我</Checkbox>
             </FormItem>
             <CodeBlock
               title="代码示例"
-              code={`<Checkbox
-  checked={checked.value}
-  onChange={(e) => checked.value = (e.target as HTMLInputElement).checked}
->
-  勾选我
-</Checkbox>`}
+              code={`<Checkbox checked={checked}>勾选我</Checkbox>`}
               language="tsx"
               showLineNumbers
               copyable
@@ -207,9 +194,7 @@ export default function FormCheckbox() {
                 name="agree"
                 value="yes"
                 id="input-agree"
-                checked={checked.value}
-                onChange={(e) =>
-                  checked.value = (e.target as HTMLInputElement).checked}
+                checked={checked}
               >
                 同意协议
               </Checkbox>
@@ -220,8 +205,7 @@ export default function FormCheckbox() {
   name="agree"
   value="yes"
   id="input-agree"
-  checked={checked.value}
-  onChange={...}
+  checked={checked}
 >
   同意协议
 </Checkbox>`}

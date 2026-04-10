@@ -464,17 +464,23 @@ export function Affix(props: AffixProps) {
     hostEl.value = next;
   };
 
-  return () => (
+  /**
+   * 根 `div` 直接返回；**勿**再包一层 `return () => …`：
+   * 否则父级 `insert` 展平时会订阅 `affixed`，重跑后 `cleanNode` 销毁组件子树，再次执行 `Affix()` 会重新 `createSignal`，固钉态被清空（表现为始终钉不住视口顶）。
+   * 对 `affixed` / `placeholderHeight` 的读取放在 **children 函数**内，由子级 `insert` 单独挂 effect（与 Menu/Pagination 一致）。
+   */
+  return (
     <div ref={setHostRef} class={twMerge("w-full min-w-0", className ?? "")}>
-      {affixed.value
-        ? (
-          <div
-            class="w-full box-border"
-            style={{ minHeight: `${placeholderHeight.value}px` }}
-            aria-hidden="true"
-          />
-        )
-        : children}
+      {() =>
+        affixed.value
+          ? (
+            <div
+              class="w-full box-border"
+              style={{ minHeight: `${placeholderHeight.value}px` }}
+              aria-hidden="true"
+            />
+          )
+          : children}
     </div>
   );
 }
