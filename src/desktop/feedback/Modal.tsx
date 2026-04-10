@@ -21,29 +21,23 @@
 import {
   createEffect,
   createMemo,
+  createPortal,
   createRenderEffect,
   createSignal,
   onCleanup,
-  type Signal,
 } from "@dreamer/view";
-
-/** 判断是否为 `createSignal` 返回的、可读 `.value` 的访问器 */
-function isViewSignal(v: unknown): v is Signal<unknown> {
-  if (typeof v !== "function") return false;
-  // Signal 为函数形态，与 Record 无直接重叠，经 unknown 再收窄以满足 TS2352
-  const f = v as unknown as Record<PropertyKey, unknown>;
-  return f.__VIEW_SIGNAL === true &&
-    Object.prototype.hasOwnProperty.call(f, "value");
-}
-import { createPortal } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
+import {
+  type ControlledOpenInput,
+  readControlledOpenInput,
+} from "../../shared/feedback/controlled-open.ts";
 /** 按需：单文件图标，避免经 icons/mod 拉入全表 */
 import { IconClose } from "../../shared/basic/icons/Close.tsx";
 import { IconExitFullscreen } from "../../shared/basic/icons/ExitFullscreen.tsx";
 import { IconMaximize2 } from "../../shared/basic/icons/Maximize2.tsx";
 
 /** `open` 合法形态：布尔快照、`createSignal` 容器，或返回 boolean 的零参 getter（嵌套 state 用 getter）。 */
-export type ModalOpenInput = boolean | (() => boolean) | Signal<boolean>;
+export type ModalOpenInput = ControlledOpenInput;
 
 /** 标题栏主文案相对弹层的水平对齐（右侧关闭/全屏仍贴右） */
 export type ModalTitleAlign = "left" | "center";
@@ -135,23 +129,6 @@ const WIDTH_PRESETS: Record<string, string> = {
   lg: "800px",
   xl: "960px",
 };
-
-/**
- * 将 `open` prop 规范为 boolean；在 {@link createMemo} 内调用以订阅 `Signal` / 零参 getter。
- *
- * @param v - `ModalProps.open`
- * @returns 当前是否视为打开
- */
-function readModalOpenInput(v: ModalOpenInput | undefined): boolean {
-  if (v === undefined) return false;
-  if (isViewSignal(v)) return !!v.value;
-  if (typeof v === "function") {
-    /** 仅零参 getter；带参函数勿当作 `open`，避免误传事件处理函数被当成恒真 */
-    if ((v as () => unknown).length !== 0) return false;
-    return !!(v as () => boolean)();
-  }
-  return !!v;
-}
 
 /**
  * 解析 `width`：支持快照或零参 getter；getter 返回 `undefined` 时用默认宽度。
@@ -317,7 +294,7 @@ export function Modal(props: ModalProps) {
   /**
    * 在组件内订阅 `open`（`Signal` / getter），避免 Hybrid 下父级未重跑时 `open={sig.value}` 卡在首帧。
    */
-  const isOpen = createMemo(() => readModalOpenInput(props.open));
+  const isOpen = createMemo(() => readControlledOpenInput(props.open));
 
   /**
    * 与 `open` 同向：`width`/`title`/`children` 在 {@link buildModalMarkup} 内通过 memo 读取，
@@ -595,7 +572,7 @@ export function Modal(props: ModalProps) {
    */
   const hostSync = getBrowserBodyPortalHost();
   if (hostSync != null) {
-    if (destroyOnClose && !readModalOpenInput(props.open)) {
+    if (destroyOnClose && !readControlledOpenInput(props.open)) {
       return null;
     }
     return (
@@ -606,7 +583,7 @@ export function Modal(props: ModalProps) {
       />
     );
   }
-  if (!readModalOpenInput(props.open)) {
+  if (!readControlledOpenInput(props.open)) {
     return null;
   }
   trySetDocumentBodyOverflow("hidden");

@@ -24,9 +24,10 @@ interface ApiRow {
 const MENTIONS_API: ApiRow[] = [
   {
     name: "value",
-    type: "string | (() => string)",
+    type: "string | (() => string) | Signal<string>",
     default: "-",
-    description: "当前文本；可为 getter",
+    description:
+      "当前文本。与全库表单一致为 MaybeSignal：字面量、`() => T`、`createSignal` 返回值；勿直接绑 `sig.value`（快照失步或误订阅）。",
   },
   {
     name: "onInput",
@@ -133,9 +134,8 @@ const opts = createSignal<MentionOption[]>([]);
 // onInput 里根据 @ 后的关键词过滤 options 并 showDropdown.value = true、opts.value = ...
 // onSelectOption 里插入选中项文案并 showDropdown.value = false
 <Mentions
-  value={() => val.value}
+  value={val}
   onInput={handleInput}
-  onChange={(e) => val.value = (e.target as HTMLTextAreaElement).value}
   showDropdown={() => showDropdown.value}
   dropdownOptions={() => opts.value}
   onSelectOption={handleSelect}
@@ -212,10 +212,8 @@ export default function FormMentions() {
             <Title level={3}>带候选下拉（输入 @ 触发）</Title>
             <FormItem label="提及">
               <Mentions
-                value={() => val.value}
+                value={val}
                 onInput={handleInput}
-                onChange={(e) =>
-                  val.value = (e.target as HTMLTextAreaElement).value}
                 placeholder="输入 @ 提及"
                 showDropdown={() => showDropdown.value}
                 dropdownOptions={() => options.value}
@@ -225,7 +223,7 @@ export default function FormMentions() {
             <CodeBlock
               title="代码示例"
               code={`<Mentions
-  value={() => val.value}
+  value={val}
   onInput={handleInput}
   showDropdown={() => showDropdown.value}
   dropdownOptions={() => options.value}
@@ -242,9 +240,7 @@ export default function FormMentions() {
             <Title level={3}>有默认值 / 无候选（仅多行输入）</Title>
             <FormItem label="仅输入">
               <Mentions
-                value={() => val2.value}
-                onChange={(e) =>
-                  val2.value = (e.target as HTMLTextAreaElement).value}
+                value={val2}
                 placeholder="无 @ 候选时就是普通 textarea"
                 rows={4}
               />
@@ -252,7 +248,7 @@ export default function FormMentions() {
             <CodeBlock
               title="代码示例"
               code={`<Mentions
-  value={() => val2.value}
+  value={val2}
   onChange={...}
   rows={4}
 />`}

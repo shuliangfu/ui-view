@@ -11,7 +11,9 @@ import {
   createRef,
   createRenderEffect,
   createSignal,
+  isSignal,
   onMount,
+  type Signal,
 } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import { parse } from "@dreamer/markdown";
@@ -25,15 +27,17 @@ import {
 import {
   ensureMarkdownPreviewPrismStyles,
   highlightMarkdownPreviewCodeBlocks,
+  isMarkdownPreviewDomHost,
   wrapMarkdownPreviewCodeBlocks,
 } from "./markdown-preview-prism.ts";
+import { commitMaybeSignal, type MaybeSignal } from "./maybe-signal.ts";
 
 /** 预览展示方式 */
 export type MarkdownEditorPreviewMode = "off" | "split" | "tabs";
 
 export interface MarkdownEditorProps {
-  /** Markdown 源码；可为 getter 以配合 signal，避免整块重挂载导致失焦 */
-  value?: string | (() => string);
+  /** Markdown 源码；见 {@link MaybeSignal} */
+  value?: MaybeSignal<string>;
   /** 占位文案 */
   placeholder?: string;
   /** 是否禁用 */
@@ -104,6 +108,44 @@ const mdToolbarSvgCls = "size-4 shrink-0";
 
 /** 无 `id` 时根节点 `id` 的后备序号（避免多实例冲突） */
 let mdEditorRootSeq = 0;
+
+/**
+ * 源码/预览顶栏切换态：dweb 等场景下父级 getter 重跑会再次执行 `MarkdownEditor()`，若每次 `createSignal('edit')` 会换新实例，
+ * 点击改的是旧 signal、新 DOM 仍订阅新 signal → tabs 切换「无反应」。与 Upload 的 storageKey 思路一致，按 `id` 或受控 `value` 的 Signal 复用。
+ */
+const mdEditorActiveTabById = new Map<string, Signal<"edit" | "preview">>();
+const mdEditorActiveTabByValueSignal = new WeakMap<
+  object,
+  Signal<"edit" | "preview">
+>();
+
+/**
+ * 获取或创建与当前编辑器实例对齐的 `activeTab` signal。
+ *
+ * @param props - 仅需 `id` 与 `value`（须在解构前传入完整 props）
+ */
+function takeMarkdownEditorActiveTab(
+  props: Pick<MarkdownEditorProps, "id" | "value">,
+): Signal<"edit" | "preview"> {
+  const trimmedId = props.id?.trim();
+  if (trimmedId) {
+    const k = `id:${trimmedId}`;
+    const hit = mdEditorActiveTabById.get(k);
+    if (hit) return hit;
+    const s = createSignal<"edit" | "preview">("edit");
+    mdEditorActiveTabById.set(k, s);
+    return s;
+  }
+  const v = props.value;
+  if (v !== undefined && isSignal(v)) {
+    const hit = mdEditorActiveTabByValueSignal.get(v as object);
+    if (hit) return hit;
+    const s = createSignal<"edit" | "preview">("edit");
+    mdEditorActiveTabByValueSignal.set(v as object, s);
+    return s;
+  }
+  return createSignal<"edit" | "preview">("edit");
+}
 
 /**
  * Markdown 工具栏悬停说明：全屏时抬高 Tooltip 层级；`placement="top"` 为产品约定（贴顶栏时向上弹出更顺）。
@@ -371,6 +413,8 @@ const MD_CHAR_COUNT_BADGE_CLS =
   "pointer-events-none absolute bottom-2 left-2 z-10 rounded border border-slate-200/80 bg-white/90 px-1.5 py-0.5 text-left text-xs text-slate-600 shadow-sm backdrop-blur-sm dark:border-slate-600/80 dark:bg-slate-950/90 dark:text-slate-400";
 
 export function MarkdownEditor(props: MarkdownEditorProps) {
+  /** 须在解构前取 props，保证 `id` / `value`（Signal）与文档实例稳定对齐 */
+  const activeTab = takeMarkdownEditorActiveTab(props);
   const {
     placeholder,
     disabled = false,
@@ -409,9 +453,6 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
   const previewRef = createRef<HTMLDivElement>(null);
   /** 有 `maxLength` 时字数徽标 DOM，仅用 `textContent` 更新，勿在 `return` 里读 `markdownSource` 绑定子节点文案（会整段重算导致 textarea 失焦） */
   const charCountRef = createRef<HTMLSpanElement>(null);
-  /** 单栏模式（tabs 或 split 窄屏）下当前可见：源码 / 预览 */
-  const activeTab = createSignal<"edit" | "preview">("edit");
-
   /**
    * 是否与 RichTextEditor 一致的 md 断点（≥768px）：`preview="split"` 时宽屏双栏、窄屏单栏切换；工具栏在宽屏仍显示全屏钮。
    */
@@ -452,17 +493,29 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
     return safeParseMarkdown(markdownSource(), mergedParseOptions());
   });
 
+  /**
+   * 将解析后的 HTML 写入预览容器。
+   * 组件首次执行时预览 div 尚未插入 DOM，`ref` 常在 effect 之后才赋值；若仅本轮读 `previewRef.current` 会一直是 null，
+   * 且受控初值未触发 memo 二次更新时 effect 不再跑 → 分栏预览永久空白。故同步尝试一次后再 `queueMicrotask` 补写。
+   *
+   * @param html - {@link safeParseMarkdown} 结果
+   */
+  const applyMarkdownPreviewHtml = (html: string) => {
+    const el = previewRef.current;
+    /** 开发服 / SSR 下 ref 偶为非 Element，避免写 innerHTML 与 Prism 遍历抛错 */
+    if (!isMarkdownPreviewDomHost(el)) return;
+    el.innerHTML = html;
+    // 围栏代码块：Prism 着色（需在 innerHTML 赋值之后执行）
+    ensureMarkdownPreviewPrismStyles(el);
+    highlightMarkdownPreviewCodeBlocks(el);
+    wrapMarkdownPreviewCodeBlocks(el);
+  };
+
   createRenderEffect(() => {
     if (preview === "off") return;
     const html = previewHtml();
-    const el = previewRef.current;
-    if (el != null) {
-      el.innerHTML = html;
-      // 围栏代码块：Prism 着色（需在 innerHTML 赋值之后执行）
-      ensureMarkdownPreviewPrismStyles(el);
-      highlightMarkdownPreviewCodeBlocks(el);
-      wrapMarkdownPreviewCodeBlocks(el);
-    }
+    applyMarkdownPreviewHtml(html);
+    queueMicrotask(() => applyMarkdownPreviewHtml(html));
   });
 
   /**
@@ -490,8 +543,22 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
     onInput?.(e);
     const t = e.target;
     if (t instanceof HTMLTextAreaElement) {
+      commitMaybeSignal(props.value, t.value);
       onMarkdownChange?.(t.value);
     }
+  };
+
+  /**
+   * 受控 `value` 为 Signal 时由组件写回，再调用外部 `onChange`。
+   *
+   * @param e - 原生 change 事件
+   */
+  const handleChange = (e: Event) => {
+    const t = e.target;
+    if (t instanceof HTMLTextAreaElement) {
+      commitMaybeSignal(props.value, t.value);
+    }
+    onChange?.(e);
   };
 
   /**
@@ -587,7 +654,7 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
           maxLength != null && "pb-9",
         )}
         onInput={handleInput}
-        onChange={onChange}
+        onChange={handleChange}
         onBlur={onBlur}
         onFocus={onFocus}
         onKeyDown={onKeyDown}
@@ -678,6 +745,11 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
             onMouseDown={(e: Event) => {
               const t = e.target;
               if (t instanceof Element && t.closest("select")) return;
+              /**
+               * 点在 `button` 上时不 `preventDefault`：与 RichTextEditor 一样用于避免 textarea 失焦，
+               * 但部分环境下会阻断后续 `click`，表现为 tabs/全屏钮点击无响应。
+               */
+              if (t instanceof Element && t.closest("button")) return;
               e.preventDefault();
             }}
           >
@@ -699,7 +771,6 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
                       disabled={disabled}
                       aria-label="Markdown 源码"
                       aria-pressed={tab === "edit"}
-                      onMouseDown={(e: Event) => e.preventDefault()}
                       onClick={() => {
                         activeTab.value = "edit";
                       }}
@@ -717,7 +788,6 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
                       disabled={disabled}
                       aria-label="Markdown 预览"
                       aria-pressed={tab === "preview"}
-                      onMouseDown={(e: Event) => e.preventDefault()}
                       onClick={() => {
                         activeTab.value = "preview";
                       }}
@@ -744,7 +814,6 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
                     )}
                     disabled={disabled}
                     aria-label={fs ? "退出全屏" : "全屏编辑"}
-                    onMouseDown={(e: Event) => e.preventDefault()}
                     onClick={toggleMdFullscreen}
                   >
                     <MdToolbarIconFullscreen exit={fs} />

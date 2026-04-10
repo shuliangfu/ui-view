@@ -83,6 +83,11 @@ export function Pagination(props: PaginationProps) {
   const activeCls =
     "border-blue-600 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 pointer-events-none";
 
+  /**
+   * 页码或每页条数变化时更新受控/非受控状态、可选 URL，并通知业务回调。
+   * @param page 目标页码（1-based）
+   * @param pageSize 若传入则同步每页条数（非受控时写入内部 Signal）
+   */
   const onChange = (page: number, pageSize?: number) => {
     if (props.current === undefined) internalCurrentRef.value = page;
     if (pageSize != null && props.pageSize === undefined) {
@@ -101,138 +106,160 @@ export function Pagination(props: PaginationProps) {
   };
 
   /**
-   * 渲染 getter：读受控 getter 或 `internalCurrentRef` / `internalPageSizeRef`。
+   * 根节点固定为 `<nav>`，**勿**再包一层 `return () => …` 作为组件返回值：
+   * 否则在父级 `insert` 展平 thunk 时，外层 effect 会订阅 `internalCurrentRef`，
+   * 重跑时 `cleanNode` 销毁组件 Owner，再次执行 `Pagination()` 会重新 `createSignal(defaultCurrent)`，页码永远回到默认页（表现为点击无反应）。
+   * 将读 Signal 的片段放在 `nav` 的 **children 函数**里，由子级 `insert` 单独挂 effect，与 DatePicker 等一致。
    */
-  return () => {
-    const { total, totalPages: totalPagesProp } = props;
-    const currentVal = props.current !== undefined
-      ? (typeof props.current === "function" ? props.current() : props.current)
-      : internalCurrentRef.value;
-    const pageSizeVal = props.pageSize !== undefined
-      ? ((typeof pageSizeProp === "function" ? pageSizeProp() : pageSizeProp) ??
-        defaultPageSize)
-      : internalPageSizeRef.value;
-    const {
-      totalPages,
-      safeCurrent,
-      from,
-      to,
-      canPrev,
-      canNext,
-      pages,
-    } = getPaginationState(
-      currentVal,
-      pageSizeVal,
-      total,
-      totalPagesProp,
-    );
+  return (
+    <nav
+      role="navigation"
+      aria-label="分页"
+      class={twMerge("flex items-center gap-1 flex-wrap", className)}
+    >
+      {() => {
+        const { total, totalPages: totalPagesProp } = props;
+        const currentVal = props.current !== undefined
+          ? (typeof props.current === "function"
+            ? props.current()
+            : props.current)
+          : internalCurrentRef.value;
+        const pageSizeVal = props.pageSize !== undefined
+          ? ((typeof pageSizeProp === "function"
+            ? pageSizeProp()
+            : pageSizeProp) ??
+            defaultPageSize)
+          : internalPageSizeRef.value;
+        const {
+          totalPages,
+          safeCurrent,
+          from,
+          to,
+          canPrev,
+          canNext,
+          pages,
+        } = getPaginationState(
+          currentVal,
+          pageSizeVal,
+          total,
+          totalPagesProp,
+        );
 
-    return (
-      <nav
-        role="navigation"
-        aria-label="分页"
-        class={twMerge("flex items-center gap-1 flex-wrap", className)}
-      >
-        {showTotal && total != null && (
-          <span class="mr-2 text-sm text-slate-600 dark:text-slate-400 shrink-0">
-            {typeof showTotal === "function"
-              ? showTotal(total, [from, to])
-              : `共 ${total} 条`}
-          </span>
-        )}
-        {showPrevNext && (
-          <button
-            type="button"
-            class={twMerge(btnCls, "shrink-0")}
-            disabled={disabled || !canPrev}
-            aria-label="上一页"
-            onClick={() => onChange(safeCurrent - 1)}
-          >
-            <IconChevronLeft class="w-4 h-4" />
-          </button>
-        )}
-        {showPageNumbers &&
-          pages.map((p, i) =>
-            p < 0
-              ? (
-                <span
-                  key={`ellipsis-${i}`}
-                  class="min-w-8 h-8 flex items-center justify-center text-slate-400"
-                >
-                  …
-                </span>
-              )
-              : (
-                <button
-                  key={p}
-                  type="button"
-                  class={twMerge(btnCls, safeCurrent === p && activeCls)}
-                  disabled={disabled}
-                  aria-label={`第 ${p} 页`}
-                  aria-current={safeCurrent === p ? "page" : undefined}
-                  onClick={() => onChange(p)}
-                >
-                  {p}
-                </button>
-              )
-          )}
-        {showPrevNext && (
-          <button
-            type="button"
-            class={twMerge(btnCls, "shrink-0")}
-            disabled={disabled || !canNext}
-            aria-label="下一页"
-            onClick={() => onChange(safeCurrent + 1)}
-          >
-            <IconChevronRight class="w-4 h-4" />
-          </button>
-        )}
-        {pageSizeOptions != null && pageSizeOptions.length > 0 &&
-          total != null &&
-          (
-            <span class="ml-2 inline-flex items-center gap-1 text-sm text-slate-600 dark:text-slate-400 shrink-0">
-              <select
-                class="h-8 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm"
-                value={String(pageSizeVal)}
-                onChange={(e: Event) => {
-                  const v = parseInt((e.target as HTMLSelectElement).value, 10);
-                  if (!Number.isNaN(v)) onChange(1, v);
-                }}
-                aria-label="每页条数"
+        return (
+          <>
+            {showTotal && total != null && (
+              <span class="mr-2 text-sm text-slate-600 dark:text-slate-400 shrink-0">
+                {typeof showTotal === "function"
+                  ? showTotal(total, [from, to])
+                  : `共 ${total} 条`}
+              </span>
+            )}
+            {showPrevNext && (
+              <button
+                type="button"
+                class={twMerge(btnCls, "shrink-0")}
+                disabled={disabled || !canPrev}
+                aria-label="上一页"
+                onClick={() => onChange(safeCurrent - 1)}
               >
-                {pageSizeOptions.map((n) => (
-                  <option key={n} value={n}>
-                    {n} 条/页
-                  </option>
-                ))}
-              </select>
-            </span>
-          )}
-        {showQuickJumper && (
-          <span class="ml-2 inline-flex items-center gap-1 text-sm text-slate-600 dark:text-slate-400">
-            跳至
-            <input
-              type="number"
-              min={1}
-              max={totalPages}
-              class="w-12 h-8 px-1 text-center rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm"
-              onBlur={(e: Event) => {
-                const v = parseInt((e.target as HTMLInputElement).value, 10);
-                if (!Number.isNaN(v) && v >= 1 && v <= totalPages) onChange(v);
-              }}
-              onKeyDown={(e: KeyboardEvent) => {
-                if (e.key === "Enter") {
-                  const v = parseInt((e.target as HTMLInputElement).value, 10);
-                  if (!Number.isNaN(v) && v >= 1 && v <= totalPages) {
-                    onChange(v);
-                  }
-                }
-              }}
-            />
-            页
-          </span>
-        )}
-      </nav>
-    );
-  };
+                <IconChevronLeft class="w-4 h-4" />
+              </button>
+            )}
+            {showPageNumbers &&
+              pages.map((p, i) =>
+                p < 0
+                  ? (
+                    <span
+                      key={`ellipsis-${i}`}
+                      class="min-w-8 h-8 flex items-center justify-center text-slate-400"
+                    >
+                      …
+                    </span>
+                  )
+                  : (
+                    <button
+                      key={p}
+                      type="button"
+                      class={twMerge(btnCls, safeCurrent === p && activeCls)}
+                      disabled={disabled}
+                      aria-label={`第 ${p} 页`}
+                      aria-current={safeCurrent === p ? "page" : undefined}
+                      onClick={() => onChange(p)}
+                    >
+                      {p}
+                    </button>
+                  )
+              )}
+            {showPrevNext && (
+              <button
+                type="button"
+                class={twMerge(btnCls, "shrink-0")}
+                disabled={disabled || !canNext}
+                aria-label="下一页"
+                onClick={() => onChange(safeCurrent + 1)}
+              >
+                <IconChevronRight class="w-4 h-4" />
+              </button>
+            )}
+            {pageSizeOptions != null && pageSizeOptions.length > 0 &&
+              total != null &&
+              (
+                <span class="ml-2 inline-flex items-center gap-1 text-sm text-slate-600 dark:text-slate-400 shrink-0">
+                  <select
+                    class="h-8 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm"
+                    value={String(pageSizeVal)}
+                    onChange={(e: Event) => {
+                      const v = parseInt(
+                        (e.target as HTMLSelectElement).value,
+                        10,
+                      );
+                      if (!Number.isNaN(v)) onChange(1, v);
+                    }}
+                    aria-label="每页条数"
+                  >
+                    {pageSizeOptions.map((n) => (
+                      <option key={n} value={n}>
+                        {n} 条/页
+                      </option>
+                    ))}
+                  </select>
+                </span>
+              )}
+            {showQuickJumper && (
+              <span class="ml-2 inline-flex items-center gap-1 text-sm text-slate-600 dark:text-slate-400">
+                跳至
+                <input
+                  type="number"
+                  min={1}
+                  max={totalPages}
+                  class="w-12 h-8 px-1 text-center rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm"
+                  onBlur={(e: Event) => {
+                    const v = parseInt(
+                      (e.target as HTMLInputElement).value,
+                      10,
+                    );
+                    if (!Number.isNaN(v) && v >= 1 && v <= totalPages) {
+                      onChange(v);
+                    }
+                  }}
+                  onKeyDown={(e: KeyboardEvent) => {
+                    if (e.key === "Enter") {
+                      const v = parseInt(
+                        (e.target as HTMLInputElement).value,
+                        10,
+                      );
+                      if (!Number.isNaN(v) && v >= 1 && v <= totalPages) {
+                        onChange(v);
+                      }
+                    }
+                  }}
+                />
+                页
+              </span>
+            )}
+          </>
+        );
+      }}
+    </nav>
+  );
 }

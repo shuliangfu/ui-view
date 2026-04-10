@@ -1,22 +1,25 @@
 /**
  * Switch 开关（View）。
  * 支持 disabled、checked，light/dark 主题；label + 隐藏 input + peer 样式。
+ * `checked` 为 `createSignal` 返回值时，变更会先写入 Signal，可不写 `onChange` 仅做同步。
  */
 
-import type { Signal } from "@dreamer/view";
+import { isSignal, type Signal } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
+import type { MaybeSignal } from "./maybe-signal.ts";
 
 export interface SwitchProps {
   /**
-   * 是否开启。支持：`boolean`、零参 getter、`createSignal` 的返回值（`Signal<boolean>`，可直接 `checked={sig}`）。
-   * 内部透传至原生 `input`，由 View 对 `checked` 做细粒度绑定。
+   * 是否开启；见 {@link MaybeSignal}（内部透传至原生 `input`，由 View 对 `checked` 做细粒度绑定）。
    */
-  checked?: boolean | (() => boolean) | Signal<boolean>;
+  checked?: MaybeSignal<boolean>;
   /** 是否禁用 */
   disabled?: boolean;
   /** 额外 class（作用于 label） */
   class?: string;
-  /** 变更回调 */
+  /**
+   * 变更回调。`checked` 为 Signal 时组件会先自动写入；仍可传以做其它副作用。
+   */
   onChange?: (e: Event) => void;
   /** 失焦回调 */
   onBlur?: (e: Event) => void;
@@ -52,11 +55,11 @@ const thumbCls =
 
 export function Switch(props: SwitchProps) {
   const {
-    checked = false,
+    checked: checkedMaybe,
     disabled = false,
     error = false,
     class: className,
-    onChange,
+    onChange: onChangeProp,
     onBlur,
     onFocus,
     onKeyDown,
@@ -69,6 +72,21 @@ export function Switch(props: SwitchProps) {
     unCheckedChildren,
     hideFocusRing = false,
   } = props;
+
+  /**
+   * 用户切换时：若 `checked` 为 Signal 则回写；再调用外部 `onChange`。
+   *
+   * @param e - 原生 change 事件
+   */
+  const handleChange = (e: Event) => {
+    const next = (e.target as HTMLInputElement).checked;
+    if (checkedMaybe !== undefined && isSignal(checkedMaybe)) {
+      (checkedMaybe as Signal<boolean>).value = next;
+    }
+    onChangeProp?.(e);
+  };
+
+  const checkedForInput = checkedMaybe === undefined ? false : checkedMaybe;
 
   const errorTrackCls = error
     ? "border-red-500 dark:border-red-500 peer-checked:border-red-500"
@@ -86,11 +104,11 @@ export function Switch(props: SwitchProps) {
         type="checkbox"
         id={id}
         name={name}
-        checked={checked}
+        checked={checkedForInput}
         disabled={disabled}
         aria-invalid={error}
         class="peer sr-only"
-        onChange={onChange}
+        onChange={handleChange}
         onBlur={onBlur}
         onFocus={onFocus}
         onKeyDown={onKeyDown}

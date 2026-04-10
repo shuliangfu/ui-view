@@ -123,6 +123,7 @@ const exampleDescription = `<Alert
 
 const exampleClosable = `import { createSignal } from "@dreamer/view";
 
+/** 若页面函数会因 data-view-dynamic 等重跑，勿在函数体内每次 new Signal；见文档页实现（模块级 visible）。 */
 const visible = createSignal(true);
 
 {visible.value && (
@@ -153,10 +154,14 @@ const exampleBanner = `<Alert
   banner
 />`;
 
-export default function FeedbackAlert() {
-  /** 可关闭示例：Alert 仅触发 onClose，是否隐藏由父级 signal 决定 */
-  const closableAlertVisible = createSignal(true);
+/**
+ * 「可关闭」演示用显隐状态：必须模块级。
+ * 页面组件若随父级 getter 重跑而再次执行，函数体内的 createSignal(true) 每次都是新实例，
+ * 关闭钮仍闭包旧 signal → 点击无视觉反馈；与 Upload / MarkdownEditor tabs 同类问题。
+ */
+const closableAlertDemoVisible = createSignal(true);
 
+export default function FeedbackAlert() {
   return (
     <div class="space-y-10">
       <section>
@@ -227,18 +232,20 @@ export default function FeedbackAlert() {
             <code class="rounded bg-slate-200/80 px-1 font-mono text-xs dark:bg-slate-600/80">
               createSignal
             </code>
-            ）控制是否继续渲染。
+            ）控制是否继续渲染。父级若会整页重跑，请把该 signal 放在
+            <strong class="font-medium">模块作用域</strong>
+            （勿在页面函数内每次新建），否则关闭只更新旧实例，界面不消失。
           </Paragraph>
           {/* 容器 w-full，与 Alert 默认 w-full 一致，占满文档内容区 */}
           <div class="flex w-full flex-wrap items-stretch gap-2">
-            {closableAlertVisible.value
+            {closableAlertDemoVisible.value
               ? (
                 <Alert
                   type="warning"
                   message="可关闭的提示"
                   closable
                   onClose={() => {
-                    closableAlertVisible.value = false;
+                    closableAlertDemoVisible.value = false;
                   }}
                 />
               )
@@ -247,7 +254,7 @@ export default function FeedbackAlert() {
                   type="button"
                   variant="default"
                   onClick={() => {
-                    closableAlertVisible.value = true;
+                    closableAlertDemoVisible.value = true;
                   }}
                 >
                   重新显示提示

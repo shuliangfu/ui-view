@@ -1,7 +1,8 @@
 /**
- * 移动端表单入口：逐项从本目录 `./*.tsx` 导出（含 shared 薄 re-export 与移动专有实现）。
- * TreeSelect 仅桌面提供，本目录无对应文件故不导出。
+ * 移动端表单入口：逐项从本目录 `./*.tsx` 导出；Select / MultiSelect 等与 DatePicker 相同经本目录薄文件再导出 {@link ../../shared/form}。
  */
+export type { MaybeSignal } from "../../shared/form/maybe-signal.ts";
+export { readMaybeSignal } from "../../shared/form/maybe-signal.ts";
 export { Input } from "./Input.tsx";
 export type { InputProps } from "./Input.tsx";
 export { Search } from "./Search.tsx";
@@ -86,14 +87,27 @@ export type {
 export { Transfer } from "./Transfer.tsx";
 export type { TransferItem, TransferProps } from "./Transfer.tsx";
 
-/** 移动专有选择器与日期（无 TreeSelect） */
 export { Select } from "./Select.tsx";
-export type { SelectOption, SelectProps } from "./Select.tsx";
+export type { SelectAppearance, SelectOption, SelectProps } from "./Select.tsx";
 export { MultiSelect } from "./MultiSelect.tsx";
-export type { MultiSelectOption, MultiSelectProps } from "./MultiSelect.tsx";
+export type {
+  MultiSelectAppearance,
+  MultiSelectOption,
+  MultiSelectProps,
+} from "./MultiSelect.tsx";
 export { Cascader } from "./Cascader.tsx";
-export type { CascaderOption, CascaderProps } from "./Cascader.tsx";
+export type {
+  CascaderAppearance,
+  CascaderOption,
+  CascaderProps,
+} from "./Cascader.tsx";
 export { DatePicker } from "./DatePicker.tsx";
 export type { DatePickerProps } from "./DatePicker.tsx";
 export { DateTimePicker } from "./DateTimePicker.tsx";
 export type { DateTimePickerProps } from "./DateTimePicker.tsx";
+export { TreeSelect } from "./TreeSelect.tsx";
+export type {
+  TreeSelectAppearance,
+  TreeSelectOption,
+  TreeSelectProps,
+} from "./TreeSelect.tsx";

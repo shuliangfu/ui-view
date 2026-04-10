@@ -4,14 +4,17 @@
  */
 
 import { twMerge } from "tailwind-merge";
+import { commitMaybeSignal, type MaybeSignal } from "./maybe-signal.ts";
 
 export interface RateProps {
   /** 星数，默认 5 */
   count?: number;
-  /** 当前分数，0～count */
-  /** 当前星级；可为 getter / `() => ref.value`（`Signal`） */
-  value?: number | (() => number);
-  /** 是否允许半星 */
+  /** 当前分数 0～count；见 {@link MaybeSignal} */
+  value?: MaybeSignal<number>;
+  /**
+   * 是否允许半星（分数可为 .5 步进，如 3.5）。
+   * 为 true 时：用鼠标点某颗星**左半边**选 `idx-0.5`、**右半边**选 `idx`；仅设 `value` 为 3.5 也会画出「半颗橙」。
+   */
   allowHalf?: boolean;
   /** 是否禁用 */
   disabled?: boolean;
@@ -23,6 +26,25 @@ export interface RateProps {
 
 const starCls = "size-6 text-slate-300 dark:text-slate-500 transition-colors";
 const starActiveCls = "text-amber-400 dark:text-amber-500";
+
+/**
+ * 根据指针在星上的水平位置得到应写入的分值（整星或半星）。
+ * 键盘等合成 click 常见 `offsetX === 0`，此时整星，避免误选半星。
+ */
+function scoreFromStarClick(
+  e: Event,
+  idx: number,
+  allowHalf: boolean,
+): number {
+  if (!allowHalf) return idx;
+  if (!(e instanceof MouseEvent)) return idx;
+  const el = e.currentTarget as HTMLElement;
+  const w = el.offsetWidth;
+  if (!(w > 0)) return idx;
+  const ox = e.offsetX;
+  if (ox <= 0) return idx;
+  return ox < w / 2 ? idx - 0.5 : idx;
+}
 
 export function Rate(props: RateProps) {
   const {
@@ -56,11 +78,20 @@ export function Rate(props: RateProps) {
           return (
             <span
               class="cursor-pointer"
-              onClick={() => !disabled && onChange?.(idx)}
+              onClick={(e: Event) => {
+                if (disabled) return;
+                const next = scoreFromStarClick(e, idx, allowHalf);
+                commitMaybeSignal(value, next);
+                onChange?.(next);
+              }}
               onKeyDown={(e: Event) => {
                 const ev = e as KeyboardEvent;
                 if (disabled) return;
-                if (ev.key === "Enter" || ev.key === " ") onChange?.(idx);
+                /** 键盘仅选整星，与鼠标左/右半边语义一致的可读默认 */
+                if (ev.key === "Enter" || ev.key === " ") {
+                  commitMaybeSignal(value, idx);
+                  onChange?.(idx);
+                }
               }}
               role="button"
               tabIndex={disabled ? -1 : 0}

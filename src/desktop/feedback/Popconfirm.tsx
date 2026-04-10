@@ -18,17 +18,10 @@
 import {
   createMemo,
   createRenderEffect,
+  isSignal,
   onCleanup,
   type Signal,
 } from "@dreamer/view";
-
-function isViewSignal(v: unknown): v is Signal<unknown> {
-  if (typeof v !== "function") return false;
-  // Signal 为函数形态，与 Record 无直接重叠，经 unknown 再收窄以满足 TS2352
-  const f = v as unknown as Record<PropertyKey, unknown>;
-  return f.__VIEW_SIGNAL === true &&
-    Object.prototype.hasOwnProperty.call(f, "value");
-}
 import { twMerge } from "tailwind-merge";
 import { Button } from "../../shared/basic/Button.tsx";
 /** 按需：单文件图标，避免经 icons/mod 拉入全表 */
@@ -137,7 +130,7 @@ function popconfirmArrowClass(placement: PopconfirmPlacement): string {
  */
 function readPopconfirmOpenInput(v: PopconfirmOpenInput | undefined): boolean {
   if (v === undefined) return false;
-  if (isViewSignal(v)) return !!v.value;
+  if (isSignal(v)) return !!(v as Signal<boolean>).value;
   if (typeof v === "function") {
     if ((v as () => unknown).length !== 0) return false;
     return !!(v as () => boolean)();
@@ -261,7 +254,7 @@ export function Popconfirm(props: PopconfirmProps) {
    */
   const requestClose = () => {
     const o = props.open;
-    if (isViewSignal(o)) o.value = false;
+    if (isSignal(o)) (o as Signal<boolean>).value = false;
     onOpenChange?.(false);
   };
 

@@ -17,15 +17,16 @@ interface ApiRow {
 const CALENDAR_API: ApiRow[] = [
   {
     name: "value",
-    type: "Date",
-    default: "-",
-    description: "当前选中日期（受控）",
+    type: "Date | () => Date | Signal<Date>",
+    default: "不传则非受控",
+    description:
+      "展示月；single 且无 selectedDate 时兼为选中日期。传 createSignal 返回值可在组件内回写，勿只传 sig.value 快照",
   },
   {
     name: "onChange",
     type: "(date: Date) => void",
     default: "-",
-    description: "日期变化回调",
+    description: "日期变化通知；value 为 Signal 时已内部赋值，可不写回调",
   },
   {
     name: "mode",
@@ -64,27 +65,13 @@ const importCode = `import { createSignal } from "@dreamer/view";
 import { Calendar } from "@dreamer/ui-view";
 
 const value = createSignal(new Date());
-<Calendar
-  value={value.value}
-  onChange={(d) => value.value = d}
-/>`;
+<Calendar value={value} />`;
 
-const exampleBasic = `<Calendar
-  value={value.value}
-  onChange={(d) => value.value = d}
-/>`;
+const exampleBasic = `<Calendar value={value} />`;
 
-const exampleModeYear = `<Calendar
-  value={value.value}
-  onChange={(d) => value.value = d}
-  mode="year"
-/>`;
+const exampleModeYear = `<Calendar value={value} mode="year" />`;
 
-const exampleFullscreen = `<Calendar
-  value={value.value}
-  onChange={(d) => value.value = d}
-  fullscreen
-/>`;
+const exampleFullscreen = `<Calendar value={value} fullscreen />`;
 
 export default function DataDisplayCalendar() {
   const value = createSignal(new Date());
@@ -95,7 +82,12 @@ export default function DataDisplayCalendar() {
         <Title level={1}>Calendar 日历</Title>
         <Paragraph class="mt-2">
           日历：value、onChange、mode、dateCellRender、monthCellRender、fullscreen、disabledDate、class。
-          使用 Tailwind v4，支持 light/dark 主题。
+          使用 Tailwind v4，支持 light/dark 主题。受控时请传{" "}
+          <code class="text-xs">value=&#123;signal&#125;</code> 或{" "}
+          <code class="text-xs">value=&#123;() =&gt; sig.value&#125;</code>
+          ，勿只传{" "}
+          <code class="text-xs">sig.value</code>；传 Signal
+          时选日由组件内回写，无需在 onChange 里赋值。
         </Paragraph>
       </section>
 
@@ -116,7 +108,7 @@ export default function DataDisplayCalendar() {
         <div class="space-y-4">
           <Title level={3}>基础选日</Title>
           <div class="w-full">
-            <Calendar value={value.value} onChange={(d) => value.value = d} />
+            <Calendar value={value} />
           </div>
           <CodeBlock
             title="代码示例"
@@ -131,11 +123,7 @@ export default function DataDisplayCalendar() {
         <div class="space-y-4">
           <Title level={3}>mode=year 年视图</Title>
           <div class="w-full">
-            <Calendar
-              value={value.value}
-              onChange={(d) => value.value = d}
-              mode="year"
-            />
+            <Calendar value={value} mode="year" />
           </div>
           <CodeBlock
             title="代码示例"
@@ -150,11 +138,7 @@ export default function DataDisplayCalendar() {
         <div class="space-y-4">
           <Title level={3}>fullscreen</Title>
           <div class="w-full min-h-[280px]">
-            <Calendar
-              value={value.value}
-              onChange={(d) => value.value = d}
-              fullscreen
-            />
+            <Calendar value={value} fullscreen />
           </div>
           <CodeBlock
             title="代码示例"

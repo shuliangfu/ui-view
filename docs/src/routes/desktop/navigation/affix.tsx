@@ -72,8 +72,10 @@ export default function NavigationAffix() {
         <Paragraph class="mt-2">
           固钉用于长页滚动时把工具条、筛选条等「钉」在视口顶部或底部。进入固钉态后，子节点通过
           {" "}
+          <code class="text-xs">@dreamer/view</code> 的{" "}
           <code class="text-xs">createPortal</code>
-          挂到 <code class="text-xs">body</code>
+          （与声明式 <code class="text-xs">&lt;Portal&gt;</code> 互补）挂到{" "}
+          <code class="text-xs">body</code>
           ，避免被父级 <code class="text-xs">overflow</code>
           裁切；原位保留占位高度。组件内部会监听滚动（默认向上查找纵向可滚动祖先，否则
           {" "}

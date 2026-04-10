@@ -29,15 +29,16 @@ const CHECKBOX_GROUP_API: ApiRow[] = [
   },
   {
     name: "value",
-    type: "string[] | (() => string[])",
+    type: "string[] | (() => string[]) | Signal<string[]>",
     default: "-",
-    description: "当前选中值数组；可为 getter",
+    description:
+      "当前选中项 value 数组。与全库表单一致为 MaybeSignal：字面量、`() => T`、`createSignal` 返回值；勿直接绑 `sig.value`（快照失步或误订阅）。",
   },
   {
     name: "onChange",
     type: "(value: string[]) => void",
     default: "-",
-    description: "变更回调",
+    description: "可选。`value` 为 Signal 时组件已回写；需副作用时再传",
   },
   {
     name: "name",
@@ -76,8 +77,7 @@ const val = createSignal<string[]>([]);
 <FormItem label="多选组">
   <CheckboxGroup
     options={options}
-    value={() => val.value}
-    onChange={(v) => val.value = v}
+    value={val}
   />
 </FormItem>`;
 
@@ -116,16 +116,14 @@ export default function FormCheckboxGroup() {
             <FormItem label="多选组">
               <CheckboxGroup
                 options={options}
-                value={() => val.value}
-                onChange={(v) => val.value = v}
+                value={val}
               />
             </FormItem>
             <CodeBlock
               title="代码示例"
               code={`<CheckboxGroup
   options={options}
-  value={() => val.value}
-  onChange={(v) => val.value = v}
+  value={val}
 />`}
               language="tsx"
               showLineNumbers
@@ -139,16 +137,14 @@ export default function FormCheckboxGroup() {
             <FormItem label="选项 Z 为 disabled">
               <CheckboxGroup
                 options={options}
-                value={() => val2.value}
-                onChange={(v) => val2.value = v}
+                value={val2}
               />
             </FormItem>
             <CodeBlock
               title="代码示例"
               code={`<CheckboxGroup
   options={options}
-  value={() => val2.value}
-  onChange={(v) => val2.value = v}
+  value={val2}
 />`}
               language="tsx"
               showLineNumbers
@@ -162,8 +158,7 @@ export default function FormCheckboxGroup() {
             <FormItem label="横向多选组">
               <CheckboxGroup
                 options={options}
-                value={() => val2.value}
-                onChange={(v) => val2.value = v}
+                value={val2}
                 direction="horizontal"
               />
             </FormItem>
@@ -171,8 +166,7 @@ export default function FormCheckboxGroup() {
               title="代码示例"
               code={`<CheckboxGroup
   options={options}
-  value={() => val2.value}
-  onChange={(v) => val2.value = v}
+  value={val2}
   direction="horizontal"
 />`}
               language="tsx"
@@ -189,8 +183,7 @@ export default function FormCheckboxGroup() {
             <FormItem label="纵向紧排多选组">
               <CheckboxGroup
                 options={options}
-                value={() => val2.value}
-                onChange={(v) => val2.value = v}
+                value={val2}
                 direction="vertical"
                 class="gap-1"
               />
@@ -199,8 +192,7 @@ export default function FormCheckboxGroup() {
               title="代码示例"
               code={`<CheckboxGroup
   options={options}
-  value={() => val2.value}
-  onChange={(v) => val2.value = v}
+  value={val2}
   direction="vertical"
   class="gap-1"
 />`}

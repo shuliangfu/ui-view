@@ -8,6 +8,7 @@ import {
   Form,
   FormItem,
   FormList,
+  type FormListRenderRowContext,
   Input,
   Link,
   Paragraph,
@@ -93,6 +94,76 @@ const FORM_LIST_API: FormDocsApiRow[] = [
   },
 ];
 
+/**
+ * FormList 动态行示例的状态。
+ *
+ * 须放在模块级：View 文档页在依赖（如本 signal）变化时会重新执行整页组件函数；
+ * 若把 createSignal 写在组件体内，每次重跑都会新建信号并回到初始值，增删行会「无效」。
+ */
+const formListRowValues = createSignal<string[]>(["", ""]);
+
+/**
+ * 仅表示行数，只在增删行时更新。
+ *
+ * 勿用 `items={rowValues.value.length}`：在父组件 JSX 里读 `rowValues.value` 会订阅整份数组，
+ * 每次按键都会触发整页重跑；@dreamer/view 对「数组子节点」会整段替换 DOM，导致 Input 失焦。
+ * 行内文案仍由 {@link formListRowValues} 驱动，Input 的 `value={() => …}` 单独细粒度订阅即可。
+ */
+const formListLength = createSignal(formListRowValues.value.length);
+
+/**
+ * FormList 示例：添加一行（同步长度信号与数组）。
+ */
+function formListDocOnAdd(): void {
+  formListRowValues.value = [...formListRowValues.value, ""];
+  formListLength.value = formListRowValues.value.length;
+}
+
+/**
+ * FormList 示例：删除一行（同步长度信号与数组）。
+ *
+ * @param index - 要删除的行索引
+ */
+function formListDocOnRemove(index: number): void {
+  formListRowValues.value = formListRowValues.value.filter((_, j) =>
+    j !== index
+  );
+  formListLength.value = formListRowValues.value.length;
+}
+
+/**
+ * FormList 文档示例的 `renderRow`：须为**模块级稳定函数引用**。
+ * 若写在页面组件内的内联箭头函数，每次父级重渲染会换函数引用，易加剧子树协调成本。
+ *
+ * @param index - 行索引
+ * @param ctx - FormList 注入的上下文（含与输入同行的删除按钮）
+ */
+function renderFormListDocRow(
+  index: number,
+  ctx: FormListRenderRowContext,
+): unknown {
+  const { removeButton } = ctx;
+  return (
+    <FormItem
+      label={`条目 ${index + 1}`}
+      id={`form-list-row-${index}`}
+      trailing={removeButton}
+    >
+      <Input
+        id={`form-list-row-${index}`}
+        placeholder={`第 ${index + 1} 行`}
+        value={() => formListRowValues.value[index] ?? ""}
+        onInput={(e) => {
+          const v = (e.target as HTMLInputElement).value;
+          const next = [...formListRowValues.value];
+          next[index] = v;
+          formListRowValues.value = next;
+        }}
+      />
+    </FormItem>
+  );
+}
+
 const importCode =
   `import { Form, FormItem, FormList, Input } from "@dreamer/ui-view";
 import { createSignal } from "@dreamer/view";
@@ -101,7 +172,7 @@ const rowValues = createSignal<string[]>([""]);
 
 <Form layout="vertical" onSubmit={(e) => { /* 处理提交 */ }}>
   <FormItem label="名称" id="name">
-    <Input id="name" value={() => val.value} onInput={...} />
+    <Input id="name" value={val} onInput={...} />
   </FormItem>
 </Form>`;
 
@@ -157,10 +228,6 @@ function ApiTable({ rows }: { rows: FormDocsApiRow[] }) {
 }
 
 export default function FormContainersDoc() {
-  /** 动态列表每行输入值，长度即 FormList 行数 */
-  const rowValues = createSignal<string[]>(["", ""]);
-
-  /** 根用渲染 getter，读取 rowValues 以便增删行后 FormList 行数更新 */
   return (
     <div class="space-y-10 w-full">
       <section>
@@ -294,53 +361,42 @@ export default function FormContainersDoc() {
               (parent) ={">"} void
             </code>
             ，若把按行回调写在子节点里会被当成父节点调用，行内表单不显示。
+            <strong class="font-medium text-slate-800 dark:text-slate-200">
+              {" "}
+              勿在父级 JSX 里写{" "}
+            </strong>
+            <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">
+              items={"{"}rowValues.value.length{"}"}
+            </code>
+            ：会订阅整份数组，每次输入都整页重跑，列表 DOM
+            整块重建导致失焦；请用仅在增删时更新的 行数 signal（见下方示例）。
           </Paragraph>
           <Form layout="vertical" class="w-full max-w-xl">
             <FormList
-              items={rowValues.value.length}
-              onAdd={() => {
-                rowValues.value = [...rowValues.value, ""];
-              }}
-              onRemove={(index) => {
-                rowValues.value = rowValues.value.filter((_, j) => j !== index);
-              }}
+              items={formListLength.value}
+              onAdd={formListDocOnAdd}
+              onRemove={formListDocOnRemove}
               addButtonText="添加一行"
-              renderRow={(index: number, { removeButton }) => (
-                <FormItem
-                  label={`条目 ${index + 1}`}
-                  id={`form-list-row-${index}`}
-                  trailing={removeButton}
-                >
-                  <Input
-                    id={`form-list-row-${index}`}
-                    placeholder={`第 ${index + 1} 行`}
-                    value={() => rowValues.value[index] ?? ""}
-                    onInput={(e) => {
-                      const v = (e.target as HTMLInputElement).value;
-                      const next = [...rowValues.value];
-                      next[index] = v;
-                      rowValues.value = next;
-                    }}
-                  />
-                </FormItem>
-              )}
+              renderRow={renderFormListDocRow}
             />
           </Form>
           <CodeBlock
-            code={`const rowValues = createSignal<string[]>(["", ""]);
+            code={`// 模块级 createSignal；行数单独 signal，避免 items={rowValues.value.length} 订阅整表、输入失焦
+const rowValues = createSignal<string[]>(["", ""]);
+const rowCount = createSignal(rowValues.value.length);
 
-<FormList
-  items={rowValues.value.length}
-  onAdd={() => { rowValues.value = [...rowValues.value, ""]; }}
-  onRemove={(i) => {
-    rowValues.value = rowValues.value.filter((_, j) => j !== i);
-  }}
-  renderRow={(index, { removeButton }) => (
-    <FormItem
-      label={\`条目 \${index + 1}\`}
-      id={\`row-\${index}\`}
-      trailing={removeButton}
-    >
+function onAdd() {
+  rowValues.value = [...rowValues.value, ""];
+  rowCount.value = rowValues.value.length;
+}
+function onRemove(i: number) {
+  rowValues.value = rowValues.value.filter((_, j) => j !== i);
+  rowCount.value = rowValues.value.length;
+}
+
+function renderRow(index: number, { removeButton }: { removeButton: unknown }) {
+  return (
+    <FormItem label={\`条目 \${index + 1}\`} id={\`row-\${index}\`} trailing={removeButton}>
       <Input
         id={\`row-\${index}\`}
         value={() => rowValues.value[index] ?? ""}
@@ -351,7 +407,14 @@ export default function FormContainersDoc() {
         }}
       />
     </FormItem>
-  )}
+  );
+}
+
+<FormList
+  items={rowCount.value}
+  onAdd={onAdd}
+  onRemove={onRemove}
+  renderRow={renderRow}
 />`}
             language="tsx"
             showLineNumbers

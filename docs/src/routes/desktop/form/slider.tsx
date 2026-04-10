@@ -11,7 +11,7 @@ import {
   Slider,
   Title,
 } from "@dreamer/ui-view";
-import { createEffect, createRef, createSignal } from "@dreamer/view";
+import { createSignal } from "@dreamer/view";
 
 interface ApiRow {
   name: string;
@@ -23,9 +23,11 @@ interface ApiRow {
 const SLIDER_API: ApiRow[] = [
   {
     name: "value",
-    type: "number | (() => number) | [number, number]",
+    type:
+      "number | [number, number] | (() => number | [number, number]) | Signal<number | [number, number]>",
     default: "-",
-    description: "单值或 range 双值；可为 getter",
+    description:
+      "单滑块为 number，range 为 [min,max]。与全库表单一致为 MaybeSignal：字面量、`() => T`、`createSignal` 返回值；勿直接绑 `sig.value`（快照失步或误订阅）。",
   },
   { name: "min", type: "number", default: "0", description: "最小值" },
   { name: "max", type: "number", default: "100", description: "最大值" },
@@ -68,33 +70,16 @@ const SLIDER_API: ApiRow[] = [
 ];
 
 const importCode = `import { Slider, Form, FormItem } from "@dreamer/ui-view";
-import { createEffect, createRef, createSignal } from "@dreamer/view";
+import { createSignal } from "@dreamer/view";
 
-/** 仅提交值走 Signal 并绑 Slider；文案用 ref 写 DOM，拖动时不走模板插值 */
+/** 与 Slider 同一 Signal；组件在拖动时内部会 commit，首屏与拖动中文案都会更新 */
 const committed = createSignal(50);
-const hintRef = createRef<HTMLSpanElement>();
-createEffect(() => {
-  const el = hintRef.current;
-  if (el) el.textContent = \`当前值：\${committed()}\`;
-});
 <FormItem label="0–100">
   <div class="flex w-full min-w-0 flex-col gap-1">
-    <Slider
-      value={() => committed()}
-      min={0}
-      max={100}
-      onInput={(e) => {
-        const el = hintRef.current;
-        if (el) el.textContent = \`当前值：\${(e.target as HTMLInputElement).value}\`;
-      }}
-      onChange={(e) => {
-        committed.value = Number((e.target as HTMLInputElement).value);
-      }}
-    />
-    <span
-      ref={hintRef}
-      class="text-sm tabular-nums text-slate-600 dark:text-slate-400"
-    />
+    <Slider value={committed} min={0} max={100} />
+    <span class="text-sm tabular-nums text-slate-600 dark:text-slate-400">
+      {() => \`当前值：\${committed()}\`}
+    </span>
   </div>
 </FormItem>`;
 
@@ -102,67 +87,11 @@ createEffect(() => {
 const sliderValueHintCls =
   "text-sm tabular-nums text-slate-600 dark:text-slate-400";
 
-/** 单值行：仅改 DOM 文案 */
-function writeSingleValueHint(
-  el: HTMLElement | null | undefined,
-  v: number,
-): void {
-  if (el != null) el.textContent = `当前值：${v}`;
-}
-
-/** 竖排行：带「共用 Signal」说明 */
-function writeVerticalValueHint(
-  el: HTMLElement | null | undefined,
-  v: number,
-): void {
-  if (el != null) {
-    el.textContent = `当前值：${v}（与上方「单值」共用 Signal）`;
-  }
-}
-
-/** range 行文案 */
-function writeRangeValueHint(
-  el: HTMLElement | null | undefined,
-  a: number,
-  b: number,
-): void {
-  if (el != null) el.textContent = `当前范围：${a} – ${b}`;
-}
-
-/** step 示例文案 */
-function writeStepValueHint(
-  el: HTMLElement | null | undefined,
-  v: number,
-): void {
-  if (el != null) el.textContent = `当前值：${v}（步长 10）`;
-}
-
 export default function FormSlider() {
-  /** 仅提交值走 Signal；拖动中数字靠 ref 写 span，避免模板插值触发兄弟节点更新 */
+  /** 与 Slider 的 value 绑定同一 Signal；Slider 在 onInput 路径内会 commitMaybeSignal，首屏即有文案且拖动跟手 */
   const singleVal = createSignal(50);
   const rangeVal = createSignal<[number, number]>([20, 80]);
   const stepVal = createSignal(30);
-
-  const singleRowHintRef = createRef<HTMLSpanElement>();
-  const verticalRowHintRef = createRef<HTMLSpanElement>();
-  const rangeHintRef = createRef<HTMLSpanElement>();
-  const stepHintRef = createRef<HTMLSpanElement>();
-
-  /** Signal 变化时同步两处文案（含挂载后 ref 就绪） */
-  createEffect(() => {
-    const v = singleVal();
-    writeSingleValueHint(singleRowHintRef.current, v);
-    writeVerticalValueHint(verticalRowHintRef.current, v);
-  });
-
-  createEffect(() => {
-    const c = rangeVal();
-    writeRangeValueHint(rangeHintRef.current, c[0], c[1]);
-  });
-
-  createEffect(() => {
-    writeStepValueHint(stepHintRef.current, stepVal());
-  });
 
   return (
     <div class="space-y-10">
@@ -177,36 +106,34 @@ export default function FormSlider() {
           <strong>受控与拖动：</strong>
           本组件不在原生 <code class="text-xs">input</code> 上绑响应式{" "}
           <code class="text-xs">value</code>，而用 ref + effect
-          在非拖动时同步。<strong>不要</strong>在{" "}
-          <code class="text-xs">onInput</code> 里更新与 Slider{" "}
-          <code class="text-xs">value</code> 绑定的<strong>同一状态</strong>
-          ，否则易换掉 <code class="text-xs">input</code> 拖不动。
+          在非拖动时同步。拖动中由内部{" "}
+          <code class="text-xs">commitMaybeSignal</code> 更新你传入的{" "}
+          <code class="text-xs">value</code>{" "}
+          Signal，一般<strong>不必</strong>再在{" "}
+          <code class="text-xs">onInput</code> 里重复写入同一状态。<strong>
+            不要
+          </strong>在 <code class="text-xs">onChange</code>{" "}
+          里按帧更新父级（仅松手触发）；若用其它方式在拖动中频繁替换整段子树，仍可能换掉
+          {" "}
+          <code class="text-xs">input</code> 导致拖不动。
         </Paragraph>
         <Paragraph class="mt-2 text-sm text-slate-600 dark:text-slate-400">
-          <strong>响应式与 DOM：</strong>
-          任意 <code class="text-xs">Signal</code> 变化都会调度<strong>
-            依赖它的视图更新
-          </strong>
-          （理想情况下只更新对应文本或节点，不是整页）。但在模板里写{" "}
-          <code class="text-xs">{"{() => ...}"}</code>{" "}
-          绑定「拖动中的数字」时，每次变化仍会走视图层更新，DevTools
-          里常见父级、兄弟节点<strong>
-            高亮
-          </strong>，极端情况下可能影响滑块。本页示例用{" "}
-          <code class="text-xs">createSignal</code> 只存{" "}
-          <code class="text-xs">提交值</code>（供{" "}
-          <code class="text-xs">
-            value
-          </code>，仅 <code class="text-xs">onChange</code> 写），拖动中的读数用
+          <strong>响应式与读数：</strong>
+          下方「当前值 / 当前范围」与 <code class="text-xs">value</code>{" "}
+          使用<strong>同一</strong> <code class="text-xs">Signal</code>，文案用
           {" "}
-          <code class="text-xs">ref</code> +{" "}
+          <code class="text-xs">{"{() => `…${sig()}`}"}</code>{" "}
+          绑定即可：<code class="text-xs">Slider</code> 在拖动时会在内部{" "}
+          <code class="text-xs">commitMaybeSignal</code>{" "}
+          更新该值，故<strong>刷新后首屏即有文案</strong>，拖动中也同步。若需在
+          DevTools 里尽量减少兄弟节点高亮，可改用 ref +{" "}
+          <code class="text-xs">textContent</code>，但须在 ref
+          挂载后另行同步（勿仅依赖首次{" "}
+          <code class="text-xs">createEffect</code>，否则首帧{" "}
           <code class="text-xs">
-            textContent
+            ref.current
           </code>{" "}
-          在 <code class="text-xs">onInput</code> 更新——<strong>
-            不经过
-          </strong>{" "}
-          另一份响应式展示字段，可与 input 最大程度隔离。
+          可能仍为 null）。
         </Paragraph>
         <Paragraph class="mt-2 text-sm text-slate-600 dark:text-slate-400">
           <strong>range 双滑块：</strong>
@@ -234,53 +161,22 @@ export default function FormSlider() {
             <Title level={3}>单值</Title>
             <FormItem label="0–100">
               <div class="flex w-full min-w-0 flex-col gap-1">
-                <Slider
-                  value={() => singleVal()}
-                  min={0}
-                  max={100}
-                  onInput={(e) => {
-                    const n = Number((e.target as HTMLInputElement).value);
-                    writeSingleValueHint(singleRowHintRef.current, n);
-                    writeVerticalValueHint(verticalRowHintRef.current, n);
-                  }}
-                  onChange={(e) => {
-                    singleVal.value = Number(
-                      (e.target as HTMLInputElement).value,
-                    );
-                  }}
-                />
-                <span ref={singleRowHintRef} class={sliderValueHintCls} />
+                <Slider value={singleVal} min={0} max={100} />
+                <span class={sliderValueHintCls}>
+                  {() => `当前值：${singleVal()}`}
+                </span>
               </div>
             </FormItem>
             <CodeBlock
               title="代码示例"
-              code={`import { createEffect, createRef, createSignal } from "@dreamer/view";
+              code={`import { createSignal } from "@dreamer/view";
 
 const committed = createSignal(50);
-const hintRef = createRef<HTMLSpanElement>();
-createEffect(() => {
-  const el = hintRef.current;
-  if (el) el.textContent = \`当前值：\${committed()}\`;
-});
 <div class="flex w-full min-w-0 flex-col gap-1">
-  <Slider
-    value={() => committed()}
-    min={0}
-    max={100}
-    onInput={(e) => {
-      const el = hintRef.current;
-      if (el) {
-        el.textContent = \`当前值：\${(e.target as HTMLInputElement).value}\`;
-      }
-    }}
-    onChange={(e) => {
-      committed.value = Number((e.target as HTMLInputElement).value);
-    }}
-  />
-  <span
-    ref={hintRef}
-    class="text-sm tabular-nums text-slate-600 dark:text-slate-400"
-  />
+  <Slider value={committed} min={0} max={100} />
+  <span class="text-sm tabular-nums text-slate-600 dark:text-slate-400">
+    {() => \`当前值：\${committed()}\`}
+  </span>
 </div>`}
               language="tsx"
               showLineNumbers
@@ -293,58 +189,28 @@ createEffect(() => {
             <Title level={3}>range 双滑块</Title>
             <FormItem label="范围">
               <div class="flex w-full min-w-0 flex-col gap-1">
-                <Slider
-                  range
-                  value={() => rangeVal()}
-                  min={0}
-                  max={100}
-                  onInput={(e) => {
-                    const t =
-                      (e.target as unknown as { value: [number, number] })
-                        .value;
-                    writeRangeValueHint(rangeHintRef.current, t[0], t[1]);
+                <Slider range value={rangeVal} min={0} max={100} />
+                <span class={sliderValueHintCls}>
+                  {() => {
+                    const c = rangeVal();
+                    return `当前范围：${c[0]} – ${c[1]}`;
                   }}
-                  onChange={(e) => {
-                    const t =
-                      (e.target as unknown as { value: [number, number] })
-                        .value;
-                    rangeVal.value = [t[0], t[1]];
-                  }}
-                />
-                <span ref={rangeHintRef} class={sliderValueHintCls} />
+                </span>
               </div>
             </FormItem>
             <CodeBlock
               title="代码示例"
-              code={`import { createEffect, createRef, createSignal } from "@dreamer/view";
+              code={`import { createSignal } from "@dreamer/view";
 
 const range = createSignal<[number, number]>([20, 80]);
-const hintRef = createRef<HTMLSpanElement>();
-createEffect(() => {
-  const el = hintRef.current;
-  const c = range();
-  if (el) el.textContent = \`当前范围：\${c[0]} – \${c[1]}\`;
-});
 <div class="flex w-full min-w-0 flex-col gap-1">
-  <Slider
-    range
-    value={() => range()}
-    min={0}
-    max={100}
-    onInput={(e) => {
-      const t = (e.target as unknown as { value: [number, number] }).value;
-      const el = hintRef.current;
-      if (el) el.textContent = \`当前范围：\${t[0]} – \${t[1]}\`;
+  <Slider range value={range} min={0} max={100} />
+  <span class="text-sm tabular-nums text-slate-600 dark:text-slate-400">
+    {() => {
+      const c = range();
+      return \`当前范围：\${c[0]} – \${c[1]}\`;
     }}
-    onChange={(e) => {
-      const t = (e.target as unknown as { value: [number, number] }).value;
-      range.value = [t[0], t[1]];
-    }}
-  />
-  <span
-    ref={hintRef}
-    class="text-sm tabular-nums text-slate-600 dark:text-slate-400"
-  />
+  </span>
 </div>`}
               language="tsx"
               showLineNumbers
@@ -357,26 +223,10 @@ createEffect(() => {
             <Title level={3}>vertical 竖排</Title>
             <FormItem label="竖排单值">
               <div class="flex w-full min-w-0 flex-col gap-2 sm:flex-row sm:items-end sm:gap-4">
-                <Slider
-                  value={() => singleVal()}
-                  min={0}
-                  max={100}
-                  vertical
-                  onInput={(e) => {
-                    const n = Number((e.target as HTMLInputElement).value);
-                    writeSingleValueHint(singleRowHintRef.current, n);
-                    writeVerticalValueHint(verticalRowHintRef.current, n);
-                  }}
-                  onChange={(e) => {
-                    singleVal.value = Number(
-                      (e.target as HTMLInputElement).value,
-                    );
-                  }}
-                />
-                <span
-                  ref={verticalRowHintRef}
-                  class={`${sliderValueHintCls} sm:pb-1`}
-                />
+                <Slider value={singleVal} min={0} max={100} vertical />
+                <span class={`${sliderValueHintCls} sm:pb-1`}>
+                  {() => `当前值：${singleVal()}（与上方「单值」共用 Signal）`}
+                </span>
               </div>
             </FormItem>
           </section>
@@ -385,24 +235,10 @@ createEffect(() => {
             <Title level={3}>step / disabled</Title>
             <FormItem label="step=10">
               <div class="flex w-full min-w-0 flex-col gap-1">
-                <Slider
-                  value={() => stepVal()}
-                  min={0}
-                  max={100}
-                  step={10}
-                  onInput={(e) => {
-                    writeStepValueHint(
-                      stepHintRef.current,
-                      Number((e.target as HTMLInputElement).value),
-                    );
-                  }}
-                  onChange={(e) => {
-                    stepVal.value = Number(
-                      (e.target as HTMLInputElement).value,
-                    );
-                  }}
-                />
-                <span ref={stepHintRef} class={sliderValueHintCls} />
+                <Slider value={stepVal} min={0} max={100} step={10} />
+                <span class={sliderValueHintCls}>
+                  {() => `当前值：${stepVal()}（步长 10）`}
+                </span>
               </div>
             </FormItem>
             <FormItem label="disabled">
@@ -415,34 +251,14 @@ createEffect(() => {
             </FormItem>
             <CodeBlock
               title="代码示例"
-              code={`import { createEffect, createRef, createSignal } from "@dreamer/view";
+              code={`import { createSignal } from "@dreamer/view";
 
 const step = createSignal(30);
-const hintRef = createRef<HTMLSpanElement>();
-createEffect(() => {
-  const el = hintRef.current;
-  if (el) el.textContent = \`当前值：\${step()}（步长 10）\`;
-});
 <div class="flex w-full min-w-0 flex-col gap-1">
-  <Slider
-    value={() => step()}
-    min={0}
-    max={100}
-    step={10}
-    onInput={(e) => {
-      const el = hintRef.current;
-      if (el) {
-        el.textContent = \`当前值：\${(e.target as HTMLInputElement).value}（步长 10）\`;
-      }
-    }}
-    onChange={(e) => {
-      step.value = Number((e.target as HTMLInputElement).value);
-    }}
-  />
-  <span
-    ref={hintRef}
-    class="text-sm tabular-nums text-slate-600 dark:text-slate-400"
-  />
+  <Slider value={step} min={0} max={100} step={10} />
+  <span class="text-sm tabular-nums text-slate-600 dark:text-slate-400">
+    {() => \`当前值：\${step()}（步长 10）\`}
+  </span>
 </div>
 <div class="flex w-full min-w-0 flex-col gap-1">
   <Slider value={60} min={0} max={100} disabled />

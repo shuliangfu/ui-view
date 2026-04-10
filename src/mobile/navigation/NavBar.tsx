@@ -66,14 +66,17 @@ export function NavBar(props: NavBarProps) {
   const hasLeft = leftSlot != null || leftText != null || leftArrow;
   const hasRight = rightSlot != null || rightText != null;
 
-  /** 顶栏主体；无内部 signal，直接返回 VNode */
+  /**
+   * 顶栏主体；无内部 signal，直接返回 VNode。
+   * 非 `fixed` 时必须 `relative`，否则居中 `h1`（absolute）会相对更外层定位，文档嵌入时标题易飘到视口中部。
+   */
   const bar = (
     <div
       class={twMerge(
         "flex items-center justify-between h-12 px-2 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100",
         safeAreaInsetTop && "pt-safe",
         border && "border-b border-slate-200 dark:border-slate-600",
-        fixed && "fixed left-0 right-0 top-0 z-30",
+        fixed ? "fixed left-0 right-0 top-0 z-30" : "relative",
         className,
       )}
       style={fixed ? { zIndex } : undefined}

@@ -9,6 +9,7 @@ import {
   controlErrorBorder,
   controlErrorFocusRing,
 } from "./input-focus-ring.ts";
+import { commitMaybeSignal, type MaybeSignal } from "./maybe-signal.ts";
 
 export interface TextareaProps {
   /** 是否禁用 */
@@ -19,8 +20,8 @@ export interface TextareaProps {
   placeholder?: string;
   /** 行数（高度） */
   rows?: number;
-  /** 输入值（受控可选）；可为 getter 以在 View 细粒度下只更新 value 不重建节点，避免失焦 */
-  value?: string | (() => string);
+  /** 输入值（受控可选）；见 {@link MaybeSignal} */
+  value?: MaybeSignal<string>;
   /** 最大字数（展示已用/总数）；由子组件内读 value()，仅该槽位重跑 */
   maxLength?: number;
   /** 是否只读 */
@@ -63,7 +64,7 @@ const readOnlyCls = "bg-slate-50 dark:bg-slate-800/80 cursor-default";
  * 在 textarea 下方一行、左侧显示剩余字符数。
  */
 function TextareaLengthDisplay(props: {
-  value?: string | (() => string);
+  value?: MaybeSignal<string>;
   maxLength: number;
 }) {
   const { value, maxLength } = props;
@@ -106,6 +107,31 @@ export function Textarea(props: TextareaProps) {
 
   // 禁止在组件体内读 value()：会订阅 signal，导致整树重跑、textarea 失焦。value 透传给 <textarea value={value} />。
 
+  /**
+   * 受控 `value` 为 Signal 时由组件写回，再调用外部 `onInput`。
+   *
+   * @param e - 原生 input 事件
+   */
+  const handleInput = (e: Event) => {
+    commitMaybeSignal(value, (e.target as HTMLTextAreaElement).value);
+    onInput?.(e);
+  };
+
+  /**
+   * 受控 `value` 为 Signal 时由组件写回，再调用外部 `onChange`。
+   *
+   * @param e - 原生 change 事件
+   */
+  const handleChange = (e: Event) => {
+    commitMaybeSignal(value, (e.target as HTMLTextAreaElement).value);
+    onChange?.(e);
+  };
+
+  /**
+   * 原生属性字典：勿在「未限制字数」时写入 `maxLength: undefined`。
+   * 经 `setProperty` 会变成 `textarea.maxLength = undefined`，部分引擎按 0 处理，导致无法输入任何字符；
+   * 显式传 `maxLength={200}` 时值为正数，故仅该分支正常。
+   */
   const textareaProps = {
     id,
     name,
@@ -114,7 +140,7 @@ export function Textarea(props: TextareaProps) {
     placeholder,
     disabled,
     readOnly,
-    maxLength,
+    ...(maxLength != null ? { maxLength } : {}),
     "aria-required": required,
     "aria-invalid": error,
     class: twMerge(
@@ -125,8 +151,8 @@ export function Textarea(props: TextareaProps) {
       readOnly && readOnlyCls,
       className,
     ),
-    onInput,
-    onChange,
+    onInput: handleInput,
+    onChange: handleChange,
     onBlur,
     onFocus,
     onKeyDown,

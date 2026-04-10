@@ -47,6 +47,16 @@ const MARKDOWN_PREVIEW_CODE_UI_CSS = `
   border: none !important;
   border-radius: 0 !important;
 }
+/* 预览 prose 的 [&_code] 底纹会命中 pre>code；行内布局时背景按行盒分段成条带。围栏内取消 code 底纹并 block 化，整轨由 shell 承色。 */
+.md-preview-code-shell pre code {
+  display: block;
+  width: max-content;
+  min-width: 100%;
+  box-sizing: border-box;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+}
 .md-preview-code-copy-btn {
   position: absolute;
   top: 0.375rem;
@@ -105,6 +115,18 @@ function fenceAliasToPrismLang(className: string): string {
 }
 
 /**
+ * 预览根是否为浏览器（或 happy-dom 等）真实元素节点。
+ * SSR、部分运行时下的 `ref.current` 可能非 DOM，直接调 `querySelectorAll` 会抛错。
+ *
+ * @param host - {@link previewRef} 等传入值
+ */
+export function isMarkdownPreviewDomHost(host: unknown): host is HTMLElement {
+  if (host == null || typeof host !== "object") return false;
+  const h = host as { querySelectorAll?: unknown };
+  return typeof h.querySelectorAll === "function";
+}
+
+/**
  * 在当前文档的 `head` 中注入一次 Prism token 样式（与 CodeBlock 视觉一致）。
  *
  * 样式挂在 `head`：预览每次更新会重写 `innerHTML`，勿把本 `<style>` 放在预览根内。
@@ -112,6 +134,7 @@ function fenceAliasToPrismLang(className: string): string {
  * @param host - 已挂树的节点，用于解析 `ownerDocument`（多 iframe 时各 Document 各注入一次）
  */
 export function ensureMarkdownPreviewPrismStyles(host: HTMLElement): void {
+  if (!isMarkdownPreviewDomHost(host)) return;
   const doc = host.ownerDocument ??
     (typeof globalThis.document !== "undefined"
       ? globalThis.document
@@ -132,6 +155,7 @@ export function ensureMarkdownPreviewPrismStyles(host: HTMLElement): void {
  * @param host - 已写入 `parse()` 产出的 HTML 的预览根节点
  */
 export function highlightMarkdownPreviewCodeBlocks(host: HTMLElement): void {
+  if (!isMarkdownPreviewDomHost(host)) return;
   const prism = Prism as {
     languages?: Record<string, unknown>;
     highlight: (code: string, grammar: unknown, lang: string) => string;
@@ -172,6 +196,7 @@ const MD_PREVIEW_COPY_ICON_SVG =
  * @param host - Markdown 预览根节点
  */
 export function wrapMarkdownPreviewCodeBlocks(host: HTMLElement): void {
+  if (!isMarkdownPreviewDomHost(host)) return;
   const doc = host.ownerDocument ??
     (typeof globalThis.document !== "undefined"
       ? globalThis.document

@@ -1,163 +1,244 @@
 /**
- * BottomSheet 底部抽屉/半屏（View）。
- * 移动端典型：从底部滑出面板；支持标题、高度（自动/半屏/全屏）、关闭。
+ * BottomSheet：自底部滑出的半屏/全屏面板。
+ * 与桌面 `Modal` / `Drawer` 一致：`open` 支持 `Signal`/getter。
+ * Portal：若在 {@link ../MobilePortalHostScope.tsx} 子树内则挂机内锚点，否则挂 `document.body`（避免被业务根 `overflow` 裁切）。
  */
 
-import { getDocument } from "@dreamer/view";
+import {
+  createEffect,
+  createMemo,
+  createPortal,
+  createRenderEffect,
+  createSignal,
+  onCleanup,
+  useContext,
+} from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
-/** 按需：单文件图标，避免经 icons/mod 拉入全表 */
-import { IconClose } from "../../shared/basic/icons/Close.tsx";
+import { MobilePortalHostContext } from "../MobilePortalHostScope.tsx";
+import {
+  type ControlledOpenInput,
+  readControlledOpenInput,
+} from "../../shared/feedback/controlled-open.ts";
+import { getBrowserBodyPortalHost } from "../../shared/feedback/portal-host.ts";
 
-export type BottomSheetHeight = "auto" | "half" | "full";
+/** 高度模式：半屏、全屏、或自定义最大高度（px） */
+export type BottomSheetHeightMode = "half" | "full" | number;
 
 export interface BottomSheetProps {
-  /** 是否打开（受控） */
-  open?: boolean;
-  /** 关闭回调 */
+  /** 是否打开：传 `Signal` 或 `() => sig()`，勿仅传 `sig.value`（Hybrid 下可能不更新） */
+  open?: ControlledOpenInput;
+  /** 标题 */
+  title?: string;
+  /** 关闭回调（遮罩/关闭按钮） */
   onClose?: () => void;
-  /** 标题；传 null 不显示 */
-  title?: string | null;
-  /** 面板内容 */
-  children?: unknown;
-  /** 高度模式：自动（由内容撑开）、半屏、全屏，默认 "auto" */
-  height?: BottomSheetHeight;
-  /** 是否显示关闭按钮，默认 true */
-  closable?: boolean;
+  /** 高度模式，默认 half */
+  heightMode?: BottomSheetHeightMode;
   /** 点击遮罩是否关闭，默认 true */
   maskClosable?: boolean;
-  /** 关闭后是否销毁子节点，默认 false */
+  /** 关闭时卸载子树，默认 false */
   destroyOnClose?: boolean;
-  /** 底部区域（如按钮组）；渲染在内容下方 */
-  footer?: unknown;
-  /** 进入动画时长（ms），默认 250 */
-  animationDuration?: number;
-  /** 额外 class（作用于面板） */
+  /** 根 class（遮罩+面板容器） */
   class?: string;
+  /** 面板 class */
+  panelClass?: string;
+  /** 子内容 */
+  children?: unknown;
 }
 
-const heightClasses: Record<BottomSheetHeight, string> = {
-  auto: "max-h-[85vh]",
-  half: "h-1/2 max-h-[85vh]",
-  full: "h-[85vh]",
-};
+const Z_INDEX = 300;
 
-export function BottomSheet(props: BottomSheetProps) {
-  const {
-    open = false,
-    onClose,
-    title,
-    children,
-    height = "auto",
-    closable = true,
-    maskClosable = true,
-    destroyOnClose = false,
-    footer,
-    animationDuration = 250,
-    class: className,
-  } = props;
+/**
+ * 将 heightMode 转为面板 max-height 的 CSS 值
+ *
+ * @param mode - 高度模式
+ */
+function heightToMaxHeight(mode: BottomSheetHeightMode | undefined): string {
+  if (mode === "full") return "100%";
+  if (typeof mode === "number" && Number.isFinite(mode)) return `${mode}px`;
+  return "50%";
+}
 
-  const shouldRender = open || !destroyOnClose;
-  /** 不挂载时直接返回 null（无模块级 signal，无需渲染 getter） */
-  if (!shouldRender) {
-    return null;
+/**
+ * 仅当存在真实 `document.body` 时设置 `overflow`（与 Modal / Drawer 同向）
+ *
+ * @param overflow - 写入 `body.style.overflow` 的值
+ */
+function trySetDocumentBodyOverflow(overflow: string): void {
+  try {
+    if (typeof globalThis.document === "undefined") return;
+    const b = globalThis.document.body;
+    if (b == null || b.nodeType !== 1) return;
+    const st = b.style;
+    if (st == null) return;
+    st.overflow = overflow;
+  } catch {
+    /* 非浏览器或受限环境 */
   }
+}
 
-  const handleMaskClick = (e: Event) => {
-    if (e.target === e.currentTarget && maskClosable) onClose?.();
+/**
+ * BottomSheet 组件
+ *
+ * @param props - 面板属性
+ */
+export function BottomSheet(props: BottomSheetProps) {
+  const destroyOnClose = props.destroyOnClose === true;
+
+  /**
+   * 机内 Portal：须用对象 `{ getHost }` 传 Context，勿传裸函数（见 {@link ../MobilePortalHostScope.tsx}）。
+   * 无 Provider 时为 `null`。
+   */
+  const portalHostScope = useContext(MobilePortalHostContext);
+  /** 零参 getter；无 Scope 时为 `undefined` */
+  const getScopedHost = portalHostScope?.getHost;
+
+  /**
+   * 解析 Portal 容器：有 Scope 且锚点已挂载 → 该机内节点；有 Scope 未挂载 → `null`（内联回退）；无 Scope → `body`。
+   */
+  const portalTarget = createMemo(() => {
+    if (getScopedHost != null) {
+      const el = getScopedHost();
+      if (el != null) return el;
+      return null;
+    }
+    return getBrowserBodyPortalHost();
+  });
+
+  /** 仅 Portal 落在整页 `body` 时锁定 `document.body` 滚动 */
+  const lockDocumentBody = createMemo(() => portalHostScope == null);
+
+  /**
+   * 须无条件调用：`createRenderEffect` 内读 {@link isOpen}，订阅 `open` 的 `Signal`。
+   */
+  const isOpen = createMemo(() => readControlledOpenInput(props.open));
+
+  /** 入场/退场过渡类名用 */
+  const visible = createSignal(false);
+  /** `destroyOnClose` 时在退场动画结束后再卸 DOM */
+  const mounted = createSignal(!destroyOnClose);
+
+  const maxH = createMemo(() => heightToMaxHeight(props.heightMode));
+
+  createEffect(() => {
+    if (isOpen()) {
+      mounted.set(true);
+      queueMicrotask(() => visible.set(true));
+    } else {
+      visible.set(false);
+    }
+  });
+
+  createEffect(() => {
+    if (!destroyOnClose) return;
+    if (isOpen() || visible()) return;
+    const t = globalThis.setTimeout(() => mounted.set(false), 220);
+    onCleanup(() => globalThis.clearTimeout(t));
+  });
+
+  const maskClosable = () => props.maskClosable !== false;
+
+  /**
+   * 半透明遮罩点击：在 `maskClosable` 为真时调用 `onClose`。
+   */
+  const handleMask = () => {
+    if (!maskClosable()) return;
+    props.onClose?.();
   };
 
   /**
-   * 面板挂载动画；SSR 下 ref 节点可能无 `style`，须判空后再写。
+   * 构建遮罩 + 面板（Portal 与 SSR 内联共用）
    */
-  const setSheetRef = (el: unknown) => {
-    if (el == null || typeof el !== "object") return;
-    const st = (el as HTMLElement).style;
-    if (st == null) return;
-    const elWithFlag = el as HTMLElement & { _sheetAnimated?: boolean };
-    if (elWithFlag._sheetAnimated) return;
-    elWithFlag._sheetAnimated = true;
-    st.transition = `transform ${animationDuration}ms ease-out`;
-    st.transform = "translateY(100%)";
-    const raf = (globalThis as unknown as {
-      requestAnimationFrame?: (cb: () => void) => number;
-    })
-      .requestAnimationFrame;
-    if (raf) {
-      raf(() => {
-        st.transform = "translateY(0)";
-      });
-    } else st.transform = "translateY(0)";
-  };
-
-  /** `body.style` 在部分 SSR document 上不存在 */
-  const bodyStyle = getDocument()?.body?.style;
-  if (!open) {
-    if (bodyStyle != null) bodyStyle.overflow = "";
-    return null;
-  }
-  if (bodyStyle != null) bodyStyle.overflow = "hidden";
-
-  return (
+  const buildSheetMarkup = () => (
     <div
-      class="fixed inset-0 z-300 flex flex-col justify-end"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby={title ? "bottomsheet-title" : undefined}
+      class={twMerge(
+        "fixed inset-0 flex flex-col justify-end transition-opacity duration-200",
+        visible() ? "opacity-100" : "opacity-0 pointer-events-none",
+        props.class,
+      )}
+      style={{ zIndex: Z_INDEX }}
+      aria-hidden={!isOpen()}
     >
-      <div
-        class="absolute inset-0 bg-black/50 dark:bg-black/60 transition-opacity"
-        onClick={(e: Event) => handleMaskClick(e)}
-        aria-hidden
+      <button
+        type="button"
+        class="absolute inset-0 bg-black/45 border-0 cursor-default"
+        aria-label="关闭"
+        onClick={handleMask}
       />
       <div
-        ref={setSheetRef}
         class={twMerge(
-          "relative z-10 flex flex-col rounded-t-2xl bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-xl overflow-hidden",
-          heightClasses[height],
-          className,
+          "relative w-full max-w-[100vw] rounded-t-2xl bg-white shadow-xl flex flex-col transition-transform duration-200 ease-out",
+          visible() ? "translate-y-0" : "translate-y-full",
+          props.panelClass,
         )}
-        onClick={(e: Event) => e.stopPropagation()}
+        style={{ maxHeight: maxH() }}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={props.title ? "bottom-sheet-title" : undefined}
+        onClick={(e: MouseEvent) => e.stopPropagation()}
       >
-        {/* 拖拽指示条（移动端常见） */}
-        <div class="shrink-0 flex justify-center pt-2 pb-1">
-          <span class="w-10 h-1 rounded-full bg-slate-300 dark:bg-slate-600" />
-        </div>
-        {title != null && title !== "" && (
-          <div class="flex items-center justify-between shrink-0 px-4 pb-3">
-            <h2 id="bottomsheet-title" class="text-lg font-semibold">
-              {title}
-            </h2>
-            {closable && (
+        {props.title
+          ? (
+            <div class="flex items-center justify-between px-4 py-3 border-b border-black/6 shrink-0">
+              <div id="bottom-sheet-title" class="text-base font-semibold">
+                {props.title}
+              </div>
               <button
                 type="button"
-                aria-label="关闭"
-                class="p-2 -m-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400"
-                onClick={() => onClose?.()}
+                class="text-sm text-black/45 hover:text-black/75 px-2 py-1 rounded-md"
+                onClick={() => props.onClose?.()}
               >
-                <IconClose class="w-5 h-5" />
+                关闭
               </button>
-            )}
-          </div>
-        )}
-        {title == null && closable && (
-          <div class="absolute top-3 right-3 z-10">
-            <button
-              type="button"
-              aria-label="关闭"
-              class="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400"
-              onClick={() => onClose?.()}
-            >
-              <IconClose class="w-5 h-5" />
-            </button>
-          </div>
-        )}
-        <div class="flex-1 overflow-auto min-h-0 px-4 pb-6">{children}</div>
-        {footer != null && (
-          <div class="shrink-0 border-t border-slate-200 dark:border-slate-600 px-4 py-3">
-            {footer}
-          </div>
-        )}
+            </div>
+          )
+          : null}
+        <div class="p-4 overflow-auto flex-1 min-h-0">{props.children}</div>
       </div>
     </div>
   );
+
+  /**
+   * 每实例无条件注册：`open` 从 false→true 时父级未必重跑本组件（与 Modal / Drawer 一致）。
+   */
+  createRenderEffect(() => {
+    if (!mounted()) {
+      if (lockDocumentBody()) trySetDocumentBodyOverflow("");
+      return;
+    }
+    const portalHost = portalTarget();
+    if (isOpen()) {
+      if (lockDocumentBody()) trySetDocumentBodyOverflow("hidden");
+    } else {
+      if (lockDocumentBody()) trySetDocumentBodyOverflow("");
+    }
+    if (portalHost != null) {
+      const root = createPortal(() => buildSheetMarkup(), portalHost);
+      onCleanup(() => {
+        root.unmount();
+        if (lockDocumentBody()) trySetDocumentBodyOverflow("");
+      });
+      return;
+    }
+  });
+
+  const targetSync = portalTarget();
+  if (targetSync != null) {
+    if (destroyOnClose && !mounted()) {
+      return null;
+    }
+    return (
+      <span
+        style="display:none;width:0;height:0;overflow:hidden;position:absolute;clip:rect(0,0,0,0)"
+        aria-hidden="true"
+        data-dreamer-bottom-sheet-portal-anchor=""
+      />
+    );
+  }
+  if (!mounted()) {
+    return null;
+  }
+  if (isOpen()) {
+    if (lockDocumentBody()) trySetDocumentBodyOverflow("hidden");
+  }
+  return buildSheetMarkup();
 }

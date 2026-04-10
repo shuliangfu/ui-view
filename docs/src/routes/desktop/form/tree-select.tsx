@@ -31,10 +31,10 @@ const TREESELECT_API: ApiRow[] = [
   },
   {
     name: "value",
-    type: "string | (() => string)",
+    type: "string | (() => string) | Signal<string>",
     default: '""',
     description:
-      "当前选中节点的 value；空字符串表示未选。可为 getter，配合 View 细粒度更新",
+      "当前选中节点 value；空串表示未选。与全库表单一致为 MaybeSignal：字面量、`() => T`、`createSignal` 返回值；勿直接绑 `sig.value`（快照失步或误订阅）。",
   },
   {
     name: "onChange",
@@ -138,10 +138,7 @@ const val = createSignal("");
 <FormItem label="部门">
   <TreeSelect
     options={tree}
-    value={() => val.value}
-    onChange={(e) => {
-      val.value = (e.target as HTMLInputElement).value;
-    }}
+    value={val}
     class="w-full"
   />
 </FormItem>`;
@@ -260,10 +257,7 @@ export default function FormTreeSelectDoc() {
             <FormItem label="部门">
               <TreeSelect
                 options={TREE_OPTIONS}
-                value={() => val.value}
-                onChange={(e) => {
-                  val.value = (e.target as HTMLInputElement).value;
-                }}
+                value={val}
                 class="w-full"
               />
             </FormItem>
@@ -271,10 +265,7 @@ export default function FormTreeSelectDoc() {
               title="代码示例"
               code={`<TreeSelect
   options={TREE_OPTIONS}
-  value={() => val.value}
-  onChange={(e) => {
-    val.value = (e.target as HTMLInputElement).value;
-  }}
+  value={val}
   class="w-full"
 />`}
               language="tsx"
@@ -292,10 +283,7 @@ export default function FormTreeSelectDoc() {
             <FormItem label="组织（三级）">
               <TreeSelect
                 options={TREE_DEEP}
-                value={() => valDeep.value}
-                onChange={(e) => {
-                  valDeep.value = (e.target as HTMLInputElement).value;
-                }}
+                value={valDeep}
                 class="w-full"
                 placeholder="选择组织节点"
               />
@@ -318,7 +306,7 @@ export default function FormTreeSelectDoc() {
     ],
   },
 ];
-<TreeSelect options={TREE_DEEP} value={() => v.value} onChange={...} placeholder="选择组织节点" />`}
+<TreeSelect options={TREE_DEEP} value={v} onChange={...} placeholder="选择组织节点" />`}
               language="tsx"
               showLineNumbers
               copyable
@@ -341,10 +329,7 @@ export default function FormTreeSelectDoc() {
                 id="tree-dept-field"
                 name="deptId"
                 options={TREE_OPTIONS}
-                value={() => valForm.value}
-                onChange={(e) => {
-                  valForm.value = (e.target as HTMLInputElement).value;
-                }}
+                value={valForm}
                 class="w-full"
               />
             </FormItem>
@@ -355,10 +340,7 @@ export default function FormTreeSelectDoc() {
     id="tree-dept-field"
     name="deptId"
     options={tree}
-    value={() => val.value}
-    onChange={(e) => {
-      val.value = (e.target as HTMLInputElement).value;
-    }}
+    value={val}
     class="w-full"
   />
 </FormItem>`}

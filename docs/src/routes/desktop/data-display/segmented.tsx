@@ -140,20 +140,21 @@ export default function DataDisplaySegmented() {
       <section class="space-y-8">
         <Title level={2}>示例</Title>
 
-        {/* 包成 getter：仅本块订阅 value.value，点击时只重跑本块、不重跑整页，避免 createSignal 被重新执行导致选中态重置 */}
+        {
+          /*
+           * 与 Table 文档一致：Segmented 放在 getter 外，仅「当前值」用函数子。
+           * 若把 Segmented 与 CodeBlock 夹在同一个 `{() => <></>}` 里，更新时兄弟节点重排会导致示例与代码块上下对调。
+           */
+        }
         <div class="space-y-4">
           <Title level={3}>基础</Title>
-          {() => (
-            <>
-              <Segmented
-                options={options}
-                value={() => valueBasic.value}
-                onChange={(v) => valueBasic.value = v}
-                stateKey="segmented-doc-basic"
-              />
-              <p class="text-sm text-slate-500">当前: {valueBasic.value}</p>
-            </>
-          )}
+          <Segmented
+            options={options}
+            value={() => valueBasic.value}
+            onChange={(v) => valueBasic.value = v}
+            stateKey="segmented-doc-basic"
+          />
+          {() => <p class="text-sm text-slate-500">当前: {valueBasic.value}</p>}
           <CodeBlock
             title="代码示例"
             code={exampleBasic}
@@ -166,16 +167,14 @@ export default function DataDisplaySegmented() {
 
         <div class="space-y-4">
           <Title level={3}>block / size=lg</Title>
-          {() => (
-            <Segmented
-              options={options}
-              value={() => valueBlock.value}
-              onChange={(v) => valueBlock.value = v}
-              block
-              size="lg"
-              stateKey="segmented-doc-block"
-            />
-          )}
+          <Segmented
+            options={options}
+            value={() => valueBlock.value}
+            onChange={(v) => valueBlock.value = v}
+            block
+            size="lg"
+            stateKey="segmented-doc-block"
+          />
           <CodeBlock
             title="代码示例"
             code={exampleBlockSize}
@@ -188,18 +187,16 @@ export default function DataDisplaySegmented() {
 
         <div class="space-y-4">
           <Title level={3}>options 含 disabled</Title>
-          {() => (
-            <Segmented
-              options={[...options, {
-                value: "禁用",
-                label: "禁用",
-                disabled: true,
-              }]}
-              value={() => valueDisabled.value}
-              onChange={(v) => valueDisabled.value = v}
-              stateKey="segmented-doc-disabled"
-            />
-          )}
+          <Segmented
+            options={[...options, {
+              value: "禁用",
+              label: "禁用",
+              disabled: true,
+            }]}
+            value={() => valueDisabled.value}
+            onChange={(v) => valueDisabled.value = v}
+            stateKey="segmented-doc-disabled"
+          />
           <CodeBlock
             title="代码示例"
             code={exampleDisabled}

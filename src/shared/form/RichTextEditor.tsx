@@ -30,6 +30,11 @@ import { IconType } from "../basic/icons/Type.tsx";
 import { ColorPicker, type ColorPickerHandle } from "./ColorPicker.tsx";
 import { controlBlueFocusRing } from "./input-focus-ring.ts";
 import { Input } from "./Input.tsx";
+import {
+  commitMaybeSignal,
+  type MaybeSignal,
+  readMaybeSignal,
+} from "./maybe-signal.ts";
 import { getFormPortalBodyHost } from "./picker-portal-utils.ts";
 
 /** 工具栏丰富程度预设 */
@@ -56,7 +61,7 @@ export type ToolbarConfig = ToolbarItem[][] | ToolbarItem[];
 
 /**
  * 工具栏与查找条悬停说明：使用 {@link Tooltip} 统一气泡样式；**不再**写原生 `title`，避免与自定义气泡叠两层。
- * 编辑器全屏根节点为 `z-9999`，而 Tooltip Portal 默认 `z-1070`，浮层会落在全屏层下方，故用 `overlayClass` 抬高 z-index。
+ * 编辑器全屏根节点为 `z-9999`，而 Tooltip 内联气泡默认 `z-1070`，在全屏内可能被压住，故用 `overlayClass` 抬高 z-index。
  *
  * @param props.content - 提示文案；`trim` 后为空则仅渲染子节点、不包裹 Tooltip
  * @param props.children - 触发区域（外包结构保持与原先一致，避免影响 `mousedown` 选区保留逻辑）
@@ -1937,8 +1942,8 @@ function renderToolbarButtonContent(
 }
 
 export interface RichTextEditorProps {
-  /** 当前内容（HTML 字符串）；作为受控值或初始值；可为 getter 以配合 View 细粒度更新 */
-  value?: string | (() => string);
+  /** 当前内容（HTML 字符串）；见 {@link MaybeSignal} */
+  value?: MaybeSignal<string>;
   /** 内容变化回调（输出 HTML） */
   onChange?: (html: string) => void;
   /** 工具栏丰富程度：simple / default / full；与 toolbar 二选一 */
@@ -2255,9 +2260,13 @@ export function RichTextEditor(props: RichTextEditorProps) {
       }
 
       const currentHtml = editor.innerHTML;
+      /**
+       * 非空基准时用 {@link rteHtmlLooselyEquals}：浏览器序列化的 innerHTML 与受控字符串常有空白/`&nbsp;` 差异，
+       * 严格 `!==` 会在「已有实质编辑」时仍判相等 → 撤销永灰。
+       */
       const canUndo = baseline === ""
         ? currentHtml.replace(/\uFEFF/g, "").trim() !== ""
-        : currentHtml !== baseline;
+        : !rteHtmlLooselyEquals(currentHtml, baseline);
 
       let qRedo = false;
       if (typeof document.queryCommandEnabled === "function") {
@@ -2581,6 +2590,8 @@ export function RichTextEditor(props: RichTextEditorProps) {
     wrapRteLeadingRootTextInParagraph(el);
     rteRedoEligibleAfterUndo = false;
     emitChange(el.innerHTML);
+    /** 同步刷新工具栏撤销态，避免仅依赖微任务时与当前帧 reconciler 顺序不一致导致仍显示 disabled */
+    refreshHistoryNavState();
     queueMicrotask(() => refreshHistoryNavState());
   };
 
@@ -2591,7 +2602,17 @@ export function RichTextEditor(props: RichTextEditorProps) {
 
   /** 通知父组件并同步 hidden input（因 value 用 untrack 不随 signal 更新，需在每次变更时手动写回） */
   const emitChange = (html?: string) => {
+    /**
+     * 撤销对照基准仍为 null 时，在 `commitMaybeSignal` **之前**读取受控值（{@link readMaybeSignal}）作为「上一拍」快照。
+     * 否则仅依赖 effect/onFocus 初始化时，在 ref 晚就绪、焦点事件未送达等情况下 {@link lastSyncedFromPropsHtml} 会一直为 null，
+     * {@link refreshHistoryNavState} 恒关撤销；或误把「已编辑后」的 DOM 当基准。
+     */
+    if (lastSyncedFromPropsHtml === null) {
+      const prior = readMaybeSignal(props.value);
+      lastSyncedFromPropsHtml = prior === undefined ? "" : prior;
+    }
     const h = html ?? getEditorHtml();
+    commitMaybeSignal(props.value, h);
     onChange?.(h);
     if (name != null) {
       const el = document.getElementById(`${editorId}-hidden`) as
@@ -3252,9 +3273,18 @@ export function RichTextEditor(props: RichTextEditorProps) {
     if (rteBlockPropsInnerHtmlAfterSourceExit) return;
     const v = typeof value === "function" ? value() : value;
     if (v === undefined) return;
-    /** 尚未从 props 记过基准时，用当前 DOM 或 v 初始化；随后刷新工具栏态（避免 null 基准期一直灰） */
-    if (lastSyncedFromPropsHtml === null) {
-      lastSyncedFromPropsHtml = el.innerHTML !== "" ? el.innerHTML : v;
+    /**
+     * 尚未记过撤销对照基准时：仅在**非获焦**且**无弹层**时初始化。
+     * 若 `editorHostRef` 晚于首次 effect 就绪，用户已输入后 effect 才跑到此处且曾把本块放在 `rteEditorHasFocus` 检查**之前**，
+     * 会用「已含当前输入」的 `innerHTML` 当基准 → 与 `refreshHistoryNavState` 里 `currentHtml` 恒等 → 撤销永灰。
+     * 获焦后仍未有基准时改由编辑区 {@link onFocus} 用当时受控值写入。
+     */
+    if (
+      lastSyncedFromPropsHtml === null &&
+      !rteEditorHasFocus &&
+      !rteAnyOverlayOpen()
+    ) {
+      lastSyncedFromPropsHtml = v;
       queueMicrotask(() => refreshHistoryNavState());
     }
     /**
@@ -3781,6 +3811,16 @@ export function RichTextEditor(props: RichTextEditorProps) {
               rteEditorHasFocus = true;
               /** Enter 新段用 `p` 而非浏览器默认的 `div`（Chromium 系） */
               trySetDefaultParagraphSeparatorToP();
+              /**
+               * ref 未就绪时 createEffect 可能从未写入 {@link lastSyncedFromPropsHtml}；须在首次获焦用**当时**受控值建基准，
+               * 勿等「已输入后」的 effect 用 innerHTML 初始化（见上方 effect 注释）。
+               */
+              if (lastSyncedFromPropsHtml === null) {
+                const vNow = typeof value === "function"
+                  ? value()
+                  : (value ?? "");
+                lastSyncedFromPropsHtml = vNow;
+              }
               if (suppressEditorFocusHistoryRefresh) return;
               refreshHistoryNavState();
             }}

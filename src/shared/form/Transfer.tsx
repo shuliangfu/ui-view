@@ -6,12 +6,14 @@
  * 1. 外层 `return ()` **不读取** `leftSearchRef` / `rightSearchRef`，也**不读取** `selectedKeysRef.value`，
  *    仅追踪 `targetKeys`（及 dataSource 等），否则每点选一项或每键入一字都会重建整棵 `div.transfer`（含中间箭头区），导致失焦。
  * 2. 左右列 + 中间箭头为**同级 JSX**（flex 一行），避免「两列各包一层 **函数子响应式插入**、中间是本征 div」时浏览器分段绘制。
- * 3. 列表区用 **JSX 函数子** `{() => …}` **不订阅** 外层 `searchRef`：列内 `localQuery` + `listVersion` 作刷新节拍，
- *    输入时 bump `listVersion`；仍把 `searchRef.value` 同步给中间箭头 onClick。`onSearch` 用 `queueMicrotask` 推迟。
+ * 3. 列表区用 **JSX 函数子** `{() => …}` + `listVersion`（在 {@link Transfer} 顶层 `createSignal`，勿在列函数内新建）作刷新节拍；
+ *    搜索文案只用传入的 `searchRef`（与 {@link Transfer} 同源），列内**禁止** `createSignal` 否则父级 getter 重跑会新建信号、输入框重挂载失焦。
+ *    `onSearch` 用 `queueMicrotask` 推迟。
  */
 
 import { createSignal, getDocument, type Signal } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
+import { commitMaybeSignal, type MaybeSignal } from "./maybe-signal.ts";
 
 export interface TransferItem {
   /** 唯一 key */
@@ -25,8 +27,8 @@ export interface TransferItem {
 export interface TransferProps {
   /** 数据源 */
   dataSource: TransferItem[];
-  /** 右侧（已选）key 列表（受控）；可为 getter 以在点击时读到最新值，避免闭包陈旧 */
-  targetKeys: string[] | (() => string[]);
+  /** 右侧（已选）key 列表（受控）；见 {@link MaybeSignal} */
+  targetKeys: MaybeSignal<string[]>;
   /** 变更回调（targetKeys 更新后） */
   onChange?: (targetKeys: string[]) => void;
   /** 左侧标题 */
@@ -79,6 +81,8 @@ type TransferColumnProps = {
   searchPlaceholder: string;
   showSearch: boolean;
   searchRef: Signal<string>;
+  /** 与 {@link searchRef} 配套：仅在输入时自增，驱动列表函数子重算，须在 Transfer 顶层创建 */
+  listVersion: Signal<number>;
   selectedKeysRef: Signal<string[]>;
   filterOption?: (inputValue: string, item: TransferItem) => boolean;
   onSearch?: (value: string) => void;
@@ -99,6 +103,7 @@ function TransferColumn(props: TransferColumnProps) {
     searchPlaceholder,
     showSearch,
     searchRef,
+    listVersion,
     selectedKeysRef,
     filterOption,
     onSearch,
@@ -109,9 +114,7 @@ function TransferColumn(props: TransferColumnProps) {
     disabled = false,
   } = props;
 
-  const localQuery = createSignal(searchRef.value);
-  const listVersion = createSignal(0);
-
+  // 搜索框绑定上层 searchRef（非列内 createSignal），父级 getter 重跑时仍为同一信号，避免输入框重挂载失焦。
   return (
     <div
       class={twMerge(transferListShellCls, "min-w-0 shrink-0")}
@@ -127,10 +130,9 @@ function TransferColumn(props: TransferColumnProps) {
           autocomplete="off"
           class="m-2 px-2 py-1 text-sm border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 w-[calc(100%-1rem)]"
           placeholder={searchPlaceholder}
-          value={() => localQuery.value}
+          value={() => searchRef.value}
           onInput={(e: Event) => {
             const v = (e.target as HTMLInputElement).value;
-            localQuery.value = v;
             searchRef.value = v;
             listVersion.value = listVersion.value + 1;
             if (onSearch != null) {
@@ -144,7 +146,7 @@ function TransferColumn(props: TransferColumnProps) {
           listVersion.value;
           const filtered = filterTransferItems(
             items,
-            localQuery.value,
+            searchRef.value,
             filterOption,
           );
           const selectedKeys = selectedKeysRef.value;
@@ -217,6 +219,9 @@ export function Transfer(props: TransferProps) {
 
   const leftSearchRef = createSignal(searchValue?.[0] ?? "");
   const rightSearchRef = createSignal(searchValue?.[1] ?? "");
+  /** 左右列表过滤区刷新节拍；必须在 Transfer 内只创建一次，不可放在 TransferColumn 内 */
+  const leftListVersion = createSignal(0);
+  const rightListVersion = createSignal(0);
   const leftSelectedKeysRef = createSignal<string[]>([]);
   const rightSelectedKeysRef = createSignal<string[]>([]);
 
@@ -226,14 +231,18 @@ export function Transfer(props: TransferProps) {
   const moveToRight = (keys: string[]) => {
     if (keys.length === 0) return;
     const current = getTargetKeys();
-    onChange?.([...new Set([...current, ...keys])]);
+    const next = [...new Set([...current, ...keys])];
+    commitMaybeSignal(targetKeys, next);
+    onChange?.(next);
     leftSelectedKeysRef.value = [];
   };
 
   const moveToLeft = (keys: string[]) => {
     if (keys.length === 0) return;
     const current = getTargetKeys();
-    onChange?.(current.filter((k) => !keys.includes(k)));
+    const next = current.filter((k) => !keys.includes(k));
+    commitMaybeSignal(targetKeys, next);
+    onChange?.(next);
     rightSelectedKeysRef.value = [];
   };
 
@@ -264,6 +273,7 @@ export function Transfer(props: TransferProps) {
           searchPlaceholder={searchPlaceholder[0]}
           showSearch={showSearch}
           searchRef={leftSearchRef}
+          listVersion={leftListVersion}
           selectedKeysRef={leftSelectedKeysRef}
           filterOption={filterOption}
           onSearch={(v) => onSearch?.("left", v)}
@@ -329,6 +339,7 @@ export function Transfer(props: TransferProps) {
           searchPlaceholder={searchPlaceholder[1]}
           showSearch={showSearch}
           searchRef={rightSearchRef}
+          listVersion={rightListVersion}
           selectedKeysRef={rightSelectedKeysRef}
           filterOption={filterOption}
           onSearch={(v) => onSearch?.("right", v)}

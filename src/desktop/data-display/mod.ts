@@ -16,8 +16,18 @@ export {
 } from "./Descriptions.tsx";
 export { Card, type CardProps } from "./Card.tsx";
 export { List, type ListItemProps, type ListProps } from "./List.tsx";
-export { Image, type ImageProps } from "./Image.tsx";
-export { ImageViewer, type ImageViewerProps } from "./ImageViewer.tsx";
+export {
+  Image,
+  IMAGE_BUILTIN_FALLBACK_SRC,
+  type ImageProps,
+} from "./Image.tsx";
+export {
+  ImageViewer,
+  type ImageViewerImageTransition,
+  type ImageViewerProps,
+  type ImageViewerTransition,
+  type ImageViewerTransitionInput,
+} from "./ImageViewer.tsx";
 export {
   Timeline,
   type TimelineItemProps,

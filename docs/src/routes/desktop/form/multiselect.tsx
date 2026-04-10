@@ -29,9 +29,10 @@ const MULTISELECT_API: ApiRow[] = [
   },
   {
     name: "value",
-    type: "string[] | (() => string[])",
+    type: "string[] | (() => string[]) | Signal<string[]>",
     default: "-",
-    description: "当前选中值数组；可为 getter",
+    description:
+      "当前选中项 value 数组。与全库表单一致为 MaybeSignal：字面量、`() => T`、`createSignal` 返回值；勿直接绑 `sig.value`（快照失步或误订阅）。",
   },
   {
     name: "placeholder",
@@ -43,7 +44,8 @@ const MULTISELECT_API: ApiRow[] = [
     name: "onChange",
     type: "(e: Event) => void",
     default: "-",
-    description: "变更回调（e.target 或 selectedOptions）",
+    description:
+      "可选。`value` 为 Signal 时组件已回写；需副作用时再传（合成事件 target.value 为 string[]）",
   },
   {
     name: "size",
@@ -81,36 +83,12 @@ import { createSignal } from "@dreamer/view";
 const options = [{ value: "a", label: "选项 A" }, { value: "b", label: "选项 B" }];
 const val = createSignal<string[]>([]);
 <FormItem label="多选">
-  <MultiSelect
-    options={options}
-    value={() => val.value}
-    onChange={(e) => val.value = ...}
-  />
+  <MultiSelect options={options} value={val} />
 </FormItem>`;
 
 export default function FormMultiSelect() {
   const val = createSignal<string[]>([]);
   const val2 = createSignal<string[]>(["a", "b"]);
-
-  const handleChange = (e: Event) => {
-    const t = e.target as HTMLSelectElement & { value?: string[] };
-    const v = Array.isArray(t.value)
-      ? t.value
-      : Array.from((t as HTMLSelectElement).selectedOptions || []).map((o) =>
-        o.value
-      );
-    val.value = v;
-  };
-
-  const handleChange2 = (e: Event) => {
-    const t = e.target as HTMLSelectElement & { value?: string[] };
-    const v = Array.isArray(t.value)
-      ? t.value
-      : Array.from((t as HTMLSelectElement).selectedOptions || []).map((o) =>
-        o.value
-      );
-    val2.value = v;
-  };
 
   return (
     <div class="space-y-10">
@@ -146,16 +124,14 @@ export default function FormMultiSelect() {
             <FormItem label="多选（点击展开，浮层内全选/清空）">
               <MultiSelect
                 options={options}
-                value={() => val.value}
-                onChange={handleChange}
+                value={val}
               />
             </FormItem>
             <CodeBlock
               title="代码示例"
               code={`<MultiSelect
   options={options}
-  value={() => val.value}
-  onChange={handleChange}
+  value={val}
 />`}
               language="tsx"
               showLineNumbers
@@ -169,8 +145,7 @@ export default function FormMultiSelect() {
             <FormItem label="选项 C 为 disabled">
               <MultiSelect
                 options={options}
-                value={() => val2.value}
-                onChange={handleChange2}
+                value={val2}
               />
             </FormItem>
             <CodeBlock

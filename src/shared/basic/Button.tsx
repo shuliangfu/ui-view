@@ -3,7 +3,7 @@
  * 使用 Tailwind v4 类名，支持 light/dark 主题（需应用层在根节点使用 .dark 切换）。
  */
 
-import { createContext, useContext } from "@dreamer/view/context";
+import { createContext, useContext } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import type { ColorVariant, SizeVariant } from "../../shared/types.ts";
 import {

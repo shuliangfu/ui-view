@@ -22,7 +22,7 @@ interface ApiRow {
   description: string;
 }
 
-/** 与 {@link CascaderProps} 对齐的 API 说明 */
+/** 与 CascaderProps 对齐的 API 说明 */
 const CASCADER_API: ApiRow[] = [
   {
     name: "options",
@@ -33,17 +33,17 @@ const CASCADER_API: ApiRow[] = [
   },
   {
     name: "value",
-    type: "string[] | (() => string[])",
+    type: "string[] | (() => string[]) | Signal<string[]>",
     default: "[]",
     description:
-      "当前选中路径，每一段对应该层节点的 value。建议传 getter：value={() => val.value}，以便 View 下随父级 signal 更新",
+      "选中路径（每段为该层节点的 value）。上列三种写法与 Input、Select 等表单组件相同；在类型系统里合称 `MaybeSignal<string[]>`。勿写 `value={val.value}`。设 `name` 时按路径段输出同名隐藏域参与提交。",
   },
   {
     name: "onChange",
     type: "(value: string[]) => void",
     default: "-",
     description:
-      "路径变化时回调，参数为新的 string[]。点浮层首行「占位文案」可清空为 []",
+      "可选。`value` 为 Signal 时组件已自动回写，可不传；需副作用或 getter/字面量受控时再传。参数为新的 string[]；点首行占位可清空为 []",
   },
   {
     name: "loadChildren",
@@ -151,12 +151,7 @@ import { createSignal } from "@dreamer/view";
 const val = createSignal<string[]>([]);
 
 <FormItem label="省 / 市 / 区">
-  <Cascader
-    options={options}
-    value={() => val.value}
-    onChange={(v) => { val.value = v; }}
-    class="w-full"
-  />
+  <Cascader options={options} value={val} class="w-full" />
 </FormItem>`;
 
 /** 仅根节点；子级由 loadChildren 按需返回（演示异步） */
@@ -197,8 +192,33 @@ async function demoLoadChildren(path: string[]): Promise<CascaderOption[]> {
   return [];
 }
 
+/**
+ * 二级静态示例：根数组即**第一列**（此处为市），每项可带 `children` 作为**下一列**（区）。
+ * 与 {@link OPTIONS} 的三级省→市→区 写法相同，只是少了一层省；`children` 可继续嵌套任意深度。
+ */
+const OPTIONS_CITY_DISTRICT: CascaderOption[] = [
+  {
+    value: "hangzhou",
+    label: "杭州",
+    children: [
+      { value: "xihu", label: "西湖区" },
+      { value: "binjiang", label: "滨江区" },
+    ],
+  },
+  {
+    value: "ningbo",
+    label: "宁波",
+    children: [
+      { value: "haishu", label: "海曙区" },
+      { value: "jiangbei", label: "江北区" },
+    ],
+  },
+];
+
 export default function FormCascaderDoc() {
   const val = createSignal<string[]>([]);
+  /** 二级静态示例（市 / 区）受控值 */
+  const valCityDistrict = createSignal<string[]>([]);
   const lazyVal = createSignal<string[]>([]);
   /** 仅用于演示带 name 的表单值 */
   const nameDemoVal = createSignal<string[]>(["zhejiang", "hangzhou", "xihu"]);
@@ -234,8 +254,9 @@ export default function FormCascaderDoc() {
           <code class="text-xs">{"<select>"}</code>
           ）；列数随已选深度变化，超出宽度可横向滚动。已选路径在触发条上以{" "}
           <code class="text-xs">label</code>{" "}
-          用「 / 」连接展示。点击遮罩、再次点击触发条、或 Esc（与 Select /
-          TreeSelect 共用布局上的关闭约定）可关闭浮层。
+          用「 / 」连接展示。点击浮层外区域、再次点击触发条、或 Esc（与 Select /
+          TreeSelect
+          共用布局上的关闭约定）可关闭浮层；展开时**不**使用全屏遮罩，以免挡住页面滚动。
         </Paragraph>
         <Paragraph class="mt-3 leading-relaxed">
           <strong>选中与清空：</strong>
@@ -247,10 +268,14 @@ export default function FormCascaderDoc() {
         </Paragraph>
         <Paragraph class="mt-3 leading-relaxed">
           <strong>View 受控写法：</strong>
-          务必使用{" "}
-          <code class="text-xs">value={"() => val.value"}</code>，不要写{" "}
-          <code class="text-xs">value={val.value}</code>，否则父级{" "}
-          <code class="text-xs">signal</code> 更新时子组件可能拿不到最新路径。
+          可写 <code class="text-xs">{"value={val}"}</code>（
+          <code class="text-xs">createSignal</code> 返回值）或{" "}
+          <code class="text-xs">{"value={val}"}</code>
+          ；勿写 <code class="text-xs">{"value={val.value}"}</code>
+          。文档正文里用 <code class="text-xs">{"<code>"}</code>{" "}
+          展示时仍须字符串字面量，勿写{" "}
+          <code class="text-xs">{"{val.value}"}</code>{" "}
+          等可执行表达式，以免误订阅、整页闪动。
         </Paragraph>
       </section>
 
@@ -295,33 +320,98 @@ export default function FormCascaderDoc() {
 
       <section class="space-y-8">
         <Title level={2}>示例</Title>
+        <Paragraph class="text-sm text-slate-500 dark:text-slate-400">
+          各小节<strong>先可交互示例、后附代码</strong>。Cascader 浮层在根内
+          {" "}
+          <code class="text-xs">absolute</code>、z-index
+          较高；若展开后第二列被下方内容遮挡，可稍滚动页面或先收起再查看代码。
+        </Paragraph>
 
         <section class="space-y-4">
           <Title level={3}>静态数据（多级嵌套）</Title>
           <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
-            数据一次性写在 <code class="text-xs">options</code>{" "}
-            里即可，层级不限；苏州示例为无 <code class="text-xs">children</code>
+            <strong>数据结构：</strong>
+            <code class="text-xs">options</code> 是根级{" "}
+            <code class="text-xs">CascaderOption[]</code>，对应浮层<strong>
+              最左一列
+            </strong>；每一项为{" "}
+            <code class="text-xs">{"{ value, label, children? }"}</code>，其中
             {" "}
-            的叶子市。
+            <code class="text-xs">children</code>{" "}
+            可选，有则再嵌一层同结构数组，即下一列数据源。叶子节点不写{" "}
+            <code class="text-xs">children</code>{" "}
+            即可（如江苏「苏州」）。数据可一次写死在静态树里，也可用{" "}
+            <code class="text-xs">loadChildren</code> 按需加载（见下文示例）。
+            <strong>层数不用配置：</strong>嵌套几层{" "}
+            <code class="text-xs">
+              children
+            </code>
+            ，展开后就会逐级多出一列，直到叶子。
+          </Paragraph>
+          <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+            下列为省 → 市 → 区 三级；苏州示例为无{" "}
+            <code class="text-xs">children</code> 的叶子市。
           </Paragraph>
           <Form layout="vertical" class="w-full max-w-lg">
             <FormItem label="省 / 市 / 区">
-              <Cascader
-                options={OPTIONS}
-                value={() => val.value}
-                onChange={(v) => {
-                  val.value = v;
-                }}
-                class="w-full"
-              />
+              <Cascader options={OPTIONS} value={val} class="w-full" />
             </FormItem>
           </Form>
           <CodeBlock
             title="代码示例"
             code={`<Cascader
   options={OPTIONS}
-  value={() => val.value}
-  onChange={(v) => { val.value = v; }}
+  value={val}
+  class="w-full"
+/>`}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+        </section>
+
+        <section class="space-y-4">
+          <Title level={3}>静态数据（二级：市 / 区）</Title>
+          <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+            只有两层时，根数组就是「市」列表，市的{" "}
+            <code class="text-xs">children</code> 为「区」列表；选中路径形如
+            {" "}
+            <code class="text-xs">["hangzhou","xihu"]</code>。
+          </Paragraph>
+          <Form layout="vertical" class="w-full max-w-lg">
+            <FormItem label="市 / 区">
+              <Cascader
+                options={OPTIONS_CITY_DISTRICT}
+                value={valCityDistrict}
+                class="w-full"
+              />
+            </FormItem>
+          </Form>
+          <CodeBlock
+            title="数据与用法"
+            code={`const OPTIONS_CITY_DISTRICT: CascaderOption[] = [
+  {
+    value: "hangzhou",
+    label: "杭州",
+    children: [
+      { value: "xihu", label: "西湖区" },
+      { value: "binjiang", label: "滨江区" },
+    ],
+  },
+  {
+    value: "ningbo",
+    label: "宁波",
+    children: [
+      { value: "haishu", label: "海曙区" },
+      { value: "jiangbei", label: "江北区" },
+    ],
+  },
+];
+
+<Cascader
+  options={OPTIONS_CITY_DISTRICT}
+  value={valCityDistrict}
   class="w-full"
 />`}
             language="tsx"
@@ -345,10 +435,7 @@ export default function FormCascaderDoc() {
               <Cascader
                 options={OPTIONS}
                 name="region"
-                value={() => nameDemoVal.value}
-                onChange={(v) => {
-                  nameDemoVal.value = v;
-                }}
+                value={nameDemoVal}
                 class="w-full"
               />
             </FormItem>
@@ -358,8 +445,7 @@ export default function FormCascaderDoc() {
             code={`<Cascader
   options={OPTIONS}
   name="region"
-  value={() => nameDemoVal.value}
-  onChange={(v) => { nameDemoVal.value = v; }}
+  value={nameDemoVal}
   class="w-full"
 />`}
             language="tsx"
@@ -403,10 +489,7 @@ export default function FormCascaderDoc() {
             <FormItem label="省 / 市 / 区（异步）">
               <Cascader
                 options={LAZY_ROOT}
-                value={() => lazyVal.value}
-                onChange={(v) => {
-                  lazyVal.value = v;
-                }}
+                value={lazyVal}
                 loadChildren={demoLoadChildren}
                 class="w-full"
               />
@@ -421,8 +504,7 @@ export default function FormCascaderDoc() {
 
 <Cascader
   options={LAZY_ROOT}
-  value={() => lazyVal.value}
-  onChange={(v) => { lazyVal.value = v; }}
+  value={lazyVal}
   loadChildren={async (path) => {
     if (path.length === 1 && path[0] === "zhejiang") {
       return [
@@ -459,9 +541,22 @@ export default function FormCascaderDoc() {
       <section class="space-y-3">
         <Title level={2}>API</Title>
         <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
-          除 <code class="text-xs">options</code> 必填外，其余属性均为可选；类型
+          除 <code class="text-xs">options</code> 必填外，其余属性均为可选；
           {" "}
           <code class="text-xs">SizeVariant</code> 与全局表单组件一致。
+        </Paragraph>
+        <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+          <strong>MaybeSignal&lt;T&gt;</strong>：受控值可以是{" "}
+          <code class="text-xs">T</code> 字面快照、零参函数{" "}
+          <code class="text-xs">{"() => T"}</code>，或{" "}
+          <code class="text-xs">createSignal</code> 的返回值（可调用{" "}
+          <code class="text-xs">Signal&lt;T&gt;</code>）。类型定义在源码{" "}
+          <code class="text-xs">ui-view/src/shared/form/maybe-signal.ts</code>
+          ，并由 <code class="text-xs">@dreamer/ui-view</code> 再导出，可{" "}
+          <code class="text-xs">
+            {'import type { MaybeSignal } from "@dreamer/ui-view"'}
+          </code>
+          。
         </Paragraph>
         <div class="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-600">
           <table class="w-full min-w-lg text-sm">

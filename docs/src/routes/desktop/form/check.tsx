@@ -26,15 +26,17 @@ interface ApiRow {
 const CHECKBOX_API: ApiRow[] = [
   {
     name: "checked",
-    type: "boolean | (() => boolean)",
+    type: "boolean | (() => boolean) | Signal<boolean>",
     default: "-",
-    description: "是否选中；可为 getter",
+    description:
+      "是否选中。与全库表单一致为 MaybeSignal：字面量、`() => T`、`createSignal` 返回值；勿直接绑 `sig.value`（快照失步或误订阅）。",
   },
   {
     name: "onChange",
     type: "(e: Event) => void",
     default: "-",
-    description: "变更（e.target.checked）",
+    description:
+      "可选。`checked` 为 Signal 时组件已回写，可不传；需副作用时再传（e.target.checked）",
   },
   {
     name: "disabled",
@@ -62,15 +64,16 @@ const CHECKBOX_GROUP_API: ApiRow[] = [
   },
   {
     name: "value",
-    type: "string[] | (() => string[])",
+    type: "string[] | (() => string[]) | Signal<string[]>",
     default: "-",
-    description: "当前选中值数组",
+    description:
+      "当前选中项 value 数组。与全库表单一致为 MaybeSignal：字面量、`() => T`、`createSignal` 返回值；勿直接绑 `sig.value`（快照失步或误订阅）。",
   },
   {
     name: "onChange",
     type: "(value: string[]) => void",
     default: "-",
-    description: "变更回调",
+    description: "可选。`value` 为 Signal 时组件已回写；需副作用时再传",
   },
   {
     name: "direction",
@@ -103,15 +106,16 @@ const RADIO_GROUP_API: ApiRow[] = [
   },
   {
     name: "value",
-    type: "string | (() => string)",
+    type: "string | (() => string) | Signal<string>",
     default: "-",
-    description: "当前选中值",
+    description:
+      "当前选中项 value。与全库表单一致为 MaybeSignal：字面量、`() => T`、`createSignal` 返回值；勿直接绑 `sig.value`（快照失步或误订阅）。",
   },
   {
     name: "onChange",
     type: "(value: string) => void",
     default: "-",
-    description: "变更回调",
+    description: "可选。`value` 为 Signal 时组件已回写；需副作用时再传",
   },
   {
     name: "direction",
@@ -132,15 +136,17 @@ const RADIO_GROUP_API: ApiRow[] = [
 const SWITCH_API: ApiRow[] = [
   {
     name: "checked",
-    type: "boolean | (() => boolean)",
+    type: "boolean | (() => boolean) | Signal<boolean>",
     default: "-",
-    description: "是否选中；可为 getter",
+    description:
+      "是否开启。与全库表单一致为 MaybeSignal：字面量、`() => T`、`createSignal` 返回值；勿直接绑 `sig.value`（快照失步或误订阅）。",
   },
   {
     name: "onChange",
     type: "(e: Event) => void",
     default: "-",
-    description: "变更（e.target.checked）",
+    description:
+      "可选。`checked` 为 Signal 时组件已回写；需副作用时再传（e.target.checked）",
   },
   {
     name: "checkedChildren",
@@ -192,18 +198,10 @@ const groupVal = createSignal<string[]>([]);
 const radioVal = createSignal("r1");
 const sw = createSignal(false);
 
-<Checkbox
-  checked={cb.value}
-  onChange={(e) => cb.value = (e.target as HTMLInputElement).checked}
->
-  勾选我
-</Checkbox>
-<CheckboxGroup options={...} value={groupVal.value} onChange={(v) => groupVal.value = v} />
-<RadioGroup name="radio-demo" options={...} value={radioVal.value} onChange={(v) => radioVal.value = v} />
-<Switch
-  checked={sw}
-  onChange={(e) => sw.value = (e.target as HTMLInputElement).checked}
-/>`;
+<Checkbox checked={cb}>勾选我</Checkbox>
+<CheckboxGroup options={...} value={groupVal} />
+<RadioGroup name="radio-demo" options={...} value={radioVal} />
+<Switch checked={sw} />`;
 
 export default function FormCheck() {
   const checkboxVal = createSignal(false);
@@ -218,8 +216,9 @@ export default function FormCheck() {
           Checkbox / CheckboxGroup / RadioGroup / Switch 勾选与开关
         </Title>
         <Paragraph class="mt-2">
-          Checkbox：单选框；CheckboxGroup：多选组（options、value、onChange）；RadioGroup：单选组（name、options、value、onChange）；Switch：开关（checked、onChange、checkedChildren、unCheckedChildren、disabled、error）。Tailwind
-          v4 + light/dark。
+          Checkbox：单选框；CheckboxGroup / RadioGroup：`value` 传 Signal
+          时可不写 onChange；Switch：`checked` 传 Signal 时可不写
+          onChange。Tailwind v4 + light/dark。
         </Paragraph>
       </section>
 
@@ -241,22 +240,11 @@ export default function FormCheck() {
           <section class="space-y-4">
             <Title level={3}>Checkbox</Title>
             <FormItem label="Checkbox">
-              <Checkbox
-                checked={checkboxVal.value}
-                onChange={(e) =>
-                  checkboxVal.value = (e.target as HTMLInputElement).checked}
-              >
-                勾选我
-              </Checkbox>
+              <Checkbox checked={checkboxVal}>勾选我</Checkbox>
             </FormItem>
             <CodeBlock
               title="代码示例"
-              code={`<Checkbox
-  checked={checkboxVal.value}
-  onChange={(e) => checkboxVal.value = (e.target as HTMLInputElement).checked}
->
-  勾选我
-</Checkbox>`}
+              code={`<Checkbox checked={checkboxVal}>勾选我</Checkbox>`}
               language="tsx"
               showLineNumbers
               copyable
@@ -269,17 +257,12 @@ export default function FormCheck() {
             <FormItem label="CheckboxGroup">
               <CheckboxGroup
                 options={checkboxOptions}
-                value={checkboxGroupVal.value}
-                onChange={(v) => checkboxGroupVal.value = v}
+                value={checkboxGroupVal}
               />
             </FormItem>
             <CodeBlock
               title="代码示例"
-              code={`<CheckboxGroup
-  options={...}
-  value={checkboxGroupVal.value}
-  onChange={(v) => checkboxGroupVal.value = v}
-/>`}
+              code={`<CheckboxGroup options={...} value={checkboxGroupVal} />`}
               language="tsx"
               showLineNumbers
               copyable
@@ -293,18 +276,12 @@ export default function FormCheck() {
               <RadioGroup
                 name="radio-demo"
                 options={radioOptions}
-                value={radioVal.value}
-                onChange={(v) => radioVal.value = v}
+                value={radioVal}
               />
             </FormItem>
             <CodeBlock
               title="代码示例"
-              code={`<RadioGroup
-  name="radio-demo"
-  options={...}
-  value={radioVal.value}
-  onChange={(v) => radioVal.value = v}
-/>`}
+              code={`<RadioGroup name="radio-demo" options={...} value={radioVal} />`}
               language="tsx"
               showLineNumbers
               copyable
@@ -315,17 +292,11 @@ export default function FormCheck() {
           <section class="space-y-4">
             <Title level={3}>Switch 基础与自定义文案</Title>
             <FormItem label="Switch">
-              <Switch
-                checked={switchVal}
-                onChange={(e) =>
-                  switchVal.value = (e.target as HTMLInputElement).checked}
-              />
+              <Switch checked={switchVal} />
             </FormItem>
             <FormItem label="Switch 自定义文案">
               <Switch
                 checked={switchVal}
-                onChange={(e) =>
-                  switchVal.value = (e.target as HTMLInputElement).checked}
                 checkedChildren="开"
                 unCheckedChildren="关"
               />
@@ -333,6 +304,7 @@ export default function FormCheck() {
             <CodeBlock
               title="代码示例"
               code={`<Switch
+  checked={switchVal}
   checkedChildren="开"
   unCheckedChildren="关"
 />`}

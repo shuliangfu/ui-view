@@ -210,6 +210,13 @@ const TABLE_EDIT_PENDING_REFOCUS_MAX_WAIT_STEPS = 160;
  */
 const TABLE_EDIT_DOM_SNAP_MAX_WAIT_STEPS = 32;
 
+/**
+ * 可编辑格内嵌 DatePicker / TimePicker / DateTimePicker 且 `panelAttach="viewport"` 时，
+ * 浮层为视口 `fixed` 仍为 host 子树；但从触发器点到面板内按钮的瞬间，`document.activeElement` 可能短暂为 `body` 等，
+ * tryBlurExit 会误判「已失焦」并清空 `editingCell`。每步 2×rAF 重试，上限作安全阀。
+ */
+const TABLE_EDIT_PICKER_FOCUS_SETTLE_MAX_STEPS = 32;
+
 const sizeClasses: Record<SizeVariant, string> = {
   xs: "px-2 py-1 text-xs",
   sm: "px-3 py-2 text-xs",
@@ -248,6 +255,30 @@ function resolveEditableDisabled<T extends Record<string, unknown>>(
 /** 编辑根节点定位用 token（避免 rowKey 特殊字符破坏 querySelector） */
 function tableEditSlotToken(rowKey: string, columnKey: string): string {
   return encodeURIComponent(`${rowKey}\0${columnKey}`);
+}
+
+/**
+ * 查找当前编辑槽内已挂载且可见的日期/时间类 Picker 主浮层根节点（与组件 `role="dialog"` + `aria-label` 一致）。
+ * 供可编辑格 `onFocusOut` 的 tryBlurExit 使用：焦点过渡帧内勿结束编辑。
+ *
+ * @param host - `data-view-table-edit-slot` 对应元素
+ * @returns 浮层根；无则 `null`
+ */
+function tableEditFindOpenPickerDialogRoot(
+  host: HTMLElement,
+): HTMLElement | null {
+  const selectors = [
+    '[role="dialog"][aria-label="选择日期"]',
+    '[role="dialog"][aria-label="选择时间"]',
+    '[role="dialog"][aria-label="选择日期与时间"]',
+  ] as const;
+  for (let s = 0; s < selectors.length; s++) {
+    const el = host.querySelector(selectors[s]) as HTMLElement | null;
+    if (el == null || !el.isConnected) continue;
+    const r = el.getBoundingClientRect();
+    if (r.width > 0 && r.height > 0) return el;
+  }
+  return null;
 }
 
 /**
@@ -661,9 +692,10 @@ function renderEditableCell<T extends Record<string, unknown>>(
       );
     case "date": {
       const dateStr = raw == null ? "" : String(raw);
+      // 表格 table-wrapper 使用 overflow-x-auto，会裁切 absolute 浮层；须 panelAttach=viewport（视口 fixed）
       return (
         <div
-          class="min-h-0 w-full max-w-full overflow-hidden"
+          class="min-h-0 w-full max-w-full overflow-visible"
           onClick={stop}
         >
           <DatePicker
@@ -672,6 +704,7 @@ function renderEditableCell<T extends Record<string, unknown>>(
             disabled={disabled}
             placeholder="选择日期"
             class={twMerge("w-full min-w-0", h)}
+            panelAttach="viewport"
             onChange={(e: Event) => {
               const v = (e.target as EventTarget & { value?: string }).value ??
                 "";
@@ -683,9 +716,10 @@ function renderEditableCell<T extends Record<string, unknown>>(
     }
     case "time": {
       const timeStr = raw == null ? "" : String(raw);
+      // 与 date 列相同：避免浮层被 table-wrapper 裁切
       return (
         <div
-          class="min-h-0 w-full max-w-full overflow-hidden"
+          class="min-h-0 w-full max-w-full overflow-visible"
           onClick={stop}
         >
           <TimePicker
@@ -694,6 +728,7 @@ function renderEditableCell<T extends Record<string, unknown>>(
             disabled={disabled}
             placeholder="选择时间"
             class={twMerge("w-full min-w-0", h)}
+            panelAttach="viewport"
             onChange={(e: Event) => {
               const v = (e.target as EventTarget & { value?: string }).value ??
                 "";
@@ -706,7 +741,7 @@ function renderEditableCell<T extends Record<string, unknown>>(
     case "select":
       return (
         <div
-          class="min-h-0 w-full max-w-full overflow-hidden"
+          class="min-h-0 w-full max-w-full overflow-visible"
           onClick={stop}
         >
           <select
@@ -1105,215 +1140,162 @@ export function Table<
     rowSelection.onChange?.(selectedRows);
   };
 
-  return () => {
-    /**
-     * 每次子槽 bump 后重跑须从 `props` 取最新数据源（与运行时 `liveProps` 同一引用，patch 时会 assign 覆盖）。
-     * 禁止依赖组件首次调用时在闭包内缓存的 `dataSource` 常量。
-     */
-    const dataSource = props.dataSource;
-    // 展开行：受控用 props，非受控用内部 signal（在 getter 内读以保证 effect 订阅、点击 + 能更新）
-    const expandedKeysSource = expandable?.expandedRowKeys ??
-      expandedRef.value;
-    const expandedSet = new Set(
-      Array.isArray(expandedKeysSource) ? expandedKeysSource : [],
-    );
+  /**
+   * 勿用外层 `return () => …` 包住整表：那会读 `expandedRef` / `sortState` / `selectedRef` / `internalPage` 等，
+   * 父级 `insert` 的 effect 会订阅这些 signal；展开行变化时 effect 重跑与 `cleanNode` 可能破坏与兄弟节点（如文档页下方 CodeBlock）的 DOM 顺序，表现为表格与代码块上下错位。
+   * 将整段依赖上述状态的 JSX 放进 `children` 函数，由子级 `insert` 单独挂 effect（与 Affix、Menu、Pagination 一致）。
+   * 根上须有一层**稳定 DOM**（如下方 `div`）：若根仅为 Fragment + 函数子，内层数组插入会把表体插在文档父级与 CodeBlock 同级，响应式重跑时可能与数组尾锚不同步导致兄弟错位；壳内更新则不影响与外侧兄弟的顺序。
+   */
+  return (
+    <div class="w-full min-w-0">
+      {() => {
+        /**
+         * 每次子槽 bump 后重跑须从 `props` 取最新数据源（与运行时 `liveProps` 同一引用，patch 时会 assign 覆盖）。
+         * 禁止依赖组件首次调用时在闭包内缓存的 `dataSource` 常量。
+         */
+        const dataSource = props.dataSource;
+        // 展开行：受控用 props，非受控用内部 signal（在 getter 内读以保证 effect 订阅、点击 + 能更新）
+        const expandedKeysSource = expandable?.expandedRowKeys ??
+          expandedRef.value;
+        const expandedSet = new Set(
+          Array.isArray(expandedKeysSource) ? expandedKeysSource : [],
+        );
 
-    // 处理排序
-    const data = [...dataSource];
-    const { key: sortKey, order: sortOrder } = sortState.value;
-    if (sortKey && sortOrder) {
-      const col = columns.find((c) => c.key === sortKey);
-      if (col?.sorter) {
-        if (typeof col.sorter === "function") {
-          data.sort((a, b) =>
-            (col.sorter as (a: T, b: T) => number)(a, b) *
-            (sortOrder === "descend" ? -1 : 1)
-          );
-        } else {
-          // 默认字符串/数字排序
-          data.sort((a, b) => {
-            const va = (a as any)[col.dataIndex || col.key];
-            const vb = (b as any)[col.dataIndex || col.key];
-            if (va === vb) return 0;
-            const result = va > vb ? 1 : -1;
-            return sortOrder === "descend" ? -result : result;
-          });
+        // 处理排序
+        const data = [...dataSource];
+        const { key: sortKey, order: sortOrder } = sortState.value;
+        if (sortKey && sortOrder) {
+          const col = columns.find((c) => c.key === sortKey);
+          if (col?.sorter) {
+            if (typeof col.sorter === "function") {
+              data.sort((a, b) =>
+                (col.sorter as (a: T, b: T) => number)(a, b) *
+                (sortOrder === "descend" ? -1 : 1)
+              );
+            } else {
+              // 默认字符串/数字排序
+              data.sort((a, b) => {
+                const va = (a as any)[col.dataIndex || col.key];
+                const vb = (b as any)[col.dataIndex || col.key];
+                if (va === vb) return 0;
+                const result = va > vb ? 1 : -1;
+                return sortOrder === "descend" ? -result : result;
+              });
+            }
+          }
         }
-      }
-    }
 
-    // 分页：计算当前页数据与总数（pagination 为对象时启用，false/undefined 不启用）
-    const paginationEnabled = paginationConfig !== undefined &&
-      paginationConfig !== false;
-    const pageSize = paginationEnabled
-      ? (paginationConfig?.pageSize ?? 10)
-      : data.length || 1;
-    const currentPage = paginationEnabled
-      ? (paginationConfig?.current ?? internalPage.value)
-      : 1;
-    const total = paginationEnabled
-      ? (paginationConfig?.total ?? data.length)
-      : data.length;
-    const displayData = paginationEnabled
-      ? data.slice((currentPage - 1) * pageSize, currentPage * pageSize)
-      : data;
-    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+        // 分页：计算当前页数据与总数（pagination 为对象时启用，false/undefined 不启用）
+        const paginationEnabled = paginationConfig !== undefined &&
+          paginationConfig !== false;
+        const pageSize = paginationEnabled
+          ? (paginationConfig?.pageSize ?? 10)
+          : data.length || 1;
+        const currentPage = paginationEnabled
+          ? (paginationConfig?.current ?? internalPage.value)
+          : 1;
+        const total = paginationEnabled
+          ? (paginationConfig?.total ?? data.length)
+          : data.length;
+        const displayData = paginationEnabled
+          ? data.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+          : data;
+        const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
-    // 处理选择状态（基于全量 data 的 key，与当前页 displayData 一致）
-    const selectedKeys = new Set(
-      rowSelection?.selectedRowKeys ?? selectedRef.value,
-    );
-    const allSelected = displayData.length > 0 && displayData.every(
-      (record, index) => {
-        const originalIndex = (currentPage - 1) * pageSize + index;
-        const key = getKey(record, originalIndex);
-        const props = rowSelection?.getCheckboxProps?.(record);
-        return props?.disabled || selectedKeys.has(key);
-      },
-    );
+        // 处理选择状态（基于全量 data 的 key，与当前页 displayData 一致）
+        const selectedKeys = new Set(
+          rowSelection?.selectedRowKeys ?? selectedRef.value,
+        );
+        const allSelected = displayData.length > 0 && displayData.every(
+          (record, index) => {
+            const originalIndex = (currentPage - 1) * pageSize + index;
+            const key = getKey(record, originalIndex);
+            const props = rowSelection?.getCheckboxProps?.(record);
+            return props?.disabled || selectedKeys.has(key);
+          },
+        );
 
-    /**
-     * 选择列原生 input 的 `checked` 须传布尔，勿传 `() => boolean`：
-     * react-jsx 产出 VNode 后由 `applyIntrinsicVNodeProps` 写 DOM，其中会 `continue` 跳过 function 类型，
-     * 导致勾选态永远不反映到 DOM（onSelectChange 仍会触发）。
-     */
+        /**
+         * 选择列原生 input 的 `checked` 须传布尔，勿传 `() => boolean`：
+         * react-jsx 产出 VNode 后由 `applyIntrinsicVNodeProps` 写 DOM，其中会 `continue` 跳过 function 类型，
+         * 导致勾选态永远不反映到 DOM（onSelectChange 仍会触发）。
+         */
 
-    /** 固定列 left 偏移（仅 fixed === "left" 的列有值，用于 sticky 定位） */
-    const fixedLeftOffsets: (number | null)[] = [];
-    let leftAcc = 0;
-    for (const col of columns) {
-      if (col.fixed === "left") {
-        fixedLeftOffsets.push(leftAcc);
-        const w = col.width;
-        leftAcc += typeof w === "number"
-          ? w
-          : (typeof w === "string" ? parseFloat(w) || 80 : 80);
-      } else {
-        fixedLeftOffsets.push(null);
-      }
-    }
-
-    const handlePageChange = (page: number) => {
-      if (paginationConfig !== undefined && paginationConfig !== false) {
-        if (paginationConfig.current === undefined) {
-          internalPage.value = page;
+        /** 固定列 left 偏移（仅 fixed === "left" 的列有值，用于 sticky 定位） */
+        const fixedLeftOffsets: (number | null)[] = [];
+        let leftAcc = 0;
+        for (const col of columns) {
+          if (col.fixed === "left") {
+            fixedLeftOffsets.push(leftAcc);
+            const w = col.width;
+            leftAcc += typeof w === "number"
+              ? w
+              : (typeof w === "string" ? parseFloat(w) || 80 : 80);
+          } else {
+            fixedLeftOffsets.push(null);
+          }
         }
-        paginationConfig.onChange?.(page, pageSize);
-      }
-    };
 
-    /** 空状态 / 加载行等单行占满表宽时的 colSpan（选择列 + 展开列 + 数据列） */
-    const bodyColSpan = (rowSelection ? 1 : 0) +
-      (expandable?.expandedRowRender ? 1 : 0) +
-      columns.length;
+        const handlePageChange = (page: number) => {
+          if (paginationConfig !== undefined && paginationConfig !== false) {
+            if (paginationConfig.current === undefined) {
+              internalPage.value = page;
+            }
+            paginationConfig.onChange?.(page, pageSize);
+          }
+        };
 
-    return (
-      <>
-        {(title != null || extra != null) && (
-          <div class="flex justify-between items-center gap-4 mb-2">
-            <div class="text-base font-medium text-slate-800 dark:text-slate-200">
-              {title}
-            </div>
-            <div>{extra}</div>
-          </div>
-        )}
-        <div
-          ref={(el: HTMLElement | null) => {
-            tableEditRootRef.current = el;
-          }}
-          class={twMerge(
-            "table-wrapper overflow-x-auto",
-            className,
-          )}
-        >
-          <table
-            class={twMerge(
-              "w-full border-collapse",
-              // 外框用 0.5px，避免默认 1px 在 light 下显得偏粗（高 DPR 下仍可见细线）
-              bordered &&
-                "box-border border-0.5 border-slate-200 dark:border-slate-600",
+        /** 空状态 / 加载行等单行占满表宽时的 colSpan（选择列 + 展开列 + 数据列） */
+        const bodyColSpan = (rowSelection ? 1 : 0) +
+          (expandable?.expandedRowRender ? 1 : 0) +
+          columns.length;
+
+        return (
+          <>
+            {(title != null || extra != null) && (
+              <div class="flex justify-between items-center gap-4 mb-2">
+                <div class="text-base font-medium text-slate-800 dark:text-slate-200">
+                  {title}
+                </div>
+                <div>{extra}</div>
+              </div>
             )}
-          >
-            <thead>
-              <tr class="border-b border-slate-200 bg-slate-50 dark:border-slate-600 dark:bg-slate-800/50">
-                {rowSelection && (
-                  <th
-                    class={twMerge(
-                      "w-8 text-center",
-                      paddingCls,
-                      rowSelection.type !== "radio" &&
-                        "cursor-pointer select-none",
-                    )}
-                    onClick={rowSelection.type !== "radio"
-                      ? (e: Event) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        const cur = rowSelection?.selectedRowKeys ??
-                          selectedRef.value;
-                        const set = cur instanceof Set
-                          ? cur
-                          : new Set((cur as string[]) ?? []);
-                        const all = displayData.length > 0 &&
-                          displayData.every((r, i) => {
-                            const k = getKey(
-                              r,
-                              (currentPage - 1) * pageSize + i,
-                            );
-                            const p = rowSelection?.getCheckboxProps?.(r);
-                            return p?.disabled || set.has(k);
-                          });
-                        handleSelectAll(
-                          !all,
-                          displayData,
-                          (currentPage - 1) * pageSize,
-                        );
-                        const input = (
-                          e.currentTarget as HTMLElement
-                        ).querySelector(
-                          'input[type="checkbox"]',
-                        ) as HTMLInputElement | null;
-                        if (input) {
-                          const nextSet =
-                            rowSelection?.selectedRowKeys === undefined
-                              ? selectedRef.value
-                              : new Set(
-                                rowSelection?.selectedRowKeys ?? [],
-                              );
-                          const nextAll = displayData.length > 0 &&
-                            displayData.every((r, i) => {
-                              const k = getKey(
-                                r,
-                                (currentPage - 1) * pageSize + i,
-                              );
-                              const p = rowSelection?.getCheckboxProps?.(r);
-                              return p?.disabled || nextSet.has(k);
-                            });
-                          const nextSome = displayData.some((r, i) =>
-                            nextSet.has(
-                              getKey(r, (currentPage - 1) * pageSize + i),
-                            )
-                          );
-                          input.checked = nextAll;
-                          input.indeterminate = !nextAll && nextSome;
-                        }
-                      }
-                      : undefined}
-                  >
-                    {rowSelection.type !== "radio" && (
-                      <input
-                        type="checkbox"
-                        class="rounded border-slate-300 text-blue-600 focus:ring-blue-500 pointer-events-none"
-                        checked={allSelected}
-                        tabIndex={-1}
-                        readOnly
-                        ref={(el: HTMLInputElement | null) => {
-                          if (!el) return;
-                          createEffect(() => {
-                            const src = rowSelection?.selectedRowKeys ??
+            <div
+              ref={(el: HTMLElement | null) => {
+                tableEditRootRef.current = el;
+              }}
+              class={twMerge(
+                "table-wrapper overflow-x-auto",
+                className,
+              )}
+            >
+              <table
+                class={twMerge(
+                  "w-full border-collapse",
+                  // 外框用 0.5px，避免默认 1px 在 light 下显得偏粗（高 DPR 下仍可见细线）
+                  bordered &&
+                    "box-border border-0.5 border-slate-200 dark:border-slate-600",
+                )}
+              >
+                <thead>
+                  <tr class="border-b border-slate-200 bg-slate-50 dark:border-slate-600 dark:bg-slate-800/50">
+                    {rowSelection && (
+                      <th
+                        class={twMerge(
+                          "w-8 text-center",
+                          paddingCls,
+                          rowSelection.type !== "radio" &&
+                            "cursor-pointer select-none",
+                        )}
+                        onClick={rowSelection.type !== "radio"
+                          ? (e: Event) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            const cur = rowSelection?.selectedRowKeys ??
                               selectedRef.value;
-                            const set = src instanceof Set
-                              ? src
-                              : new Set((src as string[]) ?? []);
+                            const set = cur instanceof Set
+                              ? cur
+                              : new Set((cur as string[]) ?? []);
                             const all = displayData.length > 0 &&
                               displayData.every((r, i) => {
                                 const k = getKey(
@@ -1323,552 +1305,673 @@ export function Table<
                                 const p = rowSelection?.getCheckboxProps?.(r);
                                 return p?.disabled || set.has(k);
                               });
-                            const some = displayData.some((r, i) =>
-                              set.has(
-                                getKey(r, (currentPage - 1) * pageSize + i),
-                              )
+                            handleSelectAll(
+                              !all,
+                              displayData,
+                              (currentPage - 1) * pageSize,
                             );
-                            el.indeterminate = !all && some;
-                          });
-                        }}
-                      />
-                    )}
-                  </th>
-                )}
-                {expandable?.expandedRowRender && (
-                  <th class={twMerge("w-8", paddingCls)} />
-                )}
-                {columns.map((col, colIndex) => (
-                  <th
-                    key={col.key}
-                    class={twMerge(
-                      "text-left font-medium text-slate-700 dark:text-slate-300 select-none",
-                      col.fixed === "left" &&
-                        "bg-slate-50 dark:bg-slate-800 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] dark:shadow-[2px_0_4px_-2px_rgba(0,0,0,0.3)]",
-                      paddingCls,
-                      col.align === "center" && "text-center",
-                      col.align === "right" && "text-right",
-                      col.sorter &&
-                        "cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700",
-                      headerClass,
-                    )}
-                    style={{
-                      ...(fixedLeftOffsets[colIndex] != null
-                        ? {
-                          position: "sticky" as const,
-                          left: `${fixedLeftOffsets[colIndex]}px`,
-                          zIndex: 2,
-                        }
-                        : {}),
-                      ...(col.width != null
-                        ? {
-                          width: typeof col.width === "number"
-                            ? `${col.width}px`
-                            : col.width,
-                        }
-                        : {}),
-                    }}
-                    onClick={() =>
-                      col.sorter && handleSort(col.key, col.sorter)}
-                  >
-                    <div class="flex items-center gap-1">
-                      {col.title}
-                      {col.sorter && (
-                        <div class="flex flex-col text-[10px] text-slate-400">
-                          <IconChevronUp
-                            class={twMerge(
-                              "w-3 h-3 -mb-1",
-                              sortKey === col.key && sortOrder === "ascend" &&
-                                "text-blue-500",
-                            )}
-                          />
-                          <IconChevronDown
-                            class={twMerge(
-                              "w-3 h-3",
-                              sortKey === col.key && sortOrder === "descend" &&
-                                "text-blue-500",
-                            )}
-                          />
-                        </div>
-                      )}
-                    </div>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {displayData.length === 0
-                ? (
-                  <tr>
-                    <td
-                      colSpan={bodyColSpan}
-                      class={twMerge(
-                        "text-center text-slate-500 dark:text-slate-400",
-                        paddingCls,
-                        // 加载态背景铺在整格；勿只写内层 div，否则 flex 块易收缩、与 thead 视觉宽度不齐
-                        loading &&
-                          "bg-slate-50/90 dark:bg-slate-900/50",
-                      )}
-                    >
-                      {/* 加载态写在 td 内；内层须 w-full 撑满单元格内容区 */}
-                      {loading
-                        ? (
-                          <div
-                            class="flex w-full min-w-0 flex-col items-center justify-center"
-                            aria-busy="true"
-                            aria-live="polite"
-                          >
-                            <span class="text-sm">加载中…</span>
-                          </div>
-                        )
-                        : (
-                          renderEmpty?.() ??
-                            (locale?.emptyText ?? "暂无数据")
-                        )}
-                    </td>
-                  </tr>
-                )
-                : (
-                  <>
-                    {displayData.flatMap((record, index) => {
-                      const originalIndex = (currentPage - 1) * pageSize +
-                        index;
-                      const key = getKey(record, originalIndex);
-                      const isExpanded = expandedSet.has(key);
-                      const canExpand = expandable?.rowExpandable?.(record) ??
-                        true;
-                      const isSelected = selectedKeys.has(key);
-                      const checkboxProps = rowSelection?.getCheckboxProps?.(
-                        record,
-                      );
-                      const rowProps = onRow?.(record, originalIndex) ?? {};
-
-                      /**
-                       * 斑马纹/行底色须落在每个 td：`border-collapse: collapse` 下 tr 的背景常被单元格遮住，浅色里会整表发白；
-                       * light 下 `slate-50/50` 对比太弱，奇数行用 `bg-slate-100` 才能看出条纹。
-                       */
-                      const bodyRowCellBg = isSelected
-                        ? "bg-blue-50 dark:bg-blue-900/20"
-                        : striped && index % 2 === 1
-                        ? "bg-slate-100 dark:bg-slate-800/40"
-                        : "bg-white dark:bg-slate-900";
-
-                      const rows: unknown[] = [
-                        <tr
-                          key={key}
-                          class={twMerge(
-                            "border-b border-slate-200 dark:border-slate-700",
-                            bordered &&
-                              "[&_td]:border-r [&_td]:border-slate-200 dark:[&_td]:border-slate-600 [&_td:last-child]:border-r-0",
-                            hoverable &&
-                              "hover:bg-slate-50 dark:hover:bg-slate-700/30",
-                            rowProps.onClick &&
-                              "cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/30",
-                            rowClassName?.(record, originalIndex),
-                          )}
-                          onClick={rowProps.onClick}
-                        >
-                          {rowSelection && (
-                            <td
-                              class={twMerge(
-                                "text-center",
-                                bodyRowCellBg,
-                                paddingCls,
-                                !checkboxProps?.disabled &&
-                                  "cursor-pointer select-none",
-                              )}
-                              onClick={(e: Event) => {
-                                if (checkboxProps?.disabled) return;
-                                e.preventDefault();
-                                e.stopPropagation();
-                                const cur = rowSelection?.selectedRowKeys ??
-                                  selectedRef.value;
-                                const set = cur instanceof Set
-                                  ? cur
-                                  : new Set((cur as string[]) ?? []);
-                                const nextChecked = !set.has(key);
-                                handleSelect(
-                                  nextChecked,
-                                  record,
-                                  originalIndex,
-                                );
-                                const input = (
-                                  e.currentTarget as HTMLElement
-                                ).querySelector(
-                                  'input[type="checkbox"], input[type="radio"]',
-                                ) as HTMLInputElement | null;
-                                if (input) input.checked = nextChecked;
-                              }}
-                            >
-                              <input
-                                type={rowSelection.type === "radio"
-                                  ? "radio"
-                                  : "checkbox"}
-                                class="rounded border-slate-300 text-blue-600 focus:ring-blue-500 pointer-events-none"
-                                checked={isSelected}
-                                disabled={checkboxProps?.disabled}
-                                tabIndex={-1}
-                                readOnly
-                              />
-                            </td>
-                          )}
-                          {expandable?.expandedRowRender && (
-                            <td class={twMerge(paddingCls, bodyRowCellBg)}>
-                              {canExpand && (
-                                <button
-                                  type="button"
-                                  // 文本符号受 line-height 影响会纵向拉长；用固定正方形 + flex 居中，hover 底四边一致
-                                  class="inline-flex size-5 shrink-0 items-center justify-center rounded-md p-0 leading-none hover:bg-slate-200 dark:hover:bg-slate-600"
-                                  onClick={(e: Event) => {
-                                    e.stopPropagation();
-                                    // 非受控时更新内部展开态，保证 getter 重跑、UI 更新
-                                    if (
-                                      expandable.expandedRowKeys === undefined
-                                    ) {
-                                      expandedRef((prev) =>
-                                        isExpanded
-                                          ? prev.filter((k: string) =>
-                                            k !== key
-                                          )
-                                          : [...prev, key]
-                                      );
-                                    }
-                                    expandable.onExpand?.(!isExpanded, record);
-                                  }}
-                                  aria-expanded={isExpanded}
-                                >
-                                  {isExpanded ? "−" : "+"}
-                                </button>
-                              )}
-                            </td>
-                          )}
-                          {columns.map((col, colIndex) => {
-                            const dataIndex =
-                              (col.dataIndex ?? col.key) as keyof T;
-                            const value = record[dataIndex];
-                            const cellEditable = isEditableConfig(col.editable);
-                            const editTarget = editingCell.value;
-                            const isEditing = cellEditable &&
-                              editTarget != null &&
-                              editTarget.rowKey === key &&
-                              editTarget.columnKey === col.key;
-
-                            let content: unknown;
-                            if (cellEditable) {
-                              const edResolved = col
-                                .editable as TableColumnEditable<T>;
-                              const dis = resolveEditableDisabled(
-                                edResolved,
-                                record,
-                                originalIndex,
+                            const input = (
+                              e.currentTarget as HTMLElement
+                            ).querySelector(
+                              'input[type="checkbox"]',
+                            ) as HTMLInputElement | null;
+                            if (input) {
+                              const nextSet =
+                                rowSelection?.selectedRowKeys === undefined
+                                  ? selectedRef.value
+                                  : new Set(
+                                    rowSelection?.selectedRowKeys ?? [],
+                                  );
+                              const nextAll = displayData.length > 0 &&
+                                displayData.every((r, i) => {
+                                  const k = getKey(
+                                    r,
+                                    (currentPage - 1) * pageSize + i,
+                                  );
+                                  const p = rowSelection?.getCheckboxProps?.(r);
+                                  return p?.disabled || nextSet.has(k);
+                                });
+                              const nextSome = displayData.some((r, i) =>
+                                nextSet.has(
+                                  getKey(r, (currentPage - 1) * pageSize + i),
+                                )
                               );
-                              const canActivate = Boolean(onCellChange) &&
-                                !dis;
-                              if (isEditing) {
-                                content = (
-                                  <div
-                                    class="w-full min-w-0 outline-none"
-                                    tabIndex={-1}
-                                    data-view-table-edit-root="1"
-                                    data-view-table-edit-slot={tableEditSlotToken(
-                                      key,
-                                      col.key,
-                                    )}
-                                    /**
-                                     * 必须用 `focusout`（`onFocusOut`）：`blur` 不冒泡，子 input 失焦时父级
-                                     * `onBlur` 永远不会触发，`editingCell` 无法清空，单元格会一直停在编辑态。
-                                     */
-                                    onFocusOut={(e: FocusEvent) => {
-                                      const cur = e
-                                        .currentTarget as HTMLElement;
-                                      const rel = e.relatedTarget as
-                                        | Node
-                                        | null;
-                                      if (rel != null && cur.contains(rel)) {
-                                        return;
-                                      }
-                                      /**
-                                       * 受控 input 被替换时先失焦、relatedTarget 常为空；不能与
-                                       * `scheduleTableEditRefocus` 抢跑：后者是 microtask+2×rAF，
-                                       * 若此处双 rAF 先执行会误清空 editingCell。
-                                       * 始终用 `tableEditRootRef`+slot 查当前槽位（整段重挂后 `cur` 可能已 detached）。
-                                       */
-                                      const rowK = key;
-                                      const colK = col.key;
-                                      /**
-                                       * 等待 `pendingEditRefocusCount` 归零的轮询步数（须与「判 activeElement」分开计数）。
-                                       * 安全上限见 {@link TABLE_EDIT_PENDING_REFOCUS_MAX_WAIT_STEPS}。
-                                       */
-                                      let pendingRefocusWaitSteps = 0;
-                                      /**
-                                       * `tableEditRootRef` / 槽位晚一帧挂上时的短轮询步数；
-                                       * 上限见 {@link TABLE_EDIT_DOM_SNAP_MAX_WAIT_STEPS}。
-                                       */
-                                      let domSnapWaitSteps = 0;
-                                      const tryBlurExit = (): void => {
-                                        const t = editingCell.value;
-                                        if (
-                                          t == null ||
-                                          t.rowKey !== rowK ||
-                                          t.columnKey !== colK
-                                        ) {
-                                          return;
-                                        }
-                                        if (
-                                          pendingEditRefocusCount.current > 0
-                                        ) {
-                                          pendingRefocusWaitSteps++;
-                                          if (
-                                            pendingRefocusWaitSteps >
-                                              TABLE_EDIT_PENDING_REFOCUS_MAX_WAIT_STEPS
-                                          ) {
-                                            return;
-                                          }
-                                          requestAnimationFrame(() => {
-                                            requestAnimationFrame(
-                                              tryBlurExit,
-                                            );
-                                          });
-                                          return;
-                                        }
-                                        const root = tableEditRootRef.current;
-                                        const slot = tableEditSlotToken(
-                                          rowK,
-                                          colK,
-                                        );
-                                        const host = root?.querySelector(
-                                          `[data-view-table-edit-slot="${slot}"]`,
-                                        ) as HTMLElement | null;
-                                        if (root == null || host == null) {
-                                          domSnapWaitSteps++;
-                                          if (
-                                            domSnapWaitSteps <=
-                                              TABLE_EDIT_DOM_SNAP_MAX_WAIT_STEPS
-                                          ) {
-                                            requestAnimationFrame(() => {
-                                              requestAnimationFrame(
-                                                tryBlurExit,
-                                              );
-                                            });
-                                            return;
-                                          }
-                                          const tOrphan = editingCell.value;
-                                          if (
-                                            tOrphan?.rowKey === rowK &&
-                                            tOrphan.columnKey === colK
-                                          ) {
-                                            editingCell.value = null;
-                                          }
-                                          return;
-                                        }
-                                        const ae = globalThis.document
-                                          .activeElement;
-                                        if (
-                                          ae === host ||
-                                          host.contains(ae)
-                                        ) {
-                                          return;
-                                        }
-                                        const t2 = editingCell.value;
-                                        if (
-                                          t2?.rowKey === rowK &&
-                                          t2.columnKey === colK
-                                        ) {
-                                          editingCell.value = null;
-                                        }
-                                      };
-                                      requestAnimationFrame(() => {
-                                        requestAnimationFrame(tryBlurExit);
-                                      });
-                                    }}
-                                  >
-                                    {renderEditableCell(
-                                      col,
-                                      record,
-                                      originalIndex,
-                                      key,
-                                      size,
-                                      col.align,
-                                      onCellChange,
-                                      () => {
-                                        scheduleTableEditRefocus(
-                                          tableEditRootRef,
-                                          () => editingCell.value,
-                                          () => {
-                                            pendingEditRefocusCount.current =
-                                              Math.max(
-                                                0,
-                                                pendingEditRefocusCount
-                                                  .current - 1,
-                                              );
-                                          },
-                                          pendingEditTextSelectionRef,
-                                        );
-                                      },
-                                      pendingEditTextSelectionRef,
-                                      pendingEditRefocusCount,
-                                    )}
-                                  </div>
-                                );
-                              } else {
-                                content = (
-                                  <div
-                                    class={twMerge(
-                                      "min-w-0 max-w-full",
-                                      canActivate
-                                        ? "cursor-cell select-none"
-                                        : "cursor-not-allowed opacity-60",
-                                    )}
-                                    title={canActivate ? "双击编辑" : undefined}
-                                    onDblClick={(e: Event) => {
-                                      e.stopPropagation();
-                                      if (!canActivate) return;
-                                      editingCell.value = {
-                                        rowKey: key,
-                                        columnKey: col.key,
-                                      };
-                                    }}
-                                  >
-                                    {renderEditableCellDisplay(
-                                      col,
-                                      value,
-                                      edResolved,
-                                      size,
-                                      col.align,
-                                    )}
-                                  </div>
-                                );
-                              }
-                            } else {
-                              content = col.render
-                                ? col.render(value, record, originalIndex)
-                                : value;
+                              input.checked = nextAll;
+                              input.indeterminate = !nextAll && nextSome;
                             }
-                            const isStickyLeft = col.fixed === "left";
-                            return (
-                              <td
-                                key={col.key}
+                          }
+                          : undefined}
+                      >
+                        {rowSelection.type !== "radio" && (
+                          <input
+                            type="checkbox"
+                            class="rounded border-slate-300 text-blue-600 focus:ring-blue-500 pointer-events-none"
+                            checked={allSelected}
+                            tabIndex={-1}
+                            readOnly
+                            ref={(el: HTMLInputElement | null) => {
+                              if (!el) return;
+                              createEffect(() => {
+                                const src = rowSelection?.selectedRowKeys ??
+                                  selectedRef.value;
+                                const set = src instanceof Set
+                                  ? src
+                                  : new Set((src as string[]) ?? []);
+                                const all = displayData.length > 0 &&
+                                  displayData.every((r, i) => {
+                                    const k = getKey(
+                                      r,
+                                      (currentPage - 1) * pageSize + i,
+                                    );
+                                    const p = rowSelection?.getCheckboxProps?.(
+                                      r,
+                                    );
+                                    return p?.disabled || set.has(k);
+                                  });
+                                const some = displayData.some((r, i) =>
+                                  set.has(
+                                    getKey(r, (currentPage - 1) * pageSize + i),
+                                  )
+                                );
+                                el.indeterminate = !all && some;
+                              });
+                            }}
+                          />
+                        )}
+                      </th>
+                    )}
+                    {expandable?.expandedRowRender && (
+                      <th class={twMerge("w-8", paddingCls)} />
+                    )}
+                    {columns.map((col, colIndex) => (
+                      <th
+                        key={col.key}
+                        class={twMerge(
+                          "text-left font-medium text-slate-700 dark:text-slate-300 select-none",
+                          col.fixed === "left" &&
+                            "bg-slate-50 dark:bg-slate-800 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] dark:shadow-[2px_0_4px_-2px_rgba(0,0,0,0.3)]",
+                          paddingCls,
+                          col.align === "center" && "text-center",
+                          col.align === "right" && "text-right",
+                          col.sorter &&
+                            "cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700",
+                          headerClass,
+                        )}
+                        style={{
+                          ...(fixedLeftOffsets[colIndex] != null
+                            ? {
+                              position: "sticky" as const,
+                              left: `${fixedLeftOffsets[colIndex]}px`,
+                              zIndex: 2,
+                            }
+                            : {}),
+                          ...(col.width != null
+                            ? {
+                              width: typeof col.width === "number"
+                                ? `${col.width}px`
+                                : col.width,
+                            }
+                            : {}),
+                        }}
+                        onClick={() =>
+                          col.sorter && handleSort(col.key, col.sorter)}
+                      >
+                        <div class="flex items-center gap-1">
+                          {col.title}
+                          {col.sorter && (
+                            <div class="flex flex-col text-[10px] text-slate-400">
+                              <IconChevronUp
                                 class={twMerge(
-                                  "text-slate-700 dark:text-slate-300",
-                                  bodyRowCellBg,
-                                  paddingCls,
-                                  col.align === "center" && "text-center",
-                                  col.align === "right" && "text-right",
-                                  col.ellipsis &&
-                                    (!cellEditable || !isEditing) &&
-                                    "max-w-0 truncate",
-                                  isStickyLeft &&
-                                    "shadow-[2px_0_4px_-2px_rgba(0,0,0,0.08)] dark:shadow-[2px_0_4px_-2px_rgba(0,0,0,0.25)]",
-                                  cellEditable && "align-middle",
+                                  "w-3 h-3 -mb-1",
+                                  sortKey === col.key &&
+                                    sortOrder === "ascend" &&
+                                    "text-blue-500",
                                 )}
-                                style={{
-                                  ...(fixedLeftOffsets[colIndex] != null
-                                    ? {
-                                      position: "sticky" as const,
-                                      left: `${fixedLeftOffsets[colIndex]}px`,
-                                      zIndex: 1,
-                                    }
-                                    : {}),
-                                  ...(col.width != null
-                                    ? {
-                                      width: typeof col.width === "number"
-                                        ? `${col.width}px`
-                                        : col.width,
-                                    }
-                                    : {}),
-                                }}
-                              >
-                                {content}
-                              </td>
-                            );
-                          })}
-                        </tr>,
-                      ];
-                      if (
-                        expandable?.expandedRowRender && isExpanded && canExpand
-                      ) {
-                        rows.push(
-                          <tr key={`${key}-exp`}>
-                            <td
-                              colSpan={(expandable ? 1 : 0) + columns.length +
-                                (rowSelection ? 1 : 0)}
-                              class={twMerge(
-                                paddingCls,
-                                "bg-slate-100 dark:bg-slate-800/40",
-                              )}
-                            >
-                              {expandable.expandedRowRender(
-                                record,
-                                originalIndex,
-                              )}
-                            </td>
-                          </tr>,
-                        );
-                      }
-                      return rows;
-                    })}
-                    {loading && (
-                      <tr key="__view-table-loading">
+                              />
+                              <IconChevronDown
+                                class={twMerge(
+                                  "w-3 h-3",
+                                  sortKey === col.key &&
+                                    sortOrder === "descend" &&
+                                    "text-blue-500",
+                                )}
+                              />
+                            </div>
+                          )}
+                        </div>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {displayData.length === 0
+                    ? (
+                      <tr>
                         <td
                           colSpan={bodyColSpan}
                           class={twMerge(
-                            "border-t border-slate-100 bg-slate-50/80 text-center text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-400",
+                            "text-center text-slate-500 dark:text-slate-400",
                             paddingCls,
+                            // 加载态背景铺在整格；勿只写内层 div，否则 flex 块易收缩、与 thead 视觉宽度不齐
+                            loading &&
+                              "bg-slate-50/90 dark:bg-slate-900/50",
                           )}
-                          aria-busy="true"
-                          aria-live="polite"
                         >
-                          <div class="flex w-full min-w-0 items-center justify-center py-6">
-                            <span>加载中…</span>
-                          </div>
+                          {/* 加载态写在 td 内；内层须 w-full 撑满单元格内容区 */}
+                          {loading
+                            ? (
+                              <div
+                                class="flex w-full min-w-0 flex-col items-center justify-center"
+                                aria-busy="true"
+                                aria-live="polite"
+                              >
+                                <span class="text-sm">加载中…</span>
+                              </div>
+                            )
+                            : (
+                              renderEmpty?.() ??
+                                (locale?.emptyText ?? "暂无数据")
+                            )}
                         </td>
                       </tr>
+                    )
+                    : (
+                      <>
+                        {displayData.flatMap((record, index) => {
+                          const originalIndex = (currentPage - 1) * pageSize +
+                            index;
+                          const key = getKey(record, originalIndex);
+                          const isExpanded = expandedSet.has(key);
+                          const canExpand =
+                            expandable?.rowExpandable?.(record) ??
+                              true;
+                          const isSelected = selectedKeys.has(key);
+                          const checkboxProps = rowSelection
+                            ?.getCheckboxProps?.(
+                              record,
+                            );
+                          const rowProps = onRow?.(record, originalIndex) ?? {};
+
+                          /**
+                           * 斑马纹/行底色须落在每个 td：`border-collapse: collapse` 下 tr 的背景常被单元格遮住，浅色里会整表发白；
+                           * light 下 `slate-50/50` 对比太弱，奇数行用 `bg-slate-100` 才能看出条纹。
+                           */
+                          const bodyRowCellBg = isSelected
+                            ? "bg-blue-50 dark:bg-blue-900/20"
+                            : striped && index % 2 === 1
+                            ? "bg-slate-100 dark:bg-slate-800/40"
+                            : "bg-white dark:bg-slate-900";
+
+                          const rows: unknown[] = [
+                            <tr
+                              key={key}
+                              class={twMerge(
+                                "border-b border-slate-200 dark:border-slate-700",
+                                bordered &&
+                                  "[&_td]:border-r [&_td]:border-slate-200 dark:[&_td]:border-slate-600 [&_td:last-child]:border-r-0",
+                                hoverable &&
+                                  "hover:bg-slate-50 dark:hover:bg-slate-700/30",
+                                rowProps.onClick &&
+                                  "cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/30",
+                                rowClassName?.(record, originalIndex),
+                              )}
+                              onClick={rowProps.onClick}
+                            >
+                              {rowSelection && (
+                                <td
+                                  class={twMerge(
+                                    "text-center",
+                                    bodyRowCellBg,
+                                    paddingCls,
+                                    !checkboxProps?.disabled &&
+                                      "cursor-pointer select-none",
+                                  )}
+                                  onClick={(e: Event) => {
+                                    if (checkboxProps?.disabled) return;
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    const cur = rowSelection?.selectedRowKeys ??
+                                      selectedRef.value;
+                                    const set = cur instanceof Set
+                                      ? cur
+                                      : new Set((cur as string[]) ?? []);
+                                    const nextChecked = !set.has(key);
+                                    handleSelect(
+                                      nextChecked,
+                                      record,
+                                      originalIndex,
+                                    );
+                                    const input = (
+                                      e.currentTarget as HTMLElement
+                                    ).querySelector(
+                                      'input[type="checkbox"], input[type="radio"]',
+                                    ) as HTMLInputElement | null;
+                                    if (input) input.checked = nextChecked;
+                                  }}
+                                >
+                                  <input
+                                    type={rowSelection.type === "radio"
+                                      ? "radio"
+                                      : "checkbox"}
+                                    class="rounded border-slate-300 text-blue-600 focus:ring-blue-500 pointer-events-none"
+                                    checked={isSelected}
+                                    disabled={checkboxProps?.disabled}
+                                    tabIndex={-1}
+                                    readOnly
+                                  />
+                                </td>
+                              )}
+                              {expandable?.expandedRowRender && (
+                                <td class={twMerge(paddingCls, bodyRowCellBg)}>
+                                  {canExpand && (
+                                    <button
+                                      type="button"
+                                      // 文本符号受 line-height 影响会纵向拉长；用固定正方形 + flex 居中，hover 底四边一致
+                                      class="inline-flex size-5 shrink-0 items-center justify-center rounded-md p-0 leading-none hover:bg-slate-200 dark:hover:bg-slate-600"
+                                      onClick={(e: Event) => {
+                                        e.stopPropagation();
+                                        // 非受控时更新内部展开态，保证 getter 重跑、UI 更新
+                                        if (
+                                          expandable.expandedRowKeys ===
+                                            undefined
+                                        ) {
+                                          expandedRef((prev) =>
+                                            isExpanded
+                                              ? prev.filter((k: string) =>
+                                                k !== key
+                                              )
+                                              : [...prev, key]
+                                          );
+                                        }
+                                        expandable.onExpand?.(
+                                          !isExpanded,
+                                          record,
+                                        );
+                                      }}
+                                      aria-expanded={isExpanded}
+                                    >
+                                      {isExpanded ? "−" : "+"}
+                                    </button>
+                                  )}
+                                </td>
+                              )}
+                              {columns.map((col, colIndex) => {
+                                const dataIndex =
+                                  (col.dataIndex ?? col.key) as keyof T;
+                                const value = record[dataIndex];
+                                const cellEditable = isEditableConfig(
+                                  col.editable,
+                                );
+                                const editTarget = editingCell.value;
+                                const isEditing = cellEditable &&
+                                  editTarget != null &&
+                                  editTarget.rowKey === key &&
+                                  editTarget.columnKey === col.key;
+
+                                let content: unknown;
+                                if (cellEditable) {
+                                  const edResolved = col
+                                    .editable as TableColumnEditable<T>;
+                                  const dis = resolveEditableDisabled(
+                                    edResolved,
+                                    record,
+                                    originalIndex,
+                                  );
+                                  const canActivate = Boolean(onCellChange) &&
+                                    !dis;
+                                  if (isEditing) {
+                                    content = (
+                                      <div
+                                        class="w-full min-w-0 outline-none"
+                                        tabIndex={-1}
+                                        data-view-table-edit-root="1"
+                                        data-view-table-edit-slot={tableEditSlotToken(
+                                          key,
+                                          col.key,
+                                        )}
+                                        /**
+                                         * 必须用 `focusout`（`onFocusOut`）：`blur` 不冒泡，子 input 失焦时父级
+                                         * `onBlur` 永远不会触发，`editingCell` 无法清空，单元格会一直停在编辑态。
+                                         */
+                                        onFocusOut={(e: FocusEvent) => {
+                                          const cur = e
+                                            .currentTarget as HTMLElement;
+                                          const rel = e.relatedTarget as
+                                            | Node
+                                            | null;
+                                          if (
+                                            rel != null && cur.contains(rel)
+                                          ) {
+                                            return;
+                                          }
+                                          /**
+                                           * 受控 input 被替换时先失焦、relatedTarget 常为空；不能与
+                                           * `scheduleTableEditRefocus` 抢跑：后者是 microtask+2×rAF，
+                                           * 若此处双 rAF 先执行会误清空 editingCell。
+                                           * 始终用 `tableEditRootRef`+slot 查当前槽位（整段重挂后 `cur` 可能已 detached）。
+                                           */
+                                          const rowK = key;
+                                          const colK = col.key;
+                                          /**
+                                           * 等待 `pendingEditRefocusCount` 归零的轮询步数（须与「判 activeElement」分开计数）。
+                                           * 安全上限见 {@link TABLE_EDIT_PENDING_REFOCUS_MAX_WAIT_STEPS}。
+                                           */
+                                          let pendingRefocusWaitSteps = 0;
+                                          /**
+                                           * `tableEditRootRef` / 槽位晚一帧挂上时的短轮询步数；
+                                           * 上限见 {@link TABLE_EDIT_DOM_SNAP_MAX_WAIT_STEPS}。
+                                           */
+                                          let domSnapWaitSteps = 0;
+                                          /** 日期/时间浮层打开时焦点尚未落稳的轮询步数；上限见 {@link TABLE_EDIT_PICKER_FOCUS_SETTLE_MAX_STEPS} */
+                                          let pickerFocusSettleSteps = 0;
+                                          const tryBlurExit = (): void => {
+                                            const t = editingCell.value;
+                                            if (
+                                              t == null ||
+                                              t.rowKey !== rowK ||
+                                              t.columnKey !== colK
+                                            ) {
+                                              return;
+                                            }
+                                            if (
+                                              pendingEditRefocusCount.current >
+                                                0
+                                            ) {
+                                              pendingRefocusWaitSteps++;
+                                              if (
+                                                pendingRefocusWaitSteps >
+                                                  TABLE_EDIT_PENDING_REFOCUS_MAX_WAIT_STEPS
+                                              ) {
+                                                return;
+                                              }
+                                              requestAnimationFrame(() => {
+                                                requestAnimationFrame(
+                                                  tryBlurExit,
+                                                );
+                                              });
+                                              return;
+                                            }
+                                            const root =
+                                              tableEditRootRef.current;
+                                            const slot = tableEditSlotToken(
+                                              rowK,
+                                              colK,
+                                            );
+                                            const host = root?.querySelector(
+                                              `[data-view-table-edit-slot="${slot}"]`,
+                                            ) as HTMLElement | null;
+                                            if (root == null || host == null) {
+                                              domSnapWaitSteps++;
+                                              if (
+                                                domSnapWaitSteps <=
+                                                  TABLE_EDIT_DOM_SNAP_MAX_WAIT_STEPS
+                                              ) {
+                                                requestAnimationFrame(() => {
+                                                  requestAnimationFrame(
+                                                    tryBlurExit,
+                                                  );
+                                                });
+                                                return;
+                                              }
+                                              const tOrphan = editingCell.value;
+                                              if (
+                                                tOrphan?.rowKey === rowK &&
+                                                tOrphan.columnKey === colK
+                                              ) {
+                                                editingCell.value = null;
+                                              }
+                                              return;
+                                            }
+                                            const doc = globalThis.document;
+                                            const ae = doc.activeElement;
+                                            if (
+                                              ae === host ||
+                                              host.contains(ae)
+                                            ) {
+                                              return;
+                                            }
+                                            /**
+                                             * 格内 Picker 主面板仍打开时：焦点可能在面板内按钮上（须视为仍在编辑），
+                                             * 或短暂落在 `body` / `documentElement`（须延后重判，勿清空编辑态）。
+                                             */
+                                            const pickerRoot =
+                                              tableEditFindOpenPickerDialogRoot(
+                                                host,
+                                              );
+                                            if (pickerRoot != null) {
+                                              if (
+                                                ae instanceof Node &&
+                                                pickerRoot.contains(ae)
+                                              ) {
+                                                return;
+                                              }
+                                              if (
+                                                ae === doc.body ||
+                                                ae === doc.documentElement ||
+                                                ae == null
+                                              ) {
+                                                pickerFocusSettleSteps++;
+                                                if (
+                                                  pickerFocusSettleSteps <=
+                                                    TABLE_EDIT_PICKER_FOCUS_SETTLE_MAX_STEPS
+                                                ) {
+                                                  requestAnimationFrame(() => {
+                                                    requestAnimationFrame(
+                                                      tryBlurExit,
+                                                    );
+                                                  });
+                                                  return;
+                                                }
+                                              }
+                                            }
+                                            const t2 = editingCell.value;
+                                            if (
+                                              t2?.rowKey === rowK &&
+                                              t2.columnKey === colK
+                                            ) {
+                                              editingCell.value = null;
+                                            }
+                                          };
+                                          requestAnimationFrame(() => {
+                                            requestAnimationFrame(tryBlurExit);
+                                          });
+                                        }}
+                                      >
+                                        {renderEditableCell(
+                                          col,
+                                          record,
+                                          originalIndex,
+                                          key,
+                                          size,
+                                          col.align,
+                                          onCellChange,
+                                          () => {
+                                            scheduleTableEditRefocus(
+                                              tableEditRootRef,
+                                              () => editingCell.value,
+                                              () => {
+                                                pendingEditRefocusCount
+                                                  .current = Math.max(
+                                                    0,
+                                                    pendingEditRefocusCount
+                                                      .current - 1,
+                                                  );
+                                              },
+                                              pendingEditTextSelectionRef,
+                                            );
+                                          },
+                                          pendingEditTextSelectionRef,
+                                          pendingEditRefocusCount,
+                                        )}
+                                      </div>
+                                    );
+                                  } else {
+                                    content = (
+                                      <div
+                                        class={twMerge(
+                                          "min-w-0 max-w-full",
+                                          canActivate
+                                            ? "cursor-cell select-none"
+                                            : "cursor-not-allowed opacity-60",
+                                        )}
+                                        title={canActivate
+                                          ? "双击编辑"
+                                          : undefined}
+                                        onDblClick={(e: Event) => {
+                                          e.stopPropagation();
+                                          if (!canActivate) return;
+                                          editingCell.value = {
+                                            rowKey: key,
+                                            columnKey: col.key,
+                                          };
+                                        }}
+                                      >
+                                        {renderEditableCellDisplay(
+                                          col,
+                                          value,
+                                          edResolved,
+                                          size,
+                                          col.align,
+                                        )}
+                                      </div>
+                                    );
+                                  }
+                                } else {
+                                  content = col.render
+                                    ? col.render(value, record, originalIndex)
+                                    : value;
+                                }
+                                const isStickyLeft = col.fixed === "left";
+                                return (
+                                  <td
+                                    key={col.key}
+                                    class={twMerge(
+                                      "text-slate-700 dark:text-slate-300",
+                                      bodyRowCellBg,
+                                      paddingCls,
+                                      col.align === "center" && "text-center",
+                                      col.align === "right" && "text-right",
+                                      col.ellipsis &&
+                                        (!cellEditable || !isEditing) &&
+                                        "max-w-0 truncate",
+                                      isStickyLeft &&
+                                        "shadow-[2px_0_4px_-2px_rgba(0,0,0,0.08)] dark:shadow-[2px_0_4px_-2px_rgba(0,0,0,0.25)]",
+                                      cellEditable && "align-middle",
+                                    )}
+                                    style={{
+                                      ...(fixedLeftOffsets[colIndex] != null
+                                        ? {
+                                          position: "sticky" as const,
+                                          left: `${
+                                            fixedLeftOffsets[colIndex]
+                                          }px`,
+                                          zIndex: 1,
+                                        }
+                                        : {}),
+                                      ...(col.width != null
+                                        ? {
+                                          width: typeof col.width === "number"
+                                            ? `${col.width}px`
+                                            : col.width,
+                                        }
+                                        : {}),
+                                    }}
+                                  >
+                                    {content}
+                                  </td>
+                                );
+                              })}
+                            </tr>,
+                          ];
+                          if (
+                            expandable?.expandedRowRender && isExpanded &&
+                            canExpand
+                          ) {
+                            rows.push(
+                              <tr key={`${key}-exp`}>
+                                <td
+                                  colSpan={(expandable ? 1 : 0) +
+                                    columns.length +
+                                    (rowSelection ? 1 : 0)}
+                                  class={twMerge(
+                                    paddingCls,
+                                    "bg-slate-100 dark:bg-slate-800/40",
+                                  )}
+                                >
+                                  {expandable.expandedRowRender(
+                                    record,
+                                    originalIndex,
+                                  )}
+                                </td>
+                              </tr>,
+                            );
+                          }
+                          return rows;
+                        })}
+                        {loading && (
+                          <tr key="__view-table-loading">
+                            <td
+                              colSpan={bodyColSpan}
+                              class={twMerge(
+                                "border-t border-slate-100 bg-slate-50/80 text-center text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-400",
+                                paddingCls,
+                              )}
+                              aria-busy="true"
+                              aria-live="polite"
+                            >
+                              <div class="flex w-full min-w-0 items-center justify-center py-6">
+                                <span>加载中…</span>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </>
                     )}
-                  </>
+                </tbody>
+                {summary != null && (
+                  <tfoot>
+                    <tr class="bg-slate-50 dark:bg-slate-800/50 font-medium border-t border-slate-200 dark:border-slate-600">
+                      <td
+                        colSpan={(expandable?.expandedRowRender ? 1 : 0) +
+                          columns.length +
+                          (rowSelection ? 1 : 0)}
+                        class={paddingCls}
+                      >
+                        {summary(dataSource)}
+                      </td>
+                    </tr>
+                  </tfoot>
                 )}
-            </tbody>
-            {summary != null && (
-              <tfoot>
-                <tr class="bg-slate-50 dark:bg-slate-800/50 font-medium border-t border-slate-200 dark:border-slate-600">
-                  <td
-                    colSpan={(expandable?.expandedRowRender ? 1 : 0) +
-                      columns.length +
-                      (rowSelection ? 1 : 0)}
-                    class={paddingCls}
-                  >
-                    {summary(dataSource)}
-                  </td>
-                </tr>
-              </tfoot>
-            )}
-          </table>
-        </div>
-        {paginationEnabled && (
-          <div class="flex items-center justify-between gap-4 mt-2 text-sm text-slate-600 dark:text-slate-400">
-            <span>
-              第 {currentPage} / {totalPages} 页，共 {total} 条
-            </span>
-            <div class="flex items-center gap-1">
-              <button
-                type="button"
-                class="px-2 py-1 rounded border border-slate-300 dark:border-slate-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-700"
-                disabled={currentPage <= 1}
-                onClick={() => handlePageChange(currentPage - 1)}
-              >
-                上一页
-              </button>
-              <button
-                type="button"
-                class="px-2 py-1 rounded border border-slate-300 dark:border-slate-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-700"
-                disabled={currentPage >= totalPages}
-                onClick={() => handlePageChange(currentPage + 1)}
-              >
-                下一页
-              </button>
+              </table>
             </div>
-          </div>
-        )}
-      </>
-    );
-  };
+            {paginationEnabled && (
+              <div class="flex items-center justify-between gap-4 mt-2 text-sm text-slate-600 dark:text-slate-400">
+                <span>
+                  第 {currentPage} / {totalPages} 页，共 {total} 条
+                </span>
+                <div class="flex items-center gap-1">
+                  <button
+                    type="button"
+                    class="px-2 py-1 rounded border border-slate-300 dark:border-slate-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-700"
+                    disabled={currentPage <= 1}
+                    onClick={() => handlePageChange(currentPage - 1)}
+                  >
+                    上一页
+                  </button>
+                  <button
+                    type="button"
+                    class="px-2 py-1 rounded border border-slate-300 dark:border-slate-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-700"
+                    disabled={currentPage >= totalPages}
+                    onClick={() => handlePageChange(currentPage + 1)}
+                  >
+                    下一页
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
+        );
+      }}
+    </div>
+  );
 }

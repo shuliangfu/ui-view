@@ -8,6 +8,7 @@ import {
   Button,
   CodeBlock,
   ImageViewer,
+  type ImageViewerTransition,
   Paragraph,
   Title,
 } from "@dreamer/ui-view";
@@ -84,6 +85,13 @@ const IMAGE_VIEWER_API: ApiRow[] = [
     default: "true",
     description: "是否显示底部缩略图",
   },
+  {
+    name: "transition",
+    type: "ImageViewerTransitionInput（字面量 | Signal | 零参 getter）",
+    default: '"fade"',
+    description:
+      "主图切换动画：none / fade / slide / blur / zoom / mosaic；可与 open 一样传 Signal",
+  },
 ];
 
 const importCode = `import { createSignal } from "@dreamer/view";
@@ -110,9 +118,51 @@ const exampleBasic = `<ImageViewer
   showThumbnails
 />`;
 
+/**
+ * 文档示例：主图切换效果与按钮文案（对应 {@link ImageViewerTransition}）。
+ */
+const VIEWER_TRANSITION_DEMOS: readonly {
+  label: string;
+  value: ImageViewerTransition;
+}[] = [
+  { label: "无动画 (none)", value: "none" },
+  { label: "叠化 (fade)", value: "fade" },
+  { label: "滑动 (slide)", value: "slide" },
+  { label: "模糊渐入 (blur)", value: "blur" },
+  { label: "小方格 (mosaic)", value: "mosaic" },
+  { label: "缩放切入 (zoom)", value: "zoom" },
+];
+
+const exampleTransitionButtons =
+  `const viewerTransition = createSignal<ImageViewerTransition>("fade");
+
+<div class="flex flex-wrap gap-2">
+  {VIEWER_TRANSITION_DEMOS.map(({ label, value }) => (
+    <Button
+      type="button"
+      key={value}
+      onClick={() => {
+        viewerTransition.value = value;
+        index.value = 0;
+        open.value = true;
+      }}
+    >
+      {label}
+    </Button>
+  ))}
+</div>
+
+<ImageViewer
+  open={open}
+  transition={viewerTransition}
+  ...
+/>`;
+
 export default function DataDisplayImageViewer() {
   const open = createSignal(false);
   const index = createSignal(0);
+  /** 当前示例使用的切图动画，与下方「按效果打开」按钮及缩略图共用同一查看器实例 */
+  const viewerTransition = createSignal<ImageViewerTransition>("fade");
 
   return () => (
     <div class="space-y-10">
@@ -148,6 +198,7 @@ export default function DataDisplayImageViewer() {
                 class="rounded-lg overflow-hidden border border-slate-200 dark:border-slate-600 hover:ring-2 hover:ring-teal-500 transition-shadow"
                 onClick={() => {
                   index.value = i;
+                  /** 缩略图沿用当前选中的 transition（默认 fade，或上次点的效果按钮） */
                   open.value = true;
                 }}
               >
@@ -159,15 +210,37 @@ export default function DataDisplayImageViewer() {
               </button>
             ))}
           </div>
-          <Button
-            type="button"
-            onClick={() => {
-              index.value = 0;
-              open.value = true;
-            }}
-          >
-            打开查看器
-          </Button>
+          <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+            下方按钮从第一张起打开查看器，并分别设置不同的{" "}
+            <code class="text-teal-600 dark:text-teal-400">transition</code>
+            {" "}
+            切图效果；在查看器内切换图片即可对比动画。点击上方缩略图也会打开，并沿用当前选中的效果。
+          </Paragraph>
+          <div class="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              onClick={() => {
+                index.value = 0;
+                open.value = true;
+              }}
+            >
+              打开查看器（当前效果）
+            </Button>
+            {VIEWER_TRANSITION_DEMOS.map(({ label, value }) => (
+              <Button
+                type="button"
+                key={value}
+                variant="secondary"
+                onClick={() => {
+                  viewerTransition.value = value;
+                  index.value = 0;
+                  open.value = true;
+                }}
+              >
+                {label}
+              </Button>
+            ))}
+          </div>
           <ImageViewer
             open={open}
             onClose={() => {
@@ -178,13 +251,22 @@ export default function DataDisplayImageViewer() {
             onIndexChange={(i) => {
               index.value = i;
             }}
+            transition={viewerTransition}
             maskClosable
             keyboard
             showThumbnails
           />
           <CodeBlock
-            title="代码示例"
+            title="代码示例（基础）"
             code={exampleBasic}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+          <CodeBlock
+            title="代码示例（按 transition 打开）"
+            code={exampleTransitionButtons}
             language="tsx"
             showLineNumbers
             copyable

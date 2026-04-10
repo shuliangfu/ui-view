@@ -1,9 +1,12 @@
 /**
  * CheckboxGroup 多选组（View）。
  * 选项列表、统一 name、选中值 value 为字符串数组，onChange 回传新数组；支持横向/纵向布局。
+ * `value` 为 `createSignal` 返回值时，会先写入 Signal，可不写 `onChange` 仅做同步。
  */
 
+import { isSignal, type Signal } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
+import type { MaybeSignal } from "./maybe-signal.ts";
 import { Checkbox } from "./Checkbox.tsx";
 
 export interface CheckboxGroupOption {
@@ -20,13 +23,15 @@ export interface CheckboxGroupProps {
   options: CheckboxGroupOption[];
   /** 同组 name */
   name?: string;
-  /** 当前选中的 value 数组；可为 getter / 如 `() => arrRef.value`（`Signal`）以配合 View 细粒度更新 */
-  value?: string[] | (() => string[]);
+  /** 当前选中的 value 数组；见 {@link MaybeSignal} */
+  value?: MaybeSignal<string[]>;
   /** 是否整组禁用 */
   disabled?: boolean;
   /** 错误状态（传递给每个 Checkbox） */
   error?: boolean;
-  /** 变更回调，回传新选中的 value 数组 */
+  /**
+   * 变更回调。`value` 为 Signal 时组件会先自动写入新数组；仍可传以做其它副作用。
+   */
   onChange?: (value: string[]) => void;
   /** 布局方向：horizontal 横向、vertical 纵向，默认 "horizontal" */
   direction?: CheckboxGroupDirection;
@@ -38,7 +43,7 @@ export function CheckboxGroup(props: CheckboxGroupProps) {
   const {
     options,
     name,
-    value = [],
+    value: valueProp,
     disabled = false,
     error = false,
     onChange,
@@ -51,7 +56,24 @@ export function CheckboxGroup(props: CheckboxGroupProps) {
     : "flex-col gap-2";
 
   return () => {
-    const resolvedValue = typeof value === "function" ? value() : (value ?? []);
+    const resolvedValue = valueProp === undefined
+      ? []
+      : typeof valueProp === "function"
+      ? (valueProp as () => string[])()
+      : valueProp;
+
+    /**
+     * 将新选中数组写回受控源：`value` 为 Signal 时赋值，再调 `onChange`。
+     *
+     * @param next - 新的已选 value 列表
+     */
+    const commitValue = (next: string[]) => {
+      if (valueProp !== undefined && isSignal(valueProp)) {
+        (valueProp as Signal<string[]>).value = next;
+      }
+      onChange?.(next);
+    };
+
     return (
       <div
         class={twMerge("flex", directionCls, className)}
@@ -74,7 +96,7 @@ export function CheckboxGroup(props: CheckboxGroupProps) {
                   const next = el.checked
                     ? [...resolvedValue, opt.value]
                     : resolvedValue.filter((v: string) => v !== opt.value);
-                  onChange?.(next);
+                  commitValue(next);
                 }}
               >
                 {opt.label}

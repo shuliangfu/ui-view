@@ -35,15 +35,16 @@ const RADIO_GROUP_API: ApiRow[] = [
   },
   {
     name: "value",
-    type: "string | (() => string)",
+    type: "string | (() => string) | Signal<string>",
     default: "-",
-    description: "当前选中值；可为 getter",
+    description:
+      "当前选中项 value。与全库表单一致为 MaybeSignal：字面量、`() => T`、`createSignal` 返回值；勿直接绑 `sig.value`（快照失步或误订阅）。",
   },
   {
     name: "onChange",
     type: "(value: string) => void",
     default: "-",
-    description: "变更回调",
+    description: "可选。`value` 为 Signal 时组件已回写；需副作用时再传",
   },
   {
     name: "direction",
@@ -77,8 +78,7 @@ const val = createSignal("a");
   <RadioGroup
     name="field"
     options={options}
-    value={() => val.value}
-    onChange={(v) => val.value = v}
+    value={val}
   />
 </FormItem>`;
 
@@ -118,8 +118,7 @@ export default function FormRadioGroup() {
               <RadioGroup
                 name="radio-demo"
                 options={options}
-                value={() => val.value}
-                onChange={(v) => val.value = v}
+                value={val}
               />
             </FormItem>
             <CodeBlock
@@ -127,8 +126,7 @@ export default function FormRadioGroup() {
               code={`<RadioGroup
   name="radio-demo"
   options={options}
-  value={() => val.value}
-  onChange={(v) => val.value = v}
+  value={val}
 />`}
               language="tsx"
               showLineNumbers
@@ -143,8 +141,7 @@ export default function FormRadioGroup() {
               <RadioGroup
                 name="radio-demo2"
                 options={options}
-                value={() => val2.value}
-                onChange={(v) => val2.value = v}
+                value={val2}
               />
             </FormItem>
             <CodeBlock
@@ -152,8 +149,7 @@ export default function FormRadioGroup() {
               code={`<RadioGroup
   name="radio-demo2"
   options={options}
-  value={() => val2.value}
-  onChange={(v) => val2.value = v}
+  value={val2}
 />`}
               language="tsx"
               showLineNumbers
@@ -168,8 +164,7 @@ export default function FormRadioGroup() {
               <RadioGroup
                 name="radio-h"
                 options={options}
-                value={() => val2.value}
-                onChange={(v) => val2.value = v}
+                value={val2}
                 direction="horizontal"
               />
             </FormItem>
@@ -178,8 +173,7 @@ export default function FormRadioGroup() {
               code={`<RadioGroup
   name="radio-h"
   options={options}
-  value={() => val2.value}
-  onChange={(v) => val2.value = v}
+  value={val2}
   direction="horizontal"
 />`}
               language="tsx"
@@ -195,8 +189,7 @@ export default function FormRadioGroup() {
               <RadioGroup
                 name="radio-v"
                 options={options}
-                value={() => val2.value}
-                onChange={(v) => val2.value = v}
+                value={val2}
                 direction="vertical"
               />
             </FormItem>
@@ -205,8 +198,7 @@ export default function FormRadioGroup() {
               code={`<RadioGroup
   name="radio-v"
   options={options}
-  value={() => val2.value}
-  onChange={(v) => val2.value = v}
+  value={val2}
   direction="vertical"
 />`}
               language="tsx"

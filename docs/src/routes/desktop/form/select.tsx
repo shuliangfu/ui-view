@@ -29,9 +29,10 @@ const SELECT_API: ApiRow[] = [
   },
   {
     name: "value",
-    type: "string | (() => string)",
+    type: "string | (() => string) | Signal<string>",
     default: "-",
-    description: "当前值；可为 getter",
+    description:
+      "当前选中项的 value（空字符串表示未选）。与全库表单一致为 MaybeSignal：字面量、`() => T`、`createSignal` 返回值；勿直接绑 `sig.value`（快照失步或误订阅）。",
   },
   {
     name: "placeholder",
@@ -74,6 +75,12 @@ const options = [
   { value: "c", label: "选项 C", disabled: true },
 ];
 
+/**
+ * 文档示例受控值须模块级：View 文档页重跑时若在页面组件内 `createSignal` 会丢状态（与 FormList / InputNumber 文档一致）。
+ */
+const selectDocVal = createSignal("");
+const selectDocVal2 = createSignal("b");
+
 const importCode = `import { Select, Form, FormItem } from "@dreamer/ui-view";
 import { createSignal } from "@dreamer/view";
 
@@ -82,16 +89,12 @@ const val = createSignal("");
 <FormItem label="请选择">
   <Select
     options={options}
-    value={() => val.value}
-    onChange={(e) => val.value = (e.target as HTMLSelectElement).value}
+    value={val}
     placeholder="请选择"
   />
 </FormItem>`;
 
 export default function FormSelect() {
-  const val = createSignal("");
-  const val2 = createSignal("b");
-
   return (
     <div class="space-y-10">
       <section>
@@ -123,9 +126,7 @@ export default function FormSelect() {
             <FormItem label="请选择">
               <Select
                 options={options}
-                value={() => val.value}
-                onChange={(e) =>
-                  val.value = (e.target as HTMLSelectElement).value}
+                value={selectDocVal}
                 placeholder="请选择"
               />
             </FormItem>
@@ -133,8 +134,7 @@ export default function FormSelect() {
               title="代码示例"
               code={`<Select
   options={options}
-  value={() => val.value}
-  onChange={(e) => val.value = (e.target as HTMLSelectElement).value}
+  value={val}
   placeholder="请选择"
 />`}
               language="tsx"
@@ -149,9 +149,7 @@ export default function FormSelect() {
             <FormItem label="选项 C 为 disabled">
               <Select
                 options={options}
-                value={() => val2.value}
-                onChange={(e) =>
-                  val2.value = (e.target as HTMLSelectElement).value}
+                value={selectDocVal2}
                 placeholder="请选择"
               />
             </FormItem>
@@ -159,7 +157,7 @@ export default function FormSelect() {
               title="代码示例"
               code={`<Select
   options={options}
-  value={() => val2.value}
+  value={val2}
   onChange={...}
   placeholder="请选择"
 />`}
@@ -196,9 +194,7 @@ export default function FormSelect() {
                 id="select-name"
                 name="city"
                 options={options}
-                value={() => val.value}
-                onChange={(e) =>
-                  val.value = (e.target as HTMLSelectElement).value}
+                value={selectDocVal}
                 placeholder="请选择城市"
               />
             </FormItem>
@@ -208,7 +204,7 @@ export default function FormSelect() {
   name="city"
   id="select-name"
   options={options}
-  value={() => val.value}
+  value={val}
   onChange={...}
 />`}
               language="tsx"

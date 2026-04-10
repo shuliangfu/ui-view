@@ -29,16 +29,17 @@ const TRANSFER_API: ApiRow[] = [
   },
   {
     name: "targetKeys",
-    type: "string[] | (() => string[])",
+    type: "MaybeSignal<string[]>",
     default: "-",
     description:
-      "已选 key 列表；须 getter（如 () => sig.value）+ onChange 更新 state，勿写死数组否则无法穿梭",
+      "已选 key 列表。传 `createSignal` 返回值时组件内回写，可不写 onChange；静态数组仅适合禁用展示等不需穿梭场景",
   },
   {
     name: "onChange",
     type: "(keys: string[]) => void",
     default: "-",
-    description: "变更回调",
+    description:
+      "可选。`targetKeys` 为 Signal 时组件已回写；需副作用（如打日志）时再传",
   },
   {
     name: "titles",
@@ -122,8 +123,7 @@ const targetKeys = createSignal<string[]>([]);
 <FormItem label="穿梭">
   <Transfer
     dataSource={data}
-    targetKeys={() => targetKeys.value}
-    onChange={(keys) => targetKeys.value = keys}
+    targetKeys={targetKeys}
     titles={["待选", "已选"]}
   />
 </FormItem>`;
@@ -131,7 +131,7 @@ const targetKeys = createSignal<string[]>([]);
 export default function FormTransfer() {
   const targetKeys = createSignal<string[]>([]);
   const targetKeys2 = createSignal<string[]>(["2", "4"]);
-  /** 含 disabled 项示例：须与基础示例一样用 signal + onChange，勿写死 targetKeys / 空 onChange */
+  /** 含 disabled 项示例：受控请传 Signal；勿写死 targetKeys 否则无法穿梭 */
   const targetKeysWithDisabled = createSignal<string[]>(["1"]);
 
   return (
@@ -166,8 +166,7 @@ export default function FormTransfer() {
             <FormItem label="穿梭">
               <Transfer
                 dataSource={data}
-                targetKeys={() => targetKeys.value}
-                onChange={(keys) => targetKeys.value = keys}
+                targetKeys={targetKeys}
                 titles={["待选", "已选"]}
               />
             </FormItem>
@@ -175,8 +174,7 @@ export default function FormTransfer() {
               title="代码示例"
               code={`<Transfer
   dataSource={data}
-  targetKeys={() => targetKeys.value}
-  onChange={(keys) => targetKeys.value = keys}
+  targetKeys={targetKeys}
   titles={["待选", "已选"]}
 />`}
               language="tsx"
@@ -191,8 +189,7 @@ export default function FormTransfer() {
             <FormItem label="左右列可搜索">
               <Transfer
                 dataSource={data}
-                targetKeys={() => targetKeys2.value}
-                onChange={(keys) => targetKeys2.value = keys}
+                targetKeys={targetKeys2}
                 titles={["待选", "已选"]}
                 showSearch
                 searchPlaceholder={["筛选左侧", "筛选右侧"]}
@@ -217,8 +214,7 @@ export default function FormTransfer() {
             <FormItem label="草莓为 disabled">
               <Transfer
                 dataSource={data}
-                targetKeys={() => targetKeysWithDisabled.value}
-                onChange={(keys) => targetKeysWithDisabled.value = keys}
+                targetKeys={targetKeysWithDisabled}
                 titles={["源", "目标"]}
               />
             </FormItem>
@@ -226,18 +222,16 @@ export default function FormTransfer() {
               <Transfer
                 dataSource={data}
                 targetKeys={["1", "2"]}
-                onChange={() => {}}
                 disabled
               />
             </FormItem>
             <CodeBlock
               title="代码示例"
-              code={`// 项级 disabled：仍须受控 targetKeys + onChange（勿静态数组 + 空 onChange）
+              code={`// 项级 disabled：受控 targetKeys 用 Signal
 const targetKeys = createSignal<string[]>(["1"]);
 <Transfer
   dataSource={[{ key: "a", title: "可选" }, { key: "b", title: "禁用", disabled: true }]}
-  targetKeys={() => targetKeys.value}
-  onChange={(keys) => (targetKeys.value = keys)}
+  targetKeys={targetKeys}
 />
 // 整组：<Transfer disabled />`}
               language="tsx"

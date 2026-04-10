@@ -88,13 +88,12 @@ export interface UiViewTailwindContentPluginOptions {
  * - MarkdownEditor 使用 `@dreamer/markdown` 的 `parse` 与桌面 `Tooltip`；须映射 `MarkdownEditor.tsx`、`Tooltip.tsx`、`input-focus-ring.ts`。
  * - 单文件图标（`icons/*.tsx`）、`Calendar.tsx`、`ChartBase.tsx` 等被组件 import 时须写入对应组件的路径列表；`getContentPaths` 会去重。
  * - 纯函数 / store（message、toast、getConfig 等）不含 Tailwind class，无需映射。
+ * - `desktop/form`、`mobile/form` 下若仅为 `export * from ../../shared/form/...` 的薄再导出，只列 **shared 实现文件** 即可，不必重复写 D/M 路径。
  */
 
 const COMPONENT_PATHS: Record<string, string[]> = {
   "Table": [
     "src/desktop/data-display/Table.tsx",
-    "src/desktop/form/DatePicker.tsx",
-    "src/desktop/form/TimePicker.tsx",
     "src/shared/form/DatePicker.tsx",
     "src/shared/form/TimePicker.tsx",
     "src/shared/form/picker-portal-utils.ts",
@@ -138,8 +137,7 @@ const COMPONENT_PATHS: Record<string, string[]> = {
     "src/desktop/feedback/Tooltip.tsx",
   ],
   "Cascader": [
-    "src/desktop/form/Cascader.tsx",
-    "src/mobile/form/Cascader.tsx",
+    "src/shared/form/Cascader.tsx",
     "src/shared/basic/icons/ChevronDown.tsx",
     "src/shared/form/input-focus-ring.ts",
   ],
@@ -154,8 +152,6 @@ const COMPONENT_PATHS: Record<string, string[]> = {
     "src/shared/basic/icons/ChevronLeft.tsx",
     "src/shared/basic/icons/ChevronRight.tsx",
     "src/shared/form/input-focus-ring.ts",
-    "src/desktop/form/DatePicker.tsx",
-    "src/mobile/form/DatePicker.tsx",
   ],
   "DateTimePicker": [
     "src/shared/form/DateTimePicker.tsx",
@@ -168,29 +164,23 @@ const COMPONENT_PATHS: Record<string, string[]> = {
     "src/shared/basic/icons/ChevronLeft.tsx",
     "src/shared/basic/icons/ChevronRight.tsx",
     "src/shared/form/input-focus-ring.ts",
-    "src/desktop/form/DateTimePicker.tsx",
-    "src/mobile/form/DateTimePicker.tsx",
   ],
   "MultiSelect": [
-    "src/desktop/form/MultiSelect.tsx",
-    "src/mobile/form/MultiSelect.tsx",
+    "src/shared/form/MultiSelect.tsx",
     "src/shared/basic/icons/ChevronDown.tsx",
     "src/shared/form/input-focus-ring.ts",
   ],
   "Select": [
-    "src/desktop/form/Select.tsx",
-    "src/mobile/form/Select.tsx",
+    "src/shared/form/Select.tsx",
     "src/shared/basic/icons/ChevronDown.tsx",
     "src/shared/form/input-focus-ring.ts",
   ],
   "Transfer": [
-    "src/desktop/form/Transfer.tsx",
     "src/shared/form/Transfer.tsx",
-    "src/mobile/form/Transfer.tsx",
     "src/shared/form/input-focus-ring.ts",
   ],
   "TreeSelect": [
-    "src/desktop/form/TreeSelect.tsx",
+    "src/shared/form/TreeSelect.tsx",
     "src/shared/basic/icons/ChevronDown.tsx",
     "src/shared/form/input-focus-ring.ts",
   ],
@@ -204,9 +194,11 @@ const COMPONENT_PATHS: Record<string, string[]> = {
     "src/desktop/navigation/Dropdown.tsx",
   ],
   "ActionSheet": [
+    "src/mobile/MobilePortalHostScope.tsx",
     "src/mobile/feedback/ActionSheet.tsx",
   ],
   "BottomSheet": [
+    "src/mobile/MobilePortalHostScope.tsx",
     "src/mobile/feedback/BottomSheet.tsx",
     "src/shared/basic/icons/Close.tsx",
   ],
@@ -225,6 +217,9 @@ const COMPONENT_PATHS: Record<string, string[]> = {
   ],
   "TabBar": [
     "src/mobile/navigation/TabBar.tsx",
+  ],
+  "MobilePortalHostScope": [
+    "src/mobile/MobilePortalHostScope.tsx",
   ],
   "Avatar": [
     "src/shared/basic/Avatar.tsx",
@@ -368,6 +363,12 @@ const COMPONENT_PATHS: Record<string, string[]> = {
   ],
   "List": [
     "src/shared/data-display/List.tsx",
+  ],
+  "ScrollList": [
+    "src/mobile/data-display/ScrollList.tsx",
+    "src/mobile/feedback/PullRefresh.tsx",
+    "src/shared/data-display/List.tsx",
+    "src/shared/feedback/controlled-open.ts",
   ],
   "Segmented": [
     "src/shared/data-display/Segmented.tsx",
@@ -533,8 +534,6 @@ const COMPONENT_PATHS: Record<string, string[]> = {
     "src/shared/form/picker-trigger-icon.ts",
     "src/shared/basic/icons/Clock.tsx",
     "src/shared/form/input-focus-ring.ts",
-    "src/desktop/form/TimePicker.tsx",
-    "src/mobile/form/TimePicker.tsx",
   ],
   "Upload": [
     "src/shared/form/Upload.tsx",

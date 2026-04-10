@@ -13,11 +13,6 @@ import {
 } from "@dreamer/ui-view";
 import { createSignal } from "@dreamer/view";
 
-/** 从 TimePicker 合成事件中读取 value（含 JSON） */
-function pickerInputValue(e: Event): string {
-  return (e.target as EventTarget & { value?: string }).value ?? "";
-}
-
 interface ApiRow {
   name: string;
   type: string;
@@ -90,8 +85,7 @@ import { createSignal } from "@dreamer/view";
 const val = createSignal("");
 <FormItem label="时间">
   <TimePicker
-    value={() => val.value}
-    onChange={(e) => val.value = (e.target as HTMLInputElement).value}
+    value={val}
   />
 </FormItem>`;
 
@@ -151,16 +145,13 @@ export default function FormTimePicker() {
             <Title level={3}>基础</Title>
             <FormItem label="时间">
               <TimePicker
-                value={() => val.value}
-                onChange={(e) =>
-                  val.value = (e.target as HTMLInputElement).value}
+                value={val}
               />
             </FormItem>
             <CodeBlock
               title="代码示例"
               code={`<TimePicker
-  value={() => val.value}
-  onChange={(e) => val.value = (e.target as HTMLInputElement).value}
+  value={val}
 />`}
               language="tsx"
               showLineNumbers
@@ -173,16 +164,13 @@ export default function FormTimePicker() {
             <Title level={3}>有默认值</Title>
             <FormItem label="默认 14:30">
               <TimePicker
-                value={() => val2.value}
-                onChange={(e) =>
-                  val2.value = (e.target as HTMLInputElement).value}
+                value={val2}
               />
             </FormItem>
             <CodeBlock
               title="代码示例"
               code={`<TimePicker
-  value={() => val2.value}
-  onChange={(e) => val2.value = (e.target as HTMLInputElement).value}
+  value={val2}
 />`}
               language="tsx"
               showLineNumbers
@@ -203,56 +191,44 @@ export default function FormTimePicker() {
             <FormItem label='format="HH:mm:ss"'>
               <TimePicker
                 format="HH:mm:ss"
-                value={() => valWithSec.value}
-                onChange={(e) =>
-                  valWithSec.value = (e.target as HTMLInputElement).value}
+                value={valWithSec}
               />
             </FormItem>
             <FormItem label='format="HH"'>
               <TimePicker
                 format="HH"
-                value={() => valHourOnly.value}
-                onChange={(e) =>
-                  valHourOnly.value = (e.target as HTMLInputElement).value}
+                value={valHourOnly}
               />
             </FormItem>
             <FormItem label='format="mm"'>
               <TimePicker
                 format="mm"
-                value={() => valMinuteOnly.value}
-                onChange={(e) =>
-                  valMinuteOnly.value = (e.target as HTMLInputElement).value}
+                value={valMinuteOnly}
               />
             </FormItem>
             <FormItem label='format="ss"'>
               <TimePicker
                 format="ss"
-                value={() => valSecondOnly.value}
-                onChange={(e) =>
-                  valSecondOnly.value = (e.target as HTMLInputElement).value}
+                value={valSecondOnly}
               />
             </FormItem>
             <CodeBlock
               title="代码示例"
               code={`<TimePicker
   format="HH:mm:ss"
-  value={() => valWithSec.value}
-  onChange={(e) => valWithSec.value = (e.target as HTMLInputElement).value}
+  value={valWithSec}
 />
 <TimePicker
   format="HH"
-  value={() => valHourOnly.value}
-  onChange={(e) => valHourOnly.value = (e.target as HTMLInputElement).value}
+  value={valHourOnly}
 />
 <TimePicker
   format="mm"
-  value={() => valMinuteOnly.value}
-  onChange={(e) => valMinuteOnly.value = (e.target as HTMLInputElement).value}
+  value={valMinuteOnly}
 />
 <TimePicker
   format="ss"
-  value={() => valSecondOnly.value}
-  onChange={(e) => valSecondOnly.value = (e.target as HTMLInputElement).value}
+  value={valSecondOnly}
 />`}
               language="tsx"
               showLineNumbers
@@ -304,39 +280,13 @@ export default function FormTimePicker() {
               JSON 对象字符串。
             </Paragraph>
             <FormItem label="时间区间">
-              <TimePicker
-                mode="range"
-                value={() => valRange.value}
-                onChange={(e) => {
-                  const raw = pickerInputValue(e);
-                  try {
-                    const o = JSON.parse(raw) as {
-                      start?: string;
-                      end?: string;
-                    };
-                    valRange.value = {
-                      start: o.start ?? "",
-                      end: o.end ?? "",
-                    };
-                  } catch {
-                    /* 保持原值 */
-                  }
-                }}
-              />
+              <TimePicker mode="range" value={valRange} />
             </FormItem>
             <CodeBlock
               title="代码示例"
               code={`const valRange = createSignal({ start: "09:00", end: "18:00" });
 
-<TimePicker
-  mode="range"
-  value={() => valRange.value}
-  onChange={(e) => {
-    const raw = (e.target as EventTarget & { value?: string }).value ?? "";
-    const o = JSON.parse(raw) as { start?: string; end?: string };
-    valRange.value = { start: o.start ?? "", end: o.end ?? "" };
-  }}
-/>`}
+<TimePicker mode="range" value={valRange} />`}
               language="tsx"
               showLineNumbers
               copyable
@@ -351,31 +301,13 @@ export default function FormTimePicker() {
               数组字符串。
             </Paragraph>
             <FormItem label="多时刻">
-              <TimePicker
-                mode="multiple"
-                value={() => valMulti.value}
-                onChange={(e) => {
-                  const raw = pickerInputValue(e);
-                  try {
-                    valMulti.value = JSON.parse(raw) as string[];
-                  } catch {
-                    valMulti.value = [];
-                  }
-                }}
-              />
+              <TimePicker mode="multiple" value={valMulti} />
             </FormItem>
             <CodeBlock
               title="代码示例"
               code={`const valMulti = createSignal<string[]>(["09:00", "12:00"]);
 
-<TimePicker
-  mode="multiple"
-  value={() => valMulti.value}
-  onChange={(e) => {
-    const raw = (e.target as EventTarget & { value?: string }).value ?? "";
-    valMulti.value = JSON.parse(raw) as string[];
-  }}
-/>`}
+<TimePicker mode="multiple" value={valMulti} />`}
               language="tsx"
               showLineNumbers
               copyable

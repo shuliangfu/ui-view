@@ -23,9 +23,10 @@ interface ApiRow {
 const MARKDOWN_EDITOR_API: ApiRow[] = [
   {
     name: "value",
-    type: "string | (() => string)",
+    type: "string | (() => string) | Signal<string>",
     default: "-",
-    description: "Markdown 源码；可为 getter 配合 signal，减轻失焦",
+    description:
+      "Markdown 源码。与全库表单一致为 MaybeSignal：字面量、`() => T`、`createSignal` 返回值；勿直接绑 `sig.value`（快照失步或误订阅）。",
   },
   {
     name: "onMarkdownChange",
@@ -169,7 +170,7 @@ const md = createSignal("# 你好\\n\\n正文");
 <FormItem label="Markdown">
   <MarkdownEditor
     class="w-full"
-    value={() => md.value}
+    value={md}
     onMarkdownChange={(s) => { md.value = s; }}
     preview="split"
   />
@@ -226,7 +227,7 @@ export default function FormMarkdownEditor() {
               <MarkdownEditor
                 class="w-full"
                 id="docs-md-split"
-                value={() => splitVal.value}
+                value={splitVal}
                 onMarkdownChange={(s) => {
                   splitVal.value = s;
                 }}
@@ -238,7 +239,7 @@ export default function FormMarkdownEditor() {
               title="代码示例"
               code={`<MarkdownEditor
   class="w-full"
-  value={() => md.value}
+  value={md}
   onMarkdownChange={(s) => { md.value = s; }}
   preview="split"
 />`}
@@ -254,7 +255,7 @@ export default function FormMarkdownEditor() {
             <FormItem label="标签切换（小屏常用）">
               <MarkdownEditor
                 class="w-full"
-                value={() => tabsVal.value}
+                value={tabsVal}
                 onMarkdownChange={(s) => {
                   tabsVal.value = s;
                 }}
@@ -277,7 +278,7 @@ export default function FormMarkdownEditor() {
             <FormItem label="仅源码">
               <MarkdownEditor
                 class="w-full"
-                value={() => offVal.value}
+                value={offVal}
                 onMarkdownChange={(s) => {
                   offVal.value = s;
                 }}
@@ -300,7 +301,7 @@ export default function FormMarkdownEditor() {
             <FormItem label="最大 200 字">
               <MarkdownEditor
                 class="w-full"
-                value={() => maxVal.value}
+                value={maxVal}
                 onMarkdownChange={(s) => {
                   maxVal.value = s;
                 }}

@@ -57,11 +57,22 @@ export interface CollapseProps {
   contentClass?: string;
 }
 
+/**
+ * 标题与内容区共用：须与默认 md 拉开梯度，否则 sm 仅少 1 档 padding 时与 md 几乎无差别。
+ */
 const sizeClasses: Record<SizeVariant, string> = {
-  xs: "px-2 py-1.5 text-xs",
-  sm: "px-3 py-2 text-sm",
+  xs: "px-2 py-1 text-xs leading-snug",
+  sm: "px-2.5 py-1.5 text-xs leading-snug",
   md: "px-4 py-3 text-sm",
   lg: "px-4 py-3.5 text-base",
+};
+
+/** 右侧展开图标尺寸，与标题字号比例协调 */
+const expandIconSizeClasses: Record<SizeVariant, string> = {
+  xs: "w-3 h-3",
+  sm: "w-3.5 h-3.5",
+  md: "w-4 h-4",
+  lg: "w-5 h-5",
 };
 
 export function Collapse(props: CollapseProps) {
@@ -120,23 +131,25 @@ export function Collapse(props: CollapseProps) {
   };
 
   /**
-   * 返回渲染 getter：在 View 的 effect 内读 getActiveKeys()，
-   * 受控传 getter 时由此订阅，点击任意面板都会重跑、各面板同步更新。
+   * 外层直接返回容器 div，仅在**子节点**上用 `{() => ...}` 读 `getActiveKeys()`。
+   * 若整段 `return () => { ... }` 作为组件返回值，会与挂载本组件的 `insert` 的 effect
+   * 处于同一层同步展平链中：该 effect 会订阅 `internalKeysRef`，重跑时再次执行
+   * `Collapse(props)`，`createSignal` 被重复创建，展开态永远回到初值（表现为点不开）。
    */
-  return () => {
-    const activeSet = new Set(getActiveKeys());
-    return (
-      <div
-        class={twMerge(
-          "collapse-panels",
-          bordered && !ghost &&
-            "border border-slate-200 dark:border-slate-600 rounded-lg overflow-hidden",
-          !bordered && "space-y-1",
-          ghost && "bg-transparent",
-          className,
-        )}
-      >
-        {items.map((item) => {
+  return (
+    <div
+      class={twMerge(
+        "collapse-panels",
+        bordered && !ghost &&
+          "border border-slate-200 dark:border-slate-600 rounded-lg overflow-hidden",
+        !bordered && "space-y-1",
+        ghost && "bg-transparent",
+        className,
+      )}
+    >
+      {() => {
+        const activeSet = new Set(getActiveKeys());
+        return items.map((item) => {
           const isActive = activeSet.has(item.key);
           const showArrow = item.showArrow ?? showArrowProp;
           const disabled = item.disabled ?? false;
@@ -167,7 +180,8 @@ export function Collapse(props: CollapseProps) {
                 {(showArrow && (expandIcon != null || true)) && (
                   <span
                     class={twMerge(
-                      "shrink-0 w-4 h-4 transition-transform flex items-center justify-center",
+                      "shrink-0 transition-transform flex items-center justify-center",
+                      expandIconSizeClasses[size],
                       isActive && "rotate-180",
                     )}
                   >
@@ -190,8 +204,8 @@ export function Collapse(props: CollapseProps) {
               </div>
             </div>
           );
-        })}
-      </div>
-    );
-  };
+        });
+      }}
+    </div>
+  );
 }

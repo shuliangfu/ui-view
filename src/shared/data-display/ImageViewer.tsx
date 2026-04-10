@@ -1,27 +1,30 @@
 /**
  * ImageViewer 图片查看器（View）。
  * 全屏遮罩内大图查看：多图切换、缩放、旋转、拖动平移、缩略图、键盘与遮罩关闭。
+ * **变换分层**：平移在外层（无 transition、拖动跟手）；缩放/旋转在内层（CSS transition，工具栏操作有过渡）。
  * 归属数据展示，与 Image 并列。
  *
  * **打开态与 {@link Modal} 对齐**：`open` 支持 `boolean`、零参 getter 或 **`Signal<boolean>`**（`createSignal` 返回值，推荐 `open={sig}`），
  * 勿仅依赖 `open={sig.value}` 在 Hybrid/函数槽 patch 下可能不触发子树更新。
- * 全屏层为 **`fixed inset-0` 内联渲染**（不再挂 `body` Portal），避免 `view-portal` 与双槽过渡带来的整段重绘与黑底闪屏。
- * **关闭态**：浏览器内存在真实 `document.body` 时须返回**隐藏占位 `span`**（与 {@link Modal} 一致），勿对该槽位 `return null`，否则 Hybrid 水合 `replaceSlot` 与更新链异常 → 点击后 `open` 已变但界面不打开。
+ * **全屏壳**：`fixed inset-0` **内联**挂在父级 VNode 树下（**不用** `createPortal`），避免与 `insert`/调度器叠床架屋导致卡死；若业务里父级带 `transform` 或强裁剪，请把本组件挪到不受裁切的容器（如布局根部）。
+ * **关闭态**：有真实 `document.body` 时返回隐藏 `span` 占槽（与 {@link Modal}、Hybrid 约定一致）；无 `body`（纯 SSR）时关闭为 `null`。
  * 勿在组件顶层 `open === false` 时提前 `return` 跳过 `createEffect`/`createRenderEffect` 注册。
- * **根返回值须为 `return () => …` 渲染 getter**（与 {@link Image}、Carousel 一致），在 getter 内读 {@link isOpen}；若直接 `return` 静态 VNode，首帧关闭会永远卡在占位节点，点击后 `open` 已为 true 仍不显示查看器。
+ * **根返回值**：与 `view/examples` 相册一致，用 {@link Show} 包一层 `when={isOpen}`，勿再 `return () => …` 整段 getter（易与父级 `insert` 的响应式子叠出卡死）；缩放/平移用 {@link createMemo} + `style`（同相册 `previewStyle`），勿用 `createRenderEffect` 写 `ref.style`。
  * **勿在根 getter 里读 `currentIndex` / 主图 `src`**：否则每次切图整棵 `fixed` 壳重算，主图与缩略图会一起闪断；主图/缩略条/张数指示应挂在占位节点上，由 **JSX 函数子**（`{() => …}`，运行时与 `insert` 同源）单独订阅，避免与外壳同一渲染节拍。
  * **为何单 `img` 改 `src` 会「先空再出」**：浏览器在赋值新 URL 后会立刻释放旧位图，新图未 `load/decode` 前没有像素可画；主图用双缓冲预载到底层再切换叠放。缩略条若 getter 订阅了当前索引，会整行 DOM 重挂载，小图也会闪；结构只跟列表走、高亮单独改 `class`。
- * **换图动画**：`imageTransition="fade"`（默认）在双缓冲上做**叠化**（新图在上层 `opacity 0→1`，旧图在下层保持不透明）；`slide` / `slideFade` 仍为**瞬时切层**以免整层平移露出黑底。系统开启「减少动态效果」时一律瞬时切换。
+ * **换图动画**：由 {@link ImageViewerProps.transition} 指定，见 {@link ImageViewerTransition}；双缓冲预载后播放，系统「减少动态效果」时一律瞬时切层。
  */
 
 import {
   createEffect,
   createMemo,
   createRef,
-  createRenderEffect,
   createSignal,
+  isSignal,
   onCleanup,
+  Show,
   type Signal,
+  untrack,
 } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 /** 按需：单文件图标，避免经 icons/mod 拉入全表 */
@@ -34,17 +37,6 @@ import { IconZoomIn } from "../basic/icons/ZoomIn.tsx";
 import { IconZoomOut } from "../basic/icons/ZoomOut.tsx";
 import { getBrowserBodyPortalHost } from "../feedback/portal-host.ts";
 
-/**
- * 判断是否为 `createSignal` 返回的、可读 `.value` 的函数对象（用于 `open`/`currentIndex` 联合类型收窄）。
- */
-function isViewSignal(v: unknown): v is Signal<unknown> {
-  if (typeof v !== "function") return false;
-  // Signal 为函数形态，与 Record 无直接重叠，经 unknown 再收窄以满足 TS2352
-  const f = v as unknown as Record<PropertyKey, unknown>;
-  return f.__VIEW_SIGNAL === true &&
-    Object.prototype.hasOwnProperty.call(f, "value");
-}
-
 /** `open` 合法形态：布尔快照、`Signal<boolean>`、或返回 boolean 的零参 getter */
 export type ImageViewerOpenInput =
   | boolean
@@ -55,10 +47,37 @@ export type ImageViewerOpenInput =
 export type ImageViewerIndexInput = number | (() => number) | Signal<number>;
 
 /**
- * 主图切换动画：`fade` 仅淡出旧图露出已解码的新图；`slide` 横向划入/划出（方向随索引增减）；
- * `slideFade` 为滑动与透明度组合。
+ * 主图切换效果（双缓冲解码完成后再播，避免闪黑）。
+ *
+ * - **`none`**：无动画，瞬时换层。
+ * - **`fade`**（默认）：新图在上叠化渐入，旧图在下保持不透明。
+ * - **`slide`**：新图从一侧平移入、旧图反向移出（环形列表按最短弧决定方向）。
+ * - **`blur`**：新图在上，自 **强模糊 + 透明** 过渡到清晰（与 `slide` 的纯位移完全不同）。
+ * - **`zoom`**：新图自略小尺寸放大并渐入。
+ * - **`mosaic`**：新图按 **小方格网格** 分块渐入（随机顺序），旧图仍在下层直至叠层结束。
  */
-export type ImageViewerImageTransition = "fade" | "slide" | "slideFade";
+export type ImageViewerTransition =
+  | "none"
+  | "fade"
+  | "slide"
+  | "blur"
+  | "zoom"
+  | "mosaic";
+
+/**
+ * 旧类型名，等价于 {@link ImageViewerTransition}，保留以兼容既有 import。
+ *
+ * @deprecated 请改用 {@link ImageViewerTransition}
+ */
+export type ImageViewerImageTransition = ImageViewerTransition;
+
+/**
+ * `transition` 合法形态：枚举字面量、`Signal<ImageViewerTransition>`、或返回枚举的零参 getter（与 `open` 一致便于受控）。
+ */
+export type ImageViewerTransitionInput =
+  | ImageViewerTransition
+  | (() => ImageViewerTransition)
+  | Signal<ImageViewerTransition>;
 
 /**
  * 解析 `open` prop（在 {@link createMemo} 内调用以订阅 `Signal` / getter）。
@@ -69,7 +88,8 @@ function readImageViewerOpenInput(
   v: ImageViewerOpenInput | undefined,
 ): boolean {
   if (v === undefined) return false;
-  if (isViewSignal(v)) return !!v.value;
+  /** 用无参调用与 `.value` 等价且兼容解构出的 getter（getter 无 `.value` 属性）。 */
+  if (isSignal(v)) return !!(v as () => boolean)();
   if (typeof v === "function") {
     if ((v as () => unknown).length !== 0) return false;
     return !!(v as () => boolean)();
@@ -84,7 +104,8 @@ function readImageViewerOpenInput(
  */
 function readImageViewerIndexInput(v: ImageViewerIndexInput): number {
   let n: number;
-  if (isViewSignal(v)) n = Number(v.value);
+  /** 同 {@link readImageViewerOpenInput}：解构 getter 须用 `()` 追踪。 */
+  if (isSignal(v)) n = Number((v as () => number)());
   else if (typeof v === "function") {
     if ((v as () => unknown).length !== 0) return 0;
     n = Number((v as () => number)());
@@ -92,6 +113,25 @@ function readImageViewerIndexInput(v: ImageViewerIndexInput): number {
     n = Number(v);
   }
   return Number.isFinite(n) ? Math.trunc(n) : 0;
+}
+
+/**
+ * 解析 `transition` prop（在 {@link createMemo} 内调用以订阅 `Signal` / getter）。
+ *
+ * @param v - {@link ImageViewerProps.transition}
+ */
+function readImageViewerTransitionInput(
+  v: ImageViewerTransitionInput | undefined,
+): ImageViewerTransition {
+  if (v === undefined) return "fade";
+  if (isSignal(v)) {
+    return (v as () => ImageViewerTransition)() as ImageViewerTransition;
+  }
+  if (typeof v === "function") {
+    if ((v as () => unknown).length !== 0) return "fade";
+    return (v as () => ImageViewerTransition)();
+  }
+  return v;
 }
 
 /**
@@ -123,6 +163,22 @@ function wrapImageListIndex(index: number, length: number): number {
   if (length <= 0) return 0;
   const m = index % length;
   return m < 0 ? m + length : m;
+}
+
+/**
+ * 环形索引上从前一张到当前张的滑动方向（最短弧），用于横向切换时新图从哪一侧进入。
+ *
+ * @param prev - 上一张已稳定展示的索引
+ * @param next - 当前要展示的索引
+ * @param len - 列表长度（≥1）
+ * @returns `1` 表示顺延方向（新图从右侧进入），`-1` 表示逆序（新图从左侧进入）
+ */
+function viewerSlideDirection(prev: number, next: number, len: number): 1 | -1 {
+  if (len <= 1) return 1;
+  let forward = next - prev;
+  if (forward > len / 2) forward -= len;
+  if (forward < -len / 2) forward += len;
+  return forward >= 0 ? 1 : -1;
 }
 
 /**
@@ -217,9 +273,10 @@ export interface ImageViewerProps {
   /** 内容区 class */
   class?: string;
   /**
-   * 主图切换：`fade`（默认）为双缓冲叠化；`slide` / `slideFade` 为瞬时换层（不做横向滑动，避免透出黑底）。
+   * 主图切换动画，默认 `fade`；可选 `none` / `slide` / `blur` / `zoom` / `mosaic`。
+   * 支持字面量、`Signal` 或零参 getter（推荐 `transition={sig}`），与 `open` 一致。
    */
-  imageTransition?: ImageViewerImageTransition;
+  transition?: ImageViewerTransitionInput;
 }
 
 const MIN_SCALE = 0.25;
@@ -231,9 +288,71 @@ const ROTATE_STEP = 90;
 const IMAGE_VIEWER_Z = 1050;
 
 /**
- * 主图叠化时长（毫秒）：新图盖在旧图之上 `opacity 0→1`，旧图全程保持不透明，避免透出对话框黑底。
+ * 主图叠化时长（毫秒）：略长以便肉眼分辨叠化；新图在上 `opacity 0→1` 盖在旧图之上，旧图保持不透明以免透出黑底。
  */
-const VIEWER_MAIN_CROSSFADE_MS = 240;
+const VIEWER_MAIN_CROSSFADE_MS = 420;
+/** 横向滑动切换时长（毫秒） */
+const VIEWER_MAIN_SLIDE_MS = 280;
+/** 缩放切入时长（毫秒） */
+const VIEWER_MAIN_ZOOM_MS = 260;
+/** 模糊渐入：滤镜 + 透明度时长（毫秒） */
+const VIEWER_MAIN_BLUR_MS = 420;
+/** 模糊渐入起始 `blur()` 半径（px），需与 `slide` 区分明显 */
+const VIEWER_BLUR_START_PX = 18;
+/** 打开查看器时离屏预取的最大张数，避免超长列表占满带宽 */
+const VIEWER_PREFETCH_MAX = 32;
+/** 马赛克切换：网格列数、行数 */
+const VIEWER_MOSAIC_COLS = 8;
+const VIEWER_MOSAIC_ROWS = 6;
+/** 单格 opacity 过渡时长（毫秒） */
+const VIEWER_MOSAIC_CELL_MS = 260;
+/** 随机顺序下相邻「批次」间隔（毫秒），控制整体时长 */
+const VIEWER_MOSAIC_STAGGER_MS = 14;
+
+/**
+ * 移除主图容器上 `mosaic` 效果留下的临时叠层（`data-dreamer-image-viewer-mosaic`），避免换图或换 `transition` 后残留方格。
+ *
+ * @param mount - {@link ImageViewer} 主图挂载节点，可为 `null`
+ */
+function viewerRemoveMosaicOverlays(
+  mount: HTMLElement | null | undefined,
+): void {
+  if (mount == null) return;
+  mount.querySelectorAll("[data-dreamer-image-viewer-mosaic]").forEach((el) => {
+    el.remove();
+  });
+}
+
+/**
+ * 计算与 `object-fit: contain` 一致时，位图在容器内的绘制尺寸与左上角偏移（主图 `img` 与此对齐）。
+ *
+ * @param containerW - 容器内容宽度（如 `clientWidth`）
+ * @param containerH - 容器内容高度
+ * @param naturalW - 已解码图片的 `naturalWidth`；无效时按容器宽回退
+ * @param naturalH - 已解码图片的 `naturalHeight`；无效时按容器高回退
+ */
+function viewerObjectContainRect(
+  containerW: number,
+  containerH: number,
+  naturalW: number,
+  naturalH: number,
+): { drawW: number; drawH: number; offX: number; offY: number } {
+  const cw = Math.max(0, containerW);
+  const ch = Math.max(0, containerH);
+  let iw = naturalW;
+  let ih = naturalH;
+  if (!Number.isFinite(iw) || iw <= 0) iw = cw > 0 ? cw : 1;
+  if (!Number.isFinite(ih) || ih <= 0) ih = ch > 0 ? ch : 1;
+  if (cw <= 0 || ch <= 0) {
+    return { drawW: cw, drawH: ch, offX: 0, offY: 0 };
+  }
+  const s = Math.min(cw / iw, ch / ih);
+  const drawW = iw * s;
+  const drawH = ih * s;
+  const offX = (cw - drawW) / 2;
+  const offY = (ch - drawH) / 2;
+  return { drawW, drawH, offX, offY };
+}
 
 /**
  * 是否应减弱动效（系统「减少动态效果」）。
@@ -254,13 +373,14 @@ export function ImageViewer(props: ImageViewerProps) {
     showThumbnails = true,
     maskClass,
     class: className,
-    imageTransition: imageTransitionProp = "fade",
   } = props;
 
   /**
-   * `fade`（含未传时的默认值）使用叠化；`slide` / `slideFade` 保持瞬时切换（与旧版滑动过渡不同，避免黑缝）。
+   * 主图切换效果：订阅 `Signal` / getter，与 {@link ImageViewerProps.open} 用法一致。
    */
-  const useMainCrossfade = (): boolean => imageTransitionProp === "fade";
+  const resolvedTransition = createMemo(() =>
+    readImageViewerTransitionInput(props.transition)
+  );
 
   /**
    * 禁止在 `open === false` 时提前 return：须无条件注册副作用（如 body overflow），
@@ -310,14 +430,21 @@ export function ImageViewer(props: ImageViewerProps) {
   };
 
   const scaleRef = createSignal(1);
+  /**
+   * 累积旋转角度（度），**不对 360 取模**：`transition-transform` 在线性插值 `rotate(a)`→`rotate(b)` 时按数值差过渡；
+   * 若用 `[0,360)` 存角（如 0→270 表示逆时针 90°），浏览器会动画 270° 大圈。用 ±90 累加则首次逆时针为 0→-90，过渡正确。
+   */
   const rotationRef = createSignal(0);
   const positionRef = createSignal({ x: 0, y: 0 });
 
   /**
-   * 包裹大图的可拖动层：缩放/旋转/位移由紧随其后的 `createRenderEffect` 写 `style.transform`，
-   * 避免在 JSX 里反复拼接 transform 触发大范围协调。
+   * 外层：仅 `translate`，与拖动平移绑定，**不设 transition**，避免拖拽跟手变「橡皮筋」。
    */
   const transformLayerRef = createRef<HTMLDivElement>(null);
+  /**
+   * 内层：仅 `scale` + `rotate`，带 CSS transition，工具栏放大/缩小/旋转有过渡；`pointer-events-none` 使点击穿透到外层以便拖移。
+   */
+  const transformInnerRef = createRef<HTMLDivElement>(null);
 
   /**
    * 是否多图：仅依赖列表长度；切索引时不变，避免根渲染 getter 因「当前张」变化而重算整壳。
@@ -333,7 +460,6 @@ export function ImageViewer(props: ImageViewerProps) {
   const mainImg1Ref = createRef<HTMLImageElement>(null);
   const thumbnailStripMountRef = createRef<HTMLDivElement>(null);
   const viewerCounterMountRef = createRef<HTMLDivElement>(null);
-  const counterTextRef = createRef<HTMLSpanElement>(null);
 
   /**
    * 当前哪一层 `img` 为「顶」层（与 {@link mainImg0Ref} / {@link mainImg1Ref} 对应）；关闭时归零。
@@ -341,6 +467,10 @@ export function ImageViewer(props: ImageViewerProps) {
   let mainViewTopSlot: 0 | 1 = 0;
   /** 快速连点切换时作废上一张的 `load/decode` 回调，避免错序 swap。 */
   let mainSwapGen = 0;
+  /**
+   * 上一次主图切换**完成**后的索引；用于 `slide` 在环形列表上算最短滑动方向。
+   */
+  let lastCommittedDisplayIndex: number | null = null;
 
   /**
    * 当前应展示的主图地址：打开且列表非空时取 {@link getDisplayIndex} 对应项，否则空串（不渲染 `img`）。
@@ -354,23 +484,81 @@ export function ImageViewer(props: ImageViewerProps) {
   });
 
   /**
-   * 打开期间，索引或同索引下的 URL 变化时重置缩放/旋转/平移，避免上一张的变换套在新图上。
+   * 外层平移样式：对齐 `view/examples/src/views/gallery` 的 `previewStyle`（memo + `style`），避免 `createRenderEffect` 写 `ref.style` 参与同步重入。
    */
-  createEffect(() => {
-    if (!isOpen()) {
-      scaleRef.value = 1;
-      rotationRef.value = 0;
-      positionRef.value = { x: 0, y: 0 };
-      return;
-    }
-    void displayImageSrc();
-    scaleRef.value = 1;
-    rotationRef.value = 0;
-    positionRef.value = { x: 0, y: 0 };
+  const viewerTranslateStyle = createMemo((): Record<string, string> => {
+    if (!isOpen()) return {};
+    const p = positionRef.value;
+    return { transform: `translate(${p.x}px, ${p.y}px)` };
   });
 
   /**
-   * 打开时锁定 body 滚动；关闭或卸载时恢复（无 Portal，仅依赖本组件副作用）。
+   * 内层缩放/旋转样式；过渡由 class 上的 `transition-transform` 负责。
+   */
+  const viewerInnerTransformStyle = createMemo((): Record<string, string> => {
+    if (!isOpen()) return {};
+    const s = scaleRef.value;
+    const r = rotationRef.value;
+    return { transform: `scale(${s}) rotate(${r}deg)` };
+  });
+
+  /**
+   * 顶栏「当前张 / 总张数」文案（多图时）；与相册示例一致走声明式文本，不用 `createRenderEffect` 写 `textContent`。
+   */
+  const viewerCounterText = createMemo(() => {
+    if (!isOpen()) return "";
+    const list = imageList();
+    if (list.length <= 1) return "";
+    return `${getDisplayIndex() + 1} / ${list.length}`;
+  });
+
+  /**
+   * 打开期间，索引或同索引下的 URL 变化时重置缩放/旋转/平移，避免上一张的变换套在新图上。
+   * 若当前非默认变换，先关掉内层 transition 再写回 1/0，避免换图时从旧缩放「动画弹回」。
+   *
+   * **死循环防范**：若在追踪上下文中读取 `scaleRef` / `rotationRef` / `positionRef` 随后又写入
+   * （尤其 `positionRef` 每次 `={ x:0, y:0 }` 为新对象），effect 会订阅自身写入的 signal 而无限重跑。
+   * 因此仅在外层订阅 `isOpen` 与 `displayImageSrc`，变换的读写在 {@link untrack} 内完成。
+   */
+  createEffect(() => {
+    const open = isOpen();
+    if (open) {
+      /** 订阅当前主图 URL：切图或列表项变更时重跑以重置变换；关闭时不读，避免多余依赖。 */
+      void displayImageSrc();
+    }
+
+    untrack(() => {
+      if (!open) {
+        scaleRef.value = 1;
+        rotationRef.value = 0;
+        positionRef.value = { x: 0, y: 0 };
+        return;
+      }
+
+      const inner = transformInnerRef.current;
+      const pos = positionRef.value;
+      const needInstantReset = scaleRef.value !== 1 ||
+        rotationRef.value !== 0 ||
+        pos.x !== 0 ||
+        pos.y !== 0;
+      if (inner != null && needInstantReset) {
+        inner.style.transition = "none";
+        void inner.offsetWidth;
+      }
+      scaleRef.value = 1;
+      rotationRef.value = 0;
+      positionRef.value = { x: 0, y: 0 };
+      if (inner != null && needInstantReset) {
+        globalThis.queueMicrotask(() => {
+          const el = transformInnerRef.current;
+          if (el != null) el.style.removeProperty("transition");
+        });
+      }
+    });
+  });
+
+  /**
+   * 打开时锁定 `document.body` 滚动；关闭或卸载时恢复。
    */
   createEffect(() => {
     if (!isOpen()) {
@@ -408,9 +596,10 @@ export function ImageViewer(props: ImageViewerProps) {
     scaleRef((s) => Math.min(MAX_SCALE, s + SCALE_STEP));
   const handleZoomOut = () =>
     scaleRef((s) => Math.max(MIN_SCALE, s - SCALE_STEP));
-  const handleRotateCw = () => rotationRef((r) => (r + ROTATE_STEP) % 360);
-  const handleRotateCcw = () =>
-    rotationRef((r) => (r - ROTATE_STEP + 360) % 360);
+  /** 顺时针：累加角度，避免 `% 360` 导致与上一帧差值过大、过渡「甩圈」。 */
+  const handleRotateCw = () => rotationRef((r) => r + ROTATE_STEP);
+  /** 逆时针：同上，用减法保持每步仅 ±90° 的插值。 */
+  const handleRotateCcw = () => rotationRef((r) => r - ROTATE_STEP);
   const handleResetTransform = () => {
     scaleRef.value = 1;
     rotationRef.value = 0;
@@ -431,23 +620,9 @@ export function ImageViewer(props: ImageViewerProps) {
   };
 
   /**
-   * 将缩放/旋转/平移同步到可拖动层 DOM。
-   * **须先读 `positionRef`/`scaleRef`/`rotationRef`，再读 `transformLayerRef.current`**：
-   * `createRef` 的 `current` 赋值会触发本 effect；
-   * **勿**再订阅 `getDisplayIndex`/`imageList`，否则每次切图都会重写父级 transform，与拖动/缩放状态打架。
+   * 打开时在 document 上绑定键盘事件；依赖 {@link isOpen} 订阅。
+   * **须用 {@link onCleanup} 解绑**：`@dreamer/view` 的 `createEffect` 不会执行回调的 `return` 清理，否则每关开一次就多一层监听，左右键一次会连跳多张。
    */
-  createRenderEffect(() => {
-    if (!isOpen()) return;
-    const pos = positionRef.value;
-    const s = scaleRef.value;
-    const r = rotationRef.value;
-    const wrap = transformLayerRef.current;
-    if (wrap == null) return;
-    wrap.style.transform =
-      `translate(${pos.x}px, ${pos.y}px) scale(${s}) rotate(${r}deg)`;
-  });
-
-  /** 打开时在 document 上绑定键盘事件；依赖 {@link isOpen} 订阅 */
   createEffect(() => {
     if (!isOpen()) return;
     const doc = globalThis.document;
@@ -468,7 +643,9 @@ export function ImageViewer(props: ImageViewerProps) {
       }
     };
     doc.addEventListener("keydown", handler as EventListener);
-    return () => doc.removeEventListener("keydown", handler as EventListener);
+    onCleanup(() => {
+      doc.removeEventListener("keydown", handler as EventListener);
+    });
   });
 
   /**
@@ -510,9 +687,12 @@ export function ImageViewer(props: ImageViewerProps) {
     const list = imageList();
     if (list.length <= 1) return;
     const idx = getDisplayIndex();
-    queueMicrotask(() => {
+    /**
+     * 优先同步写 class，与主图 effect 同一轮调度内尽量对齐；挂载未就绪时再微任务补一次。
+     */
+    const applyThumbHighlight = (): boolean => {
       const mount = thumbnailStripMountRef.current;
-      if (mount == null) return;
+      if (mount == null) return false;
       mount.querySelectorAll<HTMLButtonElement>("button[data-idx]").forEach(
         (btn) => {
           const i = Number(btn.dataset.idx);
@@ -525,23 +705,31 @@ export function ImageViewer(props: ImageViewerProps) {
           );
         },
       );
-    });
+      return true;
+    };
+    if (!applyThumbHighlight()) {
+      globalThis.queueMicrotask(applyThumbHighlight);
+    }
   });
 
   /**
-   * 顶栏张数：只改文本节点，避免整段 VNode 替换。
+   * 打开后预取列表 URL（离屏 Image），与缩略条小图同源时常已在缓存，主图 hidden 层赋 `src` 后更快触发 `load`、与缩略高亮同步感更好。
    */
-  createRenderEffect(() => {
+  createEffect(() => {
     if (!isOpen()) return;
-    const el = counterTextRef.current;
-    if (el == null) return;
     const list = imageList();
-    if (list.length <= 1) {
-      el.textContent = "";
-      return;
-    }
-    const idx = getDisplayIndex();
-    el.textContent = `${idx + 1} / ${list.length}`;
+    if (list.length === 0) return;
+    const slice = list.slice(0, VIEWER_PREFETCH_MAX);
+    globalThis.queueMicrotask(() => {
+      if (!isOpen()) return;
+      for (let i = 0; i < slice.length; i++) {
+        const url = slice[i];
+        if (url == null || url === "") continue;
+        const img = new Image();
+        img.decoding = "async";
+        img.src = url;
+      }
+    });
   });
 
   /**
@@ -551,17 +739,22 @@ export function ImageViewer(props: ImageViewerProps) {
     if (!isOpen()) {
       mainSwapGen++;
       mainViewTopSlot = 0;
+      lastCommittedDisplayIndex = null;
       const a = mainImg0Ref.current;
       const b = mainImg1Ref.current;
       if (a != null) {
         a.removeAttribute("src");
         a.style.transition = "none";
+        a.style.transform = "";
+        a.style.filter = "";
         a.style.opacity = "1";
         a.style.zIndex = "2";
       }
       if (b != null) {
         b.removeAttribute("src");
         b.style.transition = "none";
+        b.style.transform = "";
+        b.style.filter = "";
         b.style.opacity = "0";
         b.style.zIndex = "1";
       }
@@ -569,158 +762,555 @@ export function ImageViewer(props: ImageViewerProps) {
     }
 
     const next = displayImageSrc();
-    const a = mainImg0Ref.current;
-    const b = mainImg1Ref.current;
-    if (a == null || b == null) return;
-
-    if (next === "") {
-      mainSwapGen++;
-      a.removeAttribute("src");
-      b.removeAttribute("src");
-      a.style.transition = "none";
-      b.style.transition = "none";
-      return;
-    }
-
-    const visible = mainViewTopSlot === 0 ? a : b;
-    const hidden = mainViewTopSlot === 0 ? b : a;
-    const vSrc = visible.getAttribute("src") ?? "";
+    /** 订阅 {@link resolvedTransition}，避免仅改 `transition` 时本 effect 不重跑。 */
+    void resolvedTransition();
 
     /**
-     * 顶图已是要显示的 URL：仅保证叠放状态（例如首帧后重复 effect）。
+     * 首次打开时副作用可能早于 `<img>` 的 ref 回调：双缓冲节点仍为 `null` 时若直接 `return`，
+     * 依赖未变则 effect 不会重跑，主图 `src` 永远不会被写入。用微任务有限重试，待 DOM 就绪后再同步。
      */
-    if (vSrc !== "" && viewerUrlsMatch(vSrc, next)) {
-      visible.style.transition = "none";
-      hidden.style.transition = "none";
-      visible.style.opacity = "1";
-      visible.style.zIndex = "2";
-      hidden.style.opacity = "0";
-      hidden.style.zIndex = "1";
-      return;
-    }
-
-    /**
-     * 首帧尚无像素：直接写在顶图，不走预载（否则用户只看到底图空窗）。
-     */
-    if (vSrc === "") {
-      visible.src = next;
-      visible.style.transition = "none";
-      hidden.style.transition = "none";
-      visible.style.opacity = "1";
-      visible.style.zIndex = "2";
-      hidden.style.opacity = "0";
-      hidden.style.zIndex = "1";
-      return;
-    }
-
-    const g = ++mainSwapGen;
-
-    /**
-     * 无叠化：直接对调层级（降级 / 减少动效）。
-     */
-    const finishSwapInstant = () => {
-      if (g !== mainSwapGen) return;
-      visible.style.transition = "none";
-      hidden.style.transition = "none";
-      visible.style.opacity = "0";
-      visible.style.zIndex = "1";
-      hidden.style.opacity = "1";
-      hidden.style.zIndex = "2";
-      mainViewTopSlot = mainViewTopSlot === 0 ? 1 : 0;
-    };
-
-    /**
-     * 新图已解码：**新图层在上**且从 opacity 0 淡入，**旧图层在下**全程 opacity 1，中间不会出现「双透明 → 黑底」。
-     */
-    const finishSwapCrossfade = () => {
-      if (g !== mainSwapGen) return;
-      if (viewerImagePrefersReducedMotion()) {
-        finishSwapInstant();
+    let mainBufferSwapRetries = 0;
+    const MAIN_BUFFER_SWAP_MAX_RETRIES = 64;
+    const runMainBufferSwap = () => {
+      if (!isOpen()) return;
+      const a = mainImg0Ref.current;
+      const b = mainImg1Ref.current;
+      if (a == null || b == null) {
+        if (mainBufferSwapRetries < MAIN_BUFFER_SWAP_MAX_RETRIES) {
+          mainBufferSwapRetries++;
+          globalThis.queueMicrotask(runMainBufferSwap);
+        }
         return;
       }
 
-      let finalized = false;
-      /** 用对象承载 `setTimeout` id，满足 `finalize` 与定时器互相引用且符合 lint。 */
-      const fallbackTimerRef: {
-        id?: ReturnType<typeof globalThis.setTimeout>;
-      } = {};
+      if (next === "") {
+        mainSwapGen++;
+        a.removeAttribute("src");
+        b.removeAttribute("src");
+        a.style.transition = "none";
+        b.style.transition = "none";
+        a.style.transform = "";
+        b.style.transform = "";
+        a.style.filter = "";
+        b.style.filter = "";
+        return;
+      }
 
-      const finalize = () => {
-        if (finalized || g !== mainSwapGen) return;
-        finalized = true;
-        if (fallbackTimerRef.id !== undefined) {
-          globalThis.clearTimeout(fallbackTimerRef.id);
-        }
-        hidden.removeEventListener("transitionend", onEnd);
+      const visible = mainViewTopSlot === 0 ? a : b;
+      const hidden = mainViewTopSlot === 0 ? b : a;
+      const vSrc = visible.getAttribute("src") ?? "";
+
+      /**
+       * 顶图已是要显示的 URL：仅保证叠放状态（例如首帧后重复 effect）。
+       */
+      if (vSrc !== "" && viewerUrlsMatch(vSrc, next)) {
         visible.style.transition = "none";
+        hidden.style.transition = "none";
+        visible.style.transform = "";
+        hidden.style.transform = "";
+        visible.style.filter = "";
+        hidden.style.filter = "";
+        visible.style.opacity = "1";
+        visible.style.zIndex = "2";
+        hidden.style.opacity = "0";
+        hidden.style.zIndex = "1";
+        lastCommittedDisplayIndex = getDisplayIndex();
+        return;
+      }
+
+      /**
+       * 首帧尚无像素：直接写在顶图，不走预载（否则用户只看到底图空窗）。
+       */
+      if (vSrc === "") {
+        visible.src = next;
+        visible.style.transition = "none";
+        hidden.style.transition = "none";
+        visible.style.transform = "";
+        hidden.style.transform = "";
+        visible.style.filter = "";
+        hidden.style.filter = "";
+        visible.style.opacity = "1";
+        visible.style.zIndex = "2";
+        hidden.style.opacity = "0";
+        hidden.style.zIndex = "1";
+        lastCommittedDisplayIndex = getDisplayIndex();
+        return;
+      }
+
+      const listLen = imageList().length;
+      const currentIdx = getDisplayIndex();
+      const prevIdx = lastCommittedDisplayIndex ?? currentIdx;
+      /** 与 {@link viewerSlideDirection} 配合，首尾相接时按最短弧决定新图从左侧还是右侧进入。 */
+      const slideDir = viewerSlideDirection(
+        prevIdx,
+        currentIdx,
+        Math.max(1, listLen),
+      );
+      const mode = resolvedTransition();
+      const g = ++mainSwapGen;
+
+      /**
+       * 无动画：直接对调层级（`none`、减弱动效、或未知模式兜底）。
+       */
+      const finishSwapInstant = () => {
+        if (g !== mainSwapGen) return;
+        viewerRemoveMosaicOverlays(mainImageMountRef.current);
+        visible.style.transition = "none";
+        hidden.style.transition = "none";
+        visible.style.transform = "";
+        hidden.style.transform = "";
+        visible.style.filter = "";
+        hidden.style.filter = "";
         visible.style.opacity = "0";
         visible.style.zIndex = "1";
-        hidden.style.transition = "none";
         hidden.style.opacity = "1";
         hidden.style.zIndex = "2";
         mainViewTopSlot = mainViewTopSlot === 0 ? 1 : 0;
+        lastCommittedDisplayIndex = getDisplayIndex();
       };
 
-      const onEnd = (ev: TransitionEvent) => {
-        if (ev.target !== hidden || ev.propertyName !== "opacity") return;
-        finalize();
-      };
-
-      hidden.style.transition = "none";
-      hidden.style.opacity = "0";
-      hidden.style.zIndex = "3";
-      visible.style.zIndex = "2";
-      visible.style.opacity = "1";
-      visible.style.transition = "none";
-      void hidden.offsetWidth;
-
-      const ms = VIEWER_MAIN_CROSSFADE_MS;
-      const ease = "cubic-bezier(0.4, 0, 0.2, 1)";
-      hidden.addEventListener("transitionend", onEnd, { once: true });
-      fallbackTimerRef.id = globalThis.setTimeout(() => finalize(), ms + 120);
-
-      hidden.style.transition = `opacity ${ms}ms ${ease}`;
-      hidden.style.opacity = "1";
-    };
-
-    const tryDecodeAndSwap = () => {
-      if (g !== mainSwapGen) return;
-      const p = typeof hidden.decode === "function"
-        ? hidden.decode()
-        : Promise.resolve();
-      void p.catch(() => {}).then(() => {
+      /**
+       * 新图已解码：**新图层在上**且从 opacity 0 淡入，**旧图层在下**全程 opacity 1，中间不会出现「双透明 → 黑底」。
+       */
+      const finishSwapCrossfade = () => {
         if (g !== mainSwapGen) return;
-        if (useMainCrossfade()) {
+        if (viewerImagePrefersReducedMotion()) {
+          finishSwapInstant();
+          return;
+        }
+
+        let finalized = false;
+        /** 用对象承载 `setTimeout` id，满足 `finalize` 与定时器互相引用且符合 lint。 */
+        const fallbackTimerRef: {
+          id?: ReturnType<typeof globalThis.setTimeout>;
+        } = {};
+
+        const finalize = () => {
+          if (finalized || g !== mainSwapGen) return;
+          finalized = true;
+          if (fallbackTimerRef.id !== undefined) {
+            globalThis.clearTimeout(fallbackTimerRef.id);
+          }
+          hidden.removeEventListener("transitionend", onEnd);
+          visible.style.transition = "none";
+          visible.style.transform = "";
+          visible.style.filter = "";
+          visible.style.opacity = "0";
+          visible.style.zIndex = "1";
+          hidden.style.transition = "none";
+          hidden.style.transform = "";
+          hidden.style.filter = "";
+          hidden.style.opacity = "1";
+          hidden.style.zIndex = "2";
+          mainViewTopSlot = mainViewTopSlot === 0 ? 1 : 0;
+          lastCommittedDisplayIndex = getDisplayIndex();
+        };
+
+        const onEnd = (ev: TransitionEvent) => {
+          if (ev.target !== hidden || ev.propertyName !== "opacity") return;
+          finalize();
+        };
+
+        hidden.style.transition = "none";
+        hidden.style.transform = "";
+        hidden.style.filter = "";
+        hidden.style.opacity = "0";
+        hidden.style.zIndex = "3";
+        visible.style.zIndex = "2";
+        visible.style.opacity = "1";
+        visible.style.transition = "none";
+        visible.style.transform = "";
+        visible.style.filter = "";
+        void hidden.offsetWidth;
+
+        const ms = VIEWER_MAIN_CROSSFADE_MS;
+        /** 缓入缓出，中间段叠化更明显（对比偏快的 standard 曲线） */
+        const ease = "cubic-bezier(0.45, 0, 0.55, 1)";
+        hidden.addEventListener("transitionend", onEnd, { once: true });
+        fallbackTimerRef.id = globalThis.setTimeout(() => finalize(), ms + 160);
+
+        hidden.style.transition = `opacity ${ms}ms ${ease}`;
+        hidden.style.opacity = "1";
+      };
+
+      /**
+       * 横向滑动：新图在上、全程不透明平移入，旧图在下反向移出（与 `blur` 的滤镜过渡完全不同）。
+       */
+      const finishSwapSlide = () => {
+        if (g !== mainSwapGen) return;
+        if (viewerImagePrefersReducedMotion()) {
+          finishSwapInstant();
+          return;
+        }
+
+        let finalized = false;
+        const fallbackTimerRef: {
+          id?: ReturnType<typeof globalThis.setTimeout>;
+        } = {};
+
+        const finalize = () => {
+          if (finalized || g !== mainSwapGen) return;
+          finalized = true;
+          if (fallbackTimerRef.id !== undefined) {
+            globalThis.clearTimeout(fallbackTimerRef.id);
+          }
+          visible.style.transition = "none";
+          visible.style.transform = "";
+          visible.style.filter = "";
+          visible.style.opacity = "0";
+          visible.style.zIndex = "1";
+          hidden.style.transition = "none";
+          hidden.style.transform = "";
+          hidden.style.filter = "";
+          hidden.style.opacity = "1";
+          hidden.style.zIndex = "2";
+          mainViewTopSlot = mainViewTopSlot === 0 ? 1 : 0;
+          lastCommittedDisplayIndex = getDisplayIndex();
+        };
+
+        const mount = mainImageMountRef.current;
+        const w = mount?.clientWidth ?? 480;
+        const enter = slideDir >= 0 ? w : -w;
+        const exit = slideDir >= 0 ? -w : w;
+        const ms = VIEWER_MAIN_SLIDE_MS;
+        const easeMove = "cubic-bezier(0.4, 0, 0.2, 1)";
+
+        hidden.style.transition = "none";
+        visible.style.transition = "none";
+        hidden.style.filter = "";
+        visible.style.filter = "";
+        hidden.style.zIndex = "3";
+        visible.style.zIndex = "2";
+        hidden.style.opacity = "1";
+        hidden.style.transform = `translateX(${enter}px)`;
+        visible.style.opacity = "1";
+        visible.style.transform = "translateX(0)";
+        void hidden.offsetWidth;
+        hidden.style.transition = `transform ${ms}ms ${easeMove}`;
+        visible.style.transition = `transform ${ms}ms ${easeMove}`;
+        hidden.style.transform = "translateX(0)";
+        visible.style.transform = `translateX(${exit}px)`;
+
+        fallbackTimerRef.id = globalThis.setTimeout(() => finalize(), ms + 140);
+      };
+
+      /**
+       * 模糊渐入：新图叠在旧图之上，自 **高斯模糊 + 全透明** 过渡到清晰，无平移，与 `slide` 区分度大。
+       */
+      const finishSwapBlur = () => {
+        if (g !== mainSwapGen) return;
+        if (viewerImagePrefersReducedMotion()) {
+          finishSwapInstant();
+          return;
+        }
+
+        let finalized = false;
+        const fallbackTimerRef: {
+          id?: ReturnType<typeof globalThis.setTimeout>;
+        } = {};
+
+        const finalize = () => {
+          if (finalized || g !== mainSwapGen) return;
+          finalized = true;
+          if (fallbackTimerRef.id !== undefined) {
+            globalThis.clearTimeout(fallbackTimerRef.id);
+          }
+          visible.style.transition = "none";
+          visible.style.transform = "";
+          visible.style.filter = "";
+          visible.style.opacity = "0";
+          visible.style.zIndex = "1";
+          hidden.style.transition = "none";
+          hidden.style.transform = "";
+          hidden.style.filter = "";
+          hidden.style.opacity = "1";
+          hidden.style.zIndex = "2";
+          mainViewTopSlot = mainViewTopSlot === 0 ? 1 : 0;
+          lastCommittedDisplayIndex = getDisplayIndex();
+        };
+
+        const blurStart = `blur(${VIEWER_BLUR_START_PX}px)`;
+        const ms = VIEWER_MAIN_BLUR_MS;
+        const ease = "cubic-bezier(0.45, 0, 0.55, 1)";
+
+        hidden.style.transition = "none";
+        visible.style.transition = "none";
+        hidden.style.transform = "";
+        visible.style.transform = "";
+        hidden.style.zIndex = "3";
+        visible.style.zIndex = "2";
+        hidden.style.opacity = "0";
+        hidden.style.filter = blurStart;
+        visible.style.opacity = "1";
+        visible.style.filter = "";
+        void hidden.offsetWidth;
+
+        hidden.style.transition =
+          `opacity ${ms}ms ${ease}, filter ${ms}ms ${ease}`;
+        hidden.style.opacity = "1";
+        hidden.style.filter = "blur(0px)";
+
+        fallbackTimerRef.id = globalThis.setTimeout(() => finalize(), ms + 160);
+      };
+
+      /**
+       * 新图自略小放大并渐入（顶图叠在旧图之上）。
+       */
+      const finishSwapZoom = () => {
+        if (g !== mainSwapGen) return;
+        if (viewerImagePrefersReducedMotion()) {
+          finishSwapInstant();
+          return;
+        }
+
+        let finalized = false;
+        const fallbackTimerRef: {
+          id?: ReturnType<typeof globalThis.setTimeout>;
+        } = {};
+
+        const finalize = () => {
+          if (finalized || g !== mainSwapGen) return;
+          finalized = true;
+          if (fallbackTimerRef.id !== undefined) {
+            globalThis.clearTimeout(fallbackTimerRef.id);
+          }
+          visible.style.transition = "none";
+          visible.style.transform = "";
+          visible.style.transformOrigin = "";
+          visible.style.filter = "";
+          visible.style.opacity = "0";
+          visible.style.zIndex = "1";
+          hidden.style.transition = "none";
+          hidden.style.transform = "";
+          hidden.style.transformOrigin = "";
+          hidden.style.filter = "";
+          hidden.style.opacity = "1";
+          hidden.style.zIndex = "2";
+          mainViewTopSlot = mainViewTopSlot === 0 ? 1 : 0;
+          lastCommittedDisplayIndex = getDisplayIndex();
+        };
+
+        hidden.style.transition = "none";
+        hidden.style.transform = "scale(0.88)";
+        hidden.style.transformOrigin = "center center";
+        hidden.style.filter = "";
+        hidden.style.opacity = "0";
+        hidden.style.zIndex = "3";
+        visible.style.zIndex = "2";
+        visible.style.opacity = "1";
+        visible.style.transition = "none";
+        visible.style.transform = "";
+        visible.style.filter = "";
+        void hidden.offsetWidth;
+
+        const ms = VIEWER_MAIN_ZOOM_MS;
+        const ease = "cubic-bezier(0.4, 0, 0.2, 1)";
+        fallbackTimerRef.id = globalThis.setTimeout(() => finalize(), ms + 120);
+
+        hidden.style.transition =
+          `opacity ${ms}ms ${ease}, transform ${ms}ms ${ease}`;
+        hidden.style.opacity = "1";
+        hidden.style.transform = "scale(1)";
+      };
+
+      /**
+       * 小方格（马赛克）渐入：叠层用预载 `img`（`hidden`）的 **布局盒**（`offsetLeft/Top/Width/Height`）定位，
+       * 与浏览器在 `max-h-[calc(100vh-12rem)]` 等约束下的真实尺寸一致，避免公式 `contain` 与布局亚像素差导致「先略小再放大」。
+       */
+      const finishSwapMosaic = () => {
+        if (g !== mainSwapGen) return;
+        if (viewerImagePrefersReducedMotion()) {
+          finishSwapInstant();
+          return;
+        }
+        const mount = mainImageMountRef.current;
+        const doc = globalThis.document;
+        if (mount == null || doc == null) {
+          finishSwapInstant();
+          return;
+        }
+
+        let finalized = false;
+        const fallbackTimerRef: {
+          id?: ReturnType<typeof globalThis.setTimeout>;
+        } = {};
+
+        const finalize = () => {
+          if (finalized || g !== mainSwapGen) return;
+          finalized = true;
+          if (fallbackTimerRef.id !== undefined) {
+            globalThis.clearTimeout(fallbackTimerRef.id);
+          }
+          viewerRemoveMosaicOverlays(mount);
+          visible.style.transition = "none";
+          visible.style.transform = "";
+          visible.style.filter = "";
+          visible.style.opacity = "0";
+          visible.style.zIndex = "1";
+          hidden.style.transition = "none";
+          hidden.style.transform = "";
+          hidden.style.filter = "";
+          hidden.style.opacity = "1";
+          hidden.style.zIndex = "2";
+          mainViewTopSlot = mainViewTopSlot === 0 ? 1 : 0;
+          lastCommittedDisplayIndex = getDisplayIndex();
+        };
+
+        const mw = mount.clientWidth;
+        const mh = mount.clientHeight;
+        if (mw < 4 || mh < 4) {
+          finishSwapInstant();
+          return;
+        }
+
+        viewerRemoveMosaicOverlays(mount);
+
+        const cols = VIEWER_MOSAIC_COLS;
+        const rows = VIEWER_MOSAIC_ROWS;
+        /** 与 `hidden` 实际排版盒一致（含 `maxHeight` 等与父盒不同的约束） */
+        let offX = hidden.offsetLeft;
+        let offY = hidden.offsetTop;
+        let drawW = hidden.offsetWidth;
+        let drawH = hidden.offsetHeight;
+        if (drawW < 2 || drawH < 2) {
+          const fb = viewerObjectContainRect(
+            mw,
+            mh,
+            hidden.naturalWidth,
+            hidden.naturalHeight,
+          );
+          offX = fb.offX;
+          offY = fb.offY;
+          drawW = fb.drawW;
+          drawH = fb.drawH;
+        }
+        if (drawW < 2 || drawH < 2) {
+          finishSwapInstant();
+          return;
+        }
+        const cellW = drawW / cols;
+        const cellH = drawH / rows;
+
+        const overlay = doc.createElement("div");
+        overlay.setAttribute("data-dreamer-image-viewer-mosaic", "");
+        overlay.setAttribute("aria-hidden", "true");
+        overlay.style.position = "absolute";
+        overlay.style.left = `${offX}px`;
+        overlay.style.top = `${offY}px`;
+        overlay.style.width = `${drawW}px`;
+        overlay.style.height = `${drawH}px`;
+        overlay.style.zIndex = "4";
+        overlay.style.display = "grid";
+        overlay.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+        overlay.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
+        overlay.style.pointerEvents = "none";
+        overlay.style.overflow = "hidden";
+
+        const totalCells = rows * cols;
+        const order = Array.from({ length: totalCells }, (_, i) => i);
+        for (let i = order.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          const tmp = order[i]!;
+          order[i] = order[j]!;
+          order[j] = tmp;
+        }
+
+        const bgUrl = `url(${JSON.stringify(next)})`;
+        let k = 0;
+        for (let row = 0; row < rows; row++) {
+          for (let col = 0; col < cols; col++) {
+            const cell = doc.createElement("div");
+            cell.style.backgroundImage = bgUrl;
+            cell.style.backgroundSize = `${drawW}px ${drawH}px`;
+            cell.style.backgroundPosition = `-${col * cellW}px -${
+              row * cellH
+            }px`;
+            cell.style.backgroundRepeat = "no-repeat";
+            cell.style.opacity = "0";
+            cell.style.transition =
+              `opacity ${VIEWER_MOSAIC_CELL_MS}ms cubic-bezier(0.4, 0, 0.2, 1)`;
+            cell.style.transitionDelay = `${
+              order[k]! * VIEWER_MOSAIC_STAGGER_MS
+            }ms`;
+            overlay.appendChild(cell);
+            k++;
+          }
+        }
+
+        mount.appendChild(overlay);
+        void overlay.offsetWidth;
+        globalThis.requestAnimationFrame(() => {
+          if (g !== mainSwapGen) {
+            viewerRemoveMosaicOverlays(mount);
+            return;
+          }
+          for (let c = 0; c < overlay.children.length; c++) {
+            const el = overlay.children[c] as HTMLElement;
+            el.style.opacity = "1";
+          }
+        });
+
+        const totalMs = (totalCells - 1) * VIEWER_MOSAIC_STAGGER_MS +
+          VIEWER_MOSAIC_CELL_MS +
+          140;
+        fallbackTimerRef.id = globalThis.setTimeout(() => finalize(), totalMs);
+      };
+
+      const tryDecodeAndSwap = () => {
+        if (g !== mainSwapGen) return;
+        /**
+         * 不在开过渡前等待 `decode()`：`load` 后位图已可用，再等 decode 会让主图明显晚于缩略高亮。
+         * `decode()` 仅后台触发，利于合成器但不阻塞叠化/滑动。
+         */
+        if (typeof hidden.decode === "function") {
+          void hidden.decode().catch(() => {});
+        }
+        const reduceMotion = viewerImagePrefersReducedMotion();
+        if (reduceMotion || mode === "none") {
+          finishSwapInstant();
+        } else if (mode === "fade") {
           finishSwapCrossfade();
+        } else if (mode === "slide") {
+          finishSwapSlide();
+        } else if (mode === "blur") {
+          finishSwapBlur();
+        } else if (mode === "zoom") {
+          finishSwapZoom();
+        } else if (mode === "mosaic") {
+          finishSwapMosaic();
         } else {
           finishSwapInstant();
         }
-      });
-    };
+      };
 
-    /** 缓存命中时 `load` 与 `complete` 可能同帧触发两次，须只 swap 一次。 */
-    let decodedOnce = false;
-    const onReady = () => {
-      if (decodedOnce) return;
-      decodedOnce = true;
-      tryDecodeAndSwap();
-    };
+      /** 缓存命中时 `load` 与 `complete` 可能同帧触发两次，须只 swap 一次。 */
+      let decodedOnce = false;
+      const onReady = () => {
+        if (decodedOnce) return;
+        decodedOnce = true;
+        tryDecodeAndSwap();
+      };
 
-    hidden.addEventListener(
-      "error",
-      () => {
-        if (g !== mainSwapGen) return;
+      hidden.addEventListener(
+        "error",
+        () => {
+          if (g !== mainSwapGen) return;
+          onReady();
+        },
+        { once: true },
+      );
+      hidden.addEventListener("load", () => onReady(), { once: true });
+      /** 打断上一轮未结束的 `opacity` 过渡，避免叠化监听器与 `src` 竞态。 */
+      hidden.style.transition = "none";
+      hidden.style.filter = "";
+      viewerRemoveMosaicOverlays(mainImageMountRef.current);
+      hidden.src = next;
+      if (hidden.complete && hidden.naturalWidth > 0) {
         onReady();
-      },
-      { once: true },
-    );
-    hidden.addEventListener("load", () => onReady(), { once: true });
-    /** 打断上一轮未结束的 `opacity` 过渡，避免叠化监听器与 `src` 竞态。 */
-    hidden.style.transition = "none";
-    hidden.src = next;
-    if (hidden.complete && hidden.naturalWidth > 0) {
-      onReady();
-    }
+      }
+    };
+
+    runMainBufferSwap();
   });
 
   /**
@@ -785,44 +1375,57 @@ export function ImageViewer(props: ImageViewerProps) {
         <div class="flex-1 flex w-full min-w-0 items-center justify-center min-h-0 p-4 pt-14 pb-24 overflow-hidden">
           <div
             ref={transformLayerRef}
-            class="flex w-full min-w-0 max-w-full items-center justify-center origin-center cursor-grab active:cursor-grabbing select-none touch-none will-change-transform"
+            style={viewerTranslateStyle}
+            class="flex w-full min-w-0 max-w-full min-h-0 items-center justify-center cursor-grab active:cursor-grabbing select-none touch-none will-change-[transform]"
             onPointerDown={handleImagePointerDown as unknown as (
               e: Event,
             ) => void}
             role="presentation"
           >
-            {/* 双 `img` 叠放：预载后叠化（`fade`）或瞬时换层；单图改 `src` 不经此双缓冲 */}
+            {/* 内层：scale/rotate + transition（240ms）；样式由 memo 驱动，同 gallery previewStyle */}
             <div
-              ref={mainImageMountRef}
-              class="relative w-full min-w-0 min-h-[50vh] max-w-full overflow-hidden flex items-center justify-center pointer-events-none"
-              style={{ maxHeight: "calc(100vh - 12rem)" }}
+              ref={transformInnerRef}
+              style={viewerInnerTransformStyle}
+              class={twMerge(
+                "flex w-full min-w-0 max-w-full items-center justify-center origin-center pointer-events-none select-none touch-none will-change-[transform]",
+                viewerImagePrefersReducedMotion()
+                  ? "transition-none"
+                  : "transition-transform duration-[240ms] ease-[cubic-bezier(0.4,0,0.2,1)] motion-reduce:transition-none",
+              )}
             >
-              <img
-                ref={mainImg0Ref}
-                alt=""
-                class="absolute max-w-full max-h-full w-auto h-auto object-contain pointer-events-none select-none"
-                draggable={false}
-                loading="eager"
-                decoding="async"
-                style={{
-                  maxHeight: "calc(100vh - 12rem)",
-                  opacity: 1,
-                  zIndex: 2,
-                }}
-              />
-              <img
-                ref={mainImg1Ref}
-                alt=""
-                class="absolute max-w-full max-h-full w-auto h-auto object-contain pointer-events-none select-none"
-                draggable={false}
-                loading="eager"
-                decoding="async"
-                style={{
-                  maxHeight: "calc(100vh - 12rem)",
-                  opacity: 0,
-                  zIndex: 1,
-                }}
-              />
+              {/* 双 `img` 叠放：预载后叠化（`fade`）或瞬时换层；单图改 `src` 不经此双缓冲 */}
+              <div
+                ref={mainImageMountRef}
+                class="relative w-full min-w-0 min-h-[50vh] max-w-full overflow-hidden flex items-center justify-center pointer-events-none"
+                style={{ maxHeight: "calc(100vh - 12rem)" }}
+              >
+                <img
+                  ref={mainImg0Ref}
+                  alt=""
+                  class="absolute max-w-full max-h-full w-auto h-auto object-contain pointer-events-none select-none"
+                  draggable={false}
+                  loading="eager"
+                  decoding="async"
+                  style={{
+                    maxHeight: "calc(100vh - 12rem)",
+                    opacity: 1,
+                    zIndex: 2,
+                  }}
+                />
+                <img
+                  ref={mainImg1Ref}
+                  alt=""
+                  class="absolute max-w-full max-h-full w-auto h-auto object-contain pointer-events-none select-none"
+                  draggable={false}
+                  loading="eager"
+                  decoding="async"
+                  style={{
+                    maxHeight: "calc(100vh - 12rem)",
+                    opacity: 0,
+                    zIndex: 1,
+                  }}
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -901,10 +1504,9 @@ export function ImageViewer(props: ImageViewerProps) {
             ref={viewerCounterMountRef}
             class="absolute inset-0 z-5 min-h-0 pointer-events-none"
           >
-            <span
-              ref={counterTextRef}
-              class="absolute top-4 left-1/2 -translate-x-1/2 z-10 px-3 py-1.5 rounded-full bg-black/50 text-white/90 text-sm"
-            />
+            <span class="absolute top-4 left-1/2 -translate-x-1/2 z-10 px-3 py-1.5 rounded-full bg-black/50 text-white/90 text-sm">
+              {() => viewerCounterText()}
+            </span>
           </div>
         )}
       </div>
@@ -912,22 +1514,21 @@ export function ImageViewer(props: ImageViewerProps) {
   };
 
   /**
-   * 渲染 getter：在回调内读 {@link isOpen}，父级 **函数子响应式插入** 才能随 `open` 重算；否则首帧选中的分支（占位或全屏）会固定不变。
-   * 有 `body` 时关闭态用隐藏 `span` 占槽（与 {@link Modal}、Hybrid `replaceSlot` 约定一致）；无 `body`（纯 SSR）时关闭可 `null`。
+   * 与相册示例相同：`Show` 控制遮罩挂载，由控制流内部 `createEffect` 订阅 `open`，避免根级 `return () =>` 与文档站响应式子组件叠出死循环。
    */
-  return () => {
-    if (!isOpen()) {
-      if (getBrowserBodyPortalHost() != null) {
-        return (
-          <span
-            style="display:none;width:0;height:0;overflow:hidden;position:absolute;clip:rect(0,0,0,0)"
-            aria-hidden="true"
-            data-dreamer-image-viewer-anchor=""
-          />
-        );
-      }
-      return null;
-    }
-    return buildImageViewerShell();
-  };
+  const imageViewerClosedFallback = getBrowserBodyPortalHost() != null
+    ? (
+      <span
+        style="display:none;width:0;height:0;overflow:hidden;position:absolute;clip:rect(0,0,0,0)"
+        aria-hidden="true"
+        data-dreamer-image-viewer-anchor=""
+      />
+    )
+    : null;
+
+  return (
+    <Show when={isOpen} fallback={imageViewerClosedFallback}>
+      {() => buildImageViewerShell()}
+    </Show>
+  );
 }

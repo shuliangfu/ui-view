@@ -23,9 +23,10 @@ const COLLAPSE_API: ApiRow[] = [
   },
   {
     name: "activeKey",
-    type: "string[]",
+    type: "string[] | () => string[]",
     default: "-",
-    description: "当前展开 key 列表（受控）",
+    description:
+      "当前展开 key 列表（受控）；推荐 `() => sig.value` 或 getter，细粒度更新下勿只传一次性快照",
   },
   {
     name: "defaultActiveKey",
@@ -57,7 +58,13 @@ const COLLAPSE_API: ApiRow[] = [
     default: "false",
     description: "幽灵模式（无边框）",
   },
-  { name: "size", type: "SizeVariant", default: "-", description: "尺寸" },
+  {
+    name: "size",
+    type: "SizeVariant",
+    default: "md",
+    description:
+      "尺寸档位：xs、sm、md、lg；控制标题行与展开区的 padding、字号及右侧箭头大小，未传为 md",
+  },
   {
     name: "showArrow",
     type: "boolean",
@@ -80,14 +87,14 @@ const activeKey = createSignal<string[]>(["1"]);
 const items = [{ key: "1", header: "面板 1", children: <p>内容一</p> }, ...];
 <Collapse
   items={items}
-  activeKey={activeKey.value}
-  onChange={(keys) => activeKey.value = keys}
+  activeKey={() => activeKey.value}
+  onChange={(keys) => (activeKey.value = keys)}
 />`;
 
 const exampleControlled = `<Collapse
   items={items}
-  activeKey={activeKey.value}
-  onChange={(keys) => activeKey.value = keys}
+  activeKey={() => activeKey.value}
+  onChange={(keys) => (activeKey.value = keys)}
 />`;
 
 const exampleAccordion = `<Collapse
@@ -170,13 +177,27 @@ export default function DataDisplayCollapse() {
 
         <div class="space-y-4">
           <Title level={3}>受控 + 多开</Title>
-          {() => (
-            <Collapse
-              items={items}
-              activeKey={activeKeyControlled.value}
-              onChange={(keys) => activeKeyControlled.value = keys}
-            />
-          )}
+          <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+            受控时请使用{" "}
+            <code class="text-xs">
+              activeKey=&#123;() =&gt; sig.value&#125;
+            </code>
+            （或等价 getter），并在 <code class="text-xs">onChange</code>{" "}
+            里写回 signal；组件内已每次从{" "}
+            <code class="text-xs">props.activeKey</code>{" "}
+            解析，避免闭包快照导致点不开。
+          </Paragraph>
+          {
+            /*
+             * Collapse 已在内层用函数子订阅展开态；此处勿再包 `{() => <Collapse/>}`，
+             * 以免与 CodeBlock 兄弟重排（同 Segmented/Table 文档约定）。
+             */
+          }
+          <Collapse
+            items={items}
+            activeKey={() => activeKeyControlled.value}
+            onChange={(keys) => (activeKeyControlled.value = keys)}
+          />
           <CodeBlock
             title="代码示例"
             code={exampleControlled}
@@ -189,14 +210,12 @@ export default function DataDisplayCollapse() {
 
         <div class="space-y-4">
           <Title level={3}>accordion + bordered=false</Title>
-          {() => (
-            <Collapse
-              items={items}
-              defaultActiveKey={["1"]}
-              accordion
-              bordered={false}
-            />
-          )}
+          <Collapse
+            items={items}
+            defaultActiveKey={["1"]}
+            accordion
+            bordered={false}
+          />
           <CodeBlock
             title="代码示例"
             code={exampleAccordion}
@@ -209,12 +228,8 @@ export default function DataDisplayCollapse() {
 
         <div class="space-y-4">
           <Title level={3}>showArrow=false / size=sm</Title>
-          {() => (
-            <>
-              <Collapse items={items} defaultActiveKey={[]} showArrow={false} />
-              <Collapse items={items} defaultActiveKey={["1"]} size="sm" />
-            </>
-          )}
+          <Collapse items={items} defaultActiveKey={[]} showArrow={false} />
+          <Collapse items={items} defaultActiveKey={["1"]} size="sm" />
           <CodeBlock
             title="代码示例"
             code={exampleShowArrowSize}

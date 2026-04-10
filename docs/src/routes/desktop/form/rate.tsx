@@ -23,16 +23,18 @@ interface ApiRow {
 const RATE_API: ApiRow[] = [
   {
     name: "value",
-    type: "number | (() => number)",
+    type: "number | (() => number) | Signal<number>",
     default: "-",
-    description: "当前分数；可为 getter",
+    description:
+      "当前分数。与全库表单一致为 MaybeSignal：字面量、`() => T`、`createSignal` 返回值；勿直接绑 `sig.value`（快照失步或误订阅）。",
   },
   { name: "count", type: "number", default: "5", description: "星星总数" },
   {
     name: "allowHalf",
     type: "boolean",
     default: "false",
-    description: "是否允许半星",
+    description:
+      "允许 0.5 分档；为 true 时 `value` 可为 3.5 等，第 4 星显示左半填充。鼠标点星**左半边**选半档、**右半边**选整星；键盘 Enter/空格仍为整星",
   },
   {
     name: "disabled",
@@ -45,7 +47,7 @@ const RATE_API: ApiRow[] = [
     name: "onChange",
     type: "(value: number) => void",
     default: "-",
-    description: "分数变更回调",
+    description: "可选。`value` 为 Signal 时组件已回写；需副作用时再传",
   },
 ];
 
@@ -54,12 +56,13 @@ import { createSignal } from "@dreamer/view";
 
 const val = createSignal(0);
 <FormItem label="评分">
-  <Rate value={() => val.value} onChange={(v) => val.value = v} count={5} />
+  <Rate value={val} count={5} />
 </FormItem>`;
 
 export default function FormRate() {
   const val = createSignal(0);
-  const valHalf = createSignal(0);
+  /** 半星示例：初始 3.5，第 4 颗星左橙右灰；也可点星左/右半边改分 */
+  const valHalf = createSignal(3.5);
 
   return (
     <div class="space-y-10">
@@ -68,6 +71,14 @@ export default function FormRate() {
         <Paragraph class="mt-2">
           星级评分，支持 count、value、onChange、allowHalf、disabled。Tailwind
           v4 + light/dark。
+        </Paragraph>
+        <Paragraph class="mt-2 text-sm text-slate-600 dark:text-slate-400">
+          <strong>半星（allowHalf）：</strong>
+          表示分值可以按 <strong>0.5</strong>{" "}
+          为一档（例如 3.5
+          分）。此时下一颗未满分星会画成「左半边橙色、右半边灰色」。
+          开启后可用鼠标点某颗星的<strong>左半边</strong>选半档、
+          <strong>右半边</strong>选整档；键盘操作仍为整星。
         </Paragraph>
       </section>
 
@@ -90,16 +101,14 @@ export default function FormRate() {
             <Title level={3}>基础（5 星）</Title>
             <FormItem label="评分">
               <Rate
-                value={() => val.value}
-                onChange={(v) => val.value = v}
+                value={val}
                 count={5}
               />
             </FormItem>
             <CodeBlock
               title="代码示例"
               code={`<Rate
-  value={() => val.value}
-  onChange={(v) => val.value = v}
+  value={val}
   count={5}
 />`}
               language="tsx"
@@ -113,17 +122,17 @@ export default function FormRate() {
             <Title level={3}>allowHalf 半星</Title>
             <FormItem label="半星">
               <Rate
-                value={() => valHalf.value}
-                onChange={(v) => valHalf.value = v}
+                value={valHalf}
                 count={5}
                 allowHalf
               />
             </FormItem>
             <CodeBlock
               title="代码示例"
-              code={`<Rate
-  value={() => valHalf.value}
-  onChange={(v) => valHalf.value = v}
+              code={`const valHalf = createSignal(3.5);
+
+<Rate
+  value={valHalf}
   count={5}
   allowHalf
 />`}

@@ -3,10 +3,17 @@
  * 自研：{@link Calendar} + 时/分列表 + 底部确定/取消；不依赖浏览器 `input[type=datetime-local]`。
  * 受控值格式由 `format` 决定（默认 `YYYY-MM-DD HH:mm`，亦可 `YY-MM-DD HH` 等）；支持 mode：`single`（默认）、`range`、`multiple`。
  * `size` 与 {@link Input} 同为 `xs` | `sm` | `md` | `lg`；触发器内日历图标比 `size` 小一档（`picker-trigger-icon.ts`）。
- * 弹层为包裹层内 `absolute top-full left-0`，相对触发器定位，随滚动跟移。
+ * 弹层默认相对根节点 **`absolute`**（`top-full left-0`），与 {@link DatePicker} 一致；锚定模式传 `fixedToViewport: false`。
+ * `panelAttach="viewport"` 时为视口 **`fixed`** + 几何同步，用于表格等 `overflow` 会裁切 `absolute` 浮层的场景。
  */
 
-import { batch, createEffect, createSignal, type Signal } from "@dreamer/view";
+import {
+  batch,
+  createEffect,
+  createSignal,
+  Show,
+  type Signal,
+} from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 /** 触发器右侧用日历图标（日期+时间仍以日期为主视觉） */
 import { IconCalendar } from "../basic/icons/Calendar.tsx";
@@ -44,11 +51,12 @@ import {
   pickerTimeListScrollClass,
   pickerTimeStripRowMultiClass,
   pickerTimeStripSingleCenterWrapClass,
-  registerPointerDownOutside,
+  registerPickerFixedOverlayPositionAndOutsideClick,
   runTimeStripPrimaryPointerPick,
   schedulePickerTimeDraftColumnsScroll,
 } from "./picker-portal-utils.ts";
 import { pickerCalendarIconProps } from "./picker-trigger-icon.ts";
+import { commitMaybeSignal, type MaybeSignal } from "./maybe-signal.ts";
 
 /** range 模式受控值（每项为 `YYYY-MM-DD HH:mm`） */
 export interface DateTimePickerRangeValue {
@@ -58,18 +66,13 @@ export interface DateTimePickerRangeValue {
 
 export type DateTimePickerMode = "single" | "range" | "multiple";
 
+/** 受控值形态（由 {@link DateTimePickerProps.mode} 决定） */
+export type DateTimePickerValue = string | DateTimePickerRangeValue | string[];
+
 export interface DateTimePickerProps {
   mode?: DateTimePickerMode;
-  /**
-   * single → 与 `format` 一致的日期时间串；range → `{ start?, end? }`；multiple → 同格式字符串数组；均可为 getter。
-   */
-  value?:
-    | string
-    | (() => string)
-    | DateTimePickerRangeValue
-    | (() => DateTimePickerRangeValue)
-    | string[]
-    | (() => string[]);
+  /** 见 {@link MaybeSignal} */
+  value?: MaybeSignal<DateTimePickerValue>;
   /** 可选：限制可选日期的下限（仅日期部分 YYYY-MM-DD，与 {@link DatePicker} 一致） */
   min?: string;
   /** 可选：限制可选日期的上限（YYYY-MM-DD） */
@@ -89,6 +92,10 @@ export interface DateTimePickerProps {
    * `range`/`multiple` 须为完整日 + 至少到「分」的时间；否则回退默认并 `console.warn`。
    */
   format?: string;
+  /**
+   * 浮层挂载方式：`anchored`（默认）相对根 `absolute`；`viewport` 为视口 `fixed` + 几何同步，避免被表格等 overflow 裁切。
+   */
+  panelAttach?: "anchored" | "viewport";
 }
 
 const DROPDOWN_ESC_KEY = "__lastDropdownClose" as const;
@@ -675,6 +682,9 @@ export function DateTimePicker(props: DateTimePickerProps) {
   const outsidePointerCleanup: { dispose: (() => void) | null } = {
     dispose: null,
   };
+  const pickerAnchorScrollCleanup: { dispose: (() => void) | null } = {
+    dispose: null,
+  };
   /** 避免同一 DOM 节点重复 registerPointerDownOutside */
   const outsidePanelEl: { current: HTMLElement | null } = { current: null };
 
@@ -690,10 +700,12 @@ export function DateTimePicker(props: DateTimePickerProps) {
         : "border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50",
     );
 
-  /** 移除「点外部关闭」监听，避免泄漏或重复注册 */
+  /** 移除「点外部关闭」与锚点滚动同步 */
   const clearOutsidePointerDismiss = () => {
     outsidePointerCleanup.dispose?.();
     outsidePointerCleanup.dispose = null;
+    pickerAnchorScrollCleanup.dispose?.();
+    pickerAnchorScrollCleanup.dispose = null;
     outsidePanelEl.current = null;
   };
 
@@ -718,6 +730,7 @@ export function DateTimePicker(props: DateTimePickerProps) {
         draftSecond.value,
         dtFormatSpec,
       );
+      commitMaybeSignal(props.value, str);
       const synthetic = {
         target: { name: name ?? undefined, value: str },
       } as unknown as Event;
@@ -747,6 +760,11 @@ export function DateTimePicker(props: DateTimePickerProps) {
       const [startOut, endOut] = slotA <= slotB
         ? [slotA, slotB]
         : [slotB, slotA];
+      const rangeCommitted: DateTimePickerRangeValue = {
+        start: startOut,
+        end: endOut,
+      };
+      commitMaybeSignal(props.value, rangeCommitted);
       const payload = JSON.stringify({ start: startOut, end: endOut });
       const synthetic = {
         target: { name: name ?? undefined, value: payload },
@@ -755,10 +773,12 @@ export function DateTimePicker(props: DateTimePickerProps) {
       closePickerOverlay();
       return;
     }
+    const multiCommitted = [...draftDtList.value].sort();
+    commitMaybeSignal(props.value, multiCommitted);
     const synthetic = {
       target: {
         name: name ?? undefined,
-        value: JSON.stringify([...draftDtList.value].sort()),
+        value: JSON.stringify(multiCommitted),
       },
     } as unknown as Event;
     onChange?.(synthetic);
@@ -767,6 +787,58 @@ export function DateTimePicker(props: DateTimePickerProps) {
 
   const handleCancel = () => {
     closePickerOverlay();
+  };
+
+  /**
+   * 浮层打开时触发器展示草稿（选日与滚动时间即时可见）；关闭后与受控 `props.value` 一致。
+   * 隐藏域始终为已提交值。
+   *
+   * @returns 供 {@link dateTimePickerDisplayText} / {@link dateTimePickerHasValue} 使用的 raw
+   */
+  const rawForTriggerDisplay = (): unknown => {
+    const { mode, dtFormatSpec } = getDateTimePickerDerivatives(props);
+    const committed = resolveDateTimePickerRaw(props.value);
+    if (!openState.value) return committed;
+    if (mode === "single") {
+      const day = dtFormatSpec.dateGranularity === "day"
+        ? draftDay.value
+        : viewDate.value;
+      if (day == null) return committed;
+      return formatDateTimeWithSpec(
+        day,
+        draftHour.value,
+        draftMinute.value,
+        draftSecond.value,
+        dtFormatSpec,
+      );
+    }
+    if (mode === "range") {
+      const ds = draftStartDay.value;
+      const de = draftEndDay.value;
+      if (ds == null && de == null) return committed;
+      return {
+        start: ds != null
+          ? formatDateTimeWithSpec(
+            ds,
+            draftStartHour.value,
+            draftStartMinute.value,
+            draftStartSecond.value,
+            dtFormatSpec,
+          )
+          : "",
+        end: de != null
+          ? formatDateTimeWithSpec(
+            de,
+            draftEndHour.value,
+            draftEndMinute.value,
+            draftEndSecond.value,
+            dtFormatSpec,
+          )
+          : "",
+      };
+    }
+    const list = draftDtList.value;
+    return list.length > 0 ? [...list] : committed;
   };
 
   /**
@@ -797,80 +869,91 @@ export function DateTimePicker(props: DateTimePickerProps) {
     }
   };
 
-  /** 打开时按 mode 同步草稿；浮层在根节点内 `absolute top-full`，随表单滚动 */
+  /**
+   * 打开时按 mode 同步草稿；默认浮层在根节点内 `relative` + `absolute top-full` 锚定（与 {@link DatePicker} 一致）；
+   * `panelAttach="viewport"` 时浮层为视口 `fixed` + 几何同步。
+   *
+   * **`queueMicrotask`**：`@dreamer/view` 对 `onClick` 使用 document 冒泡委托；把 `openState = true` 推到当前 click
+   * 之后的微任务，可避免同一次点击里其它同步监听器在刚打开瞬间误关浮层（闪一下或像点不开）。
+   */
   const handleOpen = () => {
     if (props.disabled) return;
-    const { mode, dtFormatSpec, disabledDate } = getDateTimePickerDerivatives(
-      props,
-    );
-    const raw = resolveDateTimePickerRaw(props.value);
+    globalThis.queueMicrotask(() => {
+      if (props.disabled) return;
+      const { mode, dtFormatSpec, disabledDate } = getDateTimePickerDerivatives(
+        props,
+      );
+      const raw = resolveDateTimePickerRaw(props.value);
 
-    /** 与 DatePicker 一致：合并 signal 写入，降低打开帧与浮层同步叠加时的调度压力 */
-    batch(() => {
-      /** 无已解析时间部分时，时/分/秒草稿用本地此刻（与 {@link TimePicker} 行为一致） */
-      const nowHms = getLocalTimeHourMinuteSecond();
-      const [nH, nM, nS] = nowHms;
-      if (mode === "single") {
-        const rawStr = typeof raw === "string" ? raw : undefined;
-        const p = parseDateTimeStringWithSpec(rawStr, dtFormatSpec);
-        const base = p?.day ?? new Date();
-        let vd = base;
-        if (dtFormatSpec.dateGranularity === "year") {
-          vd = new Date(base.getFullYear(), 0, 1);
-        } else if (dtFormatSpec.dateGranularity === "year-month") {
-          vd = new Date(base.getFullYear(), base.getMonth(), 1);
-        }
-        viewDate.value = vd;
-        if (p) {
-          draftDay.value = dtFormatSpec.dateGranularity === "day" ? p.day : vd;
-          draftHour.value = p.hour;
-          draftMinute.value = p.minute;
-          draftSecond.value = p.second;
+      /** 与 DatePicker 一致：合并 signal 写入，降低打开帧与浮层同步叠加时的调度压力 */
+      batch(() => {
+        /** 无已解析时间部分时，时/分/秒草稿用本地此刻（与 {@link TimePicker} 行为一致） */
+        const nowHms = getLocalTimeHourMinuteSecond();
+        const [nH, nM, nS] = nowHms;
+        if (mode === "single") {
+          const rawStr = typeof raw === "string" ? raw : undefined;
+          const p = parseDateTimeStringWithSpec(rawStr, dtFormatSpec);
+          const base = p?.day ?? new Date();
+          let vd = base;
+          if (dtFormatSpec.dateGranularity === "year") {
+            vd = new Date(base.getFullYear(), 0, 1);
+          } else if (dtFormatSpec.dateGranularity === "year-month") {
+            vd = new Date(base.getFullYear(), base.getMonth(), 1);
+          }
+          viewDate.value = vd;
+          if (p) {
+            draftDay.value = dtFormatSpec.dateGranularity === "day"
+              ? p.day
+              : vd;
+            draftHour.value = p.hour;
+            draftMinute.value = p.minute;
+            draftSecond.value = p.second;
+          } else {
+            draftDay.value = dtFormatSpec.dateGranularity === "day"
+              ? defaultPickerDayWhenNoValue(base, disabledDate)
+              : vd;
+            draftHour.value = nH;
+            draftMinute.value = nM;
+            draftSecond.value = nS;
+          }
+        } else if (mode === "range") {
+          const o = isDateTimeRangeValue(raw) ? raw : {};
+          const ps = parseDateTimeStringWithSpec(o.start, dtFormatSpec);
+          const pe = parseDateTimeStringWithSpec(o.end, dtFormatSpec);
+          draftStartDay.value = ps?.day ?? null;
+          draftStartHour.value = ps?.hour ?? nH;
+          draftStartMinute.value = ps?.minute ?? nM;
+          draftStartSecond.value = ps?.second ?? nS;
+          draftEndDay.value = pe?.day ?? null;
+          draftEndHour.value = pe?.hour ?? nH;
+          draftEndMinute.value = pe?.minute ?? nM;
+          draftEndSecond.value = pe?.second ?? nS;
+          editingRangeEnd.value = false;
+          const view = ps?.day ?? pe?.day ?? new Date();
+          viewDate.value = view;
         } else {
-          draftDay.value = dtFormatSpec.dateGranularity === "day"
-            ? defaultPickerDayWhenNoValue(base, disabledDate)
-            : vd;
+          draftDtList.value = isDateTimeStringArray(raw) ? [...raw].sort() : [];
           draftHour.value = nH;
           draftMinute.value = nM;
           draftSecond.value = nS;
+          const first = draftDtList.value[0];
+          const fp = parseDateTimeStringWithSpec(first, dtFormatSpec);
+          viewDate.value = fp?.day ?? new Date();
         }
-      } else if (mode === "range") {
-        const o = isDateTimeRangeValue(raw) ? raw : {};
-        const ps = parseDateTimeStringWithSpec(o.start, dtFormatSpec);
-        const pe = parseDateTimeStringWithSpec(o.end, dtFormatSpec);
-        draftStartDay.value = ps?.day ?? null;
-        draftStartHour.value = ps?.hour ?? nH;
-        draftStartMinute.value = ps?.minute ?? nM;
-        draftStartSecond.value = ps?.second ?? nS;
-        draftEndDay.value = pe?.day ?? null;
-        draftEndHour.value = pe?.hour ?? nH;
-        draftEndMinute.value = pe?.minute ?? nM;
-        draftEndSecond.value = pe?.second ?? nS;
-        editingRangeEnd.value = false;
-        const view = ps?.day ?? pe?.day ?? new Date();
-        viewDate.value = view;
-      } else {
-        draftDtList.value = isDateTimeStringArray(raw) ? [...raw].sort() : [];
-        draftHour.value = nH;
-        draftMinute.value = nM;
-        draftSecond.value = nS;
-        const first = draftDtList.value[0];
-        const fp = parseDateTimeStringWithSpec(first, dtFormatSpec);
-        viewDate.value = fp?.day ?? new Date();
-      }
 
-      if (dtFormatSpec.dateGranularity === "year") {
-        headerPanel.value = "year";
-        /** 与 {@link PickerCalendarNav} 的 openYearPanel 一致 */
-        yearPageStart.value = yearGridPageStart(viewDate.value.getFullYear());
-      } else if (dtFormatSpec.dateGranularity === "year-month") {
-        headerPanel.value = "month";
-      } else {
-        headerPanel.value = "day";
-      }
-      openState.value = true;
+        if (dtFormatSpec.dateGranularity === "year") {
+          headerPanel.value = "year";
+          /** 与 {@link PickerCalendarNav} 的 openYearPanel 一致 */
+          yearPageStart.value = yearGridPageStart(viewDate.value.getFullYear());
+        } else if (dtFormatSpec.dateGranularity === "year-month") {
+          headerPanel.value = "month";
+        } else {
+          headerPanel.value = "day";
+        }
+        openState.value = true;
+      });
+      registerDropdownEsc(closePickerOverlay);
     });
-    registerDropdownEsc(closePickerOverlay);
   };
 
   /**
@@ -919,265 +1002,312 @@ export function DateTimePicker(props: DateTimePickerProps) {
     });
   });
 
-  return () => {
-    const {
-      size = "md",
-      class: className,
-      name,
-      id,
-      placeholder = "请选择日期时间",
-      hideFocusRing = false,
-      disabled = false,
-    } = props;
-    const { mode, dtFormatSpec, minDate, maxDate, disabledDate } =
-      getDateTimePickerDerivatives(props);
-    const sizeCls = pickerTriggerSizeClasses[size];
-    const calendarIconProps = pickerCalendarIconProps(size);
-    const raw = resolveDateTimePickerRaw(props.value);
-    const hasDisplayValue = dateTimePickerHasValue(mode, raw);
-    const displayText = dateTimePickerDisplayText(mode, raw, placeholder);
-    const hiddenVal = dateTimePickerHiddenSerialized(mode, raw);
-    const canConfirmSingle = dtFormatSpec.dateGranularity === "day"
-      ? draftDay.value != null
-      : true;
-    const canConfirmRange = draftStartDay.value != null &&
-      draftEndDay.value != null;
-    const canConfirm = mode === "single"
-      ? canConfirmSingle
-      : mode === "range"
-      ? canConfirmRange
-      : true;
-
-    const showSecondCol = dtFormatSpec.timeGranularity === "second" ||
-      dtFormatSpec.timeGranularity === "hour-minute-second";
-
-    const multipleDays = draftDtList.value
-      .map((s) => parseDateTimeStringWithSpec(s, dtFormatSpec))
-      .filter((x): x is NonNullable<typeof x> => x != null)
-      .map((x) => x.day);
-
-    return (
-      <span class={twMerge("relative inline-block", className)}>
-        <input type="hidden" name={name} value={hiddenVal} />
-        <button
-          type="button"
-          id={id}
-          ref={triggerRef}
-          disabled={disabled}
-          aria-haspopup="dialog"
-          aria-expanded={openState.value}
-          aria-label={displayText}
-          class={twMerge(
+  /**
+   * 勿再包一层 `return () => { ... }` 且在内层读 `openState`：与 {@link DatePicker} 相同，
+   * `insert` 会为每次 getter 重算替换根节点，触发器被卸下表现为面板点不开或闪没。
+   * 根 `div`/按钮保持稳定；`openState` 仅驱动 {@link Show} 与函数型 props。
+   */
+  return (
+    <div
+      class={() => twMerge("relative inline-block", props.class)}
+      data-ui-datetime-picker-root=""
+    >
+      <input
+        type="hidden"
+        name={props.name}
+        value={() => {
+          const { mode } = getDateTimePickerDerivatives(props);
+          const raw = resolveDateTimePickerRaw(props.value);
+          return dateTimePickerHiddenSerialized(mode, raw);
+        }}
+      />
+      <button
+        type="button"
+        id={props.id}
+        /**
+         * 触发器 DOM：点外关闭与几何同步用；`compileSource` 路径须用函数 ref，勿 `ref={triggerRef}` 对象。
+         */
+        ref={(el: HTMLButtonElement | null) => {
+          triggerRef.current = el;
+        }}
+        disabled={() => props.disabled ?? false}
+        aria-haspopup="dialog"
+        aria-expanded={() => openState.value}
+        aria-label={() => {
+          const { mode } = getDateTimePickerDerivatives(props);
+          const raw = rawForTriggerDisplay();
+          const placeholder = props.placeholder ?? "请选择日期时间";
+          return dateTimePickerDisplayText(mode, raw, placeholder);
+        }}
+        class={() => {
+          const size = props.size ?? "md";
+          return twMerge(
             pickerTriggerSurface,
-            controlBlueFocusRing(!hideFocusRing),
-            sizeCls,
-          )}
-          onClick={handleOpen}
-        >
-          <span
-            class={hasDisplayValue
+            controlBlueFocusRing(!props.hideFocusRing),
+            pickerTriggerSizeClasses[size],
+          );
+        }}
+        onClick={handleOpen}
+      >
+        <span
+          class={() => {
+            const { mode } = getDateTimePickerDerivatives(props);
+            const raw = rawForTriggerDisplay();
+            const has = dateTimePickerHasValue(mode, raw);
+            return has
               ? "text-slate-900 dark:text-slate-100"
-              : "text-slate-400 dark:text-slate-500"}
-          >
-            {displayText}
-          </span>
+              : "text-slate-400 dark:text-slate-500";
+          }}
+        >
+          {() => {
+            const { mode } = getDateTimePickerDerivatives(props);
+            const raw = rawForTriggerDisplay();
+            const placeholder = props.placeholder ?? "请选择日期时间";
+            return dateTimePickerDisplayText(mode, raw, placeholder);
+          }}
+        </span>
+        {/* 图标外包 span：打开态着色且不依赖整颗按钮因 openState 重建 */}
+        <span
+          class={() =>
+            twMerge(
+              "inline-flex shrink-0 items-center justify-center",
+              openState.value
+                ? "text-slate-600 dark:text-slate-300"
+                : "text-slate-400 dark:text-slate-500",
+            )}
+        >
           <IconCalendar
-            size={calendarIconProps.size}
+            size={pickerCalendarIconProps(props.size ?? "md").size}
             class={twMerge(
-              calendarIconProps.class,
-              "shrink-0 text-slate-400 dark:text-slate-500",
-              openState.value && "text-slate-600 dark:text-slate-300",
+              pickerCalendarIconProps(props.size ?? "md").class,
+              "shrink-0",
             )}
           />
-        </button>
-        {openState.value && (
-          <div
-            role="dialog"
-            aria-label="选择日期与时间"
-            class={twMerge(
-              "pointer-events-auto absolute left-0 top-full mt-1 box-border w-max min-w-[288px] overflow-hidden p-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-lg",
-              pickerPortalZClass,
-              /** 含秒时横向为 288px + 三列时间，28rem 会裁掉最右侧「秒」列 */
-              showSecondCol
-                ? "max-w-[min(100vw-1rem,32rem)]"
-                : "max-w-[min(100vw-1rem,28rem)]",
-            )}
-            ref={(el: HTMLElement | null) => {
-              if (el == null) {
-                clearOutsidePointerDismiss();
-                return;
-              }
-              if (el === outsidePanelEl.current) return;
-              clearOutsidePointerDismiss();
-              outsidePanelEl.current = el;
-              outsidePointerCleanup.dispose = registerPointerDownOutside(
-                el,
-                closePickerOverlay,
-                triggerRef,
-              );
-              /** 按 `data-picker-cell-value` 对齐当前草稿，避免依赖选中 data 首帧 */
-              schedulePickerTimeDraftColumnsScroll(
-                () => outsidePanelEl.current,
-                () => {
-                  const { mode: m, dtFormatSpec: dfs } =
-                    getDateTimePickerDerivatives(props);
-                  const flags = dateTimePickerScrollShowFlags(
-                    dfs.timeGranularity,
-                  );
-                  if (m === "range") {
-                    const atEnd = editingRangeEnd.value;
-                    return [
-                      {
-                        ...flags,
-                        hour: atEnd ? draftEndHour.value : draftStartHour.value,
-                        minute: atEnd
-                          ? draftEndMinute.value
-                          : draftStartMinute.value,
-                        second: atEnd
-                          ? draftEndSecond.value
-                          : draftStartSecond.value,
-                        stripScope: "default",
-                      },
-                    ];
-                  }
-                  return [
-                    {
-                      ...flags,
-                      hour: draftHour.value,
-                      minute: draftMinute.value,
-                      second: draftSecond.value,
-                      stripScope: "default",
-                    },
-                  ];
-                },
-              );
-            }}
-          >
-            {mode === "range" && (
-              <div class="flex gap-2 mb-2">
-                <button
-                  type="button"
-                  class={rangeTabCls(!editingRangeEnd.value)}
-                  onClick={() => {
-                    editingRangeEnd.value = false;
-                    const d = draftStartDay.value;
-                    if (d != null) viewDate.value = d;
-                  }}
-                >
-                  开始
-                  {draftStartDay.value != null
-                    ? ` · ${
-                      formatDateTimeWithSpec(
-                        draftStartDay.value,
-                        draftStartHour.value,
-                        draftStartMinute.value,
-                        draftStartSecond.value,
-                        dtFormatSpec,
-                      )
-                    }`
-                    : ""}
-                </button>
-                <button
-                  type="button"
-                  class={rangeTabCls(editingRangeEnd.value)}
-                  onClick={() => {
-                    editingRangeEnd.value = true;
-                    const d = draftEndDay.value;
-                    if (d != null) {
-                      viewDate.value = d;
-                    }
-                  }}
-                >
-                  结束
-                  {draftEndDay.value != null
-                    ? ` · ${
-                      formatDateTimeWithSpec(
-                        draftEndDay.value,
-                        draftEndHour.value,
-                        draftEndMinute.value,
-                        draftEndSecond.value,
-                        dtFormatSpec,
-                      )
-                    }`
-                    : ""}
-                </button>
-              </div>
-            )}
+        </span>
+      </button>
+      {/* 日期时间浮层：仅 Show 条件挂载，避免根树因 openState 整段 replace */}
+      <Show when={openState}>
+        {() => {
+          const { mode, dtFormatSpec, minDate, maxDate, disabledDate } =
+            getDateTimePickerDerivatives(props);
+          const showSecondCol = dtFormatSpec.timeGranularity === "second" ||
+            dtFormatSpec.timeGranularity === "hour-minute-second";
+          /** 视口浮层：避开表格等滚动容器的 overflow 裁切 */
+          const useViewportPanel = (props.panelAttach ?? "anchored") ===
+            "viewport";
 
-            {/* 与 DatePicker 一致：w-max；日历固定 288px，勿 flex-1 铺满余量 */}
-            <div class="flex flex-col sm:flex-row sm:items-start gap-3">
-              <div class="w-full min-w-0 shrink-0 sm:w-[288px] sm:min-w-[288px] sm:max-w-[288px]">
-                <PickerCalendarNav
-                  viewDate={viewDate}
-                  panelMode={headerPanel}
-                  yearPageStart={yearPageStart}
-                  minDate={minDate}
-                  maxDate={maxDate}
-                  dateGranularity={dtFormatSpec.dateGranularity}
-                  selectedDate={mode === "single"
-                    ? (draftDay.value ?? undefined)
-                    : mode === "range"
-                    ? (editingRangeEnd.value
-                      ? (draftEndDay.value ?? undefined)
-                      : (draftStartDay.value ?? undefined))
-                    : undefined}
-                  selectedDaySignal={mode === "single" ? draftDay : undefined}
-                  rangeStartSignal={mode === "range"
-                    ? draftStartDay
-                    : undefined}
-                  rangeEndSignal={mode === "range" ? draftEndDay : undefined}
-                  daySelectionMode={mode === "multiple" ? "multiple" : "single"}
-                  selectedDates={mode === "multiple" ? multipleDays : undefined}
-                  onSelectDay={(d) => {
-                    if (mode === "single") draftDay.value = d;
-                    else if (mode === "range") {
-                      if (editingRangeEnd.value) draftEndDay.value = d;
-                      else draftStartDay.value = d;
-                    } else onSelectMultipleDay(d);
-                  }}
-                  disabledDate={disabledDate}
+          /**
+           * 将多选稿中的每条日期时间串解析为自然日，供 {@link PickerCalendarNav} 内层订阅 `draftDtList` 更新高亮。
+           *
+           * @param items - 与 `draftDtList` 同构的串列表
+           */
+          const datetimeListToDays = (items: readonly string[]): Date[] => {
+            const out: Date[] = [];
+            for (const s of items) {
+              const p = parseDateTimeStringWithSpec(s, dtFormatSpec);
+              if (p != null) out.push(p.day);
+            }
+            return out;
+          };
+
+          return (
+            <div
+              role="dialog"
+              aria-label="选择日期与时间"
+              class={twMerge(
+                "pointer-events-auto box-border w-max min-w-[288px] overflow-hidden p-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-lg",
+                showSecondCol
+                  ? "max-w-[min(100vw-1rem,32rem)]"
+                  : "max-w-[min(100vw-1rem,28rem)]",
+                useViewportPanel
+                  ? twMerge("fixed", pickerPortalZClass)
+                  : "absolute left-0 top-full z-1070 mt-1",
+              )}
+              ref={(el: HTMLElement | null) => {
+                if (el == null) {
+                  clearOutsidePointerDismiss();
+                  return;
+                }
+                if (el === outsidePanelEl.current) return;
+                clearOutsidePointerDismiss();
+                outsidePanelEl.current = el;
+                globalThis.queueMicrotask(() => {
+                  if (outsidePanelEl.current !== el) return;
+                  const viewport = (props.panelAttach ?? "anchored") ===
+                    "viewport";
+                  registerPickerFixedOverlayPositionAndOutsideClick(
+                    el,
+                    triggerRef,
+                    closePickerOverlay,
+                    outsidePointerCleanup,
+                    pickerAnchorScrollCleanup,
+                    { panelMinWidth: showSecondCol ? 360 : 288 },
+                    viewport ? undefined : { fixedToViewport: false },
+                  );
+                });
+              }}
+            >
+              {mode === "range" && (
+                <div class="flex gap-2 mb-2">
+                  <button
+                    type="button"
+                    class={() => rangeTabCls(!editingRangeEnd.value)}
+                    onClick={() => {
+                      editingRangeEnd.value = false;
+                      const d = draftStartDay.value;
+                      if (d != null) viewDate.value = d;
+                    }}
+                  >
+                    {() => {
+                      const d = draftStartDay.value;
+                      return d != null
+                        ? `开始 · ${
+                          formatDateTimeWithSpec(
+                            d,
+                            draftStartHour.value,
+                            draftStartMinute.value,
+                            draftStartSecond.value,
+                            dtFormatSpec,
+                          )
+                        }`
+                        : "开始";
+                    }}
+                  </button>
+                  <button
+                    type="button"
+                    class={() => rangeTabCls(editingRangeEnd.value)}
+                    onClick={() => {
+                      editingRangeEnd.value = true;
+                      const d = draftEndDay.value;
+                      if (d != null) {
+                        viewDate.value = d;
+                      }
+                    }}
+                  >
+                    {() => {
+                      const d = draftEndDay.value;
+                      return d != null
+                        ? `结束 · ${
+                          formatDateTimeWithSpec(
+                            d,
+                            draftEndHour.value,
+                            draftEndMinute.value,
+                            draftEndSecond.value,
+                            dtFormatSpec,
+                          )
+                        }`
+                        : "结束";
+                    }}
+                  </button>
+                </div>
+              )}
+
+              <div class="flex flex-col sm:flex-row sm:items-start gap-3">
+                <div class="w-full min-w-0 shrink-0 sm:w-[288px] sm:min-w-[288px] sm:max-w-[288px]">
+                  <PickerCalendarNav
+                    viewDate={viewDate}
+                    panelMode={headerPanel}
+                    yearPageStart={yearPageStart}
+                    minDate={minDate}
+                    maxDate={maxDate}
+                    dateGranularity={dtFormatSpec.dateGranularity}
+                    selectedDate={mode === "single"
+                      ? (draftDay.value ?? undefined)
+                      : undefined}
+                    selectedDaySignal={mode === "single" ? draftDay : undefined}
+                    rangeStartSignal={mode === "range"
+                      ? draftStartDay
+                      : undefined}
+                    rangeEndSignal={mode === "range" ? draftEndDay : undefined}
+                    rangeDatetimeActiveEndSignal={mode === "range"
+                      ? editingRangeEnd
+                      : undefined}
+                    daySelectionMode={mode === "multiple"
+                      ? "multiple"
+                      : "single"}
+                    selectedDates={undefined}
+                    multipleItemsSignal={mode === "multiple"
+                      ? draftDtList
+                      : undefined}
+                    multipleItemsToDays={mode === "multiple"
+                      ? datetimeListToDays
+                      : undefined}
+                    onSelectDay={(d) => {
+                      if (mode === "single") draftDay.value = d;
+                      else if (mode === "range") {
+                        if (editingRangeEnd.value) draftEndDay.value = d;
+                        else draftStartDay.value = d;
+                      } else onSelectMultipleDay(d);
+                    }}
+                    disabledDate={disabledDate}
+                  />
+                </div>
+                <DateTimePickerTimeStrip
+                  mode={mode}
+                  dtFormatSpec={dtFormatSpec}
+                  editingRangeEnd={editingRangeEnd}
+                  draftHour={draftHour}
+                  draftMinute={draftMinute}
+                  draftSecond={draftSecond}
+                  draftStartHour={draftStartHour}
+                  draftStartMinute={draftStartMinute}
+                  draftStartSecond={draftStartSecond}
+                  draftEndHour={draftEndHour}
+                  draftEndMinute={draftEndMinute}
+                  draftEndSecond={draftEndSecond}
                 />
               </div>
-              <DateTimePickerTimeStrip
-                mode={mode}
-                dtFormatSpec={dtFormatSpec}
-                editingRangeEnd={editingRangeEnd}
-                draftHour={draftHour}
-                draftMinute={draftMinute}
-                draftSecond={draftSecond}
-                draftStartHour={draftStartHour}
-                draftStartMinute={draftStartMinute}
-                draftStartSecond={draftStartSecond}
-                draftEndHour={draftEndHour}
-                draftEndMinute={draftEndMinute}
-                draftEndSecond={draftEndSecond}
-              />
+              <div class="flex justify-end gap-2 mt-2 pt-2 border-t border-slate-200 dark:border-slate-600">
+                <button
+                  type="button"
+                  disabled={() => {
+                    const { mode: m, dtFormatSpec: spec } =
+                      getDateTimePickerDerivatives(props);
+                    if (m === "single") {
+                      return spec.dateGranularity === "day"
+                        ? draftDay.value == null
+                        : false;
+                    }
+                    if (m === "range") {
+                      return draftStartDay.value == null ||
+                        draftEndDay.value == null;
+                    }
+                    return false;
+                  }}
+                  class={() => {
+                    const { mode: m, dtFormatSpec: spec } =
+                      getDateTimePickerDerivatives(props);
+                    const can = m === "single"
+                      ? (spec.dateGranularity === "day"
+                        ? draftDay.value != null
+                        : true)
+                      : m === "range"
+                      ? draftStartDay.value != null &&
+                        draftEndDay.value != null
+                      : true;
+                    return twMerge(
+                      "px-3 py-1.5 text-sm rounded text-white",
+                      can
+                        ? "bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
+                        : "cursor-not-allowed bg-slate-300 dark:bg-slate-600",
+                    );
+                  }}
+                  onClick={handleConfirm}
+                >
+                  确定
+                </button>
+                <button
+                  type="button"
+                  class="px-3 py-1.5 text-sm rounded border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700"
+                  onClick={handleCancel}
+                >
+                  取消
+                </button>
+              </div>
             </div>
-            <div class="flex justify-end gap-2 mt-2 pt-2 border-t border-slate-200 dark:border-slate-600">
-              <button
-                type="button"
-                disabled={!canConfirm}
-                class={twMerge(
-                  "px-3 py-1.5 text-sm rounded text-white",
-                  canConfirm
-                    ? "bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
-                    : "cursor-not-allowed bg-slate-300 dark:bg-slate-600",
-                )}
-                onClick={handleConfirm}
-              >
-                确定
-              </button>
-              <button
-                type="button"
-                class="px-3 py-1.5 text-sm rounded border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700"
-                onClick={handleCancel}
-              >
-                取消
-              </button>
-            </div>
-          </div>
-        )}
-      </span>
-    );
-  };
+          );
+        }}
+      </Show>
+    </div>
+  );
 }

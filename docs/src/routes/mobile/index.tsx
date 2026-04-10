@@ -48,8 +48,20 @@ import { Button } from "@dreamer/ui-view/mobile"; // shared 也可从此入口`}
           侧栏导航
         </Title>
         <Paragraph class="text-slate-600 dark:text-slate-400">
-          左侧分类与桌面站结构类似，仅收录移动端实现或移动优先的组件。顶栏「桌面版」可切换回
-          PC 文档。
+          左侧含<strong>
+            反馈与浮层
+          </strong>（BottomSheet、ActionSheet、PullRefresh、SwipeCell）、
+          <strong>导航</strong>（TabBar、NavBar）、
+          <strong>数据展示</strong>（ScrollList：列表 + 下拉刷新 +
+          加载更多）、<strong>
+            表单
+          </strong>（Select、MultiSelect、TreeSelect、DatePicker、DateTimePicker、Cascader
+          等；Select / MultiSelect / TreeSelect 默认{" "}
+          <code class="text-sm">appearance</code>{" "}
+          与桌面一致，Cascader 等见各页）、
+          <strong>
+            其它
+          </strong>（MobilePortalHostScope）。各页结构为概述、引入、示例、API，与桌面文档一致。顶栏可切回桌面版。
         </Paragraph>
         <Link
           href="/desktop"

@@ -4,7 +4,7 @@
  * 结果写入隐藏域 `name`；可见 `type="file"` 不带 `name`。分片约定见 `upload-http.ts`。
  */
 
-import { createSignal } from "@dreamer/view";
+import { createSignal, getOwner, type Owner, type Signal } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import { IconUpload } from "../basic/icons/Upload.tsx";
 import { DEFAULT_UPLOAD_CHUNK_SIZE } from "./chunked-upload.ts";
@@ -13,6 +13,7 @@ import {
   uploadFilePhasedChunks,
   uploadFileSimple,
 } from "./upload-http.ts";
+import { commitMaybeSignal, type MaybeSignal } from "./maybe-signal.ts";
 
 /** 文件项状态（用于列表展示与进度） */
 export type UploadFileStatus = "pending" | "uploading" | "done" | "error";
@@ -104,8 +105,8 @@ export interface UploadCoreProps {
   getValueFromResponse?: (res: Response) => Promise<string>;
   /** 多文件隐藏域：`json` 与列表对齐（含 null）；`comma` 逗号拼接 */
   multipleValueMode?: UploadMultipleValueMode;
-  /** 受控：隐藏域值 */
-  value?: string | (() => string);
+  /** 受控：隐藏域值；见 {@link MaybeSignal} */
+  value?: MaybeSignal<string>;
   /** 非受控隐藏域初值 */
   defaultValue?: string;
   /** 隐藏值变化 */
@@ -142,6 +143,84 @@ const fileInputOverlayCls =
 const dropZoneCls =
   "border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg p-6 text-center text-sm text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50 transition-colors";
 const dropZoneActiveCls = "border-blue-500 bg-blue-50/50 dark:bg-blue-900/20";
+
+/**
+ * 与 {@link Upload} 绑定的可变状态（列表、隐藏域副本、上传句柄）。
+ * dweb 下父级 getter 重跑时每次可能是新 {@link Owner}，仅靠 WeakMap&lt;Owner&gt; 会 `miss` 并新建空信号；
+ * 故优先用 props 的 `id` / `name` 作稳定键在 Map 中复用同一套状态（与 DOM 订阅、事件闭包对齐）。
+ */
+interface UploadRuntimeState {
+  items: Signal<UploadFile[]>;
+  innerHidden: Signal<string>;
+  fileByUid: Map<string, File>;
+  abortByUid: Map<string, AbortController>;
+}
+
+/** `id:` 或 `name:` 前缀 + 值，同页勿重复用同一键的两个 Upload */
+const uploadRuntimeByStorageKey = new Map<string, UploadRuntimeState>();
+
+/** 无 id/name 时退回按 Owner 缓存（仍可能在重跑时失效） */
+const uploadRuntimeByOwner = new WeakMap<Owner, UploadRuntimeState>();
+
+/**
+ * 稳定键：`id` 优先，否则 `name`（与隐藏域 name 一致）。
+ *
+ * @returns 非空字符串则走 {@link uploadRuntimeByStorageKey}；`null` 则走 Owner 或匿名新建
+ */
+function resolveUploadStorageKey(
+  id: string | undefined,
+  name: string | undefined,
+): string | null {
+  const trimmedId = id?.trim();
+  if (trimmedId) return `id:${trimmedId}`;
+  const trimmedName = name?.trim();
+  if (trimmedName) return `name:${trimmedName}`;
+  return null;
+}
+
+/**
+ * 获取或创建上传运行时状态：优先 `storageKey`，否则 Owner，再否则匿名。
+ *
+ * @param storageKey {@link resolveUploadStorageKey} 的返回值
+ * @param owner {@link getOwner()}
+ * @param defaultHidden 非受控隐藏域初值，仅在首次创建时使用
+ */
+function takeUploadRuntimeState(
+  storageKey: string | null,
+  owner: Owner | null,
+  defaultHidden: string,
+): UploadRuntimeState {
+  if (storageKey != null) {
+    const hit = uploadRuntimeByStorageKey.get(storageKey);
+    if (hit) return hit;
+    const created: UploadRuntimeState = {
+      items: createSignal<UploadFile[]>([]),
+      innerHidden: createSignal(defaultHidden),
+      fileByUid: new Map(),
+      abortByUid: new Map(),
+    };
+    uploadRuntimeByStorageKey.set(storageKey, created);
+    return created;
+  }
+  if (owner != null) {
+    const hit = uploadRuntimeByOwner.get(owner);
+    if (hit) return hit;
+    const created: UploadRuntimeState = {
+      items: createSignal<UploadFile[]>([]),
+      innerHidden: createSignal(defaultHidden),
+      fileByUid: new Map(),
+      abortByUid: new Map(),
+    };
+    uploadRuntimeByOwner.set(owner, created);
+    return created;
+  }
+  return {
+    items: createSignal<UploadFile[]>([]),
+    innerHidden: createSignal(defaultHidden),
+    fileByUid: new Map(),
+    abortByUid: new Map(),
+  };
+}
 
 /**
  * 将已上传结果序列化为隐藏域字符串。
@@ -187,6 +266,15 @@ function canPreviewUploadedImage(url: string, accept?: string): boolean {
     return true;
   }
   if (u.startsWith("data:image/")) return true;
+  /**
+   * 常见文件下载路由：`/api/upload/file?key=子路径/xxx.jpg`；扩展名在 query 的 key 内而不在 pathname 末尾。
+   */
+  if (
+    /\/file\?[^#]*\bkey=/.test(u) &&
+    /[?&]key=[^&#]*\.(png|jpe?g|gif|webp|svg|avif|bmp)(?:&|#|$)/i.test(u)
+  ) {
+    return true;
+  }
   return /\.(png|jpe?g|gif|webp|svg|avif|bmp)(?:\?|#|$|&)/i.test(u) ||
     /[?&][^#]*\.(png|jpe?g|gif|webp|svg|avif|bmp)/i.test(u);
 }
@@ -228,15 +316,16 @@ export function Upload(props: UploadProps) {
     onUploadError,
   } = props;
 
-  const items = createSignal<UploadFile[]>([]);
-  const innerHidden = createSignal(defaultValue);
-  const fileByUid = new Map<string, File>();
-  const abortByUid = new Map<string, AbortController>();
+  const storageKey = resolveUploadStorageKey(id, name);
+  const owner = getOwner();
+  const rt = takeUploadRuntimeState(storageKey, owner, defaultValue);
+  const { items, innerHidden, fileByUid, abortByUid } = rt;
 
   const setHiddenAndNotify = (next: string) => {
     if (valueProp === undefined) {
       innerHidden.value = next;
     }
+    commitMaybeSignal(valueProp, next);
     onValueChange?.(next);
   };
 
@@ -267,10 +356,14 @@ export function Upload(props: UploadProps) {
     const ac = new AbortController();
     abortByUid.set(uid, ac);
 
+    /**
+     * 合并单行补丁。若当前列表中已无该 uid（例如误触发 `tryAddFiles([])` 单选清空），则不再写入，
+     * 避免 `[].map(...)` 反复生成新空数组触发无意义更新；成功收尾见下方对缺失 uid 的补行逻辑。
+     */
     const updateItem = (patch: Partial<UploadFile>) => {
-      items.value = items.value.map((it) =>
-        it.uid === uid ? { ...it, ...patch } : it
-      );
+      const cur = items.value;
+      if (!cur.some((it) => it.uid === uid)) return;
+      items.value = cur.map((it) => it.uid === uid ? { ...it, ...patch } : it);
     };
 
     updateItem({ status: "uploading", progress: 0, errorMessage: undefined });
@@ -311,17 +404,36 @@ export function Upload(props: UploadProps) {
         } else {
           throw new Error("Upload 需要 action 或 requestUpload");
         }
-        const list = items.value.map((it) =>
-          it.uid === uid
-            ? {
-              ...it,
+        const cur = items.value;
+        const hasRow = cur.some((it) => it.uid === uid);
+        /**
+         * 异步结束时若列表已被误清空，仍补一条完成项，保证缩略图/列表与隐藏域和接口结果一致。
+         */
+        const list: UploadFile[] = hasRow
+          ? cur.map((it) =>
+            it.uid === uid
+              ? {
+                ...it,
+                status: "done" as const,
+                progress: 100,
+                resultUrl: url,
+                errorMessage: undefined,
+              }
+              : it
+          )
+          : [
+            ...cur,
+            {
+              uid,
+              name: file.name,
+              size: file.size,
               status: "done" as const,
               progress: 100,
               resultUrl: url,
               errorMessage: undefined,
-            }
-            : it
-        );
+            },
+          ];
+        fileByUid.set(uid, file);
         items.value = list;
         recomputeHidden(list);
         onUploadSuccess?.({ url, file });
@@ -346,6 +458,11 @@ export function Upload(props: UploadProps) {
 
   const tryAddFiles = (raw: File[]) => {
     if (disabled) return;
+    /**
+     * 无文件时直接返回：单选模式下否则会先执行 `items.value = []` 清空已有项，
+     * 上传仍在进行时进度回调会对空列表 `map`，造成多次空快照且成功时无法对应 UI 行。
+     */
+    if (raw.length === 0) return;
     if (!multiple) {
       for (const it of items.value) {
         abortByUid.get(it.uid)?.abort();
@@ -416,23 +533,33 @@ export function Upload(props: UploadProps) {
     (e.currentTarget as HTMLElement).classList.remove(dropZoneActiveCls);
   };
 
-  const handleRemove = (index: number) => {
-    const row = items.value[index];
+  /**
+   * 按 uid 移除列表项并中止对应上传；使用 uid 而非下标，避免重排后下标错位。
+   *
+   * @param uid 列表项 {@link UploadFile.uid}
+   */
+  const handleRemoveByUid = (uid: string) => {
+    const row = items.value.find((it) => it.uid === uid);
     if (!row) return;
     abortByUid.get(row.uid)?.abort();
     fileByUid.delete(row.uid);
-    const next = items.value.filter((_, i) => i !== index);
+    const next = items.value.filter((it) => it.uid !== uid);
     items.value = next;
     recomputeHidden(next);
   };
 
-  const handleRetry = (index: number) => {
-    const row = items.value[index];
+  /**
+   * 按 uid 重试失败的上传：重置该行状态后再次 {@link startUpload}。
+   *
+   * @param uid 列表项 {@link UploadFile.uid}
+   */
+  const handleRetryByUid = (uid: string) => {
+    const row = items.value.find((it) => it.uid === uid);
     if (!row || row.status !== "error") return;
     const file = fileByUid.get(row.uid);
     if (!file) return;
-    items.value = items.value.map((it, i) =>
-      i === index
+    items.value = items.value.map((it) =>
+      it.uid === uid
         ? {
           ...it,
           status: "pending" as const,
@@ -527,12 +654,22 @@ export function Upload(props: UploadProps) {
         )
         : triggerBar}
 
-      {items.value.length > 0 && (
-        <ul
-          class="grid grid-cols-1 gap-3 text-sm text-slate-700 dark:text-slate-300 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-          role="list"
-        >
-          {items.value.map((file, index) => (
+      {
+        /**
+         * `ul` 始终挂在模板里：`class` 与 `children` 各用函数读 `items.value`，由运行时分别建 effect。
+         * 避免「整块 `() => { … return null : <ul>`」在 insert 展平 VNode 时与异步更新不同步，导致永远不出现 `ul`。
+         */
+      }
+      <ul
+        class={() =>
+          twMerge(
+            "grid grid-cols-1 gap-3 text-sm text-slate-700 dark:text-slate-300 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4",
+            items.value.length === 0 ? "hidden" : "",
+          )}
+        role="list"
+      >
+        {() =>
+          items.value.map((file) => (
             <li
               key={file.uid}
               class="relative flex min-w-0 flex-col gap-2 overflow-hidden rounded-lg border border-slate-200/90 bg-slate-100 p-2 dark:border-slate-600/70 dark:bg-slate-700/50"
@@ -599,7 +736,7 @@ export function Upload(props: UploadProps) {
                     type="button"
                     class="shrink-0 text-xs text-blue-600 dark:text-blue-400 hover:underline disabled:opacity-50"
                     disabled={disabled}
-                    onClick={() => handleRetry(index)}
+                    onClick={() => handleRetryByUid(file.uid)}
                   >
                     重试
                   </button>
@@ -611,7 +748,7 @@ export function Upload(props: UploadProps) {
                     ? `取消或移除 ${file.name}`
                     : `移除 ${file.name}`}
                   disabled={disabled}
-                  onClick={() => handleRemove(index)}
+                  onClick={() => handleRemoveByUid(file.uid)}
                 >
                   <svg
                     class="size-4"
@@ -649,8 +786,7 @@ export function Upload(props: UploadProps) {
               )}
             </li>
           ))}
-        </ul>
-      )}
+      </ul>
     </div>
   );
 }

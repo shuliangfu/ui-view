@@ -26,7 +26,7 @@ const SWITCH_API: ApiRow[] = [
     type: "boolean | (() => boolean) | Signal<boolean>",
     default: "-",
     description:
-      "是否开启；推荐 `checked={createSignal(...)}` 返回值，或 `() => sig.value`；勿 `checked={sig.value}` 快照",
+      "是否开启。与全库表单一致为 MaybeSignal：字面量、`() => T`、`createSignal` 返回值；勿直接绑 `sig.value`（快照失步或误订阅）。",
   },
   {
     name: "disabled",
@@ -52,7 +52,7 @@ const SWITCH_API: ApiRow[] = [
     name: "onChange",
     type: "(e: Event) => void",
     default: "-",
-    description: "变更回调",
+    description: "可选。`checked` 为 Signal 时组件已回写；需副作用时再传",
   },
   {
     name: "onBlur",
@@ -111,10 +111,7 @@ import { createSignal } from "@dreamer/view";
 
 const checked = createSignal(false);
 <FormItem label="开关">
-  <Switch
-    checked={checked}
-    onChange={(e) => checked.value = (e.target as HTMLInputElement).checked}
-  />
+  <Switch checked={checked} />
 </FormItem>`;
 
 export default function FormSwitch() {
@@ -154,18 +151,11 @@ export default function FormSwitch() {
           <section class="space-y-4">
             <Title level={3}>基础</Title>
             <FormItem label="开关">
-              <Switch
-                checked={checked}
-                onChange={(e) =>
-                  checked.value = (e.target as HTMLInputElement).checked}
-              />
+              <Switch checked={checked} />
             </FormItem>
             <CodeBlock
               title="代码示例"
-              code={`<Switch
-  checked={checked}
-  onChange={(e) => checked.value = (e.target as HTMLInputElement).checked}
-/>`}
+              code={`<Switch checked={checked} />`}
               language="tsx"
               showLineNumbers
               copyable
@@ -178,8 +168,6 @@ export default function FormSwitch() {
             <FormItem label="开/关文案">
               <Switch
                 checked={checked}
-                onChange={(e) =>
-                  checked.value = (e.target as HTMLInputElement).checked}
                 checkedChildren="开"
                 unCheckedChildren="关"
               />
@@ -187,8 +175,7 @@ export default function FormSwitch() {
             <CodeBlock
               title="代码示例"
               code={`<Switch
-  checked={checked.value}
-  onChange={...}
+  checked={checked}
   checkedChildren="开"
   unCheckedChildren="关"
 />`}
@@ -202,22 +189,11 @@ export default function FormSwitch() {
           <section class="space-y-4">
             <Title level={3}>name / id</Title>
             <FormItem label="表单字段">
-              <Switch
-                name="notify"
-                id="switch-notify"
-                checked={checked}
-                onChange={(e) =>
-                  checked.value = (e.target as HTMLInputElement).checked}
-              />
+              <Switch name="notify" id="switch-notify" checked={checked} />
             </FormItem>
             <CodeBlock
               title="代码示例"
-              code={`<Switch
-  name="notify"
-  id="switch-notify"
-  checked={checked.value}
-  onChange={...}
-/>`}
+              code={`<Switch name="notify" id="switch-notify" checked={checked} />`}
               language="tsx"
               showLineNumbers
               copyable
