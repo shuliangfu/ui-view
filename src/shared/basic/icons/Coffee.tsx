@@ -2,6 +2,7 @@
  * 咖啡图标，24×24 stroke，用于餐饮/生活。
  */
 import { Icon } from "../Icon.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { IconComponentProps } from "../Icon.tsx";
 
 const svg = (
@@ -23,6 +24,6 @@ const svg = (
   </svg>
 );
 
-export function IconCoffee(props?: IconComponentProps) {
+export function IconCoffee(props?: IconComponentProps): JSXRenderable {
   return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

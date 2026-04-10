@@ -198,7 +198,7 @@ function renderNotificationOverlay(): JSXRenderable {
 /**
  * 通知容器：有 `body` 时 Portal 挂 `body`；无 `body` 时回退根内 getter。
  */
-export function NotificationContainer() {
+export function NotificationContainer(): JSXRenderable {
   /**
    * 仅在有待展示条目时创建 Portal，避免列表为空时 `body` 下残留空 `view-portal` 包装（与 Toast/Message 同向）。
    */

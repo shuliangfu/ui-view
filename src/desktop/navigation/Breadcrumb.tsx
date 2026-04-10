@@ -4,6 +4,7 @@
  */
 
 import { twMerge } from "tailwind-merge";
+import type { JSXRenderable } from "@dreamer/view";
 import { Link } from "../../shared/basic/Link.tsx";
 /** 按需：单文件图标，避免经 icons/mod 拉入全表 */
 import { IconChevronRight } from "../../shared/basic/icons/ChevronRight.tsx";
@@ -21,7 +22,7 @@ export interface BreadcrumbProps {
   class?: string;
 }
 
-export function Breadcrumb(props: BreadcrumbProps) {
+export function Breadcrumb(props: BreadcrumbProps): JSXRenderable {
   const { items, separator, onItemClick, class: className } = props;
 
   const defaultSeparator = (

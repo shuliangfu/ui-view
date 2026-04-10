@@ -5,6 +5,7 @@
  */
 
 import { isSignal, type Signal } from "@dreamer/view";
+import type { JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import type { MaybeSignal } from "./maybe-signal.ts";
 
@@ -53,7 +54,7 @@ const trackSurface =
 const thumbCls =
   "pointer-events-none absolute left-0.5 top-0.5 inline-block h-5 w-5 rounded-full bg-white dark:bg-slate-200 shadow ring-0 transition-transform peer-checked:translate-x-5";
 
-export function Switch(props: SwitchProps) {
+export function Switch(props: SwitchProps): JSXRenderable {
   const {
     checked: checkedMaybe,
     disabled = false,

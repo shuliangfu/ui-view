@@ -4,6 +4,7 @@
  */
 
 import { twMerge } from "tailwind-merge";
+import type { JSXRenderable } from "@dreamer/view";
 
 export interface CommentProps {
   /** 作者名或节点 */
@@ -24,7 +25,7 @@ export interface CommentProps {
   contentClass?: string;
 }
 
-export function Comment(props: CommentProps) {
+export function Comment(props: CommentProps): JSXRenderable {
   const {
     author,
     avatar,

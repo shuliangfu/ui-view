@@ -2,6 +2,7 @@
  * Typography 排版：Title、Text、Paragraph。Tailwind v4 + light/dark。
  */
 import { twMerge } from "tailwind-merge";
+import type { JSXRenderable } from "@dreamer/view";
 
 export interface TitleProps {
   level?: 1 | 2 | 3 | 4 | 5 | 6;
@@ -20,7 +21,7 @@ const titleSizeClasses: Record<number, string> = {
 };
 
 /** 标题，默认 h2 */
-export function Title(props: TitleProps) {
+export function Title(props: TitleProps): JSXRenderable {
   const { level = 2, class: className, children } = props;
   const base = titleSizeClasses[level];
   const cls = twMerge(base, className);
@@ -40,7 +41,7 @@ export interface TextProps {
 }
 
 /** 正文 */
-export function Text(props: TextProps) {
+export function Text(props: TextProps): JSXRenderable {
   const { class: className, truncate, children } = props;
   const base = "text-gray-700 dark:text-gray-300";
   return (
@@ -58,7 +59,7 @@ export interface ParagraphProps {
 }
 
 /** 段落 */
-export function Paragraph(props: ParagraphProps) {
+export function Paragraph(props: ParagraphProps): JSXRenderable {
   const { class: className, children } = props;
   const base = "text-gray-600 dark:text-gray-400 leading-relaxed";
   return <p class={twMerge(base, className)}>{children}</p>;

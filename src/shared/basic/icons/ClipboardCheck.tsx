@@ -2,6 +2,7 @@
  * 剪贴板带勾/清单完成图标，24×24 stroke，用于合规/任务。
  */
 import { Icon } from "../Icon.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { IconComponentProps } from "../Icon.tsx";
 
 const svg = (
@@ -21,6 +22,6 @@ const svg = (
   </svg>
 );
 
-export function IconClipboardCheck(props?: IconComponentProps) {
+export function IconClipboardCheck(props?: IconComponentProps): JSXRenderable {
   return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

@@ -1,5 +1,9 @@
 /**
- * View common/basic 基础组件入口（Button、Link、Icon、Typography、Badge、Avatar、Skeleton、Spinner）。
+ * @module @dreamer/ui-view/mobile/basic
+ * @description
+ * **JSR**：`import … from "@dreamer/ui-view/mobile/basic"`。移动端引用的**基础**组件集合，与桌面 `basic` 同源 re-export（Button、Icon、Typography 等）。
+ *
+ * @see {@link ../../desktop/basic/mod.ts} 桌面同分类入口（符号一致）
  */
 export { Button, ButtonGroup } from "./Button.tsx";
 export type { ButtonGroupProps, ButtonProps } from "./Button.tsx";

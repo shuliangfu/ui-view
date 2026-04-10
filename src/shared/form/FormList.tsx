@@ -7,6 +7,7 @@
  */
 
 import { twMerge } from "tailwind-merge";
+import type { JSXRenderable } from "@dreamer/view";
 
 /** `renderRow` 第二参数：由 FormList 注入，供与输入同行展示 */
 export interface FormListRenderRowContext {
@@ -76,7 +77,7 @@ function removeButtonForRow(
   );
 }
 
-export function FormList(props: FormListProps) {
+export function FormList(props: FormListProps): JSXRenderable {
   const {
     items,
     onAdd,

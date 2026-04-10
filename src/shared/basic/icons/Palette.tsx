@@ -2,6 +2,7 @@
  * 调色板图标（Lucide 风格），24×24；用于 ColorPicker、主题色等。
  */
 import { Icon } from "../Icon.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { IconComponentProps } from "../Icon.tsx";
 
 const svg = (
@@ -26,6 +27,6 @@ const svg = (
 /**
  * 调色板图标组件。
  */
-export function IconPalette(props?: IconComponentProps) {
+export function IconPalette(props?: IconComponentProps): JSXRenderable {
   return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

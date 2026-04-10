@@ -3,6 +3,7 @@
  * Path 与色值来自 Wikimedia Commons (Figma-logo.svg)，与官方多色 F 一致。
  */
 import { Icon } from "../../Icon.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { IconComponentProps } from "../../Icon.tsx";
 
 const svg = (
@@ -31,6 +32,6 @@ const svg = (
 );
 
 /** Figma 品牌 Logo 图标 */
-export function IconBrandFigma(props?: IconComponentProps) {
+export function IconBrandFigma(props?: IconComponentProps): JSXRenderable {
   return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

@@ -4,6 +4,7 @@
  */
 
 import { twMerge } from "tailwind-merge";
+import type { JSXRenderable } from "@dreamer/view";
 
 export type HeroLayout = "center" | "left" | "right";
 
@@ -64,7 +65,7 @@ function backgroundUrlLayer(url: string, zClass: string) {
   );
 }
 
-export function Hero(props: HeroProps) {
+export function Hero(props: HeroProps): JSXRenderable {
   const {
     title,
     subtitle,

@@ -2,6 +2,7 @@
  * YouTube 品牌 Logo，24×24，品牌红 #FF0000。
  */
 import { Icon } from "../../Icon.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { IconComponentProps } from "../../Icon.tsx";
 
 const svg = (
@@ -14,6 +15,6 @@ const svg = (
 );
 
 /** YouTube 品牌 Logo 图标 */
-export function IconBrandYoutube(props?: IconComponentProps) {
+export function IconBrandYoutube(props?: IconComponentProps): JSXRenderable {
   return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

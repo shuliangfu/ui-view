@@ -4,6 +4,7 @@
  */
 
 import { twMerge } from "tailwind-merge";
+import type { JSXRenderable } from "@dreamer/view";
 
 export type ContainerSize = "sm" | "md" | "lg" | "xl" | "2xl" | "full";
 
@@ -29,7 +30,7 @@ const maxWidthClasses: Record<ContainerSize, string> = {
   full: "max-w-full",
 };
 
-export function Container(props: ContainerProps) {
+export function Container(props: ContainerProps): JSXRenderable {
   const {
     maxWidth = "xl",
     centered = true,

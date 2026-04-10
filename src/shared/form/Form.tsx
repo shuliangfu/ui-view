@@ -4,6 +4,7 @@
  */
 
 import { twMerge } from "tailwind-merge";
+import type { JSXRenderable } from "@dreamer/view";
 
 export type FormLayout = "vertical" | "horizontal" | "inline";
 
@@ -29,7 +30,7 @@ const layoutClasses: Record<FormLayout, string> = {
  * patch 时复用容器、只更新内容，避免子组件（如 Password）被整棵替换导致失焦。
  * 与 **`Signal`** 受控值（子组件 `value={() => ref.value}`）可组合使用。
  */
-export function Form(props: FormProps) {
+export function Form(props: FormProps): JSXRenderable {
   return () => {
     const { layout = "vertical", onSubmit, class: className, children } = props;
     const layoutCls = layoutClasses[layout];

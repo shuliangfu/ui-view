@@ -24,6 +24,7 @@ import {
   createPortal,
   createRenderEffect,
   createSignal,
+  type JSXRenderable,
   onCleanup,
 } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
@@ -264,7 +265,7 @@ function useDrag(
   };
 }
 
-export function Modal(props: ModalProps) {
+export function Modal(props: ModalProps): JSXRenderable {
   const {
     onClose,
     footer = null,

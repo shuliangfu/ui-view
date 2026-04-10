@@ -9,6 +9,7 @@
  */
 
 import { createMemo, getDocument, isSignal, type Signal } from "@dreamer/view";
+import type { JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 
 export type ProgressType = "line" | "circle";
@@ -238,7 +239,7 @@ function ProgressCircle(props: {
 /**
  * 渲染进度 UI；响应式 `percent` 在**有** {@link getDocument} 时返回 `createMemo` 子树，否则返回同步 VNode（Hybrid SSR 安全）。
  */
-export function Progress(props: ProgressProps) {
+export function Progress(props: ProgressProps): JSXRenderable {
   const {
     percent: percentIn,
     type = "line",

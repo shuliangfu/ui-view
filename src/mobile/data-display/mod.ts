@@ -1,5 +1,9 @@
 /**
- * 移动端数据展示入口：本目录显式导出（无 Table，Table 仅桌面 data-display）。
+ * @module @dreamer/ui-view/mobile/data-display
+ * @description
+ * **JSR**：`import … from "@dreamer/ui-view/mobile/data-display"`。移动端**数据展示**（**无 Table**；Table 仅在 `@dreamer/ui-view/data-display`）。
+ *
+ * 含列表、卡片、图片、时间轴等与桌面同源的薄封装；具体 props 见各 `.tsx`。
  */
 export { Tag, type TagProps } from "./Tag.tsx";
 export { Empty, type EmptyProps } from "./Empty.tsx";

@@ -5,6 +5,7 @@
  */
 
 import { createRenderEffect, createSignal, onCleanup } from "@dreamer/view";
+import type { JSXRenderable } from "@dreamer/view";
 import { createPortal } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 
@@ -173,9 +174,11 @@ function measureTopObstruction(): number {
 
   const body = doc.body;
   if (body) {
-    for (const el of Array.from(
-      body.querySelectorAll("header, [role='banner']"),
-    )) {
+    for (
+      const el of Array.from(
+        body.querySelectorAll("header, [role='banner']"),
+      )
+    ) {
       if (!(el instanceof HTMLElement)) continue;
       if (el.closest("[view-portal]")) continue;
       const r = el.getBoundingClientRect();
@@ -221,7 +224,7 @@ function getBody(): HTMLElement | null {
 /**
  * Affix：长页滚动时将子区域钉在视口顶；固钉时内容经 Portal 挂到 body，避免被父级 `overflow` 裁切。
  */
-export function Affix(props: AffixProps) {
+export function Affix(props: AffixProps): JSXRenderable {
   const {
     children,
     offsetTop = 0,

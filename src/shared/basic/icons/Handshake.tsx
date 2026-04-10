@@ -2,6 +2,7 @@
  * 握手/协作图标，24×24 stroke，用于合作/协议。
  */
 import { Icon } from "../Icon.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { IconComponentProps } from "../Icon.tsx";
 
 const svg = (
@@ -22,6 +23,6 @@ const svg = (
   </svg>
 );
 
-export function IconHandshake(props?: IconComponentProps) {
+export function IconHandshake(props?: IconComponentProps): JSXRenderable {
   return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

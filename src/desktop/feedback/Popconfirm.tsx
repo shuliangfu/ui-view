@@ -19,6 +19,7 @@ import {
   createMemo,
   createRenderEffect,
   isSignal,
+  type JSXRenderable,
   onCleanup,
   type Signal,
 } from "@dreamer/view";
@@ -232,7 +233,7 @@ function buildPopconfirmTree(
  *
  * @param props - {@link PopconfirmProps}
  */
-export function Popconfirm(props: PopconfirmProps) {
+export function Popconfirm(props: PopconfirmProps): JSXRenderable {
   const {
     onOpenChange,
     onConfirm,

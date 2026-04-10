@@ -4,6 +4,7 @@
  */
 
 import type { SizeVariant } from "../../shared/types.ts";
+import type { JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 
 export interface SpinnerProps {
@@ -19,7 +20,7 @@ const sizeClasses: Record<SizeVariant, string> = {
   lg: "w-10 h-10 border-[3px]",
 };
 
-export function Spinner(props: SpinnerProps) {
+export function Spinner(props: SpinnerProps): JSXRenderable {
   const { size = "md", class: className } = props;
   const base =
     "inline-block rounded-full border-current border-t-transparent animate-spin text-blue-600 dark:text-blue-400";

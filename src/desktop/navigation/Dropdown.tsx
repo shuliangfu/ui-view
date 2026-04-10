@@ -6,6 +6,7 @@
  */
 
 import { createEffect, createSignal, Show } from "@dreamer/view";
+import type { JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 
 export type DropdownPlacement =
@@ -46,7 +47,7 @@ export interface DropdownProps {
 const DROPDOWN_ESC_KEY = "__lastDropdownClose" as const;
 
 /** 在客户端调用一次，监听 Esc 关闭当前已打开的下拉 */
-export function initDropdownEsc() {
+export function initDropdownEsc(): (() => void) | undefined {
   if (typeof globalThis.document === "undefined") return;
   const g = globalThis as unknown as Record<string, (() => void) | undefined>;
   const onKeyDown = (e: KeyboardEvent) => {
@@ -76,7 +77,7 @@ const placementClasses: Record<
 /** hover 时用的定时器（闭包共享，避免闪动） */
 const hoverTimers: { open: number; close: number } = { open: 0, close: 0 };
 
-export function Dropdown(props: DropdownProps) {
+export function Dropdown(props: DropdownProps): JSXRenderable {
   const {
     children,
     overlay,

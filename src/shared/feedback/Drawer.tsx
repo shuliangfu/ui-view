@@ -12,6 +12,7 @@ import {
   createPortal,
   createRenderEffect,
   isSignal,
+  type JSXRenderable,
   onCleanup,
   type Signal,
 } from "@dreamer/view";
@@ -164,7 +165,7 @@ function getBrowserBodyPortalHost(): HTMLElement | null {
   }
 }
 
-export function Drawer(props: DrawerProps) {
+export function Drawer(props: DrawerProps): JSXRenderable {
   const {
     onClose,
     placement = "right",

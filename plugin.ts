@@ -1,12 +1,19 @@
 /**
- * ui-view Tailwind 按需 content 插件
+ * @module @dreamer/ui-view/plugin
+ * @packageDocumentation
  *
- * 注册后，onInit 时自动扫描项目中对 @dreamer/ui-view 的引用，收集用到的组件，
- * 生成一个只含 @source "path"; 的 CSS 文件；在 tailwind.css 里 @import 该文件，
- * Tailwind 会扫描这些路径收集 class，一次构建、单份 CSS、无 theme 重复。
- * `@source` 使用相对「生成文件所在目录」的路径，避免写入本机绝对路径导致换机/CI 构建失败。
+ * @description
+ * **JSR**：`import … from "@dreamer/ui-view/plugin"`。为 **Tailwind CSS v4** 提供按需 **content** 扫描：在 dweb `onInit` 中解析项目对 `@dreamer/ui-view` 的引用，生成仅含 `@source "相对路径";` 的 CSS 片段文件。
  *
- * 使用：先注册本插件再注册 tailwindPlugin，并在 tailwind.css 中 @import 生成的 CSS。
+ * ### 行为概要
+ * - 输出文件路径由 **`outputPath`** 指定；业务在 `tailwind.css` 中 `@import` 该文件即可让 Tailwind 扫描实际用到的组件源路径。
+ * - `@source` 路径相对于生成文件所在目录书写，避免把本机绝对路径写入仓库。
+ * - 插件入口：**{@link uiViewTailwindPlugin}**（返回 `Plugin`，含 `onInit`）。
+ *
+ * ### 使用顺序
+ * 先注册本插件，再注册 Tailwind 官方/封装插件；并在样式入口 `@import` 生成的 `@source` 文件。
+ *
+ * @see {@link uiViewTailwindPlugin} 工厂函数与选项说明
  */
 
 import type { Plugin } from "@dreamer/plugin";

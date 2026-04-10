@@ -2,6 +2,7 @@
  * 钉钉 DingTalk 品牌 Logo，24×24，来源 Iconify (Tabler brand-dingtalk)，品牌蓝 #0086F6。
  */
 import { Icon } from "../../Icon.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { IconComponentProps } from "../../Icon.tsx";
 
 const svg = (
@@ -24,6 +25,6 @@ const svg = (
 );
 
 /** 钉钉品牌 Logo 图标 */
-export function IconBrandDingtalk(props?: IconComponentProps) {
+export function IconBrandDingtalk(props?: IconComponentProps): JSXRenderable {
   return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

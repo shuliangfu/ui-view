@@ -2,6 +2,7 @@
  * Firefox 品牌 Logo，24×24，来源 Simple Icons，品牌色 #FF7139。
  */
 import { Icon } from "../../Icon.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { IconComponentProps } from "../../Icon.tsx";
 
 const svg = (
@@ -14,6 +15,6 @@ const svg = (
 );
 
 /** Firefox 品牌 Logo 图标 */
-export function IconBrandFirefox(props?: IconComponentProps) {
+export function IconBrandFirefox(props?: IconComponentProps): JSXRenderable {
   return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

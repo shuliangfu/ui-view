@@ -2,6 +2,7 @@
  * 投票/治理图标，24×24 stroke。Web3 治理/社区场景。
  */
 import { Icon } from "../Icon.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { IconComponentProps } from "../Icon.tsx";
 
 const svg = (
@@ -28,6 +29,6 @@ const svg = (
   </svg>
 );
 
-export function IconVote(props?: IconComponentProps) {
+export function IconVote(props?: IconComponentProps): JSXRenderable {
   return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

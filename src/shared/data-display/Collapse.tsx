@@ -5,6 +5,7 @@
  */
 
 import { createSignal } from "@dreamer/view";
+import type { JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 /** 按需：单文件图标，避免经 icons/mod 拉入全表 */
 import { IconChevronDown } from "../basic/icons/ChevronDown.tsx";
@@ -75,7 +76,7 @@ const expandIconSizeClasses: Record<SizeVariant, string> = {
   lg: "w-5 h-5",
 };
 
-export function Collapse(props: CollapseProps) {
+export function Collapse(props: CollapseProps): JSXRenderable {
   const {
     items,
     defaultActiveKey = [],

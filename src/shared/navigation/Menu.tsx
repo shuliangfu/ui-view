@@ -4,7 +4,7 @@
  * 水平子菜单弹出层（usePopoverSubmenu）、键盘上下键导航（focusedKey/onFocusChange）。
  */
 
-import type { VNode } from "@dreamer/view";
+import type { JSXRenderable } from "@dreamer/view";
 import { createEffect, createRef, createSignal } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 /** 按需：单文件图标，避免经 icons/mod 拉入全表 */
@@ -246,7 +246,7 @@ function renderItem(
   );
 }
 
-export function Menu(props: MenuProps) {
+export function Menu(props: MenuProps): JSXRenderable {
   const {
     items,
     onClick,
@@ -488,7 +488,9 @@ export function Menu(props: MenuProps) {
             onFocusChange,
             usePopoverSubmenu ? closePopover : undefined,
           );
-          return typeof row === "function" ? (row as () => VNode)() : row;
+          return typeof row === "function"
+            ? (row as () => JSXRenderable)()
+            : row;
         });
       }}
     </nav>

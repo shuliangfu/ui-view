@@ -6,6 +6,7 @@
  */
 
 import { Button } from "../../shared/basic/Button.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import { Modal } from "./Modal.tsx";
 import type { ModalProps } from "./Modal.tsx";
 
@@ -49,7 +50,7 @@ export interface DialogProps extends
   showFooter?: boolean;
 }
 
-export function Dialog(props: DialogProps) {
+export function Dialog(props: DialogProps): JSXRenderable {
   const {
     open,
     onClose,

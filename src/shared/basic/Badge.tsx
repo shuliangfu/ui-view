@@ -2,6 +2,7 @@
  * Badge 角标、数字徽章。Tailwind v4 + light/dark。
  */
 import type { ColorVariant, SizeVariant } from "../../shared/types.ts";
+import type { JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 
 export interface BadgeProps {
@@ -34,7 +35,7 @@ const variantClasses: Record<ColorVariant, string> = {
     "bg-transparent text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-600",
 };
 
-export function Badge(props: BadgeProps) {
+export function Badge(props: BadgeProps): JSXRenderable {
   const {
     variant = "primary",
     size = "md",

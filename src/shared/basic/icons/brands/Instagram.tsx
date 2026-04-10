@@ -2,6 +2,7 @@
  * Instagram 品牌 Logo，24×24，渐变/品牌色。
  */
 import { Icon } from "../../Icon.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { IconComponentProps } from "../../Icon.tsx";
 
 const svg = (
@@ -21,6 +22,6 @@ const svg = (
 );
 
 /** Instagram 品牌 Logo 图标 */
-export function IconBrandInstagram(props?: IconComponentProps) {
+export function IconBrandInstagram(props?: IconComponentProps): JSXRenderable {
   return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

@@ -4,6 +4,7 @@
  */
 
 import { createContext, createSignal } from "@dreamer/view";
+import type { Context, JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 
 /**
@@ -18,9 +19,9 @@ export interface MobilePortalHostContextValue {
 }
 
 /** 无 Provider 时为 `null` */
-export const MobilePortalHostContext = createContext<
+export const MobilePortalHostContext: Context<
   MobilePortalHostContextValue | null
->(null);
+> = createContext<MobilePortalHostContextValue | null>(null);
 
 /** {@link MobilePortalHostScope} 的 props */
 export interface MobilePortalHostScopeProps {
@@ -37,7 +38,9 @@ export interface MobilePortalHostScopeProps {
  *
  * @param props - 子节点与可选 class
  */
-export function MobilePortalHostScope(props: MobilePortalHostScopeProps) {
+export function MobilePortalHostScope(
+  props: MobilePortalHostScopeProps,
+): JSXRenderable {
   /** Portal 真实挂载的 DOM 节点，由 ref 写入 */
   const hostEl = createSignal<HTMLElement | null>(null);
 

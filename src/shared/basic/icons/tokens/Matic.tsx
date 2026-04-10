@@ -2,6 +2,7 @@
  * Polygon (MATIC) 代币 Logo，24×24，来源 @web3icons/core (MIT)，品牌紫 #8247E5。
  */
 import { Icon } from "../../Icon.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { IconComponentProps } from "../../Icon.tsx";
 
 const svg = (
@@ -13,6 +14,6 @@ const svg = (
   </svg>
 );
 
-export function IconTokenMatic(props?: IconComponentProps) {
+export function IconTokenMatic(props?: IconComponentProps): JSXRenderable {
   return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

@@ -20,6 +20,7 @@ import {
   createEffect,
   createSignal,
   isSignal,
+  type JSXRenderable,
   onCleanup,
   Show,
   type Signal,
@@ -1026,7 +1027,7 @@ function CascaderDropdownPanel(props: CascaderProps) {
  *
  * @param props - {@link CascaderProps}
  */
-export function Cascader(props: CascaderProps) {
+export function Cascader(props: CascaderProps): JSXRenderable {
   const appearance = props.appearance ?? "dropdown";
   if (
     appearance === "native" &&

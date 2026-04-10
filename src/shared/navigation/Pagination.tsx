@@ -4,6 +4,7 @@
  */
 
 import { createSignal } from "@dreamer/view";
+import type { JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 /** 按需：单文件图标，避免经 icons/mod 拉入全表 */
 import { IconChevronLeft } from "../basic/icons/ChevronLeft.tsx";
@@ -59,7 +60,7 @@ function updateUrlSearch(page: number, pageSize: number) {
   );
 }
 
-export function Pagination(props: PaginationProps) {
+export function Pagination(props: PaginationProps): JSXRenderable {
   const {
     pageSize: pageSizeProp,
     defaultCurrent = 1,

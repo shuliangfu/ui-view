@@ -5,6 +5,7 @@
  */
 
 import { twMerge } from "tailwind-merge";
+import type { JSXRenderable } from "@dreamer/view";
 
 export type PopoverPlacement =
   | "top"
@@ -70,7 +71,7 @@ function arrowClass(placement: PopoverPlacement): string {
   return base;
 }
 
-export function Popover(props: PopoverProps) {
+export function Popover(props: PopoverProps): JSXRenderable {
   const {
     title,
     content,

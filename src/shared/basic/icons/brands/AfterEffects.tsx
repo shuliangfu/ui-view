@@ -3,6 +3,7 @@
  * Path 来自 Wikimedia Commons (Adobe After Effects CC icon.svg)，紫底 #00005B + 浅紫 #9999FF。
  */
 import { Icon } from "../../Icon.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { IconComponentProps } from "../../Icon.tsx";
 
 const svg = (
@@ -23,6 +24,8 @@ const svg = (
 );
 
 /** Adobe After Effects 品牌 Logo 图标 */
-export function IconBrandAfterEffects(props?: IconComponentProps) {
+export function IconBrandAfterEffects(
+  props?: IconComponentProps,
+): JSXRenderable {
   return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

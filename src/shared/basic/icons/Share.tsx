@@ -2,6 +2,7 @@
  * 分享图标，24×24 stroke。
  */
 import { Icon } from "../Icon.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { IconComponentProps } from "../Icon.tsx";
 
 const svg = (
@@ -22,6 +23,6 @@ const svg = (
   </svg>
 );
 
-export function IconShare(props?: IconComponentProps) {
+export function IconShare(props?: IconComponentProps): JSXRenderable {
   return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

@@ -4,6 +4,7 @@
  */
 
 import { twMerge } from "tailwind-merge";
+import type { JSXRenderable } from "@dreamer/view";
 import type { SizeVariant } from "../types.ts";
 
 export interface DescriptionsItem {
@@ -177,7 +178,7 @@ function computeDescriptionsPlacements(
   return placements;
 }
 
-export function Descriptions(props: DescriptionsProps) {
+export function Descriptions(props: DescriptionsProps): JSXRenderable {
   const {
     items,
     title,

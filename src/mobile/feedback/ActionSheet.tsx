@@ -7,6 +7,7 @@ import {
   createMemo,
   createPortal,
   createRenderEffect,
+  type JSXRenderable,
   onCleanup,
   useContext,
 } from "@dreamer/view";
@@ -77,7 +78,7 @@ function trySetDocumentBodyOverflow(overflow: string): void {
  *
  * @param props - 动作表属性
  */
-export function ActionSheet(props: ActionSheetProps) {
+export function ActionSheet(props: ActionSheetProps): JSXRenderable {
   const {
     onClose,
     title,

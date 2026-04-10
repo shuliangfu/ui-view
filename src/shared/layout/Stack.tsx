@@ -4,6 +4,7 @@
  */
 
 import { twMerge } from "tailwind-merge";
+import type { JSXRenderable } from "@dreamer/view";
 
 export type StackDirection =
   | "row"
@@ -62,7 +63,7 @@ const directionClasses: Record<StackDirection, string> = {
   "column-reverse": "flex-col-reverse",
 };
 
-export function Stack(props: StackProps) {
+export function Stack(props: StackProps): JSXRenderable {
   const {
     direction = "column",
     gap = 4,

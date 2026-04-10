@@ -1,5 +1,12 @@
 /**
- * 桌面端表单入口：逐项从本目录 `./*.tsx` 导出（含 shared 薄 re-export 与桌面专有实现）。
+ * @module @dreamer/ui-view/form
+ * @description
+ * **JSR**：`import … from "@dreamer/ui-view/form"`。桌面端**表单**：输入、选择、上传、日期时间、富文本、校验布局等。
+ *
+ * 多数实现来自 **shared/form** 的薄封装；桌面专有组件在本目录 `.tsx`。另 re-export 分片上传、`formatUploadFileSize` 等工具符号（见 `shared/form/mod.ts`）。
+ * 与 **Signal** / 受控非受控相关的约定见各组件文件说明。
+ *
+ * @see {@link ../../shared/form/mod.ts} 共享表单实现清单
  */
 export type { MaybeSignal } from "../../shared/form/maybe-signal.ts";
 export { readMaybeSignal } from "../../shared/form/maybe-signal.ts";

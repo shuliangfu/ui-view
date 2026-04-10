@@ -2,6 +2,7 @@
  * Line 品牌 Logo，24×24，品牌绿 #00B900。
  */
 import { Icon } from "../../Icon.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { IconComponentProps } from "../../Icon.tsx";
 
 const svg = (
@@ -14,6 +15,6 @@ const svg = (
 );
 
 /** Line 品牌 Logo 图标 */
-export function IconBrandLine(props?: IconComponentProps) {
+export function IconBrandLine(props?: IconComponentProps): JSXRenderable {
   return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

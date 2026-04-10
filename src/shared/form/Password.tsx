@@ -5,6 +5,7 @@
  */
 
 import { twMerge } from "tailwind-merge";
+import type { JSXRenderable } from "@dreamer/view";
 import type { SizeVariant } from "../types.ts";
 import { controlBlueFocusRing } from "./input-focus-ring.ts";
 import { commitMaybeSignal, type MaybeSignal } from "./maybe-signal.ts";
@@ -80,7 +81,7 @@ function passwordStrengthMeta(s: string): { level: string; cls: string } {
   return { level: "强", cls: "text-green-600 dark:text-green-400" };
 }
 
-export function Password(props: PasswordProps) {
+export function Password(props: PasswordProps): JSXRenderable {
   const {
     size = "md",
     disabled = false,

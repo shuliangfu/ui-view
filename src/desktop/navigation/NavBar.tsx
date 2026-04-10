@@ -5,6 +5,7 @@
  */
 
 import { twMerge } from "tailwind-merge";
+import type { JSXRenderable } from "@dreamer/view";
 import { Container } from "../../shared/layout/Container.tsx";
 import type { ContainerSize } from "../../shared/layout/Container.tsx";
 
@@ -55,7 +56,7 @@ const defaultContainerInnerClass =
 /**
  * 顶栏导航组件。渲染语义化 <header>，内层为 Container + 多区布局：start | center（可选）| brand | nav | end。
  */
-export function NavBar(props: NavBarProps) {
+export function NavBar(props: NavBarProps): JSXRenderable {
   const {
     start,
     center,

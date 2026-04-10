@@ -2,6 +2,7 @@
  * Solana (SOL) 代币 Logo，24×24，来源 @web3icons/core (MIT)，品牌色三栏。
  */
 import { Icon } from "../../Icon.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { IconComponentProps } from "../../Icon.tsx";
 
 const svg = (
@@ -21,6 +22,6 @@ const svg = (
   </svg>
 );
 
-export function IconTokenSol(props?: IconComponentProps) {
+export function IconTokenSol(props?: IconComponentProps): JSXRenderable {
   return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

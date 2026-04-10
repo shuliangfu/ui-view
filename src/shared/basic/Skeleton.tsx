@@ -2,6 +2,7 @@
  * Skeleton 骨架屏。加载占位。Tailwind v4 + light/dark。
  */
 import type { SizeVariant } from "../../shared/types.ts";
+import type { JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 
 export interface SkeletonProps {
@@ -19,7 +20,7 @@ const sizeClasses: Record<SizeVariant, string> = {
 
 const base = "animate-pulse rounded-md bg-gray-200 dark:bg-gray-700";
 
-export function Skeleton(props: SkeletonProps) {
+export function Skeleton(props: SkeletonProps): JSXRenderable {
   const { size = "md", class: className } = props;
   return (
     <span

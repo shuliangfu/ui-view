@@ -2,6 +2,7 @@
  * 卷轴/长文档图标，24×24 stroke，用于合同/文档。
  */
 import { Icon } from "../Icon.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { IconComponentProps } from "../Icon.tsx";
 
 const svg = (
@@ -22,6 +23,6 @@ const svg = (
   </svg>
 );
 
-export function IconScrollText(props?: IconComponentProps) {
+export function IconScrollText(props?: IconComponentProps): JSXRenderable {
   return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

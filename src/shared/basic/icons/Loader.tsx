@@ -3,6 +3,7 @@
  * 矢量与 Lucide「Loader2」一致；本库导出为 {@link IconLoader}（无单独 Loader 图标，故不用 Loader2 命名）。
  */
 import { Icon } from "../Icon.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { IconComponentProps } from "../Icon.tsx";
 
 const svg = (
@@ -27,7 +28,7 @@ const svg = (
   </svg>
 );
 
-export function IconLoader(props?: IconComponentProps) {
+export function IconLoader(props?: IconComponentProps): JSXRenderable {
   return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }
 

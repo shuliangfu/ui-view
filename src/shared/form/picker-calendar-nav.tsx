@@ -4,6 +4,7 @@
  */
 
 import type { Signal } from "@dreamer/view";
+import type { JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import { IconChevronLeft } from "../basic/icons/ChevronLeft.tsx";
 import { IconChevronRight } from "../basic/icons/ChevronRight.tsx";
@@ -120,7 +121,9 @@ const gridCellBase =
  * multiple 且父级用条件挂载浮层时请传 {@link PickerCalendarNavProps.multipleYmdSignal} 或
  * `multipleItemsSignal` + {@link PickerCalendarNavProps.multipleItemsToDays}（日期时间串稿）。
  */
-export function PickerCalendarNav(props: PickerCalendarNavProps) {
+export function PickerCalendarNav(
+  props: PickerCalendarNavProps,
+): JSXRenderable {
   return () => {
     const {
       viewDate,

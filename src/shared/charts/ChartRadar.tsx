@@ -4,6 +4,7 @@
  */
 
 import { ChartBase } from "./ChartBase.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { ChartData, ChartOptions } from "./types.ts";
 
 export interface ChartRadarProps {
@@ -15,6 +16,6 @@ export interface ChartRadarProps {
 }
 
 /** 雷达图组件 */
-export function ChartRadar(props: ChartRadarProps) {
+export function ChartRadar(props: ChartRadarProps): JSXRenderable {
   return <ChartBase type="radar" {...props} />;
 }

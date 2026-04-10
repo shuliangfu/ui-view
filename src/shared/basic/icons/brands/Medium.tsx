@@ -3,6 +3,7 @@
  * 参考：Medium 官方 / Wikipedia Medium icon，viewBox 保持原始比例后居中缩放。
  */
 import { Icon } from "../../Icon.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { IconComponentProps } from "../../Icon.tsx";
 
 const svg = (
@@ -20,6 +21,6 @@ const svg = (
 );
 
 /** Medium 品牌 Logo 图标 */
-export function IconBrandMedium(props?: IconComponentProps) {
+export function IconBrandMedium(props?: IconComponentProps): JSXRenderable {
   return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

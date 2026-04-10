@@ -4,6 +4,7 @@
  */
 
 import { ChartBase } from "./ChartBase.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { ChartData, ChartOptions } from "./types.ts";
 
 export interface ChartBarProps {
@@ -15,6 +16,6 @@ export interface ChartBarProps {
 }
 
 /** 柱状图组件 */
-export function ChartBar(props: ChartBarProps) {
+export function ChartBar(props: ChartBarProps): JSXRenderable {
   return <ChartBase type="bar" {...props} />;
 }

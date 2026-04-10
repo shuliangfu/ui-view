@@ -5,6 +5,7 @@
  */
 
 import { twMerge } from "tailwind-merge";
+import type { JSXRenderable } from "@dreamer/view";
 import type { SizeVariant } from "../types.ts";
 import {
   compositeShellFocusRingFromInput,
@@ -242,7 +243,7 @@ function InputGroupShell(props: {
   );
 }
 
-export function Input(props: InputProps) {
+export function Input(props: InputProps): JSXRenderable {
   const {
     size = "md",
     disabled = false,

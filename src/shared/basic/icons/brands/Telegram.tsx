@@ -2,6 +2,7 @@
  * Telegram 电报品牌 Logo，24×24，品牌蓝 #0088CC。
  */
 import { Icon } from "../../Icon.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { IconComponentProps } from "../../Icon.tsx";
 
 const svg = (
@@ -14,6 +15,6 @@ const svg = (
 );
 
 /** Telegram 电报品牌 Logo 图标 */
-export function IconBrandTelegram(props?: IconComponentProps) {
+export function IconBrandTelegram(props?: IconComponentProps): JSXRenderable {
   return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

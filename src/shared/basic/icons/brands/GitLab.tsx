@@ -2,6 +2,7 @@
  * GitLab 品牌 Logo，24×24，品牌橙 #FC6D26。
  */
 import { Icon } from "../../Icon.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { IconComponentProps } from "../../Icon.tsx";
 
 const svg = (
@@ -14,6 +15,6 @@ const svg = (
 );
 
 /** GitLab 品牌 Logo 图标 */
-export function IconBrandGitlab(props?: IconComponentProps) {
+export function IconBrandGitlab(props?: IconComponentProps): JSXRenderable {
   return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

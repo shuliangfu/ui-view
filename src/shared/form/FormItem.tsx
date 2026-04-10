@@ -5,6 +5,7 @@
  */
 
 import { twMerge } from "tailwind-merge";
+import type { JSXRenderable } from "@dreamer/view";
 
 /** 标签位置：上方（默认）或左侧 */
 export type FormItemLabelPosition = "top" | "left";
@@ -65,7 +66,7 @@ const errorCls = "mt-1 text-sm text-red-600 dark:text-red-400";
  * 返回渲染 getter，使 View 为 FormItem 创建带 data-view-dynamic 的容器；
  * patch 时复用容器、只更新内容，避免子组件（如 Password）被整棵替换导致失焦。
  */
-export function FormItem(props: FormItemProps) {
+export function FormItem(props: FormItemProps): JSXRenderable {
   return () => {
     const {
       label,

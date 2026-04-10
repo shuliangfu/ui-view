@@ -11,6 +11,7 @@
  */
 
 import { createEffect, createSignal, type Signal } from "@dreamer/view";
+import type { JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import { DatePicker } from "../form/DatePicker.tsx";
 import { TimePicker } from "../form/TimePicker.tsx";
@@ -934,7 +935,7 @@ export function Table<
   T extends Record<string, unknown> = Record<string, unknown>,
 >(
   props: TableProps<T>,
-) {
+): JSXRenderable {
   const {
     columns,
     rowKey = "key",

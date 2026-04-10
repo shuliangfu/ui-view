@@ -2,6 +2,7 @@
  * Pinterest 品牌 Logo，24×24，品牌红 #E60023。
  */
 import { Icon } from "../../Icon.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { IconComponentProps } from "../../Icon.tsx";
 
 const svg = (
@@ -14,6 +15,6 @@ const svg = (
 );
 
 /** Pinterest 品牌 Logo 图标 */
-export function IconBrandPinterest(props?: IconComponentProps) {
+export function IconBrandPinterest(props?: IconComponentProps): JSXRenderable {
   return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

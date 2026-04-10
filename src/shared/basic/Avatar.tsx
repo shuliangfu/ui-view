@@ -3,6 +3,7 @@
  * 尺寸：xs / sm / md / lg / xl / 2xl（共 6 种，2xl 最大）。
  */
 import type { SizeVariant } from "../../shared/types.ts";
+import type { JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 
 /** Avatar 尺寸：共用 SizeVariant + 头像专用 xl、2xl */
@@ -32,7 +33,7 @@ const sizeClasses: Record<AvatarSize, string> = {
 const base =
   "inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-200 text-gray-600 dark:bg-gray-600 dark:text-gray-300 font-medium";
 
-export function Avatar(props: AvatarProps) {
+export function Avatar(props: AvatarProps): JSXRenderable {
   const { size = "md", src, alt = "", class: className, children } = props;
   const sizeCls = sizeClasses[size];
 

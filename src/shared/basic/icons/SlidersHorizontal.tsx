@@ -2,6 +2,7 @@
  * 水平滑块/筛选图标，24×24 stroke。门户筛选场景。
  */
 import { Icon } from "../Icon.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { IconComponentProps } from "../Icon.tsx";
 
 const svg = (
@@ -21,6 +22,8 @@ const svg = (
   </svg>
 );
 
-export function IconSlidersHorizontal(props?: IconComponentProps) {
+export function IconSlidersHorizontal(
+  props?: IconComponentProps,
+): JSXRenderable {
   return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

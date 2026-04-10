@@ -10,6 +10,7 @@ import {
   createPortal,
   createRenderEffect,
   createSignal,
+  type JSXRenderable,
   onCleanup,
   useContext,
 } from "@dreamer/view";
@@ -81,7 +82,7 @@ function trySetDocumentBodyOverflow(overflow: string): void {
  *
  * @param props - 面板属性
  */
-export function BottomSheet(props: BottomSheetProps) {
+export function BottomSheet(props: BottomSheetProps): JSXRenderable {
   const destroyOnClose = props.destroyOnClose === true;
 
   /**

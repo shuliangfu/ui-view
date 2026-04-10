@@ -4,6 +4,7 @@
  */
 
 import { twMerge } from "tailwind-merge";
+import type { JSXRenderable } from "@dreamer/view";
 
 export type DividerOrientation = "left" | "right" | "center";
 
@@ -20,7 +21,7 @@ export interface DividerProps {
   class?: string;
 }
 
-export function Divider(props: DividerProps) {
+export function Divider(props: DividerProps): JSXRenderable {
   const {
     type = "horizontal",
     dashed = false,

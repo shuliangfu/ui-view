@@ -1,5 +1,9 @@
 /**
- * 移动端表单入口：逐项从本目录 `./*.tsx` 导出；Select / MultiSelect 等与 DatePicker 相同经本目录薄文件再导出 {@link ../../shared/form}。
+ * @module @dreamer/ui-view/mobile/form
+ * @description
+ * **JSR**：`import … from "@dreamer/ui-view/mobile/form"`。移动端**表单**；Select、MultiSelect、DatePicker 等多经本目录薄文件转导出 **shared/form** 实现，并保留移动交互分支（appearance 等）。
+ *
+ * @see {@link ../../shared/form/mod.ts} 共享表单符号清单
  */
 export type { MaybeSignal } from "../../shared/form/maybe-signal.ts";
 export { readMaybeSignal } from "../../shared/form/maybe-signal.ts";

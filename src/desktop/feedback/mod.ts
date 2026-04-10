@@ -1,5 +1,11 @@
 /**
- * 桌面端反馈入口：本目录各 `.ts`/`.tsx` 显式导出（Toast/Message/Notification/Alert 等为薄 re-export，Modal 等为桌面实现）。
+ * @module @dreamer/ui-view/feedback
+ * @description
+ * **JSR**：`import … from "@dreamer/ui-view/feedback"`。桌面端**反馈与浮层**：Toast、Message、Notification 容器与命令式 API；Alert、Drawer；Modal、Dialog、Tooltip、Popover、Popconfirm 等。
+ *
+ * **命令式**：`toast.*`、`message.*`、`notification.open/close/destroy` 等；需在根节点挂载对应 `*Container`。Portal 依赖 `document.body` 时见各容器实现说明。
+ *
+ * @see {@link ./Modal.tsx} 模态框行为说明
  */
 export { ToastContainer } from "./Toast.tsx";
 export { toast } from "./toast-store.ts";

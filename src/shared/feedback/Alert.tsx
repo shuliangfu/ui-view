@@ -5,6 +5,7 @@
  */
 
 import { twMerge } from "tailwind-merge";
+import type { JSXRenderable } from "@dreamer/view";
 /** 按需：单文件图标，避免经 icons/mod 拉入全表 */
 import { IconAlertCircle } from "../basic/icons/AlertCircle.tsx";
 import { IconCheckCircle } from "../basic/icons/CheckCircle.tsx";
@@ -65,7 +66,7 @@ const typeBorderClasses: Record<AlertType, string> = {
     "border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/40 text-blue-800 dark:text-blue-200",
 };
 
-export function Alert(props: AlertProps) {
+export function Alert(props: AlertProps): JSXRenderable {
   const {
     type = "info",
     message,

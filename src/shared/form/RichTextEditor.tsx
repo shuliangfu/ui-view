@@ -18,6 +18,7 @@ import {
   createRenderEffect,
   createSignal,
   For,
+  type JSXRenderable,
   onCleanup,
   untrack,
 } from "@dreamer/view";
@@ -2130,7 +2131,7 @@ const findBarInputSurface =
   "px-2 py-1 border border-slate-300 dark:border-slate-600 rounded text-sm bg-white dark:bg-slate-800 focus:outline-none";
 const editorReadOnlyCls = "cursor-default bg-slate-50 dark:bg-slate-800/80";
 
-export function RichTextEditor(props: RichTextEditorProps) {
+export function RichTextEditor(props: RichTextEditorProps): JSXRenderable {
   const {
     value = "",
     onChange,

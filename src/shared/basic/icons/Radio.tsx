@@ -2,6 +2,7 @@
  * 广播/电台图标，24×24 stroke。门户音频场景。
  */
 import { Icon } from "../Icon.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { IconComponentProps } from "../Icon.tsx";
 
 const svg = (
@@ -23,6 +24,6 @@ const svg = (
   </svg>
 );
 
-export function IconRadio(props?: IconComponentProps) {
+export function IconRadio(props?: IconComponentProps): JSXRenderable {
   return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

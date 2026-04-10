@@ -13,6 +13,7 @@
  */
 
 import type { Signal } from "@dreamer/view";
+import type { JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import { Drawer } from "../feedback/Drawer.tsx";
 import { Link } from "../basic/Link.tsx";
@@ -261,7 +262,7 @@ function SidebarNavigation(props: {
 /**
  * 侧栏：概览链接、分组标题、可折叠分类（details）与叶子链接；可选小屏 Drawer。
  */
-export function Sidebar(props: SidebarProps) {
+export function Sidebar(props: SidebarProps): JSXRenderable {
   const {
     overview,
     sectionTitle,

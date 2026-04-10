@@ -4,6 +4,7 @@
  */
 
 import { twMerge } from "tailwind-merge";
+import type { JSXRenderable } from "@dreamer/view";
 
 export interface EmptyProps {
   /** 主描述文案 */
@@ -22,7 +23,7 @@ export interface EmptyProps {
   descriptionClass?: string;
 }
 
-export function Empty(props: EmptyProps) {
+export function Empty(props: EmptyProps): JSXRenderable {
   const {
     description = "暂无数据",
     image,

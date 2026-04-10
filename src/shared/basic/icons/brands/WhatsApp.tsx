@@ -2,6 +2,7 @@
  * WhatsApp 品牌 Logo，24×24，品牌绿 #25D366。
  */
 import { Icon } from "../../Icon.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { IconComponentProps } from "../../Icon.tsx";
 
 const svg = (
@@ -14,6 +15,6 @@ const svg = (
 );
 
 /** WhatsApp 品牌 Logo 图标 */
-export function IconBrandWhatsapp(props?: IconComponentProps) {
+export function IconBrandWhatsapp(props?: IconComponentProps): JSXRenderable {
   return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

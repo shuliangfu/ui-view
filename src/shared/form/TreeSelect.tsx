@@ -1,4 +1,5 @@
 /** 树选择展示形态：`dropdown` 缩进浮层；`native` 单原生 select，选项文案为完整路径（移动触控） */
+import type { JSXRenderable } from "@dreamer/view";
 export type TreeSelectAppearance = "dropdown" | "native";
 
 /**
@@ -332,7 +333,7 @@ function TreeSelectDropdownBranch(props: Omit<TreeSelectProps, "appearance">) {
 /**
  * 树形单选：默认自绘下拉；`appearance="native"` 时为原生大触控 select。
  */
-export function TreeSelect(props: TreeSelectProps) {
+export function TreeSelect(props: TreeSelectProps): JSXRenderable {
   const { appearance = "dropdown", ...rest } = props;
   if (appearance === "native") {
     return TreeSelectNativeBranch(rest);

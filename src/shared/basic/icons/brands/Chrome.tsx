@@ -2,6 +2,7 @@
  * Google Chrome 品牌 Logo，24×24，来源 Simple Icons (official shape)。
  */
 import { Icon } from "../../Icon.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { IconComponentProps } from "../../Icon.tsx";
 
 const svg = (
@@ -14,6 +15,6 @@ const svg = (
 );
 
 /** Google Chrome 品牌 Logo 图标 */
-export function IconBrandChrome(props?: IconComponentProps) {
+export function IconBrandChrome(props?: IconComponentProps): JSXRenderable {
   return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

@@ -2,6 +2,7 @@
  * 圆形美元/代币图标，24×24 stroke。Web3/代币场景。
  */
 import { Icon } from "../Icon.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { IconComponentProps } from "../Icon.tsx";
 
 const svg = (
@@ -22,6 +23,8 @@ const svg = (
   </svg>
 );
 
-export function IconCircleDollarSign(props?: IconComponentProps) {
+export function IconCircleDollarSign(
+  props?: IconComponentProps,
+): JSXRenderable {
   return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

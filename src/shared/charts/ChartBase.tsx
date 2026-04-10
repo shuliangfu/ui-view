@@ -4,6 +4,7 @@
  */
 
 import Chart from "chart.js/auto";
+import type { JSXRenderable } from "@dreamer/view";
 import type { BaseChartProps } from "./types.ts";
 
 /** canvas 元素上挂载的 Chart 实例（用于更新与销毁） */
@@ -19,7 +20,7 @@ interface CanvasWithChart extends HTMLCanvasElement {
 /** 图表基座组件（内部使用），对外使用 ChartLine / ChartBar 等 */
 export function ChartBase<T extends BaseChartProps["type"]>(
   props: BaseChartProps<T>,
-) {
+): JSXRenderable {
   const { type, data, options = {}, class: className, width, height } = props;
 
   /** 当前实例对应的 canvas，用于 ref(null) 时销毁 */

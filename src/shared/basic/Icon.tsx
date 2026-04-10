@@ -6,6 +6,7 @@
  * 按需引入以控制包体积；每个图标文件独立，无大包依赖。
  */
 import type { SizeVariant } from "../../shared/types.ts";
+import type { JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 
 export interface IconProps {
@@ -36,7 +37,13 @@ const sizeClasses: Record<SizeVariant, string> = {
 const base =
   "inline-flex shrink-0 items-center justify-center text-current text-gray-700 dark:text-gray-300";
 
-export function Icon(props: IconProps) {
+/**
+ * 图标外层容器：统一 `size` 对应的 Tailwind 宽高类、文本色与 flex 居中，并合并 `class` / `className`。
+ *
+ * @param props - `size` 默认 `md`；`children` 一般为内联 SVG 或文字图标
+ * @returns 带 `role="img"` 的 `span` 包装节点（{@link JSXRenderable}）
+ */
+export function Icon(props: IconProps): JSXRenderable {
   const { size = "md", class: classProp, className, children } = props;
   /** class 优先于 className，与业务里混写两种属性时行为确定 */
   const extraClass = classProp ?? className;

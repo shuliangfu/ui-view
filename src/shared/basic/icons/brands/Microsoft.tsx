@@ -2,6 +2,7 @@
  * Microsoft 微软品牌 Logo，24×24，四格。
  */
 import { Icon } from "../../Icon.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { IconComponentProps } from "../../Icon.tsx";
 
 const svg = (
@@ -14,6 +15,6 @@ const svg = (
 );
 
 /** 微软品牌 Logo 图标 */
-export function IconBrandMicrosoft(props?: IconComponentProps) {
+export function IconBrandMicrosoft(props?: IconComponentProps): JSXRenderable {
   return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

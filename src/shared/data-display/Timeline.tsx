@@ -4,6 +4,7 @@
  */
 
 import { twMerge } from "tailwind-merge";
+import type { JSXRenderable } from "@dreamer/view";
 import type { ColorVariant } from "../types.ts";
 
 export interface TimelineItemProps {
@@ -45,7 +46,7 @@ const colorClasses: Record<ColorVariant | "gray", string> = {
   gray: "bg-slate-300 dark:bg-slate-600",
 };
 
-export function Timeline(props: TimelineProps) {
+export function Timeline(props: TimelineProps): JSXRenderable {
   const {
     items,
     mode = "left",

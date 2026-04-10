@@ -1,5 +1,9 @@
 /**
- * 移动端反馈入口：本目录各 `.ts`/`.tsx` 显式导出（Toast/Message 等为薄 re-export，BottomSheet 等为移动实现）。
+ * @module @dreamer/ui-view/mobile/feedback
+ * @description
+ * **JSR**：`import … from "@dreamer/ui-view/mobile/feedback"`。移动端**反馈**：Toast/Message/Notification 容器与命令式 API（薄 re-export）；**BottomSheet**、**ActionSheet**、**PullRefresh**、**SwipeCell** 等移动交互实现。
+ *
+ * @see {@link ./BottomSheet.tsx} 底部抽屉
  */
 export { ToastContainer } from "./Toast.tsx";
 export { toast } from "./toast-store.ts";

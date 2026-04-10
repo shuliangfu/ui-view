@@ -2,6 +2,7 @@
  * 支付宝 Alipay 品牌 Logo，24×24，来源 Simple Icons，品牌蓝 #1677FF。
  */
 import { Icon } from "../../Icon.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { IconComponentProps } from "../../Icon.tsx";
 
 const svg = (
@@ -14,6 +15,6 @@ const svg = (
 );
 
 /** 支付宝品牌 Logo 图标 */
-export function IconBrandAlipay(props?: IconComponentProps) {
+export function IconBrandAlipay(props?: IconComponentProps): JSXRenderable {
   return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

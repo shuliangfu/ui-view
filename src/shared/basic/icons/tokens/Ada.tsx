@@ -2,6 +2,7 @@
  * Cardano (ADA) 代币 Logo，24×24，来源 @web3icons/core (MIT)。
  */
 import { Icon } from "../../Icon.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { IconComponentProps } from "../../Icon.tsx";
 
 const svg = (
@@ -13,6 +14,6 @@ const svg = (
   </svg>
 );
 
-export function IconTokenAda(props?: IconComponentProps) {
+export function IconTokenAda(props?: IconComponentProps): JSXRenderable {
   return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

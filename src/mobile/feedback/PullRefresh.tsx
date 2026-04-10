@@ -5,6 +5,7 @@
  */
 
 import { createMemo } from "@dreamer/view";
+import type { JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import {
   type ControlledOpenInput,
@@ -54,7 +55,7 @@ const DEFAULT_PULLING = "下拉即可刷新…";
 const DEFAULT_LOOSING = "释放即可刷新…";
 const DEFAULT_LOADING = "加载中…";
 
-export function PullRefresh(props: PullRefreshProps) {
+export function PullRefresh(props: PullRefreshProps): JSXRenderable {
   const {
     onRefresh,
     pullingText = DEFAULT_PULLING,

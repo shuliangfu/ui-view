@@ -4,6 +4,7 @@
  */
 
 import { twMerge } from "tailwind-merge";
+import type { JSXRenderable } from "@dreamer/view";
 
 export interface StatisticProps {
   /** 标题 */
@@ -62,7 +63,7 @@ function statisticResolvedTrend(
   return value < 0 ? "down" : "up";
 }
 
-export function Statistic(props: StatisticProps) {
+export function Statistic(props: StatisticProps): JSXRenderable {
   const {
     title,
     value,

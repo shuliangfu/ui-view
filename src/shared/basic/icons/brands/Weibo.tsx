@@ -3,6 +3,7 @@
  * Path 来自 Simple Icons (sinaweibo)，CC0-1.0，品牌红 #E6162D。
  */
 import { Icon } from "../../Icon.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { IconComponentProps } from "../../Icon.tsx";
 
 const svg = (
@@ -15,6 +16,6 @@ const svg = (
 );
 
 /** 微博品牌 Logo 图标 */
-export function IconBrandWeibo(props?: IconComponentProps) {
+export function IconBrandWeibo(props?: IconComponentProps): JSXRenderable {
   return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

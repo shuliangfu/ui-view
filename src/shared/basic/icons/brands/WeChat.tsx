@@ -3,6 +3,7 @@
  * Path 来自 Simple Icons (https://simpleicons.org)，CC0-1.0，品牌绿 #07C160。
  */
 import { Icon } from "../../Icon.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { IconComponentProps } from "../../Icon.tsx";
 
 const svg = (
@@ -15,6 +16,6 @@ const svg = (
 );
 
 /** 微信品牌 Logo 图标 */
-export function IconBrandWechat(props?: IconComponentProps) {
+export function IconBrandWechat(props?: IconComponentProps): JSXRenderable {
   return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

@@ -3,6 +3,7 @@
  * Path 来自 Wikimedia Commons (Adobe Illustrator CC icon.svg)，橙 #FF9A00。
  */
 import { Icon } from "../../Icon.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { IconComponentProps } from "../../Icon.tsx";
 
 const svg = (
@@ -21,6 +22,8 @@ const svg = (
 );
 
 /** Adobe Illustrator 品牌 Logo 图标 */
-export function IconBrandIllustrator(props?: IconComponentProps) {
+export function IconBrandIllustrator(
+  props?: IconComponentProps,
+): JSXRenderable {
   return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

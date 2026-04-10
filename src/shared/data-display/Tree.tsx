@@ -6,6 +6,7 @@
  */
 
 import { createEffect, untrack } from "@dreamer/view";
+import type { JSXRenderable } from "@dreamer/view";
 import { createSignal } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 /** 按需：单文件图标，避免经 icons/mod 拉入全表 */
@@ -172,7 +173,7 @@ function asGetter(
   return () => (value ?? fallback);
 }
 
-export function Tree(props: TreeProps) {
+export function Tree(props: TreeProps): JSXRenderable {
   const {
     treeData,
     expandedKeys: controlledExpanded,

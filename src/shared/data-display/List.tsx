@@ -5,6 +5,7 @@
  */
 
 import { twMerge } from "tailwind-merge";
+import type { JSXRenderable } from "@dreamer/view";
 import type { SizeVariant } from "../types.ts";
 
 export interface ListItemProps {
@@ -140,7 +141,7 @@ function listItemRowKey(item: unknown, index: number): string {
   return `__list-row-${index}`;
 }
 
-export function List(props: ListProps) {
+export function List(props: ListProps): JSXRenderable {
   const {
     items = [],
     renderItem,

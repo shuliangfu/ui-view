@@ -7,6 +7,7 @@
  */
 
 import { twMerge } from "tailwind-merge";
+import type { JSXRenderable } from "@dreamer/view";
 
 export type TooltipPlacement =
   | "top"
@@ -82,7 +83,7 @@ const placementClasses: Record<TooltipPlacement, string> = {
  * @param props - {@link TooltipProps}
  * @returns 包装器与气泡节点
  */
-export function Tooltip(props: TooltipProps) {
+export function Tooltip(props: TooltipProps): JSXRenderable {
   const {
     content,
     placement = "top",

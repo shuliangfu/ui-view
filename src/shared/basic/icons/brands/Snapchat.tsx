@@ -2,6 +2,7 @@
  * Snapchat 品牌 Logo，24×24，品牌黄 #FFFC00。
  */
 import { Icon } from "../../Icon.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { IconComponentProps } from "../../Icon.tsx";
 
 const svg = (
@@ -14,6 +15,6 @@ const svg = (
 );
 
 /** Snapchat 品牌 Logo 图标 */
-export function IconBrandSnapchat(props?: IconComponentProps) {
+export function IconBrandSnapchat(props?: IconComponentProps): JSXRenderable {
   return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

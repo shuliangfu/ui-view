@@ -2,6 +2,7 @@
  * 闪光/稀有/NFT 图标，24×24 stroke，用于精选/特效。
  */
 import { Icon } from "../Icon.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { IconComponentProps } from "../Icon.tsx";
 
 const svg = (
@@ -21,6 +22,6 @@ const svg = (
   </svg>
 );
 
-export function IconSparkles(props?: IconComponentProps) {
+export function IconSparkles(props?: IconComponentProps): JSXRenderable {
   return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

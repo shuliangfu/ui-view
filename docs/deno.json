@@ -13,7 +13,6 @@
     "@dreamer/runtime-adapter": "jsr:@dreamer/runtime-adapter@^1.0.18",
     "@dreamer/plugins": "jsr:@dreamer/plugins@^1.0.9",
     "@dreamer/theme": "jsr:@dreamer/theme@^1.0.1",
-
     "@dreamer/view": "jsr:@dreamer/view@^2.0.1",
 
     "@dreamer/ui-view": "../src/mod.ts",
@@ -43,9 +42,6 @@
   },
   "compilerOptions": {
     "jsx": "react-jsx",
-    "jsxImportSource": "@dreamer/view",
-    "types": [
-      "jsx.d.ts"
-    ]
+    "jsxImportSource": "@dreamer/view"
   }
 }

@@ -4,6 +4,7 @@
  */
 
 import { twMerge } from "tailwind-merge";
+import type { JSXRenderable } from "@dreamer/view";
 /** 按需：单文件图标，避免经 icons/mod 拉入全表 */
 import { IconChevronLeft } from "../../shared/basic/icons/ChevronLeft.tsx";
 
@@ -43,7 +44,7 @@ export interface NavBarProps {
   class?: string;
 }
 
-export function NavBar(props: NavBarProps) {
+export function NavBar(props: NavBarProps): JSXRenderable {
   const {
     title,
     leftText,

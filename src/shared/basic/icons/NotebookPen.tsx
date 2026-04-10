@@ -2,6 +2,7 @@
  * 笔记本/笔记图标，24×24 stroke，用于学习/记录。
  */
 import { Icon } from "../Icon.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { IconComponentProps } from "../Icon.tsx";
 
 const svg = (
@@ -22,6 +23,6 @@ const svg = (
   </svg>
 );
 
-export function IconNotebookPen(props?: IconComponentProps) {
+export function IconNotebookPen(props?: IconComponentProps): JSXRenderable {
   return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

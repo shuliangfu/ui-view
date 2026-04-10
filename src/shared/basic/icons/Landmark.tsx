@@ -2,6 +2,7 @@
  * 银行/地标建筑图标，24×24 stroke，用于金融/机构。
  */
 import { Icon } from "../Icon.tsx";
+import type { JSXRenderable } from "@dreamer/view";
 import type { IconComponentProps } from "../Icon.tsx";
 
 const svg = (
@@ -23,6 +24,6 @@ const svg = (
   </svg>
 );
 
-export function IconLandmark(props?: IconComponentProps) {
+export function IconLandmark(props?: IconComponentProps): JSXRenderable {
   return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

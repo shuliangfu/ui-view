@@ -5,6 +5,7 @@
  */
 
 import { isSignal, type Signal } from "@dreamer/view";
+import type { JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import type { MaybeSignal } from "./maybe-signal.ts";
 import { Checkbox } from "./Checkbox.tsx";
@@ -39,7 +40,7 @@ export interface CheckboxGroupProps {
   class?: string;
 }
 
-export function CheckboxGroup(props: CheckboxGroupProps) {
+export function CheckboxGroup(props: CheckboxGroupProps): JSXRenderable {
   const {
     options,
     name,

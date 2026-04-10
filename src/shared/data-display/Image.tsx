@@ -4,6 +4,7 @@
  */
 
 import { twMerge } from "tailwind-merge";
+import type { JSXRenderable } from "@dreamer/view";
 import { createEffect, onCleanup } from "@dreamer/view";
 import { createSignal } from "@dreamer/view";
 
@@ -62,7 +63,7 @@ const objectFitClasses: Record<NonNullable<ImageProps["fit"]>, string> = {
  * 加载失败时使用的内置占位图（SVG data URI，无网络请求）：**山水剪影 + 纵向撕裂缝**（灰青色系，无红色）。
  * 未传 `fallbackSrc` 或空串时用本图；非空 `fallbackSrc` 由业务覆盖。
  */
-export const IMAGE_BUILTIN_FALLBACK_SRC = "data:image/svg+xml," +
+export const IMAGE_BUILTIN_FALLBACK_SRC: string = "data:image/svg+xml," +
   encodeURIComponent(
     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80">' +
       '<rect x="7" y="9" width="66" height="62" rx="8" fill="rgba(148,163,184,0.2)" stroke="#64748b" stroke-width="2.2"/>' +
@@ -75,7 +76,7 @@ export const IMAGE_BUILTIN_FALLBACK_SRC = "data:image/svg+xml," +
       "</svg>",
   );
 
-export function Image(props: ImageProps) {
+export function Image(props: ImageProps): JSXRenderable {
   const {
     key: keyProp,
     src,

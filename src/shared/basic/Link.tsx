@@ -6,6 +6,7 @@
  */
 
 import { twMerge } from "tailwind-merge";
+import type { JSXRenderable } from "@dreamer/view";
 import type { ColorVariant, SizeVariant } from "../types.ts";
 import {
   BUTTON_SIZE_CLASSES,
@@ -59,7 +60,7 @@ const textLinkColorClasses =
 const anchorDisabledClasses =
   "opacity-40 grayscale pointer-events-none cursor-not-allowed";
 
-export function Link(props: LinkProps) {
+export function Link(props: LinkProps): JSXRenderable {
   const {
     href,
     class: classProp,
