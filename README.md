@@ -59,12 +59,12 @@ CSS file, and you `@import` that file in your main Tailwind entry. Single build,
 
 ```ts
 import { App } from "@dreamer/dweb";
-import { uiViewTailwindContentPlugin } from "@dreamer/ui-view/plugin";
+import { uiViewTailwindPlugin } from "@dreamer/ui-view/plugin";
 import { tailwindPlugin } from "@dreamer/plugins/tailwindcss";
 
 const app = new App();
 
-app.registerPlugin(uiViewTailwindContentPlugin({
+app.registerPlugin(uiViewTailwindPlugin({
   outputPath: "src/assets/ui-view-sources.css", // output file path
   scanPath: "src", // directory to scan
   // packageRoot optional; defaults to plugin package root (e.g. node_modules/@dreamer/ui-view)

@@ -57,12 +57,12 @@ Button，最终 CSS 也会很大。
 
 ```ts
 import { App } from "@dreamer/dweb";
-import { uiViewTailwindContentPlugin } from "@dreamer/ui-view/plugin";
+import { uiViewTailwindPlugin } from "@dreamer/ui-view/plugin";
 import { tailwindPlugin } from "@dreamer/plugins/tailwindcss";
 
 const app = new App();
 
-app.registerPlugin(uiViewTailwindContentPlugin({
+app.registerPlugin(uiViewTailwindPlugin({
   outputPath: "src/assets/ui-view-sources.css", // 生成的文件路径
   scanPath: "src", // 要扫描的源码目录
   // packageRoot 可选，不传则用插件所在包根（如 node_modules/@dreamer/ui-view）
