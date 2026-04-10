@@ -28,10 +28,6 @@ jobs:
       - name: Cache dependencies
         run: deno cache src/mod.ts tests/
 
-      # 预拉并预热：deno cache 只缓存 CLI 入口，npm:tailwindcss 由 esbuild 在 build 时解析，故直接跑一次 build 预热
-      - name: Warm examples build cache
-        run: cd examples && deno run -A ../src/cli.ts build
-
       - name: Install Playwright Chromium
         run: npx -y playwright@latest install chromium
 
@@ -58,9 +54,6 @@ jobs:
 
       - name: Cache dependencies
         run: deno cache src/mod.ts tests/
-
-      - name: Warm examples build cache
-        run: cd examples && deno run -A ../src/cli.ts build
 
       - name: Install Playwright Chromium
         run: npx -y playwright@latest install chromium
@@ -89,9 +82,6 @@ jobs:
 
       - name: Cache dependencies
         run: deno cache src/mod.ts tests/
-
-      - name: Warm examples build cache
-        run: cd examples && deno run -A ../src/cli.ts build
 
       - name: Install Playwright Chromium
         run: npx -y playwright@latest install chromium
