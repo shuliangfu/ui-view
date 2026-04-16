@@ -4,6 +4,7 @@
  */
 
 import { CodeBlock, Image, Paragraph, Title } from "@dreamer/ui-view";
+import { createMemo } from "@dreamer/view";
 
 /** API 属性行类型 */
 interface ApiRow {
@@ -100,13 +101,39 @@ const exampleFallbackLazy = `<Image
 <Image
   src="..."
   alt="lazy"
-  width={100}
-  height={100}
+  width={120}
+  height={120}
   lazy
   rounded="lg"
 />`;
 
+/** 宽扁 / 高窄容器下内置失败占位（object-contain）演示，供 CodeBlock 展示 */
+const exampleErrorWideAndTall = `<Image
+  src="https://invalid-url-404"
+  alt="失败占位 · 横向"
+  width={320}
+  height={100}
+/>
+<Image
+  src="https://invalid-url-404"
+  alt="失败占位 · 纵向"
+  width={100}
+  height={280}
+/>`;
+
 export default function DataDisplayImage() {
+  /**
+   * 与 ui-preact 文档对齐：picsum 带 `random`，整页刷新换图；
+   * {@link createMemo} 内不读其它 signal 时只计算一次，避免 render 反复改 src。
+   */
+  const picsumSrcs = createMemo(() => {
+    const t = Date.now();
+    return {
+      demoSrc: `https://picsum.photos/200/150?random=${t}`,
+      lazySrc: `https://picsum.photos/120/120?random=${t}-lazy`,
+    };
+  });
+
   return (
     <div class="space-y-10">
       <section>
@@ -114,7 +141,8 @@ export default function DataDisplayImage() {
         <Paragraph class="mt-2">
           图片：src、alt、width、height、fit、placeholder、fallback（兼容）、fallbackSrc、lazy、preview、previewDisabled、rounded。
           加载失败时主图换成内置灰调山水占位（无网络、无「加载失败」条）；非空
-          fallbackSrc 可覆盖。使用 Tailwind v4，支持 light/dark 主题。
+          fallbackSrc 可覆盖。使用 Tailwind v4，支持 light/dark
+          主题。下方在线示例使用 picsum.photos，需本机可访问该外网服务。
         </Paragraph>
       </section>
 
@@ -136,7 +164,7 @@ export default function DataDisplayImage() {
           <Title level={3}>基础 + fit + preview + rounded</Title>
           <div class="flex gap-4 flex-wrap">
             <Image
-              src="https://picsum.photos/200/150"
+              src={picsumSrcs().demoSrc}
               alt="示例图"
               width={200}
               height={150}
@@ -157,6 +185,7 @@ export default function DataDisplayImage() {
 
         <div class="space-y-4">
           <Title level={3}>fallback / lazy</Title>
+          {/* 两图统一 120×120，避免原先 120 与 100 并排造成一高一低 */}
           <div class="flex gap-4 flex-wrap">
             <Image
               src="https://invalid-url-404"
@@ -165,10 +194,10 @@ export default function DataDisplayImage() {
               height={120}
             />
             <Image
-              src="https://picsum.photos/100/100"
+              src={picsumSrcs().lazySrc}
               alt="lazy"
-              width={100}
-              height={100}
+              width={120}
+              height={120}
               lazy
               rounded="lg"
             />
@@ -176,6 +205,47 @@ export default function DataDisplayImage() {
           <CodeBlock
             title="代码示例"
             code={exampleFallbackLazy}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+        </div>
+
+        <div class="space-y-4">
+          <Title level={3}>失败占位 · 宽扁 / 高窄（分两行）</Title>
+          <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+            无效 src 触发内置 SVG；失败态为{" "}
+            <code class="text-xs">object-contain</code>
+            ，宽高比不变，非正方形容器内会上下或左右留白。
+          </Paragraph>
+          <div class="space-y-6">
+            <div class="space-y-2">
+              <Paragraph class="text-xs font-medium text-slate-500 dark:text-slate-400">
+                横向容器 320×100
+              </Paragraph>
+              <Image
+                src="https://invalid-url-404"
+                alt="失败占位 · 横向"
+                width={320}
+                height={100}
+              />
+            </div>
+            <div class="space-y-2">
+              <Paragraph class="text-xs font-medium text-slate-500 dark:text-slate-400">
+                纵向容器 100×280
+              </Paragraph>
+              <Image
+                src="https://invalid-url-404"
+                alt="失败占位 · 纵向"
+                width={100}
+                height={280}
+              />
+            </div>
+          </div>
+          <CodeBlock
+            title="代码示例"
+            code={exampleErrorWideAndTall}
             language="tsx"
             showLineNumbers
             copyable

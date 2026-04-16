@@ -4,8 +4,9 @@
  * 适用于设置项、轻量数据行、带头尾的清单等；超长列表请业务侧做虚拟滚动或分页。
  */
 
-import { twMerge } from "tailwind-merge";
+import { createMemo, For } from "@dreamer/view";
 import type { JSXRenderable } from "@dreamer/view";
+import { twMerge } from "tailwind-merge";
 import type { SizeVariant } from "../types.ts";
 
 export interface ListItemProps {
@@ -24,8 +25,12 @@ export interface ListItemProps {
 }
 
 export interface ListProps {
-  /** 列表项数据（每项渲染为一项，可配合 renderItem 自定义） */
-  items?: ListItemProps[] | unknown[];
+  /**
+   * 列表项数据（每项渲染为一项，可配合 renderItem 自定义）。
+   * 在 View 下父级若写 `items={makeList()}` 可能只在首帧求值；推荐 `items={() => makeList()}`
+   * 或由本组件通过 `createMemo` 解包零参访问器以订阅内层 signal。
+   */
+  items?: ListItemProps[] | unknown[] | (() => ListItemProps[] | unknown[]);
   /** 自定义每项渲染；不传则用 items[].children + thumb + extra */
   renderItem?: (item: unknown, index: number) => unknown;
   /** 列表头部 */
@@ -128,22 +133,20 @@ function buildListGridContainerClass(
 }
 
 /**
- * 列表行稳定 key：优先 `item.key`，否则回退索引前缀，减轻重排抖动。
+ * 供 {@link For} 的 `key` 使用：有 `item.key` 则返回之；否则返回 `undefined`，由运行时 `stableRowKeys` 按行下标生成稳定键。
  *
- * @param item - 原始项
- * @param index - 下标
+ * @param item - 列表行数据
  */
-function listItemRowKey(item: unknown, index: number): string {
+function listItemKeyForFor(item: unknown): unknown {
   const it = item as ListItemProps;
   if (it.key != null && String(it.key) !== "") {
-    return String(it.key);
+    return it.key;
   }
-  return `__list-row-${index}`;
+  return undefined;
 }
 
 export function List(props: ListProps): JSXRenderable {
   const {
-    items = [],
     renderItem,
     header,
     footer,
@@ -157,7 +160,22 @@ export function List(props: ListProps): JSXRenderable {
     itemClass,
   } = props;
 
-  const listItems = Array.isArray(items) ? items : [];
+  /**
+   * 在 memo 内读 `props.items` 并支持零参访问器，使父级 `createMemo` / signal 变化时能重算行数据。
+   * 避免在组件顶层解构 `items` 后只做 `Array.isArray` 一次——否则会定格首帧数组，出现分页「闪一下又变回前几项」。
+   */
+  const listItems = createMemo((): unknown[] => {
+    const raw = props.items;
+    if (raw == null) return [];
+    if (typeof raw === "function") {
+      const fn = raw as () => unknown;
+      if (fn.length !== 0) return [];
+      const out = fn();
+      return Array.isArray(out) ? out : [];
+    }
+    return Array.isArray(raw) ? raw : [];
+  });
+
   const paddingCls = sizeClasses[size];
 
   const renderOne = (item: unknown, index: number): unknown => {
@@ -193,7 +211,14 @@ export function List(props: ListProps): JSXRenderable {
     );
   };
 
-  const bodyClass = grid ? buildListGridContainerClass(grid) : "flex flex-col";
+  /**
+   * 列表体容器 class；`[&_[data-view-for-keyed]]:contents` 使键控 `For` 的外层 `span` 不参与 flex/grid 布局，
+   * 行节点仍作为本容器的直接子项参与排版（与原先 `.map` 直接子 `div` 一致）。
+   */
+  const bodyClass = twMerge(
+    grid ? buildListGridContainerClass(grid) : "flex flex-col",
+    "[&_[data-view-for-keyed]]:contents",
+  );
 
   return (
     <div
@@ -210,23 +235,29 @@ export function List(props: ListProps): JSXRenderable {
         </div>
       )}
       <div class={bodyClass}>
-        {listItems.map((item, i) => (
-          <div
-            key={listItemRowKey(item, i)}
-            class={split && !grid
-              ? "border-b border-slate-100 dark:border-slate-700 last:border-b-0"
-              : ""}
-          >
-            {renderOne(item, i)}
-          </div>
-        ))}
+        {/* 键控 For 增量更新行；勿用 listItems().map 插入数组——会整段清空重建并常把外层 scrollTop 置 0 */}
+        <For each={listItems} key={listItemKeyForFor}>
+          {(item, index) => (
+            <div
+              class={split && !grid
+                ? "border-b border-slate-100 dark:border-slate-700 last:border-b-0"
+                : ""}
+            >
+              {renderOne(item, index())}
+            </div>
+          )}
+        </For>
       </div>
       {loading && (
         <div class="px-4 py-3 text-center text-sm text-slate-500 dark:text-slate-400">
           加载中…
         </div>
       )}
-      {loadMore != null && <div class="px-4 py-3">{loadMore}</div>}
+      {loadMore != null && (
+        <div class="shrink-0 border-t border-slate-100 px-4 py-3 dark:border-slate-700">
+          {loadMore}
+        </div>
+      )}
       {footer != null && (
         <div class="px-4 py-2 border-t border-slate-200 dark:border-slate-600 text-sm text-slate-500 dark:text-slate-400">
           {footer}

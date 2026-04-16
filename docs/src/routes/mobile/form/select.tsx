@@ -101,7 +101,7 @@ const mobileSelectBasicVal = createSignal("");
 const mobileSelectControlledVal = createSignal("a");
 
 export default function MobileSelectDoc() {
-  return () => (
+  return (
     <div class="w-full max-w-3xl space-y-10">
       <section>
         <Title level={1}>Select 单选（移动）</Title>

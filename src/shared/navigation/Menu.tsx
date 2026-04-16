@@ -2,6 +2,7 @@
  * Menu 菜单列表（View）。
  * 桌面多级、移动可单层/折叠；选中态由内部 **`Signal`**（`createSignal`）维护，支持 onClick、vertical/horizontal、
  * 水平子菜单弹出层（usePopoverSubmenu）、键盘上下键导航（focusedKey/onFocusChange）。
+ * 展开子树时清除兄弟项选中、带子项触发器高亮与 ui-preact 的 Menu 行为一致。
  */
 
 import type { JSXRenderable } from "@dreamer/view";
@@ -55,6 +56,50 @@ function getOrderedKeys(items: MenuItem[], openKeys: Set<string>): string[] {
   }
   walk(items);
   return out;
+}
+
+/**
+ * 在菜单树中按 key 查找节点。
+ *
+ * @param list - 当前层 items
+ * @param key - 目标 key
+ */
+function findMenuItemByKey(
+  list: MenuItem[],
+  key: string,
+): MenuItem | undefined {
+  for (const n of list) {
+    if (n.key === key) return n;
+    if (n.children?.length) {
+      const inner = findMenuItemByKey(n.children, key);
+      if (inner != null) return inner;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * 收集节点及其所有后代 key（含自身）。
+ *
+ * @param root - 子树根
+ * @param out - 写入集合
+ */
+function collectMenuSubtreeKeys(root: MenuItem, out: Set<string>): void {
+  out.add(root.key);
+  if (root.children == null) return;
+  for (const c of root.children) collectMenuSubtreeKeys(c, out);
+}
+
+/**
+ * 选中集合是否命中该节点或其任一后代（带子菜单的触发器高亮，垂直/水平一致）。
+ */
+function menuSubtreeContainsSelectedKey(
+  node: MenuItem,
+  selected: Set<string>,
+): boolean {
+  if (selected.has(node.key)) return true;
+  if (node.children == null) return false;
+  return node.children.some((c) => menuSubtreeContainsSelectedKey(c, selected));
 }
 
 /**
@@ -131,6 +176,9 @@ function renderItem(
   const isOpen = hasChildren && openKeys.has(item.key);
   const isSelected = selectedKeys.has(item.key);
   const isHorizontalPopover = mode === "horizontal" && usePopoverSubmenu;
+  /** 带子项的触发器：展开中或子树内有选中项时高亮（垂直内联与水平 popover 一致） */
+  const submenuTriggerActive =
+    menuSubtreeContainsSelectedKey(item, selectedKeys) || isOpen;
 
   const toggleOpen = (e: Event) => {
     e.preventDefault();
@@ -178,6 +226,8 @@ function renderItem(
             ? "flex items-center gap-1 px-3 py-2"
             : "w-full flex items-center justify-between gap-2 px-3 py-2 text-left",
           "text-sm rounded-md text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700",
+          submenuTriggerActive &&
+            "bg-blue-50 dark:bg-blue-800/50 text-blue-600 dark:text-blue-300 font-medium",
           item.disabled && "opacity-50 cursor-not-allowed",
         )}
         disabled={item.disabled}
@@ -297,10 +347,28 @@ export function Menu(props: MenuProps): JSXRenderable {
    */
   const handleOpenChange = (key: string) => {
     const openVal = readOpenKeysArray();
+    const prevOpen = new Set(openVal);
     const next = new Set(openVal);
-    if (next.has(key)) next.delete(key);
+    const wasOpen = prevOpen.has(key);
+    if (wasOpen) next.delete(key);
     else next.add(key);
     const nextArr = Array.from(next) as string[];
+
+    /**
+     * 刚展开某子树时，去掉落在该子树外的选中 key（垂直/水平、内联或 popover 均适用）：
+     * 先点「选项二」再展开「子菜单」时，兄弟项不应仍显示为当前项。
+     */
+    if (!wasOpen && next.has(key)) {
+      const node = findMenuItemByKey(items, key);
+      if (node?.children?.length) {
+        const branch = new Set<string>();
+        collectMenuSubtreeKeys(node, branch);
+        selectedKeysRef.value = selectedKeysRef.value.filter((k) =>
+          branch.has(k)
+        );
+      }
+    }
+
     if (usePopoverSubmenu) {
       if (props.openKeys === undefined) popoverOpenKeysRef.value = nextArr;
     } else if (props.openKeys === undefined) {

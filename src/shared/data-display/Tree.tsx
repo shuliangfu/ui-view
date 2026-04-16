@@ -239,32 +239,63 @@ export function Tree(props: TreeProps): JSXRenderable {
     const cur = new Set(getCheckedKeys());
     if (cur.has(key)) cur.delete(key);
     else cur.add(key);
-    onCheck?.(Array.from(cur));
+    const next = Array.from(cur);
+    const nextSet = new Set(next);
+    onCheck?.(next);
+    /** 与 ui-preact 一致：用本次 `next` 立刻写 `input.checked`，避免受控源下一拍才更新时视觉上慢一拍 */
+    const root = rootElRef.value;
+    if (root && typeof root.querySelectorAll === "function") {
+      root.querySelectorAll<HTMLInputElement>("input[data-tree-check-key]")
+        .forEach((input) => {
+          const k = input.getAttribute("data-tree-check-key");
+          if (k) input.checked = nextSet.has(k);
+        });
+    }
   };
 
   const handleTreeClick = (e: Event) => {
     const me = e as MouseEvent;
     const root = rootElRef.value;
-    if (!root || !root.contains(me.target as Node)) return;
-    const clientX = me.clientX;
-    const clientY = me.clientY;
-    if (typeof clientX !== "number" || typeof clientY !== "number") return;
-    const doc = globalThis.document;
-    const elementsAtPoint = doc?.elementsFromPoint?.(clientX, clientY) ?? [];
+    const path = me.composedPath?.() ?? [];
+    const primary = (path[0] ?? me.target) as Node | null;
+    if (!root || !primary || !root.contains(primary)) return;
+
+    const hit = primary;
     let row: Element | null = null;
-    for (const el of elementsAtPoint) {
-      if (!root.contains(el)) break;
-      const r = (el as HTMLElement).closest?.("[data-tree-node-key]");
-      if (r && root.contains(r)) row = r;
+    let raw: HTMLElement | null = null;
+
+    /** 勾选框必须以 target 行为准；`elementsFromPoint` 射线若不断覆盖 `row` 会得到更深层的父行，误判为「勾到上一个」 */
+    if (
+      hit instanceof globalThis.HTMLInputElement &&
+      hit.getAttribute("data-tree-check-key") != null &&
+      root.contains(hit)
+    ) {
+      row = hit.closest("[data-tree-node-key]");
+      raw = hit;
+    } else {
+      const clientX = me.clientX;
+      const clientY = me.clientY;
+      if (typeof clientX !== "number" || typeof clientY !== "number") return;
+      const doc = globalThis.document;
+      const elementsAtPoint = doc?.elementsFromPoint?.(clientX, clientY) ?? [];
+      for (const el of elementsAtPoint) {
+        if (!root.contains(el)) break;
+        const r = (el as HTMLElement).closest?.("[data-tree-node-key]");
+        if (r && root.contains(r)) {
+          row = r;
+          break;
+        }
+      }
+      const topEl = (elementsAtPoint[0] as HTMLElement) ?? (row as HTMLElement);
+      raw = topEl?.nodeType === 3
+        ? (topEl as unknown as Text).parentElement
+        : topEl;
     }
+
     const key = row?.getAttribute("data-tree-node-key");
     if (!key || !row) return;
     const node = getNodeByKey(treeData, key);
     if (!node || (node.disabled ?? false)) return;
-    const topEl = (elementsAtPoint[0] as HTMLElement) ?? row;
-    const raw = topEl?.nodeType === 3
-      ? (topEl as unknown as Text).parentElement
-      : topEl;
     if (!raw?.closest) return;
     if (row.contains(raw) && raw.closest("button[data-tree-expand-key]")) {
       const isLeaf = node.isLeaf ??

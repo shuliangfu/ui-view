@@ -1,7 +1,7 @@
 /**
  * Table 表格（View）。
  * 桌面为主，移动可卡片化；支持列定义、排序、固定列、展开行、分页、loading、尺寸、边框、行选择、
- * 列级可编辑（text/number/email/url/tel/date/time/select/checkbox/radio，受控 onCellChange；默认只读展示，双击进入编辑，失焦退出）。
+ * 列级可编辑（text、{@link InputNumber} 数字、email/url/tel/date/time/select/checkbox/radio，受控 onCellChange；默认只读展示，双击进入编辑，失焦退出）。
  * date/time 使用 {@link DatePicker}、{@link TimePicker}（自研浮层 + 确定），非浏览器原生控件。
  *
  * **数据源与 View 函数槽 patch：** 首轮挂载后父级 VNode patch 只会 merge 同一 `liveProps` 对象并 bump 子树，
@@ -14,6 +14,7 @@ import { createEffect, createSignal, type Signal } from "@dreamer/view";
 import type { JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import { DatePicker } from "../form/DatePicker.tsx";
+import { InputNumber } from "../form/InputNumber.tsx";
 import { TimePicker } from "../form/TimePicker.tsx";
 /** 按需：单文件图标，避免经 icons/mod 拉入全表 */
 import { IconChevronDown } from "../../shared/basic/icons/ChevronDown.tsx";
@@ -215,6 +216,9 @@ const TABLE_EDIT_DOM_SNAP_MAX_WAIT_STEPS = 32;
  * 可编辑格内嵌 DatePicker / TimePicker / DateTimePicker 且 `panelAttach="viewport"` 时，
  * 浮层为视口 `fixed` 仍为 host 子树；但从触发器点到面板内按钮的瞬间，`document.activeElement` 可能短暂为 `body` 等，
  * tryBlurExit 会误判「已失焦」并清空 `editingCell`。每步 2×rAF 重试，上限作安全阀。
+ *
+ * **注意**：达到上限后若浮层仍挂载（见 tryBlurExit 内对 `pickerRoot` 的兜底），**不得**再清空编辑态——
+ * 月/年宫格等可全程无焦点落在 `role="dialog"` 内，焦点会长期停在 `body`，否则约一秒后会误关面板。
  */
 const TABLE_EDIT_PICKER_FOCUS_SETTLE_MAX_STEPS = 32;
 
@@ -624,32 +628,43 @@ function renderEditableCell<T extends Record<string, unknown>>(
       const str = raw == null || raw === ""
         ? ""
         : String(typeof raw === "number" ? raw : Number(raw));
+      /**
+       * 键盘输入走 `onInput`；{@link InputNumber} 的 +/- 步进只触发 `onChange`（合成事件），须两处都写回受控。
+       */
+      const handleNumberInputOrChange = (e: Event) => {
+        const el = e.target as HTMLInputElement;
+        if (pendingTextSelectionRef) {
+          pendingTextSelectionRef.current = captureTextInputSelection(el);
+        }
+        const v = el.value;
+        if (v === "") emit(null);
+        else {
+          const n = Number(v);
+          emit(Number.isFinite(n) ? n : v);
+        }
+      };
+      /** `InputNumber` 仅支持数值 step；列配置为 `"any"` 时退化为 1 */
+      const stepForInputNumber = ed.step === "any" || ed.step == null
+        ? 1
+        : ed.step;
       return (
         <div
           class="min-h-0 w-full max-w-full overflow-hidden"
           onClick={stop}
         >
-          <input
-            type="number"
-            class={twMerge(editableInputCls, h)}
+          <InputNumber
+            size={size}
+            /** 单元格内关闭外壳激活边框，与 ui-preact Table 可编辑数字列一致 */
+            hideFocusRing
             value={Number.isFinite(Number(str)) ? str : ""}
             placeholder={ed.placeholder}
             min={ed.min}
             max={ed.max}
-            step={ed.step}
+            step={stepForInputNumber}
             disabled={disabled}
-            onInput={(e: Event) => {
-              const el = e.target as HTMLInputElement;
-              if (pendingTextSelectionRef) {
-                pendingTextSelectionRef.current = captureTextInputSelection(el);
-              }
-              const v = el.value;
-              if (v === "") emit(null);
-              else {
-                const n = Number(v);
-                emit(Number.isFinite(n) ? n : v);
-              }
-            }}
+            class={twMerge("w-full min-w-0", h)}
+            onInput={handleNumberInputOrChange}
+            onChange={handleNumberInputOrChange}
             onBlur={(e: Event) => {
               emitCurrentNumberInputBlur(e.target as HTMLInputElement);
             }}
@@ -1762,6 +1777,23 @@ export function Table<
                                                     );
                                                   });
                                                   return;
+                                                }
+                                                /**
+                                                 * 重试耗尽后焦点仍在 document 默认锚点：常见于仅用鼠标操作月/年面板、
+                                                 * 或子控件未实现 `tabindex` 夺焦。只要选择器浮层仍连接且可见，视为仍在编辑，
+                                                 * 勿清空 `editingCell`（否则会卸载格内组件、面板被关掉）。
+                                                 */
+                                                if (
+                                                  pickerRoot.isConnected
+                                                ) {
+                                                  const pr = pickerRoot
+                                                    .getBoundingClientRect();
+                                                  if (
+                                                    pr.width > 0 &&
+                                                    pr.height > 0
+                                                  ) {
+                                                    return;
+                                                  }
                                                 }
                                               }
                                             }

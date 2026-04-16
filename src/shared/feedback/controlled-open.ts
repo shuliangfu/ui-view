@@ -8,6 +8,12 @@ import { isSignal, type Signal } from "@dreamer/view";
 /** 是否打开：快照、`Signal<boolean>`、零参 getter（勿把带参函数当 getter） */
 export type ControlledOpenInput = boolean | (() => boolean) | Signal<boolean>;
 
+/**
+ * 「是否仍有更多」分页标记：与 `ControlledOpenInput` 类似，但未传时语义为「仍有更多」
+ * （与 `open` 类布尔默认 false 不同）。
+ */
+export type HasMoreInput = boolean | (() => boolean) | Signal<boolean>;
+
 /** 字符串受控：快照、`Signal<string>`、零参 getter（用于 TabBar `activeKey` 等） */
 export type ControlledStringInput = string | (() => string) | Signal<string>;
 
@@ -23,6 +29,22 @@ export function readControlledOpenInput(
   if (isSignal(v)) return !!(v as Signal<boolean>).value;
   if (typeof v === "function") {
     if ((v as () => unknown).length !== 0) return false;
+    return !!(v as () => boolean)();
+  }
+  return !!v;
+}
+
+/**
+ * 解析「是否仍有更多」：未传视为 true；`false` / `Signal(false)` 表示无下一页。
+ * 在 `createMemo` 内调用可订阅 `Signal` / getter，避免父级只传一次 `.value` 快照后子树不再更新。
+ *
+ * @param v - 原始 `hasMore` 值
+ */
+export function readHasMoreInput(v: HasMoreInput | undefined): boolean {
+  if (v === undefined) return true;
+  if (isSignal(v)) return !!(v as Signal<boolean>).value;
+  if (typeof v === "function") {
+    if ((v as () => unknown).length !== 0) return true;
     return !!(v as () => boolean)();
   }
   return !!v;

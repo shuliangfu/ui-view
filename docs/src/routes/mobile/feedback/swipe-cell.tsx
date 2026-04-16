@@ -103,6 +103,9 @@ export default function MobileSwipeCellDoc() {
         <Title level={1}>SwipeCell 滑动单元格</Title>
         <Paragraph class="mt-2">
           列表行左右滑动露出操作按钮，适用于消息列表、购物车等；支持左右两侧多按钮与禁用。
+          实现为 Pointer Events，<strong>触摸</strong>与<strong>
+            鼠标左键横向拖
+          </strong>均可；纯纵向滚动仍由外层列表处理。
         </Paragraph>
       </section>
 

@@ -38,7 +38,8 @@ const TOOLTIP_API: ApiRow[] = [
     name: "overlayClass",
     type: "string",
     default: "-",
-    description: "气泡内容区 class",
+    description:
+      "气泡外层（Portal 根节点）class，可传 z-index 等（如全屏编辑器内抬高）",
   },
 ];
 
@@ -75,8 +76,13 @@ export default function FeedbackTooltip() {
       <section>
         <Title level={1}>Tooltip 悬停提示</Title>
         <Paragraph class="mt-2">
-          悬停提示：触发器悬停时显示气泡；支持 placement、箭头。使用 Tailwind
-          v4，支持 light/dark 主题。
+          悬停提示：触发器悬停时显示气泡；支持 placement、箭头。有{" "}
+          <code class="text-xs">document.body</code> 时气泡经{" "}
+          <code class="text-xs">createPortal</code> 挂到 body，
+          <code class="text-xs">fixed</code> 对齐视口，避免父级{" "}
+          <code class="text-xs">overflow</code>{" "}
+          裁切；无 body 时回退为包裹层内绝对定位。使用 Tailwind v4，支持
+          light/dark 主题。
         </Paragraph>
       </section>
 

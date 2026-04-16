@@ -9,6 +9,7 @@
  * `{() => <Carousel …/>}`，否则子列表含动态 getter 时 View 无法 canPatch，轮播根会被整块重挂，切换动画失效。
  *
  * **`effect="slide"`：** 轨道用 `transform: translateX/Y` + 行内 `transition` 平移；切页在 `requestAnimationFrame` 后再提交索引。不用 `scrollTo(smooth)`（易与 patch、snap 冲突，表现为闪切或邻页露边）。
+ * **`infinite` + `slide` + `slidesToShow===1`（≥2 张）：** 轨道首尾各克隆一页，末→首继续同向平移后再无过渡对齐真首帧，避免环形时整轨百分比从「最后一格」跳回「第一格」产生反向滑动感（与 ui-preact 一致）。
  *
  * **`images` + `lazySlides=false`：** 幻灯片内用原生 `<img>`（`loading="eager"`），不用 {@link Image}，避免其 loading 时 `opacity-0` 与卸载清空 `src` 在切页重绘时出现长时间黑块。
  *
@@ -28,6 +29,7 @@ import {
   getDocument,
   type JSXRenderable,
   onCleanup,
+  untrack,
 } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 /** 按需：单文件图标，避免经 icons/mod 拉入全表 */
@@ -471,6 +473,18 @@ function carouselSlidesInfo(p: CarouselProps): {
 }
 
 /**
+ * 计算到「下一 `period` 毫秒墙钟边界」的延时，供自动播链式 `setTimeout` 的下一拍调度（与 ui-preact 一致）。
+ *
+ * @param period - 已含 `Math.max(400, interval, speed+160)` 的周期（毫秒）
+ */
+function carouselAutoplayDelayToWallBoundaryMs(period: number): number {
+  if (!Number.isFinite(period) || period < 1) return 1;
+  const now = Date.now();
+  const nextSlot = Math.floor(now / period) * period + period;
+  return Math.max(1, nextSlot - now);
+}
+
+/**
  * 将原始索引归一化到 `[0, count)`。
  *
  * @param raw - 原始下标
@@ -484,7 +498,26 @@ function carouselNormalizeIndex(raw: number, count: number): number {
 }
 
 /**
- * 解析当前页（受控 getter 或 `internalVal`），供轨道、指示点、层叠垫底 effect 共用，避免多处拷贝不一致。
+ * 层叠垫底与马赛克 `createEffect` 使用的「已提交到轮播内部的页码」：仅对内部页码 signal 归一化。
+ *
+ * **勿在 `createEffect` 内用 {@link carouselResolveCurrentIndex} 取 `cur`：** 受控时会读 `current()`，
+ * 从而追踪外层 store；父级每次写同一索引都会重跑 effect，cleanup 打断马赛克定时器，表现为 arm/finalize 刷屏。
+ * **`go` / autoplay** 的相对位移也应以此函数（已提交 internal）为基准，勿单独用 `carouselResolveCurrentIndex`。
+ *
+ * @param internalVal - 组件内 `createSignal` 保存的当前页（与 commit 写入同步）
+ * @param count - 张数
+ */
+function carouselEffectCommittedSlideIndex(
+  internalVal: number,
+  count: number,
+): number {
+  if (count === 0) return 0;
+  return carouselNormalizeIndex(internalVal, count);
+}
+
+/**
+ * 解析当前页（受控 getter 或 `internalVal`），供轨道、指示点、手势等共用；层叠垫底与马赛克 `createEffect` 请用
+ * {@link carouselEffectCommittedSlideIndex}，避免在 effect 内追踪受控 `current()`。
  *
  * @param p - 轮播 props
  * @param internalVal - 非受控时内部 signal 的 `.value`
@@ -502,6 +535,60 @@ function carouselResolveCurrentIndex(
   const v = typeof p.current === "function" ? p.current() : p.current;
   const num = typeof v === "number" ? v : Number(v);
   return carouselNormalizeIndex(num, count);
+}
+
+/**
+ * 轨道布局、指示点、跟手首尾钳制用的逻辑页下标。
+ *
+ * **层叠（含 mosaic）** 与 **slide 平移轨** 均与 {@link commitCarouselIndex} 写入的 internal 对齐（与 ui-preact 一致），
+ * 避免无限末→首收尾后受控 `current()` 滞后导致轨道反向扫过中间张。
+ *
+ * @param p - 轮播 props
+ * @param internalVal - 内部 signal 当前值
+ * @param count - 张数
+ * @param effectResolved - 当前帧解析后的具体过渡
+ */
+function carouselTrackDisplaySlideIndex(
+  p: CarouselProps,
+  internalVal: number,
+  count: number,
+  effectResolved: CarouselConcreteTransitionEffect,
+): number {
+  if (count === 0) return 0;
+  if (carouselIsStackedEffect(effectResolved)) {
+    return carouselEffectCommittedSlideIndex(internalVal, count);
+  }
+  if (effectResolved === "slide") {
+    return carouselEffectCommittedSlideIndex(internalVal, count);
+  }
+  return carouselResolveCurrentIndex(p, internalVal, count);
+}
+
+/**
+ * 指示点高亮：`mosaic` 播放中 active 真节点透明，主画面为垫底上一张；高亮应与该可见页一致（见 ui-preact 同源注释）。
+ */
+function carouselDotsActiveSlideIndex(
+  p: CarouselProps,
+  internalVal: number,
+  count: number,
+  effectResolved: CarouselConcreteTransitionEffect,
+  mosaicSuppress: boolean,
+  underIdx: number | null,
+): number {
+  if (count === 0) return 0;
+  if (
+    effectResolved === "mosaic" &&
+    mosaicSuppress &&
+    underIdx !== null
+  ) {
+    return carouselEffectCommittedSlideIndex(underIdx, count);
+  }
+  return carouselTrackDisplaySlideIndex(
+    p,
+    internalVal,
+    count,
+    effectResolved,
+  );
 }
 
 export function Carousel(props: CarouselProps): JSXRenderable {
@@ -548,6 +635,26 @@ export function Carousel(props: CarouselProps): JSXRenderable {
   const carouselSwipeDraggingRef = createSignal(false);
 
   /**
+   * `infinite` + 平移 `slide` + `slidesToShow===1`：轨道首尾各克隆一页；视觉索引驱动 transform（0..count+1），
+   * 末张→首张同向滑入尾克隆后再于 RAF 内无过渡对齐真首（与 ui-preact 同源实现）。
+   */
+  const carouselSlideVisualIdxRef = createSignal(1);
+  const carouselSlideWrapLockRef = createSignal(false);
+  const carouselSlideSnapNoTransRef = createSignal(false);
+  const carouselSlideWrapGenRef = { current: 0 };
+  const carouselSlideWrapTimerRef: {
+    current: ReturnType<typeof globalThis.setTimeout> | undefined;
+  } = { current: undefined };
+
+  /**
+   * 自动播放链式 `setTimeout` 的代次：effect 清理时递增，使已排队回调失效（与 ui-preact 行为对齐）。
+   */
+  const autoplayLaneGenRef = { current: 0 };
+  const autoplayNextTimerRef: {
+    current: ReturnType<typeof globalThis.setTimeout> | undefined;
+  } = { current: undefined };
+
+  /**
    * 手动切换时 bump `.value`，让 autoplay 的 effect 重跑并清除旧定时器、重新计时，
    * 避免与 setInterval 叠加导致乱跳。
    */
@@ -562,26 +669,23 @@ export function Carousel(props: CarouselProps): JSXRenderable {
    */
   const commitCarouselIndex = (next: number) => {
     const { count } = carouselSlidesInfo(props);
+    const normalized = count === 0 ? 0 : carouselNormalizeIndex(next, count);
     if (
       count > 0 && (props.effect ?? "slide") === "random"
     ) {
-      const prevCur = carouselResolveCurrentIndex(
-        props,
+      /** 与 `go` 一致：用已提交 internal，避免受控 `current()` 滞后导致 random 抽签误判 */
+      const prevCur = carouselEffectCommittedSlideIndex(
         internalIndexRef.value,
         count,
       );
-      if (
-        carouselNormalizeIndex(prevCur, count) !==
-          carouselNormalizeIndex(next, count)
-      ) {
+      if (carouselNormalizeIndex(prevCur, count) !== normalized) {
         randomEffectPickRef.value = carouselPickRandomConcreteEffect(props);
       }
     }
-    if (props.current === undefined) {
-      internalIndexRef.value = next;
-    }
-    props.onChange?.(next);
-    currentRef.current = next;
+    /** 受控与非受控均写回 internal，与层叠/马赛克及 `go` 的 committed 基准一致（对齐 ui-preact） */
+    props.onChange?.(normalized);
+    internalIndexRef.value = normalized;
+    currentRef.current = normalized;
   };
 
   const scheduleCarouselIndexCommit = (next: number) => {
@@ -596,6 +700,73 @@ export function Carousel(props: CarouselProps): JSXRenderable {
   };
 
   /**
+   * 清除环形平移 wrap 的延时收尾，避免与下一次切页叠用。
+   */
+  const clearCarouselSlideWrapTimer = () => {
+    const t = carouselSlideWrapTimerRef.current;
+    if (t !== undefined) {
+      globalThis.clearTimeout(t);
+      carouselSlideWrapTimerRef.current = undefined;
+    }
+  };
+
+  /**
+   * 中断进行中的 infinite-slide 克隆过渡，把视觉索引拉回与当前逻辑页一致。
+   */
+  const abortInfiniteSlideWrapAnim = () => {
+    clearCarouselSlideWrapTimer();
+    if (!carouselSlideWrapLockRef.value) return;
+    carouselSlideWrapLockRef.value = false;
+    carouselSlideSnapNoTransRef.value = false;
+    const { count: n } = carouselSlidesInfo(props);
+    if (n < 2) {
+      carouselSlideVisualIdxRef.value = 1;
+      return;
+    }
+    /** 与 {@link go} 一致：wrap 中断时须对齐已提交 internal，勿读滞后 `current()` 误设视觉格 */
+    const L = carouselEffectCommittedSlideIndex(
+      internalIndexRef.value,
+      n,
+    );
+    carouselSlideVisualIdxRef.value = L + 1;
+  };
+
+  /**
+   * 尾克隆滑完后：无过渡对齐到真首屏索引 1，并提交逻辑页 0。
+   * `setTimeout` 与绘制帧不同步时，同一宏任务内立刻改 translate 仍可能带 transition 插值；先 RAF 再对齐（与 ui-preact 一致）。
+   */
+  const finishSlideForwardWrap = () => {
+    clearCarouselSlideWrapTimer();
+    globalThis.requestAnimationFrame(() => {
+      carouselSlideSnapNoTransRef.value = true;
+      carouselSlideVisualIdxRef.value = 1;
+      commitCarouselIndex(0);
+      globalThis.requestAnimationFrame(() => {
+        carouselSlideSnapNoTransRef.value = false;
+        carouselSlideWrapLockRef.value = false;
+      });
+    });
+  };
+
+  /**
+   * 首克隆滑完后：无过渡对齐到真末屏，并提交逻辑页 count-1。
+   *
+   * @param count - 真实张数
+   */
+  const finishSlideBackwardWrap = (count: number) => {
+    clearCarouselSlideWrapTimer();
+    globalThis.requestAnimationFrame(() => {
+      carouselSlideSnapNoTransRef.value = true;
+      carouselSlideVisualIdxRef.value = count;
+      commitCarouselIndex(count - 1);
+      globalThis.requestAnimationFrame(() => {
+        carouselSlideSnapNoTransRef.value = false;
+        carouselSlideWrapLockRef.value = false;
+      });
+    });
+  };
+
+  /**
    * 切换页码（供箭头、autoplay、指示点调用）；每次读取最新 `count` / `current`，无需依赖函数子重挂。
    *
    * @param delta - 相对当前页的位移（±1）
@@ -603,15 +774,74 @@ export function Carousel(props: CarouselProps): JSXRenderable {
   const go = (delta: number) => {
     const { count } = carouselSlidesInfo(props);
     if (count === 0) return;
+    /** 箭头 / autoplay 切页时丢弃跟手位移，避免 `calc(% + px)` 与逻辑页错位（受控 `current` 下同理）。 */
+    carouselSwipeDraggingRef.value = false;
+    carouselSwipeDragPxRef.value = 0;
+    /**
+     * 克隆首尾过渡中：仅判断 timer 会漏掉「timer 已空、锁仍在」的窗口；叠用 `go` 会叠 RAF/视觉与下一次切页。
+     */
+    if (
+      carouselSlideWrapTimerRef.current !== undefined ||
+      carouselSlideWrapLockRef.value
+    ) {
+      abortInfiniteSlideWrapAnim();
+    }
     const infinite = props.infinite !== false;
-    const c = carouselResolveCurrentIndex(props, internalIndexRef.value, count);
+    /**
+     * 相对位移的「当前页」以已向内部提交的 {@link internalIndexRef} 为准，避免受控 `current()` 与 internal 短暂错位。
+     */
+    const c = carouselEffectCommittedSlideIndex(
+      internalIndexRef.value,
+      count,
+    );
     let next = c + delta;
     if (infinite) next = ((next % count) + count) % count;
     else next = Math.max(0, Math.min(count - 1, next));
+
+    const eff = carouselResolveRenderEffect(props, randomEffectPickRef.value);
+    const slidesToShow = props.slidesToShow ?? 1;
+    const slideInfiniteStrip = count >= 2 &&
+      infinite &&
+      !carouselIsStackedEffect(eff) &&
+      eff === "slide" &&
+      slidesToShow === 1;
+
+    if (slideInfiniteStrip && delta === 1 && c === count - 1 && next === 0) {
+      const g = ++carouselSlideWrapGenRef.current;
+      carouselSlideWrapLockRef.value = true;
+      carouselSlideVisualIdxRef.value = count + 1;
+      const ms = props.speed ?? 300;
+      carouselSlideWrapTimerRef.current = globalThis.setTimeout(() => {
+        carouselSlideWrapTimerRef.current = undefined;
+        if (g !== carouselSlideWrapGenRef.current) return;
+        finishSlideForwardWrap();
+      }, ms);
+      return;
+    }
+    if (slideInfiniteStrip && delta === -1 && c === 0 && next === count - 1) {
+      const g = ++carouselSlideWrapGenRef.current;
+      carouselSlideWrapLockRef.value = true;
+      carouselSlideVisualIdxRef.value = 0;
+      const ms = props.speed ?? 300;
+      carouselSlideWrapTimerRef.current = globalThis.setTimeout(() => {
+        carouselSlideWrapTimerRef.current = undefined;
+        if (g !== carouselSlideWrapGenRef.current) return;
+        finishSlideBackwardWrap(count);
+      }, ms);
+      return;
+    }
+
     scheduleCarouselIndexCommit(next);
   };
 
   goRef.current = go;
+
+  /**
+   * 卸载或重挂时取消 wrap 定时器；须用 {@link onCleanup}（View 的 `createEffect` 返回值不会当作 dispose）。
+   */
+  createEffect(() => {
+    onCleanup(() => clearCarouselSlideWrapTimer());
+  });
 
   /**
    * 在根容器上注册拖移/滑动切页：水平轮播以横向位移为主判据，纵向轮播以纵向为主；忽略从 `button` 开始的指针。
@@ -620,14 +850,17 @@ export function Carousel(props: CarouselProps): JSXRenderable {
   createEffect(() => {
     void carouselRootMountTick.value;
     if (getDocument() == null) return;
+    /** 仅依赖是否关闭滑动手势；张数、方向在 untrack 内读，避免父级每次新 props 引用导致反复卸挂 document 监听 */
     if (props.swipe === false) return;
     const root = carouselRootRef.current;
     if (root == null) return;
-    const { count } = carouselSlidesInfo(props);
-    if (count <= 1) return;
+    const { count: countAtMount } = untrack(() => carouselSlidesInfo(props));
+    if (countAtMount <= 1) return;
 
     const doc = globalThis.document;
-    const horizontal = (props.direction ?? "horizontal") === "horizontal";
+    const horizontal = untrack(() =>
+      (props.direction ?? "horizontal") === "horizontal"
+    );
     /** 超过该位移（px）且为主方向分量时记为一次切换 */
     const thresholdPx = 48;
 
@@ -683,18 +916,21 @@ export function Carousel(props: CarouselProps): JSXRenderable {
      */
     const onDocumentPointerMove = (ev: PointerEvent) => {
       if (!tracking || ev.pointerId !== pointerId) return;
-      const infinite = props.infinite !== false;
-      const cur = carouselResolveCurrentIndex(
+      /** 事件回调内读最新配置与张数，勿依赖 effect 闭包里的旧 count */
+      const { count: cNow } = untrack(() => carouselSlidesInfo(props));
+      const infinite = untrack(() => props.infinite !== false);
+      const cur = carouselTrackDisplaySlideIndex(
         props,
         internalIndexRef.value,
-        count,
+        cNow,
+        carouselResolveRenderEffect(props, randomEffectPickRef.value),
       );
       const dx = ev.clientX - startX;
       const dy = ev.clientY - startY;
       let primary = horizontal ? dx : dy;
       if (!infinite) {
         if (cur <= 0) primary = Math.min(0, primary);
-        if (cur >= count - 1) primary = Math.max(0, primary);
+        if (cur >= cNow - 1) primary = Math.max(0, primary);
       }
       carouselSwipeDraggingRef.value = true;
       carouselSwipeDragPxRef.value = primary;
@@ -796,18 +1032,92 @@ export function Carousel(props: CarouselProps): JSXRenderable {
     scheduleCarouselIndexCommit(carouselNormalizeIndex(i, count));
   };
 
-  /** 自动播放：仅在有 document（浏览器或 SSR 影子）时注册，避免纯 SSR flush 时无宿主文档 */
+  /**
+   * 自动播放：链式 `setTimeout` + 墙钟对齐（与 ui-preact 一致）；wrap 或层叠过渡中短延迟重试，避免与 `go` 内 abort 叠用。
+   *
+   * **勿在 effect 内直接追踪整条 `props`：** 父级每次渲染常传入新对象引用，会订阅到「整 props」导致本 effect
+   * 每帧重跑、反复 `clearAutoplayTimer`，表现为自动播永不触发、子树反复 clean 连手动切页也失灵。
+   * 仅追踪 {@link resetAutoplayTokenRef}；`autoplay` / `interval` / `speed` / 张数在 `untrack` 内读取。
+   */
   createEffect(() => {
     if (getDocument() == null) return;
-    if (!props.autoplay) return;
-    const { count } = carouselSlidesInfo(props);
-    if (count <= 1) return;
+    /** 手动切页 bump，用于重排计时；须保留订阅 */
     void resetAutoplayTokenRef.value;
-    const ms = props.interval ?? 5000;
-    const id = globalThis.setInterval(() => {
+
+    const autoplayOn = untrack(() => props.autoplay === true);
+    if (!autoplayOn) return;
+
+    const { count } = untrack(() => carouselSlidesInfo(props));
+    if (count <= 1) return;
+
+    const intervalMs = untrack(() => props.interval ?? 5000);
+    const speedMs = untrack(() => props.speed ?? 300);
+    const ms = Math.max(400, intervalMs, speedMs + 160);
+    const lane = ++autoplayLaneGenRef.current;
+
+    /**
+     * 撤掉当前 lane 上挂起的单次延时，避免链式 setTimeout 与 effect 清理打架。
+     */
+    const clearAutoplayTimer = () => {
+      const t = autoplayNextTimerRef.current;
+      if (t !== undefined) {
+        globalThis.clearTimeout(t);
+        autoplayNextTimerRef.current = undefined;
+      }
+    };
+
+    /**
+     * 在 `delay` 后执行 `fn`（仅当 lane 仍为当前代次）；先清旧定时器，保证任意时刻最多一个挂起。
+     *
+     * @param delay - 毫秒
+     * @param fn - 回调
+     */
+    const armAutoplay = (delay: number, fn: () => void) => {
+      clearAutoplayTimer();
+      if (lane !== autoplayLaneGenRef.current) return;
+      autoplayNextTimerRef.current = globalThis.setTimeout(() => {
+        autoplayNextTimerRef.current = undefined;
+        if (lane !== autoplayLaneGenRef.current) return;
+        fn();
+      }, delay);
+    };
+
+    /**
+     * 单次自动切页并在间隔后排队下一次；wrap 进行中则短延迟重试。
+     */
+    const autoplayStep = () => {
+      if (lane !== autoplayLaneGenRef.current) return;
+      if (
+        carouselSlideWrapTimerRef.current !== undefined ||
+        carouselSlideWrapLockRef.value
+      ) {
+        armAutoplay(40, autoplayStep);
+        return;
+      }
+      const apEff = carouselResolveRenderEffect(
+        props,
+        randomEffectPickRef.value,
+      );
+      if (
+        carouselIsStackedEffect(apEff) &&
+        stackedUnderlayIdxRef.value !== null
+      ) {
+        armAutoplay(40, autoplayStep);
+        return;
+      }
       goRef.current(1);
-    }, ms);
-    return () => globalThis.clearInterval(id);
+      armAutoplay(
+        carouselAutoplayDelayToWallBoundaryMs(ms),
+        autoplayStep,
+      );
+    };
+
+    armAutoplay(carouselAutoplayDelayToWallBoundaryMs(ms), autoplayStep);
+
+    onCleanup(() => {
+      autoplayLaneGenRef.current += 1;
+      clearAutoplayTimer();
+    });
   });
 
   /**
@@ -821,11 +1131,9 @@ export function Carousel(props: CarouselProps): JSXRenderable {
     | undefined;
 
   createEffect(() => {
-    void randomEffectPickRef.value;
-    const eff = carouselResolveRenderEffect(
-      props,
-      randomEffectPickRef.value,
-    );
+    /** 追踪抽签；具体 `effect` 字符串在 untrack 内解析，减轻父级 props 引用抖动 */
+    const pick = randomEffectPickRef.value;
+    const eff = untrack(() => carouselResolveRenderEffect(props, pick));
     if (!carouselIsStackedEffect(eff)) {
       stackedUnderlayIdxRef.value = null;
       stackedPrevCommittedCur = -1;
@@ -835,14 +1143,14 @@ export function Carousel(props: CarouselProps): JSXRenderable {
       }
       return;
     }
-    const { count } = carouselSlidesInfo(props);
+    const { count } = untrack(() => carouselSlidesInfo(props));
     if (count <= 1) return;
-    const cur = carouselResolveCurrentIndex(
-      props,
+    /** 仅用 internal，避免 `createEffect` 内读受控 `current()` 追踪外层 store 导致反复垫底 / 马赛克重入 */
+    const cur = carouselEffectCommittedSlideIndex(
       internalIndexRef.value,
       count,
     );
-    const speedMs = props.speed ?? 300;
+    const speedMs = untrack(() => props.speed ?? 300);
 
     if (stackedPrevCommittedCur < 0) {
       stackedPrevCommittedCur = cur;
@@ -850,12 +1158,16 @@ export function Carousel(props: CarouselProps): JSXRenderable {
     }
     if (stackedPrevCommittedCur === cur) return;
 
-    stackedUnderlayIdxRef.value = stackedPrevCommittedCur;
+    /** 同值不写回，减少无意义 notify，避免仅依赖 `under` 的马赛克 effect 被二次触发 */
+    const nextUnderIdx = stackedPrevCommittedCur;
+    if (stackedUnderlayIdxRef.value !== nextUnderIdx) {
+      stackedUnderlayIdxRef.value = nextUnderIdx;
+    }
     stackedPrevCommittedCur = cur;
     if (stackedUnderlayClearTimer !== undefined) {
       globalThis.clearTimeout(stackedUnderlayClearTimer);
     }
-    const slidesMeta = carouselSlidesInfo(props);
+    const slidesMeta = untrack(() => carouselSlidesInfo(props));
     const mosaicUsesDom = eff === "mosaic" &&
       slidesMeta.useImages &&
       getDocument() != null &&
@@ -876,33 +1188,48 @@ export function Carousel(props: CarouselProps): JSXRenderable {
    */
   createEffect(() => {
     let fallbackTimer: ReturnType<typeof globalThis.setTimeout> | undefined;
+    /** 取消挂起的 `runMosaic` 双 RAF，避免 HMR / effect 重跑后旧回调与新的 `runId` 交错 */
+    let armMosaicRaf0: number | undefined;
+    let armMosaicRaf1: number | undefined;
     onCleanup(() => {
       if (fallbackTimer !== undefined) {
         globalThis.clearTimeout(fallbackTimer);
+      }
+      if (
+        armMosaicRaf0 !== undefined &&
+        typeof globalThis.cancelAnimationFrame === "function"
+      ) {
+        globalThis.cancelAnimationFrame(armMosaicRaf0);
+        armMosaicRaf0 = undefined;
+      }
+      if (
+        armMosaicRaf1 !== undefined &&
+        typeof globalThis.cancelAnimationFrame === "function"
+      ) {
+        globalThis.cancelAnimationFrame(armMosaicRaf1);
+        armMosaicRaf1 = undefined;
       }
       carouselRemoveMosaicOverlays(carouselTrackMountRef.current);
       mosaicSuppressActiveRef.value = false;
     });
 
+    /** 马赛克 createEffect 仅追踪 `under`；random / internal 在 `untrack` 内读，避免 arm/finalize 死循环 */
+    const under = stackedUnderlayIdxRef.value;
+
     if (getDocument() == null) return;
-    void randomEffectPickRef.value;
-    const eff = carouselResolveRenderEffect(
-      props,
-      randomEffectPickRef.value,
+    const eff = untrack(() =>
+      carouselResolveRenderEffect(props, randomEffectPickRef.value)
     );
-    const info = carouselSlidesInfo(props);
+    const info = untrack(() => carouselSlidesInfo(props));
     if (eff !== "mosaic" || !info.useImages || info.count <= 1) {
       return;
     }
 
-    void internalIndexRef.value;
-    const under = stackedUnderlayIdxRef.value;
-    const cur = carouselResolveCurrentIndex(
-      props,
-      internalIndexRef.value,
-      info.count,
+    /** 已提交页码在 `untrack` 内读 internal，勿 `void internalIndexRef.value` 订阅 internal */
+    const cur = untrack(() =>
+      carouselEffectCommittedSlideIndex(internalIndexRef.value, info.count)
     );
-    const contentFit = props.contentFit ?? "cover";
+    const contentFit = untrack(() => props.contentFit ?? "cover");
 
     if (under === null) {
       mosaicSuppressActiveRef.value = false;
@@ -932,7 +1259,7 @@ export function Carousel(props: CarouselProps): JSXRenderable {
       140;
 
     /**
-     * 叠层结束：先让当前页 `img` 在方格**底下**变为不透明，再下一帧撤方格，避免「先撤叠层、样式晚一帧」时露灰底/垫底闪一下。
+     * 叠层结束：同一同步块内撤方格、清垫底、关 suppress（与 ui-preact 一致，避免 suppress/under 跨帧错位）。
      */
     const finalize = () => {
       if (runId !== carouselMosaicRunId) return;
@@ -940,12 +1267,9 @@ export function Carousel(props: CarouselProps): JSXRenderable {
         globalThis.clearTimeout(fallbackTimer);
         fallbackTimer = undefined;
       }
+      carouselRemoveMosaicOverlays(carouselTrackMountRef.current);
+      stackedUnderlayIdxRef.value = null;
       mosaicSuppressActiveRef.value = false;
-      globalThis.requestAnimationFrame(() => {
-        if (runId !== carouselMosaicRunId) return;
-        carouselRemoveMosaicOverlays(carouselTrackMountRef.current);
-        stackedUnderlayIdxRef.value = null;
-      });
     };
 
     /**
@@ -1137,8 +1461,12 @@ export function Carousel(props: CarouselProps): JSXRenderable {
       probe.src = nextSrc;
     };
 
-    globalThis.requestAnimationFrame(() => {
-      globalThis.requestAnimationFrame(runMosaic);
+    armMosaicRaf0 = globalThis.requestAnimationFrame(() => {
+      armMosaicRaf0 = undefined;
+      armMosaicRaf1 = globalThis.requestAnimationFrame(() => {
+        armMosaicRaf1 = undefined;
+        runMosaic();
+      });
     });
   });
 
@@ -1178,7 +1506,12 @@ export function Carousel(props: CarouselProps): JSXRenderable {
       carouselIsStackedEffect(readEffectResolved());
 
     const readCur = () =>
-      carouselResolveCurrentIndex(props, internalIndexRef.value, count);
+      carouselTrackDisplaySlideIndex(
+        props,
+        internalIndexRef.value,
+        count,
+        readEffectResolved(),
+      );
 
     const readUnderlay = (): number | null =>
       readLayoutStacked() ? stackedUnderlayIdxRef.value : null;
@@ -1189,16 +1522,65 @@ export function Carousel(props: CarouselProps): JSXRenderable {
       ? "[&>img]:object-cover [&>img]:w-full [&>img]:h-full"
       : "[&>img]:object-fill [&>img]:w-full [&>img]:h-full [&>img]:min-w-full [&>img]:min-h-full";
 
-    const trackOffsetPercent = 100 / count;
-    const slideStyleSlideMode: Record<string, string | number> = isHorizontal
-      ? { width: `${trackOffsetPercent}%`, flexShrink: 0, minHeight: 0 }
-      : { height: `${trackOffsetPercent}%`, flexShrink: 0 };
+    /**
+     * 扩展轨道下标 `ext`（0 = 左侧末张克隆，1..count = 真实页，count+1 = 右侧首张克隆）映射到逻辑页下标。
+     *
+     * @param ext - 扩展轨道单元下标（0..count+1）
+     * @param n - 真实张数
+     */
+    const logicalFromExtIdx = (ext: number, n: number): number => {
+      if (ext === 0) return n - 1;
+      if (ext <= n) return ext - 1;
+      return 0;
+    };
 
     /**
-     * @param index - 当前轨道索引
-     * @param stacked - 是否层叠布局（与 {@link readLayoutStacked} 一致）
+     * 是否启用「首尾克隆 + 视觉索引」的 infinite 平移条（仅 `slide` 且一屏一张且至少两张，与 ui-preact 一致）。
+     *
+     * @param eff - 已解析的具体切换效果
      */
-    const trackStyleFor = (index: number, stacked: boolean) =>
+    const readSlideInfiniteStrip = (
+      eff: CarouselConcreteTransitionEffect,
+    ): boolean =>
+      count >= 2 &&
+      infinite &&
+      !carouselIsStackedEffect(eff) &&
+      eff === "slide" &&
+      slidesToShow === 1;
+
+    /**
+     * @param eff - 已解析的具体效果
+     */
+    const extCountFor = (eff: CarouselConcreteTransitionEffect): number =>
+      readSlideInfiniteStrip(eff) ? count + 2 : count;
+
+    /**
+     * 每个轨道单元占整条轨道的百分比（100 / 单元数）。
+     *
+     * @param eff - 已解析的具体效果
+     */
+    const cellPercentFor = (eff: CarouselConcreteTransitionEffect): number =>
+      100 / extCountFor(eff);
+
+    const slideStyleSlideModeFor = (
+      eff: CarouselConcreteTransitionEffect,
+    ): Record<string, string | number> => {
+      const cp = cellPercentFor(eff);
+      return isHorizontal
+        ? { width: `${cp}%`, flexShrink: 0, minHeight: 0 }
+        : { height: `${cp}%`, flexShrink: 0 };
+    };
+
+    /**
+     * @param index - 当前轨道索引（层叠或非 infinite-strip 平移用）
+     * @param stacked - 是否层叠布局（与 {@link readLayoutStacked} 一致）
+     * @param extCount - 平移模式下轨道上的单元数（含克隆时为 count+2）
+     */
+    const trackStyleFor = (
+      index: number,
+      stacked: boolean,
+      extCount: number,
+    ) =>
       stacked
         ? {
           position: "relative" as const,
@@ -1207,16 +1589,16 @@ export function Carousel(props: CarouselProps): JSXRenderable {
         }
         : isHorizontal
         ? {
-          transform: `translateX(-${index * trackOffsetPercent}%)`,
+          transform: `translateX(-${index * (100 / extCount)}%)`,
           display: "flex",
-          width: `${count * (100 / slidesToShow)}%`,
+          width: `${extCount * (100 / slidesToShow)}%`,
           minHeight: "100%",
         }
         : {
-          transform: `translateY(-${index * trackOffsetPercent}%)`,
+          transform: `translateY(-${index * (100 / extCount)}%)`,
           display: "flex",
           flexDirection: "column" as const,
-          height: `${count * 100}%`,
+          height: `${extCount * 100}%`,
         };
 
     const isSlideActiveFor = (activeIndex: number, i: number) => {
@@ -1226,6 +1608,22 @@ export function Carousel(props: CarouselProps): JSXRenderable {
       const prev = (activeIndex - 1 + count) % count;
       const next = (activeIndex + 1) % count;
       return i === prev || i === next;
+    };
+
+    /**
+     * `lazySlides` 下扩展轨道某一格是否应加载图片（按逻辑页及其环形邻页）。
+     *
+     * @param activeLogical - 当前逻辑页
+     * @param ext - 扩展轨道下标
+     * @param n - 真实张数
+     */
+    const isSlideActiveForExtended = (
+      activeLogical: number,
+      ext: number,
+      n: number,
+    ): boolean => {
+      const logical = logicalFromExtIdx(ext, n);
+      return isSlideActiveFor(activeLogical, logical);
     };
 
     /** 层叠模式下松手回弹：与 `speed` 对齐上限，避免比切页动画慢太多 */
@@ -1242,7 +1640,7 @@ export function Carousel(props: CarouselProps): JSXRenderable {
 
     /**
      * 合并轨道根行内样式：读 `carouselSwipeDragPxRef` / `carouselSwipeDraggingRef` 供浏览器端 `style={() => …}` 订阅。
-     * - 平移 `slide`：`calc(-百分比 + 像素)`；
+     * - 平移 `slide`：`calc(-百分比 + 像素)`；infinite strip 时用视觉索引与无过渡 snap（与 ui-preact 一致）；
      * - 层叠：整轨额外 `translate`，与单页 fade/zoom/flip 的 transform 叠加在父子层，互不覆盖。
      *
      * @param curIdx - 当前页索引
@@ -1251,11 +1649,16 @@ export function Carousel(props: CarouselProps): JSXRenderable {
       curIdx: number,
     ): Record<string, string | number | undefined> => {
       void randomEffectPickRef.value;
+      void carouselSlideSnapNoTransRef.value;
+      void carouselSlideWrapLockRef.value;
+      const wrapLocked = carouselSlideWrapLockRef.value;
       const dragPx = carouselSwipeDragPxRef.value;
       const dragging = carouselSwipeDraggingRef.value;
       const effectResolved = readEffectResolved();
       const stacked = carouselIsStackedEffect(effectResolved);
-      const trackBase = trackStyleFor(curIdx, stacked);
+      const extCount = extCountFor(effectResolved);
+      const strip = readSlideInfiniteStrip(effectResolved);
+      const trackBase = trackStyleFor(curIdx, stacked, extCount);
       const slideTrackTransition: Record<string, string> = !stacked
         ? {
           transitionProperty: "transform",
@@ -1265,14 +1668,24 @@ export function Carousel(props: CarouselProps): JSXRenderable {
         : {};
 
       if (!stacked) {
-        const pct = curIdx * trackOffsetPercent;
+        if (strip) void carouselSlideVisualIdxRef.value;
+        const visualIdx = strip
+          ? (wrapLocked ? carouselSlideVisualIdxRef.value : curIdx + 1)
+          : curIdx;
+        const cellPct = 100 / extCount;
+        const pct = visualIdx * cellPct;
         const trans = isHorizontal
           ? `translateX(calc(-${pct}% + ${dragPx}px))`
           : `translateY(calc(-${pct}% + ${dragPx}px))`;
+        const snapNoTrans = strip && carouselSlideSnapNoTransRef.value;
         return {
           ...trackBase,
           transform: trans,
-          ...(dragging ? swipeDragTransitionNone : slideTrackTransition),
+          ...(
+            dragging || snapNoTrans
+              ? swipeDragTransitionNone
+              : slideTrackTransition
+          ),
         };
       }
 
@@ -1365,6 +1778,12 @@ export function Carousel(props: CarouselProps): JSXRenderable {
     };
 
     if (reactiveBrowser) {
+      /**
+       * 禁止在此处 `void internalIndexRef` 等：本树在 `insert` 的外层 effect 里同步展开，
+       * 误订阅会把整条轨道子树绑到索引/垫底/视觉索引上，索引一变就整段 clean+insert，
+       * 自动播定时器与手势监听被反复拆掉，表现为无法自动或手动切页。
+       * 各依赖改由子节点上 `class/style` 的函数子与 {@link mergeTrackStyle} 内按需订阅。
+       */
       return (
         <div
           key="@dreamer/carousel-track"
@@ -1389,96 +1808,263 @@ export function Carousel(props: CarouselProps): JSXRenderable {
             return readEffectResolved();
           }}
         >
-          {useImages
-            ? imagesList!.map((src, i) => (
-              <div
-                key={src}
-                data-carousel-slide={String(i)}
-                class={() => {
+          {() => {
+            /**
+             * 浏览器端用函数子挂 `insert` 的独立 effect：`effect="random"` 首帧抽签为 slide 时会建「无限条」克隆子树，
+             * 抽签改为 fade/zoom 等层叠后若仍保留旧子树，层叠 z-index 与多份同逻辑页 DOM 会错乱，表现为永远不离开第一张。
+             * 此处订阅 {@link randomEffectPickRef}，在 strip / 普通两种结构间整段重建（与 ui-preact 每帧重算 stripR 一致）。
+             */
+            void randomEffectPickRef.value;
+            const effResolvedBranch = carouselResolveRenderEffect(
+              props,
+              randomEffectPickRef.value,
+            );
+            const stripBranch = readSlideInfiniteStrip(effResolvedBranch);
+            const extLenBranch = extCountFor(effResolvedBranch);
+            if (useImages) {
+              if (stripBranch) {
+                return Array.from({ length: extLenBranch }, (_, ext) => {
                   void randomEffectPickRef.value;
-                  const st = readLayoutStacked();
-                  const cur = readCur();
-                  const under = readUnderlay();
-                  if (st) {
-                    return twMerge(
-                      "overflow-hidden bg-slate-200 dark:bg-slate-700 flex",
-                      isHorizontal && "h-full",
-                      stackedZClass(i, cur, under),
-                      slideClass,
-                    );
-                  }
-                  return slideImgOuterSlideModeClass;
-                }}
-                style={() => {
-                  void randomEffectPickRef.value;
-                  if (readLayoutStacked()) {
-                    return slideStackedStyle(
-                      i,
-                      readCur(),
-                      readUnderlay(),
-                      readEffectResolved() === "mosaic" &&
-                        mosaicSuppressActiveRef.value,
-                    );
-                  }
-                  return slideStyleSlideMode;
-                }}
-                role="img"
-                aria-label=""
-              >
+                  void mosaicSuppressActiveRef.value;
+                  const logical = logicalFromExtIdx(ext, count);
+                  const src = imagesList![logical]!;
+                  const stableKey = ext === 0
+                    ? `__carousel_clone_tail_${logical}`
+                    : ext === count + 1
+                    ? `__carousel_clone_head_${logical}`
+                    : src;
+                  return (
+                    <div
+                      key={stableKey}
+                      data-carousel-slide={String(logical)}
+                      data-carousel-slide-ext={String(ext)}
+                      class={() => {
+                        void randomEffectPickRef.value;
+                        const st2 = readLayoutStacked();
+                        const cur2 = readCur();
+                        const under2 = readUnderlay();
+                        if (st2) {
+                          return twMerge(
+                            "overflow-hidden bg-slate-200 dark:bg-slate-700 flex",
+                            isHorizontal && "h-full",
+                            stackedZClass(logical, cur2, under2),
+                            slideClass,
+                          );
+                        }
+                        return slideImgOuterSlideModeClass;
+                      }}
+                      style={() => {
+                        void randomEffectPickRef.value;
+                        if (readLayoutStacked()) {
+                          return slideStackedStyle(
+                            logical,
+                            readCur(),
+                            readUnderlay(),
+                            readEffectResolved() === "mosaic" &&
+                              mosaicSuppressActiveRef.value,
+                          );
+                        }
+                        return slideStyleSlideModeFor(readEffectResolved());
+                      }}
+                      role="img"
+                      aria-label=""
+                    >
+                      <div
+                        class="w-full h-full min-w-0 min-h-0 flex-1"
+                        data-carousel-slide-inner=""
+                      >
+                        {!lazySlides
+                          ? (
+                            <img
+                              src={src}
+                              alt=""
+                              draggable={false}
+                              class={carouselNativeImgClass(contentFit)}
+                              loading="eager"
+                              referrerPolicy="no-referrer"
+                              onDragStart={(e: Event) => {
+                                e.preventDefault();
+                              }}
+                              onError={(ev: Event) => {
+                                const el = ev.currentTarget as HTMLImageElement;
+                                if (el.dataset.carouselFb === "1") return;
+                                el.dataset.carouselFb = "1";
+                                el.src = IMAGE_BUILTIN_FALLBACK_SRC;
+                              }}
+                            />
+                          )
+                          : (
+                            <img
+                              src={() =>
+                                isSlideActiveForExtended(readCur(), ext, count)
+                                  ? src
+                                  : ""}
+                              alt=""
+                              draggable={false}
+                              class={carouselNativeImgClass(contentFit)}
+                              loading="lazy"
+                              referrerPolicy="no-referrer"
+                              aria-hidden={() =>
+                                !isSlideActiveForExtended(
+                                  readCur(),
+                                  ext,
+                                  count,
+                                )}
+                              onDragStart={(e: Event) => {
+                                e.preventDefault();
+                              }}
+                              onError={(ev: Event) => {
+                                const el = ev.currentTarget as HTMLImageElement;
+                                if (el.dataset.carouselFb === "1") return;
+                                el.dataset.carouselFb = "1";
+                                el.src = IMAGE_BUILTIN_FALLBACK_SRC;
+                              }}
+                            />
+                          )}
+                      </div>
+                    </div>
+                  );
+                });
+              }
+              return imagesList!.map((src, i) => (
                 <div
-                  class="w-full h-full min-w-0 min-h-0 flex-1"
-                  data-carousel-slide-inner=""
+                  key={src}
+                  data-carousel-slide={String(i)}
+                  class={() => {
+                    void randomEffectPickRef.value;
+                    const st = readLayoutStacked();
+                    const cur = readCur();
+                    const under = readUnderlay();
+                    if (st) {
+                      return twMerge(
+                        "overflow-hidden bg-slate-200 dark:bg-slate-700 flex",
+                        isHorizontal && "h-full",
+                        stackedZClass(i, cur, under),
+                        slideClass,
+                      );
+                    }
+                    return slideImgOuterSlideModeClass;
+                  }}
+                  style={() => {
+                    void randomEffectPickRef.value;
+                    if (readLayoutStacked()) {
+                      return slideStackedStyle(
+                        i,
+                        readCur(),
+                        readUnderlay(),
+                        readEffectResolved() === "mosaic" &&
+                          mosaicSuppressActiveRef.value,
+                      );
+                    }
+                    return slideStyleSlideModeFor(readEffectResolved());
+                  }}
+                  role="img"
+                  aria-label=""
                 >
-                  {
-                    /*
-                     * lazySlides：禁止 `{() => 占位 | <Image/>}` 二选一子树——`insert` 会在切换时用 replaceChild 换掉节点，
-                     * 与层叠 fade 的 opacity 过渡冲突。改为**同一 `<img>`**，仅用 `src` 零参函数在「可加载邻页」时赋真实 URL，其余为空串不请求。
-                     */
-                  }
-                  {!lazySlides
-                    ? (
-                      <img
-                        src={src}
-                        alt=""
-                        draggable={false}
-                        class={carouselNativeImgClass(contentFit)}
-                        loading="eager"
-                        referrerPolicy="no-referrer"
-                        onDragStart={(e: Event) => {
-                          e.preventDefault();
-                        }}
-                        onError={(ev: Event) => {
-                          const el = ev.currentTarget as HTMLImageElement;
-                          if (el.dataset.carouselFb === "1") return;
-                          el.dataset.carouselFb = "1";
-                          el.src = IMAGE_BUILTIN_FALLBACK_SRC;
-                        }}
-                      />
-                    )
-                    : (
-                      <img
-                        src={() => isSlideActiveFor(readCur(), i) ? src : ""}
-                        alt=""
-                        draggable={false}
-                        class={carouselNativeImgClass(contentFit)}
-                        loading="lazy"
-                        referrerPolicy="no-referrer"
-                        aria-hidden={() => !isSlideActiveFor(readCur(), i)}
-                        onDragStart={(e: Event) => {
-                          e.preventDefault();
-                        }}
-                        onError={(ev: Event) => {
-                          const el = ev.currentTarget as HTMLImageElement;
-                          if (el.dataset.carouselFb === "1") return;
-                          el.dataset.carouselFb = "1";
-                          el.src = IMAGE_BUILTIN_FALLBACK_SRC;
-                        }}
-                      />
-                    )}
+                  <div
+                    class="w-full h-full min-w-0 min-h-0 flex-1"
+                    data-carousel-slide-inner=""
+                  >
+                    {
+                      /*
+                       * lazySlides：禁止 `{() => 占位 | <Image/>}` 二选一子树——`insert` 会在切换时用 replaceChild 换掉节点，
+                       * 与层叠 fade 的 opacity 过渡冲突。改为**同一 `<img>`**，仅用 `src` 零参函数在「可加载邻页」时赋真实 URL，其余为空串不请求。
+                       */
+                    }
+                    {!lazySlides
+                      ? (
+                        <img
+                          src={src}
+                          alt=""
+                          draggable={false}
+                          class={carouselNativeImgClass(contentFit)}
+                          loading="eager"
+                          referrerPolicy="no-referrer"
+                          onDragStart={(e: Event) => {
+                            e.preventDefault();
+                          }}
+                          onError={(ev: Event) => {
+                            const el = ev.currentTarget as HTMLImageElement;
+                            if (el.dataset.carouselFb === "1") return;
+                            el.dataset.carouselFb = "1";
+                            el.src = IMAGE_BUILTIN_FALLBACK_SRC;
+                          }}
+                        />
+                      )
+                      : (
+                        <img
+                          src={() => isSlideActiveFor(readCur(), i) ? src : ""}
+                          alt=""
+                          draggable={false}
+                          class={carouselNativeImgClass(contentFit)}
+                          loading="lazy"
+                          referrerPolicy="no-referrer"
+                          aria-hidden={() => !isSlideActiveFor(readCur(), i)}
+                          onDragStart={(e: Event) => {
+                            e.preventDefault();
+                          }}
+                          onError={(ev: Event) => {
+                            const el = ev.currentTarget as HTMLImageElement;
+                            if (el.dataset.carouselFb === "1") return;
+                            el.dataset.carouselFb = "1";
+                            el.src = IMAGE_BUILTIN_FALLBACK_SRC;
+                          }}
+                        />
+                      )}
+                  </div>
                 </div>
-              </div>
-            ))
-            : slides.map((slide, i) => (
+              ));
+            }
+            /** `children` 模式：与 images 相同，random 在 slide↔层叠间切换时须重建子树 */
+            if (stripBranch) {
+              return Array.from({ length: extLenBranch }, (_, ext) => {
+                void randomEffectPickRef.value;
+                const logical = logicalFromExtIdx(ext, count);
+                const slide = slides[logical]!;
+                const stableKey = ext === 0
+                  ? `__carousel_clone_tail_${logical}`
+                  : ext === count + 1
+                  ? `__carousel_clone_head_${logical}`
+                  : String(logical);
+                return (
+                  <div
+                    key={stableKey}
+                    data-carousel-slide={String(logical)}
+                    data-carousel-slide-ext={String(ext)}
+                    class={() => {
+                      void randomEffectPickRef.value;
+                      const st2 = readLayoutStacked();
+                      const cur2 = readCur();
+                      const under2 = readUnderlay();
+                      if (st2) {
+                        return twMerge(
+                          "flex items-center justify-center overflow-hidden",
+                          contentFitClass,
+                          slideClass,
+                          stackedZClass(logical, cur2, under2),
+                        );
+                      }
+                      return slideChildSlideModeClass;
+                    }}
+                    style={() => {
+                      void randomEffectPickRef.value;
+                      if (readLayoutStacked()) {
+                        return slideStackedStyle(
+                          logical,
+                          readCur(),
+                          readUnderlay(),
+                          false,
+                        );
+                      }
+                      return slideStyleSlideModeFor(readEffectResolved());
+                    }}
+                  >
+                    {slide}
+                  </div>
+                );
+              });
+            }
+            return slides.map((slide, i) => (
               <div
                 key={i}
                 data-carousel-slide={String(i)}
@@ -1507,12 +2093,13 @@ export function Carousel(props: CarouselProps): JSXRenderable {
                       false,
                     );
                   }
-                  return slideStyleSlideMode;
+                  return slideStyleSlideModeFor(readEffectResolved());
                 }}
               >
                 {slide}
               </div>
-            ))}
+            ));
+          }}
         </div>
       );
     }
@@ -1578,6 +2165,10 @@ export function Carousel(props: CarouselProps): JSXRenderable {
       };
     };
 
+    const stripStatic = readSlideInfiniteStrip(effectForStatic);
+    const slideStaticStripStyle = slideStyleSlideModeFor(effectForStatic);
+    const extLenStatic = extCountFor(effectForStatic);
+
     const cur0 = readCur();
     const u0 = readUnderlay();
     return (
@@ -1589,67 +2180,166 @@ export function Carousel(props: CarouselProps): JSXRenderable {
         data-effect={effectForStatic}
       >
         {useImages
-          ? imagesList!.map((src, i) => (
-            <div
-              key={src}
-              data-carousel-slide={String(i)}
-              class={twMerge(
-                slideImgOuterStaticClass,
-                isStackedStatic && stackedZClass(i, cur0, u0),
-              )}
-              style={isStackedStatic
-                ? slideStackedStyleStatic(i, cur0, u0, false)
-                : slideStyleSlideMode}
-              role="img"
-              aria-label=""
-            >
-              <div
-                class="w-full h-full min-w-0 min-h-0 flex-1"
-                data-carousel-slide-inner=""
-              >
-                {!lazySlides
-                  ? (
-                    <img
-                      src={src}
-                      alt=""
-                      draggable={false}
-                      class={carouselNativeImgClass(contentFit)}
-                      loading="eager"
-                      referrerPolicy="no-referrer"
-                      onDragStart={(e: Event) => {
-                        e.preventDefault();
-                      }}
-                      onError={(ev: Event) => {
-                        const el = ev.currentTarget as HTMLImageElement;
-                        if (el.dataset.carouselFb === "1") return;
-                        el.dataset.carouselFb = "1";
-                        el.src = IMAGE_BUILTIN_FALLBACK_SRC;
-                      }}
-                    />
-                  )
-                  : (
-                    <img
-                      src={isSlideActiveFor(cur0, i) ? src : ""}
-                      alt=""
-                      draggable={false}
-                      class={carouselNativeImgClass(contentFit)}
-                      loading="lazy"
-                      referrerPolicy="no-referrer"
-                      aria-hidden={!isSlideActiveFor(cur0, i)}
-                      onDragStart={(e: Event) => {
-                        e.preventDefault();
-                      }}
-                      onError={(ev: Event) => {
-                        const el = ev.currentTarget as HTMLImageElement;
-                        if (el.dataset.carouselFb === "1") return;
-                        el.dataset.carouselFb = "1";
-                        el.src = IMAGE_BUILTIN_FALLBACK_SRC;
-                      }}
-                    />
+          ? stripStatic
+            ? Array.from({ length: extLenStatic }, (_, ext) => {
+              const logical = logicalFromExtIdx(ext, count);
+              const src = imagesList![logical]!;
+              const stableKey = ext === 0
+                ? `__carousel_clone_tail_${logical}`
+                : ext === count + 1
+                ? `__carousel_clone_head_${logical}`
+                : src;
+              const activeExt = isSlideActiveForExtended(cur0, ext, count);
+              return (
+                <div
+                  key={stableKey}
+                  data-carousel-slide={String(logical)}
+                  data-carousel-slide-ext={String(ext)}
+                  class={twMerge(
+                    slideImgOuterStaticClass,
+                    isStackedStatic && stackedZClass(logical, cur0, u0),
                   )}
+                  style={isStackedStatic
+                    ? slideStackedStyleStatic(logical, cur0, u0, false)
+                    : slideStaticStripStyle}
+                  role="img"
+                  aria-label=""
+                >
+                  <div
+                    class="w-full h-full min-w-0 min-h-0 flex-1"
+                    data-carousel-slide-inner=""
+                  >
+                    {!lazySlides
+                      ? (
+                        <img
+                          src={src}
+                          alt=""
+                          draggable={false}
+                          class={carouselNativeImgClass(contentFit)}
+                          loading="eager"
+                          referrerPolicy="no-referrer"
+                          onDragStart={(e: Event) => {
+                            e.preventDefault();
+                          }}
+                          onError={(ev: Event) => {
+                            const el = ev.currentTarget as HTMLImageElement;
+                            if (el.dataset.carouselFb === "1") return;
+                            el.dataset.carouselFb = "1";
+                            el.src = IMAGE_BUILTIN_FALLBACK_SRC;
+                          }}
+                        />
+                      )
+                      : (
+                        <img
+                          src={activeExt ? src : ""}
+                          alt=""
+                          draggable={false}
+                          class={carouselNativeImgClass(contentFit)}
+                          loading="lazy"
+                          referrerPolicy="no-referrer"
+                          aria-hidden={!activeExt}
+                          onDragStart={(e: Event) => {
+                            e.preventDefault();
+                          }}
+                          onError={(ev: Event) => {
+                            const el = ev.currentTarget as HTMLImageElement;
+                            if (el.dataset.carouselFb === "1") return;
+                            el.dataset.carouselFb = "1";
+                            el.src = IMAGE_BUILTIN_FALLBACK_SRC;
+                          }}
+                        />
+                      )}
+                  </div>
+                </div>
+              );
+            })
+            : imagesList!.map((src, i) => (
+              <div
+                key={src}
+                data-carousel-slide={String(i)}
+                class={twMerge(
+                  slideImgOuterStaticClass,
+                  isStackedStatic && stackedZClass(i, cur0, u0),
+                )}
+                style={isStackedStatic
+                  ? slideStackedStyleStatic(i, cur0, u0, false)
+                  : slideStyleSlideModeFor(effectForStatic)}
+                role="img"
+                aria-label=""
+              >
+                <div
+                  class="w-full h-full min-w-0 min-h-0 flex-1"
+                  data-carousel-slide-inner=""
+                >
+                  {!lazySlides
+                    ? (
+                      <img
+                        src={src}
+                        alt=""
+                        draggable={false}
+                        class={carouselNativeImgClass(contentFit)}
+                        loading="eager"
+                        referrerPolicy="no-referrer"
+                        onDragStart={(e: Event) => {
+                          e.preventDefault();
+                        }}
+                        onError={(ev: Event) => {
+                          const el = ev.currentTarget as HTMLImageElement;
+                          if (el.dataset.carouselFb === "1") return;
+                          el.dataset.carouselFb = "1";
+                          el.src = IMAGE_BUILTIN_FALLBACK_SRC;
+                        }}
+                      />
+                    )
+                    : (
+                      <img
+                        src={isSlideActiveFor(cur0, i) ? src : ""}
+                        alt=""
+                        draggable={false}
+                        class={carouselNativeImgClass(contentFit)}
+                        loading="lazy"
+                        referrerPolicy="no-referrer"
+                        aria-hidden={!isSlideActiveFor(cur0, i)}
+                        onDragStart={(e: Event) => {
+                          e.preventDefault();
+                        }}
+                        onError={(ev: Event) => {
+                          const el = ev.currentTarget as HTMLImageElement;
+                          if (el.dataset.carouselFb === "1") return;
+                          el.dataset.carouselFb = "1";
+                          el.src = IMAGE_BUILTIN_FALLBACK_SRC;
+                        }}
+                      />
+                    )}
+                </div>
               </div>
-            </div>
-          ))
+            ))
+          : stripStatic
+          ? Array.from({ length: extLenStatic }, (_, ext) => {
+            const logical = logicalFromExtIdx(ext, count);
+            const slide = slides[logical]!;
+            const stableKey = ext === 0
+              ? `__carousel_clone_tail_${logical}`
+              : ext === count + 1
+              ? `__carousel_clone_head_${logical}`
+              : String(logical);
+            return (
+              <div
+                key={stableKey}
+                data-carousel-slide={String(logical)}
+                data-carousel-slide-ext={String(ext)}
+                class={twMerge(
+                  slideChildStaticClass,
+                  isStackedStatic && stackedZClass(logical, cur0, u0),
+                )}
+                style={isStackedStatic
+                  ? slideStackedStyleStatic(logical, cur0, u0, false)
+                  : slideStaticStripStyle}
+              >
+                {slide}
+              </div>
+            );
+          })
           : slides.map((slide, i) => (
             <div
               key={i}
@@ -1660,7 +2350,7 @@ export function Carousel(props: CarouselProps): JSXRenderable {
               )}
               style={isStackedStatic
                 ? slideStackedStyleStatic(i, cur0, u0, false)
-                : slideStyleSlideMode}
+                : slideStyleSlideModeFor(effectForStatic)}
             >
               {slide}
             </div>
@@ -1728,10 +2418,17 @@ export function Carousel(props: CarouselProps): JSXRenderable {
               key={i}
               type="button"
               class={() => {
-                const cur = carouselResolveCurrentIndex(
+                const effD = carouselResolveRenderEffect(
+                  props,
+                  randomEffectPickRef.value,
+                );
+                const cur = carouselDotsActiveSlideIndex(
                   props,
                   internalIndexRef.value,
                   rootCount,
+                  effD,
+                  mosaicSuppressActiveRef.value,
+                  stackedUnderlayIdxRef.value,
                 );
                 return twMerge(
                   "rounded-full transition-all duration-200 shrink-0",
@@ -1746,10 +2443,17 @@ export function Carousel(props: CarouselProps): JSXRenderable {
               }}
               aria-label={`第 ${i + 1} 张`}
               aria-current={() => {
-                const cur = carouselResolveCurrentIndex(
+                const effD = carouselResolveRenderEffect(
+                  props,
+                  randomEffectPickRef.value,
+                );
+                const cur = carouselDotsActiveSlideIndex(
                   props,
                   internalIndexRef.value,
                   rootCount,
+                  effD,
+                  mosaicSuppressActiveRef.value,
+                  stackedUnderlayIdxRef.value,
                 );
                 return i === cur ? "true" : undefined;
               }}
@@ -1758,10 +2462,17 @@ export function Carousel(props: CarouselProps): JSXRenderable {
         </div>
       );
     }
-    const cur0 = carouselResolveCurrentIndex(
+    const effD0 = carouselResolveRenderEffect(
+      props,
+      randomEffectPickRef.value,
+    );
+    const cur0 = carouselDotsActiveSlideIndex(
       props,
       internalIndexRef.value,
       rootCount,
+      effD0,
+      mosaicSuppressActiveRef.value,
+      stackedUnderlayIdxRef.value,
     );
     return (
       <div key="@dreamer/carousel-dots" class={dotsWrapClass}>

@@ -177,13 +177,16 @@ const exampleDotsArrows = `<Carousel
   arrows
 />`;
 
+/** 本页所有带 autoplay 的示例统一使用 5000ms 间隔（与组件默认 interval 一致） */
+const DEMO_AUTOPLAY_INTERVAL_MS = 5000;
+
 const exampleAutoplay = `<Carousel
   current={() => current.value}
   onChange={(i) => (current.value = i)}
   height="20rem"
   dots
   autoplay
-  interval={3000}
+  interval={${DEMO_AUTOPLAY_INTERVAL_MS}}
 >
   {slides}
 </Carousel>`;
@@ -199,7 +202,6 @@ const curZoom = createSignal(0);
 const curFlip = createSignal(0);
 const curMosaic = createSignal(0);
 const curRandom = createSignal(0);
-const fxInterval = 3500;
 
 <Carousel
   effect="slide"
@@ -211,7 +213,7 @@ const fxInterval = 3500;
   dots
   arrows
   autoplay
-  interval={fxInterval}
+  interval={${DEMO_AUTOPLAY_INTERVAL_MS}}
 />
 // fade / zoom / flip / mosaic 同上结构，仅 effect、speed、current 信号不同
 <Carousel
@@ -224,7 +226,7 @@ const fxInterval = 3500;
   dots
   arrows
   autoplay
-  interval={fxInterval}
+  interval={${DEMO_AUTOPLAY_INTERVAL_MS}}
 />`;
 
 export default function DataDisplayCarousel() {
@@ -238,8 +240,6 @@ export default function DataDisplayCarousel() {
   const currentFxFlip = createSignal(0);
   const currentFxMosaic = createSignal(0);
   const currentFxRandom = createSignal(0);
-  /** 切换效果示例区统一自动播放间隔（ms） */
-  const fxAutoplayInterval = 3500;
 
   return (
     <div class="space-y-10">
@@ -322,7 +322,7 @@ export default function DataDisplayCarousel() {
               height={DEMO_CAROUSEL_HEIGHT}
               dots
               autoplay
-              interval={3000}
+              interval={DEMO_AUTOPLAY_INTERVAL_MS}
             />
           </div>
           <CodeBlock
@@ -373,7 +373,7 @@ export default function DataDisplayCarousel() {
                 dots
                 arrows
                 autoplay
-                interval={fxAutoplayInterval}
+                interval={DEMO_AUTOPLAY_INTERVAL_MS}
                 effect="slide"
                 speed={550}
               />
@@ -390,7 +390,7 @@ export default function DataDisplayCarousel() {
                 dots
                 arrows
                 autoplay
-                interval={fxAutoplayInterval}
+                interval={DEMO_AUTOPLAY_INTERVAL_MS}
                 effect="fade"
                 speed={650}
               />
@@ -407,7 +407,7 @@ export default function DataDisplayCarousel() {
                 dots
                 arrows
                 autoplay
-                interval={fxAutoplayInterval}
+                interval={DEMO_AUTOPLAY_INTERVAL_MS}
                 effect="zoom"
                 speed={700}
               />
@@ -424,7 +424,7 @@ export default function DataDisplayCarousel() {
                 dots
                 arrows
                 autoplay
-                interval={fxAutoplayInterval}
+                interval={DEMO_AUTOPLAY_INTERVAL_MS}
                 effect="flip"
                 speed={750}
               />
@@ -441,7 +441,7 @@ export default function DataDisplayCarousel() {
                 dots
                 arrows
                 autoplay
-                interval={fxAutoplayInterval}
+                interval={DEMO_AUTOPLAY_INTERVAL_MS}
                 effect="mosaic"
               />
             </div>
@@ -457,7 +457,7 @@ export default function DataDisplayCarousel() {
                 dots
                 arrows
                 autoplay
-                interval={fxAutoplayInterval}
+                interval={DEMO_AUTOPLAY_INTERVAL_MS}
                 effect="random"
                 speed={700}
               />

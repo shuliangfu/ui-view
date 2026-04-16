@@ -57,7 +57,8 @@ const MENTIONS_API: ApiRow[] = [
     name: "onKeyDown",
     type: "(e: Event) => void",
     default: "-",
-    description: "键盘按下（透传至原生 textarea）",
+    description:
+      "键盘按下（透传至原生 textarea）。下拉打开时组件会先处理 ArrowUp/ArrowDown/Enter（选候选）/Escape（仅清高亮），再调用本回调",
   },
   {
     name: "onKeyUp",
@@ -100,7 +101,8 @@ const MENTIONS_API: ApiRow[] = [
     name: "onSelectOption",
     type: "(opt: MentionOption) => void",
     default: "-",
-    description: "选中某候选时回调",
+    description:
+      '选中某候选时回调；常见写法为保留触发符：正文 = slice(0,atIdx)+"@"+opt.label+" "+slice(cursor)（atIdx 为 @ 下标，slice(0,atIdx) 不含 @）',
   },
   {
     name: "disabled",
@@ -132,7 +134,7 @@ const val = createSignal("");
 const showDropdown = createSignal(false);
 const opts = createSignal<MentionOption[]>([]);
 // onInput 里根据 @ 后的关键词过滤 options 并 showDropdown.value = true、opts.value = ...
-// onSelectOption 里插入选中项文案并 showDropdown.value = false
+// onSelectOption 里：用 v.slice(0,atIdx)+"@"+opt.label+" "+v.slice(start) 替换 @ 至光标段，并 showDropdown.value = false
 <Mentions
   value={val}
   onInput={handleInput}
@@ -176,7 +178,8 @@ export default function FormMentions() {
     const before = v.slice(0, start);
     const atIdx = before.lastIndexOf("@");
     if (atIdx >= 0) {
-      val.value = v.slice(0, atIdx) + opt.label + " " + v.slice(start);
+      /** `slice(0, atIdx)` 不含 `@`，须显式拼回 `@` 再写入选中展示名 */
+      val.value = v.slice(0, atIdx) + "@" + opt.label + " " + v.slice(start);
     }
     showDropdown.value = false;
   };
@@ -188,8 +191,15 @@ export default function FormMentions() {
         <Paragraph class="mt-2">
           提及输入：多行输入框，输入 @
           触发候选下拉；value、onInput、onChange、showDropdown、dropdownOptions、onSelectOption；选项类型为
-          MentionOption（value、label）。宽度由 class 控制，表单中需占满一列时传
-          class="w-full"。Tailwind v4 + light/dark。
+          MentionOption（value、label）。下拉打开时可用{" "}
+          <strong>方向键 ↑↓</strong> 移动高亮、<strong>Enter</strong>{" "}
+          确认选中（Shift+Enter 仍为换行）、<strong>Escape</strong>{" "}
+          清除高亮；鼠标移入项会同步高亮。选中后在正文中保留{" "}
+          <code class="text-xs">@</code> 前缀的写法见示例{" "}
+          <code class="text-xs">handleSelect</code>
+          （<code class="text-xs">slice(0,atIdx)+&quot;@&quot;+label</code>
+          ）。宽度由 class 控制，表单中需占满一列时传 class="w-full"。Tailwind
+          v4 + light/dark。
         </Paragraph>
       </section>
 

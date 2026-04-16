@@ -151,16 +151,27 @@ export function Demo() {
 
   return (
     <>
-      <Button
-        type="button"
-        onClick={() => {
-          replayKey.value += 1;
-        }}
-      >
-        重新播放
-      </Button>
-      <Progress percent={dynamicPercent} status="active" />
-      <Progress type="circle" percent={dynamicPercent} status="active" />
+      <div class="w-full">
+        <Button
+          type="button"
+          onClick={() => {
+            replayKey.value += 1;
+          }}
+        >
+          重新播放
+        </Button>
+      </div>
+      <div class="w-full min-h-9 flex items-center">
+        <Progress percent={dynamicPercent} status="active" />
+      </div>
+      <div class="flex justify-center">
+        <Progress
+          type="circle"
+          percent={dynamicPercent}
+          status="active"
+          size={100}
+        />
+      </div>
     </>
   );
 }`;
@@ -215,32 +226,35 @@ export default function FeedbackProgress() {
           <Title level={3}>动态进度（0 → 100）</Title>
           <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
             用 createSignal 存百分比，createRenderEffect + setInterval
-            递增；依赖 replayKey 可「重新播放」。percent 须传 Signal 本身（如
-            {" "}
+            递增；依赖 replayKey 可「重新播放」。示例区为三行：按钮 → 线性条 →
+            居中环形（与 ui-preact 文档一致）。percent 须传 Signal 本身（如{" "}
             <code class="text-xs">percent={"{"}dynamicPercent{"}"}</code>
             ），勿写 <code class="text-xs">.value</code>
             ：手写 JSX 在创建 VNode 时会求值成快照，无法订阅 signal。
           </Paragraph>
-          <div class="flex flex-wrap items-center gap-4 w-full">
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => {
-                replayKey.value += 1;
-              }}
-            >
-              重新播放
-            </Button>
-            <div class="flex-1 min-w-[200px] space-y-3">
+          <div class="space-y-3 w-full">
+            {/** 第一行仅「重新播放」；第二行线性条；第三行环形居中（与 ui-preact 文档一致） */}
+            <div class="w-full">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => {
+                  replayKey.value += 1;
+                }}
+              >
+                重新播放
+              </Button>
+            </div>
+            <div class="w-full min-h-9 flex items-center">
               <Progress percent={dynamicPercent} status="active" />
-              <div class="flex justify-center">
-                <Progress
-                  type="circle"
-                  percent={dynamicPercent}
-                  status="active"
-                  size={100}
-                />
-              </div>
+            </div>
+            <div class="flex justify-center">
+              <Progress
+                type="circle"
+                percent={dynamicPercent}
+                status="active"
+                size={100}
+              />
             </div>
           </div>
           <CodeBlock

@@ -45,7 +45,7 @@ const open = createSignal(false);
 export default function MobilePortalHostScopeDoc() {
   const open = createSignal(false);
 
-  return () => (
+  return (
     <div class="w-full max-w-3xl space-y-10">
       <section>
         <Title level={1}>MobilePortalHostScope 机内 Portal 锚点</Title>
