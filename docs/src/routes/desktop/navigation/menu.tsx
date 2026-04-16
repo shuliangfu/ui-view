@@ -140,6 +140,7 @@ export default function NavigationMenu() {
         <Title level={1}>Menu 菜单列表</Title>
         <Paragraph class="mt-2">
           菜单：items、onClick、mode、defaultOpenKeys、openKeys、onOpenChange、usePopoverSubmenu、focusedKey、onFocusChange、class。选中态由组件内部维护。
+          展开某子树时，若当前选中项落在该子树外会自动清除；带子菜单的触发器在展开或子树内有选中时高亮。
           使用 Tailwind v4，支持 light/dark 主题。
         </Paragraph>
       </section>

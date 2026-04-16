@@ -36,7 +36,8 @@ const BOTTOM_SHEET_API: DocsApiTableRow[] = [
     name: "heightMode",
     type: `"half" | "full" | number`,
     default: "half",
-    description: "half：约半屏；full：全屏；number：max-height（px）",
+    description:
+      "half：固定约 50% 锚点/视口高度（内容多时在面板内滚动）；full：铺满；number：仅 max-height（px），高度随内容至上限",
   },
   {
     name: "maskClosable",
@@ -120,7 +121,7 @@ export default function MobileBottomSheetDoc() {
   const openFull = createSignal(false);
   const openScoped = createSignal(false);
 
-  return () => (
+  return (
     <div class="w-full max-w-3xl space-y-10">
       <section>
         <Title level={1}>BottomSheet 底部抽屉</Title>

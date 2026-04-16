@@ -32,7 +32,7 @@ export interface BottomSheetProps {
   title?: string;
   /** 关闭回调（遮罩/关闭按钮） */
   onClose?: () => void;
-  /** 高度模式，默认 half */
+  /** 高度模式：默认 `half` 为锚点/视口高度的约 50%（固定）；`full` 铺满；`number` 为最大高度（px），多出的内容在面板内滚动 */
   heightMode?: BottomSheetHeightMode;
   /** 点击遮罩是否关闭，默认 true */
   maskClosable?: boolean;
@@ -49,14 +49,23 @@ export interface BottomSheetProps {
 const Z_INDEX = 300;
 
 /**
- * 将 heightMode 转为面板 max-height 的 CSS 值
+ * 将 heightMode 转为面板上的高度 style。
+ * - `full`：须 `minHeight`+`maxHeight` 均为 100%，否则仅 max 时面板随内容收缩。
+ * - `half`（默认）：须二者均为 50%，否则看起来随内容变矮，而非约半屏。
+ * - 数字：仅 `maxHeight`（px），随内容增高直至上限，超出由内层滚动。
  *
  * @param mode - 高度模式
  */
-function heightToMaxHeight(mode: BottomSheetHeightMode | undefined): string {
-  if (mode === "full") return "100%";
-  if (typeof mode === "number" && Number.isFinite(mode)) return `${mode}px`;
-  return "50%";
+function heightModeToPanelStyle(
+  mode: BottomSheetHeightMode | undefined,
+): Record<string, string> {
+  if (mode === "full") {
+    return { maxHeight: "100%", minHeight: "100%" };
+  }
+  if (typeof mode === "number" && Number.isFinite(mode)) {
+    return { maxHeight: `${mode}px` };
+  }
+  return { maxHeight: "50%", minHeight: "50%" };
 }
 
 /**
@@ -118,7 +127,9 @@ export function BottomSheet(props: BottomSheetProps): JSXRenderable {
   /** `destroyOnClose` 时在退场动画结束后再卸 DOM */
   const mounted = createSignal(!destroyOnClose);
 
-  const maxH = createMemo(() => heightToMaxHeight(props.heightMode));
+  const panelHeightStyle = createMemo(() =>
+    heightModeToPanelStyle(props.heightMode)
+  );
 
   createEffect(() => {
     if (isOpen()) {
@@ -171,7 +182,7 @@ export function BottomSheet(props: BottomSheetProps): JSXRenderable {
           visible() ? "translate-y-0" : "translate-y-full",
           props.panelClass,
         )}
-        style={{ maxHeight: maxH() }}
+        style={panelHeightStyle()}
         role="dialog"
         aria-modal="true"
         aria-labelledby={props.title ? "bottom-sheet-title" : undefined}

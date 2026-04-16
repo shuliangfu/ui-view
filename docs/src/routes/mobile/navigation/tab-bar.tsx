@@ -75,15 +75,54 @@ const TAB_BAR_ITEM_API: DocsApiTableRow[] = [
   },
 ];
 
-const importCode = `import { TabBar } from "@dreamer/ui-view/mobile";
+/**
+ * 引入区与「文案标签」示例共用：与预览一致（三项 + fixed=false）。
+ */
+const introAndTextTabsCode = `import { TabBar } from "@dreamer/ui-view/mobile";
 import { createSignal } from "@dreamer/view";
 
 const activeKey = createSignal("home");
 
 <TabBar
+  fixed={false}
   items={[
     { key: "home", label: "首页" },
     { key: "list", label: "列表" },
+    { key: "me", label: "我的" },
+  ]}
+  activeKey={activeKey}
+  onChange={(k) => (activeKey.value = k)}
+/>`;
+
+/**
+ * 「图标 + 角标」示例：与预览一致。
+ */
+const iconBadgeExampleCode = `import { TabBar } from "@dreamer/ui-view/mobile";
+import { IconHome, IconInbox, IconUser } from "@dreamer/ui-view";
+import { createSignal } from "@dreamer/view";
+
+const activeKey = createSignal("home");
+
+<TabBar
+  fixed={false}
+  border
+  items={[
+    {
+      key: "home",
+      label: "首页",
+      icon: <IconHome class="h-5 w-5" aria-hidden />,
+      badge: 2,
+    },
+    {
+      key: "inbox",
+      label: "消息",
+      icon: <IconInbox class="h-5 w-5" aria-hidden />,
+    },
+    {
+      key: "me",
+      label: "我的",
+      icon: <IconUser class="h-5 w-5" aria-hidden />,
+    },
   ]}
   activeKey={activeKey}
   onChange={(k) => (activeKey.value = k)}
@@ -93,7 +132,7 @@ export default function MobileTabBarDoc() {
   const activeKey = createSignal("home");
   const activeKey2 = createSignal("home");
 
-  return () => (
+  return (
     <div class="w-full max-w-3xl space-y-10">
       <section>
         <Title level={1}>TabBar 底部标签栏</Title>
@@ -108,7 +147,7 @@ export default function MobileTabBarDoc() {
         <Title level={2}>引入</Title>
         <CodeBlock
           title="代码示例"
-          code={importCode}
+          code={introAndTextTabsCode}
           language="tsx"
           showLineNumbers
           wrapLongLines
@@ -146,7 +185,7 @@ export default function MobileTabBarDoc() {
           </MobileDocDemo>
           <CodeBlock
             title="代码示例"
-            code={importCode}
+            code={introAndTextTabsCode}
             language="tsx"
             showLineNumbers
             copyable
@@ -191,6 +230,14 @@ export default function MobileTabBarDoc() {
               />
             </div>
           </MobileDocDemo>
+          <CodeBlock
+            title="代码示例"
+            code={iconBadgeExampleCode}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
         </div>
       </section>
 

@@ -221,6 +221,10 @@ export function Image(props: ImageProps): JSXRenderable {
         class={() =>
           twMerge(
             "w-full h-full transition-opacity duration-300",
+            /**
+             * 失败态用 `object-contain`：内置 SVG / `fallbackSrc` 保持宽高比居中，
+             * 非正方形容器不裁切、不拉伸；主图仍由 `fit`（默认 cover）控制。
+             */
             statusRef.value === "error"
               ? "object-contain opacity-100"
               : objectFitClasses[fit],

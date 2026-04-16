@@ -46,7 +46,8 @@ const DATA_DISPLAY_SUBMENU = [
   {
     path: "/mobile/data-display/scroll-list",
     label: "ScrollList",
-    desc: "列表·下拉刷新·加载更多",
+    /** 侧栏宽度有限，desc 保持短于「列表·下拉刷新·加载更多」全文 */
+    desc: "滚动列表",
   },
 ] as const;
 
@@ -123,7 +124,9 @@ export default function MobileDocsLayout({ children }: LayoutProps) {
       />
       {
         /*
-         * 正文区用 flex-auto，避免 flex-1 固定高度导致长文溢出叠在页脚上（同 desktop/_layout）。
+         * main：flex-col + overflow-y-auto。正文外包 flex-auto（勿用 flex-1 钉死高度；勿给该外包层加 min-h-0，
+         * 否则子项可被压到小于内容高度、overflow 默认 visible 时正文会画在页脚前后，页脚像「漂到中间」）。
+         * 与 desktop/_layout 主栏结构保持一致。
          */
       }
       <main class="flex min-h-0 min-w-0 w-full flex-1 flex-col overflow-y-auto overscroll-y-contain px-3 py-6 sm:px-6 sm:py-8 lg:px-10">

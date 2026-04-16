@@ -62,7 +62,7 @@ export type ToolbarConfig = ToolbarItem[][] | ToolbarItem[];
 
 /**
  * 工具栏与查找条悬停说明：使用 {@link Tooltip} 统一气泡样式；**不再**写原生 `title`，避免与自定义气泡叠两层。
- * 编辑器全屏根节点为 `z-9999`，而 Tooltip 内联气泡默认 `z-1070`，在全屏内可能被压住，故用 `overlayClass` 抬高 z-index。
+ * Tooltip 气泡默认经 Portal 挂到 `document.body` 且 `fixed` 定位，避免工具栏 `overflow` 裁切；全屏根节点为 `z-9999` 时可用 `overlayClass` 抬高 z-index（如 `z-10050`）。
  *
  * @param props.content - 提示文案；`trim` 后为空则仅渲染子节点、不包裹 Tooltip
  * @param props.children - 触发区域（外包结构保持与原先一致，避免影响 `mousedown` 选区保留逻辑）

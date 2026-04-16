@@ -30,7 +30,7 @@ const TABLE_API: ApiRow[] = [
     type: "TableColumn<T>[]",
     default: "-",
     description:
-      "列定义；列可设 editable（双击进入编辑；text/number/email/url/tel/date/time/select/checkbox/radio），与 render 互斥",
+      "列定义；列可设 editable（双击进入编辑；text/InputNumber 数字/email/url/tel/date/time/select/checkbox/radio），与 render 互斥",
   },
   { name: "dataSource", type: "T[]", default: "-", description: "数据源" },
   {
@@ -815,8 +815,8 @@ export default function DataDisplayTable() {
           <strong>editable</strong>
           （
           <code class="text-xs">
-            text | number | email | url | tel | date | time | select | checkbox
-            | radio
+            text | number（InputNumber）| email | url | tel | date | time |
+            select | checkbox | radio
           </code>
           ，可选 <code class="text-xs">disabled</code>{" "}
           布尔或函数）、width、align、fixed、sorter、ellipsis。类型导出：

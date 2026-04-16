@@ -187,7 +187,7 @@ export function CodeBlock(props: CodeBlockProps): JSXRenderable {
             {/* 左上角三色圆点（仿 macOS 窗口按钮，仅装饰）；可通过 showWindowDots 关闭 */}
             {showWindowDots && (
               <div
-                class="relative z-10 flex items-center gap-1.5 shrink-0"
+                class="relative z-0 flex items-center gap-1.5 shrink-0"
                 aria-hidden
               >
                 <span

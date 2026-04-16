@@ -149,7 +149,7 @@ function takeMarkdownEditorActiveTab(
 }
 
 /**
- * Markdown 工具栏悬停说明：全屏时抬高 Tooltip 层级；`placement="top"` 为产品约定（贴顶栏时向上弹出更顺）。
+ * Markdown 工具栏悬停说明：Tooltip 默认 Portal + `fixed`；全屏时用 `overlayClass` 抬高 z-index；`placement="top"` 为产品约定。
  *
  * @param props.content - 提示文案
  * @param props.children - 触发器子节点

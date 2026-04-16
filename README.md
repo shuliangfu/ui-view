@@ -264,4 +264,4 @@ ChartPolarArea, ChartBubble, ChartScatter
 
 ## 📄 License
 
-Apache-2.0. See [LICENSE](./LICENSE). SE).
+Apache-2.0. See [LICENSE](./LICENSE).

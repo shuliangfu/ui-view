@@ -104,10 +104,46 @@ const loading = createSignal(false);
   {listContent}
 </PullRefresh>`;
 
+/** 演示列表一行：刷新后整表替换为新 id + 随机文案，便于肉眼确认已重新拉数 */
+type PullRefreshDemoRow = {
+  id: string;
+  /** 随机生成的展示文案 */
+  label: string;
+};
+
+/**
+ * 生成若干条随机演示数据（每次调用内容不同）。
+ *
+ * @param count - 行数
+ * @param batch - 刷新批次号（写入文案便于对照「加载中」与「结束后」两阶段）
+ * @returns 新数组
+ */
+function makeRandomPullRows(
+  count: number,
+  batch: number,
+): PullRefreshDemoRow[] {
+  const pick = <T,>(arr: readonly T[]): T =>
+    arr[Math.floor(Math.random() * arr.length)]!;
+  const tags = ["alpha", "beta", "gamma", "delta", "omega"] as const;
+  return Array.from({ length: count }, (_, i) => {
+    const n = Math.floor(Math.random() * 9000) + 1000;
+    return {
+      id: `${Date.now()}-${i}-${Math.random().toString(36).slice(2, 11)}`,
+      label: `#${n} · ${pick(tags)}/${pick(tags)} · 行 ${i + 1} · 批次${batch}`,
+    };
+  });
+}
+
 export default function MobilePullRefreshDoc() {
   const loading = createSignal(false);
+  /** 已完成刷新次数（每次触发 onRefresh 递增，用于示例文案展示批次号） */
+  const refreshBatch = createSignal(0);
+  /** 列表数据：`onRefresh` 内会替换两次随机行（开始时 + 请求结束后），便于确认回调全程执行 */
+  const listRows = createSignal<PullRefreshDemoRow[]>(
+    makeRandomPullRows(24, 0),
+  );
 
-  return () => (
+  return (
     <div class="w-full max-w-3xl space-y-10">
       <section>
         <Title level={1}>PullRefresh 下拉刷新</Title>
@@ -135,19 +171,75 @@ export default function MobilePullRefreshDoc() {
         <div class="space-y-4">
           <Title level={3}>基础</Title>
           <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
-            在下方区域内向下拖拽即可触发（演示约 0.9s 后结束加载）。
+            在下方区域内<strong>先滚到顶部</strong>，再<strong>
+              向下拖
+            </strong>即可触发（触摸或
+            <strong>鼠标左键按住拖动</strong>；演示约 0.9s
+            后结束加载）。示意外壳须为
+            <code class="text-sm">flex</code> 列且给{" "}
+            <code class="text-sm">PullRefresh</code>{" "}
+            <code class="text-sm">min-h-0 flex-1</code>
+            ，内层列表须撑出高度才有纵向滚动。在 Mac 触控板上建议<strong>
+              双指滚到顶
+            </strong>后用<strong>单指</strong>拖动（或<strong>
+              按住左键拖
+            </strong>）；<strong>
+              三指拖移
+            </strong>多为系统手势，与网页触摸序列不同。下方列表为<strong>
+              随机文案
+            </strong>，每次刷新结束后会整表替换为新数据，便于确认{" "}
+            <code class="text-sm">
+              onRefresh
+            </code>{" "}
+            已执行。示例在 <code class="text-sm">onRefresh</code>{" "}
+            <strong>
+              一开始
+            </strong>就替换随机行（加载动画期间即可看到列表变化），结束后再换<strong>
+              第二轮
+            </strong>随机行，便于确认整段回调跑完。
           </Paragraph>
-          <MobileDocDemo class="h-52 overflow-hidden p-0">
+          <MobileDocDemo class="flex h-52 min-h-0 flex-col overflow-hidden p-0">
             <PullRefresh
+              class="min-h-0 flex-1 select-none"
               loading={loading}
               onRefresh={async () => {
+                /** 批次 +1，并立即换新随机表（此时即进入 loading，头区转圈期间列表已是新随机） */
+                const nextBatch = refreshBatch.value + 1;
+                refreshBatch.value = nextBatch;
+                listRows(makeRandomPullRows(24, nextBatch));
                 loading.value = true;
                 await new Promise((r) => setTimeout(r, 900));
+                /** 模拟请求返回后再整表随机一轮，与上一段区分「结束态」 */
+                listRows(makeRandomPullRows(24, nextBatch));
                 loading.value = false;
               }}
             >
-              <div class="p-6 text-sm text-slate-600 dark:text-slate-400">
-                在此区域向下拖拽触发刷新
+              <div class="space-y-2 p-4 text-sm text-slate-600 dark:text-slate-400">
+                <p>
+                  在此区域<strong>滚到顶</strong>后<strong>
+                    向下拖
+                  </strong>触发刷新。松手后<strong>
+                    立刻
+                  </strong>会换一批随机行（可看顶部加载），约 0.9s
+                  后再换<strong>第二批</strong>；批次号在各行末尾
+                  <code class="text-xs">· 批次N</code>
+                  ，每次刷新 N 递增。
+                </p>
+                {
+                  /**
+                   * 须写成 `{() => listRows().map(...)}`：`{listRows().map(...)}` 会在首次渲染时把静态结果交给 insert，
+                   * 无法订阅 Signal，`onRefresh` 里更新列表后界面不刷新（见 @dreamer/view 信号示例）。
+                   */
+                }
+                {() =>
+                  listRows().map((row) => (
+                    <div
+                      class="rounded border border-slate-200/80 bg-white/60 px-3 py-2 dark:border-slate-600 dark:bg-slate-900/40"
+                      key={row.id}
+                    >
+                      {row.label}
+                    </div>
+                  ))}
               </div>
             </PullRefresh>
           </MobileDocDemo>

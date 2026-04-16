@@ -52,8 +52,7 @@ import { Button } from "@dreamer/ui-view/mobile"; // shared 也可从此入口`}
             反馈与浮层
           </strong>（BottomSheet、ActionSheet、PullRefresh、SwipeCell）、
           <strong>导航</strong>（TabBar、NavBar）、
-          <strong>数据展示</strong>（ScrollList：列表 + 下拉刷新 +
-          加载更多）、<strong>
+          <strong>数据展示</strong>（ScrollList：下拉刷新与上拉加载）、<strong>
             表单
           </strong>（Select、MultiSelect、TreeSelect、DatePicker、DateTimePicker、Cascader
           等；Select / MultiSelect / TreeSelect 默认{" "}

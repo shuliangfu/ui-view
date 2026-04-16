@@ -2,6 +2,8 @@
  * Accordion 手风琴折叠（View）。
  * 常见于 FAQ、设置；支持受控/非受控、单开/多开；非受控时用 **`Signal`**（`createSignal`）维护 expandedKeys。
  * 内部维护 fallback state，保证点击展开/收起在受控/非受控下均生效。
+ *
+ * 内容区用 `grid` + `0fr`/`1fr` 过渡，单开切换时新旧面板开合节奏一致，避免 `max-h` 大值收起偏慢。
  */
 
 import { createSignal } from "@dreamer/view";
@@ -130,17 +132,19 @@ export function Accordion(props: AccordionProps): JSXRenderable {
                 role="region"
                 aria-labelledby={`accordion-header-${item.key}`}
                 class={twMerge(
-                  "overflow-hidden transition-all duration-200",
-                  isExpanded ? "max-h-[2000px]" : "max-h-0",
+                  "grid overflow-hidden transition-[grid-template-rows] duration-200 ease-out",
+                  isExpanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
                 )}
               >
-                <div
-                  class={twMerge(
-                    "px-4 py-3 text-sm text-slate-600 dark:text-slate-400 border-t border-slate-100 dark:border-slate-700",
-                    contentClass,
-                  )}
-                >
-                  {item.children}
+                <div class="min-h-0 overflow-hidden">
+                  <div
+                    class={twMerge(
+                      "px-4 py-3 text-sm text-slate-600 dark:text-slate-400 border-t border-slate-100 dark:border-slate-700",
+                      contentClass,
+                    )}
+                  >
+                    {item.children}
+                  </div>
                 </div>
               </div>
             </div>

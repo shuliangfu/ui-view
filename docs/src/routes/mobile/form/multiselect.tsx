@@ -84,7 +84,7 @@ const mobileMultiSelectBasicVal = createSignal<string[]>(["x"]);
 const mobileMultiSelectControlledVal = createSignal<string[]>(["x"]);
 
 export default function MobileMultiSelectDoc() {
-  return () => (
+  return (
     <div class="w-full max-w-3xl space-y-10">
       <section>
         <Title level={1}>MultiSelect 多选（移动）</Title>

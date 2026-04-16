@@ -1,6 +1,7 @@
 /**
  * BackTop 回到顶部（View）。
  * 长列表/长页时显示按钮，点击平滑滚动到顶部；支持可见阈值、滚动容器、位置、自定义内容。
+ * 未指定 `target` 时同时考虑 `window` 与常见 `<main overflow-y-auto>` 主栏滚动（与 ui-preact 对齐）。
  */
 
 import { twMerge } from "tailwind-merge";
@@ -20,7 +21,7 @@ export interface BackTopProps {
   visible?: boolean;
   /** 显示/隐藏变化时回调 */
   onVisibilityChange?: (visible: boolean) => void;
-  /** 点击回调；不传则默认滚动到顶部 */
+  /** 点击时先调用；之后仍会平滑滚顶 */
   onClick?: () => void;
   /** 距离视口右侧（px），默认 24 */
   right?: number;
@@ -40,7 +41,8 @@ type BackTopEntry = {
 };
 
 const entries: BackTopEntry[] = [];
-let scrollListenerAttached = false;
+let windowScrollAttached = false;
+const elementScrollRoots = new WeakSet<Element>();
 
 function getScrollTarget(target: BackTopTarget | undefined): Element | null {
   if (target == null) return null;
@@ -51,14 +53,26 @@ function getScrollTarget(target: BackTopTarget | undefined): Element | null {
   return target;
 }
 
-function getScrollTopFromTarget(target: Element | null): number {
-  if (!target) {
-    const doc = globalThis.document;
-    if (!doc) return 0;
-    return doc.documentElement?.scrollTop ?? doc.body?.scrollTop ??
-      globalThis.scrollY ?? 0;
+/**
+ * 未指定 `target` 时解析常见主滚动容器（如文档站 `main.overflow-y-auto`）。
+ */
+function getDefaultScrollContainer(): HTMLElement | null {
+  const doc = globalThis.document;
+  if (!doc) return null;
+  const main = doc.querySelector("main");
+  if (!(main instanceof HTMLElement)) return null;
+  const oy = globalThis.getComputedStyle(main).overflowY;
+  if (oy === "auto" || oy === "scroll" || oy === "overlay") return main;
+  return null;
+}
+
+function getScrollTopFromTarget(explicitTarget: Element | null): number {
+  if (explicitTarget) {
+    return (explicitTarget as HTMLElement).scrollTop ?? 0;
   }
-  return (target as HTMLElement).scrollTop ?? 0;
+  const win = globalThis.scrollY ?? globalThis.pageYOffset ?? 0;
+  const mainTop = getDefaultScrollContainer()?.scrollTop ?? 0;
+  return Math.max(win, mainTop);
 }
 
 function onScroll() {
@@ -71,14 +85,37 @@ function onScroll() {
   }
 }
 
-function attachScrollListener(target: Element | null) {
-  if (scrollListenerAttached) return;
-  scrollListenerAttached = true;
-  if (target) {
-    target.addEventListener("scroll", onScroll, { passive: true });
-  } else {
+function attachScrollListeners(explicitTarget: Element | null): void {
+  if (explicitTarget != null) {
+    if (!elementScrollRoots.has(explicitTarget)) {
+      elementScrollRoots.add(explicitTarget);
+      explicitTarget.addEventListener("scroll", onScroll, { passive: true });
+    }
+    return;
+  }
+  if (!windowScrollAttached) {
+    windowScrollAttached = true;
     globalThis.addEventListener("scroll", onScroll, { passive: true });
   }
+  const main = getDefaultScrollContainer();
+  if (main != null && !elementScrollRoots.has(main)) {
+    elementScrollRoots.add(main);
+    main.addEventListener("scroll", onScroll, { passive: true });
+  }
+}
+
+function scrollToTopSmooth(explicitTarget: Element | null): void {
+  const opts: ScrollToOptions = { top: 0, behavior: "smooth" };
+  if (explicitTarget instanceof HTMLElement) {
+    explicitTarget.scrollTo(opts);
+    return;
+  }
+  globalThis.scrollTo?.(opts);
+  const doc = globalThis.document;
+  doc?.scrollingElement?.scrollTo?.(opts);
+  doc?.documentElement?.scrollTo?.(opts);
+  doc?.body?.scrollTo?.(opts);
+  getDefaultScrollContainer()?.scrollTo?.(opts);
 }
 
 export function BackTop(props: BackTopProps): JSXRenderable {
@@ -99,33 +136,21 @@ export function BackTop(props: BackTopProps): JSXRenderable {
     if (!div) return;
     if (!onVisibilityChange) return;
     if (entries.some((e) => e.el === div)) return;
-    const target = getScrollTarget(targetProp);
-    const getScrollTop = () => getScrollTopFromTarget(target);
+    const explicitTarget = getScrollTarget(targetProp);
+    const getScrollTop = () => getScrollTopFromTarget(explicitTarget);
     entries.push({
       el: div,
       getScrollTop,
       visibilityHeight,
       onVisibilityChange,
     });
-    attachScrollListener(target ?? null);
+    attachScrollListeners(explicitTarget);
     onScroll();
   };
 
   const handleClick = () => {
-    if (onClick) {
-      onClick();
-      return;
-    }
-    const t = getScrollTarget(targetProp);
-    if (t) {
-      (t as HTMLElement).scrollTo?.({ top: 0, behavior: "smooth" });
-    } else {
-      globalThis.document?.documentElement?.scrollTo?.({
-        top: 0,
-        behavior: "smooth",
-      });
-      globalThis.scrollTo?.({ top: 0, behavior: "smooth" });
-    }
+    onClick?.();
+    scrollToTopSmooth(getScrollTarget(targetProp));
   };
 
   return (

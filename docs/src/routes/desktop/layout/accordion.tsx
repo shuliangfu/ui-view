@@ -69,48 +69,45 @@ const ACCORDION_API: ApiRow[] = [
 const importCode = `import { createSignal } from "@dreamer/view";
 import { Accordion } from "@dreamer/ui-view";
 
-const expandedKeys = createSignal<string[]>(["1"]);
-const items = [
-  { key: "1", header: "第一项", children: <p>内容</p> },
-  { key: "2", header: "第二项", children: <p>内容</p> },
-];
-{() => (
-  <Accordion
-    items={items}
-    expandedKeys={expandedKeys.value}
-    onChange={(keys) => expandedKeys.value = keys}
-    allowMultiple
-  />
-)}`;
+export function Demo() {
+  const expandedKeys = createSignal<string[]>(["1"]);
+  const items = [
+    { key: "1", header: "第一项", children: <p>内容</p> },
+    { key: "2", header: "第二项", children: <p>内容</p> },
+  ];
+  void expandedKeys.value;
+  return (
+    <Accordion
+      items={items}
+      expandedKeys={expandedKeys.value}
+      onChange={(keys) => (expandedKeys.value = keys)}
+      allowMultiple
+    />
+  );
+}`;
 
-const exampleMultiple = `{() => (
-  <Accordion
-    items={items}
-    expandedKeys={expandedKeys.value}
-    onChange={(keys) => expandedKeys.value = keys}
-    allowMultiple
-  />
-)}`;
+const exampleMultiple = `<Accordion
+  items={items}
+  expandedKeys={expandedKeys.value}
+  onChange={(keys) => (expandedKeys.value = keys)}
+  allowMultiple
+/>`;
 
-const exampleSingle = `{() => (
-  <Accordion
-    items={items}
-    expandedKeys={expandedKeys.value}
-    onChange={(keys) => expandedKeys.value = keys}
-    allowMultiple={false}
-  />
-)}`;
+const exampleSingle = `<Accordion
+  items={items}
+  expandedKeys={expandedKeys.value}
+  onChange={(keys) => (expandedKeys.value = keys)}
+  allowMultiple={false}
+/>`;
 
-const exampleDisabled = `{() => (
-  <Accordion
-    items={[
-      { key: "1", header: "可展开", children: <p>内容</p> },
-      { key: "2", header: "禁用项", disabled: true, children: <p>不可点击</p> },
-    ]}
-    expandedKeys={["1"]}
-    onChange={() => {}}
-  />
-)}`;
+const exampleDisabled = `<Accordion
+  items={[
+    { key: "1", header: "可展开", children: <p>内容</p> },
+    { key: "2", header: "禁用项", disabled: true, children: <p>不可点击</p> },
+  ]}
+  expandedKeys={["1"]}
+  onChange={() => {}}
+/>`;
 
 export default function LayoutAccordion() {
   const expandedKeys = createSignal<string[]>(["1"]);
@@ -133,6 +130,12 @@ export default function LayoutAccordion() {
     },
   ];
 
+  /**
+   * 受控时须在渲染中读 `expandedKeys`，父级随变更重绘；勿用 `{() => <Accordion/>}`，
+   * 在 Preact/常规 JSX 中函数子不会被执行，示例区会空白。
+   */
+  void expandedKeys.value;
+
   return (
     <div class="space-y-10">
       <section>
@@ -154,20 +157,17 @@ export default function LayoutAccordion() {
         />
       </section>
 
-      {/* 必须包成 getter：否则 expandedKeys 变化会触发整树渲染，协调时易用旧 props/整块替换，导致点击无反应；仅示例区依赖 getter 后只更新本块，点击才正常 */}
       <section class="space-y-8">
         <Title level={2}>示例</Title>
 
         <div class="space-y-4">
           <Title level={3}>allowMultiple=true</Title>
-          {() => (
-            <Accordion
-              items={items}
-              expandedKeys={expandedKeys.value}
-              onChange={(keys) => expandedKeys.value = keys}
-              allowMultiple
-            />
-          )}
+          <Accordion
+            items={items}
+            expandedKeys={expandedKeys.value}
+            onChange={(keys) => (expandedKeys.value = keys)}
+            allowMultiple
+          />
           <CodeBlock
             title="代码示例"
             code={exampleMultiple}
@@ -180,14 +180,12 @@ export default function LayoutAccordion() {
 
         <div class="space-y-4">
           <Title level={3}>allowMultiple=false（单选）</Title>
-          {() => (
-            <Accordion
-              items={items}
-              expandedKeys={expandedKeys.value}
-              onChange={(keys) => expandedKeys.value = keys}
-              allowMultiple={false}
-            />
-          )}
+          <Accordion
+            items={items}
+            expandedKeys={expandedKeys.value}
+            onChange={(keys) => (expandedKeys.value = keys)}
+            allowMultiple={false}
+          />
           <CodeBlock
             title="代码示例"
             code={exampleSingle}
@@ -200,25 +198,23 @@ export default function LayoutAccordion() {
 
         <div class="space-y-4">
           <Title level={3}>items 含 disabled</Title>
-          {() => (
-            <Accordion
-              items={[
-                {
-                  key: "1",
-                  header: "可展开",
-                  children: <p class="text-sm">内容</p>,
-                },
-                {
-                  key: "2",
-                  header: "禁用项",
-                  disabled: true,
-                  children: <p class="text-sm">不可点击</p>,
-                },
-              ]}
-              expandedKeys={["1"]}
-              onChange={() => {}}
-            />
-          )}
+          <Accordion
+            items={[
+              {
+                key: "1",
+                header: "可展开",
+                children: <p class="text-sm">内容</p>,
+              },
+              {
+                key: "2",
+                header: "禁用项",
+                disabled: true,
+                children: <p class="text-sm">不可点击</p>,
+              },
+            ]}
+            expandedKeys={["1"]}
+            onChange={() => {}}
+          />
           <CodeBlock
             title="代码示例"
             code={exampleDisabled}

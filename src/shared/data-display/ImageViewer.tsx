@@ -463,15 +463,21 @@ export function ImageViewer(props: ImageViewerProps): JSXRenderable {
   const viewerCounterMountRef = createRef<HTMLDivElement>(null);
 
   /**
-   * 当前哪一层 `img` 为「顶」层（与 {@link mainImg0Ref} / {@link mainImg1Ref} 对应）；关闭时归零。
+   * 与「换图重置 transform」createEffect 配合：仅当 {@link displayImageSrc} 字符串变化时才重置，
+   * 避免 effect 误重跑把 scale 每帧写回 1（工具栏只会闪一下）。
    */
-  let mainViewTopSlot: 0 | 1 = 0;
-  /** 快速连点切换时作废上一张的 `load/decode` 回调，避免错序 swap。 */
-  let mainSwapGen = 0;
+  let lastTransformResetDisplaySrc: string | null = null;
+
+  /**
+   * 当前哪一层 `img` 为「顶」层；用对象盒持久化，避免在会重复执行的运行时里用 `let` 导致叠层状态丢失（与 Preact 版 `useRef` 对齐）。
+   */
+  const mainViewTopSlotRef = { current: 0 as 0 | 1 };
+  /** 换图代次，与异步回调比较以作废过时代次。 */
+  const mainSwapGenRef = { current: 0 };
   /**
    * 上一次主图切换**完成**后的索引；用于 `slide` 在环形列表上算最短滑动方向。
    */
-  let lastCommittedDisplayIndex: number | null = null;
+  const lastCommittedDisplayIndexRef = { current: null as number | null };
 
   /**
    * 当前应展示的主图地址：打开且列表非空时取 {@link getDisplayIndex} 对应项，否则空串（不渲染 `img`）。
@@ -514,8 +520,10 @@ export function ImageViewer(props: ImageViewerProps): JSXRenderable {
   });
 
   /**
-   * 打开期间，索引或同索引下的 URL 变化时重置缩放/旋转/平移，避免上一张的变换套在新图上。
+   * 打开期间，**仅当当前主图 URL 变化**（换图、列表项更新）时重置缩放/旋转/平移，避免上一张的变换套在新图上。
    * 若当前非默认变换，先关掉内层 transition 再写回 1/0，避免换图时从旧缩放「动画弹回」。
+   *
+   * **勿在「URL 未变」时重置**：否则 effect 误重跑时会把 `scaleRef` 写回 1，工具栏放大/旋转只会闪一下。
    *
    * **死循环防范**：若在追踪上下文中读取 `scaleRef` / `rotationRef` / `positionRef` 随后又写入
    * （尤其 `positionRef` 每次 `={ x:0, y:0 }` 为新对象），effect 会订阅自身写入的 signal 而无限重跑。
@@ -523,18 +531,21 @@ export function ImageViewer(props: ImageViewerProps): JSXRenderable {
    */
   createEffect(() => {
     const open = isOpen();
-    if (open) {
-      /** 订阅当前主图 URL：切图或列表项变更时重跑以重置变换；关闭时不读，避免多余依赖。 */
-      void displayImageSrc();
+    const srcNow = open ? displayImageSrc() : "";
+    if (open && lastTransformResetDisplaySrc === srcNow) {
+      return;
     }
 
     untrack(() => {
       if (!open) {
+        lastTransformResetDisplaySrc = null;
         scaleRef.value = 1;
         rotationRef.value = 0;
         positionRef.value = { x: 0, y: 0 };
         return;
       }
+
+      lastTransformResetDisplaySrc = srcNow;
 
       const inner = transformInnerRef.current;
       const pos = positionRef.value;
@@ -738,9 +749,9 @@ export function ImageViewer(props: ImageViewerProps): JSXRenderable {
    */
   createEffect(() => {
     if (!isOpen()) {
-      mainSwapGen++;
-      mainViewTopSlot = 0;
-      lastCommittedDisplayIndex = null;
+      mainSwapGenRef.current += 1;
+      mainViewTopSlotRef.current = 0;
+      lastCommittedDisplayIndexRef.current = null;
       const a = mainImg0Ref.current;
       const b = mainImg1Ref.current;
       if (a != null) {
@@ -763,6 +774,11 @@ export function ImageViewer(props: ImageViewerProps): JSXRenderable {
     }
 
     const next = displayImageSrc();
+    /**
+     * 须显式订阅当前下标：`displayImageSrc` 的 memo 在「末张 → 首张」与首张 URL 相同时可能输出同一字符串，
+     * Solid 下游会认为依赖未变而不重跑，环形最后一步无叠化/马赛克等；读 `getDisplayIndex()` 保证索引变化必触发。
+     */
+    void getDisplayIndex();
     /** 订阅 {@link resolvedTransition}，避免仅改 `transition` 时本 effect 不重跑。 */
     void resolvedTransition();
 
@@ -785,7 +801,7 @@ export function ImageViewer(props: ImageViewerProps): JSXRenderable {
       }
 
       if (next === "") {
-        mainSwapGen++;
+        mainSwapGenRef.current += 1;
         a.removeAttribute("src");
         b.removeAttribute("src");
         a.style.transition = "none";
@@ -797,14 +813,22 @@ export function ImageViewer(props: ImageViewerProps): JSXRenderable {
         return;
       }
 
-      const visible = mainViewTopSlot === 0 ? a : b;
-      const hidden = mainViewTopSlot === 0 ? b : a;
-      const vSrc = visible.getAttribute("src") ?? "";
+      const visible = mainViewTopSlotRef.current === 0 ? a : b;
+      const hidden = mainViewTopSlotRef.current === 0 ? b : a;
+      /**
+       * 顶图当前 URL：`currentSrc` 为实际绘制资源；仅依赖 `getAttribute("src")` 可能滞后或为空，导致误判早退、马赛克只首切正常。
+       */
+      const vSrc = (visible.currentSrc || visible.getAttribute("src") || "")
+        .trim();
 
       /**
-       * 顶图已是要显示的 URL：仅保证叠放状态（例如首帧后重复 effect）。
+       * 顶图已是目标 URL且叠层锚点与当前索引一致时才早退；避免锚点未更新时误跳过预载与马赛克。
        */
-      if (vSrc !== "" && viewerUrlsMatch(vSrc, next)) {
+      if (
+        vSrc !== "" &&
+        viewerUrlsMatch(vSrc, next) &&
+        lastCommittedDisplayIndexRef.current === getDisplayIndex()
+      ) {
         visible.style.transition = "none";
         hidden.style.transition = "none";
         visible.style.transform = "";
@@ -815,7 +839,7 @@ export function ImageViewer(props: ImageViewerProps): JSXRenderable {
         visible.style.zIndex = "2";
         hidden.style.opacity = "0";
         hidden.style.zIndex = "1";
-        lastCommittedDisplayIndex = getDisplayIndex();
+        lastCommittedDisplayIndexRef.current = getDisplayIndex();
         return;
       }
 
@@ -834,13 +858,13 @@ export function ImageViewer(props: ImageViewerProps): JSXRenderable {
         visible.style.zIndex = "2";
         hidden.style.opacity = "0";
         hidden.style.zIndex = "1";
-        lastCommittedDisplayIndex = getDisplayIndex();
+        lastCommittedDisplayIndexRef.current = getDisplayIndex();
         return;
       }
 
       const listLen = imageList().length;
       const currentIdx = getDisplayIndex();
-      const prevIdx = lastCommittedDisplayIndex ?? currentIdx;
+      const prevIdx = lastCommittedDisplayIndexRef.current ?? currentIdx;
       /** 与 {@link viewerSlideDirection} 配合，首尾相接时按最短弧决定新图从左侧还是右侧进入。 */
       const slideDir = viewerSlideDirection(
         prevIdx,
@@ -848,13 +872,14 @@ export function ImageViewer(props: ImageViewerProps): JSXRenderable {
         Math.max(1, listLen),
       );
       const mode = resolvedTransition();
-      const g = ++mainSwapGen;
+      mainSwapGenRef.current += 1;
+      const g = mainSwapGenRef.current;
 
       /**
        * 无动画：直接对调层级（`none`、减弱动效、或未知模式兜底）。
        */
       const finishSwapInstant = () => {
-        if (g !== mainSwapGen) return;
+        if (g !== mainSwapGenRef.current) return;
         viewerRemoveMosaicOverlays(mainImageMountRef.current);
         visible.style.transition = "none";
         hidden.style.transition = "none";
@@ -866,15 +891,15 @@ export function ImageViewer(props: ImageViewerProps): JSXRenderable {
         visible.style.zIndex = "1";
         hidden.style.opacity = "1";
         hidden.style.zIndex = "2";
-        mainViewTopSlot = mainViewTopSlot === 0 ? 1 : 0;
-        lastCommittedDisplayIndex = getDisplayIndex();
+        mainViewTopSlotRef.current = mainViewTopSlotRef.current === 0 ? 1 : 0;
+        lastCommittedDisplayIndexRef.current = getDisplayIndex();
       };
 
       /**
        * 新图已解码：**新图层在上**且从 opacity 0 淡入，**旧图层在下**全程 opacity 1，中间不会出现「双透明 → 黑底」。
        */
       const finishSwapCrossfade = () => {
-        if (g !== mainSwapGen) return;
+        if (g !== mainSwapGenRef.current) return;
         if (viewerImagePrefersReducedMotion()) {
           finishSwapInstant();
           return;
@@ -887,7 +912,7 @@ export function ImageViewer(props: ImageViewerProps): JSXRenderable {
         } = {};
 
         const finalize = () => {
-          if (finalized || g !== mainSwapGen) return;
+          if (finalized || g !== mainSwapGenRef.current) return;
           finalized = true;
           if (fallbackTimerRef.id !== undefined) {
             globalThis.clearTimeout(fallbackTimerRef.id);
@@ -903,8 +928,8 @@ export function ImageViewer(props: ImageViewerProps): JSXRenderable {
           hidden.style.filter = "";
           hidden.style.opacity = "1";
           hidden.style.zIndex = "2";
-          mainViewTopSlot = mainViewTopSlot === 0 ? 1 : 0;
-          lastCommittedDisplayIndex = getDisplayIndex();
+          mainViewTopSlotRef.current = mainViewTopSlotRef.current === 0 ? 1 : 0;
+          lastCommittedDisplayIndexRef.current = getDisplayIndex();
         };
 
         const onEnd = (ev: TransitionEvent) => {
@@ -938,7 +963,7 @@ export function ImageViewer(props: ImageViewerProps): JSXRenderable {
        * 横向滑动：新图在上、全程不透明平移入，旧图在下反向移出（与 `blur` 的滤镜过渡完全不同）。
        */
       const finishSwapSlide = () => {
-        if (g !== mainSwapGen) return;
+        if (g !== mainSwapGenRef.current) return;
         if (viewerImagePrefersReducedMotion()) {
           finishSwapInstant();
           return;
@@ -950,7 +975,7 @@ export function ImageViewer(props: ImageViewerProps): JSXRenderable {
         } = {};
 
         const finalize = () => {
-          if (finalized || g !== mainSwapGen) return;
+          if (finalized || g !== mainSwapGenRef.current) return;
           finalized = true;
           if (fallbackTimerRef.id !== undefined) {
             globalThis.clearTimeout(fallbackTimerRef.id);
@@ -965,8 +990,8 @@ export function ImageViewer(props: ImageViewerProps): JSXRenderable {
           hidden.style.filter = "";
           hidden.style.opacity = "1";
           hidden.style.zIndex = "2";
-          mainViewTopSlot = mainViewTopSlot === 0 ? 1 : 0;
-          lastCommittedDisplayIndex = getDisplayIndex();
+          mainViewTopSlotRef.current = mainViewTopSlotRef.current === 0 ? 1 : 0;
+          lastCommittedDisplayIndexRef.current = getDisplayIndex();
         };
 
         const mount = mainImageMountRef.current;
@@ -999,7 +1024,7 @@ export function ImageViewer(props: ImageViewerProps): JSXRenderable {
        * 模糊渐入：新图叠在旧图之上，自 **高斯模糊 + 全透明** 过渡到清晰，无平移，与 `slide` 区分度大。
        */
       const finishSwapBlur = () => {
-        if (g !== mainSwapGen) return;
+        if (g !== mainSwapGenRef.current) return;
         if (viewerImagePrefersReducedMotion()) {
           finishSwapInstant();
           return;
@@ -1011,7 +1036,7 @@ export function ImageViewer(props: ImageViewerProps): JSXRenderable {
         } = {};
 
         const finalize = () => {
-          if (finalized || g !== mainSwapGen) return;
+          if (finalized || g !== mainSwapGenRef.current) return;
           finalized = true;
           if (fallbackTimerRef.id !== undefined) {
             globalThis.clearTimeout(fallbackTimerRef.id);
@@ -1026,8 +1051,8 @@ export function ImageViewer(props: ImageViewerProps): JSXRenderable {
           hidden.style.filter = "";
           hidden.style.opacity = "1";
           hidden.style.zIndex = "2";
-          mainViewTopSlot = mainViewTopSlot === 0 ? 1 : 0;
-          lastCommittedDisplayIndex = getDisplayIndex();
+          mainViewTopSlotRef.current = mainViewTopSlotRef.current === 0 ? 1 : 0;
+          lastCommittedDisplayIndexRef.current = getDisplayIndex();
         };
 
         const blurStart = `blur(${VIEWER_BLUR_START_PX}px)`;
@@ -1058,7 +1083,7 @@ export function ImageViewer(props: ImageViewerProps): JSXRenderable {
        * 新图自略小放大并渐入（顶图叠在旧图之上）。
        */
       const finishSwapZoom = () => {
-        if (g !== mainSwapGen) return;
+        if (g !== mainSwapGenRef.current) return;
         if (viewerImagePrefersReducedMotion()) {
           finishSwapInstant();
           return;
@@ -1070,7 +1095,7 @@ export function ImageViewer(props: ImageViewerProps): JSXRenderable {
         } = {};
 
         const finalize = () => {
-          if (finalized || g !== mainSwapGen) return;
+          if (finalized || g !== mainSwapGenRef.current) return;
           finalized = true;
           if (fallbackTimerRef.id !== undefined) {
             globalThis.clearTimeout(fallbackTimerRef.id);
@@ -1087,8 +1112,8 @@ export function ImageViewer(props: ImageViewerProps): JSXRenderable {
           hidden.style.filter = "";
           hidden.style.opacity = "1";
           hidden.style.zIndex = "2";
-          mainViewTopSlot = mainViewTopSlot === 0 ? 1 : 0;
-          lastCommittedDisplayIndex = getDisplayIndex();
+          mainViewTopSlotRef.current = mainViewTopSlotRef.current === 0 ? 1 : 0;
+          lastCommittedDisplayIndexRef.current = getDisplayIndex();
         };
 
         hidden.style.transition = "none";
@@ -1119,7 +1144,7 @@ export function ImageViewer(props: ImageViewerProps): JSXRenderable {
        * 与浏览器在 `max-h-[calc(100vh-12rem)]` 等约束下的真实尺寸一致，避免公式 `contain` 与布局亚像素差导致「先略小再放大」。
        */
       const finishSwapMosaic = () => {
-        if (g !== mainSwapGen) return;
+        if (g !== mainSwapGenRef.current) return;
         if (viewerImagePrefersReducedMotion()) {
           finishSwapInstant();
           return;
@@ -1137,7 +1162,7 @@ export function ImageViewer(props: ImageViewerProps): JSXRenderable {
         } = {};
 
         const finalize = () => {
-          if (finalized || g !== mainSwapGen) return;
+          if (finalized || g !== mainSwapGenRef.current) return;
           finalized = true;
           if (fallbackTimerRef.id !== undefined) {
             globalThis.clearTimeout(fallbackTimerRef.id);
@@ -1153,8 +1178,8 @@ export function ImageViewer(props: ImageViewerProps): JSXRenderable {
           hidden.style.filter = "";
           hidden.style.opacity = "1";
           hidden.style.zIndex = "2";
-          mainViewTopSlot = mainViewTopSlot === 0 ? 1 : 0;
-          lastCommittedDisplayIndex = getDisplayIndex();
+          mainViewTopSlotRef.current = mainViewTopSlotRef.current === 0 ? 1 : 0;
+          lastCommittedDisplayIndexRef.current = getDisplayIndex();
         };
 
         const mw = mount.clientWidth;
@@ -1241,10 +1266,10 @@ export function ImageViewer(props: ImageViewerProps): JSXRenderable {
         mount.appendChild(overlay);
         void overlay.offsetWidth;
         globalThis.requestAnimationFrame(() => {
-          if (g !== mainSwapGen) {
-            viewerRemoveMosaicOverlays(mount);
-            return;
-          }
+          /**
+           * 作废代次仅 return：勿 `viewerRemoveMosaicOverlays`，否则会删掉新一轮叠层（第二次起马赛克消失）。
+           */
+          if (g !== mainSwapGenRef.current) return;
           for (let c = 0; c < overlay.children.length; c++) {
             const el = overlay.children[c] as HTMLElement;
             el.style.opacity = "1";
@@ -1257,8 +1282,11 @@ export function ImageViewer(props: ImageViewerProps): JSXRenderable {
         fallbackTimerRef.id = globalThis.setTimeout(() => finalize(), totalMs);
       };
 
-      const tryDecodeAndSwap = () => {
-        if (g !== mainSwapGen) return;
+      /**
+       * @param instant - `true`：仅 `error` 等须立刻换层；`false`：像素就绪后仍按 `transition` 播动画（含缓存命中，勿传 `true` 否则马赛克/叠化全灭）。
+       */
+      const tryDecodeAndSwap = (instant: boolean) => {
+        if (g !== mainSwapGenRef.current) return;
         /**
          * 不在开过渡前等待 `decode()`：`load` 后位图已可用，再等 decode 会让主图明显晚于缩略高亮。
          * `decode()` 仅后台触发，利于合成器但不阻塞叠化/滑动。
@@ -1267,7 +1295,7 @@ export function ImageViewer(props: ImageViewerProps): JSXRenderable {
           void hidden.decode().catch(() => {});
         }
         const reduceMotion = viewerImagePrefersReducedMotion();
-        if (reduceMotion || mode === "none") {
+        if (reduceMotion || mode === "none" || instant) {
           finishSwapInstant();
         } else if (mode === "fade") {
           finishSwapCrossfade();
@@ -1286,28 +1314,42 @@ export function ImageViewer(props: ImageViewerProps): JSXRenderable {
 
       /** 缓存命中时 `load` 与 `complete` 可能同帧触发两次，须只 swap 一次。 */
       let decodedOnce = false;
-      const onReady = () => {
+      /**
+       * @param instantSwap - `true` 仅用于 `load` 失败兜底；`complete` 同步命中须传 `false` 才能播马赛克等。
+       */
+      const onReady = (instantSwap: boolean) => {
         if (decodedOnce) return;
         decodedOnce = true;
-        tryDecodeAndSwap();
+        tryDecodeAndSwap(instantSwap);
       };
 
       hidden.addEventListener(
         "error",
         () => {
-          if (g !== mainSwapGen) return;
-          onReady();
+          if (g !== mainSwapGenRef.current) return;
+          onReady(true);
         },
         { once: true },
       );
-      hidden.addEventListener("load", () => onReady(), { once: true });
+      hidden.addEventListener(
+        "load",
+        () => {
+          if (g !== mainSwapGenRef.current) return;
+          onReady(false);
+        },
+        { once: true },
+      );
       /** 打断上一轮未结束的 `opacity` 过渡，避免叠化监听器与 `src` 竞态。 */
       hidden.style.transition = "none";
       hidden.style.filter = "";
       viewerRemoveMosaicOverlays(mainImageMountRef.current);
       hidden.src = next;
+      /**
+       * 与 Preact 版一致：同步 `complete` 仍走 `onReady(false)`，否则 `tryDecodeAndSwap(true)` 会强制瞬时换层，
+       * 缓存命中时从第二张起马赛克/叠化等全部消失。
+       */
       if (hidden.complete && hidden.naturalWidth > 0) {
-        onReady();
+        onReady(false);
       }
     };
 
