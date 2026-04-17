@@ -776,6 +776,72 @@ function toAtSourceSpecifier(
 }
 
 /**
+ * 将异常转为可读的纯文本，便于日志里出现「message + stack」，避免宿主只 `JSON.stringify(error)` 得到 `{}`。
+ *
+ * @param e - 任意 throw 值
+ * @returns 多行字符串，含 `Error.message` 与 `stack`（若有）
+ */
+function formatPluginError(e: unknown): string {
+  if (e instanceof Error) {
+    return e.stack ?? `${e.name}: ${e.message}`;
+  }
+  if (e !== null && typeof e === "object") {
+    try {
+      return JSON.stringify(e);
+    } catch {
+      return Object.prototype.toString.call(e);
+    }
+  }
+  return String(e);
+}
+
+/** 宿主注入的 logger 形态（可能含 error，用于与 dweb 对齐） */
+type UiViewTailwindLogger = {
+  info: (msg: string) => void;
+  debug: (msg: string) => void;
+  error?: (msg: string, ...args: unknown[]) => void;
+};
+
+/**
+ * 统一本插件在 onInit 中的日志出口。
+ * - **info**：同时写 `logger.info` 与 `console.info`，便于 JSR 发布后下游项目在 CI 中仍能看到关键路径（不依赖宿主是否转发 debug）。
+ * - **debug**：优先 `logger.debug`；无 logger 时用 `console.debug`。
+ *
+ * @param logger - dweb 等服务容器中的 logger，可为 undefined
+ * @returns 带 `info` / `debug` 的轻量对象
+ */
+function createUiViewTailwindPluginLog(
+  logger: UiViewTailwindLogger | undefined,
+): { info: (msg: string) => void; debug: (msg: string) => void } {
+  const tag = "[ui-view-tailwind]";
+  return {
+    info(msg: string): void {
+      const line = `${tag} ${msg}`;
+      if (logger) logger.info(line);
+      console.info(line);
+    },
+    debug(msg: string): void {
+      const line = `${tag} ${msg}`;
+      if (logger) logger.debug(line);
+      else console.debug(line);
+    },
+  };
+}
+
+/**
+ * 将字符串截断到最大长度，避免单条日志过长被宿主截断。
+ *
+ * @param s - 原文
+ * @param max - 最大字符数（含省略号占位）
+ * @returns 截断后的字符串
+ */
+function truncateForLog(s: string, max: number): string {
+  if (s.length <= max) return s;
+  if (max <= 3) return s.slice(0, max);
+  return `${s.slice(0, max - 3)}...`;
+}
+
+/**
  * 创建 ui-view Tailwind 按需 content 插件
  *
  * 参数：outputPath（生成文件路径）、scanPath（扫描目录）、packageRoot（可选）。
@@ -792,33 +858,88 @@ export function uiViewTailwindPlugin(
 
   /**
    * 解析 @dreamer/ui-view 包根：本地 file → cwd 向上找仓库 → `node_modules/@jsr/dreamer__ui-view`（JSR 安装树）。
+   *
+   * @param trace - 每步决策的说明（供发布/CI 排障）
    */
-  const resolvePackageRoot = (): string => {
+  const resolvePackageRoot = (trace: (msg: string) => void): string => {
+    const root = cwd();
+    trace(
+      `resolvePackageRoot: 开始，cwd=${root}，已配置 packageRoot=${
+        optionPackageRoot ?? "(无)"
+      }`,
+    );
+    trace(`resolvePackageRoot: import.meta.url=${import.meta.url}`);
+
     if (optionPackageRoot) {
-      return optionPackageRoot.startsWith("/")
+      const resolved = optionPackageRoot.startsWith("/")
         ? optionPackageRoot
-        : join(cwd(), optionPackageRoot);
+        : join(root, optionPackageRoot);
+      trace(`resolvePackageRoot: 使用选项 packageRoot → ${resolved}`);
+      return resolved;
     }
     /** 本地 file 映射 / 工作区：`import.meta.url` 为 file:// */
     const fromFileDir = dirnameOfThisPluginIfFileUrl();
+    trace(
+      `resolvePackageRoot: dirnameOfThisPluginIfFileUrl → ${
+        fromFileDir ?? "(undefined，多为 JSR https 加载)"
+      }`,
+    );
+    if (fromFileDir != null) {
+      const like = looksLikeUiViewSourceRoot(fromFileDir);
+      trace(
+        `resolvePackageRoot: looksLikeUiViewSourceRoot(${fromFileDir})=${like}（需含 plugin.ts、${PACKAGE_ROOT_MARKER}、src/shared/basic/Icon.tsx）`,
+      );
+    }
     if (fromFileDir != null && looksLikeUiViewSourceRoot(fromFileDir)) {
+      trace(
+        `resolvePackageRoot: 采用 file URL 插件目录作为包根 → ${fromFileDir}`,
+      );
       return fromFileDir;
     }
     /** 在 ui-view 仓库内跑 docs：cwd 向上能碰到 plugin.ts + src/mod.ts */
     const fromCwd = findUiViewPackageRootFromCwd();
+    trace(
+      `resolvePackageRoot: findUiViewPackageRootFromCwd → ${fromCwd ?? "null"}`,
+    );
     if (fromCwd != null) {
+      trace(`resolvePackageRoot: 采用 cwd 向上查找的包根 → ${fromCwd}`);
       return fromCwd;
     }
     /** 从 JSR 拉包且 `nodeModulesDir: auto`：完整源码树常在 node_modules/@jsr/dreamer__ui-view */
+    const nmCandidates = [
+      join(root, "node_modules", "@jsr", "dreamer__ui-view"),
+      join(root, "node_modules", "@dreamer", "ui-view"),
+    ];
+    trace(
+      `resolvePackageRoot: node_modules 候选存在性: ${
+        nmCandidates.map((p) =>
+          `${p}(${
+            existsSync(join(p, PACKAGE_ROOT_MARKER)) ? "有标记" : "无标记"
+          })`
+        ).join(" | ")
+      }`,
+    );
     const fromNm = tryResolveUiViewPackageRootFromNodeModules();
+    trace(
+      `resolvePackageRoot: tryResolveUiViewPackageRootFromNodeModules → ${
+        fromNm ?? "null"
+      }`,
+    );
     if (fromNm != null) {
+      trace(`resolvePackageRoot: 采用 node_modules 包根 → ${fromNm}`);
       return fromNm;
     }
     if (fromFileDir != null) {
+      trace(
+        `resolvePackageRoot: 回退采用 fromFileDir（可能非完整源码树）→ ${fromFileDir}`,
+      );
       return fromFileDir;
     }
+    trace(
+      `resolvePackageRoot: 失败汇总 — 无显式 packageRoot；file 目录不可用或不像包根；cwd 树未找到；node_modules 无 dreamer__ui-view/ui-view`,
+    );
     throw new Error(
-      '[ui-view-tailwind] 无法解析 @dreamer/ui-view 包根：请设置 packageRoot，或对 imports 使用本地路径映射（如 "@dreamer/ui-view/plugin": "../ui-view/plugin.ts"），或确保已安装依赖使 node_modules/@jsr/dreamer__ui-view 存在。',
+      `[ui-view-tailwind] 无法解析 @dreamer/ui-view 包根（cwd=${root}）。请设置 packageRoot，或对 imports 使用本地路径映射（如 "@dreamer/ui-view/plugin": "../ui-view/plugin.ts"），或确保已安装依赖使 node_modules/@jsr/dreamer__ui-view 存在。import.meta.url=${import.meta.url}`,
     );
   };
 
@@ -827,70 +948,163 @@ export function uiViewTailwindPlugin(
     version: "0.1.0",
 
     async onInit(container: ServiceContainer): Promise<void> {
-      const logger = container.tryGet<
-        { info: (msg: string) => void; debug: (msg: string) => void }
-      >(
-        "logger",
-      );
+      const logger = container.tryGet<UiViewTailwindLogger>("logger");
+      const log = createUiViewTailwindPluginLog(logger);
+
+      /**
+       * 输出本插件内的失败详情：优先 `logger.error`（若存在），否则 `info`，并始终 `console.error` 可读文本，避免只看到 `{}`。
+       *
+       * @param phase - 阶段说明
+       * @param e - 异常对象
+       * @param ctx - 额外上下文（cwd、路径等）
+       */
+      const logInitFailure = (
+        phase: string,
+        e: unknown,
+        ctx?: Record<string, string>,
+      ): void => {
+        const ctxLines = ctx
+          ? Object.entries(ctx).map(([k, v]) => `${k}=${v}`).join("\n")
+          : "";
+        const text = `[ui-view-tailwind] ${phase}${
+          ctxLines ? `\n上下文:\n${ctxLines}` : ""
+        }\n${formatPluginError(e)}`;
+        if (logger?.error) {
+          logger.error(text);
+        } else if (logger) {
+          logger.info(text);
+        }
+        console.error(text);
+      };
+
       const root = cwd();
-      const scanDir = join(root, scanPath);
+      const scanDirAbs = join(root, scanPath);
 
-      const files: string[] = [];
       try {
-        await collectTsTsx(scanDir, scanDir, files);
-      } catch (e) {
-        if (logger) {
-          logger.info(`[ui-view-tailwind] 扫描目录跳过: ${e}`);
-        }
-        return;
-      }
+        log.info(
+          `onInit 开始: cwd=${root}，scanPath=${scanPath}（绝对路径=${scanDirAbs}），outputPath=${outputPath}，显式 packageRoot=${
+            optionPackageRoot ?? "(未传)"
+          }，logger=${logger ? "已注入" : "无"}`,
+        );
+        log.debug(
+          `onInit: import.meta.url=${import.meta.url}，插件 name=${"ui-view-tailwind"}`,
+        );
 
-      const usedNames = new Set<string>();
-      for (const filePath of files) {
+        const files: string[] = [];
         try {
-          const content = await readTextFile(filePath);
-          for (const name of extractUsedNames(content)) {
-            usedNames.add(name);
-          }
-        } catch {
-          // ignore
+          await collectTsTsx(scanDirAbs, scanDirAbs, files);
+        } catch (e) {
+          log.info(
+            `扫描目录失败，跳过生成（不会抛错）。scanDir=${scanDirAbs}\n${
+              formatPluginError(e)
+            }`,
+          );
+          return;
         }
-      }
 
-      const names = Array.from(usedNames);
-      if (names.length === 0) {
-        if (logger) {
-          logger.info(
-            "[ui-view-tailwind] 未发现 @dreamer/ui-view 引用，跳过生成",
+        log.info(`扫描到 .ts/.tsx 文件数量: ${files.length}`);
+        if (files.length > 0) {
+          const sample = files.slice(0, 12).map((p) => relative(root, p)).join(
+            ", ",
+          );
+          log.debug(
+            `扫描文件示例（相对 cwd，最多 12 条）: ${sample}${
+              files.length > 12 ? ", …" : ""
+            }`,
           );
         }
-        return;
-      }
 
-      const pkgRoot = resolvePackageRoot();
-      const paths = getContentPaths(names, pkgRoot);
-      await mergeIntrinsicIconSources(names, pkgRoot, paths);
-      /** 与 getContentPaths / mergeIntrinsicIconSources 内去重双保险，保证写入的 @source 路径唯一 */
-      const uniqueSortedPaths = Array.from(new Set(paths)).sort();
+        const usedNames = new Set<string>();
+        let readFailCount = 0;
+        for (const filePath of files) {
+          try {
+            const content = await readTextFile(filePath);
+            for (const name of extractUsedNames(content)) {
+              usedNames.add(name);
+            }
+          } catch (readErr) {
+            readFailCount++;
+            log.debug(
+              `读取失败（已忽略）: ${relative(root, filePath)} → ${
+                formatPluginError(readErr)
+              }`,
+            );
+          }
+        }
+        if (readFailCount > 0) {
+          log.info(
+            `解析导入时共有 ${readFailCount} 个文件读取失败（已忽略），详见上方 debug`,
+          );
+        }
 
-      const outAbs = outputPath.startsWith("/")
-        ? outputPath
-        : join(root, outputPath);
-      const sourcesCssDir = dirname(outAbs);
-      const cssContent = uniqueSortedPaths
-        .map((p) => `@source "${toAtSourceSpecifier(sourcesCssDir, p)}";`)
-        .join("\n") + "\n";
+        const names = Array.from(usedNames).sort();
+        if (names.length === 0) {
+          log.info(
+            `未发现从 @dreamer/ui-view 解析出的已映射组件名，跳过生成（请确认业务代码使用 import { X } from "@dreamer/ui-view/..." 且 X 在插件映射表中）`,
+          );
+          return;
+        }
 
-      await mkdir(sourcesCssDir, { recursive: true });
-      await writeTextFile(outAbs, cssContent);
-
-      if (logger) {
-        logger.debug(
-          `[ui-view-tailwind] 已生成 ${uniqueSortedPaths.length} 个`,
+        const namesPreview = truncateForLog(names.join(", "), 400);
+        log.info(
+          `解析到可能来自 ui-view 的导出名 ${names.length} 个（排序后预览）: ${namesPreview}`,
         );
-        logger.debug(
-          `@source → ${outputPath}`,
+
+        const pkgRoot = resolvePackageRoot((m) => log.info(m));
+        log.info(`最终 packageRoot（@source 绝对路径前缀）: ${pkgRoot}`);
+
+        const paths = getContentPaths(names, pkgRoot);
+        log.info(
+          `getContentPaths 展开后路径条数（去重前）: ${paths.length}`,
         );
+        await mergeIntrinsicIconSources(names, pkgRoot, paths);
+        /** 与 getContentPaths / mergeIntrinsicIconSources 内去重双保险，保证写入的 @source 路径唯一 */
+        const uniqueSortedPaths = Array.from(new Set(paths)).sort();
+        log.info(
+          `mergeIntrinsicIconSources 后唯一 @source 目标文件数: ${uniqueSortedPaths.length}`,
+        );
+
+        const outAbs = outputPath.startsWith("/")
+          ? outputPath
+          : join(root, outputPath);
+        const sourcesCssDir = dirname(outAbs);
+        const specifiers = uniqueSortedPaths.map((p) =>
+          toAtSourceSpecifier(sourcesCssDir, p)
+        );
+        const previewLines = uniqueSortedPaths.slice(0, 8).map((abs, i) =>
+          `@source "${specifiers[i]}"  /* ${relative(pkgRoot, abs)} */`
+        );
+        log.debug(
+          `@source 写入预览（前 8 条，相对生成 CSS 目录）:\n${
+            previewLines.join("\n")
+          }`,
+        );
+
+        const cssContent = uniqueSortedPaths
+          .map((p) => `@source "${toAtSourceSpecifier(sourcesCssDir, p)}";`)
+          .join("\n") + "\n";
+
+        log.info(
+          `准备写入: outAbs=${outAbs}，sourcesCssDir=${sourcesCssDir}，CSS 约 ${cssContent.length} 字节`,
+        );
+        await mkdir(sourcesCssDir, { recursive: true });
+        await writeTextFile(outAbs, cssContent);
+
+        log.info(
+          `onInit 成功: 已写入 ${outAbs}（业务 tailwind 入口应 @import 的相对路径建议: ${
+            relative(root, outAbs)
+          }）`,
+        );
+      } catch (e) {
+        logInitFailure("onInit 失败", e, {
+          cwd: root,
+          scanDirAbs,
+          outputPath,
+          scanPath,
+          packageRootOption: optionPackageRoot ?? "(未传)",
+          importMetaUrl: import.meta.url,
+        });
+        throw e;
       }
     },
   };
