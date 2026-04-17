@@ -1,6 +1,6 @@
 {
   "name": "@dreamer/ui-view",
-  "version": "1.0.0-beta.4",
+  "version": "1.0.0",
   "workspace": [
     "docs"
   ],
@@ -60,7 +60,7 @@
   },
   "tasks": {
     "test": "deno test -A",
-    "check": "deno check .",
+    "check": "deno check src plugin.ts",
     "publish:jsr": "deno publish",
     "publish:jsr:dry-run": "deno publish --dry-run --allow-dirty"
   },
