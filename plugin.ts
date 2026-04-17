@@ -23,6 +23,7 @@ import {
   dirname,
   existsSync,
   fromFileUrl,
+  getEnv,
   join,
   mkdir,
   readdir,
@@ -111,6 +112,72 @@ function looksLikeUiViewTailwindContentRoot(dir: string): boolean {
 }
 
 /**
+ * 猜测本机 Deno 缓存根目录（`deno info` 里的 DENO_DIR），用于尽力从 `registries` 下解析已缓存的 JSR 包树。
+ * **非公开稳定 API**：不同 Deno 版本目录结构可能变化；仅作无 `vendor` / 无完整 `node_modules` 时的补充手段。
+ */
+function collectDenoDirGuesses(): string[] {
+  const out: string[] = [];
+  const push = (p: string | undefined) => {
+    if (p && !out.includes(p)) out.push(p);
+  };
+  push(getEnv("DENO_DIR"));
+  const home = getEnv("HOME") ?? getEnv("USERPROFILE");
+  if (home) {
+    push(join(home, "Library", "Caches", "deno"));
+    push(join(home, ".cache", "deno"));
+  }
+  const xdg = getEnv("XDG_CACHE_HOME");
+  if (xdg) push(join(xdg, "deno"));
+  const local = getEnv("LOCALAPPDATA");
+  if (local) push(join(local, "deno"));
+  return out;
+}
+
+/**
+ * 在 `$DENO_DIR/registries` 下做有预算的 DFS，查找含 `src/mod.ts` 的 ui-view 包根。
+ * 供「纯 jsr、不开 vendor」时尽力命中本机已缓存的源码树；不保证每台机器都能命中。
+ *
+ * @returns 包根绝对路径；未找到返回 `null`
+ */
+function tryResolveUiViewFromDenoRegistriesCache(): string | null {
+  const isHit = (p: string): boolean =>
+    looksLikeUiViewSourceRoot(p) || looksLikeUiViewTailwindContentRoot(p);
+
+  for (const denoDir of collectDenoDirGuesses()) {
+    const reg = join(denoDir, "registries");
+    if (!existsSync(reg)) continue;
+    let budget = 8000;
+    /** 使用箭头函数避免 `no-inner-declarations`（内层 `function dfs` 违反 lint） */
+    const dfs = (dir: string, depth: number): string | null => {
+      if (budget <= 0 || depth > 14) return null;
+      budget--;
+      if (isHit(dir)) return dir;
+      const low = dir.toLowerCase();
+      /** 浅层全展开；深处仅跟进路径上像 JSR / dreamer / ui-view 的目录，控制遍历量 */
+      const broad = depth <= 3;
+      const narrow = low.includes("dreamer") ||
+        low.includes("ui-view") ||
+        low.includes("jsr.io") ||
+        low.includes("@dreamer");
+      if (!broad && !narrow) return null;
+      try {
+        for (const e of readdirSync(dir)) {
+          if (!e.isDirectory || e.name === ".bin") continue;
+          const h = dfs(join(dir, e.name), depth + 1);
+          if (h) return h;
+        }
+      } catch {
+        return null;
+      }
+      return null;
+    };
+    const hit = dfs(reg, 0);
+    if (hit) return hit;
+  }
+  return null;
+}
+
+/**
  * 在单个 `node_modules/.deno/<存根>/` 子树下做有预算的深度优先搜索，命中 `looksLikeUiViewSourceRoot` 或 {@link looksLikeUiViewTailwindContentRoot} 即返回。
  * Deno 可能把 `@jsr/dreamer__ui-view` 挂在多层 `node_modules` 之下，仅靠固定两级路径会失败（与你日志里「.deno 子目录多但仍 null」一致）。
  *
@@ -186,6 +253,29 @@ function tryResolveUiViewPackageRootFromNodeModules(
   for (const dir of direct) {
     const hit = tryDir(dir);
     if (hit) return hit;
+  }
+
+  /**
+   * `deno.json` 设 `vendor: true` 时，常见布局是 `vendor/jsr.io/@dreamer/ui-view`（包根下直接是 `src/`，**未必**还有 `/<version>` 子目录）。
+   * 须先于仅带版本号的路径探测，否则会一直「无标记」。
+   */
+  const vendorEarly = [
+    join(projectRoot, "vendor", "jsr.io", "@dreamer", "ui-view"),
+    join(projectRoot, "vendor", "@dreamer", "ui-view"),
+  ];
+  for (const vr of vendorEarly) {
+    const hitRoot = tryDir(vr);
+    if (hitRoot) return hitRoot;
+    if (!existsSync(vr)) continue;
+    try {
+      for (const e of readdirSync(vr)) {
+        if (!e.isDirectory) continue;
+        const hitChild = tryDir(join(vr, e.name));
+        if (hitChild) return hitChild;
+      }
+    } catch {
+      /** 忽略无读权限 */
+    }
   }
 
   const ver = extractJsrIoDreamerUiViewVersion(pluginImportMetaUrl);
@@ -1122,6 +1212,17 @@ export function uiViewTailwindPlugin(
       trace(`resolvePackageRoot: 采用 node_modules 包根 → ${fromNm}`);
       return fromNm;
     }
+    /** 无 `vendor: true` 时：尽力从本机 `DENO_DIR/registries` 命中已缓存的 JSR 源码树（不保证每台机器都有） */
+    const fromReg = tryResolveUiViewFromDenoRegistriesCache();
+    trace(
+      `resolvePackageRoot: tryResolveUiViewFromDenoRegistriesCache（DENO_DIR/registries）→ ${
+        fromReg ?? "null"
+      }`,
+    );
+    if (fromReg != null) {
+      trace(`resolvePackageRoot: 采用全局 registries 缓存包根 → ${fromReg}`);
+      return fromReg;
+    }
     if (fromFileDir != null) {
       trace(
         `resolvePackageRoot: 回退采用 fromFileDir（可能非完整源码树）→ ${fromFileDir}`,
@@ -1129,10 +1230,10 @@ export function uiViewTailwindPlugin(
       return fromFileDir;
     }
     trace(
-      `resolvePackageRoot: 失败汇总 — 无显式 packageRoot；非 file URL；cwd 树未命中；node_modules 顶层与 .deno 下均未找到含 ${PACKAGE_ROOT_MARKER} 的 @dreamer/ui-view`,
+      `resolvePackageRoot: 失败汇总 — 无显式 packageRoot；非 file URL；cwd 树未命中；node_modules/.deno 未命中；DENO_DIR/registries 未命中；无 vendor/jsr.io 包根`,
     );
     throw new Error(
-      `[ui-view-tailwind] 无法解析 @dreamer/ui-view 包根（cwd=${root}）。纯 JSR 时 Deno 可能不把完整源码放在 node_modules/@jsr/dreamer__ui-view；请确认存在 node_modules/.deno/**/node_modules/@jsr/dreamer__ui-view/${PACKAGE_ROOT_MARKER}，或设置 packageRoot / 使用本地 imports 映射。import.meta.url=${import.meta.url}`,
+      `[ui-view-tailwind] 无法解析 @dreamer/ui-view 包根（cwd=${root}）。未使用 vendor 时：请确认本机已运行过依赖解析且 $DENO_DIR/registries 下存在含 ${PACKAGE_ROOT_MARKER} 的缓存树，或设置 packageRoot / imports 本地映射；亦可使用 vendor: true。import.meta.url=${import.meta.url}`,
     );
   };
 

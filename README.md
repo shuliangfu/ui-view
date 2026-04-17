@@ -262,6 +262,18 @@ ChartPolarArea, ChartBubble, ChartScatter
 
 ---
 
+## Changelog
+
+**Latest: [1.0.2] — 2026-04-17**
+
+- **Changed:** Explicit named barrel exports in root / `shared` / `desktop` /
+  `mobile` / `basic` `mod.ts` (no `export *`); explicit `Icon*` list in basic
+  barrels.
+
+Full history: [CHANGELOG.md](./CHANGELOG.md).
+
+---
+
 ## 📄 License
 
 Apache-2.0. See [LICENSE](./LICENSE).
