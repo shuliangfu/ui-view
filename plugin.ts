@@ -26,6 +26,7 @@ import {
   getEnv,
   join,
   mkdir,
+  pathToFileUrl,
   readdir,
   readdirSync,
   readTextFile,
@@ -78,6 +79,254 @@ function dirnameOfThisPluginIfFileUrl(): string | undefined {
   } catch {
     return undefined;
   }
+}
+
+/**
+ * **纯 `jsr:` 依赖**时，项目里往往**没有** `node_modules/@jsr/dreamer__ui-view`，依赖只在 Deno 全局缓存（`$DENO_DIR`）里。
+ * 用宿主应用中的真实文件作 referrer，调用 `import.meta.resolve` 把 `jsr:@dreamer/ui-view/...` 或 `@dreamer/ui-view/...` 解析成 **`file:`** 绝对路径，再向上得到包根。
+ *
+ * @param projectRoot - 应用根（一般为 `cwd()`）
+ * @param trace - 调试输出
+ * @returns 包根目录；无法解析或不像 ui-view 源码树时返回 `null`
+ */
+function tryResolveUiViewPackageRootViaImportMetaResolve(
+  projectRoot: string,
+  trace: (msg: string) => void,
+): string | null {
+  const meta = import.meta as ImportMeta & {
+    resolve?: (specifier: string, parent: string | URL) => string;
+  };
+  if (typeof meta.resolve !== "function") {
+    trace(
+      "tryResolveUiViewViaImportMetaResolve: 当前运行时无 import.meta.resolve，跳过",
+    );
+    return null;
+  }
+
+  /** 常见应用入口（存在则用其 file URL 作 referrer，以应用 deno.json 中的 imports 映射） */
+  const referrerRelPaths = [
+    join("src", "frontend", "main.ts"),
+    join("src", "main.ts"),
+    "main.ts",
+    "cli.ts",
+    join("src", "backend", "main.ts"),
+  ];
+
+  const specifiers = [
+    "jsr:@dreamer/ui-view/src/mod.ts",
+    "@dreamer/ui-view/src/mod.ts",
+  ];
+
+  for (const rel of referrerRelPaths) {
+    const refPath = join(projectRoot, rel);
+    if (!existsSync(refPath)) continue;
+    let refUrl: string;
+    try {
+      refUrl = pathToFileUrl(refPath);
+    } catch {
+      continue;
+    }
+    for (const spec of specifiers) {
+      let resolvedHref: string;
+      try {
+        resolvedHref = meta.resolve!(spec, refUrl);
+      } catch (e) {
+        trace(
+          `tryResolveUiViewViaImportMetaResolve: resolve(${spec}, ${rel}) 异常: ${
+            formatPluginError(e)
+          }`,
+        );
+        continue;
+      }
+      trace(
+        `tryResolveUiViewViaImportMetaResolve: resolve(${spec}, ${rel}) → ${
+          truncateForLog(resolvedHref, 200)
+        }`,
+      );
+      if (!resolvedHref.startsWith("file:")) {
+        trace(
+          "tryResolveUiViewViaImportMetaResolve: 解析结果非 file:，跳过",
+        );
+        continue;
+      }
+      let modFsPath: string;
+      try {
+        modFsPath = fromFileUrl(resolvedHref);
+      } catch (e) {
+        trace(
+          `tryResolveUiViewViaImportMetaResolve: fromFileUrl 失败: ${
+            formatPluginError(e)
+          }`,
+        );
+        continue;
+      }
+      const srcDir = dirname(modFsPath);
+      const pkgRoot = dirname(srcDir);
+      if (
+        looksLikeUiViewSourceRoot(pkgRoot) ||
+        looksLikeUiViewTailwindContentRoot(pkgRoot)
+      ) {
+        trace(
+          `tryResolveUiViewViaImportMetaResolve: 命中包根 → ${pkgRoot}`,
+        );
+        return pkgRoot;
+      }
+      trace(
+        `tryResolveUiViewViaImportMetaResolve: ${pkgRoot} 未通过包根检测（缺 plugin 或 src/mod 等）`,
+      );
+    }
+  }
+  return null;
+}
+
+/**
+ * 将 ui-view 包内**逻辑相对路径**（如 `src/shared/basic/Link.tsx`）解析为当前机器上的 **`file:` 绝对路径**。
+ *
+ * **背景**：Deno 的 JSR 缓存多为 `…/remote/https/jsr.io/<64 位哈希>` 的**按内容寻址单文件**，不存在
+ * `…/remote/src/shared/...` 这种「假包根」。把 `$DENO_DIR/remote/` 当作 `packageRoot` 再 `join(rel)` 会得到**磁盘上不存在**的路径。
+ * 本函数用宿主应用中的真实文件作 referrer，对 `jsr:@dreamer/ui-view/<rel>` / `@dreamer/ui-view/<rel>` 调用
+ * `import.meta.resolve`，得到 Deno 实际缓存文件路径，供 `@source` 使用。
+ *
+ * @param projectRoot - 应用根目录（一般为 `cwd()`）
+ * @param rel - 相对包根的路径，正斜杠（与 {@link COMPONENT_PATHS} 中一致）
+ * @param trace - 调试输出
+ * @returns 本地绝对路径；无法解析或文件不存在时返回 `null`
+ */
+function tryResolveUiViewRelToFsPath(
+  projectRoot: string,
+  rel: string,
+  trace: (msg: string) => void,
+): string | null {
+  const meta = import.meta as ImportMeta & {
+    resolve?: (specifier: string, parent: string | URL) => string;
+  };
+  if (typeof meta.resolve !== "function") {
+    trace(
+      "tryResolveUiViewRelToFsPath: 当前运行时无 import.meta.resolve，无法按模块解析路径",
+    );
+    return null;
+  }
+
+  const referrerRelPaths = [
+    join("src", "frontend", "main.ts"),
+    join("src", "main.ts"),
+    "main.ts",
+    "cli.ts",
+    join("src", "backend", "main.ts"),
+  ];
+
+  const specifiers = [
+    `jsr:@dreamer/ui-view/${rel}`,
+    `@dreamer/ui-view/${rel}`,
+  ];
+
+  for (const refRel of referrerRelPaths) {
+    const refPath = join(projectRoot, refRel);
+    if (!existsSync(refPath)) continue;
+    let refUrl: string;
+    try {
+      refUrl = pathToFileUrl(refPath);
+    } catch {
+      continue;
+    }
+    for (const spec of specifiers) {
+      let resolvedHref: string;
+      try {
+        resolvedHref = meta.resolve!(spec, refUrl);
+      } catch (e) {
+        trace(
+          `tryResolveUiViewRelToFsPath: resolve(${spec}) 异常: ${
+            formatPluginError(e)
+          }`,
+        );
+        continue;
+      }
+      if (!resolvedHref.startsWith("file:")) continue;
+      let fsPath: string;
+      try {
+        fsPath = fromFileUrl(resolvedHref);
+      } catch (e) {
+        trace(
+          `tryResolveUiViewRelToFsPath: fromFileUrl 失败: ${
+            formatPluginError(e)
+          }`,
+        );
+        continue;
+      }
+      if (existsSync(fsPath)) {
+        trace(
+          `tryResolveUiViewRelToFsPath: ${rel} → ${
+            truncateForLog(fsPath, 160)
+          }`,
+        );
+        return fsPath;
+      }
+    }
+  }
+  trace(
+    `tryResolveUiViewRelToFsPath: 未解析到 ${rel}（请确认 deno.json 已映射 @dreamer/ui-view 且已 deno cache）`,
+  );
+  return null;
+}
+
+/**
+ * 根据用到的组件名，得到应加入 @source 的**已解析**绝对路径列表（去重排序）。
+ * 优先使用「显式 packageRoot / 自动探测包根」下 `join(rel)` **且文件存在**的路径；否则回退为
+ * {@link tryResolveUiViewRelToFsPath}（适配 JSR 哈希缓存）。
+ *
+ * @param usedNames - 从业务源码解析出的组件符号
+ * @param ctx - 项目根、可选包根、自动解析的包根、日志
+ */
+function gatherResolvedContentPaths(
+  usedNames: string[],
+  ctx: {
+    projectRoot: string;
+    optionPackageRoot: string | undefined;
+    resolvedPackageRoot: string;
+    trace: (msg: string) => void;
+  },
+): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+
+  const tryJoinIfExists = (root: string, rel: string): string | null => {
+    const trimmed = root.replace(/\/+$/, "");
+    const full = join(trimmed, rel);
+    return existsSync(full) ? full : null;
+  };
+
+  const optRoot = ctx.optionPackageRoot
+    ? (ctx.optionPackageRoot.startsWith("/")
+      ? ctx.optionPackageRoot
+      : join(ctx.projectRoot, ctx.optionPackageRoot))
+    : undefined;
+
+  for (const name of usedNames) {
+    const rels = COMPONENT_PATHS[name];
+    if (!rels) continue;
+    for (const rel of rels) {
+      let abs: string | null = null;
+      if (optRoot) {
+        abs = tryJoinIfExists(optRoot, rel);
+      }
+      if (!abs) {
+        abs = tryJoinIfExists(ctx.resolvedPackageRoot, rel);
+      }
+      if (!abs) {
+        abs = tryResolveUiViewRelToFsPath(ctx.projectRoot, rel, ctx.trace);
+      }
+      if (!abs) {
+        ctx.trace(
+          `gatherResolvedContentPaths: 跳过 ${name} → ${rel}（无法得到本地文件路径）`,
+        );
+        continue;
+      }
+      if (seen.has(abs)) continue;
+      seen.add(abs);
+      out.push(abs);
+    }
+  }
+  return out.sort();
 }
 
 /**
@@ -391,7 +640,7 @@ export interface UiViewTailwindContentPluginOptions {
  * - DatePicker / DateTimePicker / TimePicker 依赖 `picker-portal-utils.ts` 中的 `pickerTimeListScrollClass`（含隐藏滚动条、列宽等任意类），须一并扫描，否则按需构建会丢样式。
  * - RichTextEditor 从同文件引用 `getFormPortalBodyHost`，若需该文件内其它类名亦须映射。
  * - MarkdownEditor 使用 `@dreamer/markdown` 的 `parse` 与桌面 `Tooltip`；须映射 `MarkdownEditor.tsx`、`Tooltip.tsx`、`input-focus-ring.ts`。
- * - 单文件图标（`icons/*.tsx`）、`Calendar.tsx`、`ChartBase.tsx` 等被组件 import 时须写入对应组件的路径列表；`getContentPaths` 会去重。
+ * - 单文件图标（`icons/*.tsx`）、`Calendar.tsx`、`ChartBase.tsx` 等被组件 import 时须写入对应组件的路径列表；`gatherResolvedContentPaths` 会去重。
  * - 纯函数 / store（message、toast、getConfig 等）不含 Tailwind class，无需映射。
  * - `desktop/form`、`mobile/form` 下若仅为 `export * from ../../shared/form/...` 的薄再导出，只列 **shared 实现文件** 即可，不必重复写 D/M 路径。
  */
@@ -951,36 +1200,23 @@ function extractUsedNames(content: string): string[] {
   return Array.from(names);
 }
 
-/** 根据用到的组件名和包根，得到应加入 @source 的绝对路径列表（去重排序） */
-function getContentPaths(usedNames: string[], packageRoot: string): string[] {
-  const root = packageRoot.replace(/\/+$/, "");
-  const seen = new Set<string>();
-  const out: string[] = [];
-  for (const name of usedNames) {
-    const paths = COMPONENT_PATHS[name];
-    if (!paths) continue;
-    for (const rel of paths) {
-      const full = `${root}/${rel}`.replace(/\/+/g, "/");
-      if (seen.has(full)) continue;
-      seen.add(full);
-      out.push(full);
-    }
-  }
-  return out.sort();
-}
-
 /**
  * 内置图标以 `IconXxx` 单独导出、文件分散在 icons/ 子目录；不可能在 COMPONENT_PATHS 中逐一手写。
  * 若扫描结果中出现任意 `Icon` 前缀组件名，则递归加入 `src/shared/basic/icons` 下全部 `.tsx` 供 Tailwind 收集 class。
  *
+ * **注意**：仅当 `packageRoot` 下存在真实的 `src/shared/basic/icons/Icon.tsx`（可列目录）时才递归；
+ * JSR 哈希缓存下无「icons 目录」语义，递归会失败或误扫海量无关文件，此时跳过整目录合并。
+ *
  * @param usedNames - 从项目源码提取的具名导入符号
- * @param packageRoot - ui-view 包根绝对路径
- * @param paths - getContentPaths 结果，本函数会原地追加并重新排序
+ * @param packageRoot - ui-view 包根绝对路径（可能来自探测，未必为真实磁盘树）
+ * @param paths - gatherResolvedContentPaths 结果，本函数会原地追加并重新排序
+ * @param trace - 可选调试输出（说明跳过原因）
  */
 async function mergeIntrinsicIconSources(
   usedNames: Iterable<string>,
   packageRoot: string,
   paths: string[],
+  trace?: (msg: string) => void,
 ): Promise<void> {
   let anyIcon = false;
   for (const n of usedNames) {
@@ -990,7 +1226,16 @@ async function mergeIntrinsicIconSources(
     }
   }
   if (!anyIcon) return;
+
   const iconRoot = join(packageRoot, "src/shared/basic/icons");
+  const iconEntry = join(iconRoot, "Icon.tsx");
+  if (!existsSync(iconEntry)) {
+    trace?.(
+      "mergeIntrinsicIconSources: 跳过 icons 全量扫描（包根下无 src/shared/basic/icons/Icon.tsx；纯 JSR 哈希缓存时请依赖各组件映射中的 icon 路径）",
+    );
+    return;
+  }
+
   const iconFiles: string[] = [];
   try {
     await collectTsTsx(iconRoot, iconRoot, iconFiles);
@@ -1164,6 +1409,25 @@ export function uiViewTailwindPlugin(
       trace(`resolvePackageRoot: 采用 cwd 向上查找的包根 → ${fromCwd}`);
       return fromCwd;
     }
+    /**
+     * 纯 `jsr:` 依赖：项目内可无 `node_modules/.../dreamer__ui-view`，须用应用内模块作 referrer
+     * 将 `jsr:@dreamer/ui-view/src/mod.ts` 解析到 Deno 缓存中的 `file:` 路径。
+     */
+    const fromImportResolve = tryResolveUiViewPackageRootViaImportMetaResolve(
+      root,
+      trace,
+    );
+    trace(
+      `resolvePackageRoot: tryResolveUiViewPackageRootViaImportMetaResolve（纯 jsr / 无 node 安装树）→ ${
+        fromImportResolve ?? "null"
+      }`,
+    );
+    if (fromImportResolve != null) {
+      trace(
+        `resolvePackageRoot: 采用 import.meta.resolve 推导的包根 → ${fromImportResolve}`,
+      );
+      return fromImportResolve;
+    }
     /** 从 JSR + `nodeModulesDir: auto`：完整树常在 `node_modules/.deno/.../node_modules/@jsr/dreamer__ui-view` */
     const nmCandidates = [
       join(root, "node_modules", "@jsr", "dreamer__ui-view"),
@@ -1230,10 +1494,10 @@ export function uiViewTailwindPlugin(
       return fromFileDir;
     }
     trace(
-      `resolvePackageRoot: 失败汇总 — 无显式 packageRoot；非 file URL；cwd 树未命中；node_modules/.deno 未命中；DENO_DIR/registries 未命中；无 vendor/jsr.io 包根`,
+      "resolvePackageRoot: 失败汇总 — 无显式 packageRoot；非 file URL；cwd 树未命中；import.meta.resolve 未命中；node_modules/.deno 未命中；DENO_DIR/registries 未命中；无 vendor/jsr.io 包根",
     );
     throw new Error(
-      `[ui-view-tailwind] 无法解析 @dreamer/ui-view 包根（cwd=${root}）。未使用 vendor 时：请确认本机已运行过依赖解析且 $DENO_DIR/registries 下存在含 ${PACKAGE_ROOT_MARKER} 的缓存树，或设置 packageRoot / imports 本地映射；亦可使用 vendor: true。import.meta.url=${import.meta.url}`,
+      `[ui-view-tailwind] 无法解析 @dreamer/ui-view 包根（cwd=${root}）。纯 jsr: 时请确认存在可解析的入口（如 src/frontend/main.ts）且 deno.json 已映射 @dreamer/ui-view；或设置 packageRoot；或使用 npm:/vendor。import.meta.url=${import.meta.url}`,
     );
   };
 
@@ -1347,12 +1611,22 @@ export function uiViewTailwindPlugin(
         const pkgRoot = resolvePackageRoot((m) => log.info(m));
         log.info(`最终 packageRoot（@source 绝对路径前缀）: ${pkgRoot}`);
 
-        const paths = getContentPaths(names, pkgRoot);
+        const paths = gatherResolvedContentPaths(names, {
+          projectRoot: root,
+          optionPackageRoot: optionPackageRoot,
+          resolvedPackageRoot: pkgRoot,
+          trace: (m) => log.info(m),
+        });
         log.info(
-          `getContentPaths 展开后路径条数（去重前）: ${paths.length}`,
+          `gatherResolvedContentPaths 展开后路径条数（去重前）: ${paths.length}`,
         );
-        await mergeIntrinsicIconSources(names, pkgRoot, paths);
-        /** 与 getContentPaths / mergeIntrinsicIconSources 内去重双保险，保证写入的 @source 路径唯一 */
+        await mergeIntrinsicIconSources(
+          names,
+          pkgRoot,
+          paths,
+          (m) => log.info(m),
+        );
+        /** 与 gatherResolvedContentPaths / mergeIntrinsicIconSources 内去重双保险，保证写入的 @source 路径唯一 */
         const uniqueSortedPaths = Array.from(new Set(paths)).sort();
         log.info(
           `mergeIntrinsicIconSources 后唯一 @source 目标文件数: ${uniqueSortedPaths.length}`,
