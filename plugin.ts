@@ -26,6 +26,7 @@ import {
   join,
   mkdir,
   readdir,
+  readdirSync,
   readTextFile,
   relative,
   writeTextFile,
@@ -79,22 +80,108 @@ function dirnameOfThisPluginIfFileUrl(): string | undefined {
 }
 
 /**
- * 从 JSR 安装时，Deno 在 `nodeModulesDir: "auto"` 下常把包放到 `node_modules/@jsr/dreamer__ui-view`，
- * 目录内为完整包布局（含 `src/mod.ts`），可供 `getContentPaths` 拼绝对路径。
- * （JSR 全局缓存里的 `local` 多为内容寻址单文件，**不是**包目录树，不能作 packageRoot。）
+ * 从本插件的 `import.meta.url`（如 `https://jsr.io/@dreamer/ui-view/1.0.2-beta.1/plugin.ts`）解析出版本号，
+ * 用于拼接 Deno 在 `node_modules/.deno` 下常见的目录名（如 `dreamer__ui-view@1.0.2-beta.1`）。
  *
+ * @param pluginImportMetaUrl - `plugin.ts` 的 `import.meta.url`
+ * @returns 版本字符串；非 jsr.io 或非本包路径时返回 `null`
+ */
+function extractJsrIoDreamerUiViewVersion(
+  pluginImportMetaUrl: string,
+): string | null {
+  try {
+    const u = new URL(pluginImportMetaUrl);
+    if (u.hostname !== "jsr.io") return null;
+    const m = u.pathname.match(/^\/@dreamer\/ui-view\/([^/]+)\//);
+    return m?.[1] ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 在应用根目录的 `node_modules` / `vendor` 下解析 `@dreamer/ui-view` 包根（存在 `src/mod.ts`）。
+ *
+ * **背景**：纯 `jsr:` 依赖在 Deno 2 中往往**不会**在顶层出现带完整 `src/` 的 `node_modules/@jsr/dreamer__ui-view`；
+ * `nodeModulesDir: "auto"` 时更常见的是 `node_modules/.deno/<包说明@版本>/node_modules/@jsr/dreamer__ui-view`。
+ * 因此除顶层两路径外，还须按版本拼 `.deno` 候选目录，并**枚举** `.deno` 下各子目录的 `node_modules/@jsr|@dreamer`。
+ *
+ * @param projectRoot - 一般为应用 `cwd()`
+ * @param pluginImportMetaUrl - 本插件模块的 `import.meta.url`（https 时用于解析版本）
  * @returns 包根绝对路径；未找到时 `null`
  */
-function tryResolveUiViewPackageRootFromNodeModules(): string | null {
-  const root = cwd();
-  const candidates = [
-    join(root, "node_modules", "@jsr", "dreamer__ui-view"),
-    join(root, "node_modules", "@dreamer", "ui-view"),
+function tryResolveUiViewPackageRootFromNodeModules(
+  projectRoot: string,
+  pluginImportMetaUrl: string,
+): string | null {
+  /** 若目录下存在 `src/mod.ts` 则视为包根 */
+  const tryDir = (dir: string): string | null =>
+    existsSync(join(dir, PACKAGE_ROOT_MARKER)) ? dir : null;
+
+  const direct = [
+    join(projectRoot, "node_modules", "@jsr", "dreamer__ui-view"),
+    join(projectRoot, "node_modules", "@dreamer", "ui-view"),
   ];
-  for (const dir of candidates) {
-    if (existsSync(join(dir, PACKAGE_ROOT_MARKER))) {
-      return dir;
+  for (const dir of direct) {
+    const hit = tryDir(dir);
+    if (hit) return hit;
+  }
+
+  const ver = extractJsrIoDreamerUiViewVersion(pluginImportMetaUrl);
+  if (ver) {
+    const versionedHints = [
+      join(
+        projectRoot,
+        "node_modules",
+        ".deno",
+        `dreamer__ui-view@${ver}`,
+        "node_modules",
+        "@jsr",
+        "dreamer__ui-view",
+      ),
+      join(
+        projectRoot,
+        "node_modules",
+        ".deno",
+        `@jsr+dreamer__ui-view@${ver}`,
+        "node_modules",
+        "@jsr",
+        "dreamer__ui-view",
+      ),
+      join(
+        projectRoot,
+        "node_modules",
+        ".deno",
+        `dreamer__ui-view@${ver}`,
+        "node_modules",
+        "@dreamer",
+        "ui-view",
+      ),
+      join(projectRoot, "vendor", "jsr.io", "@dreamer", "ui-view", ver),
+      join(projectRoot, "vendor", "@dreamer", "ui-view", ver),
+    ];
+    for (const dir of versionedHints) {
+      const hit = tryDir(dir);
+      if (hit) return hit;
     }
+  }
+
+  const denoNm = join(projectRoot, "node_modules", ".deno");
+  if (!existsSync(denoNm)) return null;
+  try {
+    for (const entry of readdirSync(denoNm)) {
+      if (!entry.isDirectory) continue;
+      const nested = [
+        join(denoNm, entry.name, "node_modules", "@jsr", "dreamer__ui-view"),
+        join(denoNm, entry.name, "node_modules", "@dreamer", "ui-view"),
+      ];
+      for (const dir of nested) {
+        const hit = tryDir(dir);
+        if (hit) return hit;
+      }
+    }
+  } catch {
+    /** 无读权限或目录中途变化时忽略 */
   }
   return null;
 }
@@ -905,13 +992,13 @@ export function uiViewTailwindPlugin(
       trace(`resolvePackageRoot: 采用 cwd 向上查找的包根 → ${fromCwd}`);
       return fromCwd;
     }
-    /** 从 JSR 拉包且 `nodeModulesDir: auto`：完整源码树常在 node_modules/@jsr/dreamer__ui-view */
+    /** 从 JSR + `nodeModulesDir: auto`：完整树常在 `node_modules/.deno/.../node_modules/@jsr/dreamer__ui-view` */
     const nmCandidates = [
       join(root, "node_modules", "@jsr", "dreamer__ui-view"),
       join(root, "node_modules", "@dreamer", "ui-view"),
     ];
     trace(
-      `resolvePackageRoot: node_modules 候选存在性: ${
+      `resolvePackageRoot: node_modules 顶层候选: ${
         nmCandidates.map((p) =>
           `${p}(${
             existsSync(join(p, PACKAGE_ROOT_MARKER)) ? "有标记" : "无标记"
@@ -919,7 +1006,31 @@ export function uiViewTailwindPlugin(
         ).join(" | ")
       }`,
     );
-    const fromNm = tryResolveUiViewPackageRootFromNodeModules();
+    const jsrVer = extractJsrIoDreamerUiViewVersion(import.meta.url);
+    trace(
+      `resolvePackageRoot: 从 import.meta.url 解析的 JSR 版本=${
+        jsrVer ?? "非 jsr.io/@dreamer/ui-view"
+      }`,
+    );
+    const denoRoot = join(root, "node_modules", ".deno");
+    let denoChildCount = 0;
+    if (existsSync(denoRoot)) {
+      try {
+        denoChildCount = readdirSync(denoRoot).filter((e) => e.isDirectory)
+          .length;
+      } catch {
+        denoChildCount = -1;
+      }
+    }
+    trace(
+      `resolvePackageRoot: node_modules/.deno 存在=${
+        existsSync(denoRoot)
+      }，子目录数≈${denoChildCount}`,
+    );
+    const fromNm = tryResolveUiViewPackageRootFromNodeModules(
+      root,
+      import.meta.url,
+    );
     trace(
       `resolvePackageRoot: tryResolveUiViewPackageRootFromNodeModules → ${
         fromNm ?? "null"
@@ -936,10 +1047,10 @@ export function uiViewTailwindPlugin(
       return fromFileDir;
     }
     trace(
-      `resolvePackageRoot: 失败汇总 — 无显式 packageRoot；file 目录不可用或不像包根；cwd 树未找到；node_modules 无 dreamer__ui-view/ui-view`,
+      `resolvePackageRoot: 失败汇总 — 无显式 packageRoot；非 file URL；cwd 树未命中；node_modules 顶层与 .deno 下均未找到含 ${PACKAGE_ROOT_MARKER} 的 @dreamer/ui-view`,
     );
     throw new Error(
-      `[ui-view-tailwind] 无法解析 @dreamer/ui-view 包根（cwd=${root}）。请设置 packageRoot，或对 imports 使用本地路径映射（如 "@dreamer/ui-view/plugin": "../ui-view/plugin.ts"），或确保已安装依赖使 node_modules/@jsr/dreamer__ui-view 存在。import.meta.url=${import.meta.url}`,
+      `[ui-view-tailwind] 无法解析 @dreamer/ui-view 包根（cwd=${root}）。纯 JSR 时 Deno 可能不把完整源码放在 node_modules/@jsr/dreamer__ui-view；请确认存在 node_modules/.deno/**/node_modules/@jsr/dreamer__ui-view/${PACKAGE_ROOT_MARKER}，或设置 packageRoot / 使用本地 imports 映射。import.meta.url=${import.meta.url}`,
     );
   };
 
