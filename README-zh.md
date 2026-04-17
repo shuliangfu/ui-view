@@ -255,6 +255,18 @@ Chart.js：ChartLine、ChartBar、ChartPie、ChartDoughnut、ChartRadar、ChartP
 
 ---
 
+## 变更日志
+
+**最新：[1.0.2] — 2026-04-17**
+
+- **变更：** 根入口与 `shared` / `desktop` / `mobile` / `basic` 的 `mod.ts`
+  改为显式命名再导出（不再使用 `export *`）；`basic` 内图标改为显式列出各
+  `Icon*`。
+
+完整记录见 [CHANGELOG-zh.md](./CHANGELOG-zh.md)。
+
+---
+
 ## 📄 License
 
 Apache-2.0. See [LICENSE](./LICENSE).
