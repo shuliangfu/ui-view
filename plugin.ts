@@ -1230,7 +1230,8 @@ type UiViewTailwindLogger = {
 };
 
 /**
- * 统一本插件在 onInit 中的日志出口：**info** 同时写 `logger.info` 与 `console.info`，便于 JSR 发布后下游项目在 CI 中仍能看到关键路径。
+ * 统一本插件在 onInit 中的日志出口：**info** 在宿主注入 logger 时只调用 `logger.info`（避免与 `console.info` 各打一行、内容重复）；
+ * 无 logger 时再回退到 `console.info`（例如无容器的脚本场景）。
  * **debug** 已关闭（避免刷屏）；保留方法便于将来按需接回 `logger.debug`。
  *
  * @param logger - dweb 等服务容器中的 logger，可为 undefined
@@ -1243,8 +1244,11 @@ function createUiViewTailwindPluginLog(
   return {
     info(msg: string): void {
       const line = `${tag} ${msg}`;
-      if (logger) logger.info(line);
-      console.info(line);
+      if (logger) {
+        logger.info(line);
+      } else {
+        console.info(line);
+      }
     },
     /** 调试日志已移除，刻意为空 */
     debug(_msg: string): void {
@@ -1326,7 +1330,7 @@ export function uiViewTailwindPlugin(
       const log = createUiViewTailwindPluginLog(logger);
 
       /**
-       * 输出本插件内的失败详情：优先 `logger.error`（若存在），否则 `info`，并始终 `console.error` 可读文本，避免只看到 `{}`。
+       * 输出本插件内的失败详情：与 {@link createUiViewTailwindPluginLog} 一致，有 logger 时只走 logger（避免与 stderr 重复一行）。
        *
        * @param phase - 阶段说明
        * @param e - 异常对象
@@ -1347,8 +1351,9 @@ export function uiViewTailwindPlugin(
           logger.error(text);
         } else if (logger) {
           logger.info(text);
+        } else {
+          console.error(text);
         }
-        console.error(text);
       };
 
       const root = cwd();
@@ -1426,14 +1431,12 @@ export function uiViewTailwindPlugin(
           .map((p) => `@source "${toAtSourceSpecifier(sourcesCssDir, p)}";`)
           .join("\n") + "\n";
 
+        /** 与历史版本一致：写入前后各一条 info（相对路径，避免绝对路径刷屏） */
+        const outRel = relative(root, outAbs);
+        log.info(`准备写入 ${outRel}（${cssContent.length} 字节）`);
         await mkdir(sourcesCssDir, { recursive: true });
         await writeTextFile(outAbs, cssContent);
-
-        log.info(
-          `onInit 成功: 已写入 ${outAbs}（业务 tailwind 入口应 @import 的相对路径建议: ${
-            relative(root, outAbs)
-          }）`,
-        );
+        log.info(`已写入 ${outRel}`);
       } catch (e) {
         logInitFailure("onInit 失败", e, {
           cwd: root,
