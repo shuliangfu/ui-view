@@ -61,6 +61,45 @@ function findUiViewPackageRootFromCwd(): string | null {
 }
 
 /**
+ * 本插件文件所在目录：仅当 `import.meta.url` 为 `file:` 时可转为本地路径。
+ * 从 **JSR** 加载时 URL 为 `https:`，若调用 `fromFileUrl(import.meta.url)` 会抛出 `ERR_INVALID_URL_SCHEME`，故必须先判断协议。
+ *
+ * @returns `file:` 时为目录绝对路径，否则 `undefined`
+ */
+function dirnameOfThisPluginIfFileUrl(): string | undefined {
+  try {
+    const u = new URL(import.meta.url);
+    if (u.protocol !== "file:") {
+      return undefined;
+    }
+    return dirname(fromFileUrl(u));
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * 从 JSR 安装时，Deno 在 `nodeModulesDir: "auto"` 下常把包放到 `node_modules/@jsr/dreamer__ui-view`，
+ * 目录内为完整包布局（含 `src/mod.ts`），可供 `getContentPaths` 拼绝对路径。
+ * （JSR 全局缓存里的 `local` 多为内容寻址单文件，**不是**包目录树，不能作 packageRoot。）
+ *
+ * @returns 包根绝对路径；未找到时 `null`
+ */
+function tryResolveUiViewPackageRootFromNodeModules(): string | null {
+  const root = cwd();
+  const candidates = [
+    join(root, "node_modules", "@jsr", "dreamer__ui-view"),
+    join(root, "node_modules", "@dreamer", "ui-view"),
+  ];
+  for (const dir of candidates) {
+    if (existsSync(join(dir, PACKAGE_ROOT_MARKER))) {
+      return dir;
+    }
+  }
+  return null;
+}
+
+/**
  * 解析到的目录是否像真实的 ui-view 源码根（含完整 `src/shared`），而非误选的 `dist`。
  *
  * @param dir - 待检测的绝对路径
@@ -751,25 +790,40 @@ export function uiViewTailwindPlugin(
     packageRoot: optionPackageRoot,
   } = options;
 
+  /**
+   * 解析 @dreamer/ui-view 包根：本地 file → cwd 向上找仓库 → `node_modules/@jsr/dreamer__ui-view`（JSR 安装树）。
+   */
   const resolvePackageRoot = (): string => {
     if (optionPackageRoot) {
       return optionPackageRoot.startsWith("/")
         ? optionPackageRoot
         : join(cwd(), optionPackageRoot);
     }
-    const fromMeta = dirname(fromFileUrl(import.meta.url));
-    if (looksLikeUiViewSourceRoot(fromMeta)) {
-      return fromMeta;
+    /** 本地 file 映射 / 工作区：`import.meta.url` 为 file:// */
+    const fromFileDir = dirnameOfThisPluginIfFileUrl();
+    if (fromFileDir != null && looksLikeUiViewSourceRoot(fromFileDir)) {
+      return fromFileDir;
     }
+    /** 在 ui-view 仓库内跑 docs：cwd 向上能碰到 plugin.ts + src/mod.ts */
     const fromCwd = findUiViewPackageRootFromCwd();
     if (fromCwd != null) {
       return fromCwd;
     }
-    return fromMeta;
+    /** 从 JSR 拉包且 `nodeModulesDir: auto`：完整源码树常在 node_modules/@jsr/dreamer__ui-view */
+    const fromNm = tryResolveUiViewPackageRootFromNodeModules();
+    if (fromNm != null) {
+      return fromNm;
+    }
+    if (fromFileDir != null) {
+      return fromFileDir;
+    }
+    throw new Error(
+      '[ui-view-tailwind] 无法解析 @dreamer/ui-view 包根：请设置 packageRoot，或对 imports 使用本地路径映射（如 "@dreamer/ui-view/plugin": "../ui-view/plugin.ts"），或确保已安装依赖使 node_modules/@jsr/dreamer__ui-view 存在。',
+    );
   };
 
   return {
-    name: "ui-view-tailwind-content",
+    name: "ui-view-tailwind",
     version: "0.1.0",
 
     async onInit(container: ServiceContainer): Promise<void> {
@@ -786,7 +840,7 @@ export function uiViewTailwindPlugin(
         await collectTsTsx(scanDir, scanDir, files);
       } catch (e) {
         if (logger) {
-          logger.info(`[ui-view-tailwind-content] 扫描目录跳过: ${e}`);
+          logger.info(`[ui-view-tailwind] 扫描目录跳过: ${e}`);
         }
         return;
       }
@@ -807,7 +861,7 @@ export function uiViewTailwindPlugin(
       if (names.length === 0) {
         if (logger) {
           logger.info(
-            "[ui-view-tailwind-content] 未发现 @dreamer/ui-view 引用，跳过生成",
+            "[ui-view-tailwind] 未发现 @dreamer/ui-view 引用，跳过生成",
           );
         }
         return;
@@ -832,7 +886,7 @@ export function uiViewTailwindPlugin(
 
       if (logger) {
         logger.debug(
-          `[ui-view-tailwind-content] 已生成 ${uniqueSortedPaths.length} 个`,
+          `[ui-view-tailwind] 已生成 ${uniqueSortedPaths.length} 个`,
         );
         logger.debug(
           `@source → ${outputPath}`,
