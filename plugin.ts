@@ -124,17 +124,12 @@ const denoInfoHttpsToLocalCache = new Map<string, string>();
  *
  * @param projectRoot - `cwd()` 应用根（须能加载该应用的 deno.json）
  * @param args - 一般为 `["info", "jsr:@dreamer/ui-view"]` 或 `["info", "https://jsr.io/..."]`
- * @param trace - 调试输出
  */
 async function runDenoInfo(
   projectRoot: string,
   args: string[],
-  trace: (msg: string) => void,
 ): Promise<string | null> {
   if (!IS_DENO) {
-    trace(
-      "runDenoInfo: 非 Deno 运行时，跳过（请使用显式 packageRoot 或 vendor）",
-    );
     return null;
   }
   const cmd = createCommand("deno", {
@@ -145,14 +140,6 @@ async function runDenoInfo(
   });
   const out = await cmd.output();
   if (!out.success) {
-    trace(
-      `runDenoInfo: deno ${args.join(" ")} 失败 code=${out.code} stderr=${
-        truncateForLog(
-          stripAnsiSequences(new TextDecoder().decode(out.stderr)),
-          240,
-        )
-      }`,
-    );
     return null;
   }
   return stripAnsiSequences(new TextDecoder().decode(out.stdout));
@@ -163,32 +150,19 @@ async function runDenoInfo(
  *
  * @param projectRoot - 应用根
  * @param pluginImportMetaUrl - 本插件 `import.meta.url`
- * @param trace - 调试输出
  */
 async function getUiViewJsrVersionResolvedByApp(
   projectRoot: string,
   pluginImportMetaUrl: string,
-  trace: (msg: string) => void,
 ): Promise<string | null> {
-  const tree = await runDenoInfo(
-    projectRoot,
-    ["info", "jsr:@dreamer/ui-view"],
-    trace,
-  );
+  const tree = await runDenoInfo(projectRoot, ["info", "jsr:@dreamer/ui-view"]);
   if (tree) {
     const v = parseUiViewVersionFromDenoInfoStdout(tree);
     if (v) {
-      trace(`getUiViewJsrVersionResolvedByApp: 自 deno info 树得到版本 ${v}`);
       return v;
     }
   }
-  const fromPlugin = extractJsrIoDreamerUiViewVersion(pluginImportMetaUrl);
-  if (fromPlugin) {
-    trace(
-      `getUiViewJsrVersionResolvedByApp: 回退插件 import.meta.url 版本 ${fromPlugin}`,
-    );
-  }
-  return fromPlugin;
+  return extractJsrIoDreamerUiViewVersion(pluginImportMetaUrl);
 }
 
 /**
@@ -200,13 +174,11 @@ async function getUiViewJsrVersionResolvedByApp(
  * @param projectRoot - 应用根（`deno info` 的 cwd）
  * @param rel - 包内相对路径，如 `src/shared/basic/Link.tsx`
  * @param version - `getUiViewJsrVersionResolvedByApp` 结果；为 `null` 时本函数直接返回 `null`
- * @param trace - 调试输出
  */
 async function tryResolveUiViewRelViaDenoInfo(
   projectRoot: string,
   rel: string,
   version: string | null,
-  trace: (msg: string) => void,
 ): Promise<string | null> {
   if (!version) return null;
   const httpsUrl = `https://jsr.io/@dreamer/ui-view/${version}/${rel}`;
@@ -214,22 +186,13 @@ async function tryResolveUiViewRelViaDenoInfo(
   if (cached && existsSync(cached)) {
     return cached;
   }
-  const stdout = await runDenoInfo(projectRoot, ["info", httpsUrl], trace);
+  const stdout = await runDenoInfo(projectRoot, ["info", httpsUrl]);
   if (!stdout) return null;
   const local = parseFirstLocalLineFromDenoInfo(stdout);
   if (local && existsSync(local)) {
     denoInfoHttpsToLocalCache.set(httpsUrl, local);
-    trace(
-      `tryResolveUiViewRelViaDenoInfo: ${rel} → ${truncateForLog(local, 140)}`,
-    );
     return local;
   }
-  trace(
-    `tryResolveUiViewRelViaDenoInfo: 未得到有效 local 路径 rel=${rel} version=${version}` +
-      (local
-        ? `（已解析到路径但文件不存在: ${truncateForLog(local, 120)}）`
-        : "（未匹配 local: 行）"),
-  );
   return null;
 }
 
@@ -239,7 +202,7 @@ async function tryResolveUiViewRelViaDenoInfo(
  * 否则在 Deno 下通过 {@link tryResolveUiViewRelViaDenoInfo} 解析哈希缓存路径。
  *
  * @param usedNames - 从业务源码解析出的组件符号
- * @param ctx - 项目根、可选包根、自动解析的包根、JSR 版本、日志
+ * @param ctx - 项目根、可选包根、自动解析的包根、JSR 版本
  */
 async function gatherResolvedContentPaths(
   usedNames: string[],
@@ -248,7 +211,6 @@ async function gatherResolvedContentPaths(
     optionPackageRoot: string | undefined;
     resolvedPackageRoot: string;
     jsrVersion: string | null;
-    trace: (msg: string) => void;
   },
 ): Promise<string[]> {
   const seen = new Set<string>();
@@ -282,13 +244,9 @@ async function gatherResolvedContentPaths(
           ctx.projectRoot,
           rel,
           ctx.jsrVersion,
-          ctx.trace,
         );
       }
       if (!abs) {
-        ctx.trace(
-          `gatherResolvedContentPaths: 跳过 ${name} → ${rel}（无法得到本地文件路径）`,
-        );
         continue;
       }
       if (seen.has(abs)) continue;
@@ -1180,13 +1138,11 @@ function extractUsedNames(content: string): string[] {
  * @param usedNames - 从项目源码提取的具名导入符号
  * @param packageRoot - ui-view 包根绝对路径（可能来自探测，未必为真实磁盘树）
  * @param paths - gatherResolvedContentPaths 结果，本函数会原地追加并重新排序
- * @param trace - 可选调试输出（说明跳过原因）
  */
 async function mergeIntrinsicIconSources(
   usedNames: Iterable<string>,
   packageRoot: string,
   paths: string[],
-  trace?: (msg: string) => void,
 ): Promise<void> {
   let anyIcon = false;
   for (const n of usedNames) {
@@ -1200,9 +1156,6 @@ async function mergeIntrinsicIconSources(
   const iconRoot = join(packageRoot, "src/shared/basic/icons");
   const iconEntry = join(iconRoot, "Icon.tsx");
   if (!existsSync(iconEntry)) {
-    trace?.(
-      "mergeIntrinsicIconSources: 跳过 icons 全量扫描（包根下无 src/shared/basic/icons/Icon.tsx；纯 JSR 哈希缓存时请依赖各组件映射中的 icon 路径）",
-    );
     return;
   }
 
@@ -1277,9 +1230,8 @@ type UiViewTailwindLogger = {
 };
 
 /**
- * 统一本插件在 onInit 中的日志出口。
- * - **info**：同时写 `logger.info` 与 `console.info`，便于 JSR 发布后下游项目在 CI 中仍能看到关键路径（不依赖宿主是否转发 debug）。
- * - **debug**：优先 `logger.debug`；无 logger 时用 `console.debug`。
+ * 统一本插件在 onInit 中的日志出口：**info** 同时写 `logger.info` 与 `console.info`，便于 JSR 发布后下游项目在 CI 中仍能看到关键路径。
+ * **debug** 已关闭（避免刷屏）；保留方法便于将来按需接回 `logger.debug`。
  *
  * @param logger - dweb 等服务容器中的 logger，可为 undefined
  * @returns 带 `info` / `debug` 的轻量对象
@@ -1294,25 +1246,11 @@ function createUiViewTailwindPluginLog(
       if (logger) logger.info(line);
       console.info(line);
     },
-    debug(msg: string): void {
-      const line = `${tag} ${msg}`;
-      if (logger) logger.debug(line);
-      else console.debug(line);
+    /** 调试日志已移除，刻意为空 */
+    debug(_msg: string): void {
+      void _msg;
     },
   };
-}
-
-/**
- * 将字符串截断到最大长度，避免单条日志过长被宿主截断。
- *
- * @param s - 原文
- * @param max - 最大字符数（含省略号占位）
- * @returns 截断后的字符串
- */
-function truncateForLog(s: string, max: number): string {
-  if (s.length <= max) return s;
-  if (max <= 3) return s.slice(0, max);
-  return `${s.slice(0, max - 3)}...`;
 }
 
 /**
@@ -1332,116 +1270,39 @@ export function uiViewTailwindPlugin(
 
   /**
    * 解析 @dreamer/ui-view 包根：本地 file → cwd 向上找仓库 → `node_modules/@jsr/dreamer__ui-view`（JSR 安装树）。
-   *
-   * @param trace - 每步决策的说明（供发布/CI 排障）
    */
-  const resolvePackageRoot = (trace: (msg: string) => void): string => {
+  const resolvePackageRoot = (): string => {
     const root = cwd();
-    trace(
-      `resolvePackageRoot: 开始，cwd=${root}，已配置 packageRoot=${
-        optionPackageRoot ?? "(无)"
-      }`,
-    );
-    trace(`resolvePackageRoot: import.meta.url=${import.meta.url}`);
 
     if (optionPackageRoot) {
-      const resolved = optionPackageRoot.startsWith("/")
+      return optionPackageRoot.startsWith("/")
         ? optionPackageRoot
         : join(root, optionPackageRoot);
-      trace(`resolvePackageRoot: 使用选项 packageRoot → ${resolved}`);
-      return resolved;
     }
     /** 本地 file 映射 / 工作区：`import.meta.url` 为 file:// */
     const fromFileDir = dirnameOfThisPluginIfFileUrl();
-    trace(
-      `resolvePackageRoot: dirnameOfThisPluginIfFileUrl → ${
-        fromFileDir ?? "(undefined，多为 JSR https 加载)"
-      }`,
-    );
-    if (fromFileDir != null) {
-      const like = looksLikeUiViewSourceRoot(fromFileDir);
-      trace(
-        `resolvePackageRoot: looksLikeUiViewSourceRoot(${fromFileDir})=${like}（需含 plugin.ts、${PACKAGE_ROOT_MARKER}、src/shared/basic/Icon.tsx）`,
-      );
-    }
     if (fromFileDir != null && looksLikeUiViewSourceRoot(fromFileDir)) {
-      trace(
-        `resolvePackageRoot: 采用 file URL 插件目录作为包根 → ${fromFileDir}`,
-      );
       return fromFileDir;
     }
     /** 在 ui-view 仓库内跑 docs：cwd 向上能碰到 plugin.ts + src/mod.ts */
     const fromCwd = findUiViewPackageRootFromCwd();
-    trace(
-      `resolvePackageRoot: findUiViewPackageRootFromCwd → ${fromCwd ?? "null"}`,
-    );
     if (fromCwd != null) {
-      trace(`resolvePackageRoot: 采用 cwd 向上查找的包根 → ${fromCwd}`);
       return fromCwd;
     }
     /** 从 JSR + `nodeModulesDir: auto`：完整树常在 `node_modules/.deno/.../node_modules/@jsr/dreamer__ui-view` */
-    const nmCandidates = [
-      join(root, "node_modules", "@jsr", "dreamer__ui-view"),
-      join(root, "node_modules", "@dreamer", "ui-view"),
-    ];
-    trace(
-      `resolvePackageRoot: node_modules 顶层候选: ${
-        nmCandidates.map((p) =>
-          `${p}(${
-            existsSync(join(p, PACKAGE_ROOT_MARKER)) ? "有标记" : "无标记"
-          })`
-        ).join(" | ")
-      }`,
-    );
-    const jsrVer = extractJsrIoDreamerUiViewVersion(import.meta.url);
-    trace(
-      `resolvePackageRoot: 从 import.meta.url 解析的 JSR 版本=${
-        jsrVer ?? "非 jsr.io/@dreamer/ui-view"
-      }`,
-    );
-    const denoRoot = join(root, "node_modules", ".deno");
-    let denoChildCount = 0;
-    if (existsSync(denoRoot)) {
-      try {
-        denoChildCount = readdirSync(denoRoot).filter((e) => e.isDirectory)
-          .length;
-      } catch {
-        denoChildCount = -1;
-      }
-    }
-    trace(
-      `resolvePackageRoot: node_modules/.deno 存在=${
-        existsSync(denoRoot)
-      }，子目录数≈${denoChildCount}`,
-    );
     const fromNm = tryResolveUiViewPackageRootFromNodeModules(
       root,
       import.meta.url,
     );
-    trace(
-      `resolvePackageRoot: tryResolveUiViewPackageRootFromNodeModules → ${
-        fromNm ?? "null"
-      }`,
-    );
     if (fromNm != null) {
-      trace(`resolvePackageRoot: 采用 node_modules 包根 → ${fromNm}`);
       return fromNm;
     }
     /** 无 `vendor: true` 时：尽力从本机 `DENO_DIR/registries` 命中已缓存的 JSR 源码树（不保证每台机器都有） */
     const fromReg = tryResolveUiViewFromDenoRegistriesCache();
-    trace(
-      `resolvePackageRoot: tryResolveUiViewFromDenoRegistriesCache（DENO_DIR/registries）→ ${
-        fromReg ?? "null"
-      }`,
-    );
     if (fromReg != null) {
-      trace(`resolvePackageRoot: 采用全局 registries 缓存包根 → ${fromReg}`);
       return fromReg;
     }
     if (fromFileDir != null) {
-      trace(
-        `resolvePackageRoot: 回退采用 fromFileDir（可能非完整源码树）→ ${fromFileDir}`,
-      );
       return fromFileDir;
     }
     /**
@@ -1449,14 +1310,8 @@ export function uiViewTailwindPlugin(
      * 此处仅需一个用于 `join(rel)` 尝试与 `mergeIntrinsicIconSources` 的占位根；用 cwd 即可（icons 全量扫描会因无 Icon.tsx 而跳过）。
      */
     if (IS_DENO) {
-      trace(
-        `resolvePackageRoot: Deno 下无传统包根，回退 cwd=${root}（将配合 deno info 解析各 ui-view 源文件）`,
-      );
       return root;
     }
-    trace(
-      "resolvePackageRoot: 失败汇总 — 无显式 packageRoot；非 file URL；cwd 树未命中；node_modules/.deno 未命中；DENO_DIR/registries 未命中；无 vendor/jsr.io 包根；非 Deno 无法使用 deno info 回退",
-    );
     throw new Error(
       `[ui-view-tailwind] 无法解析 @dreamer/ui-view 包根（cwd=${root}）。请设置 packageRoot、使用 vendor/npm 安装树，或在 Deno 下使用 jsr: 依赖。import.meta.url=${import.meta.url}`,
     );
@@ -1500,15 +1355,6 @@ export function uiViewTailwindPlugin(
       const scanDirAbs = join(root, scanPath);
 
       try {
-        log.info(
-          `onInit 开始: cwd=${root}，scanPath=${scanPath}（绝对路径=${scanDirAbs}），outputPath=${outputPath}，显式 packageRoot=${
-            optionPackageRoot ?? "(未传)"
-          }，logger=${logger ? "已注入" : "无"}`,
-        );
-        log.debug(
-          `onInit: import.meta.url=${import.meta.url}，插件 name=${"ui-view-tailwind"}`,
-        );
-
         const files: string[] = [];
         try {
           await collectTsTsx(scanDirAbs, scanDirAbs, files);
@@ -1521,18 +1367,6 @@ export function uiViewTailwindPlugin(
           return;
         }
 
-        log.info(`扫描到 .ts/.tsx 文件数量: ${files.length}`);
-        if (files.length > 0) {
-          const sample = files.slice(0, 12).map((p) => relative(root, p)).join(
-            ", ",
-          );
-          log.debug(
-            `扫描文件示例（相对 cwd，最多 12 条）: ${sample}${
-              files.length > 12 ? ", …" : ""
-            }`,
-          );
-        }
-
         const usedNames = new Set<string>();
         let readFailCount = 0;
         for (const filePath of files) {
@@ -1541,19 +1375,12 @@ export function uiViewTailwindPlugin(
             for (const name of extractUsedNames(content)) {
               usedNames.add(name);
             }
-          } catch (readErr) {
+          } catch {
             readFailCount++;
-            log.debug(
-              `读取失败（已忽略）: ${relative(root, filePath)} → ${
-                formatPluginError(readErr)
-              }`,
-            );
           }
         }
         if (readFailCount > 0) {
-          log.info(
-            `解析导入时共有 ${readFailCount} 个文件读取失败（已忽略），详见上方 debug`,
-          );
+          log.info(`解析导入时共有 ${readFailCount} 个文件读取失败（已忽略）`);
         }
 
         const names = Array.from(usedNames).sort();
@@ -1564,79 +1391,41 @@ export function uiViewTailwindPlugin(
           return;
         }
 
-        const namesPreview = truncateForLog(names.join(", "), 400);
-        log.info(
-          `解析到可能来自 ui-view 的导出名 ${names.length} 个（排序后预览）: ${namesPreview}`,
-        );
-
         /** 每次 onInit 清空，避免跨应用/版本误用缓存 */
         denoInfoHttpsToLocalCache.clear();
 
         const jsrVersion = await getUiViewJsrVersionResolvedByApp(
           root,
           import.meta.url,
-          (m) => log.info(m),
-        );
-        log.info(
-          `JSR @dreamer/ui-view 解析版本（供 deno info https URL）: ${
-            jsrVersion ?? "(null，将无法解析 remote 哈希路径)"
-          }`,
         );
 
-        const pkgRoot = resolvePackageRoot((m) => log.info(m));
-        log.info(`最终 packageRoot（join / icons 占位）: ${pkgRoot}`);
+        const pkgRoot = resolvePackageRoot();
 
         const paths = await gatherResolvedContentPaths(names, {
           projectRoot: root,
           optionPackageRoot: optionPackageRoot,
           resolvedPackageRoot: pkgRoot,
           jsrVersion,
-          trace: (m) => log.info(m),
         });
-        log.info(
-          `gatherResolvedContentPaths 展开后路径条数（去重前）: ${paths.length}`,
-        );
         if (paths.length === 0) {
           log.info(
             "未解析到任何可扫描的 ui-view 源文件路径，跳过写入 ui-view-sources.css（请检查 deno.json、deno cache 与组件映射）",
           );
           return;
         }
-        await mergeIntrinsicIconSources(
-          names,
-          pkgRoot,
-          paths,
-          (m) => log.info(m),
-        );
+        await mergeIntrinsicIconSources(names, pkgRoot, paths);
         /** 与 gatherResolvedContentPaths / mergeIntrinsicIconSources 内去重双保险，保证写入的 @source 路径唯一 */
         const uniqueSortedPaths = Array.from(new Set(paths)).sort();
-        log.info(
-          `mergeIntrinsicIconSources 后唯一 @source 目标文件数: ${uniqueSortedPaths.length}`,
-        );
 
         const outAbs = outputPath.startsWith("/")
           ? outputPath
           : join(root, outputPath);
         const sourcesCssDir = dirname(outAbs);
-        const specifiers = uniqueSortedPaths.map((p) =>
-          toAtSourceSpecifier(sourcesCssDir, p)
-        );
-        const previewLines = uniqueSortedPaths.slice(0, 8).map((abs, i) =>
-          `@source "${specifiers[i]}"  /* ${relative(pkgRoot, abs)} */`
-        );
-        log.debug(
-          `@source 写入预览（前 8 条，相对生成 CSS 目录）:\n${
-            previewLines.join("\n")
-          }`,
-        );
 
         const cssContent = uniqueSortedPaths
           .map((p) => `@source "${toAtSourceSpecifier(sourcesCssDir, p)}";`)
           .join("\n") + "\n";
 
-        log.info(
-          `准备写入: outAbs=${outAbs}，sourcesCssDir=${sourcesCssDir}，CSS 约 ${cssContent.length} 字节`,
-        );
         await mkdir(sourcesCssDir, { recursive: true });
         await writeTextFile(outAbs, cssContent);
 
