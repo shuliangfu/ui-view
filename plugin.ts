@@ -19,14 +19,15 @@
 import type { Plugin } from "@dreamer/plugin";
 import type { ServiceContainer } from "@dreamer/service";
 import {
+  createCommand,
   cwd,
   dirname,
   existsSync,
   fromFileUrl,
   getEnv,
+  IS_DENO,
   join,
   mkdir,
-  pathToFileUrl,
   readdir,
   readdirSync,
   readTextFile,
@@ -82,210 +83,155 @@ function dirnameOfThisPluginIfFileUrl(): string | undefined {
 }
 
 /**
- * **纯 `jsr:` 依赖**时，项目里往往**没有** `node_modules/@jsr/dreamer__ui-view`，依赖只在 Deno 全局缓存（`$DENO_DIR`）里。
- * 用宿主应用中的真实文件作 referrer，调用 `import.meta.resolve` 把 `jsr:@dreamer/ui-view/...` 或 `@dreamer/ui-view/...` 解析成 **`file:`** 绝对路径，再向上得到包根。
+ * `deno info <https://jsr.io/...>` 输出首行 `local: /path` 的本地缓存路径（多为 `remote/https/jsr.io/<hash>`）。
  *
- * @param projectRoot - 应用根（一般为 `cwd()`）
- * @param trace - 调试输出
- * @returns 包根目录；无法解析或不像 ui-view 源码树时返回 `null`
+ * @param text - `deno info` 标准输出全文
+ * @returns 去掉首尾空白的绝对路径；未匹配时返回 `null`
  */
-function tryResolveUiViewPackageRootViaImportMetaResolve(
-  projectRoot: string,
-  trace: (msg: string) => void,
-): string | null {
-  const meta = import.meta as ImportMeta & {
-    resolve?: (specifier: string, parent: string | URL) => string;
-  };
-  if (typeof meta.resolve !== "function") {
-    trace(
-      "tryResolveUiViewViaImportMetaResolve: 当前运行时无 import.meta.resolve，跳过",
-    );
-    return null;
-  }
-
-  /** 常见应用入口（存在则用其 file URL 作 referrer，以应用 deno.json 中的 imports 映射） */
-  const referrerRelPaths = [
-    join("src", "frontend", "main.ts"),
-    join("src", "main.ts"),
-    "main.ts",
-    "cli.ts",
-    join("src", "backend", "main.ts"),
-  ];
-
-  const specifiers = [
-    "jsr:@dreamer/ui-view/src/mod.ts",
-    "@dreamer/ui-view/src/mod.ts",
-  ];
-
-  for (const rel of referrerRelPaths) {
-    const refPath = join(projectRoot, rel);
-    if (!existsSync(refPath)) continue;
-    let refUrl: string;
-    try {
-      refUrl = pathToFileUrl(refPath);
-    } catch {
-      continue;
-    }
-    for (const spec of specifiers) {
-      let resolvedHref: string;
-      try {
-        resolvedHref = meta.resolve!(spec, refUrl);
-      } catch (e) {
-        trace(
-          `tryResolveUiViewViaImportMetaResolve: resolve(${spec}, ${rel}) 异常: ${
-            formatPluginError(e)
-          }`,
-        );
-        continue;
-      }
-      trace(
-        `tryResolveUiViewViaImportMetaResolve: resolve(${spec}, ${rel}) → ${
-          truncateForLog(resolvedHref, 200)
-        }`,
-      );
-      if (!resolvedHref.startsWith("file:")) {
-        trace(
-          "tryResolveUiViewViaImportMetaResolve: 解析结果非 file:，跳过",
-        );
-        continue;
-      }
-      let modFsPath: string;
-      try {
-        modFsPath = fromFileUrl(resolvedHref);
-      } catch (e) {
-        trace(
-          `tryResolveUiViewViaImportMetaResolve: fromFileUrl 失败: ${
-            formatPluginError(e)
-          }`,
-        );
-        continue;
-      }
-      const srcDir = dirname(modFsPath);
-      const pkgRoot = dirname(srcDir);
-      if (
-        looksLikeUiViewSourceRoot(pkgRoot) ||
-        looksLikeUiViewTailwindContentRoot(pkgRoot)
-      ) {
-        trace(
-          `tryResolveUiViewViaImportMetaResolve: 命中包根 → ${pkgRoot}`,
-        );
-        return pkgRoot;
-      }
-      trace(
-        `tryResolveUiViewViaImportMetaResolve: ${pkgRoot} 未通过包根检测（缺 plugin 或 src/mod 等）`,
-      );
-    }
-  }
-  return null;
+function parseFirstLocalLineFromDenoInfo(text: string): string | null {
+  const m = text.match(/^local:\s*(.+)$/m);
+  return m?.[1]?.trim() ?? null;
 }
 
 /**
- * 将 ui-view 包内**逻辑相对路径**（如 `src/shared/basic/Link.tsx`）解析为当前机器上的 **`file:` 绝对路径**。
+ * 从 `deno info jsr:@dreamer/ui-view` 依赖树文本中解析**应用当前解析到的**包版本（与 deno.json / lock 一致）。
  *
- * **背景**：Deno 的 JSR 缓存多为 `…/remote/https/jsr.io/<64 位哈希>` 的**按内容寻址单文件**，不存在
- * `…/remote/src/shared/...` 这种「假包根」。把 `$DENO_DIR/remote/` 当作 `packageRoot` 再 `join(rel)` 会得到**磁盘上不存在**的路径。
- * 本函数用宿主应用中的真实文件作 referrer，对 `jsr:@dreamer/ui-view/<rel>` / `@dreamer/ui-view/<rel>` 调用
- * `import.meta.resolve`，得到 Deno 实际缓存文件路径，供 `@source` 使用。
- *
- * @param projectRoot - 应用根目录（一般为 `cwd()`）
- * @param rel - 相对包根的路径，正斜杠（与 {@link COMPONENT_PATHS} 中一致）
- * @param trace - 调试输出
- * @returns 本地绝对路径；无法解析或文件不存在时返回 `null`
+ * @param text - `deno info jsr:@dreamer/ui-view` 的 stdout
  */
-function tryResolveUiViewRelToFsPath(
+function parseUiViewVersionFromDenoInfoStdout(text: string): string | null {
+  const m = text.match(/https:\/\/jsr\.io\/@dreamer\/ui-view\/([^/\s]+)\//);
+  return m?.[1] ?? null;
+}
+
+/** 避免同一 `onInit` 内对同一 `https://jsr.io/...` URL 重复执行 `deno info` */
+const denoInfoHttpsToLocalCache = new Map<string, string>();
+
+/**
+ * 在应用根目录下执行 `deno info`，供解析 JSR 模块在 `$DENO_DIR` 中的真实路径。
+ *
+ * @param projectRoot - `cwd()` 应用根（须能加载该应用的 deno.json）
+ * @param args - 一般为 `["info", "jsr:@dreamer/ui-view"]` 或 `["info", "https://jsr.io/..."]`
+ * @param trace - 调试输出
+ */
+async function runDenoInfo(
   projectRoot: string,
-  rel: string,
+  args: string[],
   trace: (msg: string) => void,
-): string | null {
-  const meta = import.meta as ImportMeta & {
-    resolve?: (specifier: string, parent: string | URL) => string;
-  };
-  if (typeof meta.resolve !== "function") {
+): Promise<string | null> {
+  if (!IS_DENO) {
     trace(
-      "tryResolveUiViewRelToFsPath: 当前运行时无 import.meta.resolve，无法按模块解析路径",
+      "runDenoInfo: 非 Deno 运行时，跳过（请使用显式 packageRoot 或 vendor）",
     );
     return null;
   }
+  const cmd = createCommand("deno", {
+    args,
+    cwd: projectRoot,
+    stdout: "piped",
+    stderr: "piped",
+  });
+  const out = await cmd.output();
+  if (!out.success) {
+    trace(
+      `runDenoInfo: deno ${args.join(" ")} 失败 code=${out.code} stderr=${
+        truncateForLog(new TextDecoder().decode(out.stderr), 240)
+      }`,
+    );
+    return null;
+  }
+  return new TextDecoder().decode(out.stdout);
+}
 
-  const referrerRelPaths = [
-    join("src", "frontend", "main.ts"),
-    join("src", "main.ts"),
-    "main.ts",
-    "cli.ts",
-    join("src", "backend", "main.ts"),
-  ];
-
-  const specifiers = [
-    `jsr:@dreamer/ui-view/${rel}`,
-    `@dreamer/ui-view/${rel}`,
-  ];
-
-  for (const refRel of referrerRelPaths) {
-    const refPath = join(projectRoot, refRel);
-    if (!existsSync(refPath)) continue;
-    let refUrl: string;
-    try {
-      refUrl = pathToFileUrl(refPath);
-    } catch {
-      continue;
-    }
-    for (const spec of specifiers) {
-      let resolvedHref: string;
-      try {
-        resolvedHref = meta.resolve!(spec, refUrl);
-      } catch (e) {
-        trace(
-          `tryResolveUiViewRelToFsPath: resolve(${spec}) 异常: ${
-            formatPluginError(e)
-          }`,
-        );
-        continue;
-      }
-      if (!resolvedHref.startsWith("file:")) continue;
-      let fsPath: string;
-      try {
-        fsPath = fromFileUrl(resolvedHref);
-      } catch (e) {
-        trace(
-          `tryResolveUiViewRelToFsPath: fromFileUrl 失败: ${
-            formatPluginError(e)
-          }`,
-        );
-        continue;
-      }
-      if (existsSync(fsPath)) {
-        trace(
-          `tryResolveUiViewRelToFsPath: ${rel} → ${
-            truncateForLog(fsPath, 160)
-          }`,
-        );
-        return fsPath;
-      }
+/**
+ * 解析宿主应用当前使用的 `@dreamer/ui-view` **版本号**（优先 `deno info jsr:@dreamer/ui-view` 依赖树，其次插件 `import.meta.url`）。
+ *
+ * @param projectRoot - 应用根
+ * @param pluginImportMetaUrl - 本插件 `import.meta.url`
+ * @param trace - 调试输出
+ */
+async function getUiViewJsrVersionResolvedByApp(
+  projectRoot: string,
+  pluginImportMetaUrl: string,
+  trace: (msg: string) => void,
+): Promise<string | null> {
+  const tree = await runDenoInfo(
+    projectRoot,
+    ["info", "jsr:@dreamer/ui-view"],
+    trace,
+  );
+  if (tree) {
+    const v = parseUiViewVersionFromDenoInfoStdout(tree);
+    if (v) {
+      trace(`getUiViewJsrVersionResolvedByApp: 自 deno info 树得到版本 ${v}`);
+      return v;
     }
   }
+  const fromPlugin = extractJsrIoDreamerUiViewVersion(pluginImportMetaUrl);
+  if (fromPlugin) {
+    trace(
+      `getUiViewJsrVersionResolvedByApp: 回退插件 import.meta.url 版本 ${fromPlugin}`,
+    );
+  }
+  return fromPlugin;
+}
+
+/**
+ * 将 `https://jsr.io/@dreamer/ui-view/<version>/<rel>` 对应模块解析为 Deno 缓存中的本地绝对路径。
+ *
+ * **背景**：Deno 文档中 `import.meta.resolve` **仅支持单参数**，且对 `jsr:` 裸说明符不会解析为 `file:`；
+ * 双参数在 Deno 中会 `TypeError: Invalid arguments`。故采用与 CLI 一致的 `deno info <https URL>` 解析 `local:` 行。
+ *
+ * @param projectRoot - 应用根（`deno info` 的 cwd）
+ * @param rel - 包内相对路径，如 `src/shared/basic/Link.tsx`
+ * @param version - `getUiViewJsrVersionResolvedByApp` 结果；为 `null` 时本函数直接返回 `null`
+ * @param trace - 调试输出
+ */
+async function tryResolveUiViewRelViaDenoInfo(
+  projectRoot: string,
+  rel: string,
+  version: string | null,
+  trace: (msg: string) => void,
+): Promise<string | null> {
+  if (!version) return null;
+  const httpsUrl = `https://jsr.io/@dreamer/ui-view/${version}/${rel}`;
+  const cached = denoInfoHttpsToLocalCache.get(httpsUrl);
+  if (cached && existsSync(cached)) {
+    return cached;
+  }
+  const stdout = await runDenoInfo(projectRoot, ["info", httpsUrl], trace);
+  if (!stdout) return null;
+  const local = parseFirstLocalLineFromDenoInfo(stdout);
+  if (local && existsSync(local)) {
+    denoInfoHttpsToLocalCache.set(httpsUrl, local);
+    trace(
+      `tryResolveUiViewRelViaDenoInfo: ${rel} → ${truncateForLog(local, 140)}`,
+    );
+    return local;
+  }
   trace(
-    `tryResolveUiViewRelToFsPath: 未解析到 ${rel}（请确认 deno.json 已映射 @dreamer/ui-view 且已 deno cache）`,
+    `tryResolveUiViewRelViaDenoInfo: 未得到有效 local 路径 rel=${rel} version=${version}`,
   );
   return null;
 }
 
 /**
  * 根据用到的组件名，得到应加入 @source 的**已解析**绝对路径列表（去重排序）。
- * 优先使用「显式 packageRoot / 自动探测包根」下 `join(rel)` **且文件存在**的路径；否则回退为
- * {@link tryResolveUiViewRelToFsPath}（适配 JSR 哈希缓存）。
+ * 优先使用「显式 packageRoot / 自动探测包根」下 `join(rel)` **且文件存在**的路径；
+ * 否则在 Deno 下通过 {@link tryResolveUiViewRelViaDenoInfo} 解析哈希缓存路径。
  *
  * @param usedNames - 从业务源码解析出的组件符号
- * @param ctx - 项目根、可选包根、自动解析的包根、日志
+ * @param ctx - 项目根、可选包根、自动解析的包根、JSR 版本、日志
  */
-function gatherResolvedContentPaths(
+async function gatherResolvedContentPaths(
   usedNames: string[],
   ctx: {
     projectRoot: string;
     optionPackageRoot: string | undefined;
     resolvedPackageRoot: string;
+    jsrVersion: string | null;
     trace: (msg: string) => void;
   },
-): string[] {
+): Promise<string[]> {
   const seen = new Set<string>();
   const out: string[] = [];
 
@@ -313,7 +259,12 @@ function gatherResolvedContentPaths(
         abs = tryJoinIfExists(ctx.resolvedPackageRoot, rel);
       }
       if (!abs) {
-        abs = tryResolveUiViewRelToFsPath(ctx.projectRoot, rel, ctx.trace);
+        abs = await tryResolveUiViewRelViaDenoInfo(
+          ctx.projectRoot,
+          rel,
+          ctx.jsrVersion,
+          ctx.trace,
+        );
       }
       if (!abs) {
         ctx.trace(
@@ -1409,25 +1360,6 @@ export function uiViewTailwindPlugin(
       trace(`resolvePackageRoot: 采用 cwd 向上查找的包根 → ${fromCwd}`);
       return fromCwd;
     }
-    /**
-     * 纯 `jsr:` 依赖：项目内可无 `node_modules/.../dreamer__ui-view`，须用应用内模块作 referrer
-     * 将 `jsr:@dreamer/ui-view/src/mod.ts` 解析到 Deno 缓存中的 `file:` 路径。
-     */
-    const fromImportResolve = tryResolveUiViewPackageRootViaImportMetaResolve(
-      root,
-      trace,
-    );
-    trace(
-      `resolvePackageRoot: tryResolveUiViewPackageRootViaImportMetaResolve（纯 jsr / 无 node 安装树）→ ${
-        fromImportResolve ?? "null"
-      }`,
-    );
-    if (fromImportResolve != null) {
-      trace(
-        `resolvePackageRoot: 采用 import.meta.resolve 推导的包根 → ${fromImportResolve}`,
-      );
-      return fromImportResolve;
-    }
     /** 从 JSR + `nodeModulesDir: auto`：完整树常在 `node_modules/.deno/.../node_modules/@jsr/dreamer__ui-view` */
     const nmCandidates = [
       join(root, "node_modules", "@jsr", "dreamer__ui-view"),
@@ -1493,11 +1425,21 @@ export function uiViewTailwindPlugin(
       );
       return fromFileDir;
     }
+    /**
+     * Deno 下纯 JSR 且无源码树时：`gatherResolvedContentPaths` 会用 `deno info https://jsr.io/...` 解析各文件的哈希缓存路径，
+     * 此处仅需一个用于 `join(rel)` 尝试与 `mergeIntrinsicIconSources` 的占位根；用 cwd 即可（icons 全量扫描会因无 Icon.tsx 而跳过）。
+     */
+    if (IS_DENO) {
+      trace(
+        `resolvePackageRoot: Deno 下无传统包根，回退 cwd=${root}（将配合 deno info 解析各 ui-view 源文件）`,
+      );
+      return root;
+    }
     trace(
-      "resolvePackageRoot: 失败汇总 — 无显式 packageRoot；非 file URL；cwd 树未命中；import.meta.resolve 未命中；node_modules/.deno 未命中；DENO_DIR/registries 未命中；无 vendor/jsr.io 包根",
+      "resolvePackageRoot: 失败汇总 — 无显式 packageRoot；非 file URL；cwd 树未命中；node_modules/.deno 未命中；DENO_DIR/registries 未命中；无 vendor/jsr.io 包根；非 Deno 无法使用 deno info 回退",
     );
     throw new Error(
-      `[ui-view-tailwind] 无法解析 @dreamer/ui-view 包根（cwd=${root}）。纯 jsr: 时请确认存在可解析的入口（如 src/frontend/main.ts）且 deno.json 已映射 @dreamer/ui-view；或设置 packageRoot；或使用 npm:/vendor。import.meta.url=${import.meta.url}`,
+      `[ui-view-tailwind] 无法解析 @dreamer/ui-view 包根（cwd=${root}）。请设置 packageRoot、使用 vendor/npm 安装树，或在 Deno 下使用 jsr: 依赖。import.meta.url=${import.meta.url}`,
     );
   };
 
@@ -1608,18 +1550,39 @@ export function uiViewTailwindPlugin(
           `解析到可能来自 ui-view 的导出名 ${names.length} 个（排序后预览）: ${namesPreview}`,
         );
 
-        const pkgRoot = resolvePackageRoot((m) => log.info(m));
-        log.info(`最终 packageRoot（@source 绝对路径前缀）: ${pkgRoot}`);
+        /** 每次 onInit 清空，避免跨应用/版本误用缓存 */
+        denoInfoHttpsToLocalCache.clear();
 
-        const paths = gatherResolvedContentPaths(names, {
+        const jsrVersion = await getUiViewJsrVersionResolvedByApp(
+          root,
+          import.meta.url,
+          (m) => log.info(m),
+        );
+        log.info(
+          `JSR @dreamer/ui-view 解析版本（供 deno info https URL）: ${
+            jsrVersion ?? "(null，将无法解析 remote 哈希路径)"
+          }`,
+        );
+
+        const pkgRoot = resolvePackageRoot((m) => log.info(m));
+        log.info(`最终 packageRoot（join / icons 占位）: ${pkgRoot}`);
+
+        const paths = await gatherResolvedContentPaths(names, {
           projectRoot: root,
           optionPackageRoot: optionPackageRoot,
           resolvedPackageRoot: pkgRoot,
+          jsrVersion,
           trace: (m) => log.info(m),
         });
         log.info(
           `gatherResolvedContentPaths 展开后路径条数（去重前）: ${paths.length}`,
         );
+        if (paths.length === 0) {
+          log.info(
+            "未解析到任何可扫描的 ui-view 源文件路径，跳过写入 ui-view-sources.css（请检查 deno.json、deno cache 与组件映射）",
+          );
+          return;
+        }
         await mergeIntrinsicIconSources(
           names,
           pkgRoot,
