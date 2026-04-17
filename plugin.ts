@@ -83,9 +83,22 @@ function dirnameOfThisPluginIfFileUrl(): string | undefined {
 }
 
 /**
- * `deno info <https://jsr.io/...>` 输出首行 `local: /path` 的本地缓存路径（多为 `remote/https/jsr.io/<hash>`）。
+ * 去掉 Deno CLI 写入 stdout 的 ANSI 颜色序列（如 `deno info` 首行常为 `\x1b[1mlocal:\x1b[0m`），
+ * 否则 `^local:` 正则无法匹配，`parseFirstLocalLineFromDenoInfo` 会得到 `null`。
  *
- * @param text - `deno info` 标准输出全文
+ * @param text - 子进程捕获的原始输出
+ */
+function stripAnsiSequences(text: string): string {
+  /** ESC (0x1B) + `[` + SGR 序列；用 `RegExp` 构造避免 deno lint `no-control-regex` */
+  const esc = String.fromCharCode(0x1b);
+  return text.replace(new RegExp(`${esc}\\[[\\d;]*m`, "g"), "");
+}
+
+/**
+ * `deno info <https://jsr.io/...>` 输出首行 `local: /path` 的本地缓存路径（多为 `remote/https/jsr.io/<hash>`）。
+ * 调用方须先经 {@link stripAnsiSequences}（由 {@link runDenoInfo} 统一处理）。
+ *
+ * @param text - `deno info` 标准输出全文（已无 ANSI）
  * @returns 去掉首尾空白的绝对路径；未匹配时返回 `null`
  */
 function parseFirstLocalLineFromDenoInfo(text: string): string | null {
@@ -134,12 +147,15 @@ async function runDenoInfo(
   if (!out.success) {
     trace(
       `runDenoInfo: deno ${args.join(" ")} 失败 code=${out.code} stderr=${
-        truncateForLog(new TextDecoder().decode(out.stderr), 240)
+        truncateForLog(
+          stripAnsiSequences(new TextDecoder().decode(out.stderr)),
+          240,
+        )
       }`,
     );
     return null;
   }
-  return new TextDecoder().decode(out.stdout);
+  return stripAnsiSequences(new TextDecoder().decode(out.stdout));
 }
 
 /**
@@ -209,7 +225,10 @@ async function tryResolveUiViewRelViaDenoInfo(
     return local;
   }
   trace(
-    `tryResolveUiViewRelViaDenoInfo: 未得到有效 local 路径 rel=${rel} version=${version}`,
+    `tryResolveUiViewRelViaDenoInfo: 未得到有效 local 路径 rel=${rel} version=${version}` +
+      (local
+        ? `（已解析到路径但文件不存在: ${truncateForLog(local, 120)}）`
+        : "（未匹配 local: 行）"),
   );
   return null;
 }
