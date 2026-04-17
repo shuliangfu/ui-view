@@ -100,6 +100,65 @@ function extractJsrIoDreamerUiViewVersion(
 }
 
 /**
+ * 宽松包根判定：Tailwind 扫描至少需要 `src/mod.ts` 与典型组件路径。
+ * 部分 `node_modules` 安装树里可能没有包根的 `plugin.ts`（与 `looksLikeUiViewSourceRoot` 区分）。
+ *
+ * @param dir - 待检测的绝对路径
+ */
+function looksLikeUiViewTailwindContentRoot(dir: string): boolean {
+  return existsSync(join(dir, PACKAGE_ROOT_MARKER)) &&
+    existsSync(join(dir, "src/shared/basic/Icon.tsx"));
+}
+
+/**
+ * 在单个 `node_modules/.deno/<存根>/` 子树下做有预算的深度优先搜索，命中 `looksLikeUiViewSourceRoot` 或 {@link looksLikeUiViewTailwindContentRoot} 即返回。
+ * Deno 可能把 `@jsr/dreamer__ui-view` 挂在多层 `node_modules` 之下，仅靠固定两级路径会失败（与你日志里「.deno 子目录多但仍 null」一致）。
+ *
+ * @param stashRoot - 一般为 `node_modules/.deno/<某个子目录>`
+ * @param budget - 共享递减计数，防止整盘 `node_modules` 遍历过久
+ * @param maxDepth - 单链最大深度
+ * @returns 包根目录；未找到返回 `null`
+ */
+function tryFindUiViewPackageInDenoStashSubtree(
+  stashRoot: string,
+  budget: { n: number },
+  maxDepth: number,
+): string | null {
+  const isHit = (dir: string): boolean =>
+    looksLikeUiViewSourceRoot(dir) || looksLikeUiViewTailwindContentRoot(dir);
+
+  function walk(dir: string, depth: number): string | null {
+    if (budget.n <= 0 || depth > maxDepth) return null;
+    budget.n--;
+    if (isHit(dir)) return dir;
+    let list;
+    try {
+      list = readdirSync(dir);
+    } catch {
+      return null;
+    }
+    /** 优先进入与 ui-view / JSR 相关的目录名，更快命中 */
+    const dirs = list.filter((e) => e.isDirectory && e.name !== ".bin").sort(
+      (a, b) => {
+        const rank = (name: string): number =>
+          /ui-view|dreamer__ui|@jsr|@dreamer|jsr/i.test(name)
+            ? 0
+            : name === "node_modules"
+            ? 1
+            : 2;
+        return rank(a.name) - rank(b.name);
+      },
+    );
+    for (const e of dirs) {
+      const hit = walk(join(dir, e.name), depth + 1);
+      if (hit) return hit;
+    }
+    return null;
+  }
+  return walk(stashRoot, 0);
+}
+
+/**
  * 在应用根目录的 `node_modules` / `vendor` 下解析 `@dreamer/ui-view` 包根（存在 `src/mod.ts`）。
  *
  * **背景**：纯 `jsr:` 依赖在 Deno 2 中往往**不会**在顶层出现带完整 `src/` 的 `node_modules/@jsr/dreamer__ui-view`；
@@ -114,9 +173,11 @@ function tryResolveUiViewPackageRootFromNodeModules(
   projectRoot: string,
   pluginImportMetaUrl: string,
 ): string | null {
-  /** 若目录下存在 `src/mod.ts` 则视为包根 */
+  /** 严格或宽松包根均可（见 {@link looksLikeUiViewTailwindContentRoot}） */
   const tryDir = (dir: string): string | null =>
-    existsSync(join(dir, PACKAGE_ROOT_MARKER)) ? dir : null;
+    looksLikeUiViewSourceRoot(dir) || looksLikeUiViewTailwindContentRoot(dir)
+      ? dir
+      : null;
 
   const direct = [
     join(projectRoot, "node_modules", "@jsr", "dreamer__ui-view"),
@@ -179,6 +240,27 @@ function tryResolveUiViewPackageRootFromNodeModules(
         const hit = tryDir(dir);
         if (hit) return hit;
       }
+    }
+    /** 固定两级仍找不到时：在每个 `.deno` 子目录下做有限 DFS（Deno 实际嵌套可能更深） */
+    const budget = { n: 28000 };
+    const tops = readdirSync(denoNm).filter((e) => e.isDirectory);
+    tops.sort((a, b) => {
+      const rank = (name: string): number =>
+        /ui-view|dreamer__ui/i.test(name)
+          ? 0
+          : /jsr|dreamer/i.test(name)
+          ? 1
+          : 2;
+      return rank(a.name) - rank(b.name);
+    });
+    for (const entry of tops) {
+      if (budget.n <= 0) break;
+      const hit = tryFindUiViewPackageInDenoStashSubtree(
+        join(denoNm, entry.name),
+        budget,
+        20,
+      );
+      if (hit) return hit;
     }
   } catch {
     /** 无读权限或目录中途变化时忽略 */
