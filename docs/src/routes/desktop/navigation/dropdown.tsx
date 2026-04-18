@@ -10,6 +10,7 @@ import {
   Divider,
   Dropdown,
   IconLogOut,
+  IconMoon,
   IconSettings,
   IconUser,
   IconUserCog,
@@ -78,24 +79,66 @@ const DROPDOWN_API: ApiRow[] = [
     default: "-",
     description: "下拉层 id（无障碍）",
   },
+  {
+    name: "arrow",
+    type: "boolean",
+    default: "false",
+    description:
+      "为 true 时在浮层与触发器之间显示双色小尖角；竖直方向随 placement（bottom* 尖角在上沿朝上，top* 在下沿朝下），水平随 bottom/bottomLeft/bottomRight 等同理",
+  },
   { name: "class", type: "string", default: "-", description: "包装器 class" },
 ];
 
 const importCode = `import { Button, Dropdown } from "@dreamer/ui-view";
 
 const overlay = <ul class="list-none m-0">...</ul>;
-<Dropdown overlay={overlay} trigger="click" placement="bottom">
-  <Button variant="default">点击展开</Button>
+{/* arrow 可选，默认 false：为 true 时浮层与触发器之间显示小尖角 */}
+<Dropdown overlay={overlay} trigger="click" placement="bottom" arrow>
+  <Button type="button" variant="default">点击展开</Button>
 </Dropdown>`;
 
+/** 与页面上「trigger=click」演示一致（组件内部维护展开态，无需传 open） */
 const exampleClick = `<Dropdown
-  open={open()}
-  onOpenChange={(o) => open.value = o}
   overlay={overlay}
   trigger="click"
   placement="bottomLeft"
 >
-  <Button variant="default">点击展开</Button>
+  <Button type="button" variant="default">点击展开</Button>
+</Dropdown>`;
+
+/** `arrow`：浮层与触发器之间的小尖角，默认 false */
+const exampleArrow = `<Dropdown
+  overlay={overlay}
+  trigger="click"
+  placement="bottom"
+  arrow
+>
+  <Button type="button" variant="default">带箭头（正下方居中）</Button>
+</Dropdown>`;
+
+/** 尖角水平位置随 placement：贴右触发器时用 bottomRight */
+const exampleArrowBottomRight = `<Dropdown
+  overlay={overlay}
+  trigger="click"
+  placement="bottomRight"
+  arrow
+>
+  <Button type="button" variant="default">bottomRight + 箭头</Button>
+</Dropdown>`;
+
+/** 仅图标作触发器时，尖角仍指向触发区域中心（placement=bottom） */
+const exampleArrowIconTrigger = `<Dropdown
+  overlay={overlay}
+  trigger="click"
+  placement="bottom"
+  arrow
+>
+  <span
+    class="inline-flex size-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 shadow-sm cursor-pointer dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300"
+    title="展开菜单"
+  >
+    <IconMoon class="size-5 shrink-0" />
+  </span>
 </Dropdown>`;
 
 const exampleHover = `<Dropdown
@@ -148,7 +191,7 @@ const exampleOverlayRichCode = `const overlayRich = (
     </ul>
   </div>
 );
-<Dropdown overlay={overlayRich} trigger="click" placement="bottom">
+<Dropdown overlay={overlayRich} trigger="click" placement="bottom" arrow>
   <Button variant="default">用户菜单</Button>
 </Dropdown>`;
 
@@ -232,8 +275,15 @@ export default function NavigationDropdown() {
       <section>
         <Title level={1}>Dropdown 下拉菜单</Title>
         <Paragraph class="mt-2">
-          下拉菜单：children、overlay、onOpenChange、trigger、hoverOpenDelay、hoverCloseDelay、placement、disabled、overlayClass、overlayId。展开状态由组件内部维护。
-          overlay 内菜单项建议 hover/focus 样式与{" "}
+          下拉菜单：children、overlay、onOpenChange、trigger、hoverOpenDelay、hoverCloseDelay、placement、disabled、overlayClass、overlayId、
+          <strong class="font-medium text-slate-800 dark:text-slate-200">
+            arrow
+          </strong>
+          （可选小尖角，默认 false）。展开状态由组件内部维护，无需传入{" "}
+          <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs dark:bg-slate-700">
+            open
+          </code>
+          。overlay 内菜单项建议 hover/focus 样式与{" "}
           <a
             href="/desktop/navigation/menu"
             class="text-blue-600 dark:text-blue-400 underline"
@@ -258,6 +308,114 @@ export default function NavigationDropdown() {
 
       <section class="space-y-8">
         <Title level={2}>示例</Title>
+
+        <div class="space-y-4">
+          <Title level={3}>arrow（浮层与触发器之间的小尖角）</Title>
+          <Paragraph class="text-slate-600 dark:text-slate-400">
+            设置{" "}
+            <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs dark:bg-slate-700">
+              arrow
+            </code>{" "}
+            为 true
+            时，在浮层边缘绘制指向触发方向的双色三角（外框色与面板边框一致，内芯与面板背景一致），便于与气泡式
+            UI 对齐。默认{" "}
+            <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs dark:bg-slate-700">
+              false
+            </code>
+            。竖直方向：`bottom*` 类 placement 尖角在浮层<strong>上沿</strong>
+            ；`top*` 类在浮层<strong>下沿</strong>
+            。水平方向与 placement 一致（居中 / 贴左 / 贴右）；{" "}
+            <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs dark:bg-slate-700">
+              bottomAuto
+            </code>{" "}
+            解析后的实际位置同样参与对齐。需在 Tailwind 构建中包含 ui-view
+            源码（如{" "}
+            <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs dark:bg-slate-700">
+              ui-view-sources.css
+            </code>
+            / 按需 @source），否则缺少{" "}
+            <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs dark:bg-slate-700">
+              top-full
+            </code>{" "}
+            等工具类时定位可能异常。
+          </Paragraph>
+
+          <div class="flex flex-wrap items-start gap-8">
+            <div class="space-y-3">
+              <p class="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                placement=bottom · arrow
+              </p>
+              <Dropdown
+                overlay={overlay}
+                trigger="click"
+                placement="bottom"
+                arrow
+              >
+                <Button type="button" variant="default">
+                  带箭头（正下方居中）
+                </Button>
+              </Dropdown>
+            </div>
+            <div class="space-y-3">
+              <p class="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                placement=bottomRight · arrow
+              </p>
+              <Dropdown
+                overlay={overlay}
+                trigger="click"
+                placement="bottomRight"
+                arrow
+              >
+                <Button type="button" variant="default">
+                  bottomRight + 箭头
+                </Button>
+              </Dropdown>
+            </div>
+            <div class="space-y-3">
+              <p class="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                仅图标触发 · arrow
+              </p>
+              <Dropdown
+                overlay={overlay}
+                trigger="click"
+                placement="bottom"
+                arrow
+              >
+                <span
+                  class="inline-flex size-9 cursor-pointer items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 shadow-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                  title="展开菜单"
+                >
+                  <IconMoon class="size-5 shrink-0" />
+                </span>
+              </Dropdown>
+            </div>
+          </div>
+
+          <CodeBlock
+            title="代码示例（bottom + 箭头）"
+            code={exampleArrow}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+          <CodeBlock
+            title="代码示例（bottomRight + 箭头）"
+            code={exampleArrowBottomRight}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+          <CodeBlock
+            title="代码示例（仅图标触发 + 箭头，需引入 IconMoon）"
+            code={exampleArrowIconTrigger}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+        </div>
 
         <div class="space-y-4">
           <Title level={3}>trigger=click</Title>
@@ -320,12 +478,17 @@ export default function NavigationDropdown() {
             overlay 接受任意 JSX，不限于简单列表。可在头部放头像与用户名、用
             Divider 分割、菜单项用 Icon + 文案，全部通过 overlay 传入即可。默认
             placement="bottom" 为正下方居中；贴边时可改用 placement="bottomAuto"
-            根据左右空间自动左/右移。
+            根据左右空间自动左/右移。可设{" "}
+            <code class="rounded bg-slate-100 px-1 font-mono text-xs dark:bg-slate-700">
+              arrow
+            </code>{" "}
+            在浮层与按钮间显示小尖角。
           </Paragraph>
           <Dropdown
             overlay={overlayRich}
             trigger="click"
             placement="bottom"
+            arrow
           >
             <Button type="button" variant="default">
               <IconUser class="w-4 h-4 shrink-0 mr-1" />

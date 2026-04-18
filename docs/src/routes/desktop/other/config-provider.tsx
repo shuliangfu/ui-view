@@ -102,9 +102,10 @@ export default function OtherConfigProvider() {
       <section>
         <Title level={1}>ConfigProvider 全局配置</Title>
         <Paragraph class="mt-2">
-          全局配置：可选 **config** 批量对象（含 theme / themeMode / locale / componentSize /
-          prefixCls）、或与顶层 theme、locale 等分开写（顶层优先）；子树内通过 getConfig() 读取。
-          使用 Tailwind v4，支持 light/dark 主题。
+          全局配置：可选 **config** 批量对象（含 theme / themeMode / locale /
+          componentSize / prefixCls）、或与顶层 theme、locale
+          等分开写（顶层优先）；子树内通过 getConfig() 读取。 使用 Tailwind
+          v4，支持 light/dark 主题。
         </Paragraph>
       </section>
 
