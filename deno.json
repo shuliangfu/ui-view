@@ -1,6 +1,6 @@
 {
   "name": "@dreamer/ui-view",
-  "version": "1.0.4",
+  "version": "1.0.5-beta.1",
   "workspace": [
     "docs"
   ],
@@ -74,9 +74,9 @@
     "@dreamer/view": "jsr:@dreamer/view@^2.0.1",
 
     "tailwindcss": "npm:tailwindcss@4.1.18",
-    "tailwind-merge": "npm:tailwind-merge@^2.6.1",
-    "chart.js": "npm:chart.js@^4.5.1",
-    "prismjs": "npm:prismjs@^1.30.0"
+    "tailwind-merge": "npm:tailwind-merge@2.6.1",
+    "chart.js": "npm:chart.js@4.5.1",
+    "prismjs": "npm:prismjs@1.30.0"
   },
   "nodeModulesDir": "auto",
   "compilerOptions": {
