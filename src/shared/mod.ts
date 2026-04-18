@@ -643,6 +643,7 @@ export type {
 // config-provider
 export { ConfigProvider, getConfig, setConfig } from "./config-provider/mod.ts";
 export type {
+  ConfigProviderBatchConfig,
   ConfigProviderConfig,
   ConfigProviderProps,
   ThemeMode,

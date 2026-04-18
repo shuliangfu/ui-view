@@ -11,6 +11,11 @@ export type ContainerSize = "sm" | "md" | "lg" | "xl" | "2xl" | "full";
 export interface ContainerProps {
   /** 最大宽度预设：sm(640) / md(768) / lg(1024) / xl(1280) / 2xl(1536) / full(无限制)，默认 "xl" */
   maxWidth?: ContainerSize;
+  /**
+   * 与 {@link maxWidth} 同义（便于与 Button `size` 等命名习惯对齐）。
+   * 若同时传入 `size` 与 `maxWidth`，以 **size** 为准。
+   */
+  size?: ContainerSize;
   /** 是否水平居中，默认 true */
   centered?: boolean;
   /** 内边距：是否使用默认 padding（px-4 sm:px-6 lg:px-8），默认 true */
@@ -32,12 +37,14 @@ const maxWidthClasses: Record<ContainerSize, string> = {
 
 export function Container(props: ContainerProps): JSXRenderable {
   const {
-    maxWidth = "xl",
+    size,
+    maxWidth: maxWidthProp,
     centered = true,
     padded = true,
     class: className,
     children,
   } = props;
+  const maxWidth = size ?? maxWidthProp ?? "xl";
 
   return (
     <div

@@ -23,6 +23,13 @@ interface ApiRow {
 
 const CONFIG_PROVIDER_API: ApiRow[] = [
   {
+    name: "config",
+    type: "Partial<…> & { themeMode? }",
+    default: "-",
+    description:
+      "批量写入 theme / locale / componentSize / prefixCls；其中 themeMode 与 theme 同义；顶层 props 优先",
+  },
+  {
     name: "theme",
     type: "light | dark | system",
     default: "light",
@@ -66,6 +73,16 @@ const importCode =
   <div>子树内组件可通过 getConfig() 读取 theme、locale、componentSize、prefixCls</div>
 </ConfigProvider>`;
 
+const exampleConfigProp = `<ConfigProvider
+  config={{
+    themeMode: "light",
+    locale: "zh-CN",
+    componentSize: "md",
+  }}
+>
+  <div>与顶层 theme / locale 可同时使用；顶层优先</div>
+</ConfigProvider>`;
+
 const exampleThemeLocale = `<ConfigProvider
   theme={theme.value}
   locale="zh-CN"
@@ -85,9 +102,9 @@ export default function OtherConfigProvider() {
       <section>
         <Title level={1}>ConfigProvider 全局配置</Title>
         <Paragraph class="mt-2">
-          全局配置：theme（light/dark/system）、locale、componentSize、prefixCls、children、class；子树内通过
-          getConfig() 读取 theme、locale、componentSize、prefixCls。 使用
-          Tailwind v4，支持 light/dark 主题。
+          全局配置：可选 **config** 批量对象（含 theme / themeMode / locale / componentSize /
+          prefixCls）、或与顶层 theme、locale 等分开写（顶层优先）；子树内通过 getConfig() 读取。
+          使用 Tailwind v4，支持 light/dark 主题。
         </Paragraph>
       </section>
 
@@ -104,6 +121,18 @@ export default function OtherConfigProvider() {
 
       <section class="space-y-8">
         <Title level={2}>示例</Title>
+
+        <div class="space-y-4">
+          <Title level={3}>config（批量 + themeMode）</Title>
+          <CodeBlock
+            title="代码示例"
+            code={exampleConfigProp}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+        </div>
 
         <div class="space-y-4">
           <Title level={3}>theme / locale / componentSize</Title>
