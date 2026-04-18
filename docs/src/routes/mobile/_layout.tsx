@@ -129,7 +129,12 @@ export default function MobileDocsLayout({ children }: LayoutProps) {
          * 与 desktop/_layout 主栏结构保持一致。
          */
       }
-      <main class="flex min-h-0 min-w-0 w-full flex-1 flex-col overflow-y-auto overscroll-y-contain px-3 py-6 sm:px-6 sm:py-8 lg:px-10">
+      {
+        /*
+         * 同 desktop/_layout：`z-10` 使主栏叠在侧栏上；overflow 裁剪问题见该文件注释。
+         */
+      }
+      <main class="relative z-10 flex min-h-0 min-w-0 w-full flex-1 flex-col overflow-y-auto overscroll-y-contain px-3 py-6 sm:px-6 sm:py-8 lg:px-10">
         <div class="flex flex-auto flex-col">{children}</div>
         <SiteFooter />
       </main>

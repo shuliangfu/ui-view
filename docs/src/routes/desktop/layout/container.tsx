@@ -76,7 +76,8 @@ export default function LayoutContainer() {
       <section>
         <Title level={1}>Container 最大宽度容器</Title>
         <Paragraph class="mt-2">
-          容器：maxWidth 或与之同义的 **size**（sm/md/lg/xl/2xl/full）、centered、padded、class、children。
+          容器：maxWidth 或与之同义的
+          **size**（sm/md/lg/xl/2xl/full）、centered、padded、class、children。
           使用 Tailwind v4，支持 light/dark 主题。
         </Paragraph>
       </section>

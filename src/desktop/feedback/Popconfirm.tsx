@@ -5,9 +5,9 @@
  *
  * **手写 JSX**：`open={sig.value}` 会在创建 VNode 时变成快照；须传 **`open={sig}`** 或零参 getter。
  *
- * **定位**：面板渲染在触发器外包的 `relative` 容器内，使用 `absolute` + placement 类定位，
- * 与触发器同属滚动子树，**容器或页面滚动时气泡随触发器移动**，无需 `createPortal` 与 `scroll` 同步。
- * 若祖先 `overflow: hidden`（或 `clip`）可能裁切面板，与常规下拉/气泡一致。
+ * **定位**：面板经 {@link Portal} 挂到 `document.body` 且 `position: fixed`，
+ * 由 {@link computePopFixedStyle} 按 `placement` 与触发器 `getBoundingClientRect` 对齐，避免被祖先 `overflow` 裁剪。
+ * 打开期间用 rAF 循环同步视口位置（与 {@link Popover} 一致）以随滚动/窗口变化贴住触发器。
  *
  * 根层不挂全屏遮罩；点外部由 `document` 上 `click` 冒泡关闭。
  *
@@ -16,15 +16,22 @@
  */
 
 import {
+  createEffect,
   createMemo,
   createRenderEffect,
+  createSignal,
   isSignal,
   type JSXRenderable,
   onCleanup,
+  Portal,
   type Signal,
 } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import { Button } from "../../shared/basic/Button.tsx";
+import {
+  computePopFixedStyle,
+  type FullPopStylePlacement,
+} from "./popFixedStyle.ts";
 /** 按需：单文件图标，避免经 icons/mod 拉入全表 */
 import { IconHelpCircle } from "../../shared/basic/icons/HelpCircle.tsx";
 
@@ -86,20 +93,6 @@ export interface PopconfirmProps {
 const POPCONFIRM_PANEL_ATTR = "data-dreamer-popconfirm-panel";
 
 /**
- * 相对包裹层内面板的 `absolute` 方位类（与触发器同滚动上下文，滚动时自然跟随）。
- */
-const placementClasses: Record<PopconfirmPlacement, string> = {
-  top: "bottom-full left-1/2 -translate-x-1/2 mb-2",
-  topLeft: "bottom-full left-0 mb-2",
-  topRight: "bottom-full right-0 mb-2",
-  bottom: "top-full left-1/2 -translate-x-1/2 mt-2",
-  bottomLeft: "top-full left-0 mt-2",
-  bottomRight: "top-full right-0 mt-2",
-  left: "right-full top-1/2 -translate-y-1/2 mr-2",
-  right: "left-full top-1/2 -translate-y-1/2 ml-2",
-};
-
-/**
  * 根据 `placement` 生成指向触发器一侧的箭头 class（与 {@link Popover} 的 `arrowClass` 同算法）。
  *
  * @param placement - 气泡方位
@@ -140,11 +133,11 @@ function readPopconfirmOpenInput(v: PopconfirmOpenInput | undefined): boolean {
 }
 
 /**
- * 构建 Popconfirm 根结构：`relative` 包裹触发器 + 条件渲染的 `absolute` 面板。
+ * 构建 Popconfirm 根结构：`relative` 包裹触发器，打开时经 Portal 在 body 上 `fixed` 画板。
  *
  * @param props - 组件 props
  * @param openNow - 当前是否展开面板
- * @param posCls - placement 对应的 Tailwind 定位类
+ * @param getPortalStyle - 返回挂到 `document.body` 的 `fixed` 外层上 `style` 对象（`computePopFixedStyle` 结果）
  * @param okVariant - 确定按钮变体
  * @param iconToneCls - 图标颜色类
  * @param handleConfirm - 确定处理
@@ -155,7 +148,7 @@ function readPopconfirmOpenInput(v: PopconfirmOpenInput | undefined): boolean {
 function buildPopconfirmTree(
   props: PopconfirmProps,
   openNow: boolean,
-  posCls: string,
+  getPortalStyle: () => Record<string, string>,
   okVariant: "primary" | "danger" | "warning",
   iconToneCls: string,
   handleConfirm: () => void,
@@ -183,65 +176,66 @@ function buildPopconfirmTree(
       class={twMerge("relative inline-flex", className)}
     >
       {children}
-      {openNow && (
-        <span
-          ref={setFloatingRef}
-          data-dreamer-popconfirm-panel=""
-          class={twMerge(
-            "absolute z-1065 pointer-events-auto min-w-[200px] max-w-[min(24rem,calc(100vw-1rem))] rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-lg text-slate-900 dark:text-slate-100 p-3 box-border",
-            posCls,
-            overlayClass,
-          )}
-        >
-          <div class="flex gap-2">
-            {showIcon && (
-              <span class={twMerge("shrink-0 mt-0.5", iconToneCls)}>
-                <IconHelpCircle class="w-4 h-4" />
-              </span>
-            )}
-            <div class="flex-1">
-              <div class="text-sm mb-3">{title}</div>
-              <div class="flex justify-end gap-2">
-                <Button
-                  type="button"
-                  variant={okVariant}
-                  size="sm"
-                  onClick={(_e: Event) => handleConfirm()}
-                >
-                  {okText}
-                </Button>
-                <Button
-                  type="button"
-                  variant="default"
-                  size="sm"
-                  onClick={(_e: Event) => handleCancel()}
-                >
-                  {cancelText}
-                </Button>
+      {openNow && typeof globalThis.document !== "undefined" && (
+        <Portal mount={globalThis.document.body}>
+          <div
+            class="fixed z-[1065] overflow-visible pointer-events-auto"
+            style={() =>
+              getPortalStyle()}
+          >
+            <span
+              ref={setFloatingRef}
+              data-dreamer-popconfirm-panel=""
+              class={twMerge(
+                "relative z-0 block min-w-[200px] max-w-[min(24rem,calc(100vw-1rem))] rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-lg text-slate-900 dark:text-slate-100 p-3 box-border",
+                overlayClass,
+              )}
+            >
+              <div class="flex gap-2">
+                {showIcon && (
+                  <span class={twMerge("shrink-0 mt-0.5", iconToneCls)}>
+                    <IconHelpCircle class="w-4 h-4" />
+                  </span>
+                )}
+                <div class="flex-1">
+                  <div class="text-sm mb-3">{title}</div>
+                  <div class="flex justify-end gap-2">
+                    <Button
+                      type="button"
+                      variant={okVariant}
+                      size="sm"
+                      onClick={(_e: Event) => handleConfirm()}
+                    >
+                      {okText}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="default"
+                      size="sm"
+                      onClick={(_e: Event) => handleCancel()}
+                    >
+                      {cancelText}
+                    </Button>
+                  </div>
+                </div>
               </div>
-            </div>
+              {arrow && <span class={arrowCls} aria-hidden="true" />}
+            </span>
           </div>
-          {arrow && <span class={arrowCls} aria-hidden="true" />}
-        </span>
+        </Portal>
       )}
     </span>
   );
 }
 
 /**
- * 气泡确认：受控打开、相对触发器定位，滚动时与触发器同步移动。
+ * 气泡确认：受控打开；浮层在 Portal 中 `fixed` 定位并 rAF 同步触发器视口位置。
  *
  * @param props - {@link PopconfirmProps}
  */
 export function Popconfirm(props: PopconfirmProps): JSXRenderable {
-  const {
-    onOpenChange,
-    onConfirm,
-    onCancel,
-    danger = false,
-    warning = false,
-    placement = "top",
-  } = props;
+  const { onOpenChange, onConfirm, onCancel, danger = false, warning = false } =
+    props;
 
   /** 订阅 `open` 的 Signal / getter */
   const isOpen = createMemo(() => readPopconfirmOpenInput(props.open));
@@ -278,7 +272,48 @@ export function Popconfirm(props: PopconfirmProps): JSXRenderable {
     ? "text-amber-500 dark:text-amber-400"
     : "text-slate-400 dark:text-slate-500";
 
-  const posCls = placementClasses[placement];
+  /** 与 {@link computePopFixedStyle} 同源的挂 body 的 `style` 对象，打开时 rAF 更新以贴住触发器 */
+  const portalFixedStyle = createSignal<Record<string, string>>({});
+
+  /**
+   * 与 Popover 一致：仅打开时 rAF 循环 + resize/VisualViewport 补一帧，避免全页/容器内滚动时浮层脱节。
+   */
+  createEffect(() => {
+    if (!isOpen() || typeof globalThis.window === "undefined") {
+      portalFixedStyle.value = {};
+      return;
+    }
+    void (props.placement);
+    const run = () => {
+      if (!triggerEl) return;
+      const tr = triggerEl.getBoundingClientRect();
+      const p = (props.placement ?? "top") as FullPopStylePlacement;
+      portalFixedStyle.value = computePopFixedStyle(tr, p);
+    };
+    run();
+    let rafLoop = 0;
+    let running = true;
+    const keepAligned = () => {
+      if (!running) return;
+      run();
+      rafLoop = globalThis.requestAnimationFrame(keepAligned);
+    };
+    rafLoop = globalThis.requestAnimationFrame(keepAligned);
+    const onResize = () => run();
+    globalThis.window.addEventListener("resize", onResize);
+    const vv = globalThis.visualViewport;
+    if (vv) {
+      vv.addEventListener("resize", onResize);
+    }
+    return () => {
+      running = false;
+      globalThis.cancelAnimationFrame(rafLoop);
+      globalThis.window.removeEventListener("resize", onResize);
+      if (vv) {
+        vv.removeEventListener("resize", onResize);
+      }
+    };
+  });
 
   /**
    * 记录触发器包裹元素，供 document `click` 判断是否点在触发区域内。
@@ -357,7 +392,7 @@ export function Popconfirm(props: PopconfirmProps): JSXRenderable {
     buildPopconfirmTree(
       props,
       isOpen(),
-      posCls,
+      () => portalFixedStyle.value,
       okVariant,
       iconToneCls,
       handleConfirm,
