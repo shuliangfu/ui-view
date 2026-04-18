@@ -21,6 +21,12 @@ const CONTAINER_API: ApiRow[] = [
     description: "最大宽度预设（px：640/768/1024/1280/1536/无限制）",
   },
   {
+    name: "size",
+    type: "sm | md | lg | xl | 2xl | full",
+    default: "-",
+    description: "与 maxWidth 同义；同时传入时 size 优先",
+  },
+  {
     name: "centered",
     type: "boolean",
     default: "true",
@@ -70,7 +76,7 @@ export default function LayoutContainer() {
       <section>
         <Title level={1}>Container 最大宽度容器</Title>
         <Paragraph class="mt-2">
-          容器：maxWidth（sm/md/lg/xl/2xl/full）、centered、padded、class、children。
+          容器：maxWidth 或与之同义的 **size**（sm/md/lg/xl/2xl/full）、centered、padded、class、children。
           使用 Tailwind v4，支持 light/dark 主题。
         </Paragraph>
       </section>
@@ -88,6 +94,26 @@ export default function LayoutContainer() {
 
       <section class="space-y-8">
         <Title level={2}>示例</Title>
+
+        <div class="space-y-4">
+          <Title level={3}>size（与 maxWidth 同义）</Title>
+          <Container
+            size="lg"
+            class="bg-slate-100 dark:bg-slate-800 rounded-lg py-4"
+          >
+            <p class="text-sm text-slate-600 dark:text-slate-400">
+              size=lg（1024px），等价于 maxWidth=&quot;lg&quot;
+            </p>
+          </Container>
+          <CodeBlock
+            title="代码示例"
+            code={`<Container size="lg" class="...">\n  <p>内容</p>\n</Container>`}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+        </div>
 
         <div class="space-y-4">
           <Title level={3}>maxWidth（md / xl）</Title>

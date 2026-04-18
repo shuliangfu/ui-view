@@ -7,12 +7,27 @@ import { twMerge } from "tailwind-merge";
 import type { JSXRenderable } from "@dreamer/view";
 import type { SizeVariant } from "../types.ts";
 import { setConfig } from "./config-store.ts";
-import type { ThemeMode } from "./config-store.ts";
+import type { ConfigProviderConfig, ThemeMode } from "./config-store.ts";
 
 export type { ConfigProviderConfig, ThemeMode } from "./config-store.ts";
 export { getConfig } from "./config-store.ts";
 
+/**
+ * `config` 属性接受的批量配置；`themeMode` 与 {@link ConfigProviderConfig.theme} 同义，便于与业务侧命名对齐。
+ */
+export type ConfigProviderBatchConfig = Partial<
+  ConfigProviderConfig & {
+    /** 与 `theme` 同义，写入全局时映射为 `theme` */
+    themeMode?: ThemeMode;
+  }
+>;
+
 export interface ConfigProviderProps {
+  /**
+   * 批量传入 theme / locale / componentSize / prefixCls（及 themeMode）。
+   * 与顶层 `theme`、`locale` 等可同时使用：**顶层 props 优先**。
+   */
+  config?: ConfigProviderBatchConfig;
   /** 主题：light / dark / system；system 时依 prefers-color-scheme，无则 light */
   theme?: ThemeMode;
   /** 语言/地区，如 zh-CN、en-US */
@@ -27,15 +42,30 @@ export interface ConfigProviderProps {
   class?: string;
 }
 
+/**
+ * 合并 `config` 与顶层 props，并将 `themeMode` 规范为 `theme` 写入 store。
+ */
+function resolveConfigProviderFields(props: ConfigProviderProps): {
+  theme: ThemeMode;
+  locale: string | undefined;
+  componentSize: SizeVariant | undefined;
+  prefixCls: string | undefined;
+} {
+  const batch = props.config;
+  const themeFromBatch = batch?.theme ?? batch?.themeMode;
+  const theme = props.theme ?? themeFromBatch ?? "light";
+  return {
+    theme,
+    locale: props.locale ?? batch?.locale,
+    componentSize: props.componentSize ?? batch?.componentSize,
+    prefixCls: props.prefixCls ?? batch?.prefixCls,
+  };
+}
+
 export function ConfigProvider(props: ConfigProviderProps): JSXRenderable {
-  const {
-    theme = "light",
-    locale,
-    componentSize,
-    prefixCls,
-    children,
-    class: className,
-  } = props;
+  const { children, class: className } = props;
+  const { theme, locale, componentSize, prefixCls } =
+    resolveConfigProviderFields(props);
 
   setConfig({
     theme,

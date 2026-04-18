@@ -525,6 +525,7 @@ export type {
   ColorPickerHandle,
   ColorPickerProps,
   CommentProps,
+  ConfigProviderBatchConfig,
   ConfigProviderConfig,
   ConfigProviderProps,
   ContainerProps,
