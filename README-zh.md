@@ -257,11 +257,10 @@ Chart.js：ChartLine、ChartBar、ChartPie、ChartDoughnut、ChartRadar、ChartP
 
 ## 变更日志
 
-**最新：[1.0.2] — 2026-04-17**
+**最新：[1.0.6] — 2026-04-19**
 
-- **变更：** 根入口与 `shared` / `desktop` / `mobile` / `basic` 的 `mod.ts`
-  改为显式命名再导出（不再使用 `export *`）；`basic` 内图标改为显式列出各
-  `Icon*`。
+- **变更：** `Dropdown` 仅保留下方 placement；优化带箭头时左/右下的 fixed
+  对齐；文档已同步。
 
 完整记录见 [CHANGELOG-zh.md](./CHANGELOG-zh.md)。
 

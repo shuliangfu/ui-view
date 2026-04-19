@@ -264,11 +264,10 @@ ChartPolarArea, ChartBubble, ChartScatter
 
 ## Changelog
 
-**Latest: [1.0.2] — 2026-04-17**
+**Latest: [1.0.6] — 2026-04-19**
 
-- **Changed:** Explicit named barrel exports in root / `shared` / `desktop` /
-  `mobile` / `basic` `mod.ts` (no `export *`); explicit `Icon*` list in basic
-  barrels.
+- **Changed:** `Dropdown` placement is downward-only; improved fixed/arrow
+  alignment for `bottomLeft` / `bottomRight`; docs updated.
 
 Full history: [CHANGELOG.md](./CHANGELOG.md).
 
