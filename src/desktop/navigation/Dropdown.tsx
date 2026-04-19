@@ -1,6 +1,6 @@
 /**
  * Dropdown 下拉菜单（View）。
- * 桌面点击/悬停展开；触发元素 + 下拉内容，支持 placement、trigger(click/hover)、
+ * 桌面点击/悬停展开；**仅向触发器下方**展开（`bottom` / `bottomLeft` / `bottomRight` / `bottomAuto`），不支持向上展开。
  * Esc 关闭（需 initDropdownEsc）、hover 延迟防抖。展开状态由组件内部维护，无需传 open。
  * 浮层容器使用 **`p-1`**（四边等距）；展开时经 {@link Portal} 挂到 `document.body`，`fixed` 按视口定位，避免祖先 `overflow` 裁剪。
  */
@@ -13,10 +13,7 @@ export type DropdownPlacement =
   | "bottom"
   | "bottomLeft"
   | "bottomRight"
-  | "bottomAuto"
-  | "top"
-  | "topLeft"
-  | "topRight";
+  | "bottomAuto";
 
 export interface DropdownProps {
   /** 触发元素（子节点） */
@@ -31,7 +28,7 @@ export interface DropdownProps {
   hoverOpenDelay?: number;
   /** hover 时收起延迟（ms），默认 100 */
   hoverCloseDelay?: number;
-  /** 下拉位置，默认 "bottom"（正下方居中）；"bottomAuto" 为正下方且根据左右空间自动左/右移 */
+  /** 下拉位置（均在触发器下方）：默认 `bottom`（居中）；`bottomAuto` 根据左右空间在正下/偏左/偏右间切换 */
   placement?: DropdownPlacement;
   /** 是否禁用，默认 false */
   disabled?: boolean;
@@ -42,8 +39,8 @@ export interface DropdownProps {
   /** 下拉层 id（无障碍：aria-describedby 等，可选） */
   overlayId?: string;
   /**
-   * 为 true 时在浮层与触发器之间显示小尖角（随 `placement` 自动选择在浮层上沿或下沿、左/中/右）。
-   * 默认 false，与无箭头气泡一致。
+   * 为 true 时在浮层**顶边**（靠向触发器一侧）绘制小尖角；左/中/右随 `placement`。
+   * 默认 false。
    */
   arrow?: boolean;
 }
@@ -72,17 +69,16 @@ const GAP_Y_COMPACT_PX = 4;
 /** 与 Tailwind `mt-2`/`mb-2` 默认间距一致（px），用于带箭头时间隙 */
 const GAP_Y_ARROW_PX = 8;
 
+/** 与 {@link getDropdownArrowProps} 内 `left`/`right` inset 一致（px）；`bottomLeft`/`bottomRight` 带箭头时用其锚定浮层，使箭头对准触发器左/右缘 */
+const ARROW_INSET_PX = 12;
+
 /**
  * 触发器与浮层竖向间距（px），语义同原 `overlayEdgeGapClass`。
  */
 function gapYPixels(
   arrowEnabled: boolean,
-  eff: ResolvedPopPlacement,
+  _eff: ResolvedPopPlacement,
 ): number {
-  const below = eff === "bottom" || eff === "bottomLeft" ||
-    eff === "bottomRight";
-  const above = eff === "top" || eff === "topLeft" || eff === "topRight";
-  if (!below && !above) return GAP_Y_COMPACT_PX;
   return arrowEnabled ? GAP_Y_ARROW_PX : GAP_Y_COMPACT_PX;
 }
 
@@ -100,55 +96,83 @@ function computeDropdownFixedStyle(
 ): Record<string, string> {
   const gap = gapYPixels(arrowEnabled, eff);
   const w = globalThis.window;
-  const ih = w.innerHeight;
   const iw = w.innerWidth;
   const tr = triggerRect;
+
+  /**
+   * 每次**写全**可参与 `fixed` 定位的轴，未用轴为 `auto`、`transform: none`。
+   * 仅写 `right`+`top` 时，若上一条还留着 `left`+`transform`（例如从正下方居中 rAF 更新到右对齐），
+   * 会残留为「下左+居中变换」的视觉效果。
+   */
+  const C = {
+    left: "auto",
+    right: "auto",
+    top: "auto",
+    bottom: "auto",
+    transform: "none",
+  } as const;
 
   switch (eff) {
     case "bottom":
       return {
+        ...C,
         top: `${tr.bottom + gap}px`,
         left: `${tr.left + tr.width / 2}px`,
+        right: "auto",
         transform: "translateX(-50%)",
       };
     case "bottomLeft":
+      /**
+       * 与 `bottomRight` 对称：箭头在面板**右侧** inset，`right: iw - tr.left - inset` 使尖角对准触发器**左缘**；无箭头时浮层左缘贴 `tr.left`。
+       */
+      if (arrowEnabled) {
+        return {
+          ...C,
+          top: `${tr.bottom + gap}px`,
+          right: `${iw - tr.left - ARROW_INSET_PX}px`,
+          left: "auto",
+          bottom: "auto",
+          transform: "none",
+        };
+      }
       return {
+        ...C,
         top: `${tr.bottom + gap}px`,
         left: `${tr.left}px`,
+        right: "auto",
+        transform: "none",
       };
     case "bottomRight":
+      /**
+       * 箭头在面板**左侧** inset：`left: tr.right - inset` 使尖角对准触发器**右缘**；无箭头时浮层右缘贴 `tr.right`。
+       */
+      if (arrowEnabled) {
+        return {
+          ...C,
+          top: `${tr.bottom + gap}px`,
+          left: `${tr.right - ARROW_INSET_PX}px`,
+          right: "auto",
+          bottom: "auto",
+          transform: "none",
+        };
+      }
       return {
+        ...C,
         top: `${tr.bottom + gap}px`,
         right: `${iw - tr.right}px`,
-      };
-    case "top":
-      return {
-        bottom: `${ih - tr.top + gap}px`,
-        left: `${tr.left + tr.width / 2}px`,
-        transform: "translateX(-50%)",
-      };
-    case "topLeft":
-      return {
-        bottom: `${ih - tr.top + gap}px`,
-        left: `${tr.left}px`,
-      };
-    case "topRight":
-      return {
-        bottom: `${ih - tr.top + gap}px`,
-        right: `${iw - tr.right}px`,
+        left: "auto",
+        bottom: "auto",
+        transform: "none",
       };
     default:
-      return {};
+      return { ...C };
   }
 }
 
 type ResolvedPopPlacement =
   | "bottom"
   | "bottomLeft"
-  | "bottomRight"
-  | "top"
-  | "topLeft"
-  | "topRight";
+  | "bottomRight";
 
 /**
  * 解析后用于箭头定位的 placement：bottomAuto 时使用 {@link autoPlacement}。
@@ -168,55 +192,52 @@ function resolvePlacement(
 }
 
 /**
- * 菱形箭头水平 class（与固定定位下的左/中/右语义一致）。
- * 左右侧用 `left-3`/`right-3` 并配合 ±`translate-x-1/2`，使旋转方块中心落在锚点。
- */
-function arrowHorizontalClass(eff: ResolvedPopPlacement): string {
-  switch (eff) {
-    case "bottomLeft":
-    case "topLeft":
-      return "left-3 -translate-x-1/2";
-    case "bottomRight":
-    case "topRight":
-      return "right-3 translate-x-1/2";
-    default:
-      return "left-1/2 -translate-x-1/2";
-  }
-}
-
-/**
- * 为 true 表示浮层在触发器**上方**（`top`/`topLeft`/`topRight`），小尖角画在**浮层下缘**、朝下。
- */
-function isArrowAtBottomOfOverlay(eff: ResolvedPopPlacement): boolean {
-  return eff === "top" || eff === "topLeft" || eff === "topRight";
-}
-
-/**
- * 与 {@link Popover} 相同手法：`w-2 h-2 rotate-45` + 去掉两条边框，与面板 `border-slate-*` / 背景一致；
- * 比 CSS border 三角更少锯齿、更易与圆角卡片连成一体，避免「别扭」的厚三角感。
+ * 菱形箭头：`rotate(45deg)` 与位移写在**同一条** `transform`，避免多段 Tailwind transform 互相覆盖。
+ * 菜单仅在触发器**下方**，箭头始终在面板**顶边**；`bottomLeft` 为右侧 inset，`bottomRight` 为左侧 inset。
  *
- * @param eff 解析后的 placement（决定水平对齐）
- * @param menuBelowTrigger 菜单在触发器下方时为 true（箭头贴在面板顶边中点、指向上方）
+ * @param eff - 解析后的 placement
  */
-function arrowDiamondClass(
+function getDropdownArrowProps(
   eff: ResolvedPopPlacement,
-  menuBelowTrigger: boolean,
-): string {
-  const base =
-    "absolute w-2 h-2 rotate-45 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800";
-  const h = arrowHorizontalClass(eff);
-  if (menuBelowTrigger) {
-    return twMerge(
-      base,
-      "top-0 -translate-y-1/2 border-b-0 border-r-0",
-      h,
-    );
+): { className: string; style: Record<string, string> } {
+  const shell =
+    "absolute w-2 h-2 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800";
+
+  const cut = twMerge(shell, "border-b-0 border-r-0");
+  let style: Record<string, string>;
+  switch (eff) {
+    case "bottom":
+      style = {
+        top: "0",
+        left: "50%",
+        transform: "translate(-50%, -50%) rotate(45deg)",
+      };
+      break;
+    case "bottomLeft":
+      /** 与 bottomRight 对称：尖角在面板顶边**右侧** */
+      style = {
+        top: "0",
+        left: "auto",
+        right: `${ARROW_INSET_PX}px`,
+        transform: "translate(50%, -50%) rotate(45deg)",
+      };
+      break;
+    case "bottomRight":
+      style = {
+        top: "0",
+        left: `${ARROW_INSET_PX}px`,
+        right: "auto",
+        transform: "translate(-50%, -50%) rotate(45deg)",
+      };
+      break;
+    default:
+      style = {
+        top: "0",
+        left: "50%",
+        transform: "translate(-50%, -50%) rotate(45deg)",
+      };
   }
-  return twMerge(
-    base,
-    "bottom-0 translate-y-1/2 border-t-0 border-l-0",
-    h,
-  );
+  return { className: cut, style };
 }
 
 /** hover 时用的定时器（闭包共享，避免闪动） */
@@ -427,9 +448,6 @@ export function Dropdown(props: DropdownProps): JSXRenderable {
 
   return (
     <span
-      ref={(el: HTMLElement) => {
-        triggerEl = el;
-      }}
       class={twMerge("relative inline-flex", className)}
       onMouseEnter={isHover
         ? (handleTriggerEnter as (e: Event) => void)
@@ -438,7 +456,11 @@ export function Dropdown(props: DropdownProps): JSXRenderable {
         ? (handleTriggerLeave as (e: Event) => void)
         : undefined}
     >
+      {/* ref 挂在真实按钮上：`getBoundingClientRect` 与「下右」右缘对齐一致，避免外层容器多出空隙 */}
       <span
+        ref={(el: HTMLElement) => {
+          triggerEl = el;
+        }}
         role="button"
         tabIndex={disabled ? -1 : 0}
         aria-haspopup="true"
@@ -526,16 +548,13 @@ export function Dropdown(props: DropdownProps): JSXRenderable {
                     autoPlacement.value,
                     placement,
                   );
-                  /** 菜单在触发器下方 → 箭头在面板顶边；上方 → 箭头在底边 */
-                  const menuBelowTrigger = !isArrowAtBottomOfOverlay(eff);
+                  const ap = getDropdownArrowProps(eff);
                   const arrowEl = (
                     <span
                       key="dropdown-arrow"
                       class={() =>
-                        twMerge(
-                          "pointer-events-none z-20",
-                          arrowDiamondClass(eff, menuBelowTrigger),
-                        )}
+                        twMerge("pointer-events-none z-20", ap.className)}
+                      style={ap.style}
                       aria-hidden
                     />
                   );

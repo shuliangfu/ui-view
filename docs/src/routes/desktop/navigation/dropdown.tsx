@@ -55,11 +55,10 @@ const DROPDOWN_API: ApiRow[] = [
   },
   {
     name: "placement",
-    type:
-      "bottom | bottomLeft | bottomRight | bottomAuto | top | topLeft | topRight",
+    type: "bottom | bottomLeft | bottomRight | bottomAuto",
     default: "bottom",
     description:
-      "下拉位置；bottom 为正下方居中，bottomAuto 为正下方且根据左右空间自动左/右移",
+      "下拉位置（均在触发器下方）；bottom 为正下方居中，bottomAuto 为根据左右空间在正下/偏左/偏右间切换",
   },
   {
     name: "disabled",
@@ -84,7 +83,7 @@ const DROPDOWN_API: ApiRow[] = [
     type: "boolean",
     default: "false",
     description:
-      "为 true 时在浮层与触发器之间显示双色小尖角；竖直方向随 placement（bottom* 尖角在上沿朝上，top* 在下沿朝下），水平随 bottom/bottomLeft/bottomRight 等同理",
+      "为 true 时在浮层顶边（靠向触发器）绘制双色小尖角；水平位置随 bottom / bottomLeft / bottomRight / bottomAuto 对齐",
   },
   { name: "class", type: "string", default: "-", description: "包装器 class" },
 ];
@@ -97,13 +96,37 @@ const overlay = <ul class="list-none m-0">...</ul>;
   <Button type="button" variant="default">点击展开</Button>
 </Dropdown>`;
 
-/** 与页面上「trigger=click」演示一致（组件内部维护展开态，无需传 open） */
-const exampleClick = `<Dropdown
+/**
+ * 与页面上「trigger=click」下左/下中/下右 三列演示一致；组件内部维护展开态，无需传 open。
+ */
+const exampleClick = `{/* 下左：与触发器左缘对齐 */}
+<Dropdown
+  arrow
   overlay={overlay}
   trigger="click"
   placement="bottomLeft"
 >
-  <Button type="button" variant="default">点击展开</Button>
+  <Button type="button" variant="default">下左</Button>
+</Dropdown>
+
+{/* 下中：正下方、水平相对触发器居中，placement 默认 "bottom" */}
+<Dropdown
+  arrow
+  overlay={overlay}
+  trigger="click"
+  placement="bottom"
+>
+  <Button type="button" variant="default">下中</Button>
+</Dropdown>
+
+{/* 下右：与触发器右缘对齐 */}
+<Dropdown
+  arrow
+  overlay={overlay}
+  trigger="click"
+  placement="bottomRight"
+>
+  <Button type="button" variant="default">下右</Button>
 </Dropdown>`;
 
 /** `arrow`：浮层与触发器之间的小尖角，默认 false */
@@ -322,9 +345,10 @@ export default function NavigationDropdown() {
             <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs dark:bg-slate-700">
               false
             </code>
-            。竖直方向：`bottom*` 类 placement 尖角在浮层<strong>上沿</strong>
-            ；`top*` 类在浮层<strong>下沿</strong>
-            。水平方向与 placement 一致（居中 / 贴左 / 贴右）；{" "}
+            。下拉仅在触发器<strong>下方</strong>展开，尖角始终在浮层<strong>
+              上沿
+            </strong>
+            指向触发器。水平方向与 placement 一致（居中 / 贴左 / 贴右）；{" "}
             <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs dark:bg-slate-700">
               bottomAuto
             </code>{" "}
@@ -418,14 +442,60 @@ export default function NavigationDropdown() {
         </div>
 
         <div class="space-y-4">
-          <Title level={3}>trigger=click</Title>
-          <Dropdown
-            overlay={overlay}
-            trigger="click"
-            placement="bottomLeft"
-          >
-            <Button type="button" variant="default">点击展开</Button>
-          </Dropdown>
+          <Title level={3}>
+            trigger=click：下左 / 下中 / 下右（<code class="text-sm">
+              arrow
+            </code>）
+          </Title>
+          <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+            同一 <code class="text-xs">overlay</code>，仅{" "}
+            <code class="text-xs">placement</code> 不同：{" "}
+            <code class="text-xs">bottomLeft</code>、
+            <code class="text-xs">bottom</code>（下中、正下居中）、
+            <code class="text-xs">bottomRight</code>。均开启
+            <code class="text-xs">arrow</code> 对比尖角与触发条关系。
+          </Paragraph>
+          <div class="flex flex-wrap items-start gap-6 md:gap-10">
+            <div class="flex flex-col gap-2">
+              <span class="text-xs text-slate-500 dark:text-slate-400">
+                下左·<code class="text-xs">bottomLeft</code>
+              </span>
+              <Dropdown
+                arrow
+                overlay={overlay}
+                trigger="click"
+                placement="bottomLeft"
+              >
+                <Button type="button" variant="default">下左</Button>
+              </Dropdown>
+            </div>
+            <div class="flex flex-col gap-2">
+              <span class="text-xs text-slate-500 dark:text-slate-400">
+                下中·<code class="text-xs">bottom</code>
+              </span>
+              <Dropdown
+                arrow
+                overlay={overlay}
+                trigger="click"
+                placement="bottom"
+              >
+                <Button type="button" variant="default">下中</Button>
+              </Dropdown>
+            </div>
+            <div class="flex flex-col gap-2">
+              <span class="text-xs text-slate-500 dark:text-slate-400">
+                下右·<code class="text-xs">bottomRight</code>
+              </span>
+              <Dropdown
+                arrow
+                overlay={overlay}
+                trigger="click"
+                placement="bottomRight"
+              >
+                <Button type="button" variant="default">下右</Button>
+              </Dropdown>
+            </div>
+          </div>
           <CodeBlock
             title="代码示例"
             code={exampleClick}
