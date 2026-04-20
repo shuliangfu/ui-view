@@ -73,6 +73,13 @@ const GAP_Y_ARROW_PX = 8;
 const ARROW_INSET_PX = 12;
 
 /**
+ * Portal **只改变挂载节点**（通常是 `document.body`），不会自动跑到「浏览器最顶层」。
+ * 和谁压谁仍然由 **层叠上下文 + z-index** 决定；若浮层未设有效 z-index，会输给带 `z-50` 的 `sticky` 顶栏。
+ * 此处用**内联** z-index：宿主 Tailwind 若未扫描本包源码，`class="z-*"` 可能不进 CSS；数值取高以盖过常见顶栏与若干全局浮层。
+ */
+const DROPDOWN_OVERLAY_ROOT_Z_INDEX = "99999";
+
+/**
  * 触发器与浮层竖向间距（px），语义同原 `overlayEdgeGapClass`。
  */
 function gapYPixels(
@@ -478,7 +485,10 @@ export function Dropdown(props: DropdownProps): JSXRenderable {
             }
           }) as (e: Event) => void
           : undefined}
-        class={disabled ? "pointer-events-none opacity-50" : "cursor-pointer"}
+        class={disabled
+          ? "pointer-events-none opacity-50"
+          /** `inline-flex` + `max-w-fit`：触发器外框紧贴子内容，避免 flex 父级下虚宽导致 `getBoundingClientRect` 偏左、Portal 居中错位 */
+          : "cursor-pointer inline-flex max-w-fit items-center"}
       >
         {children}
       </span>
@@ -506,10 +516,15 @@ export function Dropdown(props: DropdownProps): JSXRenderable {
                     scheduleMeasure();
                   }
                 }}
-                class="fixed z-[100] overflow-visible"
-                style={() =>
-                  portalFixedStyle.value}
-                onClick={!isHover ? () => setOpen(false) : undefined}
+                class="fixed overflow-visible"
+                style={() => ({
+                  ...portalFixedStyle.value,
+                  zIndex: DROPDOWN_OVERLAY_ROOT_Z_INDEX,
+                })}
+                onClick={!isHover
+                  ? () =>
+                    setOpen(false)
+                  : undefined}
                 onMouseEnter={isHover
                   ? (handleOverlayEnter as (e: Event) => void)
                   : undefined}
