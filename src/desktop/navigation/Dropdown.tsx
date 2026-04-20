@@ -539,10 +539,16 @@ export function Dropdown(props: DropdownProps): JSXRenderable {
                    */
                 }
                 {() => {
-                  /** 菜单面板：边框、背景、内边距；`overlayClass` 只作用于此 */
+                  /**
+                   * 菜单面板：边框、背景、内边距；`overlayClass` 只作用于此。
+                   * 带 `arrow` 时去掉顶边 `border-t`：否则整宽顶线与菱形箭头底边重叠，会出现「箭头下多一条横线」；
+                   * 顶侧轮廓由 {@link getDropdownArrowProps} 的旋转方片边框承接。
+                   */
                   const panelClass = () =>
                     twMerge(
-                      "relative z-10 min-w-[120px] rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-lg p-1",
+                      arrow
+                        ? "relative z-10 min-w-[120px] rounded-lg border-x border-b border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-lg p-1"
+                        : "relative z-10 min-w-[120px] rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-lg p-1",
                       overlayClass,
                     );
                   const panel = (
