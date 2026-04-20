@@ -7,6 +7,7 @@
  *
  * ### 行为概要
  * - 输出文件路径由 **`outputPath`** 指定；业务在 `tailwind.css` 中 `@import` 该文件即可让 Tailwind 扫描实际用到的组件源路径。
+ * - **`scanPath`** 可为单个目录或目录数组（相对 cwd），按需只扫 `frontend`、`common` 等子树，避免扫 backend/mobile。
  * - `@source` 路径相对于生成文件所在目录书写，避免把本机绝对路径写入仓库。
  * - 插件入口：**{@link uiViewTailwindPlugin}**（返回 `Plugin`，含 `onInit`）。
  *
@@ -551,10 +552,31 @@ function looksLikeUiViewSourceRoot(dir: string): boolean {
 export interface UiViewTailwindContentPluginOptions {
   /** 生成的 @source 文件路径（相对 cwd 或绝对），用户需在 tailwind.css 中 @import */
   outputPath: string;
-  /** 扫描项目源码的目录（相对 cwd，默认 "src"） */
-  scanPath?: string;
+  /**
+   * 扫描应用源码、解析 `import … from "@dreamer/ui-view"` 的根目录（相对 cwd）。
+   * 可传单个字符串，或传只读数组只扫若干子树（如 `["src/frontend","src/common"]`），避免遍历 backend/mobile、降低扫描量。
+   * 省略时默认为 `["src"]`（与旧版默认 `"src"` 一致）。
+   */
+  scanPath?: string | readonly string[];
   /** @dreamer/ui-view 包根目录（可选；不传则用插件所在包根） */
   packageRoot?: string;
+}
+
+/**
+ * 将 {@link UiViewTailwindContentPluginOptions.scanPath} 规范为非空相对路径列表。
+ *
+ * @param scanPath - 来自插件选项；`undefined` 时使用默认 `src`
+ * @returns 规范化后的目录列表（相对 cwd）
+ */
+function normalizeTailwindScanPaths(
+  scanPath?: string | readonly string[],
+): string[] {
+  if (scanPath === undefined) {
+    return ["src"];
+  }
+  const raw = typeof scanPath === "string" ? [scanPath] : [...scanPath];
+  const trimmed = raw.map((s) => String(s).trim()).filter((s) => s.length > 0);
+  return trimmed.length > 0 ? trimmed : ["src"];
 }
 
 /**
@@ -1260,7 +1282,7 @@ function createUiViewTailwindPluginLog(
 /**
  * 创建 ui-view Tailwind 按需 content 插件
  *
- * 参数：outputPath（生成文件路径）、scanPath（扫描目录）、packageRoot（可选）。
+ * 参数：outputPath（生成文件路径）、scanPath（单个或数组扫描目录）、packageRoot（可选）。
  * 在 onInit 时即扫描导入的 ui-view 组件，生成只含 @source 的 CSS，Tailwind 扫描该文件即可收集 class。
  */
 export function uiViewTailwindPlugin(
@@ -1268,7 +1290,7 @@ export function uiViewTailwindPlugin(
 ): Plugin {
   const {
     outputPath,
-    scanPath = "src",
+    scanPath: scanPathOpt,
     packageRoot: optionPackageRoot,
   } = options;
 
@@ -1357,16 +1379,26 @@ export function uiViewTailwindPlugin(
       };
 
       const root = cwd();
-      const scanDirAbs = join(root, scanPath);
+      const scanDirs = normalizeTailwindScanPaths(scanPathOpt);
 
       try {
         const files: string[] = [];
-        try {
-          await collectTsTsx(scanDirAbs, scanDirAbs, files);
-        } catch (e) {
+        for (const rel of scanDirs) {
+          const scanDirAbs = join(root, rel);
+          try {
+            await collectTsTsx(scanDirAbs, scanDirAbs, files);
+          } catch (e) {
+            log.info(
+              `扫描目录失败，已跳过该目录（不会抛错）。scanDir=${scanDirAbs}\n${
+                formatPluginError(e)
+              }`,
+            );
+          }
+        }
+        if (files.length === 0) {
           log.info(
-            `扫描目录失败，跳过生成（不会抛错）。scanDir=${scanDirAbs}\n${
-              formatPluginError(e)
+            `未发现可扫描的源码文件（目录为空或全部失败）。scanDirs=${
+              scanDirs.join(",")
             }`,
           );
           return;
@@ -1440,9 +1472,9 @@ export function uiViewTailwindPlugin(
       } catch (e) {
         logInitFailure("onInit 失败", e, {
           cwd: root,
-          scanDirAbs,
+          scanDirs: normalizeTailwindScanPaths(scanPathOpt).join(","),
           outputPath,
-          scanPath,
+          scanPath: JSON.stringify(scanPathOpt ?? "default:[src]"),
           packageRootOption: optionPackageRoot ?? "(未传)",
           importMetaUrl: import.meta.url,
         });
