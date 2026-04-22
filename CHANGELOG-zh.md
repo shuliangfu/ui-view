@@ -5,6 +5,17 @@
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，版本号遵循
 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [1.1.0-beta.4] - 2026-04-22
+
+### 变更
+
+- **plugin** `uiViewTailwindPlugin`：生成 Tailwind `@source` CSS
+  的步骤日志统一走 `@dreamer/logger`（`Logger.child` 带 `ui-view-tailwind`
+  标签，或 独立 `createLogger` 且 `level: "debug"`），输出为 **debug**
+  级别（不再用 `info`）。`deno.json` 增加 `jsr:@dreamer/logger` 依赖。
+- **plugin** `onInit` 失败：优先使用注入的 `Logger.error`；无官方 `Logger`
+  时仍支持 带 `error` 的遗留 logger；不再以 `info` 回退错误内容。
+
 ## [1.0.6] - 2026-04-19
 
 ### 变更

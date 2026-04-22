@@ -257,10 +257,11 @@ Chart.js：ChartLine、ChartBar、ChartPie、ChartDoughnut、ChartRadar、ChartP
 
 ## 变更日志
 
-**最新：[1.0.6] — 2026-04-19**
+**最新：[1.1.0-beta.4] — 2026-04-22**
 
-- **变更：** `Dropdown` 仅保留下方 placement；优化带箭头时左/右下的 fixed
-  对齐；文档已同步。
+- **变更：** `uiViewTailwindPlugin` 生成 `@source` CSS 的步骤日志统一走
+  `@dreamer/logger`，为 **debug** 级别；`deno.json` 增加 `jsr:@dreamer/logger`
+  依赖。
 
 完整记录见 [CHANGELOG-zh.md](./CHANGELOG-zh.md)。
 
