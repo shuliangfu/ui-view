@@ -264,10 +264,11 @@ ChartPolarArea, ChartBubble, ChartScatter
 
 ## Changelog
 
-**Latest: [1.0.6] — 2026-04-19**
+**Latest: [1.1.0-beta.4] — 2026-04-22**
 
-- **Changed:** `Dropdown` placement is downward-only; improved fixed/arrow
-  alignment for `bottomLeft` / `bottomRight`; docs updated.
+- **Changed:** `uiViewTailwindPlugin` logs for `@source` CSS generation use
+  `@dreamer/logger` at **debug** level; `deno.json` depends on
+  `jsr:@dreamer/logger`.
 
 Full history: [CHANGELOG.md](./CHANGELOG.md).
 
