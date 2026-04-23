@@ -62,6 +62,10 @@ export interface InputProps {
   name?: string;
   /** 原生 id */
   id?: string;
+  /**
+   * 原生 autocomplete（如 `email`、`current-password`），便于浏览器识别登录字段并触发自动填充。
+   */
+  autoComplete?: string;
 }
 
 const sizeClasses: Record<SizeVariant, string> = {
@@ -94,9 +98,26 @@ const sizeTextClasses: Record<SizeVariant, string> = {
   lg: "text-base",
 };
 
+/**
+ * 浏览器自动填充（尤其 Chrome `:-webkit-autofill`）会强改输入框背景为浅黄/浅蓝，暗色主题下白块明显。
+ * 用超大 `inset` 阴影盖住原生底色，并设 `-webkit-text-fill-color` 与 `text-slate-*` 一致；标准 `:autofill` 同样处理（Firefox 等）。
+ */
+const inputAutofillOverride = [
+  "[&:-webkit-autofill]:[-webkit-text-fill-color:rgb(15_23_42)]",
+  "dark:[&:-webkit-autofill]:[-webkit-text-fill-color:rgb(241_245_249)]",
+  "[&:-webkit-autofill]:[box-shadow:0_0_0_1000px_rgb(255_255_255)_inset]",
+  "dark:[&:-webkit-autofill]:[box-shadow:0_0_0_1000px_rgb(30_41_59)_inset]",
+  "[&:autofill]:[-webkit-text-fill-color:rgb(15_23_42)]",
+  "dark:[&:autofill]:[-webkit-text-fill-color:rgb(241_245_249)]",
+  "[&:autofill]:[box-shadow:0_0_0_1000px_rgb(255_255_255)_inset]",
+  "dark:[&:autofill]:[box-shadow:0_0_0_1000px_rgb(30_41_59)_inset]",
+].join(" ");
+
 /** 基础样式：不含宽度与聚焦 ring（由 {@link controlBlueFocusRing}(`!hideFocusRing`) 拼接） */
-const inputSurface =
-  "border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 border-slate-300 dark:border-slate-600 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed transition-colors";
+const inputSurface = twMerge(
+  "border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 border-slate-300 dark:border-slate-600 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed transition-colors",
+  inputAutofillOverride,
+);
 const readOnlyCls = "bg-slate-50 dark:bg-slate-800/80 cursor-default";
 
 /** 左右缀：与中间输入区分隔线、略浅底，仍在同一外框内 */
@@ -141,6 +162,7 @@ function InputGroupShell(props: {
   required: boolean;
   error: boolean;
   value: string | (() => string) | undefined;
+  autoComplete: string | undefined;
   onInput: InputProps["onInput"];
   onChange: InputProps["onChange"];
   onBlur: InputProps["onBlur"];
@@ -166,6 +188,7 @@ function InputGroupShell(props: {
     required,
     error,
     value,
+    autoComplete,
     onInput,
     onChange,
     onBlur,
@@ -181,6 +204,7 @@ function InputGroupShell(props: {
     "min-w-0 flex-1 border-0 bg-transparent shadow-none outline-none focus:ring-0",
     "text-inherit placeholder:text-slate-400 dark:placeholder:text-slate-500",
     "disabled:cursor-not-allowed",
+    inputAutofillOverride,
     sizePadYClasses[size],
     "px-3",
   );
@@ -196,6 +220,7 @@ function InputGroupShell(props: {
         type={type}
         id={id}
         name={name}
+        autoComplete={autoComplete}
         placeholder={placeholder}
         disabled={disabled}
         readOnly={readOnly}
@@ -268,6 +293,7 @@ export function Input(props: InputProps): JSXRenderable {
     onPaste,
     name,
     id,
+    autoComplete,
   } = props;
 
   const sizeCls = sizeClasses[size];
@@ -305,6 +331,7 @@ export function Input(props: InputProps): JSXRenderable {
     type,
     id,
     name,
+    autoComplete,
     placeholder,
     disabled,
     readOnly,
@@ -369,6 +396,7 @@ export function Input(props: InputProps): JSXRenderable {
         type={type}
         id={id}
         name={name}
+        autoComplete={autoComplete}
         placeholder={placeholder}
         disabled={disabled}
         readOnly={readOnly}
