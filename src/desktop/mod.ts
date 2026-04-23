@@ -633,8 +633,11 @@ export type {
 // desktop/feedback（增量）
 export { Dialog, Modal, Popconfirm, Popover, Tooltip } from "./feedback/mod.ts";
 export type {
+  DialogMobileLayout,
   DialogProps,
+  DialogVariant,
   ModalOpenInput,
+  ModalPlacement,
   ModalProps,
   ModalTitleAlign,
   ModalTitleInput,

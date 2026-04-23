@@ -33,7 +33,7 @@ export {
 
 /**
  * 反馈与浮层（ANALYSIS 3.4，C 共用）：Alert、Drawer、Progress、Result。
- * D：Modal、Dialog、Tooltip、Popover、Popconfirm → desktop/feedback；M：BottomSheet、ActionSheet、PullRefresh、SwipeCell → mobile/feedback。
+ * D：Modal、Dialog、Tooltip、Popover、Popconfirm → desktop/feedback；M：BottomSheet、ActionSheet、Dialog（同 desktop 实现 re-export）、PullRefresh、SwipeCell → mobile/feedback。
  */
 export { Alert } from "./Alert.tsx";
 export type { AlertProps, AlertType } from "./Alert.tsx";

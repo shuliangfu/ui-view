@@ -616,6 +616,7 @@ const COMPONENT_PATHS: Record<string, string[]> = {
   ],
   "Dialog": [
     "src/desktop/feedback/Dialog.tsx",
+    "src/mobile/feedback/Dialog.tsx",
     "src/shared/basic/Button.tsx",
     "src/shared/basic/button-variants.ts",
     "src/desktop/feedback/Modal.tsx",

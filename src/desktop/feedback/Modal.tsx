@@ -69,6 +69,11 @@ export type ModalTitleInput =
   | false
   | (() => string | null | false | undefined);
 
+/**
+ * 模态层在视口内垂直落位：当前仅 `bottom`（与底部对齐，适配 Home 条安全区），后续可扩展如 `top`。
+ */
+export type ModalPlacement = "bottom";
+
 export interface ModalProps {
   /**
    * 是否打开（受控）。
@@ -95,8 +100,16 @@ export interface ModalProps {
   mask?: boolean;
   /** 弹层宽度：预设或 CSS 字符串、数字（px）；默认 "520px"（等同 sm）；可传 `() => 同上` */
   width?: ModalWidthInput;
-  /** 是否在视口内垂直居中；`false` 时靠上并留顶距（与 Ant Design 顶部对齐相近） */
+  /**
+   * 是否在视口内垂直居中；`false` 时靠上并留顶距（与 Ant Design 顶部对齐相近）。
+   * 与 {@link placement} 同传时，以 `placement` 为准（`placement="bottom"` 时不再使用本项的垂直方向）。
+   */
   centered?: boolean;
+  /**
+   * 在遮罩中的垂直落位。传 `bottom` 时自底部对齐（如底部 Sheet），并预留 `safe-area` 下内边距；水平仍居中。
+   * 未传时沿用 `centered` 的居上/居中行为。
+   */
+  placement?: ModalPlacement;
   /** 关闭后是否销毁子节点（不挂载），默认 false */
   destroyOnClose?: boolean;
   /** 是否支持 Esc 关闭，默认 false；传 true 时按 Esc 触发 onClose */
@@ -116,6 +129,10 @@ export interface ModalProps {
   wrapClass?: string;
   /** 内容区 class */
   bodyClass?: string;
+  /**
+   * 底部栏（含确定/取消等）外层 flex 容器的 class，与默认的 `justify-end` 等合并；用于 `Dialog` 在窄屏居中等。
+   */
+  footerClass?: string;
   /** 额外 class（作用于弹层盒子） */
   class?: string;
 }
@@ -282,6 +299,7 @@ export function Modal(props: ModalProps): JSXRenderable {
     maskClass,
     wrapClass,
     bodyClass,
+    footerClass,
     class: className,
   } = props;
 
@@ -363,6 +381,7 @@ export function Modal(props: ModalProps): JSXRenderable {
     const isFullscreen = fullscreen.value;
     const pos = position.value;
     const hasOffset = pos.x !== 0 || pos.y !== 0;
+    const placement = props.placement;
     /** 写入 `CSSStyleDeclaration` 的扁平对象（勿用整段 cssText 字符串作 style={…}） */
     const modalBoxStyle: Record<string, string> = isFullscreen
       ? {
@@ -390,7 +409,9 @@ export function Modal(props: ModalProps): JSXRenderable {
       <div
         class={twMerge(
           "fixed inset-0 flex justify-center",
-          centered ? "items-center" : "items-start pt-12 sm:pt-16",
+          placement === "bottom"
+            ? "items-end pb-[max(0.5rem,env(safe-area-inset-bottom,0px))] pt-0 px-0 sm:px-4"
+            : (centered ? "items-center" : "items-start pt-12 sm:pt-16"),
           !showMask && "pointer-events-none",
           wrapClass,
         )}
@@ -531,7 +552,12 @@ export function Modal(props: ModalProps): JSXRenderable {
             {children}
           </div>
           {footer != null && (
-            <div class="shrink-0 flex items-center justify-end gap-2 px-6 py-4 border-t border-slate-200 dark:border-slate-600">
+            <div
+              class={twMerge(
+                "shrink-0 flex items-center justify-end gap-2 px-6 py-4 border-t border-slate-200 dark:border-slate-600",
+                footerClass,
+              )}
+            >
               {footer}
             </div>
           )}
