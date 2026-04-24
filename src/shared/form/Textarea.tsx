@@ -3,8 +3,9 @@
  * 对齐 Input：value 可为 getter、主体不读 value()，maxLength 字数由子组件读 value()，避免失焦。light/dark 主题。
  */
 
+import { type JSXRenderable, useContext } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
-import type { JSXRenderable } from "@dreamer/view";
+import { FormItemControlIdContext } from "./form-item-control-id.ts";
 import {
   controlBlueFocusRing,
   controlErrorBorder,
@@ -106,6 +107,10 @@ export function Textarea(props: TextareaProps): JSXRenderable {
     id,
   } = props;
 
+  /** 在 {@link import("./FormItem.tsx").FormItem} 下且未显式 `id` 时，与 `label[for]` 自动对齐 */
+  const fromFormItem = useContext(FormItemControlIdContext);
+  const resolvedId = id ?? fromFormItem;
+
   // 禁止在组件体内读 value()：会订阅 signal，导致整树重跑、textarea 失焦。value 透传给 <textarea value={value} />。
 
   /**
@@ -134,7 +139,7 @@ export function Textarea(props: TextareaProps): JSXRenderable {
    * 显式传 `maxLength={200}` 时值为正数，故仅该分支正常。
    */
   const textareaProps = {
-    id,
+    id: resolvedId,
     name,
     rows,
     value,

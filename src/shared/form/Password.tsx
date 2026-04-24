@@ -4,9 +4,14 @@
  * light/dark 主题。
  */
 
+import { type JSXRenderable, useContext } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
-import type { JSXRenderable } from "@dreamer/view";
+import { FormItemControlIdContext } from "./form-item-control-id.ts";
 import type { SizeVariant } from "../types.ts";
+import {
+  autofillVisualClass,
+  passwordNativeAutoComplete,
+} from "./input-autofill-classes.ts";
 import { controlBlueFocusRing } from "./input-focus-ring.ts";
 import { commitMaybeSignal, type MaybeSignal } from "./maybe-signal.ts";
 
@@ -47,6 +52,14 @@ export interface PasswordProps {
   name?: string;
   /** 原生 id */
   id?: string;
+  /**
+   * 自动完成与暗色 autofill 长 class：`true` 时合并，并写 `current-password` 或（`newPassword` 时）`new-password`；`string` 时原样；`false`/不传则不加。
+   */
+  autoComplete?: boolean | string;
+  /**
+   * 与 `autoComplete={true}` 联用：注册/设新密码场景写原生 `autocomplete="new-password"`，否则为 `current-password`。
+   */
+  newPassword?: boolean;
   /** 是否显示强度提示（弱/中/强）；由子组件内读 value()，仅该槽位重跑 */
   showStrength?: boolean;
 }
@@ -58,8 +71,10 @@ const sizeClasses: Record<SizeVariant, string> = {
   lg: "px-4 py-2.5 pr-11 text-base rounded-lg",
 };
 
-/** 输入区底纹（不含 ring） */
-const inputSurface =
+/**
+ * 输入区底纹（不含 ring、不含 autofill 长类），与 {@link Input} 的 `inputSurfaceBase` 一致。
+ */
+const inputSurfaceBase =
   "border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 border-slate-300 dark:border-slate-600 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed transition-colors";
 
 /**
@@ -102,9 +117,19 @@ export function Password(props: PasswordProps): JSXRenderable {
     onPaste,
     name,
     id,
+    autoComplete,
+    newPassword = false,
   } = props;
 
+  /** 在 {@link import("./FormItem.tsx").FormItem} 下且未显式 `id` 时，与 `label[for]` 自动对齐 */
+  const fromFormItem = useContext(FormItemControlIdContext);
+  const resolvedId = id ?? fromFormItem;
+
   const sizeCls = sizeClasses[size];
+  const nativeAutoComplete = passwordNativeAutoComplete(
+    autoComplete,
+    newPassword,
+  );
   // 禁止在组件体内读 value()：会订阅 signal，导致根 effect 重跑、整树重建、input 被替换失焦。
   // value 透传给 <input value={value} />，由 View applyProps 对 getter 做 createEffect 仅更新 .value。
 
@@ -130,13 +155,15 @@ export function Password(props: PasswordProps): JSXRenderable {
 
   const inputProps = {
     type: showPassword ? "text" : "password",
-    id,
+    id: resolvedId,
     name,
+    autoComplete: nativeAutoComplete,
     value,
     placeholder,
     disabled,
     class: twMerge(
-      inputSurface,
+      inputSurfaceBase,
+      autofillVisualClass(autoComplete),
       controlBlueFocusRing(!hideFocusRing),
       sizeCls,
       onToggleShow || showStrength ? "pr-10" : undefined,

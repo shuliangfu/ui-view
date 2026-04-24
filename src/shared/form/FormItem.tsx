@@ -4,8 +4,12 @@
  * 可配合 Form 使用，将 error/required 通过 class 影响子控件样式。
  */
 
+import { getOwner, type JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
-import type { JSXRenderable } from "@dreamer/view";
+import {
+  FormItemControlIdContext,
+  resolveFormItemControlId,
+} from "./form-item-control-id.ts";
 
 /** 标签位置：上方（默认）或左侧 */
 export type FormItemLabelPosition = "top" | "left";
@@ -67,6 +71,8 @@ const errorCls = "mt-1 text-sm text-red-600 dark:text-red-400";
  * patch 时复用容器、只更新内容，避免子组件（如 Password）被整棵替换导致失焦。
  */
 export function FormItem(props: FormItemProps): JSXRenderable {
+  /** 与 `jsx` 中本组件 `Owner` 一致，用于在多次渲染间复用自动生成的 `controlId` */
+  const formItemOwner = getOwner();
   return () => {
     const {
       label,
@@ -80,6 +86,11 @@ export function FormItem(props: FormItemProps): JSXRenderable {
       trailing,
       children,
     } = props;
+    /**
+     * 未传 `id` 时由 {@link resolveFormItemControlId} 生成，并经 {@link FormItemControlIdContext} 下传给单个子控件。
+     * 若仅在子 Input 上写 `id` 而未写 `FormItem` 的 `id`，`label[for]` 与原生 `id` 可能仍不一致，请二选一显式或均依赖自动。
+     */
+    const controlId = resolveFormItemControlId(formItemOwner, id);
     const hasError = Boolean(error);
     const isLeft = labelPosition === "left";
     /** 有 trailing 时控件行限制宽度，避免 flex-1 撑满整行导致删除被甩到视口最右侧 */
@@ -90,7 +101,7 @@ export function FormItem(props: FormItemProps): JSXRenderable {
     const labelEl = label != null
       ? (
         <label
-          for={id}
+          for={controlId}
           class={twMerge(
             labelBaseCls,
             isLeft
@@ -112,54 +123,56 @@ export function FormItem(props: FormItemProps): JSXRenderable {
       : null;
 
     return (
-      <div
-        class={twMerge(
-          "flex flex-col my-3",
-          hasError &&
-            "[&_input]:border-red-500 [&_textarea]:border-red-500 dark:[&_input]:border-red-500 dark:[&_textarea]:border-red-500",
-          className,
-        )}
-        role={hasError ? "alert" : undefined}
-      >
-        {isLeft && labelEl != null
-          ? (
-            <div class="flex flex-row items-center gap-4 py-0.5 min-w-0">
-              {labelEl}
-              <div
-                class={twMerge(
-                  "flex min-w-0 flex-row flex-wrap items-center gap-1.5",
-                  hasTrailing ? "max-w-md flex-1" : "flex-1",
-                )}
-              >
-                <div class="form-item-input min-w-0 flex-1">{children}</div>
-                {hasTrailing && (
-                  <div class="form-item-trailing shrink-0">{trailing}</div>
-                )}
-              </div>
-            </div>
-          )
-          : (
-            <>
-              {labelEl}
-              <div
-                class={twMerge(
-                  "flex min-w-0 flex-row flex-wrap items-center gap-1.5",
-                  hasTrailing && "w-full max-w-md",
-                )}
-              >
-                <div class="form-item-input min-w-0 flex-1">{children}</div>
-                {hasTrailing && (
-                  <div class="form-item-trailing shrink-0">{trailing}</div>
-                )}
-              </div>
-            </>
+      <FormItemControlIdContext.Provider value={controlId}>
+        <div
+          class={twMerge(
+            "flex flex-col my-3",
+            hasError &&
+              "[&_input]:border-red-500 [&_textarea]:border-red-500 dark:[&_input]:border-red-500 dark:[&_textarea]:border-red-500",
+            className,
           )}
-        {error != null && error !== "" && (
-          <div class={errorCls} id={id ? `${id}-error` : undefined}>
-            {error}
-          </div>
-        )}
-      </div>
+          role={hasError ? "alert" : undefined}
+        >
+          {isLeft && labelEl != null
+            ? (
+              <div class="flex flex-row items-center gap-4 py-0.5 min-w-0">
+                {labelEl}
+                <div
+                  class={twMerge(
+                    "flex min-w-0 flex-row flex-wrap items-center gap-1.5",
+                    hasTrailing ? "max-w-md flex-1" : "flex-1",
+                  )}
+                >
+                  <div class="form-item-input min-w-0 flex-1">{children}</div>
+                  {hasTrailing && (
+                    <div class="form-item-trailing shrink-0">{trailing}</div>
+                  )}
+                </div>
+              </div>
+            )
+            : (
+              <>
+                {labelEl}
+                <div
+                  class={twMerge(
+                    "flex min-w-0 flex-row flex-wrap items-center gap-1.5",
+                    hasTrailing && "w-full max-w-md",
+                  )}
+                >
+                  <div class="form-item-input min-w-0 flex-1">{children}</div>
+                  {hasTrailing && (
+                    <div class="form-item-trailing shrink-0">{trailing}</div>
+                  )}
+                </div>
+              </>
+            )}
+          {error != null && error !== "" && (
+            <div class={errorCls} id={`${controlId}-error`}>
+              {error}
+            </div>
+          )}
+        </div>
+      </FormItemControlIdContext.Provider>
     );
   };
 }
