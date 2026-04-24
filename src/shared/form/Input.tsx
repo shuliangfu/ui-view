@@ -4,8 +4,9 @@
  * prefix / suffix 渲染在输入框 DOM 外侧，与中间 input 同一外壳 flex 连成一体（统一边框与圆角）。
  */
 
+import { type JSXRenderable, useContext } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
-import type { JSXRenderable } from "@dreamer/view";
+import { FormItemControlIdContext } from "./form-item-control-id.ts";
 import type { SizeVariant } from "../types.ts";
 import {
   compositeShellFocusRingFromInput,
@@ -13,6 +14,10 @@ import {
   controlErrorBorder,
   controlErrorFocusRing,
 } from "./input-focus-ring.ts";
+import {
+  autofillVisualClass,
+  inputNativeAutoComplete,
+} from "./input-autofill-classes.ts";
 import { commitMaybeSignal, type MaybeSignal } from "./maybe-signal.ts";
 
 export interface InputProps {
@@ -63,9 +68,9 @@ export interface InputProps {
   /** 原生 id */
   id?: string;
   /**
-   * 原生 autocomplete（如 `email`、`current-password`），便于浏览器识别登录字段并触发自动填充。
+   * 自动完成与暗色 `:-webkit-autofill` 长 class：`true` 时合并长 class，并按 `type` 写原生 `autocomplete`（如 `email`→`email`）；`string` 时原样写出并（在非 `off`/`nope` 时）合并长 class；`false`/不传则二者皆无。
    */
-  autoComplete?: string;
+  autoComplete?: boolean | string;
 }
 
 const sizeClasses: Record<SizeVariant, string> = {
@@ -98,26 +103,9 @@ const sizeTextClasses: Record<SizeVariant, string> = {
   lg: "text-base",
 };
 
-/**
- * 浏览器自动填充（尤其 Chrome `:-webkit-autofill`）会强改输入框背景为浅黄/浅蓝，暗色主题下白块明显。
- * 用超大 `inset` 阴影盖住原生底色，并设 `-webkit-text-fill-color` 与 `text-slate-*` 一致；标准 `:autofill` 同样处理（Firefox 等）。
- */
-const inputAutofillOverride = [
-  "[&:-webkit-autofill]:[-webkit-text-fill-color:rgb(15_23_42)]",
-  "dark:[&:-webkit-autofill]:[-webkit-text-fill-color:rgb(241_245_249)]",
-  "[&:-webkit-autofill]:[box-shadow:0_0_0_1000px_rgb(255_255_255)_inset]",
-  "dark:[&:-webkit-autofill]:[box-shadow:0_0_0_1000px_rgb(30_41_59)_inset]",
-  "[&:autofill]:[-webkit-text-fill-color:rgb(15_23_42)]",
-  "dark:[&:autofill]:[-webkit-text-fill-color:rgb(241_245_249)]",
-  "[&:autofill]:[box-shadow:0_0_0_1000px_rgb(255_255_255)_inset]",
-  "dark:[&:autofill]:[box-shadow:0_0_0_1000px_rgb(30_41_59)_inset]",
-].join(" ");
-
-/** 基础样式：不含宽度与聚焦 ring（由 {@link controlBlueFocusRing}(`!hideFocusRing`) 拼接） */
-const inputSurface = twMerge(
-  "border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 border-slate-300 dark:border-slate-600 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed transition-colors",
-  inputAutofillOverride,
-);
+/** 底纹：不含 `:-webkit-autofill` 长类；autofill 见 {@link autofillVisualClass}（仅当设了 `autoComplete` 时合并） */
+const inputSurfaceBase =
+  "border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 border-slate-300 dark:border-slate-600 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed transition-colors";
 const readOnlyCls = "bg-slate-50 dark:bg-slate-800/80 cursor-default";
 
 /** 左右缀：与中间输入区分隔线、略浅底，仍在同一外框内 */
@@ -162,7 +150,10 @@ function InputGroupShell(props: {
   required: boolean;
   error: boolean;
   value: string | (() => string) | undefined;
-  autoComplete: string | undefined;
+  /** 写入 DOM 的 `autocomplete` 字符串，已由 {@link inputNativeAutoComplete} 解析 */
+  nativeAutoComplete: string | undefined;
+  /** 原始 `autoComplete`（含 `true`），供 {@link autofillVisualClass} */
+  autoCompleteHint: boolean | string | undefined;
   onInput: InputProps["onInput"];
   onChange: InputProps["onChange"];
   onBlur: InputProps["onBlur"];
@@ -188,7 +179,8 @@ function InputGroupShell(props: {
     required,
     error,
     value,
-    autoComplete,
+    nativeAutoComplete,
+    autoCompleteHint,
     onInput,
     onChange,
     onBlur,
@@ -204,7 +196,7 @@ function InputGroupShell(props: {
     "min-w-0 flex-1 border-0 bg-transparent shadow-none outline-none focus:ring-0",
     "text-inherit placeholder:text-slate-400 dark:placeholder:text-slate-500",
     "disabled:cursor-not-allowed",
-    inputAutofillOverride,
+    autofillVisualClass(autoCompleteHint),
     sizePadYClasses[size],
     "px-3",
   );
@@ -220,7 +212,7 @@ function InputGroupShell(props: {
         type={type}
         id={id}
         name={name}
-        autoComplete={autoComplete}
+        autoComplete={nativeAutoComplete}
         placeholder={placeholder}
         disabled={disabled}
         readOnly={readOnly}
@@ -296,7 +288,12 @@ export function Input(props: InputProps): JSXRenderable {
     autoComplete,
   } = props;
 
+  /** 在 {@link import("./FormItem.tsx").FormItem} 下且未显式 `id` 时，与 `label[for]` 自动对齐 */
+  const fromFormItem = useContext(FormItemControlIdContext);
+  const resolvedId = id ?? fromFormItem;
+
   const sizeCls = sizeClasses[size];
+  const nativeAutoComplete = inputNativeAutoComplete(autoComplete, type);
 
   /**
    * 受控 `value` 为 Signal 时由组件写回，再调用外部 `onInput`。
@@ -329,16 +326,17 @@ export function Input(props: InputProps): JSXRenderable {
 
   const inputSpreadProps = {
     type,
-    id,
+    id: resolvedId,
     name,
-    autoComplete,
+    autoComplete: nativeAutoComplete,
     placeholder,
     disabled,
     readOnly,
     "aria-required": required,
     "aria-invalid": error,
     class: twMerge(
-      inputSurface,
+      inputSurfaceBase,
+      autofillVisualClass(autoComplete),
       controlBlueFocusRing(!hideFocusRing),
       sizeCls,
       !prefix && !suffix && !allowClear ? "w-full min-w-0" : undefined,
@@ -367,7 +365,7 @@ export function Input(props: InputProps): JSXRenderable {
 
   const shellCls = twMerge(
     "relative flex w-full min-w-0 items-stretch overflow-hidden",
-    inputSurface,
+    inputSurfaceBase,
     sizeRoundedClasses[size],
     sizeTextClasses[size],
     !hideFocusRing &&
@@ -394,9 +392,10 @@ export function Input(props: InputProps): JSXRenderable {
         suffix={showClear ? undefined : suffix}
         showClear={showClear}
         type={type}
-        id={id}
+        id={resolvedId}
         name={name}
-        autoComplete={autoComplete}
+        nativeAutoComplete={nativeAutoComplete}
+        autoCompleteHint={autoComplete}
         placeholder={placeholder}
         disabled={disabled}
         readOnly={readOnly}
