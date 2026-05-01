@@ -4,30 +4,20 @@
  * Button 全量交互见同目录上级 `interactive-button-full.test.ts`（本包不为 /desktop/basic/button 另建页测文件）。
  */
 
+import { describe, expect, it } from "@dreamer/test";
 import {
-  afterAll,
-  beforeAll,
-  cleanupAllBrowsers,
-  describe,
-  expect,
-  it,
-} from "@dreamer/test";
-import { createDocsBrowserTestEnv, DOCS_BROWSER_CONFIG } from "../helpers.ts";
+  DOCS_BROWSER_CONFIG,
+  runKeywordAndShallowHere,
+  sharedEnv,
+} from "../helpers.ts";
 
 /** 固定为本文档 path，便于复制到其他页时改为对应路由 */
 const DOC_PATH = "/desktop/form/input";
 
 describe("文档页 E2E：/desktop/form/input（Input 输入框）", () => {
-  const env = createDocsBrowserTestEnv();
-  beforeAll(() => env.start());
-  afterAll(async () => {
-    await env.stopServerOnly();
-    await cleanupAllBrowsers();
-  });
-
   it("本页关键词命中且 main 内完成浅层交互探针", async (t) => {
     if (!t?.browser?.goto) return;
-    await runKeywordAndShallowHere(t, env, DOC_PATH, [
+    await runKeywordAndShallowHere(t, DOC_PATH, [
       /Input|输入/i,
     ]);
   }, DOCS_BROWSER_CONFIG);
@@ -37,8 +27,8 @@ describe("文档页 E2E：/desktop/form/input（Input 输入框）", () => {
    */
   it("main 内文本框可输入并在 blur 后失焦", async (t) => {
     if (!t?.browser?.goto) return;
-    await env.goto(t, DOC_PATH);
-    await env.delay(500);
+    await sharedEnv.goto(t, DOC_PATH);
+    await sharedEnv.waitDocMainReady(t);
     const typedOk = await t.browser.evaluate(() => {
       const main = document.querySelector("main");
       if (!main) return false;
@@ -55,7 +45,7 @@ describe("文档页 E2E：/desktop/form/input（Input 输入框）", () => {
       return true;
     }) as boolean;
     expect(typedOk).toBe(true);
-    await env.delay(80);
+    await sharedEnv.delay(80);
     const notSameFocused = await t.browser.evaluate(() => {
       const ae = document.activeElement as HTMLElement | null;
       if (!ae) return true;
@@ -70,8 +60,8 @@ describe("文档页 E2E：/desktop/form/input（Input 输入框）", () => {
    */
   it("严格·基础", async (t) => {
     if (!t?.browser?.goto) return;
-    await env.goto(t, DOC_PATH);
-    await env.delay(520);
+    await sharedEnv.goto(t, DOC_PATH);
+    await sharedEnv.waitDocMainReady(t);
     const ok = await t.browser.evaluate(() => {
       const needle = "基础";
       const main = document.querySelector("main");
@@ -178,8 +168,8 @@ describe("文档页 E2E：/desktop/form/input（Input 输入框）", () => {
    */
   it("严格·required", async (t) => {
     if (!t?.browser?.goto) return;
-    await env.goto(t, DOC_PATH);
-    await env.delay(520);
+    await sharedEnv.goto(t, DOC_PATH);
+    await sharedEnv.waitDocMainReady(t);
     const ok = await t.browser.evaluate(() => {
       const needle = "required";
       const main = document.querySelector("main");
@@ -286,8 +276,8 @@ describe("文档页 E2E：/desktop/form/input（Input 输入框）", () => {
    */
   it("严格·FormItem：hideRequiredMark", async (t) => {
     if (!t?.browser?.goto) return;
-    await env.goto(t, DOC_PATH);
-    await env.delay(520);
+    await sharedEnv.goto(t, DOC_PATH);
+    await sharedEnv.waitDocMainReady(t);
     const ok = await t.browser.evaluate(() => {
       const needle = "FormItem：hideRequiredMark";
       const main = document.querySelector("main");
@@ -394,8 +384,8 @@ describe("文档页 E2E：/desktop/form/input（Input 输入框）", () => {
    */
   it("严格·error", async (t) => {
     if (!t?.browser?.goto) return;
-    await env.goto(t, DOC_PATH);
-    await env.delay(520);
+    await sharedEnv.goto(t, DOC_PATH);
+    await sharedEnv.waitDocMainReady(t);
     const ok = await t.browser.evaluate(() => {
       const needle = "error";
       const main = document.querySelector("main");
@@ -502,8 +492,8 @@ describe("文档页 E2E：/desktop/form/input（Input 输入框）", () => {
    */
   it("严格·readOnly", async (t) => {
     if (!t?.browser?.goto) return;
-    await env.goto(t, DOC_PATH);
-    await env.delay(520);
+    await sharedEnv.goto(t, DOC_PATH);
+    await sharedEnv.waitDocMainReady(t);
     const ok = await t.browser.evaluate(() => {
       const needle = "readOnly";
       const main = document.querySelector("main");
@@ -610,8 +600,8 @@ describe("文档页 E2E：/desktop/form/input（Input 输入框）", () => {
    */
   it("严格·disabled", async (t) => {
     if (!t?.browser?.goto) return;
-    await env.goto(t, DOC_PATH);
-    await env.delay(520);
+    await sharedEnv.goto(t, DOC_PATH);
+    await sharedEnv.waitDocMainReady(t);
     const ok = await t.browser.evaluate(() => {
       const needle = "disabled";
       const main = document.querySelector("main");
@@ -718,8 +708,8 @@ describe("文档页 E2E：/desktop/form/input（Input 输入框）", () => {
    */
   it("严格·allowClear 可清除", async (t) => {
     if (!t?.browser?.goto) return;
-    await env.goto(t, DOC_PATH);
-    await env.delay(520);
+    await sharedEnv.goto(t, DOC_PATH);
+    await sharedEnv.waitDocMainReady(t);
     const ok = await t.browser.evaluate(() => {
       const needle = "allowClear 可清除";
       const main = document.querySelector("main");
@@ -826,8 +816,8 @@ describe("文档页 E2E：/desktop/form/input（Input 输入框）", () => {
    */
   it("严格·标签在左侧", async (t) => {
     if (!t?.browser?.goto) return;
-    await env.goto(t, DOC_PATH);
-    await env.delay(520);
+    await sharedEnv.goto(t, DOC_PATH);
+    await sharedEnv.waitDocMainReady(t);
     const ok = await t.browser.evaluate(() => {
       const needle = "标签在左侧";
       const main = document.querySelector("main");
@@ -934,8 +924,8 @@ describe("文档页 E2E：/desktop/form/input（Input 输入框）", () => {
    */
   it("严格·左对齐", async (t) => {
     if (!t?.browser?.goto) return;
-    await env.goto(t, DOC_PATH);
-    await env.delay(520);
+    await sharedEnv.goto(t, DOC_PATH);
+    await sharedEnv.waitDocMainReady(t);
     const ok = await t.browser.evaluate(() => {
       const needle = "左对齐";
       const main = document.querySelector("main");
@@ -1042,8 +1032,8 @@ describe("文档页 E2E：/desktop/form/input（Input 输入框）", () => {
    */
   it("严格·右对齐", async (t) => {
     if (!t?.browser?.goto) return;
-    await env.goto(t, DOC_PATH);
-    await env.delay(520);
+    await sharedEnv.goto(t, DOC_PATH);
+    await sharedEnv.waitDocMainReady(t);
     const ok = await t.browser.evaluate(() => {
       const needle = "右对齐";
       const main = document.querySelector("main");
@@ -1150,8 +1140,8 @@ describe("文档页 E2E：/desktop/form/input（Input 输入框）", () => {
    */
   it("严格·type / prefix / suffix", async (t) => {
     if (!t?.browser?.goto) return;
-    await env.goto(t, DOC_PATH);
-    await env.delay(520);
+    await sharedEnv.goto(t, DOC_PATH);
+    await sharedEnv.waitDocMainReady(t);
     const ok = await t.browser.evaluate(() => {
       const needle = "type / prefix / suffix";
       const main = document.querySelector("main");
@@ -1258,8 +1248,8 @@ describe("文档页 E2E：/desktop/form/input（Input 输入框）", () => {
    */
   it("严格·size", async (t) => {
     if (!t?.browser?.goto) return;
-    await env.goto(t, DOC_PATH);
-    await env.delay(520);
+    await sharedEnv.goto(t, DOC_PATH);
+    await sharedEnv.waitDocMainReady(t);
     const ok = await t.browser.evaluate(() => {
       const needle = "size";
       const main = document.querySelector("main");
@@ -1361,128 +1351,3 @@ describe("文档页 E2E：/desktop/form/input（Input 输入框）", () => {
     expect(ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
 });
-
-/**
- * 本文件内：`main` 已渲染后的浅层交互探针（不放入 helpers.ts）。
- */
-async function shallowInteractMainHere(
-  t: { browser?: { evaluate: (fn: () => unknown) => Promise<unknown> } },
-  mainTextFallback: string,
-): Promise<void> {
-  if (!t?.browser) return;
-  const probe = (await t.browser.evaluate(() => {
-    const main = document.querySelector("main");
-    if (!main) return { ok: false, acted: false };
-    const listbox = main.querySelector(
-      'button[aria-haspopup="listbox"]',
-    ) as HTMLButtonElement | null;
-    if (listbox && !listbox.disabled) {
-      listbox.click();
-      return { ok: true, acted: true };
-    }
-    const range = main.querySelector(
-      'input[type="range"]',
-    ) as HTMLInputElement | null;
-    if (range) {
-      const max = Number(range.max) || 100;
-      const cur = Number(range.value) || 0;
-      range.value = String(Math.min(max, cur + 5));
-      range.dispatchEvent(new Event("input", { bubbles: true }));
-      return { ok: true, acted: true };
-    }
-    const cb = main.querySelector(
-      'input[type="checkbox"]:not(:disabled)',
-    ) as HTMLInputElement | null;
-    if (cb) {
-      cb.click();
-      return { ok: true, acted: true };
-    }
-    const rad = main.querySelector(
-      'input[type="radio"]:not(:disabled)',
-    ) as HTMLInputElement | null;
-    if (rad) {
-      rad.click();
-      return { ok: true, acted: true };
-    }
-    const fileInput = main.querySelector(
-      'input[type="file"]:not(:disabled)',
-    ) as HTMLInputElement | null;
-    if (fileInput) {
-      fileInput.click();
-      return { ok: true, acted: true };
-    }
-    const input = main.querySelector(
-      "textarea:not(:disabled), input:not([type=hidden]):not([type=button]):not([type=submit]):not([type=file]):not(:disabled)",
-    ) as HTMLInputElement | null;
-    if (input) {
-      input.focus();
-      input.value = "e2e-probe";
-      input.dispatchEvent(new Event("input", { bubbles: true }));
-      return { ok: true, acted: true };
-    }
-    const btn = main.querySelector(
-      'button[type="button"]:not([disabled]), button:not([type]):not([disabled])',
-    ) as HTMLButtonElement | null;
-    if (btn) {
-      btn.click();
-      return { ok: true, acted: true };
-    }
-    const table = main.querySelector("table");
-    if (table) {
-      const cellBtn = table.querySelector(
-        "td button, td a",
-      ) as HTMLElement | null;
-      if (cellBtn) {
-        cellBtn.click();
-        return { ok: true, acted: true };
-      }
-    }
-    const len = main.innerText?.length ?? 0;
-    return { ok: true, acted: false, len };
-  })) as { ok: boolean; acted?: boolean; len?: number };
-
-  expect(probe.ok).toBe(true);
-  if (!probe.acted) {
-    expect(
-      (probe.len ?? mainTextFallback.length) > 100 ||
-        /canvas|Chart|svg|代码|API|示例/.test(mainTextFallback),
-    ).toBe(true);
-  }
-}
-
-type DocsEnvLike = ReturnType<typeof createDocsBrowserTestEnv>;
-
-/**
- * 本文件内：打开文档、断言关键词、再执行 {@link shallowInteractMainHere}。
- */
-async function runKeywordAndShallowHere(
-  t: {
-    browser?: {
-      goto?: (url: string) => Promise<unknown>;
-      evaluate: (fn: () => unknown) => Promise<unknown>;
-    };
-  },
-  env: DocsEnvLike,
-  path: string,
-  patterns: RegExp[],
-  minLen = 32,
-): Promise<void> {
-  if (!t?.browser?.goto) return;
-  await env.goto(t, path);
-  await env.delay(450);
-  let text = await env.getMainText(t);
-  if (text.length < minLen) {
-    await env.delay(550);
-    text = await env.getMainText(t);
-  }
-  if (text.length === 0) {
-    text = (await t.browser!.evaluate(() =>
-      document.body?.innerText ?? ""
-    )) as string;
-  }
-  expect(text.length).toBeGreaterThanOrEqual(minLen);
-  for (const p of patterns) {
-    expect(text).toMatch(p);
-  }
-  await shallowInteractMainHere(t, text);
-}

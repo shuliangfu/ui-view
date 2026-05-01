@@ -599,6 +599,7 @@ function normalizeTailwindScanPaths(
 const COMPONENT_PATHS: Record<string, string[]> = {
   "Table": [
     "src/desktop/data-display/Table.tsx",
+    "src/shared/basic/Icon.tsx",
     "src/shared/form/DatePicker.tsx",
     "src/shared/form/TimePicker.tsx",
     "src/shared/form/picker-portal-utils.ts",
@@ -618,6 +619,7 @@ const COMPONENT_PATHS: Record<string, string[]> = {
     "src/desktop/feedback/Dialog.tsx",
     "src/mobile/feedback/Dialog.tsx",
     "src/shared/basic/Button.tsx",
+    "src/shared/basic/Icon.tsx",
     "src/shared/basic/button-variants.ts",
     "src/desktop/feedback/Modal.tsx",
     "src/shared/basic/icons/Close.tsx",
@@ -626,6 +628,7 @@ const COMPONENT_PATHS: Record<string, string[]> = {
   ],
   "Modal": [
     "src/desktop/feedback/Modal.tsx",
+    "src/shared/basic/Icon.tsx",
     "src/shared/basic/icons/Close.tsx",
     "src/shared/basic/icons/ExitFullscreen.tsx",
     "src/shared/basic/icons/Maximize2.tsx",
@@ -633,6 +636,7 @@ const COMPONENT_PATHS: Record<string, string[]> = {
   "Popconfirm": [
     "src/desktop/feedback/Popconfirm.tsx",
     "src/shared/basic/Button.tsx",
+    "src/shared/basic/Icon.tsx",
     "src/shared/basic/button-variants.ts",
     "src/shared/basic/icons/HelpCircle.tsx",
   ],
@@ -644,11 +648,13 @@ const COMPONENT_PATHS: Record<string, string[]> = {
   ],
   "Cascader": [
     "src/shared/form/Cascader.tsx",
+    "src/shared/basic/Icon.tsx",
     "src/shared/basic/icons/ChevronDown.tsx",
     "src/shared/form/input-focus-ring.ts",
   ],
   "DatePicker": [
     "src/shared/form/DatePicker.tsx",
+    "src/shared/basic/Icon.tsx",
     "src/shared/form/picker-portal-utils.ts",
     "src/shared/form/picker-trigger-icon.ts",
     "src/shared/form/picker-calendar-nav.tsx",
@@ -661,6 +667,7 @@ const COMPONENT_PATHS: Record<string, string[]> = {
   ],
   "DateTimePicker": [
     "src/shared/form/DateTimePicker.tsx",
+    "src/shared/basic/Icon.tsx",
     "src/shared/form/picker-portal-utils.ts",
     "src/shared/form/picker-trigger-icon.ts",
     "src/shared/form/picker-calendar-nav.tsx",
@@ -673,11 +680,13 @@ const COMPONENT_PATHS: Record<string, string[]> = {
   ],
   "MultiSelect": [
     "src/shared/form/MultiSelect.tsx",
+    "src/shared/basic/Icon.tsx",
     "src/shared/basic/icons/ChevronDown.tsx",
     "src/shared/form/input-focus-ring.ts",
   ],
   "Select": [
     "src/shared/form/Select.tsx",
+    "src/shared/basic/Icon.tsx",
     "src/shared/basic/icons/ChevronDown.tsx",
     "src/shared/form/input-focus-ring.ts",
   ],
@@ -687,12 +696,14 @@ const COMPONENT_PATHS: Record<string, string[]> = {
   ],
   "TreeSelect": [
     "src/shared/form/TreeSelect.tsx",
+    "src/shared/basic/Icon.tsx",
     "src/shared/basic/icons/ChevronDown.tsx",
     "src/shared/form/input-focus-ring.ts",
   ],
   "Breadcrumb": [
     "src/desktop/navigation/Breadcrumb.tsx",
     "src/shared/basic/Link.tsx",
+    "src/shared/basic/Icon.tsx",
     "src/shared/basic/button-variants.ts",
     "src/shared/basic/icons/ChevronRight.tsx",
   ],
@@ -706,6 +717,7 @@ const COMPONENT_PATHS: Record<string, string[]> = {
   "BottomSheet": [
     "src/mobile/MobilePortalHostScope.tsx",
     "src/mobile/feedback/BottomSheet.tsx",
+    "src/shared/basic/Icon.tsx",
     "src/shared/basic/icons/Close.tsx",
   ],
   "PullRefresh": [
@@ -719,6 +731,7 @@ const COMPONENT_PATHS: Record<string, string[]> = {
     "src/desktop/navigation/NavBar.tsx",
     "src/mobile/navigation/NavBar.tsx",
     "src/shared/layout/Container.tsx",
+    "src/shared/basic/Icon.tsx",
     "src/shared/basic/icons/ChevronLeft.tsx",
   ],
   "TabBar": [
@@ -834,15 +847,18 @@ const COMPONENT_PATHS: Record<string, string[]> = {
   "Carousel": [
     "src/shared/data-display/Carousel.tsx",
     "src/shared/data-display/Image.tsx",
+    "src/shared/basic/Icon.tsx",
     "src/shared/basic/icons/ChevronLeft.tsx",
     "src/shared/basic/icons/ChevronRight.tsx",
   ],
   "CodeBlock": [
     "src/shared/data-display/CodeBlock.tsx",
+    "src/shared/basic/Icon.tsx",
     "src/shared/basic/icons/Copy.tsx",
   ],
   "Collapse": [
     "src/shared/data-display/Collapse.tsx",
+    "src/shared/basic/Icon.tsx",
     "src/shared/basic/icons/ChevronDown.tsx",
   ],
   "Comment": [
@@ -859,6 +875,7 @@ const COMPONENT_PATHS: Record<string, string[]> = {
   ],
   "ImageViewer": [
     "src/shared/data-display/ImageViewer.tsx",
+    "src/shared/basic/Icon.tsx",
     "src/shared/basic/icons/ChevronLeft.tsx",
     "src/shared/basic/icons/ChevronRight.tsx",
     "src/shared/basic/icons/Close.tsx",
@@ -890,10 +907,12 @@ const COMPONENT_PATHS: Record<string, string[]> = {
   ],
   "Tree": [
     "src/shared/data-display/Tree.tsx",
+    "src/shared/basic/Icon.tsx",
     "src/shared/basic/icons/ChevronRight.tsx",
   ],
   "Alert": [
     "src/shared/feedback/Alert.tsx",
+    "src/shared/basic/Icon.tsx",
     "src/shared/basic/icons/AlertCircle.tsx",
     "src/shared/basic/icons/CheckCircle.tsx",
     "src/shared/basic/icons/Info.tsx",
@@ -901,10 +920,12 @@ const COMPONENT_PATHS: Record<string, string[]> = {
   ],
   "Drawer": [
     "src/shared/feedback/Drawer.tsx",
+    "src/shared/basic/Icon.tsx",
     "src/shared/basic/icons/Close.tsx",
   ],
   "Notification": [
     "src/shared/feedback/Notification.tsx",
+    "src/shared/basic/Icon.tsx",
     "src/shared/basic/icons/AlertCircle.tsx",
     "src/shared/basic/icons/Bell.tsx",
     "src/shared/basic/icons/CheckCircle.tsx",
@@ -916,6 +937,7 @@ const COMPONENT_PATHS: Record<string, string[]> = {
   ],
   "Result": [
     "src/shared/feedback/Result.tsx",
+    "src/shared/basic/Icon.tsx",
     "src/shared/basic/icons/AlertCircle.tsx",
     "src/shared/basic/icons/CheckCircle.tsx",
     "src/shared/basic/icons/HelpCircle.tsx",
@@ -932,6 +954,7 @@ const COMPONENT_PATHS: Record<string, string[]> = {
   ],
   "MessageContainer": [
     "src/shared/feedback/Message.tsx",
+    "src/shared/basic/Icon.tsx",
     "src/shared/basic/icons/AlertCircle.tsx",
     "src/shared/basic/icons/CheckCircle.tsx",
     "src/shared/basic/icons/Info.tsx",
@@ -939,6 +962,7 @@ const COMPONENT_PATHS: Record<string, string[]> = {
   ],
   "NotificationContainer": [
     "src/shared/feedback/Notification.tsx",
+    "src/shared/basic/Icon.tsx",
     "src/shared/basic/icons/AlertCircle.tsx",
     "src/shared/basic/icons/Bell.tsx",
     "src/shared/basic/icons/CheckCircle.tsx",
@@ -959,6 +983,7 @@ const COMPONENT_PATHS: Record<string, string[]> = {
   ],
   "ColorPicker": [
     "src/shared/form/ColorPicker.tsx",
+    "src/shared/basic/Icon.tsx",
     "src/shared/form/input-focus-ring.ts",
     "src/shared/basic/icons/Palette.tsx",
   ],
@@ -1009,6 +1034,7 @@ const COMPONENT_PATHS: Record<string, string[]> = {
   ],
   "RichTextEditor": [
     "src/shared/form/RichTextEditor.tsx",
+    "src/shared/basic/Icon.tsx",
     "src/shared/form/picker-portal-utils.ts",
     "src/shared/form/input-focus-ring.ts",
     "src/desktop/feedback/Modal.tsx",
@@ -1023,6 +1049,7 @@ const COMPONENT_PATHS: Record<string, string[]> = {
   ],
   "Search": [
     "src/shared/form/Search.tsx",
+    "src/shared/basic/Icon.tsx",
     "src/shared/form/input-focus-ring.ts",
     "src/shared/basic/icons/Search.tsx",
   ],
@@ -1039,6 +1066,7 @@ const COMPONENT_PATHS: Record<string, string[]> = {
   ],
   "TimePicker": [
     "src/shared/form/TimePicker.tsx",
+    "src/shared/basic/Icon.tsx",
     "src/shared/form/picker-portal-utils.ts",
     "src/shared/form/picker-trigger-icon.ts",
     "src/shared/basic/icons/Clock.tsx",
@@ -1053,6 +1081,7 @@ const COMPONENT_PATHS: Record<string, string[]> = {
   ],
   "Accordion": [
     "src/shared/layout/Accordion.tsx",
+    "src/shared/basic/Icon.tsx",
     "src/shared/basic/icons/ChevronDown.tsx",
   ],
   "Container": [
@@ -1081,30 +1110,36 @@ const COMPONENT_PATHS: Record<string, string[]> = {
   ],
   "BackTop": [
     "src/shared/navigation/BackTop.tsx",
+    "src/shared/basic/Icon.tsx",
     "src/shared/basic/icons/ChevronUp.tsx",
   ],
   "Menu": [
     "src/shared/navigation/Menu.tsx",
+    "src/shared/basic/Icon.tsx",
     "src/shared/basic/icons/ChevronRight.tsx",
   ],
   "PageHeader": [
     "src/shared/navigation/PageHeader.tsx",
+    "src/shared/basic/Icon.tsx",
     "src/shared/basic/icons/ArrowLeft.tsx",
   ],
   "Pagination": [
     "src/shared/navigation/Pagination.tsx",
+    "src/shared/basic/Icon.tsx",
     "src/shared/basic/icons/ChevronLeft.tsx",
     "src/shared/basic/icons/ChevronRight.tsx",
   ],
   "Sidebar": [
     "src/shared/navigation/Sidebar.tsx",
     "src/shared/basic/Link.tsx",
+    "src/shared/basic/Icon.tsx",
     "src/shared/basic/button-variants.ts",
     "src/shared/basic/icons/ChevronDown.tsx",
     "src/shared/basic/icons/ChevronRight.tsx",
   ],
   "Steps": [
     "src/shared/navigation/Steps.tsx",
+    "src/shared/basic/Icon.tsx",
     "src/shared/basic/icons/Check.tsx",
   ],
 };
@@ -1159,8 +1194,9 @@ function extractUsedNames(content: string): string[] {
  * 内置图标以 `IconXxx` 单独导出、文件分散在 icons/ 子目录；不可能在 COMPONENT_PATHS 中逐一手写。
  * 若扫描结果中出现任意 `Icon` 前缀组件名，则递归加入 `src/shared/basic/icons` 下全部 `.tsx` 供 Tailwind 收集 class。
  *
- * **注意**：仅当 `packageRoot` 下存在真实的 `src/shared/basic/icons/Icon.tsx`（可列目录）时才递归；
- * JSR 哈希缓存下无「icons 目录」语义，递归会失败或误扫海量无关文件，此时跳过整目录合并。
+ * **注意**：仅当 `packageRoot` 下存在真实的 `src/shared/basic/Icon.tsx`
+ * 与 `src/shared/basic/icons/`（可列目录）时才递归；JSR 哈希缓存下无「icons 目录」语义，
+ * 递归会失败或误扫海量无关文件，此时跳过整目录合并。
  *
  * @param usedNames - 从项目源码提取的具名导入符号
  * @param packageRoot - ui-view 包根绝对路径（可能来自探测，未必为真实磁盘树）
@@ -1181,7 +1217,7 @@ async function mergeIntrinsicIconSources(
   if (!anyIcon) return;
 
   const iconRoot = join(packageRoot, "src/shared/basic/icons");
-  const iconEntry = join(iconRoot, "Icon.tsx");
+  const iconEntry = join(packageRoot, "src/shared/basic/Icon.tsx");
   if (!existsSync(iconEntry)) {
     return;
   }
@@ -1193,6 +1229,10 @@ async function mergeIntrinsicIconSources(
     return;
   }
   const seen = new Set(paths);
+  if (!seen.has(iconEntry)) {
+    seen.add(iconEntry);
+    paths.push(iconEntry);
+  }
   for (const f of iconFiles) {
     if (seen.has(f)) continue;
     seen.add(f);

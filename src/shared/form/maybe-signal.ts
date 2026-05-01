@@ -15,7 +15,10 @@ import { isSignal, type Signal } from "@dreamer/view";
 export type MaybeSignal<T> = T | (() => T) | Signal<T>;
 
 /**
- * 同步读取 {@link MaybeSignal}：未传时返回 `undefined`；函数或 Signal 则调用一次。
+ * 同步读取 {@link MaybeSignal}：未传时返回 `undefined`；Signal 或 getter 则调用一次。
+ *
+ * 优化：先检查 `isSignal`（O(1) 标记检查），比 `typeof` 更精确且避免对非函数值的类型判断。
+ * Signal 的 `.length === 2`（getter + setter），普通 getter `.length === 0`——但统一调用即可。
  *
  * @template T 值类型
  * @param v - 受控 prop
@@ -25,9 +28,9 @@ export function readMaybeSignal<T>(
   v: MaybeSignal<T> | undefined,
 ): T | undefined {
   if (v === undefined) return undefined;
-  if (typeof v === "function") {
-    return (v as () => T)();
-  }
+  // Signal 优先：标记检查 O(1)，避免对 Signal 走 typeof 分支
+  if (isSignal(v)) return (v as () => T)();
+  if (typeof v === "function") return (v as () => T)();
   return v as T;
 }
 

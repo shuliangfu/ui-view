@@ -3,7 +3,11 @@
  * 对齐 Input：value 可为 getter、主体不读 value()，maxLength 字数由子组件读 value()，避免失焦。light/dark 主题。
  */
 
-import { type JSXRenderable, useContext } from "@dreamer/view";
+import {
+  type JSXRenderable,
+  useContext,
+  type ViewRefObject,
+} from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import { FormItemControlIdContext } from "./form-item-control-id.ts";
 import {
@@ -54,6 +58,8 @@ export interface TextareaProps {
   name?: string;
   /** 原生 id */
   id?: string;
+  /** 内部 textarea ref，便于旧表单迁移后继续读取 DOM 值 */
+  textareaRef?: ViewRefObject<HTMLTextAreaElement>;
 }
 
 /** 基础底纹（不含 ring） */
@@ -105,6 +111,7 @@ export function Textarea(props: TextareaProps): JSXRenderable {
     onPaste,
     name,
     id,
+    textareaRef,
   } = props;
 
   /** 在 {@link import("./FormItem.tsx").FormItem} 下且未显式 `id` 时，与 `label[for]` 自动对齐 */
@@ -140,6 +147,7 @@ export function Textarea(props: TextareaProps): JSXRenderable {
    */
   const textareaProps = {
     id: resolvedId,
+    ref: textareaRef,
     name,
     rows,
     value,

@@ -5,7 +5,7 @@
  */
 
 import { twMerge } from "tailwind-merge";
-import type { JSXRenderable } from "@dreamer/view";
+import type { JSXRenderable, ViewRefObject } from "@dreamer/view";
 import type { SizeVariant } from "../types.ts";
 import { compositeShellFocusRingFromInput } from "./input-focus-ring.ts";
 import { commitMaybeSignal, type MaybeSignal } from "./maybe-signal.ts";
@@ -49,6 +49,8 @@ export interface InputNumberProps {
   name?: string;
   /** 原生 id */
   id?: string;
+  /** 内部 input ref，便于旧表单迁移后继续读取 DOM 值 */
+  inputRef?: ViewRefObject<HTMLInputElement>;
 }
 
 /**
@@ -220,6 +222,7 @@ export function InputNumber(props: InputNumberProps): JSXRenderable {
     onPaste,
     name,
     id,
+    inputRef,
     hideFocusRing = false,
   } = props;
 
@@ -262,6 +265,7 @@ export function InputNumber(props: InputNumberProps): JSXRenderable {
    */
   const inputSpreadProps = {
     type: "number" as const,
+    ref: inputRef,
     id,
     name,
     placeholder,

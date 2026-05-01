@@ -41,9 +41,8 @@ function push(
   },
 ): string {
   const id = nextId();
-  const list = messageListRef.value;
   messageListRef.value = [
-    ...list,
+    ...messageListRef.value,
     {
       ...item,
       placement: item.placement ?? "top",

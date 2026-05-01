@@ -14,8 +14,9 @@
  *
  * **注意**：组件内 `createSignal`/`createEffect` 等须在**每次调用**时按相同顺序执行，不可在 `open === false` 时提前 return 跳过。
  *
- * **`width` / `title` / `children` 与 compileSource**：父级 MountFn 可能只合并首帧 props；**`width` / `title`** 与 `open` 同向可传零参 getter，
- * 本组件内用 {@link createMemo} 订阅，打开后改预设仍会更新宽高与标题。**`children`** 仅当不关弹窗、正文也要随同一 signal 变时再传 `children={() => …}`；普通静态子节点即可。
+ * **`width` / `title` / `children` / `footer` 与 compileSource**：父级 MountFn 可能只合并首帧 props；**`width` / `title`** 与 `open` 同向可传零参 getter，
+ * 本组件内用 {@link createMemo} 订阅，打开后改预设仍会更新宽高与标题。**`footer`** 同样经 memo 读 {@link ModalProps.footer}，避免底栏 VNode 卡在首帧（确认框危险/警告样式与回调不刷新）。
+ * **`children`** 仅当不关弹窗、正文也要随同一 signal 变时再传 `children={() => …}`；普通静态子节点即可。
  */
 
 import {
@@ -285,7 +286,6 @@ function useDrag(
 export function Modal(props: ModalProps): JSXRenderable {
   const {
     onClose,
-    footer = null,
     closable = true,
     maskClosable = true,
     mask: showMask = true,
@@ -324,6 +324,9 @@ export function Modal(props: ModalProps): JSXRenderable {
   const resolvedChildren = createMemo(() =>
     readModalChildrenInput(props.children)
   );
+
+  /** 底栏须随 `props.footer` patch 更新；勿用首帧解构闭包（与 `resolvedChildren` 同类问题）。 */
+  const resolvedFooter = createMemo(() => props.footer);
 
   const handleMaskClick = (e: Event) => {
     if (e.target === e.currentTarget && maskClosable && showMask) {
@@ -378,6 +381,7 @@ export function Modal(props: ModalProps): JSXRenderable {
       : (WIDTH_PRESETS[w as string] ?? String(w));
     const title = resolvedTitle();
     const children = resolvedChildren();
+    const footer = resolvedFooter();
     const isFullscreen = fullscreen.value;
     const pos = position.value;
     const hasOffset = pos.x !== 0 || pos.y !== 0;

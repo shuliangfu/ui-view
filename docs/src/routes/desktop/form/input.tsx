@@ -143,10 +143,10 @@ const INPUT_API: ApiRow[] = [
   { name: "id", type: "string", default: "-", description: "原生 id" },
   {
     name: "autoComplete",
-    type: "string",
+    type: "boolean | string",
     default: "-",
     description:
-      "原生 autocomplete，如 `email`、`current-password`；登录/自动填充场景建议填写",
+      "`true` 时按 type 自动写原生 autocomplete（如 type=email → autocomplete=email）并合并 autofill 暗色 class；`string` 时原样写出（非 `off`/`nope` 时合并暗色 class）；`false`/不传则不加",
   },
 ];
 

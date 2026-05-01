@@ -4,32 +4,22 @@
  * Button 全量交互见同目录上级 `interactive-button-full.test.ts`（本包不为 /desktop/basic/button 另建页测文件）。
  */
 
+import { describe, expect, it } from "@dreamer/test";
 import {
-  afterAll,
-  beforeAll,
-  cleanupAllBrowsers,
-  describe,
-  expect,
-  it,
-} from "@dreamer/test";
-import { createDocsBrowserTestEnv, DOCS_BROWSER_CONFIG } from "../helpers.ts";
+  DOCS_BROWSER_CONFIG,
+  shallowInteractMainHere,
+  sharedEnv,
+} from "../helpers.ts";
 
 /** 固定为本文档 path，便于复制到其他页时改为对应路由 */
 const DOC_PATH = "/desktop/data-display/collapse";
 
 describe("文档页 E2E：/desktop/data-display/collapse（Collapse 折叠）", () => {
-  const env = createDocsBrowserTestEnv();
-  beforeAll(() => env.start());
-  afterAll(async () => {
-    await env.stopServerOnly();
-    await cleanupAllBrowsers();
-  });
-
   it("可展开/折叠首块并完成浅层控件探针", async (t) => {
     if (!t?.browser?.goto) return;
-    await env.goto(t, DOC_PATH);
-    await env.delay(450);
-    const text = await env.getMainText(t);
+    await sharedEnv.goto(t, DOC_PATH);
+    await sharedEnv.waitDocMainReady(t, { minChars: 36 });
+    const text = await sharedEnv.getMainText(t);
     expect(text.length).toBeGreaterThanOrEqual(36);
     expect(text).toMatch(/Collapse|折叠/i);
     expect(await clickFirstCollapseHeaderHere(t)).toBe(true);
@@ -41,8 +31,8 @@ describe("文档页 E2E：/desktop/data-display/collapse（Collapse 折叠）", 
    */
   it("严格·受控 + 多开", async (t) => {
     if (!t?.browser?.goto) return;
-    await env.goto(t, DOC_PATH);
-    await env.delay(520);
+    await sharedEnv.goto(t, DOC_PATH);
+    await sharedEnv.waitDocMainReady(t);
     const ok = await t.browser.evaluate(() => {
       const needle = "受控 + 多开";
       const main = document.querySelector("main");
@@ -149,8 +139,8 @@ describe("文档页 E2E：/desktop/data-display/collapse（Collapse 折叠）", 
    */
   it("严格·accordion + bordered=false", async (t) => {
     if (!t?.browser?.goto) return;
-    await env.goto(t, DOC_PATH);
-    await env.delay(520);
+    await sharedEnv.goto(t, DOC_PATH);
+    await sharedEnv.waitDocMainReady(t);
     const ok = await t.browser.evaluate(() => {
       const needle = "accordion + bordered=false";
       const main = document.querySelector("main");
@@ -257,8 +247,8 @@ describe("文档页 E2E：/desktop/data-display/collapse（Collapse 折叠）", 
    */
   it("严格·showArrow=false / size=sm", async (t) => {
     if (!t?.browser?.goto) return;
-    await env.goto(t, DOC_PATH);
-    await env.delay(520);
+    await sharedEnv.goto(t, DOC_PATH);
+    await sharedEnv.waitDocMainReady(t);
     const ok = await t.browser.evaluate(() => {
       const needle = "showArrow=false / size=sm";
       const main = document.querySelector("main");
@@ -378,94 +368,6 @@ async function clickFirstCollapseHeaderHere(
     }
     return false;
   });
-  await new Promise((r) => setTimeout(r, 200));
+  await sharedEnv.delay(200);
   return ok as boolean;
-}
-
-/**
- * 本文件内：`main` 已渲染后的浅层交互探针（不放入 helpers.ts）。
- */
-async function shallowInteractMainHere(
-  t: { browser?: { evaluate: (fn: () => unknown) => Promise<unknown> } },
-  mainTextFallback: string,
-): Promise<void> {
-  if (!t?.browser) return;
-  const probe = (await t.browser.evaluate(() => {
-    const main = document.querySelector("main");
-    if (!main) return { ok: false, acted: false };
-    const listbox = main.querySelector(
-      'button[aria-haspopup="listbox"]',
-    ) as HTMLButtonElement | null;
-    if (listbox && !listbox.disabled) {
-      listbox.click();
-      return { ok: true, acted: true };
-    }
-    const range = main.querySelector(
-      'input[type="range"]',
-    ) as HTMLInputElement | null;
-    if (range) {
-      const max = Number(range.max) || 100;
-      const cur = Number(range.value) || 0;
-      range.value = String(Math.min(max, cur + 5));
-      range.dispatchEvent(new Event("input", { bubbles: true }));
-      return { ok: true, acted: true };
-    }
-    const cb = main.querySelector(
-      'input[type="checkbox"]:not(:disabled)',
-    ) as HTMLInputElement | null;
-    if (cb) {
-      cb.click();
-      return { ok: true, acted: true };
-    }
-    const rad = main.querySelector(
-      'input[type="radio"]:not(:disabled)',
-    ) as HTMLInputElement | null;
-    if (rad) {
-      rad.click();
-      return { ok: true, acted: true };
-    }
-    const fileInput = main.querySelector(
-      'input[type="file"]:not(:disabled)',
-    ) as HTMLInputElement | null;
-    if (fileInput) {
-      fileInput.click();
-      return { ok: true, acted: true };
-    }
-    const input = main.querySelector(
-      "textarea:not(:disabled), input:not([type=hidden]):not([type=button]):not([type=submit]):not([type=file]):not(:disabled)",
-    ) as HTMLInputElement | null;
-    if (input) {
-      input.focus();
-      input.value = "e2e-probe";
-      input.dispatchEvent(new Event("input", { bubbles: true }));
-      return { ok: true, acted: true };
-    }
-    const btn = main.querySelector(
-      'button[type="button"]:not([disabled]), button:not([type]):not([disabled])',
-    ) as HTMLButtonElement | null;
-    if (btn) {
-      btn.click();
-      return { ok: true, acted: true };
-    }
-    const table = main.querySelector("table");
-    if (table) {
-      const cellBtn = table.querySelector(
-        "td button, td a",
-      ) as HTMLElement | null;
-      if (cellBtn) {
-        cellBtn.click();
-        return { ok: true, acted: true };
-      }
-    }
-    const len = main.innerText?.length ?? 0;
-    return { ok: true, acted: false, len };
-  })) as { ok: boolean; acted?: boolean; len?: number };
-
-  expect(probe.ok).toBe(true);
-  if (!probe.acted) {
-    expect(
-      (probe.len ?? mainTextFallback.length) > 100 ||
-        /canvas|Chart|svg|代码|API|示例/.test(mainTextFallback),
-    ).toBe(true);
-  }
 }

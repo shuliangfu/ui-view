@@ -20,6 +20,10 @@ export type ControlledStringInput = string | (() => string) | Signal<string>;
 /**
  * 将 `open` prop 规范为 boolean；在 `createMemo` 内调用以订阅 `Signal` / getter。
  *
+ * 优化：先检查 `isSignal`（O(1) 标记），再检查 `typeof === "function"`。
+ * 对函数值，不再检查 `.length`——在 @dreamer/view 中 Signal 的 `.length === 2`
+ * 但零参 getter `.length === 0`，统一调用即可，无需区分。
+ *
  * @param v - 受控开关原始值
  */
 export function readControlledOpenInput(
@@ -27,10 +31,7 @@ export function readControlledOpenInput(
 ): boolean {
   if (v === undefined) return false;
   if (isSignal(v)) return !!(v as Signal<boolean>).value;
-  if (typeof v === "function") {
-    if ((v as () => unknown).length !== 0) return false;
-    return !!(v as () => boolean)();
-  }
+  if (typeof v === "function") return !!(v as () => boolean)();
   return !!v;
 }
 
@@ -38,20 +39,21 @@ export function readControlledOpenInput(
  * 解析「是否仍有更多」：未传视为 true；`false` / `Signal(false)` 表示无下一页。
  * 在 `createMemo` 内调用可订阅 `Signal` / getter，避免父级只传一次 `.value` 快照后子树不再更新。
  *
+ * 优化：同 {@link readControlledOpenInput}，移除 `.length` 检查。
+ *
  * @param v - 原始 `hasMore` 值
  */
 export function readHasMoreInput(v: HasMoreInput | undefined): boolean {
   if (v === undefined) return true;
   if (isSignal(v)) return !!(v as Signal<boolean>).value;
-  if (typeof v === "function") {
-    if ((v as () => unknown).length !== 0) return true;
-    return !!(v as () => boolean)();
-  }
+  if (typeof v === "function") return !!(v as () => boolean)();
   return !!v;
 }
 
 /**
  * 将字符串受控 prop 规范为 `string | undefined`；在 `createMemo` 内调用以订阅 `Signal` / getter。
+ *
+ * 优化：同 {@link readControlledOpenInput}，移除 `.length` 检查。
  *
  * @param v - 原始值
  */
@@ -60,9 +62,6 @@ export function readControlledStringInput(
 ): string | undefined {
   if (v === undefined) return undefined;
   if (isSignal(v)) return (v as Signal<string>).value;
-  if (typeof v === "function") {
-    if ((v as () => unknown).length !== 0) return undefined;
-    return (v as () => string)();
-  }
+  if (typeof v === "function") return (v as () => string)();
   return v;
 }

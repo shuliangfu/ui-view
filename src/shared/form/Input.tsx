@@ -4,7 +4,11 @@
  * prefix / suffix 渲染在输入框 DOM 外侧，与中间 input 同一外壳 flex 连成一体（统一边框与圆角）。
  */
 
-import { type JSXRenderable, useContext } from "@dreamer/view";
+import {
+  type JSXRenderable,
+  useContext,
+  type ViewRefObject,
+} from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import { FormItemControlIdContext } from "./form-item-control-id.ts";
 import type { SizeVariant } from "../types.ts";
@@ -67,6 +71,8 @@ export interface InputProps {
   name?: string;
   /** 原生 id */
   id?: string;
+  /** 内部 input ref，便于旧表单在迁移到 Input 后继续读取 DOM 值 */
+  inputRef?: ViewRefObject<HTMLInputElement>;
   /**
    * 自动完成与暗色 `:-webkit-autofill` 长 class：`true` 时合并长 class，并按 `type` 写原生 `autocomplete`（如 `email`→`email`）；`string` 时原样写出并（在非 `off`/`nope` 时）合并长 class；`false`/不传则二者皆无。
    */
@@ -144,6 +150,7 @@ function InputGroupShell(props: {
   type: string;
   id: string | undefined;
   name: string | undefined;
+  inputRef: ViewRefObject<HTMLInputElement> | undefined;
   placeholder: string | undefined;
   disabled: boolean;
   readOnly: boolean;
@@ -173,6 +180,7 @@ function InputGroupShell(props: {
     type,
     id,
     name,
+    inputRef,
     placeholder,
     disabled,
     readOnly,
@@ -210,6 +218,7 @@ function InputGroupShell(props: {
       )}
       <input
         type={type}
+        ref={inputRef}
         id={id}
         name={name}
         autoComplete={nativeAutoComplete}
@@ -285,6 +294,7 @@ export function Input(props: InputProps): JSXRenderable {
     onPaste,
     name,
     id,
+    inputRef,
     autoComplete,
   } = props;
 
@@ -326,6 +336,7 @@ export function Input(props: InputProps): JSXRenderable {
 
   const inputSpreadProps = {
     type,
+    ref: inputRef,
     id: resolvedId,
     name,
     autoComplete: nativeAutoComplete,
@@ -392,6 +403,7 @@ export function Input(props: InputProps): JSXRenderable {
         suffix={showClear ? undefined : suffix}
         showClear={showClear}
         type={type}
+        inputRef={inputRef}
         id={resolvedId}
         name={name}
         nativeAutoComplete={nativeAutoComplete}

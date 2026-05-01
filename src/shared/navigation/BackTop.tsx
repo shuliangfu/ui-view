@@ -44,11 +44,21 @@ const entries: BackTopEntry[] = [];
 let windowScrollAttached = false;
 const elementScrollRoots = new WeakSet<Element>();
 
+/** 是否为带 `querySelector` 的文档根（避免残缺 `document` 或非 DOM 对象导致运行时异常） */
+function isQueryableDocument(
+  d: unknown,
+): d is Document | DocumentFragment {
+  return typeof d === "object" && d != null &&
+    typeof (d as Document).querySelector === "function";
+}
+
 function getScrollTarget(target: BackTopTarget | undefined): Element | null {
   if (target == null) return null;
   if (typeof target === "function") return target();
   if (typeof target === "string") {
-    return globalThis.document?.querySelector(target) ?? null;
+    const doc = globalThis.document;
+    if (!isQueryableDocument(doc)) return null;
+    return doc.querySelector(target) ?? null;
   }
   return target;
 }
@@ -58,7 +68,7 @@ function getScrollTarget(target: BackTopTarget | undefined): Element | null {
  */
 function getDefaultScrollContainer(): HTMLElement | null {
   const doc = globalThis.document;
-  if (!doc) return null;
+  if (!isQueryableDocument(doc)) return null;
   const main = doc.querySelector("main");
   if (!(main instanceof HTMLElement)) return null;
   const oy = globalThis.getComputedStyle(main).overflowY;
@@ -112,9 +122,11 @@ function scrollToTopSmooth(explicitTarget: Element | null): void {
   }
   globalThis.scrollTo?.(opts);
   const doc = globalThis.document;
-  doc?.scrollingElement?.scrollTo?.(opts);
-  doc?.documentElement?.scrollTo?.(opts);
-  doc?.body?.scrollTo?.(opts);
+  if (isQueryableDocument(doc)) {
+    doc.scrollingElement?.scrollTo?.(opts);
+    doc.documentElement?.scrollTo?.(opts);
+    doc.body?.scrollTo?.(opts);
+  }
   getDefaultScrollContainer()?.scrollTo?.(opts);
 }
 

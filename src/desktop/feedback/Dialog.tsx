@@ -2,13 +2,14 @@
  * Dialog 确认对话框（View）。
  * 可视为 Modal 简化版：标题、内容、确定/取消按钮；支持警告（橙色确定）、危险操作（红色确定）、加载态。
  *
- * **`open`**：与 {@link Modal} 一致，请传 **`createSignal` 返回值** `open={sig}`，勿传 `open={sig.value}` 快照。
+ * **`open` / `title`**：与 {@link Modal} 一致；`open` 请传 **`createSignal` 返回值** `open={sig}`，勿传 `open={sig.value}` 快照；`title` 支持零参 getter，与 Modal 相同。
+ * **`danger` / `warning` / `confirmText`**：亦可传零参 getter；父级仅 `open` 走 Signal、自身不重跑时，快照布尔会卡在首帧，导致危险/警告底栏与按钮语义不更新。
  *
  * **变体**：`variant` 控制宽度与 `actionSheet` 落位等；`mobileLayout` 默认横排，仅当传 `auto`/`stack` 时窄屏或全断点纵排。自定义 `footer` 时由业务自行布局，不受 `mobileLayout` 影响；默认定/取底栏窄屏在 foot 内居中成组、`sm+` 仍右对齐。
  */
 
 import { Button } from "../../shared/basic/Button.tsx";
-import type { JSXRenderable } from "@dreamer/view";
+import { createMemo, type JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import { Modal } from "./Modal.tsx";
 import type { ModalPlacement, ModalProps } from "./Modal.tsx";
@@ -36,8 +37,6 @@ export interface DialogProps extends
   > {
   /** 关闭回调 */
   onClose?: () => void;
-  /** 标题 */
-  title?: string | null;
   /** 正文内容（与 children 二选一，若都传则 content 优先） */
   content?: string | unknown;
   /** 弹层内容（与 content 二选一） */
@@ -52,21 +51,21 @@ export interface DialogProps extends
   mobileLayout?: DialogMobileLayout;
   /** 自定义底部（覆盖默认确定/取消）；传 null 不显示 footer */
   footer?: unknown;
-  /** 确定按钮文案，默认 "确定" */
-  confirmText?: string;
+  /** 确定按钮文案，默认 "确定"；支持 `() => string` */
+  confirmText?: string | (() => string);
   /** 取消按钮文案，默认 "取消"；传 null 或空则不显示取消按钮 */
   cancelText?: string | null;
   /** 确定回调；不传则不显示确定按钮（仅当 footer 也未传时生效） */
   onConfirm?: () => void | Promise<void>;
   /** 取消回调，默认 onClose */
   onCancel?: () => void;
-  /** 是否为危险操作（确定按钮 danger 样式），默认 false */
-  danger?: boolean;
+  /** 是否为危险操作（确定按钮 danger 样式），默认 false；支持 `() => boolean` */
+  danger?: boolean | (() => boolean);
   /**
    * 是否为警告类确认（确定按钮 warning 橙色样式），默认 false。
-   * 与 {@link danger} 同时为 true 时以 danger 为准。
+   * 与 {@link danger} 同时为 true 时以 danger 为准。支持 `() => boolean`。
    */
-  warning?: boolean;
+  warning?: boolean | (() => boolean);
   /**
    * 确定按钮 loading：走 Button 的 `loading`（转圈 + 主色保持）；
    * 为 true 时**确定与取消**均禁用，避免提交过程中重复操作或中途取消（完成后由业务将本项置回 false）。
@@ -152,6 +151,40 @@ function buildDialogDefaultFooter(
   return <div class={wrapForNonRow}>{nodes}</div>;
 }
 
+/**
+ * 读取布尔类 Dialog prop：支持快照或零参 getter（与 Modal `title` getter 一致）。
+ *
+ * @param v `danger` / `warning`
+ */
+function readDialogBooleanProp(
+  v: boolean | undefined | (() => boolean),
+): boolean {
+  if (v === undefined) return false;
+  if (typeof v === "function" && (v as () => unknown).length === 0) {
+    return Boolean((v as () => unknown)());
+  }
+  return Boolean(v);
+}
+
+/**
+ * 读取确定按钮文案：支持快照或零参 getter。
+ *
+ * @param v `confirmText`
+ * @param fallback 未传或空串时的默认文案
+ */
+function readDialogConfirmTextProp(
+  v: string | undefined | (() => string),
+  fallback: string,
+): string {
+  if (v === undefined) return fallback;
+  if (typeof v === "function" && (v as () => unknown).length === 0) {
+    const t = (v as () => string)();
+    return t === "" ? fallback : String(t);
+  }
+  if (typeof v === "string") return v === "" ? fallback : v;
+  return String(v);
+}
+
 export function Dialog(props: DialogProps): JSXRenderable {
   const {
     open,
@@ -161,15 +194,16 @@ export function Dialog(props: DialogProps): JSXRenderable {
     children,
     variant = "alert",
     mobileLayout: mobileLayoutIn,
-    footer: footerOverride,
+    /** 从 spread 中剔除，避免 `{...restModal}` 覆盖下方 `footer={modalFooter()}` */
+    footer: _dialogFooterSlot,
     footerClass: footerClassIn,
-    confirmText = "确定",
+    confirmText: _confirmTextSlot,
     cancelText = "取消",
-    onConfirm,
+    onConfirm: _onConfirmSlot,
     onCancel,
-    danger = false,
-    warning = false,
-    confirmLoading = false,
+    danger: _dangerSlot,
+    warning: _warningSlot,
+    confirmLoading: _confirmLoadingSlot,
     showFooter = true,
     width: widthIn,
     class: classIn,
@@ -179,15 +213,56 @@ export function Dialog(props: DialogProps): JSXRenderable {
   } = props;
 
   const body = content !== undefined ? content : children;
-  const hasCancel = cancelText != null && cancelText !== "";
-  const hasConfirm = onConfirm != null;
 
   const layout: DialogMobileLayout = mobileLayoutIn != null
     ? mobileLayoutIn
     : "row";
 
-  /** 确定钮语义：危险 > 警告 > 主色 */
-  const confirmVariant = danger ? "danger" : warning ? "warning" : "primary";
+  /**
+   * 默认定/取栏须在 memo 内读 `props.danger` / `props.warning` 等：
+   * 否则父级只把 `open` 交给 Modal（Signal）、不重跑 Dialog 时，首帧解构的快照永远是默认 primary。
+   */
+  const modalFooter = createMemo(() => {
+    const cancelTextRaw = props.cancelText ?? cancelText;
+    const hasCancel = cancelTextRaw != null && cancelTextRaw !== "";
+    const hasConfirm = props.onConfirm != null;
+    const useBuiltInFooter = showFooter && (hasConfirm || hasCancel) &&
+      props.footer === undefined;
+    if (!useBuiltInFooter) {
+      return props.footer;
+    }
+    const danger = readDialogBooleanProp(props.danger);
+    const warning = readDialogBooleanProp(props.warning);
+    const confirmTextResolved = readDialogConfirmTextProp(
+      props.confirmText,
+      "确定",
+    );
+    /** 确定钮语义：危险 > 警告 > 主色 */
+    const confirmVariant = danger ? "danger" : warning ? "warning" : "primary";
+    return buildDialogDefaultFooter({
+      hasConfirm,
+      hasCancel,
+      layout,
+      confirmVariant,
+      confirmText: confirmTextResolved,
+      cancelText: cancelTextRaw as string,
+      confirmLoading: props.confirmLoading ?? false,
+      onConfirm: props.onConfirm,
+      onCancel,
+      onClose,
+    });
+  });
+
+  const footerClassMerged = createMemo(() => {
+    const cancelTextRaw = props.cancelText ?? cancelText;
+    const hasCancel = cancelTextRaw != null && cancelTextRaw !== "";
+    const hasConfirm = props.onConfirm != null;
+    const useBuiltInFooter = showFooter && (hasConfirm || hasCancel) &&
+      props.footer === undefined;
+    return useBuiltInFooter
+      ? twMerge("max-sm:justify-center sm:justify-end", footerClassIn)
+      : footerClassIn;
+  });
 
   const resolvedWidth = widthIn != null
     ? widthIn
@@ -208,46 +283,19 @@ export function Dialog(props: DialogProps): JSXRenderable {
 
   const classMerged = twMerge(classFromVariant, classIn);
 
-  /**
-   * 仅当无自定义 footer 时构造默认定/取区；`footer: null` 为显式不展示。
-   */
-  const useBuiltInFooter = showFooter && (hasConfirm || hasCancel) &&
-    footerOverride === undefined;
-  const defaultFooter = useBuiltInFooter
-    ? buildDialogDefaultFooter({
-      hasConfirm,
-      hasCancel,
-      layout,
-      confirmVariant,
-      confirmText,
-      cancelText: cancelText as string,
-      confirmLoading,
-      onConfirm,
-      onCancel,
-      onClose,
-    })
-    : footerOverride;
-
-  /**
-   * 库默认定/取：窄屏两钮整组水平居中，与常见系统弹窗一致；`sm+` 仍与原先 Modal 底栏一样靠右。自定义 `footer` 时不加。
-   */
-  const footerClassMerged = useBuiltInFooter
-    ? twMerge("max-sm:justify-center sm:justify-end", footerClassIn)
-    : footerClassIn;
-
   return (
     <Modal
       open={open}
       onClose={onClose}
       title={title}
-      footer={defaultFooter}
       keyboard
       width={resolvedWidth}
       class={classMerged}
       wrapClass={wrapIn}
       placement={placement}
-      footerClass={footerClassMerged}
+      footerClass={footerClassMerged()}
       {...restModal}
+      footer={modalFooter()}
     >
       {body}
     </Modal>

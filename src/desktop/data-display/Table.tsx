@@ -1175,6 +1175,11 @@ export function Table<
          * 禁止依赖组件首次调用时在闭包内缓存的 `dataSource` 常量。
          */
         const dataSource = props.dataSource;
+        /**
+         * 列定义须同步从 `props.columns` 读取：若仍用函数组件首帧解构的 `columns` 闭包，
+         * patch 后表体仍渲染旧列（含 `render`/`onClick`），行内按钮等会表现为点击无响应。
+         */
+        const columns = props.columns;
         // 展开行：受控用 props，非受控用内部 signal（在 getter 内读以保证 effect 订阅、点击 + 能更新）
         const expandedKeysSource = expandable?.expandedRowKeys ??
           expandedRef.value;

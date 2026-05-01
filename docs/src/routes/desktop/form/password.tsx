@@ -121,6 +121,20 @@ const PASSWORD_API: ApiRow[] = [
   },
   { name: "name", type: "string", default: "-", description: "原生 name" },
   { name: "id", type: "string", default: "-", description: "原生 id" },
+  {
+    name: "autoComplete",
+    type: "boolean | string",
+    default: "-",
+    description:
+      "`true` 时写原生 autocomplete（默认 `current-password`，`newPassword` 时 `new-password`）并合并 autofill 暗色 class；`string` 时原样写出；`false`/不传则不加",
+  },
+  {
+    name: "newPassword",
+    type: "boolean",
+    default: "false",
+    description:
+      '与 `autoComplete={true}` 联用：注册/设新密码场景写原生 `autocomplete="new-password"`，否则为 `current-password`',
+  },
 ];
 
 const importCode = `import { Password, Form, FormItem } from "@dreamer/ui-view";

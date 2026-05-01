@@ -172,19 +172,23 @@ export function Switch(props: SwitchProps): JSXRenderable {
           >
             {
               /*
-              使用 top-1/2 + -translate-y-1/2 在轨道内竖直居中；横向用 translate-x-0/5。
-              与 ui-preact 对齐：preact 的滑块相对 `label` 用 `left-0.5`（离轨道**外**缘约 2px）；
-              本实现滑块在**有 border 的**轨道内，若仍用 `left-0.5` 会相对内缘再进 2px、视觉上偏中。
-              改为 `left-px` 相对**内**缘 1px，等效外缘 2px，与 preact 观感一致。
+              滑块位移：勿在同一元素上用 `twMerge` 同时拼 `-translate-y-1/2` 与 `translate-x-5`；
+              默认的 tailwind-merge 会把 `translate-x-*` 与 `translate-y-*` 当同一组，易只剩其一，
+              表现即为「开态轨道已蓝但圆点仍在左侧」。改用单一 `style.transform` 写死 `translate(…, -50%)`。
             */
             }
             <span
               class={twMerge(
-                "pointer-events-none absolute left-px top-1/2 block h-5 w-5 -translate-y-1/2 rounded-full",
+                "pointer-events-none absolute left-px top-1/2 block h-5 w-5 rounded-full",
                 "bg-white shadow ring-0 dark:bg-slate-200",
-                "transition-transform duration-200 will-change-transform",
-                on ? "translate-x-5" : "translate-x-0",
+                "transition-[transform] duration-200 will-change-transform",
               )}
+              style={{
+                // 1.25rem 与 `translate-x-5` / 轨宽 `w-11` 下的行程一致
+                transform: on
+                  ? "translate(1.25rem, -50%)"
+                  : "translate(0, -50%)",
+              }}
             />
           </span>
         );

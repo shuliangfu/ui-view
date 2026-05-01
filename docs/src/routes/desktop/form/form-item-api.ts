@@ -53,8 +53,9 @@ export const FORM_ITEM_API: FormDocsApiRow[] = [
   {
     name: "id",
     type: "string",
-    default: "-",
-    description: "关联控件 id（label for）",
+    default: "自动生成",
+    description:
+      "控件 id（label for）；不传时按组件实例自动生成稳定 id，并经 FormItemControlIdContext 下传给单个子控件（如 Input/Password/Textarea），子控件显式 id 仍优先",
   },
   {
     name: "trailing",
