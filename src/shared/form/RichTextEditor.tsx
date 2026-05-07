@@ -18,8 +18,10 @@ import {
   createRenderEffect,
   createSignal,
   For,
+  getOwner,
   type JSXRenderable,
   onCleanup,
+  type Owner,
   untrack,
 } from "@dreamer/view";
 import { createPortal } from "@dreamer/view";
@@ -2139,7 +2141,46 @@ const findBarInputSurface =
   "px-2 py-1 border border-slate-300 dark:border-slate-600 rounded text-sm bg-white dark:bg-slate-800 focus:outline-none";
 const editorReadOnlyCls = "cursor-default bg-slate-50 dark:bg-slate-800/80";
 
+/**
+ * 每个 {@link RichTextEditor} 实例的 View {@link Owner} 对应一个稳定 DOM `id`。
+ * 若每次父级重渲染都用 `Math.random()` 换新 id，则页脚 {@link RteWordCountReactiveIsland} 闭包里的旧 id
+ * 无法 `getElementById`，字数会退回按受控 `value` 统计，与仍显示占位符的空 `innerHTML` 不一致。
+ */
+const rteDomEditorIdByOwner = new WeakMap<Owner, string>();
+
+/**
+ * 解析富文本 **contenteditable 根节点**的 HTML `id`：显式传入的 `id` 优先；否则按 Owner 生成并跨渲染复用。
+ *
+ * @param owner - 在 {@link RichTextEditor} 同步体开头调用 {@link getOwner()} 的结果（与本组件实例一致）
+ * @param explicitId - props 上的 `id`
+ * @returns 非空字符串，与编辑区 `id={…}`、`document.getElementById` 一致
+ */
+function resolveRteDomEditorId(
+  owner: Owner | null,
+  explicitId: string | undefined,
+): string {
+  if (explicitId != null && explicitId !== "") {
+    if (owner != null) {
+      rteDomEditorIdByOwner.set(owner, explicitId);
+    }
+    return explicitId;
+  }
+  if (owner != null) {
+    const existing = rteDomEditorIdByOwner.get(owner);
+    if (existing != null) {
+      return existing;
+    }
+    const gen = `rte-${
+      globalThis.crypto.randomUUID().replace(/-/g, "").slice(0, 10)
+    }`;
+    rteDomEditorIdByOwner.set(owner, gen);
+    return gen;
+  }
+  return `rte-${globalThis.crypto.randomUUID().replace(/-/g, "").slice(0, 10)}`;
+}
+
 export function RichTextEditor(props: RichTextEditorProps): JSXRenderable {
+  const rteOwner = getOwner();
   const {
     value = "",
     onChange,
@@ -2168,7 +2209,7 @@ export function RichTextEditor(props: RichTextEditorProps): JSXRenderable {
    */
   let suppressEditorFocusHistoryRefresh = false;
 
-  const editorId = id ?? `rte-${Math.random().toString(36).slice(2, 9)}`;
+  const editorId = resolveRteDomEditorId(rteOwner, id);
   const uploadInputId = `${editorId}-upload`;
 
   /**
