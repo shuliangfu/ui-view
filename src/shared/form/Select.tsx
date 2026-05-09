@@ -1,7 +1,6 @@
 /**
- * Select 单选：支持 `appearance` 在**自定义下拉**与**原生 select**之间切换。
- * - `dropdown`（默认）：`options` 时自绘浮层；无 `options` 时走原生 select + `children`。
- * - `native`：原生 select，加大触控区，适合移动端；`options` 或 `children` 均可。
+ * Select 单选：**仅**自绘下拉（触发按钮 + listbox 浮层），不渲染原生 `<select>`。
+ * 须通过 {@link SelectProps.options} 传入选项；未传时视为空列表。
  */
 
 import { createSignal, Show } from "@dreamer/view";
@@ -10,7 +9,6 @@ import { twMerge } from "tailwind-merge";
 import { IconChevronDown } from "../basic/icons/ChevronDown.tsx";
 import {
   controlBlueFocusRing,
-  nativeSelectSurface,
   pickerTriggerSurface,
 } from "./input-focus-ring.ts";
 import { resolveFormControlSize } from "./form-control-context.ts";
@@ -21,8 +19,8 @@ import {
 } from "./maybe-signal.ts";
 import type { SizeVariant } from "../types.ts";
 
-/** 展示形态：`dropdown` 浮层；`native` 原生大触控 */
-export type SelectAppearance = "dropdown" | "native";
+/** 保留类型别名以便兼容导出；仅支持自绘下拉 */
+export type SelectAppearance = "dropdown";
 
 export interface SelectOption {
   value: string;
@@ -46,6 +44,7 @@ export const defaultSelectMessages: SelectMessages = {
 export interface SelectProps {
   size?: SizeVariant;
   disabled?: boolean;
+  /** 选项列表；与自绘下拉必选 */
   options?: SelectOption[];
   /** 当前值；见 {@link MaybeSignal} */
   value?: MaybeSignal<string>;
@@ -55,33 +54,25 @@ export interface SelectProps {
   onChange?: (e: Event) => void;
   name?: string;
   id?: string;
-  /** 仅当未传 options 时使用：渲染原生 select，由 children 提供 option 节点 */
+  /**
+   * 已废弃：不再支持通过 children 挂载原生 `<option>`。
+   * 请改用 {@link SelectProps.options}。
+   */
   children?: unknown;
   /** 为 true 时隐藏聚焦激活态边框；默认 false 显示 ring */
   hideFocusRing?: boolean;
-  /**
-   * `dropdown`：桌面默认同，自定义浮层。
-   * `native`：原生 select + 大最小高度，便于移动触控。
-   */
+  /** @deprecated 已无其它形态，可省略 */
   appearance?: SelectAppearance;
   /** 多语言/自定义文案；未传字段走 {@link defaultSelectMessages} */
   messages?: Partial<SelectMessages>;
 }
 
-/** 浮层模式下的尺寸（桌面） */
+/** 浮层模式下的尺寸 */
 const sizeClassesDropdown: Record<SizeVariant, string> = {
   xs: "px-2.5 py-1 text-xs rounded-md",
   sm: "px-3 py-1.5 text-sm rounded-md",
   md: "px-3 py-2 text-sm rounded-lg",
   lg: "px-4 py-2.5 text-base rounded-lg",
-};
-
-/** 原生模式下的尺寸（移动友好最小高度） */
-const sizeClassesNative: Record<SizeVariant, string> = {
-  xs: "px-3 py-2 text-sm rounded-md min-h-[44px]",
-  sm: "px-4 py-2.5 text-sm rounded-lg min-h-[44px]",
-  md: "px-4 py-3 text-base rounded-lg min-h-[48px]",
-  lg: "px-5 py-3.5 text-base rounded-lg min-h-[52px]",
 };
 
 const optionBase =
@@ -91,72 +82,12 @@ const optionBase =
 const DROPDOWN_ESC_KEY = "__lastDropdownClose" as const;
 
 /**
- * 原生 select 分支（`appearance="native"`）。
+ * 自绘下拉分支：`button` 触发、`hidden input` 同步表单提交、`listbox` 浮层选值。
+ * 与 {@link MultiSelect} 一致注册 Esc 关闭键 {@link DROPDOWN_ESC_KEY}。
  *
- * @param props - 与 {@link Select} 相同字段（不含 appearance）
+ * @param props 与 {@link SelectProps} 相同；无有效 `options` 时列表为空，若仍传入 `children` 会在控制台告警。
  */
-function SelectNativeBranch(props: Omit<SelectProps, "appearance">) {
-  const {
-    size: sizeProp,
-    disabled = false,
-    options,
-    value,
-    placeholder,
-    class: className,
-    onChange,
-    name,
-    id,
-    children,
-    hideFocusRing = false,
-  } = props;
-  const size = resolveFormControlSize(sizeProp);
-  const sizeCls = sizeClassesNative[size];
-
-  /**
-   * `value` 为 Signal 时在组件内写回，无需在 `onChange` 里再赋值。
-   *
-   * @param e - change 事件
-   */
-  const handleChange = (e: Event) => {
-    commitMaybeSignal(value, (e.target as HTMLSelectElement).value);
-    onChange?.(e);
-  };
-
-  return (
-    <select
-      id={id}
-      name={name}
-      value={value}
-      disabled={disabled}
-      class={twMerge(
-        "w-full touch-manipulation",
-        nativeSelectSurface,
-        controlBlueFocusRing(!hideFocusRing),
-        sizeCls,
-        className,
-      )}
-      onChange={handleChange}
-    >
-      {options
-        ? (
-          <>
-            {placeholder != null && <option value="">{placeholder}</option>}
-            {options.map((opt) => (
-              <option key={opt.value} value={opt.value} disabled={opt.disabled}>
-                {opt.label}
-              </option>
-            ))}
-          </>
-        )
-        : children}
-    </select>
-  );
-}
-
-/**
- * 自定义下拉分支（`appearance="dropdown"`），逻辑同原 desktop/form/Select。
- */
-function SelectDropdownBranch(props: Omit<SelectProps, "appearance">) {
+function SelectDropdownBranch(props: SelectProps) {
   const {
     size: sizeProp,
     disabled = false,
@@ -171,12 +102,24 @@ function SelectDropdownBranch(props: Omit<SelectProps, "appearance">) {
     hideFocusRing = false,
     messages,
   } = props;
+
+  const resolvedOptions = options ?? [];
+  if (
+    children != null && children !== false && children !== true &&
+    children !== "" && (options == null || options.length === 0)
+  ) {
+    console.warn(
+      "[@dreamer/ui-view Select] 已移除原生 <select>；请传入 options，勿仅使用 children。",
+    );
+  }
+
   const m = { ...defaultSelectMessages, ...messages };
   const size = resolveFormControlSize(sizeProp);
 
   const openState = createSignal(false);
   const sizeCls = sizeClassesDropdown[size];
 
+  /** 选中某项：写回 Signal、派发合成 change、收起浮层 */
   const triggerChange = (newValue: string) => {
     commitMaybeSignal(value, newValue);
     const synthetic = { target: { value: newValue } } as unknown as Event;
@@ -184,43 +127,10 @@ function SelectDropdownBranch(props: Omit<SelectProps, "appearance">) {
     openState.value = false;
   };
 
+  /** 点击遮罩关闭下拉 */
   const handleBackdropClick = () => {
     openState.value = false;
   };
-
-  if (!options) {
-    return () => {
-      const resolvedValue = typeof value === "function"
-        ? (value as () => string)()
-        : value;
-      /**
-       * 原生 select：`value` 为 Signal 时在组件内写回，无需在 `onChange` 里再赋值。
-       *
-       * @param e - change 事件
-       */
-      const handleNativeChange = (e: Event) => {
-        commitMaybeSignal(value, (e.target as HTMLSelectElement).value);
-        onChange?.(e);
-      };
-      return (
-        <select
-          id={id}
-          name={name}
-          value={resolvedValue}
-          disabled={disabled}
-          class={twMerge(
-            nativeSelectSurface,
-            controlBlueFocusRing(!hideFocusRing),
-            sizeCls,
-            className,
-          )}
-          onChange={handleNativeChange}
-        >
-          {children}
-        </select>
-      );
-    };
-  }
 
   return (
     <span
@@ -242,7 +152,7 @@ function SelectDropdownBranch(props: Omit<SelectProps, "appearance">) {
         aria-expanded={() => openState.value}
         aria-label={() => {
           const rv = readMaybeSignal(value);
-          const opt = options.find((o) => o.value === rv);
+          const opt = resolvedOptions.find((o) => o.value === rv);
           const labelText = opt?.label ?? (placeholder ?? "");
           return labelText || placeholder || m.triggerFallback;
         }}
@@ -259,7 +169,7 @@ function SelectDropdownBranch(props: Omit<SelectProps, "appearance">) {
         <span
           class={() => {
             const rv = readMaybeSignal(value);
-            const opt = options.find((o) => o.value === rv);
+            const opt = resolvedOptions.find((o) => o.value === rv);
             return opt
               ? "text-slate-900 dark:text-slate-100"
               : "text-slate-400 dark:text-slate-500";
@@ -267,7 +177,7 @@ function SelectDropdownBranch(props: Omit<SelectProps, "appearance">) {
         >
           {() => {
             const rv = readMaybeSignal(value);
-            const opt = options.find((o) => o.value === rv);
+            const opt = resolvedOptions.find((o) => o.value === rv);
             return opt?.label ?? (placeholder ?? "");
           }}
         </span>
@@ -311,7 +221,7 @@ function SelectDropdownBranch(props: Omit<SelectProps, "appearance">) {
             role="listbox"
             aria-activedescendant={() => {
               const rv = readMaybeSignal(value);
-              return options.find((o) => o.value === rv)?.value;
+              return resolvedOptions.find((o) => o.value === rv)?.value;
             }}
             class="absolute z-50 top-full left-0 right-0 mt-1 py-1 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-lg max-h-60 overflow-auto"
           >
@@ -331,7 +241,7 @@ function SelectDropdownBranch(props: Omit<SelectProps, "appearance">) {
                 {placeholder}
               </button>
             )}
-            {options.map((opt) => (
+            {resolvedOptions.map((opt) => (
               <button
                 key={opt.value}
                 type="button"
@@ -357,12 +267,10 @@ function SelectDropdownBranch(props: Omit<SelectProps, "appearance">) {
 }
 
 /**
- * 单选下拉：默认浮层；`appearance="native"` 时走原生大触控 select。
+ * 单选下拉：始终为自绘浮层（无原生 `<select>`）。
+ *
+ * @param props 选项须通过 `options` 提供；`appearance` 仅保留兼容。
  */
 export function Select(props: SelectProps): JSXRenderable {
-  const { appearance = "dropdown", ...rest } = props;
-  if (appearance === "native") {
-    return SelectNativeBranch(rest);
-  }
-  return SelectDropdownBranch(rest);
+  return SelectDropdownBranch(props);
 }
