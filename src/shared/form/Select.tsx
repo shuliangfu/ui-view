@@ -75,8 +75,9 @@ const sizeClassesDropdown: Record<SizeVariant, string> = {
   lg: "px-4 py-2.5 text-base rounded-lg",
 };
 
+/** 选项行：直角条，避免每项单独大圆角造成「胶囊」观感（外框圆角见下方 listbox 容器）。 */
 const optionBase =
-  "px-3 py-2 text-sm text-left w-full cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed first:rounded-t-lg last:rounded-b-lg";
+  "rounded-none px-3 py-2 text-sm text-left w-full cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed";
 
 /** 与 Dropdown 共用 Esc 关闭注册键，需配合 initDropdownEsc 使用 */
 const DROPDOWN_ESC_KEY = "__lastDropdownClose" as const;
