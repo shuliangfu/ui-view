@@ -12,6 +12,8 @@ import {
   Transfer,
 } from "@dreamer/ui-view";
 import { createSignal } from "@dreamer/view";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
+import { MESSAGES_TRANSFER } from "../../../data/component-messages-rows.ts";
 
 interface ApiRow {
   name: string;
@@ -104,6 +106,12 @@ const TRANSFER_API: ApiRow[] = [
       "为 true 时隐藏列头搜索框与穿梭操作按钮的聚焦蓝色 ring；默认 false 显示",
   },
   { name: "class", type: "string", default: "-", description: "额外 class" },
+  {
+    name: "messages",
+    type: "Partial<TransferMessages>",
+    default: "-",
+    description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
+  },
 ];
 
 const data = [
@@ -117,6 +125,8 @@ const data = [
 
 const importCode = `import { Transfer, Form, FormItem } from "@dreamer/ui-view";
 import { createSignal } from "@dreamer/view";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
+import { MESSAGES_TRANSFER } from "../../../data/component-messages-rows.ts";
 
 const data = [{ key: "1", title: "选项1" }, { key: "2", title: "选项2" }];
 const targetKeys = createSignal<string[]>([]);
@@ -242,6 +252,12 @@ const targetKeys = createSignal<string[]>(["1"]);
           </section>
         </Form>
       </section>
+
+      <DocsMessagesSection
+        interfaceName="TransferMessages"
+        defaultExportName="defaultTransferMessages"
+        rows={MESSAGES_TRANSFER}
+      />
 
       <section class="space-y-3">
         <Title level={2}>API</Title>

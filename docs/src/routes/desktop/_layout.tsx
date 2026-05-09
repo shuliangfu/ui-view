@@ -17,6 +17,11 @@ const BASIC_SUBMENU = [
   { path: "/desktop/basic/button", label: "Button", desc: "按钮" },
   { path: "/desktop/basic/link", label: "Link", desc: "文字/图标链接" },
   { path: "/desktop/basic/icon", label: "Icon", desc: "图标容器/占位" },
+  {
+    path: "/desktop/basic/flag-img",
+    label: "FlagImg",
+    desc: "国旗 SVG 渲染",
+  },
   { path: "/desktop/basic/typography", label: "Typography", desc: "排版" },
   { path: "/desktop/basic/badge", label: "Badge", desc: "角标、数字徽章" },
   { path: "/desktop/basic/avatar", label: "Avatar", desc: "头像" },
@@ -137,6 +142,12 @@ const NAVIGATION_SUBMENU = [
   },
   { path: "/desktop/navigation/pagination", label: "Pagination", desc: "分页" },
   { path: "/desktop/navigation/menu", label: "Menu", desc: "菜单列表" },
+  { path: "/desktop/navigation/navbar", label: "NavBar", desc: "桌面顶栏" },
+  {
+    path: "/desktop/navigation/sidebar",
+    label: "Sidebar",
+    desc: "侧栏菜单",
+  },
   { path: "/desktop/navigation/dropdown", label: "Dropdown", desc: "下拉菜单" },
   { path: "/desktop/navigation/steps", label: "Steps", desc: "步骤条" },
   {

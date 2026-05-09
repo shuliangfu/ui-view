@@ -5,6 +5,8 @@
 
 import { Carousel, CodeBlock, Paragraph, Title } from "@dreamer/ui-view";
 import { createSignal } from "@dreamer/view";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
+import { MESSAGES_CAROUSEL } from "../../../data/component-messages-rows.ts";
 
 /** API 属性行类型 */
 interface ApiRow {
@@ -133,6 +135,12 @@ const CAROUSEL_API: ApiRow[] = [
     default: "false",
     description:
       "是否按需加载图片（仅当前及相邻 slide 加载大图，其余占位以降低内存；默认 false 保证全部显示）",
+  },
+  {
+    name: "messages",
+    type: "Partial<CarouselMessages>",
+    default: "-",
+    description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
   },
 ];
 
@@ -473,6 +481,12 @@ export default function DataDisplayCarousel() {
           />
         </div>
       </section>
+
+      <DocsMessagesSection
+        interfaceName="CarouselMessages"
+        defaultExportName="defaultCarouselMessages"
+        rows={MESSAGES_CAROUSEL}
+      />
 
       <section class="space-y-3">
         <Title level={2}>API</Title>

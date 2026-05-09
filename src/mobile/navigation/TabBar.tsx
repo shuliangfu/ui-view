@@ -38,7 +38,20 @@ export interface TabBarProps {
   safeAreaInsetBottom?: boolean;
   /** 额外 class */
   class?: string;
+  /** 多语言/自定义文案；未传字段走 {@link defaultTabBarMessages} */
+  messages?: Partial<TabBarMessages>;
 }
+
+/** TabBar 内置文案 */
+export interface TabBarMessages {
+  /** `nav` `aria-label` */
+  navAriaLabel: string;
+}
+
+/** 默认中文文案 */
+export const defaultTabBarMessages: TabBarMessages = {
+  navAriaLabel: "底部导航",
+};
 
 export function TabBar(props: TabBarProps): JSXRenderable {
   const {
@@ -49,6 +62,11 @@ export function TabBar(props: TabBarProps): JSXRenderable {
     safeAreaInsetBottom = true,
     class: className,
   } = props;
+  /** 合并默认中文文案与外部传入 messages */
+  const m: TabBarMessages = {
+    ...defaultTabBarMessages,
+    ...(props.messages ?? {}),
+  };
 
   /** 在 memo 内读 `Signal` / getter，保证 Hybrid 下切换能刷新高亮 */
   const activeKeyResolved = createMemo(() =>
@@ -65,7 +83,7 @@ export function TabBar(props: TabBarProps): JSXRenderable {
         className,
       )}
       role="tablist"
-      aria-label="底部导航"
+      aria-label={m.navAriaLabel}
     >
       {items.map((item) => {
         /**

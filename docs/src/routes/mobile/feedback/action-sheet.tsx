@@ -9,7 +9,9 @@ import {
   DocsApiTable,
   type DocsApiTableRow,
 } from "../../../components/DocsApiTable.tsx";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MobileDocDemo } from "../../../components/MobileDocDemo.tsx";
+import { MESSAGES_ACTION_SHEET } from "../../../data/component-messages-rows.ts";
 
 const ACTION_SHEET_API: DocsApiTableRow[] = [
   {
@@ -59,6 +61,12 @@ const ACTION_SHEET_API: DocsApiTableRow[] = [
     type: "string",
     default: "-",
     description: "容器额外 class",
+  },
+  {
+    name: "messages",
+    type: "Partial<ActionSheetMessages>",
+    default: "-",
+    description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
   },
 ];
 
@@ -192,6 +200,12 @@ export default function MobileActionSheetDoc() {
       </section>
 
       <section class="space-y-6">
+        <DocsMessagesSection
+          interfaceName="ActionSheetMessages"
+          defaultExportName="defaultActionSheetMessages"
+          rows={MESSAGES_ACTION_SHEET}
+        />
+
         <Title level={2}>API</Title>
 
         <div class="space-y-3">

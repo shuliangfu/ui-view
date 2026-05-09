@@ -12,6 +12,8 @@ import {
   Title,
 } from "@dreamer/ui-view";
 import { createSignal } from "@dreamer/view";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
+import { MESSAGES_TEXTAREA } from "../../../data/component-messages-rows.ts";
 
 interface ApiRow {
   name: string;
@@ -122,10 +124,18 @@ const TEXTAREA_API: ApiRow[] = [
   },
   { name: "name", type: "string", default: "-", description: "原生 name" },
   { name: "id", type: "string", default: "-", description: "原生 id" },
+  {
+    name: "messages",
+    type: "Partial<TextareaMessages>",
+    default: "-",
+    description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
+  },
 ];
 
 const importCode = `import { Textarea, Form, FormItem } from "@dreamer/ui-view";
 import { createSignal } from "@dreamer/view";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
+import { MESSAGES_TEXTAREA } from "../../../data/component-messages-rows.ts";
 
 const val = createSignal("");
 <FormItem label="多行">
@@ -284,6 +294,12 @@ export default function FormTextarea() {
           </section>
         </Form>
       </section>
+
+      <DocsMessagesSection
+        interfaceName="TextareaMessages"
+        defaultExportName="defaultTextareaMessages"
+        rows={MESSAGES_TEXTAREA}
+      />
 
       <section class="space-y-3">
         <Title level={2}>API</Title>

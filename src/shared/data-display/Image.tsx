@@ -241,7 +241,7 @@ export function Image(props: ImageProps): JSXRenderable {
           <div
             class={() =>
               twMerge(
-                "absolute inset-0 z-[1] flex items-center justify-center text-slate-400",
+                "absolute inset-0 z-1 flex items-center justify-center text-slate-400",
                 statusRef.value === "loading" ? "" : "hidden",
               )}
           >

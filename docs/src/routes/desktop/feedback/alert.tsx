@@ -5,6 +5,8 @@
 
 import { createSignal } from "@dreamer/view";
 import { Alert, Button, CodeBlock, Paragraph, Title } from "@dreamer/ui-view";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
+import { MESSAGES_ALERT } from "../../../data/component-messages-rows.ts";
 
 /** API 属性行类型 */
 interface ApiRow {
@@ -76,6 +78,12 @@ const ALERT_API: ApiRow[] = [
     type: "unknown",
     default: "-",
     description: "子节点（可选，作为主内容）",
+  },
+  {
+    name: "messages",
+    type: "Partial<AlertMessages>",
+    default: "-",
+    description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
   },
 ];
 
@@ -328,10 +336,17 @@ export default function FeedbackAlert() {
         </div>
       </section>
 
+      <DocsMessagesSection
+        interfaceName="AlertMessages"
+        defaultExportName="defaultAlertMessages"
+        rows={MESSAGES_ALERT}
+      />
+
       <section class="space-y-3">
         <Title level={2}>API</Title>
         <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
-          组件接收以下属性，message 为必填。
+          组件接收以下属性，message
+          为必填；可本地化字段见上文「文案（messages）」表。
         </Paragraph>
         <div class="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-600">
           <table class="w-full min-w-lg text-sm">

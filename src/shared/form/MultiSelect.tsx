@@ -11,6 +11,7 @@ import {
   nativeSelectSurface,
   pickerTriggerSurface,
 } from "./input-focus-ring.ts";
+import { resolveFormControlSize } from "./form-control-context.ts";
 import {
   commitMaybeSignal,
   type MaybeSignal,
@@ -30,6 +31,34 @@ export interface MultiSelectOption {
   disabled?: boolean;
 }
 
+/**
+ * MultiSelect 内置文案。
+ */
+export interface MultiSelectMessages {
+  /** 占位默认文案；与 {@link MultiSelectProps.placeholder} 同义，后者优先 */
+  placeholder: string;
+  /** 全选按钮 */
+  selectAll: string;
+  /** 清空按钮 */
+  clear: string;
+  /** 完成按钮 */
+  done: string;
+  /** 触发条 `aria-label` 摘要文案，参数为已选 label 拼接（如「上海、北京」） */
+  selectedSummary: (summary: string) => string;
+  /** 下拉列表 `aria-label` */
+  listbox: string;
+}
+
+/** 默认中文文案 */
+export const defaultMultiSelectMessages: MultiSelectMessages = {
+  placeholder: "请选择",
+  selectAll: "全选",
+  clear: "清空",
+  done: "完成",
+  selectedSummary: (summary) => `已选：${summary}`,
+  listbox: "多选列表",
+};
+
 export interface MultiSelectProps {
   options: MultiSelectOption[];
   /** 当前选中值；见 {@link MaybeSignal} */
@@ -46,6 +75,8 @@ export interface MultiSelectProps {
   hideFocusRing?: boolean;
   /** `dropdown`：浮层多选；`native`：原生 multiple + 大触控区 */
   appearance?: MultiSelectAppearance;
+  /** 多语言/自定义文案；未传字段走 {@link defaultMultiSelectMessages} */
+  messages?: Partial<MultiSelectMessages>;
 }
 
 const sizeClassesDropdown: Record<SizeVariant, string> = {
@@ -80,14 +111,17 @@ function MultiSelectNativeBranch(props: Omit<MultiSelectProps, "appearance">) {
   const {
     options,
     value: valueProp,
-    size = "md",
+    size: sizeProp,
     disabled = false,
     onChange,
     class: className,
     name,
     id,
     hideFocusRing = false,
+    messages,
   } = props;
+  const m = { ...defaultMultiSelectMessages, ...messages };
+  const size = resolveFormControlSize(sizeProp);
   const sizeCls = sizeClassesNative[size];
 
   const triggerChange = (newVal: string[]) => {
@@ -111,7 +145,7 @@ function MultiSelectNativeBranch(props: Omit<MultiSelectProps, "appearance">) {
             disabled={disabled || allSelected}
             onClick={() => triggerChange([...allValues])}
           >
-            全选
+            {m.selectAll}
           </button>
           <button
             type="button"
@@ -119,7 +153,7 @@ function MultiSelectNativeBranch(props: Omit<MultiSelectProps, "appearance">) {
             disabled={disabled || value.length === 0}
             onClick={() => triggerChange([])}
           >
-            清空
+            {m.clear}
           </button>
         </div>
         <select
@@ -161,15 +195,18 @@ function MultiSelectDropdownBranch(
   const {
     options,
     value = [],
-    size = "md",
+    size: sizeProp,
     disabled = false,
     onChange,
     class: className,
     name,
     id,
-    placeholder = "请选择",
     hideFocusRing = false,
+    messages,
   } = props;
+  const m = { ...defaultMultiSelectMessages, ...messages };
+  const placeholder = props.placeholder ?? m.placeholder;
+  const size = resolveFormControlSize(sizeProp);
 
   const openState = createSignal(false);
   const sizeCls = sizeClassesDropdown[size];
@@ -229,7 +266,7 @@ function MultiSelectDropdownBranch(
           const summaryText = selectedLabels.length > 0
             ? selectedLabels.join("、")
             : "";
-          return summaryText ? `已选：${summaryText}` : placeholder;
+          return summaryText ? m.selectedSummary(summaryText) : placeholder;
         }}
         class={twMerge(
           "w-full flex items-center justify-between gap-2 text-left min-w-0",
@@ -302,7 +339,7 @@ function MultiSelectDropdownBranch(
           <div
             key="multiselect-dd-list"
             role="listbox"
-            aria-label="多选列表"
+            aria-label={m.listbox}
             aria-multiselectable="true"
             class="absolute z-50 top-full left-0 right-0 mt-1 flex max-h-72 flex-col overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg dark:border-slate-600 dark:bg-slate-800"
           >
@@ -319,7 +356,7 @@ function MultiSelectDropdownBranch(
                   }}
                   onClick={() => triggerChange([...selectableValues])}
                 >
-                  全选
+                  {m.selectAll}
                 </button>
                 <button
                   type="button"
@@ -330,7 +367,7 @@ function MultiSelectDropdownBranch(
                   }}
                   onClick={() => triggerChange([])}
                 >
-                  清空
+                  {m.clear}
                 </button>
               </div>
               <button
@@ -339,7 +376,7 @@ function MultiSelectDropdownBranch(
                 disabled={disabled}
                 onClick={closePanel}
               >
-                完成
+                {m.done}
               </button>
             </div>
             <div

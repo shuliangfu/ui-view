@@ -12,6 +12,8 @@ import {
   Title,
 } from "@dreamer/ui-view";
 import { createSignal } from "@dreamer/view";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
+import { MESSAGES_MARKDOWN_EDITOR } from "../../../data/component-messages-rows.ts";
 
 interface ApiRow {
   name: string;
@@ -134,6 +136,12 @@ const MARKDOWN_EDITOR_API: ApiRow[] = [
     default: "-",
     description: "外层容器 class",
   },
+  {
+    name: "messages",
+    type: "Partial<MarkdownEditorMessages>",
+    default: "-",
+    description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
+  },
 ];
 
 const DEMO_MD = `# 标题
@@ -165,6 +173,8 @@ export async function main(): Promise<void> {
 const importCode =
   `import { MarkdownEditor, Form, FormItem } from "@dreamer/ui-view";
 import { createSignal } from "@dreamer/view";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
+import { MESSAGES_MARKDOWN_EDITOR } from "../../../data/component-messages-rows.ts";
 
 const md = createSignal("# 你好\\n\\n正文");
 <FormItem label="Markdown">
@@ -321,6 +331,12 @@ export default function FormMarkdownEditor() {
           </section>
         </Form>
       </section>
+
+      <DocsMessagesSection
+        interfaceName="MarkdownEditorMessages"
+        defaultExportName="defaultMarkdownEditorMessages"
+        rows={MESSAGES_MARKDOWN_EDITOR}
+      />
 
       <section class="space-y-3">
         <Title level={2}>API</Title>

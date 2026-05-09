@@ -12,6 +12,8 @@ import {
   Title,
 } from "@dreamer/ui-view";
 import { createSignal } from "@dreamer/view";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
+import { MESSAGES_SLIDER } from "../../../data/component-messages-rows.ts";
 
 interface ApiRow {
   name: string;
@@ -67,10 +69,18 @@ const SLIDER_API: ApiRow[] = [
   },
   { name: "name", type: "string", default: "-", description: "原生 name" },
   { name: "id", type: "string", default: "-", description: "原生 id" },
+  {
+    name: "messages",
+    type: "Partial<SliderMessages>",
+    default: "-",
+    description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
+  },
 ];
 
 const importCode = `import { Slider, Form, FormItem } from "@dreamer/ui-view";
 import { createSignal } from "@dreamer/view";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
+import { MESSAGES_SLIDER } from "../../../data/component-messages-rows.ts";
 
 /** 与 Slider 同一 Signal；组件在拖动时内部会 commit，首屏与拖动中文案都会更新 */
 const committed = createSignal(50);
@@ -274,6 +284,12 @@ const step = createSignal(30);
           </section>
         </Form>
       </section>
+
+      <DocsMessagesSection
+        interfaceName="SliderMessages"
+        defaultExportName="defaultSliderMessages"
+        rows={MESSAGES_SLIDER}
+      />
 
       <section class="space-y-3">
         <Title level={2}>API</Title>

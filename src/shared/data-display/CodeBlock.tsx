@@ -79,7 +79,35 @@ export interface CodeBlockProps {
   preClass?: string;
   /** code 的 class */
   codeClass?: string;
+  /** 多语言/自定义文案；未传字段走 {@link defaultCodeBlockMessages} */
+  messages?: Partial<CodeBlockMessages>;
 }
+
+/** CodeBlock 内置文案 */
+export interface CodeBlockMessages {
+  /** macOS 风格关闭点 `title` */
+  windowClose: string;
+  /** macOS 风格最小化点 `title` */
+  windowMinimize: string;
+  /** macOS 风格最大化点 `title` */
+  windowMaximize: string;
+  /** 复制按钮 `title` 与 `aria-label` */
+  copy: string;
+  /** 复制成功 toast 文案 */
+  copySuccess: string;
+  /** 复制失败 toast 文案 */
+  copyFail: string;
+}
+
+/** 默认中文文案 */
+export const defaultCodeBlockMessages: CodeBlockMessages = {
+  windowClose: "关闭",
+  windowMinimize: "最小化",
+  windowMaximize: "最大化",
+  copy: "复制",
+  copySuccess: "复制成功",
+  copyFail: "复制失败",
+};
 
 export function CodeBlock(props: CodeBlockProps): JSXRenderable {
   const {
@@ -97,6 +125,11 @@ export function CodeBlock(props: CodeBlockProps): JSXRenderable {
     preClass,
     codeClass,
   } = props;
+  /** 合并默认中文文案与外部传入 messages */
+  const m: CodeBlockMessages = {
+    ...defaultCodeBlockMessages,
+    ...(props.messages ?? {}),
+  };
 
   const maxHeightStyle = maxHeight != null
     ? {
@@ -137,13 +170,13 @@ export function CodeBlock(props: CodeBlockProps): JSXRenderable {
   const handleCopy = () => {
     if (typeof globalThis.navigator?.clipboard?.writeText === "function") {
       globalThis.navigator.clipboard.writeText(code).then(() => {
-        toast.success("复制成功", 2000);
+        toast.success(m.copySuccess, 2000);
         onCopy?.();
       }).catch(() => {
-        toast.error("复制失败", 2000);
+        toast.error(m.copyFail, 2000);
       });
     } else {
-      toast.error("复制失败", 2000);
+      toast.error(m.copyFail, 2000);
       onCopy?.();
     }
   };
@@ -192,15 +225,15 @@ export function CodeBlock(props: CodeBlockProps): JSXRenderable {
               >
                 <span
                   class="w-2.5 h-2.5 rounded-full bg-[#ef4446]"
-                  title="关闭"
+                  title={m.windowClose}
                 />
                 <span
                   class="w-2.5 h-2.5 rounded-full bg-[#e5a00d]"
-                  title="最小化"
+                  title={m.windowMinimize}
                 />
                 <span
                   class="w-2.5 h-2.5 rounded-full bg-[#34c749]"
-                  title="最大化"
+                  title={m.windowMaximize}
                 />
               </div>
             )}
@@ -220,8 +253,8 @@ export function CodeBlock(props: CodeBlockProps): JSXRenderable {
             type="button"
             class="absolute top-2 right-2 z-0 p-2 rounded hover:bg-slate-200/80 dark:hover:bg-slate-600/80 text-slate-600 dark:text-slate-400 transition-colors"
             onClick={handleCopy}
-            title="复制"
-            aria-label="复制"
+            title={m.copy}
+            aria-label={m.copy}
           >
             <IconCopy class="w-4 h-4" />
           </button>
@@ -232,10 +265,11 @@ export function CodeBlock(props: CodeBlockProps): JSXRenderable {
               class="shrink-0 min-w-10 select-none py-3 px-2 font-mono text-xs text-slate-400 dark:text-slate-500 border-r border-slate-200 dark:border-slate-600 bg-slate-100/50 dark:bg-slate-800/50"
               aria-hidden
             >
+              {/** 行号列：每格 min-h 与正文 text-xs×leading-relaxed 对齐（1.421875rem） */}
               {lines.map((_, i) => (
                 <div
                   key={i}
-                  class="flex w-full min-h-[calc(0.875rem*1.625)] items-center justify-center tabular-nums"
+                  class="flex w-full min-h-[1.421875rem] items-center justify-center tabular-nums"
                 >
                   {lineNumberStart + i}
                 </div>
@@ -258,8 +292,8 @@ export function CodeBlock(props: CodeBlockProps): JSXRenderable {
             ref={setCodeRef}
             class={twMerge(
               `language-${(language ?? "plaintext").toLowerCase()}`,
-              /** 窄屏下避免父级 flex/min-width 把 pre 压成极窄导致逐字竖排；保持单行预格式化并横向滚动 */
-              "inline-block min-w-full w-max whitespace-pre text-left break-normal [overflow-wrap:normal] [word-break:normal]",
+              /* 窄屏下避免父级 flex/min-width 把 pre 压成极窄导致逐字竖排；`break-normal` 已含 overflow-wrap/word-break（Tailwind v4 勿再写任意属性） */
+              "inline-block min-w-full w-max whitespace-pre text-left break-normal",
               codeClass,
             )}
           >

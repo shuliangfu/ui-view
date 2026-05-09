@@ -7,8 +7,25 @@
 import { twMerge } from "tailwind-merge";
 import type { JSXRenderable, ViewRefObject } from "@dreamer/view";
 import type { SizeVariant } from "../types.ts";
+import { resolveFormControlSize } from "./form-control-context.ts";
 import { compositeShellFocusRingFromInput } from "./input-focus-ring.ts";
 import { commitMaybeSignal, type MaybeSignal } from "./maybe-signal.ts";
+
+/**
+ * InputNumber 内置文案。
+ */
+export interface InputNumberMessages {
+  /** 减少按钮 `aria-label` */
+  decrease: string;
+  /** 增加按钮 `aria-label` */
+  increase: string;
+}
+
+/** 默认中文文案 */
+export const defaultInputNumberMessages: InputNumberMessages = {
+  decrease: "减少",
+  increase: "增加",
+};
 
 export interface InputNumberProps {
   /** 尺寸 */
@@ -51,6 +68,8 @@ export interface InputNumberProps {
   id?: string;
   /** 内部 input ref，便于旧表单迁移后继续读取 DOM 值 */
   inputRef?: ViewRefObject<HTMLInputElement>;
+  /** 多语言/自定义文案；未传字段走 {@link defaultInputNumberMessages} */
+  messages?: Partial<InputNumberMessages>;
 }
 
 /**
@@ -108,7 +127,7 @@ const wrapRounded: Record<SizeVariant, string> = {
 
 /** 输入框本体：自身不画 ring；整圈高亮由外壳用 `:has(input:focus)` 控制，避免 +/- 获焦时误亮 */
 const inputBase =
-  "min-w-0 flex-1 border-0 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-0 disabled:opacity-50 disabled:cursor-not-allowed transition-colors";
+  "min-w-0 flex-1 border-0 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-hidden focus:ring-0 disabled:opacity-50 disabled:cursor-not-allowed transition-colors";
 
 /**
  * 隐藏 `type="number"` 右侧原生上下箭头（与组件自带 +/- 重复）；Chrome/Safari 用 webkit 伪元素，Firefox 用 -moz-appearance。
@@ -134,12 +153,24 @@ function InputNumberButtons(props: {
   max?: number;
   disabled: boolean;
   onTriggerChange: (newVal: number) => void;
+  /** 由父组件合并默认值后传入 */
+  decreaseLabel: string;
+  increaseLabel: string;
 }) {
-  const { value, step, min, max, disabled, onTriggerChange } = props;
+  const {
+    value,
+    step,
+    min,
+    max,
+    disabled,
+    onTriggerChange,
+    decreaseLabel,
+    increaseLabel,
+  } = props;
 
   /** 步进钮横向较窄，用较小 px 避免 +/− 被挤换行 */
   const stepperBtnCls =
-    "flex-1 min-w-0 px-0.5 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none flex items-center justify-center text-sm font-medium";
+    "flex-1 min-w-0 px-0.5 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-hidden flex items-center justify-center text-sm font-medium";
 
   return () => {
     const raw = typeof value === "function" ? value() : value;
@@ -169,7 +200,7 @@ function InputNumberButtons(props: {
             "border-r border-slate-300 dark:border-slate-600",
           )}
           disabled={!canDecrease}
-          aria-label="减少"
+          aria-label={decreaseLabel}
           onClick={() => {
             if (Number.isNaN(num)) {
               onTriggerChange(roundByStepPrecision(min ?? 0, step));
@@ -185,7 +216,7 @@ function InputNumberButtons(props: {
           type="button"
           class={stepperBtnCls}
           disabled={!canIncrease}
-          aria-label="增加"
+          aria-label={increaseLabel}
           onClick={() => {
             if (Number.isNaN(num)) {
               onTriggerChange(roundByStepPrecision(step, step));
@@ -204,7 +235,7 @@ function InputNumberButtons(props: {
 
 export function InputNumber(props: InputNumberProps): JSXRenderable {
   const {
-    size = "md",
+    size: sizeProp,
     disabled = false,
     placeholder,
     value,
@@ -224,7 +255,10 @@ export function InputNumber(props: InputNumberProps): JSXRenderable {
     id,
     inputRef,
     hideFocusRing = false,
+    messages,
   } = props;
+  const m = { ...defaultInputNumberMessages, ...messages };
+  const size = resolveFormControlSize(sizeProp);
 
   const sizeCls = sizeClasses[size];
   // 禁止在组件体内读 value()：会订阅 signal，导致整树重跑、input 失焦。value 透传给 <input value={value} />。
@@ -309,6 +343,8 @@ export function InputNumber(props: InputNumberProps): JSXRenderable {
         max={max}
         disabled={disabled}
         onTriggerChange={onTriggerChange}
+        decreaseLabel={m.decrease}
+        increaseLabel={m.increase}
       />
     </span>
   );

@@ -7,6 +7,19 @@ import { twMerge } from "tailwind-merge";
 import type { JSXRenderable } from "@dreamer/view";
 import { commitMaybeSignal, type MaybeSignal } from "./maybe-signal.ts";
 
+/**
+ * Rate 内置文案。
+ */
+export interface RateMessages {
+  /** 单颗星 `aria-label`，参数为该星序号（1-based） */
+  starLabel: (idx: number) => string;
+}
+
+/** 默认中文文案 */
+export const defaultRateMessages: RateMessages = {
+  starLabel: (idx) => `${idx} 星`,
+};
+
 export interface RateProps {
   /** 星数，默认 5 */
   count?: number;
@@ -23,6 +36,8 @@ export interface RateProps {
   onChange?: (value: number) => void;
   /** 额外 class（作用于容器） */
   class?: string;
+  /** 多语言/自定义文案；未传字段走 {@link defaultRateMessages} */
+  messages?: Partial<RateMessages>;
 }
 
 const starCls = "size-6 text-slate-300 dark:text-slate-500 transition-colors";
@@ -55,7 +70,9 @@ export function Rate(props: RateProps): JSXRenderable {
     disabled = false,
     onChange,
     class: className,
+    messages,
   } = props;
+  const m = { ...defaultRateMessages, ...messages };
 
   return () => {
     const v = typeof value === "function" ? value() : (value ?? 0);
@@ -96,7 +113,7 @@ export function Rate(props: RateProps): JSXRenderable {
               }}
               role="button"
               tabIndex={disabled ? -1 : 0}
-              aria-label={`${idx} 星`}
+              aria-label={m.starLabel(idx)}
             >
               {allowHalf && half
                 ? (

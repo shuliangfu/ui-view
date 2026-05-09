@@ -6,7 +6,7 @@
     "start": "deno run -A dist/server.js"
   },
   "imports": {
-    "@dreamer/dweb": "jsr:@dreamer/dweb@^3.4.9",
+    "@dreamer/dweb": "jsr:@dreamer/dweb@^3.5.1",
     "@dreamer/render": "jsr:@dreamer/render@^1.1.7",
     "@dreamer/router": "jsr:@dreamer/router@^1.1.7",
     "@dreamer/upload": "jsr:@dreamer/upload@^1.0.1",
@@ -17,6 +17,7 @@
     "@dreamer/view": "jsr:@dreamer/view@^2.0.2",
 
     "@dreamer/ui-view": "../src/mod.ts",
+    "@internal/ui-view-flag-img": "../src/shared/basic/icons/flags/FlagImg.tsx",
     "@dreamer/ui-view/basic": "../src/desktop/basic/mod.ts",
     "@dreamer/ui-view/form": "../src/desktop/form/mod.ts",
     "@dreamer/ui-view/config-provider": "../src/desktop/config-provider/mod.ts",

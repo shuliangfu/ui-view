@@ -12,6 +12,8 @@ import {
   Title,
 } from "@dreamer/ui-view";
 import { createSignal } from "@dreamer/view";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
+import { MESSAGES_RATE } from "../../../data/component-messages-rows.ts";
 
 interface ApiRow {
   name: string;
@@ -49,10 +51,18 @@ const RATE_API: ApiRow[] = [
     default: "-",
     description: "可选。`value` 为 Signal 时组件已回写；需副作用时再传",
   },
+  {
+    name: "messages",
+    type: "Partial<RateMessages>",
+    default: "-",
+    description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
+  },
 ];
 
 const importCode = `import { Rate, Form, FormItem } from "@dreamer/ui-view";
 import { createSignal } from "@dreamer/view";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
+import { MESSAGES_RATE } from "../../../data/component-messages-rows.ts";
 
 const val = createSignal(0);
 <FormItem label="评分">
@@ -170,6 +180,12 @@ export default function FormRate() {
           </section>
         </Form>
       </section>
+
+      <DocsMessagesSection
+        interfaceName="RateMessages"
+        defaultExportName="defaultRateMessages"
+        rows={MESSAGES_RATE}
+      />
 
       <section class="space-y-3">
         <Title level={2}>API</Title>

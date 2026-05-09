@@ -5,6 +5,8 @@
 
 import { createSignal } from "@dreamer/view";
 import { BackTop, CodeBlock, Paragraph, Title } from "@dreamer/ui-view";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
+import { MESSAGES_BACK_TOP } from "../../../data/component-messages-rows.ts";
 
 /** API 属性行类型 */
 interface ApiRow {
@@ -64,6 +66,12 @@ const BACK_TOP_API: ApiRow[] = [
     description: "自定义按钮内容",
   },
   { name: "class", type: "string", default: "-", description: "按钮 class" },
+  {
+    name: "messages",
+    type: "Partial<BackTopMessages>",
+    default: "-",
+    description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
+  },
 ];
 
 const importCode = `import { createSignal } from "@dreamer/view";
@@ -179,10 +187,16 @@ export default function OtherBackTop() {
         </div>
       </section>
 
+      <DocsMessagesSection
+        interfaceName="BackTopMessages"
+        defaultExportName="defaultBackTopMessages"
+        rows={MESSAGES_BACK_TOP}
+      />
+
       <section class="space-y-3">
         <Title level={2}>API</Title>
         <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
-          组件接收以下属性。
+          组件接收以下属性；可本地化字段见上文「文案（messages）」表。
         </Paragraph>
         <div class="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-600">
           <table class="w-full min-w-lg text-sm">

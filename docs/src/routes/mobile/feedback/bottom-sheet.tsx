@@ -9,7 +9,9 @@ import {
   DocsApiTable,
   type DocsApiTableRow,
 } from "../../../components/DocsApiTable.tsx";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MobileDocDemo } from "../../../components/MobileDocDemo.tsx";
+import { MESSAGES_BOTTOM_SHEET } from "../../../data/component-messages-rows.ts";
 
 /** BottomSheet 主 props API */
 const BOTTOM_SHEET_API: DocsApiTableRow[] = [
@@ -68,6 +70,12 @@ const BOTTOM_SHEET_API: DocsApiTableRow[] = [
     type: "unknown",
     default: "-",
     description: "面板内子内容",
+  },
+  {
+    name: "messages",
+    type: "Partial<BottomSheetMessages>",
+    default: "-",
+    description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
   },
 ];
 
@@ -240,6 +248,12 @@ export default function MobileBottomSheetDoc() {
       </section>
 
       <section class="space-y-4">
+        <DocsMessagesSection
+          interfaceName="BottomSheetMessages"
+          defaultExportName="defaultBottomSheetMessages"
+          rows={MESSAGES_BOTTOM_SHEET}
+        />
+
         <Title level={2}>API</Title>
         <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
           组件接收以下属性（均为可选，除交互上通常需配置{" "}

@@ -20,10 +20,28 @@ export interface BreadcrumbProps {
   onItemClick?: (item: BreadcrumbItem, index: number) => void;
   /** 额外 class（作用于 nav 容器） */
   class?: string;
+  /** 多语言/自定义文案；未传字段走 {@link defaultBreadcrumbMessages} */
+  messages?: Partial<BreadcrumbMessages>;
 }
+
+/** Breadcrumb 内置文案 */
+export interface BreadcrumbMessages {
+  /** `nav` `aria-label` */
+  navAriaLabel: string;
+}
+
+/** 默认中文文案 */
+export const defaultBreadcrumbMessages: BreadcrumbMessages = {
+  navAriaLabel: "Breadcrumb",
+};
 
 export function Breadcrumb(props: BreadcrumbProps): JSXRenderable {
   const { items, separator, onItemClick, class: className } = props;
+  /** 合并默认中文文案与外部传入 messages */
+  const m: BreadcrumbMessages = {
+    ...defaultBreadcrumbMessages,
+    ...(props.messages ?? {}),
+  };
 
   const defaultSeparator = (
     <span
@@ -38,7 +56,7 @@ export function Breadcrumb(props: BreadcrumbProps): JSXRenderable {
   /** 无内部 signal，直接返回 VNode */
   return (
     <nav
-      aria-label="Breadcrumb"
+      aria-label={m.navAriaLabel}
       class={twMerge("flex items-center flex-wrap gap-0 text-sm", className)}
     >
       <ol class="flex items-center flex-wrap gap-0 list-none p-0 m-0">

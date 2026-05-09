@@ -10,6 +10,8 @@ import {
   type DocsApiTableRow,
 } from "../../../components/DocsApiTable.tsx";
 import { MobileDocDemo } from "../../../components/MobileDocDemo.tsx";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
+import { MESSAGES_MULTI_SELECT } from "../../../data/component-messages-rows.ts";
 
 const OPTIONS = [
   { value: "x", label: "项 X" },
@@ -69,6 +71,12 @@ const MULTI_API: DocsApiTableRow[] = [
   },
   { name: "name", type: "string", default: "-", description: "原生 name" },
   { name: "id", type: "string", default: "-", description: "原生 id" },
+  {
+    name: "messages",
+    type: "Partial<MultiSelectMessages>",
+    default: "-",
+    description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
+  },
 ];
 
 const importCode = `import { MultiSelect } from "@dreamer/ui-view/mobile";
@@ -148,6 +156,12 @@ export default function MobileMultiSelectDoc() {
       </section>
 
       <section class="space-y-4">
+        <DocsMessagesSection
+          interfaceName="MultiSelectMessages"
+          defaultExportName="defaultMultiSelectMessages"
+          rows={MESSAGES_MULTI_SELECT}
+        />
+
         <Title level={2}>API</Title>
         <DocsApiTable rows={MULTI_API} />
       </section>

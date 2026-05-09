@@ -5,6 +5,8 @@
 
 import { createSignal } from "@dreamer/view";
 import { CodeBlock, Paragraph, Title } from "@dreamer/ui-view";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
+import { MESSAGES_CODE_BLOCK } from "../../../data/component-messages-rows.ts";
 
 const sampleJS = `function hello(name) {
   console.log("Hello, " + name);
@@ -102,6 +104,12 @@ const CODE_BLOCK_API: ApiRow[] = [
     description: "code 的 class",
   },
   { name: "class", type: "string", default: "-", description: "最外层 class" },
+  {
+    name: "messages",
+    type: "Partial<CodeBlockMessages>",
+    default: "-",
+    description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
+  },
 ];
 
 const importCode = `import { CodeBlock } from "@dreamer/ui-view";
@@ -228,6 +236,12 @@ export default function DataDisplayCodeBlock() {
           />
         </div>
       </section>
+
+      <DocsMessagesSection
+        interfaceName="CodeBlockMessages"
+        defaultExportName="defaultCodeBlockMessages"
+        rows={MESSAGES_CODE_BLOCK}
+      />
 
       <section class="space-y-3">
         <Title level={2}>API</Title>

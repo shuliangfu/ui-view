@@ -4,6 +4,8 @@
  */
 
 import { CodeBlock, Pagination, Paragraph, Title } from "@dreamer/ui-view";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
+import { MESSAGES_PAGINATION } from "../../../data/component-messages-rows.ts";
 
 /** API 属性行类型 */
 interface ApiRow {
@@ -100,6 +102,12 @@ const PAGINATION_API: ApiRow[] = [
       "为 true 时，页码/每页条数变化会写入 URL（?page=1&pageSize=10），不刷新页面",
   },
   { name: "class", type: "string", default: "-", description: "额外 class" },
+  {
+    name: "messages",
+    type: "Partial<PaginationMessages>",
+    default: "-",
+    description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
+  },
 ];
 
 const importCode = `import { Pagination } from "@dreamer/ui-view";
@@ -314,6 +322,12 @@ export default function NavigationPagination() {
           />
         </div>
       </section>
+
+      <DocsMessagesSection
+        interfaceName="PaginationMessages"
+        defaultExportName="defaultPaginationMessages"
+        rows={MESSAGES_PAGINATION}
+      />
 
       <section class="space-y-3">
         <Title level={2}>API</Title>

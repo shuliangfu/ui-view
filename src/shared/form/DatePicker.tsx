@@ -29,6 +29,7 @@ import {
 import {
   type PickerCalendarHeaderPanel,
   PickerCalendarNav,
+  type PickerCalendarNavMessages,
 } from "./picker-calendar-nav.tsx";
 import {
   DEFAULT_DATE_FORMAT,
@@ -43,6 +44,7 @@ import {
   registerPickerFixedOverlayPositionAndOutsideClick,
 } from "./picker-portal-utils.ts";
 import { pickerCalendarIconProps } from "./picker-trigger-icon.ts";
+import { resolveFormControlSize } from "./form-control-context.ts";
 import {
   commitMaybeSignal,
   type MaybeSignal,
@@ -57,6 +59,37 @@ export interface DatePickerRangeValue {
 
 /** 日期选择模式 */
 export type DatePickerMode = "single" | "range" | "multiple";
+
+/**
+ * DatePicker 内置文案。
+ */
+export interface DatePickerMessages {
+  /** 占位默认文案；与 {@link DatePickerProps.placeholder} 同义，后者优先 */
+  placeholder: string;
+  /** 浮层 `aria-label` */
+  dialog: string;
+  /** 「确定」按钮 */
+  confirm: string;
+  /** 「取消」按钮 */
+  cancel: string;
+  /** range 模式空值占位（如 `… ~ 2025-01-01`） */
+  rangePlaceholder: string;
+  /** multiple 模式合并展示（超过 2 项），参数为日期个数 */
+  multipleSummary: (count: number) => string;
+  /** 日历导航条文案 */
+  calendarNav: Partial<PickerCalendarNavMessages>;
+}
+
+/** 默认中文文案 */
+export const defaultDatePickerMessages: DatePickerMessages = {
+  placeholder: "请选择日期",
+  dialog: "选择日期",
+  confirm: "确定",
+  cancel: "取消",
+  rangePlaceholder: "…",
+  multipleSummary: (count) => `${count} 个日期`,
+  calendarNav: {},
+};
 
 /** 受控值形态（由 {@link DatePickerProps.mode} 决定具体语义） */
 export type DatePickerValue = string | DatePickerRangeValue | string[];
@@ -91,6 +124,8 @@ export interface DatePickerProps {
    * `viewport` 使用视口 `fixed` + 几何同步，避免被表格 `overflow-x-auto`、单元格 `overflow-hidden` 等裁切。
    */
   panelAttach?: "anchored" | "viewport";
+  /** 多语言/自定义文案；未传字段走 {@link defaultDatePickerMessages} */
+  messages?: Partial<DatePickerMessages>;
 }
 
 /** 与 Select 等共用 Esc 关闭 */
@@ -184,6 +219,7 @@ function datePickerDisplayText(
   mode: DatePickerMode,
   raw: unknown,
   placeholder: string,
+  messages: DatePickerMessages,
 ): string {
   if (mode === "single") {
     const s = typeof raw === "string" ? raw : "";
@@ -194,12 +230,13 @@ function datePickerDisplayText(
     const st = o.start?.trim() ?? "";
     const en = o.end?.trim() ?? "";
     if (st === "" && en === "") return placeholder;
-    return `${st || "…"} ~ ${en || "…"}`;
+    const ph = messages.rangePlaceholder;
+    return `${st || ph} ~ ${en || ph}`;
   }
   const arr = isYmdStringArray(raw) ? raw : [];
   if (arr.length === 0) return placeholder;
   if (arr.length <= 2) return arr.join("、");
-  return `${arr.length} 个日期`;
+  return messages.multipleSummary(arr.length);
 }
 
 /**
@@ -267,6 +304,8 @@ function getDatePickerDerivatives(props: DatePickerProps) {
 }
 
 export function DatePicker(props: DatePickerProps): JSXRenderable {
+  /** 与 {@link Input} 一致：继承 Form 注入的控件尺寸 */
+  const resolvedControlSize = resolveFormControlSize(props.size);
   const openState = createSignal(false);
 
   /** single：面板草稿日 */
@@ -574,17 +613,16 @@ export function DatePicker(props: DatePickerProps): JSXRenderable {
         aria-label={() => {
           const { mode } = getDatePickerDerivatives(props);
           const raw = rawForTriggerDisplay();
-          const placeholder = props.placeholder ?? "请选择日期";
-          return datePickerDisplayText(mode, raw, placeholder);
+          const m = { ...defaultDatePickerMessages, ...props.messages };
+          const placeholder = props.placeholder ?? m.placeholder;
+          return datePickerDisplayText(mode, raw, placeholder, m);
         }}
-        class={() => {
-          const size = props.size ?? "md";
-          return twMerge(
+        class={() =>
+          twMerge(
             pickerTriggerSurface,
             controlBlueFocusRing(!props.hideFocusRing),
-            pickerTriggerSizeClasses[size],
-          );
-        }}
+            pickerTriggerSizeClasses[resolvedControlSize],
+          )}
         onClick={handleOpen}
       >
         <span
@@ -600,8 +638,9 @@ export function DatePicker(props: DatePickerProps): JSXRenderable {
           {() => {
             const { mode } = getDatePickerDerivatives(props);
             const raw = rawForTriggerDisplay();
-            const placeholder = props.placeholder ?? "请选择日期";
-            return datePickerDisplayText(mode, raw, placeholder);
+            const m = { ...defaultDatePickerMessages, ...props.messages };
+            const placeholder = props.placeholder ?? m.placeholder;
+            return datePickerDisplayText(mode, raw, placeholder, m);
           }}
         </span>
         {/* 图标未透传函数 class：外包原生 span + currentColor，打开态着色且不重建按钮 */}
@@ -615,9 +654,9 @@ export function DatePicker(props: DatePickerProps): JSXRenderable {
             )}
         >
           <IconCalendar
-            size={pickerCalendarIconProps(props.size ?? "md").size}
+            size={pickerCalendarIconProps(resolvedControlSize).size}
             class={twMerge(
-              pickerCalendarIconProps(props.size ?? "md").class,
+              pickerCalendarIconProps(resolvedControlSize).class,
               "shrink-0",
             )}
           />
@@ -628,13 +667,14 @@ export function DatePicker(props: DatePickerProps): JSXRenderable {
         {() => {
           const { mode, dateFormatSpec, minDate, maxDate, disabledDate } =
             getDatePickerDerivatives(props);
+          const m = { ...defaultDatePickerMessages, ...props.messages };
           /** 视口浮层：避开表格等滚动容器的 overflow 裁切 */
           const useViewportPanel = (props.panelAttach ?? "anchored") ===
             "viewport";
           return (
             <div
               role="dialog"
-              aria-label="选择日期"
+              aria-label={m.dialog}
               class={twMerge(
                 "pointer-events-auto w-max min-w-[288px] max-w-[min(100vw-1rem,24rem)] p-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-lg",
                 useViewportPanel
@@ -705,6 +745,7 @@ export function DatePicker(props: DatePickerProps): JSXRenderable {
                   else onSelectDayMultiple(d);
                 }}
                 disabledDate={disabledDate}
+                messages={m.calendarNav}
               />
               <div class="flex justify-end gap-2 mt-2 pt-2 border-t border-slate-200 dark:border-slate-600">
                 <button
@@ -734,14 +775,14 @@ export function DatePicker(props: DatePickerProps): JSXRenderable {
                   }}
                   onClick={handleConfirm}
                 >
-                  确定
+                  {m.confirm}
                 </button>
                 <button
                   type="button"
                   class="px-3 py-1.5 text-sm rounded border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700"
                   onClick={handleCancel}
                 >
-                  取消
+                  {m.cancel}
                 </button>
               </div>
             </div>

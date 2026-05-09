@@ -51,7 +51,26 @@ export interface ActionSheetProps {
   destroyOnClose?: boolean;
   /** 额外 class（作用于容器） */
   class?: string;
+  /** 多语言/自定义文案；未传字段走 {@link defaultActionSheetMessages}；`cancelText` 优先级高于 messages */
+  messages?: Partial<ActionSheetMessages>;
 }
+
+/** ActionSheet 内置文案 */
+export interface ActionSheetMessages {
+  /** 「取消」按钮 */
+  cancel: string;
+  /** 浮层 `aria-label` */
+  dialog: string;
+  /** 遮罩按钮 `aria-label` */
+  close: string;
+}
+
+/** 默认中文文案 */
+export const defaultActionSheetMessages: ActionSheetMessages = {
+  cancel: "取消",
+  dialog: "操作列表",
+  close: "关闭",
+};
 
 const Z_INDEX = 300;
 
@@ -79,11 +98,16 @@ function trySetDocumentBodyOverflow(overflow: string): void {
  * @param props - 动作表属性
  */
 export function ActionSheet(props: ActionSheetProps): JSXRenderable {
+  /** 合并默认中文文案与外部传入 messages，再以显式 cancelText 覆盖 */
+  const m: ActionSheetMessages = {
+    ...defaultActionSheetMessages,
+    ...(props.messages ?? {}),
+  };
   const {
     onClose,
     title,
     actions,
-    cancelText = "取消",
+    cancelText = m.cancel,
     maskClosable = true,
     destroyOnClose = false,
     class: className,
@@ -129,12 +153,12 @@ export function ActionSheet(props: ActionSheetProps): JSXRenderable {
       style={{ zIndex: Z_INDEX }}
       role="dialog"
       aria-modal="true"
-      aria-label="操作列表"
+      aria-label={m.dialog}
     >
       <button
         type="button"
         class="absolute inset-0 bg-black/50 dark:bg-black/60 border-0 cursor-default transition-opacity"
-        aria-label="关闭"
+        aria-label={m.close}
         onClick={handleMaskClick}
       />
       <div

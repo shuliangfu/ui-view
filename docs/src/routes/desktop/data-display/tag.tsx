@@ -5,6 +5,8 @@
 
 import { createSignal } from "@dreamer/view";
 import { CodeBlock, Paragraph, Tag, Title } from "@dreamer/ui-view";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
+import { MESSAGES_TAG } from "../../../data/component-messages-rows.ts";
 
 /** API 属性行类型 */
 interface ApiRow {
@@ -49,6 +51,12 @@ const TAG_API: ApiRow[] = [
     description: "是否圆角胶囊",
   },
   { name: "class", type: "string", default: "-", description: "额外 class" },
+  {
+    name: "messages",
+    type: "Partial<TagMessages>",
+    default: "-",
+    description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
+  },
 ];
 
 const importCode = `import { Tag } from "@dreamer/ui-view";
@@ -155,6 +163,12 @@ export default function DataDisplayTag() {
           />
         </div>
       </section>
+
+      <DocsMessagesSection
+        interfaceName="TagMessages"
+        defaultExportName="defaultTagMessages"
+        rows={MESSAGES_TAG}
+      />
 
       <section class="space-y-3">
         <Title level={2}>API</Title>

@@ -12,6 +12,8 @@ import {
   Title,
 } from "@dreamer/ui-view";
 import { createSignal } from "@dreamer/view";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
+import { MESSAGES_AUTO_COMPLETE } from "../../../data/component-messages-rows.ts";
 
 interface ApiRow {
   name: string;
@@ -116,6 +118,12 @@ const AUTOCOMPLETE_API: ApiRow[] = [
   },
   { name: "name", type: "string", default: "-", description: "原生 name" },
   { name: "id", type: "string", default: "-", description: "原生 id" },
+  {
+    name: "messages",
+    type: "Partial<AutoCompleteMessages>",
+    default: "-",
+    description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
+  },
 ];
 
 /** size 示例用的短选项列表 */
@@ -146,6 +154,8 @@ export default function FormAutoCompleteDoc() {
           title="代码示例"
           code={`import { AutoComplete, Form, FormItem } from "@dreamer/ui-view";
 import { createSignal } from "@dreamer/view";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
+import { MESSAGES_AUTO_COMPLETE } from "../../../data/component-messages-rows.ts";
 
 const q = createSignal("");
 <FormItem label="搜索">
@@ -249,6 +259,12 @@ const q = createSignal("");
           wrapLongLines
         />
       </section>
+
+      <DocsMessagesSection
+        interfaceName="AutoCompleteMessages"
+        defaultExportName="defaultAutoCompleteMessages"
+        rows={MESSAGES_AUTO_COMPLETE}
+      />
 
       <section class="space-y-3">
         <Title level={2}>API</Title>

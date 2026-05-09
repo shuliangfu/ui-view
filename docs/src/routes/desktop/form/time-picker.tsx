@@ -12,6 +12,8 @@ import {
   Title,
 } from "@dreamer/ui-view";
 import { createSignal } from "@dreamer/view";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
+import { MESSAGES_TIME_PICKER } from "../../../data/component-messages-rows.ts";
 
 interface ApiRow {
   name: string;
@@ -76,6 +78,12 @@ const TIMEPICKER_API: ApiRow[] = [
   },
   { name: "name", type: "string", default: "-", description: "原生 name" },
   { name: "id", type: "string", default: "-", description: "原生 id" },
+  {
+    name: "messages",
+    type: "Partial<TimePickerMessages>",
+    default: "-",
+    description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
+  },
 ];
 
 const importCode =
@@ -317,10 +325,16 @@ export default function FormTimePicker() {
         </Form>
       </section>
 
+      <DocsMessagesSection
+        interfaceName="TimePickerMessages"
+        defaultExportName="defaultTimePickerMessages"
+        rows={MESSAGES_TIME_PICKER}
+      />
+
       <section class="space-y-3">
         <Title level={2}>API</Title>
         <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
-          组件接收以下属性（均为可选）。
+          组件接收以下属性（均为可选）。文案相关字段见上文「文案（messages）」表。
         </Paragraph>
         <div class="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-600">
           <table class="w-full min-w-lg text-sm">

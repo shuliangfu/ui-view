@@ -12,6 +12,8 @@ import {
   Title,
 } from "@dreamer/ui-view";
 import { createSignal } from "@dreamer/view";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
+import { MESSAGES_INPUT_NUMBER } from "../../../data/component-messages-rows.ts";
 
 interface ApiRow {
   name: string;
@@ -106,6 +108,12 @@ const INPUT_NUMBER_API: ApiRow[] = [
   },
   { name: "name", type: "string", default: "-", description: "原生 name" },
   { name: "id", type: "string", default: "-", description: "原生 id" },
+  {
+    name: "messages",
+    type: "Partial<InputNumberMessages>",
+    default: "-",
+    description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
+  },
 ];
 
 /**
@@ -125,6 +133,8 @@ const qtySizeLg = createSignal("5");
 const importCode =
   `import { InputNumber, Form, FormItem } from "@dreamer/ui-view";
 import { createSignal } from "@dreamer/view";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
+import { MESSAGES_INPUT_NUMBER } from "../../../data/component-messages-rows.ts";
 
 const qty = createSignal("10");
 <FormItem label="数量">
@@ -319,6 +329,12 @@ export default function FormInputNumber() {
           </section>
         </Form>
       </section>
+
+      <DocsMessagesSection
+        interfaceName="InputNumberMessages"
+        defaultExportName="defaultInputNumberMessages"
+        rows={MESSAGES_INPUT_NUMBER}
+      />
 
       <section class="space-y-3">
         <Title level={2}>API</Title>

@@ -9,7 +9,12 @@ import {
   DocsApiTable,
   type DocsApiTableRow,
 } from "../../../components/DocsApiTable.tsx";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MobileDocDemo } from "../../../components/MobileDocDemo.tsx";
+import {
+  MESSAGES_DATETIME_PICKER,
+  MESSAGES_PICKER_CALENDAR_NAV,
+} from "../../../data/component-messages-rows.ts";
 
 /**
  * 当前本地日期时间，默认 format 形态。
@@ -95,6 +100,12 @@ const DATETIME_API: DocsApiTableRow[] = [
   },
   { name: "name", type: "string", default: "-", description: "隐藏域 name" },
   { name: "id", type: "string", default: "-", description: "根 id" },
+  {
+    name: "messages",
+    type: "Partial<DateTimePickerMessages>",
+    default: "-",
+    description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
+  },
 ];
 
 const importCode = `import { DateTimePicker } from "@dreamer/ui-view/mobile";
@@ -148,6 +159,27 @@ export default function MobileDateTimePickerDoc() {
             wrapLongLines
           />
         </div>
+      </section>
+
+      <DocsMessagesSection
+        interfaceName="DateTimePickerMessages"
+        defaultExportName="defaultDateTimePickerMessages"
+        rows={MESSAGES_DATETIME_PICKER}
+      />
+
+      <section class="space-y-3">
+        <Title level={3}>嵌套：PickerCalendarNavMessages</Title>
+        <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+          通过{" "}
+          <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs dark:bg-slate-800">
+            messages.calendarNav
+          </code>{" "}
+          传入；与桌面 DateTimePicker 文档一致。
+        </Paragraph>
+        <DocsApiTable
+          rows={MESSAGES_PICKER_CALENDAR_NAV}
+          nameColumnHeader="字段"
+        />
       </section>
 
       <section class="space-y-4">

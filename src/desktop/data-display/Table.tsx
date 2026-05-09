@@ -152,6 +152,8 @@ export interface TableProps<T = unknown> {
   locale?: { emptyText?: string };
   /** 自定义空状态渲染（dataSource 为空时），不传则用 locale.emptyText 或「暂无数据」 */
   renderEmpty?: () => unknown;
+  /** 多语言/自定义文案；未传字段走 {@link defaultTableMessages} */
+  messages?: Partial<TableMessages>;
   /** 表格上方标题 */
   title?: unknown;
   /** 表格上方右侧区域（筛选、导出等） */
@@ -192,6 +194,50 @@ export interface TableProps<T = unknown> {
    */
   onCellChange?: (payload: TableCellChangePayload<T>) => void;
 }
+
+/** Table 内置文案 */
+export interface TableMessages {
+  /** 加载中文案 */
+  loading: string;
+  /** 空数据兜底（同时 fallback 也用 `locale.emptyText`） */
+  emptyText: string;
+  /** 布尔列：true 文本 */
+  yes: string;
+  /** 布尔列：false 文本 */
+  no: string;
+  /** 可编辑单元格 `title` 提示 */
+  doubleClickToEdit: string;
+  /** 分页 `nav` `aria-label` */
+  paginationAriaLabel: string;
+  /** 上一页按钮 `aria-label` */
+  prev: string;
+  /** 下一页按钮 `aria-label` */
+  next: string;
+  /** 单个页码按钮 `aria-label` */
+  pageLabel: (page: number) => string;
+  /** 分页区「第 from–to 条 / 共 total 条」摘要 */
+  paginationRange: (from: number, to: number, total: number) => string;
+  /** 总数为 0 时摘要 */
+  paginationTotalZero: (total: number) => string;
+  /** 「第 N / M 页」摘要 */
+  paginationOfPages: (current: number, total: number) => string;
+}
+
+/** 默认中文文案 */
+export const defaultTableMessages: TableMessages = {
+  loading: "加载中…",
+  emptyText: "暂无数据",
+  yes: "是",
+  no: "否",
+  doubleClickToEdit: "双击编辑",
+  paginationAriaLabel: "表格分页",
+  prev: "上一页",
+  next: "下一页",
+  pageLabel: (p) => `第 ${p} 页`,
+  paginationRange: (from, to, total) => `第 ${from}–${to} 条 / 共 ${total} 条`,
+  paginationTotalZero: (total) => `共 ${total} 条`,
+  paginationOfPages: (current, total) => `第 ${current} / ${total} 页`,
+};
 
 /** 当前编辑中的单元格（与 editingCell signal 存值一致） */
 type TableEditingTarget = { rowKey: string; columnKey: string };
@@ -252,7 +298,7 @@ const editableHeightCls: Record<SizeVariant, string> = {
 };
 
 const editableInputCls =
-  "box-border w-full min-w-0 max-w-full rounded border border-slate-200 bg-white px-2 text-left text-slate-800 outline-none focus:ring-2 focus:ring-blue-500/30 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100";
+  "box-border w-full min-w-0 max-w-full rounded border border-slate-200 bg-white px-2 text-left text-slate-800 outline-hidden focus:ring-2 focus:ring-blue-500/30 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100";
 
 function isEditableConfig<T>(
   e: false | TableColumnEditable<T> | undefined,
@@ -732,7 +778,6 @@ function renderEditableCell<T extends Record<string, unknown>>(
             value={dateStr}
             size={size}
             disabled={disabled}
-            placeholder="选择日期"
             class={twMerge("w-full min-w-0", h)}
             panelAttach="viewport"
             onChange={(e: Event) => {
@@ -756,7 +801,6 @@ function renderEditableCell<T extends Record<string, unknown>>(
             value={timeStr}
             size={size}
             disabled={disabled}
-            placeholder="选择时间"
             class={twMerge("w-full min-w-0", h)}
             panelAttach="viewport"
             onChange={(e: Event) => {
@@ -891,6 +935,8 @@ function renderEditableCellDisplay<T extends Record<string, unknown>>(
   ed: TableColumnEditable<T>,
   size: SizeVariant,
   cellAlign: "left" | "center" | "right" | undefined,
+  /** 由 {@link Table} 注入：用于 checkbox 显示 yes/no 文案 */
+  boolLabels: { yes: string; no: string } = { yes: "是", no: "否" },
 ): unknown {
   const h = editableHeightCls[size];
   const justify = editableCellJustify(cellAlign);
@@ -906,7 +952,7 @@ function renderEditableCellDisplay<T extends Record<string, unknown>>(
             justify,
           )}
         >
-          {raw ? "是" : "否"}
+          {raw ? boolLabels.yes : boolLabels.no}
         </span>
       );
     case "radio": {
@@ -991,6 +1037,11 @@ export function Table<
     stateKey,
     onCellChange,
   } = props;
+  /** 合并默认中文文案与外部传入 messages */
+  const tableMessages: TableMessages = {
+    ...defaultTableMessages,
+    ...(props.messages ?? {}),
+  };
 
   /** 分页当前页（非受控时使用） */
   const internalPage = createSignal(1);
@@ -1514,12 +1565,14 @@ export function Table<
                                 aria-busy="true"
                                 aria-live="polite"
                               >
-                                <span class="text-sm">加载中…</span>
+                                <span class="text-sm">
+                                  {tableMessages.loading}
+                                </span>
                               </div>
                             )
                             : (
                               renderEmpty?.() ??
-                                (locale?.emptyText ?? "暂无数据")
+                                (locale?.emptyText ?? tableMessages.emptyText)
                             )}
                         </td>
                       </tr>
@@ -1671,7 +1724,7 @@ export function Table<
                                   if (isEditing) {
                                     content = (
                                       <div
-                                        class="w-full min-w-0 outline-none"
+                                        class="w-full min-w-0 outline-hidden"
                                         tabIndex={-1}
                                         data-view-table-edit-root="1"
                                         data-view-table-edit-slot={tableEditSlotToken(
@@ -1881,7 +1934,7 @@ export function Table<
                                             : "cursor-not-allowed opacity-60",
                                         )}
                                         title={canActivate
-                                          ? "双击编辑"
+                                          ? tableMessages.doubleClickToEdit
                                           : undefined}
                                         onDblClick={(e: Event) => {
                                           e.stopPropagation();
@@ -1898,6 +1951,10 @@ export function Table<
                                           edResolved,
                                           size,
                                           col.align,
+                                          {
+                                            yes: tableMessages.yes,
+                                            no: tableMessages.no,
+                                          },
                                         )}
                                       </div>
                                     );
@@ -1986,7 +2043,7 @@ export function Table<
                               aria-live="polite"
                             >
                               <div class="flex w-full min-w-0 items-center justify-center py-6">
-                                <span>加载中…</span>
+                                <span>{tableMessages.loading}</span>
                               </div>
                             </td>
                           </tr>
@@ -2025,12 +2082,12 @@ export function Table<
                 totalPages,
               );
               const totalHint = total > 0
-                ? `第 ${from}–${to} 条 / 共 ${total} 条`
-                : `共 ${total} 条`;
+                ? tableMessages.paginationRange(from, to, total)
+                : tableMessages.paginationTotalZero(total);
               return (
                 <nav
                   role="navigation"
-                  aria-label="表格分页"
+                  aria-label={tableMessages.paginationAriaLabel}
                   class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mt-3 pt-3 border-t border-slate-200 dark:border-slate-700"
                 >
                   <span class="text-sm text-slate-600 dark:text-slate-400 tabular-nums shrink-0">
@@ -2038,14 +2095,14 @@ export function Table<
                     <span class="text-slate-400 dark:text-slate-500 mx-1.5">
                       ·
                     </span>
-                    第 {safeCurrent} / {totalPages} 页
+                    {tableMessages.paginationOfPages(safeCurrent, totalPages)}
                   </span>
                   <div class="flex flex-wrap items-center gap-1">
                     <button
                       type="button"
                       class={TABLE_PAGINATION_BTN_CLS}
                       disabled={!canPrev}
-                      aria-label="上一页"
+                      aria-label={tableMessages.prev}
                       onClick={() => handlePageChange(safeCurrent - 1)}
                     >
                       <IconChevronLeft class="w-4 h-4" />
@@ -2068,7 +2125,7 @@ export function Table<
                               TABLE_PAGINATION_BTN_CLS,
                               safeCurrent === p && TABLE_PAGINATION_ACTIVE_CLS,
                             )}
-                            aria-label={`第 ${p} 页`}
+                            aria-label={tableMessages.pageLabel(p)}
                             aria-current={safeCurrent === p
                               ? "page"
                               : undefined}
@@ -2082,7 +2139,7 @@ export function Table<
                       type="button"
                       class={TABLE_PAGINATION_BTN_CLS}
                       disabled={!canNext}
-                      aria-label="下一页"
+                      aria-label={tableMessages.next}
                       onClick={() => handlePageChange(safeCurrent + 1)}
                     >
                       <IconChevronRight class="w-4 h-4" />

@@ -213,13 +213,22 @@ export function timeGranularityFromTimeTokens(
  */
 export function pickerTimeSegmentSingleColumnHeaderLabel(
   pieces: readonly PickerFormatPiece[],
+  /**
+   * 列头标签集合。默认为中文「时 / 分 / 秒」；
+   * {@link TimePicker} / {@link DateTimePicker} 会传入 `messages` 中合并后的本地化文案。
+   */
+  labels: { hour: string; minute: string; second: string } = {
+    hour: "时",
+    minute: "分",
+    second: "秒",
+  },
 ): string {
   const t = extractTokens(pieces).filter((x) => TIME_TOKENS.has(x));
-  if (t.length !== 1) return "时";
-  if (t[0] === "HH") return "时";
-  if (t[0] === "mm") return "分";
-  if (t[0] === "ss") return "秒";
-  return "时";
+  if (t.length !== 1) return labels.hour;
+  if (t[0] === "HH") return labels.hour;
+  if (t[0] === "mm") return labels.minute;
+  if (t[0] === "ss") return labels.second;
+  return labels.hour;
 }
 
 /**

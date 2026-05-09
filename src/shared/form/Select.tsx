@@ -13,6 +13,7 @@ import {
   nativeSelectSurface,
   pickerTriggerSurface,
 } from "./input-focus-ring.ts";
+import { resolveFormControlSize } from "./form-control-context.ts";
 import {
   commitMaybeSignal,
   type MaybeSignal,
@@ -28,6 +29,19 @@ export interface SelectOption {
   label: string;
   disabled?: boolean;
 }
+
+/**
+ * Select 内置文案。
+ */
+export interface SelectMessages {
+  /** 触发按钮 `aria-label` 的兜底文案（无选中、无 placeholder 时使用） */
+  triggerFallback: string;
+}
+
+/** 默认中文文案 */
+export const defaultSelectMessages: SelectMessages = {
+  triggerFallback: "选择",
+};
 
 export interface SelectProps {
   size?: SizeVariant;
@@ -50,6 +64,8 @@ export interface SelectProps {
    * `native`：原生 select + 大最小高度，便于移动触控。
    */
   appearance?: SelectAppearance;
+  /** 多语言/自定义文案；未传字段走 {@link defaultSelectMessages} */
+  messages?: Partial<SelectMessages>;
 }
 
 /** 浮层模式下的尺寸（桌面） */
@@ -81,7 +97,7 @@ const DROPDOWN_ESC_KEY = "__lastDropdownClose" as const;
  */
 function SelectNativeBranch(props: Omit<SelectProps, "appearance">) {
   const {
-    size = "md",
+    size: sizeProp,
     disabled = false,
     options,
     value,
@@ -93,6 +109,7 @@ function SelectNativeBranch(props: Omit<SelectProps, "appearance">) {
     children,
     hideFocusRing = false,
   } = props;
+  const size = resolveFormControlSize(sizeProp);
   const sizeCls = sizeClassesNative[size];
 
   /**
@@ -141,7 +158,7 @@ function SelectNativeBranch(props: Omit<SelectProps, "appearance">) {
  */
 function SelectDropdownBranch(props: Omit<SelectProps, "appearance">) {
   const {
-    size = "md",
+    size: sizeProp,
     disabled = false,
     options,
     value,
@@ -152,7 +169,10 @@ function SelectDropdownBranch(props: Omit<SelectProps, "appearance">) {
     id,
     children,
     hideFocusRing = false,
+    messages,
   } = props;
+  const m = { ...defaultSelectMessages, ...messages };
+  const size = resolveFormControlSize(sizeProp);
 
   const openState = createSignal(false);
   const sizeCls = sizeClassesDropdown[size];
@@ -224,7 +244,7 @@ function SelectDropdownBranch(props: Omit<SelectProps, "appearance">) {
           const rv = readMaybeSignal(value);
           const opt = options.find((o) => o.value === rv);
           const labelText = opt?.label ?? (placeholder ?? "");
-          return labelText || placeholder || "选择";
+          return labelText || placeholder || m.triggerFallback;
         }}
         class={twMerge(
           "w-full",

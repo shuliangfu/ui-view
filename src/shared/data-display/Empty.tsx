@@ -6,8 +6,27 @@
 import { twMerge } from "tailwind-merge";
 import type { JSXRenderable } from "@dreamer/view";
 
+/**
+ * Empty 内置文案（仅这些是组件本身渲染的字符串），可被 {@link EmptyProps.messages} 覆盖以适配多语言。
+ */
+export interface EmptyMessages {
+  /** 主描述文案；与 {@link EmptyProps.description} 同义，后者优先 */
+  description: string;
+  /** 容器 `aria-label`，供屏幕阅读器报读 */
+  ariaLabel: string;
+}
+
+/** 默认中文文案 */
+export const defaultEmptyMessages: EmptyMessages = {
+  description: "暂无数据",
+  ariaLabel: "空状态",
+};
+
 export interface EmptyProps {
-  /** 主描述文案 */
+  /**
+   * 主描述文案；不传则用 {@link EmptyProps.messages}.description ?? {@link defaultEmptyMessages}.description。
+   * 传 `null` 显式不显示描述。
+   */
   description?: string | unknown;
   /** 自定义插图（图片或节点）；不传则使用默认占位图样式 */
   image?: unknown;
@@ -21,18 +40,24 @@ export interface EmptyProps {
   imageClass?: string;
   /** 描述 class */
   descriptionClass?: string;
+  /** 多语言/自定义文案；未传字段走 {@link defaultEmptyMessages} */
+  messages?: Partial<EmptyMessages>;
 }
 
 export function Empty(props: EmptyProps): JSXRenderable {
   const {
-    description = "暂无数据",
     image,
     simple = false,
     footer,
     class: className,
     imageClass,
     descriptionClass,
+    messages,
   } = props;
+  const m = { ...defaultEmptyMessages, ...messages };
+  const description = props.description !== undefined
+    ? props.description
+    : m.description;
 
   const defaultImage = simple
     ? (
@@ -75,7 +100,7 @@ export function Empty(props: EmptyProps): JSXRenderable {
         className,
       )}
       role="status"
-      aria-label="空状态"
+      aria-label={m.ariaLabel}
     >
       <div
         class={twMerge("shrink-0 flex items-center justify-center", imageClass)}

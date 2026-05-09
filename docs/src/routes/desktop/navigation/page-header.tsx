@@ -10,6 +10,8 @@ import {
   Paragraph,
   Title,
 } from "@dreamer/ui-view";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
+import { MESSAGES_PAGE_HEADER } from "../../../data/component-messages-rows.ts";
 
 /** API 属性行类型 */
 interface ApiRow {
@@ -47,6 +49,12 @@ const PAGE_HEADER_API: ApiRow[] = [
   { name: "extra", type: "unknown", default: "-", description: "右侧额外区域" },
   { name: "footer", type: "unknown", default: "-", description: "底部区域" },
   { name: "class", type: "string", default: "-", description: "额外 class" },
+  {
+    name: "messages",
+    type: "Partial<PageHeaderMessages>",
+    default: "-",
+    description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
+  },
 ];
 
 const importCode = `import { Button, PageHeader } from "@dreamer/ui-view";
@@ -119,6 +127,12 @@ export default function NavigationPageHeader() {
           />
         </div>
       </section>
+
+      <DocsMessagesSection
+        interfaceName="PageHeaderMessages"
+        defaultExportName="defaultPageHeaderMessages"
+        rows={MESSAGES_PAGE_HEADER}
+      />
 
       <section class="space-y-3">
         <Title level={2}>API</Title>

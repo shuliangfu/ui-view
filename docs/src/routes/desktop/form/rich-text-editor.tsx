@@ -12,6 +12,8 @@ import {
   Title,
 } from "@dreamer/ui-view";
 import { createSignal } from "@dreamer/view";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
+import { MESSAGES_RICH_TEXT_EDITOR } from "../../../data/component-messages-rows.ts";
 
 interface ApiRow {
   name: string;
@@ -99,11 +101,19 @@ const RICH_TEXT_EDITOR_API: ApiRow[] = [
   { name: "class", type: "string", default: "-", description: "额外 class" },
   { name: "name", type: "string", default: "-", description: "原生 name" },
   { name: "id", type: "string", default: "-", description: "原生 id" },
+  {
+    name: "messages",
+    type: "Partial<RichTextEditorMessages>",
+    default: "-",
+    description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
+  },
 ];
 
 const importCode =
   `import { RichTextEditor, Form, FormItem } from "@dreamer/ui-view";
 import { createSignal } from "@dreamer/view";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
+import { MESSAGES_RICH_TEXT_EDITOR } from "../../../data/component-messages-rows.ts";
 
 const html = createSignal("<p>初始</p>");
 <FormItem label="富文本">
@@ -116,7 +126,7 @@ const html = createSignal("<p>初始</p>");
 </FormItem>`;
 
 export default function FormRichTextEditor() {
-  const val = createSignal("<p>初始内容</p>");
+  const val = createSignal("");
   const valSimple = createSignal("");
   const valFull = createSignal("");
 
@@ -245,6 +255,12 @@ export default function FormRichTextEditor() {
           </section>
         </Form>
       </section>
+
+      <DocsMessagesSection
+        interfaceName="RichTextEditorMessages"
+        defaultExportName="defaultRichTextEditorMessages"
+        rows={MESSAGES_RICH_TEXT_EDITOR}
+      />
 
       <section class="space-y-3">
         <Title level={2}>API</Title>

@@ -4,6 +4,8 @@
  */
 
 import { Breadcrumb, CodeBlock, Paragraph, Title } from "@dreamer/ui-view";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
+import { MESSAGES_BREADCRUMB } from "../../../data/component-messages-rows.ts";
 
 /** API 属性行类型 */
 interface ApiRow {
@@ -37,6 +39,12 @@ const BREADCRUMB_API: ApiRow[] = [
     type: "string",
     default: "-",
     description: "nav 容器 class",
+  },
+  {
+    name: "messages",
+    type: "Partial<BreadcrumbMessages>",
+    default: "-",
+    description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
   },
 ];
 
@@ -173,6 +181,12 @@ export default function NavigationBreadcrumb() {
           />
         </div>
       </section>
+
+      <DocsMessagesSection
+        interfaceName="BreadcrumbMessages"
+        defaultExportName="defaultBreadcrumbMessages"
+        rows={MESSAGES_BREADCRUMB}
+      />
 
       <section class="space-y-3">
         <Title level={2}>API</Title>

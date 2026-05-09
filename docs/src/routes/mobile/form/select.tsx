@@ -9,7 +9,9 @@ import {
   DocsApiTable,
   type DocsApiTableRow,
 } from "../../../components/DocsApiTable.tsx";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MobileDocDemo } from "../../../components/MobileDocDemo.tsx";
+import { MESSAGES_SELECT } from "../../../data/component-messages-rows.ts";
 
 const OPTIONS = [
   { value: "a", label: "选项 A" },
@@ -74,6 +76,12 @@ const SELECT_API: DocsApiTableRow[] = [
     type: "VNode",
     default: "-",
     description: "无 options 时用于原生 option 子节点",
+  },
+  {
+    name: "messages",
+    type: "Partial<SelectMessages>",
+    default: "-",
+    description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
   },
 ];
 
@@ -175,6 +183,12 @@ export default function MobileSelectDoc() {
           </MobileDocDemo>
         </div>
       </section>
+
+      <DocsMessagesSection
+        interfaceName="SelectMessages"
+        defaultExportName="defaultSelectMessages"
+        rows={MESSAGES_SELECT}
+      />
 
       <section class="space-y-4">
         <Title level={2}>API</Title>

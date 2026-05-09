@@ -62,6 +62,7 @@ const FORM_SUBMENU = [
     label: "DateTimePicker",
     desc: "日期时间",
   },
+  { path: "/mobile/form/time-picker", label: "TimePicker", desc: "时间" },
   { path: "/mobile/form/cascader", label: "Cascader", desc: "级联" },
 ] as const;
 

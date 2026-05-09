@@ -13,6 +13,8 @@ import {
   Upload,
 } from "@dreamer/ui-view";
 import { createSignal } from "@dreamer/view";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
+import { MESSAGES_UPLOAD } from "../../../data/component-messages-rows.ts";
 
 interface ApiRow {
   name: string;
@@ -158,6 +160,12 @@ const UPLOAD_API: ApiRow[] = [
     description: "可见 file input id；隐藏域为 `${id}-value`",
   },
   { name: "class", type: "string", default: "-", description: "容器 class" },
+  {
+    name: "messages",
+    type: "Partial<UploadMessages>",
+    default: "-",
+    description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
+  },
 ];
 
 const importCode = `import { Upload, Form, FormItem } from "@dreamer/ui-view";
@@ -345,6 +353,12 @@ await runChunkedUpload({
           wrapLongLines
         />
       </section>
+
+      <DocsMessagesSection
+        interfaceName="UploadMessages"
+        defaultExportName="defaultUploadMessages"
+        rows={MESSAGES_UPLOAD}
+      />
 
       <section class="space-y-3">
         <Title level={2}>API</Title>

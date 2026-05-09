@@ -9,7 +9,9 @@ import {
   DocsApiTable,
   type DocsApiTableRow,
 } from "../../../components/DocsApiTable.tsx";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MobileDocDemo } from "../../../components/MobileDocDemo.tsx";
+import { MESSAGES_PULL_REFRESH } from "../../../data/component-messages-rows.ts";
 
 const PULL_REFRESH_API: DocsApiTableRow[] = [
   {
@@ -85,6 +87,13 @@ const PULL_REFRESH_API: DocsApiTableRow[] = [
     type: "unknown",
     default: "-",
     description: "通常为可滚动列表主体",
+  },
+  {
+    name: "messages",
+    type: "Partial<PullRefreshMessages>",
+    default: "-",
+    description:
+      "本地化默认文案；显式 pullingText/loosingText/loadingText/successText 优先于 messages 对应字段",
   },
 ];
 
@@ -255,6 +264,12 @@ export default function MobilePullRefreshDoc() {
       </section>
 
       <section class="space-y-4">
+        <DocsMessagesSection
+          interfaceName="PullRefreshMessages"
+          defaultExportName="defaultPullRefreshMessages"
+          rows={MESSAGES_PULL_REFRESH}
+        />
+
         <Title level={2}>API</Title>
         <DocsApiTable rows={PULL_REFRESH_API} />
       </section>

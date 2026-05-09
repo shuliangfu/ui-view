@@ -8,6 +8,8 @@
 
 import { createSignal } from "@dreamer/view";
 import { Button, CodeBlock, Dialog, Paragraph, Title } from "@dreamer/ui-view";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
+import { MESSAGES_DIALOG } from "../../../data/component-messages-rows.ts";
 
 /** API 属性行类型 */
 interface ApiRow {
@@ -114,6 +116,13 @@ const DIALOG_API: ApiRow[] = [
     default: "row",
     description:
       "仅库默认定/取：row 两钮横排（窄屏在底栏内居中、sm+ 靠右，与旧版一致）；需纵排时用 auto/stack；自定义 footer 无效",
+  },
+  {
+    name: "messages",
+    type: "Partial<DialogMessages>",
+    default: "-",
+    description:
+      "本地化文案（含 Modal 关闭/全屏与确定取消默认）；字段见上文「文案（messages）」表",
   },
 ];
 
@@ -370,6 +379,12 @@ export default function FeedbackDialog() {
           />
         </div>
       </section>
+
+      <DocsMessagesSection
+        interfaceName="DialogMessages"
+        defaultExportName="defaultDialogMessages"
+        rows={MESSAGES_DIALOG}
+      />
 
       <section class="space-y-3">
         <Title level={2}>API</Title>

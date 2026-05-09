@@ -10,7 +10,9 @@ import {
   DocsApiTable,
   type DocsApiTableRow,
 } from "../../../components/DocsApiTable.tsx";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MOBILE_DOC_DEMO_SHELL_BASE } from "../../../components/MobileDocDemo.tsx";
+import { MESSAGES_SCROLL_LIST } from "../../../data/component-messages-rows.ts";
 
 const SCROLL_LIST_API: DocsApiTableRow[] = [
   {
@@ -83,6 +85,12 @@ const SCROLL_LIST_API: DocsApiTableRow[] = [
     type: "object",
     default: "-",
     description: "透传 PullRefresh 的 pullingText、loadingText 等",
+  },
+  {
+    name: "messages",
+    type: "Partial<ScrollListMessages>",
+    default: "-",
+    description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
   },
 ];
 
@@ -242,6 +250,12 @@ export default function MobileScrollListDoc() {
       </section>
 
       <section class="space-y-4">
+        <DocsMessagesSection
+          interfaceName="ScrollListMessages"
+          defaultExportName="defaultScrollListMessages"
+          rows={MESSAGES_SCROLL_LIST}
+        />
+
         <Title level={2}>API</Title>
         <DocsApiTable rows={SCROLL_LIST_API} />
       </section>

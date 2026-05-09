@@ -16,7 +16,9 @@ import {
   DocsApiTable,
   type DocsApiTableRow,
 } from "../../../components/DocsApiTable.tsx";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MobileDocDemo } from "../../../components/MobileDocDemo.tsx";
+import { MESSAGES_TAB_BAR } from "../../../data/component-messages-rows.ts";
 
 const TAB_BAR_API: DocsApiTableRow[] = [
   {
@@ -56,6 +58,12 @@ const TAB_BAR_API: DocsApiTableRow[] = [
     description: "底部安全区占位（如 iPhone Home 指示条）",
   },
   { name: "class", type: "string", default: "-", description: "根节点 class" },
+  {
+    name: "messages",
+    type: "Partial<TabBarMessages>",
+    default: "-",
+    description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
+  },
 ];
 
 const TAB_BAR_ITEM_API: DocsApiTableRow[] = [
@@ -242,6 +250,12 @@ export default function MobileTabBarDoc() {
       </section>
 
       <section class="space-y-6">
+        <DocsMessagesSection
+          interfaceName="TabBarMessages"
+          defaultExportName="defaultTabBarMessages"
+          rows={MESSAGES_TAB_BAR}
+        />
+
         <Title level={2}>API</Title>
         <div class="space-y-3">
           <Title level={3}>TabBar</Title>

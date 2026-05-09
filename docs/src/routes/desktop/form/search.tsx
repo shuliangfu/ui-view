@@ -12,6 +12,8 @@ import {
   Title,
 } from "@dreamer/ui-view";
 import { createSignal } from "@dreamer/view";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
+import { MESSAGES_SEARCH } from "../../../data/component-messages-rows.ts";
 
 interface ApiRow {
   name: string;
@@ -111,10 +113,18 @@ const SEARCH_API: ApiRow[] = [
   },
   { name: "name", type: "string", default: "-", description: "原生 name" },
   { name: "id", type: "string", default: "-", description: "原生 id" },
+  {
+    name: "messages",
+    type: "Partial<SearchMessages>",
+    default: "-",
+    description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
+  },
 ];
 
 const importCode = `import { Search, Form, FormItem } from "@dreamer/ui-view";
 import { createSignal } from "@dreamer/view";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
+import { MESSAGES_SEARCH } from "../../../data/component-messages-rows.ts";
 
 const val = createSignal("");
 <FormItem label="搜索">
@@ -299,6 +309,12 @@ export default function FormSearch() {
           </section>
         </Form>
       </section>
+
+      <DocsMessagesSection
+        interfaceName="SearchMessages"
+        defaultExportName="defaultSearchMessages"
+        rows={MESSAGES_SEARCH}
+      />
 
       <section class="space-y-3">
         <Title level={2}>API</Title>

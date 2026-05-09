@@ -75,6 +75,25 @@ export type ModalTitleInput =
  */
 export type ModalPlacement = "bottom";
 
+/**
+ * Modal 内置文案。
+ */
+export interface ModalMessages {
+  /** 右上角关闭按钮 `aria-label` */
+  close: string;
+  /** 进入全屏按钮 `aria-label` */
+  enterFullscreen: string;
+  /** 退出全屏按钮 `aria-label` */
+  exitFullscreen: string;
+}
+
+/** 默认中文文案 */
+export const defaultModalMessages: ModalMessages = {
+  close: "关闭",
+  enterFullscreen: "全屏",
+  exitFullscreen: "退出全屏",
+};
+
 export interface ModalProps {
   /**
    * 是否打开（受控）。
@@ -136,6 +155,8 @@ export interface ModalProps {
   footerClass?: string;
   /** 额外 class（作用于弹层盒子） */
   class?: string;
+  /** 多语言/自定义文案；未传字段走 {@link defaultModalMessages} */
+  messages?: Partial<ModalMessages>;
 }
 
 const defaultWidth = "520px";
@@ -301,7 +322,9 @@ export function Modal(props: ModalProps): JSXRenderable {
     bodyClass,
     footerClass,
     class: className,
+    messages,
   } = props;
+  const m = { ...defaultModalMessages, ...messages };
 
   /**
    * 禁止在 `open === false` 时提前 return：否则关闭态不执行 `createSignal`/`createEffect`，
@@ -484,7 +507,9 @@ export function Modal(props: ModalProps): JSXRenderable {
                     {fullscreenable && (
                       <button
                         type="button"
-                        aria-label={isFullscreen ? "退出全屏" : "全屏"}
+                        aria-label={isFullscreen
+                          ? m.exitFullscreen
+                          : m.enterFullscreen}
                         class="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400"
                         onMouseDown={(e: Event) => e.stopPropagation()}
                         onClick={(e: Event) => {
@@ -500,7 +525,7 @@ export function Modal(props: ModalProps): JSXRenderable {
                     {closable && (
                       <button
                         type="button"
-                        aria-label="关闭"
+                        aria-label={m.close}
                         class="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400"
                         onMouseDown={(e: Event) => e.stopPropagation()}
                         onClick={() => onClose?.()}
@@ -518,7 +543,9 @@ export function Modal(props: ModalProps): JSXRenderable {
                 {fullscreenable && (
                   <button
                     type="button"
-                    aria-label={isFullscreen ? "退出全屏" : "全屏"}
+                    aria-label={isFullscreen
+                      ? m.exitFullscreen
+                      : m.enterFullscreen}
                     class="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400"
                     onMouseDown={(e: Event) => e.stopPropagation()}
                     onClick={(e: Event) => {
@@ -534,7 +561,7 @@ export function Modal(props: ModalProps): JSXRenderable {
                 {closable && (
                   <button
                     type="button"
-                    aria-label="关闭"
+                    aria-label={m.close}
                     class="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400"
                     onMouseDown={(e: Event) => e.stopPropagation()}
                     onClick={() => onClose?.()}

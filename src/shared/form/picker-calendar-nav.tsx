@@ -23,6 +23,70 @@ import type { PickerDateGranularity } from "./picker-format.ts";
 /** 日历头部子面板类型 */
 export type PickerCalendarHeaderPanel = "day" | "month" | "year";
 
+/**
+ * 日历导航条内置文案。
+ */
+export interface PickerCalendarNavMessages {
+  /** 上一月按钮 `aria-label` */
+  prevMonth: string;
+  /** 下一月按钮 `aria-label` */
+  nextMonth: string;
+  /** 「选择月份与年份」按钮（日视图标题）`aria-label` */
+  monthAndYear: string;
+  /** 上一年按钮 `aria-label`（月视图） */
+  prevYear: string;
+  /** 下一年按钮 `aria-label`（月视图） */
+  nextYear: string;
+  /** 「选择年份」按钮（月视图标题）`aria-label` */
+  yearPanel: string;
+  /** 上一组年份按钮 `aria-label`（年视图） */
+  prevYearPage: string;
+  /** 下一组年份按钮 `aria-label`（年视图） */
+  nextYearPage: string;
+  /** 月视图返回按钮 `aria-label` */
+  backToDayLabel: string;
+  /** 月视图返回按钮可见文字 */
+  backToDayText: string;
+  /** 年视图返回按钮 `aria-label` */
+  backToMonthLabel: string;
+  /** 年视图返回按钮可见文字 */
+  backToMonthText: string;
+  /** 月份选择宫格 `aria-label` */
+  monthGrid: string;
+  /** 年份选择宫格 `aria-label` */
+  yearGrid: string;
+  /** 12 个月份名称（按 0~11 顺序） */
+  monthNames: readonly string[];
+  /** 「年 + 月」标题文案 */
+  formatYearMonth: (year: number, monthLabel: string) => string;
+  /** 「年」标题文案 */
+  formatYear: (year: number) => string;
+  /** 「起始年 — 结束年」标题文案 */
+  formatYearRange: (start: number, end: number) => string;
+}
+
+/** 默认中文文案（月份与 calendar-utils.MONTHS 同步） */
+export const defaultPickerCalendarNavMessages: PickerCalendarNavMessages = {
+  prevMonth: "上一月",
+  nextMonth: "下一月",
+  monthAndYear: "选择月份与年份",
+  prevYear: "上一年",
+  nextYear: "下一年",
+  yearPanel: "选择年份",
+  prevYearPage: "上一组年份",
+  nextYearPage: "下一组年份",
+  backToDayLabel: "返回日历视图",
+  backToDayText: "返回日历",
+  backToMonthLabel: "返回月份选择",
+  backToMonthText: "返回选月",
+  monthGrid: "选择月份",
+  yearGrid: "选择年份",
+  monthNames: MONTHS,
+  formatYearMonth: (y, label) => `${y}年 ${label}`,
+  formatYear: (y) => `${y}年`,
+  formatYearRange: (s, e) => `${s}年 — ${e}年`,
+};
+
 export interface PickerCalendarNavProps {
   /** 面板当前展示的年月（与下方日网格一致） */
   viewDate: Signal<Date>;
@@ -80,6 +144,8 @@ export interface PickerCalendarNavProps {
    * 与 {@link DatePicker} 的 `format` 一致。
    */
   dateGranularity?: PickerDateGranularity;
+  /** 多语言/自定义文案；未传字段走 {@link defaultPickerCalendarNavMessages} */
+  messages?: Partial<PickerCalendarNavMessages>;
 }
 
 /**
@@ -147,7 +213,9 @@ export function PickerCalendarNav(
       disabledDate,
       calendarClass,
       dateGranularity = "day",
+      messages,
     } = props;
+    const msg = { ...defaultPickerCalendarNavMessages, ...messages };
 
     const view = viewDate.value;
     /** 与 createSignal 初始值对齐；勿使用未定义的 panel 引用（会导致整段日历无法挂载） */
@@ -250,7 +318,7 @@ export function PickerCalendarNav(
           <div class="flex items-center justify-between gap-2 mb-2">
             <button
               type="button"
-              aria-label="上一月"
+              aria-label={msg.prevMonth}
               class="p-1 rounded text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700"
               onClick={goPrevMonth}
             >
@@ -258,15 +326,15 @@ export function PickerCalendarNav(
             </button>
             <button
               type="button"
-              aria-label="选择月份与年份"
+              aria-label={msg.monthAndYear}
               class="text-sm font-medium text-slate-700 dark:text-slate-200 px-2 py-1 rounded hover:bg-slate-100 dark:hover:bg-slate-700"
               onClick={openMonthPanel}
             >
-              {y}年 {MONTHS[m]}
+              {msg.formatYearMonth(y, msg.monthNames[m] ?? "")}
             </button>
             <button
               type="button"
-              aria-label="下一月"
+              aria-label={msg.nextMonth}
               class="p-1 rounded text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700"
               onClick={goNextMonth}
             >
@@ -282,17 +350,17 @@ export function PickerCalendarNav(
                 <button
                   type="button"
                   class="text-xs text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 px-1 py-0.5 rounded"
-                  aria-label="返回日历视图"
+                  aria-label={msg.backToDayLabel}
                   onClick={backToDayPanel}
                 >
-                  返回日历
+                  {msg.backToDayText}
                 </button>
               </div>
             )}
             <div class="flex items-center justify-between gap-2 mb-2">
               <button
                 type="button"
-                aria-label="上一年"
+                aria-label={msg.prevYear}
                 class="p-1 rounded text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700"
                 onClick={goPrevYearInMonthPanel}
               >
@@ -300,15 +368,15 @@ export function PickerCalendarNav(
               </button>
               <button
                 type="button"
-                aria-label="选择年份"
+                aria-label={msg.yearPanel}
                 class="text-sm font-medium text-slate-700 dark:text-slate-200 px-2 py-1 rounded hover:bg-slate-100 dark:hover:bg-slate-700"
                 onClick={openYearPanel}
               >
-                {y}年
+                {msg.formatYear(y)}
               </button>
               <button
                 type="button"
-                aria-label="下一年"
+                aria-label={msg.nextYear}
                 class="p-1 rounded text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700"
                 onClick={goNextYearInMonthPanel}
               >
@@ -325,30 +393,30 @@ export function PickerCalendarNav(
                 <button
                   type="button"
                   class="text-xs text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 px-1 py-0.5 rounded"
-                  aria-label="返回月份选择"
+                  aria-label={msg.backToMonthLabel}
                   onClick={() => {
                     panelMode.value = "month";
                   }}
                 >
-                  返回选月
+                  {msg.backToMonthText}
                 </button>
               </div>
             )}
             <div class="flex items-center justify-between gap-2 mb-2">
               <button
                 type="button"
-                aria-label="上一组年份"
+                aria-label={msg.prevYearPage}
                 class="p-1 rounded text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700"
                 onClick={goPrevYearPage}
               >
                 <IconChevronLeft size="sm" />
               </button>
               <span class="text-xs font-medium text-slate-600 dark:text-slate-400 tabular-nums px-1 text-center">
-                {ys}年 — {ys + 11}年
+                {msg.formatYearRange(ys, ys + 11)}
               </span>
               <button
                 type="button"
-                aria-label="下一组年份"
+                aria-label={msg.nextYearPage}
                 class="p-1 rounded text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700"
                 onClick={goNextYearPage}
               >
@@ -377,9 +445,9 @@ export function PickerCalendarNav(
           <div
             class="grid grid-cols-3 gap-2 mb-1"
             role="grid"
-            aria-label="选择月份"
+            aria-label={msg.monthGrid}
           >
-            {MONTHS.map((label, i) => {
+            {msg.monthNames.map((label, i) => {
               const offRange = isMonthFullyOutsideMinMax(
                 y,
                 i,
@@ -411,7 +479,7 @@ export function PickerCalendarNav(
           <div
             class="grid grid-cols-3 gap-2 mb-1"
             role="grid"
-            aria-label="选择年份"
+            aria-label={msg.yearGrid}
           >
             {Array.from({ length: 12 }, (_, k) => {
               const yy = ys + k;

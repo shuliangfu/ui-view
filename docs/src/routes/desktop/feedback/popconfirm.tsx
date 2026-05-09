@@ -11,6 +11,8 @@ import {
   Popconfirm,
   Title,
 } from "@dreamer/ui-view";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
+import { MESSAGES_POPCONFIRM } from "../../../data/component-messages-rows.ts";
 
 /** API 属性行类型 */
 interface ApiRow {
@@ -98,6 +100,13 @@ const POPCONFIRM_API: ApiRow[] = [
     description: "触发元素（需在 onClick 中打开）",
   },
   { name: "class", type: "string", default: "-", description: "包装器 class" },
+  {
+    name: "messages",
+    type: "Partial<PopconfirmMessages>",
+    default: "-",
+    description:
+      "本地化文案；okText/cancelText 优先于 messages；字段见上文「文案（messages）」表",
+  },
 ];
 
 const importCode = `import { createSignal } from "@dreamer/view";
@@ -356,6 +365,12 @@ export default function FeedbackPopconfirm() {
           />
         </div>
       </section>
+
+      <DocsMessagesSection
+        interfaceName="PopconfirmMessages"
+        defaultExportName="defaultPopconfirmMessages"
+        rows={MESSAGES_POPCONFIRM}
+      />
 
       <section class="space-y-3">
         <Title level={2}>API</Title>

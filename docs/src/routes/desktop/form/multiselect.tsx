@@ -12,6 +12,8 @@ import {
   Title,
 } from "@dreamer/ui-view";
 import { createSignal } from "@dreamer/view";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
+import { MESSAGES_MULTI_SELECT } from "../../../data/component-messages-rows.ts";
 
 interface ApiRow {
   name: string;
@@ -68,6 +70,12 @@ const MULTISELECT_API: ApiRow[] = [
   { name: "name", type: "string", default: "-", description: "原生 name" },
   { name: "id", type: "string", default: "-", description: "原生 id" },
   { name: "class", type: "string", default: "-", description: "额外 class" },
+  {
+    name: "messages",
+    type: "Partial<MultiSelectMessages>",
+    default: "-",
+    description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
+  },
 ];
 
 const options = [
@@ -79,6 +87,8 @@ const options = [
 const importCode =
   `import { MultiSelect, Form, FormItem } from "@dreamer/ui-view";
 import { createSignal } from "@dreamer/view";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
+import { MESSAGES_MULTI_SELECT } from "../../../data/component-messages-rows.ts";
 
 const options = [{ value: "a", label: "选项 A" }, { value: "b", label: "选项 B" }];
 const val = createSignal<string[]>([]);
@@ -212,6 +222,12 @@ value={["a","b"]}`}
           </section>
         </Form>
       </section>
+
+      <DocsMessagesSection
+        interfaceName="MultiSelectMessages"
+        defaultExportName="defaultMultiSelectMessages"
+        rows={MESSAGES_MULTI_SELECT}
+      />
 
       <section class="space-y-3">
         <Title level={2}>API</Title>

@@ -12,6 +12,12 @@ import {
   Title,
 } from "@dreamer/ui-view";
 import { createSignal } from "@dreamer/view";
+import { DocsApiTable } from "../../../components/DocsApiTable.tsx";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
+import {
+  MESSAGES_DATE_PICKER,
+  MESSAGES_PICKER_CALENDAR_NAV,
+} from "../../../data/component-messages-rows.ts";
 
 /**
  * 文档示例用：当前本地日期的 YYYY-MM-DD（与 DatePicker 的 value 格式一致）。
@@ -108,6 +114,13 @@ const DATEPICKER_API: ApiRow[] = [
   },
   { name: "name", type: "string", default: "-", description: "原生 name" },
   { name: "id", type: "string", default: "-", description: "原生 id" },
+  {
+    name: "messages",
+    type: "Partial<DatePickerMessages>",
+    default: "-",
+    description:
+      "本地化文案；具体字段见上文「文案（messages）」独立表格，勿将字段摊入本表",
+  },
 ];
 
 const importCode =
@@ -395,10 +408,35 @@ const valLg = createSignal(today);
         </Form>
       </section>
 
+      <DocsMessagesSection
+        interfaceName="DatePickerMessages"
+        defaultExportName="defaultDatePickerMessages"
+        rows={MESSAGES_DATE_PICKER}
+      />
+
+      <section class="space-y-3">
+        <Title level={3}>嵌套：PickerCalendarNavMessages</Title>
+        <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+          通过{" "}
+          <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs dark:bg-slate-800">
+            messages.calendarNav
+          </code>{" "}
+          传入；与{" "}
+          <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs dark:bg-slate-800">
+            defaultPickerCalendarNavMessages
+          </code>{" "}
+          对齐，一层浅合并。
+        </Paragraph>
+        <DocsApiTable
+          rows={MESSAGES_PICKER_CALENDAR_NAV}
+          nameColumnHeader="字段"
+        />
+      </section>
+
       <section class="space-y-3">
         <Title level={2}>API</Title>
         <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
-          组件接收以下属性（均为可选）。
+          组件接收以下属性（均为可选）。文案相关字段见上文「文案（messages）」表，勿与本表合并理解。
         </Paragraph>
         <div class="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-600">
           <table class="w-full min-w-lg text-sm">

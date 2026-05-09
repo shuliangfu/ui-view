@@ -278,7 +278,47 @@ export interface ImageViewerProps {
    * 支持字面量、`Signal` 或零参 getter（推荐 `transition={sig}`），与 `open` 一致。
    */
   transition?: ImageViewerTransitionInput;
+  /** 多语言/自定义文案；未传字段走 {@link defaultImageViewerMessages} */
+  messages?: Partial<ImageViewerMessages>;
 }
+
+/** ImageViewer 内置文案 */
+export interface ImageViewerMessages {
+  /** 全屏壳 `aria-label` */
+  dialog: string;
+  /** 关闭按钮 `aria-label` */
+  close: string;
+  /** 上一张按钮 `aria-label` */
+  prev: string;
+  /** 下一张按钮 `aria-label` */
+  next: string;
+  /** 放大按钮 `aria-label` */
+  zoomIn: string;
+  /** 缩小按钮 `aria-label` */
+  zoomOut: string;
+  /** 逆时针旋转按钮 `aria-label` */
+  rotateCcw: string;
+  /** 顺时针旋转按钮 `aria-label` */
+  rotateCw: string;
+  /** 重置按钮 `aria-label` */
+  resetAriaLabel: string;
+  /** 重置按钮文本 */
+  reset: string;
+}
+
+/** 默认中文文案 */
+export const defaultImageViewerMessages: ImageViewerMessages = {
+  dialog: "图片查看",
+  close: "关闭",
+  prev: "上一张",
+  next: "下一张",
+  zoomIn: "放大",
+  zoomOut: "缩小",
+  rotateCcw: "逆时针旋转",
+  rotateCw: "顺时针旋转",
+  resetAriaLabel: "重置缩放与旋转",
+  reset: "重置",
+};
 
 const MIN_SCALE = 0.25;
 const MAX_SCALE = 4;
@@ -375,6 +415,11 @@ export function ImageViewer(props: ImageViewerProps): JSXRenderable {
     maskClass,
     class: className,
   } = props;
+  /** 合并默认中文文案与外部传入 messages */
+  const m: ImageViewerMessages = {
+    ...defaultImageViewerMessages,
+    ...(props.messages ?? {}),
+  };
 
   /**
    * 主图切换效果：订阅 `Signal` / getter，与 {@link ImageViewerProps.open} 用法一致。
@@ -1369,7 +1414,7 @@ export function ImageViewer(props: ImageViewerProps): JSXRenderable {
         style={{ zIndex: IMAGE_VIEWER_Z }}
         role="dialog"
         aria-modal="true"
-        aria-label="图片查看"
+        aria-label={m.dialog}
         tabIndex={-1}
       >
         {/* 全屏遮罩：默认约 80%～85% 黑，背后页面只隐约可见；`maskClass` 可覆盖 */}
@@ -1385,7 +1430,7 @@ export function ImageViewer(props: ImageViewerProps): JSXRenderable {
         <div class="relative z-10 flex items-center justify-end gap-2 p-3">
           <button
             type="button"
-            aria-label="关闭"
+            aria-label={m.close}
             class="p-2 rounded-lg text-white/80 hover:bg-white/10 hover:text-white transition-colors"
             onClick={() => onClose?.()}
           >
@@ -1396,7 +1441,7 @@ export function ImageViewer(props: ImageViewerProps): JSXRenderable {
         {hasMultipleImages() && (
           <button
             type="button"
-            aria-label="上一张"
+            aria-label={m.prev}
             class="absolute left-4 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-black/50 text-white/90 hover:bg-black/70 hover:text-white transition-colors"
             onClick={handlePrev}
           >
@@ -1407,7 +1452,7 @@ export function ImageViewer(props: ImageViewerProps): JSXRenderable {
         {hasMultipleImages() && (
           <button
             type="button"
-            aria-label="下一张"
+            aria-label={m.next}
             class="absolute right-4 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-black/50 text-white/90 hover:bg-black/70 hover:text-white transition-colors"
             onClick={handleNext}
           >
@@ -1419,7 +1464,7 @@ export function ImageViewer(props: ImageViewerProps): JSXRenderable {
           <div
             ref={transformLayerRef}
             style={viewerTranslateStyle}
-            class="flex w-full min-w-0 max-w-full min-h-0 items-center justify-center cursor-grab active:cursor-grabbing select-none touch-none will-change-[transform]"
+            class="flex w-full min-w-0 max-w-full min-h-0 items-center justify-center cursor-grab active:cursor-grabbing select-none touch-none will-change-transform"
             onPointerDown={handleImagePointerDown as unknown as (
               e: Event,
             ) => void}
@@ -1430,10 +1475,10 @@ export function ImageViewer(props: ImageViewerProps): JSXRenderable {
               ref={transformInnerRef}
               style={viewerInnerTransformStyle}
               class={twMerge(
-                "flex w-full min-w-0 max-w-full items-center justify-center origin-center pointer-events-none select-none touch-none will-change-[transform]",
+                "flex w-full min-w-0 max-w-full items-center justify-center origin-center pointer-events-none select-none touch-none will-change-transform",
                 viewerImagePrefersReducedMotion()
                   ? "transition-none"
-                  : "transition-transform duration-[240ms] ease-[cubic-bezier(0.4,0,0.2,1)] motion-reduce:transition-none",
+                  : "transition-transform duration-240 ease-in-out motion-reduce:transition-none",
               )}
             >
               {/* 双 `img` 叠放：预载后叠化（`fade`）或瞬时换层；单图改 `src` 不经此双缓冲 */}
@@ -1476,7 +1521,7 @@ export function ImageViewer(props: ImageViewerProps): JSXRenderable {
         <div class="absolute bottom-0 left-0 right-0 z-20 flex items-center justify-center gap-2 py-3 px-4 bg-black/60 backdrop-blur-sm">
           <button
             type="button"
-            aria-label="放大"
+            aria-label={m.zoomIn}
             class="p-2 rounded-lg text-white/80 hover:bg-white/10 hover:text-white transition-colors"
             onClick={(e: Event) => {
               e.stopPropagation();
@@ -1487,7 +1532,7 @@ export function ImageViewer(props: ImageViewerProps): JSXRenderable {
           </button>
           <button
             type="button"
-            aria-label="缩小"
+            aria-label={m.zoomOut}
             class="p-2 rounded-lg text-white/80 hover:bg-white/10 hover:text-white transition-colors"
             onClick={(e: Event) => {
               e.stopPropagation();
@@ -1498,7 +1543,7 @@ export function ImageViewer(props: ImageViewerProps): JSXRenderable {
           </button>
           <button
             type="button"
-            aria-label="逆时针旋转"
+            aria-label={m.rotateCcw}
             class="p-2 rounded-lg text-white/80 hover:bg-white/10 hover:text-white transition-colors"
             onClick={(e: Event) => {
               e.stopPropagation();
@@ -1509,7 +1554,7 @@ export function ImageViewer(props: ImageViewerProps): JSXRenderable {
           </button>
           <button
             type="button"
-            aria-label="顺时针旋转"
+            aria-label={m.rotateCw}
             class="p-2 rounded-lg text-white/80 hover:bg-white/10 hover:text-white transition-colors"
             onClick={(e: Event) => {
               e.stopPropagation();
@@ -1520,14 +1565,14 @@ export function ImageViewer(props: ImageViewerProps): JSXRenderable {
           </button>
           <button
             type="button"
-            aria-label="重置缩放与旋转"
+            aria-label={m.resetAriaLabel}
             class="px-3 py-1.5 rounded-lg text-sm text-white/80 hover:bg-white/10 hover:text-white transition-colors"
             onClick={(e: Event) => {
               e.stopPropagation();
               handleResetTransform();
             }}
           >
-            重置
+            {m.reset}
           </button>
         </div>
 

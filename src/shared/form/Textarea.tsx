@@ -17,6 +17,19 @@ import {
 } from "./input-focus-ring.ts";
 import { commitMaybeSignal, type MaybeSignal } from "./maybe-signal.ts";
 
+/**
+ * Textarea 内置文案。
+ */
+export interface TextareaMessages {
+  /** 字数提示文本，参数为剩余字符数与上限 */
+  remaining: (remaining: number, maxLength: number) => string;
+}
+
+/** 默认中文文案 */
+export const defaultTextareaMessages: TextareaMessages = {
+  remaining: (remaining, maxLength) => `剩余 ${remaining} / ${maxLength}`,
+};
+
 export interface TextareaProps {
   /** 是否禁用 */
   disabled?: boolean;
@@ -60,11 +73,13 @@ export interface TextareaProps {
   id?: string;
   /** 内部 textarea ref，便于旧表单迁移后继续读取 DOM 值 */
   textareaRef?: ViewRefObject<HTMLTextAreaElement>;
+  /** 多语言/自定义文案；未传字段走 {@link defaultTextareaMessages} */
+  messages?: Partial<TextareaMessages>;
 }
 
 /** 基础底纹（不含 ring） */
 const textareaSurface =
-  "border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 border-slate-300 dark:border-slate-600 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed transition-colors px-3 py-2 text-sm rounded-lg resize-y min-h-[80px]";
+  "border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 border-slate-300 dark:border-slate-600 focus:outline-hidden disabled:opacity-50 disabled:cursor-not-allowed transition-colors px-3 py-2 text-sm rounded-lg resize-y min-h-[80px]";
 const readOnlyCls = "bg-slate-50 dark:bg-slate-800/80 cursor-default";
 
 /**
@@ -74,8 +89,10 @@ const readOnlyCls = "bg-slate-50 dark:bg-slate-800/80 cursor-default";
 function TextareaLengthDisplay(props: {
   value?: MaybeSignal<string>;
   maxLength: number;
+  /** 由父组件合并默认值后传入，避免子组件再次合并 */
+  remainingFormatter: (remaining: number, maxLength: number) => string;
 }) {
-  const { value, maxLength } = props;
+  const { value, maxLength, remainingFormatter } = props;
   const s = typeof value === "function" ? value() : (value ?? "");
   const len = s.length;
   const remaining = Math.max(0, maxLength - len);
@@ -84,7 +101,7 @@ function TextareaLengthDisplay(props: {
       class="mt-1 block text-left text-xs text-slate-500 dark:text-slate-400"
       aria-live="polite"
     >
-      剩余 {remaining} / {maxLength}
+      {remainingFormatter(remaining, maxLength)}
     </span>
   );
 }
@@ -112,7 +129,9 @@ export function Textarea(props: TextareaProps): JSXRenderable {
     name,
     id,
     textareaRef,
+    messages,
   } = props;
+  const m = { ...defaultTextareaMessages, ...messages };
 
   /** 在 {@link import("./FormItem.tsx").FormItem} 下且未显式 `id` 时，与 `label[for]` 自动对齐 */
   const fromFormItem = useContext(FormItemControlIdContext);
@@ -182,7 +201,11 @@ export function Textarea(props: TextareaProps): JSXRenderable {
   return () => (
     <div>
       <textarea {...textareaProps} />
-      <TextareaLengthDisplay value={value} maxLength={maxLength} />
+      <TextareaLengthDisplay
+        value={value}
+        maxLength={maxLength}
+        remainingFormatter={m.remaining}
+      />
     </div>
   );
 }

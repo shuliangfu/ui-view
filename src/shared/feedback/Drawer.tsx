@@ -85,7 +85,20 @@ export interface DrawerProps {
    * 铺满背景的导航可传 `p-0 min-h-0 flex-1 overflow-hidden flex flex-col` 等去掉内边距。
    */
   contentClass?: string;
+  /** 多语言/自定义文案；未传字段走 {@link defaultDrawerMessages} */
+  messages?: Partial<DrawerMessages>;
 }
+
+/** Drawer 内置文案 */
+export interface DrawerMessages {
+  /** 关闭按钮 `aria-label` */
+  close: string;
+}
+
+/** 默认中文文案 */
+export const defaultDrawerMessages: DrawerMessages = {
+  close: "关闭",
+};
 
 const defaultWidth = "360px";
 
@@ -181,6 +194,11 @@ export function Drawer(props: DrawerProps): JSXRenderable {
     titleBarClass,
     contentClass,
   } = props;
+  /** 合并默认中文文案与外部传入 messages */
+  const m: DrawerMessages = {
+    ...defaultDrawerMessages,
+    ...(props.messages ?? {}),
+  };
 
   /**
    * 须无条件调用：`createRenderEffect` 内读 {@link isOpen}，订阅 `open` 的 `Signal`。
@@ -201,7 +219,7 @@ export function Drawer(props: DrawerProps): JSXRenderable {
   const drawerPanelStyle: Record<string, string> = {
     width: widthStyle,
     maxWidth: "100vw",
-    /** 与 `max-h-[100dvh]` 配合，避免移动浏览器地址栏导致高度不足 */
+    /** 与 Tailwind `max-h-dvh` 一致，限制面板不超过动态视口（移动浏览器地址栏） */
     height: "100%",
     maxHeight: "100dvh",
   };
@@ -268,7 +286,7 @@ export function Drawer(props: DrawerProps): JSXRenderable {
         <div
           ref={setDrawerRef}
           class={twMerge(
-            "relative z-10 flex min-h-0 flex-col h-full max-h-[100dvh] bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-xl",
+            "relative z-10 flex min-h-0 flex-col h-full max-h-dvh bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-xl",
             isLeft ? "ml-0" : "ml-auto",
             className,
           )}
@@ -319,7 +337,7 @@ export function Drawer(props: DrawerProps): JSXRenderable {
               {closable && (
                 <button
                   type="button"
-                  aria-label="关闭"
+                  aria-label={m.close}
                   class={twMerge(
                     "p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 shrink-0",
                     titleAlign === "center" &&
@@ -336,7 +354,7 @@ export function Drawer(props: DrawerProps): JSXRenderable {
             <div class="absolute top-4 right-4 z-10">
               <button
                 type="button"
-                aria-label="关闭"
+                aria-label={m.close}
                 class="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400"
                 onClick={() => onClose?.()}
               >

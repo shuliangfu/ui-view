@@ -10,6 +10,8 @@ import {
   type DocsApiTableRow,
 } from "../../../components/DocsApiTable.tsx";
 import { MobileDocDemo } from "../../../components/MobileDocDemo.tsx";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
+import { MESSAGES_TREE_SELECT } from "../../../data/component-messages-rows.ts";
 
 const TREE_OPTIONS = [
   {
@@ -70,6 +72,12 @@ const TREE_API: DocsApiTableRow[] = [
   },
   { name: "name", type: "string", default: "-", description: "原生 name" },
   { name: "id", type: "string", default: "-", description: "原生 id" },
+  {
+    name: "messages",
+    type: "Partial<TreeSelectMessages>",
+    default: "-",
+    description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
+  },
 ];
 
 const importCode = `import { TreeSelect } from "@dreamer/ui-view/mobile";
@@ -143,6 +151,12 @@ export default function MobileTreeSelectDoc() {
       </section>
 
       <section class="space-y-4">
+        <DocsMessagesSection
+          interfaceName="TreeSelectMessages"
+          defaultExportName="defaultTreeSelectMessages"
+          rows={MESSAGES_TREE_SELECT}
+        />
+
         <Title level={2}>API</Title>
         <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
           与 Select 的差异见 shared TreeSelect 文件头注释（平铺 options vs 树形

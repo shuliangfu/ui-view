@@ -12,6 +12,8 @@ import {
   Paragraph,
   Title,
 } from "@dreamer/ui-view";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
+import { MESSAGES_IMAGE_VIEWER } from "../../../data/component-messages-rows.ts";
 
 const DEMO_IMAGES = [
   "https://picsum.photos/id/1/800/600",
@@ -91,6 +93,12 @@ const IMAGE_VIEWER_API: ApiRow[] = [
     default: '"fade"',
     description:
       "主图切换动画：none / fade / slide / blur / zoom / mosaic；可与 open 一样传 Signal",
+  },
+  {
+    name: "messages",
+    type: "Partial<ImageViewerMessages>",
+    default: "-",
+    description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
   },
 ];
 
@@ -274,6 +282,12 @@ export default function DataDisplayImageViewer() {
           />
         </div>
       </section>
+
+      <DocsMessagesSection
+        interfaceName="ImageViewerMessages"
+        defaultExportName="defaultImageViewerMessages"
+        rows={MESSAGES_IMAGE_VIEWER}
+      />
 
       <section class="space-y-3">
         <Title level={2}>API</Title>

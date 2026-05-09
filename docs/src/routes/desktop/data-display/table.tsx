@@ -13,6 +13,8 @@ import {
   Title,
 } from "@dreamer/ui-view";
 import { createSignal } from "@dreamer/view";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
+import { MESSAGES_TABLE } from "../../../data/component-messages-rows.ts";
 
 type Row = { key: string; name: string; age: number; address: string };
 
@@ -152,6 +154,12 @@ const TABLE_API: ApiRow[] = [
     default: "-",
     description:
       "可编辑列变更（双击单元格进入编辑、失焦退出）；父组件受控更新 dataSource。不传则不可进入编辑",
+  },
+  {
+    name: "messages",
+    type: "Partial<TableMessages>",
+    default: "-",
+    description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
   },
 ];
 
@@ -853,6 +861,12 @@ export default function DataDisplayTable() {
           />
         </div>
       </section>
+
+      <DocsMessagesSection
+        interfaceName="TableMessages"
+        defaultExportName="defaultTableMessages"
+        rows={MESSAGES_TABLE}
+      />
 
       <section class="space-y-3">
         <Title level={2}>API</Title>

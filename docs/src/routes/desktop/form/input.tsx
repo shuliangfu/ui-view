@@ -17,6 +17,8 @@ import {
 import { Input } from "@dreamer/ui-view/form";
 
 import { createSignal } from "@dreamer/view";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
+import { MESSAGES_INPUT } from "../../../data/component-messages-rows.ts";
 
 /** 本页 API 表行（与其它表单文档页结构一致） */
 interface ApiRow {
@@ -147,6 +149,12 @@ const INPUT_API: ApiRow[] = [
     default: "-",
     description:
       "`true` 时按 type 自动写原生 autocomplete（如 type=email → autocomplete=email）并合并 autofill 暗色 class；`string` 时原样写出（非 `off`/`nope` 时合并暗色 class）；`false`/不传则不加",
+  },
+  {
+    name: "messages",
+    type: "Partial<InputMessages>",
+    default: "-",
+    description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
   },
 ];
 
@@ -767,6 +775,12 @@ const password = createSignal("");
           </section>
         </div>
       </section>
+
+      <DocsMessagesSection
+        interfaceName="InputMessages"
+        defaultExportName="defaultInputMessages"
+        rows={MESSAGES_INPUT}
+      />
 
       <section class="space-y-3">
         <Title level={2}>API</Title>

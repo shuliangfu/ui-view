@@ -87,7 +87,23 @@ export interface PopconfirmProps {
   class?: string;
   /** 面板 class */
   overlayClass?: string;
+  /** 多语言/自定义文案；未传字段走 {@link defaultPopconfirmMessages}；`okText`/`cancelText` 优先级高于 messages */
+  messages?: Partial<PopconfirmMessages>;
 }
+
+/** Popconfirm 内置文案 */
+export interface PopconfirmMessages {
+  /** 「确定」按钮 */
+  ok: string;
+  /** 「取消」按钮 */
+  cancel: string;
+}
+
+/** 默认中文文案 */
+export const defaultPopconfirmMessages: PopconfirmMessages = {
+  ok: "确定",
+  cancel: "取消",
+};
 
 /** 标记气泡面板根节点，供文档 `click` 与 `composedPath` 判断是否点在面板内 */
 const POPCONFIRM_PANEL_ATTR = "data-dreamer-popconfirm-panel";
@@ -100,7 +116,7 @@ const POPCONFIRM_PANEL_ATTR = "data-dreamer-popconfirm-panel";
  */
 function popconfirmArrowClass(placement: PopconfirmPlacement): string {
   const base =
-    "absolute z-[1] w-2 h-2 rotate-45 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 pointer-events-none";
+    "absolute z-1 w-2 h-2 rotate-45 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 pointer-events-none";
   if (placement.startsWith("top")) {
     return `${base} bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 border-t-0 border-l-0`;
   }
@@ -156,10 +172,15 @@ function buildPopconfirmTree(
   setTriggerRef: (el: unknown) => void,
   setFloatingRef: (el: unknown) => void,
 ) {
+  /** 合并默认中文文案与外部传入 messages，再以显式 okText/cancelText 覆盖 */
+  const _msg: PopconfirmMessages = {
+    ...defaultPopconfirmMessages,
+    ...(props.messages ?? {}),
+  };
   const {
     title,
-    okText = "确定",
-    cancelText = "取消",
+    okText = _msg.ok,
+    cancelText = _msg.cancel,
     showIcon = true,
     placement = "top",
     arrow = true,
@@ -179,7 +200,7 @@ function buildPopconfirmTree(
       {openNow && typeof globalThis.document !== "undefined" && (
         <Portal mount={globalThis.document.body}>
           <div
-            class="fixed z-[1065] overflow-visible pointer-events-auto"
+            class="fixed z-1065 overflow-visible pointer-events-auto"
             style={() =>
               getPortalStyle()}
           >

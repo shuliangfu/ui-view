@@ -41,7 +41,20 @@ export interface SegmentedProps<T = string> {
   stateKey?: string;
   /** 额外 class */
   class?: string;
+  /** 多语言/自定义文案；未传字段走 {@link defaultSegmentedMessages} */
+  messages?: Partial<SegmentedMessages>;
 }
+
+/** Segmented 内置文案 */
+export interface SegmentedMessages {
+  /** 容器 `aria-label` */
+  ariaLabel: string;
+}
+
+/** 默认中文文案 */
+export const defaultSegmentedMessages: SegmentedMessages = {
+  ariaLabel: "分段选择",
+};
 
 const sizeClasses: Record<SizeVariant, string> = {
   xs: "text-xs px-2 py-1",
@@ -63,6 +76,11 @@ export function Segmented<T extends string = string>(
     children,
     class: className,
   } = props;
+  /** 合并默认中文文案与外部传入 messages */
+  const m: SegmentedMessages = {
+    ...defaultSegmentedMessages,
+    ...(props.messages ?? {}),
+  };
 
   /** 选中/未选中样式（与 button 及 DOM 保底更新一致） */
   const selectedCls =
@@ -83,7 +101,7 @@ export function Segmented<T extends string = string>(
           className,
         )}
         role="group"
-        aria-label="分段选择"
+        aria-label={m.ariaLabel}
       >
         {children}
       </div>
@@ -124,7 +142,7 @@ export function Segmented<T extends string = string>(
         className,
       )}
       role="tablist"
-      aria-label="分段选择"
+      aria-label={m.ariaLabel}
     >
       {options.map((opt) => {
         const isSelected = getDisplayValue() === opt.value;

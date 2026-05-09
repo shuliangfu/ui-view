@@ -4,6 +4,8 @@
  */
 
 import { Button, CodeBlock, Empty, Paragraph, Title } from "@dreamer/ui-view";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
+import { MESSAGES_EMPTY } from "../../../data/component-messages-rows.ts";
 
 /** API 属性行类型 */
 interface ApiRow {
@@ -45,6 +47,12 @@ const EMPTY_API: ApiRow[] = [
     type: "string",
     default: "-",
     description: "描述 class",
+  },
+  {
+    name: "messages",
+    type: "Partial<EmptyMessages>",
+    default: "-",
+    description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
   },
 ];
 
@@ -143,6 +151,12 @@ export default function DataDisplayEmpty() {
           />
         </div>
       </section>
+
+      <DocsMessagesSection
+        interfaceName="EmptyMessages"
+        defaultExportName="defaultEmptyMessages"
+        rows={MESSAGES_EMPTY}
+      />
 
       <section class="space-y-3">
         <Title level={2}>API</Title>

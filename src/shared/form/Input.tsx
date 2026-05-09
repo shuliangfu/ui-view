@@ -10,6 +10,7 @@ import {
   type ViewRefObject,
 } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
+import { resolveFormControlSize } from "./form-control-context.ts";
 import { FormItemControlIdContext } from "./form-item-control-id.ts";
 import type { SizeVariant } from "../types.ts";
 import {
@@ -23,6 +24,19 @@ import {
   inputNativeAutoComplete,
 } from "./input-autofill-classes.ts";
 import { commitMaybeSignal, type MaybeSignal } from "./maybe-signal.ts";
+
+/**
+ * Input 内置文案。
+ */
+export interface InputMessages {
+  /** 清除按钮 `aria-label`（`allowClear` 时显示） */
+  clear: string;
+}
+
+/** 默认中文文案 */
+export const defaultInputMessages: InputMessages = {
+  clear: "清除",
+};
 
 export interface InputProps {
   /** 尺寸 */
@@ -77,6 +91,8 @@ export interface InputProps {
    * 自动完成与暗色 `:-webkit-autofill` 长 class：`true` 时合并长 class，并按 `type` 写原生 `autocomplete`（如 `email`→`email`）；`string` 时原样写出并（在非 `off`/`nope` 时）合并长 class；`false`/不传则二者皆无。
    */
   autoComplete?: boolean | string;
+  /** 多语言/自定义文案；未传字段走 {@link defaultInputMessages} */
+  messages?: Partial<InputMessages>;
 }
 
 const sizeClasses: Record<SizeVariant, string> = {
@@ -111,7 +127,7 @@ const sizeTextClasses: Record<SizeVariant, string> = {
 
 /** 底纹：不含 `:-webkit-autofill` 长类；autofill 见 {@link autofillVisualClass}（仅当设了 `autoComplete` 时合并） */
 const inputSurfaceBase =
-  "border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 border-slate-300 dark:border-slate-600 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed transition-colors";
+  "border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 border-slate-300 dark:border-slate-600 focus:outline-hidden disabled:opacity-50 disabled:cursor-not-allowed transition-colors";
 const readOnlyCls = "bg-slate-50 dark:bg-slate-800/80 cursor-default";
 
 /** 左右缀：与中间输入区分隔线、略浅底，仍在同一外框内 */
@@ -170,6 +186,8 @@ function InputGroupShell(props: {
   onClick: InputProps["onClick"];
   onPaste: InputProps["onPaste"];
   onClear: () => void;
+  /** 清除按钮 `aria-label` */
+  clearLabel: string;
 }) {
   const {
     size,
@@ -198,10 +216,11 @@ function InputGroupShell(props: {
     onClick,
     onPaste,
     onClear,
+    clearLabel,
   } = props;
 
   const innerInputCls = twMerge(
-    "min-w-0 flex-1 border-0 bg-transparent shadow-none outline-none focus:ring-0",
+    "min-w-0 flex-1 border-0 bg-transparent shadow-none outline-hidden focus:ring-0",
     "text-inherit placeholder:text-slate-400 dark:placeholder:text-slate-500",
     "disabled:cursor-not-allowed",
     autofillVisualClass(autoCompleteHint),
@@ -247,7 +266,7 @@ function InputGroupShell(props: {
               sizePadYClasses[size],
             )}
             onClick={onClear}
-            aria-label="清除"
+            aria-label={clearLabel}
           >
             <ClearIcon />
           </button>
@@ -271,7 +290,7 @@ function InputGroupShell(props: {
 
 export function Input(props: InputProps): JSXRenderable {
   const {
-    size = "md",
+    size: sizeProp,
     disabled = false,
     placeholder,
     value,
@@ -296,7 +315,10 @@ export function Input(props: InputProps): JSXRenderable {
     id,
     inputRef,
     autoComplete,
+    messages,
   } = props;
+  const m = { ...defaultInputMessages, ...messages };
+  const size = resolveFormControlSize(sizeProp);
 
   /** 在 {@link import("./FormItem.tsx").FormItem} 下且未显式 `id` 时，与 `label[for]` 自动对齐 */
   const fromFormItem = useContext(FormItemControlIdContext);
@@ -423,6 +445,7 @@ export function Input(props: InputProps): JSXRenderable {
         onClick={onClick}
         onPaste={onPaste}
         onClear={handleClear}
+        clearLabel={m.clear}
       />
     );
   };

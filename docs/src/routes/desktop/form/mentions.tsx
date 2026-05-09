@@ -13,6 +13,8 @@ import {
 } from "@dreamer/ui-view";
 import type { MentionOption } from "@dreamer/ui-view";
 import { createSignal } from "@dreamer/view";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
+import { MESSAGES_MENTIONS } from "../../../data/component-messages-rows.ts";
 
 interface ApiRow {
   name: string;
@@ -117,6 +119,12 @@ const MENTIONS_API: ApiRow[] = [
     description: "为 true 时隐藏聚焦时的蓝色激活边框（ring）；默认 false 显示",
   },
   { name: "class", type: "string", default: "-", description: "额外 class" },
+  {
+    name: "messages",
+    type: "Partial<MentionsMessages>",
+    default: "-",
+    description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
+  },
 ];
 
 const mentionOptions: MentionOption[] = [
@@ -128,6 +136,8 @@ const mentionOptions: MentionOption[] = [
 const importCode = `import { Mentions, Form, FormItem } from "@dreamer/ui-view";
 import type { MentionOption } from "@dreamer/ui-view";
 import { createSignal } from "@dreamer/view";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
+import { MESSAGES_MENTIONS } from "../../../data/component-messages-rows.ts";
 
 const options: MentionOption[] = [{ value: "u1", label: "张三" }];
 const val = createSignal("");
@@ -288,6 +298,12 @@ export default function FormMentions() {
           </section>
         </Form>
       </section>
+
+      <DocsMessagesSection
+        interfaceName="MentionsMessages"
+        defaultExportName="defaultMentionsMessages"
+        rows={MESSAGES_MENTIONS}
+      />
 
       <section class="space-y-3">
         <Title level={2}>API</Title>

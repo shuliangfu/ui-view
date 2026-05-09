@@ -7,6 +7,7 @@ import { createContext, useContext } from "@dreamer/view";
 import type { JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import type { ColorVariant, SizeVariant } from "../../shared/types.ts";
+import { resolveFormControlSize } from "../form/form-control-context.ts";
 import {
   BUTTON_GROUP_CHILD_BASE,
   BUTTON_SIZE_CLASSES,
@@ -83,7 +84,7 @@ export function Button(props: ButtonProps): JSXRenderable {
   const {
     itemKey,
     variant = "primary",
-    size = "md",
+    size: sizeProp,
     disabled = false,
     loading = false,
     type = "button",
@@ -91,6 +92,7 @@ export function Button(props: ButtonProps): JSXRenderable {
     onClick,
     children,
   } = props;
+  const size = resolveFormControlSize(sizeProp);
 
   const { attached: inAttachedGroup } = useContext(ButtonGroupContext);
 

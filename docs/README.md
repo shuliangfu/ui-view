@@ -18,6 +18,16 @@ deno task build
 deno task start
 ```
 
+## 文案（messages）与 API 表
+
+支持 `messages` / `defaultXxxMessages` 的组件，在文档页中应：
+
+- 使用 **`DocsMessagesSection`**（`src/components/DocsMessagesSection.tsx`）在
+  **API 章节之上**单独展示「文案（messages）」；
+- 文案字段使用 **`DocsApiTable`** 且 **`nameColumnHeader="字段"`**，与下方 **API
+  属性表**分开，**不要把各文案键摊进 props 表**；
+- API 表中仅保留一行 **`messages`**：`Partial<…Messages>`，说明指向文案表。
+
 ## 结构说明
 
 | 路径                      | 说明                                                   |

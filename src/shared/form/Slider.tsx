@@ -18,6 +18,22 @@ import type { JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import { commitMaybeSignal, type MaybeSignal } from "./maybe-signal.ts";
 
+/**
+ * Slider 内置文案。
+ */
+export interface SliderMessages {
+  /** range 模式左侧滑块 `aria-label` */
+  rangeMin: string;
+  /** range 模式右侧滑块 `aria-label` */
+  rangeMax: string;
+}
+
+/** 默认中文文案 */
+export const defaultSliderMessages: SliderMessages = {
+  rangeMin: "范围最小值",
+  rangeMax: "范围最大值",
+};
+
 export interface SliderProps {
   /** 当前值；见 {@link MaybeSignal}（单值或 range 元组） */
   value?: MaybeSignal<number | [number, number]>;
@@ -45,6 +61,8 @@ export interface SliderProps {
   name?: string;
   /** 原生 id */
   id?: string;
+  /** 多语言/自定义文案；未传字段走 {@link defaultSliderMessages} */
+  messages?: Partial<SliderMessages>;
 }
 
 /**
@@ -71,7 +89,7 @@ const trackHorizontalCls = "h-2 w-full";
  * - WebKit 拇指相对 h-2 轨道易偏下，用 -mt-[6px] 与 track 高约对齐（h-5 thumb、h-2 track）。
  */
 const rangeOverlayThumbCls =
-  "pointer-events-none absolute inset-x-0 top-1/2 z-[3] h-10 w-full -translate-y-1/2 cursor-pointer appearance-none bg-transparent disabled:cursor-not-allowed disabled:opacity-50 " +
+  "pointer-events-none absolute inset-x-0 top-1/2 z-3 h-10 w-full -translate-y-1/2 cursor-pointer appearance-none bg-transparent disabled:cursor-not-allowed disabled:opacity-50 " +
   "[&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:-mt-[6px] [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-blue-600 dark:[&::-webkit-slider-thumb]:bg-blue-500 [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:shadow " +
   "[&::-webkit-slider-runnable-track]:h-2 [&::-webkit-slider-runnable-track]:rounded-full [&::-webkit-slider-runnable-track]:bg-transparent " +
   "[&::-moz-range-thumb]:pointer-events-auto [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-blue-600 dark:[&::-moz-range-thumb]:bg-blue-500 [&::-moz-range-thumb]:cursor-pointer [&::-moz-range-thumb]:-translate-y-1.5 " +
@@ -309,7 +327,9 @@ export function Slider(props: SliderProps): JSXRenderable {
       class: className,
       name,
       id,
+      messages,
     } = props;
+    const m = { ...defaultSliderMessages, ...messages };
 
     const clamp = (v: number) => Math.min(max, Math.max(min, v));
 
@@ -418,7 +438,7 @@ export function Slider(props: SliderProps): JSXRenderable {
               <input
                 ref={rangeLowRef}
                 type="range"
-                aria-label="范围最小值"
+                aria-label={m.rangeMin}
                 min={min}
                 max={max}
                 step={step}
@@ -431,7 +451,7 @@ export function Slider(props: SliderProps): JSXRenderable {
               <input
                 ref={rangeHighRef}
                 type="range"
-                aria-label="范围最大值"
+                aria-label={m.rangeMax}
                 min={min}
                 max={max}
                 step={step}
@@ -452,7 +472,7 @@ export function Slider(props: SliderProps): JSXRenderable {
             <input
               ref={rangeLowRef}
               type="range"
-              aria-label="范围最小值"
+              aria-label={m.rangeMin}
               min={min}
               max={max}
               step={step}
@@ -467,7 +487,7 @@ export function Slider(props: SliderProps): JSXRenderable {
             <input
               ref={rangeHighRef}
               type="range"
-              aria-label="范围最大值"
+              aria-label={m.rangeMax}
               min={min}
               max={max}
               step={step}

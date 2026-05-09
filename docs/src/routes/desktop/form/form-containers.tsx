@@ -18,6 +18,8 @@ import {
 import { createSignal } from "@dreamer/view";
 
 import { FORM_ITEM_API, type FormDocsApiRow } from "./form-item-api.ts";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
+import { MESSAGES_FORM_LIST } from "../../../data/component-messages-rows.ts";
 
 /** Form 容器属性说明 */
 const FORM_API: FormDocsApiRow[] = [
@@ -91,6 +93,13 @@ const FORM_LIST_API: FormDocsApiRow[] = [
     type: "unknown",
     default: "-",
     description: "无 renderRow 时每行挂载同一模板；按索引变化请用 renderRow",
+  },
+  {
+    name: "messages",
+    type: "Partial<FormListMessages>",
+    default: "-",
+    description:
+      "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表（addButtonText 仍优先于 messages.addButton）",
   },
 ];
 
@@ -440,6 +449,12 @@ function renderRow(index: number, { removeButton }: { removeButton: unknown }) {
           <Title level={3}>FormItem</Title>
           <ApiTable rows={FORM_ITEM_API} />
         </div>
+
+        <DocsMessagesSection
+          interfaceName="FormListMessages"
+          defaultExportName="defaultFormListMessages"
+          rows={MESSAGES_FORM_LIST}
+        />
 
         <div class="space-y-2">
           <Title level={3}>FormList</Title>

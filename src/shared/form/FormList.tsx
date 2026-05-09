@@ -9,6 +9,28 @@
 import { twMerge } from "tailwind-merge";
 import type { JSXRenderable } from "@dreamer/view";
 
+/**
+ * FormList 内置文案。
+ */
+export interface FormListMessages {
+  /** 新增按钮默认文案；与 {@link FormListProps.addButtonText} 同义，后者优先 */
+  addButton: string;
+  /** 行尾删除按钮的可见文字 */
+  remove: string;
+  /** 删除按钮 `aria-label`，参数为该行序号（1-based） */
+  removeRow: (index: number) => string;
+  /** 整个 FormList 容器 `aria-label` */
+  list: string;
+}
+
+/** 默认中文文案 */
+export const defaultFormListMessages: FormListMessages = {
+  addButton: "添加一项",
+  remove: "删除",
+  removeRow: (index) => `删除第 ${index} 项`,
+  list: "动态列表",
+};
+
 /** `renderRow` 第二参数：由 FormList 注入，供与输入同行展示 */
 export interface FormListRenderRowContext {
   /**
@@ -42,6 +64,8 @@ export interface FormListProps {
    * 需要按 `index` 变化内容时请用 {@link FormListProps.renderRow}，勿在子节点写 `(index)=>...`。
    */
   children?: unknown;
+  /** 多语言/自定义文案；未传字段走 {@link defaultFormListMessages} */
+  messages?: Partial<FormListMessages>;
 }
 
 const wrapCls = "flex flex-col gap-3";
@@ -53,26 +77,28 @@ const rowMainCls = "min-w-0 w-fit max-w-full";
 const renderRowWrapCls = "min-w-0 max-w-full";
 
 const removeBtnCls =
-  "inline-flex shrink-0 items-center px-2 py-1 text-sm leading-5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-slate-700 rounded focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50";
+  "inline-flex shrink-0 items-center px-2 py-1 text-sm leading-5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-slate-700 rounded focus:outline-hidden focus:ring-2 focus:ring-red-500 disabled:opacity-50";
 
 /**
  * 构建单行删除按钮。
  *
  * @param index 行索引（从 0 起）
  * @param onRemove 删除回调
+ * @param messages 已合并默认值的文案
  */
 function removeButtonForRow(
   index: number,
   onRemove: (i: number) => void,
+  messages: FormListMessages,
 ): unknown {
   return (
     <button
       type="button"
       class={removeBtnCls}
       onClick={() => onRemove(index)}
-      aria-label={`删除第 ${index + 1} 项`}
+      aria-label={messages.removeRow(index + 1)}
     >
-      删除
+      {messages.remove}
     </button>
   );
 }
@@ -82,19 +108,21 @@ export function FormList(props: FormListProps): JSXRenderable {
     items,
     onAdd,
     onRemove,
-    addButtonText = "添加一项",
     class: className,
     children,
     renderRow: renderRowProp,
+    messages,
   } = props;
+  const m = { ...defaultFormListMessages, ...messages };
+  const addButtonText = props.addButtonText ?? m.addButton;
 
   const length = typeof items === "number" ? items : items.length;
 
   return (
-    <div class={twMerge(wrapCls, className)} role="group" aria-label="动态列表">
+    <div class={twMerge(wrapCls, className)} role="group" aria-label={m.list}>
       {Array.from({ length }, (_, index) => {
         const removeButton: unknown | null = onRemove != null
-          ? removeButtonForRow(index, onRemove)
+          ? removeButtonForRow(index, onRemove, m)
           : null;
 
         if (renderRowProp != null) {
@@ -115,7 +143,7 @@ export function FormList(props: FormListProps): JSXRenderable {
       {onAdd != null && (
         <button
           type="button"
-          class="text-sm text-blue-600 dark:text-blue-400 hover:underline focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-0"
+          class="text-sm text-blue-600 dark:text-blue-400 hover:underline focus:outline-hidden focus:ring-2 focus:ring-blue-500 rounded px-0"
           onClick={onAdd}
         >
           {addButtonText}

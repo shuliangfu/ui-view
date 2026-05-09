@@ -11,8 +11,25 @@
 import { Button } from "../../shared/basic/Button.tsx";
 import { createMemo, type JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
-import { Modal } from "./Modal.tsx";
-import type { ModalPlacement, ModalProps } from "./Modal.tsx";
+import { defaultModalMessages, Modal } from "./Modal.tsx";
+import type { ModalMessages, ModalPlacement, ModalProps } from "./Modal.tsx";
+
+/**
+ * Dialog 内置文案；继承 {@link ModalMessages}（关闭、全屏等），并新增确定/取消默认文案。
+ */
+export interface DialogMessages extends ModalMessages {
+  /** 确定按钮默认文案；与 {@link DialogProps.confirmText} 同义，后者优先 */
+  confirm: string;
+  /** 取消按钮默认文案；与 {@link DialogProps.cancelText} 同义，后者优先 */
+  cancel: string;
+}
+
+/** 默认中文文案 */
+export const defaultDialogMessages: DialogMessages = {
+  ...defaultModalMessages,
+  confirm: "确定",
+  cancel: "取消",
+};
 
 /**
  * 类系统确认框：小屏左右留白；`actionSheet` 自底部上滑；`default` 为原仅桌面 520 横排。默认定/取为横排，与旧版一致。
@@ -33,7 +50,7 @@ const DIALOG_ALERT_WIDTH = "min(calc(100vw - 2rem), 520px)";
 export interface DialogProps extends
   Omit<
     ModalProps,
-    "footer" | "children"
+    "footer" | "children" | "messages"
   > {
   /** 关闭回调 */
   onClose?: () => void;
@@ -74,6 +91,8 @@ export interface DialogProps extends
   confirmLoading?: boolean;
   /** 是否显示底部（确定/取消）；传 false 则完全不显示 footer */
   showFooter?: boolean;
+  /** 多语言/自定义文案；未传字段走 {@link defaultDialogMessages} */
+  messages?: Partial<DialogMessages>;
 }
 
 /**
@@ -198,7 +217,7 @@ export function Dialog(props: DialogProps): JSXRenderable {
     footer: _dialogFooterSlot,
     footerClass: footerClassIn,
     confirmText: _confirmTextSlot,
-    cancelText = "取消",
+    cancelText: cancelTextIn,
     onConfirm: _onConfirmSlot,
     onCancel,
     danger: _dangerSlot,
@@ -209,8 +228,12 @@ export function Dialog(props: DialogProps): JSXRenderable {
     class: classIn,
     wrapClass: wrapIn,
     placement: placementIn,
+    messages,
     ...restModal
   } = props;
+  const m = { ...defaultDialogMessages, ...messages };
+  /** `cancelText === null` 表示不显示取消按钮；其余情况未传走 messages.cancel */
+  const cancelText = cancelTextIn !== undefined ? cancelTextIn : m.cancel;
 
   const body = content !== undefined ? content : children;
 
@@ -235,7 +258,7 @@ export function Dialog(props: DialogProps): JSXRenderable {
     const warning = readDialogBooleanProp(props.warning);
     const confirmTextResolved = readDialogConfirmTextProp(
       props.confirmText,
-      "确定",
+      m.confirm,
     );
     /** 确定钮语义：危险 > 警告 > 主色 */
     const confirmVariant = danger ? "danger" : warning ? "warning" : "primary";
@@ -294,6 +317,7 @@ export function Dialog(props: DialogProps): JSXRenderable {
       wrapClass={wrapIn}
       placement={placement}
       footerClass={footerClassMerged()}
+      messages={m}
       {...restModal}
       footer={modalFooter()}
     >

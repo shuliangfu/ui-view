@@ -38,6 +38,8 @@ export interface NotificationItem {
   onClose?: () => void;
   /** 弹出位置，默认 top-right */
   placement?: NotificationPlacement;
+  /** 关闭按钮 `aria-label`；缺省 `关闭` */
+  closeAriaLabel?: string;
 }
 
 const notificationListRef = createSignal<NotificationItem[]>([]);
@@ -65,6 +67,8 @@ export interface OpenOptions {
   onClose?: () => void;
   /** 弹出位置，默认 top-right */
   placement?: NotificationPlacement;
+  /** 关闭按钮 `aria-label`；缺省走容器默认 `关闭` */
+  closeAriaLabel?: string;
 }
 
 export function openNotification(options: OpenOptions): string {
@@ -87,6 +91,7 @@ export function openNotification(options: OpenOptions): string {
     onBtnClick: options.onBtnClick,
     onClose: options.onClose,
     placement: options.placement ?? "top-right",
+    closeAriaLabel: options.closeAriaLabel,
   };
   notificationListRef.value = [...list, item];
   if (item.duration > 0) {

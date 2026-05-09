@@ -25,6 +25,37 @@ export interface TransferItem {
   disabled?: boolean;
 }
 
+/**
+ * Transfer 内置文案。
+ */
+export interface TransferMessages {
+  /** 左侧标题默认文案；与 {@link TransferProps.titles}[0] 同义，后者优先 */
+  sourceTitle: string;
+  /** 右侧标题默认文案；与 {@link TransferProps.titles}[1] 同义，后者优先 */
+  targetTitle: string;
+  /** 搜索框默认占位；与 {@link TransferProps.searchPlaceholder} 同义，后者优先 */
+  searchPlaceholder: string;
+  /** 列表底部「N 项」文案，参数为过滤后总数 */
+  count: (n: number) => string;
+  /** 列表底部「，已选 N」文案，参数为已选数；要求开头自带分隔符 */
+  selectedSuffix: (n: number) => string;
+  /** 中间向右移动按钮 `aria-label` */
+  moveRight: string;
+  /** 中间向左移动按钮 `aria-label` */
+  moveLeft: string;
+}
+
+/** 默认中文文案 */
+export const defaultTransferMessages: TransferMessages = {
+  sourceTitle: "源列表",
+  targetTitle: "目标列表",
+  searchPlaceholder: "搜索",
+  count: (n) => `${n} 项`,
+  selectedSuffix: (n) => `，已选 ${n}`,
+  moveRight: "右移",
+  moveLeft: "左移",
+};
+
 export interface TransferProps {
   /** 数据源 */
   dataSource: TransferItem[];
@@ -55,6 +86,8 @@ export interface TransferProps {
   disabled?: boolean;
   /** 额外 class */
   class?: string;
+  /** 多语言/自定义文案；未传字段走 {@link defaultTransferMessages} */
+  messages?: Partial<TransferMessages>;
 }
 
 /**
@@ -92,6 +125,10 @@ type TransferColumnProps = {
   onToggleSelect: (key: string) => void;
   onTransfer: (keys: string[]) => void;
   disabled?: boolean;
+  /** 列底部「N 项」格式化函数 */
+  countFormatter: (n: number) => string;
+  /** 列底部「，已选 N」格式化函数 */
+  selectedSuffixFormatter: (n: number) => string;
 };
 
 /**
@@ -113,6 +150,8 @@ function TransferColumn(props: TransferColumnProps) {
     onToggleSelect,
     onTransfer,
     disabled = false,
+    countFormatter,
+    selectedSuffixFormatter,
   } = props;
 
   // 搜索框绑定上层 searchRef（非列内 createSignal），父级 getter 重跑时仍为同一信号，避免输入框重挂载失焦。
@@ -190,8 +229,9 @@ function TransferColumn(props: TransferColumnProps) {
                 })}
               </ul>
               <div class="px-2 py-1 text-xs text-slate-500 dark:text-slate-400">
-                {filtered.length} 项
-                {selectedKeys.length > 0 && `，已选 ${selectedKeys.length}`}
+                {countFormatter(filtered.length)}
+                {selectedKeys.length > 0 &&
+                  selectedSuffixFormatter(selectedKeys.length)}
               </div>
             </div>
           );
@@ -206,9 +246,7 @@ export function Transfer(props: TransferProps): JSXRenderable {
     dataSource,
     targetKeys,
     onChange,
-    titles = ["源列表", "目标列表"],
     showSearch = false,
-    searchPlaceholder = ["搜索", "搜索"],
     searchValue,
     onSearch,
     filterOption,
@@ -216,7 +254,13 @@ export function Transfer(props: TransferProps): JSXRenderable {
     listStyle = { width: 200, height: 200 },
     disabled = false,
     class: className,
+    messages,
   } = props;
+  const m = { ...defaultTransferMessages, ...messages };
+  const titles: [string, string] = props.titles ??
+    [m.sourceTitle, m.targetTitle];
+  const searchPlaceholder: [string, string] = props.searchPlaceholder ??
+    [m.searchPlaceholder, m.searchPlaceholder];
 
   const leftSearchRef = createSignal(searchValue?.[0] ?? "");
   const rightSearchRef = createSignal(searchValue?.[1] ?? "");
@@ -289,13 +333,15 @@ export function Transfer(props: TransferProps): JSXRenderable {
           }}
           onTransfer={(keys) => moveToRight(keys)}
           disabled={disabled}
+          countFormatter={m.count}
+          selectedSuffixFormatter={m.selectedSuffix}
         />
         <div class="flex shrink-0 flex-col justify-center gap-2">
           <button
             type="button"
             class={btnCls}
             disabled={disabled}
-            aria-label="右移"
+            aria-label={m.moveRight}
             onClick={() => {
               moveToRight(
                 leftSelectedKeysRef.value.length > 0
@@ -316,7 +362,7 @@ export function Transfer(props: TransferProps): JSXRenderable {
             type="button"
             class={btnCls}
             disabled={disabled}
-            aria-label="左移"
+            aria-label={m.moveLeft}
             onClick={() => {
               moveToLeft(
                 rightSelectedKeysRef.value.length > 0
@@ -355,6 +401,8 @@ export function Transfer(props: TransferProps): JSXRenderable {
           }}
           onTransfer={(keys) => moveToLeft(keys)}
           disabled={disabled}
+          countFormatter={m.count}
+          selectedSuffixFormatter={m.selectedSuffix}
         />
       </div>
     );

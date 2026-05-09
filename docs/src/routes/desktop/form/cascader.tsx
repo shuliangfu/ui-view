@@ -13,6 +13,8 @@ import {
 } from "@dreamer/ui-view";
 import type { CascaderOption } from "@dreamer/ui-view";
 import { createSignal } from "@dreamer/view";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
+import { MESSAGES_CASCADER } from "../../../data/component-messages-rows.ts";
 
 /** 与文档 API 表行结构一致 */
 interface ApiRow {
@@ -102,6 +104,12 @@ const CASCADER_API: ApiRow[] = [
     default: "-",
     description: "根容器额外 class，常用 w-full",
   },
+  {
+    name: "messages",
+    type: "Partial<CascaderMessages>",
+    default: "-",
+    description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
+  },
 ];
 
 /** 三级示例：省 → 市 → 区（组件支持任意深度，浮层多列横向滚动） */
@@ -147,6 +155,8 @@ const OPTIONS = [
 
 const importCode = `import { Cascader, Form, FormItem } from "@dreamer/ui-view";
 import { createSignal } from "@dreamer/view";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
+import { MESSAGES_CASCADER } from "../../../data/component-messages-rows.ts";
 
 const val = createSignal<string[]>([]);
 
@@ -537,6 +547,12 @@ export default function FormCascaderDoc() {
           />
         </section>
       </section>
+
+      <DocsMessagesSection
+        interfaceName="CascaderMessages"
+        defaultExportName="defaultCascaderMessages"
+        rows={MESSAGES_CASCADER}
+      />
 
       <section class="space-y-3">
         <Title level={2}>API</Title>

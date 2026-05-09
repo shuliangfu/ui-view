@@ -9,8 +9,28 @@ import type { JSXRenderable } from "@dreamer/view";
 /** 按需：单文件图标，避免经 icons/mod 拉入全表 */
 import { IconSearch } from "../basic/icons/Search.tsx";
 import type { SizeVariant } from "../types.ts";
+import { resolveFormControlSize } from "./form-control-context.ts";
 import { controlBlueFocusRing } from "./input-focus-ring.ts";
 import { commitMaybeSignal, type MaybeSignal } from "./maybe-signal.ts";
+
+/**
+ * Search 内置文案。
+ */
+export interface SearchMessages {
+  /** 占位文案默认值；与 {@link SearchProps.placeholder} 同义，后者优先 */
+  placeholder: string;
+  /** 清除按钮 `aria-label` */
+  clear: string;
+  /** 搜索按钮 `aria-label`（onSearch 存在时可见） */
+  search: string;
+}
+
+/** 默认中文文案 */
+export const defaultSearchMessages: SearchMessages = {
+  placeholder: "搜索…",
+  clear: "清除",
+  search: "搜索",
+};
 
 export interface SearchProps {
   /** 尺寸 */
@@ -47,6 +67,8 @@ export interface SearchProps {
   name?: string;
   /** 原生 id */
   id?: string;
+  /** 多语言/自定义文案；未传字段走 {@link defaultSearchMessages} */
+  messages?: Partial<SearchMessages>;
 }
 
 const sizeClasses: Record<SizeVariant, string> = {
@@ -58,11 +80,11 @@ const sizeClasses: Record<SizeVariant, string> = {
 
 /** 输入区底纹（不含 ring，由 {@link controlBlueFocusRing}(`!hideFocusRing`) 控制） */
 const inputSurface =
-  "border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 border-slate-300 dark:border-slate-600 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed transition-colors";
+  "border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 border-slate-300 dark:border-slate-600 focus:outline-hidden disabled:opacity-50 disabled:cursor-not-allowed transition-colors";
 
 /** 清除 / 搜索按钮共用底纹（不含 ring） */
 const btnSurface =
-  "absolute top-1/2 -translate-y-1/2 p-1 rounded text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 focus:outline-none disabled:opacity-50";
+  "absolute top-1/2 -translate-y-1/2 p-1 rounded text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 focus:outline-hidden disabled:opacity-50";
 
 /** 清除按钮显隐由 CSS :has(input:not(:placeholder-shown)) 控制，不在组件内读 value()，避免订阅 signal 导致整树重跑、input 失焦。 */
 const clearBtnVisibleCls =
@@ -70,9 +92,8 @@ const clearBtnVisibleCls =
 
 export function Search(props: SearchProps): JSXRenderable {
   const {
-    size = "md",
+    size: sizeProp,
     disabled = false,
-    placeholder = "搜索…",
     value,
     class: className,
     onInput,
@@ -87,7 +108,11 @@ export function Search(props: SearchProps): JSXRenderable {
     name,
     id,
     hideFocusRing = false,
+    messages,
   } = props;
+  const m = { ...defaultSearchMessages, ...messages };
+  const placeholder = props.placeholder ?? m.placeholder;
+  const size = resolveFormControlSize(sizeProp);
 
   const sizeCls = sizeClasses[size];
   // 禁止在组件体内读 value()：会订阅 signal，导致根 effect 重跑、整树重建、input 被替换失焦。
@@ -185,7 +210,7 @@ export function Search(props: SearchProps): JSXRenderable {
           onSearch ? "right-10" : "right-2",
         )}
         disabled={disabled}
-        aria-label="清除"
+        aria-label={m.clear}
         onClick={handleClear}
       >
         <svg
@@ -211,7 +236,7 @@ export function Search(props: SearchProps): JSXRenderable {
             "right-2",
           )}
           disabled={disabled}
-          aria-label="搜索"
+          aria-label={m.search}
           onClick={(e: Event) => {
             const input = (e.currentTarget as HTMLElement).parentElement
               ?.querySelector("input") as HTMLInputElement | null;

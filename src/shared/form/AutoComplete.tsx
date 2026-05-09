@@ -8,8 +8,22 @@ import { createEffect, createRef, createSignal } from "@dreamer/view";
 import type { JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import type { SizeVariant } from "../types.ts";
+import { resolveFormControlSize } from "./form-control-context.ts";
 import { controlBlueFocusRing } from "./input-focus-ring.ts";
 import { commitMaybeSignal, type MaybeSignal } from "./maybe-signal.ts";
+
+/**
+ * AutoComplete 内置文案。
+ */
+export interface AutoCompleteMessages {
+  /** 候选下拉列表 `aria-label` */
+  listbox: string;
+}
+
+/** 默认中文文案 */
+export const defaultAutoCompleteMessages: AutoCompleteMessages = {
+  listbox: "建议列表",
+};
 
 export interface AutoCompleteProps {
   /** 建议选项（用于过滤展示；非空输入时按子串匹配，空输入时展示全部） */
@@ -48,6 +62,8 @@ export interface AutoCompleteProps {
   name?: string;
   /** 原生 id */
   id?: string;
+  /** 多语言/自定义文案；未传字段走 {@link defaultAutoCompleteMessages} */
+  messages?: Partial<AutoCompleteMessages>;
 }
 
 const sizeClasses: Record<SizeVariant, string> = {
@@ -59,7 +75,7 @@ const sizeClasses: Record<SizeVariant, string> = {
 
 /** 输入区底纹（不含 ring） */
 const inputSurface =
-  "border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 border-slate-300 dark:border-slate-600 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed transition-colors";
+  "border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 border-slate-300 dark:border-slate-600 focus:outline-hidden disabled:opacity-50 disabled:cursor-not-allowed transition-colors";
 
 /** 与 Mentions / Select 浮层一致的联想列表样式 */
 const panelCls =
@@ -108,8 +124,18 @@ function AutoCompletePanel(props: {
   options: string[];
   listboxId: string;
   onPick: (opt: string) => void;
+  /** 由父组件合并默认值后传入的 listbox `aria-label` */
+  listboxLabel: string;
 }) {
-  const { open, activeIndex, filterQuery, options, listboxId, onPick } = props;
+  const {
+    open,
+    activeIndex,
+    filterQuery,
+    options,
+    listboxId,
+    onPick,
+    listboxLabel,
+  } = props;
 
   return () => {
     if (!open.value) return null;
@@ -121,7 +147,7 @@ function AutoCompletePanel(props: {
         id={listboxId}
         class={panelCls}
         role="listbox"
-        aria-label="建议列表"
+        aria-label={listboxLabel}
       >
         {filtered.map((opt, i) => (
           <button
@@ -149,7 +175,7 @@ export function AutoComplete(props: AutoCompleteProps): JSXRenderable {
   const {
     options = [],
     value,
-    size = "md",
+    size: sizeProp,
     disabled = false,
     placeholder,
     onChange,
@@ -165,7 +191,10 @@ export function AutoComplete(props: AutoCompleteProps): JSXRenderable {
     hideFocusRing = false,
     name,
     id,
+    messages,
   } = props;
+  const m = { ...defaultAutoCompleteMessages, ...messages };
+  const size = resolveFormControlSize(sizeProp);
 
   const sizeCls = sizeClasses[size];
   const listboxId = id
@@ -359,6 +388,7 @@ export function AutoComplete(props: AutoCompleteProps): JSXRenderable {
         options={options}
         listboxId={listboxId}
         onPick={pickOption}
+        listboxLabel={m.listbox}
       />
     </div>
   );

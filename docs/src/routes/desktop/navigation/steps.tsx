@@ -5,6 +5,8 @@
 
 import { CodeBlock, Paragraph, Steps, Title } from "@dreamer/ui-view";
 import { createMemo, createSignal } from "@dreamer/view";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
+import { MESSAGES_STEPS } from "../../../data/component-messages-rows.ts";
 
 /** API 属性行类型 */
 interface ApiRow {
@@ -41,6 +43,12 @@ const STEPS_API: ApiRow[] = [
     description: "点击某步时回调",
   },
   { name: "class", type: "string", default: "-", description: "额外 class" },
+  {
+    name: "messages",
+    type: "Partial<StepsMessages>",
+    default: "-",
+    description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
+  },
 ];
 
 const STEP_ITEM_API: ApiRow[] = [
@@ -66,6 +74,8 @@ const STEP_ITEM_API: ApiRow[] = [
 
 const importCode = `import { createSignal } from "@dreamer/view";
 import { Steps } from "@dreamer/ui-view";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
+import { MESSAGES_STEPS } from "../../../data/component-messages-rows.ts";
 
 const current = createSignal(0);
 const items = [
@@ -241,6 +251,12 @@ export default function NavigationSteps() {
           />
         </div>
       </section>
+
+      <DocsMessagesSection
+        interfaceName="StepsMessages"
+        defaultExportName="defaultStepsMessages"
+        rows={MESSAGES_STEPS}
+      />
 
       <section class="space-y-3">
         <Title level={2}>API</Title>

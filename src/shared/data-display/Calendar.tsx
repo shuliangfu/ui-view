@@ -57,7 +57,23 @@ export interface CalendarProps {
   disabledDate?: (date: Date) => boolean;
   /** 额外 class */
   class?: string;
+  /** 多语言/自定义文案；未传字段走 {@link defaultCalendarMessages} */
+  messages?: Partial<CalendarMessages>;
 }
+
+/** Calendar 内置文案 */
+export interface CalendarMessages {
+  /** 周几文案，长度须为 7（周日为索引 0） */
+  weekdays: readonly string[];
+  /** 月份文案，长度须为 12 */
+  months: readonly string[];
+}
+
+/** 默认中文文案 */
+export const defaultCalendarMessages: CalendarMessages = {
+  weekdays: WEEKDAYS,
+  months: MONTHS,
+};
 
 export function Calendar(props: CalendarProps): JSXRenderable {
   const {
@@ -74,6 +90,11 @@ export function Calendar(props: CalendarProps): JSXRenderable {
     disabledDate,
     class: className,
   } = props;
+  /** 合并默认中文文案与外部传入 messages */
+  const m: CalendarMessages = {
+    ...defaultCalendarMessages,
+    ...(props.messages ?? {}),
+  };
 
   /**
    * 未传 `value` 时的内部日期（展示月 + single 且未传 selectedDate 时的选中态）。
@@ -169,7 +190,7 @@ export function Calendar(props: CalendarProps): JSXRenderable {
         <div class="grid grid-cols-4 gap-2 p-4">
           {() => {
             const y = frame().year;
-            return MONTHS.map((_, i) => {
+            return m.months.map((_, i) => {
               const d = new Date(y, i, 1);
               return (
                 <button
@@ -189,7 +210,7 @@ export function Calendar(props: CalendarProps): JSXRenderable {
                     onChange?.(d);
                   }}
                 >
-                  {monthCellRender ? monthCellRender(d) : MONTHS[i]}
+                  {monthCellRender ? monthCellRender(d) : m.months[i]}
                 </button>
               );
             });
@@ -208,7 +229,7 @@ export function Calendar(props: CalendarProps): JSXRenderable {
       )}
     >
       <div class="grid grid-cols-7 border-b border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800/50">
-        {WEEKDAYS.map((w) => (
+        {m.weekdays.map((w) => (
           <div
             key={w}
             class="py-2 text-center text-xs font-medium text-slate-500 dark:text-slate-400"

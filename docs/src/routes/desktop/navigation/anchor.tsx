@@ -5,6 +5,8 @@
 
 import { createSignal } from "@dreamer/view";
 import { Anchor, CodeBlock, Paragraph, Title } from "@dreamer/ui-view";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
+import { MESSAGES_ANCHOR } from "../../../data/component-messages-rows.ts";
 
 /** API 属性行类型 */
 interface ApiRow {
@@ -34,6 +36,12 @@ const ANCHOR_API: ApiRow[] = [
     description: "点击或滚动导致高亮变化时回调",
   },
   { name: "class", type: "string", default: "-", description: "额外 class" },
+  {
+    name: "messages",
+    type: "Partial<AnchorMessages>",
+    default: "-",
+    description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
+  },
 ];
 
 const ANCHOR_LINK_API: ApiRow[] = [
@@ -148,6 +156,12 @@ export default function NavigationAnchor() {
           />
         </div>
       </section>
+
+      <DocsMessagesSection
+        interfaceName="AnchorMessages"
+        defaultExportName="defaultAnchorMessages"
+        rows={MESSAGES_ANCHOR}
+      />
 
       <section class="space-y-3">
         <Title level={2}>API</Title>

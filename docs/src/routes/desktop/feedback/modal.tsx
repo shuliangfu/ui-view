@@ -5,6 +5,8 @@
  */
 import { Button, CodeBlock, Modal, Paragraph, Title } from "@dreamer/ui-view";
 import { createSignal } from "@dreamer/view";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
+import { MESSAGES_MODAL } from "../../../data/component-messages-rows.ts";
 
 /** API 属性行类型 */
 interface ApiRow {
@@ -142,6 +144,12 @@ const MODAL_API: ApiRow[] = [
     type: "string",
     default: "-",
     description: "弹层盒子 class",
+  },
+  {
+    name: "messages",
+    type: "Partial<ModalMessages>",
+    default: "-",
+    description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
   },
 ];
 
@@ -919,6 +927,12 @@ demo.value = { open: true, preset: "lg" };
           />
         </div>
       </section>
+
+      <DocsMessagesSection
+        interfaceName="ModalMessages"
+        defaultExportName="defaultModalMessages"
+        rows={MESSAGES_MODAL}
+      />
 
       <section class="space-y-3">
         <Title level={2}>API</Title>

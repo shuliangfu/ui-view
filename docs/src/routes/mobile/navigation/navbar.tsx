@@ -9,6 +9,8 @@ import {
   type DocsApiTableRow,
 } from "../../../components/DocsApiTable.tsx";
 import { MobileDocDemo } from "../../../components/MobileDocDemo.tsx";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
+import { MESSAGES_MOBILE_NAV_BAR } from "../../../data/component-messages-rows.ts";
 
 const NAV_BAR_API: DocsApiTableRow[] = [
   {
@@ -107,6 +109,12 @@ const NAV_BAR_API: DocsApiTableRow[] = [
     default: "-",
     description: "顶栏根节点 class",
   },
+  {
+    name: "messages",
+    type: "Partial<NavBarMessages>",
+    default: "-",
+    description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
+  },
 ];
 
 const importCode = `import { NavBar } from "@dreamer/ui-view/mobile";
@@ -199,6 +207,12 @@ export default function MobileNavBarDoc() {
       </section>
 
       <section class="space-y-4">
+        <DocsMessagesSection
+          interfaceName="NavBarMessages"
+          defaultExportName="defaultNavBarMessages"
+          rows={MESSAGES_MOBILE_NAV_BAR}
+        />
+
         <Title level={2}>API</Title>
         <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
           属性均为可选；无左右区时仅显示标题。

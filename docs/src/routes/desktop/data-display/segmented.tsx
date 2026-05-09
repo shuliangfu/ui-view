@@ -5,6 +5,8 @@
 
 import { createSignal } from "@dreamer/view";
 import { CodeBlock, Paragraph, Segmented, Title } from "@dreamer/ui-view";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
+import { MESSAGES_SEGMENTED } from "../../../data/component-messages-rows.ts";
 
 /** API 属性行类型 */
 interface ApiRow {
@@ -55,6 +57,12 @@ const SEGMENTED_API: ApiRow[] = [
       "可选。传值时非受控选中状态按 key 缓存，整树重渲染后仍保留，避免点击无反应",
   },
   { name: "class", type: "string", default: "-", description: "额外 class" },
+  {
+    name: "messages",
+    type: "Partial<SegmentedMessages>",
+    default: "-",
+    description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
+  },
 ];
 
 const importCode = `import { createSignal } from "@dreamer/view";
@@ -207,6 +215,12 @@ export default function DataDisplaySegmented() {
           />
         </div>
       </section>
+
+      <DocsMessagesSection
+        interfaceName="SegmentedMessages"
+        defaultExportName="defaultSegmentedMessages"
+        rows={MESSAGES_SEGMENTED}
+      />
 
       <section class="space-y-3">
         <Title level={2}>API</Title>

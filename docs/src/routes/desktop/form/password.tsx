@@ -12,6 +12,8 @@ import {
   Title,
 } from "@dreamer/ui-view";
 import { createSignal } from "@dreamer/view";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
+import { MESSAGES_PASSWORD } from "../../../data/component-messages-rows.ts";
 
 interface ApiRow {
   name: string;
@@ -135,10 +137,18 @@ const PASSWORD_API: ApiRow[] = [
     description:
       '与 `autoComplete={true}` 联用：注册/设新密码场景写原生 `autocomplete="new-password"`，否则为 `current-password`',
   },
+  {
+    name: "messages",
+    type: "Partial<PasswordMessages>",
+    default: "-",
+    description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
+  },
 ];
 
 const importCode = `import { Password, Form, FormItem } from "@dreamer/ui-view";
 import { createSignal } from "@dreamer/view";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
+import { MESSAGES_PASSWORD } from "../../../data/component-messages-rows.ts";
 
 const val = createSignal("");
 <FormItem label="密码">
@@ -271,6 +281,12 @@ export default function FormPassword() {
           </section>
         </Form>
       </section>
+
+      <DocsMessagesSection
+        interfaceName="PasswordMessages"
+        defaultExportName="defaultPasswordMessages"
+        rows={MESSAGES_PASSWORD}
+      />
 
       <section class="space-y-3">
         <Title level={2}>API</Title>
