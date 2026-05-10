@@ -5,6 +5,18 @@
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，版本号遵循
 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [1.1.0-beta.20] - 2026-05-10
+
+### 新增
+
+- **Input** 可选属性 `accept`、`multiple`（透传原生）；`type="file"`
+  时不绑定受控 `value`，且不在 input/change 时通过 Signal 写入路径字符串。
+
+### 变更
+
+- **Input** 在 `type="file"` 时跳过清除逻辑对值的同步；组合壳与单输入路径均透传
+  `accept` / `multiple`。
+
 ## [1.1.0-beta.4] - 2026-04-22
 
 ### 变更

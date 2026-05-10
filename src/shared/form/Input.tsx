@@ -85,6 +85,10 @@ export interface InputProps {
   name?: string;
   /** 原生 id */
   id?: string;
+  /** 原生 accept（常用于 `type="file"`） */
+  accept?: string;
+  /** 原生 multiple（常用于 `type="file"`） */
+  multiple?: boolean;
   /** 内部 input ref，便于旧表单在迁移到 Input 后继续读取 DOM 值 */
   inputRef?: ViewRefObject<HTMLInputElement>;
   /**
@@ -188,6 +192,10 @@ function InputGroupShell(props: {
   onClear: () => void;
   /** 清除按钮 `aria-label` */
   clearLabel: string;
+  /** 原生 accept */
+  accept?: string;
+  /** 原生 multiple */
+  multiple?: boolean;
 }) {
   const {
     size,
@@ -217,6 +225,8 @@ function InputGroupShell(props: {
     onPaste,
     onClear,
     clearLabel,
+    accept,
+    multiple,
   } = props;
 
   const innerInputCls = twMerge(
@@ -246,7 +256,9 @@ function InputGroupShell(props: {
         readOnly={readOnly}
         aria-required={required}
         aria-invalid={error}
-        value={value}
+        {...(type !== "file" ? { value } : {})}
+        {...(accept ? { accept } : {})}
+        {...(multiple ? { multiple: true } : {})}
         class={innerInputCls}
         onInput={onInput}
         onChange={onChange}
@@ -316,6 +328,8 @@ export function Input(props: InputProps): JSXRenderable {
     inputRef,
     autoComplete,
     messages,
+    accept,
+    multiple,
   } = props;
   const m = { ...defaultInputMessages, ...messages };
   const size = resolveFormControlSize(sizeProp);
@@ -333,7 +347,9 @@ export function Input(props: InputProps): JSXRenderable {
    * @param e - 原生 input 事件
    */
   const handleInput = (e: Event) => {
-    commitMaybeSignal(value, (e.target as HTMLInputElement).value);
+    if (type !== "file") {
+      commitMaybeSignal(value, (e.target as HTMLInputElement).value);
+    }
     onInput?.(e);
   };
 
@@ -343,11 +359,14 @@ export function Input(props: InputProps): JSXRenderable {
    * @param e - 原生 change 事件
    */
   const handleChange = (e: Event) => {
-    commitMaybeSignal(value, (e.target as HTMLInputElement).value);
+    if (type !== "file") {
+      commitMaybeSignal(value, (e.target as HTMLInputElement).value);
+    }
     onChange?.(e);
   };
 
   const handleClear = () => {
+    if (type === "file") return;
     commitMaybeSignal(value, "");
     const doc = globalThis.document;
     if (!doc?.createElement) return;
@@ -386,6 +405,8 @@ export function Input(props: InputProps): JSXRenderable {
     onKeyUp,
     onClick,
     onPaste,
+    ...(accept ? { accept } : {}),
+    ...(multiple ? { multiple: true as boolean } : {}),
   };
 
   const hasAddon = prefix != null && prefix !== false ||
@@ -393,7 +414,10 @@ export function Input(props: InputProps): JSXRenderable {
     allowClear;
 
   if (!hasAddon) {
-    return () => <input {...inputSpreadProps} value={value} />;
+    return () =>
+      type === "file"
+        ? <input {...inputSpreadProps} />
+        : <input {...inputSpreadProps} value={value} />;
   }
 
   const shellCls = twMerge(
@@ -446,6 +470,8 @@ export function Input(props: InputProps): JSXRenderable {
         onPaste={onPaste}
         onClear={handleClear}
         clearLabel={m.clear}
+        accept={accept}
+        multiple={multiple}
       />
     );
   };

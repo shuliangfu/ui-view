@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0-beta.20] - 2026-05-10
+
+### Added
+
+- **Input** optional `accept` and `multiple` props (native attributes); when
+  `type="file"`, omits controlled `value` on the DOM and skips writing file path
+  strings via `commitMaybeSignal` on input/change.
+
+### Changed
+
+- **Input** clear handler no-ops for `type="file"`; shell and standalone render
+  paths pass through `accept` / `multiple`.
+
 ## [1.1.0-beta.4] - 2026-04-22
 
 ### Changed

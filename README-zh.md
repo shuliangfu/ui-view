@@ -257,11 +257,11 @@ Chart.js：ChartLine、ChartBar、ChartPie、ChartDoughnut、ChartRadar、ChartP
 
 ## 变更日志
 
-**最新：[1.1.0-beta.4] — 2026-04-22**
+**最新：[1.1.0-beta.20] — 2026-05-10**
 
-- **变更：** `uiViewTailwindPlugin` 生成 `@source` CSS 的步骤日志统一走
-  `@dreamer/logger`，为 **debug** 级别；`deno.json` 增加 `jsr:@dreamer/logger`
-  依赖。
+- **新增：** **Input** 支持 `accept`、`multiple`，`type="file"` 时不使用受控路径
+  字符串。
+- **变更：** 文件类型下的清除与输入同步行为与原生 file input 对齐。
 
 完整记录见 [CHANGELOG-zh.md](./CHANGELOG-zh.md)。
 
