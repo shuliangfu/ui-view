@@ -262,16 +262,11 @@ ChartPolarArea, ChartBubble, ChartScatter
 
 ---
 
-## Changelog
+## Documentation
 
-**Latest: [1.1.0-beta.20] — 2026-05-10**
-
-- **Added:** **Input** `accept` / `multiple` for file inputs; safe `type="file"`
-  handling without controlled path values.
-- **Changed:** File-mode clear and event synchronization aligned with native
-  file inputs.
-
-Full history: [CHANGELOG.md](./CHANGELOG.md).
+Version history, migration notes, and full component APIs are maintained on the
+**documentation site**. This repository’s **`docs/`** package holds interactive
+routes and tables — see **`docs/README.md`** to run it locally.
 
 ---
 
