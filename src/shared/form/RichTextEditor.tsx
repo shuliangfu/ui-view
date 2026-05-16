@@ -2164,6 +2164,11 @@ export interface RichTextEditorProps {
   readOnly?: boolean;
   /** 编辑区最小高度（如 "200px"、"10rem"） */
   minHeight?: string;
+  /**
+   * 整格外框最大高度（如 `"70vh"`、`"min(76dvh,42rem)"`）。
+   * 传入后根节点为纵向 flex，正文区在框内 `overflow-auto` 滚动；全屏（`.rte-fullscreen`）时自动取消上限。
+   */
+  maxHeight?: string;
   /** 额外 class（作用于最外层容器） */
   class?: string;
   /** 原生 name（会同步到隐藏 input 便于表单提交） */
@@ -2431,6 +2436,7 @@ export function RichTextEditor(props: RichTextEditorProps): JSXRenderable {
     disabled = false,
     readOnly = false,
     minHeight = "200px",
+    maxHeight,
     class: className,
     name,
     id,
@@ -3559,7 +3565,7 @@ export function RichTextEditor(props: RichTextEditorProps): JSXRenderable {
     return () => (
       <div
         class={twMerge(
-          "px-2 py-1 text-xs text-slate-500 dark:text-slate-400 border-t border-slate-200 dark:border-slate-600",
+          "shrink-0 px-2 py-1 text-xs text-slate-500 dark:text-slate-400 border-t border-slate-200 dark:border-slate-600",
           !showToolbar && "hidden",
         )}
         data-rte-wordcount
@@ -3853,6 +3859,7 @@ export function RichTextEditor(props: RichTextEditorProps): JSXRenderable {
         <div
           class={twMerge(
             toolbarWrapCls,
+            "shrink-0",
             !showToolbar && "hidden",
           )}
           data-rte-toolbar
@@ -4119,7 +4126,11 @@ export function RichTextEditor(props: RichTextEditorProps): JSXRenderable {
     return () => {
       const srcOn = rteSourceMode.value;
       return (
-        <div class="contents">
+        <div
+          class={maxHeight
+            ? "flex min-h-0 flex-1 flex-col overflow-hidden"
+            : "contents"}
+        >
           <div
             key={`${editorId}-body`}
             id={editorId}
@@ -4128,6 +4139,7 @@ export function RichTextEditor(props: RichTextEditorProps): JSXRenderable {
             data-rte-editor
             class={twMerge(
               editorSurface,
+              maxHeight && "min-h-0 flex-1 basis-0",
               srcOn && "hidden",
               readOnly && editorReadOnlyCls,
               "empty:before:content-[attr(data-placeholder)] empty:before:text-slate-400 dark:empty:before:text-slate-500",
@@ -4181,7 +4193,9 @@ export function RichTextEditor(props: RichTextEditorProps): JSXRenderable {
             data-rte-source-editor
             class={twMerge(
               editorSurface,
-              "resize-y font-mono text-xs whitespace-pre-wrap wrap-break-word tab-size-2",
+              maxHeight && "min-h-0 flex-1 basis-0 resize-none",
+              !maxHeight && "resize-y",
+              "font-mono text-xs whitespace-pre-wrap wrap-break-word tab-size-2",
               !srcOn && "hidden",
               readOnly && editorReadOnlyCls,
             )}
@@ -4209,18 +4223,26 @@ export function RichTextEditor(props: RichTextEditorProps): JSXRenderable {
       id={`${editorId}-root`}
       class={twMerge(
         "rounded-lg overflow-hidden border border-slate-300 dark:border-slate-600 relative",
+        /** 限制最大高度时根为纵向 flex，正文在子级滚动；`max-h` 用变量便于全屏态覆盖。 */
+        maxHeight &&
+          "flex min-h-0 max-h-[var(--rte-max-body)] flex-col [&.rte-fullscreen]:max-h-none",
         /** 编辑区获焦时整格外框变蓝，与 Input 系一致；不画内层 ring，避免套在外框里一圈缝 */
         !hideFocusRing &&
           "has-[[data-rte-editor]:focus]:border-blue-500 dark:has-[[data-rte-editor]:focus]:border-blue-400 has-[[data-rte-source-editor]:focus]:border-blue-500 dark:has-[[data-rte-source-editor]:focus]:border-blue-400",
         "[&.rte-fullscreen]:fixed [&.rte-fullscreen]:inset-0 [&.rte-fullscreen]:z-9999 [&.rte-fullscreen]:bg-white [&.rte-fullscreen]:dark:bg-slate-900 [&.rte-fullscreen]:flex [&.rte-fullscreen]:flex-col",
         className,
       )}
+      style={maxHeight
+        ? ({
+          "--rte-max-body": maxHeight,
+        } as Record<string, string> & { "--rte-max-body": string })
+        : undefined}
     >
       <RteToolbarReactiveIsland />
       <div
         id={`${editorId}-findbar`}
         class={twMerge(
-          "flex flex-wrap items-center gap-2 p-2 border-b border-slate-200 dark:border-slate-600 bg-slate-100 dark:bg-slate-800 rte-findbar-hidden",
+          "shrink-0 flex flex-wrap items-center gap-2 p-2 border-b border-slate-200 dark:border-slate-600 bg-slate-100 dark:bg-slate-800 rte-findbar-hidden",
           "[&.rte-findbar-hidden]:h-0 [&.rte-findbar-hidden]:overflow-hidden [&.rte-findbar-hidden]:opacity-0 [&.rte-findbar-hidden]:pointer-events-none [&.rte-findbar-hidden]:min-h-0 [&.rte-findbar-hidden]:p-0 [&.rte-findbar-hidden]:border-b-0",
         )}
         role="search"
