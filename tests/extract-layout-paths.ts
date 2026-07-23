@@ -3,7 +3,7 @@
  * 保证「基础 / 表单 / 消息与通知 / 反馈与浮层 / 布局 / 导航 / 数据展示 / 图表 / 其它」下列出的组件页均有对应文件路由。
  */
 
-import { join } from "@dreamer/runtime-adapter";
+import { join, readTextFile } from "@dreamer/runtime-adapter";
 
 /**
  * 读取 `_layout.tsx` 中所有 `path: "/desktop/..."` 字面量（含分类占位路径如 `/desktop/form`）。
@@ -21,7 +21,7 @@ export async function extractDesktopSidebarPathsFromLayout(
     "desktop",
     "_layout.tsx",
   );
-  const src = await Deno.readTextFile(layoutPath);
+  const src = await readTextFile(layoutPath);
   const out = new Set<string>();
   /** 匹配 MENU 与各 SUBMENU 中的 `path: "/desktop/..."` */
   const re = /path:\s*"(\/desktop[^"]*)"/g;

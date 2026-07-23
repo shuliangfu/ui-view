@@ -17,7 +17,21 @@ deno add jsr:@dreamer/ui-view
 
 # Bun
 bunx jsr add @dreamer/ui-view
+
+# Node.js 22+
+npx jsr add @dreamer/ui-view
 ```
+
+---
+
+## 🌍 Environment Compatibility
+
+| Environment  | Version | Support |
+| ------------ | ------- | ------- |
+| **Deno**     | 2.9+    | ✅      |
+| **Bun**      | 1.3+    | ✅      |
+| **Node.js**  | 22+     | ✅      |
+| Browser      | -       | ✅      |
 
 ---
 

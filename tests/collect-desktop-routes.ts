@@ -6,7 +6,7 @@
  * - 动态段 `[id].tsx` → 用占位 `e2e-1` 便于浏览器访问
  */
 
-import { join } from "@dreamer/runtime-adapter";
+import { join, readdir } from "@dreamer/runtime-adapter";
 
 /**
  * 将动态路由段 `[param]` 替换为可访问的占位路径段。
@@ -49,7 +49,7 @@ export async function collectDesktopDocsRoutes(
   const seen = new Set<string>();
 
   async function walk(dir: string, relFromDesktop: string): Promise<void> {
-    for await (const ent of Deno.readDir(dir)) {
+    for (const ent of await readdir(dir)) {
       if (ent.name.startsWith(".")) continue;
       const full = join(dir, ent.name);
       const rel = relFromDesktop ? `${relFromDesktop}/${ent.name}` : ent.name;
