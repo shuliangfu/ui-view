@@ -1,11 +1,17 @@
 /**
  * Rate 评分（View）。
  * 星级评分，count 颗星，value 当前分数（0～count），支持 half 半星可选。
+ *
+ * 外壳稳定；星面与 aria-valuenow 由局部 getter / effect 订阅 value，避免整段重建。
  */
 
+import { createEffect, createRef, type JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
-import type { JSXRenderable } from "@dreamer/view";
-import { commitMaybeSignal, type MaybeSignal } from "./maybe-signal.ts";
+import {
+  commitMaybeSignal,
+  readMaybeSignal,
+  type MaybeSignal,
+} from "./maybe-signal.ts";
 
 /**
  * Rate 内置文案。
@@ -73,28 +79,39 @@ export function Rate(props: RateProps): JSXRenderable {
     messages,
   } = props;
   const m = { ...defaultRateMessages, ...messages };
+  const rootRef = createRef<HTMLElement>();
 
-  return () => {
-    const v = typeof value === "function" ? value() : (value ?? 0);
-    return (
-      <span
-        class={twMerge(
-          "inline-flex gap-0.5",
-          disabled && "pointer-events-none opacity-70",
-          className,
-        )}
-        role="slider"
-        aria-valuemin={0}
-        aria-valuemax={count}
-        aria-valuenow={v}
-        aria-readonly={disabled}
-      >
-        {Array.from({ length: count }, (_, i) => {
+  /** 与 {@link AutoComplete} 相同：aria 写回 DOM，勿把 value 绑进会重建外壳的 getter */
+  createEffect(() => {
+    const v = readMaybeSignal(value) ?? 0;
+    const node = rootRef.current;
+    if (node != null) {
+      node.setAttribute("aria-valuenow", String(v));
+    }
+  });
+
+  return (
+    <span
+      ref={rootRef}
+      class={twMerge(
+        "inline-flex gap-0.5",
+        disabled && "pointer-events-none opacity-70",
+        className,
+      )}
+      role="slider"
+      aria-valuemin={0}
+      aria-valuemax={count}
+      aria-readonly={disabled}
+    >
+      {() => {
+        const v = readMaybeSignal(value) ?? 0;
+        return Array.from({ length: count }, (_, i) => {
           const idx = i + 1;
           const full = v >= idx;
           const half = allowHalf && v >= idx - 0.5 && v < idx;
           return (
             <span
+              key={idx}
               class="cursor-pointer"
               onClick={(e: Event) => {
                 if (disabled) return;
@@ -143,8 +160,8 @@ export function Rate(props: RateProps): JSXRenderable {
                 )}
             </span>
           );
-        })}
-      </span>
-    );
-  };
+        });
+      }}
+    </span>
+  );
 }

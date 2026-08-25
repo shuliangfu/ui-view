@@ -2,12 +2,17 @@
  * RadioGroup 单选组（View）。
  * 选项列表、统一 name、当前选中 value，onChange 回传新 value；支持横向/纵向布局。
  * `value` 为 `createSignal` 返回值时，会先写入 Signal，可不写 `onChange` 仅做同步。
+ *
+ * 外壳为稳定 VNode；各 Radio 的 `checked` 用 getter 订阅 value，避免整组重建。
  */
 
-import { isSignal, type Signal } from "@dreamer/view";
 import type { JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
-import type { MaybeSignal } from "./maybe-signal.ts";
+import {
+  commitMaybeSignal,
+  readMaybeSignal,
+  type MaybeSignal,
+} from "./maybe-signal.ts";
 import { Radio } from "./Radio.tsx";
 
 export interface RadioGroupOption {
@@ -56,47 +61,37 @@ export function RadioGroup(props: RadioGroupProps): JSXRenderable {
     ? "flex-row flex-wrap gap-x-4 gap-y-2"
     : "flex-col gap-2";
 
-  return () => {
-    const resolvedValue = valueProp === undefined
-      ? ""
-      : typeof valueProp === "function"
-      ? (valueProp as () => string)()
-      : valueProp;
-
-    /**
-     * 将新选中 value 写回受控源：`value` 为 Signal 时赋值，再调 `onChange`。
-     *
-     * @param next - 新选中的选项 value
-     */
-    const commitValue = (next: string) => {
-      if (valueProp !== undefined && isSignal(valueProp)) {
-        (valueProp as Signal<string>).value = next;
-      }
-      onChange?.(next);
-    };
-
-    return (
-      <div
-        class={twMerge("flex", directionCls, className)}
-        role="radiogroup"
-        aria-label={name}
-        aria-invalid={error}
-      >
-        {options.map((opt) => (
-          <span key={opt.value}>
-            <Radio
-              name={name}
-              value={opt.value}
-              checked={resolvedValue === opt.value}
-              disabled={disabled || opt.disabled}
-              error={error}
-              onChange={() => commitValue(opt.value)}
-            >
-              {opt.label}
-            </Radio>
-          </span>
-        ))}
-      </div>
-    );
+  /**
+   * 将新选中 value 写回受控源：`value` 为 Signal 时赋值，再调 `onChange`。
+   *
+   * @param next - 新选中的选项 value
+   */
+  const commitValue = (next: string) => {
+    commitMaybeSignal(valueProp, next);
+    onChange?.(next);
   };
+
+  return (
+    <div
+      class={twMerge("flex", directionCls, className)}
+      role="radiogroup"
+      aria-label={name}
+      aria-invalid={error}
+    >
+      {options.map((opt) => (
+        <span key={opt.value}>
+          <Radio
+            name={name}
+            value={opt.value}
+            checked={() => readMaybeSignal(valueProp) === opt.value}
+            disabled={disabled || opt.disabled}
+            error={error}
+            onChange={() => commitValue(opt.value)}
+          >
+            {opt.label}
+          </Radio>
+        </span>
+      ))}
+    </div>
+  );
 }

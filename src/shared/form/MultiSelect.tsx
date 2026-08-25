@@ -103,7 +103,9 @@ const optionRowBase =
   "flex items-center gap-2 px-3 py-2 text-sm text-left w-full cursor-pointer border-b border-slate-100 dark:border-slate-700 last:border-b-0 hover:bg-slate-50 dark:hover:bg-slate-700/80 transition-colors";
 
 /**
- * 原生 multiple 分支；返回渲染函数以便 `value` 为 Signal 时随订阅更新。
+ * 原生 multiple 分支。
+ * 外壳与 `<select>` 稳定；全选/清空按钮与 option `selected` 用局部 getter 订阅 value，
+ * 避免外层 `return () => { readMaybeSignal(value) }` 整段重建（列表滚动/焦点丢失）。
  *
  * @param props - 与 {@link MultiSelect} 相同（不含 appearance）
  */
@@ -123,6 +125,7 @@ function MultiSelectNativeBranch(props: Omit<MultiSelectProps, "appearance">) {
   const m = { ...defaultMultiSelectMessages, ...messages };
   const size = resolveFormControlSize(sizeProp);
   const sizeCls = sizeClassesNative[size];
+  const allValues = options.map((o) => o.value);
 
   const triggerChange = (newVal: string[]) => {
     commitMaybeSignal(valueProp, newVal);
@@ -130,47 +133,50 @@ function MultiSelectNativeBranch(props: Omit<MultiSelectProps, "appearance">) {
     onChange?.(synthetic);
   };
 
-  return () => {
-    const value = readMaybeSignal(valueProp) ?? [];
-    const allValues = options.map((o) => o.value);
-    const allSelected = allValues.length > 0 &&
-      allValues.every((v) => value.includes(v));
-
-    return (
-      <span class="block">
-        <div class="flex gap-1 mb-1">
-          <button
-            type="button"
-            class={btnCls}
-            disabled={disabled || allSelected}
-            onClick={() => triggerChange([...allValues])}
-          >
-            {m.selectAll}
-          </button>
-          <button
-            type="button"
-            class={btnCls}
-            disabled={disabled || value.length === 0}
-            onClick={() => triggerChange([])}
-          >
-            {m.clear}
-          </button>
-        </div>
-        <select
-          multiple
-          id={id}
-          name={name}
-          disabled={disabled}
-          class={twMerge(
-            "w-full touch-manipulation",
-            nativeSelectSurface,
-            controlBlueFocusRing(!hideFocusRing),
-            sizeCls,
-            className,
-          )}
-          onChange={onChange}
-        >
-          {options.map((opt) => (
+  return (
+    <span class="block">
+      {() => {
+        const value = readMaybeSignal(valueProp) ?? [];
+        const allSelected = allValues.length > 0 &&
+          allValues.every((v) => value.includes(v));
+        return (
+          <div class="flex gap-1 mb-1">
+            <button
+              type="button"
+              class={btnCls}
+              disabled={disabled || allSelected}
+              onClick={() => triggerChange([...allValues])}
+            >
+              {m.selectAll}
+            </button>
+            <button
+              type="button"
+              class={btnCls}
+              disabled={disabled || value.length === 0}
+              onClick={() => triggerChange([])}
+            >
+              {m.clear}
+            </button>
+          </div>
+        );
+      }}
+      <select
+        multiple
+        id={id}
+        name={name}
+        disabled={disabled}
+        class={twMerge(
+          "w-full touch-manipulation",
+          nativeSelectSurface,
+          controlBlueFocusRing(!hideFocusRing),
+          sizeCls,
+          className,
+        )}
+        onChange={onChange}
+      >
+        {() => {
+          const value = readMaybeSignal(valueProp) ?? [];
+          return options.map((opt) => (
             <option
               key={opt.value}
               value={opt.value}
@@ -179,11 +185,11 @@ function MultiSelectNativeBranch(props: Omit<MultiSelectProps, "appearance">) {
             >
               {opt.label}
             </option>
-          ))}
-        </select>
-      </span>
-    );
-  };
+          ));
+        }}
+      </select>
+    </span>
+  );
 }
 
 /**

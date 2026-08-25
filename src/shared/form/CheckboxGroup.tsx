@@ -2,12 +2,17 @@
  * CheckboxGroup 多选组（View）。
  * 选项列表、统一 name、选中值 value 为字符串数组，onChange 回传新数组；支持横向/纵向布局。
  * `value` 为 `createSignal` 返回值时，会先写入 Signal，可不写 `onChange` 仅做同步。
+ *
+ * 外壳为稳定 VNode；各 Checkbox 的 `checked` 用 getter 订阅 value，避免整组重建。
  */
 
-import { isSignal, type Signal } from "@dreamer/view";
 import type { JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
-import type { MaybeSignal } from "./maybe-signal.ts";
+import {
+  commitMaybeSignal,
+  readMaybeSignal,
+  type MaybeSignal,
+} from "./maybe-signal.ts";
 import { Checkbox } from "./Checkbox.tsx";
 
 export interface CheckboxGroupOption {
@@ -56,56 +61,45 @@ export function CheckboxGroup(props: CheckboxGroupProps): JSXRenderable {
     ? "flex-row flex-wrap gap-x-4 gap-y-2"
     : "flex-col gap-2";
 
-  return () => {
-    const resolvedValue = valueProp === undefined
-      ? []
-      : typeof valueProp === "function"
-      ? (valueProp as () => string[])()
-      : valueProp;
-
-    /**
-     * 将新选中数组写回受控源：`value` 为 Signal 时赋值，再调 `onChange`。
-     *
-     * @param next - 新的已选 value 列表
-     */
-    const commitValue = (next: string[]) => {
-      if (valueProp !== undefined && isSignal(valueProp)) {
-        (valueProp as Signal<string[]>).value = next;
-      }
-      onChange?.(next);
-    };
-
-    return (
-      <div
-        class={twMerge("flex", directionCls, className)}
-        role="group"
-        aria-label={name}
-        aria-invalid={error}
-      >
-        {options.map((opt) => {
-          const checked = resolvedValue.includes(opt.value);
-          return (
-            <span key={opt.value}>
-              <Checkbox
-                name={name}
-                value={opt.value}
-                checked={checked}
-                disabled={disabled || opt.disabled}
-                error={error}
-                onChange={(e: Event) => {
-                  const el = e.target as HTMLInputElement;
-                  const next = el.checked
-                    ? [...resolvedValue, opt.value]
-                    : resolvedValue.filter((v: string) => v !== opt.value);
-                  commitValue(next);
-                }}
-              >
-                {opt.label}
-              </Checkbox>
-            </span>
-          );
-        })}
-      </div>
-    );
+  /**
+   * 将新选中数组写回受控源：`value` 为 Signal 时赋值，再调 `onChange`。
+   *
+   * @param next - 新的已选 value 列表
+   */
+  const commitValue = (next: string[]) => {
+    commitMaybeSignal(valueProp, next);
+    onChange?.(next);
   };
+
+  return (
+    <div
+      class={twMerge("flex", directionCls, className)}
+      role="group"
+      aria-label={name}
+      aria-invalid={error}
+    >
+      {options.map((opt) => (
+        <span key={opt.value}>
+          <Checkbox
+            name={name}
+            value={opt.value}
+            checked={() =>
+              (readMaybeSignal(valueProp) ?? []).includes(opt.value)}
+            disabled={disabled || opt.disabled}
+            error={error}
+            onChange={(e: Event) => {
+              const el = e.target as HTMLInputElement;
+              const resolved = readMaybeSignal(valueProp) ?? [];
+              const next = el.checked
+                ? [...resolved, opt.value]
+                : resolved.filter((v: string) => v !== opt.value);
+              commitValue(next);
+            }}
+          >
+            {opt.label}
+          </Checkbox>
+        </span>
+      ))}
+    </div>
+  );
 }
