@@ -26,12 +26,12 @@ npx jsr add @dreamer/ui-view
 
 ## 🌍 Environment Compatibility
 
-| Environment  | Version | Support |
-| ------------ | ------- | ------- |
-| **Deno**     | 2.9+    | ✅      |
-| **Bun**      | 1.3+    | ✅      |
-| **Node.js**  | 22+     | ✅      |
-| Browser      | -       | ✅      |
+| Environment | Version | Support |
+| ----------- | ------- | ------- |
+| **Deno**    | 2.9+    | ✅      |
+| **Bun**     | 1.3+    | ✅      |
+| **Node.js** | 22+     | ✅      |
+| Browser     | -       | ✅      |
 
 ---
 

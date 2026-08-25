@@ -25,8 +25,8 @@ import {
 } from "./input-autofill-classes.ts";
 import {
   commitMaybeSignal,
-  readMaybeSignal,
   type MaybeSignal,
+  readMaybeSignal,
 } from "./maybe-signal.ts";
 
 /**

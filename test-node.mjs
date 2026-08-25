@@ -15,7 +15,7 @@
  * require Playwright/Chromium and are excluded from Node.js CI.
  */
 import { spawnSync } from "node:child_process";
-import { resolve, relative } from "node:path";
+import { relative, resolve } from "node:path";
 
 process.env.CI = "true";
 

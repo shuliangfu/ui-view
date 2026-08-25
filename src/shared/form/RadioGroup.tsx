@@ -10,8 +10,8 @@ import type { JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import {
   commitMaybeSignal,
-  readMaybeSignal,
   type MaybeSignal,
+  readMaybeSignal,
 } from "./maybe-signal.ts";
 import { Radio } from "./Radio.tsx";
 
