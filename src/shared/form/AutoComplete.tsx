@@ -321,7 +321,10 @@ export function AutoComplete(props: AutoCompleteProps): JSXRenderable {
   );
 
   if (options.length === 0) {
-    return () => (
+    /**
+     * 与 {@link Input} 无 addon 分支一致：勿 `() => <input />`，避免与受控 value 叠用导致失焦。
+     */
+    return (
       <input
         type="text"
         id={id}
@@ -356,8 +359,11 @@ export function AutoComplete(props: AutoCompleteProps): JSXRenderable {
     }
   });
 
-  /** 本 getter 不读取 panelOpen；展开态仅由 effect + ref 写回 DOM */
-  return () => (
+  /**
+   * 外壳稳定（不读 panelOpen / value）；展开态仅由上方 effect + ref 写回 DOM。
+   * 下拉由 {@link AutoCompletePanel} 内部订阅。
+   */
+  return (
     <div class={twMerge("relative w-full", className)}>
       <input
         type="text"
