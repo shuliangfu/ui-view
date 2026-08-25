@@ -7,6 +7,8 @@
  * {@link getFormPortalBodyHost} 给仍需挂 `document.body` 的浮层（如富文本）用。
  */
 
+import { isDomElement, isHtmlElement } from "../dom-guards.ts";
+
 /**
  * Tailwind CSS **v4**：`z-*` 对任意整数会生成工具类，**写 `z-1070` 即 `z-index:1070`**。
  * v4 任意整数档可直接写 `z-1070`（不必 `z-[1070]`）；与编辑器 Tailwind 提示一致。
@@ -175,7 +177,7 @@ function queryPickerTimeScrollColumnsWithin(
   const add = (list: NodeListOf<Element>) => {
     for (let i = 0; i < list.length; i++) {
       const n = list[i];
-      if (n instanceof HTMLElement) seen.add(n);
+      if (isHtmlElement(n)) seen.add(n);
     }
   };
   add(searchRoot.querySelectorAll(`[${PICKER_TIME_SCROLL_COL_ATTR}]`));
@@ -200,7 +202,7 @@ function resolvePickerTimeSearchRoot(
   const scoped = panelRoot.querySelector(
     `[${PICKER_TIME_STRIP_SCOPE_ATTR}="${scope}"]`,
   );
-  if (scoped instanceof HTMLElement) {
+  if (isHtmlElement(scoped)) {
     const scopedCols = queryPickerTimeScrollColumnsWithin(scoped);
     if (scopedCols.length > 0) {
       return { searchRoot: scoped, columnBaseIndex: 0 };
@@ -216,7 +218,7 @@ function resolvePickerTimeSearchRoot(
   if (draft.stripScope === "range-start" && all.length >= need * 2) {
     return { searchRoot: panelRoot, columnBaseIndex: 0 };
   }
-  if (scoped instanceof HTMLElement) {
+  if (isHtmlElement(scoped)) {
     return { searchRoot: scoped, columnBaseIndex: 0 };
   }
   return { searchRoot: panelRoot, columnBaseIndex: 0 };
@@ -239,7 +241,7 @@ function resolvePickerTimeScrollColumnEl(
   const byKind = searchRoot.querySelector(
     `[${PICKER_TIME_SCROLL_COL_ATTR}][${PICKER_TIME_KIND_ATTR}="${kind}"]`,
   );
-  if (byKind instanceof HTMLElement) return byKind;
+  if (isHtmlElement(byKind)) return byKind;
   const cols = queryPickerTimeScrollColumnsWithin(searchRoot);
   const li = columnBaseIndex + pickerTimeColumnListIndex(draft, kind);
   if (li >= 0 && li < cols.length) return cols[li]!;
@@ -259,10 +261,10 @@ function resolvePickerTimeScrollCellButton(
   const byVal = col.querySelector(
     `[${PICKER_TIME_CELL_VALUE_ATTR}="${value}"]`,
   );
-  if (byVal instanceof HTMLElement) return byVal;
+  if (isHtmlElement(byVal)) return byVal;
   const buttons = col.querySelectorAll("button");
   const btn = buttons.item(value);
-  return btn instanceof HTMLElement ? btn : null;
+  return isHtmlElement(btn) ? btn : null;
 }
 
 /**
@@ -308,9 +310,9 @@ export function scrollPickerTimeActiveItemsIntoView(
   let complete = true;
   for (let i = 0; i < cols.length; i++) {
     const col = cols[i];
-    if (!(col instanceof HTMLElement)) continue;
+    if (!isHtmlElement(col)) continue;
     const active = col.querySelector(`[${PICKER_TIME_ACTIVE_ATTR}]`);
-    if (!(active instanceof HTMLElement)) {
+    if (!isHtmlElement(active)) {
       complete = false;
       continue;
     }
@@ -712,12 +714,12 @@ function resolvePickerTriggerForOutsideClick(
   const refEl = triggerRef?.current;
   if (refEl?.isConnected) return refEl;
   const host = panel.parentElement;
-  if (!(host instanceof HTMLElement)) return refEl ?? null;
+  if (!isHtmlElement(host)) return refEl ?? null;
   /** DatePicker / DateTimePicker / TimePicker / ColorPicker：触发器为父级下带 dialog 语义的 button */
   const scoped = host.querySelector(":scope > button[aria-haspopup='dialog']");
-  if (scoped instanceof HTMLElement) return scoped;
+  if (isHtmlElement(scoped)) return scoped;
   const nested = host.querySelector("button[aria-haspopup='dialog']");
-  return nested instanceof HTMLElement ? nested : refEl ?? null;
+  return isHtmlElement(nested) ? nested : refEl ?? null;
 }
 
 /**
@@ -800,7 +802,7 @@ function clientPointHitsElementSubtree(
     if (stack != null) {
       for (let i = 0; i < stack.length; i++) {
         const hit = stack[i];
-        if (hit instanceof Element && root.contains(hit)) return true;
+        if (isDomElement(hit) && root.contains(hit)) return true;
       }
     }
   }
@@ -827,12 +829,12 @@ function pointerCoordsInsidePickerChrome(
   if (clientPointInsideElementAabb(panel, clientX, clientY)) return true;
   if (clientPointHitsElementSubtree(panel, clientX, clientY)) return true;
   const host = panel.parentElement;
-  if (host instanceof HTMLElement) {
+  if (isHtmlElement(host)) {
     if (clientPointInsideElementAabb(host, clientX, clientY)) return true;
     if (clientPointHitsElementSubtree(host, clientX, clientY)) return true;
   }
   const trig = resolvePickerTriggerForOutsideClick(panel, triggerRef);
-  if (trig instanceof HTMLElement) {
+  if (isHtmlElement(trig)) {
     if (clientPointInsideElementAabb(trig, clientX, clientY)) return true;
     if (clientPointHitsElementSubtree(trig, clientX, clientY)) return true;
   }
@@ -917,7 +919,7 @@ export function registerPointerDownOutside(
      * 比单独 `triggerRef` / querySelector 更稳：重排时 ref 可能 `isConnected: false`，但事件 target 仍在同一 host 子树内。
      */
     const host = panel.parentElement;
-    if (host instanceof HTMLElement && pointerEventPathTouchesRoot(ev, host)) {
+    if (isHtmlElement(host) && pointerEventPathTouchesRoot(ev, host)) {
       return;
     }
     const trig = resolvePickerTriggerForOutsideClick(panel, triggerRef);

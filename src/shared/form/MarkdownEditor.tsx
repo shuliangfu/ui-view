@@ -32,6 +32,7 @@ import {
   wrapMarkdownPreviewCodeBlocks,
 } from "./markdown-preview-prism.ts";
 import { commitMaybeSignal, type MaybeSignal } from "./maybe-signal.ts";
+import { isDomElement, isHtmlElementOf } from "../dom-guards.ts";
 
 /** 预览展示方式 */
 export type MarkdownEditorPreviewMode = "off" | "split" | "tabs";
@@ -595,7 +596,7 @@ export function MarkdownEditor(props: MarkdownEditorProps): JSXRenderable {
   const handleInput = (e: Event) => {
     onInput?.(e);
     const t = e.target;
-    if (t instanceof HTMLTextAreaElement) {
+    if (isHtmlElementOf(t, "HTMLTextAreaElement")) {
       commitMaybeSignal(props.value, t.value);
       onMarkdownChange?.(t.value);
     }
@@ -608,7 +609,7 @@ export function MarkdownEditor(props: MarkdownEditorProps): JSXRenderable {
    */
   const handleChange = (e: Event) => {
     const t = e.target;
-    if (t instanceof HTMLTextAreaElement) {
+    if (isHtmlElementOf(t, "HTMLTextAreaElement")) {
       commitMaybeSignal(props.value, t.value);
     }
     onChange?.(e);
@@ -797,12 +798,12 @@ export function MarkdownEditor(props: MarkdownEditorProps): JSXRenderable {
             aria-label={m.toolbarAriaLabel}
             onMouseDown={(e: Event) => {
               const t = e.target;
-              if (t instanceof Element && t.closest("select")) return;
+              if (isDomElement(t) && t.closest("select")) return;
               /**
                * 点在 `button` 上时不 `preventDefault`：与 RichTextEditor 一样用于避免 textarea 失焦，
                * 但部分环境下会阻断后续 `click`，表现为 tabs/全屏钮点击无响应。
                */
-              if (t instanceof Element && t.closest("button")) return;
+              if (isDomElement(t) && t.closest("button")) return;
               e.preventDefault();
             }}
           >

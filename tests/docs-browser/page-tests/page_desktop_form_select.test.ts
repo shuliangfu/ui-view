@@ -58,6 +58,25 @@ describe("文档页 E2E：/desktop/form/select（Select 选择器）", () => {
       return false;
     }) as boolean;
     expect(picked).toBe(true);
+    await sharedEnv.delay(120);
+    const closed = await t.browser.evaluate(() => {
+      const main = document.querySelector("main");
+      const triggers = main?.querySelectorAll(
+        'button[aria-haspopup="listbox"]',
+      );
+      if (!triggers?.length) return false;
+      for (let i = 0; i < triggers.length; i++) {
+        const tr = triggers[i] as HTMLButtonElement;
+        if (tr.getAttribute("aria-expanded") === "true") return false;
+      }
+      const lbs = document.querySelectorAll('[role="listbox"]');
+      for (let j = 0; j < lbs.length; j++) {
+        const lb = lbs[j] as HTMLElement;
+        if (lb.getClientRects().length > 0) return false;
+      }
+      return true;
+    }) as boolean;
+    expect(closed).toBe(true);
   }, DOCS_BROWSER_CONFIG);
 
   /**

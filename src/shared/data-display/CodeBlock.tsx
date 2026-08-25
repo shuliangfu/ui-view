@@ -20,6 +20,7 @@ import { twMerge } from "tailwind-merge"
 import { IconCopy } from "../basic/icons/Copy.tsx"
 import { toast } from "../feedback/toast-store.ts"
 import { PRISM_TOKEN_CSS } from "../prism-token-styles.ts"
+import { isHtmlElement } from "../dom-guards.ts";
 
 /**
  * 与 {@link PRISM_TOKEN_CSS} 相同；保留此导出名以免破坏依赖方。
@@ -31,12 +32,7 @@ export const CODE_BLOCK_PRISM_STYLES = PRISM_TOKEN_CSS;
  * 不使用裸 `instanceof HTMLElement`：Deno 等运行时可能没有 HTMLElement 全局，会抛 ReferenceError。
  */
 function isElementNodeForInsert(node: unknown): node is HTMLElement {
-  if (node == null || typeof node !== "object") return false;
-  if (typeof HTMLElement !== "undefined") {
-    return node instanceof HTMLElement;
-  }
-  const o = node as { nodeType?: unknown; insertBefore?: unknown };
-  return o.nodeType === 1 && typeof o.insertBefore === "function";
+  return isHtmlElement(node);
 }
 
 /** 常用语言 id，与 Prism 的 language 一致 */

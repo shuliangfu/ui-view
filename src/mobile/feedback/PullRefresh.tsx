@@ -35,6 +35,7 @@ import {
 } from "@dreamer/view";
 import type { JSXRenderable, Owner, Signal } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
+import { isHtmlElement, isHtmlElementOf } from "../../shared/dom-guards.ts";
 import {
   type ControlledOpenInput,
   readControlledOpenInput,
@@ -334,7 +335,7 @@ function acquirePullRefreshDomBridge(owner: Owner): PullRefreshDomBridge {
         const s = refs.scrollEl;
         if (s != null && s.isConnected) return s;
         const inner = shell.querySelector("[data-pull-refresh-content]");
-        if (inner instanceof HTMLDivElement) {
+        if (isHtmlElementOf(inner, "HTMLDivElement")) {
           refs.scrollEl = inner;
           st.cb?.(inner);
           return inner;
@@ -801,7 +802,7 @@ export function PullRefresh(props: PullRefreshProps): JSXRenderable {
     if (!scroll) return null;
     const prev = scroll.previousElementSibling;
     if (
-      prev instanceof HTMLElement && prev.matches("[data-pull-refresh-head]")
+      isHtmlElement(prev) && prev.matches("[data-pull-refresh-head]")
     ) {
       return prev as HTMLDivElement;
     }
@@ -855,7 +856,7 @@ export function PullRefresh(props: PullRefreshProps): JSXRenderable {
       head.style.removeProperty("pointer-events");
     }
     const lab = head.querySelector("[data-pull-refresh-label]");
-    if (!(lab instanceof HTMLElement)) return;
+    if (!isHtmlElement(lab)) return;
     const armed = delta >= pullDistance;
     lab.textContent = armed ? loosingText : pullingText;
     lab.className = twMerge(
@@ -866,7 +867,7 @@ export function PullRefresh(props: PullRefreshProps): JSXRenderable {
     );
     const track = head.querySelector("[data-pull-refresh-progress-track]");
     const inner = head.querySelector("[data-pull-refresh-progress-inner]");
-    if (track instanceof HTMLElement && inner instanceof HTMLElement) {
+    if (isHtmlElement(track) && isHtmlElement(inner)) {
       if (expand) {
         track.style.height = "4px";
         track.style.opacity = "1";

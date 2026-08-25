@@ -8,6 +8,7 @@ import { twMerge } from "tailwind-merge";
 import type { JSXRenderable } from "@dreamer/view";
 /** 按需：单文件图标，避免经 icons/mod 拉入全表 */
 import { IconChevronUp } from "../basic/icons/ChevronUp.tsx";
+import { isHtmlElement } from "../dom-guards.ts";
 
 /** 滚动目标：不传为 window；传字符串为 document.querySelector 选择器；传函数返回元素 */
 export type BackTopTarget = (() => Element | null) | string | Element | null;
@@ -83,8 +84,10 @@ function getDefaultScrollContainer(): HTMLElement | null {
   const doc = globalThis.document;
   if (!isQueryableDocument(doc)) return null;
   const main = doc.querySelector("main");
-  if (!(main instanceof HTMLElement)) return null;
-  const oy = globalThis.getComputedStyle(main).overflowY;
+  if (!isHtmlElement(main)) return null;
+  const styleFn = globalThis.getComputedStyle;
+  if (typeof styleFn !== "function") return null;
+  const oy = styleFn(main).overflowY;
   if (oy === "auto" || oy === "scroll" || oy === "overlay") return main;
   return null;
 }
@@ -129,7 +132,7 @@ function attachScrollListeners(explicitTarget: Element | null): void {
 
 function scrollToTopSmooth(explicitTarget: Element | null): void {
   const opts: ScrollToOptions = { top: 0, behavior: "smooth" };
-  if (explicitTarget instanceof HTMLElement) {
+  if (isHtmlElement(explicitTarget)) {
     explicitTarget.scrollTo(opts);
     return;
   }

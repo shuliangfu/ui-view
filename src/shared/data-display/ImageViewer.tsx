@@ -37,6 +37,7 @@ import { IconRotateCw } from "../basic/icons/RotateCw.tsx";
 import { IconZoomIn } from "../basic/icons/ZoomIn.tsx";
 import { IconZoomOut } from "../basic/icons/ZoomOut.tsx";
 import { getBrowserBodyPortalHost } from "../feedback/portal-host.ts";
+import { isHtmlElement } from "../dom-guards.ts";
 
 /** `open` 合法形态：布尔快照、`Signal<boolean>`、或返回 boolean 的零参 getter */
 export type ImageViewerOpenInput =
@@ -212,7 +213,7 @@ function useImagePan(
   return (e: PointerEvent) => {
     if (e.pointerType === "mouse" && e.button !== 0) return;
     const target = e.currentTarget;
-    if (!(target instanceof HTMLElement)) return;
+    if (!isHtmlElement(target)) return;
     try {
       target.setPointerCapture(e.pointerId);
     } catch {

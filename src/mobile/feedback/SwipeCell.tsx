@@ -9,6 +9,7 @@
 
 import { twMerge } from "tailwind-merge";
 import { createMemo, type JSXRenderable, onCleanup } from "@dreamer/view";
+import { isHtmlElementOf } from "../../shared/dom-guards.ts";
 
 /** 单侧的一个操作项 */
 export interface SwipeCellAction {
@@ -317,7 +318,7 @@ export function SwipeCell(props: SwipeCellProps): JSXRenderable {
       // 等子树插入后再绑 inner；宽度从 dataset 读，避免闭包里的 lw 过期。
       queueMicrotask(() => {
         const inner = root.firstElementChild;
-        if (inner instanceof HTMLDivElement) {
+        if (isHtmlElementOf(inner, "HTMLDivElement")) {
           s.inner = inner;
           const { lw } = readMetrics(root);
           inner.style.transform = `translateX(${transformX(lw, s.offset)}px)`;

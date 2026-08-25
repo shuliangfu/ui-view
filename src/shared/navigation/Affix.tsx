@@ -8,6 +8,7 @@ import { createRenderEffect, createSignal, onCleanup } from "@dreamer/view";
 import type { JSXRenderable } from "@dreamer/view";
 import { createPortal } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
+import { isHtmlElement } from "../dom-guards.ts";
 
 /** 浮层 z-index，需高于常见顶栏（如 z-50） */
 const AFFIX_PORTAL_Z = 1030;
@@ -92,7 +93,7 @@ function resolveExplicitScrollTarget(
 ): HTMLElement | null {
   if (explicit === undefined) return null;
   const t = typeof explicit === "function" ? explicit() : explicit;
-  return t instanceof HTMLElement ? t : null;
+  return isHtmlElement(t) ? t : null;
 }
 
 /**
@@ -155,7 +156,7 @@ function measureTopObstruction(): number {
         const stack = doc.elementsFromPoint(x, probeY);
         if (!stack?.length) continue;
         for (const node of stack) {
-          if (!(node instanceof HTMLElement)) continue;
+          if (!isHtmlElement(node)) continue;
           if (node.closest("[view-portal]")) continue;
           const s = getComputedStyle(node);
           if (s.position !== "fixed" && s.position !== "sticky") continue;
@@ -179,7 +180,7 @@ function measureTopObstruction(): number {
         body.querySelectorAll("header, [role='banner']"),
       )
     ) {
-      if (!(el instanceof HTMLElement)) continue;
+      if (!isHtmlElement(el)) continue;
       if (el.closest("[view-portal]")) continue;
       const r = el.getBoundingClientRect();
       /** 顶栏：靠上、横向占比较宽，避免侧栏内窄 `nav` 误算 */

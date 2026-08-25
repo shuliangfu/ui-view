@@ -201,7 +201,7 @@ export function Calendar(props: CalendarProps): JSXRenderable {
                     return twMerge(
                       "py-4 rounded-lg text-sm font-medium",
                       curM === i
-                        ? "bg-blue-600 text-white dark:bg-blue-500"
+                        ? "bg-blue-600 text-white hover:bg-blue-700 hover:text-white dark:bg-blue-500 dark:hover:bg-blue-600"
                         : "bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600",
                     );
                   }}
@@ -272,7 +272,7 @@ export function Calendar(props: CalendarProps): JSXRenderable {
                       ? "text-slate-900 dark:text-white"
                       : "text-slate-400 dark:text-slate-500",
                     highlight === "endpoint" &&
-                      "bg-blue-600 text-white dark:bg-blue-500",
+                      "bg-blue-600 text-white hover:bg-blue-700 hover:text-white dark:bg-blue-500 dark:hover:bg-blue-600",
                     highlight === "range-middle" &&
                       "bg-blue-100 text-slate-900 dark:bg-blue-900/40 dark:text-slate-100",
                     highlight == null && isCurrentMonth && !disabled &&

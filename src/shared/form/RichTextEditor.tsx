@@ -5,7 +5,7 @@
  * 前景/背景色使用 {@link ColorPicker} 隐藏触发器 + 命令式 `openFromPointerEvent`；打开前克隆选区，
  * 确定时再恢复，避免操作取色面板导致选区丢失而无法正确 `execCommand`。
  * 支持粘贴图片到内容区（剪贴板图片转 data URL 或经 onPasteImage 上传后插入）。
- * 工具栏可配置为 simple（简单）、default（默认）、full（全部），或完全自定义；文字颜色与背景色在三档预设中均提供。
+ * 工具栏可配置为 simple（简单，含全屏）、default（默认）、full（全部），或完全自定义；文字颜色与背景色在三档预设中均提供。
  * 各预设工具栏首位为「编辑源码」：在 HTML 源码与可视化编辑之间切换；进入源码时会对 `innerHTML` 做缩进排版（类 Elements 结构）便于编辑。
  * 受控 HTML 仅在**编辑区未获焦**且非链接弹层打开时由 {@link createEffect} 同步到 DOM；获焦时以浏览器 DOM
  * 为准，避免写 `innerHTML` 重置选区。`ref` 仅用 `createRef` 持有编辑区节点。
@@ -39,6 +39,7 @@ import {
   readMaybeSignal,
 } from "./maybe-signal.ts";
 import { getFormPortalBodyHost } from "./picker-portal-utils.ts";
+import { isDomElement, isHtmlElement, isHtmlElementOf } from "../dom-guards.ts";
 
 /** 工具栏丰富程度预设 */
 export type ToolbarPreset = "simple" | "default" | "full";
@@ -400,7 +401,23 @@ function getToolbarByPreset(
     },
   ];
 
-  const simple: ToolbarItem[][] = [rowBasic, rowTypography, rowColors];
+  /** 独立一行全屏（与 `full` 预设同源项一致），`simple` 用于小说等长文时可一键铺满视口编辑。 */
+  const rowFullscreen: ToolbarItem[] = [
+    {
+      key: "fullscreen",
+      title: t.fullscreen,
+      command: "fullscreen",
+      /** 图标由 `renderToolbarButtonContent` 的 `fullscreen` 分支绘制（全屏后切换为退出形） */
+      icon: "⛶",
+    },
+  ];
+
+  const simple: ToolbarItem[][] = [
+    rowBasic,
+    rowTypography,
+    rowColors,
+    rowFullscreen,
+  ];
 
   const defaultPreset: ToolbarItem[][] = [
     rowBasic,
@@ -887,7 +904,7 @@ function tryUpdateExistingRteColorSpan(
   let n: Node | null = range.commonAncestorContainer;
   if (n.nodeType === Node.TEXT_NODE) n = n.parentNode;
   while (n != null && n !== editor) {
-    if (n instanceof HTMLSpanElement && n.hasAttribute(attr)) {
+    if (isHtmlElementOf(n, "HTMLSpanElement") && n.hasAttribute(attr)) {
       try {
         const spanRange = document.createRange();
         spanRange.selectNodeContents(n);
@@ -986,7 +1003,7 @@ function findInnermostRteInlineDecoSpan(
   let n: Node | null = range.commonAncestorContainer;
   if (n.nodeType === Node.TEXT_NODE) n = n.parentNode;
   while (n != null && n !== editor) {
-    if (n instanceof HTMLSpanElement && rteSpanHasInlineDecoMark(n)) {
+    if (isHtmlElementOf(n, "HTMLSpanElement") && rteSpanHasInlineDecoMark(n)) {
       try {
         const sr = document.createRange();
         sr.selectNodeContents(n);
@@ -1185,7 +1202,7 @@ function findInnermostRteColorOnlySpan(
   if (n.nodeType === Node.TEXT_NODE) n = n.parentNode;
   while (n != null && n !== editor) {
     if (
-      n instanceof HTMLSpanElement &&
+      isHtmlElementOf(n, "HTMLSpanElement") &&
       (n.hasAttribute("data-rte-color") ||
         n.hasAttribute("data-rte-bgcolor")) &&
       !rteSpanHasInlineDecoMark(n)
@@ -1479,7 +1496,10 @@ function tryUpdateExistingRteFontSizeSpan(
   let n: Node | null = range.commonAncestorContainer;
   if (n.nodeType === Node.TEXT_NODE) n = n.parentNode;
   while (n != null && n !== editor) {
-    if (n instanceof HTMLSpanElement && n.hasAttribute("data-rte-font-size")) {
+    if (
+      isHtmlElementOf(n, "HTMLSpanElement") &&
+      n.hasAttribute("data-rte-font-size")
+    ) {
       try {
         const spanRange = document.createRange();
         spanRange.selectNodeContents(n);
@@ -1592,7 +1612,7 @@ function rteFindBlockForLineHeight(
   let n: Node | null = node;
   if (n?.nodeType === Node.TEXT_NODE) n = n.parentNode;
   while (n != null && n !== editor) {
-    if (n instanceof HTMLElement) {
+    if (isHtmlElement(n)) {
       const t = n.tagName.toLowerCase();
       if (
         t === "p" || t === "div" || t === "blockquote" || t === "li" ||
@@ -2599,7 +2619,7 @@ export function RichTextEditor(props: RichTextEditorProps): JSXRenderable {
         } catch {
           qRedo = false;
         }
-        if (needStealFocus && prevActive instanceof HTMLElement) {
+        if (needStealFocus && isHtmlElement(prevActive)) {
           prevActive.focus({ preventScroll: true });
         }
       }
@@ -3871,7 +3891,7 @@ export function RichTextEditor(props: RichTextEditorProps): JSXRenderable {
              * 对按钮等阻止默认可保留编辑区选区；若对原生 `<select>` 也 `preventDefault`，下拉无法展开（段落/字号/行高无反应）。
              */
             const t = e.target;
-            if (t instanceof Element && t.closest("select")) return;
+            if (isDomElement(t) && t.closest("select")) return;
             e.preventDefault();
           }}
         >

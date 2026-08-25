@@ -2,7 +2,12 @@
  * MultiSelect 多选：`appearance` 切换**自定义浮层**与**原生 multiple + 全选/清空**（移动友好）。
  */
 
-import { createSignal, Show } from "@dreamer/view";
+import { createEffect, createSignal, onCleanup } from "@dreamer/view";
+import {
+  installInlineDropdownOutsideClickClose,
+  pickInlineDropdownOption,
+  syncInlineDropdownPanelVisibility,
+} from "./inline-dropdown-outside-click.ts";
 import type { JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import { IconChevronDown } from "../basic/icons/ChevronDown.tsx";
@@ -216,6 +221,10 @@ function MultiSelectDropdownBranch(
 
   const openState = createSignal(false);
   const sizeCls = sizeClassesDropdown[size];
+  let rootEl: HTMLElement | null = null;
+  let panelEl: HTMLElement | null = null;
+  /** 抑制 pointerdown 选中后紧随的 click 再 toggle 一次 */
+  let skipFollowupClick = false;
 
   const triggerChange = (newVal: string[]) => {
     commitMaybeSignal(value, newVal);
@@ -239,12 +248,42 @@ function MultiSelectDropdownBranch(
     openState.value = false;
   };
 
+  installInlineDropdownOutsideClickClose(
+    () => openState.value,
+    () => rootEl,
+    closePanel,
+  );
+
+  syncInlineDropdownPanelVisibility(
+    () => openState.value,
+    () => panelEl,
+  );
+
+  createEffect(() => {
+    if (!openState.value) return;
+    const g = globalThis as unknown as Record<
+      string,
+      (() => void) | undefined
+    >;
+    g[DROPDOWN_ESC_KEY] = closePanel;
+    onCleanup(() => {
+      if (g[DROPDOWN_ESC_KEY] === closePanel) {
+        delete g[DROPDOWN_ESC_KEY];
+      }
+    });
+  });
+
   const selectableValues = options
     .filter((o) => !o.disabled)
     .map((o) => o.value);
 
   return (
-    <span class={twMerge("relative block w-full min-w-0", className)}>
+    <span
+      ref={(el: HTMLElement | null) => {
+        rootEl = el;
+      }}
+      class={twMerge("relative block w-full min-w-0", className)}
+    >
       {() => {
         const nm = name;
         if (!nm) return null;
@@ -281,7 +320,16 @@ function MultiSelectDropdownBranch(
           sizeCls,
         )}
         onClick={() => {
-          if (!disabled) openState((prev) => !prev);
+          if (disabled) return;
+          if (openState.value) {
+            closePanel();
+            return;
+          }
+          queueMicrotask(() => {
+            if (!disabled && !openState.value) {
+              openState.value = true;
+            }
+          });
         }}
       >
         <span
@@ -322,143 +370,149 @@ function MultiSelectDropdownBranch(
           <IconChevronDown size="sm" />
         </span>
       </button>
-      {
-        /* 同 {@link Select}：避免 `display: contents` 导致下拉 `absolute` 锚点错乱 */
-      }
-      <Show when={() => openState.value}>
-        {[
-          typeof globalThis !== "undefined" &&
-          (() => {
-            const g = globalThis as unknown as Record<
-              string,
-              (() => void) | undefined
-            >;
-            g[DROPDOWN_ESC_KEY] = closePanel;
-            return null;
-          })(),
-          <div
-            key="multiselect-dd-backdrop"
-            class="fixed inset-0 z-40"
-            aria-hidden="true"
-            onClick={closePanel}
-          />,
-          <div
-            key="multiselect-dd-list"
-            role="listbox"
-            aria-label={m.listbox}
-            aria-multiselectable="true"
-            class="absolute z-50 top-full left-0 right-0 mt-1 flex max-h-72 flex-col overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg dark:border-slate-600 dark:bg-slate-800"
-          >
-            <div class="flex w-full shrink-0 items-center justify-between gap-2 border-b border-slate-100 p-2 dark:border-slate-700">
-              <div class="flex flex-wrap gap-1">
-                <button
-                  type="button"
-                  class={btnCls}
-                  disabled={() => {
-                    const rv = readMaybeSignal(value) ?? [];
-                    const allSelected = selectableValues.length > 0 &&
-                      selectableValues.every((v) => rv.includes(v));
-                    return disabled || allSelected;
-                  }}
-                  onClick={() => triggerChange([...selectableValues])}
-                >
-                  {m.selectAll}
-                </button>
-                <button
-                  type="button"
-                  class={btnCls}
-                  disabled={() => {
-                    const rv = readMaybeSignal(value) ?? [];
-                    return disabled || rv.length === 0;
-                  }}
-                  onClick={() => triggerChange([])}
-                >
-                  {m.clear}
-                </button>
-              </div>
+      <div
+        ref={(el: HTMLElement | null) => {
+          panelEl = el;
+        }}
+        class="hidden"
+        aria-hidden="true"
+        data-ui-multiselect-panel=""
+      >
+        <div
+          class="fixed inset-0 z-40"
+          aria-hidden="true"
+          onClick={closePanel}
+        />
+        <div
+          role="listbox"
+          aria-label={m.listbox}
+          aria-multiselectable="true"
+          class="absolute z-50 top-full left-0 right-0 mt-1 flex max-h-72 flex-col overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg dark:border-slate-600 dark:bg-slate-800"
+        >
+          <div class="flex w-full shrink-0 items-center justify-between gap-2 border-b border-slate-100 p-2 dark:border-slate-700">
+            <div class="flex flex-wrap gap-1">
               <button
                 type="button"
-                class={doneBtnCls}
-                disabled={disabled}
-                onClick={closePanel}
+                class={btnCls}
+                disabled={() => {
+                  const rv = readMaybeSignal(value) ?? [];
+                  const allSelected = selectableValues.length > 0 &&
+                    selectableValues.every((v) => rv.includes(v));
+                  return disabled || allSelected;
+                }}
+                onClick={() => triggerChange([...selectableValues])}
               >
-                {m.done}
+                {m.selectAll}
+              </button>
+              <button
+                type="button"
+                class={btnCls}
+                disabled={() => {
+                  const rv = readMaybeSignal(value) ?? [];
+                  return disabled || rv.length === 0;
+                }}
+                onClick={() => triggerChange([])}
+              >
+                {m.clear}
               </button>
             </div>
-            <div
-              class={twMerge(
-                "max-h-60 overflow-y-auto",
-                disabled && "pointer-events-none opacity-50",
-              )}
+            <button
+              type="button"
+              class={doneBtnCls}
+              disabled={disabled}
+              onClick={closePanel}
             >
-              {options.map((opt) => (
-                <div
-                  key={opt.value}
-                  role="option"
-                  aria-selected={() =>
-                    (readMaybeSignal(value) ?? []).includes(opt.value)}
-                  aria-disabled={opt.disabled}
-                  class={() => {
-                    const rv = readMaybeSignal(value) ?? [];
-                    const selected = rv.includes(opt.value);
-                    return twMerge(
-                      optionRowBase,
-                      selected &&
-                        "bg-blue-50 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200",
-                      opt.disabled &&
-                        "cursor-not-allowed opacity-50 hover:bg-transparent dark:hover:bg-transparent",
-                    );
-                  }}
-                  onClick={() =>
+              {m.done}
+            </button>
+          </div>
+          <div
+            class={twMerge(
+              "max-h-60 overflow-y-auto",
+              disabled && "pointer-events-none opacity-50",
+            )}
+          >
+            {options.map((opt) => (
+              <div
+                key={opt.value}
+                role="option"
+                aria-selected={() =>
+                  (readMaybeSignal(value) ?? []).includes(opt.value)}
+                aria-disabled={opt.disabled}
+                class={() => {
+                  const rv = readMaybeSignal(value) ?? [];
+                  const selected = rv.includes(opt.value);
+                  return twMerge(
+                    optionRowBase,
+                    selected &&
+                      "bg-blue-50 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200",
+                    opt.disabled &&
+                      "cursor-not-allowed opacity-50 hover:bg-transparent dark:hover:bg-transparent",
+                  );
+                }}
+                onPointerDown={(e: Event) => {
+                  pickInlineDropdownOption(e, () => {
+                    skipFollowupClick = true;
                     toggleOption(
                       opt.value,
                       opt.disabled,
                       readMaybeSignal(value) ?? [],
-                    )}
+                    );
+                    queueMicrotask(() => {
+                      skipFollowupClick = false;
+                    });
+                  }, opt.disabled);
+                }}
+                onClick={() => {
+                  if (skipFollowupClick) return;
+                  toggleOption(
+                    opt.value,
+                    opt.disabled,
+                    readMaybeSignal(value) ?? [],
+                  );
+                }}
+              >
+                <span
+                  class={() => {
+                    const rv = readMaybeSignal(value) ?? [];
+                    const selected = rv.includes(opt.value);
+                    return twMerge(
+                      "flex size-4 shrink-0 items-center justify-center rounded border",
+                      selected
+                        ? "border-blue-600 bg-blue-600 text-white dark:border-blue-500 dark:bg-blue-500"
+                        : "border-slate-300 dark:border-slate-500",
+                      opt.disabled && "opacity-50",
+                    );
+                  }}
+                  aria-hidden="true"
                 >
-                  <span
-                    class={() => {
-                      const rv = readMaybeSignal(value) ?? [];
-                      const selected = rv.includes(opt.value);
-                      return twMerge(
-                        "flex size-4 shrink-0 items-center justify-center rounded border",
-                        selected
-                          ? "border-blue-600 bg-blue-600 text-white dark:border-blue-500 dark:bg-blue-500"
-                          : "border-slate-300 dark:border-slate-500",
-                        opt.disabled && "opacity-50",
-                      );
-                    }}
-                    aria-hidden="true"
-                  >
-                    {() => {
-                      const rv = readMaybeSignal(value) ?? [];
-                      const selected = rv.includes(opt.value);
-                      return selected
-                        ? (
-                          <svg
-                            class="size-3"
-                            fill="none"
-                            stroke="currentColor"
-                            stroke-width="2.5"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
-                              d="M5 13l4 4L19 7"
-                            />
-                          </svg>
-                        )
-                        : null;
-                    }}
-                  </span>
-                  <span class="flex-1">{opt.label}</span>
-                </div>
-              ))}
-            </div>
-          </div>,
-        ]}
-      </Show>
+                  {() => {
+                    const rv = readMaybeSignal(value) ?? [];
+                    const selected = rv.includes(opt.value);
+                    return selected
+                      ? (
+                        <svg
+                          class="size-3"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2.5"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            d="M5 13l4 4L19 7"
+                          />
+                        </svg>
+                      )
+                      : null;
+                  }}
+                </span>
+                <span class="flex-1">{opt.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
     </span>
   );
 }

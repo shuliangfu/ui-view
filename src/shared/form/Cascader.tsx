@@ -12,7 +12,8 @@
  * 打开时先显示最左一列（根），每选一层在右侧多一列，直到叶子。
  *
  * **浮层与滚动**：下拉在根内 **`position:absolute`**（`top-full`），随滚动容器与触发条一起走；**不使用** {@link Portal}。
- * 关外部用 **`document` 冒泡 `click`** + `composedPath` / {@link pressEventLikelyInsideRoot}。若页面里 **`Form` 下方紧挨大块兄弟（如代码预览）**，后绘制的兄弟会盖住浮层，宜调整 **DOM 顺序**（代码块在前、表单项在后）或提高表单侧层叠上下文，勿改挂 body。
+ * 关外部用 {@link installInlineDropdownOutsideClickClose}（document 冒泡 `click` + composedPath）。
+ * 若页面里 **`Form` 下方紧挨大块兄弟（如代码预览）**，后绘制的兄弟会盖住浮层，宜调整 **DOM 顺序**（代码块在前、表单项在后）或提高表单侧层叠上下文，勿改挂 body。
  */
 
 import {
@@ -22,7 +23,6 @@ import {
   isSignal,
   type JSXRenderable,
   onCleanup,
-  Show,
   type Signal,
 } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
@@ -35,6 +35,10 @@ import {
 import { resolveFormControlSize } from "./form-control-context.ts";
 import { type MaybeSignal, readMaybeSignal } from "./maybe-signal.ts";
 import type { SizeVariant } from "../types.ts";
+import {
+  installInlineDropdownOutsideClickClose,
+  syncInlineDropdownPanelVisibility,
+} from "./inline-dropdown-outside-click.ts";
 
 /**
  * 级联一层的节点；静态数据用 `children` 嵌套下一层（深度不限）。
@@ -272,94 +276,6 @@ function staticOptionHasChildren(opt: CascaderOption): boolean {
 }
 
 /**
- * 判断指针事件是否发生在 `root` 子树内；优先用 `composedPath` 穿透 Shadow DOM，
- * 避免仅用 `Node.contains` 在部分环境下误判「外部」为内部或相反。
- */
-function eventTargetInsideRoot(e: Event, root: HTMLElement | null): boolean {
-  if (!root) return false;
-  if (typeof e.composedPath === "function") {
-    const path = e.composedPath();
-    if (path.length > 0 && path.includes(root)) return true;
-  }
-  /** 点击落在文本节点时 `contains` 需落到父元素 */
-  const raw = e.target;
-  let n: Node | null = raw instanceof Node ? raw : null;
-  if (n && n.nodeType === 3) {
-    n = n.parentNode;
-  }
-  return n instanceof Node && root.contains(n);
-}
-
-/**
- * 按下（pointer/mouse）是否应视为发生在 `root` 子树内，用于「点外部关面板」。
- *
- * 长页面里**后出现的兄弟区块**（标题、卡片、代码区）可能叠在上方级联控件的浮层**视觉之上**，
- * 命中测试的 `event.target` 会落在 root **外**，`window` 捕获阶段误判为外部并立刻 `closePanel`，
- * 表现为点「浙江」等一级项直接关面板、不出第二列；二级示例在文档中更靠下，叠层情况不同，故看似「只有三级坏」。
- *
- * 在 `eventTargetInsideRoot` 为假时，若事件带 `clientX`/`clientY`，再用 `document.elementsFromPoint`
- * 从上往下遍历叠层：栈里**任一**元素被 `root.contains`，仍视为点在组件内。
- *
- * @param e - `pointerdown` 或 `mousedown`
- * @param root - {@link Cascader} 根节点（`data-ui-cascader-root`）
- */
-function pressEventLikelyInsideRoot(
-  e: Event,
-  root: HTMLElement | null,
-): boolean {
-  if (!root) return false;
-  if (eventTargetInsideRoot(e, root)) return true;
-
-  const me = e as Partial<MouseEvent>;
-  const x = me.clientX;
-  const y = me.clientY;
-  if (
-    typeof x !== "number" ||
-    typeof y !== "number" ||
-    Number.isNaN(x) ||
-    Number.isNaN(y)
-  ) {
-    return false;
-  }
-
-  const doc = root.ownerDocument;
-  if (!doc || typeof doc.elementsFromPoint !== "function") {
-    return false;
-  }
-
-  let stack: Element[];
-  try {
-    stack = doc.elementsFromPoint(x, y) as Element[];
-  } catch {
-    return false;
-  }
-  if (!stack || stack.length === 0) return false;
-
-  for (let i = 0; i < stack.length; i++) {
-    const el = stack[i]!;
-    if (el instanceof Element && root.contains(el)) {
-      return true;
-    }
-  }
-  return false;
-}
-
-/**
- * 本次 `click` 的 `composedPath` 是否经过 `data-ui-cascader-root`（含其下 absolute 浮层）。
- */
-function clickComposedPathIncludesRoot(
-  e: Event,
-  root: HTMLElement | null,
-): boolean {
-  if (!root || typeof e.composedPath !== "function") return false;
-  try {
-    return e.composedPath().includes(root);
-  } catch {
-    return false;
-  }
-}
-
-/**
  * 在静态 `options` 树上，按「当前面板路径 + 列下标 + 被点 value」解析节点，得到与数据源一致的 {@link CascaderOption}。
  * 用于 {@link pickInColumn} 判断是否有下级：避免列表渲染传入的 `opt` 引用在个别时序下不完整。
  */
@@ -569,11 +485,11 @@ function displayLabelsMerged(
 /**
  * 任意层级级联：浮层内列数由 `computeNumCols` 决定；支持 `loadChildren` 动态子项。
  *
- * **浮层内容**：`Show` 子写 `{() => cascaderPanelThunk}`，由 `insert` 对 `cascaderPanelThunk` 单独建 effect，
+ * **浮层内容**：panel 内写 `{() => cascaderPanelThunk}`，由 `insert` 对 `cascaderPanelThunk` 单独建 effect，
  * 读 `pathInPanel` / `childCache` 时**不会**与「外层每次更新都 `createOwner` + thunk 展平」打架；
  * 若写成独立子组件并在其内 `return () =>`，会与 jsx 每次执行 `createOwner` 叠加，导致点选省后**列数不增**、看起来只有一层。
  *
- * **浮层挂载**：{@link Show} `when={openState}` 内为相对根 `absolute` 的下拉壳 + `{() => cascaderPanelThunk}`；`insert` 对 thunk 单独订阅 `pathInPanel` / `childCache`。
+ * **浮层挂载**：始终挂载的 panel wrap + `syncInlineDropdownPanelVisibility`；内层 `{() => cascaderPanelThunk}` 由 `insert` 单独订阅 `pathInPanel` / `childCache`。
  */
 function CascaderDropdownPanel(props: CascaderProps) {
   const {
@@ -594,6 +510,8 @@ function CascaderDropdownPanel(props: CascaderProps) {
   const openState = createSignal(false);
   /** 组件根 DOM（触发条 + 内联 absolute 浮层），供「点外部」与 `elementsFromPoint` 兜底 */
   let rootEl: HTMLElement | null = null;
+  /** 浮层包裹：始终挂载，用 hidden/inert 控制显隐（与 Select 一致） */
+  let panelEl: HTMLElement | null = null;
   /** 浮层内当前路径，打开时从 value 拷贝，点击列内项时更新 */
   const pathInPanel = createSignal<string[]>([]);
   /** 懒加载子节点缓存：键为 pathKey(父路径) */
@@ -631,50 +549,27 @@ function CascaderDropdownPanel(props: CascaderProps) {
     });
   };
 
-  /**
-   * 展开时关外部：在 **`document` 冒泡阶段**监听 **`click`**（`capture: false`）。
-   *
-   * **为何不用捕获阶段**：捕获早于目标与委托；叠层上 `event.target` 常落在根外，`pressEventLikelyInsideRoot` 仍可能误判并先 `closePanel()`，
-   * 随后同一次 `click` 的委托无法再执行 {@link pickInColumn}（表现为三级/一级一点就关）。
-   *
-   * **冒泡 + `composedPath`**：默认在 View 的 document 委托**之后**注册。
-   */
+  installInlineDropdownOutsideClickClose(
+    () => openState.value,
+    () => rootEl,
+    closePanel,
+  );
+
+  syncInlineDropdownPanelVisibility(
+    () => openState.value,
+    () => panelEl,
+  );
+
   createEffect(() => {
     if (!openState.value) return;
-    const doc = globalThis.document;
-    if (!doc) return;
-
-    let disposed = false;
-    let attached = false;
-
-    const onClickOutsideBubble = (e: Event) => {
-      if (!openState.value) return;
-      if (
-        e instanceof MouseEvent && typeof e.button === "number" &&
-        e.button !== 0
-      ) {
-        return;
-      }
-      const root = rootEl;
-      if (!root) return;
-      if (clickComposedPathIncludesRoot(e, root)) return;
-      if (pressEventLikelyInsideRoot(e, root)) return;
-      closePanel();
-    };
-
-    const attach = () => {
-      if (disposed || !openState.value) return;
-      attached = true;
-      doc.addEventListener("click", onClickOutsideBubble, false);
-    };
-
-    /** 避免与「本次用于打开面板」的同一 tick 交错 */
-    queueMicrotask(attach);
-
+    const g = globalThis as unknown as Record<
+      string,
+      (() => void) | undefined
+    >;
+    g[DROPDOWN_ESC_KEY] = closePanel;
     onCleanup(() => {
-      disposed = true;
-      if (attached) {
-        doc.removeEventListener("click", onClickOutsideBubble, false);
+      if (g[DROPDOWN_ESC_KEY] === closePanel) {
+        delete g[DROPDOWN_ESC_KEY];
       }
     });
   });
@@ -780,7 +675,7 @@ function CascaderDropdownPanel(props: CascaderProps) {
     const hasBranch = staticOptionHasChildren(canonical);
 
     /**
-     * 静态叶子：`batch` 合并关面板 + 写路径，避免与 `Show`/内层 insert 交错刷新；再包一层 `div` 绑 `openState` 作视觉兜底。
+     * 静态叶子：`batch` 合并关面板 + 写路径，避免与浮层显隐/内层 insert 交错刷新；再包一层 `div` 绑 `openState` 作视觉兜底。
      */
     if (!loadChildren && !hasBranch) {
       batch(() => {
@@ -835,7 +730,7 @@ function CascaderDropdownPanel(props: CascaderProps) {
 
   /**
    * 下拉浮层 VNode thunk：`insert` 对其调用会建独立 effect，订阅 `pathInPanel` / `childCache` 等；
-   * 若把逻辑直接写在 `Show` 的单层子函数里，`Show` 在 `when` 恒真时会短路，列数不会随路径更新。
+   * 若把逻辑直接写在外层单层子函数里且不单独建 effect，列数不会随路径更新。
    */
   function cascaderPanelThunk() {
     const opts = props.options;
@@ -891,15 +786,6 @@ function CascaderDropdownPanel(props: CascaderProps) {
 
     return (
       <div class="flex min-h-0 min-w-0 max-w-full flex-col">
-        {typeof globalThis !== "undefined" &&
-          (() => {
-            const g = globalThis as unknown as Record<
-              string,
-              (() => void) | undefined
-            >;
-            g[DROPDOWN_ESC_KEY] = closePanel;
-            return null;
-          })()}
         {/* 列区域：不用 `display:contents`，避免个别环境下命中/包含与关外部判断异常 */}
         <div class="grid max-h-72 w-max min-w-0 max-w-full grid-flow-col overflow-x-auto auto-cols-[minmax(10rem,max-content)]">
           {columns.map((col, colIdx) => (
@@ -1033,28 +919,25 @@ function CascaderDropdownPanel(props: CascaderProps) {
           <IconChevronDown size="sm" />
         </span>
       </button>
-      <Show when={openState}>
-        {() => (
-          <div
-            class={() =>
-              twMerge(
-                !openState.value && "hidden pointer-events-none",
-              )}
-            aria-hidden={() => !openState.value}
-          >
-            <div
-              role="dialog"
-              aria-label={m.dialog}
-              data-ui-cascader-panel=""
-              class={twMerge(
-                "absolute z-50 top-full left-0 mt-1 w-max max-h-72 min-w-0 max-w-[min(100vw-1rem,520px)] overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg dark:border-slate-600 dark:bg-slate-800",
-              )}
-            >
-              {() => cascaderPanelThunk}
-            </div>
-          </div>
-        )}
-      </Show>
+      <div
+        ref={(el: HTMLElement | null) => {
+          panelEl = el;
+        }}
+        class="hidden"
+        aria-hidden="true"
+        data-ui-cascader-panel-wrap=""
+      >
+        <div
+          role="dialog"
+          aria-label={m.dialog}
+          data-ui-cascader-panel=""
+          class={twMerge(
+            "absolute z-50 top-full left-0 mt-1 w-max max-h-72 min-w-0 max-w-[min(100vw-1rem,520px)] overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg dark:border-slate-600 dark:bg-slate-800",
+          )}
+        >
+          {() => cascaderPanelThunk}
+        </div>
+      </div>
     </div>
   );
 }

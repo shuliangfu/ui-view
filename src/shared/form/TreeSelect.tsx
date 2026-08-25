@@ -12,7 +12,12 @@ export type TreeSelectAppearance = "dropdown" | "native";
  * 选中后对外 `value` 仍是节点 `value`（如 `fe`），`onChange` 与 Select 一样可用 `target.value`。
  */
 
-import { createSignal, Show } from "@dreamer/view";
+import { createEffect, createSignal, onCleanup } from "@dreamer/view";
+import {
+  installInlineDropdownOutsideClickClose,
+  pickInlineDropdownOption,
+  syncInlineDropdownPanelVisibility,
+} from "./inline-dropdown-outside-click.ts";
 import { twMerge } from "tailwind-merge";
 import { IconChevronDown } from "../basic/icons/ChevronDown.tsx";
 import {
@@ -215,22 +220,69 @@ function TreeSelectDropdownBranch(props: Omit<TreeSelectProps, "appearance">) {
 
   const openState = createSignal(false);
   const sizeCls = sizeClassesDropdown[size];
+  let rootEl: HTMLElement | null = null;
+  let panelEl: HTMLElement | null = null;
   /** 展平结果仅随 props.options 变；在同步体中计算即可 */
   const flat = flattenTreeSelectOptions(options);
 
-  const triggerChange = (newValue: string) => {
-    commitMaybeSignal(value, newValue);
-    const synthetic = { target: { value: newValue } } as unknown as Event;
-    onChange?.(synthetic);
+  const closePanel = () => {
     openState.value = false;
   };
 
-  const handleBackdropClick = () => {
-    openState.value = false;
+  const scheduleClosePanel = () => {
+    closePanel();
+    queueMicrotask(() => {
+      if (openState.value) {
+        openState.value = false;
+      }
+    });
+  };
+
+  installInlineDropdownOutsideClickClose(
+    () => openState.value,
+    () => rootEl,
+    closePanel,
+  );
+
+  syncInlineDropdownPanelVisibility(
+    () => openState.value,
+    () => panelEl,
+  );
+
+  createEffect(() => {
+    if (!openState.value) return;
+    const g = globalThis as unknown as Record<
+      string,
+      (() => void) | undefined
+    >;
+    g[DROPDOWN_ESC_KEY] = closePanel;
+    onCleanup(() => {
+      if (g[DROPDOWN_ESC_KEY] === closePanel) {
+        delete g[DROPDOWN_ESC_KEY];
+      }
+    });
+  });
+
+  /**
+   * 选中某项。同值重复调用（pointerdown + click）只派发一次 onChange。
+   */
+  const triggerChange = (newValue: string) => {
+    const prev = readMaybeSignal(value) ?? "";
+    commitMaybeSignal(value, newValue);
+    if (prev !== newValue) {
+      const synthetic = { target: { value: newValue } } as unknown as Event;
+      onChange?.(synthetic);
+    }
+    scheduleClosePanel();
   };
 
   return (
-    <span class={twMerge("relative block w-full min-w-0", className)}>
+    <span
+      ref={(el: HTMLElement | null) => {
+        rootEl = el;
+      }}
+      class={twMerge("relative block w-full min-w-0", className)}
+    >
       <input
         type="hidden"
         name={name}
@@ -255,7 +307,16 @@ function TreeSelectDropdownBranch(props: Omit<TreeSelectProps, "appearance">) {
           sizeCls,
         )}
         onClick={() => {
-          if (!disabled) openState((prev) => !prev);
+          if (disabled) return;
+          if (openState.value) {
+            closePanel();
+            return;
+          }
+          queueMicrotask(() => {
+            if (!disabled && !openState.value) {
+              openState.value = true;
+            }
+          });
         }}
       >
         <span
@@ -286,74 +347,70 @@ function TreeSelectDropdownBranch(props: Omit<TreeSelectProps, "appearance">) {
           <IconChevronDown size="sm" />
         </span>
       </button>
-      {
-        /* 同 {@link Select}：避免 `display: contents` 导致下拉锚点错乱 */
-      }
-      <Show when={() => openState.value}>
-        {[
-          typeof globalThis !== "undefined" &&
-          (() => {
-            const g = globalThis as unknown as Record<
-              string,
-              (() => void) | undefined
-            >;
-            g[DROPDOWN_ESC_KEY] = handleBackdropClick;
-            return null;
-          })(),
-          <div
-            key="treeselect-dd-backdrop"
-            class="fixed inset-0 z-40"
-            aria-hidden="true"
-            onClick={handleBackdropClick}
-          />,
-          <div
-            key="treeselect-dd-list"
-            role="listbox"
-            aria-label={m.listbox}
-            class="absolute z-50 top-full left-0 right-0 mt-1 max-h-60 overflow-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg dark:border-slate-600 dark:bg-slate-800"
+      <div
+        ref={(el: HTMLElement | null) => {
+          panelEl = el;
+        }}
+        class="hidden"
+        aria-hidden="true"
+        data-ui-treeselect-panel=""
+      >
+        <div
+          class="fixed inset-0 z-40"
+          aria-hidden="true"
+          onClick={closePanel}
+        />
+        <div
+          role="listbox"
+          aria-label={m.listbox}
+          class="absolute z-50 top-full left-0 right-0 mt-1 max-h-60 overflow-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg dark:border-slate-600 dark:bg-slate-800"
+        >
+          <button
+            type="button"
+            role="option"
+            aria-selected={() => (readMaybeSignal(value) ?? "") === ""}
+            class={() =>
+              twMerge(
+                optionRowCls,
+                "pl-3",
+                (readMaybeSignal(value) ?? "") === "" &&
+                  "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
+              )}
+            onPointerDown={(e: Event) => {
+              pickInlineDropdownOption(e, () => triggerChange(""));
+            }}
+            onClick={() => triggerChange("")}
           >
+            {placeholder}
+          </button>
+          {flat.map((opt) => (
             <button
               type="button"
+              key={opt.value}
               role="option"
-              aria-selected={() => (readMaybeSignal(value) ?? "") === ""}
+              aria-selected={() => (readMaybeSignal(value) ?? "") === opt.value}
+              aria-label={opt.fullPath}
+              title={opt.fullPath}
               class={() =>
                 twMerge(
                   optionRowCls,
-                  "pl-3",
-                  (readMaybeSignal(value) ?? "") === "" &&
+                  opt.depth === 0 && "pl-3",
+                  (readMaybeSignal(value) ?? "") === opt.value &&
                     "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
                 )}
-              onClick={() => triggerChange("")}
+              style={opt.depth > 0
+                ? { paddingLeft: `${0.75 + opt.depth * 0.75}rem` }
+                : undefined}
+              onPointerDown={(e: Event) => {
+                pickInlineDropdownOption(e, () => triggerChange(opt.value));
+              }}
+              onClick={() => triggerChange(opt.value)}
             >
-              {placeholder}
+              {opt.nodeLabel}
             </button>
-            {flat.map((opt) => (
-              <button
-                type="button"
-                key={opt.value}
-                role="option"
-                aria-selected={() =>
-                  (readMaybeSignal(value) ?? "") === opt.value}
-                aria-label={opt.fullPath}
-                title={opt.fullPath}
-                class={() =>
-                  twMerge(
-                    optionRowCls,
-                    opt.depth === 0 && "pl-3",
-                    (readMaybeSignal(value) ?? "") === opt.value &&
-                      "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
-                  )}
-                style={opt.depth > 0
-                  ? { paddingLeft: `${0.75 + opt.depth * 0.75}rem` }
-                  : undefined}
-                onClick={() => triggerChange(opt.value)}
-              >
-                {opt.nodeLabel}
-              </button>
-            ))}
-          </div>,
-        ]}
-      </Show>
+          ))}
+        </div>
+      </div>
     </span>
   );
 }

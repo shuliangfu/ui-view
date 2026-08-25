@@ -3,7 +3,12 @@
  * 须通过 {@link SelectProps.options} 传入选项；未传时视为空列表。
  */
 
-import { createSignal, Show } from "@dreamer/view";
+import { createEffect, createSignal, onCleanup } from "@dreamer/view";
+import {
+  installInlineDropdownOutsideClickClose,
+  pickInlineDropdownOption,
+  syncInlineDropdownPanelVisibility,
+} from "./inline-dropdown-outside-click.ts";
 import type { JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import { IconChevronDown } from "../basic/icons/ChevronDown.tsx";
@@ -119,22 +124,72 @@ function SelectDropdownBranch(props: SelectProps) {
 
   const openState = createSignal(false);
   const sizeCls = sizeClassesDropdown[size];
+  /** 根节点：触发器 + 内联 listbox，供点外部关闭判断 */
+  let rootEl: HTMLElement | null = null;
+  /** 浮层包裹（backdrop + listbox），用 hidden 控制显隐，避免 Show 卸载后选项 click 失效 */
+  let panelEl: HTMLElement | null = null;
 
-  /** 选中某项：写回 Signal、派发合成 change、收起浮层 */
-  const triggerChange = (newValue: string) => {
-    commitMaybeSignal(value, newValue);
-    const synthetic = { target: { value: newValue } } as unknown as Event;
-    onChange?.(synthetic);
+  /** 关闭下拉浮层 */
+  const closePanel = () => {
     openState.value = false;
   };
 
-  /** 点击遮罩关闭下拉 */
-  const handleBackdropClick = () => {
-    openState.value = false;
+  /**
+   * 同步关 + 微任务再关一次，避免批处理末尾仍被写成开（与 Cascader 一致）。
+   */
+  const scheduleClosePanel = () => {
+    closePanel();
+    queueMicrotask(() => {
+      if (openState.value) {
+        openState.value = false;
+      }
+    });
+  };
+
+  installInlineDropdownOutsideClickClose(
+    () => openState.value,
+    () => rootEl,
+    closePanel,
+  );
+
+  syncInlineDropdownPanelVisibility(
+    () => openState.value,
+    () => panelEl,
+  );
+
+  createEffect(() => {
+    if (!openState.value) return;
+    const g = globalThis as unknown as Record<
+      string,
+      (() => void) | undefined
+    >;
+    g[DROPDOWN_ESC_KEY] = closePanel;
+    onCleanup(() => {
+      if (g[DROPDOWN_ESC_KEY] === closePanel) {
+        delete g[DROPDOWN_ESC_KEY];
+      }
+    });
+  });
+
+  /**
+   * 选中某项：写回 Signal、派发合成 change、收起浮层。
+   * 同值重复调用（pointerdown + click 双路径）只派发一次 onChange。
+   */
+  const triggerChange = (newValue: string) => {
+    const prev = readMaybeSignal(value) ?? "";
+    commitMaybeSignal(value, newValue);
+    if (prev !== newValue) {
+      const synthetic = { target: { value: newValue } } as unknown as Event;
+      onChange?.(synthetic);
+    }
+    scheduleClosePanel();
   };
 
   return (
     <span
+      ref={(el: HTMLElement | null) => {
+        rootEl = el;
+      }}
       class={twMerge(
         "relative block w-full min-w-0",
         className,
@@ -164,7 +219,16 @@ function SelectDropdownBranch(props: SelectProps) {
           sizeCls,
         )}
         onClick={() => {
-          if (!disabled) openState.value = !openState.value;
+          if (disabled) return;
+          if (openState.value) {
+            closePanel();
+            return;
+          }
+          queueMicrotask(() => {
+            if (!disabled && !openState.value) {
+              openState.value = true;
+            }
+          });
         }}
       >
         <span
@@ -192,77 +256,75 @@ function SelectDropdownBranch(props: SelectProps) {
           <IconChevronDown size="sm" />
         </span>
       </button>
-      {
-        /*
-         * 勿用 `display: contents` 包裹：会破坏 `absolute` 相对外层 `relative` 的包含块，列表易飘到视口顶部。
-         * 用数组子节点让遮罩与列表作为 `span` 的并列子 DOM（不用 Fragment，避免 lint jsx-no-useless-fragment）。
-         */
-      }
-      <Show when={() => openState.value}>
-        {[
-          typeof globalThis !== "undefined" &&
-          (() => {
-            const g = globalThis as unknown as Record<
-              string,
-              (() => void) | undefined
-            >;
-            g[DROPDOWN_ESC_KEY] = () => {
-              openState.value = false;
-            };
-            return null;
-          })(),
-          <div
-            key="select-dd-backdrop"
-            class="fixed inset-0 z-40"
-            aria-hidden
-            onClick={handleBackdropClick}
-          />,
-          <div
-            key="select-dd-list"
-            role="listbox"
-            aria-activedescendant={() => {
-              const rv = readMaybeSignal(value);
-              return resolvedOptions.find((o) => o.value === rv)?.value;
-            }}
-            class="absolute z-50 top-full left-0 right-0 mt-1 py-1 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-lg max-h-60 overflow-auto"
-          >
-            {placeholder != null && (
-              <button
-                type="button"
-                role="option"
-                aria-selected={() => !readMaybeSignal(value)}
-                class={() =>
-                  twMerge(
-                    optionBase,
-                    !readMaybeSignal(value) &&
-                      "bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300",
-                  )}
-                onClick={() => triggerChange("")}
-              >
-                {placeholder}
-              </button>
-            )}
-            {resolvedOptions.map((opt) => (
-              <button
-                key={opt.value}
-                type="button"
-                role="option"
-                aria-selected={() => readMaybeSignal(value) === opt.value}
-                disabled={opt.disabled}
-                class={() =>
-                  twMerge(
-                    optionBase,
-                    readMaybeSignal(value) === opt.value &&
-                      "bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300",
-                  )}
-                onClick={() => !opt.disabled && triggerChange(opt.value)}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>,
-        ]}
-      </Show>
+      <div
+        ref={(el: HTMLElement | null) => {
+          panelEl = el;
+        }}
+        class="hidden"
+        aria-hidden="true"
+        data-ui-select-panel=""
+      >
+        <div
+          class="fixed inset-0 z-40"
+          aria-hidden="true"
+          onClick={closePanel}
+        />
+        <div
+          role="listbox"
+          aria-activedescendant={() => {
+            const rv = readMaybeSignal(value);
+            return resolvedOptions.find((o) => o.value === rv)?.value;
+          }}
+          class="absolute z-50 top-full left-0 right-0 mt-1 py-1 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-lg max-h-60 overflow-auto"
+        >
+          {placeholder != null && (
+            <button
+              type="button"
+              role="option"
+              aria-selected={() => !readMaybeSignal(value)}
+              class={() =>
+                twMerge(
+                  optionBase,
+                  !readMaybeSignal(value) &&
+                    "bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300",
+                )}
+              onPointerDown={(e: Event) => {
+                pickInlineDropdownOption(e, () => triggerChange(""));
+              }}
+              onClick={() => triggerChange("")}
+            >
+              {placeholder}
+            </button>
+          )}
+          {resolvedOptions.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              role="option"
+              aria-selected={() => readMaybeSignal(value) === opt.value}
+              disabled={opt.disabled}
+              class={() =>
+                twMerge(
+                  optionBase,
+                  readMaybeSignal(value) === opt.value &&
+                    "bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300",
+                )}
+              onPointerDown={(e: Event) => {
+                pickInlineDropdownOption(
+                  e,
+                  () => triggerChange(opt.value),
+                  opt.disabled,
+                );
+              }}
+              onClick={() => {
+                if (!opt.disabled) triggerChange(opt.value);
+              }}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
     </span>
   );
 }

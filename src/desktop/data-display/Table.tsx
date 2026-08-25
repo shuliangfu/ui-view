@@ -23,6 +23,7 @@ import { IconChevronRight } from "../../shared/basic/icons/ChevronRight.tsx";
 import { IconChevronUp } from "../../shared/basic/icons/ChevronUp.tsx";
 import { getPaginationState } from "../../shared/navigation/pagination-utils.ts";
 import type { SizeVariant } from "../../shared/types.ts";
+import { isHtmlElementOf } from "../../shared/dom-guards.ts";
 
 /** Table 底部分页：与 {@link ../../shared/navigation/Pagination.tsx} 视觉对齐 */
 const TABLE_PAGINATION_BTN_CLS =
@@ -386,7 +387,7 @@ function setInputSelectionRangeSafe(
   const n = ctrl.value.length;
   const s = Math.min(Math.max(0, start), n);
   const e = Math.min(Math.max(0, end), n);
-  if (ctrl instanceof HTMLTextAreaElement) {
+  if (isHtmlElementOf(ctrl, "HTMLTextAreaElement")) {
     try {
       ctrl.setSelectionRange(s, e);
     } catch {
@@ -424,8 +425,8 @@ function applyEditTextSelectionSnapshot(
   ps: { start: number; end: number },
 ): void {
   if (
-    !(ctrl instanceof HTMLInputElement) &&
-    !(ctrl instanceof HTMLTextAreaElement)
+    !(isHtmlElementOf(ctrl, "HTMLInputElement")) &&
+    !(isHtmlElementOf(ctrl, "HTMLTextAreaElement"))
   ) {
     return;
   }
@@ -440,8 +441,8 @@ function applyEditTextSelectionSnapshot(
  */
 function applyCaretAtEndForEditControl(ctrl: HTMLElement): void {
   if (
-    !(ctrl instanceof HTMLInputElement) &&
-    !(ctrl instanceof HTMLTextAreaElement)
+    !(isHtmlElementOf(ctrl, "HTMLInputElement")) &&
+    !(isHtmlElementOf(ctrl, "HTMLTextAreaElement"))
   ) {
     return;
   }
