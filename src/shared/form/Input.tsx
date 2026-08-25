@@ -23,7 +23,11 @@ import {
   autofillVisualClass,
   inputNativeAutoComplete,
 } from "./input-autofill-classes.ts";
-import { commitMaybeSignal, type MaybeSignal } from "./maybe-signal.ts";
+import {
+  commitMaybeSignal,
+  readMaybeSignal,
+  type MaybeSignal,
+} from "./maybe-signal.ts";
 
 /**
  * Input 内置文案。
@@ -157,16 +161,66 @@ const ClearIcon = () => (
 );
 
 /**
+ * 仅尾部插槽读 `value`：清除钮 / suffix 显隐随 Signal 更新，
+ * **不得**包住中间 `<input>`，否则每次键入会整段重建并失焦（与 {@link Search} / {@link InputNumber} 同策略）。
+ */
+function InputClearOrSuffix(props: {
+  size: SizeVariant;
+  value: MaybeSignal<string> | undefined;
+  allowClear: boolean;
+  disabled: boolean;
+  readOnly: boolean;
+  suffix?: unknown;
+  onClear: () => void;
+  clearLabel: string;
+}): JSXRenderable {
+  return () => {
+    const val = readMaybeSignal(props.value) ?? "";
+    const showClear = Boolean(
+      props.allowClear && val && !props.disabled && !props.readOnly,
+    );
+    if (showClear) {
+      return (
+        <button
+          type="button"
+          class={twMerge(
+            "inline-flex shrink-0 items-center border-l border-slate-300 px-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 dark:border-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-300",
+            sizePadYClasses[props.size],
+          )}
+          onClick={props.onClear}
+          aria-label={props.clearLabel}
+        >
+          <ClearIcon />
+        </button>
+      );
+    }
+    if (props.suffix != null && props.suffix !== false) {
+      return (
+        <div
+          class={twMerge(
+            addonSuffixCls,
+            "pointer-events-none",
+            sizeTextClasses[props.size],
+          )}
+        >
+          {props.suffix}
+        </div>
+      );
+    }
+    return null;
+  };
+}
+
+/**
  * 组合输入：prefix | input | suffix/clear，共用一层 border + 圆角。
- *
- * @param showClear - 是否显示清除钮（由调用方读 value 后传入，避免在此订阅 signal）
+ * 外壳与 `<input>` 为稳定 VNode；清除/后缀见 {@link InputClearOrSuffix}。
  */
 function InputGroupShell(props: {
   size: SizeVariant;
   shellCls: string;
   prefix?: unknown;
   suffix?: unknown;
-  showClear: boolean;
+  allowClear: boolean;
   type: string;
   id: string | undefined;
   name: string | undefined;
@@ -176,7 +230,7 @@ function InputGroupShell(props: {
   readOnly: boolean;
   required: boolean;
   error: boolean;
-  value: string | (() => string) | undefined;
+  value: MaybeSignal<string> | undefined;
   /** 写入 DOM 的 `autocomplete` 字符串，已由 {@link inputNativeAutoComplete} 解析 */
   nativeAutoComplete: string | undefined;
   /** 原始 `autoComplete`（含 `true`），供 {@link autofillVisualClass} */
@@ -202,7 +256,7 @@ function InputGroupShell(props: {
     shellCls,
     prefix,
     suffix,
-    showClear,
+    allowClear,
     type,
     id,
     name,
@@ -238,6 +292,21 @@ function InputGroupShell(props: {
     "px-3",
   );
 
+  const trailing = allowClear || (suffix != null && suffix !== false)
+    ? (
+      <InputClearOrSuffix
+        size={size}
+        value={value}
+        allowClear={allowClear}
+        disabled={disabled}
+        readOnly={readOnly}
+        suffix={suffix}
+        onClear={onClear}
+        clearLabel={clearLabel}
+      />
+    )
+    : null;
+
   return (
     <div class={shellCls}>
       {prefix != null && prefix !== false && (
@@ -269,33 +338,7 @@ function InputGroupShell(props: {
         onClick={onClick}
         onPaste={onPaste}
       />
-      {showClear
-        ? (
-          <button
-            type="button"
-            class={twMerge(
-              "inline-flex shrink-0 items-center border-l border-slate-300 px-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 dark:border-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-300",
-              sizePadYClasses[size],
-            )}
-            onClick={onClear}
-            aria-label={clearLabel}
-          >
-            <ClearIcon />
-          </button>
-        )
-        : suffix != null && suffix !== false
-        ? (
-          <div
-            class={twMerge(
-              addonSuffixCls,
-              "pointer-events-none",
-              sizeTextClasses[size],
-            )}
-          >
-            {suffix}
-          </div>
-        )
-        : null}
+      {trailing}
     </div>
   );
 }
@@ -414,10 +457,14 @@ export function Input(props: InputProps): JSXRenderable {
     allowClear;
 
   if (!hasAddon) {
-    return () =>
-      type === "file"
-        ? <input {...inputSpreadProps} />
-        : <input {...inputSpreadProps} value={value} />;
+    /**
+     * 勿再包一层 `() => <input />`：`@dreamer/view` 的 `insert` 会把「函数子」挂进 effect，
+     * 与受控 `value` 的细粒度 `createRenderEffect` 叠在一起时，部分场景会在每次键入后整段重建 input DOM，表现为立刻失焦。
+     * Preact 版 `@dreamer/ui-preact` 的 `Input` 此处已直接返回 VNode，本包与之对齐。
+     */
+    return type === "file"
+      ? <input {...inputSpreadProps} />
+      : <input {...inputSpreadProps} value={value} />;
   }
 
   const shellCls = twMerge(
@@ -435,44 +482,41 @@ export function Input(props: InputProps): JSXRenderable {
     className,
   );
 
-  /** 在 getter 内读 `value()`，与 {@link InputClearOrSuffix} 一致，避免清除钮显隐不随 Signal 更新 */
-  return () => {
-    const val = typeof value === "function" ? value() : value;
-    const showClear = Boolean(
-      allowClear && val && !disabled && !readOnly,
-    );
-    return (
-      <InputGroupShell
-        size={size}
-        shellCls={shellCls}
-        prefix={prefix}
-        suffix={showClear ? undefined : suffix}
-        showClear={showClear}
-        type={type}
-        inputRef={inputRef}
-        id={resolvedId}
-        name={name}
-        nativeAutoComplete={nativeAutoComplete}
-        autoCompleteHint={autoComplete}
-        placeholder={placeholder}
-        disabled={disabled}
-        readOnly={readOnly}
-        required={required}
-        error={error}
-        value={value}
-        onInput={handleInput}
-        onChange={handleChange}
-        onBlur={onBlur}
-        onFocus={onFocus}
-        onKeyDown={onKeyDown}
-        onKeyUp={onKeyUp}
-        onClick={onClick}
-        onPaste={onPaste}
-        onClear={handleClear}
-        clearLabel={m.clear}
-        accept={accept}
-        multiple={multiple}
-      />
-    );
-  };
+  /**
+   * 与无 addon / {@link InputNumber} 一致：直接返回稳定外壳，**勿** `return () => { value(); ... }`。
+   * 清除钮显隐由 {@link InputClearOrSuffix} 局部订阅，键入时不替换中间 input DOM。
+   */
+  return (
+    <InputGroupShell
+      size={size}
+      shellCls={shellCls}
+      prefix={prefix}
+      suffix={suffix}
+      allowClear={allowClear}
+      type={type}
+      inputRef={inputRef}
+      id={resolvedId}
+      name={name}
+      nativeAutoComplete={nativeAutoComplete}
+      autoCompleteHint={autoComplete}
+      placeholder={placeholder}
+      disabled={disabled}
+      readOnly={readOnly}
+      required={required}
+      error={error}
+      value={value}
+      onInput={handleInput}
+      onChange={handleChange}
+      onBlur={onBlur}
+      onFocus={onFocus}
+      onKeyDown={onKeyDown}
+      onKeyUp={onKeyUp}
+      onClick={onClick}
+      onPaste={onPaste}
+      onClear={handleClear}
+      clearLabel={m.clear}
+      accept={accept}
+      multiple={multiple}
+    />
+  );
 }

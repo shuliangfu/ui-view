@@ -229,10 +229,18 @@ export function Password(props: PasswordProps): JSXRenderable {
   };
 
   if (!onToggleShow && !showStrength) {
-    return () => <input {...inputProps} />;
+    /**
+     * 与 {@link Input} 无 addon 分支一致：勿 `() => <input />`，避免与受控 value 的
+     * createRenderEffect 叠用导致键入重建 DOM、立刻失焦。
+     */
+    return <input {...inputProps} />;
   }
 
-  return () => (
+  /**
+   * 外壳稳定；显隐按钮不依赖 value。强度文案用函数子局部读 value()，不替换 input。
+   * （`showPassword` 为父级传入的布尔 prop；切换时本函数整体重跑属预期。）
+   */
+  return (
     <div class={twMerge("relative", className)}>
       <input {...inputProps} class={twMerge("w-full", inputProps.class)} />
       {onToggleShow && (

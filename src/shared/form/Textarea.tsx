@@ -195,17 +195,26 @@ export function Textarea(props: TextareaProps): JSXRenderable {
   };
 
   if (maxLength == null) {
-    return () => <textarea {...textareaProps} />;
+    /**
+     * 与 {@link Input} 无 addon 分支一致：避免多包一层 `() => <textarea />` 在 View `insert` 下与受控
+     * `value` 叠用导致整段 DOM 重建、输入失焦。
+     */
+    return <textarea {...textareaProps} />;
   }
 
-  return () => (
+  /**
+   * 外壳稳定；字数由函数子局部读 value（与 Password 强度槽同理），勿包整段 `() =>`。
+   */
+  return (
     <div class="w-full min-w-0">
       <textarea {...textareaProps} />
-      <TextareaLengthDisplay
-        value={value}
-        maxLength={maxLength}
-        remainingFormatter={m.remaining}
-      />
+      {() => (
+        <TextareaLengthDisplay
+          value={value}
+          maxLength={maxLength}
+          remainingFormatter={m.remaining}
+        />
+      )}
     </div>
   );
 }

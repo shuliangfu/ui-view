@@ -348,7 +348,11 @@ export function Mentions(props: MentionsProps): JSXRenderable {
     onPaste,
   };
 
-  return () => (
+  /**
+   * 与 {@link InputNumber} / 带 prefix 的 {@link Input} 一致：外壳直接返回稳定 VNode。
+   * 下拉由 {@link MentionsDropdown} 内部订阅；勿再包 `() =>` 以免与受控 textarea value 叠用。
+   */
+  return (
     <div class={twMerge("relative", className)}>
       <textarea {...textareaProps} />
       <MentionsDropdown
