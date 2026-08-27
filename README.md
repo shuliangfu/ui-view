@@ -276,6 +276,21 @@ ChartPolarArea, ChartBubble, ChartScatter
 
 ---
 
+## Changelog
+
+### 1.1.2 - 2026-08-27
+
+#### Fixed
+
+- **Table** built-in pagination bar: horizontal padding now matches cell padding
+  by `size` (`xs`/`sm`/`md`/`lg`), plus bottom padding, so the range summary and
+  pager no longer sit flush against the container edges.
+
+Older release notes and migration notes live on the **documentation site**
+(`docs/` package; see `docs/README.md`).
+
+---
+
 ## Documentation
 
 Version history, migration notes, and full component APIs are maintained on the

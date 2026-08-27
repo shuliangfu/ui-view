@@ -269,6 +269,19 @@ Chart.js：ChartLine、ChartBar、ChartPie、ChartDoughnut、ChartRadar、ChartP
 
 ---
 
+## 变更日志
+
+### 1.1.2 - 2026-08-27
+
+#### Fixed
+
+- **Table** 内置底部分页条：左右内边距按 `size`（`xs`/`sm`/`md`/`lg`）与单元格
+  对齐，并补底部内边距，避免「第 x–y 条」摘要与右侧翻页贴容器左右边。
+
+更早版本说明与迁移见 **文档站**（`docs/` 包，见 `docs/README.md`）。
+
+---
+
 ## 文档
 
 版本说明、迁移与完整组件说明维护在 **文档站**。本仓库 **`docs/`** 包提供可交互

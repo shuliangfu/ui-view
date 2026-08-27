@@ -290,6 +290,14 @@ const sizeClasses: Record<SizeVariant, string> = {
   lg: "px-4 py-3 text-sm",
 };
 
+/** 底部分页条左右内边距：与单元格 `sizeClasses` 的 px 对齐，避免贴容器左右边 */
+const paginationPadXClasses: Record<SizeVariant, string> = {
+  xs: "px-2",
+  sm: "px-3",
+  md: "px-4",
+  lg: "px-4",
+};
+
 /** 可编辑控件固定行高，避免撑开单元格导致表格闪动 */
 const editableHeightCls: Record<SizeVariant, string> = {
   xs: "h-7 max-h-7 min-h-[1.75rem]",
@@ -2089,7 +2097,10 @@ export function Table<
                 <nav
                   role="navigation"
                   aria-label={tableMessages.paginationAriaLabel}
-                  class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mt-3 pt-3 border-t border-slate-200 dark:border-slate-700"
+                  class={twMerge(
+                    "flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mt-3 pt-3 pb-3 border-t border-slate-200 dark:border-slate-700",
+                    paginationPadXClasses[size],
+                  )}
                 >
                   <span class="text-sm text-slate-600 dark:text-slate-400 tabular-nums shrink-0">
                     {totalHint}
