@@ -319,10 +319,12 @@ export function createLocalDataSource(
       const totals: Record<string, number> = {};
       for (const c of opts.columns) {
         if (c.total) {
-          totals[c.prop] = rows.reduce(
+          const sum = rows.reduce(
             (s, r) => s + (Number(r[c.prop]) || 0),
             0,
           );
+          // 去掉浮点累加误差（12769.800000000001 → 12769.8）
+          totals[c.prop] = Math.round(sum * 1e6) / 1e6;
         }
       }
       const start = (q.page - 1) * q.pageSize;

@@ -2,7 +2,7 @@
  * DataPanel 数据面板（桌面 · 数据展示）。
  *
  * 一块完整的「列表管理」面板：卡片标题栏 + 工具栏按钮组（添加 / 搜索 / 刷新 / 打印 / 导入 / 导出 / 列设置，
- * 相邻按钮之间只有一条淡分割线）+ 可折叠搜索表单 + 批量操作条 + 表格（排序、多选、行内编辑、合计行、
+ * 相邻按钮之间只有一条淡分割线）+ 搜索 Modal（工具栏按钮打开，提交即搜索、重置即清空） + 批量操作条 + 表格（排序、多选、行内编辑、合计行、
  * 操作列）+ 分页（每页条数、页码、跳页）。新增 / 编辑 / 查看使用 Modal，**任何删除（含批量）都必须先经过确认对话框**，
  * 绝不直接删除。导出支持 xlsx（原生 OOXML）/ csv / json / xml / html，支持浅色与深色主题（`.dark`）。
  *
@@ -230,23 +230,23 @@ const ICON_BTN = "!bg-transparent !border-0 !shadow-none px-1 py-1";
 /**
  * 面板自带样式（作用域在 `.dp-*` 类名下，不依赖 Tailwind 扫描）：
  * - 工具栏按钮组：相邻按钮之间**只有一条**淡分割线（左侧按钮自己的右边框）；
+ * - 注意：SSR 会转义 `<style>` 文本里的 `>` / `&` / `<`，所以这里**不得使用子选择器**，位置用 `.dp-tb-first/-last/-nf/-nl` 类表达；
  * - 深色模式下面板主体用 `--dp-panel-body-bg`（默认 #18212f，比深色卡片再深约半档）。
  */
 export const DATA_PANEL_CSS = `
-.dp-tool-group > * { display: inline-flex; }
-.dp-tool-group button {
+.dp-tb {
   box-sizing: border-box; width: 2.625rem; height: 2.125rem; padding: 0 !important; line-height: 1;
   border-radius: 0 !important;
   background-color: #f1f5f9 !important; border-color: #e2e8f0 !important; color: #334155 !important;
 }
-.dp-tool-group button [role="img"] { width: 1rem !important; height: 1rem !important; }
-.dp-tool-group button:hover:not(:disabled) { background-color: #e2e8f0 !important; color: #0f172a !important; }
-.dark .dp-tool-group button { background-color: #0f172a !important; border-color: #1e293b !important; color: #e2e8f0 !important; }
-.dark .dp-tool-group button:hover:not(:disabled) { background-color: #1e293b !important; color: #fff !important; }
-.dp-tool-group > :first-child button { border-top-left-radius: 5px !important; border-bottom-left-radius: 5px !important; }
-.dp-tool-group > :last-child button { border-top-right-radius: 5px !important; border-bottom-right-radius: 5px !important; }
-.dp-tool-group > :not(:first-child) button { border-left-width: 0 !important; }
-.dp-tool-group > :not(:last-child) button { border-right-width: 1px !important; box-shadow: none !important; }
+.dp-tb [role="img"] { width: 1rem !important; height: 1rem !important; }
+.dp-tb:hover:not(:disabled) { background-color: #e2e8f0 !important; color: #0f172a !important; }
+.dark .dp-tb { background-color: #0f172a !important; border-color: #1e293b !important; color: #e2e8f0 !important; }
+.dark .dp-tb:hover:not(:disabled) { background-color: #1e293b !important; color: #fff !important; }
+.dp-tb-first { border-top-left-radius: 5px !important; border-bottom-left-radius: 5px !important; }
+.dp-tb-last { border-top-right-radius: 5px !important; border-bottom-right-radius: 5px !important; }
+.dp-tb-nf { border-left-width: 0 !important; }
+.dp-tb-nl { border-right-width: 1px !important; box-shadow: none !important; }
 .dark .dp-card { background: var(--dp-panel-body-bg, #18212f) !important; }
 `;
 
@@ -316,14 +316,12 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
       columns.filter((c) => c.hidden).map((c) => [c.prop, true]),
     ),
   );
-  const showSearch = createSignal(
-    Object.keys(initialQuery.filters).some((k) =>
-      !(props.fixed && k in props.fixed)
-    ),
-  );
-  const draft = createSignal<Record<string, string>>({
-    ...initialQuery.filters,
-  });
+  // 搜索表单在 Modal 里（工具栏按钮打开）；每个字段一个 signal，输入时不会重渲染输入框
+  const searchOpen = createSignal(false);
+  const sfields: Record<string, ReturnType<typeof createSignal<string>>> = {};
+  for (const sdef of searchDefs) {
+    sfields[sdef.name] = createSignal(initialQuery.filters[sdef.name] ?? "");
+  }
   const jump = createSignal("");
   let seq = 0;
 
@@ -762,9 +760,22 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
     for (const ms of [0, 30, 120, 400, 1000]) setTimeout(tagToolbar, ms);
   });
   // 结构：ButtonGroup.dp-tool-group > Tooltip/Dropdown 包装 > Button。不要在这些按钮外再包一层。
-  const toolBtn = (label: string, onClick: () => void, icon: unknown) => (
+  const posCls = (id: string): string => {
+    const ids = toolIds().map((x) => x[0]);
+    const i = ids.indexOf(id);
+    const n = ids.length;
+    return `px-2.5 dp-tb${i === 0 ? " dp-tb-first" : " dp-tb-nf"}${
+      i === n - 1 ? " dp-tb-last" : " dp-tb-nl"
+    }`;
+  };
+  const toolBtn = (
+    id: string,
+    label: string,
+    onClick: () => void,
+    icon: unknown,
+  ) => (
     <Tooltip content={label} placement="top">
-      <Button type="button" size="sm" class="px-2.5" onClick={onClick}>
+      <Button type="button" size="sm" class={posCls(id)} onClick={onClick}>
         {icon}
       </Button>
     </Tooltip>
@@ -838,29 +849,36 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
       <div class="contents" data-dp-tools={key}>
         <ButtonGroup attached class="dp-tool-group">
           {(caps.create || props.onCreate) &&
-            toolBtn(m.create, doCreate, <IconPlus size="sm" />)}
+            toolBtn("dp-create", m.create, doCreate, <IconPlus size="sm" />)}
           {searchDefs.length > 0 &&
             toolBtn(
+              "dp-search-toggle",
               m.search,
-              () => (showSearch.value = !showSearch.value),
+              openSearch,
               <IconSearch size="sm" />,
             )}
           {toolBtn(
+            "dp-refresh",
             m.refresh,
             () => void load(false),
             <IconRefresh size="sm" />,
           )}
           {caps.print &&
-            toolBtn(m.print, printTable, <IconPrinter size="sm" />)}
+            toolBtn("dp-print", m.print, printTable, <IconPrinter size="sm" />)}
           {(caps.import || props.onImportRows) &&
-            toolBtn(m.import, pickImport, <IconUpload size="sm" />)}
+            toolBtn(
+              "dp-import",
+              m.import,
+              pickImport,
+              <IconUpload size="sm" />,
+            )}
           {caps.export && (
             <Dropdown
               overlay={exportMenu}
               placement="bottomRight"
               trigger="click"
             >
-              <Button type="button" size="sm" class="px-2.5">
+              <Button type="button" size="sm" class={posCls("dp-export")}>
                 <IconDownload size="sm" />
               </Button>
             </Dropdown>
@@ -871,7 +889,7 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
               placement="bottomRight"
               trigger="click"
             >
-              <Button type="button" size="sm" class="px-2.5">
+              <Button type="button" size="sm" class={posCls("dp-columns")}>
                 <IconColumns size="sm" />
               </Button>
             </Dropdown>
@@ -881,44 +899,55 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
     </div>
   );
 
-  // ---- 搜索表单
-  const searchBar = () => {
-    if (!showSearch.value || searchDefs.length === 0) return null;
-    const submit = (e?: Event) => {
-      e?.preventDefault();
-      const filters: Record<string, string> = {};
-      for (const [k, v] of Object.entries(draft.value)) {
-        if (v.trim()) filters[k] = v.trim();
-      }
-      setQuery({ filters: { ...filters, ...(props.fixed ?? {}) }, page: 1 });
-    };
-    return (
-      <form
-        class="flex flex-wrap items-end gap-3 border-b border-slate-200 px-4 py-3 dark:border-slate-700"
-        data-testid="dp-search"
-        onSubmit={submit}
-      >
-        {searchDefs.map((s) => (
-          <label class="flex flex-col gap-1 text-sm">
-            <span>{s.label}</span>
-            {s.type === "select"
+  // ---- 搜索表单（Modal）：提交即搜索，重置即清空
+  function openSearch(): void {
+    for (const sdef of searchDefs) {
+      sfields[sdef.name].value = query.value.filters[sdef.name] ?? "";
+    }
+    searchOpen.value = true;
+  }
+  function applySearch(): void {
+    const filters: Record<string, string> = {};
+    for (const sdef of searchDefs) {
+      const v = sfields[sdef.name].value.trim();
+      if (v) filters[sdef.name] = v;
+    }
+    searchOpen.value = false;
+    setQuery({ filters: { ...filters, ...(props.fixed ?? {}) }, page: 1 });
+  }
+  function resetSearch(): void {
+    for (const sdef of searchDefs) sfields[sdef.name].value = "";
+    setQuery({ filters: { ...(props.fixed ?? {}) }, page: 1 });
+  }
+  const searchBody = () => (
+    <form
+      class="grid gap-3"
+      data-testid="dp-search"
+      onSubmit={(e: Event) => {
+        e.preventDefault();
+        applySearch();
+      }}
+    >
+      {searchDefs.map((sdef) => {
+        const sig = sfields[sdef.name];
+        return (
+          <FormItem label={sdef.label}>
+            {sdef.type === "select"
               ? (
                 <select
-                  name={s.name}
-                  class={SELECT_CLS}
-                  data-testid={`dp-f-${s.name}`}
+                  name={sdef.name}
+                  class={`${SELECT_CLS} w-full`}
+                  data-testid={`dp-f-${sdef.name}`}
                   onChange={(
                     e: Event,
-                  ) => (draft.value = {
-                    ...draft.value,
-                    [s.name]: (e.target as unknown as { value: string }).value,
-                  })}
+                  ) => (sig.value =
+                    (e.target as unknown as { value: string }).value)}
                 >
                   <option value="">{m.all}</option>
-                  {(s.options ?? []).map((o) => (
+                  {(sdef.options ?? []).map((o) => (
                     <option
                       value={o.value}
-                      {...bool("selected", draft.value[s.name] === o.value)}
+                      {...bool("selected", sig.value === o.value)}
                     >
                       {o.label}
                     </option>
@@ -926,43 +955,31 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
                 </select>
               )
               : (
-                <Input
-                  name={s.name}
-                  type={s.type === "date" ? "date" : "text"}
-                  value={draft.value[s.name] ?? ""}
-                  data-testid={`dp-f-${s.name}`}
-                  onInput={(
-                    e: Event,
-                  ) => (draft.value = {
-                    ...draft.value,
-                    [s.name]: (e.target as unknown as { value: string }).value,
-                  })}
-                />
+                <div class="w-full" data-testid={`dp-f-${sdef.name}`}>
+                  <Input
+                    name={sdef.name}
+                    type={sdef.type === "date" ? "date" : "text"}
+                    value={sig}
+                    onInput={(
+                      e: Event,
+                    ) => (sig.value =
+                      (e.target as unknown as { value: string }).value)}
+                  />
+                </div>
               )}
-          </label>
-        ))}
-        <Btn
-          type="submit"
-          variant="primary"
-          size="sm"
-          data-testid="dp-search-submit"
-        >
-          {m.searchSubmit}
-        </Btn>
-        <Btn
-          type="button"
-          size="sm"
-          data-testid="dp-search-reset"
-          onClick={() => {
-            draft.value = {};
-            setQuery({ filters: { ...(props.fixed ?? {}) }, page: 1 });
-          }}
-        >
+          </FormItem>
+        );
+      })}
+      <div class="mt-2 flex justify-end gap-2">
+        <Btn type="button" data-testid="dp-search-reset" onClick={resetSearch}>
           {m.reset}
         </Btn>
-      </form>
-    );
-  };
+        <Btn type="submit" variant="primary" data-testid="dp-search-submit">
+          {m.searchSubmit}
+        </Btn>
+      </div>
+    </form>
+  );
 
   // ---- 批量条
   const batchBar = () => {
@@ -971,7 +988,7 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
     const sv = props.statusValues ?? [];
     return (
       <div
-        class="flex flex-wrap items-center gap-2 border-b border-slate-200 bg-sky-50 px-4 py-2 text-sm dark:border-slate-700 dark:bg-slate-800"
+        class="flex flex-wrap items-center gap-2 border-t border-slate-200 bg-sky-50 px-4 py-2 text-sm dark:border-slate-700 dark:bg-slate-800"
         data-testid="dp-batch-bar"
       >
         <span data-testid="dp-selected-count">
@@ -1665,10 +1682,9 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
         bodyClass="p-0"
       >
         {toolbar}
-        {/* 固定插槽：响应式子节点插在静态兄弟之后会落到卡片底部 */}
-        <div data-testid="dp-search-slot">{searchBar}</div>
-        <div data-testid="dp-batch-slot">{batchBar}</div>
+        {/* 固定插槽：响应式子节点插在静态兄弟之后会落到卡片底部；批量条在表格下方，选中行不会把表格顶下去 */}
         <div class="px-2.5 py-2.5">{table}</div>
+        <div data-testid="dp-batch-slot">{batchBar}</div>
         {pagination}
       </Card>
 
@@ -1683,6 +1699,16 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
         onClose={() => (formOpen.value = false)}
         // deno-lint-ignore jsx-no-children-prop
         children={formBody}
+      />
+      <Modal
+        open={searchOpen}
+        title={() => `${m.search} · ${props.title}`}
+        width="md"
+        keyboard
+        destroyOnClose
+        onClose={() => (searchOpen.value = false)}
+        // deno-lint-ignore jsx-no-children-prop
+        children={searchBody}
       />
       <Modal
         open={() => viewRow.value !== null}
