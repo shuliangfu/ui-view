@@ -1,0 +1,312 @@
+/** @jsxImportSource @dreamer/view */
+/**
+ * @fileoverview DataPanel 服务端渲染：首帧 HTML 与水合前后一致所依赖的结构（布尔属性、转义、能力开关、文案）。
+ */
+import { describe, expect, it } from "@dreamer/test";
+import { renderToString } from "jsr:@dreamer/view@^2.2.0/ssr";
+import {
+  DATA_PANEL_CSS,
+  DataPanel,
+  type DataPanelColumn,
+  type DataPanelDataSource,
+  type DataPanelProps,
+} from "../../src/desktop/data-display/DataPanel.tsx";
+
+const COLUMNS: DataPanelColumn[] = [
+  { prop: "name", label: "姓名", sortable: true },
+  {
+    prop: "status",
+    label: "状态",
+    type: "tag",
+    options: [{ value: "on", label: "启用", tone: "success" }, {
+      value: "off",
+      label: "停用",
+      tone: "warning",
+    }],
+  },
+  { prop: "balance", label: "余额", type: "money", total: true },
+  { prop: "secret", label: "隐藏列", hidden: true },
+];
+
+function data(n: number) {
+  return Array.from({ length: n }, (_, i) => ({
+    id: String(i + 1),
+    name: `User ${i + 1}`,
+    status: i % 2 ? "off" : "on",
+    balance: (i + 1) * 100,
+    secret: "TOPSECRET",
+    locked: i === 0,
+  }));
+}
+
+const FORM = [{ name: "name", label: "姓名", required: true }];
+
+async function html(props: Partial<DataPanelProps> = {}): Promise<string> {
+  return String(
+    await renderToString(() => (
+      <DataPanel
+        title="用户"
+        columns={COLUMNS}
+        data={data(25)}
+        form={FORM}
+        {...props}
+      />
+    )),
+  );
+}
+
+describe("DataPanel SSR：首帧内容", () => {
+  it("标题、总数、第一页 10 行、序号与范围文案", async () => {
+    const h = await html();
+    expect(h).toContain("用户");
+    expect(h).toContain("共 25 条记录");
+    expect(h).toContain("第 1-10 条，共 25 条");
+    expect((h.match(/data-testid="dp-row-/g) ?? []).length).toBe(10);
+    expect(h).toContain("User 1");
+    expect(h).toContain("User 10");
+    expect(h).not.toContain("User 11");
+  });
+
+  it("tag 列显示选项文案，money 列格式化，合计行汇总全部匹配行", async () => {
+    const h = await html();
+    expect(h).toContain("启用");
+    expect(h).toContain("停用");
+    expect(h).toContain("100.00");
+    // 1..25 → 100*(25*26/2) = 32500
+    expect(h).toContain('data-testid="dp-total-balance"');
+    expect(h).toMatch(/dp-total-balance[^>]*>\s*32,500\.00/);
+  });
+
+  it("hidden 列默认不渲染", async () => {
+    const h = await html();
+    expect(h).not.toContain("TOPSECRET");
+    expect(h).not.toContain("隐藏列</th>");
+  });
+
+  it("分页：每页条数下拉只有当前项带 selected，上一页禁用，页码按钮", async () => {
+    const h = await html();
+    expect((h.match(/<option[^>]*selected/g) ?? []).length).toBe(1);
+    expect(h).toContain("10 条/页");
+    expect(h).toMatch(/data-testid="dp-prev"/);
+    expect(h).toContain('data-testid="dp-page-1"');
+    expect(h).toContain('data-testid="dp-page-3"');
+    expect(h).not.toContain('data-testid="dp-page-4"');
+  });
+
+  it("pageSize / defaultSort / initialQuery 影响首帧", async () => {
+    const h = await html({
+      pageSize: 5,
+      pageSizes: [5, 10],
+      defaultSort: { prop: "balance", order: "desc" },
+    });
+    expect((h.match(/data-testid="dp-row-/g) ?? []).length).toBe(5);
+    expect(h.indexOf("User 25")).toBeLessThan(h.indexOf("User 24"));
+    const h2 = await html({ initialQuery: { page: 2 } });
+    expect(h2).toContain("第 11-20 条，共 25 条");
+    expect(h2).toContain("User 11");
+  });
+
+  it("initialQuery.filters 在首帧生效", async () => {
+    const h = await html({
+      search: [{ name: "name", label: "姓名" }],
+      initialQuery: { filters: { name: "User 2" } },
+    });
+    // User 2, User 20-25
+    expect(h).toContain("共 7 条记录");
+  });
+});
+
+describe("DataPanel SSR：布尔属性与转义", () => {
+  it('不会输出 checked/disabled/selected="false"', async () => {
+    const h = await html();
+    expect(h).not.toMatch(
+      /(?<!aria-)(checked|disabled|selected|readonly)="false"/i,
+    );
+  });
+
+  it("locked 行：复选框与删除按钮禁用", async () => {
+    const h = await html();
+    const row1 = h.slice(
+      h.indexOf('data-testid="dp-row-1"'),
+      h.indexOf('data-testid="dp-row-2"'),
+    );
+    expect(row1).toMatch(
+      /<input[^>]*type="checkbox"[^>]*disabled|<input[^>]*disabled[^>]*type="checkbox"/,
+    );
+    const row2 = h.slice(
+      h.indexOf('data-testid="dp-row-2"'),
+      h.indexOf('data-testid="dp-row-3"'),
+    );
+    expect(row2).not.toMatch(/<input[^>]*type="checkbox"[^>]*disabled/);
+  });
+
+  it("单元格内容被转义", async () => {
+    const h = await html({
+      data: [{
+        id: "1",
+        name: '<img src=x onerror="alert(1)">',
+        status: "on",
+        balance: 1,
+      }],
+    });
+    expect(h).not.toContain("<img src=x onerror");
+    expect(h).toContain("&lt;img");
+  });
+
+  it("内联样式不含 SSR 会转义的字符（>、&、<），否则服务端首帧样式失效", () => {
+    expect(DATA_PANEL_CSS).not.toMatch(/[<>&]/);
+    // 深色行悬停：显式规则（slate-800 @ 60%，与 dweb-admin 一致），行带 dp-row 类
+    expect(DATA_PANEL_CSS).toContain(".dark .dp-row:hover");
+    expect(DATA_PANEL_CSS).toContain("oklch(27.9% 0.041 260.031) 60%");
+  });
+
+  it("SSR 输出的 <style> 里选择器未被转义", async () => {
+    const h = await html();
+    const m = /<style>([\s\S]*?)<\/style>/.exec(h)!;
+    expect(m[1]).toContain(".dp-tb-nf");
+    expect(m[1]).not.toContain("&gt;");
+    expect(m[1]).not.toContain("&amp;");
+  });
+});
+
+describe("DataPanel SSR：能力开关", () => {
+  it("有 form 的 data 模式：添加 / 编辑 / 删除 / 选择列都在", async () => {
+    const h = await html();
+    expect(h).toContain('data-testid="dp-select-all"');
+    expect(h).toContain('data-testid="dp-edit-2"');
+    expect(h).toContain('data-testid="dp-delete-2"');
+    expect(h).toContain('data-testid="dp-view-2"');
+  });
+
+  it("没有 form 的 data 模式是只读：没有编辑 / 删除 / 选择列，仍可查看", async () => {
+    const h = await html({ form: undefined });
+    expect(h).not.toContain('data-testid="dp-select-all"');
+    expect(h).not.toContain('data-testid="dp-delete-2"');
+    expect(h).not.toContain('data-testid="dp-edit-2"');
+    expect(h).toContain('data-testid="dp-view-2"');
+  });
+
+  it("caps 可以关闭 remove / view / update", async () => {
+    const h = await html({
+      caps: { remove: false, view: false, update: false },
+    });
+    expect(h).not.toContain('data-testid="dp-delete-2"');
+    expect(h).not.toContain('data-testid="dp-view-2"');
+    expect(h).not.toContain('data-testid="dp-edit-2"');
+    expect(h).not.toContain('data-testid="dp-select-all"');
+    expect(h).not.toContain(">操作</th>");
+  });
+
+  it("selectable=false 去掉选择列", async () => {
+    expect(await html({ selectable: false })).not.toContain(
+      'data-testid="dp-select-all"',
+    );
+  });
+
+  it("空数据显示空状态且没有合计行", async () => {
+    const h = await html({ data: [] });
+    expect(h).toContain('data-testid="dp-empty"');
+    expect(h).toContain("暂无数据");
+    expect(h).not.toContain('data-testid="dp-totals"');
+    expect(h).toContain("共 0 条记录");
+  });
+
+  it("异步数据源：服务端不请求，首帧是空表（挂载后再加载）", async () => {
+    let calls = 0;
+    const ds: DataPanelDataSource = {
+      list() {
+        calls++;
+        return Promise.resolve({ rows: data(3), total: 3 });
+      },
+    };
+    const h = await html({ data: undefined, dataSource: ds, form: undefined });
+    expect(calls).toBe(0);
+    expect(h).toContain('data-testid="dp-empty"');
+  });
+
+  it("initial 预取数据直接渲染，且不调用 list", async () => {
+    let calls = 0;
+    const ds: DataPanelDataSource = {
+      list() {
+        calls++;
+        return Promise.resolve({ rows: [], total: 0 });
+      },
+    };
+    const h = await html({
+      data: undefined,
+      dataSource: ds,
+      initial: { rows: data(2), total: 2 },
+      form: undefined,
+    });
+    expect(calls).toBe(0);
+    expect(h).toContain("共 2 条记录");
+    expect(h).toContain("User 2");
+  });
+
+  it("同步数据源（sync: true）首帧直出", async () => {
+    const ds: DataPanelDataSource = {
+      sync: true,
+      list: () => ({ rows: data(4), total: 4 }),
+    };
+    const h = await html({ data: undefined, dataSource: ds, form: undefined });
+    expect(h).toContain("共 4 条记录");
+  });
+});
+
+describe("DataPanel SSR：文案与自定义", () => {
+  it("en-US 文案；messages 覆盖", async () => {
+    const h = await html({ locale: "en-US", messages: { total: "Sum" } });
+    expect(h).toContain("25 records");
+    expect(h).toContain("1-10 of 25");
+    expect(h).toContain("10 / page");
+    expect(h).toContain("Sum");
+    expect(h).toContain(">Actions</th>");
+  });
+
+  it("renderCell / rowExtra / toolbarExtra / children / class", async () => {
+    const h = await html({
+      renderCell: { name: (r) => <b data-x="cell">{String(r.name)}!</b> },
+      rowExtra: (r) => <i data-x="extra">e{String(r.id)}</i>,
+      toolbarExtra: <span data-x="tbx">TBX</span>,
+      children: <div data-x="child">CHILD</div>,
+      class: "my-panel",
+    });
+    expect(h).toContain('<b data-x="cell">');
+    expect(h).toContain('data-x="extra"');
+    expect(h).toContain('data-x="tbx"');
+    expect(h).toContain('data-x="child"');
+    expect(h).toContain("dp-card my-panel");
+  });
+
+  it("panelKey 进入根节点 data-testid 与工具栏标记", async () => {
+    const h = await html({ panelKey: "users" });
+    expect(h).toContain('data-testid="panel-users"');
+    expect(h).toContain('data-dp-tools="users"');
+  });
+
+  it("工具栏按钮位置类：首个无左边框处理、末个无右边框处理", async () => {
+    const h = await html({ search: [{ name: "name", label: "姓名" }] });
+    expect(h).toContain("dp-tb dp-tb-first dp-tb-nl");
+    expect(h).toContain("dp-tb dp-tb-nf dp-tb-last");
+    expect(h).toContain("dp-tb dp-tb-nf dp-tb-nl");
+  });
+
+  it("工具栏按钮数量随能力变化", async () => {
+    const count = (h: string) =>
+      (h.match(/class="[^"]*dp-tb[ "]/g) ?? []).length;
+    // 添加 + 导入（本地数据源可写）+ 刷新 + 打印 + 导出 + 列设置
+    expect(count(await html())).toBe(6);
+    // + 搜索
+    expect(count(await html({ search: [{ name: "name", label: "姓名" }] })))
+      .toBe(7);
+    // 只读：刷新 + 打印 + 导出 + 列设置
+    expect(count(await html({ form: undefined }))).toBe(4);
+    expect(
+      count(
+        await html({
+          caps: { print: false, columns: false, export: false, import: false },
+        }),
+      ),
+    ).toBe(2);
+  });
+});

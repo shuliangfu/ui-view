@@ -96,11 +96,14 @@ async function waitMainChars(
     const remaining = deadline - Date.now();
     if (remaining > 0) {
       try {
+        // 浏览器内执行的函数不能闭包 Node/Deno 侧变量：把 minChars 内联进函数体，
+        // 否则页内会抛 "minChars is not defined"（pageerror）
         await wf(
-          () => {
-            const main = document.querySelector("main");
-            return (main?.innerText?.length ?? 0) >= minChars;
-          },
+          new Function(
+            `const main = document.querySelector("main"); return (main?.innerText?.length ?? 0) >= ${
+              Number(minChars)
+            };`,
+          ) as () => boolean,
           { timeout: remaining },
         );
         return;

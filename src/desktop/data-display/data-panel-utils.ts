@@ -9,6 +9,7 @@ import type {
   DataPanelDataSource,
   DataPanelExportFormat,
   DataPanelFormField,
+  DataPanelImportResult,
   DataPanelListResult,
   DataPanelMessages,
   DataPanelQuery,
@@ -181,6 +182,12 @@ export interface LocalDataSourceOptions {
 /** 本地数据源：在内存数组上完成过滤、排序、分页、合计与增删改，同步返回 */
 export interface LocalDataSource extends DataPanelDataSource {
   sync: true;
+  create?(values: Record<string, unknown>): DataPanelWriteResult;
+  update?(id: string, values: Record<string, unknown>): DataPanelWriteResult;
+  remove?(ids: string[]): DataPanelBulkResult;
+  setField?(ids: string[], field: string, value: unknown): DataPanelBulkResult;
+  importRows?(rows: Record<string, string>[]): DataPanelImportResult;
+
   list(query: DataPanelQuery): DataPanelListResult;
   /** 当前全部行（副本） */
   getRows(): DataPanelRow[];

@@ -197,6 +197,16 @@ const g = globalThis as unknown as {
   URL?: typeof URL;
 };
 
+/** 是否在服务端运行（Deno / Node）；浏览器里没有这两者 */
+function onServer(): boolean {
+  const gg = globalThis as unknown as {
+    Deno?: unknown;
+    process?: { versions?: { node?: string } };
+  };
+  return gg.Deno !== undefined ||
+    typeof gg.process?.versions?.node === "string";
+}
+
 /**
  * Button 不转发 `data-testid` / `aria-label`：给外层 span 打标，既有稳定的 E2E 选择器，也有可访问名称。
  */
@@ -214,14 +224,17 @@ function Btn(props: any) {
 const bool = (k: string, v: unknown): Record<string, true> =>
   v ? { [k]: true } : {};
 
+/** 标签配色：浅色沿用 Tailwind 类；深色由 DATA_PANEL_CSS 的 `.dark .dp-tag-*` 覆盖（半透明底 + 亮字） */
 const TONE: Record<DataPanelTone, string> = {
-  success:
-    "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300",
-  warning: "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
-  danger: "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300",
-  info: "bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-300",
-  default: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300",
+  success: "dp-tag dp-tag-success bg-emerald-100 text-emerald-700",
+  warning: "dp-tag dp-tag-warning bg-amber-100 text-amber-700",
+  danger: "dp-tag dp-tag-danger bg-red-100 text-red-700",
+  info: "dp-tag dp-tag-info bg-sky-100 text-sky-700",
+  default: "dp-tag dp-tag-default bg-slate-100 text-slate-600",
 };
+
+/** 开关滑动动画时长（与 .dp-sw 的 0.2s 过渡对应，略长一点保证播完再重渲染） */
+const SWITCH_ANIM_MS = 230;
 
 const SELECT_CLS =
   "rounded-md border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-900";
@@ -247,8 +260,34 @@ export const DATA_PANEL_CSS = `
 .dp-tb-last { border-top-right-radius: 5px !important; border-bottom-right-radius: 5px !important; }
 .dp-tb-nf { border-left-width: 0 !important; }
 .dp-tb-nl { border-right-width: 1px !important; box-shadow: none !important; }
+/* 深色行悬停：与 dweb-admin 一致（Tailwind 的 dark:hover:bg-slate-800/60，即 slate-800 @ 60%）；显式写出，避免被浅色 hover:bg-slate-50 盖住导致近白底 */
+.dark .dp-row:hover { background-color: color-mix(in oklab, oklch(27.9% 0.041 260.031) 60%, transparent) !important; }
+.dp-sw { position: relative; display: inline-block; box-sizing: border-box; width: 2.25rem; height: 1.25rem; padding: 0; border: 0; border-radius: 9999px; cursor: pointer; flex-shrink: 0; vertical-align: middle; background-color: #cbd5e1; transition: background-color 0.2s ease, opacity 0.2s ease; }
+.dp-sw-on { background-color: #2563eb; }
+.dark .dp-sw { background-color: #475569; }
+.dark .dp-sw-on { background-color: #3b82f6; }
+.dp-sw-knob { position: absolute; top: 2px; left: 2px; width: 1rem; height: 1rem; border-radius: 9999px; background-color: #fff; box-shadow: 0 1px 2px rgba(15, 23, 42, 0.35); transform: translateX(0); transition: transform 0.2s ease; }
+.dp-sw-on .dp-sw-knob { transform: translateX(1rem); }
+.dp-sw:disabled { opacity: 0.5; cursor: not-allowed; }
+.dp-sw:focus-visible { outline: 2px solid #60a5fa; outline-offset: 2px; }
+.dark .dp-tag-danger { background-color: rgba(239, 68, 68, 0.15) !important; color: #fca5a5 !important; }
+.dark .dp-tag-success { background-color: rgba(34, 197, 94, 0.15) !important; color: #86efac !important; }
+.dark .dp-tag-warning { background-color: rgba(234, 179, 8, 0.15) !important; color: #fde047 !important; }
+.dark .dp-tag-info { background-color: rgba(56, 189, 248, 0.15) !important; color: #7dd3fc !important; }
+.dark .dp-tag-default { background-color: rgba(148, 163, 184, 0.15) !important; color: #cbd5e1 !important; }
 .dark .dp-card { background: var(--dp-panel-body-bg, #18212f) !important; }
 `;
+
+/**
+ * 读取 `<select>` 的值：空字符串的 `value=""` 在渲染时可能被省略，
+ * 此时浏览器会把选项文字（如「全部」「—」）当作 value，必须按「无 value 属性」处理成 ""。
+ */
+function selectValue(target: EventTarget | null): string {
+  const el = target as HTMLSelectElement | null;
+  const o = el?.options?.[el.selectedIndex];
+  if (!o) return "";
+  return o.hasAttribute("value") ? o.value : "";
+}
 
 // ---------------------------------------------------------------- component
 export function DataPanel(props: DataPanelProps): JSXRenderable {
@@ -382,6 +421,8 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
   // ---- 首次加载（异步数据源）与列偏好
   const storageKey = `dp-cols-${key}`;
   onMount(() => {
+    // 服务端渲染（含 happy-dom）也会执行 onMount：不发请求、不读本地存储
+    if (onServer()) return;
     try {
       const raw = g.localStorage?.getItem(storageKey);
       if (raw) hidden.value = JSON.parse(raw);
@@ -756,6 +797,7 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
     return true;
   };
   onMount(() => {
+    if (onServer()) return;
     // DOM 在挂载后才插入（水合时还会被替换一次）：短暂重试
     for (const ms of [0, 30, 120, 400, 1000]) setTimeout(tagToolbar, ms);
   });
@@ -915,8 +957,14 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
     searchOpen.value = false;
     setQuery({ filters: { ...filters, ...(props.fixed ?? {}) }, page: 1 });
   }
+  /** 搜索 select 的 DOM 引用：用户改过后 `selected` 属性不再生效，重置时需直接回写 value */
+  const selectEls: Record<string, HTMLSelectElement> = {};
   function resetSearch(): void {
-    for (const sdef of searchDefs) sfields[sdef.name].value = "";
+    for (const sdef of searchDefs) {
+      sfields[sdef.name].value = "";
+      const el = selectEls[sdef.name];
+      if (el) el.selectedIndex = 0;
+    }
     setQuery({ filters: { ...(props.fixed ?? {}) }, page: 1 });
   }
   const searchBody = () => (
@@ -938,10 +986,10 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
                   name={sdef.name}
                   class={`${SELECT_CLS} w-full`}
                   data-testid={`dp-f-${sdef.name}`}
-                  onChange={(
-                    e: Event,
-                  ) => (sig.value =
-                    (e.target as unknown as { value: string }).value)}
+                  ref={(el: HTMLSelectElement | null) => {
+                    if (el) selectEls[sdef.name] = el;
+                  }}
+                  onChange={(e: Event) => (sig.value = selectValue(e.target))}
                 >
                   <option value="">{m.all}</option>
                   {(sdef.options ?? []).map((o) => (
@@ -1035,31 +1083,48 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
     if (custom) return custom(row);
     const raw = row[c.prop];
     const canEdit = caps.update || !!props.onEdit || statusField === c.prop;
+    const isSwitch = c.inline === "switch" && !!c.options &&
+      c.options.length === 2;
+    if (isSwitch && canEdit) {
+      // 开关样式用 .dp-sw* 自带 CSS（不依赖 Tailwind 扫描）：ON 时旋钮在右、OFF 在左，带过渡动画；
+      // locked 行渲染成禁用开关（半透明 + not-allowed），而不是普通状态标签
+      const [on, off] = c.options!;
+      const isOn = String(raw) === on.value;
+      const locked = isLocked(row);
+      return (
+        <button
+          type="button"
+          role="switch"
+          aria-checked={isOn ? "true" : "false"}
+          {...bool("disabled", locked)}
+          aria-disabled={locked ? "true" : undefined}
+          data-testid={`dp-switch-${idOf(row)}`}
+          class={`dp-sw ${isOn ? "dp-sw-on" : "dp-sw-off"}`}
+          title={isOn ? on.label : off.label}
+          onClick={(e: Event) => {
+            if (locked) return;
+            // 先就地切换类名让旋钮平滑滑动（行重渲染会换新节点），动画结束后再提交数据
+            const btn = ((e as unknown as { currentTarget?: HTMLElement })
+              .currentTarget ??
+              (e.target as HTMLElement).closest("button")) as
+                | HTMLElement
+                | null;
+            if (btn) {
+              btn.classList.toggle("dp-sw-on", !isOn);
+              btn.classList.toggle("dp-sw-off", isOn);
+              btn.setAttribute("aria-checked", isOn ? "false" : "true");
+            }
+            setTimeout(
+              () => void setField(row, c.prop, isOn ? off.value : on.value),
+              SWITCH_ANIM_MS,
+            );
+          }}
+        >
+          <span class="dp-sw-knob" />
+        </button>
+      );
+    }
     if (c.inline && canEdit && !isLocked(row)) {
-      if (c.inline === "switch" && c.options && c.options.length === 2) {
-        const [on, off] = c.options;
-        const isOn = String(raw) === on.value;
-        return (
-          <button
-            type="button"
-            role="switch"
-            aria-checked={isOn ? "true" : "false"}
-            data-testid={`dp-switch-${idOf(row)}`}
-            class={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-              isOn ? "bg-blue-600" : "bg-slate-300 dark:bg-slate-600"
-            }`}
-            title={isOn ? on.label : off.label}
-            onClick={() =>
-              void setField(row, c.prop, isOn ? off.value : on.value)}
-          >
-            <span
-              class={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                isOn ? "translate-x-4" : "translate-x-0.5"
-              }`}
-            />
-          </button>
-        );
-      }
       if (c.inline === "text" || c.inline === "number") {
         const ed = editing.value;
         if (ed && ed.id === idOf(row) && ed.prop === c.prop) {
@@ -1256,7 +1321,7 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
               )
               : data.map((r, i) => (
                 <tr
-                  class={`hover:bg-slate-50 dark:hover:bg-slate-800/60 ${
+                  class={`dp-row hover:bg-slate-50 ${
                     i % 2 ? "bg-slate-50/50 dark:bg-slate-900/40" : ""
                   }`}
                   data-testid={`dp-row-${idOf(r)}`}
@@ -1268,9 +1333,12 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
                         {...bool("disabled", isLocked(r))}
                         {...bool("checked", sel.includes(idOf(r)))}
                         data-testid={`dp-select-${idOf(r)}`}
-                        onChange={() => (selected.value = sel.includes(idOf(r))
-                          ? sel.filter((x) => x !== idOf(r))
-                          : [...sel, idOf(r)])}
+                        onChange={() => {
+                          const cur = selected.value;
+                          selected.value = cur.includes(idOf(r))
+                            ? cur.filter((x) => x !== idOf(r))
+                            : [...cur, idOf(r)];
+                        }}
                       />
                     </td>
                   )}
@@ -1507,10 +1575,7 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
                 class={`${SELECT_CLS} w-full`}
                 {...bool("disabled", ro)}
                 data-testid={`dp-fld-${f.name}`}
-                onChange={(
-                  e: Event,
-                ) => (sig.value =
-                  (e.target as unknown as { value: string }).value)}
+                onChange={(e: Event) => (sig.value = selectValue(e.target))}
               >
                 {!f.required && !(f.options ?? []).some((o) =>
                   o.value === ""
@@ -1561,18 +1626,10 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
                 role="switch"
                 data-testid={`dp-fld-${f.name}`}
                 aria-checked={sig.value === on ? "true" : "false"}
-                class={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  sig.value === on
-                    ? "bg-blue-600"
-                    : "bg-slate-300 dark:bg-slate-600"
-                }`}
+                class={`dp-sw ${sig.value === on ? "dp-sw-on" : "dp-sw-off"}`}
                 onClick={() => (sig.value = sig.value === on ? off : on)}
               >
-                <span
-                  class={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
-                    sig.value === on ? "translate-x-5" : "translate-x-0.5"
-                  }`}
-                />
+                <span class="dp-sw-knob" />
               </button>
             );
           } else {

@@ -286,7 +286,9 @@ const tableCode = `// 排序：sortable 列表头点击 升序 → 降序 → �
 // 合计行：total: true；隐藏列：hidden: true（列设置里可打开，偏好保存在 localStorage）
 // 行内编辑：inline: "switch" 直接切换；inline: "text" | "number" 双击编辑，Enter/失焦保存，Esc 取消
 // 行 locked: true：不可选择、不可删除、不可行内编辑
-<DataPanel title="表格" data={rows} columns={columns} defaultSort={{ prop: "balance", order: "desc" }} />`;
+// 行内编辑需要可写：提供 form（或 onDataChange / dataSource.update）
+<DataPanel title="表格" data={rows} columns={columns} form={form}
+  defaultSort={{ prop: "balance", order: "desc" }} />`;
 
 const crudCode =
   `// 新增 / 编辑 / 查看都用 Modal；删除一律先弹确认对话框，确认后才调用 dataSource.remove
@@ -435,6 +437,7 @@ export default function DataDisplayDataPanel() {
             data={makeDemoRows(12)}
             columns={DEMO_COLUMNS}
             defaultSort={{ prop: "balance", order: "desc" }}
+            form={DEMO_FORM}
             statusField="status"
             caps={{ create: false, remove: false }}
           />
