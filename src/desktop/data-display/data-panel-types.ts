@@ -250,6 +250,8 @@ export interface DataPanelMessages {
   actions: string;
   confirm: string;
   cancel: string;
+  /** 查看详情弹窗页脚的「关闭」按钮 */
+  close: string;
   saved: string;
   deleted: string;
   loading: string;

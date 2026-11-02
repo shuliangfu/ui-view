@@ -83,10 +83,13 @@ describe("DataPanel SSR：首帧内容", () => {
     expect(h).not.toContain("隐藏列</th>");
   });
 
-  it("分页：每页条数下拉只有当前项带 selected，上一页禁用，页码按钮", async () => {
+  it("分页：每页条数为 ui-view Select（无原生 select），上一页禁用，页码按钮", async () => {
     const h = await html();
-    expect((h.match(/<option[^>]*selected/g) ?? []).length).toBe(1);
-    expect(h).toContain("10 条/页");
+    // 每页条数是 ui-view Select（自绘下拉）：无原生 <select>，触发按钮显示当前项
+    expect(h).not.toMatch(/<select/);
+    const ps = h.slice(h.indexOf('data-testid="dp-pagesize"'));
+    expect(ps).toMatch(/aria-label="10 条\/页"/);
+    expect(ps).toContain("20 条/页");
     expect(h).toMatch(/data-testid="dp-prev"/);
     expect(h).toContain('data-testid="dp-page-1"');
     expect(h).toContain('data-testid="dp-page-3"');
@@ -119,9 +122,10 @@ describe("DataPanel SSR：首帧内容", () => {
 describe("DataPanel SSR：布尔属性与转义", () => {
   it('不会输出 checked/disabled/selected="false"', async () => {
     const h = await html();
-    expect(h).not.toMatch(
-      /(?<!aria-)(checked|disabled|selected|readonly)="false"/i,
+    const bad = h.match(
+      /.{60}(?<!aria-)(checked|disabled|selected|readonly)="false".{10}/gi,
     );
+    expect(bad).toBe(null);
   });
 
   it("locked 行：复选框与删除按钮禁用", async () => {

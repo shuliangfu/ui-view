@@ -11,6 +11,7 @@ import {
 } from "../../../components/DocsApiTable.tsx";
 import {
   CELL_COLUMNS,
+  CELL_FORM,
   cellDemoState,
   createCellDemoSource,
   createRemoteDemoSource,
@@ -481,6 +482,7 @@ export default function DataDisplayDataPanel() {
             title="单元格编辑"
             dataSource={cellSource}
             columns={CELL_COLUMNS}
+            form={CELL_FORM}
             caps={{
               create: false,
               remove: false,

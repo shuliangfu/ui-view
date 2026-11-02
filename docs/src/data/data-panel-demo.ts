@@ -247,11 +247,48 @@ export const CELL_COLUMNS: DataPanelColumn[] = [
   { prop: "remark", label: "备注（textarea）", inline: "textarea" },
 ];
 
+/** 单元格编辑示例同款的「新增 / 编辑」表单：覆盖全部字段类型，控件均为 ui-view 自带组件 */
+export const CELL_FORM: DataPanelFormField[] = [
+  { name: "name", label: "姓名（text）", required: true },
+  {
+    name: "score",
+    label: "积分（number）",
+    type: "number",
+    min: 0,
+    initial: 0,
+  },
+  {
+    name: "role",
+    label: "角色（select）",
+    type: "select",
+    required: true,
+    initial: "viewer",
+    options: CELL_ROLE_OPTIONS,
+  },
+  {
+    name: "tags",
+    label: "标签（multiselect）",
+    type: "multiselect",
+    options: CELL_TAG_OPTIONS,
+  },
+  {
+    name: "status",
+    label: "状态（switch）",
+    type: "switch",
+    onOff: ["active", "disabled"],
+    initial: "active",
+  },
+  { name: "birthday", label: "生日（date）", type: "date" },
+  { name: "loginAt", label: "最近登录（datetime）", type: "datetime" },
+  { name: "remark", label: "备注（textarea）", type: "textarea" },
+];
+
 /** 单元格编辑示例的数据源：同步本地引擎 + 可切换的「保存失败」 */
 export function createCellDemoSource(): DataPanelDataSource {
   const inner = createLocalDataSource({
     rows: makeCellRows(5),
     columns: CELL_COLUMNS,
+    form: CELL_FORM,
     writable: true,
   });
   return {

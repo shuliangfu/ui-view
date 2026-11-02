@@ -32,6 +32,12 @@ import { Descriptions } from "./Descriptions.tsx";
 import { Dropdown } from "../navigation/Dropdown.tsx";
 import { FormItem } from "../form/FormItem.tsx";
 import { Input } from "../form/Input.tsx";
+import { Select } from "../form/Select.tsx";
+import { MultiSelect } from "../form/MultiSelect.tsx";
+import { InputNumber } from "../form/InputNumber.tsx";
+import { DatePicker } from "../form/DatePicker.tsx";
+import { DateTimePicker } from "../form/DateTimePicker.tsx";
+import { Switch } from "../form/Switch.tsx";
 import { Textarea } from "../form/Textarea.tsx";
 import { Modal } from "../feedback/Modal.tsx";
 import { Popconfirm } from "../feedback/Popconfirm.tsx";
@@ -234,11 +240,9 @@ const TONE: Record<DataPanelTone, string> = {
   default: "dp-tag dp-tag-default bg-slate-100 text-slate-600",
 };
 
-/** 开关滑动动画时长（与 .dp-sw 的 0.2s 过渡对应，略长一点保证播完再重渲染） */
+/** 开关滑动动画时长（Switch 的 0.2s 过渡，略长一点保证播完再重渲染） */
 const SWITCH_ANIM_MS = 230;
 
-const SELECT_CLS =
-  "rounded-md border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-900";
 /** 操作列图标按钮：样式见 DATA_PANEL_CSS 的 .dp-act*（无边框 / 无底色，仅图标色变化） */
 const ICON_BTN = "dp-act";
 
@@ -264,14 +268,6 @@ export const DATA_PANEL_CSS = `
 .dp-tb-nl { border-right-width: 1px !important; box-shadow: none !important; }
 /* 深色行悬停：与 dweb-admin 一致（Tailwind 的 dark:hover:bg-slate-800/60，即 slate-800 @ 60%）；显式写出，避免被浅色 hover:bg-slate-50 盖住导致近白底 */
 .dark .dp-row:hover { background-color: color-mix(in oklab, oklch(27.9% 0.041 260.031) 60%, transparent) !important; }
-.dp-sw { position: relative; display: inline-block; box-sizing: border-box; width: 2.25rem; height: 1.25rem; padding: 0; border: 0; border-radius: 9999px; cursor: pointer; flex-shrink: 0; vertical-align: middle; background-color: #cbd5e1; transition: background-color 0.2s ease, opacity 0.2s ease; }
-.dp-sw-on { background-color: #2563eb; }
-.dark .dp-sw { background-color: #475569; }
-.dark .dp-sw-on { background-color: #3b82f6; }
-.dp-sw-knob { position: absolute; top: 2px; left: 2px; width: 1rem; height: 1rem; border-radius: 9999px; background-color: #fff; box-shadow: 0 1px 2px rgba(15, 23, 42, 0.35); transform: translateX(0); transition: transform 0.2s ease; }
-.dp-sw-on .dp-sw-knob { transform: translateX(1rem); }
-.dp-sw:disabled { opacity: 0.5; cursor: not-allowed; }
-.dp-sw:focus-visible { outline: 2px solid #60a5fa; outline-offset: 2px; }
 .dark .dp-tag-danger { background-color: rgba(239, 68, 68, 0.15) !important; color: #fca5a5 !important; }
 .dark .dp-tag-success { background-color: rgba(34, 197, 94, 0.15) !important; color: #86efac !important; }
 .dark .dp-tag-warning { background-color: rgba(234, 179, 8, 0.15) !important; color: #fde047 !important; }
@@ -280,13 +276,16 @@ export const DATA_PANEL_CSS = `
 .dp-cell-edit { display: inline-block; min-width: 1.5rem; padding: 0 4px; border-radius: 4px; cursor: text; }
 .dp-cell-edit:hover { background-color: #e2e8f0; }
 .dark .dp-cell-edit:hover { background-color: #334155; }
-.dp-ed { box-sizing: border-box; width: 100%; min-width: 7rem; max-width: 18rem; padding: 2px 6px; font-size: 0.875rem; line-height: 1.4; color: #0f172a; background-color: #fff; border: 1px solid #3b82f6; border-radius: 4px; outline: none; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25); font-family: inherit; }
-.dark .dp-ed { color: #e2e8f0; background-color: #0f172a; border-color: #60a5fa; box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.3); color-scheme: dark; }
-.dp-ed-box { display: flex; flex-direction: column; gap: 4px; padding: 6px 8px; }
-.dp-ed-opt { display: flex; align-items: center; gap: 6px; font-size: 0.875rem; cursor: pointer; }
 .dp-pop { background-color: #fff !important; border-color: #e2e8f0 !important; color: #0f172a !important; }
 .dark .dp-pop { background-color: #1e293b !important; border-color: #475569 !important; color: #f1f5f9 !important; }
 .dark .dp-pop [aria-hidden="true"] { background-color: #1e293b !important; border-color: #475569 !important; }
+.dp-jump { width: 3.5rem; flex: none; }
+.dp-jump input { padding: 0.25rem 0.5rem; font-size: 0.875rem; line-height: 1.25rem; border-radius: 0.25rem; text-align: center; -moz-appearance: textfield; appearance: textfield; }
+.dp-jump input::-webkit-outer-spin-button, .dp-jump input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.dp-ed-wrap { min-width: 9.5rem; }
+.dp-pgsize { width: 6.75rem; flex: none; }
+.dp-pgsize button[aria-haspopup] { padding: 0.25rem 0.5rem; font-size: 0.875rem; line-height: 1.25rem; border-radius: 0.25rem; gap: 0.25rem; }
+.dp-pgsize [role="listbox"] { top: auto; bottom: 100%; margin-top: 0; margin-bottom: 0.25rem; }
 .dp-acts { display: inline-flex; align-items: center; justify-content: center; gap: 1px; }
 .dp-act [role="img"] { width: 1rem !important; height: 1rem !important; }
 .dp-act { background: transparent !important; border: 0 !important; box-shadow: none !important; padding: 2px !important; min-width: 0 !important; border-radius: 4px; color: #64748b !important; line-height: 1; cursor: pointer; transition: color 0.15s ease; }
@@ -299,17 +298,6 @@ export const DATA_PANEL_CSS = `
 .dark .dp-act:disabled { color: #64748b !important; }
 .dark .dp-card { background: var(--dp-panel-body-bg, #18212f) !important; }
 `;
-
-/**
- * 读取 `<select>` 的值：空字符串的 `value=""` 在渲染时可能被省略，
- * 此时浏览器会把选项文字（如「全部」「—」）当作 value，必须按「无 value 属性」处理成 ""。
- */
-function selectValue(target: EventTarget | null): string {
-  const el = target as HTMLSelectElement | null;
-  const o = el?.options?.[el.selectedIndex];
-  if (!o) return "";
-  return o.hasAttribute("value") ? o.value : "";
-}
 
 // ---------------------------------------------------------------- component
 export function DataPanel(props: DataPanelProps): JSXRenderable {
@@ -573,6 +561,9 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
   const formTop = createSignal("");
   const fields: Record<string, ReturnType<typeof createSignal<string>>> = {};
   for (const f of formDefs) fields[f.name] = createSignal("");
+  /** 多选字段的数组镜像（供 ui-view MultiSelect 绑定；与 fields 的逗号串保持同步） */
+  const mfields: Record<string, ReturnType<typeof createSignal<string[]>>> = {};
+  for (const f of formDefs) mfields[f.name] = createSignal<string[]>([]);
 
   function openForm(row?: DataPanelRow): void {
     formId.value = row ? idOf(row) : "";
@@ -586,15 +577,14 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
         );
       } else if (f.type === "datetime" || f.type === "date") {
         const s = formatDateTime(raw);
-        v = f.type === "date"
-          ? s.slice(0, 10)
-          : s.replace(" ", "T").slice(0, 16);
+        v = f.type === "date" ? s.slice(0, 10) : s.slice(0, 16);
       } else if (f.type === "switch") {
         v = f.onOff ? String(raw) : (raw ? "true" : "false");
       } else if (Array.isArray(raw)) v = raw.join(",");
       else v = String(raw);
       if (f.type === "password") v = "";
       fields[f.name].value = v;
+      mfields[f.name].value = v.split(",").filter(Boolean);
     }
     formErrors.value = {};
     formTop.value = "";
@@ -609,6 +599,7 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
       const v = fields[f.name].value;
       if (f.type === "multiselect") body[f.name] = v.split(",").filter(Boolean);
       else if (f.type === "number") body[f.name] = v === "" ? "" : Number(v);
+      else if (f.type === "datetime") body[f.name] = v.replace(" ", "T");
       else if (f.type === "switch" && !f.onOff) body[f.name] = v === "true";
       else if (f.type === "password" && isEdit && v === "") continue;
       else body[f.name] = v;
@@ -985,13 +976,9 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
     searchOpen.value = false;
     setQuery({ filters: { ...filters, ...(props.fixed ?? {}) }, page: 1 });
   }
-  /** 搜索 select 的 DOM 引用：用户改过后 `selected` 属性不再生效，重置时需直接回写 value */
-  const selectEls: Record<string, HTMLSelectElement> = {};
   function resetSearch(): void {
     for (const sdef of searchDefs) {
       sfields[sdef.name].value = "";
-      const el = selectEls[sdef.name];
-      if (el) el.selectedIndex = 0;
     }
     setQuery({ filters: { ...(props.fixed ?? {}) }, page: 1 });
   }
@@ -1010,25 +997,18 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
           <FormItem label={sdef.label}>
             {sdef.type === "select"
               ? (
-                <select
-                  name={sdef.name}
-                  class={`${SELECT_CLS} w-full`}
-                  data-testid={`dp-f-${sdef.name}`}
-                  ref={(el: HTMLSelectElement | null) => {
-                    if (el) selectEls[sdef.name] = el;
-                  }}
-                  onChange={(e: Event) => (sig.value = selectValue(e.target))}
-                >
-                  <option value="">{m.all}</option>
-                  {(sdef.options ?? []).map((o) => (
-                    <option
-                      value={o.value}
-                      {...bool("selected", sig.value === o.value)}
-                    >
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
+                <div class="w-full" data-testid={`dp-f-${sdef.name}`}>
+                  <Select
+                    name={sdef.name}
+                    size="sm"
+                    value={sig}
+                    placeholder={m.all}
+                    options={(sdef.options ?? []).map((o) => ({
+                      value: o.value,
+                      label: o.label,
+                    }))}
+                  />
+                </div>
               )
               : (
                 <div class="w-full" data-testid={`dp-f-${sdef.name}`}>
@@ -1047,11 +1027,11 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
         );
       })}
       <div class="mt-2 flex justify-end gap-2">
-        <Btn type="button" data-testid="dp-search-reset" onClick={resetSearch}>
-          {m.reset}
-        </Btn>
         <Btn type="submit" variant="primary" data-testid="dp-search-submit">
           {m.searchSubmit}
+        </Btn>
+        <Btn type="button" data-testid="dp-search-reset" onClick={resetSearch}>
+          {m.reset}
         </Btn>
       </div>
     </form>
@@ -1114,42 +1094,31 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
     const isSwitch = c.inline === "switch" && !!c.options &&
       c.options.length === 2;
     if (isSwitch && canEdit) {
-      // 开关样式用 .dp-sw* 自带 CSS（不依赖 Tailwind 扫描）：ON 时旋钮在右、OFF 在左，带过渡动画；
-      // locked 行渲染成禁用开关（半透明 + not-allowed），而不是普通状态标签
+      // 使用 ui-view 自带 Switch：旋钮 ON 在右、OFF 在左，带过渡动画；
+      // locked 行为禁用态（半透明 + not-allowed）。先让旋钮滑动，动画结束后再提交数据
       const [on, off] = c.options!;
       const isOn = String(raw) === on.value;
       const locked = isLocked(row);
       return (
-        <button
-          type="button"
-          role="switch"
-          aria-checked={isOn ? "true" : "false"}
-          {...bool("disabled", locked)}
-          aria-disabled={locked ? "true" : undefined}
+        <span
+          class="dp-sw-wrap"
           data-testid={`dp-switch-${idOf(row)}`}
-          class={`dp-sw ${isOn ? "dp-sw-on" : "dp-sw-off"}`}
           title={isOn ? on.label : off.label}
-          onClick={(e: Event) => {
-            if (locked) return;
-            // 先就地切换类名让旋钮平滑滑动（行重渲染会换新节点），动画结束后再提交数据
-            const btn = ((e as unknown as { currentTarget?: HTMLElement })
-              .currentTarget ??
-              (e.target as HTMLElement).closest("button")) as
-                | HTMLElement
-                | null;
-            if (btn) {
-              btn.classList.toggle("dp-sw-on", !isOn);
-              btn.classList.toggle("dp-sw-off", isOn);
-              btn.setAttribute("aria-checked", isOn ? "false" : "true");
-            }
-            setTimeout(
-              () => void setField(row, c.prop, isOn ? off.value : on.value),
-              SWITCH_ANIM_MS,
-            );
-          }}
         >
-          <span class="dp-sw-knob" />
-        </button>
+          <Switch
+            checked={createSignal(isOn)}
+            disabled={locked}
+            onChange={(e: Event) => {
+              if (locked) return;
+              const next = (e.target as unknown as { checked: boolean })
+                .checked;
+              setTimeout(
+                () => void setField(row, c.prop, next ? on.value : off.value),
+                SWITCH_ANIM_MS,
+              );
+            }}
+          />
+        </span>
       );
     }
     if (c.inline && c.inline !== "switch" && canEdit && !isLocked(row)) {
@@ -1171,7 +1140,12 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
     return plainCell(c, row, raw);
   }
 
-  /** 单元格编辑器：失焦 / Enter 保存，Esc 取消；保存失败由 setField 提示并回滚到原值 */
+  /**
+   * 单元格编辑器：全部使用 ui-view 自带表单组件（Input / InputNumber / Select / MultiSelect /
+   * DatePicker / DateTimePicker / Textarea）。
+   * 失焦 / 点击外部 / Enter 保存，Esc 取消；浮层（下拉、日历）打开期间不会误触发保存，
+   * 浮层关闭后焦点离开编辑器才保存。保存失败由 setField 提示并回滚到原值。
+   */
   function renderEditor(
     c: DataPanelColumn,
     row: DataPanelRow,
@@ -1187,9 +1161,7 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
           ? str.slice(0, 10)
           : formatDateTime(v).slice(0, 10);
       }
-      if (kind === "datetime") {
-        return formatDateTime(v).replace(" ", "T").slice(0, 16);
-      }
+      if (kind === "datetime") return formatDateTime(v).slice(0, 16);
       if (kind === "multiselect") {
         return (Array.isArray(v) ? v.map(String) : String(v).split(","))
           .filter(Boolean).sort().join(",");
@@ -1197,24 +1169,25 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
       return String(v);
     };
     const original = asStr(raw);
+    /** 草稿：单值用 sv，多选用 mv（均由 ui-view 组件回写） */
+    const sv = createSignal(original);
+    const mv = createSignal<string[]>(original ? original.split(",") : []);
+    const mine = editing.value;
     let done = false;
-    /** 读取控件当前值（字符串形式，便于与原值比较） */
-    const read = (root: HTMLElement): string => {
-      if (kind === "multiselect") {
-        return [...root.querySelectorAll("input[type=checkbox]")]
-          .filter((i) => (i as HTMLInputElement).checked)
-          .map((i) => (i as HTMLElement).getAttribute("data-value") ?? "")
-          .sort().join(",");
-      }
-      if (kind === "select") return selectValue(root);
-      return (root as unknown as HTMLInputElement).value;
-    };
-    const finish = (root: HTMLElement | null, save: boolean): void => {
+    let wrap: HTMLElement | null = null;
+    let offPointer: (() => void) | null = null;
+    const popupOpen = (): boolean =>
+      !!wrap?.querySelector('[aria-expanded="true"]');
+    const finish = (save: boolean): void => {
       if (done) return;
       done = true;
-      editing.value = null;
-      if (!save || !root) return;
-      const draft = read(root);
+      offPointer?.();
+      offPointer = null;
+      if (editing.value === mine) editing.value = null;
+      if (!save) return;
+      const draft = kind === "multiselect"
+        ? [...mv.value].sort().join(",")
+        : String(sv.value ?? "");
       if (draft === original) return;
       let value: unknown = draft;
       if (kind === "number") {
@@ -1227,7 +1200,7 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
       } else if (kind === "multiselect") {
         value = draft ? draft.split(",") : [];
       } else if (kind === "datetime") {
-        const d = new Date(draft);
+        const d = new Date(draft.replace(" ", "T"));
         if (draft && Number.isNaN(d.getTime())) {
           message.error(m.invalid);
           return;
@@ -1236,109 +1209,142 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
       }
       void setField(row, c.prop, value);
     };
-    let rootEl: HTMLElement | null = null;
     /**
-     * ref：记录根节点、聚焦，并用原生监听处理失焦保存
+     * ref：记录根节点、聚焦，并用原生监听处理失焦 / 点外部 / 键盘
      * （框架的 onBlur 绑定在这里不会触发，会导致编辑框「卡住」不退出）
      */
-    const focusLater = (el: HTMLElement | null): void => {
-      rootEl = el;
+    const setup = (el: HTMLElement | null): void => {
+      wrap = el;
       if (!el) return;
-      if (kind === "multiselect") {
-        el.setAttribute("tabindex", "-1");
-        el.addEventListener("focusout", (e) => {
-          const next = (e as FocusEvent).relatedTarget as Node | null;
-          if (next && el.contains(next)) return;
-          finish(el, true);
-        });
-      } else {
-        el.addEventListener("blur", () => finish(el, true));
-      }
+      el.addEventListener("keydown", (e) => {
+        const ke = e as KeyboardEvent;
+        if (ke.key === "Escape") {
+          if (popupOpen()) return; // 先交给浮层自己关闭
+          ke.preventDefault();
+          finish(false);
+        } else if (ke.key === "Enter") {
+          if (popupOpen()) return;
+          if (kind === "textarea" && ke.shiftKey) return;
+          ke.preventDefault();
+          finish(true);
+        }
+      });
+      el.addEventListener("focusout", (e) => {
+        const next = (e as FocusEvent).relatedTarget as Node | null;
+        if (next && el.contains(next)) return;
+        if (next) return finish(true); // Tab 到编辑器外
+        // 焦点丢失（点击不可聚焦处 / 浮层选项收起 / 调用 blur()）：稍后判定
+        const lost = e.target as HTMLElement;
+        setTimeout(() => {
+          if (done) return;
+          if (el.contains(document.activeElement)) return;
+          if (popupOpen()) return;
+          // 失焦元素已被收起 / 移除（如下拉选项选中后浮层关闭）：不是用户离开，焦点收回编辑器
+          if (!lost.isConnected || lost.getClientRects().length === 0) {
+            focusMain();
+            return;
+          }
+          finish(true);
+        }, 60);
+      });
+      const onDown = (e: Event) => {
+        if (!el.isConnected) return offPointer?.();
+        if (!el.contains(e.target as Node)) finish(true);
+      };
       setTimeout(() => {
-        try {
-          el.focus();
-          (el as unknown as HTMLInputElement).select?.();
-        } catch { /* 部分 input 类型不支持 select() */ }
+        if (done) return;
+        document.addEventListener("pointerdown", onDown, true);
+        offPointer = () =>
+          document.removeEventListener("pointerdown", onDown, true);
       }, 0);
+      setTimeout(() => focusMain(true), 0);
     };
-    const onKey = (e: KeyboardEvent): void => {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        finish(rootEl, false);
-      } else if (e.key === "Enter" && !(kind === "textarea" && e.shiftKey)) {
-        e.preventDefault();
-        finish(rootEl, true);
-      }
+    /** 把焦点放回编辑器主控件（选择类可顺便展开浮层） */
+    const focusMain = (open = false): void => {
+      if (done || !wrap) return;
+      try {
+        const input = wrap.querySelector(
+          "input:not([type=hidden]), textarea",
+        ) as HTMLInputElement | null;
+        const trigger = wrap.querySelector(
+          "button[aria-haspopup]",
+        ) as HTMLElement | null;
+        if (trigger) {
+          trigger.focus();
+          if (open) trigger.click(); // 选择类编辑器：直接展开浮层
+        } else if (input) {
+          input.focus();
+          if (open) input.select?.();
+        }
+      } catch { /* 部分 input 类型不支持 select() */ }
     };
-    const common = {
-      "data-testid": testid,
-      onKeyDown: onKey,
-    };
+    let control: unknown;
     if (kind === "textarea") {
-      return (
-        <textarea
-          class="dp-ed"
-          rows={3}
-          ref={focusLater}
-          {...common}
-        >
-          {original}
-        </textarea>
+      control = <Textarea rows={3} value={sv} />;
+    } else if (kind === "select") {
+      control = (
+        <Select
+          size="sm"
+          value={sv}
+          options={(c.options ?? []).map((o) => ({
+            value: o.value,
+            label: o.label,
+          }))}
+        />
       );
-    }
-    if (kind === "select") {
-      return (
-        <select
-          class="dp-ed"
-          ref={focusLater}
-          {...common}
-        >
-          {(c.options ?? []).map((o) => (
-            <option value={o.value} {...bool("selected", o.value === original)}>
-              {o.label}
-            </option>
-          ))}
-        </select>
+    } else if (kind === "multiselect") {
+      control = (
+        <MultiSelect
+          size="sm"
+          value={mv}
+          options={(c.options ?? []).map((o) => ({
+            value: o.value,
+            label: o.label,
+          }))}
+          onChange={(e: Event) => {
+            const v = (e.target as unknown as { value: unknown }).value;
+            if (Array.isArray(v)) mv.value = v.map(String);
+          }}
+        />
       );
-    }
-    if (kind === "multiselect") {
-      const cur = original ? original.split(",") : [];
-      return (
-        <div
-          class="dp-ed dp-ed-box"
-          tabIndex={-1}
-          ref={focusLater}
-          {...common}
-        >
-          {(c.options ?? []).map((o) => (
-            <label class="dp-ed-opt">
-              <input
-                type="checkbox"
-                data-value={o.value}
-                data-testid={`${testid}-${o.value}`}
-                {...bool("checked", cur.includes(o.value))}
-              />
-              {o.label}
-            </label>
-          ))}
-        </div>
+    } else if (kind === "number") {
+      control = <InputNumber size="sm" value={sv} />;
+    } else if (kind === "date") {
+      control = (
+        <DatePicker
+          size="sm"
+          value={sv}
+          panelAttach="viewport"
+          onChange={(e: Event) => {
+            sv.value = String((e.target as unknown as { value: string }).value);
+          }}
+        />
       );
+    } else if (kind === "datetime") {
+      control = (
+        <DateTimePicker
+          size="sm"
+          value={sv}
+          format="YYYY-MM-DD HH:mm"
+          panelAttach="viewport"
+          onChange={(e: Event) => {
+            sv.value = String((e.target as unknown as { value: string }).value);
+          }}
+        />
+      );
+    } else {
+      control = <Input size="sm" value={sv} />;
     }
-    const type = kind === "number"
-      ? "number"
-      : kind === "date"
-      ? "date"
-      : kind === "datetime"
-      ? "datetime-local"
-      : "text";
     return (
-      <input
-        class="dp-ed"
-        type={type}
-        value={original}
-        ref={focusLater}
-        {...common}
-      />
+      <div
+        class="dp-ed-wrap"
+        tabIndex={-1}
+        ref={setup}
+        data-testid={testid}
+        data-editor={kind}
+      >
+        {control}
+      </div>
     );
   }
 
@@ -1672,23 +1678,23 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
           {n === 0 ? m.rangeEmpty : tr(m.range, { from, to, total: n })}
         </span>
         <div class="flex flex-wrap items-center gap-2">
-          <select
-            class={SELECT_CLS}
-            data-testid="dp-pagesize"
-            onChange={(e: Event) =>
-              setQuery({
-                pageSize: Number(
-                  (e.target as unknown as { value: string }).value,
-                ),
-                page: 1,
-              })}
-          >
-            {pageSizes.map((s) => (
-              <option value={String(s)} {...bool("selected", s === q.pageSize)}>
-                {tr(m.perPage, { n: s })}
-              </option>
-            ))}
-          </select>
+          <div class="dp-pgsize" data-testid="dp-pagesize">
+            <Select
+              size="xs"
+              value={createSignal(String(q.pageSize))}
+              options={pageSizes.map((sz) => ({
+                value: String(sz),
+                label: tr(m.perPage, { n: sz }),
+              }))}
+              onChange={(e: Event) =>
+                setQuery({
+                  pageSize: Number(
+                    (e.target as unknown as { value: string }).value,
+                  ),
+                  page: 1,
+                })}
+            />
+          </div>
           <button
             type="button"
             class={`${pbtn} border-slate-300`}
@@ -1726,28 +1732,29 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
           </button>
           <label class="flex items-center gap-1">
             {m.jump}
-            <input
-              class="w-14 rounded-md border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-900"
-              type="number"
-              min="1"
-              max={String(last)}
-              value={jump.value}
-              data-testid="dp-jump"
-              onInput={(
-                e: Event,
-              ) => (jump.value =
-                (e.target as unknown as { value: string }).value)}
-              onKeyDown={(e: Event & { key: string }) => {
-                if (e.key === "Enter") {
-                  const p = Math.min(
-                    last,
-                    Math.max(1, Number.parseInt(jump.value, 10) || 1),
-                  );
-                  jump.value = "";
-                  go(p);
-                }
-              }}
-            />
+            <div class="dp-jump" data-testid="dp-jump">
+              <Input
+                size="sm"
+                type="text"
+                value={jump}
+                onInput={(e: Event) => {
+                  const el = e.target as unknown as { value: string };
+                  const v = el.value.replace(/\D+/g, "").slice(0, 7);
+                  if (v !== el.value) el.value = v;
+                  jump.value = v;
+                }}
+                onKeyDown={(e: Event) => {
+                  if ((e as KeyboardEvent).key === "Enter") {
+                    const p = Math.min(
+                      last,
+                      Math.max(1, Number.parseInt(jump.value, 10) || 1),
+                    );
+                    jump.value = "";
+                    go(p);
+                  }
+                }}
+              />
+            </div>
             {m.page}
           </label>
         </div>
@@ -1789,80 +1796,96 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
             );
           } else if (type === "select") {
             control = (
-              <select
-                class={`${SELECT_CLS} w-full`}
-                {...bool("disabled", ro)}
-                data-testid={`dp-fld-${f.name}`}
-                onChange={(e: Event) => (sig.value = selectValue(e.target))}
-              >
-                {!f.required && !(f.options ?? []).some((o) =>
-                  o.value === ""
-                ) && <option value="">—</option>}
-                {(f.options ?? []).map((o) => (
-                  <option
-                    value={o.value}
-                    {...bool("selected", sig.value === o.value)}
-                  >
-                    {o.label}
-                  </option>
-                ))}
-              </select>
+              <div class="w-full" data-testid={`dp-fld-${f.name}`}>
+                <Select
+                  size="sm"
+                  value={sig}
+                  disabled={ro}
+                  placeholder={!f.required &&
+                      !(f.options ?? []).some((o) => o.value === "")
+                    ? "—"
+                    : undefined}
+                  options={(f.options ?? []).map((o) => ({
+                    value: o.value,
+                    label: o.label,
+                  }))}
+                />
+              </div>
             );
           } else if (type === "multiselect") {
-            const cur = sig.value.split(",").filter(Boolean);
             control = (
-              <div
-                class="flex flex-wrap gap-x-4 gap-y-1"
-                data-testid={`dp-fld-${f.name}`}
-              >
-                {(f.options ?? []).map((o) => (
-                  <label class="flex cursor-pointer items-center gap-1.5 text-sm">
-                    <input
-                      type="checkbox"
-                      {...bool("checked", cur.includes(o.value))}
-                      data-testid={`dp-fld-${f.name}-${o.value}`}
-                      onChange={() => {
-                        const now = sig.value.split(",").filter(Boolean);
-                        sig.value = (now.includes(o.value)
-                          ? now.filter((x) =>
-                            x !== o.value
-                          )
-                          : [...now, o.value]).join(",");
-                      }}
-                    />
-                    {o.label}
-                  </label>
-                ))}
+              <div class="w-full" data-testid={`dp-fld-${f.name}`}>
+                <MultiSelect
+                  size="sm"
+                  value={mfields[f.name]}
+                  disabled={ro}
+                  options={(f.options ?? []).map((o) => ({
+                    value: o.value,
+                    label: o.label,
+                  }))}
+                  onChange={(e: Event) => {
+                    const v = (e.target as unknown as { value: unknown }).value;
+                    if (Array.isArray(v)) sig.value = v.join(",");
+                  }}
+                />
               </div>
             );
           } else if (type === "switch") {
             const on = f.onOff ? f.onOff[0] : "true";
             const off = f.onOff ? f.onOff[1] : "false";
             control = (
-              <button
-                type="button"
-                role="switch"
-                data-testid={`dp-fld-${f.name}`}
-                aria-checked={sig.value === on ? "true" : "false"}
-                class={`dp-sw ${sig.value === on ? "dp-sw-on" : "dp-sw-off"}`}
-                onClick={() => (sig.value = sig.value === on ? off : on)}
-              >
-                <span class="dp-sw-knob" />
-              </button>
+              <span data-testid={`dp-fld-${f.name}`}>
+                <Switch
+                  checked={() => sig.value === on}
+                  disabled={ro}
+                  onChange={(e: Event) => {
+                    sig.value =
+                      (e.target as unknown as { checked: boolean }).checked
+                        ? on
+                        : off;
+                  }}
+                />
+              </span>
+            );
+          } else if (type === "number") {
+            control = (
+              <div class="w-full" data-testid={`dp-fld-${f.name}`}>
+                <InputNumber
+                  size="sm"
+                  value={sig}
+                  disabled={ro}
+                  placeholder={f.placeholder}
+                />
+              </div>
+            );
+          } else if (type === "date") {
+            control = (
+              <div class="w-full" data-testid={`dp-fld-${f.name}`}>
+                <DatePicker
+                  size="sm"
+                  value={sig}
+                  disabled={ro}
+                  placeholder={f.placeholder}
+                />
+              </div>
+            );
+          } else if (type === "datetime") {
+            control = (
+              <div class="w-full" data-testid={`dp-fld-${f.name}`}>
+                <DateTimePicker
+                  size="sm"
+                  value={sig}
+                  disabled={ro}
+                  format="YYYY-MM-DD HH:mm"
+                  placeholder={f.placeholder}
+                />
+              </div>
             );
           } else {
             control = (
               <div class="w-full" data-testid={`dp-fld-${f.name}`}>
                 <Input
-                  type={type === "number"
-                    ? "number"
-                    : type === "password"
-                    ? "password"
-                    : type === "date"
-                    ? "date"
-                    : type === "datetime"
-                    ? "datetime-local"
-                    : "text"}
+                  type={type === "password" ? "password" : "text"}
                   value={sig}
                   {...bool("readOnly", ro)}
                   autoComplete={type === "password" ? "new-password" : "off"}
@@ -1892,19 +1915,19 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
         )}
         <div class="mt-2 flex justify-end gap-2">
           <Btn
-            type="button"
-            onClick={() => (formOpen.value = false)}
-            data-testid="dp-form-cancel"
-          >
-            {m.cancel}
-          </Btn>
-          <Btn
             type="submit"
             variant="primary"
             loading={formBusy.value}
             data-testid="dp-form-submit"
           >
             {m.confirm}
+          </Btn>
+          <Btn
+            type="button"
+            onClick={() => (formOpen.value = false)}
+            data-testid="dp-form-cancel"
+          >
+            {m.cancel}
           </Btn>
         </div>
       </form>
@@ -1930,7 +1953,20 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
           : String(raw),
       });
     }
-    return <Descriptions bordered column={1} size="sm" items={items} />;
+    return (
+      <div data-testid="dp-view">
+        <Descriptions bordered column={1} size="sm" items={items} />
+        <div class="mt-4 flex justify-end gap-2" data-testid="dp-view-footer">
+          <Btn
+            type="button"
+            data-testid="dp-view-close"
+            onClick={() => (viewRow.value = null)}
+          >
+            {m.close}
+          </Btn>
+        </div>
+      </div>
+    );
   };
 
   return (

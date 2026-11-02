@@ -321,8 +321,8 @@ function InputGroupShell(props: {
         name={name}
         autoComplete={nativeAutoComplete}
         placeholder={placeholder}
-        disabled={disabled}
-        readOnly={readOnly}
+        {...(disabled ? { disabled: true } : {})}
+        {...(readOnly ? { readOnly: true } : {})}
         aria-required={required}
         aria-invalid={error}
         {...(type !== "file" ? { value } : {})}
@@ -425,8 +425,10 @@ export function Input(props: InputProps): JSXRenderable {
     name,
     autoComplete: nativeAutoComplete,
     placeholder,
-    disabled,
-    readOnly,
+    // 布尔属性仅为 true 时输出：SSR 会把 false 序列化成 disabled="false" / readonly="false"，
+    // 而 HTML 里只要写了该属性就为真（水合前输入框会被锁成只读 / 禁用）
+    ...(disabled ? { disabled: true } : {}),
+    ...(readOnly ? { readOnly: true } : {}),
     "aria-required": required,
     "aria-invalid": error,
     class: twMerge(

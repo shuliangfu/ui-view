@@ -47,7 +47,7 @@ if (!window.__dp) {
   const text = (el) => (el ? el.textContent.trim() : "");
   const total = (k) => Number((text(q(k, '[data-testid="dp-total-count"]')).match(/\\d+/) || [0])[0]);
   const rows = (k) => qa(k, '[data-testid^="dp-row-"]');
-  const cell = (r, n) => r.querySelectorAll("td")[(r.querySelector("td input[type=checkbox]") ? 1 : 0) + n];
+  const cell = (r, n) => r.querySelectorAll("td")[(r.querySelector("td:first-child input[type=checkbox]:not(.sr-only)") ? 1 : 0) + n];
   const names = (k) => rows(k).map((r) => text(cell(r, 1)));
   const g = (sel) => {
     const el = document.querySelector(sel);
@@ -86,7 +86,25 @@ if (!window.__dp) {
   };
   const pop = () => document.querySelector(".dp-pop");
   const popBtn = (txt) => pop() ? [...pop().querySelectorAll("button")].find((b) => b.textContent.trim() === txt) : null;
-  window.__dp = { pop, popBtn, rgba, effBg, contrast, g, cell, sleep, root, q, qa, until, click, fill, dlg, text, total, rows, names };
+  /** ui-view Select：点开触发按钮 → 点选项文案 */
+  const pick = async (wrap, label) => {
+    const trig = wrap.querySelector("button[aria-haspopup]");
+    if (trig.getAttribute("aria-expanded") !== "true") trig.click();
+    await until(() => trig.getAttribute("aria-expanded") === "true");
+    const o = [...wrap.querySelectorAll('[role="option"]')].find((b) => b.textContent.trim() === label);
+    if (!o) throw new Error("missing option " + label);
+    o.click(); await sleep(80);
+  };
+  const sw = (k, id) => {
+    const w = q(k, '[data-testid="dp-switch-' + id + '"]');
+    const input = w.querySelector("input");
+    const label = w.querySelector("label");
+    const track = label.querySelector('span[aria-hidden="true"]');
+    return { w, input, label, track, knob: track.firstElementChild, on: input.checked, toggle: () => label.click() };
+  };
+  const picked = (wrap) => wrap.querySelector("button[aria-haspopup]").textContent.trim();
+  const hidden = (wrap) => wrap.querySelector('input[type="hidden"]').value;
+  window.__dp = { sw, pick, picked, hidden, pop, popBtn, rgba, effBg, contrast, g, cell, sleep, root, q, qa, until, click, fill, dlg, text, total, rows, names };
 }
 `;
 
@@ -305,6 +323,10 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
       D.click(D.q(k, '[data-testid="dp-search-toggle"]'));
       await D.until(() => D.dlg() && document.querySelector('[role="dialog"] [data-testid="dp-search"]'));
       out.modal = !!document.querySelector('[role="dialog"] [data-testid="dp-search"]');
+      { const sb = document.querySelector('[role="dialog"] [data-testid="dp-search-submit"]'), rb = document.querySelector('[role="dialog"] [data-testid="dp-search-reset"]');
+        const ra = sb.getBoundingClientRect(), rr = rb.getBoundingClientRect();
+        out.footerOrder = (ra.left < rr.left && Math.abs(ra.top - rr.top) < 2 ? "ok" : "swapped") + ":" + sb.textContent.replace(/\\s/g, "") + "," + rb.textContent.replace(/\\s/g, "");
+        out.footerDom = !!(sb.compareDocumentPosition(rb) & Node.DOCUMENT_POSITION_FOLLOWING); }
       out.fields = [...document.querySelectorAll('[role="dialog"] [data-testid^="dp-f-"]')].map((e) => e.getAttribute("data-testid"));
       out.topOpen = D.q(k, '[data-testid="dp-table"]').getBoundingClientRect().top === top0;
       D.fill(document.querySelector('[role="dialog"] [data-testid="dp-f-name"] input'), "ali");
@@ -318,7 +340,7 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
       out.kept = document.querySelector('[data-testid="dp-f-name"] input').value;
       // 下拉搜索：角色 = 管理员
       const sel = document.querySelector('[data-testid="dp-f-role"]');
-      sel.value = "admin"; sel.dispatchEvent(new Event("change", { bubbles: true }));
+      await D.pick(sel, "管理员");
       // 先选「管理员」搜索，再改回「全部」搜索：筛选必须被清除（而不是把「全部」当作值）
       D.click(D.g('[data-testid="dp-search-submit"]'));
       await D.until(() => D.total(k) < 25);
@@ -326,7 +348,7 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
       D.click(D.q(k, '[data-testid="dp-search-toggle"]'));
       await D.until(() => document.querySelector('[data-testid="dp-search"]'));
       const sel2 = document.querySelector('[data-testid="dp-f-role"]');
-      sel2.selectedIndex = 0; sel2.dispatchEvent(new Event("change", { bubbles: true }));
+      await D.pick(sel2, "全部");
       D.fill(document.querySelector('[data-testid="dp-f-name"] input'), "");
       D.click(D.g('[data-testid="dp-search-submit"]'));
       await D.until(() => D.total(k) === 25);
@@ -334,13 +356,13 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
       D.click(D.q(k, '[data-testid="dp-search-toggle"]'));
       await D.until(() => document.querySelector('[data-testid="dp-search"]'));
       const sel3 = document.querySelector('[data-testid="dp-f-role"]');
-      sel3.value = "admin"; sel3.dispatchEvent(new Event("change", { bubbles: true }));
+      await D.pick(sel3, "管理员");
       D.click(D.g('[data-testid="dp-search-reset"]'));
       await D.until(() => D.total(k) === 24 || D.total(k) === 25);
       out.afterReset = D.total(k);
       out.nameCleared = document.querySelector('[data-testid="dp-f-name"] input').value === "";
-      out.roleCleared = document.querySelector('[data-testid="dp-f-role"]').selectedIndex === 0;
-      out.statusCleared = document.querySelector('[data-testid="dp-f-status"]').selectedIndex === 0;
+      out.roleCleared = D.picked(document.querySelector('[data-testid="dp-f-role"]')) === "全部" && D.hidden(document.querySelector('[data-testid="dp-f-role"]')) === "";
+      out.statusCleared = D.picked(document.querySelector('[data-testid="dp-f-status"]')) === "全部" && D.hidden(document.querySelector('[data-testid="dp-f-status"]')) === "";
       // 关闭
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
       window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
@@ -349,6 +371,8 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
       );
       expect(r.inline).toBe(false);
       expect(r.modal).toBe(true);
+      expect(r.footerOrder).toBe("ok:搜索,重置");
+      expect(r.footerDom).toBe(true);
       expect(r.fields).toEqual(["dp-f-name", "dp-f-role", "dp-f-status"]);
       expect(r.topOpen).toBe(true);
       expect((r.afterSearch as unknown[])[0]).toBe(1);
@@ -376,9 +400,9 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
       const out = { initialTotal: D.total(k) };
       D.click(D.q(k, '[data-testid="dp-search-toggle"]'));
       await D.until(() => document.querySelector('[data-testid="dp-search"]'));
-      out.roleValue = document.querySelector('[data-testid="dp-f-role"]').value;
+      out.roleValue = D.hidden(document.querySelector('[data-testid="dp-f-role"]'));
       const st = document.querySelector('[data-testid="dp-f-status"]');
-      st.value = "disabled"; st.dispatchEvent(new Event("change", { bubbles: true }));
+      await D.pick(st, "停用");
       D.click(D.g('[data-testid="dp-search-submit"]'));
       await D.until(() => D.total(k) < out.initialTotal);
       out.after = D.total(k);
@@ -439,19 +463,20 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
       out.reset = true;
       document.body.click();
       // 行内开关：状态标签（启用/停用）切换
-      const sw = D.q(k, '[data-testid^="dp-switch-"]');
-      const before = sw.getAttribute("aria-checked");
-      const id = sw.getAttribute("data-testid");
-      D.click(sw);
-      await D.until(() => D.q(k, '[data-testid="' + id + '"]').getAttribute("aria-checked") !== before);
-      out.switched = true;
+      const swId = D.q(k, '[data-testid^="dp-switch-"]').getAttribute("data-testid").replace("dp-switch-", "");
+      const before = D.sw(k, swId).on;
+      D.sw(k, swId).toggle();
+      await D.sleep(900);
+      out.switched = D.sw(k, swId).on !== before;
       // 行内文本编辑：双击 → 输入 → Enter
       const firstEdit = D.q(k, '[data-testid^="dp-edit-name-"]');
       const editId = firstEdit.getAttribute("data-testid").replace("dp-edit-name-", "");
       firstEdit.dispatchEvent(new MouseEvent("dblclick", { bubbles: true }));
       await D.until(() => D.q(k, '[data-testid="dp-inline-name"]'));
       const inp = D.q(k, '[data-testid="dp-inline-name"]');
-      inp.value = "Renamed Inline";
+      const innerInput = inp.querySelector("input");
+      innerInput.value = "Renamed Inline";
+      innerInput.dispatchEvent(new Event("input", { bubbles: true }));
       inp.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
       await D.until(() => D.names(k).includes("Renamed Inline"));
       out.inlineEdited = D.names(k).includes("Renamed Inline");
@@ -552,12 +577,12 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
       out.statusText = D.text(document.querySelector('[data-testid="dp-confirm-text"]'));
       D.click(D.g('[data-testid="dp-confirm-cancel"]'));
       await D.until(() => !confirmOpen());
-      out.statusUnchanged = D.q(k, '[data-testid="dp-switch-2"]').getAttribute("aria-checked") === "true" && D.q(k, '[data-testid="dp-switch-3"]').getAttribute("aria-checked") === "true";
+      out.statusUnchanged = D.sw(k, 2).on === true && D.sw(k, 3).on === true;
       D.click(D.q(k, '[data-testid="dp-batch-status-disabled"]'));
       await D.until(confirmOpen);
       D.click(D.g('[data-testid="dp-confirm-ok"]'));
       await D.until(() => !confirmOpen() && !D.q(k, '[data-testid="dp-batch-bar"]'));
-      out.statusChanged = D.q(k, '[data-testid="dp-switch-2"]').getAttribute("aria-checked") === "false" && D.q(k, '[data-testid="dp-switch-3"]').getAttribute("aria-checked") === "false";
+      out.statusChanged = D.sw(k, 2).on === false && D.sw(k, 3).on === false;
       // 批量删除
       const total0 = D.total(k);
       D.click(D.q(k, '[data-testid="dp-select-2"]'));
@@ -596,6 +621,7 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
         `
       const k = ${P("demo-crud")};
       const out = {};
+const footerOrder = () => { const a = document.querySelector('[role="dialog"] [data-testid="dp-form-submit"]'), b = document.querySelector('[role="dialog"] [data-testid="dp-form-cancel"]'); if (!a || !b) return "missing"; const ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect(); return (ra.left < rb.left && Math.abs(ra.top - rb.top) < 2 ? "ok" : "swapped") + ":" + a.textContent.replace(/\\s/g, "") + "," + b.textContent.replace(/\\s/g, ""); };
       const dialogForm = () => document.querySelector('[role="dialog"] [data-testid="dp-form"]');
       const confirmOpen = () => document.querySelector('[data-testid="dp-confirm"]');
       const total0 = D.total(k);
@@ -603,6 +629,7 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
       D.click(D.q(k, '[data-testid="dp-create"]'));
       await D.until(dialogForm);
       out.createTitle = D.text(document.querySelector('[role="dialog"] h2'));
+      out.createOrder = footerOrder();
       D.click(D.g('[data-testid="dp-form-submit"]'));
       await D.until(() => document.querySelector('[data-testid="dp-form-error"]'));
       out.invalidTop = D.text(document.querySelector('[data-testid="dp-form-error"]'));
@@ -628,6 +655,7 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
       D.click(D.q(k, '[data-testid="dp-edit-' + newId + '"]'));
       await D.until(dialogForm);
       out.editTitle = D.text(document.querySelector('[role="dialog"] h2'));
+      out.editOrder = footerOrder();
       out.prefill = document.querySelector('[data-testid="dp-fld-name"] input').value;
       D.fill(document.querySelector('[data-testid="dp-fld-name"] input'), "Newbie 2");
       D.click(D.g('[data-testid="dp-form-submit"]'));
@@ -672,6 +700,9 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
       return out;`,
       );
       expect(r.createTitle).toContain("新增");
+      // 页脚按钮顺序：「确定」在左、「取消」在右（新增 / 编辑一致）
+      expect(r.createOrder).toBe("ok:确定,取消");
+      expect(r.editOrder).toBe("ok:确定,取消");
       expect(r.invalidTop).toBe("表单有误，请检查标红的字段");
       expect(r.stillOpen).toBe(true);
       expect(r.errorsShown).toBe(true);
@@ -714,18 +745,18 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
       await D.until(() => range().startsWith("第 36-40"));
       out.last = range();
       out.nextDisabled = D.q(k, '[data-testid="dp-next"]').disabled === true;
-      const j = D.q(k, '[data-testid="dp-jump"]');
+      const j = D.q(k, '[data-testid="dp-jump"] input');
       D.fill(j, "3");
       j.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
       await D.until(() => range().startsWith("第 11-15"));
       out.jumped = range();
       const sz = D.q(k, '[data-testid="dp-pagesize"]');
-      sz.value = "20"; sz.dispatchEvent(new Event("change", { bubbles: true }));
+      await D.pick(sz, "20 条/页");
       await D.until(() => range().startsWith("第 1-20"));
       out.size20 = [range(), D.rows(k).length];
-      out.sizeOptions = [...sz.options].map((o) => o.textContent.trim());
+      out.sizeOptions = [...D.q(k, '[data-testid="dp-pagesize"]').querySelectorAll('[role="option"]')].map((o) => o.textContent.trim());
       // 越界跳页被夹到最后一页
-      const j2 = D.q(k, '[data-testid="dp-jump"]');
+      const j2 = D.q(k, '[data-testid="dp-jump"] input');
       D.fill(j2, "99");
       j2.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
       await D.until(() => range().startsWith("第 21-40"));
@@ -971,7 +1002,7 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
         count: D.text(D.q(k, '[data-testid="dp-total-count"]')),
         range: D.text(D.q(k, '[data-testid="dp-range"]')),
         actions: D.q(k, "thead").textContent.includes("Actions"),
-        perPage: D.q(k, '[data-testid="dp-pagesize"]').options[0].textContent.trim(),
+        perPage: D.q(k, '[data-testid="dp-pagesize"]').querySelector('[role="option"]').textContent.trim(),
       };`,
       );
       expect(en.labels).toEqual([
@@ -1189,7 +1220,7 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
     DOCS_BROWSER_CONFIG,
   );
   it(
-    "状态开关：ON 旋钮在右、OFF 在左、有过渡动画；locked 行为禁用开关（浅色 / 深色）",
+    "状态开关（ui-view Switch）：ON 旋钮在右、OFF 在左、有过渡动画；locked 行为禁用开关（浅色 / 深色）",
     async (t) => {
       if (!t?.browser?.goto) return;
       await open(t, "demo-basic");
@@ -1199,18 +1230,17 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
           `
         const k = ${P("demo-basic")};
         const m = (id) => {
-          const b = D.q(k, '[data-testid="dp-switch-' + id + '"]');
-          const kn = b.querySelector("span");
-          const br = b.getBoundingClientRect(), kr = kn.getBoundingClientRect();
-          const cs = getComputedStyle(b), ks = getComputedStyle(kn);
+          const s = D.sw(k, id);
+          const br = s.track.getBoundingClientRect(), kr = s.knob.getBoundingClientRect();
+          const cs = getComputedStyle(s.track), ks = getComputedStyle(s.knob);
           return {
-            checked: b.getAttribute("aria-checked"), disabled: b.disabled, ariaDisabled: b.getAttribute("aria-disabled"),
+            checked: s.on, disabled: s.input.disabled, native: s.input.type, cursor: getComputedStyle(s.label).cursor,
             w: Math.round(br.width), h: Math.round(br.height),
             knobLeft: Math.round((kr.left - br.left) * 10) / 10, knobRight: Math.round((br.right - kr.right) * 10) / 10,
             knobCenterRight: kr.left + kr.width / 2 > br.left + br.width / 2,
             knobW: Math.round(kr.width), knobH: Math.round(kr.height),
-            radius: parseFloat(cs.borderTopLeftRadius), opacity: cs.opacity, cursor: cs.cursor, bg: cs.backgroundColor,
-            kTrans: ks.transitionProperty + "|" + ks.transitionDuration, bTrans: cs.transitionProperty,
+            radius: parseFloat(cs.borderTopLeftRadius), opacity: cs.opacity, bg: cs.backgroundColor,
+            kTrans: ks.transitionProperty + "|" + ks.transitionDuration,
           };
         };
         return { on: m(2), off: m(4), locked: m(1) };`,
@@ -1220,30 +1250,31 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
         dark: boolean,
       ) => {
         const tag = dark ? "dark" : "light";
-        // ON：蓝色，旋钮在右侧（右边距 ≈2px）
-        expect([tag, r.on.checked]).toEqual([tag, "true"]);
+        // ON：蓝色，旋钮在右侧
+        expect([tag, r.on.checked]).toEqual([tag, true]);
         expect([tag, r.on.knobCenterRight]).toEqual([tag, true]);
         expect([tag, r.on.knobRight]).toEqual([tag, 2]);
-        expect([tag, r.on.bg]).toEqual([
-          tag,
-          dark ? "rgb(59, 130, 246)" : "rgb(37, 99, 235)",
-        ]);
-        // OFF：旋钮在左侧（左边距 ≈2px）
-        expect([tag, r.off.checked]).toEqual([tag, "false"]);
+        const onRgb = (r.on.bg as string).match(/\d+/g)!.map(Number);
+        // 蓝色系（theme 主色）：B 通道明显高于 R，且与 OFF 底色不同
+        expect([tag, onRgb[2] - onRgb[0] > 100]).toEqual([tag, true]);
+        expect([tag, r.on.bg !== r.off.bg]).toEqual([tag, true]);
+        // OFF：旋钮在左侧
+        expect([tag, r.off.checked]).toEqual([tag, false]);
         expect([tag, r.off.knobCenterRight]).toEqual([tag, false]);
         expect([tag, r.off.knobLeft]).toEqual([tag, 2]);
-        expect([tag, r.off.bg]).toEqual([
+        const offRgb = (r.off.bg as string).match(/\d+/g)!.map(Number);
+        // OFF：灰色系（slate），不是蓝 / 绿
+        expect([tag, Math.abs(offRgb[2] - offRgb[0]) < 60]).toEqual([
           tag,
-          dark ? "rgb(71, 85, 105)" : "rgb(203, 213, 225)",
+          true,
         ]);
-        // 圆形旋钮 + 胶囊轨道 + 过渡
+        // 圆形旋钮 + 胶囊轨道 + 过渡（同一个 ui-view Switch 组件）
         for (const x of [r.on, r.off, r.locked]) {
-          expect([tag, x.w, x.h]).toEqual([tag, 36, 20]);
-          expect([tag, x.knobW, x.knobH]).toEqual([tag, 16, 16]);
+          expect([tag, x.w, x.h]).toEqual([tag, 44, 24]);
+          expect([tag, x.knobW, x.knobH]).toEqual([tag, 20, 20]);
           expect((x.radius as number) >= 10).toBe(true);
           expect(String(x.kTrans)).toContain("transform");
           expect(String(x.kTrans)).toContain("0.2s");
-          expect(String(x.bTrans)).toContain("background-color");
         }
         expect([tag, r.on.disabled, r.on.opacity, r.off.disabled]).toEqual([
           tag,
@@ -1252,16 +1283,12 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
           false,
         ]);
         // locked 行：禁用开关（不是浅绿色方块）：胶囊、半透明、not-allowed、仍显示当前状态（ON → 旋钮在右）
-        expect([tag, r.locked.disabled, r.locked.ariaDisabled]).toEqual([
-          tag,
-          true,
-          "true",
-        ]);
+        expect([tag, r.locked.disabled]).toEqual([tag, true]);
         expect([tag, r.locked.opacity]).toEqual([tag, "0.5"]);
         expect([tag, r.locked.cursor]).toEqual([tag, "not-allowed"]);
         expect([tag, r.locked.checked, r.locked.knobCenterRight]).toEqual([
           tag,
-          "true",
+          true,
           true,
         ]);
         expect([tag, r.locked.bg]).toEqual([tag, r.on.bg]);
@@ -1269,35 +1296,31 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
       check(await measure(), false);
 
       // 点击 locked 开关无效
-      const afterClick = await ev<string>(
+      const afterClick = await ev<boolean>(
         t,
-        `D.click(D.q(${
-          P("demo-basic")
-        }, '[data-testid="dp-switch-1"]')); await D.sleep(300);
-       return D.q(${
-          P("demo-basic")
-        }, '[data-testid="dp-switch-1"]').getAttribute("aria-checked");`,
+        `const k = ${P("demo-basic")};
+       D.sw(k, 1).toggle(); await D.sleep(500);
+       return D.sw(k, 1).on;`,
       );
-      expect(afterClick).toBe("true");
+      expect(afterClick).toBe(true);
 
-      // 动画：点击 ON 开关后，旋钮的 translateX 在 16px → 0px 之间出现中间值（不是瞬移）
-      const anim = await ev<{ samples: number[]; end: string }>(
+      // 动画：点击 ON 开关后，旋钮的 translateX 在 20px → 0px 之间出现中间值（不是瞬移）
+      const anim = await ev<{ samples: number[]; end: boolean }>(
         t,
         `
       const k = ${P("demo-basic")};
-      const b = () => D.q(k, '[data-testid="dp-switch-3"]');
-      const tx = () => new DOMMatrixReadOnly(getComputedStyle(b().querySelector("span")).transform).m41;
+      const tx = () => new DOMMatrixReadOnly(getComputedStyle(D.sw(k, 3).knob).transform).m41;
       const start = tx();
       const samples = [];
-      D.click(b());
+      D.sw(k, 3).toggle();
       const t0 = performance.now();
-      while (performance.now() - t0 < 400) { samples.push(Math.round(tx() * 100) / 100); await new Promise((r) => requestAnimationFrame(r)); }
-      return { samples: [start, ...samples], end: b().getAttribute("aria-checked") };`,
+      while (performance.now() - t0 < 500) { try { samples.push(Math.round(tx() * 100) / 100); } catch (_) {} await new Promise((r) => requestAnimationFrame(r)); }
+      return { samples: [start, ...samples], end: D.sw(k, 3).on };`,
       );
-      expect(anim.end).toBe("false");
-      expect(anim.samples[0]).toBe(16);
+      expect(anim.end).toBe(false);
+      expect(anim.samples[0]).toBe(20);
       expect(anim.samples[anim.samples.length - 1]).toBe(0);
-      expect(anim.samples.some((v) => v > 0.5 && v < 15.5)).toBe(true);
+      expect(anim.samples.some((v) => v > 0.5 && v < 19.5)).toBe(true);
 
       // 切到深色（真实主题按钮）后同样成立
       await ev(
@@ -1397,31 +1420,27 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
   );
 
   // ---------------------------------------------------------------- 单元格编辑
-  /** 每种可编辑类型一个用例：dblclick 进入编辑 → 改值 → 按模式结束 */
+  /** 每种可编辑类型一个用例：dblclick 进入编辑 → 改值（用 ui-view 控件的真实交互）→ 按模式结束 */
   const CELL_CASES = [
     { prop: "name", id: "2", kind: "input", set: "Zed", shows: ["Zed"] },
     { prop: "score", id: "2", kind: "input", set: "99", shows: ["99"] },
-    { prop: "role", id: "2", kind: "select", set: "admin", shows: ["管理员"] },
+    { prop: "role", id: "2", kind: "select", set: "管理员", shows: ["管理员"] },
     {
       prop: "tags",
       id: "3",
       kind: "multi",
-      set: ["vip", "beta"],
+      set: ["VIP", "内测"],
       shows: ["VIP", "内测"],
     },
-    {
-      prop: "birthday",
-      id: "2",
-      kind: "input",
-      set: "2001-02-03",
-      shows: ["2001-02-03"],
-    },
+    { prop: "birthday", id: "2", kind: "date", day: 15, shows: ["-15"] },
     {
       prop: "loginAt",
       id: "2",
-      kind: "input",
-      set: "2026-03-04T05:06",
-      shows: ["2026-03-04 05:06:00"],
+      kind: "datetime",
+      day: 15,
+      hour: 5,
+      minute: 6,
+      shows: ["-15 05:06"],
     },
     {
       prop: "remark",
@@ -1443,6 +1462,8 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
           editorGone: boolean;
           error: boolean;
           editorKind: string;
+          native: number;
+          stillEditingAfterPick: boolean;
         }
       >
     >(
@@ -1454,6 +1475,34 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
       const out = {};
       const shown = (c) => { const e = D.q(k, '[data-testid="dp-edit-' + c.prop + '-' + c.id + '"]'); return e ? e.textContent : null; };
       const editor = (c) => D.q(k, '[data-testid="dp-inline-' + c.prop + '"]');
+      /** 用 ui-view 控件的真实交互改值 */
+      const setValue = async (ed, c) => {
+        if (c.kind === "input") {
+          const el = ed.querySelector("input:not([type=hidden]), textarea");
+          el.focus(); el.value = c.set;
+          el.dispatchEvent(new Event("input", { bubbles: true }));
+          el.dispatchEvent(new Event("change", { bubbles: true }));
+        } else if (c.kind === "select") {
+          await D.pick(ed, c.set);
+        } else if (c.kind === "multi") {
+          await D.until(() => ed.querySelector('[role="option"]'));
+          for (const o of ed.querySelectorAll('[role="option"]')) {
+            const want = c.set.includes(o.textContent.trim());
+            if ((o.getAttribute("aria-selected") === "true") !== want) { o.click(); await D.sleep(60); }
+          }
+          [...ed.querySelectorAll("button")].find((b) => b.textContent.trim() === "完成").click();
+        } else {
+          await D.until(() => ed.querySelector("[data-ui-calendar-day]"));
+          [...ed.querySelectorAll("[data-ui-calendar-day]")].find((b) => b.textContent.trim() === String(c.day)).click();
+          if (c.kind === "datetime") {
+            ed.querySelector('[data-picker-time-kind="hour"] [data-picker-cell-value="' + c.hour + '"]').click();
+            ed.querySelector('[data-picker-time-kind="minute"] [data-picker-cell-value="' + c.minute + '"]').click();
+          }
+          await D.sleep(60);
+          [...ed.querySelector('[role="dialog"]').querySelectorAll("button")].find((b) => b.textContent.trim() === "确定").click();
+        }
+        await D.sleep(250);
+      };
       if (mode === "fail") {
         D.click(D.g('[data-testid="cell-demo-fail"]'));
         await D.sleep(100);
@@ -1463,19 +1512,26 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
         D.q(k, '[data-testid="dp-edit-' + c.prop + '-' + c.id + '"]').dispatchEvent(new MouseEvent("dblclick", { bubbles: true }));
         await D.until(() => editor(c));
         const ed = editor(c);
-        const kind = ed.tagName.toLowerCase() + (ed.type ? ":" + ed.type : "");
-        await D.until(() => document.activeElement === ed || ed.contains(document.activeElement));
-        if (c.kind === "multi") {
-          for (const cb of ed.querySelectorAll("input[type=checkbox]")) {
-            cb.checked = c.set.includes(cb.getAttribute("data-value"));
-            cb.dispatchEvent(new Event("change", { bubbles: true }));
-          }
-        } else {
-          ed.value = c.set;
-          ed.dispatchEvent(new Event("input", { bubbles: true }));
-          ed.dispatchEvent(new Event("change", { bubbles: true }));
-        }
-        if (mode === "blur" || mode === "fail") document.activeElement.blur();
+        await D.until(() => ed.contains(document.activeElement));
+        const marker = ({
+          input: () => (c.prop === "remark" ? "textarea" : c.prop === "score" ? "number" : "text"),
+          select: () => "select", multi: () => "multiselect", date: () => "datepicker", datetime: () => "datetimepicker",
+        })[c.kind]();
+        const ui = {
+          text: !!ed.querySelector("input[type=text], input:not([type])"),
+          number: !!ed.querySelector('button[aria-label="增加"]'),
+          textarea: !!ed.querySelector("textarea"),
+          select: !!ed.querySelector('button[aria-haspopup="listbox"]') && !ed.querySelector("[data-ui-multiselect-panel]"),
+          multiselect: !!ed.querySelector("[data-ui-multiselect-panel]"),
+          datepicker: !!ed.querySelector("[data-ui-datepicker-root]"),
+          datetimepicker: !!ed.querySelector("[data-ui-datetime-picker-root]"),
+        }[marker];
+        // 不能出现原生 select / date / datetime-local / checkbox / multiple 控件
+        const native = ed.querySelectorAll('select, input[type=date], input[type=datetime-local], input[type=time], input[type=checkbox], input[type=radio]').length;
+        await setValue(ed, c);
+        // 选完值（浮层关闭 / 确定）后仍处于编辑态：等失焦 / Enter 才保存
+        const stillEditingAfterPick = !!editor(c);
+        if (mode === "blur" || mode === "fail") (document.activeElement || document.body).blur();
         else if (mode === "enter") ed.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
         else if (mode === "esc") ed.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
         const gone = await D.until(() => !editor(c), 3000);
@@ -1483,7 +1539,8 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
         out[c.prop] = {
           before, after: shown(c), editorGone: gone,
           error: mode === "fail" ? await D.until(() => document.body.innerText.includes("保存失败（演示：服务端拒绝）"), 2000) : false,
-          editorKind: kind,
+          editorKind: ed.getAttribute("data-editor") + ":" + marker + ":" + ui,
+          native, stillEditingAfterPick,
         };
         // 等 toast 消失 / 重渲染稳定，避免影响下一个用例
         await D.sleep(150);
@@ -1492,20 +1549,21 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
     );
 
   it(
-    "单元格编辑·失焦保存：每种类型 dblclick → 改值 → blur 后保存并回到展示态",
+    "单元格编辑·失焦保存：每种类型用 ui-view 控件（无原生控件）dblclick → 改值 → blur 后保存并回到展示态",
     async (t) => {
       if (!t?.browser?.goto) return;
       await open(t, "demo-cell");
       const r = await runCells(t, "blur");
-      expect(r.name.editorKind).toBe("input:text");
-      expect(r.score.editorKind).toBe("input:number");
-      expect(r.role.editorKind).toBe("select:select-one");
-      expect(r.tags.editorKind).toBe("div");
-      expect(r.birthday.editorKind).toBe("input:date");
-      expect(r.loginAt.editorKind).toBe("input:datetime-local");
-      expect(r.remark.editorKind).toBe("textarea:textarea");
+      expect(r.name.editorKind).toBe("text:text:true");
+      expect(r.score.editorKind).toBe("number:number:true");
+      expect(r.role.editorKind).toBe("select:select:true");
+      expect(r.tags.editorKind).toBe("multiselect:multiselect:true");
+      expect(r.birthday.editorKind).toBe("date:datepicker:true");
+      expect(r.loginAt.editorKind).toBe("datetime:datetimepicker:true");
+      expect(r.remark.editorKind).toBe("textarea:textarea:true");
       for (const c of CELL_CASES) {
         const x = r[c.prop];
+        expect([c.prop, "native", x.native]).toEqual([c.prop, "native", 0]);
         expect([c.prop, "editorGone", x.editorGone]).toEqual([
           c.prop,
           "editorGone",
@@ -1516,6 +1574,10 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
           expect([c.prop, String(x.after).includes(s)])
             .toEqual([c.prop, true]);
         }
+      }
+      // 浮层选完值 / 点确定后不会提前保存：仍在编辑，直到失焦
+      for (const p of ["role", "tags", "birthday", "loginAt"]) {
+        expect([p, r[p].stillEditingAfterPick]).toEqual([p, true]);
       }
     },
     DOCS_BROWSER_CONFIG,
@@ -1555,6 +1617,50 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
   );
 
   it(
+    "单元格编辑·浮层打开时 Esc 只关浮层、不取消编辑；点编辑器外部保存",
+    async (t) => {
+      if (!t?.browser?.goto) return;
+      await open(t, "demo-cell");
+      const r = await ev<Record<string, unknown>>(
+        t,
+        `
+      const k = ${P("demo-cell")};
+      const out = {};
+      const edit = (p, id) => D.q(k, '[data-testid="dp-edit-' + p + '-' + id + '"]');
+      const ed = (p) => D.q(k, '[data-testid="dp-inline-' + p + '"]');
+      edit("role", 2).dispatchEvent(new MouseEvent("dblclick", { bubbles: true }));
+      await D.until(() => ed("role") && ed("role").querySelector('[aria-expanded="true"]'));
+      out.opened = !!ed("role").querySelector('[aria-expanded="true"]');
+      ed("role").dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+      await D.sleep(300);
+      out.stillEditing = !!ed("role");
+      // 再次 Esc：真正取消
+      ed("role").dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+      await D.until(() => !ed("role"));
+      out.cancelled = !ed("role");
+      // 点编辑器外部：选值后保存
+      const before = edit("role", 2).textContent;
+      edit("role", 2).dispatchEvent(new MouseEvent("dblclick", { bubbles: true }));
+      await D.until(() => ed("role"));
+      await D.pick(ed("role"), before.includes("管理员") ? "访客" : "管理员");
+      await D.sleep(200);
+      out.editingAfterPick = !!ed("role");
+      document.body.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+      await D.until(() => !ed("role"));
+      await D.sleep(450);
+      out.saved = edit("role", 2).textContent !== before;
+      return out;`,
+      );
+      expect(r.opened).toBe(true);
+      expect(r.stillEditing).toBe(true);
+      expect(r.cancelled).toBe(true);
+      expect(r.editingAfterPick).toBe(true);
+      expect(r.saved).toBe(true);
+    },
+    DOCS_BROWSER_CONFIG,
+  );
+
+  it(
     "单元格编辑·保存失败：提示错误、保持原值、回到展示态（含开关）",
     async (t) => {
       if (!t?.browser?.goto) return;
@@ -1567,14 +1673,13 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
         expect([c.prop, x.after]).toEqual([c.prop, x.before]);
       }
       // 开关：失败后回到原状态
-      const sw = await ev<{ before: string; after: string }>(
+      const sw = await ev<{ before: boolean; after: boolean }>(
         t,
         `const k = ${P("demo-cell")};
-       const b = () => D.q(k, '[data-testid="dp-switch-2"]').getAttribute("aria-checked");
-       const before = b();
-       D.click(D.q(k, '[data-testid="dp-switch-2"]'));
-       await D.sleep(900);
-       return { before, after: b() };`,
+       const before = D.sw(k, 2).on;
+       D.sw(k, 2).toggle();
+       await D.sleep(1000);
+       return { before, after: D.sw(k, 2).on };`,
       );
       expect(sw.after).toBe(sw.before);
     },
@@ -1591,20 +1696,19 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
         `
       const k = ${P("demo-cell")};
       const out = {};
-      const sw = () => D.q(k, '[data-testid="dp-switch-2"]').getAttribute("aria-checked");
-      const s0 = sw();
-      D.click(D.q(k, '[data-testid="dp-switch-2"]'));
+      const s0 = D.sw(k, 2).on;
+      D.sw(k, 2).toggle();
       await D.sleep(900);
-      out.switched = sw() !== s0;
+      out.switched = D.sw(k, 2).on !== s0;
       // number：清空后失焦 → 非法，保持原值
       const span = () => D.q(k, '[data-testid="dp-edit-score-3"]');
+      const inp = () => D.q(k, '[data-testid="dp-inline-score"] input');
       const before = span().textContent;
       span().dispatchEvent(new MouseEvent("dblclick", { bubbles: true }));
-      await D.until(() => D.q(k, '[data-testid="dp-inline-score"]'));
-      const ed = D.q(k, '[data-testid="dp-inline-score"]');
-      await D.until(() => document.activeElement === ed);
-      ed.value = "";
-      ed.dispatchEvent(new Event("input", { bubbles: true }));
+      await D.until(() => inp());
+      await D.until(() => document.activeElement === inp());
+      inp().value = "";
+      inp().dispatchEvent(new Event("input", { bubbles: true }));
       document.activeElement.blur();
       await D.until(() => !D.q(k, '[data-testid="dp-inline-score"]'));
       await D.sleep(300);
@@ -1612,10 +1716,9 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
       out.invalidMsg = await D.until(() => document.body.innerText.includes("表单有误"), 2000);
       // 未改动直接失焦：回到展示态，原值不变
       span().dispatchEvent(new MouseEvent("dblclick", { bubbles: true }));
-      await D.until(() => D.q(k, '[data-testid="dp-inline-score"]'));
-      const ed2 = D.q(k, '[data-testid="dp-inline-score"]');
-      await D.until(() => document.activeElement === ed2);
-      out.focusedOnOpen = document.activeElement === ed2;
+      await D.until(() => inp());
+      await D.until(() => document.activeElement === inp());
+      out.focusedOnOpen = document.activeElement === inp();
       document.activeElement.blur();
       await D.until(() => !D.q(k, '[data-testid="dp-inline-score"]'));
       out.unchangedKept = span().textContent === before;
@@ -1630,7 +1733,7 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
     DOCS_BROWSER_CONFIG,
   );
 
-  it("单元格编辑·深色：编辑器与悬停配色可读（深色底 + 亮字）", async (t) => {
+  it("单元格编辑·深色：编辑器与浮层配色可读（深色底 + 亮字）", async (t) => {
     if (!t?.browser?.goto) return;
     await open(t, "demo-cell");
     await ev(
@@ -1638,20 +1741,28 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
       `const b = [...document.querySelectorAll("button")].find((x) => x.querySelector("[data-theme-icon]") && x.offsetParent !== null);
        b.click(); await D.sleep(700);`,
     );
-    const r = await ev<{ ratio: number; bg: string; fg: string }>(
+    const r = await ev<Record<string, { ratio: number; lum: number }>>(
       t,
       `const k = ${P("demo-cell")};
-       D.q(k, '[data-testid="dp-edit-name-2"]').dispatchEvent(new MouseEvent("dblclick", { bubbles: true }));
-       await D.until(() => D.q(k, '[data-testid="dp-inline-name"]'));
-       const ed = D.q(k, '[data-testid="dp-inline-name"]');
-       const cs = getComputedStyle(ed);
-       const out = { ratio: D.contrast(ed), bg: cs.backgroundColor, fg: cs.color };
-       ed.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+       const out = {};
+       for (const [p, id, sel] of [["name", 2, "input"], ["role", 2, "button[aria-haspopup]"], ["birthday", 2, "button[aria-haspopup]"], ["remark", 2, "textarea"]]) {
+         D.q(k, '[data-testid="dp-edit-' + p + '-' + id + '"]').dispatchEvent(new MouseEvent("dblclick", { bubbles: true }));
+         await D.until(() => D.q(k, '[data-testid="dp-inline-' + p + '"]'));
+         await D.sleep(300);
+         const ed = D.q(k, '[data-testid="dp-inline-' + p + '"]');
+         const ctl = ed.querySelector(sel);
+         const bg = D.effBg(ctl);
+         out[p] = { ratio: Math.round(D.contrast(ctl.querySelector("span") || ctl) * 100) / 100, lum: (bg[0] + bg[1] + bg[2]) / 3 };
+         ed.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+         ed.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+         await D.until(() => !D.q(k, '[data-testid="dp-inline-' + p + '"]'));
+       }
        return out;`,
     );
-    expect(r.bg).toBe("rgb(15, 23, 42)");
-    expect(r.fg).toBe("rgb(226, 232, 240)");
-    expect(r.ratio >= 4.5).toBe(true);
+    for (const p of ["name", "role", "birthday", "remark"]) {
+      expect([p, r[p].lum < 90]).toEqual([p, true]); // 深色底
+      expect([p, r[p].ratio >= 4.5]).toEqual([p, true]);
+    }
   }, DOCS_BROWSER_CONFIG);
   it(
     "行删除用小气泡确认：箭头在按钮上方、问号图标在左、红色删除 + 取消；浅色 / 深色；取消 / 点外部不删除；确认才删",
@@ -1831,6 +1942,342 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
        b.click(); await D.sleep(700);`,
       );
       await check(true);
+    },
+    DOCS_BROWSER_CONFIG,
+  );
+  it(
+    "查看（眼睛图标）详情弹窗：页脚右对齐「关闭」按钮，点击关闭；浅色 / 深色；en-US 为 Close",
+    async (t) => {
+      if (!t?.browser?.goto) return;
+      await open(t, "demo-crud");
+      const probe = () =>
+        ev<Record<string, unknown>>(
+          t,
+          `
+        const k = ${P("demo-crud")};
+        const out = {};
+        D.q(k, '[data-testid="dp-view-2"]').scrollIntoView({ block: "center" });
+        await D.sleep(100);
+        D.click(D.q(k, '[data-testid="dp-view-2"]'));
+        await D.until(() => document.querySelector('[data-testid="dp-view-footer"]'));
+        const dlg = D.dlg();
+        const foot = document.querySelector('[data-testid="dp-view-footer"]');
+        const btn = foot.querySelector("button");
+        const fr = foot.getBoundingClientRect(), br = btn.getBoundingClientRect(), dr = dlg.getBoundingClientRect();
+        out.text = btn.textContent.trim();
+        out.rightAligned = Math.abs(fr.right - br.right) < 1 && br.left > fr.left + fr.width / 2;
+        out.inside = br.right <= dr.right && br.bottom <= dr.bottom && br.top >= dr.top;
+        const cs = getComputedStyle(btn);
+        out.fg = cs.color; out.bg = cs.backgroundColor;
+        out.ratio = Math.round(D.contrast(btn) * 100) / 100;
+        // 与表单弹窗的页脚按钮同款（同一 Btn 组件）：圆角、非透明底
+        out.radius = parseFloat(cs.borderTopLeftRadius) > 0;
+        D.click(btn);
+        out.closed = await D.until(() => !document.querySelector('[data-testid="dp-view-footer"]'), 3000);
+        out.dialogGone = await D.until(() => !document.querySelector('[role="dialog"]'), 3000);
+        return out;`,
+        );
+      const light = await probe();
+      expect(light.text).toBe("关闭");
+      expect(light.rightAligned).toBe(true);
+      expect(light.inside).toBe(true);
+      expect(light.radius).toBe(true);
+      // 与表单页脚同款 Btn（默认样式 4.1:1），按 WCAG 1.4.11 UI 组件对比度 >= 3:1 断言
+      expect((light.ratio as number) >= 3).toBe(true);
+      expect(light.closed).toBe(true);
+      expect(light.dialogGone).toBe(true);
+      await ev(
+        t,
+        `const b = [...document.querySelectorAll("button")].find((x) => x.querySelector("[data-theme-icon]") && x.offsetParent !== null);
+       b.click(); await D.sleep(700);`,
+      );
+      const dark = await probe();
+      expect(dark.text).toBe("关闭");
+      expect(dark.rightAligned).toBe(true);
+      // 深色下库默认 Button（sky-500 + 白字）本身只有 ~2.8:1，与其它弹窗页脚按钮同款；这里只防回归到更差
+      expect((dark.ratio as number) >= 2.5).toBe(true);
+      expect(dark.closed).toBe(true);
+      expect(dark.dialogGone).toBe(true);
+      // 文案可被 locale 切换：en-US 面板为 Close
+      await ev(
+        t,
+        `const k = ${P("demo-locale")};
+       D.q(k, '[data-testid^="dp-view-"]').scrollIntoView({ block: "center" });
+       await D.sleep(100);
+       D.click(D.q(k, '[data-testid^="dp-view-"]'));
+       await D.until(() => document.querySelector('[data-testid="dp-view-footer"]'));`,
+      );
+      const en = await ev<string>(
+        t,
+        `return document.querySelector('[data-testid="dp-view-footer"] button').textContent.trim();`,
+      );
+      expect(en).toBe("Close");
+      await ev(
+        t,
+        `D.click(document.querySelector('[data-testid="dp-view-footer"] button')); await D.sleep(300);`,
+      );
+    },
+    DOCS_BROWSER_CONFIG,
+  );
+  it(
+    "分页「每页条数」与搜索 / 表单下拉使用 ui-view Select：紧凑、与分页按钮等高、选择生效；浅色 / 深色",
+    async (t) => {
+      if (!t?.browser?.goto) return;
+      await open(t, "demo-page");
+      const probe = () =>
+        ev<Record<string, unknown>>(
+          t,
+          `
+        const k = ${P("demo-page")};
+        const out = {};
+        const wrap = D.q(k, '[data-testid="dp-pagesize"]');
+        wrap.scrollIntoView({ block: "center" }); await D.sleep(100);
+        out.native = D.qa(k, '[data-testid="dp-pagination"] select').length;
+        const trig = wrap.querySelector("button[aria-haspopup]");
+        const tr = trig.getBoundingClientRect(), nx = D.q(k, '[data-testid="dp-next"]').getBoundingClientRect();
+        out.width = Math.round(tr.width);
+        out.heightDiff = Math.abs(tr.height - nx.height);
+        const ch = trig.querySelector("svg, [role=img]").getBoundingClientRect();
+        out.arrowGap = Math.round(tr.right - ch.right);
+        out.ratio = Math.round(D.contrast(trig.querySelector("span")) * 100) / 100;
+        out.bg = getComputedStyle(trig).backgroundColor;
+        const before = D.rows(k).length;
+        await D.pick(wrap, "20 条/页");
+        await D.until(() => D.q(k, '[data-testid="dp-range"]').textContent.includes("1-20"));
+        out.after = D.text(D.q(k, '[data-testid="dp-range"]'));
+        await D.pick(D.q(k, '[data-testid="dp-pagesize"]'), "5 条/页");
+        await D.until(() => D.q(k, '[data-testid="dp-range"]').textContent.includes("1-5 "));
+        out.back = D.text(D.q(k, '[data-testid="dp-range"]'));
+        return out;`,
+        );
+      const light = await probe();
+      expect(light.native).toBe(0);
+      expect((light.width as number) <= 120).toBe(true);
+      expect((light.heightDiff as number) <= 4).toBe(true);
+      expect((light.arrowGap as number) <= 12).toBe(true);
+      expect((light.ratio as number) >= 4.5).toBe(true);
+      expect(String(light.after).includes("1-20")).toBe(true);
+      expect(String(light.back).includes("1-5 ")).toBe(true);
+      await ev(
+        t,
+        `const b = [...document.querySelectorAll("button")].find((x) => x.querySelector("[data-theme-icon]") && x.offsetParent !== null);
+       b.click(); await D.sleep(700);`,
+      );
+      const dark = await probe();
+      expect(dark.native).toBe(0);
+      expect((dark.heightDiff as number) <= 4).toBe(true);
+      expect((dark.arrowGap as number) <= 12).toBe(true);
+      expect((dark.ratio as number) >= 4.5).toBe(true);
+      expect(dark.bg).not.toBe(light.bg);
+      expect(String(dark.after).includes("1-20")).toBe(true);
+      // 搜索弹窗内的 select 也是 Select（无原生 select）
+      const sm = await ev<Record<string, unknown>>(
+        t,
+        `const k = ${P("demo-basic")};
+       D.q(k, '[data-testid="dp-search-toggle"]').scrollIntoView({ block: "center" });
+       D.click(D.q(k, '[data-testid="dp-search-toggle"]'));
+       await D.until(() => document.querySelector('[role="dialog"] [data-testid="dp-search"]'));
+       const d = D.dlg();
+       const w = d.querySelector('[data-testid="dp-f-role"]');
+       const out = { native: d.querySelectorAll("select").length, hasTrigger: !!w.querySelector("button[aria-haspopup]") };
+       const trig = w.querySelector("button[aria-haspopup]");
+       trig.click(); await D.until(() => trig.getAttribute("aria-expanded") === "true");
+       const lb = w.querySelector('[role="listbox"]').getBoundingClientRect(), vp = innerHeight;
+       out.listboxVisible = lb.height > 0 && lb.bottom <= vp + 1;
+       trig.click(); await D.sleep(100);
+       D.click(D.g('[data-testid="dp-search-reset"]')); await D.sleep(200);
+       D.click(document.querySelector('[role="dialog"] button[aria-label]')); await D.sleep(200);
+       return out;`,
+      );
+      expect(sm.native).toBe(0);
+      expect(sm.hasTrigger).toBe(true);
+      expect(sm.listboxVisible).toBe(true);
+    },
+    DOCS_BROWSER_CONFIG,
+  );
+  it(
+    "分页「跳至」输入框使用 ui-view Input：无原生微调箭头、紧凑、与分页按钮等高；Enter 跳转并夹取越界 / 非法值；浅色 / 深色",
+    async (t) => {
+      if (!t?.browser?.goto) return;
+      await open(t, "demo-page");
+      const probe = () =>
+        ev<Record<string, unknown>>(
+          t,
+          `
+        const k = ${P("demo-page")};
+        const out = {};
+        const range = () => D.text(D.q(k, '[data-testid="dp-range"]'));
+        const inp = () => D.q(k, '[data-testid="dp-jump"] input');
+        const go = async (v) => {
+          const el = inp(); el.focus();
+          D.fill(el, v);
+          el.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+          await D.sleep(300);
+          return range();
+        };
+        D.q(k, '[data-testid="dp-jump"]').scrollIntoView({ block: "center" }); await D.sleep(100);
+        const el = inp(), cs = getComputedStyle(el), r = el.getBoundingClientRect();
+        const nx = D.q(k, '[data-testid="dp-next"]').getBoundingClientRect();
+        out.type = el.type;
+        out.width = Math.round(r.width);
+        out.heightDiff = Math.abs(r.height - nx.height);
+        out.appearance = cs.appearance || cs.webkitAppearance;
+        out.ratio = Math.round(D.contrast(el) * 100) / 100;
+        el.focus(); await D.sleep(50);
+        const f = getComputedStyle(el);
+        out.outlineW = f.outlineStyle === "none" ? 0 : parseFloat(f.outlineWidth);
+        out.focusShadow = f.boxShadow;
+        out.bg = f.backgroundColor;
+        out.letters = (() => { D.fill(el, "a1b2"); return el.value; })();
+        out.p3 = await go("3");
+        out.clampHigh = await go("99");
+        out.clampLow = await go("0");
+        out.invalid = await go("abc");
+        out.cleared = inp().value;
+        await go("1");
+        return out;`,
+        );
+      const check = (r: Record<string, unknown>) => {
+        expect(r.type).toBe("text");
+        expect((r.width as number) <= 64).toBe(true);
+        expect((r.heightDiff as number) <= 4).toBe(true);
+        expect(r.appearance).toBe("textfield");
+        expect((r.ratio as number) >= 4.5).toBe(true);
+        expect((r.outlineW as number) <= 2).toBe(true);
+        expect(r.letters).toBe("12");
+        expect(String(r.p3).startsWith("第 11-15")).toBe(true);
+        expect(String(r.clampHigh).startsWith("第 36-40")).toBe(true);
+        expect(String(r.clampLow).startsWith("第 1-5")).toBe(true);
+        expect(String(r.invalid).startsWith("第 1-5")).toBe(true);
+        expect(r.cleared).toBe("");
+      };
+      const light = await probe();
+      check(light);
+      await ev(
+        t,
+        `const b = [...document.querySelectorAll("button")].find((x) => x.querySelector("[data-theme-icon]") && x.offsetParent !== null);
+       b.click(); await D.sleep(700);`,
+      );
+      const dark = await probe();
+      check(dark);
+      expect(dark.bg).not.toBe(light.bg);
+    },
+    DOCS_BROWSER_CONFIG,
+  );
+  it(
+    "编辑 Modal 全部字段类型使用 ui-view 控件（text / number / select / multiselect / switch / date / datetime / textarea），无原生控件，改值后提交生效；浅色 / 深色",
+    async (t) => {
+      if (!t?.browser?.goto) return;
+      await open(t, "demo-cell");
+      const run = (dark: boolean) =>
+        ev<Record<string, unknown>>(
+          t,
+          `
+        const k = ${P("demo-cell")};
+        const dark = ${dark};
+        const out = {};
+        const row = () => D.q(k, '[data-testid="dp-row-2"]');
+        D.q(k, '[data-testid="dp-edit-2"]').scrollIntoView({ block: "center" });
+        D.click(D.q(k, '[data-testid="dp-edit-2"]'));
+        await D.until(() => document.querySelector('[role="dialog"] [data-testid="dp-form"]'));
+        const d = D.dlg();
+        const f = (n) => d.querySelector('[data-testid="dp-fld-' + n + '"]');
+        // Switch 内部是 sr-only 的 checkbox（ui-view 组件自身），其余原生控件不允许出现
+        out.native = d.querySelectorAll("select, input[type=date], input[type=datetime-local], input[type=time], input[type=checkbox]:not(.sr-only), input[type=radio]").length;
+        out.markers = {
+          name: !!f("name").querySelector("input"),
+          score: !!f("score").querySelector('button[aria-label="增加"]'),
+          role: !!f("role").querySelector('button[aria-haspopup="listbox"]'),
+          tags: !!f("tags").querySelector("[data-ui-multiselect-panel]"),
+          status: !!f("status").querySelector("label input[type=checkbox].sr-only") || !!f("status").querySelector("label"),
+          birthday: !!f("birthday").querySelector("[data-ui-datepicker-root]"),
+          loginAt: !!f("loginAt").querySelector("[data-ui-datetime-picker-root]"),
+          remark: !!f("remark").querySelector("textarea"),
+        };
+        out.prefill = { birthday: D.picked(f("birthday")), loginAt: D.picked(f("loginAt")), role: D.picked(f("role")) };
+        // 改值（真实交互）
+        D.fill(f("score").querySelector("input"), "77");
+        await D.pick(f("role"), "管理员");
+        await D.until(() => f("tags").querySelector('[role="option"]'));
+        const tg = f("tags"); tg.querySelector("button[aria-haspopup]").click();
+        await D.until(() => tg.querySelector('button[aria-haspopup]').getAttribute("aria-expanded") === "true");
+        for (const o of tg.querySelectorAll('[role="option"]')) {
+          const want = ["VIP", "内测"].includes(o.textContent.trim());
+          if ((o.getAttribute("aria-selected") === "true") !== want) { o.click(); await D.sleep(60); }
+        }
+        [...tg.querySelectorAll("button")].find((b) => b.textContent.trim() === "完成").click();
+        await D.sleep(150);
+        const sw = f("status").querySelector("input"); const swBefore = sw.checked;
+        f("status").querySelector("label").click();
+        await D.sleep(300);
+        out.switchToggled = f("status").querySelector("input").checked !== swBefore;
+        const pickDay = async (n, day, hm) => {
+          const w = f(n); w.querySelector("button[aria-haspopup]").click();
+          await D.until(() => w.querySelector("[data-ui-calendar-day]"));
+          [...w.querySelectorAll("[data-ui-calendar-day]")].find((b) => b.textContent.trim() === String(day)).click();
+          if (hm) {
+            w.querySelector('[data-picker-time-kind="hour"] [data-picker-cell-value="' + hm[0] + '"]').click();
+            w.querySelector('[data-picker-time-kind="minute"] [data-picker-cell-value="' + hm[1] + '"]').click();
+          }
+          await D.sleep(60);
+          const dlg = w.querySelector('[role="dialog"]');
+          // 弹窗内浮层随 Modal 内容滚动（absolute 锚定）：滚到可见后必须完整落在视口内
+          dlg.scrollIntoView({ block: "nearest" });
+          await D.sleep(100);
+          const r = dlg.getBoundingClientRect();
+          out["popup_" + n] = r.width > 0 && r.bottom <= innerHeight + 1 && r.top >= 0;
+          [...dlg.querySelectorAll("button")].find((b) => b.textContent.trim() === "确定").click();
+          await D.sleep(200);
+        };
+        await pickDay("birthday", 15);
+        await pickDay("loginAt", 15, [5, 6]);
+        D.fill(f("remark").querySelector("textarea"), "form remark");
+        out.afterPick = { birthday: D.picked(f("birthday")), loginAt: D.picked(f("loginAt")), role: D.picked(f("role")) };
+        // 弹窗内下拉可见（未被裁切）
+        f("role").querySelector("button[aria-haspopup]").click();
+        await D.sleep(150);
+        const lb = f("role").querySelector('[role="listbox"]').getBoundingClientRect();
+        out.listboxVisible = lb.height > 0 && lb.bottom <= innerHeight + 1;
+        f("role").querySelector("button[aria-haspopup]").click();
+        await D.sleep(100);
+        out.fieldContrast = Math.round(D.contrast(f("birthday").querySelector("button span")) * 100) / 100;
+        out.fieldBgDark = (() => { const b = D.effBg(f("birthday").querySelector("button")); return (b[0] + b[1] + b[2]) / 3 < 90; })();
+        D.click(D.g('[data-testid="dp-form-submit"]'));
+        await D.until(() => !D.dlg(), 5000);
+        await D.sleep(500);
+        out.rowText = row().textContent;
+        return out;`,
+        );
+      const light = await run(false);
+      expect(light.native).toBe(0);
+      expect(Object.values(light.markers as Record<string, boolean>)).toEqual(
+        [true, true, true, true, true, true, true, true],
+      );
+      const pre = light.prefill as Record<string, string>;
+      expect(/^\d{4}-\d{2}-\d{2}$/.test(pre.birthday)).toBe(true);
+      expect(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(pre.loginAt)).toBe(true);
+      expect(light.switchToggled).toBe(true);
+      expect(light.popup_birthday).toBe(true);
+      expect(light.popup_loginAt).toBe(true);
+      expect(light.listboxVisible).toBe(true);
+      const ap = light.afterPick as Record<string, string>;
+      expect(ap.birthday.endsWith("-15")).toBe(true);
+      expect(ap.loginAt.endsWith("-15 05:06")).toBe(true);
+      expect(ap.role).toBe("管理员");
+      const rt = String(light.rowText);
+      for (const x of ["管理员", "VIP", "内测", "77", "form remark", "-15"]) {
+        expect([x, rt.includes(x)]).toEqual([x, true]);
+      }
+      await ev(
+        t,
+        `const b = [...document.querySelectorAll("button")].find((x) => x.querySelector("[data-theme-icon]") && x.offsetParent !== null);
+       b.click(); await D.sleep(700);`,
+      );
+      const dark = await run(true);
+      expect(dark.native).toBe(0);
+      expect((dark.fieldContrast as number) >= 4.5).toBe(true);
+      expect(dark.fieldBgDark).toBe(true);
+      expect(dark.listboxVisible).toBe(true);
     },
     DOCS_BROWSER_CONFIG,
   );

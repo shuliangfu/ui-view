@@ -150,49 +150,49 @@ export function Switch(props: SwitchProps): JSXRenderable {
         轨道为固定 `h-6 w-11` 的圆角条，滑块在轨内平移，与文「开/关」不抢占同一 `absolute` 参照物。
       */
       }
-      {() => {
-        const on = getSwitchOn(
-          checkedMaybe,
-          isUncontrolled,
-          localChecked,
-        );
-        return (
-          <span
-            class={twMerge(
-              "relative h-6 w-11 shrink-0 overflow-hidden rounded-full border transition-colors",
-              "peer-focus:ring-2 peer-focus:ring-blue-500 peer-focus:ring-offset-0",
-              "peer-disabled:cursor-not-allowed peer-disabled:opacity-50",
-              on
-                ? "border-blue-600 bg-blue-600 dark:border-blue-500 dark:bg-blue-500"
-                : "border-slate-300 bg-slate-200 dark:border-slate-600 dark:bg-slate-600",
-              error && "border-red-500 dark:border-red-500",
-              hideFocusRing && "peer-focus:ring-0",
-            )}
-            aria-hidden="true"
-          >
-            {
-              /*
-              滑块位移：勿在同一元素上用 `twMerge` 同时拼 `-translate-y-1/2` 与 `translate-x-5`；
-              默认的 tailwind-merge 会把 `translate-x-*` 与 `translate-y-*` 当同一组，易只剩其一，
-              表现即为「开态轨道已蓝但圆点仍在左侧」。改用单一 `style.transform` 写死 `translate(…, -50%)`。
-            */
-            }
-            <span
-              class={twMerge(
-                "pointer-events-none absolute left-px top-1/2 block h-5 w-5 rounded-full",
-                "bg-white shadow ring-0 dark:bg-slate-200",
-                "transition-[transform] duration-200 will-change-transform",
-              )}
-              style={{
-                // 1.25rem 与 `translate-x-5` / 轨宽 `w-11` 下的行程一致
-                transform: on
-                  ? "translate(1.25rem, -50%)"
-                  : "translate(0, -50%)",
-              }}
-            />
-          </span>
-        );
-      }}
+      {
+        /*
+        轨道与滑块都是常驻节点，仅用函数式 class / style 细粒度更新：
+        这样切换时滑块的 `transform` 过渡（200ms）能真正播放，而不是整段重建后瞬移。
+      */
+      }
+      <span
+        class={() => {
+          const on = getSwitchOn(checkedMaybe, isUncontrolled, localChecked);
+          return twMerge(
+            "relative h-6 w-11 shrink-0 overflow-hidden rounded-full border transition-colors",
+            "peer-focus:ring-2 peer-focus:ring-blue-500 peer-focus:ring-offset-0",
+            "peer-disabled:cursor-not-allowed peer-disabled:opacity-50",
+            on
+              ? "border-blue-600 bg-blue-600 dark:border-blue-500 dark:bg-blue-500"
+              : "border-slate-300 bg-slate-200 dark:border-slate-600 dark:bg-slate-600",
+            error && "border-red-500 dark:border-red-500",
+            hideFocusRing && "peer-focus:ring-0",
+          );
+        }}
+        aria-hidden="true"
+      >
+        {
+          /*
+          滑块位移：勿在同一元素上用 `twMerge` 同时拼 `-translate-y-1/2` 与 `translate-x-5`；
+          默认的 tailwind-merge 会把 `translate-x-*` 与 `translate-y-*` 当同一组，易只剩其一，
+          表现即为「开态轨道已蓝但圆点仍在左侧」。改用单一 `style.transform` 写死 `translate(…, -50%)`。
+        */
+        }
+        <span
+          class={twMerge(
+            "pointer-events-none absolute left-px top-1/2 block h-5 w-5 rounded-full",
+            "bg-white shadow ring-0 dark:bg-slate-200",
+            "transition-[transform] duration-200 will-change-transform",
+          )}
+          style={() => ({
+            // 1.25rem 与 `translate-x-5` / 轨宽 `w-11` 下的行程一致
+            transform: getSwitchOn(checkedMaybe, isUncontrolled, localChecked)
+              ? "translate(1.25rem, -50%)"
+              : "translate(0, -50%)",
+          })}
+        />
+      </span>
       {unCheckedChildren != null && (
         <span class="peer-checked:hidden">{unCheckedChildren}</span>
       )}
