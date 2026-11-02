@@ -667,7 +667,40 @@ export type {
 } from "./navigation/mod.ts";
 
 // desktop/data-display（增量）
-export { Table } from "./data-display/mod.ts";
+export {
+  buildExportFile,
+  buildXlsx,
+  createLocalDataSource,
+  DATA_PANEL_CSS,
+  DataPanel,
+  defaultDataPanelMessages,
+  enDataPanelMessages,
+  refreshDataPanel,
+  Table,
+} from "./data-display/mod.ts";
+export type {
+  DataPanelBulkResult,
+  DataPanelCaps,
+  DataPanelColumn,
+  DataPanelDataSource,
+  DataPanelExportContext,
+  DataPanelExportFile,
+  DataPanelExportFormat,
+  DataPanelFormField,
+  DataPanelListResult,
+  DataPanelLocale,
+  DataPanelMessages,
+  DataPanelOption,
+  DataPanelProps,
+  DataPanelQuery,
+  DataPanelRow,
+  DataPanelSearchField,
+  DataPanelTone,
+  DataPanelWriteResult,
+  LocalDataSource,
+  LocalDataSourceOptions,
+  XlsxSheet,
+} from "./data-display/mod.ts";
 export type {
   SortOrder,
   TableCellChangePayload,
