@@ -58,8 +58,20 @@ export function displayValue(
   const raw = row[col.prop];
   switch (col.type) {
     case "tag": {
+      if (Array.isArray(raw)) {
+        return raw.map((v) =>
+          col.options?.find((x) => x.value === String(v))?.label ?? String(v)
+        ).join(", ");
+      }
       const o = col.options?.find((x) => x.value === String(raw));
       return o ? o.label : (raw == null ? "" : String(raw));
+    }
+    case "date": {
+      // 纯日期串（YYYY-MM-DD）原样展示，避免时区换算造成前后一天
+      const str = String(raw ?? "");
+      return /^\d{4}-\d{2}-\d{2}/.test(str)
+        ? str.slice(0, 10)
+        : formatDateTime(raw).slice(0, 10);
     }
     case "bool":
       return raw ? m.yes : m.no;

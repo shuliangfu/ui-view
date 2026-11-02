@@ -133,6 +133,7 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
         "表格",
         "新增 / 编辑 Modal 与删除确认",
         "批量操作",
+        "单元格编辑",
         "分页",
         "导出",
         "远程数据源",
@@ -147,7 +148,7 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
       t,
       `return document.querySelectorAll('[data-testid^="panel-demo-"]').length;`,
     );
-    expect(panels).toBe(11);
+    expect(panels).toBe(12);
   }, DOCS_BROWSER_CONFIG);
 
   it(
@@ -994,7 +995,7 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
   );
 
   it(
-    "刷新按钮重新加载当前页；每个面板互不影响（同页 11 个实例）",
+    "刷新按钮重新加载当前页；每个面板互不影响（同页 12 个实例）",
     async (t) => {
       if (!t?.browser?.goto) return;
       await open(t, "demo-crud");
@@ -1016,19 +1017,19 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
       );
       expect(r.sameTotal).toBe(true);
       expect(r.otherNoBar).toBe(true);
-      expect(r.toolbars).toBe(11);
+      expect(r.toolbars).toBe(12);
     },
     DOCS_BROWSER_CONFIG,
   );
   it(
-    "11 个示例全部渲染：工具栏 / 表格 / 分页齐全，且水合后可交互",
+    "12 个示例全部渲染：工具栏 / 表格 / 分页齐全，且水合后可交互",
     async (t) => {
       if (!t?.browser?.goto) return;
       await open(t, "demo-basic");
       const r = await ev<Record<string, unknown>>(
         t,
         `
-      const keys = ["demo-basic","demo-search","demo-table","demo-crud","demo-batch","demo-page","demo-export","demo-remote","demo-dark","demo-locale","demo-custom"];
+      const keys = ["demo-basic","demo-search","demo-table","demo-crud","demo-batch","demo-page","demo-export","demo-remote","demo-dark","demo-locale","demo-custom","demo-cell"];
       await D.until(() => D.total("demo-remote") > 0, 10000);
       const out = {};
       for (const k of keys) {
@@ -1043,7 +1044,7 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
       }
       return out;`,
       );
-      expect(Object.keys(r).length).toBe(11);
+      expect(Object.keys(r).length).toBe(12);
       for (const [k, v] of Object.entries(r)) {
         const o = v as Record<string, unknown>;
         expect([k, o.toolbar, o.table, o.pagination, o.hydrated, o.visible])
@@ -1382,4 +1383,262 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
     },
     DOCS_BROWSER_CONFIG,
   );
+
+  // ---------------------------------------------------------------- 单元格编辑
+  /** 每种可编辑类型一个用例：dblclick 进入编辑 → 改值 → 按模式结束 */
+  const CELL_CASES = [
+    { prop: "name", id: "2", kind: "input", set: "Zed", shows: ["Zed"] },
+    { prop: "score", id: "2", kind: "input", set: "99", shows: ["99"] },
+    { prop: "role", id: "2", kind: "select", set: "admin", shows: ["管理员"] },
+    {
+      prop: "tags",
+      id: "3",
+      kind: "multi",
+      set: ["vip", "beta"],
+      shows: ["VIP", "内测"],
+    },
+    {
+      prop: "birthday",
+      id: "2",
+      kind: "input",
+      set: "2001-02-03",
+      shows: ["2001-02-03"],
+    },
+    {
+      prop: "loginAt",
+      id: "2",
+      kind: "input",
+      set: "2026-03-04T05:06",
+      shows: ["2026-03-04 05:06:00"],
+    },
+    {
+      prop: "remark",
+      id: "2",
+      kind: "input",
+      set: "line1\nline2",
+      shows: ["line1", "line2"],
+    },
+  ];
+
+  /** 在页内跑完所有类型用例；mode: blur | enter | esc | fail */
+  const runCells = (t: T, mode: string) =>
+    ev<
+      Record<
+        string,
+        {
+          before: string;
+          after: string;
+          editorGone: boolean;
+          error: boolean;
+          editorKind: string;
+        }
+      >
+    >(
+      t,
+      `
+      const k = ${P("demo-cell")};
+      const mode = ${JSON.stringify(mode)};
+      const cases = ${JSON.stringify(CELL_CASES)};
+      const out = {};
+      const shown = (c) => { const e = D.q(k, '[data-testid="dp-edit-' + c.prop + '-' + c.id + '"]'); return e ? e.textContent : null; };
+      const editor = (c) => D.q(k, '[data-testid="dp-inline-' + c.prop + '"]');
+      if (mode === "fail") {
+        D.click(D.g('[data-testid="cell-demo-fail"]'));
+        await D.sleep(100);
+      }
+      for (const c of cases) {
+        const before = shown(c);
+        D.q(k, '[data-testid="dp-edit-' + c.prop + '-' + c.id + '"]').dispatchEvent(new MouseEvent("dblclick", { bubbles: true }));
+        await D.until(() => editor(c));
+        const ed = editor(c);
+        const kind = ed.tagName.toLowerCase() + (ed.type ? ":" + ed.type : "");
+        await D.until(() => document.activeElement === ed || ed.contains(document.activeElement));
+        if (c.kind === "multi") {
+          for (const cb of ed.querySelectorAll("input[type=checkbox]")) {
+            cb.checked = c.set.includes(cb.getAttribute("data-value"));
+            cb.dispatchEvent(new Event("change", { bubbles: true }));
+          }
+        } else {
+          ed.value = c.set;
+          ed.dispatchEvent(new Event("input", { bubbles: true }));
+          ed.dispatchEvent(new Event("change", { bubbles: true }));
+        }
+        if (mode === "blur" || mode === "fail") document.activeElement.blur();
+        else if (mode === "enter") ed.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+        else if (mode === "esc") ed.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+        const gone = await D.until(() => !editor(c), 3000);
+        await D.sleep(450);
+        out[c.prop] = {
+          before, after: shown(c), editorGone: gone,
+          error: mode === "fail" ? await D.until(() => document.body.innerText.includes("保存失败（演示：服务端拒绝）"), 2000) : false,
+          editorKind: kind,
+        };
+        // 等 toast 消失 / 重渲染稳定，避免影响下一个用例
+        await D.sleep(150);
+      }
+      return out;`,
+    );
+
+  it(
+    "单元格编辑·失焦保存：每种类型 dblclick → 改值 → blur 后保存并回到展示态",
+    async (t) => {
+      if (!t?.browser?.goto) return;
+      await open(t, "demo-cell");
+      const r = await runCells(t, "blur");
+      expect(r.name.editorKind).toBe("input:text");
+      expect(r.score.editorKind).toBe("input:number");
+      expect(r.role.editorKind).toBe("select:select-one");
+      expect(r.tags.editorKind).toBe("div");
+      expect(r.birthday.editorKind).toBe("input:date");
+      expect(r.loginAt.editorKind).toBe("input:datetime-local");
+      expect(r.remark.editorKind).toBe("textarea:textarea");
+      for (const c of CELL_CASES) {
+        const x = r[c.prop];
+        expect([c.prop, "editorGone", x.editorGone]).toEqual([
+          c.prop,
+          "editorGone",
+          true,
+        ]);
+        expect([c.prop, x.after !== x.before]).toEqual([c.prop, true]);
+        for (const s of c.shows) {
+          expect([c.prop, String(x.after).includes(s)])
+            .toEqual([c.prop, true]);
+        }
+      }
+    },
+    DOCS_BROWSER_CONFIG,
+  );
+
+  it(
+    "单元格编辑·Enter 保存：每种类型（textarea 也是 Enter 保存）",
+    async (t) => {
+      if (!t?.browser?.goto) return;
+      await open(t, "demo-cell");
+      const r = await runCells(t, "enter");
+      for (const c of CELL_CASES) {
+        const x = r[c.prop];
+        expect([c.prop, x.editorGone]).toEqual([c.prop, true]);
+        for (const s of c.shows) {
+          expect([c.prop, String(x.after).includes(s)])
+            .toEqual([c.prop, true]);
+        }
+      }
+    },
+    DOCS_BROWSER_CONFIG,
+  );
+
+  it(
+    "单元格编辑·Esc 取消：每种类型都恢复原值并回到展示态（不保存、不残留）",
+    async (t) => {
+      if (!t?.browser?.goto) return;
+      await open(t, "demo-cell");
+      const r = await runCells(t, "esc");
+      for (const c of CELL_CASES) {
+        const x = r[c.prop];
+        expect([c.prop, x.editorGone]).toEqual([c.prop, true]);
+        expect([c.prop, x.after]).toEqual([c.prop, x.before]);
+      }
+    },
+    DOCS_BROWSER_CONFIG,
+  );
+
+  it(
+    "单元格编辑·保存失败：提示错误、保持原值、回到展示态（含开关）",
+    async (t) => {
+      if (!t?.browser?.goto) return;
+      await open(t, "demo-cell");
+      const r = await runCells(t, "fail");
+      for (const c of CELL_CASES) {
+        const x = r[c.prop];
+        expect([c.prop, x.editorGone]).toEqual([c.prop, true]);
+        expect([c.prop, x.error]).toEqual([c.prop, true]);
+        expect([c.prop, x.after]).toEqual([c.prop, x.before]);
+      }
+      // 开关：失败后回到原状态
+      const sw = await ev<{ before: string; after: string }>(
+        t,
+        `const k = ${P("demo-cell")};
+       const b = () => D.q(k, '[data-testid="dp-switch-2"]').getAttribute("aria-checked");
+       const before = b();
+       D.click(D.q(k, '[data-testid="dp-switch-2"]'));
+       await D.sleep(900);
+       return { before, after: b() };`,
+      );
+      expect(sw.after).toBe(sw.before);
+    },
+    DOCS_BROWSER_CONFIG,
+  );
+
+  it(
+    "单元格编辑·开关：点击即切换并保存；number 输入非法值时提示并保持原值；未改动失焦不保存",
+    async (t) => {
+      if (!t?.browser?.goto) return;
+      await open(t, "demo-cell");
+      const r = await ev<Record<string, unknown>>(
+        t,
+        `
+      const k = ${P("demo-cell")};
+      const out = {};
+      const sw = () => D.q(k, '[data-testid="dp-switch-2"]').getAttribute("aria-checked");
+      const s0 = sw();
+      D.click(D.q(k, '[data-testid="dp-switch-2"]'));
+      await D.sleep(900);
+      out.switched = sw() !== s0;
+      // number：清空后失焦 → 非法，保持原值
+      const span = () => D.q(k, '[data-testid="dp-edit-score-3"]');
+      const before = span().textContent;
+      span().dispatchEvent(new MouseEvent("dblclick", { bubbles: true }));
+      await D.until(() => D.q(k, '[data-testid="dp-inline-score"]'));
+      const ed = D.q(k, '[data-testid="dp-inline-score"]');
+      await D.until(() => document.activeElement === ed);
+      ed.value = "";
+      ed.dispatchEvent(new Event("input", { bubbles: true }));
+      document.activeElement.blur();
+      await D.until(() => !D.q(k, '[data-testid="dp-inline-score"]'));
+      await D.sleep(300);
+      out.invalidKept = span().textContent === before;
+      out.invalidMsg = await D.until(() => document.body.innerText.includes("表单有误"), 2000);
+      // 未改动直接失焦：回到展示态，原值不变
+      span().dispatchEvent(new MouseEvent("dblclick", { bubbles: true }));
+      await D.until(() => D.q(k, '[data-testid="dp-inline-score"]'));
+      const ed2 = D.q(k, '[data-testid="dp-inline-score"]');
+      await D.until(() => document.activeElement === ed2);
+      out.focusedOnOpen = document.activeElement === ed2;
+      document.activeElement.blur();
+      await D.until(() => !D.q(k, '[data-testid="dp-inline-score"]'));
+      out.unchangedKept = span().textContent === before;
+      return out;`,
+      );
+      expect(r.switched).toBe(true);
+      expect(r.invalidKept).toBe(true);
+      expect(r.invalidMsg).toBe(true);
+      expect(r.focusedOnOpen).toBe(true);
+      expect(r.unchangedKept).toBe(true);
+    },
+    DOCS_BROWSER_CONFIG,
+  );
+
+  it("单元格编辑·深色：编辑器与悬停配色可读（深色底 + 亮字）", async (t) => {
+    if (!t?.browser?.goto) return;
+    await open(t, "demo-cell");
+    await ev(
+      t,
+      `const b = [...document.querySelectorAll("button")].find((x) => x.querySelector("[data-theme-icon]") && x.offsetParent !== null);
+       b.click(); await D.sleep(700);`,
+    );
+    const r = await ev<{ ratio: number; bg: string; fg: string }>(
+      t,
+      `const k = ${P("demo-cell")};
+       D.q(k, '[data-testid="dp-edit-name-2"]').dispatchEvent(new MouseEvent("dblclick", { bubbles: true }));
+       await D.until(() => D.q(k, '[data-testid="dp-inline-name"]'));
+       const ed = D.q(k, '[data-testid="dp-inline-name"]');
+       const cs = getComputedStyle(ed);
+       const out = { ratio: D.contrast(ed), bg: cs.backgroundColor, fg: cs.color };
+       ed.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+       return out;`,
+    );
+    expect(r.bg).toBe("rgb(15, 23, 42)");
+    expect(r.fg).toBe("rgb(226, 232, 240)");
+    expect(r.ratio >= 4.5).toBe(true);
+  }, DOCS_BROWSER_CONFIG);
 });

@@ -176,3 +176,97 @@ export function createRemoteDemoSource(latency = 400): DataPanelDataSource {
     importRows: (rows) => wait(inner.importRows!(rows)),
   };
 }
+
+// ------------------------------------------------------------------ 单元格编辑示例
+
+/** 单元格编辑示例的开关：为 true 时数据源拒绝保存，用来演示「保存失败 → 提示并保持原值」 */
+export const cellDemoState = { fail: false };
+
+export const CELL_ROLE_OPTIONS = [
+  { value: "admin", label: "管理员", tone: "danger" as const },
+  { value: "editor", label: "编辑", tone: "info" as const },
+  { value: "viewer", label: "访客", tone: "default" as const },
+];
+
+export const CELL_TAG_OPTIONS = [
+  { value: "vip", label: "VIP", tone: "warning" as const },
+  { value: "new", label: "新用户", tone: "success" as const },
+  { value: "beta", label: "内测", tone: "info" as const },
+  { value: "staff", label: "员工", tone: "default" as const },
+];
+
+/** 单元格编辑示例数据：每种可编辑类型一列 */
+export function makeCellRows(n = 5): DataPanelRow[] {
+  return Array.from({ length: n }, (_, i) => ({
+    id: String(i + 1),
+    name: NAMES[i % NAMES.length],
+    score: 10 + i * 15,
+    role: ["admin", "editor", "viewer"][i % 3],
+    tags: [["vip"], ["new", "beta"], [], ["staff"], ["vip", "staff"]][i % 5],
+    status: i % 2 === 0 ? "active" : "disabled",
+    birthday: `199${i}-0${i + 1}-1${i}`,
+    loginAt: new Date(2026, 0, 1 + i, 9 + i, 30).toISOString(),
+    remark: `第 ${i + 1} 位用户的备注`,
+  }));
+}
+
+export const CELL_COLUMNS: DataPanelColumn[] = [
+  { prop: "name", label: "姓名（text）", inline: "text" },
+  { prop: "score", label: "积分（number）", type: "number", inline: "number" },
+  {
+    prop: "role",
+    label: "角色（select）",
+    type: "tag",
+    inline: "select",
+    options: CELL_ROLE_OPTIONS,
+  },
+  {
+    prop: "tags",
+    label: "标签（multiselect）",
+    type: "tag",
+    inline: "multiselect",
+    options: CELL_TAG_OPTIONS,
+  },
+  {
+    prop: "status",
+    label: "状态（switch）",
+    type: "tag",
+    inline: "switch",
+    options: [
+      { value: "active", label: "启用", tone: "success" },
+      { value: "disabled", label: "停用", tone: "warning" },
+    ],
+  },
+  { prop: "birthday", label: "生日（date）", type: "date", inline: "date" },
+  {
+    prop: "loginAt",
+    label: "最近登录（datetime）",
+    type: "datetime",
+    inline: "datetime",
+  },
+  { prop: "remark", label: "备注（textarea）", inline: "textarea" },
+];
+
+/** 单元格编辑示例的数据源：同步本地引擎 + 可切换的「保存失败」 */
+export function createCellDemoSource(): DataPanelDataSource {
+  const inner = createLocalDataSource({
+    rows: makeCellRows(5),
+    columns: CELL_COLUMNS,
+    writable: true,
+  });
+  return {
+    ...inner,
+    setField: (ids, field, value) => {
+      if (cellDemoState.fail) {
+        return {
+          removed: 0,
+          failed: ids.map((id) => ({
+            id,
+            error: "保存失败（演示：服务端拒绝）",
+          })),
+        };
+      }
+      return inner.setField!(ids, field, value);
+    },
+  } as DataPanelDataSource;
+}

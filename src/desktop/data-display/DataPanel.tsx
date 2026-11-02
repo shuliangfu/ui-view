@@ -275,6 +275,13 @@ export const DATA_PANEL_CSS = `
 .dark .dp-tag-warning { background-color: rgba(234, 179, 8, 0.15) !important; color: #fde047 !important; }
 .dark .dp-tag-info { background-color: rgba(56, 189, 248, 0.15) !important; color: #7dd3fc !important; }
 .dark .dp-tag-default { background-color: rgba(148, 163, 184, 0.15) !important; color: #cbd5e1 !important; }
+.dp-cell-edit { display: inline-block; min-width: 1.5rem; padding: 0 4px; border-radius: 4px; cursor: text; }
+.dp-cell-edit:hover { background-color: #e2e8f0; }
+.dark .dp-cell-edit:hover { background-color: #334155; }
+.dp-ed { box-sizing: border-box; width: 100%; min-width: 7rem; max-width: 18rem; padding: 2px 6px; font-size: 0.875rem; line-height: 1.4; color: #0f172a; background-color: #fff; border: 1px solid #3b82f6; border-radius: 4px; outline: none; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25); font-family: inherit; }
+.dark .dp-ed { color: #e2e8f0; background-color: #0f172a; border-color: #60a5fa; box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.3); color-scheme: dark; }
+.dp-ed-box { display: flex; flex-direction: column; gap: 4px; padding: 6px 8px; }
+.dp-ed-opt { display: flex; align-items: center; gap: 6px; font-size: 0.875rem; cursor: pointer; }
 .dark .dp-card { background: var(--dp-panel-body-bg, #18212f) !important; }
 `;
 
@@ -1124,52 +1131,224 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
         </button>
       );
     }
-    if (c.inline && canEdit && !isLocked(row)) {
-      if (c.inline === "text" || c.inline === "number") {
-        const ed = editing.value;
-        if (ed && ed.id === idOf(row) && ed.prop === c.prop) {
-          return (
-            <input
-              class="w-28 rounded border border-blue-400 px-1 py-0.5 text-sm dark:bg-slate-900"
-              type={c.inline === "number" ? "number" : "text"}
-              value={String(raw ?? "")}
-              data-testid={`dp-inline-${c.prop}`}
-              autofocus
-              onKeyDown={(e: Event & { key: string }) => {
-                const el = e.target as unknown as { value: string };
-                if (e.key === "Enter") {
-                  editing.value = null;
-                  if (el.value !== String(raw ?? "")) {
-                    void setField(row, c.prop, el.value);
-                  }
-                } else if (e.key === "Escape") {
-                  editing.value = null;
-                }
-              }}
-              onBlur={(e: Event) => {
-                const el = e.target as unknown as { value: string };
-                editing.value = null;
-                if (el.value !== String(raw ?? "")) {
-                  void setField(row, c.prop, el.value);
-                }
-              }}
-            />
-          );
-        }
-        return (
-          <span
-            class="cursor-text rounded px-1 hover:bg-slate-100 dark:hover:bg-slate-800"
-            title={m.doubleClickToEdit}
-            data-testid={`dp-edit-${c.prop}-${idOf(row)}`}
-            onDblClick={() => (editing.value = { id: idOf(row), prop: c.prop })}
-          >
-            {displayValue(c, row, m) || "—"}
-          </span>
-        );
+    if (c.inline && c.inline !== "switch" && canEdit && !isLocked(row)) {
+      const ed = editing.value;
+      if (ed && ed.id === idOf(row) && ed.prop === c.prop) {
+        return renderEditor(c, row, raw);
       }
+      return (
+        <span
+          class="dp-cell-edit"
+          title={m.doubleClickToEdit}
+          data-testid={`dp-edit-${c.prop}-${idOf(row)}`}
+          onDblClick={() => (editing.value = { id: idOf(row), prop: c.prop })}
+        >
+          {plainCell(c, row, raw)}
+        </span>
+      );
     }
+    return plainCell(c, row, raw);
+  }
+
+  /** 单元格编辑器：失焦 / Enter 保存，Esc 取消；保存失败由 setField 提示并回滚到原值 */
+  function renderEditor(
+    c: DataPanelColumn,
+    row: DataPanelRow,
+    raw: unknown,
+  ): unknown {
+    const kind = c.inline as string;
+    const testid = `dp-inline-${c.prop}`;
+    const asStr = (v: unknown): string => {
+      if (v === null || v === undefined) return "";
+      if (kind === "date") {
+        const str = String(v);
+        return /^\d{4}-\d{2}-\d{2}/.test(str)
+          ? str.slice(0, 10)
+          : formatDateTime(v).slice(0, 10);
+      }
+      if (kind === "datetime") {
+        return formatDateTime(v).replace(" ", "T").slice(0, 16);
+      }
+      if (kind === "multiselect") {
+        return (Array.isArray(v) ? v.map(String) : String(v).split(","))
+          .filter(Boolean).sort().join(",");
+      }
+      return String(v);
+    };
+    const original = asStr(raw);
+    let done = false;
+    /** 读取控件当前值（字符串形式，便于与原值比较） */
+    const read = (root: HTMLElement): string => {
+      if (kind === "multiselect") {
+        return [...root.querySelectorAll("input[type=checkbox]")]
+          .filter((i) => (i as HTMLInputElement).checked)
+          .map((i) => (i as HTMLElement).getAttribute("data-value") ?? "")
+          .sort().join(",");
+      }
+      if (kind === "select") return selectValue(root);
+      return (root as unknown as HTMLInputElement).value;
+    };
+    const finish = (root: HTMLElement | null, save: boolean): void => {
+      if (done) return;
+      done = true;
+      editing.value = null;
+      if (!save || !root) return;
+      const draft = read(root);
+      if (draft === original) return;
+      let value: unknown = draft;
+      if (kind === "number") {
+        const n = Number(draft);
+        if (draft.trim() === "" || !Number.isFinite(n)) {
+          message.error(m.invalid);
+          return;
+        }
+        value = n;
+      } else if (kind === "multiselect") {
+        value = draft ? draft.split(",") : [];
+      } else if (kind === "datetime") {
+        const d = new Date(draft);
+        if (draft && Number.isNaN(d.getTime())) {
+          message.error(m.invalid);
+          return;
+        }
+        value = draft ? d.toISOString() : "";
+      }
+      void setField(row, c.prop, value);
+    };
+    let rootEl: HTMLElement | null = null;
+    /**
+     * ref：记录根节点、聚焦，并用原生监听处理失焦保存
+     * （框架的 onBlur 绑定在这里不会触发，会导致编辑框「卡住」不退出）
+     */
+    const focusLater = (el: HTMLElement | null): void => {
+      rootEl = el;
+      if (!el) return;
+      if (kind === "multiselect") {
+        el.setAttribute("tabindex", "-1");
+        el.addEventListener("focusout", (e) => {
+          const next = (e as FocusEvent).relatedTarget as Node | null;
+          if (next && el.contains(next)) return;
+          finish(el, true);
+        });
+      } else {
+        el.addEventListener("blur", () => finish(el, true));
+      }
+      setTimeout(() => {
+        try {
+          el.focus();
+          (el as unknown as HTMLInputElement).select?.();
+        } catch { /* 部分 input 类型不支持 select() */ }
+      }, 0);
+    };
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        finish(rootEl, false);
+      } else if (e.key === "Enter" && !(kind === "textarea" && e.shiftKey)) {
+        e.preventDefault();
+        finish(rootEl, true);
+      }
+    };
+    const common = {
+      "data-testid": testid,
+      onKeyDown: onKey,
+    };
+    if (kind === "textarea") {
+      return (
+        <textarea
+          class="dp-ed"
+          rows={3}
+          ref={focusLater}
+          {...common}
+        >
+          {original}
+        </textarea>
+      );
+    }
+    if (kind === "select") {
+      return (
+        <select
+          class="dp-ed"
+          ref={focusLater}
+          {...common}
+        >
+          {(c.options ?? []).map((o) => (
+            <option value={o.value} {...bool("selected", o.value === original)}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+      );
+    }
+    if (kind === "multiselect") {
+      const cur = original ? original.split(",") : [];
+      return (
+        <div
+          class="dp-ed dp-ed-box"
+          tabIndex={-1}
+          ref={focusLater}
+          {...common}
+        >
+          {(c.options ?? []).map((o) => (
+            <label class="dp-ed-opt">
+              <input
+                type="checkbox"
+                data-value={o.value}
+                data-testid={`${testid}-${o.value}`}
+                {...bool("checked", cur.includes(o.value))}
+              />
+              {o.label}
+            </label>
+          ))}
+        </div>
+      );
+    }
+    const type = kind === "number"
+      ? "number"
+      : kind === "date"
+      ? "date"
+      : kind === "datetime"
+      ? "datetime-local"
+      : "text";
+    return (
+      <input
+        class="dp-ed"
+        type={type}
+        value={original}
+        ref={focusLater}
+        {...common}
+      />
+    );
+  }
+
+  /** 非编辑态的单元格展示 */
+  function plainCell(
+    c: DataPanelColumn,
+    row: DataPanelRow,
+    raw: unknown,
+  ): unknown {
     switch (c.type) {
       case "tag": {
+        if (Array.isArray(raw)) {
+          return raw.length === 0
+            ? "—"
+            : (
+              <span class="inline-flex flex-wrap gap-1">
+                {raw.map((v) => {
+                  const oo = c.options?.find((x) => x.value === String(v));
+                  return (
+                    <span
+                      class={`inline-block rounded px-1.5 py-0.5 text-xs ${
+                        TONE[oo?.tone ?? "default"]
+                      }`}
+                    >
+                      {oo?.label ?? String(v)}
+                    </span>
+                  );
+                })}
+              </span>
+            );
+        }
         const o = c.options?.find((x) => x.value === String(raw));
         return (
           <span

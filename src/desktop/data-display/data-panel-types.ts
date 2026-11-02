@@ -19,6 +19,7 @@ export type DataPanelColumnType =
   | "text"
   | "number"
   | "money"
+  | "date"
   | "datetime"
   | "tag"
   | "bool"
@@ -46,8 +47,22 @@ export interface DataPanelColumn {
   width?: number;
   /** tag 列：值 → 文案 / 色调；switch/select 行内编辑也用 */
   options?: DataPanelOption[];
-  /** 行内编辑：switch（两个 options 的开关）、text / number（双击编辑） */
-  inline?: "switch" | "select" | "text" | "number";
+  /**
+   * 行内编辑（单元格编辑）：
+   * - `switch`：两个 options 的开关，点击即切换并保存；
+   * - 其余类型双击进入编辑：`text` / `number` / `textarea` / `date` / `datetime` / `select`（单选，需 options）/
+   *   `multiselect`（多选，需 options，值为数组）；
+   * - 失焦或 Enter 保存并回到展示态；Esc 取消并恢复原值；保存失败提示错误并保持原值。
+   */
+  inline?:
+    | "switch"
+    | "select"
+    | "multiselect"
+    | "text"
+    | "number"
+    | "textarea"
+    | "date"
+    | "datetime";
   /** 页脚合计行：显示 `list()` 返回 `totals[prop]` */
   total?: boolean;
   /** 默认隐藏，可在「列设置」里打开 */

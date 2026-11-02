@@ -10,6 +10,9 @@ import {
   type DocsApiTableRow,
 } from "../../../components/DocsApiTable.tsx";
 import {
+  CELL_COLUMNS,
+  cellDemoState,
+  createCellDemoSource,
   createRemoteDemoSource,
   DEMO_COLUMNS,
   DEMO_FORM,
@@ -30,7 +33,7 @@ const DATA_PANEL_API: DocsApiTableRow[] = [
     type: "DataPanelColumn[]",
     default: "-",
     description:
-      "列定义：prop / label / type(text|number|money|datetime|tag|bool|image|link) / sortable / width / options / inline(switch|text|number) / total / hidden / noExport（必填）",
+      "列定义：prop / label / type(text|number|money|datetime|tag|bool|image|link) / sortable / width / options / inline(switch|text|number|textarea|date|datetime|select|multiselect) / total / hidden / noExport（必填）",
   },
   {
     name: "data",
@@ -321,6 +324,22 @@ import { buildExportFile } from "@dreamer/ui-view";
 const file = buildExportFile({ format: "xlsx", title: "用户", basename: "users", columns, rows, messages });
 // file = { filename, mime, data: Uint8Array | string }`;
 
+const cellCode = `// 单元格编辑：column.inline 指定编辑器类型，双击进入编辑
+//   text / number / textarea / date / datetime / select（单选，需 options）/ multiselect（多选，需 options）
+//   switch：点击即切换；失焦或 Enter 保存并回到展示态；Esc 取消并恢复原值
+//   保存失败（dataSource.setField / update 返回失败）：弹出错误提示并保持原值
+const columns: DataPanelColumn[] = [
+  { prop: "name", label: "姓名", inline: "text" },
+  { prop: "score", label: "积分", type: "number", inline: "number" },
+  { prop: "role", label: "角色", type: "tag", inline: "select", options: roleOptions },
+  { prop: "tags", label: "标签", type: "tag", inline: "multiselect", options: tagOptions },
+  { prop: "status", label: "状态", type: "tag", inline: "switch", options: [on, off] },
+  { prop: "birthday", label: "生日", type: "date", inline: "date" },
+  { prop: "loginAt", label: "最近登录", type: "datetime", inline: "datetime" },
+  { prop: "remark", label: "备注", inline: "textarea" },
+];
+<DataPanel title="单元格编辑" dataSource={source} columns={columns} />`;
+
 const remoteCode = `const source: DataPanelDataSource = {
   async list(q) {
     const r = await fetch("/api/users?" + new URLSearchParams({ page: String(q.page), pageSize: String(q.pageSize), sort: q.sort, order: q.order === 1 ? "asc" : "desc", ...q.filters }));
@@ -367,6 +386,7 @@ function Demo(props: { title: string; code: string; children?: unknown }) {
 
 export default function DataDisplayDataPanel() {
   const remote: DataPanelDataSource = createRemoteDemoSource(300);
+  const cellSource: DataPanelDataSource = createCellDemoSource();
   return (
     <div class="space-y-10">
       <section>
@@ -440,6 +460,34 @@ export default function DataDisplayDataPanel() {
             form={DEMO_FORM}
             statusField="status"
             caps={{ create: false, remove: false }}
+          />
+        </Demo>
+
+        <Demo title="单元格编辑" code={cellCode}>
+          <label class="mb-2 flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              data-testid="cell-demo-fail"
+              onChange={(e: Event) => {
+                cellDemoState.fail =
+                  (e.target as unknown as { checked: boolean }).checked;
+              }}
+            />
+            模拟保存失败（勾选后再编辑：提示错误并保持原值）
+          </label>
+          <DataPanel
+            panelKey="demo-cell"
+            title="单元格编辑"
+            dataSource={cellSource}
+            columns={CELL_COLUMNS}
+            caps={{
+              create: false,
+              remove: false,
+              import: false,
+              export: false,
+              print: false,
+              columns: false,
+            }}
           />
         </Demo>
 
