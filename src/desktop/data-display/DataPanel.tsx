@@ -287,8 +287,9 @@ export const DATA_PANEL_CSS = `
 .dp-pop { background-color: #fff !important; border-color: #e2e8f0 !important; color: #0f172a !important; }
 .dark .dp-pop { background-color: #1e293b !important; border-color: #475569 !important; color: #f1f5f9 !important; }
 .dark .dp-pop [aria-hidden="true"] { background-color: #1e293b !important; border-color: #475569 !important; }
-.dp-acts { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
-.dp-act { background: transparent !important; border: 0 !important; box-shadow: none !important; padding: 4px !important; border-radius: 4px; color: #64748b !important; cursor: pointer; transition: color 0.15s ease; }
+.dp-acts { display: inline-flex; align-items: center; justify-content: center; gap: 1px; }
+.dp-act [role="img"] { width: 1.25rem !important; height: 1.25rem !important; }
+.dp-act { background: transparent !important; border: 0 !important; box-shadow: none !important; padding: 2px !important; min-width: 0 !important; border-radius: 4px; color: #64748b !important; line-height: 1; cursor: pointer; transition: color 0.15s ease; }
 .dp-act:hover:not(:disabled) { background: transparent !important; border: 0 !important; color: #2563eb !important; }
 .dp-act-del:hover:not(:disabled) { color: #dc2626 !important; }
 .dp-act:disabled { opacity: 0.4; color: #94a3b8 !important; cursor: not-allowed !important; }

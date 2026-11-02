@@ -1806,15 +1806,23 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
         ]);
         expect([tag, d.bg]).toEqual([tag, "rgba(0, 0, 0, 0)"]);
         expect([tag, d.bw]).toEqual([tag, "0px,0px,0px,0px"]);
-        // 图标之间有间距（按钮矩形之间 ≥ 6px）
-        const gaps = await ev<number[]>(
+        // 图标紧凑：约 18–20px 的图标，相邻图标之间 4–8px（几乎相邻）
+        const geo = await ev<{ sizes: number[][]; gaps: number[] }>(
           t,
-          `const r = ["view","edit","delete"].map((k) => document.querySelector(${
-            JSON.stringify(row("2", "X"))
-          }.replace("dp-X-2", "dp-" + k + "-2")).getBoundingClientRect());
-         return [r[1].left - r[0].right, r[2].left - r[1].right].map((v) => Math.round(v * 10) / 10);`,
+          `const r = ["view","edit","delete"].map((k) => document.querySelector('[data-testid="panel-demo-basic"] [data-testid="dp-' + k + '-2"] svg').getBoundingClientRect());
+         return { sizes: r.map((x) => [Math.round(x.width * 10) / 10, Math.round(x.height * 10) / 10]),
+           gaps: [r[1].left - r[0].right, r[2].left - r[1].right].map((v) => Math.round(v * 10) / 10) };`,
         );
-        for (const g of gaps) expect([tag, g >= 6]).toEqual([tag, true]);
+        for (const sz of geo.sizes) {
+          expect([
+            tag,
+            sz[0] >= 18 && sz[0] <= 20.5,
+            sz[1] >= 18 && sz[1] <= 20.5,
+          ]).toEqual([tag, true, true]);
+        }
+        for (const g of geo.gaps) {
+          expect([tag, g >= 3 && g <= 8]).toEqual([tag, true]);
+        }
       };
       await check(false);
       await ev(
