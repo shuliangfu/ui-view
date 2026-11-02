@@ -162,6 +162,11 @@ const NAVIGATION_SUBMENU = [
 /** 数据展示下的二级子菜单，对应路由 /data-display/xxx */
 const DATA_DISPLAY_SUBMENU = [
   { path: "/desktop/data-display/table", label: "Table", desc: "表格" },
+  {
+    path: "/desktop/data-display/data-panel",
+    label: "DataPanel",
+    desc: "数据面板",
+  },
   { path: "/desktop/data-display/list", label: "List", desc: "列表" },
   { path: "/desktop/data-display/card", label: "Card", desc: "卡片" },
   { path: "/desktop/data-display/tag", label: "Tag", desc: "标签" },
