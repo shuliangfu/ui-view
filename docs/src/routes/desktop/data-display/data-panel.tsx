@@ -225,7 +225,8 @@ const SOURCE_API: DocsApiTableRow[] = [
     name: "remove(ids)",
     type: "{ removed, failed[] }",
     default: "-",
-    description: "删除；面板保证只在用户确认对话框点「删除」之后才会调用",
+    description:
+      "删除；面板保证只在用户确认后才会调用（行内删除为按钮上方的小气泡「确定删除xxx？」，批量删除为确认对话框）",
   },
   {
     name: "setField(ids, field, value)",
@@ -294,7 +295,7 @@ const tableCode = `// 排序：sortable 列表头点击 升序 → 降序 → �
   defaultSort={{ prop: "balance", order: "desc" }} />`;
 
 const crudCode =
-  `// 新增 / 编辑 / 查看都用 Modal；删除一律先弹确认对话框，确认后才调用 dataSource.remove
+  `// 新增 / 编辑 / 查看都用 Modal；删除一律先确认（行内：图标上方的小气泡 Popconfirm；批量：确认对话框），确认后才调用 dataSource.remove
 <DataPanel title="CRUD" data={rows} columns={columns} form={form}
   onDataChange={(next) => console.log(next)} />
 
@@ -396,7 +397,7 @@ export default function DataDisplayDataPanel() {
           / 导出 / 列设置， 相邻按钮之间只有一条淡分割线）、搜索
           Modal（工具栏按钮打开）、表格下方的批量操作条、表格（排序、多选、行内编辑、合计、操作列）、
           分页，以及用 Modal 的新增 / 编辑 / 查看。<strong>
-            任何删除都必须先经过确认对话框
+            任何删除都必须先确认：行内删除弹出小气泡「确定删除xxx？」（红色「删除」+「取消」，点外部也会关闭），批量删除使用确认对话框
           </strong>。 支持原生 xlsx 导出（零依赖），支持浅色 / 深色主题与 zh-CN
           / en-US。数据通过 <code>data</code> 或 <code>dataSource</code>{" "}
           注入，与后端无关。

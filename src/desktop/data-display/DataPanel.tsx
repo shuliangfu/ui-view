@@ -3,7 +3,7 @@
  *
  * 一块完整的「列表管理」面板：卡片标题栏 + 工具栏按钮组（添加 / 搜索 / 刷新 / 打印 / 导入 / 导出 / 列设置，
  * 相邻按钮之间只有一条淡分割线）+ 搜索 Modal（工具栏按钮打开，提交即搜索、重置即清空） + 批量操作条 + 表格（排序、多选、行内编辑、合计行、
- * 操作列）+ 分页（每页条数、页码、跳页）。新增 / 编辑 / 查看使用 Modal，**任何删除（含批量）都必须先经过确认对话框**，
+ * 操作列）+ 分页（每页条数、页码、跳页）。新增 / 编辑 / 查看使用 Modal，**任何删除都必须先确认（行内删除为图标上方的小气泡 Popconfirm，批量删除为确认对话框）**，
  * 绝不直接删除。导出支持 xlsx（原生 OOXML）/ csv / json / xml / html，支持浅色与深色主题（`.dark`）。
  *
  * 数据通过 props 注入，与任何后端无关：
@@ -34,6 +34,7 @@ import { FormItem } from "../form/FormItem.tsx";
 import { Input } from "../form/Input.tsx";
 import { Textarea } from "../form/Textarea.tsx";
 import { Modal } from "../feedback/Modal.tsx";
+import { Popconfirm } from "../feedback/Popconfirm.tsx";
 import { Tooltip } from "../feedback/Tooltip.tsx";
 import { message } from "../feedback/message-store.ts";
 import {
@@ -238,7 +239,8 @@ const SWITCH_ANIM_MS = 230;
 
 const SELECT_CLS =
   "rounded-md border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-900";
-const ICON_BTN = "!bg-transparent !border-0 !shadow-none px-1 py-1";
+/** 操作列图标按钮：样式见 DATA_PANEL_CSS 的 .dp-act*（无边框 / 无底色，仅图标色变化） */
+const ICON_BTN = "dp-act";
 
 /**
  * 面板自带样式（作用域在 `.dp-*` 类名下，不依赖 Tailwind 扫描）：
@@ -282,6 +284,18 @@ export const DATA_PANEL_CSS = `
 .dark .dp-ed { color: #e2e8f0; background-color: #0f172a; border-color: #60a5fa; box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.3); color-scheme: dark; }
 .dp-ed-box { display: flex; flex-direction: column; gap: 4px; padding: 6px 8px; }
 .dp-ed-opt { display: flex; align-items: center; gap: 6px; font-size: 0.875rem; cursor: pointer; }
+.dp-pop { background-color: #fff !important; border-color: #e2e8f0 !important; color: #0f172a !important; }
+.dark .dp-pop { background-color: #1e293b !important; border-color: #475569 !important; color: #f1f5f9 !important; }
+.dark .dp-pop [aria-hidden="true"] { background-color: #1e293b !important; border-color: #475569 !important; }
+.dp-acts { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.dp-act { background: transparent !important; border: 0 !important; box-shadow: none !important; padding: 4px !important; border-radius: 4px; color: #64748b !important; cursor: pointer; transition: color 0.15s ease; }
+.dp-act:hover:not(:disabled) { background: transparent !important; border: 0 !important; color: #2563eb !important; }
+.dp-act-del:hover:not(:disabled) { color: #dc2626 !important; }
+.dp-act:disabled { opacity: 0.4; color: #94a3b8 !important; cursor: not-allowed !important; }
+.dark .dp-act { color: #94a3b8 !important; }
+.dark .dp-act:hover:not(:disabled) { color: #60a5fa !important; }
+.dark .dp-act-del:hover:not(:disabled) { color: #f87171 !important; }
+.dark .dp-act:disabled { color: #64748b !important; }
 .dark .dp-card { background: var(--dp-panel-body-bg, #18212f) !important; }
 `;
 
@@ -482,23 +496,29 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
     }
   }
 
-  function askDelete(ids: string[], label: string): void {
+  /** 真正执行删除（行内气泡确认与批量确认框共用） */
+  async function doRemove(ids: string[]): Promise<void> {
+    if (!ds.remove) return;
+    const r = await guarded(() => ds.remove!(ids));
+    if (r) reportBulk(r, m.deleted);
+    await load(false);
+    props.onChanged?.();
+  }
+
+  /** 批量删除：保留确认对话框；单行删除走行内 Popconfirm（见操作列） */
+  function askDelete(ids: string[]): void {
     if (!ds.remove) return;
     confirm.value = {
       title: m.deleteTitle,
-      text: ids.length === 1
-        ? tr(m.deleteAsk, { name: label })
-        : tr(m.deleteMany, { n: ids.length }),
+      text: tr(m.deleteMany, { n: ids.length }),
       danger: true,
       okText: m.delete,
-      run: async () => {
-        const r = await guarded(() => ds.remove!(ids));
-        if (r) reportBulk(r, m.deleted);
-        await load(false);
-        props.onChanged?.();
-      },
+      run: () => doRemove(ids),
     };
   }
+
+  /** 当前打开删除气泡确认的行 id */
+  const popRow = createSignal<string | null>(null);
 
   function askStatus(ids: string[], value: string, label: string): void {
     if (!ds.setField || !statusField) return;
@@ -1066,7 +1086,7 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
             size="sm"
             variant="danger"
             data-testid="dp-batch-delete"
-            onClick={() => askDelete(ids, "")}
+            onClick={() => askDelete(ids)}
           >
             {m.batchDelete}
           </Btn>
@@ -1531,47 +1551,65 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
                   ))}
                   {acts && (
                     <td class="whitespace-nowrap border border-slate-200 px-2 py-1.5 text-center dark:border-slate-700">
-                      {props.rowExtra?.(r)}
-                      {(caps.view || props.onView) && (
-                        <Btn
-                          type="button"
-                          size="sm"
-                          variant="ghost"
-                          class={ICON_BTN}
-                          aria-label={m.view}
-                          data-testid={`dp-view-${idOf(r)}`}
-                          onClick={() => doView(r)}
-                        >
-                          <IconEye size="xs" />
-                        </Btn>
-                      )}
-                      {(caps.update || props.onEdit) && (
-                        <Btn
-                          type="button"
-                          size="sm"
-                          variant="ghost"
-                          class={ICON_BTN}
-                          aria-label={m.edit}
-                          data-testid={`dp-edit-${idOf(r)}`}
-                          onClick={() => doEdit(r)}
-                        >
-                          <IconEdit size="xs" />
-                        </Btn>
-                      )}
-                      {caps.remove && (
-                        <Btn
-                          type="button"
-                          size="sm"
-                          variant="ghost"
-                          class={`${ICON_BTN} !text-red-500`}
-                          {...bool("disabled", isLocked(r))}
-                          aria-label={m.delete}
-                          data-testid={`dp-delete-${idOf(r)}`}
-                          onClick={() => askDelete([idOf(r)], rowName(r))}
-                        >
-                          <IconTrash size="xs" />
-                        </Btn>
-                      )}
+                      <span class="dp-acts">
+                        {props.rowExtra?.(r)}
+                        {(caps.view || props.onView) && (
+                          <Btn
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            class={ICON_BTN}
+                            aria-label={m.view}
+                            data-testid={`dp-view-${idOf(r)}`}
+                            onClick={() => doView(r)}
+                          >
+                            <IconEye size="xs" />
+                          </Btn>
+                        )}
+                        {(caps.update || props.onEdit) && (
+                          <Btn
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            class={ICON_BTN}
+                            aria-label={m.edit}
+                            data-testid={`dp-edit-${idOf(r)}`}
+                            onClick={() => doEdit(r)}
+                          >
+                            <IconEdit size="xs" />
+                          </Btn>
+                        )}
+                        {caps.remove && (
+                          <Popconfirm
+                            open={() => popRow.value === idOf(r)}
+                            placement="top"
+                            danger
+                            title={tr(m.deleteAsk, { name: rowName(r) })}
+                            okText={m.delete}
+                            cancelText={m.cancel}
+                            overlayClass="dp-pop"
+                            onOpenChange={(o: boolean) => {
+                              if (!o && popRow.value === idOf(r)) {
+                                popRow.value = null;
+                              }
+                            }}
+                            onConfirm={() => void doRemove([idOf(r)])}
+                          >
+                            <Btn
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              class={`${ICON_BTN} dp-act-del`}
+                              {...bool("disabled", isLocked(r))}
+                              aria-label={m.delete}
+                              data-testid={`dp-delete-${idOf(r)}`}
+                              onClick={() => (popRow.value = idOf(r))}
+                            >
+                              <IconTrash size="xs" />
+                            </Btn>
+                          </Popconfirm>
+                        )}
+                      </span>
                     </td>
                   )}
                 </tr>

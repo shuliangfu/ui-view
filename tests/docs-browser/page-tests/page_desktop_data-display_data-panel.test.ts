@@ -84,7 +84,9 @@ if (!window.__dp) {
     const a = lum(fg), b = lum(bg);
     return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
   };
-  window.__dp = { rgba, effBg, contrast, g, cell, sleep, root, q, qa, until, click, fill, dlg, text, total, rows, names };
+  const pop = () => document.querySelector(".dp-pop");
+  const popBtn = (txt) => pop() ? [...pop().querySelectorAll("button")].find((b) => b.textContent.trim() === txt) : null;
+  window.__dp = { pop, popBtn, rgba, effBg, contrast, g, cell, sleep, root, q, qa, until, click, fill, dlg, text, total, rows, names };
 }
 `;
 
@@ -647,17 +649,24 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
       window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
       await D.until(() => !document.querySelector('[role="dialog"]'), 3000);
-      // 删除：点击只弹确认，行仍在；取消仍在；确认才删除
-      D.click(D.q(k, '[data-testid="dp-delete-' + newId + '"] button') || D.q(k, '[data-testid="dp-delete-' + newId + '"]'));
-      await D.until(confirmOpen);
-      out.confirmText = D.text(document.querySelector('[data-testid="dp-confirm-text"]'));
+      // 删除：点击只弹小气泡确认（不是大弹窗），行仍在；取消 / 点击外部关闭且不删除；确认才删除
+      const delBtn = () => D.q(k, '[data-testid="dp-delete-' + newId + '"]');
+      D.click(delBtn());
+      await D.until(() => D.pop());
+      out.noModal = !confirmOpen() && !document.querySelector('[role="dialog"]');
+      out.confirmText = D.text(D.pop().querySelector("div.text-sm"));
       out.rowStillThere = !!D.q(k, '[data-testid="dp-row-' + newId + '"]') && D.total(k) === total0 + 1;
-      D.click(D.g('[data-testid="dp-confirm-cancel"]'));
-      await D.until(() => !confirmOpen());
-      out.cancelKeeps = !!D.q(k, '[data-testid="dp-row-' + newId + '"]');
-      D.click(D.q(k, '[data-testid="dp-delete-' + newId + '"] button') || D.q(k, '[data-testid="dp-delete-' + newId + '"]'));
-      await D.until(confirmOpen);
-      D.click(D.g('[data-testid="dp-confirm-ok"]'));
+      D.click(D.popBtn("取消"));
+      await D.until(() => !D.pop());
+      out.cancelKeeps = !!D.q(k, '[data-testid="dp-row-' + newId + '"]') && D.total(k) === total0 + 1;
+      D.click(delBtn());
+      await D.until(() => D.pop());
+      document.body.click();
+      out.outsideClosed = await D.until(() => !D.pop(), 3000);
+      out.outsideKeeps = D.total(k) === total0 + 1;
+      D.click(delBtn());
+      await D.until(() => D.pop());
+      D.click(D.popBtn("删除"));
       await D.until(() => D.total(k) === total0);
       out.deleted = !D.q(k, '[data-testid="dp-row-' + newId + '"]');
       return out;`,
@@ -674,7 +683,10 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
       expect(r.edited).toBe(true);
       expect(r.cancelKept).toBe(true);
       expect(r.viewShows).toBe(true);
-      expect(r.confirmText).toBe("确定要删除「Newbie 2」吗？此操作不可恢复。");
+      expect(r.noModal).toBe(true);
+      expect(r.confirmText).toBe("确定删除Newbie 2？");
+      expect(r.outsideClosed).toBe(true);
+      expect(r.outsideKeeps).toBe(true);
       expect(r.rowStillThere).toBe(true);
       expect(r.cancelKeeps).toBe(true);
       expect(r.deleted).toBe(true);
@@ -923,11 +935,11 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
       out.created = D.total(k) === t0 + 1;
       // 删除：确认前不调用 remove
       const id = D.rows(k)[0].getAttribute("data-testid").replace("dp-row-", "");
-      D.click(D.q(k, '[data-testid="dp-delete-' + id + '"] button') || D.q(k, '[data-testid="dp-delete-' + id + '"]'));
-      await D.until(() => document.querySelector('[data-testid="dp-confirm"]'));
+      D.click(D.q(k, '[data-testid="dp-delete-' + id + '"]'));
+      await D.until(() => D.pop());
       await D.sleep(700);
       out.notDeletedBeforeConfirm = D.total(k) === t0 + 1;
-      D.click(D.g('[data-testid="dp-confirm-ok"]'));
+      D.click(D.popBtn("删除"));
       await D.until(() => D.total(k) === t0, 5000);
       out.deleted = D.total(k) === t0;
       return out;`,
@@ -1158,8 +1170,8 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
         await D.sleep(300);
         document.body.click();
         D.click(D.q(k, '[data-testid="dp-delete-2"]'));
-        await D.until(() => document.querySelector('[data-testid="dp-confirm"]'));
-        D.click(D.g('[data-testid="dp-confirm-cancel"]'));
+        await D.until(() => D.pop());
+        D.click(D.popBtn("取消"));
         await D.sleep(300);
         `,
         );
@@ -1641,4 +1653,177 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
     expect(r.fg).toBe("rgb(226, 232, 240)");
     expect(r.ratio >= 4.5).toBe(true);
   }, DOCS_BROWSER_CONFIG);
+  it(
+    "行删除用小气泡确认：箭头在按钮上方、问号图标在左、红色删除 + 取消；浅色 / 深色；取消 / 点外部不删除；确认才删",
+    async (t) => {
+      if (!t?.browser?.goto) return;
+      await open(t, "demo-crud");
+      const measure = () =>
+        ev<Record<string, unknown>>(
+          t,
+          `
+        const k = ${P("demo-crud")};
+        const out = {};
+        D.q(k, '[data-testid="dp-delete-3"]').scrollIntoView({ block: "center" });
+        await D.sleep(150);
+        D.click(D.q(k, '[data-testid="dp-delete-3"]'));
+        await D.until(() => D.pop());
+        await D.sleep(300);
+        // 气泡打开会重建触发器：重新取按钮
+        const btn = D.q(k, '[data-testid="dp-delete-3"] button') || D.q(k, '[data-testid="dp-delete-3"]');
+        const panel = D.pop();
+        const pr = panel.getBoundingClientRect(), br = btn.getBoundingClientRect();
+        const name = D.names(k)[2];
+        out.text = D.text(panel.querySelector("div.text-sm"));
+        out.name = name;
+        out.above = pr.bottom <= br.top + 1;
+        out.centered = Math.abs((pr.left + pr.width / 2) - (br.left + br.width / 2)) < 6;
+        out.small = pr.width < 360 && pr.height < 140;
+        out.inBody = panel.closest("[data-dreamer-popconfirm-panel]") !== null && !document.querySelector('[role="dialog"]');
+        const icon = panel.querySelector("svg");
+        out.iconLeft = !!icon && icon.getBoundingClientRect().right <= panel.querySelector("div.text-sm").getBoundingClientRect().left + 1;
+        const arrow = panel.querySelector('[aria-hidden="true"]');
+        out.arrow = !!arrow && arrow.getBoundingClientRect().height > 0;
+        const ok = D.popBtn("删除"), cancel = D.popBtn("取消");
+        out.btns = !!ok && !!cancel && ok.getBoundingClientRect().left < cancel.getBoundingClientRect().left;
+        const okBg = D.rgba(getComputedStyle(ok).backgroundColor);
+        out.okRed = okBg[0] > 180 && okBg[1] < 90 && okBg[2] < 90;
+        const cs = getComputedStyle(panel);
+        out.panelBg = cs.backgroundColor;
+        out.panelFg = cs.color;
+        out.ratio = Math.round(D.contrast(panel.querySelector("div.text-sm")) * 100) / 100;
+        out.arrowBg = arrow ? getComputedStyle(arrow).backgroundColor : "";
+        D.click(cancel);
+        await D.until(() => !D.pop());
+        return out;`,
+        );
+      const light = await measure();
+      expect(light.text).toBe("确定删除" + light.name + "？");
+      expect(light.above).toBe(true);
+      expect(light.centered).toBe(true);
+      expect(light.small).toBe(true);
+      expect(light.inBody).toBe(true);
+      expect(light.iconLeft).toBe(true);
+      expect(light.arrow).toBe(true);
+      expect(light.btns).toBe(true);
+      expect(light.okRed).toBe(true);
+      expect(light.panelBg).toBe("rgb(255, 255, 255)");
+      expect((light.ratio as number) >= 4.5).toBe(true);
+      await ev(
+        t,
+        `const b = [...document.querySelectorAll("button")].find((x) => x.querySelector("[data-theme-icon]") && x.offsetParent !== null);
+       b.click(); await D.sleep(700);`,
+      );
+      const dark = await measure();
+      expect(dark.text).toBe("确定删除" + dark.name + "？");
+      expect(dark.above).toBe(true);
+      expect(dark.okRed).toBe(true);
+      expect(dark.panelBg).toBe("rgb(30, 41, 59)");
+      expect(dark.arrowBg).toBe("rgb(30, 41, 59)");
+      expect((dark.ratio as number) >= 4.5).toBe(true);
+      // 切换行：打开 A 后点 B 的删除 → 只有 B 的气泡
+      const sw = await ev<Record<string, unknown>>(
+        t,
+        `const k = ${P("demo-crud")};
+       D.click(D.q(k, '[data-testid="dp-delete-3"]'));
+       await D.until(() => D.pop());
+       D.click(D.q(k, '[data-testid="dp-delete-4"]'));
+       await D.sleep(400);
+       const pops = document.querySelectorAll(".dp-pop");
+       const out = { count: pops.length, text: pops[0] ? D.text(pops[0].querySelector("div.text-sm")) : "", total: D.total(k) };
+       document.body.click();
+       await D.until(() => !D.pop());
+       return out;`,
+      );
+      expect(sw.count).toBe(1);
+      expect(String(sw.text)).toBe(
+        "确定删除" +
+          (await ev<string>(t, `return D.names(${P("demo-crud")})[3];`)) + "？",
+      );
+      expect(sw.total).toBe(8);
+    },
+    DOCS_BROWSER_CONFIG,
+  );
+  it(
+    "操作列图标：无边框无底色的纯图标、图标之间有间距；悬停只变色；禁用删除为半透明灰 + not-allowed（浅色 / 深色）",
+    async (t) => {
+      if (!t?.browser?.goto) return;
+      await open(t, "demo-basic");
+      // deno-lint-ignore no-explicit-any
+      const page = (t.browser as any).page;
+      const style = (sel: string) =>
+        ev<Record<string, string | number>>(
+          t,
+          `const b = document.querySelector(${JSON.stringify(sel)} + " button");
+         const cs = getComputedStyle(b);
+         return { color: cs.color, bg: cs.backgroundColor, bw: [cs.borderTopWidth, cs.borderRightWidth, cs.borderBottomWidth, cs.borderLeftWidth].join(","),
+           bs: cs.borderTopStyle, shadow: cs.boxShadow, opacity: cs.opacity, cursor: cs.cursor, disabled: b.disabled ? 1 : 0,
+           w: b.getBoundingClientRect().width };`,
+        );
+      const row = (id: string, kind: string) =>
+        `[data-testid="panel-demo-basic"] [data-testid="dp-${kind}-${id}"]`;
+      const check = async (dark: boolean) => {
+        const tag = dark ? "dark" : "light";
+        const base = dark ? "rgb(148, 163, 184)" : "rgb(100, 116, 139)";
+        const hover = dark ? "rgb(96, 165, 250)" : "rgb(37, 99, 235)";
+        const hoverDel = dark ? "rgb(248, 113, 113)" : "rgb(220, 38, 38)";
+        await page.mouse.move(2, 2);
+        for (const kind of ["view", "edit", "delete"]) {
+          const sel = row("2", kind);
+          await page.hover(
+            `[data-testid="panel-demo-basic"] [data-testid="dp-row-2"] td:first-child`,
+          );
+          const s0 = await style(sel);
+          // 无边框、无底色、无阴影
+          expect([tag, kind, s0.bw]).toEqual([tag, kind, "0px,0px,0px,0px"]);
+          expect([tag, kind, s0.bg]).toEqual([tag, kind, "rgba(0, 0, 0, 0)"]);
+          expect([tag, kind, s0.shadow]).toEqual([tag, kind, "none"]);
+          expect([tag, kind, s0.color]).toEqual([tag, kind, base]);
+          // 悬停：只变色，仍无边框 / 底色
+          await page.hover(`${sel} button`);
+          await ev(t, `await D.sleep(300);`);
+          const s1 = await style(sel);
+          expect([tag, kind, s1.color]).toEqual([
+            tag,
+            kind,
+            kind === "delete" ? hoverDel : hover,
+          ]);
+          expect([tag, kind, s1.bw]).toEqual([tag, kind, "0px,0px,0px,0px"]);
+          expect([tag, kind, s1.bg]).toEqual([tag, kind, "rgba(0, 0, 0, 0)"]);
+          expect([tag, kind, s1.opacity]).toEqual([tag, kind, "1"]);
+        }
+        // 禁用的删除（locked 行）：半透明灰、not-allowed，悬停不变色，同样无边框 / 底色
+        const dsel = row("1", "delete");
+        await page.hover(`${dsel}`);
+        await ev(t, `await D.sleep(300);`);
+        const d = await style(dsel);
+        expect([tag, d.disabled]).toEqual([tag, 1]);
+        expect([tag, d.opacity]).toEqual([tag, "0.4"]);
+        expect([tag, d.cursor]).toEqual([tag, "not-allowed"]);
+        expect([tag, d.color]).toEqual([
+          tag,
+          dark ? "rgb(100, 116, 139)" : "rgb(148, 163, 184)",
+        ]);
+        expect([tag, d.bg]).toEqual([tag, "rgba(0, 0, 0, 0)"]);
+        expect([tag, d.bw]).toEqual([tag, "0px,0px,0px,0px"]);
+        // 图标之间有间距（按钮矩形之间 ≥ 6px）
+        const gaps = await ev<number[]>(
+          t,
+          `const r = ["view","edit","delete"].map((k) => document.querySelector(${
+            JSON.stringify(row("2", "X"))
+          }.replace("dp-X-2", "dp-" + k + "-2")).getBoundingClientRect());
+         return [r[1].left - r[0].right, r[2].left - r[1].right].map((v) => Math.round(v * 10) / 10);`,
+        );
+        for (const g of gaps) expect([tag, g >= 6]).toEqual([tag, true]);
+      };
+      await check(false);
+      await ev(
+        t,
+        `const b = [...document.querySelectorAll("button")].find((x) => x.querySelector("[data-theme-icon]") && x.offsetParent !== null);
+       b.click(); await D.sleep(700);`,
+      );
+      await check(true);
+    },
+    DOCS_BROWSER_CONFIG,
+  );
 });
