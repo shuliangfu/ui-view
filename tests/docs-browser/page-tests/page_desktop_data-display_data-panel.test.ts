@@ -1806,7 +1806,7 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
         ]);
         expect([tag, d.bg]).toEqual([tag, "rgba(0, 0, 0, 0)"]);
         expect([tag, d.bw]).toEqual([tag, "0px,0px,0px,0px"]);
-        // 图标紧凑：约 18–20px 的图标，相邻图标之间 4–8px（几乎相邻）
+        // 图标紧凑：16px 图标（与表格文字同大），相邻图标之间 4–8px（几乎相邻）
         const geo = await ev<{ sizes: number[][]; gaps: number[] }>(
           t,
           `const r = ["view","edit","delete"].map((k) => document.querySelector('[data-testid="panel-demo-basic"] [data-testid="dp-' + k + '-2"] svg').getBoundingClientRect());
@@ -1816,12 +1816,12 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
         for (const sz of geo.sizes) {
           expect([
             tag,
-            sz[0] >= 18 && sz[0] <= 20.5,
-            sz[1] >= 18 && sz[1] <= 20.5,
+            sz[0] >= 15.5 && sz[0] <= 16.5,
+            sz[1] >= 15.5 && sz[1] <= 16.5,
           ]).toEqual([tag, true, true]);
         }
         for (const g of geo.gaps) {
-          expect([tag, g >= 3 && g <= 8]).toEqual([tag, true]);
+          expect([tag, g >= 4 && g <= 8]).toEqual([tag, true]);
         }
       };
       await check(false);
