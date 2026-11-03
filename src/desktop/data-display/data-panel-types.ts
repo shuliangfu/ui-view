@@ -220,6 +220,10 @@ export interface DataPanelMessages {
   export: string;
   columns: string;
   resetColumns: string;
+  /** 列设置里「多选」列的显示名 */
+  colSelect: string;
+  /** 列设置里「序号」列的显示名 */
+  colIndex: string;
   all: string;
   reset: string;
   searchSubmit: string;

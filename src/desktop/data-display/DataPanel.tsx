@@ -231,6 +231,10 @@ function Btn(props: any) {
 const bool = (k: string, v: unknown): Record<string, true> =>
   v ? { [k]: true } : {};
 
+/** 列偏好里系统列键（与业务 prop 隔离） */
+const COL_SELECT = "__select";
+const COL_INDEX = "__index";
+
 /** 标签配色：浅色沿用 Tailwind 类；深色由 DATA_PANEL_CSS 的 `.dark .dp-tag-*` 覆盖（半透明底 + 亮字） */
 const TONE: Record<DataPanelTone, string> = {
   success: "dp-tag dp-tag-success bg-emerald-100 text-emerald-700",
@@ -427,6 +431,15 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
   }
 
   const columnsVisible = () => columns.filter((c) => !hidden.value[c.prop]);
+  /** 多选列：仅当面板本身可多选，且列设置未隐藏 */
+  const showSelectCol = () => selectable && !hidden.value[COL_SELECT];
+  /** 序号列：列设置未隐藏时显示（默认显示） */
+  const showIndexCol = () => !hidden.value[COL_INDEX];
+  /** 重置列：回到列定义里的 default hidden，系统列（多选/序号）恢复显示 */
+  const defaultHidden = (): Record<string, boolean> =>
+    Object.fromEntries(
+      columns.filter((c) => c.hidden).map((c) => [c.prop, true]),
+    );
 
   // ---- 首次加载（异步数据源）与列偏好
   const storageKey = `dp-cols-${key}`;
@@ -866,6 +879,13 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
     </div>
   );
 
+  function toggleHiddenProp(prop: string): void {
+    const next = { ...hidden.value };
+    if (next[prop]) delete next[prop];
+    else next[prop] = true;
+    saveHidden(next);
+  }
+
   const columnMenu = () => (
     <div
       class="flex max-h-72 min-w-40 flex-col gap-1 overflow-auto p-2"
@@ -873,18 +893,33 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
       onClick={(e: Event) => e.stopPropagation()}
       onMouseDown={(e: Event) => e.stopPropagation()}
     >
+      {selectable && (
+        <label class="flex cursor-pointer items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            {...bool("checked", !hidden.value[COL_SELECT])}
+            data-testid="dp-col-__select"
+            onChange={() => toggleHiddenProp(COL_SELECT)}
+          />
+          {m.colSelect}
+        </label>
+      )}
+      <label class="flex cursor-pointer items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          {...bool("checked", !hidden.value[COL_INDEX])}
+          data-testid="dp-col-__index"
+          onChange={() => toggleHiddenProp(COL_INDEX)}
+        />
+        {m.colIndex}
+      </label>
       {columns.map((c) => (
         <label class="flex cursor-pointer items-center gap-2 text-sm">
           <input
             type="checkbox"
             {...bool("checked", !hidden.value[c.prop])}
             data-testid={`dp-col-${c.prop}`}
-            onChange={() => {
-              const next = { ...hidden.value };
-              if (next[c.prop]) delete next[c.prop];
-              else next[c.prop] = true;
-              saveHidden(next);
-            }}
+            onChange={() => toggleHiddenProp(c.prop)}
           />
           {c.label}
         </label>
@@ -893,10 +928,7 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
         type="button"
         class="mt-1 border-t border-slate-200 px-1 pt-2 text-left text-xs font-medium text-slate-700 hover:text-slate-900 dark:border-slate-700 dark:text-slate-200 dark:hover:text-white"
         data-testid="dp-col-reset"
-        onClick={() =>
-          saveHidden(Object.fromEntries(
-            columns.filter((c) => c.hidden).map((c) => [c.prop, true]),
-          ))}
+        onClick={() => saveHidden(defaultHidden())}
       >
         {m.resetColumns}
       </button>
@@ -1472,7 +1504,7 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
         <table class="w-full border-collapse text-sm" data-testid="dp-table">
           <thead>
             <tr class="bg-slate-50 text-left dark:bg-slate-800">
-              {selectable && (
+              {showSelectCol() && (
                 <th class="w-10 border border-slate-200 px-2 py-2 text-center dark:border-slate-700">
                   <input
                     type="checkbox"
@@ -1484,9 +1516,14 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
                   />
                 </th>
               )}
-              <th class="w-12 border border-slate-200 px-2 py-2 text-center dark:border-slate-700">
-                #
-              </th>
+              {showIndexCol() && (
+                <th
+                  class="w-12 border border-slate-200 px-2 py-2 text-center dark:border-slate-700"
+                  data-testid="dp-colhead-index"
+                >
+                  #
+                </th>
+              )}
               {cols.map((c) => (
                 <th
                   class="whitespace-nowrap border border-slate-200 px-3 py-2 font-medium dark:border-slate-700"
@@ -1519,8 +1556,8 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
               ? (
                 <tr>
                   <td
-                    colSpan={cols.length + 1 + (selectable ? 1 : 0) +
-                      (acts ? 1 : 0)}
+                    colSpan={cols.length + (showIndexCol() ? 1 : 0) +
+                      (showSelectCol() ? 1 : 0) + (acts ? 1 : 0)}
                     class="border border-slate-200 px-3 py-8 text-center text-slate-400 dark:border-slate-700"
                     data-testid="dp-empty"
                   >
@@ -1535,7 +1572,7 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
                   }`}
                   data-testid={`dp-row-${idOf(r)}`}
                 >
-                  {selectable && (
+                  {showSelectCol() && (
                     <td class="border border-slate-200 px-2 py-1.5 text-center dark:border-slate-700">
                       <input
                         type="checkbox"
@@ -1551,9 +1588,11 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
                       />
                     </td>
                   )}
-                  <td class="border border-slate-200 px-2 py-1.5 text-center text-slate-500 dark:border-slate-700">
-                    {offset() + i + 1}
-                  </td>
+                  {showIndexCol() && (
+                    <td class="border border-slate-200 px-2 py-1.5 text-center text-slate-500 dark:border-slate-700">
+                      {offset() + i + 1}
+                    </td>
+                  )}
                   {cols.map((c) => (
                     <td class="border border-slate-200 px-3 py-1.5 dark:border-slate-700">
                       {cell(c, r)}
@@ -1631,22 +1670,31 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
                 class="bg-slate-50 font-semibold dark:bg-slate-800"
                 data-testid="dp-totals"
               >
-                {selectable && (
+                {showSelectCol() && (
                   <td class="border border-slate-200 dark:border-slate-700" />
                 )}
-                <td class="border border-slate-200 px-2 py-2 text-center dark:border-slate-700">
-                  {m.total}
-                </td>
-                {cols.map((c) => (
+                {showIndexCol() && (
+                  <td class="border border-slate-200 px-2 py-2 text-center dark:border-slate-700">
+                    {m.total}
+                  </td>
+                )}
+                {cols.map((c, ci) => (
                   <td
                     class="border border-slate-200 px-3 py-2 dark:border-slate-700"
                     data-testid={`dp-total-${c.prop}`}
                   >
-                    {c.total
-                      ? (c.type === "money"
-                        ? formatMoney(t[c.prop])
-                        : String(t[c.prop] ?? 0))
-                      : ""}
+                    {(() => {
+                      const val = c.total
+                        ? (c.type === "money"
+                          ? formatMoney(t[c.prop])
+                          : String(t[c.prop] ?? 0))
+                        : "";
+                      if (!showIndexCol() && ci === 0 && !val) return m.total;
+                      if (!showIndexCol() && ci === 0 && val) {
+                        return `${m.total} ${val}`;
+                      }
+                      return val;
+                    })()}
                   </td>
                 ))}
                 {acts && (
