@@ -1,6 +1,14 @@
 /**
- * 内置图标：每个图标单独文件、单独导出，按需引入以控制包体积。
+ * 内置图标 barrel：每个图标仍是单独 `.tsx` 文件。
  * 使用 currentColor，可与 Icon 的 size/class 配合。
+ *
+ * **打包注意（实测 esbuild）**：
+ * - 从**本文件**或 `@dreamer/ui-view` / `@dreamer/ui-view/basic` 取一个 `Icon*` 时，
+ *   打包器会把整个 barrel（约 575 个图标文件、解析量约 2MB）拉进模块图，再 tree-shake；
+ *   最终产物通常只留用到的图标，但**冷构建/分析成本**偏高。
+ * - 库内组件请继续 `import { IconX } from ".../icons/X.tsx"` 直达单文件（DataPanel 已如此）。
+ * - 应用侧若在意构建体积/速度：优先直达单文件；根入口 barrel 勿再 `import * as Icons`。
+ * - 国旗另见 `flags/mod.ts`（根入口 `export *`），勿与常用图标混在同一通配导入里。
  */
 export { IconActivity } from "./Activity.tsx";
 export { IconAlertCircle } from "./AlertCircle.tsx";
