@@ -43,6 +43,11 @@ export interface DropdownProps {
    * 默认 false。
    */
   arrow?: boolean;
+  /**
+   * `trigger="click"` 时，点击浮层**内部**是否关闭。默认 true（点菜单项即关）。
+   * 列设置等多选面板应设为 false：否则 click 冒泡先卸载浮层，checkbox 的 change 来不及触发。
+   */
+  closeOnOverlayClick?: boolean;
 }
 
 /** 用于 Esc 关闭时注册当前打开的下拉关闭回调（每帧仅一个） */
@@ -264,6 +269,7 @@ export function Dropdown(props: DropdownProps): JSXRenderable {
     overlayClass,
     overlayId,
     arrow = false,
+    closeOnOverlayClick = true,
   } = props;
 
   /** 展开状态由组件内部维护（`Signal`，`.value`） */
@@ -394,7 +400,19 @@ export function Dropdown(props: DropdownProps): JSXRenderable {
     }
     const id = globalThis.setTimeout(() => {
       const onDocClick = (e: MouseEvent) => {
+        // 浮层内点击若同步重绘卸掉目标节点，e.target 会脱离 DOM，
+        // contains(target)===false 会被误判为“外部点击”。用 composedPath 认路径。
+        const path = typeof e.composedPath === "function"
+          ? e.composedPath()
+          : [];
+        if (
+          (triggerEl && path.includes(triggerEl)) ||
+          (overlayEl && path.includes(overlayEl))
+        ) {
+          return;
+        }
         const target = e.target as Node | null;
+        if (target && !target.isConnected) return;
         if (
           target &&
           triggerEl?.contains(target) === false &&
@@ -521,7 +539,7 @@ export function Dropdown(props: DropdownProps): JSXRenderable {
                   ...portalFixedStyle.value,
                   zIndex: DROPDOWN_OVERLAY_ROOT_Z_INDEX,
                 })}
-                onClick={!isHover
+                onClick={!isHover && closeOnOverlayClick
                   ? () =>
                     setOpen(false)
                   : undefined}

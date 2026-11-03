@@ -870,6 +870,8 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
     <div
       class="flex max-h-72 min-w-40 flex-col gap-1 overflow-auto p-2"
       data-testid="dp-column-menu"
+      onClick={(e: Event) => e.stopPropagation()}
+      onMouseDown={(e: Event) => e.stopPropagation()}
     >
       {columns.map((c) => (
         <label class="flex cursor-pointer items-center gap-2 text-sm">
@@ -889,7 +891,7 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
       ))}
       <button
         type="button"
-        class="mt-1 border-t border-slate-200 px-1 pt-2 text-left text-xs text-slate-500 hover:text-slate-800 dark:border-slate-700"
+        class="mt-1 border-t border-slate-200 px-1 pt-2 text-left text-xs font-medium text-slate-700 hover:text-slate-900 dark:border-slate-700 dark:text-slate-200 dark:hover:text-white"
         data-testid="dp-col-reset"
         onClick={() =>
           saveHidden(Object.fromEntries(
@@ -946,9 +948,10 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
           )}
           {caps.columns && (
             <Dropdown
-              overlay={columnMenu()}
+              overlay={columnMenu}
               placement="bottomRight"
               trigger="click"
+              closeOnOverlayClick={false}
             >
               <Button type="button" size="sm" class={posCls("dp-columns")}>
                 <IconColumns size="sm" />

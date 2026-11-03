@@ -502,6 +502,139 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
   );
 
   it(
+    "列设置：真实鼠标勾选立即显隐、浮层不关、重置列、localStorage",
+    async (t) => {
+      if (!t?.browser?.goto) return;
+      // deno-lint-ignore no-explicit-any
+      const page = (t.browser as any).page as {
+        mouse: { click: (x: number, y: number) => Promise<void> };
+        hover: (sel: string) => Promise<void>;
+      };
+
+      await open(t, "demo-table");
+      // 清偏好并重进，保证默认 hidden 列状态
+      await ev(t, `localStorage.removeItem("dp-cols-demo-table");`);
+      await open(t, "demo-table");
+
+      const centerClick = async (sel: string) => {
+        const box = await ev<{ x: number; y: number; w: number; h: number } | null>(
+          t,
+          `const el = document.querySelector(${JSON.stringify(sel)});
+           if (!el) return null;
+           el.scrollIntoView({ block: "center", inline: "center" });
+           const r = el.getBoundingClientRect();
+           return { x: r.x, y: r.y, w: r.width, h: r.height };`,
+        );
+        if (!box) throw new Error("missing " + sel);
+        await page.mouse.click(box.x + box.w / 2, box.y + box.h / 2);
+        await ev(t, `await D.sleep(80);`);
+      };
+
+      const before = await ev<boolean>(
+        t,
+        `return D.q(${P("demo-table")}, "thead").textContent.includes("创建时间");`,
+      );
+      expect(before).toBe(false);
+
+      await centerClick(
+        '[data-testid="panel-demo-table"] [data-testid="dp-columns"]',
+      );
+      const menuOpened = await ev<boolean>(
+        t,
+        `return await D.until(() => !!document.querySelector('[data-testid="dp-column-menu"]'));`,
+      );
+      expect(menuOpened).toBe(true);
+
+      // 勾选「创建时间」→ 表头出现；浮层仍开；勾选同步
+      await centerClick('[data-testid="dp-col-createdAt"]');
+      const afterShow = await ev<Record<string, unknown>>(
+        t,
+        `
+        const ok = await D.until(() => D.q(${P("demo-table")}, "thead").textContent.includes("创建时间"));
+        const cb = document.querySelector('[data-testid="dp-col-createdAt"]');
+        return {
+          ok,
+          menuOpen: !!document.querySelector('[data-testid="dp-column-menu"]'),
+          header: D.q(${P("demo-table")}, "thead").textContent.includes("创建时间"),
+          checked: !!(cb && cb.checked),
+          stored: localStorage.getItem("dp-cols-demo-table"),
+        };`,
+      );
+      expect(afterShow.ok).toBe(true);
+      expect(afterShow.menuOpen).toBe(true);
+      expect(afterShow.header).toBe(true);
+      expect(afterShow.checked).toBe(true);
+      expect(String(afterShow.stored)).not.toContain("createdAt");
+
+      // 取消勾选 → 隐藏；浮层仍开
+      await centerClick('[data-testid="dp-col-createdAt"]');
+      const afterHide = await ev<Record<string, unknown>>(
+        t,
+        `
+        const ok = await D.until(() => !D.q(${P("demo-table")}, "thead").textContent.includes("创建时间"));
+        const cb = document.querySelector('[data-testid="dp-col-createdAt"]');
+        return {
+          ok,
+          menuOpen: !!document.querySelector('[data-testid="dp-column-menu"]'),
+          header: D.q(${P("demo-table")}, "thead").textContent.includes("创建时间"),
+          checked: !!(cb && cb.checked),
+          stored: localStorage.getItem("dp-cols-demo-table"),
+        };`,
+      );
+      expect(afterHide.ok).toBe(true);
+      expect(afterHide.menuOpen).toBe(true);
+      expect(afterHide.header).toBe(false);
+      expect(afterHide.checked).toBe(false);
+      expect(String(afterHide.stored)).toContain("createdAt");
+
+      // 隐藏姓名后重置
+      await centerClick('[data-testid="dp-col-name"]');
+      await ev(
+        t,
+        `await D.until(() => !D.q(${P("demo-table")}, "thead").textContent.includes("姓名"));`,
+      );
+      await centerClick('[data-testid="dp-col-reset"]');
+      const afterReset = await ev<Record<string, unknown>>(
+        t,
+        `
+        const ok = await D.until(() => {
+          const th = D.q(${P("demo-table")}, "thead").textContent;
+          return th.includes("姓名") && !th.includes("创建时间");
+        });
+        const nameCb = document.querySelector('[data-testid="dp-col-name"]');
+        const createdCb = document.querySelector('[data-testid="dp-col-createdAt"]');
+        return {
+          ok,
+          menuOpen: !!document.querySelector('[data-testid="dp-column-menu"]'),
+          hasName: D.q(${P("demo-table")}, "thead").textContent.includes("姓名"),
+          hasCreated: D.q(${P("demo-table")}, "thead").textContent.includes("创建时间"),
+          nameChecked: !!(nameCb && nameCb.checked),
+          createdChecked: !!(createdCb && createdCb.checked),
+          resetColor: (() => { const b = document.querySelector('[data-testid="dp-col-reset"]'); return b ? getComputedStyle(b).color : ""; })(),
+          stored: localStorage.getItem("dp-cols-demo-table"),
+        };`,
+      );
+      expect(afterReset.ok).toBe(true);
+      expect(afterReset.menuOpen).toBe(true);
+      expect(afterReset.hasName).toBe(true);
+      expect(afterReset.hasCreated).toBe(false);
+      expect(afterReset.nameChecked).toBe(true);
+      expect(afterReset.createdChecked).toBe(false);
+      expect(String(afterReset.resetColor)).not.toBe("rgb(100, 116, 139)");
+      expect(String(afterReset.stored)).toContain("createdAt");
+      expect(String(afterReset.stored)).not.toContain('"name"');
+
+      await page.mouse.click(2, 2);
+      const closed = await ev<boolean>(
+        t,
+        `return await D.until(() => !document.querySelector('[data-testid="dp-column-menu"]'));`,
+      );
+      expect(closed).toBe(true);
+    },
+    { ...DOCS_BROWSER_CONFIG, timeout: 120_000 },
+  );
+
+  it(
     "批量条：选中行后出现在表格下方，表格位置不动；locked 行不可选",
     async (t) => {
       if (!t?.browser?.goto) return;
