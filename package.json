@@ -23,7 +23,8 @@
     "./mobile/layout": "./src/mobile/layout/mod.ts",
     "./mobile/navigation": "./src/mobile/navigation/mod.ts",
     "./mobile/charts": "./src/mobile/charts/mod.ts",
-    "./plugin": "./plugin.ts"
+    "./plugin": "./plugin.ts",
+    "./icons/*": "./src/shared/basic/icons/*"
   },
   "scripts": {
     "test": "deno test -A tests/docs-sidebar-reconcile.test.ts",

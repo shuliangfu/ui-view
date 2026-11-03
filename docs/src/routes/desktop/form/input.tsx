@@ -7,13 +7,13 @@ import {
   CodeBlock,
   Form,
   FormItem,
-  IconLock,
-  IconUser,
   Link,
   // Input,
   Paragraph,
   Title,
 } from "@dreamer/ui-view";
+import { IconLock } from "@dreamer/ui-view/icons/Lock.tsx";
+import { IconUser } from "@dreamer/ui-view/icons/User.tsx";
 import { Input } from "@dreamer/ui-view/form";
 
 import { createSignal } from "@dreamer/view";
@@ -620,7 +620,9 @@ export default function FormInput() {
             </Form>
             <div class="w-full">
               <CodeBlock
-                code={`import { Input, IconUser, IconLock } from "@dreamer/ui-view";
+                code={`import { Input } from "@dreamer/ui-view";
+import { IconUser } from "@dreamer/ui-view/icons/User.tsx";
+import { IconLock } from "@dreamer/ui-view/icons/Lock.tsx";
 
 <Input
   type="email"

@@ -5,12 +5,12 @@
 import { TabBar } from "@dreamer/ui-view/mobile";
 import {
   CodeBlock,
-  IconHome,
-  IconInbox,
-  IconUser,
   Paragraph,
   Title,
 } from "@dreamer/ui-view";
+import { IconHome } from "@dreamer/ui-view/icons/Home.tsx";
+import { IconInbox } from "@dreamer/ui-view/icons/Inbox.tsx";
+import { IconUser } from "@dreamer/ui-view/icons/User.tsx";
 import { createSignal } from "@dreamer/view";
 import {
   DocsApiTable,
@@ -106,7 +106,9 @@ const activeKey = createSignal("home");
  * 「图标 + 角标」示例：与预览一致。
  */
 const iconBadgeExampleCode = `import { TabBar } from "@dreamer/ui-view/mobile";
-import { IconHome, IconInbox, IconUser } from "@dreamer/ui-view";
+import { IconHome } from "@dreamer/ui-view/icons/Home.tsx";
+import { IconInbox } from "@dreamer/ui-view/icons/Inbox.tsx";
+import { IconUser } from "@dreamer/ui-view/icons/User.tsx";
 import { createSignal } from "@dreamer/view";
 
 const activeKey = createSignal("home");

@@ -13,9 +13,7 @@
     "@dreamer/runtime-adapter": "jsr:@dreamer/runtime-adapter@^1.0.18",
     "@dreamer/plugins": "jsr:@dreamer/plugins@^1.1.5",
     "@dreamer/theme": "jsr:@dreamer/theme@^1.0.1",
-
     "@dreamer/view": "jsr:@dreamer/view@^2.0.2",
-
     "@dreamer/ui-view": "../src/mod.ts",
     "@internal/ui-view-flag-img": "../src/shared/basic/icons/flags/FlagImg.tsx",
     "@dreamer/ui-view/basic": "../src/desktop/basic/mod.ts",
@@ -40,7 +38,8 @@
     "@dreamer/markdown/types": "../../markdown/src/types.ts",
     "postcss": "npm:postcss@8.4.39",
     "tailwindcss": "npm:tailwindcss@4.1.18",
-    "@tailwindcss/postcss": "npm:@tailwindcss/postcss@4.1.18"
+    "@tailwindcss/postcss": "npm:@tailwindcss/postcss@4.1.18",
+    "@dreamer/ui-view/icons/": "../src/shared/basic/icons/"
   },
   "compilerOptions": {
     "jsx": "react-jsx",

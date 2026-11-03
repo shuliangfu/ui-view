@@ -7,16 +7,16 @@
 
 import {
   Divider,
-  IconBrandGithub,
-  IconExternalLink,
-  IconMenu,
-  IconMoreHorizontal,
   Link,
   MessageContainer,
   NavBar,
   NotificationContainer,
   ToastContainer,
 } from "@dreamer/ui-view";
+import { IconBrandGithub } from "@dreamer/ui-view/icons/brands/GitHub.tsx";
+import { IconExternalLink } from "@dreamer/ui-view/icons/ExternalLink.tsx";
+import { IconMenu } from "@dreamer/ui-view/icons/Menu.tsx";
+import { IconMoreHorizontal } from "@dreamer/ui-view/icons/MoreHorizontal.tsx";
 import {
   createEffect,
   createSignal,
