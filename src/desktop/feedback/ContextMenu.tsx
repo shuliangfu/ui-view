@@ -1,17 +1,22 @@
 /**
  * ContextMenu 右键菜单（View）。
- * 在触发区 `contextmenu` 时弹出菜单；Portal 挂 body。
+ * 在触发区 `contextmenu` 时弹出；经 {@link Portal} 挂 `document.body` + `fixed` + 行内高 z-index，
+ * 避免祖先 `overflow`／层叠上下文裁切（docs `main` 为 `overflow-y-auto`）。
+ * 旧实现用无效 Tailwind `z-400`（未进 CSS）+ 命令式 `createPortal` 时机不稳，菜单常落在触发区内被裁切。
  */
 
 import {
   createEffect,
-  createPortal,
   createSignal,
+  Portal,
+  Show,
   type JSXRenderable,
   onCleanup,
 } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
-import { getBrowserBodyPortalHost } from "../../shared/feedback/portal-host.ts";
+
+/** 高于文档站 sticky 顶栏／main `z-10`、与 Dropdown 浮层同级 */
+const CONTEXT_MENU_Z_INDEX = "99999";
 
 export interface ContextMenuItem {
   key: string;
@@ -52,70 +57,80 @@ export function ContextMenu(props: ContextMenuProps): JSXRenderable {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") close();
     };
-    globalThis.addEventListener?.("mousedown", close, true);
+    // 下一宏任务再听 mousedown，避免本次右键事件链立刻关掉
+    const t = globalThis.setTimeout?.(() => {
+      globalThis.addEventListener?.("mousedown", close, true);
+    }, 0);
     globalThis.addEventListener?.("keydown", onKey);
     onCleanup(() => {
+      if (t != null) globalThis.clearTimeout?.(t);
       globalThis.removeEventListener?.("mousedown", close, true);
       globalThis.removeEventListener?.("keydown", onKey);
     });
   });
 
-  const menu = () => {
-    if (!open.value) return null;
-    const { x, y } = pos.value;
-    return (
-      <div
-        class={twMerge(
-          "fixed z-400 min-w-40 rounded-lg border border-slate-200 dark:border-slate-600",
-          "bg-white dark:bg-slate-800 py-1 shadow-xl text-sm",
-          menuClass,
-        )}
-        style={{ left: `${x}px`, top: `${y}px` }}
-        role="menu"
-        onMouseDown={(e: Event) => e.stopPropagation()}
-      >
-        {items.map((it) =>
-          it.divider
-            ? (
-              <div
-                key={it.key}
-                class="my-1 border-t border-slate-100 dark:border-slate-700"
-                role="separator"
-              />
-            )
-            : (
-              <button
-                type="button"
-                key={it.key}
-                role="menuitem"
-                disabled={it.disabled}
-                class={twMerge(
-                  "w-full text-left px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-40",
-                  it.danger && "text-red-600 dark:text-red-400",
-                )}
-                onClick={() => {
-                  if (it.disabled) return;
-                  it.onClick?.();
-                  open.value = false;
-                }}
-              >
-                {it.label}
-              </button>
-            )
-        )}
-      </div>
-    );
-  };
+  const menu = (
+    <div
+      class={twMerge(
+        "fixed min-w-40 rounded-lg border border-slate-200 dark:border-slate-600",
+        "bg-white dark:bg-slate-800 py-1 shadow-xl text-sm",
+        menuClass,
+      )}
+      style={() => ({
+        left: `${pos.value.x}px`,
+        top: `${pos.value.y}px`,
+        zIndex: CONTEXT_MENU_Z_INDEX,
+      })}
+      role="menu"
+      onMouseDown={(e: Event) => e.stopPropagation()}
+    >
+      {items.map((it) =>
+        it.divider
+          ? (
+            <div
+              key={it.key}
+              class="my-1 border-t border-slate-100 dark:border-slate-700"
+              role="separator"
+            />
+          )
+          : (
+            <button
+              type="button"
+              key={it.key}
+              role="menuitem"
+              disabled={it.disabled}
+              class={twMerge(
+                "w-full text-left px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-40",
+                it.danger && "text-red-600 dark:text-red-400",
+              )}
+              onClick={() => {
+                if (it.disabled) return;
+                it.onClick?.();
+                open.value = false;
+              }}
+            >
+              {it.label}
+            </button>
+          )
+      )}
+    </div>
+  );
 
-  const host = getBrowserBodyPortalHost();
-  if (host) {
-    createPortal(() => menu(), host);
-  }
+  const body = typeof globalThis.document !== "undefined"
+    ? globalThis.document.body
+    : null;
 
   return (
-    <div class={twMerge("contents", className)} onContextMenu={(e: Event) => onContext(e as MouseEvent)}>
+    <div
+      class={twMerge("contents", className)}
+      onContextMenu={(e: Event) => onContext(e as MouseEvent)}
+    >
       {children}
-      {!host ? () => menu() : null}
+      <Show when={() => open.value}>
+        {body
+          ? <Portal mount={body}>{menu}</Portal>
+          : menu}
+      </Show>
     </div>
   );
 }
