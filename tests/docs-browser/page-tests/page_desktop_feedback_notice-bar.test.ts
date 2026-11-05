@@ -116,20 +116,23 @@ describe("文档页 E2E：/desktop/feedback/notice-bar（NoticeBar 通知栏）"
     if (!before.hasBar || !before.hasClose) {
       throw new Error(`NoticeBar 示例缺少可关闭条: ${JSON.stringify(before)}`);
     }
+    // 文档可能有多条 closable，全部点掉
     await t.browser.evaluate(() => {
-      const close = document.querySelector(
-        "[data-dreamer-notice-bar-close]",
-      ) as (HTMLButtonElement & { __onclick?: (ev: Event) => void }) | null;
-      close?.scrollIntoView({ block: "center" });
-      if (close && typeof close.__onclick === "function") {
-        close.__onclick(
-          new MouseEvent("click", { bubbles: true, cancelable: true }),
-        );
-      } else {
-        close?.click();
+      const closes = Array.from(
+        document.querySelectorAll("[data-dreamer-notice-bar-close]"),
+      ) as (HTMLButtonElement & { __onclick?: (ev: Event) => void })[];
+      for (const close of closes) {
+        close.scrollIntoView({ block: "center" });
+        if (typeof close.__onclick === "function") {
+          close.__onclick(
+            new MouseEvent("click", { bubbles: true, cancelable: true }),
+          );
+        } else {
+          close.click();
+        }
       }
     });
-    await sharedEnv.delay(250);
+    await sharedEnv.delay(300);
     const after = await t.browser.evaluate(() => {
       const bars = document.querySelectorAll("[data-dreamer-notice-bar]");
       const closes = document.querySelectorAll(

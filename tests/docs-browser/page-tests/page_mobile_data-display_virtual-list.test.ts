@@ -142,7 +142,7 @@ describe("文档页 E2E：/mobile/data-display/virtual-list（VirtualList 虚拟
       const total = Number(spacer.getAttribute("data-total") || 0);
       const end = Number(spacer.getAttribute("data-end") || 0);
       const text = list.innerText || "";
-      const hasLast = new RegExp(`Item\s+${total}\b`).test(text);
+      const hasLast = new RegExp("Item\\s+" + total + "\\b").test(text);
       const nearEnd = end >= total - 8;
       const maxScroll = list.scrollHeight - list.clientHeight;
       const atBottom = Math.abs(list.scrollTop - maxScroll) < 4;
