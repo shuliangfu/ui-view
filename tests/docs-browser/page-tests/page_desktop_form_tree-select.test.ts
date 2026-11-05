@@ -29,6 +29,9 @@ describe("文档页 E2E：/desktop/form/tree-select（TreeSelect 树选择）", 
     if (!t?.browser?.goto) return;
     await sharedEnv.goto(t, DOC_PATH);
     await sharedEnv.waitDocMainReady(t);
+    await t.browser.evaluate(() => location.reload());
+    await sharedEnv.waitDocMainReady(t);
+    await sharedEnv.delay(100);
     const opened = await t.browser.evaluate(() => {
       const btn = document.querySelector(
         'main button[aria-haspopup="listbox"]:not([disabled]), main button[aria-haspopup]:not([disabled])',

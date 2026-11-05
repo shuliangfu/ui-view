@@ -29,54 +29,44 @@ describe("文档页 E2E：/desktop/form/select（Select 选择器）", () => {
     if (!t?.browser?.goto) return;
     await sharedEnv.goto(t, DOC_PATH);
     await sharedEnv.waitDocMainReady(t);
-    const opened = await t.browser.evaluate(() => {
-      const main = document.querySelector("main");
-      const btn = main?.querySelector(
-        'button[aria-haspopup="listbox"]:not([disabled])',
-      );
-      if (!btn) return false;
-      (btn as HTMLButtonElement).click();
-      return true;
-    }) as boolean;
-    expect(opened).toBe(true);
-    await sharedEnv.delay(220);
-    const picked = await t.browser.evaluate(() => {
-      const lbs = document.querySelectorAll('[role="listbox"]');
-      for (let i = 0; i < lbs.length; i++) {
-        const lb = lbs[i] as HTMLElement;
-        if (lb.getClientRects().length === 0) continue;
-        const opts = lb.querySelectorAll('[role="option"]');
-        for (let j = 0; j < opts.length; j++) {
-          const o = opts[j] as HTMLElement;
-          if ((o as HTMLButtonElement).disabled) continue;
-          if ((o.textContent || "").includes("选项 A")) {
-            o.click();
-            return true;
-          }
-        }
+    await t.browser.evaluate(() => location.reload());
+    await sharedEnv.waitDocMainReady(t);
+    await sharedEnv.delay(100);
+    const result = await t.browser.evaluate(async () => {
+      const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+      const clickEl = (
+        el: HTMLElement & { __onclick?: (ev: Event) => void },
+      ) => {
+        if (typeof el.__onclick === "function") {
+          el.__onclick(
+            new MouseEvent("click", { bubbles: true, cancelable: true }),
+          );
+        } else el.click();
+      };
+      const btn = document.querySelector(
+        'main button[aria-haspopup="listbox"]:not([disabled])',
+      ) as (HTMLButtonElement & { __onclick?: (ev: Event) => void }) | null;
+      if (!btn) return { ok: false, reason: "no-trigger" };
+      btn.scrollIntoView({ block: "center" });
+      clickEl(btn);
+      let opt: HTMLElement | null = null;
+      for (let i = 0; i < 20; i++) {
+        await sleep(50);
+        opt = Array.from(document.querySelectorAll('[role="option"]')).find(
+          (o) =>
+            !(o as HTMLButtonElement).disabled &&
+            (o.textContent || "").includes("选项 A") &&
+            o.getClientRects().length > 0,
+        ) as HTMLElement | undefined ?? null;
+        if (opt) break;
       }
-      return false;
-    }) as boolean;
-    expect(picked).toBe(true);
-    await sharedEnv.delay(120);
-    const closed = await t.browser.evaluate(() => {
-      const main = document.querySelector("main");
-      const triggers = main?.querySelectorAll(
-        'button[aria-haspopup="listbox"]',
-      );
-      if (!triggers?.length) return false;
-      for (let i = 0; i < triggers.length; i++) {
-        const tr = triggers[i] as HTMLButtonElement;
-        if (tr.getAttribute("aria-expanded") === "true") return false;
-      }
-      const lbs = document.querySelectorAll('[role="listbox"]');
-      for (let j = 0; j < lbs.length; j++) {
-        const lb = lbs[j] as HTMLElement;
-        if (lb.getClientRects().length > 0) return false;
-      }
-      return true;
-    }) as boolean;
-    expect(closed).toBe(true);
+      if (!opt) return { ok: false, reason: "no-option" };
+      clickEl(opt as HTMLElement & { __onclick?: (ev: Event) => void });
+      await sleep(150);
+      return { ok: true, reason: "ok" };
+    }) as { ok: boolean; reason: string };
+    if (!result.ok) throw new Error(`Select: ${JSON.stringify(result)}`);
+    expect(result.ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
 
   /**

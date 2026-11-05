@@ -1,0 +1,7 @@
+{
+  "name": "@dreamer/ui-view-docs",
+  "private": true,
+  "scripts": {
+    "dev": "deno run -A src/main.ts"
+  }
+}

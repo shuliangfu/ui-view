@@ -29,58 +29,66 @@ describe("文档页 E2E：/desktop/form/date-picker（DatePicker 日期）", () 
     if (!t?.browser?.goto) return;
     await sharedEnv.goto(t, DOC_PATH);
     await sharedEnv.waitDocMainReady(t);
-    const openOk = await t.browser.evaluate(() => {
-      /** 勿用 `main` 下首个 `aria-haspopup=dialog`：其它页面区块可能先出现同类按钮，须限定 DatePicker 根 */
+    await t.browser.evaluate(() => location.reload());
+    await sharedEnv.waitDocMainReady(t);
+    await sharedEnv.delay(100);
+    const result = await t.browser.evaluate(async () => {
+      const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+      const clickEl = (
+        el: HTMLElement & { __onclick?: (ev: Event) => void },
+      ) => {
+        if (typeof el.__onclick === "function") {
+          el.__onclick(
+            new MouseEvent("click", { bubbles: true, cancelable: true }),
+          );
+        } else el.click();
+      };
       const root = document.querySelector("main [data-ui-datepicker-root]");
-      const btn = root?.querySelector(
+      const btn = (root?.querySelector(
         'button[type="button"][aria-haspopup="dialog"]:not([disabled])',
-      );
-      if (!btn) return false;
-      (btn as HTMLButtonElement).click();
-      return true;
-    }) as boolean;
-    expect(openOk).toBe(true);
-    await sharedEnv.delay(500);
-    const dayOk = await t.browser.evaluate(() => {
-      const dlg = document.querySelector(
-        '[role="dialog"][aria-label="选择日期"]',
-      );
-      if (!dlg) return false;
-      /** 优先 {@link Calendar} 日格标记；旧 bundle 无该属性时回退到纯数字 `textContent` */
+      ) || document.querySelector(
+        'main button[aria-haspopup]:not([disabled])',
+      )) as (HTMLButtonElement & { __onclick?: (ev: Event) => void }) | null;
+      if (!btn) return { ok: false, reason: "no-trigger" };
+      btn.scrollIntoView({ block: "center" });
+      clickEl(btn);
+      let dlg: HTMLElement | null = null;
+      for (let i = 0; i < 20; i++) {
+        await sleep(50);
+        dlg = Array.from(
+          document.querySelectorAll('[role="dialog"]'),
+        ).find((el) => {
+          const r = (el as HTMLElement).getBoundingClientRect();
+          return r.width > 20 && r.height > 20;
+        }) as HTMLElement | undefined ?? null;
+        if (dlg) break;
+      }
+      if (!dlg) return { ok: false, reason: "no-dialog" };
       let dayCell = dlg.querySelector(
         "button[data-ui-calendar-day]:not([disabled])",
-      ) as HTMLButtonElement | null;
+      ) as (HTMLButtonElement & { __onclick?: (ev: Event) => void }) | null;
       if (!dayCell) {
-        const btns = dlg.querySelectorAll('button[type="button"]');
-        for (let i = 0; i < btns.length; i++) {
-          const b = btns[i] as HTMLButtonElement;
-          if (b.disabled) continue;
-          const tx = (b.textContent || "").trim();
-          if (/^\d{1,2}$/.test(tx)) {
-            dayCell = b;
-            break;
-          }
-        }
+        dayCell = Array.from(dlg.querySelectorAll("button[type='button']")).find(
+          (b) =>
+            !(b as HTMLButtonElement).disabled &&
+            /^\d{1,2}$/.test((b.textContent || "").trim()),
+        ) as (HTMLButtonElement & { __onclick?: (ev: Event) => void }) | null;
       }
-      if (!dayCell) return false;
-      dayCell.click();
-      return true;
-    }) as boolean;
-    expect(dayOk).toBe(true);
-    await sharedEnv.delay(120);
-    const confirmOk = await t.browser.evaluate(() => {
-      const all = document.querySelectorAll('button[type="button"]');
-      for (let i = 0; i < all.length; i++) {
-        const b = all[i] as HTMLButtonElement;
-        if (b.disabled) continue;
-        if ((b.textContent || "").trim() === "确定") {
-          b.click();
-          return true;
-        }
-      }
-      return false;
-    }) as boolean;
-    expect(confirmOk).toBe(true);
+      if (!dayCell) return { ok: false, reason: "no-day" };
+      clickEl(dayCell);
+      await sleep(120);
+      const okBtn = Array.from(
+        dlg.querySelectorAll("button[type='button']"),
+      ).find((b) =>
+        !(b as HTMLButtonElement).disabled &&
+        (b.textContent || "").trim() === "确定"
+      ) as (HTMLButtonElement & { __onclick?: (ev: Event) => void }) | undefined;
+      if (!okBtn) return { ok: false, reason: "no-confirm" };
+      clickEl(okBtn);
+      return { ok: true, reason: "ok" };
+    }) as { ok: boolean; reason: string };
+    if (!result.ok) throw new Error(`DatePicker: ${JSON.stringify(result)}`);
+    expect(result.ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
 
   /**

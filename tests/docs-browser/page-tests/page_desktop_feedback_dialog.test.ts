@@ -29,6 +29,9 @@ describe("文档页 E2E：/desktop/feedback/dialog（Dialog 对话框）", () =>
     if (!t?.browser?.goto) return;
     await sharedEnv.goto(t, DOC_PATH);
     await sharedEnv.waitDocMainReady(t);
+    await t.browser.evaluate(() => location.reload());
+    await sharedEnv.waitDocMainReady(t);
+    await sharedEnv.delay(100);
     const openOk = await t.browser.evaluate(() => {
       const btns = Array.from(
         document.querySelectorAll("main button[type='button']"),

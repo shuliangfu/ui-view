@@ -29,6 +29,9 @@ describe("文档页 E2E：/desktop/form/time-picker（TimePicker 时间）", () 
     if (!t?.browser?.goto) return;
     await sharedEnv.goto(t, DOC_PATH);
     await sharedEnv.waitDocMainReady(t);
+    await t.browser.evaluate(() => location.reload());
+    await sharedEnv.waitDocMainReady(t);
+    await sharedEnv.delay(100);
     const openOk = await t.browser.evaluate(() => {
       const root = document.querySelector("main [data-ui-timepicker-root]");
       const btn = (root?.querySelector(

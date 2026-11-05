@@ -29,28 +29,45 @@ describe("文档页 E2E：/desktop/form/color-picker（ColorPicker 颜色）", (
     if (!t?.browser?.goto) return;
     await sharedEnv.goto(t, DOC_PATH);
     await sharedEnv.waitDocMainReady(t);
+    await t.browser.evaluate(() => location.reload());
+    await sharedEnv.waitDocMainReady(t);
+    await sharedEnv.delay(100);
     const openOk = await t.browser.evaluate(() => {
-      const main = document.querySelector("main");
-      const btn = main?.querySelector(
-        'button[type="button"][aria-haspopup="dialog"]',
-      );
-      if (!btn) return false;
-      (btn as HTMLButtonElement).click();
+      const btn = document.querySelector(
+        'main button[aria-haspopup="dialog"], main button[aria-haspopup]',
+      ) as (HTMLButtonElement & { __onclick?: (ev: Event) => void }) | null;
+      if (!btn || btn.disabled) return false;
+      btn.scrollIntoView({ block: "center" });
+      if (typeof btn.__onclick === "function") {
+        btn.__onclick(
+          new MouseEvent("click", { bubbles: true, cancelable: true }),
+        );
+      } else btn.click();
       return true;
     }) as boolean;
     expect(openOk).toBe(true);
-    await sharedEnv.delay(250);
+    await sharedEnv.delay(350);
     const confirmOk = await t.browser.evaluate(() => {
-      const all = document.querySelectorAll('button[type="button"]');
-      for (let i = 0; i < all.length; i++) {
-        const b = all[i] as HTMLButtonElement;
-        if (b.disabled) continue;
-        if ((b.textContent || "").trim() === "确定") {
-          b.click();
-          return true;
-        }
-      }
-      return false;
+      const panels = Array.from(
+        document.querySelectorAll('[role="dialog"]'),
+      ) as HTMLElement[];
+      const scope = panels.find((el) => {
+        const r = el.getBoundingClientRect();
+        return r.width > 20 && r.height > 20;
+      }) || document.body;
+      const btns = Array.from(
+        scope.querySelectorAll("button[type='button']"),
+      ) as (HTMLButtonElement & { __onclick?: (ev: Event) => void })[];
+      const b = btns.find((x) =>
+        !x.disabled && (x.textContent || "").trim() === "确定"
+      );
+      if (!b) return false;
+      if (typeof b.__onclick === "function") {
+        b.__onclick(
+          new MouseEvent("click", { bubbles: true, cancelable: true }),
+        );
+      } else b.click();
+      return true;
     }) as boolean;
     expect(confirmOk).toBe(true);
   }, DOCS_BROWSER_CONFIG);

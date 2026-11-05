@@ -3,7 +3,7 @@
  * @fileoverview DataPanel 服务端渲染：首帧 HTML 与水合前后一致所依赖的结构（布尔属性、转义、能力开关、文案）。
  */
 import { describe, expect, it } from "@dreamer/test";
-import { renderToString } from "jsr:@dreamer/view@^2.2.0/ssr";
+import { renderToString } from "@dreamer/view/ssr";
 import {
   DATA_PANEL_CSS,
   DataPanel,
