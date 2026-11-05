@@ -457,6 +457,25 @@ describe("文档页 E2E：/desktop/layout/tabs（Tabs 标签页）", () => {
     }) as boolean;
     expect(ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
+
+  /**
+   * UI·示例区主内容可见且有尺寸。
+   */
+  it("UI·示例区可见有尺寸", async (t) => {
+    if (!t?.browser?.goto) return;
+    await sharedEnv.goto(t, DOC_PATH);
+    await sharedEnv.waitDocMainReady(t);
+    await sharedEnv.delay(120);
+    const got = await t.browser.evaluate(() => {
+      const main = document.querySelector("main") as HTMLElement | null;
+      if (!main) return { ok: false };
+      const r = main.getBoundingClientRect();
+      const text = (main.innerText || "").trim();
+      return { ok: r.width > 80 && r.height > 80 && text.length > 20 };
+    }) as { ok: boolean };
+    expect(got.ok).toBe(true);
+  }, DOCS_BROWSER_CONFIG);
+
 });
 
 /** 本文件内：点击第二个 tab */
