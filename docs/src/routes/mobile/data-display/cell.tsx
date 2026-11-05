@@ -1,111 +1,50 @@
 /**
- * Cell / CellGroup 文档页。路由: /mobile/data-display/cell
+ * Cell 文档页。路由: /mobile/data-display/cell
  */
-
 import { createSignal } from "@dreamer/view";
-import { CodeBlock, Paragraph, Title } from "@dreamer/ui-view";
 import { Cell, CellGroup, Switch } from "@dreamer/ui-view/mobile";
-import {
-  DocsApiTable,
-  type DocsApiTableRow,
-} from "../../../components/DocsApiTable.tsx";
+import { CodeBlock, Paragraph, Title } from "@dreamer/ui-view";
+import { DocsApiTable, type DocsApiTableRow } from "../../../components/DocsApiTable.tsx";
 import { MobileDocDemo } from "../../../components/MobileDocDemo.tsx";
 
 const API: DocsApiTableRow[] = [
-  { name: "title", type: "unknown", default: "-", description: "标题" },
-  { name: "description", type: "unknown", default: "-", description: "描述" },
-  { name: "extra", type: "unknown", default: "-", description: "右侧额外" },
-  { name: "arrow", type: "boolean", default: "false", description: "箭头（可点时请配 onClick）" },
-  { name: "onClick", type: "() => void", default: "-", description: "整行点击" },
-  { name: "disabled", type: "boolean", default: "false", description: "禁用" },
+  { name: "arrow / onClick / disabled / href", type: "—", default: "-", description: "见桌面 API；行为一致" },
 ];
-
-const importCode = `import { createSignal } from "@dreamer/view";
-import { Cell, CellGroup, Switch } from "@dreamer/ui-view/mobile";
-
-const tip = createSignal("");
-const notifyOn = createSignal(true);
-
-<CellGroup title="账户">
-  <Cell title="资料" arrow extra="详情" onClick={() => (tip.value = "进入资料")} />
-  <Cell
-    title="安全"
-    description="密码与设备"
-    arrow
-    onClick={() => (tip.value = "进入安全设置")}
-  />
-  <Cell
-    title="通知"
-    extra={<Switch checked={notifyOn} />}
-  />
-</CellGroup>`;
+const importCode = `import { Cell, CellGroup } from "@dreamer/ui-view/mobile";`;
 
 export default function Page() {
   const tip = createSignal("");
-  const notifyOn = createSignal(true);
+  const on = createSignal(true);
   return (
     <div class="space-y-8">
       <div>
-        <Title level={1}>Cell / CellGroup</Title>
-        <Paragraph>
-          移动端列表行：箭头行须配 onClick；开关放在 extra 可交互。
-        </Paragraph>
+        <Title level={1}>Cell</Title>
+        <Paragraph>移动列表行：详情可点、Switch、禁用、href。</Paragraph>
       </div>
-      <section class="space-y-3">
-        <Title level={2}>引入</Title>
-        <CodeBlock code={importCode} language="tsx" />
-      </section>
-      <section class="space-y-3">
+      <section class="space-y-3"><Title level={2}>引入</Title><CodeBlock code={importCode} language="tsx" /></section>
+      <section class="space-y-6">
         <Title level={2}>示例</Title>
-        <MobileDocDemo>
-          <div class="space-y-3">
-            <CellGroup title="账户">
-              <Cell
-                title="资料"
-                arrow
-                extra="详情"
-                onClick={() => {
-                  tip.value = "已打开资料";
-                }}
-              />
-              <Cell
-                title="安全"
-                description="密码与设备"
-                arrow
-                onClick={() => {
-                  tip.value = "已打开安全设置";
-                }}
-              />
-              <Cell
-                title="通知"
-                description="推送开关"
-                extra={
-                  <Switch
-                    checked={notifyOn}
-                    onChange={(v: boolean) => {
-                      notifyOn.value = v;
-                      tip.value = v ? "通知已开启" : "通知已关闭";
-                    }}
-                  />
-                }
-              />
-              <Cell title="注销（禁用示意）" arrow extra="不可用" disabled />
+        <div class="space-y-2">
+          <Title level={3}>可点 + Switch + 禁用</Title>
+          <MobileDocDemo class="p-3 space-y-2">
+            <CellGroup title="设置">
+              <Cell title="账号" arrow extra="详情" onClick={() => (tip.value = "已打开账号详情")} />
+              <Cell title="通知" description="推送" extra={<Switch checked={on} />} />
+              <Cell title="注销" arrow disabled extra="不可用" />
             </CellGroup>
-            {() =>
-              tip.value
-                ? (
-                  <p class="text-sm text-blue-600 dark:text-blue-400 px-1" role="status">
-                    {tip.value}
-                  </p>
-                )
-                : null}
-          </div>
-        </MobileDocDemo>
+            {() => tip.value ? <p class="text-xs text-blue-600" role="status">{tip.value}</p> : null}
+          </MobileDocDemo>
+        </div>
+        <div class="space-y-2">
+          <Title level={3}>href 链接行</Title>
+          <MobileDocDemo class="p-3">
+            <CellGroup>
+              <Cell title="帮助" arrow href="https://example.com/help" />
+            </CellGroup>
+          </MobileDocDemo>
+        </div>
       </section>
-      <section class="space-y-3">
-        <Title level={2}>API</Title>
-        <DocsApiTable rows={API} />
-      </section>
+      <section class="space-y-3"><Title level={2}>API</Title><DocsApiTable rows={API} /></section>
     </div>
   );
 }

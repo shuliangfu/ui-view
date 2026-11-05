@@ -2,6 +2,7 @@
  * FloatButton 文档页。路由: /desktop/basic/float-button
  */
 
+import { createSignal } from "@dreamer/view";
 import { FloatButton } from "@dreamer/ui-view";
 import { CodeBlock, Paragraph, Title } from "@dreamer/ui-view";
 import {
@@ -12,8 +13,13 @@ import {
 const API: DocsApiTableRow[] = [
   { name: "icon", type: "unknown", default: "+", description: "主按钮内容" },
   { name: "items", type: "FloatButtonItem[]", default: "-", description: "展开子项" },
-  { name: "placement", type: "bottom-right | …", default: "bottom-right", description: "角落位置" },
-  { name: "position", type: '"fixed" | "absolute"', default: "fixed", description: "fixed=视口；absolute=相对最近定位祖先（文档示例用）" },
+  { name: "shape", type: "circle | square", default: "circle", description: "形状（正圆／正方）" },
+  { name: "placement", type: "bottom-right | …", default: "bottom-right", description: "角落" },
+  { name: "position", type: '"fixed" | "absolute"', default: "fixed", description: "fixed=视口；文档示例用 absolute" },
+  { name: "badge", type: "number | boolean", default: "-", description: "徽标" },
+  { name: "open", type: "boolean", default: "-", description: "受控展开" },
+  { name: "onOpenChange", type: "(open)=>void", default: "-", description: "展开变化" },
+  { name: "offset", type: "number", default: "24", description: "距边 px" },
 ];
 
 const importCode = `import { FloatButton } from "@dreamer/ui-view";
@@ -23,36 +29,104 @@ const importCode = `import { FloatButton } from "@dreamer/ui-view";
   badge={3}
   position="absolute"
   items={[
-    { key: "file", icon: "📄", "aria-label": "文件", onClick: () => {} },
-    { key: "img", icon: "🖼️", "aria-label": "图片", onClick: () => {} },
+    { key: "file", icon: "📄", "aria-label": "文件" },
+    { key: "img", icon: "🖼️", "aria-label": "图片" },
   ]}
 />`;
 
+function DemoBox(props: { label: string; children?: unknown }) {
+  return (
+    <div class="relative h-44 overflow-visible rounded-lg bg-slate-50 dark:bg-slate-950/60 border border-dashed border-slate-300 dark:border-slate-600">
+      <p class="absolute left-3 top-3 text-xs text-slate-500">{props.label}</p>
+      {props.children}
+    </div>
+  );
+}
+
 export default function Page() {
+  const open = createSignal(false);
   return (
     <div class="space-y-8">
       <div>
         <Title level={1}>FloatButton</Title>
-        <Paragraph>视口角悬浮按钮，可展开子操作。文档示例用 position=&quot;absolute&quot; 落在示意框内。</Paragraph>
+        <Paragraph>
+          角悬浮按钮，可展开子操作。文档示例 position=&quot;absolute&quot; 落在示意框内；产品默认 fixed 视口。
+        </Paragraph>
       </div>
       <section class="space-y-3">
         <Title level={2}>引入</Title>
         <CodeBlock code={importCode} language="tsx" />
       </section>
-      <section class="space-y-3">
+      <section class="space-y-6">
         <Title level={2}>示例</Title>
-        <div class="rounded-xl border border-slate-200 dark:border-slate-700 p-4 bg-white dark:bg-slate-900">
-          <div class="relative h-56 overflow-visible rounded-lg bg-slate-50 dark:bg-slate-950/60 border border-dashed border-slate-300 dark:border-slate-600">
-            <p class="absolute left-3 top-3 text-xs text-slate-500">示意容器（非视口）</p>
-            <FloatButton
-              position="absolute"
-              aria-label="新建"
-              badge={3}
-              items={[
-                { key: "file", icon: "📄", "aria-label": "文件" },
-                { key: "img", icon: "🖼️", "aria-label": "图片" },
-              ]}
-            />
+
+        <div class="space-y-2">
+          <Title level={3}>圆形 + 徽标 + 子项</Title>
+          <div class="rounded-xl border border-slate-200 dark:border-slate-700 p-4 bg-white dark:bg-slate-900">
+            <DemoBox label="circle · badge · items">
+              <FloatButton
+                position="absolute"
+                shape="circle"
+                aria-label="新建"
+                badge={3}
+                items={[
+                  { key: "file", icon: "📄", "aria-label": "文件" },
+                  { key: "img", icon: "🖼️", "aria-label": "图片" },
+                ]}
+              />
+            </DemoBox>
+          </div>
+        </div>
+
+        <div class="space-y-2">
+          <Title level={3}>方形 shape=square</Title>
+          <div class="rounded-xl border border-slate-200 dark:border-slate-700 p-4 bg-white dark:bg-slate-900">
+            <DemoBox label="square">
+              <FloatButton
+                position="absolute"
+                shape="square"
+                aria-label="操作"
+                icon="＋"
+              />
+            </DemoBox>
+          </div>
+        </div>
+
+        <div class="space-y-2">
+          <Title level={3}>placement 四角</Title>
+          <div class="rounded-xl border border-slate-200 dark:border-slate-700 p-4 bg-white dark:bg-slate-900 grid sm:grid-cols-2 gap-3">
+            {(["bottom-right", "bottom-left", "top-right", "top-left"] as const).map((p) => (
+              <DemoBox label={p}>
+                <FloatButton
+                  position="absolute"
+                  placement={p}
+                  offset={12}
+                  aria-label={p}
+                  icon="·"
+                />
+              </DemoBox>
+            ))}
+          </div>
+        </div>
+
+        <div class="space-y-2">
+          <Title level={3}>受控 open</Title>
+          <div class="rounded-xl border border-slate-200 dark:border-slate-700 p-4 bg-white dark:bg-slate-900 space-y-2">
+            {() => (
+              <p class="text-xs text-slate-500">展开：{String(open.value)}</p>
+            )}
+            <DemoBox label="controlled open">
+              <FloatButton
+                position="absolute"
+                aria-label="受控"
+                open={open.value}
+                onOpenChange={(v) => (open.value = v)}
+                items={[
+                  { key: "a", icon: "A", "aria-label": "A" },
+                  { key: "b", icon: "B", "aria-label": "B" },
+                ]}
+              />
+            </DemoBox>
           </div>
         </div>
       </section>

@@ -14,37 +14,58 @@ import { MobileDocDemo } from "../../../components/MobileDocDemo.tsx";
 const API: DocsApiTableRow[] = [
   { name: "open", type: "ControlledOpenInput", default: "-", description: "是否显示" },
   { name: "onClick", type: "() => void", default: "-", description: "点击遮罩" },
-  { name: "as", type: "'div' | 'button'", default: "div", description: "根节点标签" },
+  { name: "clickable", type: "boolean", default: "true", description: "点击是否触发 onClick" },
+  { name: "portal", type: "boolean", default: "true", description: "挂 body；框内示例用 false" },
+  { name: "zIndex", type: "number", default: "-", description: "层级" },
 ];
 
 const importCode = `import { createSignal } from "@dreamer/view";
 import { Overlay } from "@dreamer/ui-view/mobile";
 
 const open = createSignal(false);
-
-<button type="button" onClick={() => (open.value = true)}>打开遮罩</button>
 <Overlay open={open} onClick={() => (open.value = false)} zIndex={400} />`;
 
 export default function Page() {
   const open = createSignal(false);
+  const openLocal = createSignal(false);
   return (
     <div class="space-y-8">
       <div>
         <Title level={1}>Overlay</Title>
-        <Paragraph>全屏半透明遮罩（移动端同款）。</Paragraph>
+        <Paragraph>半透明遮罩；默认可 Portal；示意框内用 portal=false。</Paragraph>
       </div>
       <section class="space-y-3">
         <Title level={2}>引入</Title>
         <CodeBlock code={importCode} language="tsx" />
       </section>
-      <section class="space-y-3">
+      <section class="space-y-6">
         <Title level={2}>示例</Title>
-        <MobileDocDemo>
-          <div class="space-y-3 p-2">
-            <Button type="button" onClick={() => (open.value = true)}>打开遮罩</Button>
-            <Overlay open={open} onClick={() => (open.value = false)} zIndex={400} />
-          </div>
-        </MobileDocDemo>
+        <div class="space-y-2">
+          <Title level={3}>默认 Portal</Title>
+          <MobileDocDemo>
+            <div class="space-y-3 p-2">
+              <Button type="button" onClick={() => (open.value = true)}>打开遮罩</Button>
+              <Overlay open={open} onClick={() => (open.value = false)} zIndex={400} />
+            </div>
+          </MobileDocDemo>
+        </div>
+        <div class="space-y-2">
+          <Title level={3}>局部 portal=false</Title>
+          <MobileDocDemo class="p-3 space-y-2">
+            <Button type="button" size="sm" onClick={() => (openLocal.value = true)}>框内遮罩</Button>
+            <div class="relative h-32 rounded-lg border border-dashed overflow-hidden">
+              <p class="p-2 text-xs text-slate-500">容器</p>
+              <Overlay
+                open={openLocal}
+                portal={false}
+                position="absolute"
+                zIndex={10}
+                class="bg-slate-900/40"
+                onClick={() => (openLocal.value = false)}
+              />
+            </div>
+          </MobileDocDemo>
+        </div>
       </section>
       <section class="space-y-3">
         <Title level={2}>API</Title>

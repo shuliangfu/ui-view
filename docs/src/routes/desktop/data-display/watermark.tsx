@@ -10,10 +10,14 @@ import {
 } from "../../../components/DocsApiTable.tsx";
 
 const API: DocsApiTableRow[] = [
-  { name: "content", type: "string | string[]", default: "Watermark", description: "水印文字" },
-  { name: "image", type: "string", default: "-", description: "水印图" },
+  { name: "content", type: "string | string[]", default: "-", description: "水印文字（与 image 二选一）" },
+  { name: "image", type: "string", default: "-", description: "水印图 URL" },
+  { name: "fontSize", type: "number", default: "14", description: "字号" },
+  { name: "color", type: "string", default: "半透明灰", description: "文字色" },
   { name: "rotate", type: "number", default: "-22", description: "旋转角" },
-  { name: "class", type: "string", default: "-", description: "外层 class" }
+  { name: "gapX", type: "number", default: "180", description: "水平间距" },
+  { name: "gapY", type: "number", default: "140", description: "垂直间距" },
+  { name: "children", type: "unknown", default: "-", description: "被覆盖内容" },
 ];
 
 const importCode = `import { Watermark } from "@dreamer/ui-view";
@@ -27,16 +31,47 @@ export default function Page() {
     <div class="space-y-8">
       <div>
         <Title level={1}>Watermark</Title>
-        <Paragraph>容器水印：重复文字／图片，内容叠在上层。</Paragraph>
+        <Paragraph>容器水印：重复文字／多行／调间距与旋转；内容叠在上层可点。</Paragraph>
       </div>
       <section class="space-y-3">
         <Title level={2}>引入</Title>
         <CodeBlock code={importCode} language="tsx" />
       </section>
-      <section class="space-y-3">
+      <section class="space-y-6">
         <Title level={2}>示例</Title>
-        <div class="rounded-xl border border-slate-200 dark:border-slate-700 p-4 bg-white dark:bg-slate-900">
-          <Watermark content="内部资料"><div class="h-40 p-4">业务内容区域</div></Watermark>
+
+        <div class="space-y-2">
+          <Title level={3}>基础文字</Title>
+          <div class="rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+            <Watermark content="内部资料">
+              <div class="h-40 p-4 bg-white dark:bg-slate-900">业务内容区域</div>
+            </Watermark>
+          </div>
+        </div>
+
+        <div class="space-y-2">
+          <Title level={3}>多行 content[]</Title>
+          <div class="rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+            <Watermark content={["Dreamer", "仅供预览"]}>
+              <div class="h-40 p-4 bg-white dark:bg-slate-900">多行水印</div>
+            </Watermark>
+          </div>
+        </div>
+
+        <div class="space-y-2">
+          <Title level={3}>间距／旋转／字号色</Title>
+          <div class="rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+            <Watermark
+              content="CONFIDENTIAL"
+              fontSize={12}
+              color="rgba(37,99,235,0.25)"
+              rotate={-30}
+              gapX={120}
+              gapY={100}
+            >
+              <div class="h-44 p-4 bg-white dark:bg-slate-900">自定义样式</div>
+            </Watermark>
+          </div>
         </div>
       </section>
       <section class="space-y-3">
