@@ -12,6 +12,7 @@ import { readSignalValue, safeIsSignal } from "../safe-signal.ts";
 import { twMerge } from "tailwind-merge";
 /** 按需：单文件图标，避免经 icons/mod 拉入全表 */
 import { IconClose } from "../basic/icons/Close.tsx";
+import { Overlay } from "./Overlay.tsx";
 
 export type DrawerPlacement = "left" | "right";
 
@@ -324,10 +325,6 @@ export function Drawer(props: DrawerProps): JSXRenderable {
    * `z-300`：与 Modal 等同档，保证浮层在文档流之上。
    */
   const buildDrawerMarkup = () => {
-    const handleMaskClick = (e: Event) => {
-      if (e.target === e.currentTarget && maskClosable) onClose?.();
-    };
-
     const handleKeyDown = (e: KeyboardEvent) => {
       if (keyboard && e.key === "Escape") onClose?.();
     };
@@ -347,13 +344,16 @@ export function Drawer(props: DrawerProps): JSXRenderable {
         tabindex={-1}
         onKeyDown={(e: Event) => handleKeyDown(e as KeyboardEvent)}
       >
-        {/** 与文档站顶栏全宽下拉同一视觉：`bg-slate-900/35`，偏冷灰、不另加 dark 分段与毛玻璃 */}
-        <div
-          class={twMerge(
-            "absolute inset-0 bg-slate-900/35 transition-opacity motion-reduce:transition-none",
-          )}
-          onClick={(e: Event) => handleMaskClick(e)}
-          aria-hidden
+        {/** 遮罩：消费 {@link Overlay}（内联 absolute，视觉同文档站顶栏灰罩） */}
+        <Overlay
+          open
+          portal={false}
+          lockScroll={false}
+          position="absolute"
+          class="bg-slate-900/35"
+          clickable={maskClosable}
+          onClick={() => onClose?.()}
+          aria-label="遮罩"
         />
         <div
           ref={setDrawerRef}

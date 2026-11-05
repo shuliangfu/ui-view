@@ -161,7 +161,7 @@ export function Switch(props: SwitchProps): JSXRenderable {
         class={() => {
           const on = getSwitchOn(checkedMaybe, isUncontrolled, localChecked);
           return twMerge(
-            "relative h-6 w-11 shrink-0 overflow-hidden rounded-full border transition-colors",
+            "relative h-6 w-11 shrink-0 overflow-hidden rounded-full border transition-colors motion-reduce:transition-none",
             "peer-focus:ring-2 peer-focus:ring-blue-500 peer-focus:ring-offset-0",
             "peer-disabled:cursor-not-allowed peer-disabled:opacity-50",
             on
@@ -184,7 +184,7 @@ export function Switch(props: SwitchProps): JSXRenderable {
           class={twMerge(
             "pointer-events-none absolute left-px top-1/2 block h-5 w-5 rounded-full",
             "bg-white shadow ring-0 dark:bg-slate-200",
-            "transition-[transform] duration-200 will-change-transform",
+            "transition-[transform] duration-200 motion-reduce:transition-none will-change-transform",
           )}
           style={() => ({
             // 1.25rem 与 `translate-x-5` / 轨宽 `w-11` 下的行程一致

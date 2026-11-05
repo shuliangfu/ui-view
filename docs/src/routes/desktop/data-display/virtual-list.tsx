@@ -11,7 +11,8 @@ import {
 
 const API: DocsApiTableRow[] = [
   { name: "data", type: "T[]", default: "-", description: "数据" },
-  { name: "itemHeight", type: "number", default: "-", description: "行高 px" },
+  { name: "itemHeight", type: "number", default: "-", description: "定高 px；与 getItemHeight 二选一" },
+  { name: "getItemHeight", type: "(item, index) => number", default: "-", description: "动态行高" },
   { name: "height", type: "number", default: "320", description: "容器高" },
   { name: "renderItem", type: "(item,i)=>unknown", default: "-", description: "行渲染" }
 ];

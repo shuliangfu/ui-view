@@ -187,7 +187,7 @@ const fileInputOverlayCls =
   "absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0 disabled:cursor-not-allowed";
 
 const dropZoneCls =
-  "border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg p-6 text-center text-sm text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50 transition-colors";
+  "border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg p-6 text-center text-sm text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50 transition-colors motion-reduce:transition-none";
 const dropZoneActiveCls = "border-blue-500 bg-blue-50/50 dark:bg-blue-900/20";
 
 /**

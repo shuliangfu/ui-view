@@ -29,6 +29,7 @@ import {
   onCleanup,
 } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
+import { Overlay } from "../../shared/feedback/Overlay.tsx";
 import {
   type ControlledOpenInput,
   readControlledOpenInput,
@@ -371,11 +372,6 @@ export function Modal(props: ModalProps): JSXRenderable {
   /** 底栏须随 `props.footer` patch 更新；勿用首帧解构闭包（与 `resolvedChildren` 同类问题）。 */
   const resolvedFooter = createMemo(() => props.footer);
 
-  const handleMaskClick = (e: Event) => {
-    if (e.target === e.currentTarget && maskClosable && showMask) {
-      onClose?.();
-    }
-  };
 
   /**
    * `fullscreen` prop：每次打开时同步初始全屏态，关闭时清零，避免下次打开仍停留在上一档全屏。
@@ -530,13 +526,18 @@ export function Modal(props: ModalProps): JSXRenderable {
       >
         {showMask
           ? (
-            <div
+            <Overlay
+              open
+              portal={false}
+              lockScroll={false}
+              position="absolute"
               class={twMerge(
-                "absolute inset-0 bg-black/50 dark:bg-black/60 backdrop-blur-sm transition-opacity motion-reduce:transition-none",
+                "bg-black/50 dark:bg-black/60 backdrop-blur-sm",
                 maskClass,
               )}
-              onClick={handleMaskClick as unknown as (e: Event) => void}
-              aria-hidden
+              clickable={maskClosable}
+              onClick={() => onClose?.()}
+              aria-label="遮罩"
             />
           )
           : null}

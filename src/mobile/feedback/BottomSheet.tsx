@@ -21,6 +21,7 @@ import {
   readControlledOpenInput,
 } from "../../shared/feedback/controlled-open.ts";
 import { getBrowserBodyPortalHost } from "../../shared/feedback/portal-host.ts";
+import { Overlay } from "../../shared/feedback/Overlay.tsx";
 
 /** 高度模式：半屏、全屏、或自定义最大高度（px） */
 export type BottomSheetHeightMode = "half" | "full" | number;
@@ -170,13 +171,6 @@ export function BottomSheet(props: BottomSheetProps): JSXRenderable {
 
   const maskClosable = () => props.maskClosable !== false;
 
-  /**
-   * 半透明遮罩点击：在 `maskClosable` 为真时调用 `onClose`。
-   */
-  const handleMask = () => {
-    if (!maskClosable()) return;
-    props.onClose?.();
-  };
 
   /**
    * 构建遮罩 + 面板（Portal 与 SSR 内联共用）
@@ -191,11 +185,16 @@ export function BottomSheet(props: BottomSheetProps): JSXRenderable {
       style={{ zIndex: Z_INDEX }}
       aria-hidden={!isOpen()}
     >
-      <button
-        type="button"
-        class="absolute inset-0 bg-black/45 border-0 cursor-default"
+      <Overlay
+        open={visible}
+        portal={false}
+        lockScroll={false}
+        position="absolute"
+        as="button"
+        class="bg-black/45"
+        clickable={maskClosable()}
+        onClick={() => props.onClose?.()}
         aria-label={m.closeAriaLabel}
-        onClick={handleMask}
       />
       <div
         class={twMerge(

@@ -1,6 +1,6 @@
 /**
  * SignaturePad 签名板（View）。
- * Canvas 手写签名；支持清空、导出 dataURL；可挂表单。
+ * Canvas 手写签名；支持清空、导出 dataURL；经 `onReady` 暴露 {@link SignaturePadHandle}。
  */
 
 import {
@@ -20,8 +20,13 @@ export interface SignaturePadProps {
   penWidth?: number;
   /** 背景色 */
   backgroundColor?: string;
-  /** 笔画结束／清空时回调 dataURL（image/png） */
+  /** 笔画结束／清空时回调 dataURL（image/png）；空板为 `null` */
   onChange?: (dataUrl: string | null) => void;
+  /**
+   * 画布就绪后回调命令式句柄（clear／toDataURL／isEmpty）。
+   * 父级可保存 handle 供表单提交前校验。
+   */
+  onReady?: (handle: SignaturePadHandle) => void;
   class?: string;
   disabled?: boolean;
   messages?: Partial<SignaturePadMessages>;
@@ -39,7 +44,8 @@ export const defaultSignaturePadMessages: SignaturePadMessages = {
 
 export interface SignaturePadHandle {
   clear: () => void;
-  toDataURL: (type?: string) => string | null;
+  /** 导出；空板返回 `null` */
+  toDataURL: (type?: string, quality?: number) => string | null;
   isEmpty: () => boolean;
 }
 
@@ -50,6 +56,7 @@ export function SignaturePad(props: SignaturePadProps): JSXRenderable {
     penWidth = 2.5,
     backgroundColor = "#ffffff",
     onChange,
+    onReady,
     class: className,
     disabled = false,
   } = props;
@@ -62,8 +69,11 @@ export function SignaturePad(props: SignaturePadProps): JSXRenderable {
 
   const paintBg = () => {
     if (!canvas || !ctx) return;
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.fillStyle = backgroundColor;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.restore();
   };
 
   const emit = () => {
@@ -77,6 +87,19 @@ export function SignaturePad(props: SignaturePadProps): JSXRenderable {
     emit();
   };
 
+  const toDataURL = (type = "image/png", quality?: number): string | null => {
+    if (!canvas || empty.value) return null;
+    return quality != null
+      ? canvas.toDataURL(type, quality)
+      : canvas.toDataURL(type);
+  };
+
+  const handle: SignaturePadHandle = {
+    clear,
+    toDataURL,
+    isEmpty: () => empty.value,
+  };
+
   const setRef = (el: unknown) => {
     if (!isHtmlElement(el)) return;
     canvas = el as HTMLCanvasElement;
@@ -88,10 +111,11 @@ export function SignaturePad(props: SignaturePadProps): JSXRenderable {
     canvas.style.height = `${height}px`;
     ctx = canvas.getContext("2d");
     if (!ctx) return;
-    ctx.scale(dpr, dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
     paintBg();
+    onReady?.(handle);
 
     const pos = (e: PointerEvent) => {
       const r = canvas!.getBoundingClientRect();
@@ -136,7 +160,12 @@ export function SignaturePad(props: SignaturePadProps): JSXRenderable {
   return (
     <div class={twMerge("signature-pad", className)}>
       <div class="relative overflow-hidden rounded-xl border border-slate-200 dark:border-slate-600">
-        <canvas ref={setRef} class="block w-full touch-none" style={{ height: `${height}px` }} />
+        <canvas
+          ref={setRef}
+          class="block w-full touch-none"
+          style={{ height: `${height}px` }}
+          aria-label={m.empty}
+        />
         {() =>
           empty.value
             ? (

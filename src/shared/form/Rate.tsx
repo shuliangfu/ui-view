@@ -46,7 +46,7 @@ export interface RateProps {
   messages?: Partial<RateMessages>;
 }
 
-const starCls = "size-6 text-slate-300 dark:text-slate-500 transition-colors";
+const starCls = "size-6 text-slate-300 dark:text-slate-500 transition-colors motion-reduce:transition-none";
 const starActiveCls = "text-amber-400 dark:text-amber-500";
 
 /**

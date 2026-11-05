@@ -249,7 +249,7 @@ function SelectDropdownBranch(props: SelectProps) {
         <span
           class={() =>
             twMerge(
-              "inline-flex shrink-0 text-slate-400 dark:text-slate-500 transition-transform",
+              "inline-flex shrink-0 text-slate-400 dark:text-slate-500 transition-transform motion-reduce:transition-none",
               openState.value && "rotate-180",
             )}
         >

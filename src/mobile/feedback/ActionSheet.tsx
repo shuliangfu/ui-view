@@ -1,6 +1,7 @@
 /**
  * ActionSheet 底部动作列表（View）。
  * 移动端选择/操作：底部弹出若干选项 + 取消；与 `Modal` / `Drawer` 一致支持 `open={Signal}`；Portal 目标同 {@link ./BottomSheet.tsx}。
+ * 全屏遮罩消费 {@link ../../shared/feedback/Overlay.tsx}（`portal={false}` 内联于本对话框根）。
  */
 
 import {
@@ -18,6 +19,7 @@ import {
   readControlledOpenInput,
 } from "../../shared/feedback/controlled-open.ts";
 import { getBrowserBodyPortalHost } from "../../shared/feedback/portal-host.ts";
+import { Overlay } from "../../shared/feedback/Overlay.tsx";
 
 export interface ActionSheetAction {
   /** 显示文案 */
@@ -132,17 +134,6 @@ export function ActionSheet(props: ActionSheetProps): JSXRenderable {
    */
   const isOpen = createMemo(() => readControlledOpenInput(props.open));
 
-  /**
-   * 全屏遮罩点击：仅当点击落在遮罩按钮自身（非面板区域）且允许遮罩关闭时触发 `onClose`。
-   *
-   * @param e - 指针事件
-   */
-  const handleMaskClick = (e: MouseEvent) => {
-    const t = e.target as Node | null;
-    const cur = e.currentTarget as Node | null;
-    if (t !== cur || !maskClosable) return;
-    onClose?.();
-  };
 
   /**
    * 构建遮罩 + 面板（Portal 与 SSR 内联共用）
@@ -155,11 +146,16 @@ export function ActionSheet(props: ActionSheetProps): JSXRenderable {
       aria-modal="true"
       aria-label={m.dialog}
     >
-      <button
-        type="button"
-        class="absolute inset-0 bg-black/50 dark:bg-black/60 border-0 cursor-default transition-opacity"
+      <Overlay
+        open
+        portal={false}
+        lockScroll={false}
+        position="absolute"
+        as="button"
+        class="bg-black/50 dark:bg-black/60"
+        clickable={maskClosable}
+        onClick={() => onClose?.()}
         aria-label={m.close}
-        onClick={handleMaskClick}
       />
       <div
         class={twMerge(
