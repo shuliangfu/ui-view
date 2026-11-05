@@ -111,6 +111,23 @@ describe("文档页 E2E：/mobile/data-display/tree（Tree 树）", () => {
       } else cb?.click();
     });
     await sharedEnv.delay(250);
+    // 展开 1-2，使 1-2-1 挂载
+    await t.browser.evaluate(() => {
+      const leaf = document.querySelector(
+        "main [data-tree-demo='cascade'] [data-tree-check-key='1-2-1']",
+      );
+      if (!leaf) {
+        const exp = document.querySelector(
+          "main [data-tree-demo='cascade'] [data-tree-expand-key='1-2']",
+        ) as (HTMLButtonElement & { __onclick?: (ev: Event) => void }) | null;
+        if (exp && typeof exp.__onclick === "function") {
+          exp.__onclick(
+            new MouseEvent("click", { bubbles: true, cancelable: true }),
+          );
+        } else exp?.click();
+      }
+    });
+    await sharedEnv.delay(200);
 
     const after = await t.browser.evaluate(() => {
       const keys = ["1", "1-1", "1-2", "1-2-1"];
@@ -171,6 +188,9 @@ describe("文档页 E2E：/mobile/data-display/tree（Tree 树）", () => {
       const parentCb = document.querySelector(
         "main [data-tree-demo='cascade'] [data-tree-check-key='1-2']",
       ) as HTMLInputElement | null;
+      const ancestorCb = document.querySelector(
+        "main [data-tree-demo='cascade'] [data-tree-check-key='1']",
+      ) as HTMLInputElement | null;
       const parentRow = document.querySelector(
         "main [data-tree-demo='cascade'] [data-tree-node-key='1-2']",
       );
@@ -179,21 +199,29 @@ describe("文档页 E2E：/mobile/data-display/tree（Tree 树）", () => {
       )?.textContent ?? "";
       return {
         leafChecked: !!leafCb?.checked,
+        parentChecked: !!parentCb?.checked,
         parentIndeterminate: !!parentCb?.indeterminate ||
           parentCb?.getAttribute("aria-checked") === "mixed",
+        ancestorIndeterminate: !!ancestorCb?.indeterminate ||
+          ancestorCb?.getAttribute("aria-checked") === "mixed",
         parentSelected: parentRow?.getAttribute("data-tree-selected") === "true",
         display,
       };
     }) as {
       leafChecked: boolean;
+      parentChecked: boolean;
       parentIndeterminate: boolean;
+      ancestorIndeterminate: boolean;
       parentSelected: boolean;
       display: string;
     };
+    // 1-2 仅一子 → 全选；祖先 1 半选；勾选不写 selected
     expect(got.leafChecked).toBe(true);
-    expect(got.parentIndeterminate).toBe(true);
+    expect(got.parentChecked).toBe(true);
+    expect(got.parentIndeterminate).toBe(false);
+    expect(got.ancestorIndeterminate).toBe(true);
     expect(got.parentSelected).toBe(false);
-    expect(got.display).toMatch(/共\s*1/);
+    expect(got.display).toMatch(/共\s*2/);
   }, DOCS_BROWSER_CONFIG);
 
 });

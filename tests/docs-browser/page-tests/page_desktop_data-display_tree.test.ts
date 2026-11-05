@@ -210,6 +210,23 @@ describe("文档页 E2E：/desktop/data-display/tree（Tree 树）", () => {
       }
     });
     await sharedEnv.delay(250);
+    // 展开 1-2，使 1-2-1 挂载后再断言 DOM checkbox
+    await t.browser.evaluate(() => {
+      const leaf = document.querySelector(
+        "main [data-tree-demo='cascade'] [data-tree-check-key='1-2-1']",
+      );
+      if (!leaf) {
+        const exp = document.querySelector(
+          "main [data-tree-demo='cascade'] [data-tree-expand-key='1-2']",
+        ) as (HTMLButtonElement & { __onclick?: (ev: Event) => void }) | null;
+        if (exp && typeof exp.__onclick === "function") {
+          exp.__onclick(
+            new MouseEvent("click", { bubbles: true, cancelable: true }),
+          );
+        } else exp?.click();
+      }
+    });
+    await sharedEnv.delay(200);
 
     const afterParent = await t.browser.evaluate(() => {
       const keys = ["1", "1-1", "1-2", "1-2-1"];
@@ -514,13 +531,10 @@ describe("文档页 E2E：/desktop/data-display/tree（Tree 树）", () => {
     await t.browser.evaluate(() => {
       const cb = document.querySelector(
         "main [data-tree-demo='cascade'] [data-tree-check-key='1-2-1']",
-      ) as (HTMLInputElement & { __onclick?: (ev: Event) => void; __onchange?: (ev: Event) => void }) | null;
+      ) as (HTMLInputElement & { __onclick?: (ev: Event) => void }) | null;
       cb?.scrollIntoView({ block: "center" });
-      if (cb && typeof cb.__onchange === "function") {
-        cb.__onchange(
-          new Event("change", { bubbles: true, cancelable: true }),
-        );
-      } else if (cb && typeof cb.__onclick === "function") {
+      // onChange 为空操作；勾选只在 onClick
+      if (cb && typeof cb.__onclick === "function") {
         cb.__onclick(
           new MouseEvent("click", { bubbles: true, cancelable: true }),
         );
@@ -537,6 +551,9 @@ describe("文档页 E2E：/desktop/data-display/tree（Tree 树）", () => {
       const parentCb = document.querySelector(
         "main [data-tree-demo='cascade'] [data-tree-check-key='1-2']",
       ) as HTMLInputElement | null;
+      const ancestorCb = document.querySelector(
+        "main [data-tree-demo='cascade'] [data-tree-check-key='1']",
+      ) as HTMLInputElement | null;
       const parentRow = document.querySelector(
         "main [data-tree-demo='cascade'] [data-tree-node-key='1-2']",
       );
@@ -551,6 +568,9 @@ describe("文档页 E2E：/desktop/data-display/tree（Tree 树）", () => {
         parentChecked: !!parentCb?.checked,
         parentIndeterminate: !!parentCb?.indeterminate ||
           parentCb?.getAttribute("aria-checked") === "mixed",
+        ancestorChecked: !!ancestorCb?.checked,
+        ancestorIndeterminate: !!ancestorCb?.indeterminate ||
+          ancestorCb?.getAttribute("aria-checked") === "mixed",
         parentSelected: parentRow?.getAttribute("data-tree-selected") === "true",
         leafSelected: leafRow?.getAttribute("data-tree-selected") === "true",
         display,
@@ -559,18 +579,24 @@ describe("文档页 E2E：/desktop/data-display/tree（Tree 树）", () => {
       leafChecked: boolean;
       parentChecked: boolean;
       parentIndeterminate: boolean;
+      ancestorChecked: boolean;
+      ancestorIndeterminate: boolean;
       parentSelected: boolean;
       leafSelected: boolean;
       display: string;
     };
 
+    // 1-2 仅一子 → 全选；祖先 1 半选；勾选不写 selected；keys 含 1-2 + 1-2-1
     expect(got.leafChecked).toBe(true);
-    expect(got.parentChecked).toBe(false);
-    expect(got.parentIndeterminate).toBe(true);
+    expect(got.parentChecked).toBe(true);
+    expect(got.parentIndeterminate).toBe(false);
+    expect(got.ancestorChecked).toBe(false);
+    expect(got.ancestorIndeterminate).toBe(true);
     expect(got.parentSelected).toBe(false);
     expect(got.leafSelected).toBe(false);
     expect(got.display).toMatch(/1-2-1/);
-    expect(got.display).toMatch(/共\s*1/);
+    expect(got.display).toMatch(/1-2/);
+    expect(got.display).toMatch(/共\s*2/);
   }, DOCS_BROWSER_CONFIG);
 
 });

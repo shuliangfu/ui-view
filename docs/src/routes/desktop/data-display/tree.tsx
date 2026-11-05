@@ -175,17 +175,20 @@ function KeysDisplay(props: {
   getChecked: () => string[];
   label?: string;
 }) {
-  const sel = props.getSelected?.() ?? [];
-  const chk = props.getChecked();
-  return (
-    <p class="text-sm text-slate-500" data-tree-keys-display="">
-      {props.label ? `${props.label} · ` : ""}
-      {props.getSelected
-        ? `已选: ${sel.join(", ") || "-"} | `
-        : ""}
-      已勾选: {chk.join(", ") || "-"}（共 {chk.length}）
-    </p>
-  );
+  // 返回 thunk：在独立 effect 内读 signal，避免整页不刷新「已勾选」计数
+  return () => {
+    const sel = props.getSelected?.() ?? [];
+    const chk = props.getChecked();
+    return (
+      <p class="text-sm text-slate-500" data-tree-keys-display="">
+        {props.label ? `${props.label} · ` : ""}
+        {props.getSelected
+          ? `已选: ${sel.join(", ") || "-"} | `
+          : ""}
+        已勾选: {chk.join(", ") || "-"}（共 {chk.length}）
+      </p>
+    );
+  };
 }
 
 export default function Page() {
@@ -217,7 +220,7 @@ export default function Page() {
         <div class="space-y-3">
           <Title level={3}>展开 / 选中 / 勾选</Title>
           <Paragraph class="text-sm text-slate-500">
-            勾 checkbox「1-2-1」→ 仅 checkedKeys 含该叶，父「1-2」半选（非 selected 高亮）。
+            勾 checkbox「1-2-1」→ checkedKeys 含该叶；若「1-2」仅此一子则父亦全选（cascade），有未勾兄弟时父半选；行高亮（selected）不变。
             点标题「1-2-1」→ 仅该叶 selected 高亮，勾选计数不变。勾父「1」级联子孙。
           </Paragraph>
           <div

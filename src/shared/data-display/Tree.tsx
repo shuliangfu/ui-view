@@ -22,6 +22,7 @@ import { IconChevronRight } from "../basic/icons/ChevronRight.tsx";
 import {
   readSignalValue,
   safeIsSignal,
+  writeSignalValue,
 } from "../safe-signal.ts";
 
 export interface TreeNode {
@@ -401,13 +402,41 @@ export function Tree(props: TreeProps): JSXRenderable {
   const readChecked = () =>
     hasControlledChecked ? getCheckedKeysProp() : innerChecked.value;
 
+  const commitExpanded = (next: string[]) => {
+    if (safeIsSignal(props.expandedKeys)) {
+      writeSignalValue(props.expandedKeys as never, next);
+    } else if (!hasControlledExpanded) {
+      innerExpanded.set(next);
+    }
+    onExpand?.(next);
+  };
+
+  const commitSelected = (
+    next: string[],
+    info: { node: TreeNode; selected: boolean },
+  ) => {
+    if (safeIsSignal(props.selectedKeys)) {
+      writeSignalValue(props.selectedKeys as never, next);
+    } else if (!hasControlledSelected) {
+      innerSelected.set(next);
+    }
+    onSelect?.(next, info);
+  };
+
+  const commitChecked = (next: string[]) => {
+    if (safeIsSignal(props.checkedKeys)) {
+      writeSignalValue(props.checkedKeys as never, next);
+    } else if (!hasControlledChecked) {
+      innerChecked.set(next);
+    }
+    onCheck?.(next);
+  };
+
   const handleExpand = (key: string) => {
     const cur = new Set(readExpanded());
     if (cur.has(key)) cur.delete(key);
     else cur.add(key);
-    const next = Array.from(cur);
-    if (!hasControlledExpanded) innerExpanded.set(next);
-    onExpand?.(next);
+    commitExpanded(Array.from(cur));
   };
 
   const handleSelect = (key: string) => {
@@ -420,8 +449,7 @@ export function Tree(props: TreeProps): JSXRenderable {
     }
     const node = getNodeByKey(treeData, key);
     if (!node) return;
-    if (!hasControlledSelected) innerSelected.set(next);
-    onSelect?.(next, { node, selected: next.includes(key) });
+    commitSelected(next, { node, selected: next.includes(key) });
   };
 
   const handleCheck = (key: string) => {
@@ -446,9 +474,7 @@ export function Tree(props: TreeProps): JSXRenderable {
       reconcileAncestors(treeData, key, cur);
     }
 
-    const next = Array.from(cur);
-    if (!hasControlledChecked) innerChecked.set(next);
-    onCheck?.(next);
+    commitChecked(Array.from(cur));
   };
 
   const ctx = {
