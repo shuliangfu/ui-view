@@ -32,7 +32,6 @@ describe("文档页 E2E：/desktop/form/autocomplete（Autocomplete 自动完成
     const typed = await t.browser.evaluate(() => {
       const main = document.querySelector("main");
       if (!main) return false;
-      /** 避免命中 CodeBlock/其它区第一个 input，优先示例区 placeholder */
       const el = main.querySelector<HTMLInputElement>(
         'input[placeholder="输入或选择"]',
       ) ||
@@ -40,25 +39,50 @@ describe("文档页 E2E：/desktop/form/autocomplete（Autocomplete 自动完成
           'input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"])',
         );
       if (!el || el.disabled) return false;
+      el.scrollIntoView({ block: "center" });
       el.focus();
       el.value = "北";
-      el.dispatchEvent(new Event("input", { bubbles: true }));
+      el.dispatchEvent(new InputEvent("input", { bubbles: true, data: "北" }));
+      el.dispatchEvent(new Event("change", { bubbles: true }));
       return true;
     }) as boolean;
     expect(typed).toBe(true);
-    await sharedEnv.delay(280);
+    await sharedEnv.delay(350);
     const picked = await t.browser.evaluate(() => {
-      const lbs = document.querySelectorAll('[role="listbox"]');
-      for (let i = 0; i < lbs.length; i++) {
-        const lb = lbs[i] as HTMLElement;
+      const clickEl = (
+        el: HTMLElement & { __onclick?: (ev: Event) => void },
+      ) => {
+        if (typeof el.__onclick === "function") {
+          el.__onclick(
+            new MouseEvent("click", { bubbles: true, cancelable: true }),
+          );
+        } else el.click();
+      };
+      const lbs = Array.from(
+        document.querySelectorAll('[role="listbox"]'),
+      ) as HTMLElement[];
+      for (const lb of lbs) {
         if (lb.getClientRects().length === 0) continue;
-        const opts = lb.querySelectorAll('[role="option"]');
-        for (let j = 0; j < opts.length; j++) {
-          const o = opts[j] as HTMLElement;
+        const opts = Array.from(
+          lb.querySelectorAll('[role="option"]'),
+        ) as HTMLElement[];
+        for (const o of opts) {
           if ((o.textContent || "").trim() === "北京") {
-            o.click();
+            clickEl(o as HTMLElement & { __onclick?: (ev: Event) => void });
             return true;
           }
+        }
+      }
+      const any = Array.from(
+        document.querySelectorAll('[role="option"]'),
+      ) as HTMLElement[];
+      for (const o of any) {
+        if (
+          (o.textContent || "").includes("北京") &&
+          o.getClientRects().length > 0
+        ) {
+          clickEl(o as HTMLElement & { __onclick?: (ev: Event) => void });
+          return true;
         }
       }
       return false;

@@ -34,33 +34,16 @@ describe("文档页 E2E：/desktop/navigation/pagination（Pagination 分页）"
     if (!t?.browser?.goto) return;
     await sharedEnv.goto(t, DOC_PATH);
     await sharedEnv.waitDocMainReady(t);
-    await t.browser.evaluate(() => {
-      const needle =
-        "完整（total + pageSizeOptions + showTotal + showQuickJumper）";
-      const main = document.querySelector("main");
-      if (!main) return;
-      const heads = main.querySelectorAll("h2, h3");
-      for (let i = 0; i < heads.length; i++) {
-        const h = heads[i];
-        if (!(h.textContent || "").includes(needle)) continue;
-        const section = h.parentElement;
-        const nav = section?.querySelector(
-          'nav[role="navigation"][aria-label="分页"]',
-        ) as HTMLElement | null;
-        if (!nav) return;
-        const buttons = nav.querySelectorAll("button[type='button']");
-        for (let j = 0; j < buttons.length; j++) {
-          const b = buttons[j] as HTMLButtonElement;
-          if (b.getAttribute("aria-label") !== "第 2 页") continue;
-          if ((b.textContent || "").trim() !== "2") continue;
-          b.click();
-          return;
-        }
-        return;
-      }
-    });
-    await sharedEnv.delay(200);
-    const currentIsPage2 = await t.browser.evaluate(() => {
+    const clicked = await t.browser.evaluate(() => {
+      const clickEl = (
+        el: HTMLElement & { __onclick?: (ev: Event) => void },
+      ) => {
+        if (typeof el.__onclick === "function") {
+          el.__onclick(
+            new MouseEvent("click", { bubbles: true, cancelable: true }),
+          );
+        } else el.click();
+      };
       const needle =
         "完整（total + pageSizeOptions + showTotal + showQuickJumper）";
       const main = document.querySelector("main");
@@ -73,6 +56,48 @@ describe("文档页 E2E：/desktop/navigation/pagination（Pagination 分页）"
         const nav = section?.querySelector(
           'nav[role="navigation"][aria-label="分页"]',
         ) as HTMLElement | null;
+        if (!nav) return false;
+        nav.scrollIntoView({ block: "center" });
+        const buttons = nav.querySelectorAll("button[type='button']");
+        for (let j = 0; j < buttons.length; j++) {
+          const b = buttons[j] as HTMLButtonElement & {
+            __onclick?: (ev: Event) => void;
+          };
+          if (b.getAttribute("aria-label") !== "第 2 页") continue;
+          if ((b.textContent || "").trim() !== "2") continue;
+          clickEl(b);
+          return true;
+        }
+        /** 兜底：任意分页导航上的「第 2 页」 */
+        const any = document.querySelector(
+          'nav[aria-label="分页"] button[aria-label="第 2 页"]',
+        ) as (HTMLButtonElement & { __onclick?: (ev: Event) => void }) | null;
+        if (any) {
+          clickEl(any);
+          return true;
+        }
+        return false;
+      }
+      return false;
+    }) as boolean;
+    expect(clicked).toBe(true);
+    await sharedEnv.delay(250);
+    const currentIsPage2 = await t.browser.evaluate(() => {
+      const needle =
+        "完整（total + pageSizeOptions + showTotal + showQuickJumper）";
+      const main = document.querySelector("main");
+      if (!main) return false;
+      const heads = main.querySelectorAll("h2, h3");
+      for (let i = 0; i < heads.length; i++) {
+        const h = heads[i];
+        if (!(h.textContent || "").includes(needle)) continue;
+        const section = h.parentElement;
+        const nav = (section?.querySelector(
+          'nav[role="navigation"][aria-label="分页"]',
+        ) ||
+          document.querySelector(
+            'nav[role="navigation"][aria-label="分页"]',
+          )) as HTMLElement | null;
         if (!nav) return false;
         const cur = nav.querySelector(
           'button[aria-current="page"]',

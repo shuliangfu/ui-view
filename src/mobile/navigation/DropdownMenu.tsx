@@ -107,6 +107,7 @@ export function DropdownMenu(props: DropdownMenuProps): JSXRenderable {
               <button
                 type="button"
                 key={it.key}
+                data-menu-key={it.key}
                 class={twMerge(
                   "flex-1 py-2.5 text-sm",
                   active
@@ -114,7 +115,9 @@ export function DropdownMenu(props: DropdownMenuProps): JSXRenderable {
                     : "text-slate-700 dark:text-slate-200",
                 )}
                 onClick={() => {
-                  openKey.set(active ? null : it.key);
+                  /** 必须在点击时读 Signal：勿闭包渲染期 active（委托/__onclick 路径下易踩到过期闭包） */
+                  const cur = openKey.value;
+                  openKey.set(cur === it.key ? null : it.key);
                 }}
               >
                 {labelOf(it)}

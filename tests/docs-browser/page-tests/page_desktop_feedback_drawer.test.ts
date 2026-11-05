@@ -30,27 +30,36 @@ describe("文档页 E2E：/desktop/feedback/drawer（Drawer 抽屉）", () => {
     await sharedEnv.goto(t, DOC_PATH);
     await sharedEnv.waitDocMainReady(t);
     const openOk = await t.browser.evaluate(() => {
-      const main = document.querySelector("main");
-      if (!main) return false;
-      const btns = main.querySelectorAll('button[type="button"]');
-      for (let i = 0; i < btns.length; i++) {
-        const b = btns[i] as HTMLButtonElement;
-        if (b.disabled) continue;
-        if ((b.textContent || "").trim() === "右侧抽屉") {
-          b.click();
-          return true;
-        }
-      }
-      return false;
+      const btns = Array.from(
+        document.querySelectorAll("main button[type='button']"),
+      ) as (HTMLButtonElement & { __onclick?: (ev: Event) => void })[];
+      const b = btns.find((x) =>
+        /右侧抽屉|打开/.test((x.textContent || "").trim())
+      );
+      if (!b || b.disabled) return false;
+      b.scrollIntoView({ block: "center" });
+      if (typeof b.__onclick === "function") {
+        b.__onclick(
+          new MouseEvent("click", { bubbles: true, cancelable: true }),
+        );
+      } else b.click();
+      return true;
     }) as boolean;
     expect(openOk).toBe(true);
-    await sharedEnv.delay(250);
+    await sharedEnv.delay(300);
     const closeOk = await t.browser.evaluate(() => {
-      const b = document.querySelector(
-        'button[type="button"][aria-label="关闭"]',
-      ) as HTMLButtonElement | null;
+      const closes = Array.from(
+        document.querySelectorAll('button[type="button"][aria-label="关闭"]'),
+      ) as (HTMLButtonElement & { __onclick?: (ev: Event) => void })[];
+      const b = closes.find((x) =>
+        !x.disabled && getComputedStyle(x).opacity !== "0"
+      ) || closes[0];
       if (!b || b.disabled) return false;
-      b.click();
+      if (typeof b.__onclick === "function") {
+        b.__onclick(
+          new MouseEvent("click", { bubbles: true, cancelable: true }),
+        );
+      } else b.click();
       return true;
     }) as boolean;
     expect(closeOk).toBe(true);

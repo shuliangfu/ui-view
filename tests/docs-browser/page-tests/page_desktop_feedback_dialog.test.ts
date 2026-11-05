@@ -30,33 +30,39 @@ describe("文档页 E2E：/desktop/feedback/dialog（Dialog 对话框）", () =>
     await sharedEnv.goto(t, DOC_PATH);
     await sharedEnv.waitDocMainReady(t);
     const openOk = await t.browser.evaluate(() => {
-      const main = document.querySelector("main");
-      if (!main) return false;
-      const btns = main.querySelectorAll('button[type="button"]');
-      for (let i = 0; i < btns.length; i++) {
-        const b = btns[i] as HTMLButtonElement;
-        if (b.disabled) continue;
-        if ((b.textContent || "").includes("打开 Dialog")) {
-          b.click();
-          return true;
-        }
-      }
-      return false;
+      const btns = Array.from(
+        document.querySelectorAll("main button[type='button']"),
+      ) as (HTMLButtonElement & { __onclick?: (ev: Event) => void })[];
+      const b = btns.find((x) => (x.textContent || "").includes("打开 Dialog"));
+      if (!b || b.disabled) return false;
+      b.scrollIntoView({ block: "center" });
+      if (typeof b.__onclick === "function") {
+        b.__onclick(
+          new MouseEvent("click", { bubbles: true, cancelable: true }),
+        );
+      } else b.click();
+      return true;
     }) as boolean;
     expect(openOk).toBe(true);
-    await sharedEnv.delay(200);
+    await sharedEnv.delay(300);
     const closeOk = await t.browser.evaluate(() => {
-      const btns = document.querySelectorAll('button[type="button"]');
-      for (let i = 0; i < btns.length; i++) {
-        const b = btns[i] as HTMLButtonElement;
-        if (b.disabled) continue;
-        const tx = (b.textContent || "").trim();
-        if (tx === "确定" || tx === "取消") {
-          b.click();
-          return true;
-        }
-      }
-      return false;
+      const dlg = document.querySelector('[role="dialog"]') as HTMLElement | null;
+      const scope = dlg || document.body;
+      const btns = Array.from(
+        scope.querySelectorAll("button[type='button']"),
+      ) as (HTMLButtonElement & { __onclick?: (ev: Event) => void })[];
+      const b = btns.find((x) => {
+        const tx = (x.textContent || "").trim();
+        const aria = x.getAttribute("aria-label") || "";
+        return !x.disabled && (tx === "确定" || tx === "取消" || aria === "关闭");
+      });
+      if (!b) return false;
+      if (typeof b.__onclick === "function") {
+        b.__onclick(
+          new MouseEvent("click", { bubbles: true, cancelable: true }),
+        );
+      } else b.click();
+      return true;
     }) as boolean;
     expect(closeOk).toBe(true);
   }, DOCS_BROWSER_CONFIG);

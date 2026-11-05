@@ -30,27 +30,42 @@ describe("文档页 E2E：/desktop/form/multiselect（MultiSelect 多选）", ()
     await sharedEnv.goto(t, DOC_PATH);
     await sharedEnv.waitDocMainReady(t);
     const opened = await t.browser.evaluate(() => {
-      const main = document.querySelector("main");
-      const btn = main?.querySelector(
-        'button[aria-haspopup="listbox"]:not([disabled])',
-      );
+      const btn = document.querySelector(
+        'main button[aria-haspopup="listbox"]:not([disabled]), main button[aria-haspopup]:not([disabled])',
+      ) as (HTMLButtonElement & { __onclick?: (ev: Event) => void }) | null;
       if (!btn) return false;
-      (btn as HTMLButtonElement).click();
+      btn.scrollIntoView({ block: "center" });
+      if (typeof btn.__onclick === "function") {
+        btn.__onclick(
+          new MouseEvent("click", { bubbles: true, cancelable: true }),
+        );
+      } else btn.click();
       return true;
     }) as boolean;
     expect(opened).toBe(true);
-    await sharedEnv.delay(220);
+    await sharedEnv.delay(300);
     const picked = await t.browser.evaluate(() => {
-      const lbs = document.querySelectorAll('[role="listbox"]');
-      for (let i = 0; i < lbs.length; i++) {
-        const lb = lbs[i] as HTMLElement;
+      const clickEl = (
+        el: HTMLElement & { __onclick?: (ev: Event) => void },
+      ) => {
+        if (typeof el.__onclick === "function") {
+          el.__onclick(
+            new MouseEvent("click", { bubbles: true, cancelable: true }),
+          );
+        } else el.click();
+      };
+      const lbs = Array.from(
+        document.querySelectorAll('[role="listbox"]'),
+      ) as HTMLElement[];
+      for (const lb of lbs) {
         if (lb.getClientRects().length === 0) continue;
-        const opts = lb.querySelectorAll('[role="option"]');
-        for (let j = 0; j < opts.length; j++) {
-          const o = opts[j] as HTMLElement;
+        const opts = Array.from(
+          lb.querySelectorAll('[role="option"]'),
+        ) as HTMLElement[];
+        for (const o of opts) {
           if ((o as HTMLButtonElement).disabled) continue;
           if ((o.textContent || "").includes("选项 A")) {
-            o.click();
+            clickEl(o as HTMLElement & { __onclick?: (ev: Event) => void });
             return true;
           }
         }

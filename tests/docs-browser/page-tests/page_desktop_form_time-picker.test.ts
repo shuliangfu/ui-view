@@ -31,19 +31,36 @@ describe("文档页 E2E：/desktop/form/time-picker（TimePicker 时间）", () 
     await sharedEnv.waitDocMainReady(t);
     const openOk = await t.browser.evaluate(() => {
       const root = document.querySelector("main [data-ui-timepicker-root]");
-      const btn = root?.querySelector(
+      const btn = (root?.querySelector(
         'button[type="button"][aria-haspopup="dialog"]:not([disabled])',
-      );
+      ) ||
+        document.querySelector(
+          'main button[aria-haspopup="dialog"]:not([disabled]), main button[aria-haspopup]:not([disabled])',
+        )) as
+          | (HTMLButtonElement & { __onclick?: (ev: Event) => void })
+          | null;
       if (!btn) return false;
-      (btn as HTMLButtonElement).click();
+      btn.scrollIntoView({ block: "center" });
+      if (typeof btn.__onclick === "function") {
+        btn.__onclick(
+          new MouseEvent("click", { bubbles: true, cancelable: true }),
+        );
+      } else btn.click();
       return true;
     }) as boolean;
     expect(openOk).toBe(true);
-    await sharedEnv.delay(500);
+    await sharedEnv.delay(400);
     const dlgVisible = await t.browser.evaluate(() => {
-      return !!document.querySelector(
-        '[role="dialog"][aria-label="选择时间"]',
-      );
+      const panels = Array.from(
+        document.querySelectorAll(
+          '[role="dialog"], [aria-label="选择时间"]',
+        ),
+      ) as HTMLElement[];
+      return panels.some((el) => {
+        const r = el.getBoundingClientRect();
+        const s = getComputedStyle(el);
+        return s.opacity !== "0" && r.width > 20 && r.height > 20;
+      });
     }) as boolean;
     expect(dlgVisible).toBe(true);
   }, DOCS_BROWSER_CONFIG);

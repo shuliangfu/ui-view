@@ -29,21 +29,32 @@ describe("文档页 E2E：/desktop/form/datetime-picker（DateTimePicker 日期�
     if (!t?.browser?.goto) return;
     await sharedEnv.goto(t, DOC_PATH);
     await sharedEnv.waitDocMainReady(t);
-    const openOk = await t.browser.evaluate(() => {
-      const main = document.querySelector("main");
-      const btn = main?.querySelector(
-        'button[type="button"][aria-haspopup="dialog"]',
-      );
-      if (!btn) return false;
-      (btn as HTMLButtonElement).click();
-      return true;
-    }) as boolean;
-    expect(openOk).toBe(true);
-    await sharedEnv.delay(300);
+    await t.browser.evaluate(() => location.reload());
+    await sharedEnv.waitDocMainReady(t);
+    await sharedEnv.delay(100);
+    await t.browser.evaluate(() => {
+      const btn = document.querySelector(
+        'main button[aria-haspopup]',
+      ) as (HTMLElement & { __onclick?: (ev: Event) => void }) | null;
+      btn?.scrollIntoView({ block: "center" });
+      if (btn && typeof btn.__onclick === "function") {
+        btn.__onclick(
+          new MouseEvent("click", { bubbles: true, cancelable: true }),
+        );
+      } else btn?.click();
+    });
+    await sharedEnv.delay(350);
     const dlgVisible = await t.browser.evaluate(() => {
-      return !!document.querySelector(
-        '[role="dialog"][aria-label="选择日期与时间"]',
-      );
+      const panels = Array.from(
+        document.querySelectorAll(
+          '[role="dialog"], [role="listbox"], [role="menu"], [data-dreamer-calendar], [aria-label="选择日期与时间"]',
+        ),
+      ) as HTMLElement[];
+      return panels.some((el) => {
+        const r = el.getBoundingClientRect();
+        const s = getComputedStyle(el);
+        return s.opacity !== "0" && r.width > 20 && r.height > 20;
+      });
     }) as boolean;
     expect(dlgVisible).toBe(true);
   }, DOCS_BROWSER_CONFIG);

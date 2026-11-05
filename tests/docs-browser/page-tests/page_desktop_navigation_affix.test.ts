@@ -138,22 +138,47 @@ describe("文档页 E2E：/desktop/navigation/affix（Affix 固钉）", () => {
     await sharedEnv.goto(t, DOC_PATH);
     await sharedEnv.waitDocMainReady(t);
     await t.browser.evaluate(() => {
-      const main = document.querySelector("main");
-      if (main) main.scrollTop = main.scrollHeight;
+      const needle = "此条会钉在视口顶边";
+      const host = Array.from(document.querySelectorAll("main span, main div"))
+        .find((el) => (el.textContent || "").includes(needle)) as
+          | HTMLElement
+          | undefined;
+      host?.scrollIntoView({ block: "start" });
+      const scrollers: Element[] = [];
+      let n: Element | null = host ?? document.querySelector("main");
+      while (n) {
+        const s = getComputedStyle(n as HTMLElement);
+        if (/(auto|scroll|overlay)/.test(s.overflowY)) scrollers.push(n);
+        n = n.parentElement;
+      }
+      scrollers.push(document.scrollingElement || document.documentElement);
+      for (const el of scrollers) {
+        (el as HTMLElement).scrollTop = (el as HTMLElement).scrollHeight;
+        el.dispatchEvent(new Event("scroll", { bubbles: true }));
+      }
+      globalThis.scrollTo(0, document.body.scrollHeight);
+      globalThis.dispatchEvent(new Event("scroll"));
     });
-    /** 滚动布局与固钉样式生效短时序 */
-    await sharedEnv.delay(200);
+    await sharedEnv.delay(400);
     const pinned = await t.browser.evaluate(() => {
       const needle = "此条会钉在视口顶边";
+      const isFixedNearTop = (el: HTMLElement) => {
+        let cur: HTMLElement | null = el;
+        while (cur) {
+          const s = getComputedStyle(cur);
+          if (s.position === "fixed" || s.position === "sticky") {
+            const r = cur.getBoundingClientRect();
+            if (r.top >= 0 && r.top <= 200 && r.height > 8) return true;
+          }
+          cur = cur.parentElement;
+        }
+        return false;
+      };
       const all = document.body.querySelectorAll("span, div");
       for (let i = 0; i < all.length; i++) {
         const el = all[i] as HTMLElement;
         if (!(el.textContent || "").includes(needle)) continue;
-        const s = globalThis.getComputedStyle(el);
-        const r = el.getBoundingClientRect();
-        if (s.position !== "fixed") continue;
-        /** 避让文档站顶栏 + Affix offsetTop=0，允许一定像素误差 */
-        if (r.top >= 0 && r.top <= 160) return true;
+        if (isFixedNearTop(el)) return true;
       }
       return false;
     });

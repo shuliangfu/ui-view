@@ -31,27 +31,44 @@ describe("文档页 E2E：/desktop/form/tree-select（TreeSelect 树选择）", 
     await sharedEnv.waitDocMainReady(t);
     const opened = await t.browser.evaluate(() => {
       const btn = document.querySelector(
-        'main button[aria-haspopup="listbox"]:not([disabled])',
-      );
+        'main button[aria-haspopup="listbox"]:not([disabled]), main button[aria-haspopup]:not([disabled])',
+      ) as (HTMLButtonElement & { __onclick?: (ev: Event) => void }) | null;
       if (!btn) return false;
-      (btn as HTMLButtonElement).click();
+      btn.scrollIntoView({ block: "center" });
+      if (typeof btn.__onclick === "function") {
+        btn.__onclick(
+          new MouseEvent("click", { bubbles: true, cancelable: true }),
+        );
+      } else btn.click();
       return true;
     }) as boolean;
     expect(opened).toBe(true);
-    await sharedEnv.delay(250);
+    await sharedEnv.delay(300);
     const picked = await t.browser.evaluate(() => {
-      const lbs = document.querySelectorAll('[role="listbox"]');
-      for (let i = 0; i < lbs.length; i++) {
-        const lb = lbs[i] as HTMLElement;
+      const clickEl = (
+        el: HTMLElement & { __onclick?: (ev: Event) => void },
+      ) => {
+        if (typeof el.__onclick === "function") {
+          el.__onclick(
+            new MouseEvent("click", { bubbles: true, cancelable: true }),
+          );
+        } else el.click();
+      };
+      const lbs = Array.from(
+        document.querySelectorAll('[role="listbox"]'),
+      ) as HTMLElement[];
+      for (const lb of lbs) {
         if (lb.getClientRects().length === 0) continue;
-        const nodes = lb.querySelectorAll(
-          '[role="option"], [role="treeitem"], button[type="button"]',
-        );
-        for (let j = 0; j < nodes.length; j++) {
-          const n = nodes[j] as HTMLElement;
+        const nodes = Array.from(
+          lb.querySelectorAll(
+            '[role="option"], [role="treeitem"], button[type="button"]',
+          ),
+        ) as HTMLElement[];
+        for (const n of nodes) {
           if ((n as HTMLButtonElement).disabled) continue;
-          if ((n.textContent || "").trim() === "前端") {
-            n.click();
+          const tx = (n.textContent || "").trim();
+          if (tx === "前端" || tx.endsWith("前端")) {
+            clickEl(n as HTMLElement & { __onclick?: (ev: Event) => void });
             return true;
           }
         }

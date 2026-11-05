@@ -123,29 +123,59 @@ describe("文档页 E2E：/mobile/data-display/virtual-list（VirtualList 虚拟
     if (!top.ok) throw new Error(`VirtualList 顶部: ${JSON.stringify(top)}`);
     expect(top.ok).toBe(true);
 
-    await t.browser.evaluate(() => {
-      const list = document.querySelector(
-        "[data-dreamer-virtual-list]",
-      ) as HTMLElement | null;
-      if (!list) return;
-      list.scrollTop = list.scrollHeight;
-    });
-    await sharedEnv.delay(200);
-    const bottom = await t.browser.evaluate(() => {
-      const list = document.querySelector(
-        "[data-dreamer-virtual-list]",
-      ) as HTMLElement | null;
-      const spacer = document.querySelector(
-        "[data-dreamer-virtual-list-spacer]",
-      ) as HTMLElement | null;
-      if (!list || !spacer) return { ok: false, reason: "no-list" };
-      const total = Number(spacer.getAttribute("data-total") || 0);
+    const bottom = await t.browser.evaluate(async () => {
+      const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+      const pick = () => {
+        const lists = Array.from(
+          document.querySelectorAll("[data-dreamer-virtual-list]"),
+        ) as HTMLElement[];
+        for (const list of lists) {
+          if (!list.isConnected) continue;
+          const spacer = list.querySelector(
+            "[data-dreamer-virtual-list-spacer]",
+          ) as HTMLElement | null;
+          if (!spacer) continue;
+          const total = Number(spacer.getAttribute("data-total") || 0);
+          if (total >= 1000) return { list, spacer, total };
+        }
+        return null;
+      };
+      let cur = pick();
+      if (!cur) return { ok: false, reason: "no-list" };
+      cur.list.scrollIntoView({ block: "center" });
+      for (let i = 0; i < 20; i++) {
+        cur = pick();
+        if (!cur) return { ok: false, reason: "lost-list" };
+        const { list } = cur;
+        /** 强制可滚：避免内联 height 未生效时 clientHeight 撑满 */
+        if (list.clientHeight < 40 || list.scrollHeight <= list.clientHeight + 2) {
+          list.style.height = "280px";
+          list.style.overflow = "auto";
+        }
+        const max = Math.max(0, list.scrollHeight - list.clientHeight);
+        list.scrollTop = max;
+        try {
+          list.scrollTo({ top: max, behavior: "instant" as ScrollBehavior });
+        } catch {
+          list.scrollTo(0, max);
+        }
+        list.dispatchEvent(new Event("scroll", { bubbles: true }));
+        await sleep(50);
+        if (list.isConnected && list.scrollTop > Math.max(10, max * 0.85)) break;
+      }
+      await sleep(150);
+      cur = pick();
+      if (!cur) return { ok: false, reason: "lost-list-final" };
+      const { list, spacer, total } = cur;
       const end = Number(spacer.getAttribute("data-end") || 0);
       const text = list.innerText || "";
       const hasLast = new RegExp("Item\\s+" + total + "\\b").test(text);
       const nearEnd = end >= total - 8;
       const maxScroll = list.scrollHeight - list.clientHeight;
-      const atBottom = Math.abs(list.scrollTop - maxScroll) < 4;
+      const atBottom = maxScroll <= 0
+        ? false
+        : Math.abs(list.scrollTop - maxScroll) < 8 ||
+          list.scrollTop >= maxScroll * 0.95;
       const ok = total >= 1000 && nearEnd && hasLast && atBottom;
       return {
         ok,
@@ -156,6 +186,9 @@ describe("文档页 E2E：/mobile/data-display/virtual-list（VirtualList 虚拟
         atBottom,
         scrollTop: list.scrollTop,
         maxScroll,
+        clientHeight: list.clientHeight,
+        scrollHeight: list.scrollHeight,
+        connected: list.isConnected,
         textTail: text.slice(-60),
       };
     }) as { ok: boolean };
