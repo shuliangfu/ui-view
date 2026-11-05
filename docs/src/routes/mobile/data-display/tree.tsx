@@ -95,9 +95,9 @@ export default function Page() {
     <div class="space-y-8">
       <div>
         <Title level={1}>Tree</Title>
-        <Paragraph>
-          移动端树形。默认父子联动（点 1-2 带 1-2-1 正常）；checkStrictly
-          关联动。另有 showLine 连接线、blockNode 块级行风格。
+                <Paragraph>
+          移动端树形。箭头＝展开；checkbox＝勾选（默认联动／半选，不写 selected）；
+          标题／行＝仅本节点 selected。checkStrictly 关联动。另有 showLine／blockNode。
         </Paragraph>
       </div>
       <section class="space-y-3">

@@ -127,4 +127,73 @@ describe("文档页 E2E：/mobile/data-display/tree（Tree 树）", () => {
     expect(after.allChecked).toBe(true);
     expect(after.display).toMatch(/共\s*4/);
   }, DOCS_BROWSER_CONFIG);
+
+  it("UI·点叶勾选不写 selected", async (t) => {
+    if (!t?.browser?.goto) return;
+    await sharedEnv.goto(t, DOC_PATH);
+    await sharedEnv.waitDocMainReady(t);
+    await t.browser.evaluate(() => location.reload());
+    await sharedEnv.waitDocMainReady(t);
+    await sharedEnv.delay(120);
+
+    await t.browser.evaluate(() => {
+      if (!document.querySelector(
+        'main [data-tree-demo="cascade"] [data-tree-check-key="1-2-1"]',
+      )) {
+        const exp = document.querySelector(
+          'main [data-tree-demo="cascade"] [data-tree-expand-key="1-2"]',
+        ) as (HTMLButtonElement & { __onclick?: (ev: Event) => void }) | null;
+        if (exp && typeof exp.__onclick === "function") {
+          exp.__onclick(
+            new MouseEvent("click", { bubbles: true, cancelable: true }),
+          );
+        } else exp?.click();
+      }
+    });
+    await sharedEnv.delay(200);
+
+    await t.browser.evaluate(() => {
+      const cb = document.querySelector(
+        'main [data-tree-demo="cascade"] [data-tree-check-key="1-2-1"]',
+      ) as (HTMLInputElement & { __onclick?: (ev: Event) => void }) | null;
+      if (cb && typeof cb.__onclick === "function") {
+        cb.__onclick(
+          new MouseEvent("click", { bubbles: true, cancelable: true }),
+        );
+      } else cb?.click();
+    });
+    await sharedEnv.delay(250);
+
+    const got = await t.browser.evaluate(() => {
+      const leafCb = document.querySelector(
+        'main [data-tree-demo="cascade"] [data-tree-check-key="1-2-1"]',
+      ) as HTMLInputElement | null;
+      const parentCb = document.querySelector(
+        'main [data-tree-demo="cascade"] [data-tree-check-key="1-2"]',
+      ) as HTMLInputElement | null;
+      const parentRow = document.querySelector(
+        'main [data-tree-demo="cascade"] [data-tree-node-key="1-2"]',
+      );
+      const display = document.querySelector(
+        '[data-tree-demo="cascade"] [data-tree-keys-display]',
+      )?.textContent ?? "";
+      return {
+        leafChecked: !!leafCb?.checked,
+        parentIndeterminate: !!parentCb?.indeterminate ||
+          parentCb?.getAttribute("aria-checked") === "mixed",
+        parentSelected: parentRow?.getAttribute("data-tree-selected") === "true",
+        display,
+      };
+    }) as {
+      leafChecked: boolean;
+      parentIndeterminate: boolean;
+      parentSelected: boolean;
+      display: string;
+    };
+    expect(got.leafChecked).toBe(true);
+    expect(got.parentIndeterminate).toBe(true);
+    expect(got.parentSelected).toBe(false);
+    expect(got.display).toMatch(/共\s*1/);
+  }, DOCS_BROWSER_CONFIG);
+
 });

@@ -4,6 +4,11 @@
  *
  * `expandedKeys`／`selectedKeys`／`checkedKeys` 请传 Signal 或 getter；勿传 `signal.value` 快照，
  * 否则回调写回后组件仍读旧数组，表现为展开／勾选「点了没反应」。
+ *
+ * 交互分流（勿混用）：
+ * - 箭头：仅展开／收起（expandedKeys）
+ * - checkbox：仅勾选（checkedKeys；默认 cascade／半选，checkStrictly 关闭联动）
+ * - 标题／行空白：仅选中本节点（selectedKeys），绝不改父级 selected、绝不写 checkedKeys
  */
 
 import {
@@ -224,10 +229,13 @@ function renderNode(
             }}
             data-tree-show-line={ctx.showLine ? "true" : undefined}
             data-tree-block-node={ctx.blockNode ? "true" : undefined}
-            onClick={() => {
-              // 行点击（空白处）切换展开；子控件已 stopPropagation
-              if (disabled || isLeaf) return;
-              ctx.onExpand(node.key);
+            data-tree-selected={isSelected ? "true" : undefined}
+            data-tree-check-visual={nodeCheckable ? vcheck : undefined}
+            onClick={(e: Event) => {
+              // 行空白：仅选中本节点（不展开、不勾选）；子控件已 stopPropagation
+              e.stopPropagation();
+              if (disabled) return;
+              if (node.selectable !== false) ctx.onSelect(node.key);
             }}
             onKeyDown={(e: KeyboardEvent) => {
               if (disabled) return;
@@ -283,13 +291,15 @@ function renderNode(
                   vcheck === "indeterminate" ? "mixed" : vcheck === "checked"
                 }
                 onClick={(e: Event) => {
+                  // 拦冒泡，避免行 onClick 写入 selected；同步触发勾选（兼容仅绑定 click 的运行时）
                   e.preventDefault();
                   e.stopPropagation();
                   if (!disabled) ctx.onCheck(node.key);
                 }}
                 onChange={(e: Event) => {
-                  // 受控：阻止原生切换，由 onCheck 写回
+                  // 受控：忽略原生切换；勾选已在 onClick 处理，避免双触发
                   e.preventDefault();
+                  e.stopPropagation();
                 }}
               />
             )}
@@ -299,8 +309,7 @@ function renderNode(
               onClick={(e: Event) => {
                 e.stopPropagation();
                 if (disabled) return;
-                // 行／标题点击：有子则切换展开；勾选仅走 checkbox
-                if (!isLeaf) ctx.onExpand(node.key);
+                // 标题：仅 selectedKeys（本 key）；勾选只走 checkbox；展开只走箭头
                 if (node.selectable !== false) ctx.onSelect(node.key);
               }}
             >
@@ -351,9 +360,9 @@ export function Tree(props: TreeProps): JSXRenderable {
     expandedKeys: controlledExpanded,
     defaultExpandedKeys = [],
     onExpand,
-    selectedKeys = [],
+    selectedKeys,
     onSelect,
-    checkedKeys = [],
+    checkedKeys,
     onCheck,
     checkable = false,
     checkStrictly = false,
@@ -364,18 +373,33 @@ export function Tree(props: TreeProps): JSXRenderable {
   } = props;
 
   const getExpandedKeys = asGetter(controlledExpanded, defaultExpandedKeys);
-  const getSelectedKeys = asGetter(selectedKeys, []);
-  const getCheckedKeys = asGetter(checkedKeys, []);
+  const getSelectedKeysProp = asGetter(
+    props.selectedKeys !== undefined ? selectedKeys : undefined,
+    [],
+  );
+  const getCheckedKeysProp = asGetter(
+    props.checkedKeys !== undefined ? checkedKeys : undefined,
+    [],
+  );
 
   /** 非受控展开兜底（未传 expandedKeys 时） */
   const innerExpanded = createSignal<string[]>(
     untrack(() => [...defaultExpandedKeys]),
   );
+  const innerSelected = createSignal<string[]>([]);
+  const innerChecked = createSignal<string[]>([]);
+
   const hasControlledExpanded =
     controlledExpanded !== undefined && controlledExpanded !== null;
+  const hasControlledSelected = props.selectedKeys !== undefined;
+  const hasControlledChecked = props.checkedKeys !== undefined;
 
   const readExpanded = () =>
     hasControlledExpanded ? getExpandedKeys() : innerExpanded.value;
+  const readSelected = () =>
+    hasControlledSelected ? getSelectedKeysProp() : innerSelected.value;
+  const readChecked = () =>
+    hasControlledChecked ? getCheckedKeysProp() : innerChecked.value;
 
   const handleExpand = (key: string) => {
     const cur = new Set(readExpanded());
@@ -387,7 +411,7 @@ export function Tree(props: TreeProps): JSXRenderable {
   };
 
   const handleSelect = (key: string) => {
-    const cur = new Set(getSelectedKeys());
+    const cur = new Set(readSelected());
     let next: string[];
     if (multiple) {
       next = cur.has(key) ? [...cur].filter((k) => k !== key) : [...cur, key];
@@ -396,13 +420,14 @@ export function Tree(props: TreeProps): JSXRenderable {
     }
     const node = getNodeByKey(treeData, key);
     if (!node) return;
+    if (!hasControlledSelected) innerSelected.set(next);
     onSelect?.(next, { node, selected: next.includes(key) });
   };
 
   const handleCheck = (key: string) => {
     const node = getNodeByKey(treeData, key);
     if (!node || node.disabled) return;
-    const cur = new Set(getCheckedKeys());
+    const cur = new Set(readChecked());
 
     if (checkStrictly) {
       if (cur.has(key)) cur.delete(key);
@@ -422,13 +447,14 @@ export function Tree(props: TreeProps): JSXRenderable {
     }
 
     const next = Array.from(cur);
+    if (!hasControlledChecked) innerChecked.set(next);
     onCheck?.(next);
   };
 
   const ctx = {
     getExpanded: () => new Set(readExpanded()),
-    getSelected: () => new Set(getSelectedKeys()),
-    getChecked: () => new Set(getCheckedKeys()),
+    getSelected: () => new Set(readSelected()),
+    getChecked: () => new Set(readChecked()),
     checkStrictly,
     checkable,
     showLine,
@@ -441,7 +467,7 @@ export function Tree(props: TreeProps): JSXRenderable {
   // 同步原生 indeterminate（属性需 DOM 赋值）
   const rootElRef = createSignal<HTMLElement | null>(null);
   createEffect(() => {
-    const checked = new Set(getCheckedKeys());
+    const checked = new Set(readChecked());
     const root = rootElRef.value;
     if (!root || typeof root.querySelectorAll !== "function") return;
     root.querySelectorAll<HTMLInputElement>("input[data-tree-check-key]")

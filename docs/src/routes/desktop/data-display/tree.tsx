@@ -194,12 +194,15 @@ export default function Page() {
       <div>
         <Title level={1}>Tree</Title>
         <Paragraph>
-          树形控件。箭头／行点击切换展开；键盘 ArrowLeft／Right 收起／展开，Space
-          勾选，Enter 选中。勾选默认
-          <strong>父子联动</strong>（点 1-2 会带上 1-2-1，属正常 cascade）；传
-          <code class="mx-1">checkStrictly</code>
-          可关掉联动。子孙部分勾选时父级半选。expandedKeys／checkedKeys／selectedKeys
-          请传 Signal 或 getter，勿传 .value 快照。
+          树形控件。交互必须分流：
+          <strong>箭头</strong>＝展开／收起（expandedKeys）；
+          <strong>checkbox</strong>＝勾选（checkedKeys，默认 cascade：勾叶则父半选／全选，
+          不写 selectedKeys）；
+          <strong>标题／行</strong>＝仅选中本节点（selectedKeys，行高亮），
+          <em>不会</em>改勾选计数、也绝不把父节点标成 selected。
+          键盘：ArrowLeft／Right 展开，Enter 选中，Space 勾选。
+          <code class="mx-1">checkStrictly</code> 关闭父子联动。
+          keys 请传 Signal／getter，勿传 .value 快照。
         </Paragraph>
       </div>
 
@@ -214,7 +217,8 @@ export default function Page() {
         <div class="space-y-3">
           <Title level={3}>展开 / 选中 / 勾选</Title>
           <Paragraph class="text-sm text-slate-500">
-            默认联动：勾「节点 1」或「1-2」会级联子孙；取消叶子后父级半选。
+            勾 checkbox「1-2-1」→ 仅 checkedKeys 含该叶，父「1-2」半选（非 selected 高亮）。
+            点标题「1-2-1」→ 仅该叶 selected 高亮，勾选计数不变。勾父「1」级联子孙。
           </Paragraph>
           <div
             class="rounded-xl border border-slate-200 dark:border-slate-700 p-4 bg-white dark:bg-slate-900 space-y-3"

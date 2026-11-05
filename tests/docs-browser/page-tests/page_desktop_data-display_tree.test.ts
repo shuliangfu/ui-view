@@ -412,4 +412,165 @@ describe("文档页 E2E：/desktop/data-display/tree（Tree 树）", () => {
     expect(after.child).toBe(false);
   }, DOCS_BROWSER_CONFIG);
 
+
+  /**
+   * UI·点叶标题：仅该叶 selected；父不 selected；checked 计数仍 0。
+   */
+  it("UI·点叶标题不选中父且不改勾选", async (t) => {
+    if (!t?.browser?.goto) return;
+    await sharedEnv.goto(t, DOC_PATH);
+    await sharedEnv.waitDocMainReady(t);
+    await t.browser.evaluate(() => location.reload());
+    await sharedEnv.waitDocMainReady(t);
+    await sharedEnv.delay(100);
+
+    // 确保 1-2 展开以见到 1-2-1
+    await t.browser.evaluate(() => {
+      const need = document.querySelector(
+        'main [data-tree-demo="cascade"] [data-tree-select-key="1-2-1"]',
+      );
+      if (!need) {
+        const exp = document.querySelector(
+          'main [data-tree-demo="cascade"] [data-tree-expand-key="1-2"]',
+        ) as (HTMLButtonElement & { __onclick?: (ev: Event) => void }) | null;
+        if (exp && typeof exp.__onclick === "function") {
+          exp.__onclick(
+            new MouseEvent("click", { bubbles: true, cancelable: true }),
+          );
+        } else exp?.click();
+      }
+    });
+    await sharedEnv.delay(200);
+
+    await t.browser.evaluate(() => {
+      const title = document.querySelector(
+        'main [data-tree-demo="cascade"] [data-tree-select-key="1-2-1"]',
+      ) as (HTMLElement & { __onclick?: (ev: Event) => void }) | null;
+      title?.scrollIntoView({ block: "center" });
+      if (title && typeof title.__onclick === "function") {
+        title.__onclick(
+          new MouseEvent("click", { bubbles: true, cancelable: true }),
+        );
+      } else title?.click();
+    });
+    await sharedEnv.delay(200);
+
+    const got = await t.browser.evaluate(() => {
+      const leaf = document.querySelector(
+        'main [data-tree-demo="cascade"] [data-tree-node-key="1-2-1"]',
+      );
+      const parent = document.querySelector(
+        'main [data-tree-demo="cascade"] [data-tree-node-key="1-2"]',
+      );
+      const display = document.querySelector(
+        '[data-tree-demo="cascade"] [data-tree-keys-display]',
+      )?.textContent ?? "";
+      return {
+        leafSelected: leaf?.getAttribute("data-tree-selected") === "true" ||
+          leaf?.getAttribute("aria-selected") === "true",
+        parentSelected: parent?.getAttribute("data-tree-selected") === "true" ||
+          parent?.getAttribute("aria-selected") === "true",
+        display,
+      };
+    }) as {
+      leafSelected: boolean;
+      parentSelected: boolean;
+      display: string;
+    };
+
+    expect(got.leafSelected).toBe(true);
+    expect(got.parentSelected).toBe(false);
+    expect(got.display).toMatch(/已勾选:.*共\s*0|已勾选:\s*-\s*（共\s*0）/);
+  }, DOCS_BROWSER_CONFIG);
+
+  /**
+   * UI·点叶 checkbox：checkedKeys 含叶；父半选；父／叶均非因勾选而 selected。
+   */
+  it("UI·点叶勾选半选父且不写 selected", async (t) => {
+    if (!t?.browser?.goto) return;
+    await sharedEnv.goto(t, DOC_PATH);
+    await sharedEnv.waitDocMainReady(t);
+    await t.browser.evaluate(() => location.reload());
+    await sharedEnv.waitDocMainReady(t);
+    await sharedEnv.delay(100);
+
+    await t.browser.evaluate(() => {
+      const need = document.querySelector(
+        'main [data-tree-demo="cascade"] [data-tree-check-key="1-2-1"]',
+      );
+      if (!need) {
+        const exp = document.querySelector(
+          'main [data-tree-demo="cascade"] [data-tree-expand-key="1-2"]',
+        ) as (HTMLButtonElement & { __onclick?: (ev: Event) => void }) | null;
+        if (exp && typeof exp.__onclick === "function") {
+          exp.__onclick(
+            new MouseEvent("click", { bubbles: true, cancelable: true }),
+          );
+        } else exp?.click();
+      }
+    });
+    await sharedEnv.delay(200);
+
+    await t.browser.evaluate(() => {
+      const cb = document.querySelector(
+        'main [data-tree-demo="cascade"] [data-tree-check-key="1-2-1"]',
+      ) as (HTMLInputElement & { __onclick?: (ev: Event) => void; __onchange?: (ev: Event) => void }) | null;
+      cb?.scrollIntoView({ block: "center" });
+      if (cb && typeof cb.__onchange === "function") {
+        cb.__onchange(
+          new Event("change", { bubbles: true, cancelable: true }),
+        );
+      } else if (cb && typeof cb.__onclick === "function") {
+        cb.__onclick(
+          new MouseEvent("click", { bubbles: true, cancelable: true }),
+        );
+      } else {
+        cb?.click();
+      }
+    });
+    await sharedEnv.delay(250);
+
+    const got = await t.browser.evaluate(() => {
+      const leafCb = document.querySelector(
+        'main [data-tree-demo="cascade"] [data-tree-check-key="1-2-1"]',
+      ) as HTMLInputElement | null;
+      const parentCb = document.querySelector(
+        'main [data-tree-demo="cascade"] [data-tree-check-key="1-2"]',
+      ) as HTMLInputElement | null;
+      const parentRow = document.querySelector(
+        'main [data-tree-demo="cascade"] [data-tree-node-key="1-2"]',
+      );
+      const leafRow = document.querySelector(
+        'main [data-tree-demo="cascade"] [data-tree-node-key="1-2-1"]',
+      );
+      const display = document.querySelector(
+        '[data-tree-demo="cascade"] [data-tree-keys-display]',
+      )?.textContent ?? "";
+      return {
+        leafChecked: !!leafCb?.checked,
+        parentChecked: !!parentCb?.checked,
+        parentIndeterminate: !!parentCb?.indeterminate ||
+          parentCb?.getAttribute("aria-checked") === "mixed",
+        parentSelected: parentRow?.getAttribute("data-tree-selected") === "true",
+        leafSelected: leafRow?.getAttribute("data-tree-selected") === "true",
+        display,
+      };
+    }) as {
+      leafChecked: boolean;
+      parentChecked: boolean;
+      parentIndeterminate: boolean;
+      parentSelected: boolean;
+      leafSelected: boolean;
+      display: string;
+    };
+
+    expect(got.leafChecked).toBe(true);
+    expect(got.parentChecked).toBe(false);
+    expect(got.parentIndeterminate).toBe(true);
+    expect(got.parentSelected).toBe(false);
+    expect(got.leafSelected).toBe(false);
+    expect(got.display).toMatch(/1-2-1/);
+    expect(got.display).toMatch(/共\s*1/);
+  }, DOCS_BROWSER_CONFIG);
+
 });
