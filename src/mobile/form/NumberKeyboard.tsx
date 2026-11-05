@@ -66,10 +66,13 @@ export function NumberKeyboard(props: NumberKeyboardProps): JSXRenderable {
   } = props;
   const m = { ...defaultNumberKeyboardMessages, ...(props.messages ?? {}) };
   const isOpen = createMemo(() => readControlledOpenInput(props.open));
-  const portalOverride = useContext(MobilePortalHostContext);
+  /** 机内 Portal：Context 为 `{ getHost }`，勿当成 HTMLElement */
+  const portalHostScope = useContext(MobilePortalHostContext);
+  const getScopedHost = portalHostScope?.getHost;
 
   createRenderEffect(() => {
     if (!isOpen()) return;
+    if (portalHostScope != null) return;
     const body = getBrowserBodyPortalHost();
     if (!body) return;
     const prev = body.style.overflow;
@@ -146,11 +149,26 @@ export function NumberKeyboard(props: NumberKeyboardProps): JSXRenderable {
     );
   };
 
-  const host = (portalOverride as HTMLElement | null | undefined) ??
-    getBrowserBodyPortalHost();
-  if (host) {
-    createPortal(() => markup(), host);
-    return null;
-  }
-  return () => markup();
+  createRenderEffect(() => {
+    let host: HTMLElement | null | undefined;
+    if (getScopedHost != null) {
+      host = getScopedHost();
+      if (host == null) return;
+    } else {
+      host = getBrowserBodyPortalHost();
+    }
+    if (host == null) return;
+    const root = createPortal(() => markup(), host);
+    onCleanup(() => {
+      root.unmount();
+    });
+  });
+
+  return (
+    <span
+      style="display:none;width:0;height:0;overflow:hidden;position:absolute;clip:rect(0,0,0,0)"
+      aria-hidden="true"
+      data-dreamer-number-keyboard-portal-anchor=""
+    />
+  );
 }

@@ -39,8 +39,19 @@ export default function Page() {
       </section>
       <section class="space-y-3">
         <Title level={2}>示例</Title>
-        <MobileDocDemo>
-          <div class="h-80"><IndexBar items={[{ index: "A", children: <Cell title="Alice" /> }, { index: "B", children: <Cell title="Bob" /> }]} /></div>
+        <MobileDocDemo class="p-0 overflow-hidden">
+          <div class="h-80 flex flex-col">
+            <IndexBar
+              class="h-full"
+              items={[
+                { index: "A", children: <div><Cell title="Alice" /><Cell title="Amy" /></div> },
+                { index: "B", children: <div><Cell title="Bob" /><Cell title="Bella" /></div> },
+                { index: "C", children: <Cell title="Carol" /> },
+                { index: "D", children: <Cell title="David" /> },
+                { index: "Z", children: <Cell title="Zoe" /> },
+              ]}
+            />
+          </div>
         </MobileDocDemo>
       </section>
       <section class="space-y-3">

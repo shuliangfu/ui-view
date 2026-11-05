@@ -2,8 +2,12 @@
  * ShareSheet 文档页。路由: /mobile/feedback/share-sheet
  */
 
-import { ShareSheet } from "@dreamer/ui-view/mobile";
-import { CodeBlock, Paragraph, Title } from "@dreamer/ui-view";
+import { createSignal } from "@dreamer/view";
+import {
+  MobilePortalHostScope,
+  ShareSheet,
+} from "@dreamer/ui-view/mobile";
+import { Button, CodeBlock, Paragraph, Title } from "@dreamer/ui-view";
 import {
   DocsApiTable,
   type DocsApiTableRow,
@@ -12,8 +16,10 @@ import { MobileDocDemo } from "../../../components/MobileDocDemo.tsx";
 
 const API: DocsApiTableRow[] = [
   { name: "open", type: "ControlledOpenInput", default: "-", description: "是否打开" },
-  { name: "options", type: "ShareSheetOption[]", default: "-", description: "选项" },
-  { name: "title", type: "string|null", default: "-", description: "标题" }
+  { name: "options", type: "ShareSheetOption[]", default: "-", description: "分享选项" },
+  { name: "title", type: "string | null", default: "-", description: "标题" },
+  { name: "onClose", type: "() => void", default: "-", description: "关闭" },
+  { name: "cancelText", type: "string | null", default: "取消", description: "取消文案" },
 ];
 
 const importCode = `import { createSignal } from "@dreamer/view";
@@ -32,11 +38,12 @@ const open = createSignal(false);
 />`;
 
 export default function Page() {
+  const open = createSignal(false);
   return (
     <div class="space-y-8">
       <div>
         <Title level={1}>ShareSheet</Title>
-        <Paragraph>底部分享宫格。</Paragraph>
+        <Paragraph>底部分享宫格；文档示例限制在机内 Portal Scope。</Paragraph>
       </div>
       <section class="space-y-3">
         <Title level={2}>引入</Title>
@@ -44,8 +51,23 @@ export default function Page() {
       </section>
       <section class="space-y-3">
         <Title level={2}>示例</Title>
-        <MobileDocDemo>
-          <Paragraph class="p-3 text-sm text-slate-500">使用 open=&#123;signal&#125; 打开分享面板。</Paragraph>
+        <MobileDocDemo class="flex min-h-[280px] flex-col p-4">
+          <MobilePortalHostScope class="flex min-h-0 flex-1 flex-col">
+            <Button type="button" onClick={() => (open.value = true)}>
+              打开分享面板
+            </Button>
+            <ShareSheet
+              open={open}
+              title="分享到"
+              options={[
+                { key: "wx", label: "微信", icon: "微" },
+                { key: "qq", label: "QQ", icon: "Q" },
+                { key: "link", label: "链接", icon: "链" },
+                { key: "more", label: "更多", icon: "…" },
+              ]}
+              onClose={() => (open.value = false)}
+            />
+          </MobilePortalHostScope>
         </MobileDocDemo>
       </section>
       <section class="space-y-3">

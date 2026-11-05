@@ -19,7 +19,7 @@ const API: DocsApiTableRow[] = [
 
 const importCode = `import { CountDown } from "@dreamer/ui-view/mobile";
 
-<CountDown remaining={3_661_000} />`;
+<CountDown target={Date.now() + 3_661_000} />`;
 
 export default function Page() {
   return (
@@ -35,7 +35,7 @@ export default function Page() {
       <section class="space-y-3">
         <Title level={2}>示例</Title>
         <MobileDocDemo>
-          <div class="p-4 text-center text-lg"><CountDown remaining={3661000} /></div>
+          <div class="p-4 text-center text-lg"><CountDown target={Date.now() + 3661000} /></div>
         </MobileDocDemo>
       </section>
       <section class="space-y-3">
