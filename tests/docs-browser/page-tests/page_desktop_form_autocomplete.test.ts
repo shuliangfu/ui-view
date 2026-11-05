@@ -29,65 +29,78 @@ describe("文档页 E2E：/desktop/form/autocomplete（Autocomplete 自动完成
     if (!t?.browser?.goto) return;
     await sharedEnv.goto(t, DOC_PATH);
     await sharedEnv.waitDocMainReady(t);
-    const typed = await t.browser.evaluate(() => {
-      const main = document.querySelector("main");
-      if (!main) return false;
-      const el = main.querySelector<HTMLInputElement>(
-        'input[placeholder="输入或选择"]',
-      ) ||
-        main.querySelector<HTMLInputElement>(
-          'input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"])',
-        );
-      if (!el || el.disabled) return false;
+    await t.browser.evaluate(() => location.reload());
+    await sharedEnv.waitDocMainReady(t);
+    await sharedEnv.delay(150);
+    const picked = await t.browser.evaluate(async () => {
+      const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+      const el = document.querySelector(
+        'main input[placeholder="输入或选择"]',
+      ) as
+        | (HTMLInputElement & {
+          __oninput?: (ev: Event) => void;
+          __onfocus?: (ev: Event) => void;
+        })
+        | null;
+      if (!el || el.disabled) return { ok: false, reason: "no-input" };
       el.scrollIntoView({ block: "center" });
       el.focus();
+      /** focus 打开全量建议；再输入「北」过滤（与文档交互一致） */
+      if (typeof el.__onfocus === "function") {
+        el.__onfocus(new FocusEvent("focus", { bubbles: true }));
+      }
+      await sleep(120);
       el.value = "北";
-      el.dispatchEvent(new InputEvent("input", { bubbles: true, data: "北" }));
-      el.dispatchEvent(new Event("change", { bubbles: true }));
-      return true;
-    }) as boolean;
-    expect(typed).toBe(true);
-    await sharedEnv.delay(350);
-    const picked = await t.browser.evaluate(() => {
-      const clickEl = (
-        el: HTMLElement & { __onclick?: (ev: Event) => void },
-      ) => {
-        if (typeof el.__onclick === "function") {
-          el.__onclick(
-            new MouseEvent("click", { bubbles: true, cancelable: true }),
-          );
-        } else el.click();
-      };
-      const lbs = Array.from(
-        document.querySelectorAll('[role="listbox"]'),
-      ) as HTMLElement[];
-      for (const lb of lbs) {
-        if (lb.getClientRects().length === 0) continue;
-        const opts = Array.from(
-          lb.querySelectorAll('[role="option"]'),
-        ) as HTMLElement[];
-        for (const o of opts) {
-          if ((o.textContent || "").trim() === "北京") {
-            clickEl(o as HTMLElement & { __onclick?: (ev: Event) => void });
-            return true;
+      el.dispatchEvent(new Event("input", { bubbles: true }));
+      if (typeof el.__oninput === "function") {
+        const ev = new Event("input", { bubbles: true });
+        Object.defineProperty(ev, "target", { value: el });
+        Object.defineProperty(ev, "currentTarget", { value: el });
+        el.__oninput(ev);
+      }
+      let opt: HTMLElement | null = null;
+      for (let i = 0; i < 25; i++) {
+        await sleep(40);
+        opt = Array.from(document.querySelectorAll('[role="option"]')).find(
+          (o) =>
+            (o.textContent || "").trim() === "北京" &&
+            o.getClientRects().length > 0,
+        ) as HTMLElement | undefined ?? null;
+        if (opt) break;
+        if (i === 10) {
+          el.value = "北";
+          el.dispatchEvent(new Event("input", { bubbles: true }));
+          if (typeof el.__oninput === "function") {
+            const ev = new Event("input", { bubbles: true });
+            Object.defineProperty(ev, "target", { value: el });
+            el.__oninput(ev);
           }
         }
       }
-      const any = Array.from(
-        document.querySelectorAll('[role="option"]'),
-      ) as HTMLElement[];
-      for (const o of any) {
-        if (
-          (o.textContent || "").includes("北京") &&
-          o.getClientRects().length > 0
-        ) {
-          clickEl(o as HTMLElement & { __onclick?: (ev: Event) => void });
-          return true;
-        }
+      if (!opt) {
+        return {
+          ok: false,
+          reason: "no-option",
+          lbs: document.querySelectorAll('[role="listbox"]').length,
+          opts: Array.from(document.querySelectorAll('[role="option"]')).map(
+            (o) => (o.textContent || "").trim(),
+          ),
+          val: el.value,
+        };
       }
-      return false;
-    }) as boolean;
-    expect(picked).toBe(true);
+      opt.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+      const c = opt as HTMLElement & { __onclick?: (ev: Event) => void };
+      if (typeof c.__onclick === "function") {
+        c.__onclick(
+          new MouseEvent("click", { bubbles: true, cancelable: true }),
+        );
+      } else opt.click();
+      return { ok: true, reason: "ok" };
+    }) as { ok: boolean; reason: string };
+    if (!picked.ok) {
+      throw new Error(`Autocomplete: ${JSON.stringify(picked)}`);
+    }
+    expect(picked.ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
 
   /**

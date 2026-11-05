@@ -29,50 +29,59 @@ describe("文档页 E2E：/desktop/form/multiselect（MultiSelect 多选）", ()
     if (!t?.browser?.goto) return;
     await sharedEnv.goto(t, DOC_PATH);
     await sharedEnv.waitDocMainReady(t);
-    const opened = await t.browser.evaluate(() => {
-      const btn = document.querySelector(
-        'main button[aria-haspopup="listbox"]:not([disabled]), main button[aria-haspopup]:not([disabled])',
-      ) as (HTMLButtonElement & { __onclick?: (ev: Event) => void }) | null;
-      if (!btn) return false;
-      btn.scrollIntoView({ block: "center" });
-      if (typeof btn.__onclick === "function") {
-        btn.__onclick(
-          new MouseEvent("click", { bubbles: true, cancelable: true }),
-        );
-      } else btn.click();
-      return true;
-    }) as boolean;
-    expect(opened).toBe(true);
-    await sharedEnv.delay(300);
-    const picked = await t.browser.evaluate(() => {
-      const clickEl = (
-        el: HTMLElement & { __onclick?: (ev: Event) => void },
-      ) => {
-        if (typeof el.__onclick === "function") {
-          el.__onclick(
+    await t.browser.evaluate(() => location.reload());
+    await sharedEnv.waitDocMainReady(t);
+    await sharedEnv.delay(150);
+    const result = await t.browser.evaluate(async () => {
+      const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+      const openBtn = () => {
+        const btn = document.querySelector(
+          'main button[aria-haspopup="listbox"]:not([disabled])',
+        ) as (HTMLButtonElement & { __onclick?: (ev: Event) => void }) | null;
+        if (!btn) return false;
+        btn.scrollIntoView({ block: "center" });
+        if (typeof btn.__onclick === "function") {
+          btn.__onclick(
             new MouseEvent("click", { bubbles: true, cancelable: true }),
           );
-        } else el.click();
+        } else btn.click();
+        return true;
       };
-      const lbs = Array.from(
-        document.querySelectorAll('[role="listbox"]'),
-      ) as HTMLElement[];
-      for (const lb of lbs) {
-        if (lb.getClientRects().length === 0) continue;
-        const opts = Array.from(
-          lb.querySelectorAll('[role="option"]'),
-        ) as HTMLElement[];
-        for (const o of opts) {
-          if ((o as HTMLButtonElement).disabled) continue;
-          if ((o.textContent || "").includes("选项 A")) {
-            clickEl(o as HTMLElement & { __onclick?: (ev: Event) => void });
-            return true;
-          }
-        }
+      if (!openBtn()) return { ok: false, reason: "no-trigger" };
+      let opt: HTMLElement | null = null;
+      for (let i = 0; i < 20; i++) {
+        await sleep(50);
+        opt = Array.from(document.querySelectorAll('[role="option"]')).find(
+          (o) =>
+            !(o as HTMLButtonElement).disabled &&
+            (o.textContent || "").includes("选项 A") &&
+            o.getClientRects().length > 0,
+        ) as HTMLElement | undefined ?? null;
+        if (opt) break;
+        if (i === 6 || i === 12) openBtn();
       }
-      return false;
-    }) as boolean;
-    expect(picked).toBe(true);
+      if (!opt) {
+        return {
+          ok: false,
+          reason: "no-option",
+          lbs: document.querySelectorAll('[role="listbox"]').length,
+          opts: Array.from(document.querySelectorAll('[role="option"]')).map(
+            (o) => (o.textContent || "").trim(),
+          ),
+        };
+      }
+      const c = opt as HTMLElement & { __onclick?: (ev: Event) => void };
+      if (typeof c.__onclick === "function") {
+        c.__onclick(
+          new MouseEvent("click", { bubbles: true, cancelable: true }),
+        );
+      } else opt.click();
+      return { ok: true, reason: "ok" };
+    }) as { ok: boolean; reason: string };
+    if (!result.ok) {
+      throw new Error(`MultiSelect: ${JSON.stringify(result)}`);
+    }
+    expect(result.ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
 
   /**

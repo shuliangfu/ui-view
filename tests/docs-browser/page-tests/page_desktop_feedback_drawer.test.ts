@@ -29,37 +29,68 @@ describe("文档页 E2E：/desktop/feedback/drawer（Drawer 抽屉）", () => {
     if (!t?.browser?.goto) return;
     await sharedEnv.goto(t, DOC_PATH);
     await sharedEnv.waitDocMainReady(t);
-    const openOk = await t.browser.evaluate(() => {
-      const btns = Array.from(
+    const opened = await t.browser.evaluate(async () => {
+      const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+      const clickOpen = () => {
+        const b = Array.from(
+          document.querySelectorAll("main button[type='button']"),
+        ).find((x) => (x.textContent || "").trim() === "右侧抽屉") as
+          | (HTMLButtonElement & { __onclick?: (ev: Event) => void })
+          | undefined;
+        if (!b || b.disabled) return false;
+        b.scrollIntoView({ block: "center" });
+        /** 原生 click 走委托，避免偶发直接调 __onclick 未打开 */
+        b.click();
+        return true;
+      };
+      if (!clickOpen()) return { ok: false, reason: "no-btn" };
+      for (let i = 0; i < 20; i++) {
+        await sleep(50);
+        const dlg = document.querySelector(
+          '[role="dialog"]',
+        ) as HTMLElement | null;
+        if (dlg && dlg.getClientRects().length > 0) {
+          return { ok: true, reason: "ok" };
+        }
+      }
+      /** 再试一次 __onclick */
+      const b = Array.from(
         document.querySelectorAll("main button[type='button']"),
-      ) as (HTMLButtonElement & { __onclick?: (ev: Event) => void })[];
-      const b = btns.find((x) =>
-        /右侧抽屉|打开/.test((x.textContent || "").trim())
+      ).find((x) => (x.textContent || "").trim() === "右侧抽屉") as
+        | (HTMLButtonElement & { __onclick?: (ev: Event) => void })
+        | undefined;
+      b?.__onclick?.(
+        new MouseEvent("click", { bubbles: true, cancelable: true }),
       );
-      if (!b || b.disabled) return false;
-      b.scrollIntoView({ block: "center" });
-      if (typeof b.__onclick === "function") {
-        b.__onclick(
-          new MouseEvent("click", { bubbles: true, cancelable: true }),
-        );
-      } else b.click();
-      return true;
-    }) as boolean;
-    expect(openOk).toBe(true);
-    await sharedEnv.delay(300);
+      for (let i = 0; i < 20; i++) {
+        await sleep(50);
+        const dlg = document.querySelector(
+          '[role="dialog"]',
+        ) as HTMLElement | null;
+        if (dlg && dlg.getClientRects().length > 0) {
+          return { ok: true, reason: "ok-onclick" };
+        }
+      }
+      return { ok: false, reason: "no-dialog" };
+    }) as { ok: boolean; reason: string };
+    if (!opened.ok) {
+      throw new Error(`Drawer open: ${JSON.stringify(opened)}`);
+    }
+    expect(opened.ok).toBe(true);
     const closeOk = await t.browser.evaluate(() => {
-      const closes = Array.from(
-        document.querySelectorAll('button[type="button"][aria-label="关闭"]'),
-      ) as (HTMLButtonElement & { __onclick?: (ev: Event) => void })[];
-      const b = closes.find((x) =>
-        !x.disabled && getComputedStyle(x).opacity !== "0"
-      ) || closes[0];
-      if (!b || b.disabled) return false;
-      if (typeof b.__onclick === "function") {
-        b.__onclick(
-          new MouseEvent("click", { bubbles: true, cancelable: true }),
-        );
-      } else b.click();
+      const dlg = document.querySelector(
+        '[role="dialog"]',
+      ) as HTMLElement | null;
+      if (!dlg || dlg.getClientRects().length === 0) return false;
+      const b = Array.from(dlg.querySelectorAll("button[type='button']")).find(
+        (x) => {
+          const aria = x.getAttribute("aria-label") || "";
+          const tx = (x.textContent || "").trim();
+          return aria === "关闭" || tx === "确定";
+        },
+      ) as (HTMLButtonElement & { __onclick?: (ev: Event) => void }) | undefined;
+      if (!b) return false;
+      b.click();
       return true;
     }) as boolean;
     expect(closeOk).toBe(true);

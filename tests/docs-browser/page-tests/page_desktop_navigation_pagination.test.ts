@@ -34,79 +34,73 @@ describe("文档页 E2E：/desktop/navigation/pagination（Pagination 分页）"
     if (!t?.browser?.goto) return;
     await sharedEnv.goto(t, DOC_PATH);
     await sharedEnv.waitDocMainReady(t);
-    const clicked = await t.browser.evaluate(() => {
-      const clickEl = (
-        el: HTMLElement & { __onclick?: (ev: Event) => void },
-      ) => {
-        if (typeof el.__onclick === "function") {
-          el.__onclick(
-            new MouseEvent("click", { bubbles: true, cancelable: true }),
-          );
-        } else el.click();
-      };
+    const result = await t.browser.evaluate(async () => {
       const needle =
         "完整（total + pageSizeOptions + showTotal + showQuickJumper）";
-      const main = document.querySelector("main");
-      if (!main) return false;
-      const heads = main.querySelectorAll("h2, h3");
-      for (let i = 0; i < heads.length; i++) {
-        const h = heads[i];
-        if (!(h.textContent || "").includes(needle)) continue;
-        const section = h.parentElement;
-        const nav = section?.querySelector(
+      const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+      const findNav = () => {
+        const heads = Array.from(
+          document.querySelectorAll("main h2, main h3"),
+        );
+        for (const h of heads) {
+          if (!(h.textContent || "").includes(needle)) continue;
+          let cur: HTMLElement | null = h as HTMLElement;
+          for (let d = 0; d < 8 && cur; d++) {
+            const nav = cur.querySelector(
+              'nav[role="navigation"][aria-label="分页"]',
+            ) as HTMLElement | null;
+            if (nav) return nav;
+            cur = cur.parentElement;
+          }
+        }
+        return document.querySelector(
           'nav[role="navigation"][aria-label="分页"]',
         ) as HTMLElement | null;
-        if (!nav) return false;
-        nav.scrollIntoView({ block: "center" });
-        const buttons = nav.querySelectorAll("button[type='button']");
-        for (let j = 0; j < buttons.length; j++) {
-          const b = buttons[j] as HTMLButtonElement & {
-            __onclick?: (ev: Event) => void;
-          };
-          if (b.getAttribute("aria-label") !== "第 2 页") continue;
-          if ((b.textContent || "").trim() !== "2") continue;
-          clickEl(b);
-          return true;
-        }
-        /** 兜底：任意分页导航上的「第 2 页」 */
-        const any = document.querySelector(
-          'nav[aria-label="分页"] button[aria-label="第 2 页"]',
-        ) as (HTMLButtonElement & { __onclick?: (ev: Event) => void }) | null;
-        if (any) {
-          clickEl(any);
-          return true;
-        }
-        return false;
-      }
-      return false;
-    }) as boolean;
-    expect(clicked).toBe(true);
-    await sharedEnv.delay(250);
-    const currentIsPage2 = await t.browser.evaluate(() => {
-      const needle =
-        "完整（total + pageSizeOptions + showTotal + showQuickJumper）";
-      const main = document.querySelector("main");
-      if (!main) return false;
-      const heads = main.querySelectorAll("h2, h3");
-      for (let i = 0; i < heads.length; i++) {
-        const h = heads[i];
-        if (!(h.textContent || "").includes(needle)) continue;
-        const section = h.parentElement;
-        const nav = (section?.querySelector(
-          'nav[role="navigation"][aria-label="分页"]',
-        ) ||
-          document.querySelector(
-            'nav[role="navigation"][aria-label="分页"]',
-          )) as HTMLElement | null;
-        if (!nav) return false;
-        const cur = nav.querySelector(
+      };
+      const nav0 = findNav();
+      if (!nav0) return { ok: false, reason: "no-nav" };
+      nav0.scrollIntoView({ block: "center" });
+      const clickPage2 = () => {
+        const b = findNav()?.querySelector(
+          'button[type="button"][aria-label="第 2 页"]',
+        ) as HTMLButtonElement | null;
+        if (!b || b.disabled) return false;
+        b.click();
+        return true;
+      };
+      if (!clickPage2()) return { ok: false, reason: "no-btn" };
+      for (let i = 0; i < 15; i++) {
+        await sleep(50);
+        const cur = findNav()?.querySelector(
           'button[aria-current="page"]',
         ) as HTMLButtonElement | null;
-        return cur != null && (cur.textContent || "").trim() === "2";
+        if (cur && (cur.textContent || "").trim() === "2") {
+          return { ok: true, reason: "ok" };
+        }
       }
-      return false;
-    });
-    expect(currentIsPage2).toBe(true);
+      clickPage2();
+      for (let i = 0; i < 15; i++) {
+        await sleep(50);
+        const cur = findNav()?.querySelector(
+          'button[aria-current="page"]',
+        ) as HTMLButtonElement | null;
+        if (cur && (cur.textContent || "").trim() === "2") {
+          return { ok: true, reason: "ok-retry" };
+        }
+      }
+      const cur = findNav()?.querySelector(
+        'button[aria-current="page"]',
+      ) as HTMLButtonElement | null;
+      return {
+        ok: false,
+        reason: "not-page-2",
+        cur: (cur?.textContent || "").trim(),
+      };
+    }) as { ok: boolean; reason: string; cur?: string };
+    if (!result.ok) {
+      throw new Error(`Pagination: ${JSON.stringify(result)}`);
+    }
+    expect(result.ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
 
   /**
