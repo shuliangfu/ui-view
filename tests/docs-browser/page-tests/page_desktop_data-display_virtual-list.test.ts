@@ -88,4 +88,80 @@ describe("文档页 E2E：/desktop/data-display/virtual-list（VirtualList 虚�
     }) as boolean;
     expect(ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
+
+  /**
+   * UI·大列表：总条数 ≥1000；初始可见 Item 1 附近；滚到底可见末项且无空滚过头。
+   */
+  it("UI·大列表可见区间与总条数", async (t) => {
+    if (!t?.browser?.goto) return;
+    await sharedEnv.goto(t, DOC_PATH);
+    await sharedEnv.waitDocMainReady(t);
+    const top = await t.browser.evaluate(() => {
+      const list = document.querySelector(
+        "[data-dreamer-virtual-list]",
+      ) as HTMLElement | null;
+      const spacer = document.querySelector(
+        "[data-dreamer-virtual-list-spacer]",
+      ) as HTMLElement | null;
+      if (!list || !spacer) {
+        return { ok: false, reason: "no-list" };
+      }
+      const total = Number(spacer.getAttribute("data-total") || 0);
+      const start = Number(spacer.getAttribute("data-start") || -1);
+      const text = list.innerText || "";
+      const hasItem1 = /Item\s+1\b/.test(text);
+      const ok = total >= 1000 && start <= 4 && hasItem1;
+      return {
+        ok,
+        reason: ok ? "ok" : "top",
+        total,
+        start,
+        hasItem1,
+        textHead: text.slice(0, 80),
+      };
+    }) as { ok: boolean };
+    if (!top.ok) throw new Error(`VirtualList 顶部: ${JSON.stringify(top)}`);
+    expect(top.ok).toBe(true);
+
+    await t.browser.evaluate(() => {
+      const list = document.querySelector(
+        "[data-dreamer-virtual-list]",
+      ) as HTMLElement | null;
+      if (!list) return;
+      list.scrollTop = list.scrollHeight;
+    });
+    await sharedEnv.delay(200);
+    const bottom = await t.browser.evaluate(() => {
+      const list = document.querySelector(
+        "[data-dreamer-virtual-list]",
+      ) as HTMLElement | null;
+      const spacer = document.querySelector(
+        "[data-dreamer-virtual-list-spacer]",
+      ) as HTMLElement | null;
+      if (!list || !spacer) return { ok: false, reason: "no-list" };
+      const total = Number(spacer.getAttribute("data-total") || 0);
+      const end = Number(spacer.getAttribute("data-end") || 0);
+      const text = list.innerText || "";
+      const hasLast = new RegExp(`Item\s+${total}\b`).test(text);
+      const nearEnd = end >= total - 8;
+      const maxScroll = list.scrollHeight - list.clientHeight;
+      const atBottom = Math.abs(list.scrollTop - maxScroll) < 4;
+      const ok = total >= 1000 && nearEnd && hasLast && atBottom;
+      return {
+        ok,
+        reason: ok ? "ok" : "bottom",
+        total,
+        end,
+        hasLast,
+        atBottom,
+        scrollTop: list.scrollTop,
+        maxScroll,
+        textTail: text.slice(-60),
+      };
+    }) as { ok: boolean };
+    if (!bottom.ok) {
+      throw new Error(`VirtualList 底部: ${JSON.stringify(bottom)}`);
+    }
+    expect(bottom.ok).toBe(true);
+  }, DOCS_BROWSER_CONFIG);
 });

@@ -1,6 +1,8 @@
 /**
  * VirtualList 虚拟列表（View）。
  * 仅渲染可视区附近行；支持定高 `itemHeight` 或按行 `getItemHeight` 动态行高。
+ *
+ * 滚动容器须稳定（勿放进整段 `return () =>`），否则每次 scrollTop 更新会换 DOM、丢滚动位置并出现空滚／过头。
  */
 
 import {
@@ -73,105 +75,110 @@ export function VirtualList<T = unknown>(
   } = props;
 
   const scrollTop = createSignal(0);
-  let scroller: HTMLElement | null = null;
+  const scrollerEl = createSignal<HTMLElement | null>(null);
 
   const setRef = (el: unknown) => {
-    if (!isHtmlElement(el)) return;
-    scroller = el;
+    scrollerEl.set(isHtmlElement(el) ? el : null);
   };
 
   createEffect(() => {
-    const el = scroller;
+    const el = scrollerEl.value;
     if (!el) return;
     const onScroll = () => {
-      scrollTop.value = el.scrollTop;
+      scrollTop.set(el.scrollTop);
     };
     el.addEventListener("scroll", onScroll, { passive: true });
     onCleanup(() => el.removeEventListener("scroll", onScroll));
   });
 
-  return () => {
-    const data = props.data ?? [];
-    const totalCount = data.length;
-    if (totalCount === 0) {
-      return (
-        <div
-          ref={setRef}
-          class={twMerge("virtual-list overflow-auto", className)}
-          style={{ height: `${height}px` }}
-        >
-          {empty ?? (
-            <div class="p-6 text-center text-sm text-slate-400">暂无数据</div>
-          )}
-        </div>
-      );
-    }
+  return (
+    <div
+      ref={setRef}
+      class={twMerge("virtual-list overflow-auto relative", className)}
+      style={{ height: `${height}px` }}
+      data-dreamer-virtual-list=""
+    >
+      {() => {
+        const data = props.data ?? [];
+        const totalCount = data.length;
+        if (totalCount === 0) {
+          return (
+            empty ?? (
+              <div class="p-6 text-center text-sm text-slate-400">暂无数据</div>
+            )
+          );
+        }
 
-    const fixed = props.itemHeight;
-    const dyn = props.getItemHeight;
-    if (fixed == null && dyn == null) {
-      return (
-        <div class={twMerge("p-4 text-sm text-red-500", className)}>
-          VirtualList 需要 `itemHeight` 或 `getItemHeight`
-        </div>
-      );
-    }
+        const fixed = props.itemHeight;
+        const dyn = props.getItemHeight;
+        if (fixed == null && dyn == null) {
+          return (
+            <div class="p-4 text-sm text-red-500">
+              VirtualList 需要 `itemHeight` 或 `getItemHeight`
+            </div>
+          );
+        }
 
-    const heightAt = (i: number) =>
-      dyn ? Math.max(1, dyn(data[i]!, i)) : Math.max(1, fixed!);
+        const heightAt = (i: number) =>
+          dyn ? Math.max(1, dyn(data[i]!, i)) : Math.max(1, fixed!);
 
-    let start: number;
-    let end: number;
-    let offsetY: number;
-    let totalHeight: number;
-    let rowHeightAt: (i: number) => number = heightAt;
+        let start: number;
+        let end: number;
+        let offsetY: number;
+        let totalHeight: number;
+        let rowHeightAt: (i: number) => number = heightAt;
+        const st = scrollTop.value;
 
-    if (dyn) {
-      const { offsets, total } = buildOffsets(data, heightAt);
-      totalHeight = total;
-      start = Math.max(0, lowerBound(offsets, scrollTop.value) - overscan);
-      // 找 end：offsets[end] >= scrollTop+height
-      let e = start;
-      const limit = scrollTop.value + height;
-      while (e < totalCount && offsets[e]! < limit) e++;
-      end = Math.min(totalCount, e + overscan);
-      offsetY = offsets[start]!;
-      rowHeightAt = (i) => offsets[i + 1]! - offsets[i]!;
-    } else {
-      const ih = fixed!;
-      totalHeight = totalCount * ih;
-      start = Math.max(0, Math.floor(scrollTop.value / ih) - overscan);
-      const visibleCount = Math.ceil(height / ih) + overscan * 2;
-      end = Math.min(totalCount, start + visibleCount);
-      offsetY = start * ih;
-      rowHeightAt = () => ih;
-    }
+        if (dyn) {
+          const { offsets, total } = buildOffsets(data, heightAt);
+          totalHeight = total;
+          start = Math.max(0, lowerBound(offsets, st) - overscan);
+          let e = start;
+          const limit = st + height;
+          while (e < totalCount && offsets[e]! < limit) e++;
+          end = Math.min(totalCount, e + overscan);
+          offsetY = offsets[start]!;
+          rowHeightAt = (i) => offsets[i + 1]! - offsets[i]!;
+        } else {
+          const ih = fixed!;
+          totalHeight = totalCount * ih;
+          start = Math.max(0, Math.floor(st / ih) - overscan);
+          const visibleCount = Math.ceil(height / ih) + overscan * 2;
+          end = Math.min(totalCount, start + visibleCount);
+          offsetY = start * ih;
+          rowHeightAt = () => ih;
+        }
 
-    const items: unknown[] = [];
-    for (let i = start; i < end; i++) {
-      const item = data[i]!;
-      const key = rowKey ? rowKey(item, i) : i;
-      items.push(
-        <div
-          key={key}
-          class="virtual-list-item box-border"
-          style={{ height: `${rowHeightAt(i)}px` }}
-        >
-          {renderItem(item, i)}
-        </div>,
-      );
-    }
+        const items: unknown[] = [];
+        for (let i = start; i < end; i++) {
+          const item = data[i]!;
+          const key = rowKey ? rowKey(item, i) : i;
+          items.push(
+            <div
+              key={key}
+              class="virtual-list-item box-border"
+              style={{ height: `${rowHeightAt(i)}px` }}
+              data-index={String(i)}
+            >
+              {renderItem(item, i)}
+            </div>,
+          );
+        }
 
-    return (
-      <div
-        ref={setRef}
-        class={twMerge("virtual-list overflow-auto relative", className)}
-        style={{ height: `${height}px` }}
-      >
-        <div style={{ height: `${totalHeight}px`, position: "relative" }}>
-          <div style={{ transform: `translateY(${offsetY}px)` }}>{items}</div>
-        </div>
-      </div>
-    );
-  };
+        return (
+          <div
+            style={{ height: `${totalHeight}px`, position: "relative" }}
+            data-dreamer-virtual-list-spacer=""
+            data-total={String(totalCount)}
+            data-start={String(start)}
+            data-end={String(end)}
+          >
+            <div style={{ transform: `translateY(${offsetY}px)` }}>
+              {items}
+            </div>
+          </div>
+        );
+      }}
+    </div>
+  );
 }

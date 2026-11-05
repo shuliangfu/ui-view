@@ -15,26 +15,32 @@ const API: DocsApiTableRow[] = [
   { name: "itemHeight", type: "number", default: "-", description: "定高 px；与 getItemHeight 二选一" },
   { name: "getItemHeight", type: "(item, index) => number", default: "-", description: "动态行高" },
   { name: "height", type: "number", default: "320", description: "容器高" },
-  { name: "renderItem", type: "(item,i)=>unknown", default: "-", description: "行渲染" }
+  { name: "renderItem", type: "(item,i)=>unknown", default: "-", description: "行渲染" },
 ];
+
+const TOTAL = 2000;
 
 const importCode = `import { VirtualList } from "@dreamer/ui-view/mobile";
 
-const rows = Array.from({ length: 200 }, (_, i) => i);
+const rows = Array.from({ length: ${TOTAL} }, (_, i) => i + 1);
 
 <VirtualList
-  height={240}
+  height={320}
   itemHeight={36}
   data={rows}
   renderItem={(n) => <div class="px-3 leading-9 text-sm">Item {n}</div>}
 />`;
 
 export default function Page() {
+  const rows = Array.from({ length: TOTAL }, (_, i) => i + 1);
   return (
     <div class="space-y-8">
       <div>
         <Title level={1}>VirtualList</Title>
-        <Paragraph>定高／动态行高虚拟列表，仅渲染可视区附近行。</Paragraph>
+        <Paragraph>
+          定高／动态行高虚拟列表。示例共 {TOTAL} 条（Item 1…{TOTAL}
+          ），滚动高度与条数一致。
+        </Paragraph>
       </div>
       <section class="space-y-3">
         <Title level={2}>引入</Title>
@@ -43,7 +49,16 @@ export default function Page() {
       <section class="space-y-3">
         <Title level={2}>示例</Title>
         <MobileDocDemo>
-          <VirtualList height={240} itemHeight={36} data={Array.from({length:200},(_,i)=>i)} renderItem={(n)=> <div class="px-3 leading-9 text-sm">Item {n}</div>} />
+          <VirtualList
+            height={320}
+            itemHeight={36}
+            data={rows}
+            renderItem={(n) => (
+              <div class="px-3 leading-9 text-sm border-b border-slate-100 dark:border-slate-800">
+                Item {n}
+              </div>
+            )}
+          />
         </MobileDocDemo>
       </section>
       <section class="space-y-3">
