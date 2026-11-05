@@ -111,10 +111,10 @@ describe("文档页 E2E：/desktop/data-display/tree（Tree 树）", () => {
 
     const before = await t.browser.evaluate(() => {
       const child = document.querySelector(
-        "main [data-tree-demo="cascade"] [data-tree-select-key='1-1']",
+        "main [data-tree-demo='cascade'] [data-tree-select-key='1-1']",
       );
       const expand = document.querySelector(
-        "main [data-tree-demo="cascade"] [data-tree-expand-key='1']",
+        "main [data-tree-demo='cascade'] [data-tree-expand-key='1']",
       ) as (HTMLButtonElement & { __onclick?: (ev: Event) => void }) | null;
       return {
         childVisible: !!child,
@@ -127,7 +127,7 @@ describe("文档页 E2E：/desktop/data-display/tree（Tree 树）", () => {
 
     await t.browser.evaluate(() => {
       const expand = document.querySelector(
-        "main [data-tree-demo="cascade"] [data-tree-expand-key='1']",
+        "main [data-tree-demo='cascade'] [data-tree-expand-key='1']",
       ) as (HTMLButtonElement & { __onclick?: (ev: Event) => void }) | null;
       expand?.scrollIntoView({ block: "center" });
       if (expand && typeof expand.__onclick === "function") {
@@ -142,10 +142,10 @@ describe("文档页 E2E：/desktop/data-display/tree（Tree 树）", () => {
 
     const collapsed = await t.browser.evaluate(() => {
       const child = document.querySelector(
-        "main [data-tree-demo="cascade"] [data-tree-select-key='1-1']",
+        "main [data-tree-demo='cascade'] [data-tree-select-key='1-1']",
       );
       const expand = document.querySelector(
-        "main [data-tree-demo="cascade"] [data-tree-expand-key='1']",
+        "main [data-tree-demo='cascade'] [data-tree-expand-key='1']",
       );
       return {
         childVisible: !!child,
@@ -157,7 +157,7 @@ describe("文档页 E2E：/desktop/data-display/tree（Tree 树）", () => {
 
     await t.browser.evaluate(() => {
       const expand = document.querySelector(
-        "main [data-tree-demo="cascade"] [data-tree-expand-key='1']",
+        "main [data-tree-demo='cascade'] [data-tree-expand-key='1']",
       ) as (HTMLButtonElement & { __onclick?: (ev: Event) => void }) | null;
       if (expand && typeof expand.__onclick === "function") {
         expand.__onclick(
@@ -171,10 +171,10 @@ describe("文档页 E2E：/desktop/data-display/tree（Tree 树）", () => {
 
     const opened = await t.browser.evaluate(() => {
       const child = document.querySelector(
-        "main [data-tree-demo="cascade"] [data-tree-select-key='1-1']",
+        "main [data-tree-demo='cascade'] [data-tree-select-key='1-1']",
       );
       const expand = document.querySelector(
-        "main [data-tree-demo="cascade"] [data-tree-expand-key='1']",
+        "main [data-tree-demo='cascade'] [data-tree-expand-key='1']",
       );
       return {
         childVisible: !!child,
@@ -198,7 +198,7 @@ describe("文档页 E2E：/desktop/data-display/tree（Tree 树）", () => {
 
     await t.browser.evaluate(() => {
       const cb = document.querySelector(
-        "main [data-tree-demo="cascade"] [data-tree-check-key='1']",
+        "main [data-tree-demo='cascade'] [data-tree-check-key='1']",
       ) as (HTMLInputElement & { __onclick?: (ev: Event) => void }) | null;
       cb?.scrollIntoView({ block: "center" });
       if (cb && typeof cb.__onclick === "function") {
@@ -217,14 +217,14 @@ describe("文档页 E2E：/desktop/data-display/tree（Tree 树）", () => {
         {};
       for (const k of keys) {
         const el = document.querySelector(
-          `main [data-tree-demo="cascade"] [data-tree-check-key='${k}']`,
+          `main [data-tree-demo='cascade'] [data-tree-check-key='${k}']`,
         ) as HTMLInputElement | null;
         states[k] = {
           checked: !!el?.checked,
           indeterminate: !!el?.indeterminate,
         };
       }
-      const display = document.querySelector('[data-tree-demo="cascade"] [data-tree-keys-display]')
+      const display = document.querySelector("[data-tree-demo='cascade'] [data-tree-keys-display]")
         ?.textContent ?? "";
       return { states, display };
     }) as {
@@ -245,7 +245,7 @@ describe("文档页 E2E：/desktop/data-display/tree（Tree 树）", () => {
     // 取消叶子 1-1 → 父应半选
     await t.browser.evaluate(() => {
       const cb = document.querySelector(
-        "main [data-tree-demo="cascade"] [data-tree-check-key='1-1']",
+        "main [data-tree-demo='cascade'] [data-tree-check-key='1-1']",
       ) as (HTMLInputElement & { __onclick?: (ev: Event) => void }) | null;
       if (cb && typeof cb.__onclick === "function") {
         cb.__onclick(
@@ -259,12 +259,12 @@ describe("文档页 E2E：/desktop/data-display/tree（Tree 树）", () => {
 
     const half = await t.browser.evaluate(() => {
       const p = document.querySelector(
-        "main [data-tree-demo="cascade"] [data-tree-check-key='1']",
+        "main [data-tree-demo='cascade'] [data-tree-check-key='1']",
       ) as HTMLInputElement | null;
       const leaf = document.querySelector(
-        "main [data-tree-demo="cascade"] [data-tree-check-key='1-1']",
+        "main [data-tree-demo='cascade'] [data-tree-check-key='1-1']",
       ) as HTMLInputElement | null;
-      const display = document.querySelector('[data-tree-demo="cascade"] [data-tree-keys-display]')
+      const display = document.querySelector("[data-tree-demo='cascade'] [data-tree-keys-display]")
         ?.textContent ?? "";
       return {
         parentChecked: !!p?.checked,
@@ -300,7 +300,7 @@ describe("文档页 E2E：/desktop/data-display/tree（Tree 树）", () => {
 
     await t.browser.evaluate(() => {
       const row = document.querySelector(
-        "main [data-tree-demo="cascade"] [data-tree-node-key='1']",
+        "main [data-tree-demo='cascade'] [data-tree-node-key='1']",
       ) as HTMLElement | null;
       row?.focus();
       row?.dispatchEvent(
@@ -313,16 +313,16 @@ describe("文档页 E2E：/desktop/data-display/tree（Tree 树）", () => {
     });
     await sharedEnv.delay(200);
     const collapsed = await t.browser.evaluate(() => ({
-      child: !!document.querySelector("main [data-tree-demo="cascade"] [data-tree-select-key='1-1']"),
+      child: !!document.querySelector("main [data-tree-demo='cascade'] [data-tree-select-key='1-1']"),
       aria: document
-        .querySelector("main [data-tree-demo="cascade"] [data-tree-expand-key='1']")
+        .querySelector("main [data-tree-demo='cascade'] [data-tree-expand-key='1']")
         ?.getAttribute("aria-expanded"),
     })) as { child: boolean; aria: string | null };
     expect(collapsed.child).toBe(false);
 
     await t.browser.evaluate(() => {
       const row = document.querySelector(
-        "main [data-tree-demo="cascade"] [data-tree-node-key='1']",
+        "main [data-tree-demo='cascade'] [data-tree-node-key='1']",
       ) as HTMLElement | null;
       row?.focus();
       row?.dispatchEvent(
@@ -335,9 +335,9 @@ describe("文档页 E2E：/desktop/data-display/tree（Tree 树）", () => {
     });
     await sharedEnv.delay(200);
     const opened = await t.browser.evaluate(() => ({
-      child: !!document.querySelector("main [data-tree-demo="cascade"] [data-tree-select-key='1-1']"),
+      child: !!document.querySelector("main [data-tree-demo='cascade'] [data-tree-select-key='1-1']"),
       aria: document
-        .querySelector("main [data-tree-demo="cascade"] [data-tree-expand-key='1']")
+        .querySelector("main [data-tree-demo='cascade'] [data-tree-expand-key='1']")
         ?.getAttribute("aria-expanded"),
     })) as { child: boolean; aria: string | null };
     expect(opened.child).toBe(true);
@@ -357,7 +357,7 @@ describe("文档页 E2E：/desktop/data-display/tree（Tree 树）", () => {
 
     await t.browser.evaluate(() => {
       const cb = document.querySelector(
-        'main [data-tree-demo="strict"] [data-tree-check-key="1-2"]',
+        "main [data-tree-demo='strict'] [data-tree-check-key='1-2']",
       ) as (HTMLInputElement & { __onclick?: (ev: Event) => void }) | null;
       cb?.scrollIntoView({ block: "center" });
       if (cb && typeof cb.__onclick === "function") {
@@ -370,10 +370,10 @@ describe("文档页 E2E：/desktop/data-display/tree（Tree 树）", () => {
 
     const got = await t.browser.evaluate(() => {
       const p12 = document.querySelector(
-        'main [data-tree-demo="strict"] [data-tree-check-key="1-2"]',
+        "main [data-tree-demo='strict'] [data-tree-check-key='1-2']",
       ) as HTMLInputElement | null;
       const c = document.querySelector(
-        'main [data-tree-demo="strict"] [data-tree-check-key="1-2-1"]',
+        "main [data-tree-demo='strict'] [data-tree-check-key='1-2-1']",
       ) as HTMLInputElement | null;
       // ensure child visible: expand 1-2 if needed
       return {
@@ -387,7 +387,7 @@ describe("文档页 E2E：/desktop/data-display/tree（Tree 树）", () => {
     if (!got.childExists) {
       await t.browser.evaluate(() => {
         const exp = document.querySelector(
-          'main [data-tree-demo="strict"] [data-tree-expand-key="1-2"]',
+          "main [data-tree-demo='strict'] [data-tree-expand-key='1-2']",
         ) as (HTMLButtonElement & { __onclick?: (ev: Event) => void }) | null;
         if (exp && typeof exp.__onclick === "function") {
           exp.__onclick(
@@ -400,10 +400,10 @@ describe("文档页 E2E：/desktop/data-display/tree（Tree 树）", () => {
 
     const after = await t.browser.evaluate(() => {
       const p12 = document.querySelector(
-        'main [data-tree-demo="strict"] [data-tree-check-key="1-2"]',
+        "main [data-tree-demo='strict'] [data-tree-check-key='1-2']",
       ) as HTMLInputElement | null;
       const c = document.querySelector(
-        'main [data-tree-demo="strict"] [data-tree-check-key="1-2-1"]',
+        "main [data-tree-demo='strict'] [data-tree-check-key='1-2-1']",
       ) as HTMLInputElement | null;
       return { parent: !!p12?.checked, child: !!c?.checked };
     }) as { parent: boolean; child: boolean };
@@ -427,11 +427,11 @@ describe("文档页 E2E：/desktop/data-display/tree（Tree 树）", () => {
     // 确保 1-2 展开以见到 1-2-1
     await t.browser.evaluate(() => {
       const need = document.querySelector(
-        'main [data-tree-demo="cascade"] [data-tree-select-key="1-2-1"]',
+        "main [data-tree-demo='cascade'] [data-tree-select-key='1-2-1']",
       );
       if (!need) {
         const exp = document.querySelector(
-          'main [data-tree-demo="cascade"] [data-tree-expand-key="1-2"]',
+          "main [data-tree-demo='cascade'] [data-tree-expand-key='1-2']",
         ) as (HTMLButtonElement & { __onclick?: (ev: Event) => void }) | null;
         if (exp && typeof exp.__onclick === "function") {
           exp.__onclick(
@@ -444,7 +444,7 @@ describe("文档页 E2E：/desktop/data-display/tree（Tree 树）", () => {
 
     await t.browser.evaluate(() => {
       const title = document.querySelector(
-        'main [data-tree-demo="cascade"] [data-tree-select-key="1-2-1"]',
+        "main [data-tree-demo='cascade'] [data-tree-select-key='1-2-1']",
       ) as (HTMLElement & { __onclick?: (ev: Event) => void }) | null;
       title?.scrollIntoView({ block: "center" });
       if (title && typeof title.__onclick === "function") {
@@ -457,13 +457,13 @@ describe("文档页 E2E：/desktop/data-display/tree（Tree 树）", () => {
 
     const got = await t.browser.evaluate(() => {
       const leaf = document.querySelector(
-        'main [data-tree-demo="cascade"] [data-tree-node-key="1-2-1"]',
+        "main [data-tree-demo='cascade'] [data-tree-node-key='1-2-1']",
       );
       const parent = document.querySelector(
-        'main [data-tree-demo="cascade"] [data-tree-node-key="1-2"]',
+        "main [data-tree-demo='cascade'] [data-tree-node-key='1-2']",
       );
       const display = document.querySelector(
-        '[data-tree-demo="cascade"] [data-tree-keys-display]',
+        "[data-tree-demo='cascade'] [data-tree-keys-display]",
       )?.textContent ?? "";
       return {
         leafSelected: leaf?.getAttribute("data-tree-selected") === "true" ||
@@ -496,11 +496,11 @@ describe("文档页 E2E：/desktop/data-display/tree（Tree 树）", () => {
 
     await t.browser.evaluate(() => {
       const need = document.querySelector(
-        'main [data-tree-demo="cascade"] [data-tree-check-key="1-2-1"]',
+        "main [data-tree-demo='cascade'] [data-tree-check-key='1-2-1']",
       );
       if (!need) {
         const exp = document.querySelector(
-          'main [data-tree-demo="cascade"] [data-tree-expand-key="1-2"]',
+          "main [data-tree-demo='cascade'] [data-tree-expand-key='1-2']",
         ) as (HTMLButtonElement & { __onclick?: (ev: Event) => void }) | null;
         if (exp && typeof exp.__onclick === "function") {
           exp.__onclick(
@@ -513,7 +513,7 @@ describe("文档页 E2E：/desktop/data-display/tree（Tree 树）", () => {
 
     await t.browser.evaluate(() => {
       const cb = document.querySelector(
-        'main [data-tree-demo="cascade"] [data-tree-check-key="1-2-1"]',
+        "main [data-tree-demo='cascade'] [data-tree-check-key='1-2-1']",
       ) as (HTMLInputElement & { __onclick?: (ev: Event) => void; __onchange?: (ev: Event) => void }) | null;
       cb?.scrollIntoView({ block: "center" });
       if (cb && typeof cb.__onchange === "function") {
@@ -532,19 +532,19 @@ describe("文档页 E2E：/desktop/data-display/tree（Tree 树）", () => {
 
     const got = await t.browser.evaluate(() => {
       const leafCb = document.querySelector(
-        'main [data-tree-demo="cascade"] [data-tree-check-key="1-2-1"]',
+        "main [data-tree-demo='cascade'] [data-tree-check-key='1-2-1']",
       ) as HTMLInputElement | null;
       const parentCb = document.querySelector(
-        'main [data-tree-demo="cascade"] [data-tree-check-key="1-2"]',
+        "main [data-tree-demo='cascade'] [data-tree-check-key='1-2']",
       ) as HTMLInputElement | null;
       const parentRow = document.querySelector(
-        'main [data-tree-demo="cascade"] [data-tree-node-key="1-2"]',
+        "main [data-tree-demo='cascade'] [data-tree-node-key='1-2']",
       );
       const leafRow = document.querySelector(
-        'main [data-tree-demo="cascade"] [data-tree-node-key="1-2-1"]',
+        "main [data-tree-demo='cascade'] [data-tree-node-key='1-2-1']",
       );
       const display = document.querySelector(
-        '[data-tree-demo="cascade"] [data-tree-keys-display]',
+        "[data-tree-demo='cascade'] [data-tree-keys-display]",
       )?.textContent ?? "";
       return {
         leafChecked: !!leafCb?.checked,

@@ -66,15 +66,15 @@ describe("文档页 E2E：/mobile/data-display/tree（Tree 树）", () => {
     await sharedEnv.delay(120);
 
     const before = await t.browser.evaluate(() => ({
-      child: !!document.querySelector("main [data-tree-demo="cascade"] [data-tree-select-key='1-1']"),
-      hasCheck: !!document.querySelector("main [data-tree-demo="cascade"] [data-tree-check-key='1']"),
+      child: !!document.querySelector("main [data-tree-demo='cascade'] [data-tree-select-key='1-1']"),
+      hasCheck: !!document.querySelector("main [data-tree-demo='cascade'] [data-tree-check-key='1']"),
     })) as { child: boolean; hasCheck: boolean };
     expect(before.child).toBe(true);
     expect(before.hasCheck).toBe(true);
 
     await t.browser.evaluate(() => {
       const expand = document.querySelector(
-        "main [data-tree-demo="cascade"] [data-tree-expand-key='1']",
+        "main [data-tree-demo='cascade'] [data-tree-expand-key='1']",
       ) as (HTMLButtonElement & { __onclick?: (ev: Event) => void }) | null;
       if (expand && typeof expand.__onclick === "function") {
         expand.__onclick(
@@ -84,13 +84,13 @@ describe("文档页 E2E：/mobile/data-display/tree（Tree 树）", () => {
     });
     await sharedEnv.delay(200);
     const collapsed = await t.browser.evaluate(() =>
-      !!document.querySelector("main [data-tree-demo="cascade"] [data-tree-select-key='1-1']")
+      !!document.querySelector("main [data-tree-demo='cascade'] [data-tree-select-key='1-1']")
     ) as boolean;
     expect(collapsed).toBe(false);
 
     await t.browser.evaluate(() => {
       const expand = document.querySelector(
-        "main [data-tree-demo="cascade"] [data-tree-expand-key='1']",
+        "main [data-tree-demo='cascade'] [data-tree-expand-key='1']",
       ) as (HTMLButtonElement & { __onclick?: (ev: Event) => void }) | null;
       if (expand && typeof expand.__onclick === "function") {
         expand.__onclick(
@@ -102,7 +102,7 @@ describe("文档页 E2E：/mobile/data-display/tree（Tree 树）", () => {
 
     await t.browser.evaluate(() => {
       const cb = document.querySelector(
-        "main [data-tree-demo="cascade"] [data-tree-check-key='1']",
+        "main [data-tree-demo='cascade'] [data-tree-check-key='1']",
       ) as (HTMLInputElement & { __onclick?: (ev: Event) => void }) | null;
       if (cb && typeof cb.__onclick === "function") {
         cb.__onclick(
@@ -116,11 +116,11 @@ describe("文档页 E2E：/mobile/data-display/tree（Tree 树）", () => {
       const keys = ["1", "1-1", "1-2", "1-2-1"];
       const allChecked = keys.every((k) => {
         const el = document.querySelector(
-          `main [data-tree-demo="cascade"] [data-tree-check-key='${k}']`,
+          `main [data-tree-demo='cascade'] [data-tree-check-key='${k}']`,
         ) as HTMLInputElement | null;
         return !!el?.checked;
       });
-      const display = document.querySelector('[data-tree-demo="cascade"] [data-tree-keys-display]')
+      const display = document.querySelector("[data-tree-demo='cascade'] [data-tree-keys-display]")
         ?.textContent ?? "";
       return { allChecked, display };
     }) as { allChecked: boolean; display: string };
@@ -138,10 +138,10 @@ describe("文档页 E2E：/mobile/data-display/tree（Tree 树）", () => {
 
     await t.browser.evaluate(() => {
       if (!document.querySelector(
-        'main [data-tree-demo="cascade"] [data-tree-check-key="1-2-1"]',
+        "main [data-tree-demo='cascade'] [data-tree-check-key='1-2-1']",
       )) {
         const exp = document.querySelector(
-          'main [data-tree-demo="cascade"] [data-tree-expand-key="1-2"]',
+          "main [data-tree-demo='cascade'] [data-tree-expand-key='1-2']",
         ) as (HTMLButtonElement & { __onclick?: (ev: Event) => void }) | null;
         if (exp && typeof exp.__onclick === "function") {
           exp.__onclick(
@@ -154,7 +154,7 @@ describe("文档页 E2E：/mobile/data-display/tree（Tree 树）", () => {
 
     await t.browser.evaluate(() => {
       const cb = document.querySelector(
-        'main [data-tree-demo="cascade"] [data-tree-check-key="1-2-1"]',
+        "main [data-tree-demo='cascade'] [data-tree-check-key='1-2-1']",
       ) as (HTMLInputElement & { __onclick?: (ev: Event) => void }) | null;
       if (cb && typeof cb.__onclick === "function") {
         cb.__onclick(
@@ -166,16 +166,16 @@ describe("文档页 E2E：/mobile/data-display/tree（Tree 树）", () => {
 
     const got = await t.browser.evaluate(() => {
       const leafCb = document.querySelector(
-        'main [data-tree-demo="cascade"] [data-tree-check-key="1-2-1"]',
+        "main [data-tree-demo='cascade'] [data-tree-check-key='1-2-1']",
       ) as HTMLInputElement | null;
       const parentCb = document.querySelector(
-        'main [data-tree-demo="cascade"] [data-tree-check-key="1-2"]',
+        "main [data-tree-demo='cascade'] [data-tree-check-key='1-2']",
       ) as HTMLInputElement | null;
       const parentRow = document.querySelector(
-        'main [data-tree-demo="cascade"] [data-tree-node-key="1-2"]',
+        "main [data-tree-demo='cascade'] [data-tree-node-key='1-2']",
       );
       const display = document.querySelector(
-        '[data-tree-demo="cascade"] [data-tree-keys-display]',
+        "[data-tree-demo='cascade'] [data-tree-keys-display]",
       )?.textContent ?? "";
       return {
         leafChecked: !!leafCb?.checked,
