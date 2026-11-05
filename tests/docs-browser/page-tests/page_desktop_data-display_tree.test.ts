@@ -1,7 +1,6 @@
 /**
  * @fileoverview 文档路由 `/desktop/data-display/tree` 的浏览器测试。
  * Tree 树 — **本文件仅服务该路由**：后续请按文档示例块继续补全分步交互与断言，勿用仓库脚本覆盖正文。
- * Button 全量交互见同目录上级 `interactive-button-full.test.ts`（本包不为 /desktop/basic/button 另建页测文件）。
  */
 
 import { describe, expect, it } from "@dreamer/test";
@@ -39,34 +38,6 @@ describe("文档页 E2E：/desktop/data-display/tree（Tree 树）", () => {
         if (!(h.textContent || "").includes(needle)) continue;
         let root: Element | null = h.parentElement;
         for (let depth = 0; depth < 12 && root && root !== main; depth++) {
-          const copy = root.querySelector(
-            'button[type="button"][aria-label="复制"]',
-          ) as HTMLButtonElement | null;
-          if (copy && !copy.disabled) {
-            copy.click();
-            return true;
-          }
-          const lb = root.querySelector(
-            'button[aria-haspopup="listbox"]:not([disabled])',
-          ) as HTMLButtonElement | null;
-          if (lb) {
-            lb.click();
-            return true;
-          }
-          const dg = root.querySelector(
-            'button[aria-haspopup="dialog"]:not([disabled])',
-          ) as HTMLButtonElement | null;
-          if (dg) {
-            dg.click();
-            return true;
-          }
-          const sw = root.querySelector(
-            '[role="switch"]',
-          ) as HTMLElement | null;
-          if (sw && !(sw as HTMLButtonElement).disabled) {
-            sw.click();
-            return true;
-          }
           const cb = root.querySelector(
             'input[type="checkbox"]:not(:disabled)',
           ) as HTMLInputElement | null;
@@ -74,49 +45,11 @@ describe("文档页 E2E：/desktop/data-display/tree（Tree 树）", () => {
             cb.click();
             return true;
           }
-          const rd = root.querySelector(
-            'input[type="radio"]:not(:disabled)',
-          ) as HTMLInputElement | null;
-          if (rd) {
-            rd.click();
-            return true;
-          }
-          const ta = root.querySelector(
-            "textarea:not(:disabled), input:not([type=hidden]):not([type=button]):not([type=submit]):not([type=file]):not([type=checkbox]):not([type=radio]):not(:disabled)",
-          ) as HTMLInputElement | null;
-          if (ta) {
-            ta.focus();
-            ta.value = "e2e-strict";
-            ta.dispatchEvent(new Event("input", { bubbles: true }));
-            return true;
-          }
-          const rg = root.querySelector(
-            'input[type="range"]',
-          ) as HTMLInputElement | null;
-          if (rg && !rg.disabled) {
-            const mx = Number(rg.max) || 100;
-            const cur = Number(rg.value) || 0;
-            rg.value = String(Math.min(mx, cur + 2));
-            rg.dispatchEvent(new Event("input", { bubbles: true }));
-            return true;
-          }
-          const star = root.querySelector(
-            '[role="button"][aria-label="3 星"]',
-          ) as HTMLElement | null;
-          if (star) {
-            star.click();
-            return true;
-          }
           const btn = root.querySelector(
             'button[type="button"]:not([disabled])',
           ) as HTMLButtonElement | null;
           if (btn) {
             btn.click();
-            return true;
-          }
-          const a = root.querySelector("a[href]") as HTMLAnchorElement | null;
-          if (a) {
-            a.click();
             return true;
           }
           root = root.parentElement;
@@ -147,84 +80,11 @@ describe("文档页 E2E：/desktop/data-display/tree（Tree 树）", () => {
         if (!(h.textContent || "").includes(needle)) continue;
         let root: Element | null = h.parentElement;
         for (let depth = 0; depth < 12 && root && root !== main; depth++) {
-          const copy = root.querySelector(
-            'button[type="button"][aria-label="复制"]',
-          ) as HTMLButtonElement | null;
-          if (copy && !copy.disabled) {
-            copy.click();
-            return true;
-          }
-          const lb = root.querySelector(
-            'button[aria-haspopup="listbox"]:not([disabled])',
-          ) as HTMLButtonElement | null;
-          if (lb) {
-            lb.click();
-            return true;
-          }
-          const dg = root.querySelector(
-            'button[aria-haspopup="dialog"]:not([disabled])',
-          ) as HTMLButtonElement | null;
-          if (dg) {
-            dg.click();
-            return true;
-          }
-          const sw = root.querySelector(
-            '[role="switch"]',
-          ) as HTMLElement | null;
-          if (sw && !(sw as HTMLButtonElement).disabled) {
-            sw.click();
-            return true;
-          }
-          const cb = root.querySelector(
-            'input[type="checkbox"]:not(:disabled)',
-          ) as HTMLInputElement | null;
-          if (cb) {
-            cb.click();
-            return true;
-          }
-          const rd = root.querySelector(
-            'input[type="radio"]:not(:disabled)',
-          ) as HTMLInputElement | null;
-          if (rd) {
-            rd.click();
-            return true;
-          }
-          const ta = root.querySelector(
-            "textarea:not(:disabled), input:not([type=hidden]):not([type=button]):not([type=submit]):not([type=file]):not([type=checkbox]):not([type=radio]):not(:disabled)",
-          ) as HTMLInputElement | null;
-          if (ta) {
-            ta.focus();
-            ta.value = "e2e-strict";
-            ta.dispatchEvent(new Event("input", { bubbles: true }));
-            return true;
-          }
-          const rg = root.querySelector(
-            'input[type="range"]',
-          ) as HTMLInputElement | null;
-          if (rg && !rg.disabled) {
-            const mx = Number(rg.max) || 100;
-            const cur = Number(rg.value) || 0;
-            rg.value = String(Math.min(mx, cur + 2));
-            rg.dispatchEvent(new Event("input", { bubbles: true }));
-            return true;
-          }
-          const star = root.querySelector(
-            '[role="button"][aria-label="3 星"]',
-          ) as HTMLElement | null;
-          if (star) {
-            star.click();
-            return true;
-          }
           const btn = root.querySelector(
-            'button[type="button"]:not([disabled])',
+            'button[data-tree-expand-key]:not([disabled])',
           ) as HTMLButtonElement | null;
           if (btn) {
             btn.click();
-            return true;
-          }
-          const a = root.querySelector("a[href]") as HTMLAnchorElement | null;
-          if (a) {
-            a.click();
             return true;
           }
           root = root.parentElement;
@@ -237,4 +97,319 @@ describe("文档页 E2E：/desktop/data-display/tree（Tree 树）", () => {
     }) as boolean;
     expect(ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
+
+  /**
+   * UI·展开折叠：点箭头收起再展开，「节点 1-1」显隐切换。
+   */
+  it("UI·箭头展开折叠", async (t) => {
+    if (!t?.browser?.goto) return;
+    await sharedEnv.goto(t, DOC_PATH);
+    await sharedEnv.waitDocMainReady(t);
+    await t.browser.evaluate(() => location.reload());
+    await sharedEnv.waitDocMainReady(t);
+    await sharedEnv.delay(100);
+
+    const before = await t.browser.evaluate(() => {
+      const child = document.querySelector(
+        "main [data-tree-demo="cascade"] [data-tree-select-key='1-1']",
+      );
+      const expand = document.querySelector(
+        "main [data-tree-demo="cascade"] [data-tree-expand-key='1']",
+      ) as (HTMLButtonElement & { __onclick?: (ev: Event) => void }) | null;
+      return {
+        childVisible: !!child,
+        hasExpand: !!expand,
+        aria: expand?.getAttribute("aria-expanded"),
+      };
+    }) as { childVisible: boolean; hasExpand: boolean; aria: string | null };
+    expect(before.hasExpand).toBe(true);
+    expect(before.childVisible).toBe(true);
+
+    await t.browser.evaluate(() => {
+      const expand = document.querySelector(
+        "main [data-tree-demo="cascade"] [data-tree-expand-key='1']",
+      ) as (HTMLButtonElement & { __onclick?: (ev: Event) => void }) | null;
+      expand?.scrollIntoView({ block: "center" });
+      if (expand && typeof expand.__onclick === "function") {
+        expand.__onclick(
+          new MouseEvent("click", { bubbles: true, cancelable: true }),
+        );
+      } else {
+        expand?.click();
+      }
+    });
+    await sharedEnv.delay(200);
+
+    const collapsed = await t.browser.evaluate(() => {
+      const child = document.querySelector(
+        "main [data-tree-demo="cascade"] [data-tree-select-key='1-1']",
+      );
+      const expand = document.querySelector(
+        "main [data-tree-demo="cascade"] [data-tree-expand-key='1']",
+      );
+      return {
+        childVisible: !!child,
+        aria: expand?.getAttribute("aria-expanded"),
+      };
+    }) as { childVisible: boolean; aria: string | null };
+    expect(collapsed.childVisible).toBe(false);
+    expect(collapsed.aria).toBe("false");
+
+    await t.browser.evaluate(() => {
+      const expand = document.querySelector(
+        "main [data-tree-demo="cascade"] [data-tree-expand-key='1']",
+      ) as (HTMLButtonElement & { __onclick?: (ev: Event) => void }) | null;
+      if (expand && typeof expand.__onclick === "function") {
+        expand.__onclick(
+          new MouseEvent("click", { bubbles: true, cancelable: true }),
+        );
+      } else {
+        expand?.click();
+      }
+    });
+    await sharedEnv.delay(200);
+
+    const opened = await t.browser.evaluate(() => {
+      const child = document.querySelector(
+        "main [data-tree-demo="cascade"] [data-tree-select-key='1-1']",
+      );
+      const expand = document.querySelector(
+        "main [data-tree-demo="cascade"] [data-tree-expand-key='1']",
+      );
+      return {
+        childVisible: !!child,
+        aria: expand?.getAttribute("aria-expanded"),
+      };
+    }) as { childVisible: boolean; aria: string | null };
+    expect(opened.childVisible).toBe(true);
+    expect(opened.aria).toBe("true");
+  }, DOCS_BROWSER_CONFIG);
+
+  /**
+   * UI·勾选联动：勾「节点 1」后子孙全勾，计数同步；再勾「1-1」取消后父半选。
+   */
+  it("UI·勾选联动与半选", async (t) => {
+    if (!t?.browser?.goto) return;
+    await sharedEnv.goto(t, DOC_PATH);
+    await sharedEnv.waitDocMainReady(t);
+    await t.browser.evaluate(() => location.reload());
+    await sharedEnv.waitDocMainReady(t);
+    await sharedEnv.delay(100);
+
+    await t.browser.evaluate(() => {
+      const cb = document.querySelector(
+        "main [data-tree-demo="cascade"] [data-tree-check-key='1']",
+      ) as (HTMLInputElement & { __onclick?: (ev: Event) => void }) | null;
+      cb?.scrollIntoView({ block: "center" });
+      if (cb && typeof cb.__onclick === "function") {
+        cb.__onclick(
+          new MouseEvent("click", { bubbles: true, cancelable: true }),
+        );
+      } else {
+        cb?.click();
+      }
+    });
+    await sharedEnv.delay(250);
+
+    const afterParent = await t.browser.evaluate(() => {
+      const keys = ["1", "1-1", "1-2", "1-2-1"];
+      const states: Record<string, { checked: boolean; indeterminate: boolean }> =
+        {};
+      for (const k of keys) {
+        const el = document.querySelector(
+          `main [data-tree-demo="cascade"] [data-tree-check-key='${k}']`,
+        ) as HTMLInputElement | null;
+        states[k] = {
+          checked: !!el?.checked,
+          indeterminate: !!el?.indeterminate,
+        };
+      }
+      const display = document.querySelector('[data-tree-demo="cascade"] [data-tree-keys-display]')
+        ?.textContent ?? "";
+      return { states, display };
+    }) as {
+      states: Record<string, { checked: boolean; indeterminate: boolean }>;
+      display: string;
+    };
+
+    for (const k of ["1", "1-1", "1-2", "1-2-1"]) {
+      if (!afterParent.states[k]?.checked) {
+        throw new Error(
+          `勾选节点1后应联动 ${k}: ${JSON.stringify(afterParent)}`,
+        );
+      }
+    }
+    expect(afterParent.display).toMatch(/已勾选/);
+    expect(afterParent.display).toMatch(/共\s*4/);
+
+    // 取消叶子 1-1 → 父应半选
+    await t.browser.evaluate(() => {
+      const cb = document.querySelector(
+        "main [data-tree-demo="cascade"] [data-tree-check-key='1-1']",
+      ) as (HTMLInputElement & { __onclick?: (ev: Event) => void }) | null;
+      if (cb && typeof cb.__onclick === "function") {
+        cb.__onclick(
+          new MouseEvent("click", { bubbles: true, cancelable: true }),
+        );
+      } else {
+        cb?.click();
+      }
+    });
+    await sharedEnv.delay(250);
+
+    const half = await t.browser.evaluate(() => {
+      const p = document.querySelector(
+        "main [data-tree-demo="cascade"] [data-tree-check-key='1']",
+      ) as HTMLInputElement | null;
+      const leaf = document.querySelector(
+        "main [data-tree-demo="cascade"] [data-tree-check-key='1-1']",
+      ) as HTMLInputElement | null;
+      const display = document.querySelector('[data-tree-demo="cascade"] [data-tree-keys-display]')
+        ?.textContent ?? "";
+      return {
+        parentChecked: !!p?.checked,
+        parentIndeterminate: !!p?.indeterminate,
+        leafChecked: !!leaf?.checked,
+        display,
+        aria: p?.getAttribute("aria-checked"),
+      };
+    }) as {
+      parentChecked: boolean;
+      parentIndeterminate: boolean;
+      leafChecked: boolean;
+      display: string;
+      aria: string | null;
+    };
+
+    expect(half.leafChecked).toBe(false);
+    expect(half.parentChecked).toBe(false);
+    expect(half.parentIndeterminate || half.aria === "mixed").toBe(true);
+    expect(half.display).toMatch(/已勾选/);
+  }, DOCS_BROWSER_CONFIG);
+
+  /**
+   * UI·键盘：聚焦节点行后 ArrowLeft 收起、ArrowRight 展开。
+   */
+  it("UI·键盘展开折叠", async (t) => {
+    if (!t?.browser?.goto) return;
+    await sharedEnv.goto(t, DOC_PATH);
+    await sharedEnv.waitDocMainReady(t);
+    await t.browser.evaluate(() => location.reload());
+    await sharedEnv.waitDocMainReady(t);
+    await sharedEnv.delay(100);
+
+    await t.browser.evaluate(() => {
+      const row = document.querySelector(
+        "main [data-tree-demo="cascade"] [data-tree-node-key='1']",
+      ) as HTMLElement | null;
+      row?.focus();
+      row?.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: "ArrowLeft",
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+    });
+    await sharedEnv.delay(200);
+    const collapsed = await t.browser.evaluate(() => ({
+      child: !!document.querySelector("main [data-tree-demo="cascade"] [data-tree-select-key='1-1']"),
+      aria: document
+        .querySelector("main [data-tree-demo="cascade"] [data-tree-expand-key='1']")
+        ?.getAttribute("aria-expanded"),
+    })) as { child: boolean; aria: string | null };
+    expect(collapsed.child).toBe(false);
+
+    await t.browser.evaluate(() => {
+      const row = document.querySelector(
+        "main [data-tree-demo="cascade"] [data-tree-node-key='1']",
+      ) as HTMLElement | null;
+      row?.focus();
+      row?.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: "ArrowRight",
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+    });
+    await sharedEnv.delay(200);
+    const opened = await t.browser.evaluate(() => ({
+      child: !!document.querySelector("main [data-tree-demo="cascade"] [data-tree-select-key='1-1']"),
+      aria: document
+        .querySelector("main [data-tree-demo="cascade"] [data-tree-expand-key='1']")
+        ?.getAttribute("aria-expanded"),
+    })) as { child: boolean; aria: string | null };
+    expect(opened.child).toBe(true);
+    expect(opened.aria).toBe("true");
+  }, DOCS_BROWSER_CONFIG);
+
+  /**
+   * UI·严格勾选：checkStrictly 下勾「1-2」不带「1-2-1」。
+   */
+  it("UI·严格勾选不联动", async (t) => {
+    if (!t?.browser?.goto) return;
+    await sharedEnv.goto(t, DOC_PATH);
+    await sharedEnv.waitDocMainReady(t);
+    await t.browser.evaluate(() => location.reload());
+    await sharedEnv.waitDocMainReady(t);
+    await sharedEnv.delay(100);
+
+    await t.browser.evaluate(() => {
+      const cb = document.querySelector(
+        'main [data-tree-demo="strict"] [data-tree-check-key="1-2"]',
+      ) as (HTMLInputElement & { __onclick?: (ev: Event) => void }) | null;
+      cb?.scrollIntoView({ block: "center" });
+      if (cb && typeof cb.__onclick === "function") {
+        cb.__onclick(
+          new MouseEvent("click", { bubbles: true, cancelable: true }),
+        );
+      } else cb?.click();
+    });
+    await sharedEnv.delay(250);
+
+    const got = await t.browser.evaluate(() => {
+      const p12 = document.querySelector(
+        'main [data-tree-demo="strict"] [data-tree-check-key="1-2"]',
+      ) as HTMLInputElement | null;
+      const c = document.querySelector(
+        'main [data-tree-demo="strict"] [data-tree-check-key="1-2-1"]',
+      ) as HTMLInputElement | null;
+      // ensure child visible: expand 1-2 if needed
+      return {
+        parent: !!p12?.checked,
+        child: !!c?.checked,
+        childExists: !!c,
+      };
+    }) as { parent: boolean; child: boolean; childExists: boolean };
+
+    // 若 1-2-1 未展开，先展开再断言
+    if (!got.childExists) {
+      await t.browser.evaluate(() => {
+        const exp = document.querySelector(
+          'main [data-tree-demo="strict"] [data-tree-expand-key="1-2"]',
+        ) as (HTMLButtonElement & { __onclick?: (ev: Event) => void }) | null;
+        if (exp && typeof exp.__onclick === "function") {
+          exp.__onclick(
+            new MouseEvent("click", { bubbles: true, cancelable: true }),
+          );
+        } else exp?.click();
+      });
+      await sharedEnv.delay(200);
+    }
+
+    const after = await t.browser.evaluate(() => {
+      const p12 = document.querySelector(
+        'main [data-tree-demo="strict"] [data-tree-check-key="1-2"]',
+      ) as HTMLInputElement | null;
+      const c = document.querySelector(
+        'main [data-tree-demo="strict"] [data-tree-check-key="1-2-1"]',
+      ) as HTMLInputElement | null;
+      return { parent: !!p12?.checked, child: !!c?.checked };
+    }) as { parent: boolean; child: boolean };
+
+    expect(after.parent).toBe(true);
+    expect(after.child).toBe(false);
+  }, DOCS_BROWSER_CONFIG);
+
 });

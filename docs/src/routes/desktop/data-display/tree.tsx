@@ -1,83 +1,69 @@
 /**
- * Tree 组件文档页（标准文档结构：概述、引入、示例、API）
- * 路由: /desktop/data-display/tree
+ * Tree 文档页。路由: /desktop/data-display/tree
  */
 
 import { createSignal } from "@dreamer/view";
 import { CodeBlock, Paragraph, Title, Tree } from "@dreamer/ui-view";
 import type { TreeNode } from "@dreamer/ui-view";
+import {
+  DocsApiTable,
+  type DocsApiTableRow,
+} from "../../../components/DocsApiTable.tsx";
 
-/** API 属性行类型 */
-interface ApiRow {
-  name: string;
-  type: string;
-  default: string;
-  description: string;
-}
-
-const TREE_API: ApiRow[] = [
+const API: DocsApiTableRow[] = [
   { name: "treeData", type: "TreeNode[]", default: "-", description: "树数据" },
   {
     name: "expandedKeys",
-    type: "string[]",
+    type: "Signal | () => string[] | string[]",
     default: "-",
-    description: "当前展开 key（受控）",
+    description: "展开 key（请传 Signal／getter，勿 .value 快照）",
   },
   {
     name: "defaultExpandedKeys",
     type: "string[]",
-    default: "-",
-    description: "默认展开 key",
-  },
-  {
-    name: "onExpand",
-    type: "(expandedKeys: string[]) => void",
-    default: "-",
-    description: "展开/收起回调",
+    default: "[]",
+    description: "非受控初始展开",
   },
   {
     name: "selectedKeys",
-    type: "string[]",
+    type: "Signal | () => string[] | string[]",
     default: "-",
-    description: "当前选中 key",
-  },
-  {
-    name: "onSelect",
-    type: "(keys, info) => void",
-    default: "-",
-    description: "选中回调",
+    description: "选中 key（传 Signal／getter）",
   },
   {
     name: "checkedKeys",
-    type: "string[]",
+    type: "Signal | () => string[] | string[]",
     default: "-",
-    description: "当前勾选 key（checkable 时）",
-  },
-  {
-    name: "onCheck",
-    type: "(checkedKeys: string[]) => void",
-    default: "-",
-    description: "勾选回调",
+    description: "勾选 key（传 Signal／getter）",
   },
   {
     name: "checkable",
     type: "boolean",
     default: "false",
-    description: "是否显示 checkbox",
+    description: "显示 checkbox",
   },
-  { name: "multiple", type: "boolean", default: "-", description: "是否多选" },
   {
-    name: "blockNode",
+    name: "checkStrictly",
     type: "boolean",
     default: "false",
-    description: "是否块级",
+    description: "默认 false＝父子联动＋半选；true＝仅切换自身、无联动",
   },
   {
     name: "showLine",
     type: "boolean",
     default: "false",
-    description: "是否显示连接线",
+    description: "连接线风格（目录线）",
   },
+  {
+    name: "blockNode",
+    type: "boolean",
+    default: "false",
+    description: "块级行（整行铺满选中底）",
+  },
+  { name: "multiple", type: "boolean", default: "false", description: "多选" },
+  { name: "onExpand", type: "(keys) => void", default: "-", description: "展开变化" },
+  { name: "onSelect", type: "(keys, info) => void", default: "-", description: "选中变化" },
+  { name: "onCheck", type: "(keys) => void", default: "-", description: "勾选变化" },
   { name: "class", type: "string", default: "-", description: "容器 class" },
 ];
 
@@ -87,51 +73,69 @@ import type { TreeNode } from "@dreamer/ui-view";
 
 const expandedKeys = createSignal<string[]>(["1"]);
 const selectedKeys = createSignal<string[]>([]);
-const treeData: TreeNode[] = [{ key: "1", title: "节点 1", children: [...] }, ...];
+const checkedKeys = createSignal<string[]>([]);
+
+const treeData: TreeNode[] = [
+  {
+    key: "1",
+    title: "节点 1",
+    children: [
+      { key: "1-1", title: "节点 1-1" },
+      { key: "1-2", title: "节点 1-2", children: [{ key: "1-2-1", title: "节点 1-2-1" }] },
+    ],
+  },
+  { key: "2", title: "节点 2" },
+];
+
 <Tree
   treeData={treeData}
-  expandedKeys={expandedKeys.value}
-  onExpand={(keys) => expandedKeys.value = keys}
-  selectedKeys={selectedKeys.value}
-  onSelect={(keys) => selectedKeys.value = keys}
+  checkable
+  expandedKeys={expandedKeys}
+  onExpand={(keys) => (expandedKeys.value = keys)}
+  selectedKeys={selectedKeys}
+  onSelect={(keys) => (selectedKeys.value = keys)}
+  checkedKeys={checkedKeys}
+  onCheck={(keys) => (checkedKeys.value = keys)}
 />`;
 
-const exampleCheckable = `<Tree
+const exampleCascade = `<Tree
   treeData={treeData}
-  expandedKeys={expandedKeys.value}
-  onExpand={(keys) => expandedKeys.value = keys}
-  selectedKeys={selectedKeys.value}
-  onSelect={(keys) => selectedKeys.value = keys}
   checkable
-  checkedKeys={checkedKeys.value}
-  onCheck={(keys) => checkedKeys.value = keys}
+  /* checkStrictly 默认 false：勾父联动子孙；部分勾选时父半选 */
+  expandedKeys={expandedKeys}
+  onExpand={(keys) => (expandedKeys.value = keys)}
+  checkedKeys={checkedKeys}
+  onCheck={(keys) => (checkedKeys.value = keys)}
+/>`;
+
+const exampleStrict = `<Tree
+  treeData={treeData}
+  checkable
+  checkStrictly
+  expandedKeys={strictExpanded}
+  onExpand={(keys) => (strictExpanded.value = keys)}
+  checkedKeys={strictChecked}
+  onCheck={(keys) => (strictChecked.value = keys)}
 />`;
 
 const exampleShowLine = `<Tree
   treeData={treeData}
-  expandedKeys={expandedKeys.value}
-  onExpand={(keys) => expandedKeys.value = keys}
   showLine
+  expandedKeys={lineExpanded}
+  onExpand={(keys) => (lineExpanded.value = keys)}
+  selectedKeys={lineSelected}
+  onSelect={(keys) => (lineSelected.value = keys)}
 />`;
 
-/** 仅展示已选/已勾选文案，单独读 signal 避免父组件重渲染导致整树闪动 */
-function KeysDisplay(props: {
-  getSelectedKeys: () => string[];
-  getCheckedKeys: () => string[];
-}) {
-  const { getSelectedKeys, getCheckedKeys } = props;
-  return (
-    <p class="text-sm text-slate-500">
-      已选: {getSelectedKeys().join(", ") || "-"} | 已勾选:{" "}
-      {getCheckedKeys().join(", ") || "-"}
-    </p>
-  );
-}
-
-/** 树示例用的展开/选中/勾选 state 提到模块级，避免 state 更新时页面组件重跑导致整树重渲染 */
-const expandedKeys = createSignal<string[]>(["1"]);
-const selectedKeys = createSignal<string[]>([]);
-const checkedKeys = createSignal<string[]>([]);
+const exampleBlock = `<Tree
+  treeData={treeData}
+  blockNode
+  checkable
+  expandedKeys={blockExpanded}
+  onExpand={(keys) => (blockExpanded.value = keys)}
+  checkedKeys={blockChecked}
+  onCheck={(keys) => (blockChecked.value = keys)}
+/>`;
 
 const treeData: TreeNode[] = [
   {
@@ -146,130 +150,180 @@ const treeData: TreeNode[] = [
       },
     ],
   },
-  { key: "2", title: "节点 2" },
+  {
+    key: "2",
+    title: "节点 2",
+    children: [{ key: "2-1", title: "节点 2-1" }],
+  },
 ];
 
-export default function DataDisplayTree() {
+const expandedKeys = createSignal<string[]>(["1"]);
+const selectedKeys = createSignal<string[]>([]);
+const checkedKeys = createSignal<string[]>([]);
+
+const strictExpanded = createSignal<string[]>(["1"]);
+const strictChecked = createSignal<string[]>([]);
+
+const lineExpanded = createSignal<string[]>(["1"]);
+const lineSelected = createSignal<string[]>([]);
+
+const blockExpanded = createSignal<string[]>(["1"]);
+const blockChecked = createSignal<string[]>([]);
+
+function KeysDisplay(props: {
+  getSelected?: () => string[];
+  getChecked: () => string[];
+  label?: string;
+}) {
+  const sel = props.getSelected?.() ?? [];
+  const chk = props.getChecked();
   return (
-    <div class="space-y-10">
-      <section>
-        <Title level={1}>Tree 树形</Title>
-        <Paragraph class="mt-2">
-          树形：treeData、expandedKeys、onExpand、selectedKeys、onSelect、checkedKeys、onCheck、checkable、multiple、blockNode、showLine。
-          使用 Tailwind v4，支持 light/dark 主题。
+    <p class="text-sm text-slate-500" data-tree-keys-display="">
+      {props.label ? `${props.label} · ` : ""}
+      {props.getSelected
+        ? `已选: ${sel.join(", ") || "-"} | `
+        : ""}
+      已勾选: {chk.join(", ") || "-"}（共 {chk.length}）
+    </p>
+  );
+}
+
+export default function Page() {
+  return (
+    <div class="space-y-8">
+      <div>
+        <Title level={1}>Tree</Title>
+        <Paragraph>
+          树形控件。箭头／行点击切换展开；键盘 ArrowLeft／Right 收起／展开，Space
+          勾选，Enter 选中。勾选默认
+          <strong>父子联动</strong>（点 1-2 会带上 1-2-1，属正常 cascade）；传
+          <code class="mx-1">checkStrictly</code>
+          可关掉联动。子孙部分勾选时父级半选。expandedKeys／checkedKeys／selectedKeys
+          请传 Signal 或 getter，勿传 .value 快照。
         </Paragraph>
-      </section>
+      </div>
 
       <section class="space-y-3">
         <Title level={2}>引入</Title>
-        <CodeBlock
-          title="代码示例"
-          code={importCode}
-          language="tsx"
-          showLineNumbers
-          wrapLongLines
-        />
+        <CodeBlock code={importCode} language="tsx" />
       </section>
 
-      <section class="space-y-8">
+      <section class="space-y-6">
         <Title level={2}>示例</Title>
 
-        <div class="space-y-4">
+        <div class="space-y-3">
           <Title level={3}>展开 / 选中 / 勾选</Title>
-          <Tree
-            treeData={treeData}
-            defaultExpandedKeys={["1"]}
-            expandedKeys={expandedKeys.value}
-            onExpand={(keys) => expandedKeys.value = keys}
-            selectedKeys={selectedKeys.value}
-            onSelect={(keys) => selectedKeys.value = keys}
-            checkable
-            checkedKeys={checkedKeys.value}
-            onCheck={(keys) => checkedKeys.value = keys}
-          />
-          {/* 包成 getter，使 KeysDisplay 在独立 effect 中渲染并读 signal，避免整页 effect 订阅 signal 导致 DataDisplayTree 重跑、Tree 的 data-view-dynamic 槽被 replaceChildren 整树闪动 */}
-          {() => (
-            <KeysDisplay
-              getSelectedKeys={() => selectedKeys.value}
-              getCheckedKeys={() => checkedKeys.value}
+          <Paragraph class="text-sm text-slate-500">
+            默认联动：勾「节点 1」或「1-2」会级联子孙；取消叶子后父级半选。
+          </Paragraph>
+          <div
+            class="rounded-xl border border-slate-200 dark:border-slate-700 p-4 bg-white dark:bg-slate-900 space-y-3"
+            data-tree-demo="cascade"
+          >
+            <Tree
+              treeData={treeData}
+              checkable
+              defaultExpandedKeys={["1"]}
+              expandedKeys={expandedKeys}
+              onExpand={(keys) => (expandedKeys.value = keys)}
+              selectedKeys={selectedKeys}
+              onSelect={(keys) => (selectedKeys.value = keys)}
+              checkedKeys={checkedKeys}
+              onCheck={(keys) => (checkedKeys.value = keys)}
             />
-          )}
-          <CodeBlock
-            title="代码示例"
-            code={exampleCheckable}
-            language="tsx"
-            showLineNumbers
-            copyable
-            wrapLongLines
-          />
+            {() => (
+              <KeysDisplay
+                getSelected={() => selectedKeys.value}
+                getChecked={() => checkedKeys.value}
+              />
+            )}
+          </div>
+          <CodeBlock code={exampleCascade} language="tsx" />
         </div>
 
-        <div class="space-y-4">
+        <div class="space-y-3">
+          <Title level={3}>严格勾选 checkStrictly</Title>
+          <Paragraph class="text-sm text-slate-500">
+            checkStrictly：只切换自身，父子互不影响、无半选联动。
+          </Paragraph>
+          <div
+            class="rounded-xl border border-slate-200 dark:border-slate-700 p-4 bg-white dark:bg-slate-900 space-y-3"
+            data-tree-demo="strict"
+          >
+            <Tree
+              treeData={treeData}
+              checkable
+              checkStrictly
+              defaultExpandedKeys={["1"]}
+              expandedKeys={strictExpanded}
+              onExpand={(keys) => (strictExpanded.value = keys)}
+              checkedKeys={strictChecked}
+              onCheck={(keys) => (strictChecked.value = keys)}
+            />
+            {() => (
+              <KeysDisplay getChecked={() => strictChecked.value} label="严格" />
+            )}
+          </div>
+          <CodeBlock code={exampleStrict} language="tsx" />
+        </div>
+
+        <div class="space-y-3">
           <Title level={3}>showLine 连接线</Title>
-          <Tree
-            treeData={treeData}
-            expandedKeys={expandedKeys.value}
-            onExpand={(keys) => expandedKeys.value = keys}
-            showLine
-          />
-          <CodeBlock
-            title="代码示例"
-            code={exampleShowLine}
-            language="tsx"
-            showLineNumbers
-            copyable
-            wrapLongLines
-          />
+          <Paragraph class="text-sm text-slate-500">
+            第二种展示风格：目录连接线，仅选中、无勾选。
+          </Paragraph>
+          <div
+            class="rounded-xl border border-slate-200 dark:border-slate-700 p-4 bg-white dark:bg-slate-900"
+            data-tree-demo="show-line"
+          >
+            <Tree
+              treeData={treeData}
+              showLine
+              defaultExpandedKeys={["1"]}
+              expandedKeys={lineExpanded}
+              onExpand={(keys) => (lineExpanded.value = keys)}
+              selectedKeys={lineSelected}
+              onSelect={(keys) => (lineSelected.value = keys)}
+            />
+          </div>
+          <CodeBlock code={exampleShowLine} language="tsx" />
+        </div>
+
+        <div class="space-y-3">
+          <Title level={3}>blockNode 块级行</Title>
+          <Paragraph class="text-sm text-slate-500">
+            整行铺满选中底，适合侧栏目录。
+          </Paragraph>
+          <div
+            class="rounded-xl border border-slate-200 dark:border-slate-700 p-4 bg-white dark:bg-slate-900 space-y-3"
+            data-tree-demo="block-node"
+          >
+            <Tree
+              treeData={treeData}
+              blockNode
+              checkable
+              defaultExpandedKeys={["1"]}
+              expandedKeys={blockExpanded}
+              onExpand={(keys) => (blockExpanded.value = keys)}
+              checkedKeys={blockChecked}
+              onCheck={(keys) => (blockChecked.value = keys)}
+            />
+            {() => (
+              <KeysDisplay getChecked={() => blockChecked.value} label="块级" />
+            )}
+          </div>
+          <CodeBlock code={exampleBlock} language="tsx" />
         </div>
       </section>
 
       <section class="space-y-3">
         <Title level={2}>API</Title>
         <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
-          TreeNode：key、title、disabled、selectable、checkable、isLeaf、children。Tree
-          属性如下。
+          TreeNode：key、title、disabled、selectable、checkable、isLeaf、children。
+          勾选联动默认开启（checkStrictly=false）；半选仅 DOM indeterminate，不进入
+          checkedKeys。
         </Paragraph>
-        <div class="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-600">
-          <table class="w-full min-w-lg text-sm">
-            <thead>
-              <tr class="border-b border-slate-200 bg-slate-50 dark:border-slate-600 dark:bg-slate-800/80">
-                <th class="px-4 py-3 text-left font-medium text-slate-900 dark:text-slate-100">
-                  属性
-                </th>
-                <th class="px-4 py-3 text-left font-medium text-slate-900 dark:text-slate-100">
-                  类型
-                </th>
-                <th class="px-4 py-3 text-left font-medium text-slate-900 dark:text-slate-100">
-                  默认值
-                </th>
-                <th class="px-4 py-3 text-left font-medium text-slate-900 dark:text-slate-100">
-                  说明
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {TREE_API.map((row) => (
-                <tr
-                  key={row.name}
-                  class="border-b border-slate-100 dark:border-slate-700 last:border-b-0"
-                >
-                  <td class="px-4 py-2.5 font-mono text-slate-700 dark:text-slate-300">
-                    {row.name}
-                  </td>
-                  <td class="px-4 py-2.5 text-slate-600 dark:text-slate-400">
-                    {row.type}
-                  </td>
-                  <td class="px-4 py-2.5 text-slate-600 dark:text-slate-400">
-                    {row.default}
-                  </td>
-                  <td class="px-4 py-2.5 text-slate-600 dark:text-slate-400">
-                    {row.description}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <DocsApiTable rows={API} />
       </section>
     </div>
   );

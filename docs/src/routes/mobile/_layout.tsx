@@ -106,6 +106,7 @@ const DATA_DISPLAY_SUBMENU = [
     label: "VirtualList",
     desc: "虚拟列表",
   },
+  { path: "/mobile/data-display/tree", label: "Tree", desc: "树形" },
 ] as const;
 
 /** 表单（移动入口；Select 等与桌面默认一致，Cascader 等差异见各页） */

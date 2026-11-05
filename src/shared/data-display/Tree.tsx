@@ -1,16 +1,23 @@
 /**
  * Tree 树形（View）。
- * 目录、结构数据；支持展开/选中/勾选、异步加载、多选、可拖拽（可选）。
- * expandedKeys/selectedKeys/checkedKeys 可传 getter（如 signal）；用 untrack 读 getter 避免订阅导致整树重跑，
- * 用 createEffect 同步 DOM 更新勾选/展开/选中状态。
+ * 目录、结构数据；支持展开／选中／勾选（默认父子联动＋半选；`checkStrictly` 时严格独立）。
+ *
+ * `expandedKeys`／`selectedKeys`／`checkedKeys` 请传 Signal 或 getter；勿传 `signal.value` 快照，
+ * 否则回调写回后组件仍读旧数组，表现为展开／勾选「点了没反应」。
  */
 
-import { createEffect, untrack } from "@dreamer/view";
-import type { JSXRenderable } from "@dreamer/view";
-import { createSignal } from "@dreamer/view";
+import {
+  createEffect,
+  createSignal,
+  untrack,
+  type JSXRenderable,
+} from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
-/** 按需：单文件图标，避免经 icons/mod 拉入全表 */
 import { IconChevronRight } from "../basic/icons/ChevronRight.tsx";
+import {
+  readSignalValue,
+  safeIsSignal,
+} from "../safe-signal.ts";
 
 export interface TreeNode {
   /** 唯一 key */
@@ -21,7 +28,7 @@ export interface TreeNode {
   disabled?: boolean;
   /** 是否可选（不传则默认 true） */
   selectable?: boolean;
-  /** 是否可勾选（显示 checkbox） */
+  /** 是否可勾选（显示 checkbox）；节点级可覆盖 */
   checkable?: boolean;
   /** 是否叶子节点（无 children 时自动为 true） */
   isLeaf?: boolean;
@@ -32,25 +39,31 @@ export interface TreeNode {
 export interface TreeProps {
   /** 树数据 */
   treeData: TreeNode[];
-  /** 当前展开的 key 列表（受控）；可传 getter 如 signal 以减少整树重渲染 */
-  expandedKeys?: string[] | (() => string[]);
+  /** 当前展开的 key 列表（受控）；请传 Signal／getter，勿传 `.value` 快照 */
+  expandedKeys?: string[] | (() => string[]) | unknown;
   /** 默认展开的 key 列表 */
   defaultExpandedKeys?: string[];
   /** 展开/收起回调 */
   onExpand?: (expandedKeys: string[]) => void;
-  /** 当前选中的 key（受控）；可传 getter 以减少整树重渲染 */
-  selectedKeys?: string[] | (() => string[]);
+  /** 当前选中的 key（受控） */
+  selectedKeys?: string[] | (() => string[]) | unknown;
   /** 选中回调 */
   onSelect?: (
     selectedKeys: string[],
     info: { node: TreeNode; selected: boolean },
   ) => void;
-  /** 当前勾选的 key 列表（受控，当 checkable 时）；可传 getter 以减少整树重渲染 */
-  checkedKeys?: string[] | (() => string[]);
+  /** 当前勾选的 key 列表（受控，当 checkable 时） */
+  checkedKeys?: string[] | (() => string[]) | unknown;
   /** 勾选回调 */
   onCheck?: (checkedKeys: string[]) => void;
   /** 是否显示 checkbox */
   checkable?: boolean;
+  /**
+   * 勾选是否父子独立。
+   * - `false`（默认）：勾选父级联动子孙；子孙部分勾选时父级半选
+   * - `true`：仅切换自身
+   */
+  checkStrictly?: boolean;
   /** 是否允许多选 */
   multiple?: boolean;
   /** 是否块级 */
@@ -70,107 +83,266 @@ function getNodeByKey(nodes: TreeNode[], key: string): TreeNode | undefined {
   return undefined;
 }
 
+function collectDescendantKeys(node: TreeNode): string[] {
+  const out: string[] = [];
+  const walk = (n: TreeNode) => {
+    if (!n.children) return;
+    for (const c of n.children) {
+      out.push(c.key);
+      walk(c);
+    }
+  };
+  walk(node);
+  return out;
+}
+
+/** 更直观的找父：返回父节点 */
+function getParentNode(nodes: TreeNode[], key: string): TreeNode | null {
+  for (const n of nodes) {
+    if (n.children?.some((c) => c.key === key)) return n;
+    if (n.children) {
+      const p = getParentNode(n.children, key);
+      if (p) return p;
+    }
+  }
+  return null;
+}
+
+type CheckVisual = "checked" | "unchecked" | "indeterminate";
+
+function visualCheckState(
+  node: TreeNode,
+  checked: Set<string>,
+  checkStrictly: boolean,
+): CheckVisual {
+  if (checkStrictly || !node.children?.length) {
+    return checked.has(node.key) ? "checked" : "unchecked";
+  }
+  const childStates = node.children.map((c) =>
+    visualCheckState(c, checked, false)
+  );
+  const allChecked = childStates.every((s) => s === "checked");
+  const allUnchecked = childStates.every((s) => s === "unchecked");
+  if (allChecked) return "checked";
+  if (allUnchecked) {
+    return checked.has(node.key) ? "checked" : "unchecked";
+  }
+  return "indeterminate";
+}
+
+/** 联动后根据子孙校正祖先：全选则加入，否则移出（半选仅 DOM indeterminate） */
+function reconcileAncestors(
+  treeData: TreeNode[],
+  fromKey: string,
+  checked: Set<string>,
+): void {
+  let parent = getParentNode(treeData, fromKey);
+  while (parent) {
+    const children = parent.children ?? [];
+    const allOn = children.every((c) =>
+      visualCheckState(c, checked, false) === "checked"
+    );
+    if (allOn) checked.add(parent.key);
+    else checked.delete(parent.key);
+    parent = getParentNode(treeData, parent.key);
+  }
+}
+
+function asGetter(
+  value: unknown,
+  fallback: string[],
+): () => string[] {
+  if (typeof value === "function") return value as () => string[];
+  if (safeIsSignal(value)) {
+    return () => {
+      const v = readSignalValue(value as never);
+      return Array.isArray(v) ? (v as string[]) : fallback;
+    };
+  }
+  if (Array.isArray(value)) {
+    // 字面量快照：仅作初始／非响应；文档应改传 Signal／getter
+    const snap = value as string[];
+    return () => snap;
+  }
+  return () => fallback;
+}
+
 function renderNode(
   node: TreeNode,
-  expandedSet: Set<string>,
-  selectedSet: Set<string>,
-  checkedSet: Set<string>,
-  onExpand: (key: string) => void,
-  onSelect: (key: string) => void,
-  onCheck: (key: string) => void,
-  checkable: boolean,
-  showLine: boolean,
   depth: number,
+  ctx: {
+    getExpanded: () => Set<string>;
+    getSelected: () => Set<string>;
+    getChecked: () => Set<string>;
+    checkStrictly: boolean;
+    checkable: boolean;
+    showLine: boolean;
+    blockNode: boolean;
+    onExpand: (key: string) => void;
+    onSelect: (key: string) => void;
+    onCheck: (key: string) => void;
+  },
 ): unknown {
   const hasChildren = node.children != null && node.children.length > 0;
   const isLeaf = node.isLeaf ?? !hasChildren;
-  const isExpanded = expandedSet.has(node.key);
-  const isSelected = selectedSet.has(node.key);
-  const isChecked = checkedSet.has(node.key);
   const disabled = node.disabled ?? false;
+  const nodeCheckable = ctx.checkable && (node.checkable !== false);
 
-  // 直接返回 JSX，不包一层函数，避免父组件重跑时整树被当作新子组件替换导致「整树沉浸」、无法展开/选中/勾选
-  return () => (
-    <div key={node.key} class="tree-node">
-      <div
-        data-tree-node-key={node.key}
-        class={twMerge(
-          "flex items-center gap-1 py-1 pr-2 rounded-md",
-          "text-slate-700 dark:text-slate-300",
-          isSelected &&
-            "bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300",
-          !disabled &&
-            "hover:bg-slate-100 dark:hover:bg-slate-700/50 cursor-pointer",
-          disabled && "opacity-60 cursor-not-allowed",
-        )}
-        style={{ paddingLeft: `${depth * 16 + 4}px` }}
-      >
-        <button
-          type="button"
-          data-tree-expand-key={node.key}
-          class={twMerge(
-            "shrink-0 w-4 h-4 p-0 flex items-center justify-center rounded",
-            !isLeaf && "hover:bg-slate-200 dark:hover:bg-slate-600",
-            isLeaf && "invisible",
-          )}
-          aria-expanded={hasChildren ? isExpanded : undefined}
-        >
-          <IconChevronRight
+  return (
+    <div key={node.key} class="tree-node" data-tree-node-wrap={node.key}>
+      {() => {
+        const expandedSet = ctx.getExpanded();
+        const selectedSet = ctx.getSelected();
+        const checkedSet = ctx.getChecked();
+        const isExpanded = expandedSet.has(node.key);
+        const isSelected = selectedSet.has(node.key);
+        const vcheck = nodeCheckable
+          ? visualCheckState(node, checkedSet, ctx.checkStrictly)
+          : "unchecked";
+        return (
+          <div
+            data-tree-node-key={node.key}
+            role="treeitem"
+            tabIndex={disabled ? -1 : 0}
+            aria-expanded={hasChildren ? isExpanded : undefined}
+            aria-selected={isSelected}
             class={twMerge(
-              "w-4 h-4 transition-transform",
-              isExpanded && "rotate-90",
+              "flex items-center gap-1 py-1 pr-2 outline-none relative",
+              ctx.blockNode ? "rounded-none w-full" : "rounded-md",
+              "text-slate-700 dark:text-slate-300",
+              "focus-visible:ring-2 focus-visible:ring-blue-500/60",
+              isSelected &&
+                "bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300",
+              !disabled &&
+                "hover:bg-slate-100 dark:hover:bg-slate-700/50 cursor-pointer",
+              disabled && "opacity-60 cursor-not-allowed",
             )}
-          />
-        </button>
-        {checkable && (
-          <input
-            type="checkbox"
-            data-tree-check-key={node.key}
-            class="shrink-0 w-4 h-4 rounded border-slate-300 dark:border-slate-600 cursor-pointer"
-            checked={isChecked}
-            disabled={disabled}
-          />
-        )}
-        <span
-          data-tree-select-key={node.key}
-          class="flex-1 min-w-0 truncate select-none"
-        >
-          {node.title}
-        </span>
-      </div>
+            style={{
+              paddingLeft: ctx.showLine
+                ? `${depth * 20 + 12}px`
+                : `${depth * 16 + 4}px`,
+            }}
+            data-tree-show-line={ctx.showLine ? "true" : undefined}
+            data-tree-block-node={ctx.blockNode ? "true" : undefined}
+            onClick={() => {
+              // 行点击（空白处）切换展开；子控件已 stopPropagation
+              if (disabled || isLeaf) return;
+              ctx.onExpand(node.key);
+            }}
+            onKeyDown={(e: KeyboardEvent) => {
+              if (disabled) return;
+              const key = e.key;
+              if (key === "ArrowRight") {
+                e.preventDefault();
+                if (hasChildren && !isExpanded) ctx.onExpand(node.key);
+              } else if (key === "ArrowLeft") {
+                e.preventDefault();
+                if (hasChildren && isExpanded) ctx.onExpand(node.key);
+              } else if (key === "Enter") {
+                e.preventDefault();
+                if (node.selectable !== false) ctx.onSelect(node.key);
+              } else if (key === " " || key === "Spacebar") {
+                e.preventDefault();
+                if (nodeCheckable) ctx.onCheck(node.key);
+                else if (node.selectable !== false) ctx.onSelect(node.key);
+              }
+            }}
+          >
+            <button
+              type="button"
+              data-tree-expand-key={node.key}
+              class={twMerge(
+                "shrink-0 w-4 h-4 p-0 flex items-center justify-center rounded",
+                !isLeaf && "hover:bg-slate-200 dark:hover:bg-slate-600",
+                isLeaf && "invisible pointer-events-none",
+              )}
+              aria-expanded={hasChildren ? isExpanded : undefined}
+              aria-label={isExpanded ? "收起" : "展开"}
+              disabled={disabled || isLeaf}
+              onClick={(e: Event) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (!disabled && !isLeaf) ctx.onExpand(node.key);
+              }}
+            >
+              <IconChevronRight
+                class={twMerge(
+                  "w-4 h-4 transition-transform",
+                  isExpanded && "rotate-90",
+                )}
+              />
+            </button>
+            {nodeCheckable && (
+              <input
+                type="checkbox"
+                data-tree-check-key={node.key}
+                class="shrink-0 w-4 h-4 rounded border-slate-300 dark:border-slate-600 cursor-pointer"
+                checked={vcheck === "checked"}
+                disabled={disabled}
+                aria-checked={
+                  vcheck === "indeterminate" ? "mixed" : vcheck === "checked"
+                }
+                onClick={(e: Event) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (!disabled) ctx.onCheck(node.key);
+                }}
+                onChange={(e: Event) => {
+                  // 受控：阻止原生切换，由 onCheck 写回
+                  e.preventDefault();
+                }}
+              />
+            )}
+            <span
+              data-tree-select-key={node.key}
+              class="flex-1 min-w-0 truncate select-none"
+              onClick={(e: Event) => {
+                e.stopPropagation();
+                if (disabled) return;
+                // 行／标题点击：有子则切换展开；勾选仅走 checkbox
+                if (!isLeaf) ctx.onExpand(node.key);
+                if (node.selectable !== false) ctx.onSelect(node.key);
+              }}
+            >
+              {node.title}
+            </span>
+          </div>
+        );
+      }}
       {hasChildren && (
         <div
-          class="tree-children"
-          data-tree-children-key={node.key}
-          style={{ display: isExpanded ? "" : "none" }}
-        >
-          {node.children!.map((child) =>
-            renderNode(
-              child,
-              expandedSet,
-              selectedSet,
-              checkedSet,
-              onExpand,
-              onSelect,
-              onCheck,
-              checkable,
-              showLine,
-              depth + 1,
-            )
+          class={twMerge(
+            "tree-children",
+            ctx.showLine &&
+              "ml-[11px] border-l border-slate-200 dark:border-slate-600",
           )}
+          data-tree-children-key={node.key}
+          data-tree-show-line={ctx.showLine ? "true" : undefined}
+        >
+          {() => {
+            const open = ctx.getExpanded().has(node.key);
+            if (!open) return null;
+            return node.children!.map((child) => (
+              <div
+                class={twMerge(
+                  ctx.showLine && "relative",
+                )}
+                data-tree-line-item={ctx.showLine ? "true" : undefined}
+              >
+                {ctx.showLine && (
+                  <span
+                    aria-hidden="true"
+                    class="pointer-events-none absolute left-0 top-[14px] w-3 border-t border-slate-200 dark:border-slate-600"
+                  />
+                )}
+                {renderNode(child, depth + 1, ctx)}
+              </div>
+            ));
+          }}
         </div>
       )}
     </div>
   );
-}
-
-/** 将 array 或 getter 规范为 getter */
-function asGetter(
-  value: string[] | (() => string[]) | undefined,
-  fallback: string[],
-): () => string[] {
-  if (typeof value === "function") return value as () => string[];
-  return () => (value ?? fallback);
 }
 
 export function Tree(props: TreeProps): JSXRenderable {
@@ -184,7 +356,9 @@ export function Tree(props: TreeProps): JSXRenderable {
     checkedKeys = [],
     onCheck,
     checkable = false,
+    checkStrictly = false,
     multiple = false,
+    blockNode = false,
     showLine = false,
     class: className,
   } = props;
@@ -193,34 +367,23 @@ export function Tree(props: TreeProps): JSXRenderable {
   const getSelectedKeys = asGetter(selectedKeys, []);
   const getCheckedKeys = asGetter(checkedKeys, []);
 
-  /** 用 untrack 读 getter，拿当前值做首屏且不订阅，避免 signal 更新时整树重跑 */
-  const expandedSet = new Set(
-    untrack(() =>
-      typeof controlledExpanded === "function"
-        ? (controlledExpanded as () => string[])()
-        : (controlledExpanded ?? defaultExpandedKeys)
-    ),
+  /** 非受控展开兜底（未传 expandedKeys 时） */
+  const innerExpanded = createSignal<string[]>(
+    untrack(() => [...defaultExpandedKeys]),
   );
-  const selectedSet = new Set(
-    untrack(() =>
-      typeof selectedKeys === "function"
-        ? (selectedKeys as () => string[])()
-        : (selectedKeys ?? [])
-    ),
-  );
-  const checkedSet = new Set(
-    untrack(() =>
-      typeof checkedKeys === "function"
-        ? (checkedKeys as () => string[])()
-        : (checkedKeys ?? [])
-    ),
-  );
+  const hasControlledExpanded =
+    controlledExpanded !== undefined && controlledExpanded !== null;
+
+  const readExpanded = () =>
+    hasControlledExpanded ? getExpandedKeys() : innerExpanded.value;
 
   const handleExpand = (key: string) => {
-    const cur = new Set(getExpandedKeys());
+    const cur = new Set(readExpanded());
     if (cur.has(key)) cur.delete(key);
     else cur.add(key);
-    onExpand?.(Array.from(cur));
+    const next = Array.from(cur);
+    if (!hasControlledExpanded) innerExpanded.set(next);
+    onExpand?.(next);
   };
 
   const handleSelect = (key: string) => {
@@ -232,167 +395,85 @@ export function Tree(props: TreeProps): JSXRenderable {
       next = cur.has(key) ? [] : [key];
     }
     const node = getNodeByKey(treeData, key);
-    onSelect?.(next, { node: node!, selected: next.includes(key) });
+    if (!node) return;
+    onSelect?.(next, { node, selected: next.includes(key) });
   };
 
   const handleCheck = (key: string) => {
-    const cur = new Set(getCheckedKeys());
-    if (cur.has(key)) cur.delete(key);
-    else cur.add(key);
-    const next = Array.from(cur);
-    const nextSet = new Set(next);
-    onCheck?.(next);
-    /** 与 ui-preact 一致：用本次 `next` 立刻写 `input.checked`，避免受控源下一拍才更新时视觉上慢一拍 */
-    const root = rootElRef.value;
-    if (root && typeof root.querySelectorAll === "function") {
-      root.querySelectorAll<HTMLInputElement>("input[data-tree-check-key]")
-        .forEach((input) => {
-          const k = input.getAttribute("data-tree-check-key");
-          if (k) input.checked = nextSet.has(k);
-        });
-    }
-  };
-
-  const handleTreeClick = (e: Event) => {
-    const me = e as MouseEvent;
-    const root = rootElRef.value;
-    const path = me.composedPath?.() ?? [];
-    const primary = (path[0] ?? me.target) as Node | null;
-    if (!root || !primary || !root.contains(primary)) return;
-
-    const hit = primary;
-    let row: Element | null = null;
-    let raw: HTMLElement | null = null;
-
-    /** 勾选框必须以 target 行为准；`elementsFromPoint` 射线若不断覆盖 `row` 会得到更深层的父行，误判为「勾到上一个」 */
-    if (
-      hit instanceof globalThis.HTMLInputElement &&
-      hit.getAttribute("data-tree-check-key") != null &&
-      root.contains(hit)
-    ) {
-      row = hit.closest("[data-tree-node-key]");
-      raw = hit;
-    } else {
-      const clientX = me.clientX;
-      const clientY = me.clientY;
-      if (typeof clientX !== "number" || typeof clientY !== "number") return;
-      const doc = globalThis.document;
-      const elementsAtPoint = doc?.elementsFromPoint?.(clientX, clientY) ?? [];
-      for (const el of elementsAtPoint) {
-        if (!root.contains(el)) break;
-        const r = (el as HTMLElement).closest?.("[data-tree-node-key]");
-        if (r && root.contains(r)) {
-          row = r;
-          break;
-        }
-      }
-      const topEl = (elementsAtPoint[0] as HTMLElement) ?? (row as HTMLElement);
-      raw = topEl?.nodeType === 3
-        ? (topEl as unknown as Text).parentElement
-        : topEl;
-    }
-
-    const key = row?.getAttribute("data-tree-node-key");
-    if (!key || !row) return;
     const node = getNodeByKey(treeData, key);
-    if (!node || (node.disabled ?? false)) return;
-    if (!raw?.closest) return;
-    if (row.contains(raw) && raw.closest("button[data-tree-expand-key]")) {
-      const isLeaf = node.isLeaf ??
-        !(node.children != null && node.children.length > 0);
-      if (!isLeaf) {
-        e.preventDefault();
-        e.stopPropagation();
-        handleExpand(key);
+    if (!node || node.disabled) return;
+    const cur = new Set(getCheckedKeys());
+
+    if (checkStrictly) {
+      if (cur.has(key)) cur.delete(key);
+      else cur.add(key);
+    } else {
+      const desc = collectDescendantKeys(node);
+      const fullyOn =
+        cur.has(key) && desc.every((k) => cur.has(k));
+      if (fullyOn || visualCheckState(node, cur, false) === "checked") {
+        cur.delete(key);
+        for (const k of desc) cur.delete(k);
+      } else {
+        cur.add(key);
+        for (const k of desc) cur.add(k);
       }
-      return;
+      reconcileAncestors(treeData, key, cur);
     }
-    if (row.contains(raw) && raw.closest("input[data-tree-check-key]")) {
-      e.preventDefault();
-      e.stopPropagation();
-      handleCheck(key);
-      if (node.selectable !== false) handleSelect(key);
-      return;
-    }
-    if (
-      row.contains(raw) &&
-      (raw.closest("span[data-tree-select-key]") || raw === row)
-    ) {
-      e.preventDefault();
-      e.stopPropagation();
-      if (checkable) handleCheck(key);
-      if (node.selectable !== false) handleSelect(key);
-    }
+
+    const next = Array.from(cur);
+    onCheck?.(next);
   };
 
-  const rootElRef = createSignal<HTMLDivElement | null>(null);
+  const ctx = {
+    getExpanded: () => new Set(readExpanded()),
+    getSelected: () => new Set(getSelectedKeys()),
+    getChecked: () => new Set(getCheckedKeys()),
+    checkStrictly,
+    checkable,
+    showLine,
+    blockNode,
+    onExpand: handleExpand,
+    onSelect: handleSelect,
+    onCheck: handleCheck,
+  };
 
+  // 同步原生 indeterminate（属性需 DOM 赋值）
+  const rootElRef = createSignal<HTMLElement | null>(null);
   createEffect(() => {
-    // 先读 getter 建立订阅，再读 root `Signal`，这样 ref 挂上或 keys 变化时都会重跑并同步 DOM
-    const expanded = new Set(getExpandedKeys());
-    const selected = new Set(getSelectedKeys());
     const checked = new Set(getCheckedKeys());
     const root = rootElRef.value;
-    // SSR 时 ref 可能为占位对象，无 DOM API；仅在有真实 Element 时同步勾选/展开态
     if (!root || typeof root.querySelectorAll !== "function") return;
     root.querySelectorAll<HTMLInputElement>("input[data-tree-check-key]")
       .forEach((input) => {
-        const key = input.getAttribute("data-tree-check-key");
-        if (key) input.checked = checked.has(key);
+        const k = input.getAttribute("data-tree-check-key");
+        if (!k) return;
+        const n = getNodeByKey(treeData, k);
+        if (!n) return;
+        const v = visualCheckState(n, checked, checkStrictly);
+        input.checked = v === "checked";
+        input.indeterminate = v === "indeterminate";
       });
-    root.querySelectorAll<HTMLButtonElement>("button[data-tree-expand-key]")
-      .forEach((btn) => {
-        const key = btn.getAttribute("data-tree-expand-key");
-        if (key) {
-          const open = expanded.has(key);
-          btn.setAttribute("aria-expanded", String(open));
-          const icon = btn.querySelector("[class*='transition-transform']");
-          if (icon) (icon as HTMLElement).classList.toggle("rotate-90", open);
-        }
-      });
-    root.querySelectorAll<HTMLElement>("[data-tree-node-key]").forEach(
-      (row) => {
-        const key = row.getAttribute("data-tree-node-key");
-        if (!key) return;
-        const isSelected = selected.has(key);
-        row.classList.toggle("bg-blue-50", isSelected);
-        row.classList.toggle("dark:bg-blue-900/30", isSelected);
-        row.classList.toggle("text-blue-700", isSelected);
-        row.classList.toggle("dark:text-blue-300", isSelected);
-      },
-    );
-    root.querySelectorAll<HTMLElement>(".tree-children").forEach((wrap) => {
-      const key = wrap.getAttribute("data-tree-children-key");
-      wrap.style.display = key && expanded.has(key) ? "" : "none";
-    });
   });
 
-  /**
-   * 渲染 getter：配合 `createEffect` 内读 `rootElRef.value` 与受控 keys getter，同步 DOM 勾选/展开态。
-   */
-  return () => (
+  return (
     <div
       ref={(el: unknown) => {
-        rootElRef.value = el as HTMLDivElement | null;
+        rootElRef.set((el as HTMLElement | null) ?? null);
       }}
-      class={twMerge("tree text-sm", className)}
-      role="tree"
-      onClick={handleTreeClick}
-    >
-      {treeData.map((node) =>
-        renderNode(
-          node,
-          expandedSet,
-          selectedSet,
-          checkedSet,
-          handleExpand,
-          handleSelect,
-          handleCheck,
-          checkable,
-          showLine,
-          0,
-        )
+      class={twMerge(
+        "tree text-sm",
+        showLine && "tree-show-line",
+        blockNode && "tree-block-node",
+        className,
       )}
+      role="tree"
+      data-dreamer-tree=""
+      data-tree-check-strictly={checkStrictly ? "true" : "false"}
+      data-tree-show-line={showLine ? "true" : undefined}
+      data-tree-block-node={blockNode ? "true" : undefined}
+    >
+      {treeData.map((node) => renderNode(node, 0, ctx))}
     </div>
   );
 }
