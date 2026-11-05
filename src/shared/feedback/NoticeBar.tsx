@@ -1,6 +1,8 @@
 /**
  * NoticeBar 通知栏（View）。
  * 顶部／块级提示条：信息／成功／警告／危险；可关闭、可滚动长文案。
+ *
+ * 关闭态：内部 `closed` Signal + 子树 thunk 订阅（setup 经 jsx `untrack`）。
  */
 
 import { createSignal, type JSXRenderable } from "@dreamer/view";
@@ -30,6 +32,11 @@ export interface NoticeBarProps {
   closable?: boolean;
   /** 关闭回调 */
   onClose?: () => void;
+  /**
+   * 受控可见；传入时优先于内部关闭态（`false` 隐藏）。
+   * 未传则点 × 用内部 Signal 隐藏。
+   */
+  visible?: boolean;
   /** 整条点击 */
   onClick?: () => void;
   /** 长文案横向滚动（CSS 动画；遵循 reduced-motion） */
@@ -64,55 +71,66 @@ export function NoticeBar(props: NoticeBarProps): JSXRenderable {
   const m = { ...defaultNoticeBarMessages, ...(props.messages ?? {}) };
   const closed = createSignal(false);
 
-  return () => {
-    if (closed.value) return null;
-    const body = children ?? content;
-    return (
-      <div
-        class={twMerge(
-          "notice-bar flex items-center gap-2 px-3 py-2 text-sm border",
-          toneCls[tone],
-          onClick && "cursor-pointer",
-          className,
-        )}
-        role="status"
-        onClick={() => onClick?.()}
-      >
-        {icon != null && <span class="shrink-0 inline-flex">{icon}</span>}
-        <div
-          class={twMerge(
-            "min-w-0 flex-1",
-            scrollable &&
-              "overflow-hidden whitespace-nowrap [mask-image:linear-gradient(90deg,transparent,black_8%,black_92%,transparent)]",
-          )}
-        >
+  return (
+    <div class="contents" data-dreamer-notice-bar-host="">
+      {() => {
+        if (props.visible === false) return null;
+        if (props.visible === undefined && closed.value) return null;
+        const body = children ?? content;
+        return (
           <div
             class={twMerge(
-              scrollable &&
-                "inline-block animate-[notice-bar-marquee_12s_linear_infinite] motion-reduce:animate-none pr-8",
+              "notice-bar flex items-center gap-2 px-3 py-2 text-sm border",
+              toneCls[tone],
+              onClick && "cursor-pointer",
+              className,
             )}
+            role="status"
+            data-dreamer-notice-bar=""
+            onClick={() => onClick?.()}
           >
-            {body}
+            {icon != null && (
+              <span class="shrink-0 inline-flex">{icon}</span>
+            )}
+            <div
+              class={twMerge(
+                "min-w-0 flex-1",
+                scrollable &&
+                  "overflow-hidden whitespace-nowrap [mask-image:linear-gradient(90deg,transparent,black_8%,black_92%,transparent)]",
+              )}
+            >
+              <div
+                class={twMerge(
+                  scrollable &&
+                    "inline-block animate-[notice-bar-marquee_12s_linear_infinite] motion-reduce:animate-none pr-8",
+                )}
+              >
+                {body}
+              </div>
+            </div>
+            {closable && (
+              <button
+                type="button"
+                class="shrink-0 rounded p-0.5 hover:bg-black/5 dark:hover:bg-white/10"
+                aria-label={m.close}
+                data-dreamer-notice-bar-close=""
+                onClick={(e: Event) => {
+                  e.stopPropagation();
+                  if (props.visible === undefined) {
+                    closed.set(true);
+                  }
+                  onClose?.();
+                }}
+              >
+                ×
+              </button>
+            )}
+            {scrollable && (
+              <style>{`@keyframes notice-bar-marquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}`}</style>
+            )}
           </div>
-        </div>
-        {closable && (
-          <button
-            type="button"
-            class="shrink-0 rounded p-0.5 hover:bg-black/5 dark:hover:bg-white/10"
-            aria-label={m.close}
-            onClick={(e: Event) => {
-              e.stopPropagation();
-              closed.value = true;
-              onClose?.();
-            }}
-          >
-            ×
-          </button>
-        )}
-        {scrollable && (
-          <style>{`@keyframes notice-bar-marquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}`}</style>
-        )}
-      </div>
-    );
-  };
+        );
+      }}
+    </div>
+  );
 }

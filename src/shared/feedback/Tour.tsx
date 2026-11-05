@@ -1,12 +1,15 @@
 /**
  * Tour 漫游式引导（View）。
  * 按步骤高亮目标并展示说明气泡；支持受控 `open`／`current`、四向 placement、Esc／焦点与步骤切换时滚动入视。
+ *
+ * 浮层经 Portal 挂 `document.body`，`z-index` 高于文档示例触发钮，避免「开始引导」等按钮叠在气泡／高亮之间。
  */
 
 import {
   createEffect,
   createMemo,
   createPortal,
+  createRenderEffect,
   createSignal,
   type JSXRenderable,
   onCleanup,
@@ -63,6 +66,9 @@ export interface TourProps {
   /** Esc 关闭，默认 true */
   keyboard?: boolean;
 }
+
+/** 高于文档站 sticky 顶栏与示例区内按钮，避免触发钮叠穿引导层 */
+const TOUR_Z_INDEX = 1100;
 
 function resolveTarget(t: TourStep["target"]): HTMLElement | null {
   try {
@@ -135,24 +141,34 @@ export function Tour(props: TourProps): JSXRenderable {
   const isOpen = createMemo(() => readControlledOpenInput(props.open));
   const rectSig = createSignal<DOMRect | null>(null);
   const panelRef = createSignal<HTMLElement | null>(null);
+  /** 非受控步进：docs／多数用法不传 `current`，须有内部索引，否则「下一步」空操作 */
+  const innerCurrent = createSignal(0);
 
   const currentIndex = createMemo(() => {
-    const v = readMaybeSignal(props.current);
     const max = Math.max(0, steps.length - 1);
-    const n = typeof v === "number" && Number.isFinite(v) ? v : 0;
-    return clamp(n, 0, max);
+    const v = readMaybeSignal(props.current);
+    if (typeof v === "number" && Number.isFinite(v)) {
+      return clamp(v, 0, max);
+    }
+    return clamp(innerCurrent.value, 0, max);
   });
 
   const setCurrent = (i: number) => {
     const max = Math.max(0, steps.length - 1);
     const next = clamp(i, 0, max);
-    commitMaybeSignal(props.current, next);
+    if (props.current !== undefined) {
+      commitMaybeSignal(props.current, next);
+    } else {
+      innerCurrent.set(next);
+    }
     onCurrentChange?.(next);
   };
 
   createEffect(() => {
     if (!isOpen()) {
       rectSig.value = null;
+      // 关闭时复位非受控步，下次打开从第 0 步开始
+      if (props.current === undefined) innerCurrent.set(0);
       return;
     }
     const step = steps[currentIndex()];
@@ -162,7 +178,11 @@ export function Tour(props: TourProps): JSXRenderable {
       const el = resolveTarget(step.target);
       if (el && typeof el.scrollIntoView === "function") {
         try {
-          el.scrollIntoView({ block: "center", inline: "nearest", behavior: "smooth" });
+          el.scrollIntoView({
+            block: "center",
+            inline: "nearest",
+            behavior: "smooth",
+          });
         } catch {
           el.scrollIntoView();
         }
@@ -198,7 +218,6 @@ export function Tour(props: TourProps): JSXRenderable {
     };
     globalThis.document?.addEventListener?.("keydown", onKey);
 
-    // 聚焦气泡内首个按钮，便于键盘操作
     const focusPanel = () => {
       const panel = panelRef.value;
       const btn = panel?.querySelector?.<HTMLElement>("button");
@@ -206,12 +225,18 @@ export function Tour(props: TourProps): JSXRenderable {
     };
     const raf = globalThis.requestAnimationFrame?.(focusPanel);
 
+    // 打开时锁 body 滚动，减少目标／气泡错位
+    const body = getBrowserBodyPortalHost();
+    const prevOverflow = body?.style.overflow;
+    if (body) body.style.overflow = "hidden";
+
     onCleanup(() => {
       if (t != null) globalThis.clearTimeout?.(t);
       if (raf != null) globalThis.cancelAnimationFrame?.(raf);
       globalThis.removeEventListener?.("resize", onWin);
       globalThis.removeEventListener?.("scroll", onWin, true);
       globalThis.document?.removeEventListener?.("keydown", onKey);
+      if (body && prevOverflow != null) body.style.overflow = prevOverflow;
     });
   });
 
@@ -228,30 +253,45 @@ export function Tour(props: TourProps): JSXRenderable {
         left: `${Math.max(0, rect.left - pad)}px`,
         width: `${rect.width + pad * 2}px`,
         height: `${rect.height + pad * 2}px`,
+        // 仅用外扩阴影做遮罩：高亮框内透出目标，框外变暗；不再铺 inset 半透明层，避免触发钮叠进气泡缝
+        boxShadow: "0 0 0 9999px rgba(15, 23, 42, 0.6)",
       }
       : null;
     const bubbleStyle = rect
       ? computeBubbleStyle(rect, step.placement)
-      : { top: "30%", left: "50%", transform: "translateX(-50%)", width: "min(100% - 24px, 20rem)" };
+      : {
+        top: "30%",
+        left: "50%",
+        transform: "translateX(-50%)",
+        width: "min(100% - 24px, 20rem)",
+      };
     const isLast = idx >= steps.length - 1;
     const titleId = "ui-tour-title";
     const descId = "ui-tour-desc";
 
     return (
       <div
-        class={twMerge("fixed inset-0 z-400", className)}
+        class={twMerge("fixed inset-0", className)}
+        style={{ zIndex: String(TOUR_Z_INDEX) }}
         role="dialog"
         aria-modal="true"
         aria-labelledby={step.title != null ? titleId : undefined}
         aria-describedby={step.description != null ? descId : undefined}
         aria-label={step.title == null ? "功能引导" : undefined}
+        data-dreamer-tour="root"
       >
-        <div class="absolute inset-0 bg-slate-900/50" aria-hidden="true" />
+        {/* 全屏拦截：挡住页面触发钮；视觉变暗由高亮 box-shadow 承担 */}
+        <div
+          class="absolute inset-0"
+          aria-hidden="true"
+          data-dreamer-tour="mask"
+        />
         {highlight && (
           <div
-            class="absolute rounded-md ring-2 ring-blue-400 shadow-[0_0_0_9999px_rgba(15,23,42,0.55)] pointer-events-none"
+            class="absolute rounded-md ring-2 ring-blue-400 pointer-events-none bg-transparent"
             style={highlight}
             aria-hidden="true"
+            data-dreamer-tour="highlight"
           />
         )}
         <div
@@ -260,6 +300,8 @@ export function Tour(props: TourProps): JSXRenderable {
           }}
           class="absolute z-10 rounded-xl bg-white dark:bg-slate-800 p-4 shadow-xl text-slate-900 dark:text-slate-100"
           style={bubbleStyle}
+          data-dreamer-tour="bubble"
+          data-tour-step={String(idx)}
         >
           {step.title != null && (
             <div id={titleId} class="font-semibold text-sm mb-1">
@@ -267,7 +309,10 @@ export function Tour(props: TourProps): JSXRenderable {
             </div>
           )}
           {step.description != null && (
-            <div id={descId} class="text-sm text-slate-600 dark:text-slate-300 mb-3">
+            <div
+              id={descId}
+              class="text-sm text-slate-600 dark:text-slate-300 mb-3"
+            >
               {step.description}
             </div>
           )}
@@ -315,10 +360,20 @@ export function Tour(props: TourProps): JSXRenderable {
     );
   };
 
-  const host = getBrowserBodyPortalHost();
-  if (host) {
-    createPortal(() => markup(), host);
-    return null;
-  }
-  return () => markup();
+  createRenderEffect(() => {
+    const host = getBrowserBodyPortalHost();
+    if (host == null) return;
+    const root = createPortal(() => markup(), host);
+    onCleanup(() => {
+      root.unmount();
+    });
+  });
+
+  return (
+    <span
+      style="display:none;width:0;height:0;overflow:hidden;position:absolute;clip:rect(0,0,0,0)"
+      aria-hidden="true"
+      data-dreamer-tour-portal-anchor=""
+    />
+  );
 }

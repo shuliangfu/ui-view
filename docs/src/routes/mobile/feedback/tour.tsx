@@ -62,10 +62,38 @@ export default function Page() {
         <MobileDocDemo>
           <div class="space-y-3 p-2">
             <div class="flex gap-3">
-              <div id="m-tour-a" class="flex-1 rounded-lg border border-dashed px-3 py-4 text-xs">目标 A</div>
-              <div id="m-tour-b" class="flex-1 rounded-lg border border-dashed px-3 py-4 text-xs">目标 B</div>
+              <div
+                id="m-tour-a"
+                class="flex-1 rounded-lg border border-dashed px-3 py-4 text-xs"
+              >
+                目标 A
+              </div>
+              <div
+                id="m-tour-b"
+                class="flex-1 rounded-lg border border-dashed px-3 py-4 text-xs"
+              >
+                目标 B
+              </div>
             </div>
-            <Button type="button" onClick={() => (open.value = true)}>开始引导</Button>
+            {() =>
+              !open.value
+                ? (
+                  <div data-tour-trigger="start">
+                    <Button
+                      type="button"
+                      onClick={() => (open.value = true)}
+                    >
+                      开始引导
+                    </Button>
+                  </div>
+                )
+                : (
+                  <div
+                    class="h-9"
+                    aria-hidden="true"
+                    data-tour-trigger="placeholder"
+                  />
+                )}
             <Tour
               open={open}
               steps={steps}

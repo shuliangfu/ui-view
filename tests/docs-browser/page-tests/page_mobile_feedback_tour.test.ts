@@ -45,37 +45,11 @@ describe("文档页 E2E：/mobile/feedback/tour（Tour 漫游引导）", () => {
             copy.click();
             return true;
           }
-          const lb = root.querySelector(
-            'button[aria-haspopup="listbox"]:not([disabled])',
-          ) as HTMLButtonElement | null;
-          if (lb) {
-            lb.click();
-            return true;
-          }
-          const dg = root.querySelector(
-            'button[aria-haspopup="dialog"]:not([disabled])',
-          ) as HTMLButtonElement | null;
-          if (dg) {
-            dg.click();
-            return true;
-          }
-          const sw = root.querySelector(
-            '[role="switch"]',
-          ) as HTMLElement | null;
-          if (sw && !(sw as HTMLButtonElement).disabled) {
-            sw.click();
-            return true;
-          }
           const btn = root.querySelector(
             'button[type="button"]:not([disabled])',
           ) as HTMLButtonElement | null;
           if (btn) {
             btn.click();
-            return true;
-          }
-          const a = root.querySelector("a[href]") as HTMLAnchorElement | null;
-          if (a) {
-            a.click();
             return true;
           }
           root = root.parentElement;
@@ -88,4 +62,143 @@ describe("文档页 E2E：/mobile/feedback/tour（Tour 漫游引导）", () => {
     }) as boolean;
     expect(ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
+
+  /**
+   * UI·叠层＋步进：开始后触发钮不叠气泡；点「下一步」到第 2 步（目标 B／文案变化）。
+   */
+  it("UI·打开后触发钮不叠气泡且下一步可推进", async (t) => {
+    if (!t?.browser?.goto) return;
+    await sharedEnv.goto(t, DOC_PATH);
+    await sharedEnv.waitDocMainReady(t);
+    const clickStart = () =>
+      t.browser!.evaluate(() => {
+        const wrap = document.querySelector(
+          '[data-tour-trigger="start"]',
+        ) as HTMLElement | null;
+        const trigger = wrap?.querySelector("button") as
+          | (HTMLButtonElement & { __onclick?: (ev: Event) => void })
+          | null;
+        wrap?.scrollIntoView({ block: "center" });
+        if (trigger && typeof trigger.__onclick === "function") {
+          trigger.__onclick(
+            new MouseEvent("click", { bubbles: true, cancelable: true }),
+          );
+        } else {
+          trigger?.click();
+        }
+      });
+    await clickStart();
+    await sharedEnv.delay(350);
+    const openedOnce = await t.browser.evaluate(() =>
+      !!document.querySelector('[data-dreamer-tour="root"]')
+    );
+    if (!openedOnce) {
+      await clickStart();
+      await sharedEnv.delay(400);
+    }
+    const opened = await t.browser.evaluate(() => {
+      const root = document.querySelector('[data-dreamer-tour="root"]');
+      const bubble = document.querySelector(
+        '[data-dreamer-tour="bubble"]',
+      ) as HTMLElement | null;
+      const highlight = document.querySelector(
+        '[data-dreamer-tour="highlight"]',
+      ) as HTMLElement | null;
+      const start = document.querySelector('[data-tour-trigger="start"]');
+      if (!root || !bubble) {
+        return {
+          ok: false,
+          reason: "no-tour",
+          hasRoot: !!root,
+          hasBubble: !!bubble,
+        };
+      }
+      const br = bubble.getBoundingClientRect();
+      const hr = highlight?.getBoundingClientRect();
+      const step0 = bubble.getAttribute("data-tour-step") === "0";
+      const text0 = (bubble.innerText || "").includes("1/2") ||
+        (bubble.innerText || "").includes("第一步") ||
+        (bubble.innerText || "").includes("欢迎");
+      const triggerGone = start == null;
+      const bubbleVisible = br.width > 40 && br.height > 20;
+      const highlightVisible = !!hr && hr.width > 8 && hr.height > 8;
+      const ok = triggerGone && bubbleVisible && highlightVisible && step0 &&
+        text0;
+      return {
+        ok,
+        reason: ok ? "ok" : "open-layout",
+        triggerGone,
+        bubbleVisible,
+        highlightVisible,
+        step0,
+        text0,
+        step: bubble.getAttribute("data-tour-step"),
+        text: (bubble.innerText || "").slice(0, 80),
+      };
+    }) as { ok: boolean };
+    if (!opened.ok) {
+      throw new Error(`Tour 打开失败: ${JSON.stringify(opened)}`);
+    }
+    expect(opened.ok).toBe(true);
+
+    await t.browser.evaluate(() => {
+      const bubble = document.querySelector(
+        '[data-dreamer-tour="bubble"]',
+      ) as HTMLElement | null;
+      const next = Array.from(bubble?.querySelectorAll("button") ?? []).find(
+        (b) => (b.textContent || "").includes("下一步"),
+      ) as (HTMLButtonElement & { __onclick?: (ev: Event) => void }) | undefined;
+      if (next && typeof next.__onclick === "function") {
+        next.__onclick(
+          new MouseEvent("click", { bubbles: true, cancelable: true }),
+        );
+      } else {
+        next?.click();
+      }
+    });
+    await sharedEnv.delay(450);
+    const stepped = await t.browser.evaluate(() => {
+      const bubble = document.querySelector(
+        '[data-dreamer-tour="bubble"]',
+      ) as HTMLElement | null;
+      const highlight = document.querySelector(
+        '[data-dreamer-tour="highlight"]',
+      ) as HTMLElement | null;
+      if (!bubble) return { ok: false, reason: "no-bubble" };
+      const step1 = bubble.getAttribute("data-tour-step") === "1";
+      const text = bubble.innerText || "";
+      const text1 = text.includes("2/2") || text.includes("第二步") ||
+        text.includes("继续") || text.includes("下一步");
+      const targetB = (document.querySelector("#tour-demo-b") ||
+        document.querySelector("#m-tour-b")) as HTMLElement | null;
+      const hr = highlight?.getBoundingClientRect();
+      const tr = targetB?.getBoundingClientRect();
+      let highlightOnB = true;
+      if (hr && tr) {
+        const cx = hr.left + hr.width / 2;
+        const cy = hr.top + hr.height / 2;
+        highlightOnB = cx >= tr.left - 20 && cx <= tr.right + 20 &&
+          cy >= tr.top - 20 && cy <= tr.bottom + 20;
+      }
+      const hasPrev = Array.from(bubble.querySelectorAll("button")).some((b) =>
+        (b.textContent || "").includes("上一步")
+      );
+      const ok = step1 && text1 && highlightOnB && hasPrev;
+      return {
+        ok,
+        reason: ok ? "ok" : "step",
+        step1,
+        text1,
+        highlightOnB,
+        hasPrev,
+        step: bubble.getAttribute("data-tour-step"),
+        text: text.slice(0, 100),
+      };
+    }) as { ok: boolean };
+    if (!stepped.ok) {
+      throw new Error(`Tour 下一步失败: ${JSON.stringify(stepped)}`);
+    }
+    expect(stepped.ok).toBe(true);
+  }, DOCS_BROWSER_CONFIG);
+
 });

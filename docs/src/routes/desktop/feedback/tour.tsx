@@ -60,10 +60,38 @@ export default function Page() {
         <Title level={2}>示例</Title>
         <div class="rounded-xl border border-slate-200 dark:border-slate-700 p-4 bg-white dark:bg-slate-900 space-y-4">
           <div class="flex gap-4">
-            <div id="tour-demo-a" class="rounded-lg border border-dashed px-4 py-6 text-sm">目标 A</div>
-            <div id="tour-demo-b" class="rounded-lg border border-dashed px-4 py-6 text-sm">目标 B</div>
+            <div
+              id="tour-demo-a"
+              class="rounded-lg border border-dashed px-4 py-6 text-sm"
+            >
+              目标 A
+            </div>
+            <div
+              id="tour-demo-b"
+              class="rounded-lg border border-dashed px-4 py-6 text-sm"
+            >
+              目标 B
+            </div>
           </div>
-          <Button type="button" onClick={() => (open.value = true)}>开始引导</Button>
+          {() =>
+            !open.value
+              ? (
+                <div data-tour-trigger="start">
+                  <Button
+                    type="button"
+                    onClick={() => (open.value = true)}
+                  >
+                    开始引导
+                  </Button>
+                </div>
+              )
+              : (
+                <div
+                  class="h-9"
+                  aria-hidden="true"
+                  data-tour-trigger="placeholder"
+                />
+              )}
           <Tour
             open={open}
             steps={steps}

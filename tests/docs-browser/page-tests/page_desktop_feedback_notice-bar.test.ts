@@ -88,4 +88,62 @@ describe("文档页 E2E：/desktop/feedback/notice-bar（NoticeBar 通知栏）"
     }) as boolean;
     expect(ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
+
+  /**
+   * UI·关闭：点 × 后通知条从文档流消失。
+   */
+  it("UI·点关闭后条隐藏", async (t) => {
+    if (!t?.browser?.goto) return;
+    await sharedEnv.goto(t, DOC_PATH);
+    await sharedEnv.waitDocMainReady(t);
+    // 硬刷新，避免同文件前序用例点 × 后软导航未复位
+    await t.browser.evaluate(() => location.reload());
+    await sharedEnv.waitDocMainReady(t);
+    await sharedEnv.delay(100);
+    const before = await t.browser.evaluate(() => {
+      const bar = document.querySelector(
+        "[data-dreamer-notice-bar]",
+      ) as HTMLElement | null;
+      const close = document.querySelector(
+        "[data-dreamer-notice-bar-close]",
+      ) as (HTMLButtonElement & { __onclick?: (ev: Event) => void }) | null;
+      return {
+        hasBar: !!bar,
+        hasClose: !!close,
+        text: bar?.innerText?.slice(0, 40) ?? "",
+      };
+    }) as { hasBar: boolean; hasClose: boolean };
+    if (!before.hasBar || !before.hasClose) {
+      throw new Error(`NoticeBar 示例缺少可关闭条: ${JSON.stringify(before)}`);
+    }
+    await t.browser.evaluate(() => {
+      const close = document.querySelector(
+        "[data-dreamer-notice-bar-close]",
+      ) as (HTMLButtonElement & { __onclick?: (ev: Event) => void }) | null;
+      close?.scrollIntoView({ block: "center" });
+      if (close && typeof close.__onclick === "function") {
+        close.__onclick(
+          new MouseEvent("click", { bubbles: true, cancelable: true }),
+        );
+      } else {
+        close?.click();
+      }
+    });
+    await sharedEnv.delay(250);
+    const after = await t.browser.evaluate(() => {
+      const bars = document.querySelectorAll("[data-dreamer-notice-bar]");
+      const closes = document.querySelectorAll(
+        "[data-dreamer-notice-bar-close]",
+      );
+      return { barCount: bars.length, closeCount: closes.length };
+    }) as { barCount: number; closeCount: number };
+    // 至少原先那条 closable 已隐藏（mobile 还有一条不可关闭的滚动条）
+    if (!(after.closeCount === 0 || after.barCount < 1 + (before.hasBar ? 0 : 0))) {
+      // close 按钮应全部消失；若页上另有不可关闭条，barCount 可 >0 但 closeCount 须为 0
+    }
+    if (after.closeCount !== 0) {
+      throw new Error(`NoticeBar 关闭失败: ${JSON.stringify(after)}`);
+    }
+    expect(after.closeCount).toBe(0);
+  }, DOCS_BROWSER_CONFIG);
 });

@@ -13,7 +13,8 @@ const API: DocsApiTableRow[] = [
   { name: "content", type: "unknown", default: "-", description: "文案" },
   { name: "tone", type: "info|success|warning|danger", default: "info", description: "色调" },
   { name: "closable", type: "boolean", default: "false", description: "可关闭" },
-  { name: "scrollable", type: "boolean", default: "false", description: "横向滚动" }
+  { name: "scrollable", type: "boolean", default: "false", description: "横向滚动" },
+  { name: "visible", type: "boolean", default: "-", description: "受控可见；不传则点 × 内部隐藏" }
 ];
 
 const importCode = `import { NoticeBar } from "@dreamer/ui-view";
