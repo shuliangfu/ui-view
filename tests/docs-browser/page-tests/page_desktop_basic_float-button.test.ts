@@ -88,4 +88,78 @@ describe("文档页 E2E：/desktop/basic/float-button（FloatButton 悬浮按钮
     }) as boolean;
     expect(ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
+
+  /**
+   * UI·布局：主按钮近正圆／正方（~48px），角标贴右上外缘，不盖主图标中心。
+   */
+  it("UI·主按钮近正方且角标贴右上", async (t) => {
+    if (!t?.browser?.goto) return;
+    await sharedEnv.goto(t, DOC_PATH);
+    await sharedEnv.waitDocMainReady(t);
+    await t.browser.evaluate(() => {
+      // 避免同文件前序用例点开展开后软导航未复位
+      const b = document.querySelector(
+        'main button[aria-label="新建"]',
+      ) as HTMLButtonElement | null;
+      if (b?.getAttribute("aria-expanded") === "true") b.click();
+    });
+    await sharedEnv.delay(80);
+    const result = await t.browser.evaluate(() => {
+      const main = document.querySelector("main");
+      if (!main) return { ok: false, reason: "no-main" };
+      const btn = main.querySelector(
+        'button[aria-label="新建"]',
+      ) as HTMLButtonElement | null;
+      if (!btn) return { ok: false, reason: "no-btn" };
+      btn.scrollIntoView({ block: "center", inline: "center" });
+      const r = btn.getBoundingClientRect();
+      const max = Math.max(r.width, r.height);
+      const ratio = max > 0 ? Math.abs(r.width - r.height) / max : 1;
+      const nearSquare = ratio < 0.08;
+      const sizeOk = r.width >= 40 && r.width <= 56 && r.height >= 40 &&
+        r.height <= 56;
+      const visible = r.width > 0 && r.height > 0;
+
+      const badge = btn.querySelector('[role="status"]') as HTMLElement | null;
+      if (!badge) {
+        return {
+          ok: false,
+          reason: "no-badge",
+          w: r.width,
+          h: r.height,
+          ratio,
+          nearSquare,
+          sizeOk,
+          visible,
+        };
+      }
+      const br = badge.getBoundingClientRect();
+      const btnCx = r.left + r.width / 2;
+      const btnCy = r.top + r.height / 2;
+      const badgeCx = br.left + br.width / 2;
+      const badgeCy = br.top + br.height / 2;
+      const nearTopRight = badgeCx > btnCx && badgeCy < btnCy;
+      const dist = Math.hypot(badgeCx - btnCx, badgeCy - btnCy);
+      const notCoverCenter = dist > Math.min(r.width, r.height) * 0.25;
+      const ok = visible && nearSquare && sizeOk && nearTopRight &&
+        notCoverCenter;
+      return {
+        ok,
+        reason: ok ? "ok" : "layout",
+        w: r.width,
+        h: r.height,
+        ratio,
+        nearSquare,
+        sizeOk,
+        visible,
+        nearTopRight,
+        notCoverCenter,
+        dist,
+      };
+    }) as { ok: boolean; reason: string };
+    if (!result.ok) {
+      throw new Error(`FloatButton UI 布局失败: ${JSON.stringify(result)}`);
+    }
+    expect(result.ok).toBe(true);
+  }, DOCS_BROWSER_CONFIG);
 });

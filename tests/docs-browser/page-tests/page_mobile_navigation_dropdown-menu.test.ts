@@ -88,4 +88,69 @@ describe("文档页 E2E：/mobile/navigation/dropdown-menu（DropdownMenu 下拉
     }) as boolean;
     expect(ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
+
+  /**
+   * UI·布局：打开后遮罩盖示意框（Portal 宿主），不盖整页视口；选项面板可见。
+   */
+  it("UI·打开遮罩不盖整页且面板可见", async (t) => {
+    if (!t?.browser?.goto) return;
+    await sharedEnv.goto(t, DOC_PATH);
+    await sharedEnv.waitDocMainReady(t);
+    await t.browser.evaluate(() => {
+      const menu = document.querySelector(".dropdown-menu") as HTMLElement | null;
+      menu?.scrollIntoView({ block: "center" });
+      const btn = menu?.querySelector("button") as
+        | (HTMLButtonElement & { __onclick?: (ev: Event) => void })
+        | null;
+      if (btn && typeof btn.__onclick === "function") {
+        btn.__onclick(
+          new MouseEvent("click", { bubbles: true, cancelable: true }),
+        );
+      } else {
+        btn?.click();
+      }
+    });
+    await sharedEnv.delay(200);
+    const result = await t.browser.evaluate(() => {
+      const host = document.querySelector(
+        "[data-dreamer-mobile-portal-host]",
+      ) as HTMLElement | null;
+      const scope = host?.parentElement as HTMLElement | null;
+      const mask = (document.querySelector(
+        "[data-dreamer-dropdown-mask]",
+      ) || document.querySelector('button[aria-label="关闭"]')) as
+        | HTMLButtonElement
+        | null;
+      if (!mask) return { ok: false, reason: "no-mask" };
+      if (!scope) return { ok: false, reason: "no-scope" };
+      const mr = mask.getBoundingClientRect();
+      const sr = scope.getBoundingClientRect();
+      const coversViewport = mr.width >= innerWidth * 0.95 &&
+        mr.height >= innerHeight * 0.95;
+      const withinScope =
+        mr.left >= sr.left - 3 &&
+        mr.right <= sr.right + 3 &&
+        mr.top >= sr.top - 3 &&
+        mr.bottom <= sr.bottom + 3;
+      const menu = document.querySelector(".dropdown-menu") as HTMLElement | null;
+      const open = menu?.getAttribute("data-open") === "true";
+      const panelVisible = (menu?.querySelectorAll("button").length ?? 0) > 2;
+      const ok = open && !coversViewport && withinScope && panelVisible &&
+        mr.width > 40 && mr.height > 40;
+      return {
+        ok,
+        reason: ok ? "ok" : "layout",
+        open,
+        coversViewport,
+        withinScope,
+        panelVisible,
+        mw: mr.width,
+        mh: mr.height,
+        sw: sr.width,
+        sh: sr.height,
+      };
+    }) as { ok: boolean; reason: string };
+    expect(result.ok).toBe(true);
+  }, DOCS_BROWSER_CONFIG);
+
 });

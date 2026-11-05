@@ -4,6 +4,9 @@
  *
  * 遮罩：在 {@link ../MobilePortalHostScope.tsx} 内 Portal 到机内宿主并用 `absolute` 盖宿主；
  * 无 Scope 时用 `fixed` 盖视口（产品默认）。
+ *
+ * 注意：组件 setup 经 jsx 的 `untrack` 执行，交互状态须用子树 thunk / Effect 订阅 Signal，
+ * 勿依赖「整段 `return () =>`」作为唯一订阅点（在部分插入路径下易丢观察者）。
  */
 
 import {
@@ -56,15 +59,15 @@ export function DropdownMenu(props: DropdownMenuProps): JSXRenderable {
   };
 
   const close = () => {
-    openKey.value = null;
+    openKey.set(null);
   };
 
   /**
-   * 有 Scope：遮罩 Portal 到机内宿主，`absolute inset-0` 盖示意框；
-   * 无 Scope：不走 Portal，下方内联 `fixed` 盖视口。
+   * 有 Scope：遮罩 Portal 到机内宿主，`absolute inset-0` 盖示意框。
    */
   createRenderEffect(() => {
-    if (openKey.value == null) return;
+    const key = openKey.value;
+    if (key == null) return;
     if (getScopedHost == null) return;
     const host = getScopedHost();
     if (host == null) return;
@@ -74,6 +77,7 @@ export function DropdownMenu(props: DropdownMenuProps): JSXRenderable {
           type="button"
           class="absolute inset-0 z-10 bg-slate-900/30 pointer-events-auto"
           aria-label="关闭"
+          data-dreamer-dropdown-mask="scoped"
           onClick={close}
         />
       ),
@@ -84,21 +88,20 @@ export function DropdownMenu(props: DropdownMenuProps): JSXRenderable {
     });
   });
 
-  return () => {
-    const open = openKey.value != null;
-    const scoped = getScopedHost != null;
-    return (
-      <div
-        class={twMerge(
-          "dropdown-menu relative",
-          // 机内打开时抬到宿主 z-120 之上，保证顶栏／选项面板不被遮罩盖住
-          open && scoped ? "z-[130]" : "z-20",
-          className,
-        )}
-        style={open && scoped ? { zIndex: "130" } : undefined}
-      >
-        <div class="relative z-20 flex border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
-          {items.map((it) => {
+  return (
+    <div
+      class={twMerge("dropdown-menu relative z-20", className)}
+      data-open={() => (openKey.value != null ? "true" : "false")}
+      data-open-key={() => openKey.value ?? ""}
+      style={() =>
+        openKey.value != null && getScopedHost != null
+          ? { zIndex: "130" }
+          : undefined
+      }
+    >
+      <div class="relative z-20 flex border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
+        {() =>
+          items.map((it) => {
             const active = openKey.value === it.key;
             return (
               <button
@@ -111,7 +114,7 @@ export function DropdownMenu(props: DropdownMenuProps): JSXRenderable {
                     : "text-slate-700 dark:text-slate-200",
                 )}
                 onClick={() => {
-                  openKey.value = active ? null : it.key;
+                  openKey.set(active ? null : it.key);
                 }}
               >
                 {labelOf(it)}
@@ -121,22 +124,27 @@ export function DropdownMenu(props: DropdownMenuProps): JSXRenderable {
               </button>
             );
           })}
-        </div>
-        {open && (
+      </div>
+      {() => {
+        const key = openKey.value;
+        if (key == null) return null;
+        const scoped = getScopedHost != null;
+        return (
           <>
             {!scoped && (
               <button
                 type="button"
                 class="fixed inset-0 z-10 bg-slate-900/30"
                 aria-label="关闭"
+                data-dreamer-dropdown-mask="fixed"
                 onClick={close}
               />
             )}
             <div class="absolute left-0 right-0 z-20 max-h-64 overflow-auto border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-lg">
               {items
-                .find((i) => i.key === openKey.value)
+                .find((i) => i.key === key)
                 ?.options.map((opt) => {
-                  const selected = valueOf(openKey.value!) === opt.value;
+                  const selected = valueOf(key) === opt.value;
                   return (
                     <button
                       type="button"
@@ -149,10 +157,9 @@ export function DropdownMenu(props: DropdownMenuProps): JSXRenderable {
                           : "text-slate-700 dark:text-slate-200",
                       )}
                       onClick={() => {
-                        const key = openKey.value!;
-                        local.value = { ...local.value, [key]: opt.value };
+                        local.set({ ...local.value, [key]: opt.value });
                         onChange?.(key, opt.value);
-                        openKey.value = null;
+                        openKey.set(null);
                       }}
                     >
                       {opt.label}
@@ -161,8 +168,8 @@ export function DropdownMenu(props: DropdownMenuProps): JSXRenderable {
                 })}
             </div>
           </>
-        )}
-      </div>
-    );
-  };
+        );
+      }}
+    </div>
+  );
 }
