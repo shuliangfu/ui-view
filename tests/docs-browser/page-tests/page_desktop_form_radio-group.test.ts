@@ -580,4 +580,47 @@ describe("文档页 E2E：/desktop/form/radio-group（RadioGroup 单选组）", 
     }) as boolean;
     expect(ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
+
+
+
+  /**
+   * UI·点选另一 radio 更新选中。
+   */
+  it("UI·点选 radio 切换", async (t) => {
+    if (!t?.browser?.goto) return;
+    await sharedEnv.goto(t, DOC_PATH);
+    await sharedEnv.waitDocMainReady(t);
+    await sharedEnv.delay(100);
+    const before = await t.browser.evaluate(() => {
+      const radios = Array.from(
+        document.querySelectorAll('main input[type="radio"]'),
+      ) as HTMLInputElement[];
+      return {
+        n: radios.length,
+        checked: radios.findIndex((r) => r.checked),
+      };
+    }) as { n: number; checked: number };
+    expect(before.n).toBeGreaterThan(1);
+    await t.browser.evaluate(() => {
+      const radios = Array.from(
+        document.querySelectorAll('main input[type="radio"]'),
+      ) as (HTMLInputElement & { __onclick?: (ev: Event) => void })[];
+      const target = radios.find((r) => !r.checked) || radios[1];
+      target?.scrollIntoView({ block: "center" });
+      if (target && typeof target.__onclick === "function") {
+        target.__onclick(
+          new MouseEvent("click", { bubbles: true, cancelable: true }),
+        );
+      } else target?.click();
+    });
+    await sharedEnv.delay(200);
+    const after = await t.browser.evaluate(() => {
+      const radios = Array.from(
+        document.querySelectorAll('main input[type="radio"]'),
+      ) as HTMLInputElement[];
+      return { checked: radios.findIndex((r) => r.checked) };
+    }) as { checked: number };
+    expect(after.checked).not.toBe(before.checked);
+  }, DOCS_BROWSER_CONFIG);
+
 });

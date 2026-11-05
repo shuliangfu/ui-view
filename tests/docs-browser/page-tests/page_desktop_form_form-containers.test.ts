@@ -702,4 +702,28 @@ describe("文档页 E2E：/desktop/form/form-containers（Form 容器）", () =>
     }) as boolean;
     expect(ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
+
+  /**
+   * UI·示例区主内容可见且有尺寸。
+   */
+  it("UI·示例区可见有尺寸", async (t) => {
+    if (!t?.browser?.goto) return;
+    await sharedEnv.goto(t, DOC_PATH);
+    await sharedEnv.waitDocMainReady(t);
+    await sharedEnv.delay(120);
+    const got = await t.browser.evaluate(() => {
+      const main = document.querySelector("main") as HTMLElement | null;
+      if (!main) return { ok: false, reason: "no-main" };
+      const r = main.getBoundingClientRect();
+      const text = (main.innerText || "").trim();
+      return {
+        ok: r.width > 80 && r.height > 80 && text.length > 20,
+        w: r.width,
+        h: r.height,
+        textLen: text.length,
+      };
+    }) as { ok: boolean };
+    expect(got.ok).toBe(true);
+  }, DOCS_BROWSER_CONFIG);
+
 });

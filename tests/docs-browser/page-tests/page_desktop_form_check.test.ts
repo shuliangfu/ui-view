@@ -585,6 +585,47 @@ describe("文档页 E2E：/desktop/form/check（Checkbox / Radio / Switch 合页
     }) as boolean;
     expect(ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
+
+
+
+  /**
+   * UI·勾选 checkbox 切换 checked。
+   */
+  it("UI·勾选切换", async (t) => {
+    if (!t?.browser?.goto) return;
+    await sharedEnv.goto(t, DOC_PATH);
+    await sharedEnv.waitDocMainReady(t);
+    await t.browser.evaluate(() => location.reload());
+    await sharedEnv.waitDocMainReady(t);
+    await sharedEnv.delay(100);
+    const before = await t.browser.evaluate(() => {
+      const cb = document.querySelector(
+        'main input[type="checkbox"]:not([disabled])',
+      ) as HTMLInputElement | null;
+      return { has: !!cb, on: !!cb?.checked };
+    }) as { has: boolean; on: boolean };
+    expect(before.has).toBe(true);
+    await t.browser.evaluate(() => {
+      const cb = document.querySelector(
+        'main input[type="checkbox"]:not([disabled])',
+      ) as (HTMLInputElement & { __onclick?: (ev: Event) => void }) | null;
+      cb?.scrollIntoView({ block: "center" });
+      if (cb && typeof cb.__onclick === "function") {
+        cb.__onclick(
+          new MouseEvent("click", { bubbles: true, cancelable: true }),
+        );
+      } else cb?.click();
+    });
+    await sharedEnv.delay(200);
+    const after = await t.browser.evaluate(() => {
+      const cb = document.querySelector(
+        'main input[type="checkbox"]:not([disabled])',
+      ) as HTMLInputElement | null;
+      return { on: !!cb?.checked };
+    }) as { on: boolean };
+    expect(after.on).not.toBe(before.on);
+  }, DOCS_BROWSER_CONFIG);
+
 });
 
 /** 本文件内：点击 main 内首个 checkbox */

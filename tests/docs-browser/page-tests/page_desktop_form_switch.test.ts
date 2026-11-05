@@ -479,4 +479,48 @@ describe("文档页 E2E：/desktop/form/switch（Switch 开关）", () => {
     }) as boolean;
     expect(ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
+
+  /**
+   * UI·开关可切换 aria-checked／checked。
+   */
+  it("UI·开关可切换", async (t) => {
+    if (!t?.browser?.goto) return;
+    await sharedEnv.goto(t, DOC_PATH);
+    await sharedEnv.waitDocMainReady(t);
+    await t.browser.evaluate(() => location.reload());
+    await sharedEnv.waitDocMainReady(t);
+    await sharedEnv.delay(100);
+    const before = await t.browser.evaluate(() => {
+      const sw = document.querySelector(
+        'main [role="switch"], main input[type="checkbox"]',
+      ) as HTMLInputElement | null;
+      return {
+        has: !!sw,
+        on: sw?.getAttribute("aria-checked") === "true" || !!sw?.checked,
+      };
+    }) as { has: boolean; on: boolean };
+    expect(before.has).toBe(true);
+    await t.browser.evaluate(() => {
+      const sw = document.querySelector(
+        'main [role="switch"], main input[type="checkbox"]',
+      ) as (HTMLElement & { __onclick?: (ev: Event) => void }) | null;
+      sw?.scrollIntoView({ block: "center" });
+      if (sw && typeof sw.__onclick === "function") {
+        sw.__onclick(
+          new MouseEvent("click", { bubbles: true, cancelable: true }),
+        );
+      } else sw?.click();
+    });
+    await sharedEnv.delay(200);
+    const after = await t.browser.evaluate(() => {
+      const sw = document.querySelector(
+        'main [role="switch"], main input[type="checkbox"]',
+      ) as HTMLInputElement | null;
+      return {
+        on: sw?.getAttribute("aria-checked") === "true" || !!sw?.checked,
+      };
+    }) as { on: boolean };
+    expect(after.on).not.toBe(before.on);
+  }, DOCS_BROWSER_CONFIG);
+
 });

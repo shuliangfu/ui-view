@@ -281,4 +281,32 @@ describe("文档页 E2E：/desktop/form/autocomplete（Autocomplete 自动完成
     }) as boolean;
     expect(ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
+
+  /**
+   * UI·输入框可见可输入。
+   */
+  it("UI·输入框可输入", async (t) => {
+    if (!t?.browser?.goto) return;
+    await sharedEnv.goto(t, DOC_PATH);
+    await sharedEnv.waitDocMainReady(t);
+    await sharedEnv.delay(100);
+    const got = await t.browser.evaluate(() => {
+      const input = document.querySelector(
+        'main input:not([type="hidden"]):not([disabled]), main textarea:not([disabled])',
+      ) as HTMLInputElement | null;
+      if (!input) return { ok: false, reason: "no-input" };
+      input.focus();
+      input.value = "ui-test";
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      const r = input.getBoundingClientRect();
+      return {
+        ok: r.width > 40 && r.height > 16 && input.value.length > 0,
+        w: r.width,
+        h: r.height,
+        v: input.value,
+      };
+    }) as { ok: boolean };
+    expect(got.ok).toBe(true);
+  }, DOCS_BROWSER_CONFIG);
+
 });

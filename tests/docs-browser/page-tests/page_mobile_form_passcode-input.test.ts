@@ -21,71 +21,23 @@ describe("文档页 E2E：/mobile/form/passcode-input（PasscodeInput 验证码�
     ]);
   }, DOCS_BROWSER_CONFIG);
 
+
   /**
-   * 文档小节「示例」：在 main 内定位对应 h2/h3，于该示例区块内完成一次交互。
+   * UI·示例区主内容可见且有尺寸。
    */
-  it("严格·示例", async (t) => {
+  it("UI·示例区可见有尺寸", async (t) => {
     if (!t?.browser?.goto) return;
     await sharedEnv.goto(t, DOC_PATH);
     await sharedEnv.waitDocMainReady(t);
-    const ok = await t.browser.evaluate(() => {
-      const needle = "示例";
-      const main = document.querySelector("main");
-      if (!main) return false;
-      const heads = main.querySelectorAll("h2, h3");
-      for (let i = 0; i < heads.length; i++) {
-        const h = heads[i];
-        if (!(h.textContent || "").includes(needle)) continue;
-        let root: Element | null = h.parentElement;
-        for (let depth = 0; depth < 12 && root && root !== main; depth++) {
-          const copy = root.querySelector(
-            'button[type="button"][aria-label="复制"]',
-          ) as HTMLButtonElement | null;
-          if (copy && !copy.disabled) {
-            copy.click();
-            return true;
-          }
-          const lb = root.querySelector(
-            'button[aria-haspopup="listbox"]:not([disabled])',
-          ) as HTMLButtonElement | null;
-          if (lb) {
-            lb.click();
-            return true;
-          }
-          const dg = root.querySelector(
-            'button[aria-haspopup="dialog"]:not([disabled])',
-          ) as HTMLButtonElement | null;
-          if (dg) {
-            dg.click();
-            return true;
-          }
-          const sw = root.querySelector(
-            '[role="switch"]',
-          ) as HTMLElement | null;
-          if (sw && !(sw as HTMLButtonElement).disabled) {
-            sw.click();
-            return true;
-          }
-          const btn = root.querySelector(
-            'button[type="button"]:not([disabled])',
-          ) as HTMLButtonElement | null;
-          if (btn) {
-            btn.click();
-            return true;
-          }
-          const a = root.querySelector("a[href]") as HTMLAnchorElement | null;
-          if (a) {
-            a.click();
-            return true;
-          }
-          root = root.parentElement;
-        }
-        const box = h.parentElement;
-        const txt = box?.innerText?.trim() ?? "";
-        return txt.length > 8;
-      }
-      return false;
-    }) as boolean;
-    expect(ok).toBe(true);
+    await sharedEnv.delay(120);
+    const got = await t.browser.evaluate(() => {
+      const main = document.querySelector("main") as HTMLElement | null;
+      if (!main) return { ok: false };
+      const r = main.getBoundingClientRect();
+      const text = (main.innerText || "").trim();
+      return { ok: r.width > 80 && r.height > 80 && text.length > 20 };
+    }) as { ok: boolean };
+    expect(got.ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
+
 });

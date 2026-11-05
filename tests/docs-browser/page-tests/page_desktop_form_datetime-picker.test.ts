@@ -695,4 +695,43 @@ describe("文档页 E2E：/desktop/form/datetime-picker（DateTimePicker 日期�
     }) as boolean;
     expect(ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
+
+  /**
+   * UI·打开选择面板可见。
+   */
+  it("UI·打开选择面板可见", async (t) => {
+    if (!t?.browser?.goto) return;
+    await sharedEnv.goto(t, DOC_PATH);
+    await sharedEnv.waitDocMainReady(t);
+    await t.browser.evaluate(() => location.reload());
+    await sharedEnv.waitDocMainReady(t);
+    await sharedEnv.delay(100);
+    await t.browser.evaluate(() => {
+      const btn = document.querySelector(
+        'main button[aria-haspopup]',
+      ) as (HTMLElement & { __onclick?: (ev: Event) => void }) | null;
+      btn?.scrollIntoView({ block: "center" });
+      if (btn && typeof btn.__onclick === "function") {
+        btn.__onclick(
+          new MouseEvent("click", { bubbles: true, cancelable: true }),
+        );
+      } else btn?.click();
+    });
+    await sharedEnv.delay(300);
+    const got = await t.browser.evaluate(() => {
+      const panels = Array.from(
+        document.querySelectorAll(
+          '[role="dialog"], [role="listbox"], [role="menu"], [data-dreamer-calendar]',
+        ),
+      ) as HTMLElement[];
+      const vis = panels.filter((el) => {
+        const r = el.getBoundingClientRect();
+        const s = getComputedStyle(el);
+        return s.opacity !== "0" && r.width > 20 && r.height > 20;
+      });
+      return { ok: vis.length > 0, n: vis.length };
+    }) as { ok: boolean };
+    expect(got.ok).toBe(true);
+  }, DOCS_BROWSER_CONFIG);
+
 });
