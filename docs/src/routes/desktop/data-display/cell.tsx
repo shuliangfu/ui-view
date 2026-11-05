@@ -16,7 +16,7 @@ const API: DocsApiTableRow[] = [
   { name: "onClick", type: "() => void", default: "-", description: "点击" }
 ];
 
-const importCode = `import { Cell, CellGroup } from "@dreamer/ui-view";\n\n<CellGroup><Cell title=\"账号" arrow /></CellGroup>`;
+const importCode = `import { Cell, CellGroup } from "@dreamer/ui-view";\n\n<CellGroup><Cell title="账号" arrow /></CellGroup>`;
 
 export default function Page() {
   return (

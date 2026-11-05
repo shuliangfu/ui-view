@@ -15,7 +15,7 @@ const API: DocsApiTableRow[] = [
   { name: "closable", type: "boolean", default: "false", description: "可关闭" }
 ];
 
-const importCode = `import { NoticeBar } from "@dreamer/ui-view/mobile";\n\n<NoticeBar content=\"…" />`;
+const importCode = `import { NoticeBar } from "@dreamer/ui-view/mobile";\n\n<NoticeBar content="…" />`;
 
 export default function Page() {
   return (

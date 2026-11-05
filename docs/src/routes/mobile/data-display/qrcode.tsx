@@ -15,7 +15,7 @@ const API: DocsApiTableRow[] = [
   { name: "size", type: "number", default: "128", description: "边长" }
 ];
 
-const importCode = `import { QRCode } from "@dreamer/ui-view/mobile";\n\n<QRCode value=\"…" />`;
+const importCode = `import { QRCode } from "@dreamer/ui-view/mobile";\n\n<QRCode value="…" />`;
 
 export default function Page() {
   return (

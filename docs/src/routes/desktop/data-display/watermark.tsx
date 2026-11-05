@@ -16,7 +16,7 @@ const API: DocsApiTableRow[] = [
   { name: "class", type: "string", default: "-", description: "外层 class" }
 ];
 
-const importCode = `import { Watermark } from "@dreamer/ui-view";\n\n<Watermark content=\"内部资料">…</Watermark>`;
+const importCode = `import { Watermark } from "@dreamer/ui-view";\n\n<Watermark content="内部资料">…</Watermark>`;
 
 export default function Page() {
   return (

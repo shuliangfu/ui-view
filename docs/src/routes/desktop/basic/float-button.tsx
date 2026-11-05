@@ -15,7 +15,7 @@ const API: DocsApiTableRow[] = [
   { name: "placement", type: "bottom-right | …", default: "bottom-right", description: "角落位置" }
 ];
 
-const importCode = `import { FloatButton } from "@dreamer/ui-view";\n\n<FloatButton aria-label=\"新建" />`;
+const importCode = `import { FloatButton } from "@dreamer/ui-view";\n\n<FloatButton aria-label="新建" />`;
 
 export default function Page() {
   return (
