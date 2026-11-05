@@ -15,7 +15,12 @@ const API: DocsApiTableRow[] = [
   { name: "minSize", type: "number", default: "10", description: "最小百分比" }
 ];
 
-const importCode = `import { Splitter } from "@dreamer/ui-view";\n\n<Splitter><div>A</div><div>B</div></Splitter>`;
+const importCode = `import { Splitter } from "@dreamer/ui-view";
+
+<Splitter>
+  <div class="p-3">左侧面板</div>
+  <div class="p-3">右侧面板</div>
+</Splitter>`;
 
 export default function Page() {
   return (

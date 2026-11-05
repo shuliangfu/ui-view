@@ -16,7 +16,20 @@ const API: DocsApiTableRow[] = [
   { name: "steps", type: "TourStep[]", default: "-", description: "步骤" },
 ];
 
-const importCode = `import { Tour } from "@dreamer/ui-view/mobile";`;
+const importCode = `import { createSignal } from "@dreamer/view";
+import { Tour } from "@dreamer/ui-view/mobile";
+
+const open = createSignal(false);
+
+<Tour
+  open={open}
+  steps={[
+    { title: "欢迎", description: "移动端漫游第一步", target: "#m-tour-a", placement: "bottom" },
+    { title: "下一步", description: "第二步目标", target: "#m-tour-b", placement: "top" },
+  ]}
+  onClose={() => (open.value = false)}
+  onFinish={() => (open.value = false)}
+/>`;
 
 export default function Page() {
   const open = createSignal(false);

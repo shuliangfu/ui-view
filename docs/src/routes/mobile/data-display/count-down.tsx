@@ -17,7 +17,9 @@ const API: DocsApiTableRow[] = [
   { name: "render", type: "(parts)=>unknown", default: "-", description: "自定义展示" }
 ];
 
-const importCode = `import { CountDown } from "@dreamer/ui-view/mobile";\n\n<CountDown remaining={60_000} />`;
+const importCode = `import { CountDown } from "@dreamer/ui-view/mobile";
+
+<CountDown remaining={3_661_000} />`;
 
 export default function Page() {
   return (

@@ -17,7 +17,14 @@ const API: DocsApiTableRow[] = [
   { name: "onFinish", type: "(v)=>void", default: "-", description: "填满回调" }
 ];
 
-const importCode = `import { PasscodeInput } from "@dreamer/ui-view/mobile";\n\n<PasscodeInput length={6} onFinish={…} />`;
+const importCode = `import { PasscodeInput } from "@dreamer/ui-view/mobile";
+
+<PasscodeInput
+  length={6}
+  mask
+  onChange={(v) => console.log("change", v)}
+  onFinish={(v) => console.log("finish", v)}
+/>`;
 
 export default function Page() {
   return (

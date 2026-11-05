@@ -15,7 +15,16 @@ const API: DocsApiTableRow[] = [
   { name: "onSelect", type: "(index)=>void", default: "-", description: "选中索引" }
 ];
 
-const importCode = `import { IndexBar } from "@dreamer/ui-view/mobile";\n\n<IndexBar items={[…]} />`;
+const importCode = `import { IndexBar } from "@dreamer/ui-view/mobile";
+
+<IndexBar
+  items={[
+    { index: "A", children: <div>Apple</div> },
+    { index: "B", children: <div>Banana</div> },
+    { index: "C", children: <div>Cherry</div> },
+  ]}
+  onSelect={(index) => console.log(index)}
+/>`;
 
 export default function Page() {
   return (

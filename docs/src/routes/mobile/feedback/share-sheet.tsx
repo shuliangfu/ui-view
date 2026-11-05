@@ -16,7 +16,20 @@ const API: DocsApiTableRow[] = [
   { name: "title", type: "string|null", default: "-", description: "标题" }
 ];
 
-const importCode = `import { ShareSheet } from "@dreamer/ui-view/mobile";\n\n<ShareSheet open={open} options={[…]} onClose={…} />`;
+const importCode = `import { createSignal } from "@dreamer/view";
+import { ShareSheet } from "@dreamer/ui-view/mobile";
+
+const open = createSignal(false);
+
+<ShareSheet
+  open={open}
+  title="分享到"
+  options={[
+    { key: "wechat", label: "微信", onClick: () => {} },
+    { key: "link", label: "复制链接", onClick: () => {} },
+  ]}
+  onClose={() => (open.value = false)}
+/>`;
 
 export default function Page() {
   return (

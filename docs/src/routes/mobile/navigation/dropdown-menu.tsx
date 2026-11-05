@@ -16,7 +16,20 @@ const API: DocsApiTableRow[] = [
   { name: "onChange", type: "(key,value)=>void", default: "-", description: "变更" }
 ];
 
-const importCode = `import { DropdownMenu } from "@dreamer/ui-view/mobile";\n\n<DropdownMenu items={[…]} />`;
+const importCode = `import { DropdownMenu } from "@dreamer/ui-view/mobile";
+
+<DropdownMenu
+  items={[
+    {
+      key: "sort",
+      title: "排序",
+      options: [
+        { value: "default", label: "默认" },
+        { value: "price", label: "价格" },
+      ],
+    },
+  ]}
+/>`;
 
 export default function Page() {
   return (

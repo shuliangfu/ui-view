@@ -16,7 +16,18 @@ const API: DocsApiTableRow[] = [
   { name: "anchorIndex", type: "number", default: "-", description: "当前锚点" }
 ];
 
-const importCode = `import { FloatingPanel } from "@dreamer/ui-view/mobile";\n\n<FloatingPanel open={open} anchors={[120,360]} >…</FloatingPanel>`;
+const importCode = `import { createSignal } from "@dreamer/view";
+import { FloatingPanel } from "@dreamer/ui-view/mobile";
+
+const open = createSignal(true);
+
+<FloatingPanel
+  open={open}
+  anchors={[120, 360]}
+  onClose={() => (open.value = false)}
+>
+  <div class="p-4">面板内容</div>
+</FloatingPanel>`;
 
 export default function Page() {
   return (

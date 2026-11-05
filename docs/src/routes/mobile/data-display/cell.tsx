@@ -16,7 +16,12 @@ const API: DocsApiTableRow[] = [
   { name: "extra", type: "unknown", default: "-", description: "右侧额外" }
 ];
 
-const importCode = `import { Cell, CellGroup } from "@dreamer/ui-view/mobile";\n\n<CellGroup><Cell title="资料" arrow /></CellGroup>`;
+const importCode = `import { Cell, CellGroup } from "@dreamer/ui-view/mobile";
+
+<CellGroup title="资料">
+  <Cell title="昵称" arrow />
+  <Cell title="手机号" description="未绑定" />
+</CellGroup>`;
 
 export default function Page() {
   return (

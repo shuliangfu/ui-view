@@ -19,7 +19,16 @@ const importCode = `import { createSignal } from "@dreamer/view";
 import { Tour } from "@dreamer/ui-view";
 
 const open = createSignal(false);
-<Tour open={open} steps={[{ title: "一步", description: "…", target: "#tour-demo-a" }]} onClose={() => (open.value = false)} />`;
+
+<Tour
+  open={open}
+  steps={[
+    { title: "欢迎", description: "高亮左侧目标", target: "#tour-demo-a", placement: "bottom" },
+    { title: "继续", description: "高亮右侧目标", target: "#tour-demo-b", placement: "bottom" },
+  ]}
+  onClose={() => (open.value = false)}
+  onFinish={() => (open.value = false)}
+/>`;
 
 export default function Page() {
   const open = createSignal(false);

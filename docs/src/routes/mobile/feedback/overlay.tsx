@@ -21,7 +21,9 @@ const importCode = `import { createSignal } from "@dreamer/view";
 import { Overlay } from "@dreamer/ui-view/mobile";
 
 const open = createSignal(false);
-<Overlay open={open} onClick={() => (open.value = false)} />`;
+
+<button type="button" onClick={() => (open.value = true)}>打开遮罩</button>
+<Overlay open={open} onClick={() => (open.value = false)} zIndex={400} />`;
 
 export default function Page() {
   const open = createSignal(false);

@@ -16,7 +16,9 @@ const API: DocsApiTableRow[] = [
   { name: "scrollable", type: "boolean", default: "false", description: "横向滚动" }
 ];
 
-const importCode = `import { NoticeBar } from "@dreamer/ui-view";\n\n<NoticeBar tone="warning" content="…" />`;
+const importCode = `import { NoticeBar } from "@dreamer/ui-view";
+
+<NoticeBar tone="warning" closable content="系统将于今晚 23:00 维护，请提前保存" />`;
 
 export default function Page() {
   return (

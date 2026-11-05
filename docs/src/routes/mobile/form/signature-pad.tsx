@@ -16,7 +16,11 @@ const API: DocsApiTableRow[] = [
   { name: "onChange", type: "(dataUrl|null)=>void", default: "-", description: "变更" }
 ];
 
-const importCode = `import { SignaturePad } from "@dreamer/ui-view/mobile";\n\n<SignaturePad onChange={…} />`;
+const importCode = `import { SignaturePad } from "@dreamer/ui-view/mobile";
+
+<SignaturePad
+  onChange={(dataUrl) => console.log("stroke", dataUrl?.slice(0, 32))}
+/>`;
 
 export default function Page() {
   return (

@@ -18,7 +18,16 @@ const API: DocsApiTableRow[] = [
   { name: "renderItem", type: "(item,i)=>unknown", default: "-", description: "行渲染" }
 ];
 
-const importCode = `import { VirtualList } from "@dreamer/ui-view/mobile";\n\n<VirtualList data={rows} itemHeight={36} renderItem={…} />`;
+const importCode = `import { VirtualList } from "@dreamer/ui-view/mobile";
+
+const rows = Array.from({ length: 200 }, (_, i) => i);
+
+<VirtualList
+  height={240}
+  itemHeight={36}
+  data={rows}
+  renderItem={(n) => <div class="px-3 leading-9 text-sm">Item {n}</div>}
+/>`;
 
 export default function Page() {
   return (

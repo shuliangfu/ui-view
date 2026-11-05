@@ -16,7 +16,17 @@ const API: DocsApiTableRow[] = [
   { name: "position", type: '"fixed" | "absolute"', default: "fixed", description: "fixed=视口；absolute=相对最近定位祖先（文档示例用）" },
 ];
 
-const importCode = `import { FloatButton } from "@dreamer/ui-view";\n\n<FloatButton aria-label="新建" />`;
+const importCode = `import { FloatButton } from "@dreamer/ui-view";
+
+<FloatButton
+  aria-label="新建"
+  badge={3}
+  position="absolute"
+  items={[
+    { key: "file", icon: "📄", "aria-label": "文件", onClick: () => {} },
+    { key: "img", icon: "🖼️", "aria-label": "图片", onClick: () => {} },
+  ]}
+/>`;
 
 export default function Page() {
   return (

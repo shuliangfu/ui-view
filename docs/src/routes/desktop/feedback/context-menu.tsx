@@ -14,7 +14,17 @@ const API: DocsApiTableRow[] = [
   { name: "children", type: "unknown", default: "-", description: "触发区" }
 ];
 
-const importCode = `import { ContextMenu } from "@dreamer/ui-view";\n\n<ContextMenu items={[…]}>…</ContextMenu>`;
+const importCode = `import { ContextMenu } from "@dreamer/ui-view";
+
+<ContextMenu
+  items={[
+    { key: "copy", label: "复制", onClick: () => console.log("copy") },
+    { key: "div1", label: "", divider: true },
+    { key: "del", label: "删除", danger: true, onClick: () => console.log("del") },
+  ]}
+>
+  <div class="p-8 border border-dashed rounded-lg">在此区域右键</div>
+</ContextMenu>`;
 
 export default function Page() {
   return (
@@ -30,7 +40,15 @@ export default function Page() {
       <section class="space-y-3">
         <Title level={2}>示例</Title>
         <div class="rounded-xl border border-slate-200 dark:border-slate-700 p-4 bg-white dark:bg-slate-900">
-          <ContextMenu items={[{ key: "c", label: "复制", onClick: () => {} }, { key: "d", label: "删除", danger: true }]}><div class="p-8 border border-dashed rounded-lg text-sm text-slate-500">在此区域右键</div></ContextMenu>
+          <ContextMenu
+            items={[
+              { key: "copy", label: "复制", onClick: () => {} },
+              { key: "div1", label: "", divider: true },
+              { key: "del", label: "删除", danger: true, onClick: () => {} },
+            ]}
+          >
+            <div class="p-8 border border-dashed rounded-lg text-sm text-slate-500">在此区域右键</div>
+          </ContextMenu>
         </div>
       </section>
       <section class="space-y-3">

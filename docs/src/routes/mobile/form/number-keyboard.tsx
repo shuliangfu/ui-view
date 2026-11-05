@@ -17,7 +17,18 @@ const API: DocsApiTableRow[] = [
   { name: "decimal", type: "boolean", default: "false", description: "小数点" }
 ];
 
-const importCode = `import { NumberKeyboard } from "@dreamer/ui-view/mobile";\n\n<NumberKeyboard open={open} onInput={…} onClose={…} />`;
+const importCode = `import { createSignal } from "@dreamer/view";
+import { NumberKeyboard } from "@dreamer/ui-view/mobile";
+
+const open = createSignal(true);
+
+<NumberKeyboard
+  open={open}
+  decimal
+  onInput={(key) => console.log("input", key)}
+  onDelete={() => console.log("delete")}
+  onClose={() => (open.value = false)}
+/>`;
 
 export default function Page() {
   return (

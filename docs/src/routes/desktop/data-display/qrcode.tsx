@@ -16,7 +16,9 @@ const API: DocsApiTableRow[] = [
   { name: "bgColor", type: "string", default: "#fff", description: "背景" }
 ];
 
-const importCode = `import { QRCode } from "@dreamer/ui-view";\n\n<QRCode value="https://example.com" />`;
+const importCode = `import { QRCode } from "@dreamer/ui-view";
+
+<QRCode value="https://dreamer.example" size={148} />`;
 
 export default function Page() {
   return (
