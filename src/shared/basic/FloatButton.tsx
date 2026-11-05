@@ -122,8 +122,10 @@ export function FloatButton(props: FloatButtonProps): JSXRenderable {
   };
 
   const shapeCls = shape === "circle" ? "rounded-full" : "rounded-xl";
+  // 强制正方／正圆 FAB：锁宽高＋aspect，清默认 button padding，避免被父级 flex 拉成「又高又扁」
   const btnBase = twMerge(
-    "relative inline-flex size-12 items-center justify-center overflow-visible shadow-lg",
+    "relative inline-flex h-12 w-12 min-h-12 min-w-12 shrink-0 aspect-square box-border p-0",
+    "items-center justify-center overflow-visible shadow-lg leading-none",
     "bg-blue-600 text-white hover:bg-blue-500 active:bg-blue-700",
     "focus:outline-hidden focus-visible:ring-2 focus-visible:ring-blue-400",
     shapeCls,
@@ -133,7 +135,7 @@ export function FloatButton(props: FloatButtonProps): JSXRenderable {
     <div
       class={twMerge(
         position === "absolute" ? "absolute" : "fixed",
-        "flex flex-col-reverse items-center gap-3",
+        "flex flex-col-reverse items-center gap-3 w-max",
         placeCls[placement],
         className,
       )}
@@ -148,7 +150,7 @@ export function FloatButton(props: FloatButtonProps): JSXRenderable {
             <button
               type="button"
               key={it.key}
-              class={twMerge(btnBase, "size-10 bg-slate-700 hover:bg-slate-600")}
+              class={twMerge(btnBase, "h-10 w-10 min-h-10 min-w-10 size-10 bg-slate-700 hover:bg-slate-600")}
               aria-label={it["aria-label"] ?? it.key}
               onClick={() => {
                 it.onClick?.();
