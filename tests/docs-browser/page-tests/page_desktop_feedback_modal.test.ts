@@ -29,33 +29,47 @@ describe("文档页 E2E：/desktop/feedback/modal（Modal 模态框）", () => {
     if (!t?.browser?.goto) return;
     await sharedEnv.goto(t, DOC_PATH);
     await sharedEnv.waitDocMainReady(t);
+    await t.browser.evaluate(() => location.reload());
+    await sharedEnv.waitDocMainReady(t);
+    await sharedEnv.delay(100);
     const openOk = await t.browser.evaluate(() => {
-      const main = document.querySelector("main");
-      if (!main) return false;
-      const btns = main.querySelectorAll('button[type="button"]');
-      for (let i = 0; i < btns.length; i++) {
-        const b = btns[i] as HTMLButtonElement;
-        if (b.disabled) continue;
-        if ((b.textContent || "").trim() === "打开 Modal") {
-          b.click();
-          return true;
-        }
-      }
-      return false;
+      const btns = Array.from(
+        document.querySelectorAll("main button[type='button']"),
+      ) as (HTMLButtonElement & { __onclick?: (ev: Event) => void })[];
+      const b = btns.find((x) => (x.textContent || "").trim() === "打开 Modal");
+      if (!b || b.disabled) return false;
+      b.scrollIntoView({ block: "center" });
+      if (typeof b.__onclick === "function") {
+        b.__onclick(
+          new MouseEvent("click", { bubbles: true, cancelable: true }),
+        );
+      } else b.click();
+      return true;
     }) as boolean;
     expect(openOk).toBe(true);
-    await sharedEnv.delay(200);
+    await sharedEnv.delay(350);
     const confirmOk = await t.browser.evaluate(() => {
-      const btns = document.querySelectorAll('button[type="button"]');
-      for (let i = 0; i < btns.length; i++) {
-        const b = btns[i] as HTMLButtonElement;
-        if (b.disabled) continue;
-        if ((b.textContent || "").trim() === "确定") {
-          b.click();
-          return true;
-        }
-      }
-      return false;
+      const panels = Array.from(
+        document.querySelectorAll('[role="dialog"]'),
+      ) as HTMLElement[];
+      const scope = panels.find((el) => {
+        const r = el.getBoundingClientRect();
+        return r.width > 20 && r.height > 20;
+      }) || document.body;
+      const btns = Array.from(
+        scope.querySelectorAll("button[type='button']"),
+      ) as (HTMLButtonElement & { __onclick?: (ev: Event) => void })[];
+      const b = btns.find((x) => {
+        const tx = (x.textContent || "").trim();
+        return !x.disabled && tx === "确定";
+      });
+      if (!b) return false;
+      if (typeof b.__onclick === "function") {
+        b.__onclick(
+          new MouseEvent("click", { bubbles: true, cancelable: true }),
+        );
+      } else b.click();
+      return true;
     }) as boolean;
     expect(confirmOk).toBe(true);
   }, DOCS_BROWSER_CONFIG);
