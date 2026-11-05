@@ -63,15 +63,33 @@ const placeCls: Record<FloatButtonPlacement, string> = {
 function BadgeDot(props: { badge?: number | boolean }) {
   const b = props.badge;
   if (b == null || b === false) return null;
+  // 贴主按钮右上角外缘（常规角标），不盖住主图标；定位用 style 防 Tailwind 未产出 inset 类时掉回中心
+  const cornerStyle = {
+    position: "absolute",
+    top: "0",
+    right: "0",
+    transform: "translate(50%, -50%)",
+    zIndex: "10",
+    pointerEvents: "none",
+  } as const;
   if (b === true) {
     return (
-      <span class="absolute -top-0.5 -right-0.5 size-2.5 rounded-full bg-red-500" />
+      <span
+        class="size-2.5 rounded-full bg-red-500"
+        style={cornerStyle}
+        aria-hidden="true"
+      />
     );
   }
   const n = typeof b === "number" ? b : 0;
   if (n <= 0) return null;
   return (
-    <span class="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-red-500 text-white text-[10px] leading-4 text-center">
+    <span
+      class="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] leading-none text-white tabular-nums"
+      style={cornerStyle}
+      role="status"
+      aria-label={String(n > 99 ? "99+" : n)}
+    >
       {n > 99 ? "99+" : n}
     </span>
   );
@@ -105,7 +123,7 @@ export function FloatButton(props: FloatButtonProps): JSXRenderable {
 
   const shapeCls = shape === "circle" ? "rounded-full" : "rounded-xl";
   const btnBase = twMerge(
-    "relative inline-flex size-12 items-center justify-center shadow-lg",
+    "relative inline-flex size-12 items-center justify-center overflow-visible shadow-lg",
     "bg-blue-600 text-white hover:bg-blue-500 active:bg-blue-700",
     "focus:outline-hidden focus-visible:ring-2 focus-visible:ring-blue-400",
     shapeCls,

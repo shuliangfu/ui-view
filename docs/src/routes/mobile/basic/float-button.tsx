@@ -43,7 +43,7 @@ export default function Page() {
       <section class="space-y-3">
         <Title level={2}>示例</Title>
         <MobileDocDemo>
-          <div class="relative h-56 overflow-hidden rounded-lg bg-slate-50 dark:bg-slate-950/60 border border-dashed border-slate-300 dark:border-slate-600">
+          <div class="relative h-56 overflow-visible rounded-lg bg-slate-50 dark:bg-slate-950/60 border border-dashed border-slate-300 dark:border-slate-600">
             <p class="absolute left-3 top-3 text-xs text-slate-500">示意容器</p>
             <FloatButton
               position="absolute"
