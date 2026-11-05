@@ -474,6 +474,7 @@ export function Dropdown(props: DropdownProps): JSXRenderable {
   return (
     <span
       class={twMerge("relative inline-flex", className)}
+      data-dreamer-dropdown=""
       onMouseEnter={isHover
         ? (handleTriggerEnter as (e: Event) => void)
         : undefined}

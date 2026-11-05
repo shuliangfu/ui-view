@@ -88,4 +88,76 @@ describe("文档页 E2E：/desktop/feedback/context-menu（ContextMenu 右键菜
     }) as boolean;
     expect(ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
+
+  /**
+   * UI·右键打开菜单，点「复制」写 status。
+   */
+  it("UI·右键菜单可点项", async (t) => {
+    if (!t?.browser?.goto) return;
+    await sharedEnv.goto(t, DOC_PATH);
+    await sharedEnv.waitDocMainReady(t);
+    await t.browser.evaluate(() => location.reload());
+    await sharedEnv.waitDocMainReady(t);
+    await sharedEnv.delay(100);
+
+    await t.browser.evaluate(() => {
+      const hosts = Array.from(
+        document.querySelectorAll("main div"),
+      ) as (HTMLElement & { __oncontextmenu?: (ev: Event) => void })[];
+      const host = hosts.find((d) =>
+        typeof d.__oncontextmenu === "function" &&
+        (d.textContent || "").includes("在此区域右键")
+      );
+      const area = host?.querySelector("div") as HTMLElement | null;
+      (host || area)?.scrollIntoView({ block: "center" });
+      const target = area || host;
+      const rect = target?.getBoundingClientRect();
+      const ev = new MouseEvent("contextmenu", {
+        bubbles: true,
+        cancelable: true,
+        clientX: (rect?.left ?? 0) + 20,
+        clientY: (rect?.top ?? 0) + 20,
+        button: 2,
+      });
+      if (host && typeof host.__oncontextmenu === "function") {
+        host.__oncontextmenu(ev);
+      } else {
+        target?.dispatchEvent(ev);
+      }
+    });
+    await sharedEnv.delay(250);
+
+    const menu = await t.browser.evaluate(() => {
+      const m = document.querySelector(
+        "[data-dreamer-context-menu], [role='menu']",
+      ) as HTMLElement | null;
+      const items = Array.from(
+        document.querySelectorAll("[role='menuitem']"),
+      ).map((el) => el.textContent?.trim() ?? "");
+      return { has: !!m, items, w: m?.getBoundingClientRect().width ?? 0 };
+    }) as { has: boolean; items: string[]; w: number };
+    expect(menu.has).toBe(true);
+    expect(menu.items.some((x) => x.includes("复制"))).toBe(true);
+    expect(menu.w).toBeGreaterThan(40);
+
+    await t.browser.evaluate(() => {
+      const item = Array.from(
+        document.querySelectorAll("[role='menuitem']"),
+      ).find((el) => (el.textContent || "").includes("复制")) as
+        | (HTMLElement & { __onclick?: (ev: Event) => void })
+        | undefined;
+      if (item && typeof item.__onclick === "function") {
+        item.__onclick(
+          new MouseEvent("click", { bubbles: true, cancelable: true }),
+        );
+      } else item?.click();
+    });
+    await sharedEnv.delay(200);
+    const status = await t.browser.evaluate(() => {
+      return document.querySelector("main [role='status']")?.textContent?.trim() ??
+        "";
+    }) as string;
+    expect(status).toMatch(/复制/);
+  }, DOCS_BROWSER_CONFIG);
+
 });

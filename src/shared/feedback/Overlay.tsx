@@ -120,6 +120,7 @@ export function Overlay(props: OverlayProps): JSXRenderable {
           type="button"
           class={cls}
           style={style}
+          data-dreamer-overlay=""
           aria-label={ariaLabel}
           aria-hidden={!isOpen() ? true : undefined}
           onClick={handleClick}
@@ -133,6 +134,7 @@ export function Overlay(props: OverlayProps): JSXRenderable {
       <div
         class={cls}
         style={style}
+        data-dreamer-overlay=""
         aria-hidden={!isOpen() ? true : undefined}
         aria-label={ariaLabel}
         role="presentation"

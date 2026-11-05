@@ -88,4 +88,78 @@ describe("文档页 E2E：/desktop/data-display/cell（Cell 单元格）", () =>
     }) as boolean;
     expect(ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
+
+  /**
+   * UI·点击账号行写 status；禁用行不可点；Switch 可切换。
+   */
+  it("UI·点行写 status 且禁用不可点", async (t) => {
+    if (!t?.browser?.goto) return;
+    await sharedEnv.goto(t, DOC_PATH);
+    await sharedEnv.waitDocMainReady(t);
+    await t.browser.evaluate(() => location.reload());
+    await sharedEnv.waitDocMainReady(t);
+    await sharedEnv.delay(100);
+
+    const before = await t.browser.evaluate(() => {
+      const cells = document.querySelectorAll("main [data-dreamer-cell]");
+      return { n: cells.length };
+    }) as { n: number };
+    if (before.n < 2) throw new Error(`Cell 示例不足: ${JSON.stringify(before)}`);
+
+    await t.browser.evaluate(() => {
+      const cells = Array.from(
+        document.querySelectorAll("main [data-dreamer-cell]"),
+      ) as (HTMLElement & { __onclick?: (ev: Event) => void })[];
+      const account = cells.find((c) => (c.textContent || "").includes("账号"));
+      account?.scrollIntoView({ block: "center" });
+      if (account && typeof account.__onclick === "function") {
+        account.__onclick(
+          new MouseEvent("click", { bubbles: true, cancelable: true }),
+        );
+      } else account?.click();
+    });
+    await sharedEnv.delay(200);
+
+    const afterClick = await t.browser.evaluate(() => {
+      const status = document.querySelector("main [role='status']");
+      return { text: status?.textContent?.trim() ?? "" };
+    }) as { text: string };
+    expect(afterClick.text).toMatch(/账号/);
+
+    const disabledOk = await t.browser.evaluate(() => {
+      const cells = Array.from(
+        document.querySelectorAll("main [data-dreamer-cell]"),
+      ) as HTMLElement[];
+      const dis = cells.find((c) => (c.textContent || "").includes("注销"));
+      if (!dis) return { ok: false, reason: "no-disabled" };
+      const aria = dis.getAttribute("aria-disabled");
+      const cls = dis.className || "";
+      return {
+        ok: aria === "true" || /opacity|pointer-events-none|disabled/i.test(cls) ||
+          dis.hasAttribute("disabled"),
+        aria,
+        cls: cls.slice(0, 80),
+      };
+    }) as { ok: boolean };
+    expect(disabledOk.ok).toBe(true);
+
+    await t.browser.evaluate(() => {
+      const sw = document.querySelector(
+        "main [data-dreamer-cell] [role='switch'], main [data-dreamer-cell] input[type='checkbox']",
+      ) as (HTMLElement & { __onclick?: (ev: Event) => void }) | null;
+      sw?.scrollIntoView({ block: "center" });
+      if (sw && typeof sw.__onclick === "function") {
+        sw.__onclick(
+          new MouseEvent("click", { bubbles: true, cancelable: true }),
+        );
+      } else sw?.click();
+    });
+    await sharedEnv.delay(200);
+    const afterSw = await t.browser.evaluate(() => {
+      const status = document.querySelector("main [role='status']");
+      return { text: status?.textContent?.trim() ?? "" };
+    }) as { text: string };
+    expect(afterSw.text.length).toBeGreaterThan(0);
+  }, DOCS_BROWSER_CONFIG);
+
 });

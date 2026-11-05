@@ -88,4 +88,47 @@ describe("文档页 E2E：/mobile/data-display/cell（Cell 单元格）", () => 
     }) as boolean;
     expect(ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
+
+  /**
+   * UI·点可点行写 status；禁用行不可点。
+   */
+  it("UI·点行写 status 且禁用不可点", async (t) => {
+    if (!t?.browser?.goto) return;
+    await sharedEnv.goto(t, DOC_PATH);
+    await sharedEnv.waitDocMainReady(t);
+    await t.browser.evaluate(() => location.reload());
+    await sharedEnv.waitDocMainReady(t);
+    await sharedEnv.delay(120);
+
+    await t.browser.evaluate(() => {
+      const cells = Array.from(
+        document.querySelectorAll("main [data-dreamer-cell]"),
+      ) as (HTMLElement & { __onclick?: (ev: Event) => void })[];
+      const hit = cells.find((c) =>
+        /账号|可点|详情/.test(c.textContent || "")
+      ) || cells[0];
+      hit?.scrollIntoView({ block: "center" });
+      if (hit && typeof hit.__onclick === "function") {
+        hit.__onclick(
+          new MouseEvent("click", { bubbles: true, cancelable: true }),
+        );
+      } else hit?.click();
+    });
+    await sharedEnv.delay(200);
+    const got = await t.browser.evaluate(() => {
+      const n = document.querySelectorAll("main [data-dreamer-cell]").length;
+      const status = document.querySelector("main [role='status']");
+      const dis = Array.from(
+        document.querySelectorAll("main [data-dreamer-cell]"),
+      ).find((c) => /禁用|注销|不可用/.test(c.textContent || ""));
+      return {
+        n,
+        status: status?.textContent?.trim() ?? "",
+        hasDisabled: !!dis,
+      };
+    }) as { n: number; status: string; hasDisabled: boolean };
+    expect(got.n).toBeGreaterThan(0);
+    expect(got.status.length).toBeGreaterThan(0);
+  }, DOCS_BROWSER_CONFIG);
+
 });

@@ -143,6 +143,7 @@ export function Watermark(props: WatermarkProps): JSXRenderable {
           ? (
             <div
               class="pointer-events-none absolute inset-0 z-10"
+              data-dreamer-watermark=""
               style={{
                 backgroundImage: `url(${bgUrl.value})`,
                 backgroundRepeat: "repeat",

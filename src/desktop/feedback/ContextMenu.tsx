@@ -82,6 +82,7 @@ export function ContextMenu(props: ContextMenuProps): JSXRenderable {
         zIndex: CONTEXT_MENU_Z_INDEX,
       })}
       role="menu"
+      data-dreamer-context-menu=""
       onMouseDown={(e: Event) => e.stopPropagation()}
     >
       {items.map((it) =>
@@ -122,7 +123,7 @@ export function ContextMenu(props: ContextMenuProps): JSXRenderable {
 
   return (
     <div
-      class={twMerge("contents", className)}
+      class={twMerge("block", className)}
       onContextMenu={(e: Event) => onContext(e as MouseEvent)}
     >
       {children}

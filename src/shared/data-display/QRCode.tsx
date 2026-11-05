@@ -57,6 +57,7 @@ export function QRCode(props: QRCodeProps): JSXRenderable {
             className,
           )}
           style={{ width: `${size}px`, height: `${size}px` }}
+          data-dreamer-qrcode=""
           role="img"
           aria-label={ariaLabel}
         >
@@ -90,7 +91,8 @@ export function QRCode(props: QRCodeProps): JSXRenderable {
         width={size}
         height={size}
         viewBox={`0 0 ${size} ${size}`}
-        role="img"
+        data-dreamer-qrcode=""
+          role="img"
         aria-label={ariaLabel}
       >
         <rect width={size} height={size} fill={bgColor} />

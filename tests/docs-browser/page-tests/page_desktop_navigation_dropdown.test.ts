@@ -453,4 +453,61 @@ describe("文档页 E2E：/desktop/navigation/dropdown（Dropdown 下拉）", ()
     }) as boolean;
     expect(ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
+
+  /**
+   * UI·点击展开下拉，面板可见且不误盖整页。
+   */
+  it("UI·点击展开面板可见", async (t) => {
+    if (!t?.browser?.goto) return;
+    await sharedEnv.goto(t, DOC_PATH);
+    await sharedEnv.waitDocMainReady(t);
+    await t.browser.evaluate(() => location.reload());
+    await sharedEnv.waitDocMainReady(t);
+    await sharedEnv.delay(100);
+
+    await t.browser.evaluate(() => {
+      const root = document.querySelector(
+        "main [data-dreamer-dropdown]",
+      ) as HTMLElement | null;
+      root?.scrollIntoView({ block: "center" });
+      const trigger = (root?.querySelector('[aria-haspopup="true"]') ||
+        root?.querySelector("button")) as
+          | (HTMLElement & { __onclick?: (ev: Event) => void })
+          | null;
+      if (trigger && typeof trigger.__onclick === "function") {
+        trigger.__onclick(
+          new MouseEvent("click", { bubbles: true, cancelable: true }),
+        );
+      } else trigger?.click();
+    });
+    await sharedEnv.delay(250);
+
+    const got = await t.browser.evaluate(() => {
+      const trigger = document.querySelector(
+        "main [data-dreamer-dropdown] [aria-haspopup='true']",
+      ) as HTMLElement | null;
+      const expanded = trigger?.getAttribute("aria-expanded") === "true";
+      const menu = document.querySelector("[role='menu']") as HTMLElement | null;
+      const mr = menu?.getBoundingClientRect();
+      const covers = !!mr && mr.width >= innerWidth * 0.95 &&
+        mr.height >= innerHeight * 0.95;
+      return {
+        expanded,
+        hasMenu: !!menu,
+        mw: mr?.width ?? 0,
+        mh: mr?.height ?? 0,
+        covers,
+      };
+    }) as {
+      expanded: boolean;
+      hasMenu: boolean;
+      mw: number;
+      mh: number;
+      covers: boolean;
+    };
+    expect(got.expanded || got.hasMenu).toBe(true);
+    expect(got.mw).toBeGreaterThan(40);
+    expect(got.covers).toBe(false);
+  }, DOCS_BROWSER_CONFIG);
+
 });

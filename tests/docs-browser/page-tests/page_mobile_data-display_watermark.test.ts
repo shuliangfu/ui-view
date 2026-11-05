@@ -88,4 +88,29 @@ describe("文档页 E2E：/mobile/data-display/watermark（Watermark 水印）",
     }) as boolean;
     expect(ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
+
+  /**
+   * UI·水印层挂载且铺满示意容器。
+   */
+  it("UI·水印层可见铺满", async (t) => {
+    if (!t?.browser?.goto) return;
+    await sharedEnv.goto(t, DOC_PATH);
+    await sharedEnv.waitDocMainReady(t);
+    await sharedEnv.delay(300);
+    const got = await t.browser.evaluate(() => {
+      const layers = Array.from(
+        document.querySelectorAll("main [data-dreamer-watermark]"),
+      ) as HTMLElement[];
+      const info = layers.map((el) => {
+        const r = el.getBoundingClientRect();
+        const bg = getComputedStyle(el).backgroundImage || "";
+        return { w: r.width, h: r.height, hasBg: bg.includes("url(") };
+      });
+      return { n: info.length, info };
+    }) as { n: number; info: { w: number; h: number; hasBg: boolean }[] };
+    if (got.n < 1) throw new Error(`Watermark 层未出现: ${JSON.stringify(got)}`);
+    const ok = got.info.some((i) => i.w >= 40 && i.h >= 40 && i.hasBg);
+    expect(ok).toBe(true);
+  }, DOCS_BROWSER_CONFIG);
+
 });

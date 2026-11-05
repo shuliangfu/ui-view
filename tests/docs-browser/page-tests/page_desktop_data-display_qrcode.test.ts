@@ -88,4 +88,28 @@ describe("文档页 E2E：/desktop/data-display/qrcode（QRCode 二维码）", (
     }) as boolean;
     expect(ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
+
+  /**
+   * UI·二维码可见且尺寸合理。
+   */
+  it("UI·二维码可见且有尺寸", async (t) => {
+    if (!t?.browser?.goto) return;
+    await sharedEnv.goto(t, DOC_PATH);
+    await sharedEnv.waitDocMainReady(t);
+    await sharedEnv.delay(150);
+    const got = await t.browser.evaluate(() => {
+      const els = Array.from(
+        document.querySelectorAll("main [data-dreamer-qrcode], main [role='img'][aria-label*='二维码']"),
+      ) as HTMLElement[];
+      const boxes = els.map((el) => {
+        const r = el.getBoundingClientRect();
+        return { w: r.width, h: r.height, label: el.getAttribute("aria-label") };
+      });
+      return { n: boxes.length, boxes };
+    }) as { n: number; boxes: { w: number; h: number }[] };
+    if (got.n < 1) throw new Error(`QR 未渲染: ${JSON.stringify(got)}`);
+    const ok = got.boxes.some((b) => b.w >= 48 && b.h >= 48);
+    expect(ok).toBe(true);
+  }, DOCS_BROWSER_CONFIG);
+
 });

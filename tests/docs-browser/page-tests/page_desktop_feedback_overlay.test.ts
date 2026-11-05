@@ -88,4 +88,93 @@ describe("文档页 E2E：/desktop/feedback/overlay（Overlay 遮罩）", () => 
     }) as boolean;
     expect(ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
+
+  /**
+   * UI·打开遮罩可见；点击遮罩关闭。
+   */
+  it("UI·打开遮罩可点关闭", async (t) => {
+    if (!t?.browser?.goto) return;
+    await sharedEnv.goto(t, DOC_PATH);
+    await sharedEnv.waitDocMainReady(t);
+    await t.browser.evaluate(() => location.reload());
+    await sharedEnv.waitDocMainReady(t);
+    await sharedEnv.delay(100);
+
+    await t.browser.evaluate(() => {
+      const btns = Array.from(
+        document.querySelectorAll("main button"),
+      ) as (HTMLButtonElement & { __onclick?: (ev: Event) => void })[];
+      const openBtn = btns.find((b) => /打开遮罩|打开/.test(b.textContent || ""));
+      openBtn?.scrollIntoView({ block: "center" });
+      if (openBtn && typeof openBtn.__onclick === "function") {
+        openBtn.__onclick(
+          new MouseEvent("click", { bubbles: true, cancelable: true }),
+        );
+      } else openBtn?.click();
+    });
+    await sharedEnv.delay(250);
+
+    const opened = await t.browser.evaluate(() => {
+      const ovs = Array.from(
+        document.querySelectorAll("[data-dreamer-overlay]"),
+      ) as HTMLElement[];
+      const visible = ovs.find((ov) => {
+        if (ov.getAttribute("aria-hidden") === "true") return false;
+        const style = getComputedStyle(ov);
+        const r = ov.getBoundingClientRect();
+        return style.opacity !== "0" && r.width > 40 && r.height > 40;
+      });
+      if (!visible) {
+        return {
+          ok: false,
+          reason: "no-visible",
+          n: ovs.length,
+          states: ovs.map((ov) => ({
+            hidden: ov.getAttribute("aria-hidden"),
+            opacity: getComputedStyle(ov).opacity,
+            w: ov.getBoundingClientRect().width,
+          })),
+        };
+      }
+      const r = visible.getBoundingClientRect();
+      return {
+        ok: true,
+        w: r.width,
+        h: r.height,
+        opacity: getComputedStyle(visible).opacity,
+        z: getComputedStyle(visible).zIndex,
+      };
+    }) as { ok: boolean };
+    expect(opened.ok).toBe(true);
+
+    await t.browser.evaluate(() => {
+      const ovs = Array.from(
+        document.querySelectorAll("[data-dreamer-overlay]"),
+      ) as (HTMLElement & { __onclick?: (ev: Event) => void })[];
+      const ov = ovs.find((el) => {
+        if (el.getAttribute("aria-hidden") === "true") return false;
+        return getComputedStyle(el).opacity !== "0";
+      }) ?? null;
+      if (ov && typeof ov.__onclick === "function") {
+        ov.__onclick(
+          new MouseEvent("click", { bubbles: true, cancelable: true }),
+        );
+      } else ov?.click();
+    });
+    await sharedEnv.delay(250);
+
+    const closed = await t.browser.evaluate(() => {
+      const ovs = Array.from(
+        document.querySelectorAll("[data-dreamer-overlay]"),
+      ) as HTMLElement[];
+      const stillVisible = ovs.some((ov) => {
+        if (ov.getAttribute("aria-hidden") === "true") return false;
+        return getComputedStyle(ov).opacity !== "0" &&
+          ov.getBoundingClientRect().width > 40;
+      });
+      return { ok: !stillVisible, n: ovs.length };
+    }) as { ok: boolean };
+    expect(closed.ok).toBe(true);
+  }, DOCS_BROWSER_CONFIG);
+
 });
