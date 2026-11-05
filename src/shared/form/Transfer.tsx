@@ -12,6 +12,10 @@
  */
 
 import { createSignal, getDocument, type Signal } from "@dreamer/view";
+import {
+  readSignalValue,
+  writeSignalValue,
+} from "../safe-signal.ts";
 import type { JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import { commitMaybeSignal, type MaybeSignal } from "./maybe-signal.ts";
@@ -170,11 +174,11 @@ function TransferColumn(props: TransferColumnProps) {
           autocomplete="off"
           class="m-2 px-2 py-1 text-sm border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 w-[calc(100%-1rem)]"
           placeholder={searchPlaceholder}
-          value={() => searchRef.value}
+          value={() => readSignalValue(searchRef) ?? ""}
           onInput={(e: Event) => {
             const v = (e.target as HTMLInputElement).value;
-            searchRef.value = v;
-            listVersion.value = listVersion.value + 1;
+            writeSignalValue(searchRef, v);
+            writeSignalValue(listVersion, readSignalValue(listVersion) + 1);
             if (onSearch != null) {
               queueMicrotask(() => onSearch(v));
             }
@@ -183,13 +187,13 @@ function TransferColumn(props: TransferColumnProps) {
       )}
       <div class="flex flex-col flex-1 min-h-0">
         {() => {
-          listVersion.value;
+          readSignalValue(listVersion);
           const filtered = filterTransferItems(
             items,
-            searchRef.value,
+            readSignalValue(searchRef) ?? "",
             filterOption,
           );
-          const selectedKeys = selectedKeysRef.value;
+          const selectedKeys = readSignalValue(selectedKeysRef) ?? [];
           const listHeight = listStyle.height ?? 200;
           return (
             <div class="contents">
@@ -279,7 +283,7 @@ export function Transfer(props: TransferProps): JSXRenderable {
     const next = [...new Set([...current, ...keys])];
     commitMaybeSignal(targetKeys, next);
     onChange?.(next);
-    leftSelectedKeysRef.value = [];
+    writeSignalValue(leftSelectedKeysRef, []);
   };
 
   const moveToLeft = (keys: string[]) => {
@@ -288,7 +292,7 @@ export function Transfer(props: TransferProps): JSXRenderable {
     const next = current.filter((k) => !keys.includes(k));
     commitMaybeSignal(targetKeys, next);
     onChange?.(next);
-    rightSelectedKeysRef.value = [];
+    writeSignalValue(rightSelectedKeysRef, []);
   };
 
   const btnCls =
@@ -325,11 +329,12 @@ export function Transfer(props: TransferProps): JSXRenderable {
           render={render}
           listStyle={listStyle}
           onToggleSelect={(key) => {
-            leftSelectedKeysRef((prev: string[]) =>
-              prev.includes(key)
-                ? prev.filter((k: string) => k !== key)
-                : [...prev, key]
-            );
+            leftSelectedKeysRef((prev: string[] | undefined) => {
+              const cur = prev ?? [];
+              return cur.includes(key)
+                ? cur.filter((k: string) => k !== key)
+                : [...cur, key];
+            });
           }}
           onTransfer={(keys) => moveToRight(keys)}
           disabled={disabled}
@@ -343,17 +348,20 @@ export function Transfer(props: TransferProps): JSXRenderable {
             disabled={disabled}
             aria-label={m.moveRight}
             onClick={() => {
-              moveToRight(
-                leftSelectedKeysRef.value.length > 0
-                  ? leftSelectedKeysRef.value
-                  : filterTransferItems(
-                    leftRaw,
-                    leftSearchRef.value,
-                    filterOption,
-                  )
-                    .filter((i) => !i.disabled)
-                    .map((i) => i.key),
-              );
+              {
+                const selected = readSignalValue(leftSelectedKeysRef) ?? [];
+                moveToRight(
+                  selected.length > 0
+                    ? selected
+                    : filterTransferItems(
+                      leftRaw,
+                      readSignalValue(leftSearchRef) ?? "",
+                      filterOption,
+                    )
+                      .filter((i) => !i.disabled)
+                      .map((i) => i.key),
+                );
+              }
             }}
           >
             →
@@ -364,17 +372,20 @@ export function Transfer(props: TransferProps): JSXRenderable {
             disabled={disabled}
             aria-label={m.moveLeft}
             onClick={() => {
-              moveToLeft(
-                rightSelectedKeysRef.value.length > 0
-                  ? rightSelectedKeysRef.value
-                  : filterTransferItems(
-                    rightRaw,
-                    rightSearchRef.value,
-                    filterOption,
-                  )
-                    .filter((i) => !i.disabled)
-                    .map((i) => i.key),
-              );
+              {
+                const selected = readSignalValue(rightSelectedKeysRef) ?? [];
+                moveToLeft(
+                  selected.length > 0
+                    ? selected
+                    : filterTransferItems(
+                      rightRaw,
+                      readSignalValue(rightSearchRef) ?? "",
+                      filterOption,
+                    )
+                      .filter((i) => !i.disabled)
+                      .map((i) => i.key),
+                );
+              }
             }}
           >
             ←
@@ -393,11 +404,12 @@ export function Transfer(props: TransferProps): JSXRenderable {
           render={render}
           listStyle={listStyle}
           onToggleSelect={(key) => {
-            rightSelectedKeysRef((prev: string[]) =>
-              prev.includes(key)
-                ? prev.filter((k: string) => k !== key)
-                : [...prev, key]
-            );
+            rightSelectedKeysRef((prev: string[] | undefined) => {
+              const cur = prev ?? [];
+              return cur.includes(key)
+                ? cur.filter((k: string) => k !== key)
+                : [...cur, key];
+            });
           }}
           onTransfer={(keys) => moveToLeft(keys)}
           disabled={disabled}
