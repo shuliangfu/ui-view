@@ -1,6 +1,6 @@
 /**
  * FloatButton 悬浮按钮（View）。
- * 固定于视口角；支持主按钮、展开子按钮组、徽标。
+ * 默认固定于**视口**角；文档／局部演示传 `position="absolute"`，挂在最近 `relative` 容器内，避免飞出示例框。
  */
 
 import { createSignal, type JSXRenderable } from "@dreamer/view";
@@ -37,6 +37,11 @@ export interface FloatButtonProps {
   onOpenChange?: (open: boolean) => void;
   shape?: FloatButtonShape;
   placement?: FloatButtonPlacement;
+  /**
+   * 定位参照：`fixed` 相对视口（产品默认）；`absolute` 相对最近定位祖先（文档示例框内用）。
+   * @default "fixed"
+   */
+  position?: "fixed" | "absolute";
   /** 主按钮 aria-label */
   "aria-label"?: string;
   /** 徽标 */
@@ -81,6 +86,7 @@ export function FloatButton(props: FloatButtonProps): JSXRenderable {
     onOpenChange,
     shape = "circle",
     placement = "bottom-right",
+    position = "fixed",
     badge,
     class: className,
     offset = 24,
@@ -107,7 +113,12 @@ export function FloatButton(props: FloatButtonProps): JSXRenderable {
 
   return () => (
     <div
-      class={twMerge("fixed flex flex-col-reverse items-center gap-3", placeCls[placement], className)}
+      class={twMerge(
+        position === "absolute" ? "absolute" : "fixed",
+        "flex flex-col-reverse items-center gap-3",
+        placeCls[placement],
+        className,
+      )}
       style={{
         zIndex: String(zIndex),
         margin: `${offset}px`,

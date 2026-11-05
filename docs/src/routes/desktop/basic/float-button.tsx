@@ -12,7 +12,8 @@ import {
 const API: DocsApiTableRow[] = [
   { name: "icon", type: "unknown", default: "+", description: "主按钮内容" },
   { name: "items", type: "FloatButtonItem[]", default: "-", description: "展开子项" },
-  { name: "placement", type: "bottom-right | …", default: "bottom-right", description: "角落位置" }
+  { name: "placement", type: "bottom-right | …", default: "bottom-right", description: "角落位置" },
+  { name: "position", type: '"fixed" | "absolute"', default: "fixed", description: "fixed=视口；absolute=相对最近定位祖先（文档示例用）" },
 ];
 
 const importCode = `import { FloatButton } from "@dreamer/ui-view";\n\n<FloatButton aria-label="新建" />`;
@@ -22,7 +23,7 @@ export default function Page() {
     <div class="space-y-8">
       <div>
         <Title level={1}>FloatButton</Title>
-        <Paragraph>视口角悬浮按钮，可展开子操作。</Paragraph>
+        <Paragraph>视口角悬浮按钮，可展开子操作。文档示例用 position=&quot;absolute&quot; 落在示意框内。</Paragraph>
       </div>
       <section class="space-y-3">
         <Title level={2}>引入</Title>
@@ -31,7 +32,18 @@ export default function Page() {
       <section class="space-y-3">
         <Title level={2}>示例</Title>
         <div class="rounded-xl border border-slate-200 dark:border-slate-700 p-4 bg-white dark:bg-slate-900">
-          <div class="relative h-48"><FloatButton aria-label="新建" /></div>
+          <div class="relative h-56 overflow-hidden rounded-lg bg-slate-50 dark:bg-slate-950/60 border border-dashed border-slate-300 dark:border-slate-600">
+            <p class="absolute left-3 top-3 text-xs text-slate-500">示意容器（非视口）</p>
+            <FloatButton
+              position="absolute"
+              aria-label="新建"
+              badge={3}
+              items={[
+                { key: "file", icon: "📄", "aria-label": "文件" },
+                { key: "img", icon: "🖼️", "aria-label": "图片" },
+              ]}
+            />
+          </div>
         </div>
       </section>
       <section class="space-y-3">
