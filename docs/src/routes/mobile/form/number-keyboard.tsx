@@ -23,21 +23,21 @@ export default function Page() {
   return (
     <div class="space-y-8">
       <div>
-        <Title level=1>NumberKeyboard</Title>
+        <Title level={1}>NumberKeyboard</Title>
         <Paragraph>底部数字键盘，可配合 PasscodeInput。</Paragraph>
       </div>
       <section class="space-y-3">
-        <Title level=2>引入</Title>
+        <Title level={2}>引入</Title>
         <CodeBlock code={importCode} language="tsx" />
       </section>
       <section class="space-y-3">
-        <Title level=2>示例</Title>
+        <Title level={2}>示例</Title>
         <MobileDocDemo>
           <Paragraph class="text-sm text-slate-500 p-3">打开键盘示例见引入代码；与 PasscodeInput 联用。</Paragraph>
         </MobileDocDemo>
       </section>
       <section class="space-y-3">
-        <Title level=2>API</Title>
+        <Title level={2}>API</Title>
         <DocsApiTable rows={API} />
       </section>
     </div>

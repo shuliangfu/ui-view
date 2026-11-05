@@ -22,21 +22,21 @@ export default function Page() {
   return (
     <div class="space-y-8">
       <div>
-        <Title level=1>SignaturePad</Title>
+        <Title level={1}>SignaturePad</Title>
         <Paragraph>Canvas 手写签名，可清空并导出。</Paragraph>
       </div>
       <section class="space-y-3">
-        <Title level=2>引入</Title>
+        <Title level={2}>引入</Title>
         <CodeBlock code={importCode} language="tsx" />
       </section>
       <section class="space-y-3">
-        <Title level=2>示例</Title>
+        <Title level={2}>示例</Title>
         <MobileDocDemo>
           <div class="p-3"><SignaturePad height={160} /></div>
         </MobileDocDemo>
       </section>
       <section class="space-y-3">
-        <Title level=2>API</Title>
+        <Title level={2}>API</Title>
         <DocsApiTable rows={API} />
       </section>
     </div>

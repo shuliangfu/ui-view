@@ -22,21 +22,21 @@ export default function Page() {
   return (
     <div class="space-y-8">
       <div>
-        <Title level=1>Overlay</Title>
+        <Title level={1}>Overlay</Title>
         <Paragraph>全屏遮罩（自浮层抽离），支持 Portal 与滚动锁定。</Paragraph>
       </div>
       <section class="space-y-3">
-        <Title level=2>引入</Title>
+        <Title level={2}>引入</Title>
         <CodeBlock code={importCode} language="tsx" />
       </section>
       <section class="space-y-3">
-        <Title level=2>示例</Title>
+        <Title level={2}>示例</Title>
         <div class="rounded-xl border border-slate-200 dark:border-slate-700 p-4 bg-white dark:bg-slate-900">
           <Paragraph>传 open=&#123;signal&#125; 控制显示；常与自定义面板组合。</Paragraph>
         </div>
       </section>
       <section class="space-y-3">
-        <Title level=2>API</Title>
+        <Title level={2}>API</Title>
         <DocsApiTable rows={API} />
       </section>
     </div>

@@ -15,27 +15,27 @@ const API: DocsApiTableRow[] = [
   { name: "size", type: "number", default: "128", description: "边长" }
 ];
 
-const importCode = `import { QRCode } from "@dreamer/ui-view/mobile";\n\n<QRCode value=\"…\" />`;
+const importCode = `import { QRCode } from "@dreamer/ui-view/mobile";\n\n<QRCode value=\"…" />`;
 
 export default function Page() {
   return (
     <div class="space-y-8">
       <div>
-        <Title level=1>QRCode</Title>
+        <Title level={1}>QRCode</Title>
         <Paragraph>移动端二维码展示。</Paragraph>
       </div>
       <section class="space-y-3">
-        <Title level=2>引入</Title>
+        <Title level={2}>引入</Title>
         <CodeBlock code={importCode} language="tsx" />
       </section>
       <section class="space-y-3">
-        <Title level=2>示例</Title>
+        <Title level={2}>示例</Title>
         <MobileDocDemo>
           <div class="p-4 flex justify-center"><QRCode value="https://dreamer.example/m" size={160} /></div>
         </MobileDocDemo>
       </section>
       <section class="space-y-3">
-        <Title level=2>API</Title>
+        <Title level={2}>API</Title>
         <DocsApiTable rows={API} />
       </section>
     </div>

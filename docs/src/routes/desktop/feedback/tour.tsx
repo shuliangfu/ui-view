@@ -22,21 +22,21 @@ export default function Page() {
   return (
     <div class="space-y-8">
       <div>
-        <Title level=1>Tour</Title>
+        <Title level={1}>Tour</Title>
         <Paragraph>分步漫游引导，高亮目标并展示说明。</Paragraph>
       </div>
       <section class="space-y-3">
-        <Title level=2>引入</Title>
+        <Title level={2}>引入</Title>
         <CodeBlock code={importCode} language="tsx" />
       </section>
       <section class="space-y-3">
-        <Title level=2>示例</Title>
+        <Title level={2}>示例</Title>
         <div class="rounded-xl border border-slate-200 dark:border-slate-700 p-4 bg-white dark:bg-slate-900">
           <Paragraph>在页面中放置 data-tour 目标后传入 steps 即可；此处仅 API 说明。</Paragraph>
         </div>
       </section>
       <section class="space-y-3">
-        <Title level=2>API</Title>
+        <Title level={2}>API</Title>
         <DocsApiTable rows={API} />
       </section>
     </div>

@@ -22,21 +22,21 @@ export default function Page() {
   return (
     <div class="space-y-8">
       <div>
-        <Title level=1>DropdownMenu</Title>
+        <Title level={1}>DropdownMenu</Title>
         <Paragraph>移动顶栏多列下拉筛选菜单。</Paragraph>
       </div>
       <section class="space-y-3">
-        <Title level=2>引入</Title>
+        <Title level={2}>引入</Title>
         <CodeBlock code={importCode} language="tsx" />
       </section>
       <section class="space-y-3">
-        <Title level=2>示例</Title>
+        <Title level={2}>示例</Title>
         <MobileDocDemo>
           <DropdownMenu items={[{ key: "sort", title: "排序", options: [{ value: "n", label: "最新" }, { value: "h", label: "最热" }] }, { key: "filter", title: "筛选", options: [{ value: "a", label: "全部" }, { value: "m", label: "我的" }] }]} />
         </MobileDocDemo>
       </section>
       <section class="space-y-3">
-        <Title level=2>API</Title>
+        <Title level={2}>API</Title>
         <DocsApiTable rows={API} />
       </section>
     </div>

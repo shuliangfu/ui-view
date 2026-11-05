@@ -22,21 +22,21 @@ export default function Page() {
   return (
     <div class="space-y-8">
       <div>
-        <Title level=1>ShareSheet</Title>
+        <Title level={1}>ShareSheet</Title>
         <Paragraph>底部分享宫格。</Paragraph>
       </div>
       <section class="space-y-3">
-        <Title level=2>引入</Title>
+        <Title level={2}>引入</Title>
         <CodeBlock code={importCode} language="tsx" />
       </section>
       <section class="space-y-3">
-        <Title level=2>示例</Title>
+        <Title level={2}>示例</Title>
         <MobileDocDemo>
           <Paragraph class="p-3 text-sm text-slate-500">使用 open=&#123;signal&#125; 打开分享面板。</Paragraph>
         </MobileDocDemo>
       </section>
       <section class="space-y-3">
-        <Title level=2>API</Title>
+        <Title level={2}>API</Title>
         <DocsApiTable rows={API} />
       </section>
     </div>

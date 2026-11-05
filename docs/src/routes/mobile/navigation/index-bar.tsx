@@ -21,21 +21,21 @@ export default function Page() {
   return (
     <div class="space-y-8">
       <div>
-        <Title level=1>IndexBar</Title>
+        <Title level={1}>IndexBar</Title>
         <Paragraph>右侧索引条 + 分组锚点列表。</Paragraph>
       </div>
       <section class="space-y-3">
-        <Title level=2>引入</Title>
+        <Title level={2}>引入</Title>
         <CodeBlock code={importCode} language="tsx" />
       </section>
       <section class="space-y-3">
-        <Title level=2>示例</Title>
+        <Title level={2}>示例</Title>
         <MobileDocDemo>
           <div class="h-80"><IndexBar items={[{ index: "A", children: <Cell title="Alice" /> }, { index: "B", children: <Cell title="Bob" /> }]} /></div>
         </MobileDocDemo>
       </section>
       <section class="space-y-3">
-        <Title level=2>API</Title>
+        <Title level={2}>API</Title>
         <DocsApiTable rows={API} />
       </section>
     </div>

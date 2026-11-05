@@ -11,6 +11,15 @@ import {
   docsNavSidebarAttached,
 } from "../../state/docs-nav-drawer.ts";
 
+/** 基础 */
+const BASIC_SUBMENU = [
+  {
+    path: "/mobile/basic/float-button",
+    label: "FloatButton",
+    desc: "悬浮按钮",
+  },
+] as const;
+
 /** 反馈与浮层 */
 const FEEDBACK_SUBMENU = [
   {
@@ -48,6 +57,16 @@ const FEEDBACK_SUBMENU = [
     label: "FloatingPanel",
     desc: "浮动面板",
   },
+  {
+    path: "/mobile/feedback/tour",
+    label: "Tour",
+    desc: "漫游引导",
+  },
+  {
+    path: "/mobile/feedback/overlay",
+    label: "Overlay",
+    desc: "遮罩层",
+  },
 ] as const;
 
 /** 导航 */
@@ -72,6 +91,21 @@ const DATA_DISPLAY_SUBMENU = [
   },
   { path: "/mobile/data-display/cell", label: "Cell", desc: "单元格" },
   { path: "/mobile/data-display/qrcode", label: "QRCode", desc: "二维码" },
+  {
+    path: "/mobile/data-display/watermark",
+    label: "Watermark",
+    desc: "水印",
+  },
+  {
+    path: "/mobile/data-display/count-down",
+    label: "CountDown",
+    desc: "倒计时",
+  },
+  {
+    path: "/mobile/data-display/virtual-list",
+    label: "VirtualList",
+    desc: "虚拟列表",
+  },
 ] as const;
 
 /** 表单（移动入口；Select 等与桌面默认一致，Cascader 等差异见各页） */
@@ -118,6 +152,7 @@ const MENU: ReadonlyArray<{
   label: string;
   children?: ReadonlyArray<{ path: string; label: string; desc: string }>;
 }> = [
+  { path: "/mobile/basic", label: "基础", children: BASIC_SUBMENU },
   { path: "/mobile/feedback", label: "反馈与浮层", children: FEEDBACK_SUBMENU },
   { path: "/mobile/navigation", label: "导航", children: NAVIGATION_SUBMENU },
   {

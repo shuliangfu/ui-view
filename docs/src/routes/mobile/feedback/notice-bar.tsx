@@ -15,27 +15,27 @@ const API: DocsApiTableRow[] = [
   { name: "closable", type: "boolean", default: "false", description: "可关闭" }
 ];
 
-const importCode = `import { NoticeBar } from "@dreamer/ui-view/mobile";\n\n<NoticeBar content=\"…\" />`;
+const importCode = `import { NoticeBar } from "@dreamer/ui-view/mobile";\n\n<NoticeBar content=\"…" />`;
 
 export default function Page() {
   return (
     <div class="space-y-8">
       <div>
-        <Title level=1>NoticeBar</Title>
+        <Title level={1}>NoticeBar</Title>
         <Paragraph>通知栏。</Paragraph>
       </div>
       <section class="space-y-3">
-        <Title level=2>引入</Title>
+        <Title level={2}>引入</Title>
         <CodeBlock code={importCode} language="tsx" />
       </section>
       <section class="space-y-3">
-        <Title level=2>示例</Title>
+        <Title level={2}>示例</Title>
         <MobileDocDemo>
           <NoticeBar tone="info" scrollable content="欢迎使用移动组件库 —— 长文案可横向滚动展示" />
         </MobileDocDemo>
       </section>
       <section class="space-y-3">
-        <Title level=2>API</Title>
+        <Title level={2}>API</Title>
         <DocsApiTable rows={API} />
       </section>
     </div>

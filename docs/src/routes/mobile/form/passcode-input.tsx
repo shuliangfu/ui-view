@@ -23,21 +23,21 @@ export default function Page() {
   return (
     <div class="space-y-8">
       <div>
-        <Title level=1>PasscodeInput</Title>
+        <Title level={1}>PasscodeInput</Title>
         <Paragraph>等宽验证码／密码格输入。</Paragraph>
       </div>
       <section class="space-y-3">
-        <Title level=2>引入</Title>
+        <Title level={2}>引入</Title>
         <CodeBlock code={importCode} language="tsx" />
       </section>
       <section class="space-y-3">
-        <Title level=2>示例</Title>
+        <Title level={2}>示例</Title>
         <MobileDocDemo>
           <div class="p-4 flex justify-center"><PasscodeInput length={6} /></div>
         </MobileDocDemo>
       </section>
       <section class="space-y-3">
-        <Title level=2>API</Title>
+        <Title level={2}>API</Title>
         <DocsApiTable rows={API} />
       </section>
     </div>
