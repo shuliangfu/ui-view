@@ -6,7 +6,8 @@
  * 否则手写 JSX 只快照首帧，onChange 更新后步骤条不重渲。
  */
 
-import { isSignal, type Signal } from "@dreamer/view";
+import { type Signal } from "@dreamer/view";
+import { readSignalValue, safeIsSignal } from "../safe-signal.ts";
 import type { JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 /** 按需：单文件图标，避免经 icons/mod 拉入全表 */
@@ -76,7 +77,7 @@ function readStepsCurrent(
   v: number | (() => number) | Signal<number> | undefined,
 ): number {
   if (v === undefined) return 0;
-  if (isSignal(v)) return Number((v as Signal<number>).value);
+  if (safeIsSignal(v)) return Number(readSignalValue(v as Signal<number>));
   if (typeof v === "function") {
     if ((v as () => unknown).length !== 0) return 0;
     return Number((v as () => number)());

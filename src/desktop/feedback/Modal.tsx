@@ -304,6 +304,26 @@ function useDrag(
   };
 }
 
+
+/** 弹层内可聚焦选择器（与常见 a11y 实践对齐） */
+const MODAL_FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+/**
+ * 收集容器内可见可聚焦元素。
+ */
+function listModalFocusable(root: HTMLElement): HTMLElement[] {
+  return Array.from(root.querySelectorAll<HTMLElement>(MODAL_FOCUSABLE_SELECTOR))
+    .filter((el) => {
+      if (el.getAttribute("aria-hidden") === "true") return false;
+      const style = globalThis.getComputedStyle?.(el);
+      if (style && (style.visibility === "hidden" || style.display === "none")) {
+        return false;
+      }
+      return true;
+    });
+}
+
 export function Modal(props: ModalProps): JSXRenderable {
   const {
     onClose,
@@ -385,6 +405,65 @@ export function Modal(props: ModalProps): JSXRenderable {
     return () => doc.removeEventListener("keydown", handler as EventListener);
   });
 
+  /**
+   * 打开时：记住触发焦点 → 聚焦弹层首个可聚焦控件；Tab 循环陷阱；
+   * 关闭／卸载时恢复先前焦点（避免焦点落到 body 丢失键盘上下文）。
+   */
+  createEffect(() => {
+    if (!isOpen()) return;
+    const doc = typeof globalThis.document !== "undefined"
+      ? globalThis.document
+      : null;
+    if (!doc) return;
+    const previouslyFocused = doc.activeElement as HTMLElement | null;
+
+    const focusFirst = () => {
+      const panel = doc.querySelector<HTMLElement>("[data-ui-modal-panel]");
+      if (!panel) return;
+      const list = listModalFocusable(panel);
+      (list[0] ?? panel).focus?.({ preventScroll: true });
+    };
+    const raf = globalThis.requestAnimationFrame?.(focusFirst);
+    // fallback without rAF
+    if (raf == null) Promise.resolve().then(focusFirst);
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "Tab") return;
+      const panel = doc.querySelector<HTMLElement>("[data-ui-modal-panel]");
+      if (!panel) return;
+      const list = listModalFocusable(panel);
+      if (list.length === 0) {
+        e.preventDefault();
+        panel.focus?.({ preventScroll: true });
+        return;
+      }
+      const first = list[0]!;
+      const last = list[list.length - 1]!;
+      const active = doc.activeElement as HTMLElement | null;
+      if (e.shiftKey) {
+        if (active === first || !panel.contains(active)) {
+          e.preventDefault();
+          last.focus({ preventScroll: true });
+        }
+      } else if (active === last) {
+        e.preventDefault();
+        first.focus({ preventScroll: true });
+      }
+    };
+    doc.addEventListener("keydown", onKeyDown as EventListener);
+    return () => {
+      doc.removeEventListener("keydown", onKeyDown as EventListener);
+      if (raf != null) globalThis.cancelAnimationFrame?.(raf);
+      if (
+        previouslyFocused &&
+        typeof previouslyFocused.focus === "function" &&
+        doc.contains(previouslyFocused)
+      ) {
+        previouslyFocused.focus({ preventScroll: true });
+      }
+    };
+  });
+
   const handleTitleMouseDown = useDrag(
     () => position.value,
     (v) => {
@@ -443,6 +522,8 @@ export function Modal(props: ModalProps): JSXRenderable {
           wrapClass,
         )}
         style={{ zIndex: wrapZ }}
+        data-ui-modal-panel=""
+        tabindex={-1}
         role="dialog"
         aria-modal="true"
         aria-labelledby={title ? "modal-title" : undefined}
@@ -451,7 +532,7 @@ export function Modal(props: ModalProps): JSXRenderable {
           ? (
             <div
               class={twMerge(
-                "absolute inset-0 bg-black/50 dark:bg-black/60 backdrop-blur-sm transition-opacity",
+                "absolute inset-0 bg-black/50 dark:bg-black/60 backdrop-blur-sm transition-opacity motion-reduce:transition-none",
                 maskClass,
               )}
               onClick={handleMaskClick as unknown as (e: Event) => void}

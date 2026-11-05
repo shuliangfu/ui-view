@@ -33,3 +33,6 @@ export type { TabItem, TabsProps, TabsType } from "./Tabs.tsx";
 
 export { Accordion } from "./Accordion.tsx";
 export type { AccordionItem, AccordionProps } from "./Accordion.tsx";
+
+export { Splitter } from "./Splitter.tsx";
+export type { SplitterProps } from "./Splitter.tsx";

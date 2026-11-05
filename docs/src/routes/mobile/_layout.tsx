@@ -33,12 +33,33 @@ const FEEDBACK_SUBMENU = [
     label: "SwipeCell",
     desc: "滑动单元格",
   },
+  {
+    path: "/mobile/feedback/notice-bar",
+    label: "NoticeBar",
+    desc: "通知栏",
+  },
+  {
+    path: "/mobile/feedback/share-sheet",
+    label: "ShareSheet",
+    desc: "分享面板",
+  },
+  {
+    path: "/mobile/feedback/floating-panel",
+    label: "FloatingPanel",
+    desc: "浮动面板",
+  },
 ] as const;
 
 /** 导航 */
 const NAVIGATION_SUBMENU = [
   { path: "/mobile/navigation/tab-bar", label: "TabBar", desc: "底部标签栏" },
   { path: "/mobile/navigation/navbar", label: "NavBar", desc: "顶栏" },
+  { path: "/mobile/navigation/index-bar", label: "IndexBar", desc: "索引栏" },
+  {
+    path: "/mobile/navigation/dropdown-menu",
+    label: "DropdownMenu",
+    desc: "下拉菜单",
+  },
 ] as const;
 
 /** 数据展示（移动 data-display 子集文档） */
@@ -49,6 +70,8 @@ const DATA_DISPLAY_SUBMENU = [
     /** 侧栏宽度有限，desc 保持短于「列表·下拉刷新·加载更多」全文 */
     desc: "滚动列表",
   },
+  { path: "/mobile/data-display/cell", label: "Cell", desc: "单元格" },
+  { path: "/mobile/data-display/qrcode", label: "QRCode", desc: "二维码" },
 ] as const;
 
 /** 表单（移动入口；Select 等与桌面默认一致，Cascader 等差异见各页） */
@@ -64,6 +87,21 @@ const FORM_SUBMENU = [
   },
   { path: "/mobile/form/time-picker", label: "TimePicker", desc: "时间" },
   { path: "/mobile/form/cascader", label: "Cascader", desc: "级联" },
+  {
+    path: "/mobile/form/number-keyboard",
+    label: "NumberKeyboard",
+    desc: "数字键盘",
+  },
+  {
+    path: "/mobile/form/passcode-input",
+    label: "PasscodeInput",
+    desc: "验证码输入",
+  },
+  {
+    path: "/mobile/form/signature-pad",
+    label: "SignaturePad",
+    desc: "签名板",
+  },
 ] as const;
 
 /** 其它（移动专用工具） */

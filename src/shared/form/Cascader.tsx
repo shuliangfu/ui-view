@@ -16,15 +16,8 @@
  * 若页面里 **`Form` 下方紧挨大块兄弟（如代码预览）**，后绘制的兄弟会盖住浮层，宜调整 **DOM 顺序**（代码块在前、表单项在后）或提高表单侧层叠上下文，勿改挂 body。
  */
 
-import {
-  batch,
-  createEffect,
-  createSignal,
-  isSignal,
-  type JSXRenderable,
-  onCleanup,
-  type Signal,
-} from "@dreamer/view";
+import { batch, createEffect, createSignal, type JSXRenderable, onCleanup, type Signal,  } from "@dreamer/view";
+import { safeIsSignal, writeSignalValue } from "../safe-signal.ts";
 import { twMerge } from "tailwind-merge";
 import { IconChevronDown } from "../basic/icons/ChevronDown.tsx";
 import {
@@ -193,8 +186,8 @@ function CascaderNativeTwoLevel(props: CascaderProps) {
    */
   const commitPath = (newPath: string[]) => {
     const v = valueProp;
-    if (v !== undefined && isSignal(v)) {
-      (v as Signal<string[]>).value = newPath;
+    if (v !== undefined && safeIsSignal(v)) {
+      writeSignalValue(v as Signal<string[]>, newPath);
     }
     onChange?.(newPath);
   };
@@ -527,8 +520,8 @@ function CascaderDropdownPanel(props: CascaderProps) {
    */
   const commitPath = (newPath: string[]) => {
     const v = value;
-    if (v !== undefined && isSignal(v)) {
-      (v as Signal<string[]>).value = newPath;
+    if (v !== undefined && safeIsSignal(v)) {
+      writeSignalValue(v as Signal<string[]>, newPath);
     }
     onChange?.(newPath);
   };

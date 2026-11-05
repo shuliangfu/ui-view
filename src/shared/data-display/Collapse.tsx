@@ -181,7 +181,7 @@ export function Collapse(props: CollapseProps): JSXRenderable {
                 {(showArrow && (expandIcon != null || true)) && (
                   <span
                     class={twMerge(
-                      "shrink-0 transition-transform flex items-center justify-center",
+                      "shrink-0 transition-transform motion-reduce:transition-none flex items-center justify-center",
                       expandIconSizeClasses[size],
                       isActive && "rotate-180",
                     )}

@@ -157,6 +157,30 @@ const config: AppConfig = {
   //   "./middlewares/cors.ts",
   //   { middleware: "./middlewares/auth.ts", condition: (req) => req.url.startsWith("/admin"), name: "admin-auth" },
   // ],
+
+  /**
+   * 文档站安全头：显式 CSP（theme 防闪／HMR／Tailwind 需有限 inline／eval 例外）。
+   * `onResponse` 路径由 dweb 合并本配置；dev 亦启用以便本地对齐。
+   */
+  securityHeaders: {
+    enabled: true,
+    contentSecurityPolicy:
+      "default-src 'self'; " +
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
+      "style-src 'self' 'unsafe-inline'; " +
+      "img-src 'self' data: blob: https:; " +
+      "font-src 'self' data:; " +
+      "connect-src 'self' ws: wss:; " +
+      "frame-ancestors 'self'; " +
+      "base-uri 'self'; " +
+      "form-action 'self'; " +
+      "object-src 'none'",
+    frameOptions: "SAMEORIGIN",
+    referrerPolicy: "strict-origin-when-cross-origin",
+    headers: {
+      "X-Content-Type-Options": "nosniff",
+    },
+  },
 };
 
 export default config;

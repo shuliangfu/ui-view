@@ -27,6 +27,7 @@ const BASIC_SUBMENU = [
   { path: "/desktop/basic/avatar", label: "Avatar", desc: "头像" },
   { path: "/desktop/basic/skeleton", label: "Skeleton", desc: "骨架屏" },
   { path: "/desktop/basic/spinner", label: "Spinner", desc: "加载旋转" },
+  { path: "/desktop/basic/float-button", label: "FloatButton", desc: "悬浮按钮" },
 ] as const;
 
 /**
@@ -116,6 +117,10 @@ const FEEDBACK_SUBMENU = [
     desc: "气泡确认框",
   },
   { path: "/desktop/feedback/result", label: "Result", desc: "结果页" },
+  { path: "/desktop/feedback/notice-bar", label: "NoticeBar", desc: "通知栏" },
+  { path: "/desktop/feedback/overlay", label: "Overlay", desc: "遮罩层" },
+  { path: "/desktop/feedback/tour", label: "Tour", desc: "漫游引导" },
+  { path: "/desktop/feedback/context-menu", label: "ContextMenu", desc: "右键菜单" },
 ] as const;
 
 /** 布局与容器下的二级子菜单，对应路由 /layout/xxx */
@@ -131,6 +136,7 @@ const LAYOUT_SUBMENU = [
   { path: "/desktop/layout/divider", label: "Divider", desc: "分割线" },
   { path: "/desktop/layout/tabs", label: "Tabs", desc: "标签页" },
   { path: "/desktop/layout/accordion", label: "Accordion", desc: "手风琴折叠" },
+  { path: "/desktop/layout/splitter", label: "Splitter", desc: "分割面板" },
 ] as const;
 
 /** 导航下的二级子菜单，对应路由 /navigation/xxx */
@@ -207,6 +213,15 @@ const DATA_DISPLAY_SUBMENU = [
     label: "CodeBlock",
     desc: "代码块",
   },
+  { path: "/desktop/data-display/watermark", label: "Watermark", desc: "水印" },
+  { path: "/desktop/data-display/count-down", label: "CountDown", desc: "倒计时" },
+  { path: "/desktop/data-display/qrcode", label: "QRCode", desc: "二维码" },
+  {
+    path: "/desktop/data-display/virtual-list",
+    label: "VirtualList",
+    desc: "虚拟列表",
+  },
+  { path: "/desktop/data-display/cell", label: "Cell", desc: "单元格" },
 ] as const;
 
 /** 图表下的二级子菜单，对应路由 /charts/xxx，基于 Chart.js */

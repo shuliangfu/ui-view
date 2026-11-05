@@ -120,7 +120,7 @@ export function Accordion(props: AccordionProps): JSXRenderable {
                 <span>{item.header}</span>
                 <span
                   class={twMerge(
-                    "shrink-0 w-5 h-5 text-slate-500 dark:text-slate-400 transition-transform duration-200",
+                    "shrink-0 w-5 h-5 text-slate-500 dark:text-slate-400 transition-transform duration-200 motion-reduce:transition-none",
                     isExpanded && "rotate-180",
                   )}
                 >
@@ -132,7 +132,7 @@ export function Accordion(props: AccordionProps): JSXRenderable {
                 role="region"
                 aria-labelledby={`accordion-header-${item.key}`}
                 class={twMerge(
-                  "grid overflow-hidden transition-[grid-template-rows] duration-200 ease-out",
+                  "grid overflow-hidden transition-[grid-template-rows] duration-200 ease-out motion-reduce:transition-none",
                   isExpanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
                 )}
               >

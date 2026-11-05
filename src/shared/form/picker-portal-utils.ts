@@ -642,12 +642,6 @@ export const pickerTimeListInnerWidthClass = "w-12 min-w-12 max-w-12";
 export const pickerTimeStripRowMultiClass = "inline-flex shrink-0 gap-2";
 
 /**
- * @deprecated 单列时间请用 {@link pickerTimeStripRowMultiClass} + {@link pickerTimeColumnWrapClass} + {@link pickerTimeColumnSpacerClass}，与 `HH:mm` 完全一致。
- */
-export const pickerTimeSingleMergedStripClass =
-  "flex w-[6.5rem] min-w-[6.5rem] max-w-[6.5rem] shrink-0 flex-col items-stretch";
-
-/**
  * 与「时/分」列同宽的空占位：`HH` 仅一列数据时放在第二轨，保证横向与 `HH:mm` 两列（`w-12`×2+`gap-2`）一致；仅用 Tailwind 标准 `w-12`，避免任意宽度未进构建。
  */
 export const pickerTimeColumnSpacerClass =
@@ -658,28 +652,6 @@ export const pickerTimeColumnSpacerClass =
  */
 export const pickerTimeStripSingleCenterWrapClass =
   "flex w-max max-w-full shrink-0 justify-center self-center";
-
-/**
- * @deprecated 合并条方案已弃用；列表在 `w-12` 列内请用 {@link pickerTimeListInnerWidthClass}。
- */
-export const pickerTimeListMergedInnerClass = "w-full min-w-0";
-
-/**
- * @deprecated 请用 {@link pickerTimeStripRowMultiClass} + {@link pickerTimeColumnSpacerClass}。
- */
-export const pickerTimeColumnsRowSingleClass =
-  "flex w-full min-w-0 justify-center gap-2";
-
-/**
- * @deprecated 请用 {@link pickerTimeSingleMergedStripClass}。
- */
-export const pickerTimeColumnWrapSingleClass =
-  "flex w-[6.5rem] min-w-[6.5rem] max-w-[6.5rem] shrink-0 flex-col";
-
-/**
- * @deprecated 时/分/秒列内列表请统一用 {@link pickerTimeListInnerWidthClass}。
- */
-export const pickerTimeListSingleColWidthClass = "w-full min-w-0";
 
 /**
  * 时间滚轮列表内 `button`：在主键 `pointerdown` 时执行与 `onClick` 相同的 `pick`，

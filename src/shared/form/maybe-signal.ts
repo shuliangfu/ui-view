@@ -5,7 +5,12 @@
  * `createSignal` 返回值为零参可调用，运行时与显式 `() => T` 一致；透传至 JSX 时由 View 对「函数型」属性做细粒度绑定。
  */
 
-import { isSignal, type Signal } from "@dreamer/view";
+import type { Signal } from "@dreamer/view";
+import {
+  readSignalValue,
+  safeIsSignal,
+  writeSignalValue,
+} from "../safe-signal.ts";
 
 /**
  * 标量、零参 getter，或 `createSignal` 返回值；用于 `value` / `checked` / `targetKeys` 等受控 props。
@@ -17,8 +22,7 @@ export type MaybeSignal<T> = T | (() => T) | Signal<T>;
 /**
  * 同步读取 {@link MaybeSignal}：未传时返回 `undefined`；Signal 或 getter 则调用一次。
  *
- * 优化：先检查 `isSignal`（O(1) 标记检查），比 `typeof` 更精确且避免对非函数值的类型判断。
- * Signal 的 `.length === 2`（getter + setter），普通 getter `.length === 0`——但统一调用即可。
+ * 优化：先检查 `safeIsSignal`（兼容 view 3 props Proxy），再 `typeof === "function"`。
  *
  * @template T 值类型
  * @param v - 受控 prop
@@ -28,14 +32,13 @@ export function readMaybeSignal<T>(
   v: MaybeSignal<T> | undefined,
 ): T | undefined {
   if (v === undefined) return undefined;
-  // Signal 优先：标记检查 O(1)，避免对 Signal 走 typeof 分支
-  if (isSignal(v)) return (v as () => T)();
+  if (safeIsSignal(v)) return readSignalValue(v as Signal<T>);
   if (typeof v === "function") return (v as () => T)();
   return v as T;
 }
 
 /**
- * 若受控源为 `createSignal` 返回值，将 `next` 写入 `.value`；字面量或普通 getter 则忽略。
+ * 若受控源为 `createSignal` 返回值，将 `next` 写入；字面量或普通 getter 则忽略。
  * 供各表单项在 `onInput`/`onChange`/内部提交路径中统一回写，调用方无需在 `onChange` 里再手写 `sig.value = …`。
  *
  * @typeParam T - 与 {@link MaybeSignal} 一致的数据类型
@@ -46,7 +49,7 @@ export function commitMaybeSignal<T>(
   v: MaybeSignal<T> | undefined,
   next: T,
 ): void {
-  if (v !== undefined && isSignal(v)) {
-    (v as Signal<T>).value = next;
+  if (v !== undefined && safeIsSignal(v)) {
+    writeSignalValue(v as Signal<T>, next);
   }
 }

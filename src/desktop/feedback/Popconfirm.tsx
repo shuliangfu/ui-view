@@ -15,17 +15,8 @@
  * 运行时只做一次性 `mountVNodeTree`，`open` 的 Signal 变化不会重挂子树，表现为点击打不开。
  */
 
-import {
-  createEffect,
-  createMemo,
-  createRenderEffect,
-  createSignal,
-  isSignal,
-  type JSXRenderable,
-  onCleanup,
-  Portal,
-  type Signal,
-} from "@dreamer/view";
+import { createEffect, createMemo, createRenderEffect, createSignal, type JSXRenderable, onCleanup, Portal, type Signal } from "@dreamer/view";
+import { readSignalValue, safeIsSignal, writeSignalValue } from "../../shared/safe-signal.ts";
 import { twMerge } from "tailwind-merge";
 import { Button } from "../../shared/basic/Button.tsx";
 import {
@@ -140,7 +131,7 @@ function popconfirmArrowClass(placement: PopconfirmPlacement): string {
  */
 function readPopconfirmOpenInput(v: PopconfirmOpenInput | undefined): boolean {
   if (v === undefined) return false;
-  if (isSignal(v)) return !!(v as Signal<boolean>).value;
+  if (safeIsSignal(v)) return !!readSignalValue(v as Signal<boolean>);
   if (typeof v === "function") {
     if ((v as () => unknown).length !== 0) return false;
     return !!(v as () => boolean)();
@@ -270,7 +261,7 @@ export function Popconfirm(props: PopconfirmProps): JSXRenderable {
    */
   const requestClose = () => {
     const o = props.open;
-    if (isSignal(o)) (o as Signal<boolean>).value = false;
+    if (safeIsSignal(o)) writeSignalValue(o as Signal<boolean>, false);
     onOpenChange?.(false);
   };
 

@@ -340,3 +340,11 @@ export { Skeleton } from "./Skeleton.tsx";
 export type { SkeletonProps } from "./Skeleton.tsx";
 export { Spinner } from "./Spinner.tsx";
 export type { SpinnerProps } from "./Spinner.tsx";
+
+export { FloatButton } from "./FloatButton.tsx";
+export type {
+  FloatButtonItem,
+  FloatButtonPlacement,
+  FloatButtonProps,
+  FloatButtonShape,
+} from "./FloatButton.tsx";

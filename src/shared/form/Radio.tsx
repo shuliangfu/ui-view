@@ -4,7 +4,8 @@
  * `checked` 为 `createSignal` 返回值时，变更会先写入 Signal。
  */
 
-import { isSignal, type Signal } from "@dreamer/view";
+import { type Signal } from "@dreamer/view";
+import { safeIsSignal, writeSignalValue } from "../safe-signal.ts";
 import type { JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import { controlBlueFocusRing } from "./input-focus-ring.ts";
@@ -79,8 +80,8 @@ export function Radio(props: RadioProps): JSXRenderable {
    */
   const handleChange = (e: Event) => {
     const next = (e.target as HTMLInputElement).checked;
-    if (checkedMaybe !== undefined && isSignal(checkedMaybe)) {
-      (checkedMaybe as Signal<boolean>).value = next;
+    if (checkedMaybe !== undefined && safeIsSignal(checkedMaybe)) {
+      writeSignalValue(checkedMaybe as Signal<boolean>, next);
     }
     onChangeProp?.(e);
   };

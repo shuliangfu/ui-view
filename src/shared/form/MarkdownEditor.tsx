@@ -2,20 +2,11 @@
  * MarkdownEditor：源码编辑 + 可选实时预览，解析由 `@dreamer/markdown` 的 {@link parse} 完成。
  * 预览在写入 HTML 后对 `pre code.language-*` 用 Prism 着色，并为围栏块加独立底色与右上角复制（与 {@link CodeBlock} 行为接近）。
  * 顶栏与 {@link RichTextEditor} 对齐：分组、SVG 图标、{@link Tooltip}、全屏（根节点 `md-editor-fullscreen`）。
- * `split` 宽屏仅全屏钮；窄屏与 `tabs` 含源码/预览切换。预览区写入 `innerHTML`，勿用于不可信内容。
+ * `split` 宽屏仅全屏钮；窄屏与 `tabs` 含源码/预览切换。预览区写入 `innerHTML`；默认经 markdown sanitizeUrl＋`hardenPreviewHtml` 收紧，仍勿把完全不可信内容当生产 CMS。
  */
 
-import {
-  createEffect,
-  createMemo,
-  createRef,
-  createRenderEffect,
-  createSignal,
-  isSignal,
-  type JSXRenderable,
-  onMount,
-  type Signal,
-} from "@dreamer/view";
+import { createEffect, createMemo, createRef, createRenderEffect, createSignal, type JSXRenderable, onMount, type Signal,  } from "@dreamer/view";
+import { safeIsSignal } from "../safe-signal.ts";
 import { twMerge } from "tailwind-merge";
 import { parse } from "@dreamer/markdown";
 import type { ParseOptions } from "@dreamer/markdown/types";
@@ -183,7 +174,7 @@ function takeMarkdownEditorActiveTab(
     return s;
   }
   const v = props.value;
-  if (v !== undefined && isSignal(v)) {
+  if (v !== undefined && safeIsSignal(v)) {
     const hit = mdEditorActiveTabByValueSignal.get(v as object);
     if (hit) return hit;
     const s = createSignal<"edit" | "preview">("edit");
@@ -437,6 +428,20 @@ const readOnlyTextareaCls = "bg-slate-50 dark:bg-slate-800/80 cursor-default";
  * @param opts - 与默认合并后的解析选项
  * @param messages - 用于占位与失败提示的本地化文案
  */
+/**
+ * 预览 HTML 二次消毒：@dreamer/markdown 已对链接做 sanitizeUrl；
+ * 此处再剥 script／事件处理器／javascript: 属性，收紧不可信源码的默认面。
+ */
+function hardenPreviewHtml(html: string): string {
+  return html
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "")
+    .replace(/\son[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, "")
+    .replace(
+      /\s(href|src|xlink:href)\s*=\s*("\s*javascript:[^"]*"|'\s*javascript:[^']*'|javascript:[^\s>]+)/gi,
+      ' $1="#"',
+    );
+}
+
 function safeParseMarkdown(
   md: string,
   opts: ParseOptions,
@@ -444,7 +449,7 @@ function safeParseMarkdown(
 ): string {
   if (md.trim() === "") return messages.previewEmpty;
   try {
-    return parse(md, opts);
+    return hardenPreviewHtml(parse(md, opts));
   } catch {
     return messages.previewError;
   }

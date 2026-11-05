@@ -35,7 +35,6 @@
     "include": [
       "src/**/*.ts",
       "src/**/*.tsx",
-      "styles/*.css",
       "plugin.ts",
       "LICENSE",
       "NOTICE",
@@ -73,10 +72,10 @@
     "@dreamer/runtime-adapter": "jsr:@dreamer/runtime-adapter@^1.2.2",
     "@dreamer/service": "jsr:@dreamer/service@^1.1.0",
     "@dreamer/test": "jsr:@dreamer/test@^1.2.3",
-    "@dreamer/view": "jsr:@dreamer/view@^2.2.0",
-    "tailwindcss": "npm:tailwindcss@4.1.18",
-    "tailwind-merge": "npm:tailwind-merge@2.6.1",
-    "chart.js": "npm:chart.js@4.5.1",
+    "@dreamer/view": "jsr:@dreamer/view@^3.0.1",
+    "tailwindcss": "npm:tailwindcss@4.3.4",
+    "tailwind-merge": "npm:tailwind-merge@3.7.0",
+    "chart.js": "npm:chart.js@4.6.1",
     "prismjs": "npm:prismjs@1.30.0"
   },
   "nodeModulesDir": "auto",

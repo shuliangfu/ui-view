@@ -709,3 +709,50 @@ export type {
   TableEditableOption,
   TableProps,
 } from "./data-display/mod.ts";
+
+// DIG P0/P1 增量（desktop）
+export { FloatButton } from "./basic/mod.ts";
+export type {
+  FloatButtonItem,
+  FloatButtonPlacement,
+  FloatButtonProps,
+  FloatButtonShape,
+} from "./basic/mod.ts";
+export {
+  ContextMenu,
+  NoticeBar,
+  Overlay,
+  Tour,
+  defaultNoticeBarMessages,
+  defaultTourMessages,
+} from "./feedback/mod.ts";
+export type {
+  ContextMenuItem,
+  ContextMenuProps,
+  NoticeBarMessages,
+  NoticeBarProps,
+  NoticeBarTone,
+  OverlayProps,
+  TourMessages,
+  TourProps,
+  TourStep,
+} from "./feedback/mod.ts";
+export {
+  Cell,
+  CellGroup,
+  CountDown,
+  QRCode,
+  VirtualList,
+  Watermark,
+} from "./data-display/mod.ts";
+export type {
+  CellGroupProps,
+  CellProps,
+  CountDownProps,
+  CountDownTimeParts,
+  QRCodeProps,
+  VirtualListProps,
+  WatermarkProps,
+} from "./data-display/mod.ts";
+export { Splitter } from "./layout/mod.ts";
+export type { SplitterProps } from "./layout/mod.ts";

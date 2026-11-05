@@ -3,19 +3,12 @@
  * 展示代码并支持语法高亮（基于 Prism）、行号、复制、标题、最大高度滚动；归属 3.7 数据展示。
  */
 
-import Prism from "prismjs"
 import type { JSXRenderable } from "@dreamer/view";
-import "prismjs/components/prism-bash.js"
-import "prismjs/components/prism-css.js"
-import "prismjs/components/prism-javascript.js"
-import "prismjs/components/prism-json.js"
-import "prismjs/components/prism-jsx.js"
-import "prismjs/components/prism-markdown.js"
-import "prismjs/components/prism-tsx.js"
-import "prismjs/components/prism-typescript.js"
-// html 与 plaintext 通常已在 core 或通过 markup
-import "prismjs/components/prism-markup.js"
 import { twMerge } from "tailwind-merge"
+import {
+  highlightPrismCode,
+  PRISM_LANG_ALLOW,
+} from "../prism-languages.ts";
 /** 按需：单文件图标，避免经 icons/mod 拉入全表 */
 import { IconCopy } from "../basic/icons/Copy.tsx"
 import { toast } from "../feedback/toast-store.ts"
@@ -46,7 +39,9 @@ export type CodeBlockLanguage =
   | "shell"
   | "markdown"
   | "plaintext"
-  | string;
+  | "markup"
+  | "tsx"
+  | "jsx";
 
 export interface CodeBlockProps {
   /** 代码内容 */
@@ -137,28 +132,21 @@ export function CodeBlock(props: CodeBlockProps): JSXRenderable {
   const lineCount = lines.length;
 
   /** 服务端无 DOM，需在 JSX 中直接输出代码文本，供 SSR 可见；客户端由 setCodeRef 替换为高亮结果 */
+  /**
+   * Prism 高亮仅允许 {@link PRISM_LANG_ALLOW}；未知语言走 textContent。
+   * innerHTML 仅写入 Prism 自产 token HTML。
+   */
   const setCodeRef = (el: unknown) => {
     const codeEl = el as HTMLElement | null;
     if (!codeEl || typeof globalThis.document === "undefined") return;
-    let lang = (language ?? "plaintext").toLowerCase();
-    if (lang === "html") lang = "markup";
-    if (lang === "shell") lang = "bash";
-    const prism = Prism as {
-      languages?: Record<string, unknown>;
-      highlight: (code: string, grammar: unknown, lang: string) => string;
-    };
-    let grammar = prism.languages?.[lang];
-    if (!grammar && lang === "tsx") {
-      grammar = prism.languages?.["typescript"];
-      if (grammar) lang = "typescript";
+    if (!PRISM_LANG_ALLOW.has((language ?? "plaintext").toLowerCase())) {
+      codeEl.textContent = code;
+      return;
     }
-    try {
-      if (grammar) {
-        codeEl.innerHTML = prism.highlight(code, grammar, lang);
-      } else {
-        codeEl.textContent = code;
-      }
-    } catch {
+    const html = highlightPrismCode(code, language);
+    if (html != null) {
+      codeEl.innerHTML = html;
+    } else {
       codeEl.textContent = code;
     }
   };

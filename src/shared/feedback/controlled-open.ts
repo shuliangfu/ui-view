@@ -3,7 +3,8 @@
  * 须传 `open={createSignal 返回值}` 或 `open={() => sig()}`；勿依赖 `open={sig.value}` 在 Hybrid/函数子插入下随点击更新。
  */
 
-import { isSignal, type Signal } from "@dreamer/view";
+import { type Signal } from "@dreamer/view";
+import { readSignalValue, safeIsSignal } from "../safe-signal.ts";
 
 /** 是否打开：快照、`Signal<boolean>`、零参 getter（勿把带参函数当 getter） */
 export type ControlledOpenInput = boolean | (() => boolean) | Signal<boolean>;
@@ -30,7 +31,7 @@ export function readControlledOpenInput(
   v: ControlledOpenInput | undefined,
 ): boolean {
   if (v === undefined) return false;
-  if (isSignal(v)) return !!(v as Signal<boolean>).value;
+  if (safeIsSignal(v)) return !!readSignalValue(v as Signal<boolean>);
   if (typeof v === "function") return !!(v as () => boolean)();
   return !!v;
 }
@@ -45,7 +46,7 @@ export function readControlledOpenInput(
  */
 export function readHasMoreInput(v: HasMoreInput | undefined): boolean {
   if (v === undefined) return true;
-  if (isSignal(v)) return !!(v as Signal<boolean>).value;
+  if (safeIsSignal(v)) return !!readSignalValue(v as Signal<boolean>);
   if (typeof v === "function") return !!(v as () => boolean)();
   return !!v;
 }
@@ -61,7 +62,7 @@ export function readControlledStringInput(
   v: ControlledStringInput | undefined,
 ): string | undefined {
   if (v === undefined) return undefined;
-  if (isSignal(v)) return (v as Signal<string>).value;
+  if (safeIsSignal(v)) return readSignalValue(v as Signal<string>);
   if (typeof v === "function") return (v as () => string)();
   return v;
 }

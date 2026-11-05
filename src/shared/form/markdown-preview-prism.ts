@@ -5,18 +5,9 @@
  * 与 {@link CodeBlock} 使用相同语言包与 token 样式（{@link PRISM_TOKEN_CSS}）。
  */
 
-import Prism from "prismjs";
-import "prismjs/components/prism-bash.js";
-import "prismjs/components/prism-css.js";
-import "prismjs/components/prism-javascript.js";
-import "prismjs/components/prism-json.js";
-import "prismjs/components/prism-jsx.js";
-import "prismjs/components/prism-markdown.js";
-import "prismjs/components/prism-tsx.js";
-import "prismjs/components/prism-typescript.js";
-import "prismjs/components/prism-markup.js";
 import { toast } from "../feedback/toast-store.ts";
 import { PRISM_TOKEN_CSS } from "../prism-token-styles.ts";
+import { highlightPrismCode, normalizePrismLang } from "../prism-languages.ts";
 
 /**
  * 预览内代码块外壳与复制按钮样式（挂 head，避免被 `innerHTML` 清空）。
@@ -106,12 +97,12 @@ const prismPreviewCssInjectedForDoc = new WeakMap<Document, boolean>();
 function fenceAliasToPrismLang(className: string): string {
   const m = className.match(/\blanguage-([\w-]+)\b/);
   if (!m) return "";
-  const alias = m[1].toLowerCase();
-  if (alias === "ts") return "typescript";
-  if (alias === "js") return "javascript";
-  if (alias === "html" || alias === "xml") return "markup";
-  if (alias === "shell" || alias === "sh") return "bash";
-  return alias;
+  let alias = m[1].toLowerCase();
+  if (alias === "ts") alias = "typescript";
+  if (alias === "js") alias = "javascript";
+  if (alias === "xml") alias = "html";
+  if (alias === "sh") alias = "shell";
+  return normalizePrismLang(alias) ?? "";
 }
 
 /**
@@ -156,29 +147,17 @@ export function ensureMarkdownPreviewPrismStyles(host: HTMLElement): void {
  */
 export function highlightMarkdownPreviewCodeBlocks(host: HTMLElement): void {
   if (!isMarkdownPreviewDomHost(host)) return;
-  const prism = Prism as {
-    languages?: Record<string, unknown>;
-    highlight: (code: string, grammar: unknown, lang: string) => string;
-  };
 
   const codes = host.querySelectorAll("pre > code[class*='language-']");
   codes.forEach((node) => {
     const codeEl = node as HTMLElement;
-    let lang = fenceAliasToPrismLang(codeEl.className);
+    const lang = fenceAliasToPrismLang(codeEl.className);
     if (!lang) return;
-
-    let grammar = prism.languages?.[lang];
-    if (!grammar && lang === "tsx") {
-      grammar = prism.languages?.["typescript"];
-      if (grammar) lang = "typescript";
-    }
-
     const source = codeEl.textContent ?? "";
-    try {
-      if (grammar) {
-        codeEl.innerHTML = prism.highlight(source, grammar, lang);
-      }
-    } catch {
+    const html = highlightPrismCode(source, lang);
+    if (html != null) {
+      codeEl.innerHTML = html;
+    } else {
       codeEl.textContent = source;
     }
   });

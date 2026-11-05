@@ -8,7 +8,8 @@
  * 无可用 document 时走浏览器渲染路径会访问 DOM 抛错。
  */
 
-import { createMemo, getDocument, isSignal, type Signal } from "@dreamer/view";
+import { createMemo, getDocument, type Signal } from "@dreamer/view";
+import { readSignalValue, safeIsSignal } from "../safe-signal.ts";
 import type { JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 
@@ -49,7 +50,7 @@ export interface ProgressProps {
 const statusSuccessCls = "bg-green-500 dark:bg-green-400";
 const statusExceptionCls = "bg-red-500 dark:bg-red-400";
 const statusNormalCls = "bg-blue-500 dark:bg-blue-400";
-const statusActiveCls = "bg-blue-500 dark:bg-blue-400 animate-pulse";
+const statusActiveCls = "bg-blue-500 dark:bg-blue-400 animate-pulse motion-reduce:animate-none";
 
 function percentCls(status: ProgressStatus): string {
   if (status === "success") return statusSuccessCls;
@@ -68,8 +69,8 @@ function readProgressPercentInput(
   v: ProgressPercentInput | undefined,
 ): number {
   if (v === undefined) return 0;
-  if (isSignal(v)) {
-    const n = Number((v as Signal<number>).value);
+  if (safeIsSignal(v)) {
+    const n = Number(readSignalValue(v as Signal<number>));
     return clampProgressPercent(n);
   }
   if (typeof v === "function") {
@@ -101,7 +102,7 @@ function percentPropIsReactive(
   v: ProgressPercentInput | undefined,
 ): boolean {
   if (v === undefined) return false;
-  if (isSignal(v)) return true;
+  if (safeIsSignal(v)) return true;
   return typeof v === "function" && (v as () => unknown).length === 0;
 }
 
@@ -141,7 +142,7 @@ function ProgressLine(props: {
       >
         <div
           class={twMerge(
-            "h-full rounded-full transition-all duration-300",
+            "h-full rounded-full transition-all duration-300 motion-reduce:transition-none",
             barCls,
           )}
           style={{
@@ -224,7 +225,7 @@ function ProgressCircle(props: {
           stroke-dasharray={circumference}
           stroke-dashoffset={offset}
           stroke-linecap="round"
-          class="transition-all duration-300"
+          class="transition-all duration-300 motion-reduce:transition-none"
         />
       </svg>
       {showInfo && (

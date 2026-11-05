@@ -1,6 +1,6 @@
 /**
  * ui-view docs 上传演示：整文件用 {@link Uploader}；分片用 `@dreamer/upload/server` 的 MultipartUploadHandler +
- * 本地磁盘 {@link createLocalCloudStorageAdapter}（仅开发/文档，生产请接鉴权与对象存储）。
+ * 本地磁盘 {@link createLocalCloudStorageAdapter}（仅开发/文档本地演示：`requireAuth: false`＋MIME 白名单；生产请接 authenticate 与对象存储）。
  */
 
 import { createLocalCloudStorageAdapter } from "@dreamer/upload/adapters";
@@ -26,13 +26,27 @@ let multipartHandlerSingleton:
  */
 export function getUploader(): Uploader {
   if (!uploaderSingleton) {
+    /**
+     * docs 演示上传：仅本地开发／文档站。收紧 MIME（常见图文），魔数校验默认开。
+     * 匿名写仅因演示便利；生产应用须接 authenticate，勿照搬 requireAuth:false。
+     */
     uploaderSingleton = createUploader({
       uploadDir: UPLOAD_ROOT,
       validation: {
-        maxFileSize: 50 * 1024 * 1024,
-        allowedMimeTypes: [],
+        maxFileSize: 10 * 1024 * 1024,
+        allowedMimeTypes: [
+          "image/jpeg",
+          "image/png",
+          "image/gif",
+          "image/webp",
+          "image/svg+xml",
+          "text/plain",
+          "application/pdf",
+        ],
       },
-      maxTotalSize: 80 * 1024 * 1024,
+      maxTotalSize: 20 * 1024 * 1024,
+      verifyMagicBytes: true,
+      requireMimeType: true,
     });
   }
   return uploaderSingleton;
@@ -58,11 +72,24 @@ export function getMultipartHandler(): ReturnType<
       baseDir: UPLOAD_ROOT,
       publicFileBasePath: "/api/upload/file",
     });
+    /**
+     * 分片演示同样收紧 MIME；`requireAuth: false` 标明「仅本地 docs」，
+     * 与 upload@2 默认 requireAuth=true 区分，避免演示站 401。
+     */
     multipartHandlerSingleton = createMultipartUploadHandler({
       storage,
-      maxFileSize: 50 * 1024 * 1024,
-      maxPartSize: 10 * 1024 * 1024,
-      allowedMimeTypes: [],
+      maxFileSize: 10 * 1024 * 1024,
+      maxPartSize: 5 * 1024 * 1024,
+      allowedMimeTypes: [
+        "image/jpeg",
+        "image/png",
+        "image/gif",
+        "image/webp",
+        "image/svg+xml",
+        "text/plain",
+        "application/pdf",
+      ],
+      requireAuth: false,
     });
   }
   return multipartHandlerSingleton;

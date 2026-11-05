@@ -37,15 +37,15 @@
     "@dreamer/logger": "npm:@jsr/dreamer__logger@^1.1.0",
     "@dreamer/runtime-adapter": "npm:@jsr/dreamer__runtime-adapter@^1.2.2",
     "@dreamer/service": "npm:@jsr/dreamer__service@^1.1.0",
-    "@dreamer/view": "npm:@jsr/dreamer__view@^2.2.0",
-    "tailwindcss": "npm:tailwindcss@4.1.18",
-    "tailwind-merge": "npm:tailwind-merge@2.6.1",
-    "chart.js": "npm:chart.js@4.5.1",
+    "@dreamer/view": "npm:@jsr/dreamer__view@^3.0.1",
+    "tailwindcss": "npm:tailwindcss@4.3.4",
+    "tailwind-merge": "npm:tailwind-merge@3.7.0",
+    "chart.js": "npm:chart.js@4.6.1",
     "prismjs": "npm:prismjs@1.30.0"
   },
   "devDependencies": {
     "@dreamer/test": "npm:@jsr/dreamer__test@^1.2.3",
-    "tsx": "^4.23.12"
+    "tsx": "^4.23.15"
   },
   "engines": {
     "node": ">=22",

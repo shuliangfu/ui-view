@@ -8,7 +8,8 @@
  * 否则 `sr-only`、`absolute` 等类未进产线 CSS 时，会出现原生方框+碎块/异常大的滑块等样式崩坏。
  */
 
-import { createSignal, isSignal, type Signal } from "@dreamer/view";
+import { createSignal, type Signal } from "@dreamer/view";
+import { readSignalValue, safeIsSignal, writeSignalValue } from "../safe-signal.ts";
 import type { JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import { commitMaybeSignal, readMaybeSignal } from "./maybe-signal.ts";
@@ -63,8 +64,8 @@ function getSwitchOn(
   local: Signal<boolean> | undefined,
 ): boolean {
   if (isUncontrolled && local) return local.value;
-  if (checkedMaybe !== undefined && isSignal(checkedMaybe)) {
-    return (checkedMaybe as Signal<boolean>).value;
+  if (checkedMaybe !== undefined && safeIsSignal(checkedMaybe)) {
+    return readSignalValue(checkedMaybe as Signal<boolean>);
   }
   return readMaybeSignal(checkedMaybe) ?? false;
 }
@@ -100,8 +101,8 @@ export function Switch(props: SwitchProps): JSXRenderable {
    */
   const handleChange = (e: Event) => {
     const next = (e.target as HTMLInputElement).checked;
-    if (checkedMaybe !== undefined && isSignal(checkedMaybe)) {
-      (checkedMaybe as Signal<boolean>).value = next;
+    if (checkedMaybe !== undefined && safeIsSignal(checkedMaybe)) {
+      writeSignalValue(checkedMaybe as Signal<boolean>, next);
     } else if (isUncontrolled && localChecked) {
       localChecked.value = next;
     } else {

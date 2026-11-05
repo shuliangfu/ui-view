@@ -198,13 +198,13 @@ export function BackTop(props: BackTopProps): JSXRenderable {
         right: `${right}px`,
         bottom: `${bottom}px`,
         zIndex: 100,
-        transition: "opacity 0.2s, visibility 0.2s",
+        transition: globalThis.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ? "none" : "opacity 0.2s, visibility 0.2s",
       }}
     >
       <button
         type="button"
         class={twMerge(
-          "flex items-center justify-center w-10 h-10 rounded-full shadow-lg hover:opacity-90 active:scale-95 transition",
+          "flex items-center justify-center w-10 h-10 rounded-full shadow-lg hover:opacity-90 active:scale-95 transition motion-reduce:transition-none motion-reduce:active:scale-100",
           "bg-slate-200 text-slate-900 dark:bg-slate-800 dark:text-white",
           className,
         )}

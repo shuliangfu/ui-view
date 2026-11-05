@@ -4,6 +4,7 @@
  */
 
 import type { Signal } from "@dreamer/view";
+import { readSignalValue, writeSignalValue } from "../safe-signal.ts";
 import type { JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import { IconChevronLeft } from "../basic/icons/ChevronLeft.tsx";
@@ -217,7 +218,7 @@ export function PickerCalendarNav(
     } = props;
     const msg = { ...defaultPickerCalendarNavMessages, ...messages };
 
-    const view = viewDate.value;
+    const view = readSignalValue(viewDate);
     /** 与 createSignal 初始值对齐；勿使用未定义的 panel 引用（会导致整段日历无法挂载） */
     const mode: PickerCalendarHeaderPanel = panelMode.value ?? "day";
     const y = view.getFullYear();
@@ -230,43 +231,43 @@ export function PickerCalendarNav(
         daySelectionMode === "single" &&
         rangeStartSignal != null &&
         rangeEndSignal != null
-      ? (rangeDatetimeActiveEndSignal.value
-        ? (rangeEndSignal.value ?? undefined)
-        : (rangeStartSignal.value ?? undefined))
+      ? (readSignalValue(rangeDatetimeActiveEndSignal)
+        ? (readSignalValue(rangeEndSignal) ?? undefined)
+        : (readSignalValue(rangeStartSignal) ?? undefined))
       : selectedDaySignal != null
-      ? (selectedDaySignal.value ?? undefined)
+      ? (readSignalValue(selectedDaySignal) ?? undefined)
       : selectedDate;
     const calendarRangeStart = rangeStartSignal != null
-      ? (rangeStartSignal.value ?? undefined)
+      ? (readSignalValue(rangeStartSignal) ?? undefined)
       : rangeStart;
     const calendarRangeEnd = rangeEndSignal != null
-      ? (rangeEndSignal.value ?? undefined)
+      ? (readSignalValue(rangeEndSignal) ?? undefined)
       : rangeEnd;
 
     /** multiple：YMD signal → 日期时间串 signal+映射 → 否则 props 快照 */
     const calendarSelectedDatesResolved =
       daySelectionMode === "multiple" && multipleYmdSignal != null
-        ? parseYmdStringsToDates(multipleYmdSignal.value)
+        ? parseYmdStringsToDates(readSignalValue(multipleYmdSignal))
         : daySelectionMode === "multiple" &&
             multipleItemsSignal != null &&
             multipleItemsToDays != null
-        ? multipleItemsToDays(multipleItemsSignal.value)
+        ? multipleItemsToDays(readSignalValue(multipleItemsSignal))
         : selectedDates;
 
     /** 日视图：左右为上一月 / 下一月 */
     const goPrevMonth = () => {
-      viewDate.value = new Date(y, m - 1, 1);
+      writeSignalValue(viewDate, new Date(y, m - 1, 1));
     };
     const goNextMonth = () => {
-      viewDate.value = new Date(y, m + 1, 1);
+      writeSignalValue(viewDate, new Date(y, m + 1, 1));
     };
 
     /** 月视图：切换展示年（仍停留在月宫格） */
     const goPrevYearInMonthPanel = () => {
-      viewDate.value = new Date(y - 1, m, 1);
+      writeSignalValue(viewDate, new Date(y - 1, m, 1));
     };
     const goNextYearInMonthPanel = () => {
-      viewDate.value = new Date(y + 1, m, 1);
+      writeSignalValue(viewDate, new Date(y + 1, m, 1));
     };
 
     /** 打开月选择：从日视图点标题进入 */
@@ -296,7 +297,7 @@ export function PickerCalendarNav(
     /** 选中某月后：完整日 format 进入日视图，否则停在月视图 */
     const pickMonth = (monthIndex: number) => {
       if (isMonthFullyOutsideMinMax(y, monthIndex, minDate, maxDate)) return;
-      viewDate.value = new Date(y, monthIndex, 1);
+      writeSignalValue(viewDate, new Date(y, monthIndex, 1));
       if (dateGranularity === "year-month") return;
       panelMode.value = "day";
     };
@@ -305,10 +306,10 @@ export function PickerCalendarNav(
     const pickYear = (year: number) => {
       if (isYearFullyOutsideMinMax(year, minDate, maxDate)) return;
       if (dateGranularity === "year") {
-        viewDate.value = new Date(year, 0, 1);
+        writeSignalValue(viewDate, new Date(year, 0, 1));
         return;
       }
-      viewDate.value = new Date(year, m, 1);
+      writeSignalValue(viewDate, new Date(year, m, 1));
       panelMode.value = "month";
     };
 

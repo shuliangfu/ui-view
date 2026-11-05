@@ -15,18 +15,8 @@
  * **换图动画**：由 {@link ImageViewerProps.transition} 指定，见 {@link ImageViewerTransition}；双缓冲预载后播放，系统「减少动态效果」时一律瞬时切层。
  */
 
-import {
-  createEffect,
-  createMemo,
-  createRef,
-  createSignal,
-  isSignal,
-  type JSXRenderable,
-  onCleanup,
-  Show,
-  type Signal,
-  untrack,
-} from "@dreamer/view";
+import { createEffect, createMemo, createRef, createSignal, type JSXRenderable, onCleanup, Show, type Signal, untrack,  } from "@dreamer/view";
+import { safeIsSignal } from "../safe-signal.ts";
 import { twMerge } from "tailwind-merge";
 /** 按需：单文件图标，避免经 icons/mod 拉入全表 */
 import { IconChevronLeft } from "../basic/icons/ChevronLeft.tsx";
@@ -91,7 +81,7 @@ function readImageViewerOpenInput(
 ): boolean {
   if (v === undefined) return false;
   /** 用无参调用与 `.value` 等价且兼容解构出的 getter（getter 无 `.value` 属性）。 */
-  if (isSignal(v)) return !!(v as () => boolean)();
+  if (safeIsSignal(v)) return !!(v as () => boolean)();
   if (typeof v === "function") {
     if ((v as () => unknown).length !== 0) return false;
     return !!(v as () => boolean)();
@@ -107,7 +97,7 @@ function readImageViewerOpenInput(
 function readImageViewerIndexInput(v: ImageViewerIndexInput): number {
   let n: number;
   /** 同 {@link readImageViewerOpenInput}：解构 getter 须用 `()` 追踪。 */
-  if (isSignal(v)) n = Number((v as () => number)());
+  if (safeIsSignal(v)) n = Number((v as () => number)());
   else if (typeof v === "function") {
     if ((v as () => unknown).length !== 0) return 0;
     n = Number((v as () => number)());
@@ -126,7 +116,7 @@ function readImageViewerTransitionInput(
   v: ImageViewerTransitionInput | undefined,
 ): ImageViewerTransition {
   if (v === undefined) return "fade";
-  if (isSignal(v)) {
+  if (safeIsSignal(v)) {
     return (v as () => ImageViewerTransition)() as ImageViewerTransition;
   }
   if (typeof v === "function") {

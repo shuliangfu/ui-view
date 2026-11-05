@@ -23,7 +23,7 @@ const sizeClasses: Record<SizeVariant, string> = {
 export function Spinner(props: SpinnerProps): JSXRenderable {
   const { size = "md", class: className } = props;
   const base =
-    "inline-block rounded-full border-current border-t-transparent animate-spin text-blue-600 dark:text-blue-400";
+    "inline-block rounded-full border-current border-t-transparent animate-spin motion-reduce:animate-none text-blue-600 dark:text-blue-400";
   return (
     <span
       class={twMerge(base, sizeClasses[size], className)}

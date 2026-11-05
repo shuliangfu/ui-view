@@ -7,15 +7,8 @@
  * 左/右拉出；支持标题（字符串或自定义 TSX）、`titleAlign`、底部、遮罩、Esc、宽度；客户端有真实 `document.body` 时走 Portal，SSR/无 body 时内联快照。
  */
 
-import {
-  createMemo,
-  createPortal,
-  createRenderEffect,
-  isSignal,
-  type JSXRenderable,
-  onCleanup,
-  type Signal,
-} from "@dreamer/view";
+import { createEffect, createMemo, createPortal, createRenderEffect, type JSXRenderable, onCleanup, type Signal } from "@dreamer/view";
+import { readSignalValue, safeIsSignal } from "../safe-signal.ts";
 import { twMerge } from "tailwind-merge";
 /** 按需：单文件图标，避免经 icons/mod 拉入全表 */
 import { IconClose } from "../basic/icons/Close.tsx";
@@ -110,7 +103,7 @@ const defaultWidth = "360px";
  */
 function readDrawerOpenInput(v: DrawerOpenInput | undefined): boolean {
   if (v === undefined) return false;
-  if (isSignal(v)) return !!(v as Signal<boolean>).value;
+  if (safeIsSignal(v)) return !!readSignalValue(v as Signal<boolean>);
   if (typeof v === "function") {
     if ((v as () => unknown).length !== 0) return false;
     return !!(v as () => boolean)();
@@ -178,6 +171,26 @@ function getBrowserBodyPortalHost(): HTMLElement | null {
   }
 }
 
+
+/** 抽屉内可聚焦选择器（与 Modal 对齐） */
+const DRAWER_FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+/**
+ * 收集容器内可见可聚焦元素。
+ */
+function listDrawerFocusable(root: HTMLElement): HTMLElement[] {
+  return Array.from(root.querySelectorAll<HTMLElement>(DRAWER_FOCUSABLE_SELECTOR))
+    .filter((el) => {
+      if (el.getAttribute("aria-hidden") === "true") return false;
+      const style = globalThis.getComputedStyle?.(el);
+      if (style && (style.visibility === "hidden" || style.display === "none")) {
+        return false;
+      }
+      return true;
+    });
+}
+
 export function Drawer(props: DrawerProps): JSXRenderable {
   const {
     onClose,
@@ -204,6 +217,64 @@ export function Drawer(props: DrawerProps): JSXRenderable {
    * 须无条件调用：`createRenderEffect` 内读 {@link isOpen}，订阅 `open` 的 `Signal`。
    */
   const isOpen = createMemo(() => readDrawerOpenInput(props.open));
+
+  /**
+   * 打开时：记住触发焦点 → 聚焦抽屉首个可聚焦控件；Tab 循环陷阱；
+   * 关闭／卸载时恢复先前焦点。
+   */
+  createEffect(() => {
+    if (!isOpen()) return;
+    const doc = typeof globalThis.document !== "undefined"
+      ? globalThis.document
+      : null;
+    if (!doc) return;
+    const previouslyFocused = doc.activeElement as HTMLElement | null;
+
+    const focusFirst = () => {
+      const panel = doc.querySelector<HTMLElement>("[data-ui-drawer-panel]");
+      if (!panel) return;
+      const list = listDrawerFocusable(panel);
+      (list[0] ?? panel).focus?.({ preventScroll: true });
+    };
+    const raf = globalThis.requestAnimationFrame?.(focusFirst);
+    if (raf == null) Promise.resolve().then(focusFirst);
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "Tab") return;
+      const panel = doc.querySelector<HTMLElement>("[data-ui-drawer-panel]");
+      if (!panel) return;
+      const list = listDrawerFocusable(panel);
+      if (list.length === 0) {
+        e.preventDefault();
+        panel.focus?.({ preventScroll: true });
+        return;
+      }
+      const first = list[0]!;
+      const last = list[list.length - 1]!;
+      const active = doc.activeElement as HTMLElement | null;
+      if (e.shiftKey) {
+        if (active === first || !panel.contains(active)) {
+          e.preventDefault();
+          last.focus({ preventScroll: true });
+        }
+      } else if (active === last) {
+        e.preventDefault();
+        first.focus({ preventScroll: true });
+      }
+    };
+    doc.addEventListener("keydown", onKeyDown as EventListener);
+    return () => {
+      doc.removeEventListener("keydown", onKeyDown as EventListener);
+      if (raf != null) globalThis.cancelAnimationFrame?.(raf);
+      if (
+        previouslyFocused &&
+        typeof previouslyFocused.focus === "function" &&
+        doc.contains(previouslyFocused)
+      ) {
+        previouslyFocused.focus({ preventScroll: true });
+      }
+    };
+  });
 
   /**
    * 订阅 `title` 的零参 getter，并与纯字符串 / 自定义 TSX 同步刷新标题栏。
@@ -235,7 +306,8 @@ export function Drawer(props: DrawerProps): JSXRenderable {
     const elWithFlag = el as HTMLElement & { _drawerAnimated?: boolean };
     if (elWithFlag._drawerAnimated) return;
     elWithFlag._drawerAnimated = true;
-    st.transition = "transform 0.2s ease-out";
+    const reduceMotion = globalThis.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+    st.transition = reduceMotion ? "none" : "transform 0.2s ease-out";
     st.transform = isLeft ? "translateX(-100%)" : "translateX(100%)";
     const raf = (globalThis as unknown as {
       requestAnimationFrame?: (cb: () => void) => number;
@@ -278,13 +350,15 @@ export function Drawer(props: DrawerProps): JSXRenderable {
         {/** 与文档站顶栏全宽下拉同一视觉：`bg-slate-900/35`，偏冷灰、不另加 dark 分段与毛玻璃 */}
         <div
           class={twMerge(
-            "absolute inset-0 bg-slate-900/35 transition-opacity",
+            "absolute inset-0 bg-slate-900/35 transition-opacity motion-reduce:transition-none",
           )}
           onClick={(e: Event) => handleMaskClick(e)}
           aria-hidden
         />
         <div
           ref={setDrawerRef}
+          data-ui-drawer-panel
+          tabindex={-1}
           class={twMerge(
             "relative z-10 flex min-h-0 flex-col h-full max-h-dvh bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-xl",
             isLeft ? "ml-0" : "ml-auto",

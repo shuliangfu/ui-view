@@ -672,3 +672,75 @@ export type {
   ScrollListListProps,
   ScrollListProps,
 } from "./data-display/ScrollList.tsx";
+
+// DIG P0/P1 增量（mobile）
+export { FloatButton } from "./basic/mod.ts";
+export type {
+  FloatButtonItem,
+  FloatButtonPlacement,
+  FloatButtonProps,
+  FloatButtonShape,
+} from "./basic/mod.ts";
+export {
+  FloatingPanel,
+  NoticeBar,
+  Overlay,
+  ShareSheet,
+  Tour,
+  defaultNoticeBarMessages,
+  defaultShareSheetMessages,
+  defaultTourMessages,
+} from "./feedback/mod.ts";
+export type {
+  FloatingPanelProps,
+  NoticeBarMessages,
+  NoticeBarProps,
+  NoticeBarTone,
+  OverlayProps,
+  ShareSheetMessages,
+  ShareSheetOption,
+  ShareSheetProps,
+  TourMessages,
+  TourProps,
+  TourStep,
+} from "./feedback/mod.ts";
+export {
+  Cell,
+  CellGroup,
+  CountDown,
+  QRCode,
+  VirtualList,
+  Watermark,
+} from "./data-display/mod.ts";
+export type {
+  CellGroupProps,
+  CellProps,
+  CountDownProps,
+  CountDownTimeParts,
+  QRCodeProps,
+  VirtualListProps,
+  WatermarkProps,
+} from "./data-display/mod.ts";
+export {
+  NumberKeyboard,
+  PasscodeInput,
+  SignaturePad,
+  defaultNumberKeyboardMessages,
+  defaultSignaturePadMessages,
+} from "./form/mod.ts";
+export type {
+  NumberKeyboardMessages,
+  NumberKeyboardProps,
+  PasscodeInputProps,
+  SignaturePadHandle,
+  SignaturePadMessages,
+  SignaturePadProps,
+} from "./form/mod.ts";
+export { DropdownMenu, IndexBar } from "./navigation/mod.ts";
+export type {
+  DropdownMenuItem,
+  DropdownMenuOption,
+  DropdownMenuProps,
+  IndexBarItem,
+  IndexBarProps,
+} from "./navigation/mod.ts";

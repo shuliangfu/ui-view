@@ -115,3 +115,19 @@ export type {
   TreeSelectOption,
   TreeSelectProps,
 } from "./TreeSelect.tsx";
+
+export { NumberKeyboard } from "./NumberKeyboard.tsx";
+export type {
+  NumberKeyboardMessages,
+  NumberKeyboardProps,
+} from "./NumberKeyboard.tsx";
+export { defaultNumberKeyboardMessages } from "./NumberKeyboard.tsx";
+export { PasscodeInput } from "./PasscodeInput.tsx";
+export type { PasscodeInputProps } from "./PasscodeInput.tsx";
+export { SignaturePad } from "./SignaturePad.tsx";
+export type {
+  SignaturePadHandle,
+  SignaturePadMessages,
+  SignaturePadProps,
+} from "./SignaturePad.tsx";
+export { defaultSignaturePadMessages } from "./SignaturePad.tsx";

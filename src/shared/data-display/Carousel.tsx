@@ -37,462 +37,42 @@ import { IconChevronLeft } from "../basic/icons/ChevronLeft.tsx";
 import { IconChevronRight } from "../basic/icons/ChevronRight.tsx";
 import { IMAGE_BUILTIN_FALLBACK_SRC } from "./Image.tsx";
 
-/**
- * 轮播切换动画：`slide` 为轨道平移；`fade` / `zoom` / `flip` / `mosaic` 为层叠（`slidesToShow>1` 时仍建议用 slide）；
- * `random` 为每次切页在若干种效果中随机择一（`children` 时池内不含 `mosaic`，与单项 `mosaic` 降级一致）。
- */
-export type CarouselTransitionEffect =
-  | "slide"
-  | "fade"
-  | "zoom"
-  | "flip"
-  | "mosaic"
-  | "random";
+import type {
+  CarouselConcreteTransitionEffect,
+  CarouselProps,
+  CarouselMessages,
+} from "./carousel-types.ts";
+import {
+  carouselSlidesInfo,
+  defaultCarouselMessages,
+} from "./carousel-types.ts";
+import type { CarouselStackedKind } from "./carousel-effects.ts";
+import {
+  CAROUSEL_MOSAIC_CELL_MS,
+  CAROUSEL_MOSAIC_COLS,
+  CAROUSEL_MOSAIC_ROWS,
+  CAROUSEL_MOSAIC_STAGGER_MS,
+  carouselIsStackedEffect,
+  carouselMosaicInnerContentBoxInTrack,
+  carouselNativeImgClass,
+  carouselObjectFitDrawRect,
+  carouselPickRandomConcreteEffect,
+  carouselPrefersReducedMotion,
+  carouselRemoveMosaicOverlays,
+  carouselResolveRenderEffect,
+  carouselSameResourceUrl,
+  carouselStackedSlideLayoutStyle,
+  carouselStackedSlideStyle,
+} from "./carousel-effects.ts";
 
-/** 实际参与布局/CSS 的切换类型（不含 `random`） */
-export type CarouselConcreteTransitionEffect = Exclude<
+export type {
+  CarouselConcreteTransitionEffect,
+  CarouselMessages,
+  CarouselProps,
   CarouselTransitionEffect,
-  "random"
->;
+} from "./carousel-types.ts";
+export { defaultCarouselMessages } from "./carousel-types.ts";
 
-/** `effect="random"` 时参与抽签的候选（`mosaic` 在仅 `children` 时由 {@link carouselPickRandomConcreteEffect} 剔除） */
-const CAROUSEL_RANDOM_EFFECT_POOL: readonly CarouselConcreteTransitionEffect[] =
-  [
-    "slide",
-    "fade",
-    "zoom",
-    "flip",
-    "mosaic",
-  ];
-
-/**
- * 从候选池中随机一条具体效果；无 `images` 时不抽 `mosaic`，避免与 children 降级规则冲突。
- *
- * @param p - 轮播 props
- */
-function carouselPickRandomConcreteEffect(
-  p: CarouselProps,
-): CarouselConcreteTransitionEffect {
-  const slides = carouselSlidesInfo(p);
-  const pool = slides.useImages
-    ? [...CAROUSEL_RANDOM_EFFECT_POOL]
-    : CAROUSEL_RANDOM_EFFECT_POOL.filter((e) => e !== "mosaic");
-  const n = pool.length;
-  if (n === 0) return "slide";
-  return pool[Math.floor(Math.random() * n)]!;
-}
-
-/**
- * 将 `random` 解析为当前用于渲染的具体效果（由内部 signal 保存每次切页抽签结果）。
- *
- * @param p - 轮播 props
- * @param randomPick - `effect="random"` 时使用的具体效果
- */
-function carouselResolveRenderEffect(
-  p: CarouselProps,
-  randomPick: CarouselConcreteTransitionEffect,
-): CarouselConcreteTransitionEffect {
-  const raw = (p.effect ?? "slide") as CarouselTransitionEffect;
-  if (raw !== "random") return raw as CarouselConcreteTransitionEffect;
-  return randomPick;
-}
-
-/** 层叠位效果子集（与 {@link carouselIsStackedEffect} 一致） */
-type CarouselStackedKind = "fade" | "zoom" | "flip" | "mosaic";
-
-/**
- * 层叠模式下每一页必须叠在同一矩形内；若仍为 `relative` 块级流式排列，多页会纵向堆高，
- * 在 `overflow:hidden` 的轨道里只能看到错误一截（空白、压住指示点、上下错位等）。
- */
-const carouselStackedSlideLayoutStyle: Record<string, string | number> = {
-  position: "absolute",
-  top: 0,
-  left: 0,
-  width: "100%",
-  height: "100%",
-  boxSizing: "border-box",
-};
-
-/**
- * 是否为层叠切换（绝对定位叠放、不移动整条轨道）。
- *
- * @param e - 已解析的具体效果（不含 `random`）
- */
-function carouselIsStackedEffect(
-  e: CarouselConcreteTransitionEffect,
-): e is CarouselStackedKind {
-  return (
-    e === "fade" ||
-    e === "zoom" ||
-    e === "flip" ||
-    e === "mosaic"
-  );
-}
-
-/** 与 ImageViewer 一致的马赛克网格参数 */
-const CAROUSEL_MOSAIC_COLS = 8;
-const CAROUSEL_MOSAIC_ROWS = 6;
-const CAROUSEL_MOSAIC_CELL_MS = 260;
-const CAROUSEL_MOSAIC_STAGGER_MS = 14;
-
-/**
- * 移除轨道上 `mosaic` 叠层，避免换图或改 `effect` 后残留方格。
- *
- * @param mount - 轨道根节点（`data-carousel-track-root`）；SSR / 虚拟节点上可能无 DOM API，需跳过。
- */
-function carouselRemoveMosaicOverlays(
-  mount: HTMLElement | null | undefined,
-): void {
-  if (mount == null) return;
-  // Hybrid SSR 清理时 ref 可能不是真实 Element（无 querySelectorAll），避免抛错导致整页 500
-  if (typeof mount.querySelectorAll !== "function") return;
-  mount.querySelectorAll("[data-dreamer-carousel-mosaic]").forEach((el) => {
-    el.remove();
-  });
-}
-
-/**
- * 系统是否开启「减少动态效果」。
- *
- * @returns 为 `true` 时马赛克降级为瞬时切换
- */
-function carouselPrefersReducedMotion(): boolean {
-  try {
-    return globalThis.matchMedia?.("(prefers-reduced-motion: reduce)")
-      ?.matches === true;
-  } catch {
-    return false;
-  }
-}
-
-/**
- * 按单项 `contentFit` 计算图片在容器内的绘制框（马赛克 `background-*` 与真实 `img` 对齐；`cover`/`contain`/`fill`）。
- *
- * @param containerW - 容器内容宽
- * @param containerH - 容器内容高
- * @param naturalW - 位图宽
- * @param naturalH - 位图高
- * @param fit - 与 {@link CarouselProps.contentFit} 一致
- */
-function carouselObjectFitDrawRect(
-  containerW: number,
-  containerH: number,
-  naturalW: number,
-  naturalH: number,
-  fit: NonNullable<CarouselProps["contentFit"]>,
-): { drawW: number; drawH: number; offX: number; offY: number } {
-  const cw = Math.max(0, containerW);
-  const ch = Math.max(0, containerH);
-  let iw = naturalW;
-  let ih = naturalH;
-  if (!Number.isFinite(iw) || iw <= 0) iw = cw > 0 ? cw : 1;
-  if (!Number.isFinite(ih) || ih <= 0) ih = ch > 0 ? ch : 1;
-  if (cw <= 0 || ch <= 0) {
-    return { drawW: cw, drawH: ch, offX: 0, offY: 0 };
-  }
-  if (fit === "fill") {
-    return { drawW: cw, drawH: ch, offX: 0, offY: 0 };
-  }
-  if (fit === "contain") {
-    const s = Math.min(cw / iw, ch / ih);
-    const drawW = iw * s;
-    const drawH = ih * s;
-    return { drawW, drawH, offX: (cw - drawW) / 2, offY: (ch - drawH) / 2 };
-  }
-  const s = Math.max(cw / iw, ch / ih);
-  const drawW = iw * s;
-  const drawH = ih * s;
-  return { drawW, drawH, offX: (cw - drawW) / 2, offY: (ch - drawH) / 2 };
-}
-
-/**
- * 判断两 URL 是否指向同一资源（`img.currentSrc` 与 `nextSrc`；相对/绝对写法归一）。
- *
- * @param a - 当前地址
- * @param b - 目标地址
- */
-function carouselSameResourceUrl(a: string, b: string): boolean {
-  if (a === b) return true;
-  try {
-    const base = globalThis.location?.href ?? "http://carousel.local/";
-    return new URL(a, base).href === new URL(b, base).href;
-  } catch {
-    return false;
-  }
-}
-
-/**
- * 轨道内 `data-carousel-slide-inner` 相对轨道根的内容盒原点与宽高。
- * 马赛克叠层必须用 **inner 的 client 尺寸 + {@link carouselObjectFitDrawRect}** 对齐 `object-fit`，
- * 切换瞬间勿信 `img.getBoundingClientRect()`（新图未解码时常仍为上一张的布局尺寸）。
- *
- * @param mount - `data-carousel-track-root`
- * @param inner - 单项内容容器
- */
-function carouselMosaicInnerContentBoxInTrack(
-  mount: HTMLElement,
-  inner: HTMLElement,
-): { left: number; top: number; cw: number; ch: number } {
-  const mbr = mount.getBoundingClientRect();
-  const ir = inner.getBoundingClientRect();
-  return {
-    left: ir.left - mbr.left + inner.clientLeft,
-    top: ir.top - mbr.top + inner.clientTop,
-    cw: inner.clientWidth,
-    ch: inner.clientHeight,
-  };
-}
-
-/**
- * `images` 且 `lazySlides=false` 时用原生 img 的 object-fit 类。
- * 不用 {@link Image}：其 loading 态为 `opacity-0`，且卸载时会清空 `src`；内层随 `current` 重跑若重建子树，会反复进入 loading，切页长时间只见灰/黑底。
- *
- * @param fit - 与 {@link CarouselProps.contentFit} 一致
- */
-function carouselNativeImgClass(
-  fit: NonNullable<CarouselProps["contentFit"]>,
-): string {
-  const fitCls = fit === "contain"
-    ? "object-contain"
-    : fit === "fill"
-    ? "object-fill"
-    : "object-cover";
-  return twMerge(
-    "block w-full h-full min-w-0 min-h-0",
-    fitCls,
-  );
-}
-
-/** 层叠切换时单张 slide 的角色（与 ImageViewer 双缓冲：underlay = 旧图垫底） */
-type CarouselStackedSlideRole = "active" | "underlay" | "hidden";
-
-/**
- * 解析层叠模式下第 `i` 张的角色。
- *
- * @param i - slide 下标
- * @param cur - 当前页
- * @param underlayIdx - 过渡期内垫在下面的上一页；`null` 表示无过渡
- */
-function carouselStackedSlideRoleOf(
-  i: number,
-  cur: number,
-  underlayIdx: number | null,
-): CarouselStackedSlideRole {
-  if (i === cur) return "active";
-  if (underlayIdx !== null && i === underlayIdx) return "underlay";
-  return "hidden";
-}
-
-/**
- * 层叠布局下单张 slide 的**目标** opacity / transform（与 {@link carouselStackedSlideRole} 配合）。
- * fade：仅透明度叠化，无位移（对齐 ImageViewer `fade`）；underlay / active 在过渡期内均保持不透明。
- *
- * @param kind - fade / zoom / flip / mosaic
- * @param role - active | underlay | hidden
- */
-function carouselStackedSlideAnimatedStyle(
-  kind: CarouselStackedKind,
-  role: CarouselStackedSlideRole,
-): Record<string, string | number> {
-  if (kind === "fade" || kind === "mosaic") {
-    if (role === "hidden") {
-      return { opacity: 0, transform: "none" };
-    }
-    return { opacity: 1, transform: "none" };
-  }
-  // zoom：hidden 态缩得足够小，切入时「由小放大」才明显（0.88 仅约 12%，肉眼偏弱）
-  if (kind === "zoom") {
-    if (role === "hidden") {
-      return { opacity: 0, transform: "scale(0.72)" };
-    }
-    return { opacity: 1, transform: "scale(1)" };
-  }
-  if (role === "hidden") {
-    return {
-      opacity: 0,
-      transform: "rotateY(-86deg) scale(0.88) translateZ(-20px)",
-    };
-  }
-  return {
-    opacity: 1,
-    transform: "rotateY(0deg) scale(1) translateZ(0)",
-  };
-}
-
-/**
- * 层叠模式下单张 slide 的**完整**行内样式：transition longhand + 动画终态。
- * **不依赖** Tailwind 是否生成 `transition-*` 任意类；文档站若未打进对应 CSS，原先会表现为完全瞬切。
- *
- * @param kind - fade / zoom / flip / mosaic
- * @param i - slide 下标
- * @param cur - 当前页
- * @param underlayIdx - 过渡期内垫底上一页
- * @param speedMs - 与 {@link CarouselProps.speed} 一致
- * @param mosaicHideActive - `mosaic` 且叠层播放中：当前页先透明，避免与方格叠层重复绘制
- */
-function carouselStackedSlideStyle(
-  kind: CarouselStackedKind,
-  i: number,
-  cur: number,
-  underlayIdx: number | null,
-  speedMs: number,
-  mosaicHideActive = false,
-): Record<string, string | number> {
-  const role = carouselStackedSlideRoleOf(i, cur, underlayIdx);
-  if (kind === "mosaic" && role === "active" && mosaicHideActive) {
-    return {
-      ...carouselStackedSlideLayoutStyle,
-      opacity: 0,
-      transitionProperty: "none",
-      transitionDuration: "0ms",
-      transitionTimingFunction: "linear",
-      willChange: "auto",
-    };
-  }
-  // 方格结束揭开时：当前页须**瞬时**不透明；若仍用 `speed` 的 opacity 过渡，叠层一撤会从 0 缓到 1，肉眼像闪一下/发灰
-  if (kind === "mosaic" && role === "active" && !mosaicHideActive) {
-    return {
-      ...carouselStackedSlideLayoutStyle,
-      ...carouselStackedSlideAnimatedStyle(kind, role),
-      transitionProperty: "none",
-      transitionDuration: "0ms",
-      transitionTimingFunction: "linear",
-      willChange: "auto",
-    };
-  }
-  const timing = kind === "fade" || kind === "mosaic"
-    ? "cubic-bezier(0.45, 0, 0.55, 1)"
-    : kind === "zoom"
-    // 略抬高贝塞尔控制点 y，收尾略带「弹出感」，配合更小起始 scale 强化「缩小再放大」
-    ? "cubic-bezier(0.28, 1.18, 0.55, 1.02)"
-    : "cubic-bezier(0.45, 0, 0.2, 1)";
-  const anim = carouselStackedSlideAnimatedStyle(kind, role);
-  const transitionProperty = kind === "fade" || kind === "mosaic"
-    ? "opacity"
-    : "opacity, transform";
-  const out: Record<string, string | number> = {
-    transitionProperty,
-    transitionDuration: `${speedMs}ms`,
-    transitionTimingFunction: timing,
-    willChange: kind === "fade" || kind === "mosaic"
-      ? "opacity"
-      : "opacity, transform",
-    ...anim,
-  };
-  if (kind === "flip") {
-    out.transformOrigin = "center center";
-    out.backfaceVisibility = "hidden";
-  } else if (kind === "zoom") {
-    // 从中心缩放，避免贴边裁切时「往一角缩」看起来像在平移
-    out.transformOrigin = "center center";
-  }
-  return out;
-}
-
-export interface CarouselProps {
-  /** 图片地址列表；传此项时轮播内部渲染 img，无需传 children */
-  images?: string[];
-  /** 轮播项（每项一屏或与 slidesToShow 配合）；不传 images 时使用此项 */
-  children?: unknown[];
-  /**
-   * 当前页（从 0 开始）：可传 number、getter（推荐 `() => sig.value`，勿只传快照）；
-   * 不传则由组件内部维护（无需再传 `onChange` 也可切换，传了则仍可通知外部）。
-   */
-  current?: number | (() => number);
-  /** 切换回调 */
-  onChange?: (index: number) => void;
-  /** 是否自动播放 */
-  autoplay?: boolean;
-  /** 自动播放间隔（ms），默认 5000 */
-  interval?: number;
-  /** 方向：horizontal | vertical */
-  direction?: "horizontal" | "vertical";
-  /** 一屏显示几张（默认 1） */
-  slidesToShow?: number;
-  /** 是否循环，默认 true */
-  infinite?: boolean;
-  /** 是否显示指示点 */
-  dots?: boolean;
-  /** 是否显示左右/上下箭头切换按钮，默认 true */
-  arrows?: boolean;
-  /**
-   * 是否允许在轮播区域通过鼠标拖移或手指滑动切换（Pointer Events，移动端与桌面均可）。
-   * 默认 true；设为 false 时仅箭头、指示点、自动播放可切换。
-   */
-  swipe?: boolean;
-  /** 指示点位置 */
-  dotPosition?: "bottom" | "top" | "left" | "right";
-  /**
-   * 切换效果：slide 轨道平移；fade / zoom / flip / mosaic 为层叠（mosaic 为小方格随机渐入，仅 `images`；思路同 `ImageViewer`）；
-   * random 为每次切页在 slide/fade/zoom/flip/mosaic 中随机择一（仅 children 时不含 mosaic）。
-   */
-  effect?: CarouselTransitionEffect;
-  /** 切换动画时长（ms），默认 300 */
-  speed?: number;
-  /** 容器高度，如 "200px"、"16rem"、"50%"；不传时横向默认 h-48、纵向默认 h-64；也可通过 class 覆盖（如 class="h-64"） */
-  height?: string;
-  /**
-   * 单项内图片等内容的显示方式（对直接子元素 img 生效）：
-   * - cover: 铺满裁切，默认；
-   * - contain: 完整显示不裁切，可能留白；
-   * - fill: 自动宽高铺满显示，可能拉伸变形以填满区域。
-   */
-  contentFit?: "contain" | "cover" | "fill";
-  /** 额外 class（宽度随容器，高度可用 class 或 height 覆盖） */
-  class?: string;
-  /** 单项 class */
-  slideClass?: string;
-  /**
-   * 是否按需加载图片（仅当前及相邻 slide 加载大图，其余用占位以降低内存）。
-   * 默认 false，保证所有 slide 均能正常显示；设为 true 可省内存但依赖 patch 替换占位，部分环境下第 2/3 张可能不显示。
-   */
-  lazySlides?: boolean;
-  /** 多语言/自定义文案；未传字段走 {@link defaultCarouselMessages} */
-  messages?: Partial<CarouselMessages>;
-}
-
-/** Carousel 内置文案 */
-export interface CarouselMessages {
-  /** 上一张按钮 `aria-label` */
-  prev: string;
-  /** 下一张按钮 `aria-label` */
-  next: string;
-}
-
-/** 默认中文文案 */
-export const defaultCarouselMessages: CarouselMessages = {
-  prev: "上一张",
-  next: "下一张",
-};
-
-/**
- * 从 `props` 解析轮播数据来源与张数；在渲染 getter 内调用，避免 images/children 变更后仍用旧 count。
- */
-function carouselSlidesInfo(p: CarouselProps): {
-  useImages: boolean;
-  images: string[] | undefined;
-  slides: unknown[];
-  count: number;
-} {
-  const useImages = Array.isArray(p.images) && p.images.length > 0;
-  if (useImages) {
-    return {
-      useImages: true,
-      images: p.images,
-      slides: [],
-      count: p.images!.length,
-    };
-  }
-  const ch = p.children;
-  const slides = Array.isArray(ch) ? ch : ch != null ? [ch] : [];
-  return { useImages: false, images: undefined, slides, count: slides.length };
-}
-
-/**
- * 计算到「下一 `period` 毫秒墙钟边界」的延时，供自动播链式 `setTimeout` 的下一拍调度（与 ui-preact 一致）。
- *
- * @param period - 已含 `Math.max(400, interval, speed+160)` 的周期（毫秒）
- */
 function carouselAutoplayDelayToWallBoundaryMs(period: number): number {
   if (!Number.isFinite(period) || period < 1) return 1;
   const now = Date.now();
@@ -1888,7 +1468,7 @@ export function Carousel(props: CarouselProps): JSXRenderable {
                         return slideStyleSlideModeFor(readEffectResolved());
                       }}
                       role="img"
-                      aria-label=""
+                      aria-label={`第 ${logical + 1} 张`}
                     >
                       <div
                         class="w-full h-full min-w-0 min-h-0 flex-1"
@@ -1980,7 +1560,7 @@ export function Carousel(props: CarouselProps): JSXRenderable {
                     return slideStyleSlideModeFor(readEffectResolved());
                   }}
                   role="img"
-                  aria-label=""
+                  aria-label={`第 ${i + 1} 张`}
                 >
                   <div
                     class="w-full h-full min-w-0 min-h-0 flex-1"
@@ -2224,7 +1804,7 @@ export function Carousel(props: CarouselProps): JSXRenderable {
                     ? slideStackedStyleStatic(logical, cur0, u0, false)
                     : slideStaticStripStyle}
                   role="img"
-                  aria-label=""
+                  aria-label={`第 ${logical + 1} 张`}
                 >
                   <div
                     class="w-full h-full min-w-0 min-h-0 flex-1"
@@ -2286,7 +1866,7 @@ export function Carousel(props: CarouselProps): JSXRenderable {
                   ? slideStackedStyleStatic(i, cur0, u0, false)
                   : slideStyleSlideModeFor(effectForStatic)}
                 role="img"
-                aria-label=""
+                aria-label={`第 ${i + 1} 张`}
               >
                 <div
                   class="w-full h-full min-w-0 min-h-0 flex-1"
