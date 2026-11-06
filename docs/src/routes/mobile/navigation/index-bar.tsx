@@ -26,6 +26,12 @@ const importCode = `import { IndexBar } from "@dreamer/ui-view/mobile";
   onSelect={(index) => console.log(index)}
 />`;
 
+
+const exampleDemo = `<IndexBar indexList={["A","B","C"]}>
+  {/* 分组列表 */}
+</IndexBar>`;
+
+
 export default function Page() {
   return (
     <div class="space-y-8">
@@ -53,6 +59,7 @@ export default function Page() {
             />
           </div>
         </MobileDocDemo>
+        <CodeBlock title="代码示例" code={exampleDemo} language="tsx" showLineNumbers copyable wrapLongLines />
       </section>
       <section class="space-y-3">
         <Title level={2}>API</Title>

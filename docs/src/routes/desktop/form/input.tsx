@@ -169,6 +169,13 @@ const val = createSignal("");
   />
 </FormItem>`;
 
+
+const exampleLabelLeft = `<FormItem label="用户名" labelPosition="left">
+  <Input placeholder="左侧标签" />
+</FormItem>`;
+
+const exampleAlignLeft = `<Input class="text-left" placeholder="左对齐" />`;
+
 export default function FormInput() {
   const valPlaceholder = createSignal("");
   const valRequired = createSignal("");
@@ -435,6 +442,8 @@ export default function FormInput() {
             <Form layout="vertical" class="w-full">
               <div class="rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50/50 dark:bg-slate-800/30 p-5 space-y-6">
                 <div>
+          <CodeBlock title="代码示例" code={exampleLabelLeft} language="tsx" showLineNumbers copyable wrapLongLines />
+
                   <Title
                     level={3}
                     class="text-sm! font-medium! mb-3! text-slate-600 dark:text-slate-400"
@@ -478,7 +487,9 @@ export default function FormInput() {
                         value={valLeft3}
                         placeholder="必填"
                       />
-                    </FormItem>
+                    
+          <CodeBlock title="代码示例" code={exampleAlignLeft} language="tsx" showLineNumbers copyable wrapLongLines />
+</FormItem>
                   </div>
                 </div>
                 <div class="pt-2 border-t border-slate-200 dark:border-slate-600">

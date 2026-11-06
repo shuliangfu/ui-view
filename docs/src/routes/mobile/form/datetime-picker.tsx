@@ -118,6 +118,13 @@ const val = createSignal(localNowDateTime());
 /** 文档页受控值须模块级 */
 const mobileDateTimePickerVal = createSignal(localNowDateTime());
 
+
+const exampleNestedMessages = `<DateTimePicker
+  messages={{
+    calendarNav: { /* PickerCalendarNavMessages */ },
+  }}
+/>`;
+
 export default function MobileDateTimePickerDoc() {
   return (
     <div class="w-full max-w-3xl space-y-10">
@@ -183,6 +190,8 @@ export default function MobileDateTimePickerDoc() {
       </section>
 
       <section class="space-y-4">
+          <CodeBlock title="代码示例" code={exampleNestedMessages} language="tsx" showLineNumbers copyable wrapLongLines />
+
         <Title level={2}>API</Title>
         <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
           完整 mode/format 组合与桌面 DateTimePicker 文档一致。

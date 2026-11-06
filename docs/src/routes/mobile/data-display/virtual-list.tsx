@@ -12,6 +12,35 @@ const API: DocsApiTableRow[] = [
 ];
 const importCode = `import { VirtualList } from "@dreamer/ui-view/mobile";`;
 
+
+const exampleFixed = `const rows = Array.from({ length: 2000 }, (_, i) => i + 1);
+
+<VirtualList
+  height={280}
+  itemHeight={36}
+  data={rows}
+  renderItem={(n) => <div class="px-3 leading-9 text-sm">Item {n}</div>}
+/>`;
+
+const exampleDynamic = `const dyn = [/* { id, h, t }… */];
+
+<VirtualList
+  height={200}
+  data={dyn}
+  rowKey={(r) => r.id}
+  getItemHeight={(r) => r.h}
+  renderItem={(r) => <div class="px-3 py-2 text-sm">{r.t}</div>}
+/>`;
+
+const exampleEmpty = `<VirtualList
+  height={100}
+  itemHeight={36}
+  data={[]}
+  empty={<p class="text-xs text-slate-500 p-3">暂无数据</p>}
+  renderItem={() => null}
+/>`;
+
+
 export default function Page() {
   const rows = Array.from({ length: TOTAL }, (_, i) => i + 1);
   const dyn = Array.from({ length: 80 }, (_, i) => ({
@@ -34,6 +63,8 @@ export default function Page() {
             <VirtualList height={280} itemHeight={36} data={rows}
               renderItem={(n) => <div class="px-3 leading-9 text-sm border-b border-slate-100 dark:border-slate-800">Item {n}</div>} />
           </MobileDocDemo>
+          <CodeBlock title="代码示例" code={exampleFixed} language="tsx" showLineNumbers copyable wrapLongLines />
+
         </div>
         <div class="space-y-2">
           <Title level={3}>动态行高</Title>
@@ -41,12 +72,16 @@ export default function Page() {
             <VirtualList height={200} data={dyn} rowKey={(r) => r.id} getItemHeight={(r) => r.h}
               renderItem={(r) => <div class="px-3 py-2 text-sm border-b border-slate-100 dark:border-slate-800">{r.t}</div>} />
           </MobileDocDemo>
+          <CodeBlock title="代码示例" code={exampleDynamic} language="tsx" showLineNumbers copyable wrapLongLines />
+
         </div>
         <div class="space-y-2">
           <Title level={3}>空态</Title>
           <MobileDocDemo class="p-2">
             <VirtualList height={100} itemHeight={36} data={[]} empty={<p class="text-xs text-slate-500 p-3">暂无数据</p>} renderItem={() => null} />
           </MobileDocDemo>
+          <CodeBlock title="代码示例" code={exampleEmpty} language="tsx" showLineNumbers copyable wrapLongLines />
+
         </div>
       </section>
       <section class="space-y-3"><Title level={2}>API</Title><DocsApiTable rows={API} /></section>

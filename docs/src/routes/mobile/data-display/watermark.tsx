@@ -11,6 +11,20 @@ const API: DocsApiTableRow[] = [
 ];
 const importCode = `import { Watermark } from "@dreamer/ui-view/mobile";`;
 
+const exampleBasic = `<Watermark content="内部资料">
+  <div class="h-36 p-3 text-sm">业务内容</div>
+</Watermark>`;
+
+const exampleMulti = `<Watermark
+  content={["Dreamer", "预览"]}
+  fontSize={11}
+  rotate={-28}
+  gapX={100}
+  gapY={80}
+>
+  <div class="h-36 p-3 text-sm">自定义</div>
+</Watermark>`;
+
 export default function Page() {
   return (
     <div class="space-y-8">
@@ -23,6 +37,14 @@ export default function Page() {
           <MobileDocDemo class="p-0 overflow-hidden">
             <Watermark content="内部资料"><div class="h-36 p-3 text-sm">业务内容</div></Watermark>
           </MobileDocDemo>
+          <CodeBlock
+            title="代码示例"
+            code={exampleBasic}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
         </div>
         <div class="space-y-2">
           <Title level={3}>多行 + 样式</Title>
@@ -31,6 +53,14 @@ export default function Page() {
               <div class="h-36 p-3 text-sm">自定义</div>
             </Watermark>
           </MobileDocDemo>
+          <CodeBlock
+            title="代码示例"
+            code={exampleMulti}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
         </div>
       </section>
       <section class="space-y-3"><Title level={2}>API</Title><DocsApiTable rows={API} /></section>

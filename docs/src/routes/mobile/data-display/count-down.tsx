@@ -21,6 +21,10 @@ const importCode = `import { CountDown } from "@dreamer/ui-view/mobile";
 
 <CountDown target={Date.now() + 3_661_000} />`;
 
+
+const exampleDemo = `<CountDown target={Date.now() + 3_661_000} />`;
+
+
 export default function Page() {
   return (
     <div class="space-y-8">
@@ -37,6 +41,7 @@ export default function Page() {
         <MobileDocDemo>
           <div class="p-4 text-center text-lg"><CountDown target={Date.now() + 3661000} /></div>
         </MobileDocDemo>
+        <CodeBlock title="代码示例" code={exampleDemo} language="tsx" showLineNumbers copyable wrapLongLines />
       </section>
       <section class="space-y-3">
         <Title level={2}>API</Title>

@@ -22,6 +22,13 @@ const importCode = `import { Splitter } from "@dreamer/ui-view";
   <div class="p-3">右侧面板</div>
 </Splitter>`;
 
+
+const exampleDemo = `<Splitter>
+  <div class="p-3 bg-slate-50">左</div>
+  <div class="p-3">右</div>
+</Splitter>`;
+
+
 export default function Page() {
   return (
     <div class="space-y-8">
@@ -38,6 +45,7 @@ export default function Page() {
         <div class="rounded-xl border border-slate-200 dark:border-slate-700 p-4 bg-white dark:bg-slate-900">
           <div class="h-48 border rounded-lg overflow-hidden"><Splitter><div class="p-3 bg-slate-50 dark:bg-slate-800">左</div><div class="p-3">右</div></Splitter></div>
         </div>
+        <CodeBlock title="代码示例" code={exampleDemo} language="tsx" showLineNumbers copyable wrapLongLines />
       </section>
       <section class="space-y-3">
         <Title level={2}>API</Title>

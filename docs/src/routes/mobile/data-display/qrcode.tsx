@@ -13,6 +13,13 @@ const importCode = `import { QRCode } from "@dreamer/ui-view/mobile";
 const value = globalThis.location?.href ?? "https://example.com";
 <QRCode value={value} size={148} />`;
 
+const exampleUrl = `const value = globalThis.location?.href ?? "https://example.com";
+
+<QRCode value={value} size={148} />`;
+
+const exampleStyle = `<QRCode value="m-96" size={96} />
+<QRCode value="m-brand" size={96} color="#1d4ed8" bgColor="#eff6ff" />`;
+
 export default function Page() {
   const value = globalThis.location?.href ?? "https://ui-view.dreamer.local/mobile/data-display/qrcode";
   return (
@@ -27,6 +34,14 @@ export default function Page() {
             <QRCode value={value} size={148} />
             <p class="text-[10px] text-slate-500 break-all">{value}</p>
           </MobileDocDemo>
+          <CodeBlock
+            title="代码示例"
+            code={exampleUrl}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
         </div>
         <div class="space-y-2">
           <Title level={3}>尺寸与颜色</Title>
@@ -34,6 +49,14 @@ export default function Page() {
             <QRCode value="m-96" size={96} />
             <QRCode value="m-brand" size={96} color="#1d4ed8" bgColor="#eff6ff" />
           </MobileDocDemo>
+          <CodeBlock
+            title="代码示例"
+            code={exampleStyle}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
         </div>
       </section>
       <section class="space-y-3"><Title level={2}>API</Title><DocsApiTable rows={API} /></section>

@@ -236,6 +236,18 @@ function ApiTable({ rows }: { rows: FormDocsApiRow[] }) {
   );
 }
 
+
+const exampleFormLayout = `<Form layout="horizontal">…</Form>
+<Form layout="vertical">…</Form>
+<Form layout="inline">…</Form>`;
+
+const exampleFormItem = `<FormItem label="用户名" required labelPosition="top">
+  <Input />
+</FormItem>
+<FormItem label="邮箱" labelPosition="left">
+  <Input />
+</FormItem>`;
+
 export default function FormContainersDoc() {
   return (
     <div class="space-y-10 w-full">
@@ -305,7 +317,9 @@ export default function FormContainersDoc() {
                 </FormItem>
                 <FormItem label="类型" id="fc-i2">
                   <Input id="fc-i2" placeholder="筛选" value="" />
-                </FormItem>
+                
+          <CodeBlock title="代码示例" code={exampleFormLayout} language="tsx" showLineNumbers copyable wrapLongLines />
+</FormItem>
               </Form>
             </div>
           </div>
@@ -347,7 +361,9 @@ export default function FormContainersDoc() {
                 placeholder="左侧标签 + 右对齐"
                 value=""
               />
-            </FormItem>
+            
+          <CodeBlock title="代码示例" code={exampleFormItem} language="tsx" showLineNumbers copyable wrapLongLines />
+</FormItem>
           </Form>
         </div>
 

@@ -12,6 +12,18 @@ const API: DocsApiTableRow[] = [
 ];
 const importCode = `import { Cell, CellGroup } from "@dreamer/ui-view/mobile";`;
 
+const exampleInteractive = `const on = createSignal(true);
+
+<CellGroup title="设置">
+  <Cell title="账号" arrow extra="详情" onClick={() => {}} />
+  <Cell title="通知" description="推送" extra={<Switch checked={on} />} />
+  <Cell title="注销" arrow disabled extra="不可用" />
+</CellGroup>`;
+
+const exampleHref = `<CellGroup>
+  <Cell title="帮助" arrow href="https://example.com/help" />
+</CellGroup>`;
+
 export default function Page() {
   const tip = createSignal("");
   const on = createSignal(true);
@@ -34,6 +46,14 @@ export default function Page() {
             </CellGroup>
             {() => tip.value ? <p class="text-xs text-blue-600" role="status">{tip.value}</p> : null}
           </MobileDocDemo>
+          <CodeBlock
+            title="代码示例"
+            code={exampleInteractive}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
         </div>
         <div class="space-y-2">
           <Title level={3}>href 链接行</Title>
@@ -42,6 +62,14 @@ export default function Page() {
               <Cell title="帮助" arrow href="https://example.com/help" />
             </CellGroup>
           </MobileDocDemo>
+          <CodeBlock
+            title="代码示例"
+            code={exampleHref}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
         </div>
       </section>
       <section class="space-y-3"><Title level={2}>API</Title><DocsApiTable rows={API} /></section>

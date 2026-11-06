@@ -119,6 +119,17 @@ const importCode = `import { Sidebar } from "@dreamer/ui-view";
 /**
  * Sidebar 文档页：概述、引入、示例、文案表、API。
  */
+
+const exampleDemo = `import { Sidebar } from "@dreamer/ui-view";
+
+<Sidebar
+  overview={{ path: "/desktop", label: "概览" }}
+  sectionTitle="组件"
+  items={items}
+  getCurrentPath={() => "/desktop/basic/button"}
+/>`;
+
+
 export default function NavigationSidebarDoc() {
   return (
     <div class="w-full max-w-3xl space-y-10">
@@ -159,6 +170,8 @@ export default function NavigationSidebarDoc() {
         </div>
       </section>
 
+      
+        <CodeBlock title="代码示例" code={exampleDemo} language="tsx" showLineNumbers copyable wrapLongLines />
       <DocsMessagesSection
         interfaceName="SidebarMessages"
         defaultExportName="defaultSidebarMessages"

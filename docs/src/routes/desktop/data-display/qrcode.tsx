@@ -22,6 +22,17 @@ const importCode = `import { QRCode } from "@dreamer/ui-view";
 const value = globalThis.location?.href ?? "https://example.com";
 <QRCode value={value} size={148} />`;
 
+const exampleUrl = `const value = globalThis.location?.href ?? "https://example.com";
+
+<QRCode value={value} size={148} />`;
+
+const exampleSize = `<QRCode value="size-96" size={96} aria-label="96px" />
+<QRCode value="size-128" size={128} aria-label="128px" />
+<QRCode value="size-160" size={160} aria-label="160px" />`;
+
+const exampleColor = `<QRCode value="brand" size={120} color="#1d4ed8" bgColor="#eff6ff" />
+<QRCode value="tight" size={120} includeMargin={false} />`;
+
 export default function Page() {
   const value =
     globalThis.location?.href ??
@@ -45,6 +56,14 @@ export default function Page() {
             <QRCode value={value} size={148} />
             <p class="text-xs text-slate-500 break-all max-w-sm">{value}</p>
           </div>
+          <CodeBlock
+            title="代码示例"
+            code={exampleUrl}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
         </div>
 
         <div class="space-y-2">
@@ -54,6 +73,14 @@ export default function Page() {
             <QRCode value="size-128" size={128} aria-label="128px" />
             <QRCode value="size-160" size={160} aria-label="160px" />
           </div>
+          <CodeBlock
+            title="代码示例"
+            code={exampleSize}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
         </div>
 
         <div class="space-y-2">
@@ -62,6 +89,14 @@ export default function Page() {
             <QRCode value="brand" size={120} color="#1d4ed8" bgColor="#eff6ff" />
             <QRCode value="tight" size={120} includeMargin={false} />
           </div>
+          <CodeBlock
+            title="代码示例"
+            code={exampleColor}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
         </div>
       </section>
       <section class="space-y-3">

@@ -22,6 +22,33 @@ const importCode = `import { NoticeBar } from "@dreamer/ui-view/mobile";
 
 <NoticeBar tone="warning" closable content="系统将于今晚维护" />`;
 
+const exampleClosable = `<NoticeBar tone="warning" closable content="系统将于今晚维护" />`;
+
+const exampleTone = `<NoticeBar tone="info" content="信息" />
+<NoticeBar tone="success" content="成功" />
+<NoticeBar tone="danger" content="危险" />`;
+
+const exampleScroll = `const visible = createSignal(true);
+
+<NoticeBar
+  tone="info"
+  scrollable
+  content="欢迎使用移动组件库 —— 长文案可横向滚动展示"
+/>
+{visible.value ? (
+  <NoticeBar
+    tone="success"
+    closable
+    visible={visible.value}
+    onClose={() => (visible.value = false)}
+    content="受控可见条"
+  />
+) : (
+  <Button type="button" size="sm" onClick={() => (visible.value = true)}>
+    重新显示
+  </Button>
+)}`;
+
 export default function Page() {
   const visible = createSignal(true);
   return (
@@ -41,6 +68,7 @@ export default function Page() {
           <MobileDocDemo class="space-y-3 p-4">
             <NoticeBar tone="warning" closable content="系统将于今晚维护" />
           </MobileDocDemo>
+          <CodeBlock title="代码示例" code={exampleClosable} language="tsx" showLineNumbers copyable wrapLongLines />
         </div>
         <div class="space-y-2">
           <Title level={3}>色调</Title>
@@ -49,6 +77,7 @@ export default function Page() {
             <NoticeBar tone="success" content="成功" />
             <NoticeBar tone="danger" content="危险" />
           </MobileDocDemo>
+          <CodeBlock title="代码示例" code={exampleTone} language="tsx" showLineNumbers copyable wrapLongLines />
         </div>
         <div class="space-y-2">
           <Title level={3}>滚动 + 受控</Title>
@@ -75,6 +104,7 @@ export default function Page() {
                   </Button>
                 )}
           </MobileDocDemo>
+          <CodeBlock title="代码示例" code={exampleScroll} language="tsx" showLineNumbers copyable wrapLongLines />
         </div>
       </section>
       <section class="space-y-3">

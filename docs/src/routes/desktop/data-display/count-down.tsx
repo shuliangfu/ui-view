@@ -20,6 +20,10 @@ const importCode = `import { CountDown } from "@dreamer/ui-view";
 
 <CountDown target={Date.now() + 3_661_000} />`;
 
+
+const exampleDemo = `<CountDown target={Date.now() + 3_661_000} />`;
+
+
 export default function Page() {
   return (
     <div class="space-y-8">
@@ -36,6 +40,7 @@ export default function Page() {
         <div class="rounded-xl border border-slate-200 dark:border-slate-700 p-4 bg-white dark:bg-slate-900">
           <CountDown target={Date.now() + 3661000} />
         </div>
+        <CodeBlock title="代码示例" code={exampleDemo} language="tsx" showLineNumbers copyable wrapLongLines />
       </section>
       <section class="space-y-3">
         <Title level={2}>API</Title>

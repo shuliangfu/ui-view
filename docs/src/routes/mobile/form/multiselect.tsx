@@ -91,6 +91,11 @@ const val = createSignal<string[]>(["x"]);
 const mobileMultiSelectBasicVal = createSignal<string[]>(["x"]);
 const mobileMultiSelectControlledVal = createSignal<string[]>(["x"]);
 
+
+const exampleControlled = `const value = createSignal(["a"]);
+<MultiSelect value={value} options={[{ value: "a", label: "A" }, { value: "b", label: "B" }]} />`;
+
+
 export default function MobileMultiSelectDoc() {
   return (
     <div class="w-full max-w-3xl space-y-10">
@@ -152,6 +157,8 @@ export default function MobileMultiSelectDoc() {
               </p>
             )}
           </MobileDocDemo>
+          <CodeBlock title="代码示例" code={exampleControlled} language="tsx" showLineNumbers copyable wrapLongLines />
+
         </div>
       </section>
 

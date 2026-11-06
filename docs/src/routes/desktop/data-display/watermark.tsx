@@ -26,6 +26,25 @@ const importCode = `import { Watermark } from "@dreamer/ui-view";
   <div class="h-40 p-4">业务内容区域</div>
 </Watermark>`;
 
+const exampleBasic = `<Watermark content="内部资料">
+  <div class="h-40 p-4 bg-white dark:bg-slate-900">业务内容区域</div>
+</Watermark>`;
+
+const exampleMulti = `<Watermark content={["Dreamer", "仅供预览"]}>
+  <div class="h-40 p-4 bg-white dark:bg-slate-900">多行水印</div>
+</Watermark>`;
+
+const exampleStyle = `<Watermark
+  content="CONFIDENTIAL"
+  fontSize={12}
+  color="rgba(37,99,235,0.25)"
+  rotate={-30}
+  gapX={120}
+  gapY={100}
+>
+  <div class="h-44 p-4 bg-white dark:bg-slate-900">自定义样式</div>
+</Watermark>`;
+
 export default function Page() {
   return (
     <div class="space-y-8">
@@ -47,6 +66,14 @@ export default function Page() {
               <div class="h-40 p-4 bg-white dark:bg-slate-900">业务内容区域</div>
             </Watermark>
           </div>
+          <CodeBlock
+            title="代码示例"
+            code={exampleBasic}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
         </div>
 
         <div class="space-y-2">
@@ -56,6 +83,14 @@ export default function Page() {
               <div class="h-40 p-4 bg-white dark:bg-slate-900">多行水印</div>
             </Watermark>
           </div>
+          <CodeBlock
+            title="代码示例"
+            code={exampleMulti}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
         </div>
 
         <div class="space-y-2">
@@ -72,6 +107,14 @@ export default function Page() {
               <div class="h-44 p-4 bg-white dark:bg-slate-900">自定义样式</div>
             </Watermark>
           </div>
+          <CodeBlock
+            title="代码示例"
+            code={exampleStyle}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
         </div>
       </section>
       <section class="space-y-3">

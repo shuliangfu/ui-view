@@ -27,6 +27,27 @@ const importCode = `import { ContextMenu } from "@dreamer/ui-view";
   <div class="p-8 border border-dashed rounded-lg">在此区域右键</div>
 </ContextMenu>`;
 
+const exampleBasic = `<ContextMenu
+  items={[
+    { key: "copy", label: "复制", onClick: () => {} },
+    { key: "div1", label: "", divider: true },
+    { key: "del", label: "删除", danger: true, onClick: () => {} },
+  ]}
+>
+  <div class="p-8 border border-dashed rounded-lg">在此区域右键</div>
+</ContextMenu>`;
+
+const exampleDisabled = `<ContextMenu
+  items={[
+    { key: "edit", label: "编辑", onClick: () => {} },
+    { key: "share", label: "分享（禁用）", disabled: true },
+    { key: "d", label: "", divider: true },
+    { key: "del", label: "删除", danger: true, onClick: () => {} },
+  ]}
+>
+  <div class="p-8 border border-dashed rounded-lg">右键：含禁用「分享」</div>
+</ContextMenu>`;
+
 export default function Page() {
   const tip = createSignal("");
   return (
@@ -61,6 +82,14 @@ export default function Page() {
                 ? <p class="text-sm text-slate-500" role="status">操作：{tip.value}</p>
                 : null}
           </div>
+          <CodeBlock
+            title="代码示例"
+            code={exampleBasic}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
         </div>
 
         <div class="space-y-2">
@@ -79,6 +108,14 @@ export default function Page() {
               </div>
             </ContextMenu>
           </div>
+          <CodeBlock
+            title="代码示例"
+            code={exampleDisabled}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
         </div>
       </section>
       <section class="space-y-3">

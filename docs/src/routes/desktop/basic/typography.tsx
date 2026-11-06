@@ -63,6 +63,13 @@ const exampleParagraph = `<Paragraph>
   两端对齐等版式时，请通过 class 传入 Tailwind 工具类覆盖默认样式。
 </Paragraph>`;
 
+
+const exampleTitleLevels = `<Title level={1}>一级标题</Title>
+<Title level={2}>二级标题</Title>
+<Title level={3}>三级标题</Title>
+<Title level={4}>四级标题</Title>
+<Title level={5}>五级标题</Title>`;
+
 export default function BasicTypography() {
   return (
     <div class="space-y-10">
@@ -94,6 +101,8 @@ export default function BasicTypography() {
           <div class="space-y-2">
             <Title level={1}>标题 level 1</Title>
             <Title level={2}>标题 level 2</Title>
+          <CodeBlock title="代码示例" code={exampleTitleLevels} language="tsx" showLineNumbers copyable wrapLongLines />
+
             <Title level={3}>标题 level 3</Title>
             <Title level={4}>标题 level 4</Title>
             <Title level={5}>标题 level 5</Title>

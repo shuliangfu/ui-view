@@ -164,6 +164,13 @@ const val = createSignal(localNowDateTime());
   />
 </FormItem>`;
 
+
+const exampleNestedMessages = `<DateTimePicker
+  messages={{
+    calendarNav: { /* PickerCalendarNavMessages */ },
+  }}
+/>`;
+
 export default function FormDateTimePickerDoc() {
   const now = localNowDateTime();
   const rangeYear = new Date().getFullYear();
@@ -431,6 +438,8 @@ export default function FormDateTimePickerDoc() {
       </section>
 
       <section class="space-y-3">
+          <CodeBlock title="代码示例" code={exampleNestedMessages} language="tsx" showLineNumbers copyable wrapLongLines />
+
         <Title level={2}>API</Title>
         <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
           组件接收以下属性（均为可选）。文案相关字段见上文「文案（messages）」表。

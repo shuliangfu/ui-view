@@ -12,6 +12,33 @@ const API: DocsApiTableRow[] = [
 ];
 const importCode = `import { FloatButton } from "@dreamer/ui-view/mobile";`;
 
+const exampleCircle = `<FloatButton
+  position="absolute"
+  aria-label="新建"
+  badge={3}
+  items={[
+    { key: "a", icon: "📄", "aria-label": "文件" },
+    { key: "b", icon: "🖼️", "aria-label": "图片" },
+  ]}
+/>`;
+
+const exampleSquare = `<FloatButton
+  position="absolute"
+  shape="square"
+  aria-label="方"
+  icon="＋"
+/>`;
+
+const exampleOpen = `const open = createSignal(false);
+
+<FloatButton
+  position="absolute"
+  aria-label="受控"
+  open={open.value}
+  onOpenChange={(v) => (open.value = v)}
+  items={[{ key: "x", icon: "X", "aria-label": "X" }]}
+/>`;
+
 export default function Page() {
   const open = createSignal(false);
   return (
@@ -28,6 +55,14 @@ export default function Page() {
                 items={[{ key: "a", icon: "📄", "aria-label": "文件" }, { key: "b", icon: "🖼️", "aria-label": "图片" }]} />
             </div>
           </MobileDocDemo>
+          <CodeBlock
+            title="代码示例"
+            code={exampleCircle}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
         </div>
         <div class="space-y-2">
           <Title level={3}>方形</Title>
@@ -36,6 +71,14 @@ export default function Page() {
               <FloatButton position="absolute" shape="square" aria-label="方" icon="＋" />
             </div>
           </MobileDocDemo>
+          <CodeBlock
+            title="代码示例"
+            code={exampleSquare}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
         </div>
         <div class="space-y-2">
           <Title level={3}>受控 open</Title>
@@ -48,6 +91,14 @@ export default function Page() {
               )}
             </div>
           </MobileDocDemo>
+          <CodeBlock
+            title="代码示例"
+            code={exampleOpen}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
         </div>
       </section>
       <section class="space-y-3"><Title level={2}>API</Title><DocsApiTable rows={API} /></section>

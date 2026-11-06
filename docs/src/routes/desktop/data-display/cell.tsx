@@ -36,6 +36,38 @@ const notifyOn = createSignal(true);
   <Cell title="注销" arrow extra="不可用" disabled />
 </CellGroup>`;
 
+
+const exampleInteractive = `const tip = createSignal("");
+const notifyOn = createSignal(true);
+
+<CellGroup title="设置">
+  <Cell title="账号" arrow extra="详情" onClick={() => (tip.value = "已打开账号详情")} />
+  <Cell title="通知" description="推送开关" extra={<Switch checked={notifyOn} />} />
+  <Cell title="注销（禁用示意）" arrow extra="不可用" disabled />
+</CellGroup>`;
+
+const exampleIconHref = `<CellGroup title="资料" inset>
+  <Cell
+    icon={<span aria-hidden="true">👤</span>}
+    title="昵称"
+    required
+    extra="未填写"
+    arrow
+    onClick={() => {}}
+  />
+  <Cell
+    title="帮助文档"
+    description="新窗口打开"
+    arrow
+    href="https://example.com/help"
+  />
+</CellGroup>`;
+
+const exampleInset = `<CellGroup title="紧凑" inset={false}>
+  <Cell title="一项" />
+  <Cell title="二项" />
+</CellGroup>`;
+
 export default function Page() {
   const tip = createSignal("");
   const notifyOn = createSignal(true);
@@ -88,6 +120,7 @@ export default function Page() {
                 )
                 : null}
           </div>
+          <CodeBlock title="代码示例" code={exampleInteractive} language="tsx" showLineNumbers copyable wrapLongLines />
         </div>
 
         <div class="space-y-2">
@@ -110,6 +143,7 @@ export default function Page() {
               />
             </CellGroup>
           </div>
+          <CodeBlock title="代码示例" code={exampleIconHref} language="tsx" showLineNumbers copyable wrapLongLines />
         </div>
 
         <div class="space-y-2">
@@ -120,6 +154,7 @@ export default function Page() {
               <Cell title="二项" />
             </CellGroup>
           </div>
+          <CodeBlock title="代码示例" code={exampleInset} language="tsx" showLineNumbers copyable wrapLongLines />
         </div>
       </section>
       <section class="space-y-3">

@@ -26,6 +26,38 @@ import { Overlay } from "@dreamer/ui-view";
 const open = createSignal(false);
 <Overlay open={open} onClick={() => (open.value = false)} zIndex={400} />`;
 
+const examplePortal = `const open = createSignal(false);
+
+<Button type="button" onClick={() => (open.value = true)}>打开遮罩</Button>
+<Overlay open={open} onClick={() => (open.value = false)} zIndex={400} />`;
+
+const exampleLocal = `const openLocal = createSignal(false);
+
+<Button type="button" size="sm" onClick={() => (openLocal.value = true)}>
+  框内遮罩
+</Button>
+<div class="relative h-40 rounded-lg border border-dashed overflow-hidden">
+  <p class="p-3 text-sm text-slate-500">相对定位容器</p>
+  <Overlay
+    open={openLocal}
+    portal={false}
+    position="absolute"
+    zIndex={10}
+    onClick={() => (openLocal.value = false)}
+    class="bg-slate-900/40"
+  />
+</div>`;
+
+const exampleNoClick = `const openNoClick = createSignal(false);
+
+<Button type="button" size="sm" onClick={() => (openNoClick.value = true)}>
+  打开（点遮罩不关）
+</Button>
+<Button type="button" size="sm" variant="ghost" onClick={() => (openNoClick.value = false)}>
+  强制关闭
+</Button>
+<Overlay open={openNoClick} clickable={false} zIndex={400} aria-label="不可点遮罩" />`;
+
 export default function Page() {
   const open = createSignal(false);
   const openLocal = createSignal(false);
@@ -51,6 +83,7 @@ export default function Page() {
             <Button type="button" onClick={() => (open.value = true)}>打开遮罩</Button>
             <Overlay open={open} onClick={() => (open.value = false)} zIndex={400} />
           </div>
+          <CodeBlock title="代码示例" code={examplePortal} language="tsx" showLineNumbers copyable wrapLongLines />
         </div>
 
         <div class="space-y-2">
@@ -71,6 +104,7 @@ export default function Page() {
               />
             </div>
           </div>
+          <CodeBlock title="代码示例" code={exampleLocal} language="tsx" showLineNumbers copyable wrapLongLines />
         </div>
 
         <div class="space-y-2">
@@ -91,6 +125,7 @@ export default function Page() {
               aria-label="不可点遮罩"
             />
           </div>
+          <CodeBlock title="代码示例" code={exampleNoClick} language="tsx" showLineNumbers copyable wrapLongLines />
         </div>
       </section>
       <section class="space-y-3">

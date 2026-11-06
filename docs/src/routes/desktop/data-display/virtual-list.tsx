@@ -32,6 +32,40 @@ const rows = Array.from({ length: ${TOTAL} }, (_, i) => i + 1);
   renderItem={(n) => <div class="px-3 leading-9">Item {n}</div>}
 />`;
 
+
+const exampleFixed = `const rows = Array.from({ length: 2000 }, (_, i) => i + 1);
+
+<VirtualList
+  height={320}
+  itemHeight={36}
+  data={rows}
+  renderItem={(n) => (
+    <div class="px-3 leading-9 border-b border-slate-100">Item {n}</div>
+  )}
+/>`;
+
+const exampleDynamic = `const dynamic = [/* { id, text }… */];
+
+<VirtualList
+  height={240}
+  overscan={6}
+  data={dynamic}
+  rowKey={(r) => r.id}
+  getItemHeight={(r) => (r.text.includes("\\n") ? 56 : 36)}
+  renderItem={(r) => (
+    <div class="px-3 py-2 text-sm whitespace-pre-line">{r.text}</div>
+  )}
+/>`;
+
+const exampleEmpty = `<VirtualList
+  height={120}
+  itemHeight={36}
+  data={[]}
+  empty={<p class="text-sm text-slate-500 p-4">暂无数据</p>}
+  renderItem={() => null}
+/>`;
+
+
 export default function Page() {
   const rows = Array.from({ length: TOTAL }, (_, i) => i + 1);
   const dynamic = Array.from({ length: 200 }, (_, i) => ({
@@ -67,6 +101,8 @@ export default function Page() {
               )}
             />
           </div>
+          <CodeBlock title="代码示例" code={exampleFixed} language="tsx" showLineNumbers copyable wrapLongLines />
+
         </div>
 
         <div class="space-y-2">
@@ -85,6 +121,8 @@ export default function Page() {
               )}
             />
           </div>
+          <CodeBlock title="代码示例" code={exampleDynamic} language="tsx" showLineNumbers copyable wrapLongLines />
+
         </div>
 
         <div class="space-y-2">
@@ -98,6 +136,8 @@ export default function Page() {
               renderItem={() => null}
             />
           </div>
+          <CodeBlock title="代码示例" code={exampleEmpty} language="tsx" showLineNumbers copyable wrapLongLines />
+
         </div>
       </section>
       <section class="space-y-3">

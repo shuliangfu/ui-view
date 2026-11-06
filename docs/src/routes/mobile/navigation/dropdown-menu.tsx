@@ -56,6 +56,43 @@ const items = [
   },
 ];
 
+
+const exampleBasic = `<MobilePortalHostScope>
+  <DropdownMenu
+    items={[
+      {
+        key: "sort",
+        title: "排序",
+        options: [
+          { value: "n", label: "最新" },
+          { value: "h", label: "最热" },
+        ],
+      },
+      {
+        key: "filter",
+        title: "筛选",
+        options: [
+          { value: "a", label: "全部" },
+          { value: "m", label: "我的" },
+        ],
+      },
+    ]}
+  />
+</MobilePortalHostScope>`;
+
+const exampleValue = `const value = createSignal({ sort: "n", filter: "a" });
+
+<MobilePortalHostScope>
+  <DropdownMenu
+    items={items}
+    value={value.value}
+    onChange={(key, v) => {
+      value.value = { ...value.value, [key]: v };
+    }}
+  />
+</MobilePortalHostScope>`;
+
+
 export default function Page() {
   const value = createSignal<Record<string, string>>({ sort: "n", filter: "a" });
   return (
@@ -82,6 +119,8 @@ export default function Page() {
               </div>
             </MobilePortalHostScope>
           </MobileDocDemo>
+          <CodeBlock title="代码示例" code={exampleBasic} language="tsx" showLineNumbers copyable wrapLongLines />
+
         </div>
         <div class="space-y-2">
           <Title level={3}>受控 value</Title>
@@ -103,6 +142,8 @@ export default function Page() {
               )}
             </MobilePortalHostScope>
           </MobileDocDemo>
+          <CodeBlock title="代码示例" code={exampleValue} language="tsx" showLineNumbers copyable wrapLongLines />
+
         </div>
       </section>
       <section class="space-y-3">

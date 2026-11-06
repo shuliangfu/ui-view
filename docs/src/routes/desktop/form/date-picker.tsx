@@ -140,6 +140,13 @@ const val = createSignal(localTodayYmd());
   />
 </FormItem>`;
 
+
+const exampleNestedMessages = `<DatePicker
+  messages={{
+    calendarNav: { /* PickerCalendarNavMessages */ },
+  }}
+/>`;
+
 export default function FormDatePicker() {
   const today = localTodayYmd();
   /** min/max 与「有默认值」示例同年，保证默认选中日在可选范围内 */
@@ -434,6 +441,8 @@ const valLg = createSignal(today);
       </section>
 
       <section class="space-y-3">
+          <CodeBlock title="代码示例" code={exampleNestedMessages} language="tsx" showLineNumbers copyable wrapLongLines />
+
         <Title level={2}>API</Title>
         <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
           组件接收以下属性（均为可选）。文案相关字段见上文「文案（messages）」表，勿与本表合并理解。

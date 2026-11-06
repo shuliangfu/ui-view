@@ -57,6 +57,12 @@ const svg = \`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 5 3"><rect wi
 
 <FlagImg svg={svg} size="md" />`;
 
+const exampleWithSvg = `const svg = \`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 5 3"><rect width="5" height="3" fill="#dc2626"/></svg>\`;
+
+<FlagImg svg={svg} size="lg" title="示例旗" />`;
+
+const exampleEmpty = `<FlagImg svg="" size="md" />`;
+
 /**
  * FlagImg 文档页：概述、引入、示例、文案表、API。
  */
@@ -96,12 +102,28 @@ export default function BasicFlagImgDoc() {
           <div class="flex items-center gap-4">
             <FlagImg svg={DEMO_FLAG_SVG} size="lg" title="示例旗" />
           </div>
+          <CodeBlock
+            title="代码示例"
+            code={exampleWithSvg}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
         </div>
         <div class="space-y-3">
           <Title level={3}>空 SVG（占位与 messages.emptySvgTitle）</Title>
           <div class="flex items-center gap-4">
             <FlagImg svg="" size="md" />
           </div>
+          <CodeBlock
+            title="代码示例"
+            code={exampleEmpty}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
         </div>
       </section>
 

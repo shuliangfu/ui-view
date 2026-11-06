@@ -65,6 +65,54 @@ const stepsPlace = [
   },
 ];
 
+
+const exampleBasic = `const open = createSignal(false);
+
+<Button type="button" onClick={() => (open.value = true)}>开始引导</Button>
+<Tour
+  open={open}
+  steps={[
+    { title: "欢迎", description: "第一步", target: "#tour-demo-a", placement: "bottom" },
+    { title: "继续", description: "第二步", target: "#tour-demo-b", placement: "bottom" },
+  ]}
+  onClose={() => (open.value = false)}
+  onFinish={() => (open.value = false)}
+/>`;
+
+const exampleCtrl = `const openControlled = createSignal(false);
+const current = createSignal(0);
+
+<Button type="button" size="sm" onClick={() => { current.value = 0; openControlled.value = true; }}>
+  打开受控引导
+</Button>
+<Tour
+  open={openControlled}
+  current={current}
+  onCurrentChange={(i) => (current.value = i)}
+  steps={[
+    { title: "受控 1", description: "current 由外部 signal", target: "#tour-ctrl-a", placement: "bottom" },
+    { title: "受控 2", description: "下一步会写回 current", target: "#tour-ctrl-b", placement: "bottom" },
+  ]}
+  onClose={() => (openControlled.value = false)}
+  onFinish={() => (openControlled.value = false)}
+/>`;
+
+const exampleNoSkip = `const openNoSkip = createSignal(false);
+
+<Tour
+  open={openNoSkip}
+  showSkip={false}
+  steps={[{ title: "唯一", description: "无跳过按钮", target: "#tour-noskip", placement: "bottom" }]}
+  onClose={() => (openNoSkip.value = false)}
+  onFinish={() => (openNoSkip.value = false)}
+/>`;
+
+const examplePlace = `const openPlace = createSignal(false);
+
+<Tour open={openPlace} steps={stepsPlace} onClose={() => (openPlace.value = false)} onFinish={() => (openPlace.value = false)} />
+{/* stepsPlace 含 top / bottom / left / right 等 placement */}`;
+
+
 export default function Page() {
   const open = createSignal(false);
   const openControlled = createSignal(false);
@@ -118,6 +166,8 @@ export default function Page() {
               onFinish={() => (open.value = false)}
             />
           </div>
+          <CodeBlock title="代码示例" code={exampleBasic} language="tsx" showLineNumbers copyable wrapLongLines />
+
         </div>
 
         <div class="space-y-2">
@@ -148,6 +198,8 @@ export default function Page() {
               onFinish={() => (openControlled.value = false)}
             />
           </div>
+          <CodeBlock title="代码示例" code={exampleCtrl} language="tsx" showLineNumbers copyable wrapLongLines />
+
         </div>
 
         <div class="space-y-2">
@@ -169,6 +221,8 @@ export default function Page() {
               onFinish={() => (openNoSkip.value = false)}
             />
           </div>
+          <CodeBlock title="代码示例" code={exampleNoSkip} language="tsx" showLineNumbers copyable wrapLongLines />
+
         </div>
 
         <div class="space-y-2">
@@ -189,6 +243,8 @@ export default function Page() {
               onFinish={() => (openPlace.value = false)}
             />
           </div>
+          <CodeBlock title="代码示例" code={examplePlace} language="tsx" showLineNumbers copyable wrapLongLines />
+
         </div>
       </section>
       <section class="space-y-3">

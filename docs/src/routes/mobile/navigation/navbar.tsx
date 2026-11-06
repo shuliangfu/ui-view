@@ -128,6 +128,10 @@ const importCode = `import { NavBar } from "@dreamer/ui-view/mobile";
   onClickRight={() => {}}
 />`;
 
+
+const exampleFixed = `<Navbar title="标题" fixed placeholder left={<span>返回</span>} />`;
+
+
 export default function MobileNavBarDoc() {
   return (
     <div class="w-full max-w-3xl space-y-10">
@@ -203,6 +207,8 @@ export default function MobileNavBarDoc() {
               正文从占位下方开始，不被 NavBar 盖住。
             </div>
           </MobileDocDemo>
+          <CodeBlock title="代码示例" code={exampleFixed} language="tsx" showLineNumbers copyable wrapLongLines />
+
         </div>
       </section>
 

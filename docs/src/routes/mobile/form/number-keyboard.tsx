@@ -37,6 +37,12 @@ const open = createSignal(false);
   onClose={() => (open.value = false)}
 />`;
 
+
+const exampleDemo = `const open = createSignal(false);
+const value = createSignal("");
+<NumberKeyboard open={open} value={value} onClose={() => (open.value = false)} />`;
+
+
 export default function Page() {
   const open = createSignal(false);
   const digits = createSignal("");
@@ -79,6 +85,7 @@ export default function Page() {
             />
           </MobilePortalHostScope>
         </MobileDocDemo>
+        <CodeBlock title="代码示例" code={exampleDemo} language="tsx" showLineNumbers copyable wrapLongLines />
       </section>
       <section class="space-y-3">
         <Title level={2}>API</Title>

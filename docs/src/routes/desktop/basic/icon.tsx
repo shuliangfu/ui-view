@@ -450,6 +450,12 @@ function DotSvg() {
   );
 }
 
+
+const exampleThemeIcons = `{/* 浅色 / 自动 / 深色 主题图标 */}
+<IconLightTheme size="md" />
+<IconAutoTheme size="md" />
+<IconDarkTheme size="md" />`;
+
 export default function BasicIcon() {
   const 操作 = [
     { Component: IconClose, name: "Close" },
@@ -1055,7 +1061,9 @@ export default function BasicIcon() {
               </span>
             </div>
           </div>
-        </div>
+        
+          <CodeBlock title="代码示例" code={exampleThemeIcons} language="tsx" showLineNumbers copyable wrapLongLines />
+</div>
       </section>
 
       <section class="space-y-3">

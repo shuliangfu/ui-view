@@ -43,6 +43,47 @@ function DemoBox(props: { label: string; children?: unknown }) {
   );
 }
 
+
+const exampleCircle = `<FloatButton
+  position="absolute"
+  shape="circle"
+  aria-label="新建"
+  badge={3}
+  items={[
+    { key: "file", icon: "📄", "aria-label": "文件" },
+    { key: "img", icon: "🖼️", "aria-label": "图片" },
+  ]}
+/>`;
+
+const exampleSquare = `<FloatButton
+  position="absolute"
+  shape="square"
+  aria-label="操作"
+  icon="＋"
+/>`;
+
+const examplePlacement = `<FloatButton
+  position="absolute"
+  placement="bottom-right"
+  offset={12}
+  aria-label="bottom-right"
+  icon="·"
+/>
+{/* 同理 placement: bottom-left | top-right | top-left */}`;
+
+const exampleOpen = `const open = createSignal(false);
+
+<FloatButton
+  position="absolute"
+  aria-label="受控"
+  open={open.value}
+  onOpenChange={(v) => (open.value = v)}
+  items={[
+    { key: "a", icon: "A", "aria-label": "A" },
+    { key: "b", icon: "B", "aria-label": "B" },
+  ]}
+/>`;
+
 export default function Page() {
   const open = createSignal(false);
   return (
@@ -76,6 +117,7 @@ export default function Page() {
               />
             </DemoBox>
           </div>
+          <CodeBlock title="代码示例" code={exampleCircle} language="tsx" showLineNumbers copyable wrapLongLines />
         </div>
 
         <div class="space-y-2">
@@ -90,6 +132,7 @@ export default function Page() {
               />
             </DemoBox>
           </div>
+          <CodeBlock title="代码示例" code={exampleSquare} language="tsx" showLineNumbers copyable wrapLongLines />
         </div>
 
         <div class="space-y-2">
@@ -107,6 +150,7 @@ export default function Page() {
               </DemoBox>
             ))}
           </div>
+          <CodeBlock title="代码示例" code={examplePlacement} language="tsx" showLineNumbers copyable wrapLongLines />
         </div>
 
         <div class="space-y-2">
@@ -128,6 +172,7 @@ export default function Page() {
               />
             </DemoBox>
           </div>
+          <CodeBlock title="代码示例" code={exampleOpen} language="tsx" showLineNumbers copyable wrapLongLines />
         </div>
       </section>
       <section class="space-y-3">

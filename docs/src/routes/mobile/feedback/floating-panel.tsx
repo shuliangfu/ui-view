@@ -35,6 +35,14 @@ const open = createSignal(false);
   <div class="p-4">面板内容</div>
 </FloatingPanel>`;
 
+
+const exampleDemo = `const open = createSignal(false);
+<Button onClick={() => (open.value = true)}>打开</Button>
+<FloatingPanel open={open} onClose={() => (open.value = false)}>
+  面板内容
+</FloatingPanel>`;
+
+
 export default function Page() {
   const open = createSignal(false);
   return (
@@ -67,6 +75,7 @@ export default function Page() {
             </FloatingPanel>
           </MobilePortalHostScope>
         </MobileDocDemo>
+        <CodeBlock title="代码示例" code={exampleDemo} language="tsx" showLineNumbers copyable wrapLongLines />
       </section>
       <section class="space-y-3">
         <Title level={2}>API</Title>

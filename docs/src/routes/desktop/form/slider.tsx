@@ -97,6 +97,10 @@ const committed = createSignal(50);
 const sliderValueHintCls =
   "text-sm tabular-nums text-slate-600 dark:text-slate-400";
 
+
+const exampleVertical = `<Slider vertical value={50} style={{ height: "160px" }} />`;
+
+
 export default function FormSlider() {
   /** 与 Slider 的 value 绑定同一 Signal；Slider 在 onInput 路径内会 commitMaybeSignal，首屏即有文案且拖动跟手 */
   const singleVal = createSignal(50);
@@ -238,7 +242,9 @@ const range = createSignal<[number, number]>([20, 80]);
                   {() => `当前值：${singleVal()}（与上方「单值」共用 Signal）`}
                 </span>
               </div>
-            </FormItem>
+            
+          <CodeBlock title="代码示例" code={exampleVertical} language="tsx" showLineNumbers copyable wrapLongLines />
+</FormItem>
           </section>
 
           <section class="space-y-4">

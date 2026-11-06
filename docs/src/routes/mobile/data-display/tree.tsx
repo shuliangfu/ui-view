@@ -90,6 +90,48 @@ const lineExpanded = createSignal<string[]>(["1"]);
 const blockExpanded = createSignal<string[]>(["1"]);
 const blockChecked = createSignal<string[]>([]);
 
+
+const exampleCascade = `<Tree
+  treeData={treeData}
+  checkable
+  defaultExpandedKeys={["1"]}
+  expandedKeys={expandedKeys}
+  onExpand={(keys) => (expandedKeys.value = keys)}
+  checkedKeys={checkedKeys}
+  onCheck={(keys) => (checkedKeys.value = keys)}
+/>`;
+
+const exampleStrict = `<Tree
+  treeData={treeData}
+  checkable
+  checkStrictly
+  defaultExpandedKeys={["1"]}
+  expandedKeys={strictExpanded}
+  onExpand={(keys) => (strictExpanded.value = keys)}
+  checkedKeys={strictChecked}
+  onCheck={(keys) => (strictChecked.value = keys)}
+/>`;
+
+const exampleLine = `<Tree
+  treeData={treeData}
+  showLine
+  defaultExpandedKeys={["1"]}
+  expandedKeys={lineExpanded}
+  onExpand={(keys) => (lineExpanded.value = keys)}
+/>`;
+
+const exampleBlock = `<Tree
+  treeData={treeData}
+  blockNode
+  checkable
+  defaultExpandedKeys={["1"]}
+  expandedKeys={blockExpanded}
+  onExpand={(keys) => (blockExpanded.value = keys)}
+  checkedKeys={blockChecked}
+  onCheck={(keys) => (blockChecked.value = keys)}
+/>`;
+
+
 export default function Page() {
   return (
     <div class="space-y-8">
@@ -126,6 +168,8 @@ export default function Page() {
               </p>
             )}
           </MobileDocDemo></div>
+          <CodeBlock title="代码示例" code={exampleCascade} language="tsx" showLineNumbers copyable wrapLongLines />
+
         </div>
 
         <div class="space-y-2">
@@ -148,6 +192,8 @@ export default function Page() {
               </p>
             )}
           </MobileDocDemo></div>
+          <CodeBlock title="代码示例" code={exampleStrict} language="tsx" showLineNumbers copyable wrapLongLines />
+
         </div>
 
         <div class="space-y-2">
@@ -161,6 +207,8 @@ export default function Page() {
               onExpand={(keys) => (lineExpanded.value = keys)}
             />
           </MobileDocDemo></div>
+          <CodeBlock title="代码示例" code={exampleLine} language="tsx" showLineNumbers copyable wrapLongLines />
+
         </div>
 
         <div class="space-y-2">
@@ -177,6 +225,8 @@ export default function Page() {
               onCheck={(keys) => (blockChecked.value = keys)}
             />
           </MobileDocDemo></div>
+          <CodeBlock title="代码示例" code={exampleBlock} language="tsx" showLineNumbers copyable wrapLongLines />
+
         </div>
       </section>
       <section class="space-y-3">

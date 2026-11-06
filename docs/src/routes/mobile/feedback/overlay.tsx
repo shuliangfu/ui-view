@@ -25,6 +25,25 @@ import { Overlay } from "@dreamer/ui-view/mobile";
 const open = createSignal(false);
 <Overlay open={open} onClick={() => (open.value = false)} zIndex={400} />`;
 
+const examplePortal = `const open = createSignal(false);
+
+<Button type="button" onClick={() => (open.value = true)}>打开遮罩</Button>
+<Overlay open={open} onClick={() => (open.value = false)} zIndex={400} />`;
+
+const exampleLocal = `const openLocal = createSignal(false);
+
+<Button type="button" size="sm" onClick={() => (openLocal.value = true)}>框内遮罩</Button>
+<div class="relative h-32 rounded-lg border border-dashed overflow-hidden">
+  <Overlay
+    open={openLocal}
+    portal={false}
+    position="absolute"
+    zIndex={10}
+    class="bg-slate-900/40"
+    onClick={() => (openLocal.value = false)}
+  />
+</div>`;
+
 export default function Page() {
   const open = createSignal(false);
   const openLocal = createSignal(false);
@@ -48,6 +67,7 @@ export default function Page() {
               <Overlay open={open} onClick={() => (open.value = false)} zIndex={400} />
             </div>
           </MobileDocDemo>
+          <CodeBlock title="代码示例" code={examplePortal} language="tsx" showLineNumbers copyable wrapLongLines />
         </div>
         <div class="space-y-2">
           <Title level={3}>局部 portal=false</Title>
@@ -65,6 +85,7 @@ export default function Page() {
               />
             </div>
           </MobileDocDemo>
+          <CodeBlock title="代码示例" code={exampleLocal} language="tsx" showLineNumbers copyable wrapLongLines />
         </div>
       </section>
       <section class="space-y-3">

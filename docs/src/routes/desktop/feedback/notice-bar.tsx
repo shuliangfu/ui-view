@@ -26,6 +26,43 @@ const importCode = `import { NoticeBar } from "@dreamer/ui-view";
 
 <NoticeBar tone="warning" closable content="系统将于今晚 23:00 维护，请提前保存" />`;
 
+
+const exampleTone = `<NoticeBar tone="info" content="信息：同步已完成" />
+<NoticeBar tone="success" content="成功：配置已保存" />
+<NoticeBar tone="warning" content="警告：磁盘空间不足" />
+<NoticeBar tone="danger" content="危险：认证即将过期" />`;
+
+const exampleClosable = `<NoticeBar tone="warning" closable content="系统将于今晚维护" />`;
+
+const exampleScroll = `<NoticeBar
+  tone="info"
+  scrollable
+  content="欢迎使用组件库 —— 本条为长文案横向滚动示意，请关注发布说明与变更日志。"
+/>`;
+
+const exampleVisible = `const controlledVisible = createSignal(true);
+
+{controlledVisible.value ? (
+  <NoticeBar
+    tone="success"
+    closable
+    visible={controlledVisible.value}
+    onClose={() => (controlledVisible.value = false)}
+    content="受控条：点 × 由外部 signal 隐藏"
+  />
+) : (
+  <Button type="button" size="sm" onClick={() => (controlledVisible.value = true)}>
+    重新显示
+  </Button>
+)}`;
+
+const exampleIconClick = `<NoticeBar
+  tone="info"
+  icon={<span aria-hidden="true">📢</span>}
+  content="点击本条查看详情"
+  onClick={() => {}}
+/>`;
+
 export default function Page() {
   const controlledVisible = createSignal(true);
   const tip = createSignal("");
@@ -52,6 +89,7 @@ export default function Page() {
             <NoticeBar tone="warning" content="警告：磁盘空间不足" />
             <NoticeBar tone="danger" content="危险：认证即将过期" />
           </div>
+          <CodeBlock title="代码示例" code={exampleTone} language="tsx" showLineNumbers copyable wrapLongLines />
         </div>
 
         <div class="space-y-2">
@@ -59,6 +97,7 @@ export default function Page() {
           <div class="rounded-xl border border-slate-200 dark:border-slate-700 p-4 bg-white dark:bg-slate-900">
             <NoticeBar tone="warning" closable content="系统将于今晚维护" />
           </div>
+          <CodeBlock title="代码示例" code={exampleClosable} language="tsx" showLineNumbers copyable wrapLongLines />
         </div>
 
         <div class="space-y-2">
@@ -70,6 +109,7 @@ export default function Page() {
               content="欢迎使用组件库 —— 本条为长文案横向滚动示意，请关注发布说明与变更日志。"
             />
           </div>
+          <CodeBlock title="代码示例" code={exampleScroll} language="tsx" showLineNumbers copyable wrapLongLines />
         </div>
 
         <div class="space-y-2">
@@ -96,6 +136,7 @@ export default function Page() {
                   </Button>
                 )}
           </div>
+          <CodeBlock title="代码示例" code={exampleVisible} language="tsx" showLineNumbers copyable wrapLongLines />
         </div>
 
         <div class="space-y-2">
@@ -112,6 +153,7 @@ export default function Page() {
                 ? <p class="text-sm text-slate-500" role="status">{tip.value}</p>
                 : null}
           </div>
+          <CodeBlock title="代码示例" code={exampleIconClick} language="tsx" showLineNumbers copyable wrapLongLines />
         </div>
       </section>
       <section class="space-y-3">

@@ -116,6 +116,13 @@ const val = createSignal("2026-04-09");
 /** 文档页受控值须模块级，与桌面 DatePicker 示例一致 */
 const mobileDatePickerVal = createSignal(localTodayYmd());
 
+
+const exampleNestedMessages = `<DatePicker
+  messages={{
+    calendarNav: { /* PickerCalendarNavMessages */ },
+  }}
+/>`;
+
 export default function MobileDatePickerDoc() {
   return (
     <div class="w-full max-w-3xl space-y-10">
@@ -186,6 +193,8 @@ export default function MobileDatePickerDoc() {
       </section>
 
       <section class="space-y-4">
+          <CodeBlock title="代码示例" code={exampleNestedMessages} language="tsx" showLineNumbers copyable wrapLongLines />
+
         <Title level={2}>API</Title>
         <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
           与 <code class="text-sm">@dreamer/ui-view</code>{" "}

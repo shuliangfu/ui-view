@@ -120,6 +120,15 @@ const open = createSignal(false);
   cancelText="取消"
 />`;
 
+
+const exampleNoTitle = `const open = createSignal(false);
+
+<ActionSheet
+  open={open}
+  actions={[{ key: "a", label: "操作 A" }]}
+  onClose={() => (open.value = false)}
+/>`;
+
 export default function MobileActionSheetDoc() {
   const open = createSignal(false);
   const openDanger = createSignal(false);
@@ -196,6 +205,8 @@ export default function MobileActionSheetDoc() {
               cancelText="关闭"
             />
           </MobileDocDemo>
+          <CodeBlock title="代码示例" code={exampleNoTitle} language="tsx" showLineNumbers copyable wrapLongLines />
+
         </div>
       </section>
 

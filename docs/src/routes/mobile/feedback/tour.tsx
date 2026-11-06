@@ -24,6 +24,32 @@ import { Tour } from "@dreamer/ui-view/mobile";
 const open = createSignal(false);
 <Tour open={open} steps={[...]} onClose={() => (open.value = false)} />`;
 
+
+const exampleBasic = `const open = createSignal(false);
+const steps = [
+  { title: "欢迎", description: "第一步", target: "#m-tour-a", placement: "bottom" },
+  { title: "继续", description: "第二步", target: "#m-tour-b", placement: "bottom" },
+];
+
+<Button type="button" onClick={() => (open.value = true)}>开始引导</Button>
+<Tour open={open} steps={steps} onClose={() => (open.value = false)} onFinish={() => (open.value = false)} />`;
+
+const exampleCtrl = `const openCtrl = createSignal(false);
+const current = createSignal(0);
+
+<Button type="button" size="sm" onClick={() => { current.value = 0; openCtrl.value = true; }}>
+  打开受控
+</Button>
+<Tour
+  open={openCtrl}
+  current={current}
+  onCurrentChange={(i) => (current.value = i)}
+  steps={[{ title: "一步", description: "受控", target: "#m-tour-c", placement: "bottom" }]}
+  onClose={() => (openCtrl.value = false)}
+  onFinish={() => (openCtrl.value = false)}
+/>`;
+
+
 export default function Page() {
   const open = createSignal(false);
   const openCtrl = createSignal(false);
@@ -66,6 +92,8 @@ export default function Page() {
               onFinish={() => (open.value = false)}
             />
           </MobileDocDemo>
+          <CodeBlock title="代码示例" code={exampleBasic} language="tsx" showLineNumbers copyable wrapLongLines />
+
         </div>
         <div class="space-y-2">
           <Title level={3}>受控 current</Title>
@@ -88,6 +116,8 @@ export default function Page() {
               onFinish={() => (openCtrl.value = false)}
             />
           </MobileDocDemo>
+          <CodeBlock title="代码示例" code={exampleCtrl} language="tsx" showLineNumbers copyable wrapLongLines />
+
         </div>
       </section>
       <section class="space-y-3">

@@ -105,6 +105,21 @@ const importCode = `import { Link, NavBar } from "@dreamer/ui-view";
 /**
  * NavBar（桌面）文档页：概述、引入、示例、文案表、API。
  */
+
+const exampleDemo = `import { Link, NavBar } from "@dreamer/ui-view";
+
+<NavBar
+  sticky={false}
+  brand={<span class="font-semibold">Brand</span>}
+  nav={
+    <>
+      <Link href="#">首页</Link>
+      <Link href="#">文档</Link>
+    </>
+  }
+/>`;
+
+
 export default function NavigationDesktopNavBarDoc() {
   return (
     <div class="w-full max-w-3xl space-y-10">
@@ -175,6 +190,8 @@ export default function NavigationDesktopNavBarDoc() {
         </div>
       </section>
 
+      
+        <CodeBlock title="代码示例" code={exampleDemo} language="tsx" showLineNumbers copyable wrapLongLines />
       <DocsMessagesSection
         interfaceName="DesktopNavBarMessages"
         defaultExportName="defaultDesktopNavBarMessages"

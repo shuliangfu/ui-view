@@ -108,6 +108,11 @@ const mobileSelectBasicVal = createSignal("");
 /** 「受控 Signal」示例专用，勿放进页面函数体内 */
 const mobileSelectControlledVal = createSignal("a");
 
+
+const exampleControlled = `const value = createSignal("a");
+<Select value={value} options={[{ value: "a", label: "A" }, { value: "b", label: "B" }]} />`;
+
+
 export default function MobileSelectDoc() {
   return (
     <div class="w-full max-w-3xl space-y-10">
@@ -181,6 +186,8 @@ export default function MobileSelectDoc() {
               </p>
             )}
           </MobileDocDemo>
+          <CodeBlock title="代码示例" code={exampleControlled} language="tsx" showLineNumbers copyable wrapLongLines />
+
         </div>
       </section>
 

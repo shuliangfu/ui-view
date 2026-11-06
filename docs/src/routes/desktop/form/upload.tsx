@@ -174,6 +174,17 @@ const importCode = `import { Upload, Form, FormItem } from "@dreamer/ui-view";
   <Upload name="avatarUrl" action="/api/upload" maxFileSize={5 * 1024 * 1024} />
 </FormItem>`;
 
+
+const exampleActionDemo = `<Upload action="/api/upload" />`;
+
+const exampleMultiNoDrag = `<Upload
+  multiple
+  showDragArea={false}
+  accept="image/*"
+>
+  <Button><IconUpload /> 上传图片</Button>
+</Upload>`;
+
 export default function FormUpload() {
   const hiddenPreview = createSignal("");
 
@@ -240,7 +251,9 @@ export default function FormUpload() {
                 multiple
                 onValueChange={(v) => hiddenPreview.value = v}
               />
-            </FormItem>
+            
+          <CodeBlock title="代码示例" code={exampleActionDemo} language="tsx" showLineNumbers copyable wrapLongLines />
+</FormItem>
           </section>
 
           <section class="space-y-4">
@@ -310,7 +323,9 @@ export default function FormUpload() {
                 accept="image/*"
                 triggerLabel="上传图片"
               />
-            </FormItem>
+            
+          <CodeBlock title="代码示例" code={exampleMultiNoDrag} language="tsx" showLineNumbers copyable wrapLongLines />
+</FormItem>
           </section>
 
           <section class="space-y-4">

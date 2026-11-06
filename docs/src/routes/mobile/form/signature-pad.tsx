@@ -22,6 +22,10 @@ const importCode = `import { SignaturePad } from "@dreamer/ui-view/mobile";
   onChange={(dataUrl) => console.log("stroke", dataUrl?.slice(0, 32))}
 />`;
 
+
+const exampleDemo = `<SignaturePad height={160} />`;
+
+
 export default function Page() {
   return (
     <div class="space-y-8">
@@ -38,6 +42,7 @@ export default function Page() {
         <MobileDocDemo>
           <div class="p-3"><SignaturePad height={160} /></div>
         </MobileDocDemo>
+        <CodeBlock title="代码示例" code={exampleDemo} language="tsx" showLineNumbers copyable wrapLongLines />
       </section>
       <section class="space-y-3">
         <Title level={2}>API</Title>

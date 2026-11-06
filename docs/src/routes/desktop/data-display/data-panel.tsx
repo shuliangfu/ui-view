@@ -386,6 +386,20 @@ function Demo(props: { title: string; code: string; children?: unknown }) {
   );
 }
 
+
+const exampleDemo = `import { DataPanel } from "@dreamer/ui-view";
+// 或 import { DataPanel } from "@dreamer/ui-view/data-display";
+
+<DataPanel
+  title="用户管理"
+  panelKey="users"
+  data={rows}
+  columns={columns}
+  search={search}
+  form={form}
+/>`;
+
+
 export default function DataDisplayDataPanel() {
   const remote: DataPanelDataSource = createRemoteDemoSource(300);
   const cellSource: DataPanelDataSource = createCellDemoSource();
@@ -621,6 +635,8 @@ export default function DataDisplayDataPanel() {
         </Demo>
       </section>
 
+      
+        <CodeBlock title="代码示例" code={exampleDemo} language="tsx" showLineNumbers copyable wrapLongLines />
       <section class="space-y-3">
         <Title level={2}>API</Title>
         <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
