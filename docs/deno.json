@@ -6,14 +6,14 @@
     "start": "deno run -A dist/server.js"
   },
   "imports": {
-    "@dreamer/dweb": "jsr:@dreamer/dweb@^3.8.0",
-    "@dreamer/render": "jsr:@dreamer/render@^1.5.0",
+    "@dreamer/dweb": "jsr:@dreamer/dweb@^3.8.3",
+    "@dreamer/render": "jsr:@dreamer/render@^1.5.3",
     "@dreamer/router": "jsr:@dreamer/router@^1.2.1",
     "@dreamer/upload": "jsr:@dreamer/upload@^2.0.0",
     "@dreamer/runtime-adapter": "./src/dev/runtime-adapter-hmr-origin.ts",
     "@dreamer/plugins": "jsr:@dreamer/plugins@^1.2.0",
     "@dreamer/theme": "jsr:@dreamer/theme@^1.1.0",
-    "@dreamer/view": "jsr:@dreamer/view@^3.0.1",
+    "@dreamer/view": "jsr:@dreamer/view@^3.0.4",
     "@dreamer/ui-view": "../src/mod.ts",
     "@internal/ui-view-flag-img": "../src/shared/basic/icons/flags/FlagImg.tsx",
     "@dreamer/ui-view/basic": "../src/desktop/basic/mod.ts",

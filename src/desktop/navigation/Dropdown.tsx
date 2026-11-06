@@ -253,7 +253,7 @@ function getDropdownArrowProps(
 }
 
 /** hover 时用的定时器（闭包共享，避免闪动） */
-const hoverTimers: { open: number; close: number } = { open: 0, close: 0 };
+const hoverTimers: { open: ReturnType<typeof globalThis.setTimeout> | 0; close: ReturnType<typeof globalThis.setTimeout> | 0 } = { open: 0, close: 0 };
 
 export function Dropdown(props: DropdownProps): JSXRenderable {
   const {

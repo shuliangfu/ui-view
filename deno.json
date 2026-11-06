@@ -136,7 +136,7 @@
     "@dreamer/runtime-adapter": "jsr:@dreamer/runtime-adapter@^1.2.2",
     "@dreamer/service": "jsr:@dreamer/service@^1.1.0",
     "@dreamer/test": "jsr:@dreamer/test@^1.2.3",
-    "@dreamer/view": "jsr:@dreamer/view@^3.0.1",
+    "@dreamer/view": "jsr:@dreamer/view@^3.0.4",
     "tailwindcss": "npm:tailwindcss@4.3.4",
     "tailwind-merge": "npm:tailwind-merge@3.7.0",
     "chart.js": "npm:chart.js@4.6.1",

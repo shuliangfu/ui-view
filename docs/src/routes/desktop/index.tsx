@@ -101,7 +101,7 @@ import { IconFlagCN } from "@dreamer/ui-view/icons/flags/standalone/IconFlagCN.t
           <code class="text-sm">tailwindPlugin</code> 之前注册插件）。
         </Paragraph>
         <CodeBlock
-          language="ts"
+          language="typescript"
           code={`import { uiViewTailwindContentPlugin } from "@dreamer/ui-view/plugin";
 import { tailwindPlugin } from "@dreamer/plugins/tailwindcss";
 

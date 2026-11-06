@@ -101,7 +101,7 @@
     "@dreamer/logger": "npm:@jsr/dreamer__logger@^1.1.0",
     "@dreamer/runtime-adapter": "npm:@jsr/dreamer__runtime-adapter@^1.2.2",
     "@dreamer/service": "npm:@jsr/dreamer__service@^1.1.0",
-    "@dreamer/view": "npm:@jsr/dreamer__view@^3.0.1",
+    "@dreamer/view": "npm:@jsr/dreamer__view@^3.0.4",
     "tailwindcss": "npm:tailwindcss@4.3.4",
     "tailwind-merge": "npm:tailwind-merge@3.7.0",
     "chart.js": "npm:chart.js@4.6.1",

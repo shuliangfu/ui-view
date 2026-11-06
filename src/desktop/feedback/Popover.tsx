@@ -88,7 +88,7 @@ export function Popover(props: PopoverProps): JSXRenderable {
   } = props;
 
   /** 本组件实例的悬停延迟，避免多 Popover 共用导致互相取消计时器 */
-  const hoverTimers = { open: 0, close: 0 } as { open: number; close: number };
+  const hoverTimers: { open: ReturnType<typeof globalThis.setTimeout> | 0; close: ReturnType<typeof globalThis.setTimeout> | 0 } = { open: 0, close: 0 };
   const clearHoverOpenCloseTimers = () => {
     if (hoverTimers.open) {
       globalThis.clearTimeout(hoverTimers.open);

@@ -33,6 +33,7 @@ export type {
   UpgradeWebSocketOptions,
   UpgradeWebSocketResult,
   FileWatcher,
+  CronHandle,
 } from "jsr:@dreamer/runtime-adapter@1.2.2";
 
 type ServeHandler = (
