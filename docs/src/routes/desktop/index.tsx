@@ -3,7 +3,8 @@
  * 路由: /desktop
  */
 
-import { CodeBlock, Link, Paragraph, Title } from "@dreamer/ui-view";
+import { CodeBlock } from "@dreamer/ui-view/data-display";
+import { Link, Paragraph, Title } from "@dreamer/ui-view/basic";
 
 /** 跳转到常用分类的快速链接 */
 const QUICK = [
