@@ -3,7 +3,7 @@
  */
 
 import { createSignal } from "@dreamer/view";
-import { MobilePortalHostScope } from "@dreamer/ui-view/mobile";
+import { MobilePortalHostScope } from "@dreamer/ui-view/mobile/portal";
 import { NumberKeyboard } from "@dreamer/ui-view/mobile/form/number-keyboard";
 import { PasscodeInput } from "@dreamer/ui-view/mobile/form/passcode-input";
 import { Button, Paragraph, Title } from "@dreamer/ui-view/mobile/basic";

@@ -12,6 +12,7 @@ import {
 } from "../../../components/DocsApiTable.tsx";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MobileDocDemo } from "../../../components/MobileDocDemo.tsx";
+import {
   MESSAGES_DATETIME_PICKER,
   MESSAGES_PICKER_CALENDAR_NAV,
 } from "../../../data/component-messages-rows.ts";
@@ -109,6 +110,7 @@ const DATETIME_API: DocsApiTableRow[] = [
 ];
 
 const importCode = `import { DateTimePicker } from "@dreamer/ui-view/mobile/form/datetime-picker";
+import { createSignal } from "@dreamer/view";
 
 const val = createSignal(localNowDateTime());
 

@@ -85,6 +85,8 @@ import { IconFlagCN } from "@dreamer/ui-view/icons/flags";
 //    Deno/JSR: prefer `@dreamer/ui-view/icons` / `/icons/flags` — no `*` export in deno.json.
 ```
 
+> **Form deep paths:** Prefer `@dreamer/ui-view/form/select` (etc.) over the `./form` barrel when you want a single widget. `MobilePortalHostScope` is `@dreamer/ui-view/mobile/portal` (not the fat `./mobile` aggregate).
+
 > **Publish note:** Category entries (`./data-display`, …) and `./icons` / `./icons/flags` are in both `deno.json` and `package.json`. Per-file `./icons/*` lives **only** in `package.json` (Node/Bun/npm). Deno rejects `*` in `deno.json` exports — do not add it back. For Deno/JSR consumers: import from `@dreamer/ui-view/icons`, `@dreamer/ui-view/icons/flags`, or a category subpath; do not depend on wildcard deep paths.
 
 ## 🎨 Using with Tailwind

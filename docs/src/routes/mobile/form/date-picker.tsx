@@ -12,6 +12,7 @@ import {
 } from "../../../components/DocsApiTable.tsx";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MobileDocDemo } from "../../../components/MobileDocDemo.tsx";
+import {
   MESSAGES_DATE_PICKER,
   MESSAGES_PICKER_CALENDAR_NAV,
 } from "../../../data/component-messages-rows.ts";
@@ -107,6 +108,7 @@ const DATEPICKER_API: DocsApiTableRow[] = [
 ];
 
 const importCode = `import { DatePicker } from "@dreamer/ui-view/mobile/form/date-picker";
+import { createSignal } from "@dreamer/view";
 
 const val = createSignal("2026-04-09");
 

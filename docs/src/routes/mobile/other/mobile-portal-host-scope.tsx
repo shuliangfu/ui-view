@@ -2,7 +2,7 @@
  * MobilePortalHostScope 文档页（概述、引入、示例、API）。路由: /mobile/other/mobile-portal-host-scope
  */
 
-import { MobilePortalHostScope } from "@dreamer/ui-view/mobile";
+import { MobilePortalHostScope } from "@dreamer/ui-view/mobile/portal";
 import { BottomSheet } from "@dreamer/ui-view/mobile/feedback";
 import { Button, Paragraph, Title } from "@dreamer/ui-view/mobile/basic";
 import { CodeBlock } from "@dreamer/ui-view/mobile/data-display";
@@ -29,7 +29,7 @@ const SCOPE_API: DocsApiTableRow[] = [
   },
 ];
 
-const importCode = `import { MobilePortalHostScope } from "@dreamer/ui-view/mobile";
+const importCode = `import { MobilePortalHostScope } from "@dreamer/ui-view/mobile/portal";
 
 const open = createSignal(false);
 

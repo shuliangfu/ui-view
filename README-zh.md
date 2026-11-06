@@ -81,6 +81,8 @@ import { IconFlagCN } from "@dreamer/ui-view/icons/flags";
 // ❌ Deno／JSR 勿依赖 `./icons/*` 通配；npm 侧才有该导出
 ```
 
+> **表单深路径：** 单控件请优先 `@dreamer/ui-view/form/select` 等；`MobilePortalHostScope` 用 `@dreamer/ui-view/mobile/portal`（勿走胖 `./mobile` 聚合）。
+
 > **发布说明：** 分类子入口与 `./icons`、`./icons/flags` 已写入 `deno.json` 与 `package.json`。逐文件 `./icons/*` **只**写在 `package.json`（Node／Bun／npm）。Deno 不允许 `deno.json` exports 含 `*`，请勿再加回。Deno／JSR 消费者：从 `@dreamer/ui-view/icons`、`@dreamer/ui-view/icons/flags` 或分类子入口导入，勿依赖通配深路径。
 
 ## 与 Tailwind 配合使用

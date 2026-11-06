@@ -87,7 +87,8 @@
     "./mobile/form/time-picker": "./src/mobile/form/TimePicker.tsx",
     "./mobile/form/transfer": "./src/mobile/form/Transfer.tsx",
     "./mobile/form/tree-select": "./src/mobile/form/TreeSelect.tsx",
-    "./mobile/form/upload": "./src/mobile/form/Upload.tsx"
+    "./mobile/form/upload": "./src/mobile/form/Upload.tsx",
+    "./mobile/portal": "./src/mobile/MobilePortalHostScope.tsx"
   },
   "scripts": {
     "test": "deno test -A tests/docs-sidebar-reconcile.test.ts",
