@@ -43,26 +43,35 @@ describe("文档页 E2E：/desktop/form/select（Select 选择器）", () => {
           );
         } else el.click();
       };
-      const btn = document.querySelector(
-        'main button[aria-haspopup="listbox"]:not([disabled])',
-      ) as (HTMLButtonElement & { __onclick?: (ev: Event) => void }) | null;
-      if (!btn) return { ok: false, reason: "no-trigger" };
-      btn.scrollIntoView({ block: "center" });
-      clickEl(btn);
-      let opt: HTMLElement | null = null;
-      for (let i = 0; i < 20; i++) {
-        await sleep(50);
-        opt = Array.from(document.querySelectorAll('[role="option"]')).find(
+      const findOpt = () =>
+        Array.from(document.querySelectorAll('[role="option"]')).find(
           (o) =>
             !(o as HTMLButtonElement).disabled &&
             (o.textContent || "").includes("选项 A") &&
             o.getClientRects().length > 0,
         ) as HTMLElement | undefined ?? null;
-        if (opt) break;
+      const btn = document.querySelector(
+        'main button[aria-haspopup="listbox"]:not([disabled])',
+      ) as (HTMLButtonElement & { __onclick?: (ev: Event) => void }) | null;
+      if (!btn) return { ok: false, reason: "no-trigger" };
+      btn.scrollIntoView({ block: "center" });
+      // 对齐 Modal/Menu：打开后等可见；串行负载下偶发 no-option，重试点击并加长轮询
+      let opt: HTMLElement | null = null;
+      for (let attempt = 0; attempt < 3 && !opt; attempt++) {
+        clickEl(btn);
+        for (let i = 0; i < 40; i++) {
+          await sleep(75);
+          const expanded = btn.getAttribute("aria-expanded") === "true";
+          const listbox = document.querySelector('[role="listbox"]');
+          if (expanded || listbox) {
+            opt = findOpt();
+            if (opt) break;
+          }
+        }
       }
       if (!opt) return { ok: false, reason: "no-option" };
       clickEl(opt as HTMLElement & { __onclick?: (ev: Event) => void });
-      await sleep(150);
+      await sleep(200);
       return { ok: true, reason: "ok" };
     }) as { ok: boolean; reason: string };
     if (!result.ok) throw new Error(`Select: ${JSON.stringify(result)}`);
