@@ -52,20 +52,20 @@ const config: AppConfig = {
   // 完整说明见 docs/zh-CN/APP_CONFIG.md 或 docs/en-US/APP_CONFIG.md（含 SSR/SSG 客户端激活）
   render: {
     engine: "view",
-    // mode: "ssr",
-    mode: "hybrid",
+    mode: "ssg",
+    // mode: "hybrid",
     // debug: false,
     /** 关闭客户端激活：不注入 _client.js，仅输出服务端 HTML，链接点击整页跳转，可避免刷新时 hydrate 导致的闪动 */
     // ssr: {
     //   hydrate: false,
     // },
-    // ssg: {
-    //   outputDir: "dist/static",
-    //   routes: ["/", "/about"],
-    //   /** 支持路径段（/user/[id]→/user/1）与 query（/user?id=[id]→/user?id=1）两种形式 */
-    //   dynamicRoutes: { "/user/[id]": ["1", "2", "3"] }, // 或 "/user?id=[id]": ["1", "2", "3"]
-    //   hydrate: true,
-    // },
+    ssg: {
+      outputDir: "dist/static",
+      // routes: ["/", "/about"],
+      /** 支持路径段（/user/[id]→/user/1）与 query（/user?id=[id]→/user?id=1）两种形式 */
+      // dynamicRoutes: { "/user/[id]": ["1", "2", "3"] }, // 或 "/user?id=[id]": ["1", "2", "3"]
+      hydrate: true,
+    },
   },
 
   // ========== Build ==========
