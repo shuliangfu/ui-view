@@ -57,7 +57,7 @@ const CONFIG_PROVIDER_API: ApiRow[] = [
 ];
 
 const importCode =
-  `import { ConfigProvider, getConfig } from "@dreamer/ui-view";
+  `import { ConfigProvider, getConfig } from "@dreamer/ui-view/config-provider";
 
 <ConfigProvider
   theme="light"

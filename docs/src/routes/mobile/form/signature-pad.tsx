@@ -2,7 +2,7 @@
  * SignaturePad 文档页。路由: /mobile/form/signature-pad
  */
 
-import { SignaturePad } from "@dreamer/ui-view/mobile";
+import { SignaturePad } from "@dreamer/ui-view/mobile/form/signature-pad";
 import { Paragraph, Title } from "@dreamer/ui-view/mobile/basic";
 import { CodeBlock } from "@dreamer/ui-view/mobile/data-display";
 import {
@@ -17,7 +17,7 @@ const API: DocsApiTableRow[] = [
   { name: "onChange", type: "(dataUrl|null)=>void", default: "-", description: "变更" }
 ];
 
-const importCode = `import { SignaturePad } from "@dreamer/ui-view/mobile";
+const importCode = `import { SignaturePad } from "@dreamer/ui-view/mobile/form/signature-pad";
 
 <SignaturePad
   onChange={(dataUrl) => console.log("stroke", dataUrl?.slice(0, 32))}

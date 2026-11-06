@@ -5,7 +5,9 @@
 
 import { Paragraph, Title } from "@dreamer/ui-view/basic";
 
-import { Form, FormItem, TimePicker } from "@dreamer/ui-view/form";
+import { Form } from "@dreamer/ui-view/form/form";
+import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { TimePicker } from "@dreamer/ui-view/form/time-picker";
 
 import { CodeBlock } from "@dreamer/ui-view/data-display";
 import { createSignal } from "@dreamer/view";
@@ -84,8 +86,9 @@ const TIMEPICKER_API: ApiRow[] = [
 ];
 
 const importCode =
-  `import { TimePicker, Form, FormItem } from "@dreamer/ui-view";
-import { createSignal } from "@dreamer/view";
+  `import { Form } from "@dreamer/ui-view/form/form";
+import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { TimePicker } from "@dreamer/ui-view/form/time-picker";
 
 const val = createSignal("");
 <FormItem label="时间">

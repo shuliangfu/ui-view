@@ -51,7 +51,7 @@ const RESULT_API: ApiRow[] = [
   { name: "class", type: "string", default: "-", description: "最外层 class" },
 ];
 
-const importCode = `import { Button, Result } from "@dreamer/ui-view";
+const importCode = `import { Button } from "@dreamer/ui-view/basic";
 
 <Result
   status="success"

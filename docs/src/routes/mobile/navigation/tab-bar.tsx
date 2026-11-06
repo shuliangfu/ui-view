@@ -2,7 +2,7 @@
  * TabBar 文档页（概述、引入、示例、API）。路由: /mobile/navigation/tab-bar
  */
 
-import { TabBar } from "@dreamer/ui-view/mobile";
+import { TabBar } from "@dreamer/ui-view/mobile/navigation";
 import { Paragraph, Title } from "@dreamer/ui-view/mobile/basic";
 import { CodeBlock } from "@dreamer/ui-view/mobile/data-display";
 import { IconHome } from "@dreamer/ui-view/icons/Home.tsx";
@@ -83,8 +83,7 @@ const TAB_BAR_ITEM_API: DocsApiTableRow[] = [
 /**
  * 引入区与「文案标签」示例共用：与预览一致（三项 + fixed=false）。
  */
-const introAndTextTabsCode = `import { TabBar } from "@dreamer/ui-view/mobile";
-import { createSignal } from "@dreamer/view";
+const introAndTextTabsCode = `import { TabBar } from "@dreamer/ui-view/mobile/navigation";
 
 const activeKey = createSignal("home");
 
@@ -102,11 +101,7 @@ const activeKey = createSignal("home");
 /**
  * 「图标 + 角标」示例：与预览一致。
  */
-const iconBadgeExampleCode = `import { TabBar } from "@dreamer/ui-view/mobile";
-import { IconHome } from "@dreamer/ui-view/icons/Home.tsx";
-import { IconInbox } from "@dreamer/ui-view/icons/Inbox.tsx";
-import { IconUser } from "@dreamer/ui-view/icons/User.tsx";
-import { createSignal } from "@dreamer/view";
+const iconBadgeExampleCode = `import { TabBar } from "@dreamer/ui-view/mobile/navigation";
 
 const activeKey = createSignal("home");
 

@@ -28,7 +28,7 @@ const SPINNER_API: ApiRow[] = [
   },
 ];
 
-const importCode = `import { Spinner } from "@dreamer/ui-view";
+const importCode = `import { Spinner } from "@dreamer/ui-view/basic";
 
 <Spinner size="md" />
 <Spinner class="text-green-600" />`;

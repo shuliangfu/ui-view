@@ -64,7 +64,8 @@ const CARD_API: ApiRow[] = [
   { name: "class", type: "string", default: "-", description: "额外 class" },
 ];
 
-const importCode = `import { Button, Card } from "@dreamer/ui-view";
+const importCode = `import { Button } from "@dreamer/ui-view/basic";
+import { Card } from "@dreamer/ui-view/data-display";
 
 <Card
   title="卡片标题"

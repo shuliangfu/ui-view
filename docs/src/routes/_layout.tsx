@@ -26,7 +26,6 @@ import {
 } from "@dreamer/view";
 import DocsSiteBrand from "../components/DocsSiteBrand.tsx";
 import { ThemeToggle } from "../components/ThemeToggle.tsx";
-import {
   docsNavDrawerOpen,
   docsNavSidebarAttached,
 } from "../state/docs-nav-drawer.ts";

@@ -40,7 +40,7 @@ const PARAGRAPH_API: ApiRow[] = [
   { name: "children", type: "unknown", default: "-", description: "段落内容" },
 ];
 
-const importCode = `import { Title, Text, Paragraph } from "@dreamer/ui-view";
+const importCode = `import { Title, Text, Paragraph } from "@dreamer/ui-view/basic";
 
 <Title level={1}>标题</Title>
 <Text>正文</Text>

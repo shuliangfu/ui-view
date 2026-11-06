@@ -24,7 +24,7 @@ const API: DocsApiTableRow[] = [
   { name: "class", type: "string", default: "-", description: "额外 class" },
 ];
 
-const importCode = `import { NoticeBar } from "@dreamer/ui-view";
+const importCode = `import { NoticeBar } from "@dreamer/ui-view/feedback";
 
 <NoticeBar tone="warning" closable content="系统将于今晚 23:00 维护，请提前保存" />`;
 

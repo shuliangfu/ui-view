@@ -3,10 +3,8 @@
  */
 
 import { createSignal } from "@dreamer/view";
-import {
-  DropdownMenu,
-  MobilePortalHostScope,
-} from "@dreamer/ui-view/mobile";
+import { MobilePortalHostScope } from "@dreamer/ui-view/mobile";
+import { DropdownMenu } from "@dreamer/ui-view/mobile/navigation";
 import { Paragraph, Title } from "@dreamer/ui-view/mobile/basic";
 import { CodeBlock } from "@dreamer/ui-view/mobile/data-display";
 import {
@@ -21,7 +19,7 @@ const API: DocsApiTableRow[] = [
   { name: "onChange", type: "(key,value)=>void", default: "-", description: "变更" },
 ];
 
-const importCode = `import { DropdownMenu, MobilePortalHostScope } from "@dreamer/ui-view/mobile";
+const importCode = `import { MobilePortalHostScope } from "@dreamer/ui-view/mobile";
 
 <MobilePortalHostScope>
   <DropdownMenu

@@ -1,16 +1,15 @@
 /**
  * QRCode 文档页。路由: /mobile/data-display/qrcode
  */
-import { QRCode } from "@dreamer/ui-view/mobile";
+import { QRCode, CodeBlock } from "@dreamer/ui-view/mobile/data-display";
 import { Paragraph, Title } from "@dreamer/ui-view/mobile/basic";
-import { CodeBlock } from "@dreamer/ui-view/mobile/data-display";
 import { DocsApiTable, type DocsApiTableRow } from "../../../components/DocsApiTable.tsx";
 import { MobileDocDemo } from "../../../components/MobileDocDemo.tsx";
 
 const API: DocsApiTableRow[] = [
   { name: "value / size / color / bgColor / includeMargin", type: "—", default: "-", description: "与桌面一致" },
 ];
-const importCode = `import { QRCode } from "@dreamer/ui-view/mobile";
+const importCode = `import { QRCode } from "@dreamer/ui-view/mobile/data-display";
 const value = globalThis.location?.href ?? "https://example.com";
 <QRCode value={value} size={148} />`;
 

@@ -5,10 +5,12 @@
 
 import { Paragraph, Title } from "@dreamer/ui-view/basic";
 
-import { Form, FormItem, Mentions } from "@dreamer/ui-view/form";
+import { Form } from "@dreamer/ui-view/form/form";
+import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { Mentions } from "@dreamer/ui-view/form/mentions";
 
 import { CodeBlock } from "@dreamer/ui-view/data-display";
-import type { MentionOption } from "@dreamer/ui-view/form";
+import type { MentionOption } from "@dreamer/ui-view/form/mentions";
 import { createSignal } from "@dreamer/view";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_MENTIONS } from "../../../data/component-messages-rows.ts";
@@ -130,11 +132,9 @@ const mentionOptions: MentionOption[] = [
   { value: "u3", label: "王五" },
 ];
 
-const importCode = `import { Mentions, Form, FormItem } from "@dreamer/ui-view";
-import type { MentionOption } from "@dreamer/ui-view/form";
-import { createSignal } from "@dreamer/view";
-import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
-import { MESSAGES_MENTIONS } from "../../../data/component-messages-rows.ts";
+const importCode = `import { Form } from "@dreamer/ui-view/form/form";
+import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { Mentions } from "@dreamer/ui-view/form/mentions";
 
 const options: MentionOption[] = [{ value: "u1", label: "张三" }];
 const val = createSignal("");

@@ -5,7 +5,9 @@
 
 import { Paragraph, Title } from "@dreamer/ui-view/basic";
 
-import { Form, FormItem, Password } from "@dreamer/ui-view/form";
+import { Form } from "@dreamer/ui-view/form/form";
+import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { Password } from "@dreamer/ui-view/form/password";
 
 import { CodeBlock } from "@dreamer/ui-view/data-display";
 import { createSignal } from "@dreamer/view";
@@ -142,10 +144,9 @@ const PASSWORD_API: ApiRow[] = [
   },
 ];
 
-const importCode = `import { Password, Form, FormItem } from "@dreamer/ui-view";
-import { createSignal } from "@dreamer/view";
-import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
-import { MESSAGES_PASSWORD } from "../../../data/component-messages-rows.ts";
+const importCode = `import { Form } from "@dreamer/ui-view/form/form";
+import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { Password } from "@dreamer/ui-view/form/password";
 
 const val = createSignal("");
 <FormItem label="密码">

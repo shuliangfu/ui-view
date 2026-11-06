@@ -68,7 +68,6 @@ const ACCORDION_API: ApiRow[] = [
 ];
 
 const importCode = `import { createSignal } from "@dreamer/view";
-import { Accordion } from "@dreamer/ui-view/layout";
 export function Demo() {
   const expandedKeys = createSignal<string[]>(["1"]);
   const items = [

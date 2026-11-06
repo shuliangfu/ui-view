@@ -65,7 +65,7 @@ const LIST_API: ApiRow[] = [
   { name: "class", type: "string", default: "-", description: "容器 class" },
 ];
 
-const importCode = `import { List } from "@dreamer/ui-view";
+const importCode = `import { List } from "@dreamer/ui-view/data-display";
 
 const items = [{ key: "1", children: "列表项 1", extra: "详情" }, ...];
 <List

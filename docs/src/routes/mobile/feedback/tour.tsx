@@ -3,7 +3,7 @@
  */
 
 import { createSignal } from "@dreamer/view";
-import { Tour } from "@dreamer/ui-view/mobile";
+import { Tour } from "@dreamer/ui-view/mobile/feedback";
 import { Button, Paragraph, Title } from "@dreamer/ui-view/mobile/basic";
 import { CodeBlock } from "@dreamer/ui-view/mobile/data-display";
 import {
@@ -20,7 +20,6 @@ const API: DocsApiTableRow[] = [
 ];
 
 const importCode = `import { createSignal } from "@dreamer/view";
-import { Tour } from "@dreamer/ui-view/mobile";
 
 const open = createSignal(false);
 <Tour open={open} steps={[...]} onClose={() => (open.value = false)} />`;

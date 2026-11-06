@@ -80,7 +80,7 @@ const DROPDOWN_API: ApiRow[] = [
   { name: "class", type: "string", default: "-", description: "包装器 class" },
 ];
 
-const importCode = `import { Button, Dropdown } from "@dreamer/ui-view";
+const importCode = `import { Button } from "@dreamer/ui-view/basic";
 
 const overlay = <ul class="list-none m-0">...</ul>;
 {/* arrow 可选，默认 false：为 true 时浮层与触发器之间显示小尖角 */}

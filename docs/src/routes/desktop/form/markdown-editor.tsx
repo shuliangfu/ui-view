@@ -5,7 +5,9 @@
 
 import { Paragraph, Title } from "@dreamer/ui-view/basic";
 
-import { Form, FormItem, MarkdownEditor } from "@dreamer/ui-view/form";
+import { Form } from "@dreamer/ui-view/form/form";
+import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { MarkdownEditor } from "@dreamer/ui-view/form/markdown-editor";
 
 import { CodeBlock } from "@dreamer/ui-view/data-display";
 import { createSignal } from "@dreamer/view";
@@ -168,10 +170,9 @@ export async function main(): Promise<void> {
 `;
 
 const importCode =
-  `import { MarkdownEditor, Form, FormItem } from "@dreamer/ui-view";
-import { createSignal } from "@dreamer/view";
-import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
-import { MESSAGES_MARKDOWN_EDITOR } from "../../../data/component-messages-rows.ts";
+  `import { Form } from "@dreamer/ui-view/form/form";
+import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { MarkdownEditor } from "@dreamer/ui-view/form/markdown-editor";
 
 const md = createSignal("# 你好\\n\\n正文");
 <FormItem label="Markdown">

@@ -23,7 +23,6 @@ const API: DocsApiTableRow[] = [
 ];
 
 const importCode = `import { createSignal } from "@dreamer/view";
-import { Overlay } from "@dreamer/ui-view/feedback";
 const open = createSignal(false);
 <Overlay open={open} onClick={() => (open.value = false)} zIndex={400} />`;
 

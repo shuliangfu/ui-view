@@ -75,7 +75,6 @@ const MENU_API: ApiRow[] = [
 ];
 
 const importCode = `import { createSignal } from "@dreamer/view";
-import { Menu } from "@dreamer/ui-view/navigation";
 const openKeys = createSignal<string[]>(["sub1"]);
 const items = [
   { key: "1", label: "选项一" },

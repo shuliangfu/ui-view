@@ -62,7 +62,7 @@ const CHART_LINE_API: ApiRow[] = [
   { name: "height", type: "number", default: "-", description: "画布高度" },
 ];
 
-const importCode = `import { ChartLine } from "@dreamer/ui-view";
+const importCode = `import { ChartLine } from "@dreamer/ui-view/charts";
 
 const data = { labels: ["1月", "2月", ...], datasets: [{ label: "系列 A", data: [12, 19, ...], borderColor: "...", fill: true, tension: 0.3 }] };
 const options = { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "top" } } };

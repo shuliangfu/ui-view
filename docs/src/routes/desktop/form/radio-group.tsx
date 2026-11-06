@@ -5,7 +5,9 @@
 
 import { Paragraph, Title } from "@dreamer/ui-view/basic";
 
-import { Form, FormItem, RadioGroup } from "@dreamer/ui-view/form";
+import { Form } from "@dreamer/ui-view/form/form";
+import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { RadioGroup } from "@dreamer/ui-view/form/radio-group";
 
 import { CodeBlock } from "@dreamer/ui-view/data-display";
 import { createSignal } from "@dreamer/view";
@@ -66,8 +68,9 @@ const options = [
 ];
 
 const importCode =
-  `import { RadioGroup, Form, FormItem } from "@dreamer/ui-view";
-import { createSignal } from "@dreamer/view";
+  `import { Form } from "@dreamer/ui-view/form/form";
+import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { RadioGroup } from "@dreamer/ui-view/form/radio-group";
 
 const options = [{ value: "a", label: "选项 A" }, { value: "b", label: "选项 B" }];
 const val = createSignal("a");

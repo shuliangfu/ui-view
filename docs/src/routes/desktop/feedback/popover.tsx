@@ -51,7 +51,7 @@ const POPOVER_API: ApiRow[] = [
   },
 ];
 
-const importCode = `import { Popover } from "@dreamer/ui-view";
+const importCode = `import { Popover } from "@dreamer/ui-view/feedback";
 
 <Popover
   title="标题"

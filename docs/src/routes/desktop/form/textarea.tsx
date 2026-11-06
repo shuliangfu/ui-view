@@ -5,7 +5,9 @@
 
 import { Paragraph, Title } from "@dreamer/ui-view/basic";
 
-import { Form, FormItem, Textarea } from "@dreamer/ui-view/form";
+import { Form } from "@dreamer/ui-view/form/form";
+import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { Textarea } from "@dreamer/ui-view/form/textarea";
 
 import { CodeBlock } from "@dreamer/ui-view/data-display";
 import { createSignal } from "@dreamer/view";
@@ -129,10 +131,9 @@ const TEXTAREA_API: ApiRow[] = [
   },
 ];
 
-const importCode = `import { Textarea, Form, FormItem } from "@dreamer/ui-view";
-import { createSignal } from "@dreamer/view";
-import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
-import { MESSAGES_TEXTAREA } from "../../../data/component-messages-rows.ts";
+const importCode = `import { Form } from "@dreamer/ui-view/form/form";
+import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { Textarea } from "@dreamer/ui-view/form/textarea";
 
 const val = createSignal("");
 <FormItem label="多行">

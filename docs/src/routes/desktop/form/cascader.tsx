@@ -5,10 +5,12 @@
 
 import { Paragraph, Title } from "@dreamer/ui-view/basic";
 
-import { Cascader, Form, FormItem } from "@dreamer/ui-view/form";
+import { Cascader } from "@dreamer/ui-view/form/cascader";
+import { Form } from "@dreamer/ui-view/form/form";
+import { FormItem } from "@dreamer/ui-view/form/form-item";
 
 import { CodeBlock } from "@dreamer/ui-view/data-display";
-import type { CascaderOption } from "@dreamer/ui-view/form";
+import type { CascaderOption } from "@dreamer/ui-view/form/cascader";
 import { createSignal } from "@dreamer/view";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_CASCADER } from "../../../data/component-messages-rows.ts";
@@ -150,10 +152,9 @@ const OPTIONS = [
   },
 ];
 
-const importCode = `import { Cascader, Form, FormItem } from "@dreamer/ui-view";
-import { createSignal } from "@dreamer/view";
-import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
-import { MESSAGES_CASCADER } from "../../../data/component-messages-rows.ts";
+const importCode = `import { Cascader } from "@dreamer/ui-view/form/cascader";
+import { Form } from "@dreamer/ui-view/form/form";
+import { FormItem } from "@dreamer/ui-view/form/form-item";
 
 const val = createSignal<string[]>([]);
 
@@ -567,7 +568,7 @@ export default function FormCascaderDoc() {
           <code class="text-xs">ui-view/src/shared/form/maybe-signal.ts</code>
           ，并由 <code class="text-xs">@dreamer/ui-view</code> 再导出，可{" "}
           <code class="text-xs">
-            {'import type { MaybeSignal } from "@dreamer/ui-view"'}
+            {'import type { MaybeSignal } from "@dreamer/ui-view/form";'}
           </code>
           。
         </Paragraph>

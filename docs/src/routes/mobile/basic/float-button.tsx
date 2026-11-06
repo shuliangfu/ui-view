@@ -2,8 +2,7 @@
  * FloatButton 文档页。路由: /mobile/basic/float-button
  */
 import { createSignal } from "@dreamer/view";
-import { FloatButton } from "@dreamer/ui-view/mobile";
-import { Paragraph, Title } from "@dreamer/ui-view/mobile/basic";
+import { FloatButton, Paragraph, Title } from "@dreamer/ui-view/mobile/basic";
 import { CodeBlock } from "@dreamer/ui-view/mobile/data-display";
 import { DocsApiTable, type DocsApiTableRow } from "../../../components/DocsApiTable.tsx";
 import { MobileDocDemo } from "../../../components/MobileDocDemo.tsx";
@@ -11,7 +10,7 @@ import { MobileDocDemo } from "../../../components/MobileDocDemo.tsx";
 const API: DocsApiTableRow[] = [
   { name: "shape / badge / items / placement / position / open", type: "—", default: "-", description: "与桌面一致；文档用 absolute" },
 ];
-const importCode = `import { FloatButton } from "@dreamer/ui-view/mobile";`;
+const importCode = `import { FloatButton } from "@dreamer/ui-view/mobile/basic";`;
 
 const exampleCircle = `<FloatButton
   position="absolute"

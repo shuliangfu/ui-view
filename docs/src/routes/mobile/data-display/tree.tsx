@@ -3,10 +3,9 @@
  */
 
 import { createSignal } from "@dreamer/view";
-import { Tree } from "@dreamer/ui-view/mobile";
-import type { TreeNode } from "@dreamer/ui-view/mobile";
+import { Tree, CodeBlock } from "@dreamer/ui-view/mobile/data-display";
+import type { TreeNode } from "@dreamer/ui-view/mobile/data-display";
 import { Paragraph, Title } from "@dreamer/ui-view/mobile/basic";
-import { CodeBlock } from "@dreamer/ui-view/mobile/data-display";
 import {
   DocsApiTable,
   type DocsApiTableRow,
@@ -53,7 +52,6 @@ const API: DocsApiTableRow[] = [
 ];
 
 const importCode = `import { createSignal } from "@dreamer/view";
-import { Tree } from "@dreamer/ui-view/mobile";
 
 const expandedKeys = createSignal<string[]>(["1"]);
 const checkedKeys = createSignal<string[]>([]);

@@ -3,8 +3,7 @@
  */
 
 import { createSignal } from "@dreamer/view";
-import { FloatButton } from "@dreamer/ui-view/basic";
-import { Paragraph, Title } from "@dreamer/ui-view/basic";
+import { FloatButton, Paragraph, Title } from "@dreamer/ui-view/basic";
 import { CodeBlock } from "@dreamer/ui-view/data-display";
 import {
   DocsApiTable,
@@ -23,7 +22,7 @@ const API: DocsApiTableRow[] = [
   { name: "offset", type: "number", default: "24", description: "距边 px" },
 ];
 
-const importCode = `import { FloatButton } from "@dreamer/ui-view";
+const importCode = `import { FloatButton } from "@dreamer/ui-view/basic";
 
 <FloatButton
   aria-label="新建"

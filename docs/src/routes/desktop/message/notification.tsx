@@ -96,7 +96,7 @@ const NOTIFICATION_OPTIONS: ApiRow[] = [
   },
 ];
 
-const importCode = `import { notification } from "@dreamer/ui-view";
+const importCode = `import { notification } from "@dreamer/ui-view/feedback";
 
 notification.open({
   title: "任务完成",

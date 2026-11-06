@@ -23,7 +23,6 @@ const API: DocsApiTableRow[] = [
 ];
 
 const importCode = `import { createSignal } from "@dreamer/view";
-import { Tour } from "@dreamer/ui-view/feedback";
 const open = createSignal(false);
 
 <Tour

@@ -63,7 +63,7 @@ const STATISTIC_API: ApiRow[] = [
   { name: "class", type: "string", default: "-", description: "容器 class" },
 ];
 
-const importCode = `import { Statistic } from "@dreamer/ui-view";
+const importCode = `import { Statistic } from "@dreamer/ui-view/data-display";
 
 <Statistic
   title="总销售额"

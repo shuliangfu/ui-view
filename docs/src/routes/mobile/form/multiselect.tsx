@@ -2,7 +2,7 @@
  * MultiSelect（移动版）文档页（概述、引入、示例、API）。路由: /mobile/form/multiselect
  */
 
-import { MultiSelect } from "@dreamer/ui-view/mobile";
+import { MultiSelect } from "@dreamer/ui-view/mobile/form/multiselect";
 import { Paragraph, Title } from "@dreamer/ui-view/mobile/basic";
 import { CodeBlock } from "@dreamer/ui-view/mobile/data-display";
 import { createSignal } from "@dreamer/view";
@@ -80,8 +80,7 @@ const MULTI_API: DocsApiTableRow[] = [
   },
 ];
 
-const importCode = `import { MultiSelect } from "@dreamer/ui-view/mobile";
-import { createSignal } from "@dreamer/view";
+const importCode = `import { MultiSelect } from "@dreamer/ui-view/mobile/form/multiselect";
 
 const val = createSignal<string[]>(["x"]);
 <MultiSelect class="w-full" options={...} value={val} />`;

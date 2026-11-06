@@ -2,7 +2,7 @@
  * PullRefresh 文档页（概述、引入、示例、API）。路由: /mobile/feedback/pull-refresh
  */
 
-import { PullRefresh } from "@dreamer/ui-view/mobile";
+import { PullRefresh } from "@dreamer/ui-view/mobile/feedback";
 import { Paragraph, Title } from "@dreamer/ui-view/mobile/basic";
 import { CodeBlock } from "@dreamer/ui-view/mobile/data-display";
 import { createSignal } from "@dreamer/view";
@@ -98,8 +98,7 @@ const PULL_REFRESH_API: DocsApiTableRow[] = [
   },
 ];
 
-const importCode = `import { PullRefresh } from "@dreamer/ui-view/mobile";
-import { createSignal } from "@dreamer/view";
+const importCode = `import { PullRefresh } from "@dreamer/ui-view/mobile/feedback";
 
 const loading = createSignal(false);
 

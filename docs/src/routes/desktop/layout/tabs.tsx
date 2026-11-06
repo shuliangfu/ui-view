@@ -62,7 +62,6 @@ const TABS_API: ApiRow[] = [
 ];
 
 const importCode = `import { createSignal } from "@dreamer/view";
-import { Tabs } from "@dreamer/ui-view/layout";
 const activeKey = createSignal("a");
 const items = [
   { key: "a", label: "标签 A", children: <p>内容 A</p> },

@@ -5,13 +5,14 @@
 
 import { Link, Paragraph, Title } from "@dreamer/ui-view/basic";
 
-import { Form, FormItem } from "@dreamer/ui-view/form";
+import { Form } from "@dreamer/ui-view/form/form";
+import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { Input } from "@dreamer/ui-view/form/input";
 
 import { CodeBlock } from "@dreamer/ui-view/data-display";
 
 import { IconLock } from "@dreamer/ui-view/icons/Lock.tsx";
 import { IconUser } from "@dreamer/ui-view/icons/User.tsx";
-import { Input } from "@dreamer/ui-view/form";
 
 import { createSignal } from "@dreamer/view";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
@@ -155,8 +156,9 @@ const INPUT_API: ApiRow[] = [
   },
 ];
 
-const importCode = `import { Input, Form, FormItem } from "@dreamer/ui-view";
-import { createSignal } from "@dreamer/view";
+const importCode = `import { Form } from "@dreamer/ui-view/form/form";
+import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { Input } from "@dreamer/ui-view/form/input";
 
 const val = createSignal("");
 <FormItem label="用户名">
@@ -628,9 +630,7 @@ export default function FormInput() {
             </Form>
             <div class="w-full">
               <CodeBlock
-                code={`import { Input } from "@dreamer/ui-view";
-import { IconUser } from "@dreamer/ui-view/icons/User.tsx";
-import { IconLock } from "@dreamer/ui-view/icons/Lock.tsx";
+                code={`import { Input } from "@dreamer/ui-view/form/input";
 
 <Input
   type="email"
@@ -721,7 +721,9 @@ import { IconLock } from "@dreamer/ui-view/icons/Lock.tsx";
             <div class="w-full">
               <CodeBlock
                 code={`import { createSignal } from "@dreamer/view";
-import { Form, FormItem, Input } from "@dreamer/ui-view/form";
+import { Form } from "@dreamer/ui-view/form/form";
+import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { Input } from "@dreamer/ui-view/form/input";
 const email = createSignal("");
 const password = createSignal("");
 

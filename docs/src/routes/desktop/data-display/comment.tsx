@@ -45,7 +45,8 @@ const COMMENT_API: ApiRow[] = [
   },
 ];
 
-const importCode = `import { Avatar, Comment } from "@dreamer/ui-view";
+const importCode = `import { Avatar } from "@dreamer/ui-view/basic";
+import { Comment } from "@dreamer/ui-view/data-display";
 
 <Comment
   author="用户 A"

@@ -55,7 +55,7 @@ const PAGE_HEADER_API: ApiRow[] = [
   },
 ];
 
-const importCode = `import { Button, PageHeader } from "@dreamer/ui-view";
+const importCode = `import { Button } from "@dreamer/ui-view/basic";
 
 <PageHeader
   title="页面标题"

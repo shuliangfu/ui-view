@@ -5,7 +5,9 @@
 
 import { Paragraph, Title } from "@dreamer/ui-view/basic";
 
-import { ColorPicker, Form, FormItem } from "@dreamer/ui-view/form";
+import { ColorPicker } from "@dreamer/ui-view/form/color-picker";
+import { Form } from "@dreamer/ui-view/form/form";
+import { FormItem } from "@dreamer/ui-view/form/form-item";
 
 import { CodeBlock } from "@dreamer/ui-view/data-display";
 import { createSignal } from "@dreamer/view";
@@ -148,7 +150,7 @@ export default function FormColorPickerDoc() {
         <Title level={2}>引入</Title>
         <CodeBlock
           title="最小用法"
-          code={`import { ColorPicker } from "@dreamer/ui-view";
+          code={`import { ColorPicker } from "@dreamer/ui-view/form/color-picker";
 
 const hex = createSignal("#3b82f6");
 

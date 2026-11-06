@@ -55,7 +55,7 @@ const GRID_ITEM_API: ApiRow[] = [
   { name: "children", type: "unknown", default: "-", description: "子节点" },
 ];
 
-const importCode = `import { Grid, GridItem } from "@dreamer/ui-view";
+const importCode = `import { Grid, GridItem } from "@dreamer/ui-view/layout";
 
 <Grid
   cols={12}

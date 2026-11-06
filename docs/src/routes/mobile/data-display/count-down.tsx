@@ -2,9 +2,8 @@
  * CountDown 文档页。路由: /mobile/data-display/count-down
  */
 
-import { CountDown } from "@dreamer/ui-view/mobile";
+import { CountDown, CodeBlock } from "@dreamer/ui-view/mobile/data-display";
 import { Paragraph, Title } from "@dreamer/ui-view/mobile/basic";
-import { CodeBlock } from "@dreamer/ui-view/mobile/data-display";
 import {
   DocsApiTable,
   type DocsApiTableRow,
@@ -18,7 +17,7 @@ const API: DocsApiTableRow[] = [
   { name: "render", type: "(parts)=>unknown", default: "-", description: "自定义展示" }
 ];
 
-const importCode = `import { CountDown } from "@dreamer/ui-view/mobile";
+const importCode = `import { CountDown } from "@dreamer/ui-view/mobile/data-display";
 
 <CountDown target={Date.now() + 3_661_000} />`;
 

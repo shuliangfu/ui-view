@@ -3,7 +3,7 @@
  * 路由: /mobile/form/time-picker
  */
 
-import { TimePicker } from "@dreamer/ui-view/mobile";
+import { TimePicker } from "@dreamer/ui-view/mobile/form/time-picker";
 import { Paragraph, Title } from "@dreamer/ui-view/mobile/basic";
 import { CodeBlock } from "@dreamer/ui-view/mobile/data-display";
 import { createSignal } from "@dreamer/view";
@@ -83,8 +83,7 @@ const TIMEPICKER_API: DocsApiTableRow[] = [
   },
 ];
 
-const importCode = `import { TimePicker } from "@dreamer/ui-view/mobile";
-import { createSignal } from "@dreamer/view";
+const importCode = `import { TimePicker } from "@dreamer/ui-view/mobile/form/time-picker";
 
 const val = createSignal("09:30");
 

@@ -39,8 +39,9 @@ export default function MobileIndex() {
           language="typescript"
           title="jsr / Deno"
           copyable
-          code={`import { BottomSheet, TabBar, NavBar } from "@dreamer/ui-view/mobile";
-import { Button } from "@dreamer/ui-view/mobile"; // shared 也可从此入口`}
+          code={`import { BottomSheet } from "@dreamer/ui-view/mobile/feedback";
+import { TabBar, NavBar } from "@dreamer/ui-view/mobile/navigation";
+import { Button } from "@dreamer/ui-view/mobile/basic"; // shared 也可从此入口`}
         />
       </section>
 

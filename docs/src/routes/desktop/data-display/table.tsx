@@ -239,7 +239,7 @@ const apiColumns = [
   },
 ];
 
-const importCode = `import { Table } from "@dreamer/ui-view";
+const importCode = `import { Table } from "@dreamer/ui-view/data-display";
 
 const columns = [{ key: "name", title: "姓名", dataIndex: "name" }, ...];
 const dataSource = [{ key: "1", name: "张三", age: 28 }, ...];
@@ -328,8 +328,7 @@ type EditableDocRow = {
   level: string;
 };
 
-const exampleEditable = `import type { TableColumn } from "@dreamer/ui-view";
-import { createSignal } from "@dreamer/view";
+const exampleEditable = `import type { TableColumn } from "@dreamer/ui-view/data-display";
 import { Table } from "@dreamer/ui-view/data-display";
 type EditableRow = {
   key: string;

@@ -49,7 +49,7 @@ const CHART_DOUGHNUT_API: ApiRow[] = [
   { name: "height", type: "number", default: "-", description: "画布高度" },
 ];
 
-const importCode = `import { ChartDoughnut } from "@dreamer/ui-view";
+const importCode = `import { ChartDoughnut } from "@dreamer/ui-view/charts";
 
 const data = { labels: ["A", "B", ...], datasets: [{ data: [35, 30, ...], backgroundColor: [...] }] };
 <ChartDoughnut

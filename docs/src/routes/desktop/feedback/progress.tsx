@@ -85,7 +85,7 @@ const PROGRESS_API: ApiRow[] = [
   },
 ];
 
-const importCode = `import { Progress } from "@dreamer/ui-view";
+const importCode = `import { Progress } from "@dreamer/ui-view/feedback";
 
 <Progress percent={30} />
 <Progress type="circle" percent={75} />`;
@@ -125,7 +125,6 @@ const exampleDynamic = `import {
   onCleanup,
 } from "@dreamer/view";
 import { Button } from "@dreamer/ui-view/basic";
-import { Progress } from "@dreamer/ui-view/feedback";
 export function Demo() {
   const dynamicPercent = createSignal(0);
   const replayKey = createSignal(0);

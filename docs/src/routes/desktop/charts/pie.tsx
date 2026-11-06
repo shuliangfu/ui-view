@@ -49,7 +49,7 @@ const CHART_PIE_API: ApiRow[] = [
   { name: "height", type: "number", default: "-", description: "画布高度" },
 ];
 
-const importCode = `import { ChartPie } from "@dreamer/ui-view";
+const importCode = `import { ChartPie } from "@dreamer/ui-view/charts";
 
 const data = { labels: ["A", "B", ...], datasets: [{ data: [30, 25, ...], backgroundColor: [...] }] };
 <ChartPie

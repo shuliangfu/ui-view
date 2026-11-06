@@ -50,7 +50,7 @@ const MESSAGE_API: ApiRow[] = [
   },
 ];
 
-const importCode = `import { message } from "@dreamer/ui-view";
+const importCode = `import { message } from "@dreamer/ui-view/feedback";
 
 message.success("保存成功");
 message.error("网络错误");

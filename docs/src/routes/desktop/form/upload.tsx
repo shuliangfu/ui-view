@@ -5,7 +5,10 @@
 
 import { Paragraph, Title } from "@dreamer/ui-view/basic";
 
-import { DEFAULT_UPLOAD_CHUNK_SIZE, Form, FormItem, Upload } from "@dreamer/ui-view/form";
+import { DEFAULT_UPLOAD_CHUNK_SIZE } from "@dreamer/ui-view/form";
+import { Form } from "@dreamer/ui-view/form/form";
+import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { Upload } from "@dreamer/ui-view/form/upload";
 
 import { CodeBlock } from "@dreamer/ui-view/data-display";
 import { createSignal } from "@dreamer/view";
@@ -164,7 +167,9 @@ const UPLOAD_API: ApiRow[] = [
   },
 ];
 
-const importCode = `import { Upload, Form, FormItem } from "@dreamer/ui-view";
+const importCode = `import { Form } from "@dreamer/ui-view/form/form";
+import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { Upload } from "@dreamer/ui-view/form/upload";
 
 <FormItem label="头像">
   <Upload name="avatarUrl" action="/api/upload" maxFileSize={5 * 1024 * 1024} />
@@ -346,7 +351,7 @@ export default function FormUpload() {
         </Paragraph>
         <CodeBlock
           title="runChunkedUpload（自建请求）"
-          code={`import { runChunkedUpload, DEFAULT_UPLOAD_CHUNK_SIZE } from "@dreamer/ui-view";
+          code={`import { runChunkedUpload, DEFAULT_UPLOAD_CHUNK_SIZE } from "@dreamer/ui-view/form";
 
 await runChunkedUpload({
   file,

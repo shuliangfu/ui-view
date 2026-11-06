@@ -2,7 +2,8 @@
  * BottomSheet 文档页（概述、引入、示例、API）。路由: /mobile/feedback/bottom-sheet
  */
 
-import { BottomSheet, MobilePortalHostScope } from "@dreamer/ui-view/mobile";
+import { MobilePortalHostScope } from "@dreamer/ui-view/mobile";
+import { BottomSheet } from "@dreamer/ui-view/mobile/feedback";
 import { Button, Paragraph, Title } from "@dreamer/ui-view/mobile/basic";
 import { CodeBlock } from "@dreamer/ui-view/mobile/data-display";
 import { createSignal } from "@dreamer/view";
@@ -80,8 +81,7 @@ const BOTTOM_SHEET_API: DocsApiTableRow[] = [
   },
 ];
 
-const importCode = `import { BottomSheet } from "@dreamer/ui-view/mobile";
-import { createSignal } from "@dreamer/view";
+const importCode = `import { BottomSheet } from "@dreamer/ui-view/mobile/feedback";
 
 const open = createSignal(false);
 
@@ -112,10 +112,7 @@ const exampleFull = `<BottomSheet
   全屏内容
 </BottomSheet>`;
 
-const examplePortalScope = `import {
-  BottomSheet,
-  MobilePortalHostScope,
-} from "@dreamer/ui-view/mobile";
+const examplePortalScope = `import { MobilePortalHostScope } from "@dreamer/ui-view/mobile";
 
 /** 在嵌入容器内：浮层 Portal 到 Scope 锚点，而非整页 body */
 <MobilePortalHostScope class="min-h-[200px]">

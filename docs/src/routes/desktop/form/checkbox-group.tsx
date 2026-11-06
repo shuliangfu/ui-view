@@ -5,7 +5,9 @@
 
 import { Paragraph, Title } from "@dreamer/ui-view/basic";
 
-import { CheckboxGroup, Form, FormItem } from "@dreamer/ui-view/form";
+import { CheckboxGroup } from "@dreamer/ui-view/form/checkbox-group";
+import { Form } from "@dreamer/ui-view/form/form";
+import { FormItem } from "@dreamer/ui-view/form/form-item";
 
 import { CodeBlock } from "@dreamer/ui-view/data-display";
 import { createSignal } from "@dreamer/view";
@@ -66,8 +68,9 @@ const options = [
 ];
 
 const importCode =
-  `import { CheckboxGroup, Form, FormItem } from "@dreamer/ui-view";
-import { createSignal } from "@dreamer/view";
+  `import { CheckboxGroup } from "@dreamer/ui-view/form/checkbox-group";
+import { Form } from "@dreamer/ui-view/form/form";
+import { FormItem } from "@dreamer/ui-view/form/form-item";
 
 const options = [{ value: "a", label: "选项 A" }, { value: "b", label: "选项 B" }];
 const val = createSignal<string[]>([]);

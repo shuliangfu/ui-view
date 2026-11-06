@@ -16,7 +16,7 @@ const API: DocsApiTableRow[] = [
   { name: "children", type: "unknown", default: "-", description: "触发区（右键）" },
 ];
 
-const importCode = `import { ContextMenu } from "@dreamer/ui-view";
+const importCode = `import { ContextMenu } from "@dreamer/ui-view/feedback";
 
 <ContextMenu
   items={[

@@ -113,7 +113,7 @@ const CODE_BLOCK_API: ApiRow[] = [
   },
 ];
 
-const importCode = `import { CodeBlock } from "@dreamer/ui-view";
+const importCode = `import { CodeBlock } from "@dreamer/ui-view/data-display";
 
 <CodeBlock
   code={\`console.log("hello");\`}

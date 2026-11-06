@@ -2,9 +2,8 @@
  * ScrollList 文档页（概述、引入、示例、API）。路由: /mobile/data-display/scroll-list
  */
 
-import { ScrollList } from "@dreamer/ui-view/mobile";
+import { ScrollList, CodeBlock } from "@dreamer/ui-view/mobile/data-display";
 import { Paragraph, Title } from "@dreamer/ui-view/mobile/basic";
-import { CodeBlock } from "@dreamer/ui-view/mobile/data-display";
 import { createMemo, createSignal } from "@dreamer/view";
 import type { JSXRenderable } from "@dreamer/view";
 import {
@@ -95,7 +94,7 @@ const SCROLL_LIST_API: DocsApiTableRow[] = [
   },
 ];
 
-const importCode = `import { ScrollList } from "@dreamer/ui-view/mobile";
+const importCode = `import { ScrollList } from "@dreamer/ui-view/mobile/data-display";
 import { createSignal } from "@dreamer/view";
 
 const refreshLoading = createSignal(false);

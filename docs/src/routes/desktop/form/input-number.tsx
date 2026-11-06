@@ -5,7 +5,9 @@
 
 import { Paragraph, Title } from "@dreamer/ui-view/basic";
 
-import { Form, FormItem, InputNumber } from "@dreamer/ui-view/form";
+import { Form } from "@dreamer/ui-view/form/form";
+import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { InputNumber } from "@dreamer/ui-view/form/input-number";
 
 import { CodeBlock } from "@dreamer/ui-view/data-display";
 import { createSignal } from "@dreamer/view";
@@ -128,10 +130,9 @@ const qtySizeMd = createSignal("50");
 const qtySizeLg = createSignal("5");
 
 const importCode =
-  `import { InputNumber, Form, FormItem } from "@dreamer/ui-view";
-import { createSignal } from "@dreamer/view";
-import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
-import { MESSAGES_INPUT_NUMBER } from "../../../data/component-messages-rows.ts";
+  `import { Form } from "@dreamer/ui-view/form/form";
+import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { InputNumber } from "@dreamer/ui-view/form/input-number";
 
 const qty = createSignal("10");
 <FormItem label="数量">

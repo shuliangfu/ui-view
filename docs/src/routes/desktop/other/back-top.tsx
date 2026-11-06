@@ -77,7 +77,6 @@ const BACK_TOP_API: ApiRow[] = [
 ];
 
 const importCode = `import { createSignal } from "@dreamer/view";
-import { BackTop } from "@dreamer/ui-view/navigation";
 const visible = createSignal(false);
 <BackTop
   visibilityHeight={200}

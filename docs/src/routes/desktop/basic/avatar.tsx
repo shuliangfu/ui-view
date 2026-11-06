@@ -42,7 +42,7 @@ const AVATAR_API: ApiRow[] = [
   },
 ];
 
-const importCode = `import { Avatar } from "@dreamer/ui-view";
+const importCode = `import { Avatar } from "@dreamer/ui-view/basic";
 
 <Avatar size="md">张</Avatar>
 <Avatar size="lg" src="https://..." alt="用户" />`;

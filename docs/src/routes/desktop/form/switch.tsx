@@ -5,7 +5,9 @@
 
 import { Paragraph, Title } from "@dreamer/ui-view/basic";
 
-import { Form, FormItem, Switch } from "@dreamer/ui-view/form";
+import { Form } from "@dreamer/ui-view/form/form";
+import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { Switch } from "@dreamer/ui-view/form/switch";
 
 import { CodeBlock } from "@dreamer/ui-view/data-display";
 import { createSignal } from "@dreamer/view";
@@ -103,8 +105,9 @@ const SWITCH_API: ApiRow[] = [
   },
 ];
 
-const importCode = `import { Switch, Form, FormItem } from "@dreamer/ui-view";
-import { createSignal } from "@dreamer/view";
+const importCode = `import { Form } from "@dreamer/ui-view/form/form";
+import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { Switch } from "@dreamer/ui-view/form/switch";
 
 const checked = createSignal(false);
 <FormItem label="开关">

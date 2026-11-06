@@ -2,7 +2,7 @@
  * Select（移动版）文档页（概述、引入、示例、API）。路由: /mobile/form/select
  */
 
-import { Select } from "@dreamer/ui-view/mobile";
+import { Select } from "@dreamer/ui-view/mobile/form/select";
 import { Paragraph, Title } from "@dreamer/ui-view/mobile/basic";
 import { CodeBlock } from "@dreamer/ui-view/mobile/data-display";
 import { createSignal } from "@dreamer/view";
@@ -86,8 +86,7 @@ const SELECT_API: DocsApiTableRow[] = [
   },
 ];
 
-const importCode = `import { Select } from "@dreamer/ui-view/mobile";
-import { createSignal } from "@dreamer/view";
+const importCode = `import { Select } from "@dreamer/ui-view/mobile/form/select";
 
 /** 须绑定 value（Signal 或字面量）；仅 onChange 无法持久化选中项，与桌面文档一致 */
 const val = createSignal("");

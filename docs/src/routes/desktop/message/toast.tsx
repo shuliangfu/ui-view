@@ -63,7 +63,7 @@ const TOAST_API: ApiRow[] = [
   },
 ];
 
-const importCode = `import { toast } from "@dreamer/ui-view";
+const importCode = `import { toast } from "@dreamer/ui-view/feedback";
 
 toast.success("操作成功");
 toast.error("操作失败");

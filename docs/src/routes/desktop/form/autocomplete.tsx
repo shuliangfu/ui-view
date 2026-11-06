@@ -5,7 +5,9 @@
 
 import { Paragraph, Title } from "@dreamer/ui-view/basic";
 
-import { AutoComplete, Form, FormItem } from "@dreamer/ui-view/form";
+import { AutoComplete } from "@dreamer/ui-view/form/autocomplete";
+import { Form } from "@dreamer/ui-view/form/form";
+import { FormItem } from "@dreamer/ui-view/form/form-item";
 
 import { CodeBlock } from "@dreamer/ui-view/data-display";
 import { createSignal } from "@dreamer/view";
@@ -149,10 +151,9 @@ export default function FormAutoCompleteDoc() {
         <Title level={2}>引入</Title>
         <CodeBlock
           title="代码示例"
-          code={`import { AutoComplete, Form, FormItem } from "@dreamer/ui-view";
-import { createSignal } from "@dreamer/view";
-import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
-import { MESSAGES_AUTO_COMPLETE } from "../../../data/component-messages-rows.ts";
+          code={`import { AutoComplete } from "@dreamer/ui-view/form/autocomplete";
+import { Form } from "@dreamer/ui-view/form/form";
+import { FormItem } from "@dreamer/ui-view/form/form-item";
 
 const q = createSignal("");
 <FormItem label="搜索">

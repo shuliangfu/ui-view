@@ -222,7 +222,8 @@ import { Button } from "@dreamer/ui-view/basic";
 import { Table } from "@dreamer/ui-view/data-display";
 
 import { Modal } from "@dreamer/ui-view/feedback";
-import { BottomSheet, TabBar, NavBar } from "@dreamer/ui-view/mobile";`}
+import { BottomSheet } from "@dreamer/ui-view/mobile/feedback";
+import { TabBar, NavBar } from "@dreamer/ui-view/mobile/navigation";`}
               language="typescript"
               copyable
               class="rounded-xl text-left bg-slate-900 dark:bg-slate-950 border border-slate-700"

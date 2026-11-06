@@ -2,7 +2,7 @@
  * TreeSelect（移动版）文档页（概述、引入、示例、API）。路由: /mobile/form/tree-select
  */
 
-import { TreeSelect } from "@dreamer/ui-view/mobile";
+import { TreeSelect } from "@dreamer/ui-view/mobile/form/tree-select";
 import { Paragraph, Title } from "@dreamer/ui-view/mobile/basic";
 import { CodeBlock } from "@dreamer/ui-view/mobile/data-display";
 import { createSignal } from "@dreamer/view";
@@ -81,8 +81,7 @@ const TREE_API: DocsApiTableRow[] = [
   },
 ];
 
-const importCode = `import { TreeSelect } from "@dreamer/ui-view/mobile";
-import { createSignal } from "@dreamer/view";
+const importCode = `import { TreeSelect } from "@dreamer/ui-view/mobile/form/tree-select";
 
 const val = createSignal("");
 

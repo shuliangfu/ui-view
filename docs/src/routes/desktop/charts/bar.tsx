@@ -57,7 +57,7 @@ const CHART_BAR_API: ApiRow[] = [
   { name: "height", type: "number", default: "-", description: "画布高度" },
 ];
 
-const importCode = `import { ChartBar } from "@dreamer/ui-view";
+const importCode = `import { ChartBar } from "@dreamer/ui-view/charts";
 
 const data = { labels: ["红", "绿", ...], datasets: [{ label: "数量", data: [12, 19, ...], backgroundColor: [...] }] };
 <ChartBar

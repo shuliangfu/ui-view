@@ -83,7 +83,7 @@ const DESCRIPTIONS_API: ApiRow[] = [
   { name: "class", type: "string", default: "-", description: "容器 class" },
 ];
 
-const importCode = `import { Descriptions } from "@dreamer/ui-view";
+const importCode = `import { Descriptions } from "@dreamer/ui-view/data-display";
 
 const items = [{ label: "姓名", children: "张三" }, { label: "年龄", children: "28" }, ...];
 <Descriptions

@@ -42,7 +42,7 @@ const TIMELINE_API: ApiRow[] = [
   },
 ];
 
-const importCode = `import { Timeline } from "@dreamer/ui-view";
+const importCode = `import { Timeline } from "@dreamer/ui-view/data-display";
 
 const items = [{ key: "1", label: "2024-01-01", children: "创建项目", color: "primary" }, ...];
 <Timeline

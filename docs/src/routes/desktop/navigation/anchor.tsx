@@ -68,7 +68,6 @@ const ANCHOR_LINK_API: ApiRow[] = [
 ];
 
 const importCode = `import { createSignal } from "@dreamer/view";
-import { Anchor } from "@dreamer/ui-view/navigation";
 const activeKey = createSignal("section1");
 const links = [
   { key: "section1", href: "#section1", title: "第一节" },

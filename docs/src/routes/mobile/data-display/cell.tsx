@@ -2,16 +2,16 @@
  * Cell 文档页。路由: /mobile/data-display/cell
  */
 import { createSignal } from "@dreamer/view";
-import { Cell, CellGroup, Switch } from "@dreamer/ui-view/mobile";
+import { Cell, CellGroup, CodeBlock } from "@dreamer/ui-view/mobile/data-display";
+import { Switch } from "@dreamer/ui-view/mobile/form/switch";
 import { Paragraph, Title } from "@dreamer/ui-view/mobile/basic";
-import { CodeBlock } from "@dreamer/ui-view/mobile/data-display";
 import { DocsApiTable, type DocsApiTableRow } from "../../../components/DocsApiTable.tsx";
 import { MobileDocDemo } from "../../../components/MobileDocDemo.tsx";
 
 const API: DocsApiTableRow[] = [
   { name: "arrow / onClick / disabled / href", type: "—", default: "-", description: "见桌面 API；行为一致" },
 ];
-const importCode = `import { Cell, CellGroup } from "@dreamer/ui-view/mobile";`;
+const importCode = `import { Cell, CellGroup } from "@dreamer/ui-view/mobile/data-display";`;
 
 const exampleInteractive = `const on = createSignal(true);
 

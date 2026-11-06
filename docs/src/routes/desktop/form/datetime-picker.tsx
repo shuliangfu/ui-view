@@ -5,7 +5,9 @@
 
 import { Paragraph, Title } from "@dreamer/ui-view/basic";
 
-import { DateTimePicker, Form, FormItem } from "@dreamer/ui-view/form";
+import { DateTimePicker } from "@dreamer/ui-view/form/datetime-picker";
+import { Form } from "@dreamer/ui-view/form/form";
+import { FormItem } from "@dreamer/ui-view/form/form-item";
 
 import { CodeBlock } from "@dreamer/ui-view/data-display";
 import { createSignal } from "@dreamer/view";
@@ -145,8 +147,9 @@ const DATETIMEPICKER_API: ApiRow[] = [
 ];
 
 const importCode =
-  `import { DateTimePicker, Form, FormItem } from "@dreamer/ui-view";
-import { createSignal } from "@dreamer/view";
+  `import { DateTimePicker } from "@dreamer/ui-view/form/datetime-picker";
+import { Form } from "@dreamer/ui-view/form/form";
+import { FormItem } from "@dreamer/ui-view/form/form-item";
 
 function localNowDateTime() {
   const d = new Date();

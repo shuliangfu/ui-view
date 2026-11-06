@@ -5,7 +5,9 @@
 
 import { Paragraph, Title } from "@dreamer/ui-view/basic";
 
-import { Form, FormItem, Transfer } from "@dreamer/ui-view/form";
+import { Form } from "@dreamer/ui-view/form/form";
+import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { Transfer } from "@dreamer/ui-view/form/transfer";
 
 import { CodeBlock } from "@dreamer/ui-view/data-display";
 import { createSignal } from "@dreamer/view";
@@ -120,10 +122,9 @@ const data = [
   { key: "6", title: "草莓", disabled: true },
 ];
 
-const importCode = `import { Transfer, Form, FormItem } from "@dreamer/ui-view";
-import { createSignal } from "@dreamer/view";
-import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
-import { MESSAGES_TRANSFER } from "../../../data/component-messages-rows.ts";
+const importCode = `import { Form } from "@dreamer/ui-view/form/form";
+import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { Transfer } from "@dreamer/ui-view/form/transfer";
 
 const data = [{ key: "1", title: "选项1" }, { key: "2", title: "选项2" }];
 const targetKeys = createSignal<string[]>([]);

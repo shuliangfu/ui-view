@@ -157,7 +157,6 @@ const MODAL_API: ApiRow[] = [
 
 const importCode = `import { createSignal } from "@dreamer/view";
 import { Button } from "@dreamer/ui-view/basic";
-import { Modal } from "@dreamer/ui-view/feedback";
 const open = createSignal(false);
 
 <Button type="button" variant="primary" onClick={() => open.value = true}>

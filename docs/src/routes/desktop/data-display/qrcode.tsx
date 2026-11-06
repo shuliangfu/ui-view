@@ -19,7 +19,7 @@ const API: DocsApiTableRow[] = [
   { name: "aria-label", type: "string", default: "二维码", description: "无障碍" },
 ];
 
-const importCode = `import { QRCode } from "@dreamer/ui-view";
+const importCode = `import { QRCode } from "@dreamer/ui-view/data-display";
 
 const value = globalThis.location?.href ?? "https://example.com";
 <QRCode value={value} size={148} />`;

@@ -2,7 +2,7 @@
  * NavBar 文档页（概述、引入、示例、API）。路由: /mobile/navigation/navbar
  */
 
-import { NavBar } from "@dreamer/ui-view/mobile";
+import { NavBar } from "@dreamer/ui-view/mobile/navigation";
 import { Paragraph, Title } from "@dreamer/ui-view/mobile/basic";
 import { CodeBlock } from "@dreamer/ui-view/mobile/data-display";
 import {
@@ -118,7 +118,7 @@ const NAV_BAR_API: DocsApiTableRow[] = [
   },
 ];
 
-const importCode = `import { NavBar } from "@dreamer/ui-view/mobile";
+const importCode = `import { NavBar } from "@dreamer/ui-view/mobile/navigation";
 
 <NavBar
   title="页面标题"

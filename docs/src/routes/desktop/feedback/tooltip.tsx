@@ -46,7 +46,7 @@ const TOOLTIP_API: ApiRow[] = [
   },
 ];
 
-const importCode = `import { Tooltip } from "@dreamer/ui-view";
+const importCode = `import { Tooltip } from "@dreamer/ui-view/feedback";
 
 <Tooltip
   content="上方提示"

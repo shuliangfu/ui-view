@@ -5,7 +5,9 @@
 
 import { Paragraph, Title } from "@dreamer/ui-view/basic";
 
-import { Form, FormItem, TreeSelect } from "@dreamer/ui-view/form";
+import { Form } from "@dreamer/ui-view/form/form";
+import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { TreeSelect } from "@dreamer/ui-view/form/tree-select";
 
 import { CodeBlock } from "@dreamer/ui-view/data-display";
 import { createSignal } from "@dreamer/view";
@@ -125,8 +127,9 @@ const TREE_DEEP = [
 ];
 
 const importCode =
-  `import { TreeSelect, Form, FormItem } from "@dreamer/ui-view";
-import { createSignal } from "@dreamer/view";
+  `import { Form } from "@dreamer/ui-view/form/form";
+import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { TreeSelect } from "@dreamer/ui-view/form/tree-select";
 
 const tree = [
   {

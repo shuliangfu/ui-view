@@ -66,7 +66,7 @@ const CHART_BUBBLE_API: ApiRow[] = [
   { name: "height", type: "number", default: "-", description: "画布高度" },
 ];
 
-const importCode = `import { ChartBubble } from "@dreamer/ui-view";
+const importCode = `import { ChartBubble } from "@dreamer/ui-view/charts";
 
 const data = { datasets: [{ label: "系列 A", data: [{ x: 20, y: 30, r: 15 }, ...], backgroundColor: "...", borderColor: "..." }] };
 <ChartBubble

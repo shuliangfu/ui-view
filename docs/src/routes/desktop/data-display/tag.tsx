@@ -60,7 +60,7 @@ const TAG_API: ApiRow[] = [
   },
 ];
 
-const importCode = `import { Tag } from "@dreamer/ui-view";
+const importCode = `import { Tag } from "@dreamer/ui-view/data-display";
 
 <Tag>默认</Tag>
 <Tag variant="primary">Primary</Tag>

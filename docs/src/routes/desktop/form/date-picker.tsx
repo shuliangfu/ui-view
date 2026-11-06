@@ -5,7 +5,9 @@
 
 import { Paragraph, Title } from "@dreamer/ui-view/basic";
 
-import { DatePicker, Form, FormItem } from "@dreamer/ui-view/form";
+import { DatePicker } from "@dreamer/ui-view/form/date-picker";
+import { Form } from "@dreamer/ui-view/form/form";
+import { FormItem } from "@dreamer/ui-view/form/form-item";
 
 import { CodeBlock } from "@dreamer/ui-view/data-display";
 import { createSignal } from "@dreamer/view";
@@ -121,8 +123,9 @@ const DATEPICKER_API: ApiRow[] = [
 ];
 
 const importCode =
-  `import { DatePicker, Form, FormItem } from "@dreamer/ui-view";
-import { createSignal } from "@dreamer/view";
+  `import { DatePicker } from "@dreamer/ui-view/form/date-picker";
+import { Form } from "@dreamer/ui-view/form/form";
+import { FormItem } from "@dreamer/ui-view/form/form-item";
 
 /** 本地时区今天 YYYY-MM-DD */
 function localTodayYmd() {

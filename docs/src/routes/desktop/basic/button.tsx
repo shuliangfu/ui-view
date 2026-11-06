@@ -73,7 +73,7 @@ const BUTTON_API: ApiRow[] = [
   },
 ];
 
-const importCode = `import { Button, ButtonGroup } from "@dreamer/ui-view";
+const importCode = `import { Button, ButtonGroup } from "@dreamer/ui-view/basic";
 
 <Button variant="primary" onClick={() => console.log("click")}>
   确定

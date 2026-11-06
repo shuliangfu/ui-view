@@ -5,7 +5,9 @@
 
 import { Paragraph, Title } from "@dreamer/ui-view/basic";
 
-import { Checkbox, Form, FormItem } from "@dreamer/ui-view/form";
+import { Checkbox } from "@dreamer/ui-view/form/checkbox";
+import { Form } from "@dreamer/ui-view/form/form";
+import { FormItem } from "@dreamer/ui-view/form/form-item";
 
 import { CodeBlock } from "@dreamer/ui-view/data-display";
 import { createSignal } from "@dreamer/view";
@@ -96,8 +98,9 @@ const CHECKBOX_API: ApiRow[] = [
   },
 ];
 
-const importCode = `import { Checkbox, Form, FormItem } from "@dreamer/ui-view";
-import { createSignal } from "@dreamer/view";
+const importCode = `import { Checkbox } from "@dreamer/ui-view/form/checkbox";
+import { Form } from "@dreamer/ui-view/form/form";
+import { FormItem } from "@dreamer/ui-view/form/form-item";
 
 const checked = createSignal(false);
 <FormItem label="勾选">

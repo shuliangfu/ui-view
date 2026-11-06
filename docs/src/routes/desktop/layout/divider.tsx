@@ -44,7 +44,7 @@ const DIVIDER_API: ApiRow[] = [
   { name: "class", type: "string", default: "-", description: "额外 class" },
 ];
 
-const importCode = `import { Divider } from "@dreamer/ui-view";
+const importCode = `import { Divider } from "@dreamer/ui-view/layout";
 
 <Divider />
 <Divider>中间文案</Divider>

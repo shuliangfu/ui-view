@@ -2,7 +2,7 @@
  * DateTimePicker（移动版）文档页（概述、引入、示例、API）。路由: /mobile/form/datetime-picker
  */
 
-import { DateTimePicker } from "@dreamer/ui-view/mobile";
+import { DateTimePicker } from "@dreamer/ui-view/mobile/form/datetime-picker";
 import { Paragraph, Title } from "@dreamer/ui-view/mobile/basic";
 import { CodeBlock } from "@dreamer/ui-view/mobile/data-display";
 import { createSignal } from "@dreamer/view";
@@ -12,7 +12,6 @@ import {
 } from "../../../components/DocsApiTable.tsx";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MobileDocDemo } from "../../../components/MobileDocDemo.tsx";
-import {
   MESSAGES_DATETIME_PICKER,
   MESSAGES_PICKER_CALENDAR_NAV,
 } from "../../../data/component-messages-rows.ts";
@@ -109,8 +108,7 @@ const DATETIME_API: DocsApiTableRow[] = [
   },
 ];
 
-const importCode = `import { DateTimePicker } from "@dreamer/ui-view/mobile";
-import { createSignal } from "@dreamer/view";
+const importCode = `import { DateTimePicker } from "@dreamer/ui-view/mobile/form/datetime-picker";
 
 const val = createSignal(localNowDateTime());
 

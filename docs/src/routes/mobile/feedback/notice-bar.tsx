@@ -3,7 +3,7 @@
  */
 
 import { createSignal } from "@dreamer/view";
-import { NoticeBar } from "@dreamer/ui-view/mobile";
+import { NoticeBar } from "@dreamer/ui-view/mobile/feedback";
 import { Button, Paragraph, Title } from "@dreamer/ui-view/mobile/basic";
 import { CodeBlock } from "@dreamer/ui-view/mobile/data-display";
 import {
@@ -19,7 +19,7 @@ const API: DocsApiTableRow[] = [
   { name: "visible", type: "boolean", default: "-", description: "受控可见" },
 ];
 
-const importCode = `import { NoticeBar } from "@dreamer/ui-view/mobile";
+const importCode = `import { NoticeBar } from "@dreamer/ui-view/mobile/feedback";
 
 <NoticeBar tone="warning" closable content="系统将于今晚维护" />`;
 

@@ -2,7 +2,7 @@
  * Cascader（移动版）文档页（概述、引入、示例、API）。路由: /mobile/form/cascader
  */
 
-import { Cascader } from "@dreamer/ui-view/mobile";
+import { Cascader } from "@dreamer/ui-view/mobile/form/cascader";
 import { Paragraph, Title } from "@dreamer/ui-view/mobile/basic";
 import { CodeBlock } from "@dreamer/ui-view/mobile/data-display";
 import { createSignal } from "@dreamer/view";
@@ -103,8 +103,7 @@ const CASCADER_API: DocsApiTableRow[] = [
   },
 ];
 
-const importCode = `import { Cascader } from "@dreamer/ui-view/mobile";
-import { createSignal } from "@dreamer/view";
+const importCode = `import { Cascader } from "@dreamer/ui-view/mobile/form/cascader";
 
 const val = createSignal<string[]>([]);
 

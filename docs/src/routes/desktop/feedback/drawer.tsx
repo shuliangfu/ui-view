@@ -105,7 +105,6 @@ const DRAWER_API: ApiRow[] = [
 
 const importCode = `import { createSignal } from "@dreamer/view";
 import { Button } from "@dreamer/ui-view/basic";
-import { Drawer } from "@dreamer/ui-view/feedback";
 const open = createSignal(false);
 
 <Button type="button" onClick={() => open.value = true}>打开抽屉</Button>

@@ -5,7 +5,9 @@
 
 import { Paragraph, Title } from "@dreamer/ui-view/basic";
 
-import { Form, FormItem, Slider } from "@dreamer/ui-view/form";
+import { Form } from "@dreamer/ui-view/form/form";
+import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { Slider } from "@dreamer/ui-view/form/slider";
 
 import { CodeBlock } from "@dreamer/ui-view/data-display";
 import { createSignal } from "@dreamer/view";
@@ -74,10 +76,9 @@ const SLIDER_API: ApiRow[] = [
   },
 ];
 
-const importCode = `import { Slider, Form, FormItem } from "@dreamer/ui-view";
-import { createSignal } from "@dreamer/view";
-import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
-import { MESSAGES_SLIDER } from "../../../data/component-messages-rows.ts";
+const importCode = `import { Form } from "@dreamer/ui-view/form/form";
+import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { Slider } from "@dreamer/ui-view/form/slider";
 
 /** 与 Slider 同一 Signal；组件在拖动时内部会 commit，首屏与拖动中文案都会更新 */
 const committed = createSignal(50);

@@ -2,7 +2,7 @@
  * DatePicker（移动版）文档页（概述、引入、示例、API）。路由: /mobile/form/date-picker
  */
 
-import { DatePicker } from "@dreamer/ui-view/mobile";
+import { DatePicker } from "@dreamer/ui-view/mobile/form/date-picker";
 import { Paragraph, Title } from "@dreamer/ui-view/mobile/basic";
 import { CodeBlock } from "@dreamer/ui-view/mobile/data-display";
 import { createSignal } from "@dreamer/view";
@@ -12,7 +12,6 @@ import {
 } from "../../../components/DocsApiTable.tsx";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MobileDocDemo } from "../../../components/MobileDocDemo.tsx";
-import {
   MESSAGES_DATE_PICKER,
   MESSAGES_PICKER_CALENDAR_NAV,
 } from "../../../data/component-messages-rows.ts";
@@ -107,8 +106,7 @@ const DATEPICKER_API: DocsApiTableRow[] = [
   },
 ];
 
-const importCode = `import { DatePicker } from "@dreamer/ui-view/mobile";
-import { createSignal } from "@dreamer/view";
+const importCode = `import { DatePicker } from "@dreamer/ui-view/mobile/form/date-picker";
 
 const val = createSignal("2026-04-09");
 

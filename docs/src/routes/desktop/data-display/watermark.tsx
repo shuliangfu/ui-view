@@ -2,9 +2,8 @@
  * Watermark 文档页。路由: /desktop/data-display/watermark
  */
 
-import { Watermark } from "@dreamer/ui-view/data-display";
+import { Watermark, CodeBlock } from "@dreamer/ui-view/data-display";
 import { Paragraph, Title } from "@dreamer/ui-view/basic";
-import { CodeBlock } from "@dreamer/ui-view/data-display";
 import {
   DocsApiTable,
   type DocsApiTableRow,
@@ -21,7 +20,7 @@ const API: DocsApiTableRow[] = [
   { name: "children", type: "unknown", default: "-", description: "被覆盖内容" },
 ];
 
-const importCode = `import { Watermark } from "@dreamer/ui-view";
+const importCode = `import { Watermark } from "@dreamer/ui-view/data-display";
 
 <Watermark content="内部资料">
   <div class="h-40 p-4">业务内容区域</div>

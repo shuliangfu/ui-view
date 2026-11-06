@@ -96,7 +96,7 @@ const LINK_API: ApiRow[] = [
   },
 ];
 
-const importCode = `import { Link } from "@dreamer/ui-view";
+const importCode = `import { Link } from "@dreamer/ui-view/basic";
 
 <Link href="/desktop">返回桌面</Link>`;
 

@@ -2,9 +2,8 @@
  * VirtualList 文档页。路由: /desktop/data-display/virtual-list
  */
 
-import { VirtualList } from "@dreamer/ui-view/data-display";
+import { VirtualList, CodeBlock } from "@dreamer/ui-view/data-display";
 import { Paragraph, Title } from "@dreamer/ui-view/basic";
-import { CodeBlock } from "@dreamer/ui-view/data-display";
 import {
   DocsApiTable,
   type DocsApiTableRow,
@@ -22,7 +21,7 @@ const API: DocsApiTableRow[] = [
 ];
 
 const TOTAL = 2000;
-const importCode = `import { VirtualList } from "@dreamer/ui-view";
+const importCode = `import { VirtualList } from "@dreamer/ui-view/data-display";
 
 const rows = Array.from({ length: ${TOTAL} }, (_, i) => i + 1);
 

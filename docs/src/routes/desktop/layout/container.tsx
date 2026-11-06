@@ -45,7 +45,7 @@ const CONTAINER_API: ApiRow[] = [
   { name: "children", type: "unknown", default: "-", description: "子节点" },
 ];
 
-const importCode = `import { Container } from "@dreamer/ui-view";
+const importCode = `import { Container } from "@dreamer/ui-view/layout";
 
 <Container maxWidth="md">
   <p>内容</p>

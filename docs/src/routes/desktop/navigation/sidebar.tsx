@@ -111,7 +111,7 @@ const SIDEBAR_API: DocsApiTableRow[] = [
   },
 ];
 
-const importCode = `import { Sidebar } from "@dreamer/ui-view";
+const importCode = `import { Sidebar } from "@dreamer/ui-view/navigation";
 
 <Sidebar
   overview={{ path: "/desktop", label: "概览" }}
@@ -124,7 +124,7 @@ const importCode = `import { Sidebar } from "@dreamer/ui-view";
  * Sidebar 文档页：概述、引入、示例、文案表、API。
  */
 
-const exampleDemo = `import { Sidebar } from "@dreamer/ui-view";
+const exampleDemo = `import { Sidebar } from "@dreamer/ui-view/navigation";
 
 <Sidebar
   overview={{ path: "/desktop", label: "概览" }}

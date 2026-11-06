@@ -2,7 +2,7 @@
  * PasscodeInput 文档页。路由: /mobile/form/passcode-input
  */
 
-import { PasscodeInput } from "@dreamer/ui-view/mobile";
+import { PasscodeInput } from "@dreamer/ui-view/mobile/form/passcode-input";
 import { Paragraph, Title } from "@dreamer/ui-view/mobile/basic";
 import { CodeBlock } from "@dreamer/ui-view/mobile/data-display";
 import {
@@ -18,7 +18,7 @@ const API: DocsApiTableRow[] = [
   { name: "onFinish", type: "(v)=>void", default: "-", description: "填满回调" }
 ];
 
-const importCode = `import { PasscodeInput } from "@dreamer/ui-view/mobile";
+const importCode = `import { PasscodeInput } from "@dreamer/ui-view/mobile/form/passcode-input";
 
 <PasscodeInput
   length={6}

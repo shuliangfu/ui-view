@@ -58,7 +58,8 @@ const EMPTY_API: ApiRow[] = [
   },
 ];
 
-const importCode = `import { Button, Empty } from "@dreamer/ui-view";
+const importCode = `import { Button } from "@dreamer/ui-view/basic";
+import { Empty } from "@dreamer/ui-view/data-display";
 
 <Empty description="暂无数据" />
 <Empty

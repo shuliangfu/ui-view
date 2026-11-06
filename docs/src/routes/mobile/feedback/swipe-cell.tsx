@@ -2,7 +2,7 @@
  * SwipeCell 文档页（概述、引入、示例、API）。路由: /mobile/feedback/swipe-cell
  */
 
-import { SwipeCell } from "@dreamer/ui-view/mobile";
+import { SwipeCell } from "@dreamer/ui-view/mobile/feedback";
 import { Paragraph, Title } from "@dreamer/ui-view/mobile/basic";
 import { CodeBlock } from "@dreamer/ui-view/mobile/data-display";
 import {
@@ -79,7 +79,7 @@ const ACTION_API: DocsApiTableRow[] = [
   },
 ];
 
-const importCode = `import { SwipeCell } from "@dreamer/ui-view/mobile";
+const importCode = `import { SwipeCell } from "@dreamer/ui-view/mobile/feedback";
 
 <SwipeCell
   rightActions={[

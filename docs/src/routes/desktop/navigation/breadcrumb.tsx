@@ -73,7 +73,7 @@ const BREADCRUMB_ITEM_API: ApiRow[] = [
   },
 ];
 
-const importCode = `import { Breadcrumb } from "@dreamer/ui-view";
+const importCode = `import { Breadcrumb } from "@dreamer/ui-view/navigation";
 
 const items = [
   { label: "首页", href: "#" },

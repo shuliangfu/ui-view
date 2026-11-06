@@ -5,7 +5,11 @@
 
 import { Link, Paragraph, Title } from "@dreamer/ui-view/basic";
 
-import { Form, FormItem, FormList, type FormListRenderRowContext, Input } from "@dreamer/ui-view/form";
+import type { FormListRenderRowContext } from "@dreamer/ui-view/form/form-list";
+import { Form } from "@dreamer/ui-view/form/form";
+import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { FormList } from "@dreamer/ui-view/form/form-list";
+import { Input } from "@dreamer/ui-view/form/input";
 
 import { CodeBlock } from "@dreamer/ui-view/data-display";
 import { createSignal } from "@dreamer/view";
@@ -167,8 +171,10 @@ function renderFormListDocRow(
 }
 
 const importCode =
-  `import { Form, FormItem, FormList, Input } from "@dreamer/ui-view";
-import { createSignal } from "@dreamer/view";
+  `import { Form } from "@dreamer/ui-view/form/form";
+import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { FormList } from "@dreamer/ui-view/form/form-list";
+import { Input } from "@dreamer/ui-view/form/input";
 
 const rowValues = createSignal<string[]>([""]);
 

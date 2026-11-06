@@ -89,7 +89,7 @@ const ALERT_API: ApiRow[] = [
   },
 ];
 
-const importCode = `import { Alert } from "@dreamer/ui-view";
+const importCode = `import { Alert } from "@dreamer/ui-view/feedback";
 
 <Alert
   type="success"

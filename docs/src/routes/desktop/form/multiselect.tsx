@@ -5,7 +5,9 @@
 
 import { Paragraph, Title } from "@dreamer/ui-view/basic";
 
-import { Form, FormItem, MultiSelect } from "@dreamer/ui-view/form";
+import { Form } from "@dreamer/ui-view/form/form";
+import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { MultiSelect } from "@dreamer/ui-view/form/multiselect";
 
 import { CodeBlock } from "@dreamer/ui-view/data-display";
 import { createSignal } from "@dreamer/view";
@@ -82,10 +84,9 @@ const options = [
 ];
 
 const importCode =
-  `import { MultiSelect, Form, FormItem } from "@dreamer/ui-view";
-import { createSignal } from "@dreamer/view";
-import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
-import { MESSAGES_MULTI_SELECT } from "../../../data/component-messages-rows.ts";
+  `import { Form } from "@dreamer/ui-view/form/form";
+import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { MultiSelect } from "@dreamer/ui-view/form/multiselect";
 
 const options = [{ value: "a", label: "选项 A" }, { value: "b", label: "选项 B" }];
 const val = createSignal<string[]>([]);

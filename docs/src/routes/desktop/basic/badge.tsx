@@ -49,7 +49,7 @@ const BADGE_API: ApiRow[] = [
   },
 ];
 
-const importCode = `import { Badge } from "@dreamer/ui-view";
+const importCode = `import { Badge } from "@dreamer/ui-view/basic";
 
 <Badge
   variant="primary"

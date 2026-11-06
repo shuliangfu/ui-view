@@ -114,7 +114,7 @@ const PAGINATION_API: ApiRow[] = [
   },
 ];
 
-const importCode = `import { Pagination } from "@dreamer/ui-view";
+const importCode = `import { Pagination } from "@dreamer/ui-view/navigation";
 
 <Pagination
   defaultCurrent={1}

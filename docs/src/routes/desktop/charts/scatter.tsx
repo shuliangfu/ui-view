@@ -64,7 +64,7 @@ const CHART_SCATTER_API: ApiRow[] = [
   { name: "height", type: "number", default: "-", description: "画布高度" },
 ];
 
-const importCode = `import { ChartScatter } from "@dreamer/ui-view";
+const importCode = `import { ChartScatter } from "@dreamer/ui-view/charts";
 
 const data = { datasets: [{ label: "系列 A", data: [{ x: 10, y: 20 }, ...], backgroundColor: "...", borderColor: "..." }] };
 <ChartScatter

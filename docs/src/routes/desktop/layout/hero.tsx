@@ -92,7 +92,7 @@ const HERO_API: ApiRow[] = [
   },
 ];
 
-const importCode = `import { Button, Hero } from "@dreamer/ui-view";
+const importCode = `import { Button } from "@dreamer/ui-view/basic";
 
 <Hero
   layout="center"

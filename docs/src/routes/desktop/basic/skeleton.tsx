@@ -28,7 +28,7 @@ const SKELETON_API: ApiRow[] = [
   },
 ];
 
-const importCode = `import { Skeleton } from "@dreamer/ui-view";
+const importCode = `import { Skeleton } from "@dreamer/ui-view/basic";
 
 <Skeleton size="md" />
 <Skeleton class="w-full h-4" />`;

@@ -57,7 +57,7 @@ const AFFIX_API: ApiRow[] = [
   },
 ];
 
-const importCode = `import { Affix } from "@dreamer/ui-view";
+const importCode = `import { Affix } from "@dreamer/ui-view/navigation";
 
 <Affix offsetTop={0} affixClass="shadow-md">
   <div class="...">滚动后钉在视口顶部的内容</div>

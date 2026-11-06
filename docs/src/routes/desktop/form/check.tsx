@@ -5,7 +5,12 @@
 
 import { Paragraph, Title } from "@dreamer/ui-view/basic";
 
-import { Checkbox, CheckboxGroup, Form, FormItem, RadioGroup, Switch } from "@dreamer/ui-view/form";
+import { Checkbox } from "@dreamer/ui-view/form/checkbox";
+import { CheckboxGroup } from "@dreamer/ui-view/form/checkbox-group";
+import { Form } from "@dreamer/ui-view/form/form";
+import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { RadioGroup } from "@dreamer/ui-view/form/radio-group";
+import { Switch } from "@dreamer/ui-view/form/switch";
 
 import { CodeBlock } from "@dreamer/ui-view/data-display";
 import { createSignal } from "@dreamer/view";
@@ -184,8 +189,12 @@ const radioOptions = [
 ];
 
 const importCode =
-  `import { Checkbox, CheckboxGroup, RadioGroup, Switch, Form, FormItem } from "@dreamer/ui-view";
-import { createSignal } from "@dreamer/view";
+  `import { Checkbox } from "@dreamer/ui-view/form/checkbox";
+import { CheckboxGroup } from "@dreamer/ui-view/form/checkbox-group";
+import { Form } from "@dreamer/ui-view/form/form";
+import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { RadioGroup } from "@dreamer/ui-view/form/radio-group";
+import { Switch } from "@dreamer/ui-view/form/switch";
 
 const cb = createSignal(false);
 const groupVal = createSignal<string[]>([]);

@@ -2,9 +2,9 @@
  * IndexBar 文档页。路由: /mobile/navigation/index-bar
  */
 
-import { IndexBar, Cell } from "@dreamer/ui-view/mobile";
+import { Cell, CodeBlock } from "@dreamer/ui-view/mobile/data-display";
+import { IndexBar } from "@dreamer/ui-view/mobile/navigation";
 import { Paragraph, Title } from "@dreamer/ui-view/mobile/basic";
-import { CodeBlock } from "@dreamer/ui-view/mobile/data-display";
 import {
   DocsApiTable,
   type DocsApiTableRow,
@@ -16,7 +16,7 @@ const API: DocsApiTableRow[] = [
   { name: "onSelect", type: "(index)=>void", default: "-", description: "选中索引" }
 ];
 
-const importCode = `import { IndexBar } from "@dreamer/ui-view/mobile";
+const importCode = `import { IndexBar } from "@dreamer/ui-view/mobile/navigation";
 
 <IndexBar
   items={[

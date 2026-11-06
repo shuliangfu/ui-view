@@ -93,7 +93,7 @@ const DESKTOP_NAV_BAR_API: DocsApiTableRow[] = [
   },
 ];
 
-const importCode = `import { Link, NavBar } from "@dreamer/ui-view";
+const importCode = `import { Link } from "@dreamer/ui-view/basic";
 
 <NavBar
   sticky={false}
@@ -110,7 +110,7 @@ const importCode = `import { Link, NavBar } from "@dreamer/ui-view";
  * NavBar（桌面）文档页：概述、引入、示例、文案表、API。
  */
 
-const exampleDemo = `import { Link, NavBar } from "@dreamer/ui-view";
+const exampleDemo = `import { Link } from "@dreamer/ui-view/basic";
 
 <NavBar
   sticky={false}

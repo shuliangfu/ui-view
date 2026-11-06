@@ -1,16 +1,15 @@
 /**
  * Watermark 文档页。路由: /mobile/data-display/watermark
  */
-import { Watermark } from "@dreamer/ui-view/mobile";
+import { Watermark, CodeBlock } from "@dreamer/ui-view/mobile/data-display";
 import { Paragraph, Title } from "@dreamer/ui-view/mobile/basic";
-import { CodeBlock } from "@dreamer/ui-view/mobile/data-display";
 import { DocsApiTable, type DocsApiTableRow } from "../../../components/DocsApiTable.tsx";
 import { MobileDocDemo } from "../../../components/MobileDocDemo.tsx";
 
 const API: DocsApiTableRow[] = [
   { name: "content / rotate / gapX / gapY / fontSize / color", type: "—", default: "-", description: "与桌面一致" },
 ];
-const importCode = `import { Watermark } from "@dreamer/ui-view/mobile";`;
+const importCode = `import { Watermark } from "@dreamer/ui-view/mobile/data-display";`;
 
 const exampleBasic = `<Watermark content="内部资料">
   <div class="h-36 p-3 text-sm">业务内容</div>

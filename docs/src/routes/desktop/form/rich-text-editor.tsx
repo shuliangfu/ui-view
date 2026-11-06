@@ -5,7 +5,9 @@
 
 import { Paragraph, Title } from "@dreamer/ui-view/basic";
 
-import { Form, FormItem, RichTextEditor } from "@dreamer/ui-view/form";
+import { Form } from "@dreamer/ui-view/form/form";
+import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { RichTextEditor } from "@dreamer/ui-view/form/rich-text-editor";
 
 import { CodeBlock } from "@dreamer/ui-view/data-display";
 import { createSignal } from "@dreamer/view";
@@ -114,10 +116,9 @@ const RICH_TEXT_EDITOR_API: ApiRow[] = [
 ];
 
 const importCode =
-  `import { RichTextEditor, Form, FormItem } from "@dreamer/ui-view";
-import { createSignal } from "@dreamer/view";
-import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
-import { MESSAGES_RICH_TEXT_EDITOR } from "../../../data/component-messages-rows.ts";
+  `import { Form } from "@dreamer/ui-view/form/form";
+import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { RichTextEditor } from "@dreamer/ui-view/form/rich-text-editor";
 
 const html = createSignal("<p>初始</p>");
 <FormItem label="富文本">

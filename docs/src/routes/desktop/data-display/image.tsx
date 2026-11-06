@@ -72,7 +72,7 @@ const IMAGE_API: ApiRow[] = [
   { name: "class", type: "string", default: "-", description: "额外 class" },
 ];
 
-const importCode = `import { Image } from "@dreamer/ui-view";
+const importCode = `import { Image } from "@dreamer/ui-view/data-display";
 
 <Image
   src="https://example.com/photo.jpg"

@@ -77,9 +77,6 @@ const STEP_ITEM_API: ApiRow[] = [
 ];
 
 const importCode = `import { createSignal } from "@dreamer/view";
-import { Steps } from "@dreamer/ui-view/navigation";
-import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
-import { MESSAGES_STEPS } from "../../../data/component-messages-rows.ts";
 
 const current = createSignal(0);
 const items = [

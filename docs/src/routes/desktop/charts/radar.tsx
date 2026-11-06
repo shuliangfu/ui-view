@@ -60,7 +60,7 @@ const CHART_RADAR_API: ApiRow[] = [
   { name: "height", type: "number", default: "-", description: "画布高度" },
 ];
 
-const importCode = `import { ChartRadar } from "@dreamer/ui-view";
+const importCode = `import { ChartRadar } from "@dreamer/ui-view/charts";
 
 const data = { labels: ["速度", "力量", ...], datasets: [{ label: "系列 A", data: [65, 59, ...], borderColor: "...", backgroundColor: "..." }] };
 <ChartRadar
