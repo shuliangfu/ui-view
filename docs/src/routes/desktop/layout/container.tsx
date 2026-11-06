@@ -3,8 +3,11 @@
  * 路由: /desktop/layout/container
  */
 
-import { CodeBlock, Container, Paragraph, Title } from "@dreamer/ui-view";
+import { Paragraph, Title } from "@dreamer/ui-view/basic";
 
+import { CodeBlock } from "@dreamer/ui-view/data-display";
+
+import { Container } from "@dreamer/ui-view/layout";
 /** API 属性行类型 */
 interface ApiRow {
   name: string;

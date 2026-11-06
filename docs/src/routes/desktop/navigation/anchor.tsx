@@ -4,7 +4,9 @@
  */
 
 import { createSignal } from "@dreamer/view";
-import { Anchor, CodeBlock, Paragraph, Title } from "@dreamer/ui-view";
+import { Paragraph, Title } from "@dreamer/ui-view/basic";
+import { CodeBlock } from "@dreamer/ui-view/data-display";
+import { Anchor } from "@dreamer/ui-view/navigation";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_ANCHOR } from "../../../data/component-messages-rows.ts";
 
@@ -66,8 +68,7 @@ const ANCHOR_LINK_API: ApiRow[] = [
 ];
 
 const importCode = `import { createSignal } from "@dreamer/view";
-import { Anchor } from "@dreamer/ui-view";
-
+import { Anchor } from "@dreamer/ui-view/navigation";
 const activeKey = createSignal("section1");
 const links = [
   { key: "section1", href: "#section1", title: "第一节" },

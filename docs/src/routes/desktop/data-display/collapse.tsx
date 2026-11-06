@@ -3,7 +3,9 @@
  * 路由: /desktop/data-display/collapse
  */
 
-import { CodeBlock, Collapse, Paragraph, Title } from "@dreamer/ui-view";
+import { Paragraph, Title } from "@dreamer/ui-view/basic";
+
+import { CodeBlock, Collapse } from "@dreamer/ui-view/data-display";
 import { createSignal } from "@dreamer/view";
 
 /** API 属性行类型 */
@@ -81,8 +83,7 @@ const COLLAPSE_API: ApiRow[] = [
 ];
 
 const importCode = `import { createSignal } from "@dreamer/view";
-import { Collapse } from "@dreamer/ui-view";
-
+import { Collapse } from "@dreamer/ui-view/data-display";
 const activeKey = createSignal<string[]>(["1"]);
 const items = [{ key: "1", header: "面板 1", children: <p>内容一</p> }, ...];
 <Collapse

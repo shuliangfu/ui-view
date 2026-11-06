@@ -3,8 +3,11 @@
  * 路由: /desktop/charts/polar-area
  */
 
-import { ChartPolarArea, CodeBlock, Paragraph, Title } from "@dreamer/ui-view";
+import { Paragraph, Title } from "@dreamer/ui-view/basic";
 
+import { CodeBlock } from "@dreamer/ui-view/data-display";
+
+import { ChartPolarArea } from "@dreamer/ui-view/charts";
 const sampleData = {
   labels: ["红", "绿", "蓝", "黄", "紫"],
   datasets: [{

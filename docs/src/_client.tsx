@@ -5,7 +5,7 @@
  * - 路由拦截：app.router.beforeRoute((to, from) => { ... })、app.router.afterRoute((to, from) => { ... })
  */
 
-import { initDropdownEsc } from "@dreamer/ui-view";
+import { initDropdownEsc } from "@dreamer/ui-view/navigation";
 import { initApp } from "./_client.dep.tsx";
 
 initApp()

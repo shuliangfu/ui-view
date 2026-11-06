@@ -4,7 +4,8 @@
  */
 
 import { createSignal } from "@dreamer/view";
-import { CodeBlock, Paragraph, Segmented, Title } from "@dreamer/ui-view";
+import { Paragraph, Title } from "@dreamer/ui-view/basic";
+import { CodeBlock, Segmented } from "@dreamer/ui-view/data-display";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_SEGMENTED } from "../../../data/component-messages-rows.ts";
 
@@ -66,8 +67,7 @@ const SEGMENTED_API: ApiRow[] = [
 ];
 
 const importCode = `import { createSignal } from "@dreamer/view";
-import { Segmented } from "@dreamer/ui-view";
-
+import { Segmented } from "@dreamer/ui-view/data-display";
 const value = createSignal("列表");
 const options = [{ value: "列表", label: "列表" }, { value: "网格", label: "网格" }];
 {() => (

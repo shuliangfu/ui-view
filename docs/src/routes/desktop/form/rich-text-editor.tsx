@@ -3,14 +3,11 @@
  * 路由: /desktop/form/rich-text-editor
  */
 
-import {
-  CodeBlock,
-  Form,
-  FormItem,
-  Paragraph,
-  RichTextEditor,
-  Title,
-} from "@dreamer/ui-view";
+import { Paragraph, Title } from "@dreamer/ui-view/basic";
+
+import { Form, FormItem, RichTextEditor } from "@dreamer/ui-view/form";
+
+import { CodeBlock } from "@dreamer/ui-view/data-display";
 import { createSignal } from "@dreamer/view";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_RICH_TEXT_EDITOR } from "../../../data/component-messages-rows.ts";

@@ -3,15 +3,9 @@
  * 路由: /desktop/data-display/table
  */
 
-import {
-  Button,
-  ButtonGroup,
-  CodeBlock,
-  Paragraph,
-  Table,
-  type TableColumn,
-  Title,
-} from "@dreamer/ui-view";
+import { Button, ButtonGroup, Paragraph, Title } from "@dreamer/ui-view/basic";
+
+import { CodeBlock, Table, type TableColumn } from "@dreamer/ui-view/data-display";
 import { createSignal } from "@dreamer/view";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_TABLE } from "../../../data/component-messages-rows.ts";
@@ -336,8 +330,7 @@ type EditableDocRow = {
 
 const exampleEditable = `import type { TableColumn } from "@dreamer/ui-view";
 import { createSignal } from "@dreamer/view";
-import { Table } from "@dreamer/ui-view";
-
+import { Table } from "@dreamer/ui-view/data-display";
 type EditableRow = {
   key: string;
   name: string;

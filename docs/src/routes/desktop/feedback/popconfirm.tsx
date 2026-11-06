@@ -4,13 +4,9 @@
  */
 
 import { createSignal } from "@dreamer/view";
-import {
-  Button,
-  CodeBlock,
-  Paragraph,
-  Popconfirm,
-  Title,
-} from "@dreamer/ui-view";
+import { Button, Paragraph, Title } from "@dreamer/ui-view/basic";
+import { CodeBlock } from "@dreamer/ui-view/data-display";
+import { Popconfirm } from "@dreamer/ui-view/feedback";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_POPCONFIRM } from "../../../data/component-messages-rows.ts";
 
@@ -110,8 +106,8 @@ const POPCONFIRM_API: ApiRow[] = [
 ];
 
 const importCode = `import { createSignal } from "@dreamer/view";
-import { Button, Popconfirm } from "@dreamer/ui-view";
-
+import { Button } from "@dreamer/ui-view/basic";
+import { Popconfirm } from "@dreamer/ui-view/feedback";
 const open = createSignal(false);
 
 <Popconfirm

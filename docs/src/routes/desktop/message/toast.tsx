@@ -3,8 +3,11 @@
  * 路由: /desktop/message/toast
  */
 
-import { Button, CodeBlock, Paragraph, Title, toast } from "@dreamer/ui-view";
+import { Button, Paragraph, Title } from "@dreamer/ui-view/basic";
 
+import { CodeBlock } from "@dreamer/ui-view/data-display";
+
+import { toast } from "@dreamer/ui-view/feedback";
 /** API 方法/属性行类型 */
 interface ApiRow {
   name: string;

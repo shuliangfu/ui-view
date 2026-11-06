@@ -4,7 +4,7 @@
  * aside 与 main 各自纵向滚动（overflow-y-auto + min-h-0），与根布局 flex 链配合，不共用整页滚动。
  */
 
-import { Sidebar } from "@dreamer/ui-view";
+import { Sidebar } from "@dreamer/ui-view/navigation";
 import { onCleanup, onMount, type VNode } from "@dreamer/view";
 import SiteFooter from "../../components/SiteFooter.tsx";
 import {

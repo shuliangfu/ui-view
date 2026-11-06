@@ -3,15 +3,11 @@
  * 路由: /desktop/form/upload
  */
 
-import {
-  CodeBlock,
-  DEFAULT_UPLOAD_CHUNK_SIZE,
-  Form,
-  FormItem,
-  Paragraph,
-  Title,
-  Upload,
-} from "@dreamer/ui-view";
+import { Paragraph, Title } from "@dreamer/ui-view/basic";
+
+import { DEFAULT_UPLOAD_CHUNK_SIZE, Form, FormItem, Upload } from "@dreamer/ui-view/form";
+
+import { CodeBlock } from "@dreamer/ui-view/data-display";
 import { createSignal } from "@dreamer/view";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_UPLOAD } from "../../../data/component-messages-rows.ts";

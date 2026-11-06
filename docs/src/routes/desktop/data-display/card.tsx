@@ -3,8 +3,9 @@
  * 路由: /desktop/data-display/card
  */
 
-import { Button, Card, CodeBlock, Paragraph, Title } from "@dreamer/ui-view";
+import { Button, Paragraph, Title } from "@dreamer/ui-view/basic";
 
+import { Card, CodeBlock } from "@dreamer/ui-view/data-display";
 /** API 属性行类型 */
 interface ApiRow {
   name: string;

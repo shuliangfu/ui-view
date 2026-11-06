@@ -3,8 +3,11 @@
  * 路由: /desktop/feedback/popover
  */
 
-import { CodeBlock, Paragraph, Popover, Title } from "@dreamer/ui-view";
+import { Paragraph, Title } from "@dreamer/ui-view/basic";
 
+import { CodeBlock } from "@dreamer/ui-view/data-display";
+
+import { Popover } from "@dreamer/ui-view/feedback";
 /** API 属性行类型 */
 interface ApiRow {
   name: string;

@@ -3,7 +3,7 @@
  * aside 与 main 各自纵向滚动，不共用整页滚动。
  */
 
-import { Sidebar } from "@dreamer/ui-view";
+import { Sidebar } from "@dreamer/ui-view/mobile/navigation";
 import { onCleanup, onMount, type VNode } from "@dreamer/view";
 import SiteFooter from "../../components/SiteFooter.tsx";
 import {

@@ -3,7 +3,9 @@
  */
 
 import { createSignal } from "@dreamer/view";
-import { Button, CodeBlock, Overlay, Paragraph, Title } from "@dreamer/ui-view";
+import { Button, Paragraph, Title } from "@dreamer/ui-view/basic";
+import { CodeBlock } from "@dreamer/ui-view/data-display";
+import { Overlay } from "@dreamer/ui-view/feedback";
 import {
   DocsApiTable,
   type DocsApiTableRow,
@@ -21,8 +23,7 @@ const API: DocsApiTableRow[] = [
 ];
 
 const importCode = `import { createSignal } from "@dreamer/view";
-import { Overlay } from "@dreamer/ui-view";
-
+import { Overlay } from "@dreamer/ui-view/feedback";
 const open = createSignal(false);
 <Overlay open={open} onClick={() => (open.value = false)} zIndex={400} />`;
 

@@ -6,8 +6,7 @@
  * 父级 main 宜为 flex flex-col，本组件 shrink-0；正文外包 flex-auto（非 flex-1），避免长文溢出叠层。
  */
 
-import { Link } from "@dreamer/ui-view";
-
+import { Link } from "@dreamer/ui-view/basic";
 /** 站点页脚：版权与快捷链接，供 desktop/mobile 主栏及首页复用 */
 export default function SiteFooter() {
   return (

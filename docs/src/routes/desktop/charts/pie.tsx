@@ -3,8 +3,11 @@
  * 路由: /desktop/charts/pie
  */
 
-import { ChartPie, CodeBlock, Paragraph, Title } from "@dreamer/ui-view";
+import { Paragraph, Title } from "@dreamer/ui-view/basic";
 
+import { CodeBlock } from "@dreamer/ui-view/data-display";
+
+import { ChartPie } from "@dreamer/ui-view/charts";
 const sampleData = {
   labels: ["A", "B", "C", "D", "E"],
   datasets: [{

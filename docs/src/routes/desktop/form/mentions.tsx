@@ -3,15 +3,12 @@
  * 路由: /desktop/form/mentions
  */
 
-import {
-  CodeBlock,
-  Form,
-  FormItem,
-  Mentions,
-  Paragraph,
-  Title,
-} from "@dreamer/ui-view";
-import type { MentionOption } from "@dreamer/ui-view";
+import { Paragraph, Title } from "@dreamer/ui-view/basic";
+
+import { Form, FormItem, Mentions } from "@dreamer/ui-view/form";
+
+import { CodeBlock } from "@dreamer/ui-view/data-display";
+import type { MentionOption } from "@dreamer/ui-view/form";
 import { createSignal } from "@dreamer/view";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_MENTIONS } from "../../../data/component-messages-rows.ts";
@@ -134,7 +131,7 @@ const mentionOptions: MentionOption[] = [
 ];
 
 const importCode = `import { Mentions, Form, FormItem } from "@dreamer/ui-view";
-import type { MentionOption } from "@dreamer/ui-view";
+import type { MentionOption } from "@dreamer/ui-view/form";
 import { createSignal } from "@dreamer/view";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_MENTIONS } from "../../../data/component-messages-rows.ts";

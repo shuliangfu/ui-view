@@ -3,8 +3,11 @@
  * 路由: /desktop/charts/line
  */
 
-import { ChartLine, CodeBlock, Paragraph, Title } from "@dreamer/ui-view";
+import { Paragraph, Title } from "@dreamer/ui-view/basic";
 
+import { CodeBlock } from "@dreamer/ui-view/data-display";
+
+import { ChartLine } from "@dreamer/ui-view/charts";
 const sampleData = {
   labels: ["1月", "2月", "3月", "4月", "5月", "6月"],
   datasets: [

@@ -59,6 +59,33 @@ export default function DesktopIndex() {
 
       <section class="space-y-4">
         <Title level={2} class="text-xl sm:text-2xl">
+          按需导入（打包最小）
+        </Title>
+        <Paragraph class="text-slate-600 dark:text-slate-400">
+          组件请走分类子入口（如{" "}
+          <code class="text-sm">@dreamer/ui-view/data-display</code>
+          ）；单个图标／国旗走{" "}
+          <code class="text-sm">@dreamer/ui-view/icons/Home.tsx</code>
+          或{" "}
+          <code class="text-sm">
+            icons/flags/standalone/IconFlagCN.tsx
+          </code>
+          。禁止对主入口{" "}
+          <code class="text-sm">import *</code>{" "}
+          再扫{" "}
+          <code class="text-sm">Object.keys</code>
+          ；国旗不再从根入口／icons barrel 全量导出。详见仓库 README「Entry
+          points／按需导入」。
+        </Paragraph>
+        <CodeBlock
+          language="tsx"
+          code={`import { DataPanel } from "@dreamer/ui-view/data-display";
+import { Button } from "@dreamer/ui-view/basic";
+import { IconHome } from "@dreamer/ui-view/icons/Home.tsx";
+import { IconFlagCN } from "@dreamer/ui-view/icons/flags/standalone/IconFlagCN.tsx";`}
+        />
+
+        <Title level={2} class="text-xl sm:text-2xl">
           Tailwind 按需插件
         </Title>
         <Paragraph class="text-slate-600 dark:text-slate-400">

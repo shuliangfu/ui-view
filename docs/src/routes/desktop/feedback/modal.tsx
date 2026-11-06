@@ -3,7 +3,9 @@
  * 路由: /desktop/feedback/modal
  * `Modal` 的 `open`：请传 **`createSignal` 返回值**或零参 getter；**`width`/`title`** 随 signal 变时请用 **`width={() => …}`**、**`title={() => …}`**（Modal 内 memo 订阅，勿只写 `width={sig.value}` 快照）。**`children`** 普通写 `<p>…</p>` 即可；仅当弹窗**已打开**时仍要正文随同一 signal 刷新，再传 **`children={() => …}`**。客户端浮层通过 **`@dreamer/view` 的 `createPortal`** 挂到 `globalThis.document.body`（hybrid/SSR 下需存在真实 document）。
  */
-import { Button, CodeBlock, Modal, Paragraph, Title } from "@dreamer/ui-view";
+import { Button, Paragraph, Title } from "@dreamer/ui-view/basic";
+import { CodeBlock } from "@dreamer/ui-view/data-display";
+import { Modal } from "@dreamer/ui-view/feedback";
 import { createSignal } from "@dreamer/view";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_MODAL } from "../../../data/component-messages-rows.ts";
@@ -154,8 +156,8 @@ const MODAL_API: ApiRow[] = [
 ];
 
 const importCode = `import { createSignal } from "@dreamer/view";
-import { Button, Modal } from "@dreamer/ui-view";
-
+import { Button } from "@dreamer/ui-view/basic";
+import { Modal } from "@dreamer/ui-view/feedback";
 const open = createSignal(false);
 
 <Button type="button" variant="primary" onClick={() => open.value = true}>

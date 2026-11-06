@@ -3,14 +3,11 @@
  * 路由: /desktop/form/datetime-picker
  */
 
-import {
-  CodeBlock,
-  DateTimePicker,
-  Form,
-  FormItem,
-  Paragraph,
-  Title,
-} from "@dreamer/ui-view";
+import { Paragraph, Title } from "@dreamer/ui-view/basic";
+
+import { DateTimePicker, Form, FormItem } from "@dreamer/ui-view/form";
+
+import { CodeBlock } from "@dreamer/ui-view/data-display";
 import { createSignal } from "@dreamer/view";
 import { DocsApiTable } from "../../../components/DocsApiTable.tsx";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";

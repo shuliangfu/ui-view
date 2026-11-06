@@ -3,7 +3,9 @@
  * 路由: /desktop/data-display/image
  */
 
-import { CodeBlock, Image, Paragraph, Title } from "@dreamer/ui-view";
+import { Paragraph, Title } from "@dreamer/ui-view/basic";
+
+import { CodeBlock, Image } from "@dreamer/ui-view/data-display";
 import { createMemo } from "@dreamer/view";
 
 /** API 属性行类型 */

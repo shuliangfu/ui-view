@@ -3,7 +3,9 @@
  */
 
 import { createSignal } from "@dreamer/view";
-import { Button, CodeBlock, NoticeBar, Paragraph, Title } from "@dreamer/ui-view";
+import { Button, Paragraph, Title } from "@dreamer/ui-view/basic";
+import { CodeBlock } from "@dreamer/ui-view/data-display";
+import { NoticeBar } from "@dreamer/ui-view/feedback";
 import {
   DocsApiTable,
   type DocsApiTableRow,

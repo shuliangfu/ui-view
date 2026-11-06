@@ -3,7 +3,8 @@
  */
 
 import { ScrollList } from "@dreamer/ui-view/mobile";
-import { CodeBlock, Paragraph, Title } from "@dreamer/ui-view";
+import { Paragraph, Title } from "@dreamer/ui-view/mobile/basic";
+import { CodeBlock } from "@dreamer/ui-view/mobile/data-display";
 import { createMemo, createSignal } from "@dreamer/view";
 import type { JSXRenderable } from "@dreamer/view";
 import {

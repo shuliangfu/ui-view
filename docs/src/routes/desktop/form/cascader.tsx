@@ -3,15 +3,12 @@
  * 路由: /desktop/form/cascader
  */
 
-import {
-  Cascader,
-  CodeBlock,
-  Form,
-  FormItem,
-  Paragraph,
-  Title,
-} from "@dreamer/ui-view";
-import type { CascaderOption } from "@dreamer/ui-view";
+import { Paragraph, Title } from "@dreamer/ui-view/basic";
+
+import { Cascader, Form, FormItem } from "@dreamer/ui-view/form";
+
+import { CodeBlock } from "@dreamer/ui-view/data-display";
+import type { CascaderOption } from "@dreamer/ui-view/form";
 import { createSignal } from "@dreamer/view";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_CASCADER } from "../../../data/component-messages-rows.ts";

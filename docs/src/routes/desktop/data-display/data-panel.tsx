@@ -3,8 +3,10 @@
  * 路由: /desktop/data-display/data-panel
  */
 
-import { CodeBlock, DataPanel, Paragraph, Title } from "@dreamer/ui-view";
-import type { DataPanelDataSource } from "@dreamer/ui-view";
+import { Paragraph, Title } from "@dreamer/ui-view/basic";
+
+import { CodeBlock, DataPanel } from "@dreamer/ui-view/data-display";
+import type { DataPanelDataSource } from "@dreamer/ui-view/data-display";
 import {
   DocsApiTable,
   type DocsApiTableRow,
@@ -243,8 +245,7 @@ const SOURCE_API: DocsApiTableRow[] = [
   },
 ];
 
-const importCode = `import { DataPanel } from "@dreamer/ui-view";
-// 或 import { DataPanel } from "@dreamer/ui-view/data-display";
+const importCode = `import { DataPanel } from "@dreamer/ui-view/data-display";
 
 <DataPanel
   title="用户管理"
@@ -322,7 +323,7 @@ const exportCode =
 <DataPanel title="导出导入" data={rows} columns={columns} exportName="users" />
 
 // 也可只用导出函数
-import { buildExportFile } from "@dreamer/ui-view";
+import { buildExportFile } from "@dreamer/ui-view/data-display";
 const file = buildExportFile({ format: "xlsx", title: "用户", basename: "users", columns, rows, messages });
 // file = { filename, mime, data: Uint8Array | string }`;
 
@@ -387,8 +388,7 @@ function Demo(props: { title: string; code: string; children?: unknown }) {
 }
 
 
-const exampleDemo = `import { DataPanel } from "@dreamer/ui-view";
-// 或 import { DataPanel } from "@dreamer/ui-view/data-display";
+const exampleDemo = `import { DataPanel } from "@dreamer/ui-view/data-display";
 
 <DataPanel
   title="用户管理"
@@ -444,7 +444,7 @@ export default function DataDisplayDataPanel() {
           <DataPanel
             panelKey="demo-basic"
             title="用户管理"
-            data={makeDemoRows(25)}
+            data={makeDemoRows(8)}
             columns={DEMO_COLUMNS}
             search={DEMO_SEARCH}
             form={DEMO_FORM}
@@ -458,7 +458,7 @@ export default function DataDisplayDataPanel() {
           <DataPanel
             panelKey="demo-search"
             title="搜索表单"
-            data={makeDemoRows(25)}
+            data={makeDemoRows(8)}
             columns={DEMO_COLUMNS}
             search={DEMO_SEARCH}
             initialQuery={{ filters: { role: "admin" } }}
@@ -470,7 +470,7 @@ export default function DataDisplayDataPanel() {
           <DataPanel
             panelKey="demo-table"
             title="表格功能"
-            data={makeDemoRows(12)}
+            data={makeDemoRows(8)}
             columns={DEMO_COLUMNS}
             defaultSort={{ prop: "balance", order: "desc" }}
             form={DEMO_FORM}
@@ -534,7 +534,7 @@ export default function DataDisplayDataPanel() {
           <DataPanel
             panelKey="demo-page"
             title="分页"
-            data={makeDemoRows(40)}
+            data={makeDemoRows(12)}
             columns={DEMO_COLUMNS}
             pageSize={5}
             pageSizes={[5, 10, 20]}
@@ -549,7 +549,7 @@ export default function DataDisplayDataPanel() {
           <DataPanel
             panelKey="demo-export"
             title="导出导入"
-            data={makeDemoRows(15)}
+            data={makeDemoRows(8)}
             columns={DEMO_COLUMNS}
             form={DEMO_FORM}
             exportName="users"

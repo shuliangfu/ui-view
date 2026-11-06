@@ -3,8 +3,9 @@
  * 路由: /desktop/data-display/list
  */
 
-import { CodeBlock, List, Paragraph, Title } from "@dreamer/ui-view";
+import { Paragraph, Title } from "@dreamer/ui-view/basic";
 
+import { CodeBlock, List } from "@dreamer/ui-view/data-display";
 /** API 属性行类型 */
 interface ApiRow {
   name: string;

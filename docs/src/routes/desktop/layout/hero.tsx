@@ -3,8 +3,11 @@
  * 路由: /desktop/layout/hero
  */
 
-import { Button, CodeBlock, Hero, Paragraph, Title } from "@dreamer/ui-view";
+import { Button, Paragraph, Title } from "@dreamer/ui-view/basic";
 
+import { CodeBlock } from "@dreamer/ui-view/data-display";
+
+import { Hero } from "@dreamer/ui-view/layout";
 /** API 属性行类型 */
 interface ApiRow {
   name: string;

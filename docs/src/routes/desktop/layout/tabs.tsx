@@ -4,8 +4,9 @@
  */
 
 import { createSignal } from "@dreamer/view";
-import { CodeBlock, Paragraph, Tabs, Title } from "@dreamer/ui-view";
-
+import { Paragraph, Title } from "@dreamer/ui-view/basic";
+import { CodeBlock } from "@dreamer/ui-view/data-display";
+import { Tabs } from "@dreamer/ui-view/layout";
 /** API 属性行类型 */
 interface ApiRow {
   name: string;
@@ -61,8 +62,7 @@ const TABS_API: ApiRow[] = [
 ];
 
 const importCode = `import { createSignal } from "@dreamer/view";
-import { Tabs } from "@dreamer/ui-view";
-
+import { Tabs } from "@dreamer/ui-view/layout";
 const activeKey = createSignal("a");
 const items = [
   { key: "a", label: "标签 A", children: <p>内容 A</p> },

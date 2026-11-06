@@ -3,18 +3,11 @@
  * 路由: /desktop/form/form-containers
  */
 
-import {
-  CodeBlock,
-  Form,
-  FormItem,
-  FormList,
-  type FormListRenderRowContext,
-  Input,
-  Link,
-  Paragraph,
-  Title,
-} from "@dreamer/ui-view";
+import { Link, Paragraph, Title } from "@dreamer/ui-view/basic";
 
+import { Form, FormItem, FormList, type FormListRenderRowContext, Input } from "@dreamer/ui-view/form";
+
+import { CodeBlock } from "@dreamer/ui-view/data-display";
 import { createSignal } from "@dreamer/view";
 
 import { FORM_ITEM_API, type FormDocsApiRow } from "./form-item-api.ts";

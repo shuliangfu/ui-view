@@ -4,14 +4,8 @@
  */
 
 import { createSignal } from "@dreamer/view";
-import {
-  Button,
-  CodeBlock,
-  ImageViewer,
-  type ImageViewerTransition,
-  Paragraph,
-  Title,
-} from "@dreamer/ui-view";
+import { Button, Paragraph, Title } from "@dreamer/ui-view/basic";
+import { CodeBlock, ImageViewer, type ImageViewerTransition } from "@dreamer/ui-view/data-display";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_IMAGE_VIEWER } from "../../../data/component-messages-rows.ts";
 
@@ -103,8 +97,8 @@ const IMAGE_VIEWER_API: ApiRow[] = [
 ];
 
 const importCode = `import { createSignal } from "@dreamer/view";
-import { Button, ImageViewer } from "@dreamer/ui-view";
-
+import { Button } from "@dreamer/ui-view/basic";
+import { ImageViewer } from "@dreamer/ui-view/data-display";
 const open = createSignal(false);
 const index = createSignal(0);
 <ImageViewer

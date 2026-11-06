@@ -3,8 +3,11 @@
  * 路由: /desktop/charts/scatter
  */
 
-import { ChartScatter, CodeBlock, Paragraph, Title } from "@dreamer/ui-view";
+import { Paragraph, Title } from "@dreamer/ui-view/basic";
 
+import { CodeBlock } from "@dreamer/ui-view/data-display";
+
+import { ChartScatter } from "@dreamer/ui-view/charts";
 const sampleData = {
   datasets: [
     {

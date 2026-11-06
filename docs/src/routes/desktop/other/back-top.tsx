@@ -4,7 +4,9 @@
  */
 
 import { createSignal } from "@dreamer/view";
-import { BackTop, CodeBlock, Paragraph, Title } from "@dreamer/ui-view";
+import { Paragraph, Title } from "@dreamer/ui-view/basic";
+import { CodeBlock } from "@dreamer/ui-view/data-display";
+import { BackTop } from "@dreamer/ui-view/navigation";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_BACK_TOP } from "../../../data/component-messages-rows.ts";
 
@@ -75,8 +77,7 @@ const BACK_TOP_API: ApiRow[] = [
 ];
 
 const importCode = `import { createSignal } from "@dreamer/view";
-import { BackTop } from "@dreamer/ui-view";
-
+import { BackTop } from "@dreamer/ui-view/navigation";
 const visible = createSignal(false);
 <BackTop
   visibilityHeight={200}

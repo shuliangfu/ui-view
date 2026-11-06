@@ -3,19 +3,11 @@
  * 路由: /
  */
 
-import {
-  Card,
-  CodeBlock,
-  Container,
-  Grid,
-  GridItem,
-  Hero,
-  IconBrandGithub,
-  Link,
-  Paragraph,
-  Text,
-  Title,
-} from "@dreamer/ui-view";
+import { IconBrandGithub, Link, Paragraph, Text, Title } from "@dreamer/ui-view/basic";
+
+import { Card, CodeBlock } from "@dreamer/ui-view/data-display";
+
+import { Container, Grid, GridItem, Hero } from "@dreamer/ui-view/layout";
 import SiteFooter from "../components/SiteFooter.tsx";
 
 /** Hero 背景：渐变 + 细网格，提升层次且不抢眼 */
@@ -225,7 +217,11 @@ deno add jsr:@dreamer/ui-view
 // Bun
 bunx jsr add @dreamer/ui-view
 
-import { Button, Modal, Table } from "@dreamer/ui-view";
+import { Button } from "@dreamer/ui-view/basic";
+
+import { Table } from "@dreamer/ui-view/data-display";
+
+import { Modal } from "@dreamer/ui-view/feedback";
 import { BottomSheet, TabBar, NavBar } from "@dreamer/ui-view/mobile";`}
               language="typescript"
               copyable

@@ -5,14 +5,13 @@
  * 使用 @dreamer/ui-view：NavBar、Link、Divider、IconBrandGithub 等。
  */
 
-import {
-  Divider,
-  Link,
-  MessageContainer,
-  NavBar,
-  NotificationContainer,
-  ToastContainer,
-} from "@dreamer/ui-view";
+import { Link } from "@dreamer/ui-view/basic";
+
+import { MessageContainer, NotificationContainer, ToastContainer } from "@dreamer/ui-view/feedback";
+
+import { Divider } from "@dreamer/ui-view/layout";
+
+import { NavBar } from "@dreamer/ui-view/navigation";
 import { IconBrandGithub } from "@dreamer/ui-view/icons/brands/GitHub.tsx";
 import { IconExternalLink } from "@dreamer/ui-view/icons/ExternalLink.tsx";
 import { IconMenu } from "@dreamer/ui-view/icons/Menu.tsx";

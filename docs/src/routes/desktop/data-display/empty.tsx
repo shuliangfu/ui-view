@@ -3,7 +3,9 @@
  * 路由: /desktop/data-display/empty
  */
 
-import { Button, CodeBlock, Empty, Paragraph, Title } from "@dreamer/ui-view";
+import { Button, Paragraph, Title } from "@dreamer/ui-view/basic";
+
+import { CodeBlock, Empty } from "@dreamer/ui-view/data-display";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_EMPTY } from "../../../data/component-messages-rows.ts";
 

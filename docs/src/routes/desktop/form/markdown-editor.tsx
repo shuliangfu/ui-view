@@ -3,14 +3,11 @@
  * 路由: /desktop/form/markdown-editor
  */
 
-import {
-  CodeBlock,
-  Form,
-  FormItem,
-  MarkdownEditor,
-  Paragraph,
-  Title,
-} from "@dreamer/ui-view";
+import { Paragraph, Title } from "@dreamer/ui-view/basic";
+
+import { Form, FormItem, MarkdownEditor } from "@dreamer/ui-view/form";
+
+import { CodeBlock } from "@dreamer/ui-view/data-display";
 import { createSignal } from "@dreamer/view";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_MARKDOWN_EDITOR } from "../../../data/component-messages-rows.ts";

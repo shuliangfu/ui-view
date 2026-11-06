@@ -2,8 +2,7 @@
  * 文档站品牌链：跳转站点首页 `/`，仅用于根布局顶栏 NavBar（侧栏不放，避免与顶栏重复）。
  */
 
-import { Link } from "@dreamer/ui-view";
-
+import { Link } from "@dreamer/ui-view/basic";
 /** 顶栏品牌：仅展示 ui-view；避免在 Link 子树里用 JSX 块注释夹正文，compileSource 下可能闪屏 */
 export default function DocsSiteBrand() {
   return (

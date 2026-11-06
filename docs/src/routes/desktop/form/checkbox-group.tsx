@@ -3,14 +3,11 @@
  * 路由: /desktop/form/checkbox-group
  */
 
-import {
-  CheckboxGroup,
-  CodeBlock,
-  Form,
-  FormItem,
-  Paragraph,
-  Title,
-} from "@dreamer/ui-view";
+import { Paragraph, Title } from "@dreamer/ui-view/basic";
+
+import { CheckboxGroup, Form, FormItem } from "@dreamer/ui-view/form";
+
+import { CodeBlock } from "@dreamer/ui-view/data-display";
 import { createSignal } from "@dreamer/view";
 
 interface ApiRow {

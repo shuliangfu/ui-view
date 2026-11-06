@@ -3,7 +3,11 @@
  * 路由: /desktop/navigation/sidebar
  */
 
-import { CodeBlock, Link, Paragraph, Sidebar, Title } from "@dreamer/ui-view";
+import { Link, Paragraph, Title } from "@dreamer/ui-view/basic";
+
+import { CodeBlock } from "@dreamer/ui-view/data-display";
+
+import { Sidebar } from "@dreamer/ui-view/navigation";
 import {
   DocsApiTable,
   type DocsApiTableRow,

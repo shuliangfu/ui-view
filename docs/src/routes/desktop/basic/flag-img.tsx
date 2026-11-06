@@ -3,7 +3,9 @@
  * 路由: /desktop/basic/flag-img
  */
 
-import { CodeBlock, Paragraph, Title } from "@dreamer/ui-view";
+import { Paragraph, Title } from "@dreamer/ui-view/basic";
+
+import { CodeBlock } from "@dreamer/ui-view/data-display";
 import { FlagImg } from "@internal/ui-view-flag-img";
 import {
   DocsApiTable,

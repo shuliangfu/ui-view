@@ -3,7 +3,9 @@
  * 路由: /desktop/data-display/carousel
  */
 
-import { Carousel, CodeBlock, Paragraph, Title } from "@dreamer/ui-view";
+import { Paragraph, Title } from "@dreamer/ui-view/basic";
+
+import { Carousel, CodeBlock } from "@dreamer/ui-view/data-display";
 import { createSignal } from "@dreamer/view";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_CAROUSEL } from "../../../data/component-messages-rows.ts";
@@ -160,8 +162,7 @@ const DEMO_IMAGES = [
 ];
 
 const importCode = `import { createSignal } from "@dreamer/view";
-import { Carousel } from "@dreamer/ui-view";
-
+import { Carousel } from "@dreamer/ui-view/data-display";
 const current = createSignal(0);
 const images = [
   "https://placehold.co/800x320/1e3a5f/fff?text=1",

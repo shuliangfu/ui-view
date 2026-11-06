@@ -3,14 +3,11 @@
  * 路由: /desktop/form/switch
  */
 
-import {
-  CodeBlock,
-  Form,
-  FormItem,
-  Paragraph,
-  Switch,
-  Title,
-} from "@dreamer/ui-view";
+import { Paragraph, Title } from "@dreamer/ui-view/basic";
+
+import { Form, FormItem, Switch } from "@dreamer/ui-view/form";
+
+import { CodeBlock } from "@dreamer/ui-view/data-display";
 import { createSignal } from "@dreamer/view";
 
 interface ApiRow {

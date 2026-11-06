@@ -4,15 +4,9 @@
  */
 
 import { createSignal } from "@dreamer/view";
-import {
-  Button,
-  CodeBlock,
-  ConfigProvider,
-  getConfig,
-  Paragraph,
-  Title,
-} from "@dreamer/ui-view";
-
+import { Button, Paragraph, Title } from "@dreamer/ui-view/basic";
+import { ConfigProvider, getConfig } from "@dreamer/ui-view/config-provider";
+import { CodeBlock } from "@dreamer/ui-view/data-display";
 /** API 属性行类型 */
 interface ApiRow {
   name: string;

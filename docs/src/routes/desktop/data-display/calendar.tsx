@@ -4,7 +4,8 @@
  */
 
 import { createSignal } from "@dreamer/view";
-import { Calendar, CodeBlock, Paragraph, Title } from "@dreamer/ui-view";
+import { Paragraph, Title } from "@dreamer/ui-view/basic";
+import { Calendar, CodeBlock } from "@dreamer/ui-view/data-display";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_CALENDAR } from "../../../data/component-messages-rows.ts";
 
@@ -70,8 +71,7 @@ const CALENDAR_API: ApiRow[] = [
 ];
 
 const importCode = `import { createSignal } from "@dreamer/view";
-import { Calendar } from "@dreamer/ui-view";
-
+import { Calendar } from "@dreamer/ui-view/data-display";
 const value = createSignal(new Date());
 <Calendar value={value} />`;
 

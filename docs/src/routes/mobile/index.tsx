@@ -3,8 +3,9 @@
  * 路由: /mobile
  */
 
-import { CodeBlock, Link, Paragraph, Title } from "@dreamer/ui-view";
+import { Link, Paragraph, Title } from "@dreamer/ui-view/mobile/basic";
 
+import { CodeBlock } from "@dreamer/ui-view/mobile/data-display";
 export default function MobileIndex() {
   return (
     <div class="w-full max-w-3xl space-y-10">

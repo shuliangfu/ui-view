@@ -7,7 +7,8 @@ import {
   FloatingPanel,
   MobilePortalHostScope,
 } from "@dreamer/ui-view/mobile";
-import { Button, CodeBlock, Paragraph, Title } from "@dreamer/ui-view";
+import { Button, Paragraph, Title } from "@dreamer/ui-view/mobile/basic";
+import { CodeBlock } from "@dreamer/ui-view/mobile/data-display";
 import {
   DocsApiTable,
   type DocsApiTableRow,

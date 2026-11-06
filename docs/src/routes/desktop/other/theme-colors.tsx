@@ -3,8 +3,9 @@
  * 路由: /desktop/other/theme-colors
  */
 
-import { CodeBlock, Paragraph, Title } from "@dreamer/ui-view";
+import { Paragraph, Title } from "@dreamer/ui-view/basic";
 
+import { CodeBlock } from "@dreamer/ui-view/data-display";
 /** 与 tailwind.css @theme 中各阶梯一致 */
 const SHADES = [
   50,

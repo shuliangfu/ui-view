@@ -3,8 +3,9 @@
  * 路由: /desktop/basic/spinner
  */
 
-import { CodeBlock, Paragraph, Spinner, Title } from "@dreamer/ui-view";
+import { Paragraph, Spinner, Title } from "@dreamer/ui-view/basic";
 
+import { CodeBlock } from "@dreamer/ui-view/data-display";
 interface ApiRow {
   name: string;
   type: string;

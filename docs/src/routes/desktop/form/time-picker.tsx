@@ -3,14 +3,11 @@
  * 路由: /desktop/form/time-picker
  */
 
-import {
-  CodeBlock,
-  Form,
-  FormItem,
-  Paragraph,
-  TimePicker,
-  Title,
-} from "@dreamer/ui-view";
+import { Paragraph, Title } from "@dreamer/ui-view/basic";
+
+import { Form, FormItem, TimePicker } from "@dreamer/ui-view/form";
+
+import { CodeBlock } from "@dreamer/ui-view/data-display";
 import { createSignal } from "@dreamer/view";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_TIME_PICKER } from "../../../data/component-messages-rows.ts";

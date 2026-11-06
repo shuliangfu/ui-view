@@ -3,14 +3,11 @@
  * 路由: /desktop/form/tree-select
  */
 
-import {
-  CodeBlock,
-  Form,
-  FormItem,
-  Paragraph,
-  Title,
-  TreeSelect,
-} from "@dreamer/ui-view";
+import { Paragraph, Title } from "@dreamer/ui-view/basic";
+
+import { Form, FormItem, TreeSelect } from "@dreamer/ui-view/form";
+
+import { CodeBlock } from "@dreamer/ui-view/data-display";
 import { createSignal } from "@dreamer/view";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_TREE_SELECT } from "../../../data/component-messages-rows.ts";

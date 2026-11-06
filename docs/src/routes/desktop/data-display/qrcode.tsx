@@ -2,7 +2,9 @@
  * QRCode 文档页。路由: /desktop/data-display/qrcode
  */
 
-import { QRCode, CodeBlock, Paragraph, Title } from "@dreamer/ui-view";
+import { Paragraph, Title } from "@dreamer/ui-view/basic";
+
+import { QRCode, CodeBlock } from "@dreamer/ui-view/data-display";
 import {
   DocsApiTable,
   type DocsApiTableRow,

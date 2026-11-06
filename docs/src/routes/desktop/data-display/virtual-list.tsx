@@ -2,8 +2,9 @@
  * VirtualList 文档页。路由: /desktop/data-display/virtual-list
  */
 
-import { VirtualList } from "@dreamer/ui-view";
-import { CodeBlock, Paragraph, Title } from "@dreamer/ui-view";
+import { VirtualList } from "@dreamer/ui-view/data-display";
+import { Paragraph, Title } from "@dreamer/ui-view/basic";
+import { CodeBlock } from "@dreamer/ui-view/data-display";
 import {
   DocsApiTable,
   type DocsApiTableRow,

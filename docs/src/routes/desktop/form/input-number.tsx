@@ -3,14 +3,11 @@
  * 路由: /desktop/form/input-number
  */
 
-import {
-  CodeBlock,
-  Form,
-  FormItem,
-  InputNumber,
-  Paragraph,
-  Title,
-} from "@dreamer/ui-view";
+import { Paragraph, Title } from "@dreamer/ui-view/basic";
+
+import { Form, FormItem, InputNumber } from "@dreamer/ui-view/form";
+
+import { CodeBlock } from "@dreamer/ui-view/data-display";
 import { createSignal } from "@dreamer/view";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_INPUT_NUMBER } from "../../../data/component-messages-rows.ts";

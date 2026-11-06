@@ -2,8 +2,9 @@
  * Splitter 文档页。路由: /desktop/layout/splitter
  */
 
-import { Splitter } from "@dreamer/ui-view";
-import { CodeBlock, Paragraph, Title } from "@dreamer/ui-view";
+import { Splitter } from "@dreamer/ui-view/layout";
+import { Paragraph, Title } from "@dreamer/ui-view/basic";
+import { CodeBlock } from "@dreamer/ui-view/data-display";
 import {
   DocsApiTable,
   type DocsApiTableRow,

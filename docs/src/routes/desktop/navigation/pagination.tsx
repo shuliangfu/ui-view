@@ -3,7 +3,11 @@
  * 路由: /desktop/navigation/pagination
  */
 
-import { CodeBlock, Pagination, Paragraph, Title } from "@dreamer/ui-view";
+import { Paragraph, Title } from "@dreamer/ui-view/basic";
+
+import { CodeBlock } from "@dreamer/ui-view/data-display";
+
+import { Pagination } from "@dreamer/ui-view/navigation";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_PAGINATION } from "../../../data/component-messages-rows.ts";
 

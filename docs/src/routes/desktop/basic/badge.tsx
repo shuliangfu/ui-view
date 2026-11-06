@@ -3,8 +3,9 @@
  * 路由: /desktop/basic/badge
  */
 
-import { Badge, CodeBlock, Paragraph, Title } from "@dreamer/ui-view";
+import { Badge, Paragraph, Title } from "@dreamer/ui-view/basic";
 
+import { CodeBlock } from "@dreamer/ui-view/data-display";
 interface ApiRow {
   name: string;
   type: string;

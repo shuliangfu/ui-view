@@ -4,14 +4,9 @@
  */
 
 import { createRenderEffect, createSignal, onCleanup } from "@dreamer/view";
-import {
-  Button,
-  CodeBlock,
-  Paragraph,
-  Progress,
-  Title,
-} from "@dreamer/ui-view";
-
+import { Button, Paragraph, Title } from "@dreamer/ui-view/basic";
+import { CodeBlock } from "@dreamer/ui-view/data-display";
+import { Progress } from "@dreamer/ui-view/feedback";
 /** API 属性行类型 */
 interface ApiRow {
   name: string;
@@ -129,8 +124,8 @@ const exampleDynamic = `import {
   createSignal,
   onCleanup,
 } from "@dreamer/view";
-import { Button, Progress } from "@dreamer/ui-view";
-
+import { Button } from "@dreamer/ui-view/basic";
+import { Progress } from "@dreamer/ui-view/feedback";
 export function Demo() {
   const dynamicPercent = createSignal(0);
   const replayKey = createSignal(0);

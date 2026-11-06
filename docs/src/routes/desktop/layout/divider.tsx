@@ -3,8 +3,11 @@
  * 路由: /desktop/layout/divider
  */
 
-import { CodeBlock, Divider, Paragraph, Title } from "@dreamer/ui-view";
+import { Paragraph, Title } from "@dreamer/ui-view/basic";
 
+import { CodeBlock } from "@dreamer/ui-view/data-display";
+
+import { Divider } from "@dreamer/ui-view/layout";
 /** API 属性行类型 */
 interface ApiRow {
   name: string;

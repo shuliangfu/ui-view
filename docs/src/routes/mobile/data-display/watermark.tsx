@@ -2,7 +2,8 @@
  * Watermark 文档页。路由: /mobile/data-display/watermark
  */
 import { Watermark } from "@dreamer/ui-view/mobile";
-import { CodeBlock, Paragraph, Title } from "@dreamer/ui-view";
+import { Paragraph, Title } from "@dreamer/ui-view/mobile/basic";
+import { CodeBlock } from "@dreamer/ui-view/mobile/data-display";
 import { DocsApiTable, type DocsApiTableRow } from "../../../components/DocsApiTable.tsx";
 import { MobileDocDemo } from "../../../components/MobileDocDemo.tsx";
 

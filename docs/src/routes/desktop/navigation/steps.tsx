@@ -3,7 +3,11 @@
  * 路由: /desktop/navigation/steps
  */
 
-import { CodeBlock, Paragraph, Steps, Title } from "@dreamer/ui-view";
+import { Paragraph, Title } from "@dreamer/ui-view/basic";
+
+import { CodeBlock } from "@dreamer/ui-view/data-display";
+
+import { Steps } from "@dreamer/ui-view/navigation";
 import { createMemo, createSignal } from "@dreamer/view";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_STEPS } from "../../../data/component-messages-rows.ts";
@@ -73,7 +77,7 @@ const STEP_ITEM_API: ApiRow[] = [
 ];
 
 const importCode = `import { createSignal } from "@dreamer/view";
-import { Steps } from "@dreamer/ui-view";
+import { Steps } from "@dreamer/ui-view/navigation";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_STEPS } from "../../../data/component-messages-rows.ts";
 

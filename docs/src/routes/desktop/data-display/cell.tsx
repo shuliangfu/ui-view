@@ -3,7 +3,9 @@
  */
 
 import { createSignal } from "@dreamer/view";
-import { Cell, CellGroup, CodeBlock, Paragraph, Switch, Title } from "@dreamer/ui-view";
+import { Paragraph, Title } from "@dreamer/ui-view/basic";
+import { Switch } from "@dreamer/ui-view/form";
+import { Cell, CellGroup, CodeBlock } from "@dreamer/ui-view/data-display";
 import {
   DocsApiTable,
   type DocsApiTableRow,
@@ -25,8 +27,8 @@ const API: DocsApiTableRow[] = [
 ];
 
 const importCode = `import { createSignal } from "@dreamer/view";
-import { Cell, CellGroup, Switch } from "@dreamer/ui-view";
-
+import { Switch } from "@dreamer/ui-view/form";
+import { Cell, CellGroup } from "@dreamer/ui-view/data-display";
 const tip = createSignal("");
 const notifyOn = createSignal(true);
 

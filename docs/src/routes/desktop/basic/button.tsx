@@ -3,14 +3,9 @@
  * 路由: /desktop/basic/button
  */
 
-import {
-  Button,
-  ButtonGroup,
-  CodeBlock,
-  Paragraph,
-  Title,
-} from "@dreamer/ui-view";
+import { Button, ButtonGroup, Paragraph, Title } from "@dreamer/ui-view/basic";
 
+import { CodeBlock } from "@dreamer/ui-view/data-display";
 /** API 属性行类型 */
 interface ApiRow {
   name: string;

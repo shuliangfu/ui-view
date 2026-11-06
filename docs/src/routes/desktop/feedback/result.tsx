@@ -3,8 +3,11 @@
  * 路由: /desktop/feedback/result
  */
 
-import { Button, CodeBlock, Paragraph, Result, Title } from "@dreamer/ui-view";
+import { Button, Paragraph, Title } from "@dreamer/ui-view/basic";
 
+import { CodeBlock } from "@dreamer/ui-view/data-display";
+
+import { Result } from "@dreamer/ui-view/feedback";
 /** API 属性行类型 */
 interface ApiRow {
   name: string;

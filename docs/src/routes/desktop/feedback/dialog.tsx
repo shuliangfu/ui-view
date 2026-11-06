@@ -7,7 +7,9 @@
  */
 
 import { createSignal } from "@dreamer/view";
-import { Button, CodeBlock, Dialog, Paragraph, Title } from "@dreamer/ui-view";
+import { Button, Paragraph, Title } from "@dreamer/ui-view/basic";
+import { CodeBlock } from "@dreamer/ui-view/data-display";
+import { Dialog } from "@dreamer/ui-view/feedback";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_DIALOG } from "../../../data/component-messages-rows.ts";
 
@@ -127,8 +129,8 @@ const DIALOG_API: ApiRow[] = [
 ];
 
 const importCode = `import { createSignal } from "@dreamer/view";
-import { Button, Dialog } from "@dreamer/ui-view";
-
+import { Button } from "@dreamer/ui-view/basic";
+import { Dialog } from "@dreamer/ui-view/feedback";
 const open = createSignal(false);
 
 <Button type="button" variant="primary" onClick={() => open.value = true}>

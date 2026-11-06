@@ -3,21 +3,13 @@
  * 路由: /desktop/navigation/dropdown
  */
 
-import {
-  Avatar,
-  Button,
-  CodeBlock,
-  Divider,
-  Dropdown,
-  IconLogOut,
-  IconMoon,
-  IconSettings,
-  IconUser,
-  IconUserCog,
-  Paragraph,
-  Title,
-} from "@dreamer/ui-view";
+import { Avatar, Button, IconLogOut, IconMoon, IconSettings, IconUser, IconUserCog, Paragraph, Title } from "@dreamer/ui-view/basic";
 
+import { CodeBlock } from "@dreamer/ui-view/data-display";
+
+import { Divider } from "@dreamer/ui-view/layout";
+
+import { Dropdown } from "@dreamer/ui-view/navigation";
 /** API 属性行类型 */
 interface ApiRow {
   name: string;

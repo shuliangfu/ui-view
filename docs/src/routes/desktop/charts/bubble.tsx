@@ -3,8 +3,11 @@
  * 路由: /desktop/charts/bubble
  */
 
-import { ChartBubble, CodeBlock, Paragraph, Title } from "@dreamer/ui-view";
+import { Paragraph, Title } from "@dreamer/ui-view/basic";
 
+import { CodeBlock } from "@dreamer/ui-view/data-display";
+
+import { ChartBubble } from "@dreamer/ui-view/charts";
 const sampleData = {
   datasets: [
     {

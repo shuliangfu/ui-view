@@ -3,14 +3,11 @@
  * 路由: /desktop/form/multiselect
  */
 
-import {
-  CodeBlock,
-  Form,
-  FormItem,
-  MultiSelect,
-  Paragraph,
-  Title,
-} from "@dreamer/ui-view";
+import { Paragraph, Title } from "@dreamer/ui-view/basic";
+
+import { Form, FormItem, MultiSelect } from "@dreamer/ui-view/form";
+
+import { CodeBlock } from "@dreamer/ui-view/data-display";
 import { createSignal } from "@dreamer/view";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_MULTI_SELECT } from "../../../data/component-messages-rows.ts";

@@ -4,8 +4,9 @@
  */
 
 import { createSignal } from "@dreamer/view";
-import { Accordion, CodeBlock, Paragraph, Title } from "@dreamer/ui-view";
-
+import { Paragraph, Title } from "@dreamer/ui-view/basic";
+import { CodeBlock } from "@dreamer/ui-view/data-display";
+import { Accordion } from "@dreamer/ui-view/layout";
 /** API 属性行类型 */
 interface ApiRow {
   name: string;
@@ -67,8 +68,7 @@ const ACCORDION_API: ApiRow[] = [
 ];
 
 const importCode = `import { createSignal } from "@dreamer/view";
-import { Accordion } from "@dreamer/ui-view";
-
+import { Accordion } from "@dreamer/ui-view/layout";
 export function Demo() {
   const expandedKeys = createSignal<string[]>(["1"]);
   const items = [

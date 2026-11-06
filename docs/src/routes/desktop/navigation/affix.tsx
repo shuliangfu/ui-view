@@ -3,8 +3,11 @@
  * 路由: /desktop/navigation/affix
  */
 
-import { Affix, CodeBlock, Paragraph, Title } from "@dreamer/ui-view";
+import { Paragraph, Title } from "@dreamer/ui-view/basic";
 
+import { CodeBlock } from "@dreamer/ui-view/data-display";
+
+import { Affix } from "@dreamer/ui-view/navigation";
 /** API 属性行类型 */
 interface ApiRow {
   name: string;

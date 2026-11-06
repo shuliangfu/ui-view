@@ -3,13 +3,11 @@
  * 路由: /desktop/navigation/page-header
  */
 
-import {
-  Button,
-  CodeBlock,
-  PageHeader,
-  Paragraph,
-  Title,
-} from "@dreamer/ui-view";
+import { Button, Paragraph, Title } from "@dreamer/ui-view/basic";
+
+import { CodeBlock } from "@dreamer/ui-view/data-display";
+
+import { PageHeader } from "@dreamer/ui-view/navigation";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_PAGE_HEADER } from "../../../data/component-messages-rows.ts";
 

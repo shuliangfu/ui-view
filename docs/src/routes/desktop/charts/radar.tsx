@@ -3,8 +3,11 @@
  * 路由: /desktop/charts/radar
  */
 
-import { ChartRadar, CodeBlock, Paragraph, Title } from "@dreamer/ui-view";
+import { Paragraph, Title } from "@dreamer/ui-view/basic";
 
+import { CodeBlock } from "@dreamer/ui-view/data-display";
+
+import { ChartRadar } from "@dreamer/ui-view/charts";
 const sampleData = {
   labels: ["速度", "力量", "耐力", "技巧", "防守", "进攻"],
   datasets: [

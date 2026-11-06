@@ -3,7 +3,11 @@
  * 路由: /desktop/navigation/breadcrumb
  */
 
-import { Breadcrumb, CodeBlock, Paragraph, Title } from "@dreamer/ui-view";
+import { Paragraph, Title } from "@dreamer/ui-view/basic";
+
+import { CodeBlock } from "@dreamer/ui-view/data-display";
+
+import { Breadcrumb } from "@dreamer/ui-view/navigation";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_BREADCRUMB } from "../../../data/component-messages-rows.ts";
 

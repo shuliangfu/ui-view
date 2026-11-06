@@ -3,8 +3,9 @@
  * 路由: /desktop/data-display/comment
  */
 
-import { Avatar, CodeBlock, Comment, Paragraph, Title } from "@dreamer/ui-view";
+import { Avatar, Paragraph, Title } from "@dreamer/ui-view/basic";
 
+import { CodeBlock, Comment } from "@dreamer/ui-view/data-display";
 /** API 属性行类型 */
 interface ApiRow {
   name: string;

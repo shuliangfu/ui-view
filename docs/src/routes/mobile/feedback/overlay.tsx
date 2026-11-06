@@ -3,7 +3,8 @@
  */
 
 import { createSignal } from "@dreamer/view";
-import { Button, CodeBlock, Paragraph, Title } from "@dreamer/ui-view";
+import { Button, Paragraph, Title } from "@dreamer/ui-view/mobile/basic";
+import { CodeBlock } from "@dreamer/ui-view/mobile/data-display";
 import { Overlay } from "@dreamer/ui-view/mobile";
 import {
   DocsApiTable,

@@ -4,7 +4,9 @@
  */
 
 import { createSignal } from "@dreamer/view";
-import { Alert, Button, CodeBlock, Paragraph, Title } from "@dreamer/ui-view";
+import { Button, Paragraph, Title } from "@dreamer/ui-view/basic";
+import { CodeBlock } from "@dreamer/ui-view/data-display";
+import { Alert } from "@dreamer/ui-view/feedback";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_ALERT } from "../../../data/component-messages-rows.ts";
 

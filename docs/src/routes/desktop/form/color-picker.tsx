@@ -3,14 +3,11 @@
  * 路由: /desktop/form/color-picker
  */
 
-import {
-  CodeBlock,
-  ColorPicker,
-  Form,
-  FormItem,
-  Paragraph,
-  Title,
-} from "@dreamer/ui-view";
+import { Paragraph, Title } from "@dreamer/ui-view/basic";
+
+import { ColorPicker, Form, FormItem } from "@dreamer/ui-view/form";
+
+import { CodeBlock } from "@dreamer/ui-view/data-display";
 import { createSignal } from "@dreamer/view";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_COLOR_PICKER } from "../../../data/component-messages-rows.ts";

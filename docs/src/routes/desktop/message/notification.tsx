@@ -3,15 +3,11 @@
  * 路由: /desktop/message/notification
  */
 
-import {
-  Button,
-  CodeBlock,
-  notification,
-  Paragraph,
-  Title,
-  toast,
-} from "@dreamer/ui-view";
+import { Button, Paragraph, Title } from "@dreamer/ui-view/basic";
 
+import { CodeBlock } from "@dreamer/ui-view/data-display";
+
+import { notification, toast } from "@dreamer/ui-view/feedback";
 /** API 方法/选项行类型 */
 interface ApiRow {
   name: string;

@@ -3,15 +3,12 @@
  * 路由: /desktop/form/input
  */
 
-import {
-  CodeBlock,
-  Form,
-  FormItem,
-  Link,
-  // Input,
-  Paragraph,
-  Title,
-} from "@dreamer/ui-view";
+import { Link, Paragraph, Title } from "@dreamer/ui-view/basic";
+
+import { Form, FormItem } from "@dreamer/ui-view/form";
+
+import { CodeBlock } from "@dreamer/ui-view/data-display";
+
 import { IconLock } from "@dreamer/ui-view/icons/Lock.tsx";
 import { IconUser } from "@dreamer/ui-view/icons/User.tsx";
 import { Input } from "@dreamer/ui-view/form";
@@ -724,8 +721,7 @@ import { IconLock } from "@dreamer/ui-view/icons/Lock.tsx";
             <div class="w-full">
               <CodeBlock
                 code={`import { createSignal } from "@dreamer/view";
-import { Form, FormItem, Input } from "@dreamer/ui-view";
-
+import { Form, FormItem, Input } from "@dreamer/ui-view/form";
 const email = createSignal("");
 const password = createSignal("");
 

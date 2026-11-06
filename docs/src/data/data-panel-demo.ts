@@ -1,15 +1,8 @@
 /**
  * @fileoverview DataPanel 文档页示例数据与列 / 搜索 / 表单定义（纯数据，无 JSX）。
  */
-import type {
-  DataPanelColumn,
-  DataPanelDataSource,
-  DataPanelFormField,
-  DataPanelRow,
-  DataPanelSearchField,
-} from "@dreamer/ui-view";
-import { createLocalDataSource } from "@dreamer/ui-view";
-
+import type { DataPanelColumn, DataPanelDataSource, DataPanelFormField, DataPanelRow, DataPanelSearchField } from "@dreamer/ui-view/data-display";
+import { createLocalDataSource } from "@dreamer/ui-view/data-display";
 const NAMES = [
   "Alice",
   "Bob",

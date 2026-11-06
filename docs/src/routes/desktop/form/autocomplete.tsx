@@ -3,14 +3,11 @@
  * 路由: /desktop/form/autocomplete
  */
 
-import {
-  AutoComplete,
-  CodeBlock,
-  Form,
-  FormItem,
-  Paragraph,
-  Title,
-} from "@dreamer/ui-view";
+import { Paragraph, Title } from "@dreamer/ui-view/basic";
+
+import { AutoComplete, Form, FormItem } from "@dreamer/ui-view/form";
+
+import { CodeBlock } from "@dreamer/ui-view/data-display";
 import { createSignal } from "@dreamer/view";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_AUTO_COMPLETE } from "../../../data/component-messages-rows.ts";

@@ -2,7 +2,7 @@
  * @fileoverview 文档站「文案 messages」独立区块：与 API 属性表分开，单独一张表说明可本地化字段。
  */
 
-import { Paragraph, Title } from "@dreamer/ui-view";
+import { Paragraph, Title } from "@dreamer/ui-view/basic";
 import { DocsApiTable, type DocsApiTableRow } from "./DocsApiTable.tsx";
 
 /**

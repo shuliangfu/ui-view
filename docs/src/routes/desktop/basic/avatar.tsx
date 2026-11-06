@@ -3,8 +3,9 @@
  * 路由: /desktop/basic/avatar
  */
 
-import { Avatar, CodeBlock, Paragraph, Title } from "@dreamer/ui-view";
+import { Avatar, Paragraph, Title } from "@dreamer/ui-view/basic";
 
+import { CodeBlock } from "@dreamer/ui-view/data-display";
 interface ApiRow {
   name: string;
   type: string;

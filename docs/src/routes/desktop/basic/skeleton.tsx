@@ -3,8 +3,9 @@
  * 路由: /desktop/basic/skeleton
  */
 
-import { CodeBlock, Paragraph, Skeleton, Title } from "@dreamer/ui-view";
+import { Paragraph, Skeleton, Title } from "@dreamer/ui-view/basic";
 
+import { CodeBlock } from "@dreamer/ui-view/data-display";
 interface ApiRow {
   name: string;
   type: string;

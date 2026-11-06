@@ -3,8 +3,11 @@
  * 路由: /desktop/layout/grid
  */
 
-import { CodeBlock, Grid, GridItem, Paragraph, Title } from "@dreamer/ui-view";
+import { Paragraph, Title } from "@dreamer/ui-view/basic";
 
+import { CodeBlock } from "@dreamer/ui-view/data-display";
+
+import { Grid, GridItem } from "@dreamer/ui-view/layout";
 /** API 属性行类型 */
 interface ApiRow {
   name: string;

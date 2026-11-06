@@ -3,8 +3,11 @@
  * 路由: /desktop/charts/doughnut
  */
 
-import { ChartDoughnut, CodeBlock, Paragraph, Title } from "@dreamer/ui-view";
+import { Paragraph, Title } from "@dreamer/ui-view/basic";
 
+import { CodeBlock } from "@dreamer/ui-view/data-display";
+
+import { ChartDoughnut } from "@dreamer/ui-view/charts";
 const sampleData = {
   labels: ["A", "B", "C", "D"],
   datasets: [{

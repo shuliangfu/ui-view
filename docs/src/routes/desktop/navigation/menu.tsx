@@ -3,8 +3,11 @@
  * 路由: /desktop/navigation/menu
  */
 
-import { CodeBlock, Menu, Paragraph, Title } from "@dreamer/ui-view";
+import { Paragraph, Title } from "@dreamer/ui-view/basic";
 
+import { CodeBlock } from "@dreamer/ui-view/data-display";
+
+import { Menu } from "@dreamer/ui-view/navigation";
 /** API 属性行类型 */
 interface ApiRow {
   name: string;
@@ -72,8 +75,7 @@ const MENU_API: ApiRow[] = [
 ];
 
 const importCode = `import { createSignal } from "@dreamer/view";
-import { Menu } from "@dreamer/ui-view";
-
+import { Menu } from "@dreamer/ui-view/navigation";
 const openKeys = createSignal<string[]>(["sub1"]);
 const items = [
   { key: "1", label: "选项一" },
