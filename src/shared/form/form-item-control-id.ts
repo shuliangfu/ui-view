@@ -6,6 +6,7 @@
  */
 
 import { type Context, createContext, type Owner } from "@dreamer/view";
+import { safeRandomUUID } from "../utils/safe-random-uuid.ts";
 
 /**
  * 当 `FormItem` 未传 `id` 时，向子树提供自动生成的 `controlId`；无 Provider 时为 `undefined`。
@@ -42,9 +43,9 @@ export function resolveFormItemControlId(
     if (existing != null) {
       return existing;
     }
-    const gen = `form-item-${globalThis.crypto.randomUUID()}`;
+    const gen = `form-item-${safeRandomUUID()}`;
     formItemControlIdByOwner.set(owner, gen);
     return gen;
   }
-  return `form-item-${globalThis.crypto.randomUUID()}`;
+  return `form-item-${safeRandomUUID()}`;
 }

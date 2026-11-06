@@ -4,6 +4,7 @@
  */
 
 import { type Owner } from "@dreamer/view";
+import { safeRandomUUID } from "../utils/safe-random-uuid.ts";
 import { twMerge } from "tailwind-merge";
 import { Tooltip } from "../../desktop/feedback/Tooltip.tsx";
 import { controlBlueFocusRing } from "./input-focus-ring.ts";
@@ -926,11 +927,11 @@ export function resolveRteDomEditorId(
       return existing;
     }
     const gen = `rte-${
-      globalThis.crypto.randomUUID().replace(/-/g, "").slice(0, 10)
+      safeRandomUUID().replace(/-/g, "").slice(0, 10)
     }`;
     rteDomEditorIdByOwner.set(owner, gen);
     return gen;
   }
-  return `rte-${globalThis.crypto.randomUUID().replace(/-/g, "").slice(0, 10)}`;
+  return `rte-${safeRandomUUID().replace(/-/g, "").slice(0, 10)}`;
 }
 

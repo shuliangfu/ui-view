@@ -5,6 +5,7 @@
  */
 
 import { createSignal, getOwner, type Owner, type Signal } from "@dreamer/view";
+import { safeRandomUUID } from "../utils/safe-random-uuid.ts";
 import type { JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import { IconUpload } from "../basic/icons/Upload.tsx";
@@ -294,9 +295,7 @@ function serializeUploadHiddenValue(
 }
 
 function newUploadUid(): string {
-  const c = globalThis.crypto;
-  if (c && typeof c.randomUUID === "function") return c.randomUUID();
-  return `u-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+  return safeRandomUUID();
 }
 
 /**

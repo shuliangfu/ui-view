@@ -309,7 +309,10 @@ DateTimePicker, TimePicker
 ### 📈 Charts
 
 Built on Chart.js: ChartLine, ChartBar, ChartPie, ChartDoughnut, ChartRadar,
-ChartPolarArea, ChartBubble, ChartScatter
+ChartPolarArea, ChartBubble, ChartScatter.
+
+Import from `@dreamer/ui-view/charts` or `@dreamer/ui-view/mobile/charts` only —
+not from the root / `mobile` barrels (keeps Chart.js out of apps that do not use charts).
 
 ### ⚙️ Other
 

@@ -545,33 +545,6 @@ export type {
   TabsType,
 } from "./layout/mod.ts";
 
-// charts
-export {
-  ChartBar,
-  ChartBase,
-  ChartBubble,
-  ChartDoughnut,
-  ChartLine,
-  ChartPie,
-  ChartPolarArea,
-  ChartRadar,
-  ChartScatter,
-} from "./charts/mod.ts";
-export type {
-  BaseChartProps,
-  ChartBarProps,
-  ChartBubbleProps,
-  ChartData,
-  ChartDoughnutProps,
-  ChartLineProps,
-  ChartOptions,
-  ChartPieProps,
-  ChartPolarAreaProps,
-  ChartRadarProps,
-  ChartScatterProps,
-  ChartType,
-} from "./charts/mod.ts";
-
 // navigation
 export {
   Affix,

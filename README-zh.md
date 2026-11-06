@@ -297,8 +297,9 @@ Select、MultiSelect、Cascader、TreeSelect、DatePicker、DateTimePicker、Tim
 
 ### 📈 图表
 
-基于
-Chart.js：ChartLine、ChartBar、ChartPie、ChartDoughnut、ChartRadar、ChartPolarArea、ChartBubble、ChartScatter
+基于 Chart.js：ChartLine、ChartBar、ChartPie、ChartDoughnut、ChartRadar、ChartPolarArea、ChartBubble、ChartScatter。
+
+请从 `@dreamer/ui-view/charts` 或 `@dreamer/ui-view/mobile/charts` 导入，不要从根入口 / `mobile` 聚合 barrel 导入（避免未用图表的应用打进 Chart.js）。
 
 ### ⚙️ 其它
 
