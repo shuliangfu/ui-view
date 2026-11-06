@@ -1,10 +1,14 @@
 /**
  * @module desktop/data-display/data-panel-chrome
- * @description DataPanel 刷新注册表、环境探测、工具按钮壳与面板 CSS。
+ * @description DataPanel 刷新注册表、环境探测、本地偏好（@dreamer/storage/client）、工具按钮壳与面板 CSS。
  */
 
 import { Button } from "../../shared/basic/Button.tsx";
 import type { DataPanelTone } from "./data-panel-types.ts";
+import {
+  BrowserStorage,
+  LocalStorageAdapter,
+} from "@dreamer/storage/client";
 
 // ---------------------------------------------------------------- refresh registry
 export const refreshers = new Map<string, () => Promise<void>>();
@@ -41,6 +45,87 @@ export function onServer(): boolean {
   };
   return gg.Deno !== undefined ||
     typeof gg.process?.versions?.node === "string";
+}
+
+/** DataPanel 本地偏好（列显隐 / 行高 / 全屏）；按 panelKey 隔离 */
+export interface DataPanelPrefs {
+  hidden?: Record<string, boolean>;
+  density?: "compact" | "comfortable" | "loose";
+  fullscreen?: boolean;
+}
+
+function prefsKey(panelKey: string): string {
+  return `dp-prefs-${panelKey}`;
+}
+function legacyColsKey(panelKey: string): string {
+  return `dp-cols-${panelKey}`;
+}
+
+let dpBrowserStorage: BrowserStorage | null = null;
+
+/** 浏览器端单例；SSR／无 localStorage 时返回 null */
+function getDpBrowserStorage(): BrowserStorage | null {
+  if (onServer()) return null;
+  try {
+    if (typeof globalThis.localStorage === "undefined") return null;
+  } catch {
+    return null;
+  }
+  if (!dpBrowserStorage) {
+    dpBrowserStorage = new BrowserStorage({ adapter: "localStorage" });
+  }
+  return dpBrowserStorage;
+}
+
+function isPrefsShape(v: unknown): v is DataPanelPrefs {
+  if (!v || typeof v !== "object") return false;
+  const o = v as DataPanelPrefs;
+  return o.hidden !== undefined || o.density !== undefined ||
+    o.fullscreen !== undefined;
+}
+
+/** 读偏好（仅 `@dreamer/storage/client` BrowserStorage）；兼容旧 `dp-cols-*` 与曾直写的 prefs JSON */
+export async function readDataPanelPrefs(
+  panelKey: string,
+): Promise<DataPanelPrefs> {
+  const store = getDpBrowserStorage();
+  if (!store) return {};
+  try {
+    const v = await store.get<DataPanelPrefs>(prefsKey(panelKey));
+    if (isPrefsShape(v)) return v;
+
+    // 兼容：本机曾用 raw localStorage JSON 写入的 prefs（无 BrowserStorage 信封）
+    const adapter = new LocalStorageAdapter();
+    const raw = adapter.get(prefsKey(panelKey));
+    if (isPrefsShape(raw)) {
+      await store.set(prefsKey(panelKey), raw);
+      return raw;
+    }
+    // 兼容更旧：仅列显隐 `dp-cols-*`
+    const legacy = adapter.get(legacyColsKey(panelKey));
+    if (legacy && typeof legacy === "object" && !Array.isArray(legacy)) {
+      const prefs: DataPanelPrefs = {
+        hidden: legacy as Record<string, boolean>,
+      };
+      await store.set(prefsKey(panelKey), prefs);
+      return prefs;
+    }
+  } catch { /* ignore */ }
+  return {};
+}
+
+/** 浅合并写回（仅 `@dreamer/storage/client` BrowserStorage.set） */
+export async function writeDataPanelPrefs(
+  panelKey: string,
+  patch: DataPanelPrefs,
+): Promise<void> {
+  const store = getDpBrowserStorage();
+  if (!store) return;
+  try {
+    const cur = await readDataPanelPrefs(panelKey);
+    const next: DataPanelPrefs = { ...cur, ...patch };
+    await store.set(prefsKey(panelKey), next);
+  } catch { /* ignore */ }
 }
 
 /**
@@ -130,6 +215,16 @@ export const DATA_PANEL_CSS = `
 .dark .dp-act-del:hover:not(:disabled) { color: #f87171 !important; }
 .dark .dp-act:disabled { color: #64748b !important; }
 .dark .dp-card { background: var(--dp-panel-body-bg, #18212f) !important; }
+.dp-den-compact td, .dp-den-compact th { padding-top: 0.25rem !important; padding-bottom: 0.25rem !important; }
+.dp-den-loose td, .dp-den-loose th { padding-top: 0.875rem !important; padding-bottom: 0.875rem !important; }
+.dp-fs {
+  position: fixed !important; inset: 0 !important; z-index: 9999 !important;
+  width: 100vw !important; height: 100vh !important; max-width: 100vw !important; max-height: 100vh !important;
+  overflow: auto !important; box-sizing: border-box !important; padding: 0.75rem !important;
+  background: #fff !important; margin: 0 !important; border-radius: 0 !important;
+}
+.dark .dp-fs { background: #0f172a !important; }
+.dp-fs .dp-card { border-radius: 0 !important; min-height: calc(100vh - 1.5rem) !important; }
 `;
 
 // ---------------------------------------------------------------- component

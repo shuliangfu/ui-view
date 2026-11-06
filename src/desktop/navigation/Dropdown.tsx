@@ -1,13 +1,17 @@
 /**
  * Dropdown 下拉菜单（View）。
  * 桌面点击/悬停展开；**仅向触发器下方**展开（`bottom` / `bottomLeft` / `bottomRight` / `bottomAuto`），不支持向上展开。
- * Esc 关闭（需 initDropdownEsc）、hover 延迟防抖。展开状态由组件内部维护，无需传 open。
+ * Esc 关闭（需 initDropdownEsc）、hover 延迟防抖。展开默认内部维护；也可传受控 `open` + `onOpenChange`（点菜单项关菜单等场景）。
  * 浮层容器使用 **`p-1`**（四边等距）；展开时经 {@link Portal} 挂到 `document.body`，`fixed` 按视口定位，避免祖先 `overflow` 裁剪。
  */
 
-import { createEffect, createSignal, Portal, Show } from "@dreamer/view";
+import { createEffect, createMemo, createSignal, Portal, Show } from "@dreamer/view";
 import type { JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
+import {
+  readControlledOpenInput,
+  type ControlledOpenInput,
+} from "../../shared/feedback/controlled-open.ts";
 
 export type DropdownPlacement =
   | "bottom"
@@ -20,7 +24,12 @@ export interface DropdownProps {
   children?: unknown;
   /** 下拉内容（菜单或自定义节点） */
   overlay: unknown;
-  /** 打开/关闭时回调（可选，仅通知，不参与控制） */
+  /**
+   * 受控展开。不传则内部维护。
+   * 传 `createSignal` 返回值、`() => boolean` 或 boolean（与 Modal 一致；勿传 `sig.value` 快照）。
+   */
+  open?: ControlledOpenInput;
+  /** 打开/关闭时回调；受控时须在此写回 `open` 对应 signal */
   onOpenChange?: (open: boolean) => void;
   /** 触发方式：click 或 hover，默认 "click" */
   trigger?: "click" | "hover";
@@ -272,8 +281,15 @@ export function Dropdown(props: DropdownProps): JSXRenderable {
     closeOnOverlayClick = true,
   } = props;
 
-  /** 展开状态由组件内部维护（`Signal`，`.value`） */
+  /** 非受控时的内部展开状态 */
   const openState = createSignal(false);
+  const isControlled = () => props.open !== undefined;
+  /** 当前是否展开（受控读 `props.open`，否则读内部 signal） */
+  const isOpen = createMemo(() =>
+    isControlled()
+      ? readControlledOpenInput(props.open)
+      : openState.value
+  );
   /** bottomAuto 时根据视口空间计算出的实际位置 */
   const autoPlacement = createSignal<
     "bottom" | "bottomLeft" | "bottomRight"
@@ -282,9 +298,9 @@ export function Dropdown(props: DropdownProps): JSXRenderable {
   /** Portal + `fixed` 浮层的内联样式（视口坐标），展开时由 {@link computeDropdownFixedStyle} 写入 */
   const portalFixedStyle = createSignal<Record<string, string>>({});
 
-  /** 同步内部 open 与 onOpenChange 通知 */
+  /** 写展开态：非受控改内部 signal；始终通知 onOpenChange（受控方须写回） */
   const setOpen = (value: boolean) => {
-    openState.value = value;
+    if (!isControlled()) openState.value = value;
     onOpenChange?.(value);
   };
 
@@ -329,7 +345,7 @@ export function Dropdown(props: DropdownProps): JSXRenderable {
    * 对任意 `div` 滚动/窗口变化/动效下触发器移动都能跟上；`bottomAuto` 在第二帧再量浮层宽。
    */
   createEffect(() => {
-    if (!openState.value || typeof globalThis.window === "undefined") {
+    if (!isOpen() || typeof globalThis.window === "undefined") {
       portalFixedStyle.value = {};
       return;
     }
@@ -394,7 +410,7 @@ export function Dropdown(props: DropdownProps): JSXRenderable {
   let removeClickOutside: (() => void) | null = null;
   createEffect(() => {
     if (
-      typeof globalThis.document === "undefined" || isHover || !openState.value
+      typeof globalThis.document === "undefined" || isHover || !isOpen()
     ) {
       return;
     }
@@ -436,7 +452,7 @@ export function Dropdown(props: DropdownProps): JSXRenderable {
   const handleTriggerClick = (e: Event) => {
     e.preventDefault();
     if (disabled) return;
-    if (!isHover) setOpen(!openState.value);
+    if (!isHover) setOpen(!isOpen());
   };
 
   const handleTriggerEnter = () => {
@@ -490,7 +506,7 @@ export function Dropdown(props: DropdownProps): JSXRenderable {
         role="button"
         tabIndex={disabled ? -1 : 0}
         aria-haspopup="true"
-        aria-expanded={() => openState.value}
+        aria-expanded={() => isOpen()}
         aria-disabled={disabled}
         onClick={!isHover
           ? (handleTriggerClick as (e: Event) => void)
@@ -500,7 +516,7 @@ export function Dropdown(props: DropdownProps): JSXRenderable {
             const k = (e as KeyboardEvent).key;
             if (k === "Enter" || k === " ") {
               e.preventDefault();
-              setOpen(!openState.value);
+              setOpen(!isOpen());
             }
           }) as (e: Event) => void
           : undefined}
@@ -514,7 +530,7 @@ export function Dropdown(props: DropdownProps): JSXRenderable {
       {
         /* 浮层经 Portal 挂 body + `fixed`，避免侧栏/滚动容器的 overflow 与叠层裁剪 */
       }
-      <Show when={() => openState.value}>
+      <Show when={() => isOpen()}>
         {[
           typeof globalThis !== "undefined" &&
           (() => {

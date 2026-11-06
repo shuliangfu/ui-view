@@ -13,6 +13,7 @@
     "@dreamer/runtime-adapter": "./src/dev/runtime-adapter-hmr-origin.ts",
     "@dreamer/plugins": "jsr:@dreamer/plugins@^1.2.0",
     "@dreamer/theme": "jsr:@dreamer/theme@^1.1.0",
+    "@dreamer/storage/client": "jsr:@dreamer/storage@^1.1.0/client",
     "@dreamer/view": "jsr:@dreamer/view@^3.0.4",
     "@dreamer/ui-view": "../src/mod.ts",
     "@internal/ui-view-flag-img": "../src/shared/basic/icons/flags/FlagImg.tsx",

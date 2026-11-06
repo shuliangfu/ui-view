@@ -202,7 +202,16 @@ export interface DataPanelCaps {
   export: boolean;
   print: boolean;
   columns: boolean;
+  /** 行高密度切换 */
+  density: boolean;
+  /** 面板全屏 */
+  fullscreen: boolean;
+  /** 复制选中行到剪贴板 */
+  copy: boolean;
 }
+
+/** 表格行高密度 */
+export type DataPanelDensity = "compact" | "comfortable" | "loose";
 
 /** 导出格式 */
 export type DataPanelExportFormat = "xlsx" | "csv" | "json" | "xml" | "html";
@@ -215,11 +224,28 @@ export interface DataPanelMessages {
   search: string;
   create: string;
   refresh: string;
+  /** 工具栏刷新成功提示 */
+  refreshed: string;
   print: string;
   import: string;
   export: string;
   columns: string;
   resetColumns: string;
+  /** 行高／密度 */
+  density: string;
+  densityCompact: string;
+  densityComfortable: string;
+  densityLoose: string;
+  /** 切换密度后的提示，{mode} 为当前档文案 */
+  densitySet: string;
+  enterFullscreen: string;
+  exitFullscreen: string;
+  copy: string;
+  /** 已复制 {n} 行 */
+  copyDone: string;
+  /** 无选中时的提示 */
+  copyEmpty: string;
+  copyFailed: string;
   /** 列设置里「多选」列的显示名 */
   colSelect: string;
   /** 列设置里「序号」列的显示名 */

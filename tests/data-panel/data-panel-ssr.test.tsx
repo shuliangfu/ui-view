@@ -298,17 +298,25 @@ describe("DataPanel SSR：文案与自定义", () => {
   it("工具栏按钮数量随能力变化", async () => {
     const count = (h: string) =>
       (h.match(/class="[^"]*dp-tb[ "]/g) ?? []).length;
-    // 添加 + 导入（本地数据源可写）+ 刷新 + 打印 + 导出 + 列设置
-    expect(count(await html())).toBe(6);
+    // 添加 + 导入 + 刷新 + 打印 + 导出 + 列设置 + 行高 + 全屏 + 复制
+    expect(count(await html())).toBe(9);
     // + 搜索
     expect(count(await html({ search: [{ name: "name", label: "姓名" }] })))
-      .toBe(7);
-    // 只读：刷新 + 打印 + 导出 + 列设置
-    expect(count(await html({ form: undefined }))).toBe(4);
+      .toBe(10);
+    // 只读：刷新 + 打印 + 导出 + 列设置 + 行高 + 全屏 + 复制
+    expect(count(await html({ form: undefined }))).toBe(7);
     expect(
       count(
         await html({
-          caps: { print: false, columns: false, export: false, import: false },
+          caps: {
+            print: false,
+            columns: false,
+            export: false,
+            import: false,
+            density: false,
+            fullscreen: false,
+            copy: false,
+          },
         }),
       ),
     ).toBe(2);

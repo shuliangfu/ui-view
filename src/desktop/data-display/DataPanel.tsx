@@ -1,7 +1,7 @@
 /**
  * DataPanel 数据面板（桌面 · 数据展示）。
  *
- * 一块完整的「列表管理」面板：卡片标题栏 + 工具栏按钮组（添加 / 搜索 / 刷新 / 打印 / 导入 / 导出 / 列设置，
+ * 一块完整的「列表管理」面板：卡片标题栏 + 工具栏按钮组（添加 / 搜索 / 刷新 / 打印 / 导入 / 导出 / 列设置 / 行高 / 全屏 / 复制，
  * 相邻按钮之间只有一条淡分割线）+ 搜索 Modal（工具栏按钮打开，提交即搜索、重置即清空） + 批量操作条 + 表格（排序、多选、行内编辑、合计行、
  * 操作列）+ 分页（每页条数、页码、跳页）。新增 / 编辑 / 查看使用 Modal，**任何删除都必须先确认（行内删除为图标上方的小气泡 Popconfirm，批量删除为确认对话框）**，
  * 绝不直接删除。导出支持 xlsx（原生 OOXML）/ csv / json / xml / html，支持浅色与深色主题（`.dark`）。
@@ -12,15 +12,18 @@
  *
  * **SSR / 水合**：布尔属性只在为 true 时输出；`sync` 数据源（含 `data` 模式）首帧同步渲染，水合前后 DOM 一致。
  */
-import { createSignal, type JSXRenderable, onMount } from "@dreamer/view";
+import { createSignal, type JSXRenderable, onCleanup, onMount } from "@dreamer/view";
 import { Button, ButtonGroup } from "../basic/Button.tsx";
 import { IconChevronDown } from "../../shared/basic/icons/ChevronDown.tsx";
 import { IconChevronUp } from "../../shared/basic/icons/ChevronUp.tsx";
 import { IconColumns } from "../../shared/basic/icons/Columns.tsx";
+import { IconCopy } from "../../shared/basic/icons/Copy.tsx";
 import { IconDownload } from "../../shared/basic/icons/Download.tsx";
 import { IconEdit } from "../../shared/basic/icons/Edit.tsx";
+import { IconExitFullscreen } from "../../shared/basic/icons/ExitFullscreen.tsx";
 import { IconEye } from "../../shared/basic/icons/Eye.tsx";
 import { IconList } from "../../shared/basic/icons/List.tsx";
+import { IconMaximize2 } from "../../shared/basic/icons/Maximize2.tsx";
 import { IconPlus } from "../../shared/basic/icons/Plus.tsx";
 import { IconPrinter } from "../../shared/basic/icons/Printer.tsx";
 import { IconRefresh } from "../../shared/basic/icons/Refresh.tsx";
@@ -63,6 +66,7 @@ import type {
   DataPanelCaps,
   DataPanelColumn,
   DataPanelDataSource,
+  DataPanelDensity,
   DataPanelExportFormat,
   DataPanelFormField,
   DataPanelListResult,
@@ -81,6 +85,7 @@ export type {
   DataPanelCaps,
   DataPanelColumn,
   DataPanelDataSource,
+  DataPanelDensity,
   DataPanelExportFormat,
   DataPanelFormField,
   DataPanelListResult,
@@ -105,7 +110,10 @@ export interface DataPanelExportContext {
 }
 
 export interface DataPanelProps {
-  /** 面板标识，用于列偏好的 localStorage 键与 `refreshDataPanel(key)`；默认 "data-panel" */
+  /**
+   * 面板标识：列显隐／行高／全屏的持久化键（`@dreamer/storage/client` → `dp-prefs-${panelKey}`）、
+   * 以及 `refreshDataPanel(key)`；同页多面板须唯一。默认 "data-panel"。
+   */
   panelKey?: string;
   /** 卡片标题 */
   title: string;
@@ -146,6 +154,8 @@ export interface DataPanelProps {
   messages?: Partial<DataPanelMessages>;
   /** 导出文件名（不含扩展名），默认取 title */
   exportName?: string;
+  /** 初始行高密度，默认 comfortable（舒适） */
+  defaultDensity?: DataPanelDensity;
   /** 自定义新增（替代内置 Modal 表单） */
   onCreate?: () => void;
   /** 自定义编辑 */
@@ -186,9 +196,11 @@ import {
   g,
   ICON_BTN,
   onServer,
+  readDataPanelPrefs,
   refreshers,
   SWITCH_ANIM_MS,
   TONE,
+  writeDataPanelPrefs,
 } from "./data-panel-chrome.tsx";
 
 export { DATA_PANEL_CSS, refreshDataPanel } from "./data-panel-chrome.tsx";
@@ -227,6 +239,9 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
     export: true,
     print: true,
     columns: true,
+    density: true,
+    fullscreen: true,
+    copy: true,
     ...(props.caps ?? {}),
   };
   const selectable = props.selectable !== false &&
@@ -252,6 +267,12 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
   const totals = createSignal<Record<string, number>>(first?.totals ?? {});
   const query = createSignal<DataPanelQuery>(initialQuery);
   const loading = createSignal(false);
+  const density = createSignal<DataPanelDensity>(
+    props.defaultDensity ?? "comfortable",
+  );
+  /** 密度菜单受控开闭：选后写 false，避免仅靠 __lastDropdownClose／冒泡关不掉 */
+  const densityOpen = createSignal(false);
+  const panelFs = createSignal(false);
   const selected = createSignal<string[]>([]);
   const hidden = createSignal<Record<string, boolean>>(
     Object.fromEntries(
@@ -276,28 +297,43 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
     });
 
   // ---- data loading
-  async function load(syncUrl = true): Promise<void> {
+  /** 工具栏刷新最短 busy，避免本地同步 list 瞬间结束导致 loading 从未上屏 */
+  const REFRESH_MIN_BUSY_MS = 320;
+  type LoadOpts = { minBusyMs?: number; notify?: boolean };
+  async function holdBusy(started: number, minMs?: number): Promise<void> {
+    if (!minMs) return;
+    const left = minMs - (Date.now() - started);
+    if (left > 0) {
+      await new Promise<void>((r) => setTimeout(r, left));
+    }
+  }
+  async function load(syncUrl = true, opts?: LoadOpts): Promise<void> {
     const my = ++seq;
+    const started = Date.now();
     loading.value = true;
     const q = query.value;
     let res: DataPanelListResult;
     try {
-      res = await ds.list({
-        ...q,
-        filters: { ...q.filters, ...(props.fixed ?? {}) },
-      });
+      // 始终再次调用数据源 list（远程 Promise 会等待；同步源也会再跑一遍过滤／分页）
+      res = await Promise.resolve(
+        ds.list({
+          ...q,
+          filters: { ...q.filters, ...(props.fixed ?? {}) },
+        }),
+      );
     } catch (e) {
+      if (my !== seq) return;
+      await holdBusy(started, opts?.minBusyMs);
       if (my !== seq) return;
       loading.value = false;
       message.error((e as Error)?.message || m.networkError);
       return;
     }
     if (my !== seq) return;
-    loading.value = false;
     const last = Math.max(1, Math.ceil(res.total / q.pageSize));
     if (q.page > last) {
       query.value = { ...q, page: last };
-      return load(syncUrl);
+      return load(syncUrl, opts);
     }
     rows.value = res.rows;
     total.value = res.total;
@@ -311,6 +347,17 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
         g.location.pathname + (qs ? `?${qs}` : ""),
       );
     }
+    await holdBusy(started, opts?.minBusyMs);
+    if (my !== seq) return;
+    loading.value = false;
+    if (opts?.notify) message.success(m.refreshed);
+  }
+  /**
+   * 工具栏刷新：必须再次 await ds.list 拉数（真请求／真重算），再配 loading 遮罩与成功／失败 toast。
+   * minBusy 只保证同步源也能看见转圈，不能替代 list 调用。
+   */
+  function refreshFromToolbar(): Promise<void> {
+    return load(false, { minBusyMs: REFRESH_MIN_BUSY_MS, notify: true });
   }
   refreshers.set(key, () => load(false));
 
@@ -330,22 +377,39 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
       columns.filter((c) => c.hidden).map((c) => [c.prop, true]),
     );
 
-  // ---- 首次加载（异步数据源）与列偏好
-  const storageKey = `dp-cols-${key}`;
+  // ---- 首次加载（异步数据源）与本地偏好（@dreamer/storage/client：列／密度／全屏）
   onMount(() => {
     // 服务端渲染（含 happy-dom）也会执行 onMount：不发请求、不读本地存储
     if (onServer()) return;
-    try {
-      const raw = g.localStorage?.getItem(storageKey);
-      if (raw) hidden.value = JSON.parse(raw);
-    } catch { /* ignore */ }
-    if (!first) void load(false);
+    void (async () => {
+      const prefs = await readDataPanelPrefs(key);
+      if (prefs.hidden) hidden.value = prefs.hidden;
+      if (
+        prefs.density === "compact" ||
+        prefs.density === "comfortable" ||
+        prefs.density === "loose"
+      ) {
+        density.value = prefs.density;
+      }
+      if (prefs.fullscreen) setPanelFullscreen(true);
+      if (!first) void load(false);
+    })();
+    const onKey = (e: Event) => {
+      const ke = e as KeyboardEvent;
+      if (ke.key === "Escape" && panelFs.value) {
+        applyFullscreenChrome(false);
+        void writeDataPanelPrefs(key, { fullscreen: false });
+      }
+    };
+    g.document?.addEventListener?.("keydown", onKey);
+    onCleanup(() => {
+      g.document?.removeEventListener?.("keydown", onKey);
+      applyFullscreenChrome(false);
+    });
   });
   function saveHidden(next: Record<string, boolean>): void {
     hidden.value = next;
-    try {
-      g.localStorage?.setItem(storageKey, JSON.stringify(next));
-    } catch { /* ignore */ }
+    void writeDataPanelPrefs(key, { hidden: next });
   }
 
   // ---- 确认对话框（所有删除 / 批量状态都经过它）
@@ -692,6 +756,107 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
     input.click();
   }
 
+  // ---- 密度 / 全屏 / 复制
+  function applyFullscreenChrome(on: boolean): void {
+    panelFs.value = on;
+    try {
+      if (g.document?.body) {
+        g.document.body.style.overflow = on ? "hidden" : "";
+      }
+    } catch { /* ignore */ }
+  }
+  /** 用户切换全屏：写 UI + 持久化；卸载清理勿走此函数以免抹掉已存偏好 */
+  function setPanelFullscreen(on: boolean): void {
+    applyFullscreenChrome(on);
+    void writeDataPanelPrefs(key, { fullscreen: on });
+  }
+  function toggleFullscreen(): void {
+    setPanelFullscreen(!panelFs.value);
+  }
+  function densityLabel(d: DataPanelDensity): string {
+    if (d === "compact") return m.densityCompact;
+    if (d === "loose") return m.densityLoose;
+    return m.densityComfortable;
+  }
+  function setDensity(d: DataPanelDensity): void {
+    density.value = d;
+    densityOpen.value = false;
+    void writeDataPanelPrefs(key, { density: d });
+    message.success(tr(m.densitySet, { mode: densityLabel(d) }));
+  }
+  async function writeClipboard(text: string): Promise<void> {
+    const nav = (globalThis as unknown as {
+      navigator?: { clipboard?: { writeText?(s: string): Promise<void> } };
+    }).navigator;
+    if (typeof nav?.clipboard?.writeText === "function") {
+      await nav.clipboard.writeText(text);
+      return;
+    }
+    const doc = g.document;
+    if (!doc) throw new Error("no document");
+    const ta = doc.createElement("textarea");
+    ta.value = text;
+    ta.setAttribute("readonly", "");
+    ta.style.position = "fixed";
+    ta.style.left = "-9999px";
+    doc.body.appendChild(ta);
+    ta.select();
+    const ok = typeof doc.execCommand === "function"
+      ? doc.execCommand("copy")
+      : false;
+    ta.remove();
+    if (!ok) throw new Error("execCommand copy failed");
+  }
+  async function copySelected(): Promise<void> {
+    const ids = selected.value;
+    if (!ids.length) {
+      message.warning(m.copyEmpty);
+      return;
+    }
+    const idSet = new Set(ids);
+    const cols = columnsVisible().filter((c) => !c.noExport);
+    const data = rows.value.filter((r) => idSet.has(idOf(r)));
+    if (!data.length) {
+      message.warning(m.copyEmpty);
+      return;
+    }
+    const escCell = (s: string) => s.replace(/\t|\r?\n/g, " ");
+    const header = cols.map((c) => escCell(c.label)).join("\t");
+    const lines = data.map((r) =>
+      cols.map((c) => escCell(displayValue(c, r, m))).join("\t")
+    );
+    try {
+      await writeClipboard([header, ...lines].join("\n"));
+      message.success(tr(m.copyDone, { n: data.length }));
+    } catch {
+      message.error(m.copyFailed);
+    }
+  }
+  /** 必须是 getter：静态 overlay 会冻住 ✓；选中后关菜单 */
+  const densityMenu = () => (
+    <div
+      class="flex min-w-28 flex-col gap-0.5 p-1"
+      data-testid="dp-density-menu"
+    >
+      {([
+        ["compact", m.densityCompact],
+        ["comfortable", m.densityComfortable],
+        ["loose", m.densityLoose],
+      ] as const).map(([d, label]) => (
+        <button
+          type="button"
+          class="rounded px-2 py-1.5 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-800"
+          data-testid={`dp-density-${d}`}
+          aria-pressed={density.value === d ? "true" : "false"}
+          onClick={() => setDensity(d)}
+        >
+          {label}
+          {density.value === d ? " ✓" : ""}
+        </button>
+      ))}
+    </div>
+  );
+
   // ---- 工具栏
   // 与下方按钮组的渲染顺序一致
   const toolIds = (): string[][] => [
@@ -702,6 +867,11 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
     ...(caps.import || props.onImportRows ? [["dp-import", m.import]] : []),
     ...(caps.export ? [["dp-export", m.export]] : []),
     ...(caps.columns ? [["dp-columns", m.columns]] : []),
+    ...(caps.density ? [["dp-density", m.density]] : []),
+    ...(caps.fullscreen
+      ? [["dp-fullscreen", panelFs.value ? m.exitFullscreen : m.enterFullscreen]]
+      : []),
+    ...(caps.copy ? [["dp-copy", m.copy]] : []),
   ];
   const tagToolbar = (): boolean => {
     const root = g.document?.querySelector?.(`[data-dp-tools="${key}"]`);
@@ -824,7 +994,7 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
     </div>
   );
 
-  const toolbar = (
+  const toolbar = () => (
     <div
       class="flex w-full flex-wrap items-center justify-end gap-2 border-b border-slate-200 px-3 py-2 dark:border-slate-700"
       data-testid="data-panel-toolbar"
@@ -841,12 +1011,24 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
               openSearch,
               <IconSearch size="sm" />,
             )}
-          {toolBtn(
-            "dp-refresh",
-            m.refresh,
-            () => void load(false),
-            <IconRefresh size="sm" />,
-          )}
+          <Tooltip content={m.refresh} placement="top">
+            <Button
+              type="button"
+              size="sm"
+              class={posCls("dp-refresh")}
+              disabled={loading.value}
+              aria-busy={loading.value ? true : undefined}
+              onClick={() => void refreshFromToolbar()}
+            >
+              <span
+                class={loading.value
+                  ? "inline-flex animate-spin"
+                  : "inline-flex"}
+              >
+                <IconRefresh size="sm" />
+              </span>
+            </Button>
+          </Tooltip>
           {caps.print &&
             toolBtn("dp-print", m.print, printTable, <IconPrinter size="sm" />)}
           {(caps.import || props.onImportRows) &&
@@ -879,6 +1061,46 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
               </Button>
             </Dropdown>
           )}
+          {caps.density && (
+            <Dropdown
+              open={densityOpen}
+              onOpenChange={(o) => {
+                densityOpen.value = o;
+              }}
+              overlay={densityMenu}
+              placement="bottomRight"
+              trigger="click"
+              closeOnOverlayClick
+            >
+              <Button type="button" size="sm" class={posCls("dp-density")}>
+                <IconList size="sm" />
+              </Button>
+            </Dropdown>
+          )}
+          {caps.fullscreen && (
+            <Tooltip
+              content={panelFs.value ? m.exitFullscreen : m.enterFullscreen}
+              placement="top"
+            >
+              <Button
+                type="button"
+                size="sm"
+                class={posCls("dp-fullscreen")}
+                onClick={toggleFullscreen}
+              >
+                {panelFs.value
+                  ? <IconExitFullscreen size="sm" />
+                  : <IconMaximize2 size="sm" />}
+              </Button>
+            </Tooltip>
+          )}
+          {caps.copy &&
+            toolBtn(
+              "dp-copy",
+              m.copy,
+              () => void copySelected(),
+              <IconCopy size="sm" />,
+            )}
         </ButtonGroup>
       </div>
     </div>
@@ -1379,7 +1601,10 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
     const t = totals.value;
     const hasTotals = cols.some((c) => c.total) && data.length > 0;
     return (
-      <div class="relative overflow-x-auto">
+      <div
+        class={`relative overflow-x-auto dp-den-${density.value}`}
+        data-density={density.value}
+      >
         {loading.value && (
           <div
             class="absolute inset-0 z-10 flex items-center justify-center bg-white/60 dark:bg-slate-900/60"
@@ -1912,6 +2137,13 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
   return (
     <div class="contents" data-testid={`panel-${key}`}>
       <style>{DATA_PANEL_CSS}</style>
+      {() => (
+      <div
+        class={panelFs.value ? "dp-fs" : undefined}
+        data-dp-shell={key}
+        data-testid="dp-shell"
+        data-fullscreen={panelFs.value ? "true" : undefined}
+      >
       <Card
         bordered
         size="sm"
@@ -1938,6 +2170,8 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
         <div data-testid="dp-batch-slot">{batchBar}</div>
         {pagination}
       </Card>
+      </div>
+      )}
 
       {props.children}
 

@@ -77,6 +77,7 @@ export {
   type DataPanelCaps,
   type DataPanelColumn,
   type DataPanelDataSource,
+  type DataPanelDensity,
   type DataPanelExportContext,
   type DataPanelExportFormat,
   type DataPanelFormField,

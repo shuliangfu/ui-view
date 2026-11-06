@@ -11,6 +11,7 @@ import {
   DocsApiTable,
   type DocsApiTableRow,
 } from "../../../components/DocsApiTable.tsx";
+import { DocsDemo } from "../../../components/DocsDemo.tsx";
 import {
   CELL_COLUMNS,
   CELL_FORM,
@@ -76,7 +77,7 @@ const DATA_PANEL_API: DocsApiTableRow[] = [
     type: "string",
     default: '"data-panel"',
     description:
-      "面板标识：列偏好 localStorage 键、refreshDataPanel(key)；同页多个面板需唯一",
+      "面板标识：@dreamer/storage/client 持久化键（列显隐／行高／全屏）、refreshDataPanel(key)；同页多面板须唯一",
   },
   { name: "rowKey", type: "string", default: '"id"', description: "主键字段" },
   {
@@ -114,7 +115,7 @@ const DATA_PANEL_API: DocsApiTableRow[] = [
     type: "Partial<DataPanelCaps>",
     default: "按数据源推断",
     description:
-      "能力开关：create / update / view / remove / batchStatus / import / export / print / columns",
+      "能力开关：create / update / view / remove / batchStatus / import / export / print / columns / density / fullscreen / copy",
   },
   {
     name: "locale",
@@ -133,6 +134,12 @@ const DATA_PANEL_API: DocsApiTableRow[] = [
     type: "string",
     default: "title",
     description: "导出文件名（不含扩展名，自动追加日期）",
+  },
+  {
+    name: "defaultDensity",
+    type: '"compact" | "comfortable" | "loose"',
+    default: '"comfortable"',
+    description: "初始行高密度；工具栏「行高」菜单可切换（紧凑／舒适／宽松）",
   },
   {
     name: "onExport",
@@ -319,6 +326,7 @@ const pageCode =
 
 const exportCode =
   `// 工具栏「导出」：xlsx（原生 OOXML）/ csv / json / xml / html，只导出当前可见列，导出全部匹配行
+// 工具栏「行高／全屏／复制」：切密度、面板级全屏（Esc 退出）、复制勾选行（无选中会提示）
 // 工具栏「导入」：选择 .csv / .json，表头可为列文案或字段名
 <DataPanel title="导出导入" data={rows} columns={columns} exportName="users" />
 
@@ -370,23 +378,6 @@ const customCode = `<DataPanel title="自定义" data={rows} columns={columns}
   toolbarExtra={<span>自定义工具栏内容</span>} />`;
 
 /** 单个示例块 */
-function Demo(props: { title: string; code: string; children?: unknown }) {
-  return (
-    <div class="space-y-4">
-      <Title level={3}>{props.title}</Title>
-      {props.children}
-      <CodeBlock
-        title="代码示例"
-        code={props.code}
-        language="tsx"
-        showLineNumbers
-        copyable
-        wrapLongLines
-      />
-    </div>
-  );
-}
-
 
 const exampleDemo = `import { DataPanel } from "@dreamer/ui-view/data-display";
 
@@ -409,7 +400,7 @@ export default function DataDisplayDataPanel() {
         <Title level={1}>DataPanel 数据面板</Title>
         <Paragraph class="mt-2">
           一块完整的列表管理面板：工具栏按钮组（添加 / 搜索 / 刷新 / 打印 / 导入
-          / 导出 / 列设置， 相邻按钮之间只有一条淡分割线）、搜索
+          / 导出 / 列设置 / 行高 / 全屏 / 复制， 相邻按钮之间只有一条淡分割线）、搜索
           Modal（工具栏按钮打开）、表格下方的批量操作条、表格（排序、多选、行内编辑、合计、操作列）、
           分页，以及用 Modal 的新增 / 编辑 / 查看。<strong>
             任何删除都必须先确认：行内删除弹出小气泡「确定删除xxx？」（红色「删除」+「取消」，点外部也会关闭），批量删除使用确认对话框
@@ -437,10 +428,10 @@ export default function DataDisplayDataPanel() {
         />
       </section>
 
-      <section class="space-y-8">
+      <section class="flex flex-col gap-10">
         <Title level={2}>示例</Title>
 
-        <Demo title="基础用法（全部功能）" code={basicCode}>
+        <DocsDemo title="基础用法（全部功能）" code={basicCode}>
           <DataPanel
             panelKey="demo-basic"
             title="用户管理"
@@ -452,9 +443,9 @@ export default function DataDisplayDataPanel() {
             statusValues={DEMO_STATUS_VALUES}
             exportName="users"
           />
-        </Demo>
+        </DocsDemo>
 
-        <Demo title="搜索表单（Modal）" code={searchCode}>
+        <DocsDemo title="搜索表单（Modal）" code={searchCode}>
           <DataPanel
             panelKey="demo-search"
             title="搜索表单"
@@ -464,9 +455,9 @@ export default function DataDisplayDataPanel() {
             initialQuery={{ filters: { role: "admin" } }}
             caps={{ create: false }}
           />
-        </Demo>
+        </DocsDemo>
 
-        <Demo title="表格：排序 / 合计 / 行内编辑 / 隐藏列" code={tableCode}>
+        <DocsDemo title="表格：排序 / 合计 / 行内编辑 / 隐藏列" code={tableCode}>
           <DataPanel
             panelKey="demo-table"
             title="表格功能"
@@ -477,9 +468,9 @@ export default function DataDisplayDataPanel() {
             statusField="status"
             caps={{ create: false, remove: false }}
           />
-        </Demo>
+        </DocsDemo>
 
-        <Demo title="单元格编辑" code={cellCode}>
+        <DocsDemo title="单元格编辑" code={cellCode}>
           <label class="mb-2 flex items-center gap-2 text-sm">
             <input
               type="checkbox"
@@ -506,9 +497,9 @@ export default function DataDisplayDataPanel() {
               columns: false,
             }}
           />
-        </Demo>
+        </DocsDemo>
 
-        <Demo title="新增 / 编辑 Modal 与删除确认" code={crudCode}>
+        <DocsDemo title="新增 / 编辑 Modal 与删除确认" code={crudCode}>
           <DataPanel
             panelKey="demo-crud"
             title="CRUD"
@@ -516,9 +507,9 @@ export default function DataDisplayDataPanel() {
             columns={DEMO_COLUMNS}
             form={DEMO_FORM}
           />
-        </Demo>
+        </DocsDemo>
 
-        <Demo title="批量操作" code={batchCode}>
+        <DocsDemo title="批量操作" code={batchCode}>
           <DataPanel
             panelKey="demo-batch"
             title="批量操作"
@@ -528,9 +519,9 @@ export default function DataDisplayDataPanel() {
             statusField="status"
             statusValues={DEMO_STATUS_VALUES}
           />
-        </Demo>
+        </DocsDemo>
 
-        <Demo title="分页" code={pageCode}>
+        <DocsDemo title="分页" code={pageCode}>
           <DataPanel
             panelKey="demo-page"
             title="分页"
@@ -540,9 +531,9 @@ export default function DataDisplayDataPanel() {
             pageSizes={[5, 10, 20]}
             caps={{ create: false }}
           />
-        </Demo>
+        </DocsDemo>
 
-        <Demo
+        <DocsDemo
           title="导出 xlsx / csv / json / xml / html 与导入"
           code={exportCode}
         >
@@ -554,9 +545,9 @@ export default function DataDisplayDataPanel() {
             form={DEMO_FORM}
             exportName="users"
           />
-        </Demo>
+        </DocsDemo>
 
-        <Demo title="远程数据源（异步）" code={remoteCode}>
+        <DocsDemo title="远程数据源（异步）" code={remoteCode}>
           <DataPanel
             panelKey="demo-remote"
             title="远程数据"
@@ -567,9 +558,9 @@ export default function DataDisplayDataPanel() {
             statusField="status"
             statusValues={DEMO_STATUS_VALUES}
           />
-        </Demo>
+        </DocsDemo>
 
-        <Demo title="深色主题" code={themeCode}>
+        <DocsDemo title="深色主题" code={themeCode}>
           <div class="dark rounded-lg bg-slate-900 p-3">
             <DataPanel
               panelKey="demo-dark"
@@ -580,9 +571,9 @@ export default function DataDisplayDataPanel() {
               form={DEMO_FORM}
             />
           </div>
-        </Demo>
+        </DocsDemo>
 
-        <Demo title="多语言与文案覆盖" code={localeCode}>
+        <DocsDemo title="多语言与文案覆盖" code={localeCode}>
           <DataPanel
             panelKey="demo-locale"
             locale="en-US"
@@ -604,9 +595,9 @@ export default function DataDisplayDataPanel() {
             form={DEMO_FORM.map((f) => ({ ...f }))}
             messages={{ create: "New" }}
           />
-        </Demo>
+        </DocsDemo>
 
-        <Demo title="自定义单元格 / 操作列 / 工具栏" code={customCode}>
+        <DocsDemo title="自定义单元格 / 操作列 / 工具栏" code={customCode}>
           <DataPanel
             panelKey="demo-custom"
             title="自定义"
@@ -632,11 +623,15 @@ export default function DataDisplayDataPanel() {
               </span>
             }
           />
-        </Demo>
+        </DocsDemo>
       </section>
 
-      
+
+      <section class="flex flex-col gap-6">
+        <Title level={2}>完整示例</Title>
         <CodeBlock title="代码示例" code={exampleDemo} language="tsx" showLineNumbers copyable wrapLongLines />
+      </section>
+
       <section class="space-y-3">
         <Title level={2}>API</Title>
         <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
