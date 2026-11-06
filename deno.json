@@ -172,5 +172,17 @@
     "exclude": [
       "src/shared/data-display/CodeBlock.tsx"
     ]
+  },
+  "scopes": {
+    "https://jsr.io/@dreamer/server/": {
+      "@dreamer/runtime-adapter": "./docs/src/dev/runtime-adapter-hmr-origin.ts",
+      "jsr:@dreamer/runtime-adapter@^1.2.2": "./docs/src/dev/runtime-adapter-hmr-origin.ts",
+      "jsr:@dreamer/runtime-adapter@1.2.2": "./docs/src/dev/runtime-adapter-hmr-origin.ts"
+    },
+    "https://jsr.io/@dreamer/dweb/": {
+      "@dreamer/runtime-adapter": "./docs/src/dev/runtime-adapter-hmr-origin.ts",
+      "jsr:@dreamer/runtime-adapter@^1.2.2": "./docs/src/dev/runtime-adapter-hmr-origin.ts",
+      "jsr:@dreamer/runtime-adapter@1.2.2": "./docs/src/dev/runtime-adapter-hmr-origin.ts"
+    }
   }
 }

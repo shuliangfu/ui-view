@@ -10,7 +10,7 @@
     "@dreamer/render": "jsr:@dreamer/render@^1.5.0",
     "@dreamer/router": "jsr:@dreamer/router@^1.2.1",
     "@dreamer/upload": "jsr:@dreamer/upload@^2.0.0",
-    "@dreamer/runtime-adapter": "jsr:@dreamer/runtime-adapter@^1.2.2",
+    "@dreamer/runtime-adapter": "./src/dev/runtime-adapter-hmr-origin.ts",
     "@dreamer/plugins": "jsr:@dreamer/plugins@^1.2.0",
     "@dreamer/theme": "jsr:@dreamer/theme@^1.1.0",
     "@dreamer/view": "jsr:@dreamer/view@^3.0.1",
@@ -103,7 +103,8 @@
     "@dreamer/ui-view/mobile/form/upload": "../src/mobile/form/Upload.tsx",
     "@dreamer/ui-view/icons": "../src/shared/basic/icons/mod.ts",
     "@dreamer/ui-view/icons/flags": "../src/shared/basic/icons/flags/mod.ts",
-    "@dreamer/ui-view/mobile/portal": "../src/mobile/MobilePortalHostScope.tsx"
+    "@dreamer/ui-view/mobile/portal": "../src/mobile/MobilePortalHostScope.tsx",
+    "jsr:@dreamer/runtime-adapter@^1.2.2": "./src/dev/runtime-adapter-hmr-origin.ts"
   },
   "compilerOptions": {
     "jsx": "react-jsx",
