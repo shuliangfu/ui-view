@@ -1,6 +1,8 @@
 /**
  * Watermark 水印（View）。
  * 在容器上铺满重复文字／图片水印；内容区通过 children 叠在上层。
+ *
+ * SSR／SSG／无真实 canvas（如部分测试 DOM）时跳过绘制，仅客户端生成背景图。
  */
 
 import {
@@ -33,7 +35,24 @@ export interface WatermarkProps {
 }
 
 /**
- * 生成重复水印的 data-URL（canvas）。
+ * 是否具备可绘制的 2D canvas（真实浏览器）。
+ * Deno／happy-dom／部分 SSR 桩里 `document` 存在但 `getContext` 不可用。
+ */
+function canUseCanvas2d(): boolean {
+  if (typeof globalThis.document === "undefined") return false;
+  if (typeof globalThis.HTMLCanvasElement === "undefined") return false;
+  try {
+    const canvas = globalThis.document.createElement("canvas");
+    if (!canvas || typeof canvas.getContext !== "function") return false;
+    const ctx = canvas.getContext("2d");
+    return !!(ctx && typeof ctx.fillText === "function");
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * 生成重复水印的 data-URL（canvas）。无真实 canvas 时返回 null。
  */
 function buildWatermarkDataUrl(opts: {
   content?: string | string[];
@@ -44,10 +63,9 @@ function buildWatermarkDataUrl(opts: {
   gapX: number;
   gapY: number;
 }): Promise<string | null> {
-  const doc = typeof globalThis.document !== "undefined"
-    ? globalThis.document
-    : null;
-  if (!doc) return Promise.resolve(null);
+  if (!canUseCanvas2d()) return Promise.resolve(null);
+
+  const doc = globalThis.document;
   const canvas = doc.createElement("canvas");
   const ctx = canvas.getContext("2d");
   if (!ctx) return Promise.resolve(null);
@@ -82,24 +100,37 @@ function buildWatermarkDataUrl(opts: {
 
   if (opts.image) {
     return new Promise((resolve) => {
+      // Image 在无 DOM 环境可能缺失
+      if (typeof globalThis.Image !== "function") {
+        resolve(drawText());
+        return;
+      }
       const img = new Image();
       img.crossOrigin = "anonymous";
       img.onload = () => {
-        ctx.clearRect(0, 0, w, h);
-        ctx.save();
-        ctx.translate(w / 2, h / 2);
-        ctx.rotate((opts.rotate * Math.PI) / 180);
-        const iw = Math.min(opts.gapX * 0.55, img.width);
-        const ih = (img.height / img.width) * iw;
-        ctx.drawImage(img, -iw / 2, -ih / 2, iw, ih);
-        ctx.restore();
-        resolve(canvas.toDataURL("image/png"));
+        try {
+          ctx.clearRect(0, 0, w, h);
+          ctx.save();
+          ctx.translate(w / 2, h / 2);
+          ctx.rotate((opts.rotate * Math.PI) / 180);
+          const iw = Math.min(opts.gapX * 0.55, img.width);
+          const ih = (img.height / img.width) * iw;
+          ctx.drawImage(img, -iw / 2, -ih / 2, iw, ih);
+          ctx.restore();
+          resolve(canvas.toDataURL("image/png"));
+        } catch {
+          resolve(drawText());
+        }
       };
       img.onerror = () => resolve(drawText());
       img.src = opts.image!;
     });
   }
-  return Promise.resolve(drawText());
+  try {
+    return Promise.resolve(drawText());
+  } catch {
+    return Promise.resolve(null);
+  }
 }
 
 export function Watermark(props: WatermarkProps): JSXRenderable {
@@ -118,6 +149,11 @@ export function Watermark(props: WatermarkProps): JSXRenderable {
   const bgUrl = createSignal<string | null>(null);
 
   createEffect(() => {
+    // 仅客户端、且 canvas 可用时绘制；SSR／SSG 跳过，避免 getContext 抛错
+    if (!canUseCanvas2d()) {
+      bgUrl.value = null;
+      return;
+    }
     let cancelled = false;
     buildWatermarkDataUrl({
       content,
@@ -129,6 +165,8 @@ export function Watermark(props: WatermarkProps): JSXRenderable {
       gapY,
     }).then((url) => {
       if (!cancelled) bgUrl.value = url;
+    }).catch(() => {
+      if (!cancelled) bgUrl.value = null;
     });
     onCleanup(() => {
       cancelled = true;
