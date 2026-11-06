@@ -7,6 +7,7 @@
 
 import {
   createEffect,
+  createRenderEffect,
   createSignal,
   type JSXRenderable,
   onCleanup,
@@ -78,7 +79,15 @@ export function VirtualList<T = unknown>(
   const scrollerEl = createSignal<HTMLElement | null>(null);
 
   const setRef = (el: unknown) => {
-    scrollerEl.set(isHtmlElement(el) ? el : null);
+    const node = isHtmlElement(el) ? el : null;
+    scrollerEl.set(node);
+    // 【Why】docs SSG/hydrate 下 JSX `style`（对象或字符串）可能落不到 DOM，
+    // 容器无固定高度则 scrollHeight===clientHeight，无法滚动（E2E UI·大列表失败）。
+    if (node) {
+      node.style.height = `${height}px`;
+      node.style.overflowY = "auto";
+      node.style.position = "relative";
+    }
   };
 
   createEffect(() => {
@@ -91,11 +100,19 @@ export function VirtualList<T = unknown>(
     onCleanup(() => el.removeEventListener("scroll", onScroll));
   });
 
+  /** hydrate 后 ref 可能晚于首帧；同步再刷一次容器高，避免 scrollHeight===clientHeight */
+  createRenderEffect(() => {
+    const el = scrollerEl.value;
+    if (!el) return;
+    el.style.height = `${height}px`;
+    el.style.overflowY = "auto";
+    el.style.position = "relative";
+  });
+
   return (
     <div
       ref={setRef}
       class={twMerge("virtual-list overflow-auto relative", className)}
-      style={{ height: `${height}px` }}
       data-dreamer-virtual-list=""
     >
       {() => {
@@ -149,15 +166,28 @@ export function VirtualList<T = unknown>(
           rowHeightAt = () => ih;
         }
 
+        const applySpacer = (el: unknown) => {
+          if (!isHtmlElement(el)) return;
+          el.style.height = `${totalHeight}px`;
+          el.style.position = "relative";
+        };
+        const applyOffset = (el: unknown) => {
+          if (!isHtmlElement(el)) return;
+          el.style.transform = `translateY(${offsetY}px)`;
+        };
+
         const items: unknown[] = [];
         for (let i = start; i < end; i++) {
           const item = data[i]!;
           const key = rowKey ? rowKey(item, i) : i;
+          const h = rowHeightAt(i);
           items.push(
             <div
               key={key}
               class="virtual-list-item box-border"
-              style={{ height: `${rowHeightAt(i)}px` }}
+              ref={(el: unknown) => {
+                if (isHtmlElement(el)) el.style.height = `${h}px`;
+              }}
               data-index={String(i)}
             >
               {renderItem(item, i)}
@@ -167,13 +197,13 @@ export function VirtualList<T = unknown>(
 
         return (
           <div
-            style={{ height: `${totalHeight}px`, position: "relative" }}
+            ref={applySpacer}
             data-dreamer-virtual-list-spacer=""
             data-total={String(totalCount)}
             data-start={String(start)}
             data-end={String(end)}
           >
-            <div style={{ transform: `translateY(${offsetY}px)` }}>
+            <div ref={applyOffset}>
               {items}
             </div>
           </div>

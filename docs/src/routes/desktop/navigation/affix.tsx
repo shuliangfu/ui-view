@@ -67,6 +67,7 @@ const exampleAffixTop = `<Affix offsetTop={0} affixClass="shadow-md">
   <div class="...">此区域在滚动时可固定到视口顶部</div>
 </Affix>`;
 
+
 export default function NavigationAffix() {
   return (
     <div class="space-y-10">
@@ -103,7 +104,14 @@ export default function NavigationAffix() {
 
         <div class="space-y-4">
           <Title level={3}>视口顶部固钉</Title>
-          <Affix offsetTop={0} affixClass="shadow-md">
+          <Affix
+            offsetTop={0}
+            affixClass="shadow-md"
+            scrollTarget={() =>
+              typeof document !== "undefined"
+                ? document.querySelector("main")
+                : null}
+          >
             <div class="border border-slate-200 dark:border-slate-600 rounded-lg p-4 bg-white dark:bg-slate-800 shadow">
               <span class="text-sm font-medium">
                 向下滚动主内容区，此条会钉在视口顶边（示例 offsetTop=0）
@@ -118,6 +126,21 @@ export default function NavigationAffix() {
             copyable
             wrapLongLines
           />
+          {/**
+           * 加高主栏可滚动高度，否则 Affix 示例在常见视口内无法触发固钉
+           *（桌面布局滚动容器是 main，不是 window）。
+           */}
+          <div
+            data-testid="affix-scroll-filler"
+            class="space-y-6 rounded-lg border border-dashed border-slate-200 p-4 text-sm text-slate-500 dark:border-slate-600 dark:text-slate-400"
+            aria-hidden="true"
+          >
+            {Array.from({ length: 40 }, (_, i) => (
+              <div class="h-64 rounded bg-slate-100/50 p-3 dark:bg-slate-800/40">
+                滚动占位块 {i + 1} — 继续向下滚动以观察上方固钉条贴紧视口顶。
+              </div>
+            ))}
+          </div>
         </div>
 
         <div class="h-40 flex items-center justify-center border border-dashed border-slate-300 dark:border-slate-600 rounded">

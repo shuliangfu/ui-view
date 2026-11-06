@@ -123,14 +123,27 @@ describe("文档页 E2E：/desktop/data-display/virtual-list（VirtualList 虚�
     if (!top.ok) throw new Error(`VirtualList 顶部: ${JSON.stringify(top)}`);
     expect(top.ok).toBe(true);
 
-    await t.browser.evaluate(() => {
-      const list = document.querySelector(
-        "[data-dreamer-virtual-list]",
-      ) as HTMLElement | null;
+    // 等 hydrate/ref 写上容器高（否则 scrollHeight===clientHeight，赋 scrollTop 无效）
+    await t.browser.evaluate(async () => {
+      const deadline = Date.now() + 5000;
+      let list: HTMLElement | null = null;
+      while (Date.now() < deadline) {
+        list = document.querySelector(
+          "[data-dreamer-virtual-list]",
+        ) as HTMLElement | null;
+        if (list && list.scrollHeight > list.clientHeight + 10) break;
+        await new Promise((r) => setTimeout(r, 50));
+      }
       if (!list) return;
       list.scrollTop = list.scrollHeight;
+      list.dispatchEvent(new Event("scroll", { bubbles: true }));
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+      if (Math.abs(list.scrollTop - (list.scrollHeight - list.clientHeight)) > 4) {
+        list.scrollTop = list.scrollHeight - list.clientHeight;
+        list.dispatchEvent(new Event("scroll", { bubbles: true }));
+      }
     });
-    await sharedEnv.delay(200);
+    await sharedEnv.delay(250);
     const bottom = await t.browser.evaluate(() => {
       const list = document.querySelector(
         "[data-dreamer-virtual-list]",

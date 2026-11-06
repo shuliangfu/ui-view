@@ -444,7 +444,7 @@ export default function DataDisplayDataPanel() {
           <DataPanel
             panelKey="demo-basic"
             title="用户管理"
-            data={makeDemoRows(8)}
+            data={makeDemoRows(25)}
             columns={DEMO_COLUMNS}
             search={DEMO_SEARCH}
             form={DEMO_FORM}
@@ -458,7 +458,7 @@ export default function DataDisplayDataPanel() {
           <DataPanel
             panelKey="demo-search"
             title="搜索表单"
-            data={makeDemoRows(8)}
+            data={makeDemoRows(25)}
             columns={DEMO_COLUMNS}
             search={DEMO_SEARCH}
             initialQuery={{ filters: { role: "admin" } }}
@@ -534,7 +534,7 @@ export default function DataDisplayDataPanel() {
           <DataPanel
             panelKey="demo-page"
             title="分页"
-            data={makeDemoRows(12)}
+            data={makeDemoRows(40)}
             columns={DEMO_COLUMNS}
             pageSize={5}
             pageSizes={[5, 10, 20]}
@@ -549,7 +549,7 @@ export default function DataDisplayDataPanel() {
           <DataPanel
             panelKey="demo-export"
             title="导出导入"
-            data={makeDemoRows(8)}
+            data={makeDemoRows(15)}
             columns={DEMO_COLUMNS}
             form={DEMO_FORM}
             exportName="users"
