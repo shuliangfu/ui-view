@@ -51,7 +51,7 @@ npx jsr add @dreamer/ui-view
 | `@dreamer/ui-view/mobile` / `…/mobile/*` | 移动端聚合与分类入口 |
 | `@dreamer/ui-view/icons` | 内置图标 barrel（不含国旗全量 `export *`） |
 | `@dreamer/ui-view/icons/flags` | 国旗图鉴 barrel |
-| `@dreamer/ui-view/icons/*`（Node/Bun `package.json`） | **单图标／国旗文件**深路径 |
+| `@dreamer/ui-view/icons/…`（仅 Node/Bun，`package.json` 的 `./icons/*`） | **单图标／国旗文件**深路径 — **不在** `deno.json`（Deno 禁止 `*` exports） |
 | `@dreamer/ui-view/plugin` | Tailwind v4 按需 `@source` 插件 |
 
 ### 按需导入／打包最小
@@ -61,7 +61,7 @@ npx jsr add @dreamer/ui-view
 | 写法 | 示例 | 场景 |
 | ---- | ---- | ---- |
 | **分类子入口** | `import { DataPanel } from "@dreamer/ui-view/data-display"` | 日常组件；`deno.json`／`package.json` 的 `./basic`、`./form`、`./data-display` 等 |
-| **单图标／国旗文件** | `import { IconHome } from "@dreamer/ui-view/icons/Home.tsx"` | 体积最小；`exports["./icons/*"]`（国旗如 `icons/flags/standalone/IconFlagCN.tsx`） |
+| **单图标／国旗文件** | `import { IconHome } from "@dreamer/ui-view/icons/Home.tsx"` | **仅 npm/Node/Bun**（`package.json` 的 `./icons/*`）。Deno／JSR：用 `@dreamer/ui-view/icons` 或 `/icons/flags`，勿依赖 `deno.json` 里的 `*` |
 | **icons／flags barrel** | `from "@dreamer/ui-view/icons"` 或 `…/icons/flags` | 仅图鉴页；会带入大量图标／国旗 |
 
 ```ts
@@ -69,16 +69,19 @@ npx jsr add @dreamer/ui-view
 import { DataPanel, CodeBlock } from "@dreamer/ui-view/data-display";
 import { Paragraph, Title, Button } from "@dreamer/ui-view/basic";
 
-// ✅ 单个图标／国旗走深路径
+// ✅ 单个图标／国旗深路径 — 仅 npm/Node/Bun（package.json `./icons/*`）
 import { IconHome } from "@dreamer/ui-view/icons/Home.tsx";
 import { IconFlagCN } from "@dreamer/ui-view/icons/flags/standalone/IconFlagCN.tsx";
+// Deno／JSR：用 icons／flags 入口（deno.json 无 `*`）
+import { IconHome } from "@dreamer/ui-view/icons";
+import { IconFlagCN } from "@dreamer/ui-view/icons/flags";
 
 // ❌ 不要 `import * as Uv from "@dreamer/ui-view"` 再 `Object.keys(Uv)` 扫全量
-// ❌ 国旗已不再从根入口／basic／icons barrel `export *`；请走 icons/flags 深路径
-// ❌ 不要为「只要一个图标」去 import icons barrel
+// ❌ 国旗已不再从根入口／basic／icons barrel `export *`；请走 icons/flags
+// ❌ Deno／JSR 勿依赖 `./icons/*` 通配；npm 侧才有该导出
 ```
 
-> **发布说明：** 分类子入口与 `./icons`、`./icons/flags` 已写入 `deno.json` 与 `package.json`。逐文件 `./icons/*` 与 `package.json` 对齐（Node／Bun／JSR）。Deno CLI 可能对 `deno.json` 里的 `*` 报非标准警告，仍保留以便发布后深路径可用。
+> **发布说明：** 分类子入口与 `./icons`、`./icons/flags` 已写入 `deno.json` 与 `package.json`。逐文件 `./icons/*` **只**写在 `package.json`（Node／Bun／npm）。Deno 不允许 `deno.json` exports 含 `*`，请勿再加回。Deno／JSR 消费者：从 `@dreamer/ui-view/icons`、`@dreamer/ui-view/icons/flags` 或分类子入口导入，勿依赖通配深路径。
 
 ## 与 Tailwind 配合使用
 

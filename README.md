@@ -51,7 +51,7 @@ npx jsr add @dreamer/ui-view
 | `@dreamer/ui-view/mobile` / `…/mobile/*` | Mobile aggregate and category entries |
 | `@dreamer/ui-view/icons` | Built-in icon barrel (no country-flag `export *`) |
 | `@dreamer/ui-view/icons/flags` | Country-flag catalog barrel |
-| `@dreamer/ui-view/icons/*` (Node/Bun `package.json`) | **Single icon/flag file** deep path |
+| `@dreamer/ui-view/icons/…` (Node/Bun via `package.json` `./icons/*` only) | **Single icon/flag file** deep path — **not** in `deno.json` (Deno forbids `*` exports) |
 | `@dreamer/ui-view/plugin` | Tailwind v4 on-demand `@source` plugin |
 
 ### Tree-shaking / minimal bundle
@@ -61,7 +61,7 @@ Three layers (prefer top → bottom only when needed):
 | Style | Example | When |
 | ----- | ------- | ---- |
 | **Category subpath** | `import { DataPanel } from "@dreamer/ui-view/data-display"` | Everyday components — published via `deno.json` / `package.json` `exports` (`./basic`, `./form`, `./data-display`, …) |
-| **Per-file icon/flag** | `import { IconHome } from "@dreamer/ui-view/icons/Home.tsx"` | Smallest icon cost — `exports["./icons/*"]` (also `icons/flags/standalone/IconFlagCN.tsx`) |
+| **Per-file icon/flag** | `import { IconHome } from "@dreamer/ui-view/icons/Home.tsx"` | **npm/Node/Bun only** (`package.json` `./icons/*`). Deno/JSR: use `@dreamer/ui-view/icons` or `/icons/flags`, or vendor the file — do **not** rely on `*` in `deno.json` |
 | **Icon / flag barrel** | `import { IconHome } from "@dreamer/ui-view/icons"` or `…/icons/flags` | Icon **catalog** pages only; pulls many icons/flags |
 
 ```ts
@@ -69,20 +69,23 @@ Three layers (prefer top → bottom only when needed):
 import { DataPanel, CodeBlock } from "@dreamer/ui-view/data-display";
 import { Paragraph, Title, Button } from "@dreamer/ui-view/basic";
 
-// ✅ Single icon / single flag (smallest)
+// ✅ Single icon / single flag (smallest) — npm/Node/Bun (`package.json` `./icons/*`)
 import { IconHome } from "@dreamer/ui-view/icons/Home.tsx";
 import { IconBrandGithub } from "@dreamer/ui-view/icons/brands/GitHub.tsx";
 import { IconFlagCN } from "@dreamer/ui-view/icons/flags/standalone/IconFlagCN.tsx";
+// Deno/JSR: use barrels below (or category subpaths); no `./icons/*` in deno.json
+import { IconHome } from "@dreamer/ui-view/icons";
+import { IconFlagCN } from "@dreamer/ui-view/icons/flags";
 
 // ⚠️ Root `@dreamer/ui-view` named import is OK for apps, but never
 //    `import * as Uv from "@dreamer/ui-view"` + `Object.keys(Uv)` (pins the whole barrel into a shared chunk).
 
 // ❌ Country flags are NOT re-exported from the root / basic / icons barrels anymore.
-//    Use `icons/flags/…` (per-file or `icons/flags` catalog). Do not use the icons barrel
-//    just to grab one glyph — prefer `icons/Home.tsx`.
+//    Use `icons/flags` catalog, or (npm/Node/Bun) per-file `icons/flags/…` via package.json `./icons/*`.
+//    Deno/JSR: prefer `@dreamer/ui-view/icons` / `/icons/flags` — no `*` export in deno.json.
 ```
 
-> **Publish note:** Category entries (`./data-display`, …) and `./icons` / `./icons/flags` are in both `deno.json` and `package.json`. Per-file `./icons/*` matches `package.json` (Node/Bun/JSR consumers). Deno CLI may warn that `*` in `deno.json` exports is non-standard; the field is kept aligned for publish — deep icon imports still resolve through that export map / `package.json`.
+> **Publish note:** Category entries (`./data-display`, …) and `./icons` / `./icons/flags` are in both `deno.json` and `package.json`. Per-file `./icons/*` lives **only** in `package.json` (Node/Bun/npm). Deno rejects `*` in `deno.json` exports — do not add it back. For Deno/JSR consumers: import from `@dreamer/ui-view/icons`, `@dreamer/ui-view/icons/flags`, or a category subpath; do not depend on wildcard deep paths.
 
 ## 🎨 Using with Tailwind
 
