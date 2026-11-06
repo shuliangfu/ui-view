@@ -74,7 +74,7 @@ export type {
   FormItemProps,
 } from "./FormItem.tsx";
 export { FormList } from "./FormList.tsx";
-export type { FormListProps } from "./FormList.tsx";
+export type { FormListProps, FormListRenderRowContext } from "./FormList.tsx";
 export { RichTextEditor } from "./RichTextEditor.tsx";
 export type {
   RichTextEditorProps,
@@ -89,6 +89,8 @@ export type {
 } from "./MarkdownEditor.tsx";
 
 /** 桌面专有：日期时间。Select/MultiSelect/Cascader/TreeSelect 实现均在 `shared/form`，本目录 re-export；默认 `appearance="dropdown"`。`Transfer` 由 `../shared` 提供 */
+export { Transfer } from "./Transfer.tsx";
+export type { TransferItem, TransferProps } from "./Transfer.tsx";
 export { Select } from "./Select.tsx";
 export type { SelectOption, SelectProps } from "./Select.tsx";
 export { MultiSelect } from "./MultiSelect.tsx";

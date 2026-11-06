@@ -37,16 +37,48 @@ npx jsr add @dreamer/ui-view
 
 ## 📂 入口
 
-| 入口                      | 说明                                                     |
-| ------------------------- | -------------------------------------------------------- |
-| `@dreamer/ui-view`        | 桌面端组件（默认）                                       |
-| `@dreamer/ui-view/mobile` | 移动端组件                                               |
-| `@dreamer/ui-view/shared` | 共享组件与类型（主入口与 mobile 已包含，可按需单独引用） |
+| 入口 | 说明 |
+| ---- | ---- |
+| `@dreamer/ui-view` | 桌面端聚合（默认）。请用**命名导入**；避免 `import *` |
+| `@dreamer/ui-view/basic` | 按钮、链接、图标、排版、徽标、头像等 |
+| `@dreamer/ui-view/form` | 表单控件 |
+| `@dreamer/ui-view/data-display` | Table、DataPanel、CodeBlock、Tree 等 |
+| `@dreamer/ui-view/feedback` | Modal、Drawer、Toast/Message 等 |
+| `@dreamer/ui-view/layout` | 布局：容器、栅格、Tabs、Accordion 等 |
+| `@dreamer/ui-view/navigation` | 菜单、分页、下拉、锚点等 |
+| `@dreamer/ui-view/charts` | Chart.js 封装 |
+| `@dreamer/ui-view/config-provider` | 主题 / ConfigProvider |
+| `@dreamer/ui-view/mobile` / `…/mobile/*` | 移动端聚合与分类入口 |
+| `@dreamer/ui-view/icons` | 内置图标 barrel（不含国旗全量 `export *`） |
+| `@dreamer/ui-view/icons/flags` | 国旗图鉴 barrel |
+| `@dreamer/ui-view/icons/*`（Node/Bun `package.json`） | **单图标／国旗文件**深路径 |
+| `@dreamer/ui-view/plugin` | Tailwind v4 按需 `@source` 插件 |
 
-桌面端入口已包含所有 shared 组件 + 桌面专用组件；移动端入口为 shared +
-移动专用组件。
+### 按需导入／打包最小
 
----
+三层用法（能上层就别下层）：
+
+| 写法 | 示例 | 场景 |
+| ---- | ---- | ---- |
+| **分类子入口** | `import { DataPanel } from "@dreamer/ui-view/data-display"` | 日常组件；`deno.json`／`package.json` 的 `./basic`、`./form`、`./data-display` 等 |
+| **单图标／国旗文件** | `import { IconHome } from "@dreamer/ui-view/icons/Home.tsx"` | 体积最小；`exports["./icons/*"]`（国旗如 `icons/flags/standalone/IconFlagCN.tsx`） |
+| **icons／flags barrel** | `from "@dreamer/ui-view/icons"` 或 `…/icons/flags` | 仅图鉴页；会带入大量图标／国旗 |
+
+```ts
+// ✅ 组件走分类子 path
+import { DataPanel, CodeBlock } from "@dreamer/ui-view/data-display";
+import { Paragraph, Title, Button } from "@dreamer/ui-view/basic";
+
+// ✅ 单个图标／国旗走深路径
+import { IconHome } from "@dreamer/ui-view/icons/Home.tsx";
+import { IconFlagCN } from "@dreamer/ui-view/icons/flags/standalone/IconFlagCN.tsx";
+
+// ❌ 不要 `import * as Uv from "@dreamer/ui-view"` 再 `Object.keys(Uv)` 扫全量
+// ❌ 国旗已不再从根入口／basic／icons barrel `export *`；请走 icons/flags 深路径
+// ❌ 不要为「只要一个图标」去 import icons barrel
+```
+
+> **发布说明：** 分类子入口与 `./icons`、`./icons/flags` 已写入 `deno.json` 与 `package.json`。逐文件 `./icons/*` 与 `package.json` 对齐（Node／Bun／JSR）。Deno CLI 可能对 `deno.json` 里的 `*` 报非标准警告，仍保留以便发布后深路径可用。
 
 ## 与 Tailwind 配合使用
 

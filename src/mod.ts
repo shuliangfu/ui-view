@@ -21,6 +21,9 @@
  * | `@dreamer/ui-view/charts` | Chart.js 封装图表 |
  * | `@dreamer/ui-view/mobile` | 移动端聚合（shared + 移动专用） |
  * | `@dreamer/ui-view/mobile/*` | 与上表对应的移动端分类入口 |
+ * | `@dreamer/ui-view/icons` | 内置图标 barrel（不含国旗 standalone；国旗见下行） |
+ * | `@dreamer/ui-view/icons/flags` | 国旗子 barrel；单码请 `icons/flags/standalone/IconFlagXX.tsx`（Node/Bun 另有 `package.json` `icons/*`） |
+ * | `@dreamer/ui-view/icons/*` | 单文件深路径（与 `package.json`／`deno.json` `./icons/*` 对齐，如 `icons/Home.tsx`） |
  * | `@dreamer/ui-view/plugin` | Tailwind v4 按需 content 扫描插件 |
  *
  * 各 **export function** 的 `@param` / `@returns` 与行为说明见对应 `.tsx` 源文件顶部及函数 JSDoc。
@@ -484,9 +487,12 @@ export {
   uploadFileSimple,
 } from "./desktop/mod.ts";
 /**
- * 各国家/地区 1:1 国旗（`build-country-flags` 生成，`IconFlag`+两字母 ISO 大写，如 `IconFlagCN`）；根入口上列仅来自 desktop，故用 `export *` 再导出全部。
+ * 各国家/地区 1:1 国旗（`build-country-flags` 生成，`IconFlag`+两字母 ISO 大写，如 `IconFlagCN`）
+ * **不再**从根入口 `export *`：请按需
+ * `import { IconFlagCN } from "@dreamer/ui-view/icons/flags/standalone/IconFlagCN.tsx"`
+ * 或 `import { … } from "@dreamer/ui-view/icons/flags/mod.ts"`（会带入国旗子 barrel）。
+ * 通用手绘旗标 `IconFlag` 仍由上方 desktop 显式导出。
  */
-export * from "./shared/basic/icons/flags/mod.ts";
 export type {
   AccordionItem,
   AccordionProps,

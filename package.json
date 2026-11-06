@@ -24,6 +24,8 @@
     "./mobile/navigation": "./src/mobile/navigation/mod.ts",
     "./mobile/charts": "./src/mobile/charts/mod.ts",
     "./plugin": "./plugin.ts",
+    "./icons": "./src/shared/basic/icons/mod.ts",
+    "./icons/flags": "./src/shared/basic/icons/flags/mod.ts",
     "./icons/*": "./src/shared/basic/icons/*"
   },
   "scripts": {

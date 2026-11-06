@@ -37,16 +37,52 @@ npx jsr add @dreamer/ui-view
 
 ## 📂 Entry points
 
-| Entry                     | Description                                                                     |
-| ------------------------- | ------------------------------------------------------------------------------- |
-| `@dreamer/ui-view`        | Desktop components (default)                                                    |
-| `@dreamer/ui-view/mobile` | Mobile components                                                               |
-| `@dreamer/ui-view/shared` | Shared components and types (included in main and mobile; use for tree-shaking) |
+| Entry | Description |
+| ----- | ----------- |
+| `@dreamer/ui-view` | Desktop aggregate (default). Prefer **named** imports; avoid `import *`. |
+| `@dreamer/ui-view/basic` | Button, Link, Icon, Typography, Badge, Avatar, … |
+| `@dreamer/ui-view/form` | Form controls (Input, Select, Upload, …) |
+| `@dreamer/ui-view/data-display` | Table, DataPanel, CodeBlock, Tree, … |
+| `@dreamer/ui-view/feedback` | Modal, Drawer, Toast/Message helpers, … |
+| `@dreamer/ui-view/layout` | Container, Grid, Tabs, Accordion, … |
+| `@dreamer/ui-view/navigation` | Menu, Pagination, Dropdown, Anchor, … |
+| `@dreamer/ui-view/charts` | Chart.js wrappers |
+| `@dreamer/ui-view/config-provider` | Theme / ConfigProvider |
+| `@dreamer/ui-view/mobile` / `…/mobile/*` | Mobile aggregate and category entries |
+| `@dreamer/ui-view/icons` | Built-in icon barrel (no country-flag `export *`) |
+| `@dreamer/ui-view/icons/flags` | Country-flag catalog barrel |
+| `@dreamer/ui-view/icons/*` (Node/Bun `package.json`) | **Single icon/flag file** deep path |
+| `@dreamer/ui-view/plugin` | Tailwind v4 on-demand `@source` plugin |
 
-The desktop entry includes all shared components plus desktop-only ones; the
-mobile entry includes shared plus mobile-only ones.
+### Tree-shaking / minimal bundle
 
----
+Three layers (prefer top → bottom only when needed):
+
+| Style | Example | When |
+| ----- | ------- | ---- |
+| **Category subpath** | `import { DataPanel } from "@dreamer/ui-view/data-display"` | Everyday components — published via `deno.json` / `package.json` `exports` (`./basic`, `./form`, `./data-display`, …) |
+| **Per-file icon/flag** | `import { IconHome } from "@dreamer/ui-view/icons/Home.tsx"` | Smallest icon cost — `exports["./icons/*"]` (also `icons/flags/standalone/IconFlagCN.tsx`) |
+| **Icon / flag barrel** | `import { IconHome } from "@dreamer/ui-view/icons"` or `…/icons/flags` | Icon **catalog** pages only; pulls many icons/flags |
+
+```ts
+// ✅ Category subpath (recommended for components)
+import { DataPanel, CodeBlock } from "@dreamer/ui-view/data-display";
+import { Paragraph, Title, Button } from "@dreamer/ui-view/basic";
+
+// ✅ Single icon / single flag (smallest)
+import { IconHome } from "@dreamer/ui-view/icons/Home.tsx";
+import { IconBrandGithub } from "@dreamer/ui-view/icons/brands/GitHub.tsx";
+import { IconFlagCN } from "@dreamer/ui-view/icons/flags/standalone/IconFlagCN.tsx";
+
+// ⚠️ Root `@dreamer/ui-view` named import is OK for apps, but never
+//    `import * as Uv from "@dreamer/ui-view"` + `Object.keys(Uv)` (pins the whole barrel into a shared chunk).
+
+// ❌ Country flags are NOT re-exported from the root / basic / icons barrels anymore.
+//    Use `icons/flags/…` (per-file or `icons/flags` catalog). Do not use the icons barrel
+//    just to grab one glyph — prefer `icons/Home.tsx`.
+```
+
+> **Publish note:** Category entries (`./data-display`, …) and `./icons` / `./icons/flags` are in both `deno.json` and `package.json`. Per-file `./icons/*` matches `package.json` (Node/Bun/JSR consumers). Deno CLI may warn that `*` in `deno.json` exports is non-standard; the field is kept aligned for publish — deep icon imports still resolve through that export map / `package.json`.
 
 ## 🎨 Using with Tailwind
 
