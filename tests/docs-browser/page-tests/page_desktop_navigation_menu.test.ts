@@ -140,10 +140,13 @@ describe("文档页 E2E：/desktop/navigation/menu（Menu 菜单）", () => {
     if (!t?.browser?.goto) return;
     await sharedEnv.goto(t, DOC_PATH);
     await sharedEnv.waitDocMainReady(t);
-    await t.browser.evaluate(() => {
+    await t.browser.evaluate(() => location.reload());
+    await sharedEnv.waitDocMainReady(t);
+    await sharedEnv.delay(100);
+    const clicked = await t.browser.evaluate(() => {
       const needle = "mode=vertical（垂直）";
       const main = document.querySelector("main");
-      if (!main) return;
+      if (!main) return false;
       const heads = main.querySelectorAll("h2, h3");
       for (let i = 0; i < heads.length; i++) {
         const h = heads[i];
@@ -152,20 +155,31 @@ describe("文档页 E2E：/desktop/navigation/menu（Menu 菜单）", () => {
         const nav = section?.querySelector(
           'nav[role="menu"]',
         ) as HTMLElement | null;
-        if (!nav) return;
-        const triggers = nav.querySelectorAll(
-          'button[type="button"][aria-haspopup="true"]',
+        if (!nav) return false;
+        nav.scrollIntoView({ block: "center" });
+        const triggers = Array.from(
+          nav.querySelectorAll(
+            'button[type="button"][aria-haspopup="true"]',
+          ),
+        ) as (HTMLButtonElement & { __onclick?: (ev: Event) => void })[];
+        const b = triggers.find((x) =>
+          x.getAttribute("aria-expanded") === "true" &&
+          (x.textContent || "").includes("子菜单")
+        ) || triggers.find((x) =>
+          x.getAttribute("aria-expanded") === "true"
         );
-        for (let j = 0; j < triggers.length; j++) {
-          const b = triggers[j] as HTMLButtonElement;
-          if (b.getAttribute("aria-expanded") !== "true") continue;
-          b.click();
-          return;
-        }
-        return;
+        if (!b) return false;
+        if (typeof b.__onclick === "function") {
+          b.__onclick(
+            new MouseEvent("click", { bubbles: true, cancelable: true }),
+          );
+        } else b.click();
+        return true;
       }
-    });
-    await sharedEnv.delay(200);
+      return false;
+    }) as boolean;
+    expect(clicked).toBe(true);
+    await sharedEnv.delay(350);
     const collapsed = await t.browser.evaluate(() => {
       const needle = "mode=vertical（垂直）";
       const main = document.querySelector("main");
@@ -202,10 +216,13 @@ describe("文档页 E2E：/desktop/navigation/menu（Menu 菜单）", () => {
     if (!t?.browser?.goto) return;
     await sharedEnv.goto(t, DOC_PATH);
     await sharedEnv.waitDocMainReady(t);
-    await t.browser.evaluate(() => {
+    await t.browser.evaluate(() => location.reload());
+    await sharedEnv.waitDocMainReady(t);
+    await sharedEnv.delay(100);
+    const opened = await t.browser.evaluate(() => {
       const needle = "mode=horizontal + usePopoverSubmenu";
       const main = document.querySelector("main");
-      if (!main) return;
+      if (!main) return false;
       const heads = main.querySelectorAll("h2, h3");
       for (let i = 0; i < heads.length; i++) {
         const h = heads[i];
@@ -214,19 +231,26 @@ describe("文档页 E2E：/desktop/navigation/menu（Menu 菜单）", () => {
         const nav = section?.querySelector(
           'nav[role="menu"]',
         ) as HTMLElement | null;
-        if (!nav) return;
-        const buttons = nav.querySelectorAll("button[type='button']");
-        for (let j = 0; j < buttons.length; j++) {
-          const b = buttons[j] as HTMLButtonElement;
-          if ((b.textContent || "").includes("子菜单")) {
-            b.click();
-            return;
-          }
-        }
-        return;
+        if (!nav) return false;
+        nav.scrollIntoView({ block: "center" });
+        const buttons = Array.from(
+          nav.querySelectorAll("button[type='button']"),
+        ) as (HTMLButtonElement & { __onclick?: (ev: Event) => void })[];
+        const b = buttons.find((x) =>
+          (x.textContent || "").includes("子菜单")
+        );
+        if (!b || b.disabled) return false;
+        if (typeof b.__onclick === "function") {
+          b.__onclick(
+            new MouseEvent("click", { bubbles: true, cancelable: true }),
+          );
+        } else b.click();
+        return true;
       }
-    });
-    await sharedEnv.delay(250);
+      return false;
+    }) as boolean;
+    expect(opened).toBe(true);
+    await sharedEnv.delay(350);
     const hasSubItem = await t.browser.evaluate(() => {
       const needle = "mode=horizontal + usePopoverSubmenu";
       const main = document.querySelector("main");
@@ -237,7 +261,17 @@ describe("文档页 E2E：/desktop/navigation/menu（Menu 菜单）", () => {
         if (!(h.textContent || "").includes(needle)) continue;
         const section = h.parentElement;
         if (!section) return false;
-        return (section.innerText || "").includes("子项 3");
+        const inSection = (section.innerText || "").includes("子项 3");
+        if (inSection) return true;
+        /** popover 可能 Portal 到 body；可见菜单项亦可 */
+        const menus = Array.from(
+          document.querySelectorAll('[role="menu"], [role="menuitem"]'),
+        ) as HTMLElement[];
+        return menus.some((el) => {
+          const r = el.getBoundingClientRect();
+          return r.width > 8 && r.height > 8 &&
+            (el.innerText || "").includes("子项 3");
+        });
       }
       return false;
     });
@@ -254,7 +288,15 @@ describe("文档页 E2E：/desktop/navigation/menu（Menu 菜单）", () => {
         if (!(h.textContent || "").includes(needle)) continue;
         const section = h.parentElement;
         if (!section) return false;
-        return (section.innerText || "").includes("子项 3");
+        if ((section.innerText || "").includes("子项 3")) return true;
+        const menus = Array.from(
+          document.querySelectorAll('[role="menu"], [role="menuitem"]'),
+        ) as HTMLElement[];
+        return menus.some((el) => {
+          const r = el.getBoundingClientRect();
+          return r.width > 8 && r.height > 8 &&
+            (el.innerText || "").includes("子项 3");
+        });
       }
       return false;
     });
