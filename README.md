@@ -255,7 +255,7 @@ DateTimePicker, TimePicker
 - **Progress** progress bar
 - **Result** result page
 
-**Desktop only:** Modal (`constrainToViewport` default true), Dialog, Tooltip, Popover, Popconfirm
+**Desktop only:** Modal (`keepInView` default true), Dialog, Tooltip, Popover, Popconfirm
 
 **Mobile only:** BottomSheet, ActionSheet, PullRefresh, SwipeCell
 

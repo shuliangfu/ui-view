@@ -15,7 +15,7 @@
 - **basic**：Avatar Badge Button FloatButton Icon Link Skeleton Spinner Typography（icons 全量；Tailwind 经 `mergeIntrinsicIconSources`）
 - **form**（除 Upload）：AutoComplete Cascader Checkbox* ColorPicker Date* Form* Input* Mentions MultiSelect Password Radio* Rate Search Select Slider Switch Textarea TimePicker Transfer TreeSelect；mobile：NumberKeyboard PasscodeInput SignaturePad（本地画布）
 - **data-display**：Calendar Card Carousel Cell CodeBlock Collapse Comment CountDown Descriptions Empty Image ImageViewer List QRCode Segmented Statistic Tag Timeline Tree VirtualList Watermark；desktop DataPanel／Table；mobile ScrollList
-- **feedback**：Alert ContextMenu Dialog Drawer Message Modal（`constrainToViewport` 默认 true，拖动不出可视区）NoticeBar Notification Overlay Popconfirm Popover Progress Result Toast Tooltip Tour；mobile ActionSheet BottomSheet FloatingPanel PullRefresh ShareSheet SwipeCell
+- **feedback**：Alert ContextMenu Dialog Drawer Message Modal（`keepInView` 默认 true，拖动不出可视区）NoticeBar Notification Overlay Popconfirm Popover Progress Result Toast Tooltip Tour；mobile ActionSheet BottomSheet FloatingPanel PullRefresh ShareSheet SwipeCell
 - **layout／navigation／charts／config-provider**：全部纯前端（charts＝Chart.js 客户端）
 - **例外**：上述「可选回调」可由业务接远程，组件本身不绑死路由
 
@@ -38,6 +38,6 @@
 
 ## ⑤ 本批 API 备忘（2026-11-07）
 
-- **Modal**：`constrainToViewport`／`keepInView` 默认 **true**（仅 `draggable` 时生效）
+- **Modal**：`keepInView` 默认 **true**（仅 `draggable` 时生效）
 - **uiViewUploadPlugin**：`localDir` **必填**；默认 `basePath=/ui-view-upload`；`virusScan` 透传；`GET ${basePath}/file?key=`
 - **RichText／Markdown**：可设 `uploadAction` 对齐插件 `basePath`（推荐 `DEFAULT_UI_VIEW_UPLOAD_BASE_PATH`）

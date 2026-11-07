@@ -1,5 +1,5 @@
 /**
- * @fileoverview Modal constrainToViewport — clampModalTranslateToViewport 边界单测（无浏览器 DOM）
+ * @fileoverview Modal keepInView — clampModalTranslateToViewport 边界单测（无浏览器 DOM）
  */
 
 import { describe, expect, it } from "@dreamer/test";

@@ -2,7 +2,7 @@
  * Modal 模态弹窗（View）。
  * 桌面居中弹层：遮罩、标题、内容、底部按钮；支持关闭、点击遮罩关闭、Esc、自定义宽度与 footer。
  * 支持拖动标题栏、全屏切换；全屏与关闭按钮并排于标题栏右侧。
- * 拖动默认 `constrainToViewport`（可视区内，不可拖出窗口）；可显式 `false` 关闭。
+ * 拖动默认 `keepInView`（可视区内，不可拖出窗口）；可显式 `false` 关闭。
  *
  * **客户端**：`open === true` 且存在真实 `globalThis.document.body` 时，用 {@link createPortal} 挂到 `body`；
  * Portal 路径下父级槽位返回**隐藏占位 `span`**（勿返回 `null`），避免 Hybrid 水合 `replaceSlot` 与仅 `null` 时更新链异常。
@@ -146,10 +146,7 @@ export interface ModalProps {
   /**
    * 拖动时是否限制在浏览器可视区内（不可拖出窗口／看不见）。
    * 默认 **true**；仅 `draggable` 时生效。传 `false` 可恢复无边界拖动。
-   * 别名语义同 `keepInView`。
    */
-  constrainToViewport?: boolean;
-  /** @deprecated 请用 {@link ModalProps.constrainToViewport}；二者等价，后者优先 */
   keepInView?: boolean;
   /**
    * 拖动位移初始值（相对默认落点的 translate x/y，单位 px）。
@@ -357,7 +354,7 @@ function useDrag(
   enabled: boolean,
   onDragEnd?: (pos: { x: number; y: number }) => void,
   options?: {
-    constrainToViewport?: boolean;
+    keepInView?: boolean;
     getBoxEl?: () => HTMLElement | null;
   },
 ) {
@@ -369,7 +366,7 @@ function useDrag(
     const startPos = getPosition();
     const boxEl = options?.getBoxEl?.() ?? null;
     const startRect = boxEl?.getBoundingClientRect?.() ?? null;
-    const constrain = options?.constrainToViewport !== false;
+    const constrain = options?.keepInView !== false;
     let rafId = 0;
     let last = startPos;
     const clamp = (raw: { x: number; y: number }) => {
@@ -445,7 +442,6 @@ export function Modal(props: ModalProps): JSXRenderable {
     destroyOnClose = false,
     keyboard = false,
     draggable = false,
-    constrainToViewport,
     keepInView,
     fullscreen: startInFullscreen = false,
     fullscreenable = false,
@@ -598,8 +594,8 @@ export function Modal(props: ModalProps): JSXRenderable {
     };
   });
 
-  /** 默认 true：拖动不可出可视区；显式 false 关闭。keepInView 为别名。 */
-  const constrainDrag = constrainToViewport ?? keepInView ?? true;
+  /** 默认 true：拖动不可出可视区；显式 false 关闭。 */
+  const constrainDrag = keepInView ?? true;
 
   const handleTitleMouseDown = useDrag(
     () => position.value,
@@ -613,7 +609,7 @@ export function Modal(props: ModalProps): JSXRenderable {
       props.onPositionChange?.(v);
     },
     {
-      constrainToViewport: constrainDrag,
+      keepInView: constrainDrag,
       getBoxEl: () => modalBoxEl,
     },
   );
