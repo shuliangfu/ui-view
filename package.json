@@ -1,6 +1,6 @@
 {
   "name": "@dreamer/ui-view",
-  "version": "1.2.4",
+  "version": "1.2.5",
   "description": "View framework UI components for Dreamer. Desktop and mobile with Tailwind v4 and light/dark theme.",
   "type": "module",
   "license": "Apache-2.0",
