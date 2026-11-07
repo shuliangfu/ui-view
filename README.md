@@ -153,6 +153,83 @@ writes a CSS file that only contains `@source "path";`. Tailwind then scans only
 those paths, so the final CSS includes only the classes you use and the theme
 appears once.
 
+## 📤 Server upload plugin
+
+Use **`uiViewUploadPlugin`** when your dweb app needs multipart / chunked upload
+backed by `@dreamer/upload` (local-cloud storage). Prefer the dedicated entry
+`@dreamer/ui-view/plugin/upload`; the same symbols are also re-exported from
+`@dreamer/ui-view/plugin`.
+
+| Option | Required | Default / notes |
+| ------ | -------- | --------------- |
+| `localDir` | **yes** | Absolute or cwd-relative directory. Missing / empty → mount throws (no implicit default). |
+| `basePath` | no | `/ui-view-upload` — do **not** hard-code `/upload` |
+| `virusScan` | no | Off by default; pass `{ enable: true, … }` to forward to the upload Handler |
+| File download | — | Plugin `onRequest` serves `GET ${basePath}/file?key=` (disable with `serveFiles: false`) |
+
+Wire **`upload.uploadConfig` into `AppConfig.upload`**, then **`registerPlugin(upload)`**
+so complete hooks (afterComplete / optional image.dual) and the file route attach.
+
+```ts
+import { App, type AppConfig } from "@dreamer/dweb";
+import { uiViewUploadPlugin } from "@dreamer/ui-view/plugin/upload";
+// or: import { uiViewUploadPlugin } from "@dreamer/ui-view/plugin";
+
+const upload = uiViewUploadPlugin({
+  localDir: "./runtime/uploads", // required
+  basePath: "/ui-view-upload",   // default; do not use "/upload"
+  image: { dual: true },
+  virusScan: { enable: true },   // optional
+  // authenticate: async (req) => { … },
+});
+
+const config: AppConfig = {
+  // …
+  upload: upload.uploadConfig,
+};
+
+const app = new App(config);
+app.registerPlugin(upload);
+app.start();
+```
+
+Also set **`basePath` explicitly** when you want the default visible in app
+config (still defaults to `/ui-view-upload` if omitted):
+
+```ts
+const upload = uiViewUploadPlugin({
+  localDir: "./runtime/uploads", // required
+  basePath: "/ui-view-upload",   // default; do not use "/upload"
+  virusScan: { enable: true },   // optional
+});
+```
+
+### Components that talk to the upload plugin
+
+Align every client route with the same plugin `basePath` (default
+`/ui-view-upload` = `DEFAULT_UI_VIEW_UPLOAD_BASE_PATH`). **Do not** hard-code
+`/upload`.
+
+| Component | How it uploads | Align to `basePath` |
+| --------- | -------------- | ------------------- |
+| **Upload** (primary) | `action` → `init`／`chunk`／`complete` on that URL | `<Upload action="/ui-view-upload" />` |
+| **RichTextEditor** / **MarkdownEditor** | Optional `uploadAction` (else `onUploadImage`／`onPasteImage`, else dataURL) | `uploadAction={DEFAULT_UI_VIEW_UPLOAD_BASE_PATH}` or `"/ui-view-upload"` |
+| **SignaturePad** (optional) | Local canvas only; export `toDataURL`／`onChange` then **your** code uploads | Convert dataURL → `File`／`Blob` and POST via `<Upload requestUpload={…} />` or the same chunked protocol against `basePath` |
+
+```tsx
+import { Upload } from "@dreamer/ui-view/form/upload";
+import { RichTextEditor } from "@dreamer/ui-view/form/rich-text-editor";
+import { DEFAULT_UI_VIEW_UPLOAD_BASE_PATH } from "@dreamer/ui-view/form/upload";
+// SignaturePad: @dreamer/ui-view/mobile/form/signature-pad
+
+<Upload action={DEFAULT_UI_VIEW_UPLOAD_BASE_PATH} />
+<RichTextEditor uploadAction={DEFAULT_UI_VIEW_UPLOAD_BASE_PATH} />
+{/* MarkdownEditor: same uploadAction prop */}
+```
+
+See `docs/component-backend-matrix.md` and `upload.ts` (`@example`) for the
+full matrix.
+
 ---
 
 ## dweb + View: `compileSource` for package `.tsx`

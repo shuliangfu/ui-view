@@ -53,6 +53,7 @@ npx jsr add @dreamer/ui-view
 | `@dreamer/ui-view/icons/flags` | 国旗图鉴 barrel |
 | `@dreamer/ui-view/icons/…`（仅 Node/Bun，`package.json` 的 `./icons/*`） | **单图标／国旗文件**深路径 — **不在** `deno.json`（Deno 禁止 `*` exports） |
 | `@dreamer/ui-view/plugin` | Tailwind v4 按需 `@source` 插件 |
+| `@dreamer/ui-view/plugin/upload` | 服务端上传插件（**必填** `localDir`；默认 `/ui-view-upload`） |
 
 ### 按需导入／打包最小
 
@@ -144,6 +145,80 @@ app.start();
 `jsr:@dreamer/ui-view`）的命名导入，收集组件名，生成只含 `@source "path";` 的
 CSS；Tailwind 编译时只会扫描这些路径，最终 CSS 只包含用到的 class，且 theme
 只出现一次。
+
+## 📤 服务端上传插件
+
+应用需要分片／multipart 上传（`@dreamer/upload` + local-cloud）时，挂载
+**`uiViewUploadPlugin`**。推荐从 `@dreamer/ui-view/plugin/upload` 导入；也可从
+`@dreamer/ui-view/plugin` 拿到同一套导出。
+
+| 选项 | 必填 | 默认／说明 |
+| ---- | ---- | ---------- |
+| `localDir` | **是** | 绝对路径或相对 cwd；缺／空字符串 → 挂载抛错（无隐式默认目录） |
+| `basePath` | 否 | `/ui-view-upload` — **勿**写死 `/upload` |
+| `virusScan` | 否 | 默认关；传 `{ enable: true, … }` 透传到 upload Handler |
+| 文件下载 | — | 插件 `onRequest` 提供 `GET ${basePath}/file?key=`（`serveFiles: false` 可关） |
+
+把 **`upload.uploadConfig` 赋给 `AppConfig.upload`**，再
+**`registerPlugin(upload)`**，complete 钩子（afterComplete／可选 image.dual）与
+file 路由才会挂上。
+
+```ts
+import { App, type AppConfig } from "@dreamer/dweb";
+import { uiViewUploadPlugin } from "@dreamer/ui-view/plugin/upload";
+// 或：import { uiViewUploadPlugin } from "@dreamer/ui-view/plugin";
+
+const upload = uiViewUploadPlugin({
+  localDir: "./runtime/uploads", // 必填
+  basePath: "/ui-view-upload",   // 默认；勿用 "/upload"
+  image: { dual: true },
+  virusScan: { enable: true },   // 可选
+  // authenticate: async (req) => { … },
+});
+
+const config: AppConfig = {
+  // …
+  upload: upload.uploadConfig,
+};
+
+const app = new App(config);
+app.registerPlugin(upload);
+app.start();
+```
+
+也可显式写出默认前缀（省略时仍为 `/ui-view-upload`）：
+
+```ts
+const upload = uiViewUploadPlugin({
+  localDir: "./runtime/uploads", // 必填
+  basePath: "/ui-view-upload",   // 默认；勿用 "/upload"
+  virusScan: { enable: true },   // 可选
+});
+```
+
+### 走上传的组件（须对齐插件路由）
+
+所有前端路由须与插件 **`basePath`**（默认 `/ui-view-upload`＝
+`DEFAULT_UI_VIEW_UPLOAD_BASE_PATH`）一致；**勿**写死 `/upload`。
+
+| 组件 | 如何上传 | 如何对齐 `basePath` |
+| ---- | -------- | ------------------- |
+| **Upload**（主） | `action` → 同 URL 的 `init`／`chunk`／`complete` | `<Upload action="/ui-view-upload" />` |
+| **RichTextEditor**／**MarkdownEditor** | 可选 `uploadAction`（否则 `onUploadImage`／`onPasteImage`，皆无则 dataURL） | `uploadAction={DEFAULT_UI_VIEW_UPLOAD_BASE_PATH}` 或 `"/ui-view-upload"` |
+| **SignaturePad**（可选） | 仅本地画布；`toDataURL`／`onChange` 导出后由**业务**上传 | 把 dataURL 转成 `File`／`Blob`，再用 `<Upload requestUpload={…} />` 或同一分片协议打到 `basePath` |
+
+```tsx
+import { Upload } from "@dreamer/ui-view/form/upload";
+import { RichTextEditor } from "@dreamer/ui-view/form/rich-text-editor";
+import { DEFAULT_UI_VIEW_UPLOAD_BASE_PATH } from "@dreamer/ui-view/form/upload";
+// SignaturePad：@dreamer/ui-view/mobile/form/signature-pad
+
+<Upload action={DEFAULT_UI_VIEW_UPLOAD_BASE_PATH} />
+<RichTextEditor uploadAction={DEFAULT_UI_VIEW_UPLOAD_BASE_PATH} />
+{/* MarkdownEditor：同样传 uploadAction */}
+```
+
+完整矩阵见 `docs/component-backend-matrix.md` 与 `upload.ts`（`@example`）。
 
 ---
 

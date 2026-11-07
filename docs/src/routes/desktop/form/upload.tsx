@@ -186,6 +186,38 @@ const exampleMultiNoDrag = `<Upload
   <Button><IconUpload /> 上传图片</Button>
 </Upload>`;
 
+/** 生产挂载：与 upload.ts @example／matrix 对齐（本页演示仍用 /api/upload） */
+const exampleServerPluginMount = `import { App, type AppConfig } from "@dreamer/dweb";
+import {
+  uiViewUploadPlugin,
+  DEFAULT_UI_VIEW_UPLOAD_BASE_PATH,
+} from "@dreamer/ui-view/plugin/upload";
+// 也可：import { uiViewUploadPlugin } from "@dreamer/ui-view/plugin";
+
+const upload = uiViewUploadPlugin({
+  localDir: "./runtime/uploads", // 必填；缺则挂载失败
+  basePath: "/ui-view-upload",   // 默认；勿写死 /upload
+  virusScan: { enable: true },   // 可选；透传 Handler
+  // image: { dual: true },
+  // authenticate: async (req) => { … },
+});
+
+const config: AppConfig = {
+  // …
+  upload: upload.uploadConfig,
+};
+
+const app = new App(config);
+app.registerPlugin(upload);
+app.start();
+
+// 前端对齐同一 basePath（DEFAULT_UI_VIEW_UPLOAD_BASE_PATH === "/ui-view-upload"）
+// <Upload action={DEFAULT_UI_VIEW_UPLOAD_BASE_PATH} />
+// <RichTextEditor uploadAction={DEFAULT_UI_VIEW_UPLOAD_BASE_PATH} />
+// <MarkdownEditor uploadAction={DEFAULT_UI_VIEW_UPLOAD_BASE_PATH} />
+// SignaturePad：本地 toDataURL 后业务再走 Upload／同 basePath 分片协议
+`;
+
 export default function FormUpload() {
   const hiddenPreview = createSignal("");
 
@@ -217,6 +249,52 @@ export default function FormUpload() {
         <code class="text-xs">/upload</code>）。本页 docs 示例{" "}
         <code class="text-xs">action="/api/upload"</code> 仅为文档站本地适配路由。
       </Paragraph>
+      </section>
+
+      <section class="space-y-3">
+        <Title level={2}>服务端挂载（uiViewUploadPlugin）</Title>
+        <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+          从 <code class="text-xs">@dreamer/ui-view/plugin/upload</code>{" "}
+          导入（亦可从 <code class="text-xs">@dreamer/ui-view/plugin</code>{" "}
+          re-export）。须把{" "}
+          <code class="text-xs">upload.uploadConfig</code> 赋给{" "}
+          <code class="text-xs">AppConfig.upload</code>，再{" "}
+          <code class="text-xs">registerPlugin(upload)</code>。插件提供{" "}
+          <code class="text-xs">GET ${"{"}basePath{"}"}/file?key=</code>{" "}
+          下载（可用 <code class="text-xs">serveFiles:false</code> 关闭）。
+        </Paragraph>
+        <CodeBlock
+          title="生产挂载示例"
+          code={exampleServerPluginMount}
+          language="tsx"
+          showLineNumbers
+          copyable
+          wrapLongLines
+        />
+        <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+          <strong>走上传的组件</strong>（路由须对齐插件{" "}
+          <code class="text-xs">basePath</code>，默认{" "}
+          <code class="text-xs">/ui-view-upload</code>）：
+        </Paragraph>
+        <ul class="list-disc pl-5 text-sm text-slate-600 dark:text-slate-400 space-y-1">
+          <li>
+            <strong>Upload</strong>（主）：
+            <code class="text-xs">action="/ui-view-upload"</code> 或{" "}
+            <code class="text-xs">DEFAULT_UI_VIEW_UPLOAD_BASE_PATH</code>
+          </li>
+          <li>
+            <strong>RichTextEditor／MarkdownEditor</strong>（可选）：
+            <code class="text-xs">uploadAction</code>{" "}
+            对齐同一前缀；皆无则 dataURL／自定义回调
+          </li>
+          <li>
+            <strong>SignaturePad</strong>（可选）：本地画布导出{" "}
+            <code class="text-xs">toDataURL</code>／
+            <code class="text-xs">onChange</code>
+            ，业务再经 Upload 或同{" "}
+            <code class="text-xs">basePath</code> 分片协议上传
+          </li>
+        </ul>
       </section>
 
       <section class="space-y-3">
