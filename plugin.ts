@@ -10,7 +10,7 @@
  * - **`scanPath`** 可为单个目录或目录数组（相对 cwd），按需只扫 `frontend`、`common` 等子树，避免扫 backend/mobile。
  * - `@source` 路径相对于生成文件所在目录书写，避免把本机绝对路径写入仓库。
  * - 插件入口：**{@link uiViewTailwindPlugin}**（返回 `Plugin`，含 `onInit`）。
- * - 上传插件：**{@link uiViewUploadPlugin}**（**必填** `localDir`；默认前缀 `/ui-view-upload`；可选 `virusScan`／`image.dual`／`afterComplete`／file；见 `upload-plugin.ts`）。
+ * - 上传插件：**{@link uiViewUploadPlugin}**（**必填** `localDir`；默认前缀 `/ui-view-upload`；可选 `virusScan`／`image.dual`／`afterComplete`／file；见 `upload.ts`）。
  *
  * ### 使用顺序
  * 先注册本插件，再注册 Tailwind 官方/封装插件；并在样式入口 `@import` 生成的 `@source` 文件。
@@ -1679,7 +1679,7 @@ export {
   dualObjectKeys,
   uiViewUploadPlugin,
   wrapUploadCompletePipeline,
-} from "./upload-plugin.ts";
+} from "./upload.ts";
 export type {
   UiViewUploadAfterComplete,
   UiViewUploadAfterCompleteContext,
@@ -1691,4 +1691,4 @@ export type {
   UiViewUploadPlugin,
   UiViewUploadPluginOptions,
   UiViewUploadStorage,
-} from "./upload-plugin.ts";
+} from "./upload.ts";

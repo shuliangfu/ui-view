@@ -8,7 +8,7 @@ import {
   DEFAULT_UI_VIEW_UPLOAD_BASE_PATH,
   uiViewUploadPlugin,
   wrapUploadCompletePipeline,
-} from "../upload-plugin.ts";
+} from "../upload.ts";
 import { uploadFileViaUiViewBase } from "../src/shared/form/upload-http.ts";
 
 const BASE = DEFAULT_UI_VIEW_UPLOAD_BASE_PATH;

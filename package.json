@@ -89,7 +89,7 @@
     "./mobile/form/tree-select": "./src/mobile/form/TreeSelect.tsx",
     "./mobile/form/upload": "./src/mobile/form/Upload.tsx",
     "./mobile/portal": "./src/mobile/MobilePortalHostScope.tsx",
-    "./plugin/upload": "./upload-plugin.ts"
+    "./plugin/upload": "./upload.ts"
   },
   "scripts": {
     "test": "deno test -A tests/docs-sidebar-reconcile.test.ts",

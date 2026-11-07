@@ -94,14 +94,14 @@
     "./mobile/form/tree-select": "./src/mobile/form/TreeSelect.tsx",
     "./mobile/form/upload": "./src/mobile/form/Upload.tsx",
     "./mobile/portal": "./src/mobile/MobilePortalHostScope.tsx",
-    "./plugin/upload": "./upload-plugin.ts"
+    "./plugin/upload": "./upload.ts"
   },
   "publish": {
     "include": [
       "src/**/*.ts",
       "src/**/*.tsx",
       "plugin.ts",
-      "upload-plugin.ts",
+      "upload.ts",
       "LICENSE",
       "NOTICE",
       "README.md"
@@ -126,7 +126,7 @@
   "tasks": {
     "test": "deno test -A",
     "test:unit": "deno test -A tests/docs-sidebar-reconcile.test.ts",
-    "check": "deno check src plugin.ts upload-plugin.ts",
+    "check": "deno check src plugin.ts upload.ts",
     "publish:jsr": "deno publish",
     "publish:jsr:dry-run": "deno publish --dry-run --allow-dirty",
     "test:node": "node --import tsx --test-force-exit test-node.mjs"
@@ -164,7 +164,7 @@
     "include": [
       "src/",
       "plugin.ts",
-      "upload-plugin.ts",
+      "upload.ts",
       "tests/"
     ],
     "rules": {
