@@ -4,7 +4,85 @@ import * as Flags from "@dreamer/ui-view/icons/flags/mod.ts";
  * 路由: /basic/icon
  */
 
-import { Icon, IconActivity, IconAlertCircle, IconAlertTriangle, IconAlignCenter, IconAlignLeft, IconAlignRight, IconArchive, IconArrowDown, IconArrowDownLeft, IconArrowDownRight, IconArrowLeft, IconArrowLeftRight, IconArrowRight, IconArrowUp, IconArrowUpLeft, IconArrowUpRight, IconAtSign, IconAward, IconBadgeCheck, IconBan, IconBanknote, IconBarChart, IconBattery, IconBatteryCharging, IconBell, IconBookmark, IconBookOpen, IconBox, IconBraces, IconBrandAcrobat, IconBrandAdobexd, IconBrandAfterEffects, IconBrandAlipay, IconBrandAndroid, IconBrandApple, IconBrandBehance, IconBrandBinance, IconBrandChrome, IconBrandDingtalk, IconBrandDiscord, IconBrandDocker, IconBrandDropbox, IconBrandFacebook, IconBrandFigma, IconBrandFirefox, IconBrandGithub, IconBrandGitlab, IconBrandGoogle, IconBrandIllustrator, IconBrandIndesign, IconBrandInstagram, IconBrandLightroom, IconBrandLine, IconBrandLinkedin, IconBrandMedium, IconBrandMicrosoft, IconBrandNetflix, IconBrandNotion, IconBrandNpm, IconBrandPaypal, IconBrandPhotoshop, IconBrandPinterest, IconBrandPremiere, IconBrandQq, IconBrandReddit, IconBrandSignal, IconBrandSkype, IconBrandSlack, IconBrandSnapchat, IconBrandSpotify, IconBrandStripe, IconBrandTelegram, IconBrandTiktok, IconBrandTrello, IconBrandTwitch, IconBrandTwitter, IconBrandVercel, IconBrandWechat, IconBrandWeibo, IconBrandWhatsapp, IconBrandYoutube, IconBrandZoom, IconBriefcase, IconBug, IconBuilding, IconCalculator, IconCalendar, IconCamera, IconCheck, IconCheckCircle, IconChevronDown, IconChevronLeft, IconChevronRight, IconChevronUp, IconCircle, IconCircleDollarSign, IconCircleDot, IconCircleSplit, IconClipboard, IconClipboardCheck, IconClock, IconClose, IconCloud, IconCloudRain, IconCode, IconCoffee, IconCoins, IconColumns, IconCompass, IconCopy, IconCpu, IconCreditCard, IconCrown, IconDatabase, IconDisc, IconDollarSign, IconDownload, IconDroplet, IconEdit, IconExitFullscreen, IconExternalLink, IconEye, IconEyeOff, IconFile, IconFileCheck, IconFilePlus, IconFileText, IconFileX, IconFilm, IconFilter, IconFingerprint, IconFlag, IconFlame, IconFolder, IconFolderOpen, IconForward, IconGem, IconGift, IconGitBranch, IconGlobe, IconGraduationCap, IconGrid, IconGripVertical, IconHandshake, IconHash, IconHeadphones, IconHeart, IconHeartPulse, IconHelpCircle, IconHistory, IconHome, IconImage, IconImagePlus, IconInbox, IconInfo, IconKanban, IconKey, IconLamp, IconLandmark, IconLayers, IconLibrary, IconLink, IconLink2, IconList, IconLoader, IconLock, IconLogIn, IconLogOut, IconMail, IconMailOpen, IconMapPin, IconMaximize2, IconMegaphone, IconMenu, IconMessageCircle, IconMessageSquare, IconMic, IconMicOff, IconMinus, IconMinusCircle, IconMonitorSplit, IconMoon, IconMoreHorizontal, IconMoreVertical, IconMusic, IconNavigation, IconNewspaper, IconNotebookPen, IconPackage, IconPalette, IconPaperClip, IconParkingCircle, IconPause, IconPercent, IconPhone, IconPieChart, IconPiggyBank, IconPill, IconPin, IconPlane, IconPlay, IconPlus, IconPlusCircle, IconPodcast, IconPower, IconPrinter, IconRadio, IconReceipt, IconRedo, IconRefresh, IconRepeat, IconReply, IconRotateCcw, IconRotateCw, IconRss, IconSave, IconScale, IconScan, IconScanBarcode, IconScissors, IconScrollText, IconSearch, IconSend, IconServer, IconSettings, IconShare, IconShield, IconShieldAlert, IconShieldCheck, IconShip, IconShoppingBag, IconShoppingCart, IconShuffle, IconSignature, IconSkipBack, IconSkipForward, IconSlidersHorizontal, IconSnowflake, IconSparkles, IconSquare, IconStamp, IconStar, IconStethoscope, IconStickyNote, IconStop, IconStore, IconSun, IconSyringe, IconTag, IconTarget, IconTerminal, IconTestTube, IconThermometer, IconThumbsDown, IconThumbsUp, IconTicket, IconTimer, IconTokenAda, IconTokenAlgo, IconTokenArb, IconTokenAtom, IconTokenAvax, IconTokenBnb, IconTokenBtc, IconTokenCro, IconTokenDai, IconTokenDoge, IconTokenDot, IconTokenEth, IconTokenFil, IconTokenFtm, IconTokenLink, IconTokenLtc, IconTokenMatic, IconTokenNear, IconTokenOp, IconTokenPepe, IconTokenShib, IconTokenSol, IconTokenSui, IconTokenTrx, IconTokenUni, IconTokenUsdc, IconTokenUsdt, IconTokenWbtc, IconTokenXrp, IconTrain, IconTrash, IconTrendingDown, IconTrendingUp, IconTruck, IconTv, IconType, IconUmbrella, IconUndo, IconUnlock, IconUpload, IconUser, IconUserCog, IconUserMinus, IconUserPlus, IconUsers, IconUtensils, IconVideo, IconVolume, IconVolumeOff, IconVote, IconWallet, IconWifi, IconWifiOff, IconWind, IconWine, IconWrench, IconXCircle, IconZoomIn, IconZoomOut, Paragraph, Title } from "@dreamer/ui-view/basic";
+import {
+  Icon, IconAccessibility, IconActivity, IconAirplay, IconAlarmClock, IconAlertCircle,
+  IconAlertTriangle, IconAlignCenter, IconAlignJustify, IconAlignLeft, IconAlignRight, IconAnchor,
+  IconAngry, IconAperture, IconArchive, IconArrowDown, IconArrowDownLeft, IconArrowDownRight,
+  IconArrowLeft, IconArrowLeftRight, IconArrowRight, IconArrowUp, IconArrowUpDown, IconArrowUpLeft,
+  IconArrowUpRight, IconAtSign, IconAtom, IconAward, IconBaby, IconBadgeCheck, IconBan,
+  IconBanknote, IconBarChart, IconBaseline, IconBath, IconBattery, IconBatteryCharging, IconBeaker,
+  IconBed, IconBeer, IconBell, IconBellOff, IconBellRing, IconBike, IconBird, IconBlocks,
+  IconBluetooth, IconBold, IconBookOpen, IconBookmark, IconBot, IconBox, IconBraces,
+  IconBrandAcrobat, IconBrandAdobexd, IconBrandAfterEffects, IconBrandAlipay, IconBrandAndroid,
+  IconBrandApple, IconBrandBehance, IconBrandBinance, IconBrandChrome, IconBrandDingtalk,
+  IconBrandDiscord, IconBrandDocker, IconBrandDropbox, IconBrandFacebook, IconBrandFigma,
+  IconBrandFirefox, IconBrandGithub, IconBrandGitlab, IconBrandGoogle, IconBrandIllustrator,
+  IconBrandIndesign, IconBrandInstagram, IconBrandLightroom, IconBrandLine, IconBrandLinkedin,
+  IconBrandMedium, IconBrandMicrosoft, IconBrandNetflix, IconBrandNotion, IconBrandNpm,
+  IconBrandPaypal, IconBrandPhotoshop, IconBrandPinterest, IconBrandPremiere, IconBrandQq,
+  IconBrandReddit, IconBrandSignal, IconBrandSkype, IconBrandSlack, IconBrandSnapchat,
+  IconBrandSpotify, IconBrandStripe, IconBrandTelegram, IconBrandTiktok, IconBrandTrello,
+  IconBrandTwitch, IconBrandTwitter, IconBrandVercel, IconBrandWechat, IconBrandWeibo,
+  IconBrandWhatsapp, IconBrandYoutube, IconBrandZoom, IconBriefcase, IconBrush, IconBug,
+  IconBuilding, IconBuilding2, IconBus, IconCable, IconCake, IconCalculator, IconCalendar,
+  IconCalendarCheck, IconCalendarDays, IconCalendarPlus, IconCalendarX, IconCamera, IconCaptions,
+  IconCar, IconCast, IconCat, IconCheck, IconCheckCircle, IconChevronDown, IconChevronLeft,
+  IconChevronRight, IconChevronUp, IconChevronsDown, IconChevronsLeft, IconChevronsRight,
+  IconChevronsUp, IconCircle, IconCircleDollarSign, IconCircleDot, IconCircleSplit, IconCircleUser,
+  IconCircuitBoard, IconClapperboard, IconClipboard, IconClipboardCheck, IconClipboardCopy,
+  IconClipboardList, IconClipboardPaste, IconClock, IconClose, IconCloud, IconCloudDownload,
+  IconCloudLightning, IconCloudOff, IconCloudRain, IconCloudSnow, IconCloudUpload, IconCloudy,
+  IconCode, IconCoffee, IconCoins, IconColumns, IconCompass, IconComponent, IconConstruction,
+  IconContact, IconCookie, IconCopy, IconCornerDownLeft, IconCornerDownRight, IconCpu,
+  IconCreditCard, IconCrop, IconCrosshair, IconCrown, IconDatabase, IconDiamond, IconDisc, IconDog,
+  IconDollarSign, IconDoorClosed, IconDoorOpen, IconDownload, IconDroplet, IconDumbbell,
+  IconEclipse, IconEdit, IconEqual, IconEqualNot, IconEraser, IconExitFullscreen, IconExpand,
+  IconExternalLink, IconEye, IconEyeOff, IconFaceSmile, IconFactory, IconFile, IconFileArchive,
+  IconFileAudio, IconFileCheck, IconFileCode, IconFileImage, IconFileJson, IconFilePlus,
+  IconFileSearch, IconFileSpreadsheet, IconFileText, IconFileVideo, IconFileX, IconFilm, IconFilter,
+  IconFingerprint, IconFish, IconFlag, IconFlame, IconFlower2, IconFocus, IconFolder,
+  IconFolderMinus, IconFolderOpen, IconFolderPlus, IconFolderSearch, IconFolderX, IconFootprints,
+  IconForward, IconFrown, IconFullscreen, IconGem, IconGhost, IconGift, IconGitBranch,
+  IconGitCommit, IconGitCompare, IconGitMerge, IconGitPullRequest, IconGlobe, IconGraduationCap,
+  IconGrid, IconGripVertical, IconHammer, IconHand, IconHandshake, IconHardDrive, IconHash,
+  IconHeading, IconHeadphones, IconHeart, IconHeartPulse, IconHelpCircle, IconHexagon,
+  IconHighlighter, IconHistory, IconHome, IconImage, IconImagePlus, IconImages, IconInbox,
+  IconInfinity, IconInfo, IconItalic, IconKanban, IconKey, IconKeyboard, IconLamp, IconLandmark,
+  IconLanguages, IconLaptop, IconLaugh, IconLayers, IconLayoutDashboard, IconLeaf, IconLibrary,
+  IconLightbulb, IconLink, IconLink2, IconList, IconListChecks, IconListOrdered, IconLoader,
+  IconLoader2, IconLock, IconLogIn, IconLogOut, IconMail, IconMailOpen, IconMap, IconMapPin,
+  IconMaximize2, IconMegaphone, IconMeh, IconMenu, IconMessageCircle, IconMessageSquare,
+  IconMessageSquarePlus, IconMic, IconMicOff, IconMicroscope, IconMinimize2, IconMinus,
+  IconMinusCircle, IconMonitor, IconMonitorSplit, IconMoon, IconMoreHorizontal, IconMoreVertical,
+  IconMountain, IconMouse, IconMousePointer, IconMusic, IconNavigation, IconNewspaper,
+  IconNotebookPen, IconOrbit, IconPackage, IconPaintbrush, IconPalette, IconPanelBottom,
+  IconPanelLeft, IconPanelRight, IconPanelTop, IconPaperClip, IconParkingCircle, IconPartyPopper,
+  IconPause, IconPenTool, IconPencil, IconPercent, IconPhone, IconPhoneCall, IconPhoneOff,
+  IconPieChart, IconPiggyBank, IconPill, IconPin, IconPizza, IconPlane, IconPlay, IconPlug,
+  IconPlus, IconPlusCircle, IconPodcast, IconPower, IconPrinter, IconQrCode, IconQuote, IconRadar,
+  IconRadio, IconRatio, IconReceipt, IconRecycle, IconRedo, IconRefresh, IconRepeat, IconReplace,
+  IconReply, IconRocket, IconRotateCcw, IconRotateCw, IconRoute, IconRss, IconSatellite, IconSave,
+  IconScale, IconScaling, IconScan, IconScanBarcode, IconScissors, IconScrollText, IconSearch,
+  IconSend, IconServer, IconSettings, IconShare, IconShield, IconShieldAlert, IconShieldCheck,
+  IconShip, IconShoppingBag, IconShoppingCart, IconShuffle, IconSignature, IconSkipBack,
+  IconSkipForward, IconSkull, IconSlidersHorizontal, IconSmartphone, IconSmile, IconSmilePlus,
+  IconSnowflake, IconSparkles, IconSpeaker, IconSpellCheck, IconSquare, IconStamp, IconStar,
+  IconStethoscope, IconSticker, IconStickyNote, IconStop, IconStore, IconStrikethrough, IconSun,
+  IconSunrise, IconSunset, IconSyringe, IconTable, IconTablet, IconTag, IconTarget, IconTelescope,
+  IconTerminal, IconTestTube, IconThermometer, IconThumbsDown, IconThumbsUp, IconTicket, IconTimer,
+  IconToggleLeft, IconToggleRight, IconTokenAda, IconTokenAlgo, IconTokenArb, IconTokenAtom,
+  IconTokenAvax, IconTokenBnb, IconTokenBtc, IconTokenCro, IconTokenDai, IconTokenDoge,
+  IconTokenDot, IconTokenEth, IconTokenFil, IconTokenFtm, IconTokenLink, IconTokenLtc,
+  IconTokenMatic, IconTokenNear, IconTokenOp, IconTokenPepe, IconTokenShib, IconTokenSol,
+  IconTokenSui, IconTokenTrx, IconTokenUni, IconTokenUsdc, IconTokenUsdt, IconTokenWbtc,
+  IconTokenXrp, IconTrain, IconTrash, IconTrash2, IconTreePine, IconTrendingDown, IconTrendingUp,
+  IconTriangle, IconTruck, IconTv, IconType, IconUmbrella, IconUnderline, IconUndo, IconUnlock,
+  IconUnplug, IconUpload, IconUsb, IconUser, IconUserCheck, IconUserCog, IconUserMinus,
+  IconUserPlus, IconUserSearch, IconUserX, IconUsers, IconUtensils, IconVideo, IconVolume,
+  IconVolume1, IconVolume2, IconVolumeOff, IconVote, IconWallet, IconWandSparkles, IconWarehouse,
+  IconWaves, IconWifi, IconWifiOff, IconWind, IconWine, IconWorkflow, IconWrapText, IconWrench,
+  IconXCircle, IconZap, IconZoomIn, IconZoomOut, Paragraph, Title
+} from "@dreamer/ui-view/basic";
 
 import { CodeBlock } from "@dreamer/ui-view/data-display";
 
@@ -143,9 +221,17 @@ export default function BasicIcon() {
     { Component: IconClose, name: "Close" },
     { Component: IconEdit, name: "Edit" },
     { Component: IconTrash, name: "Trash" },
+    { Component: IconTrash2, name: "Trash2" },
     { Component: IconCopy, name: "Copy" },
     { Component: IconClipboard, name: "Clipboard" },
+    { Component: IconClipboardCopy, name: "ClipboardCopy" },
+    { Component: IconClipboardPaste, name: "ClipboardPaste" },
+    { Component: IconClipboardList, name: "ClipboardList" },
+    { Component: IconClipboardCheck, name: "ClipboardCheck" },
     { Component: IconDownload, name: "Download" },
+    { Component: IconUpload, name: "Upload" },
+    { Component: IconCloudDownload, name: "CloudDownload" },
+    { Component: IconCloudUpload, name: "CloudUpload" },
     { Component: IconSave, name: "Save" },
     { Component: IconUndo, name: "Undo" },
     { Component: IconRedo, name: "Redo" },
@@ -153,6 +239,9 @@ export default function BasicIcon() {
     { Component: IconRotateCw, name: "RotateCw" },
     { Component: IconRotateCcw, name: "RotateCcw" },
     { Component: IconMaximize2, name: "Maximize2" },
+    { Component: IconMinimize2, name: "Minimize2" },
+    { Component: IconExpand, name: "Expand" },
+    { Component: IconFullscreen, name: "Fullscreen" },
     { Component: IconExitFullscreen, name: "ExitFullscreen" },
     { Component: IconSettings, name: "Settings" },
     { Component: IconFilter, name: "Filter" },
@@ -160,10 +249,24 @@ export default function BasicIcon() {
     { Component: IconPin, name: "Pin" },
     { Component: IconScissors, name: "Scissors" },
     { Component: IconArrowLeftRight, name: "ArrowLeftRight" },
+    { Component: IconArrowUpDown, name: "ArrowUpDown" },
     { Component: IconCalculator, name: "Calculator" },
     { Component: IconMoreVertical, name: "MoreVertical" },
     { Component: IconMoreHorizontal, name: "MoreHorizontal" },
     { Component: IconPrinter, name: "Printer" },
+    { Component: IconReplace, name: "Replace" },
+    { Component: IconSpellCheck, name: "SpellCheck" },
+    { Component: IconCrop, name: "Crop" },
+    { Component: IconScaling, name: "Scaling" },
+    { Component: IconRatio, name: "Ratio" },
+    { Component: IconRecycle, name: "Recycle" },
+    { Component: IconHammer, name: "Hammer" },
+    { Component: IconConstruction, name: "Construction" },
+    { Component: IconScan, name: "Scan" },
+    { Component: IconScanBarcode, name: "ScanBarcode" },
+    { Component: IconQrCode, name: "QrCode" },
+    { Component: IconMousePointer, name: "MousePointer" },
+    { Component: IconHand, name: "Hand" },
   ];
 
   const 方向导航 = [
@@ -171,6 +274,10 @@ export default function BasicIcon() {
     { Component: IconChevronUp, name: "ChevronUp" },
     { Component: IconChevronLeft, name: "ChevronLeft" },
     { Component: IconChevronRight, name: "ChevronRight" },
+    { Component: IconChevronsDown, name: "ChevronsDown" },
+    { Component: IconChevronsUp, name: "ChevronsUp" },
+    { Component: IconChevronsLeft, name: "ChevronsLeft" },
+    { Component: IconChevronsRight, name: "ChevronsRight" },
     { Component: IconArrowLeft, name: "ArrowLeft" },
     { Component: IconArrowRight, name: "ArrowRight" },
     { Component: IconArrowUp, name: "ArrowUp" },
@@ -179,8 +286,16 @@ export default function BasicIcon() {
     { Component: IconArrowDownRight, name: "ArrowDownRight" },
     { Component: IconArrowUpLeft, name: "ArrowUpLeft" },
     { Component: IconArrowDownLeft, name: "ArrowDownLeft" },
+    { Component: IconCornerDownLeft, name: "CornerDownLeft" },
+    { Component: IconCornerDownRight, name: "CornerDownRight" },
     { Component: IconHome, name: "Home" },
     { Component: IconExternalLink, name: "ExternalLink" },
+    { Component: IconNavigation, name: "Navigation" },
+    { Component: IconCompass, name: "Compass" },
+    { Component: IconMapPin, name: "MapPin" },
+    { Component: IconMap, name: "Map" },
+    { Component: IconRoute, name: "Route" },
+    { Component: IconFootprints, name: "Footprints" },
   ];
 
   const 内容 = [
@@ -190,10 +305,23 @@ export default function BasicIcon() {
     { Component: IconFilePlus, name: "FilePlus" },
     { Component: IconFileCheck, name: "FileCheck" },
     { Component: IconFileX, name: "FileX" },
+    { Component: IconFileCode, name: "FileCode" },
+    { Component: IconFileJson, name: "FileJson" },
+    { Component: IconFileSpreadsheet, name: "FileSpreadsheet" },
+    { Component: IconFileArchive, name: "FileArchive" },
+    { Component: IconFileSearch, name: "FileSearch" },
+    { Component: IconFileImage, name: "FileImage" },
+    { Component: IconFileAudio, name: "FileAudio" },
+    { Component: IconFileVideo, name: "FileVideo" },
     { Component: IconFolder, name: "Folder" },
     { Component: IconFolderOpen, name: "FolderOpen" },
+    { Component: IconFolderPlus, name: "FolderPlus" },
+    { Component: IconFolderSearch, name: "FolderSearch" },
+    { Component: IconFolderMinus, name: "FolderMinus" },
+    { Component: IconFolderX, name: "FolderX" },
     { Component: IconImage, name: "Image" },
     { Component: IconImagePlus, name: "ImagePlus" },
+    { Component: IconImages, name: "Images" },
     { Component: IconPalette, name: "Palette" },
     { Component: IconLink, name: "Link" },
     { Component: IconLink2, name: "Link2" },
@@ -202,18 +330,25 @@ export default function BasicIcon() {
     { Component: IconReply, name: "Reply" },
     { Component: IconForward, name: "Forward" },
     { Component: IconBookOpen, name: "BookOpen" },
+    { Component: IconLibrary, name: "Library" },
     { Component: IconMessageSquare, name: "MessageSquare" },
+    { Component: IconMessageSquarePlus, name: "MessageSquarePlus" },
+    { Component: IconMessageCircle, name: "MessageCircle" },
     { Component: IconSend, name: "Send" },
     { Component: IconPaperClip, name: "PaperClip" },
     { Component: IconInbox, name: "Inbox" },
-    { Component: IconMessageCircle, name: "MessageCircle" },
     { Component: IconPhone, name: "Phone" },
+    { Component: IconPhoneCall, name: "PhoneCall" },
+    { Component: IconPhoneOff, name: "PhoneOff" },
     { Component: IconRss, name: "Rss" },
     { Component: IconHash, name: "Hash" },
-    { Component: IconClipboardCheck, name: "ClipboardCheck" },
     { Component: IconStickyNote, name: "StickyNote" },
     { Component: IconScrollText, name: "ScrollText" },
     { Component: IconSignature, name: "Signature" },
+    { Component: IconQuote, name: "Quote" },
+    { Component: IconNewspaper, name: "Newspaper" },
+    { Component: IconNotebookPen, name: "NotebookPen" },
+    { Component: IconContact, name: "Contact" },
   ];
 
   const 状态反馈 = [
@@ -225,12 +360,45 @@ export default function BasicIcon() {
     { Component: IconAlertTriangle, name: "AlertTriangle" },
     { Component: IconHelpCircle, name: "HelpCircle" },
     { Component: IconBell, name: "Bell" },
+    { Component: IconBellOff, name: "BellOff" },
+    { Component: IconBellRing, name: "BellRing" },
     { Component: IconShield, name: "Shield" },
     { Component: IconShieldAlert, name: "ShieldAlert" },
     { Component: IconShieldCheck, name: "ShieldCheck" },
     { Component: IconBan, name: "Ban" },
     { Component: IconLoader, name: "Loader" },
     { Component: IconTimer, name: "Timer" },
+    { Component: IconZap, name: "Zap" },
+    { Component: IconActivity, name: "Activity" },
+    { Component: IconCrosshair, name: "Crosshair" },
+    { Component: IconFocus, name: "Focus" },
+    { Component: IconTarget, name: "Target" },
+    { Component: IconThumbsUp, name: "ThumbsUp" },
+    { Component: IconThumbsDown, name: "ThumbsDown" },
+    { Component: IconBadgeCheck, name: "BadgeCheck" },
+    { Component: IconAward, name: "Award" },
+    { Component: IconSparkles, name: "Sparkles" },
+    { Component: IconFlame, name: "Flame" },
+    { Component: IconGhost, name: "Ghost" },
+    { Component: IconSkull, name: "Skull" },
+    { Component: IconInfinity, name: "Infinity" },
+    { Component: IconEqual, name: "Equal" },
+    { Component: IconEqualNot, name: "EqualNot" },
+  ];
+
+  const 表情情绪 = [
+    { Component: IconSmile, name: "Smile" },
+    { Component: IconSmilePlus, name: "SmilePlus" },
+    { Component: IconLaugh, name: "Laugh" },
+    { Component: IconFrown, name: "Frown" },
+    { Component: IconMeh, name: "Meh" },
+    { Component: IconAngry, name: "Angry" },
+    { Component: IconHeart, name: "Heart" },
+    { Component: IconHeartPulse, name: "HeartPulse" },
+    { Component: IconStar, name: "Star" },
+    { Component: IconSticker, name: "Sticker" },
+    { Component: IconPartyPopper, name: "PartyPopper" },
+    { Component: IconWandSparkles, name: "WandSparkles" },
   ];
 
   const 媒体 = [
@@ -242,21 +410,28 @@ export default function BasicIcon() {
     { Component: IconRepeat, name: "Repeat" },
     { Component: IconShuffle, name: "Shuffle" },
     { Component: IconVolume, name: "Volume" },
+    { Component: IconVolume1, name: "Volume1" },
+    { Component: IconVolume2, name: "Volume2" },
     { Component: IconVolumeOff, name: "VolumeOff" },
+    { Component: IconSpeaker, name: "Speaker" },
     { Component: IconHeadphones, name: "Headphones" },
     { Component: IconMusic, name: "Music" },
     { Component: IconMic, name: "Mic" },
     { Component: IconMicOff, name: "MicOff" },
     { Component: IconCamera, name: "Camera" },
     { Component: IconVideo, name: "Video" },
-    { Component: IconNewspaper, name: "Newspaper" },
     { Component: IconRadio, name: "Radio" },
     { Component: IconPodcast, name: "Podcast" },
     { Component: IconMegaphone, name: "Megaphone" },
     { Component: IconTv, name: "Tv" },
     { Component: IconFilm, name: "Film" },
-    { Component: IconCircleDot, name: "CircleDot" },
     { Component: IconDisc, name: "Disc" },
+    { Component: IconCircleDot, name: "CircleDot" },
+    { Component: IconClapperboard, name: "Clapperboard" },
+    { Component: IconCaptions, name: "Captions" },
+    { Component: IconCast, name: "Cast" },
+    { Component: IconAirplay, name: "Airplay" },
+    { Component: IconAperture, name: "Aperture" },
   ];
 
   const 用户社交 = [
@@ -265,61 +440,242 @@ export default function BasicIcon() {
     { Component: IconUserMinus, name: "UserMinus" },
     { Component: IconUsers, name: "Users" },
     { Component: IconUserCog, name: "UserCog" },
-    { Component: IconHeart, name: "Heart" },
-    { Component: IconStar, name: "Star" },
+    { Component: IconUserCheck, name: "UserCheck" },
+    { Component: IconUserX, name: "UserX" },
+    { Component: IconUserSearch, name: "UserSearch" },
+    { Component: IconCircleUser, name: "CircleUser" },
     { Component: IconBookmark, name: "Bookmark" },
     { Component: IconShare, name: "Share" },
-    { Component: IconThumbsUp, name: "ThumbsUp" },
-    { Component: IconThumbsDown, name: "ThumbsDown" },
     { Component: IconLock, name: "Lock" },
     { Component: IconUnlock, name: "Unlock" },
     { Component: IconAtSign, name: "AtSign" },
     { Component: IconCrown, name: "Crown" },
     { Component: IconTicket, name: "Ticket" },
-    { Component: IconBadgeCheck, name: "BadgeCheck" },
     { Component: IconStore, name: "Store" },
-    { Component: IconScanBarcode, name: "ScanBarcode" },
-    { Component: IconSlidersHorizontal, name: "SlidersHorizontal" },
+    { Component: IconHandshake, name: "Handshake" },
+    { Component: IconAccessibility, name: "Accessibility" },
+    { Component: IconBaby, name: "Baby" },
+    { Component: IconBot, name: "Bot" },
   ];
 
   const 时间地点 = [
     { Component: IconCalendar, name: "Calendar" },
+    { Component: IconCalendarDays, name: "CalendarDays" },
+    { Component: IconCalendarCheck, name: "CalendarCheck" },
+    { Component: IconCalendarPlus, name: "CalendarPlus" },
+    { Component: IconCalendarX, name: "CalendarX" },
     { Component: IconClock, name: "Clock" },
-    { Component: IconMapPin, name: "MapPin" },
-    { Component: IconTag, name: "Tag" },
-    { Component: IconCompass, name: "Compass" },
+    { Component: IconAlarmClock, name: "AlarmClock" },
+    { Component: IconHistory, name: "History" },
     { Component: IconGlobe, name: "Globe" },
-    { Component: IconNavigation, name: "Navigation" },
     { Component: IconPlane, name: "Plane" },
     { Component: IconShip, name: "Ship" },
     { Component: IconTrain, name: "Train" },
+    { Component: IconCar, name: "Car" },
+    { Component: IconTruck, name: "Truck" },
+    { Component: IconBike, name: "Bike" },
+    { Component: IconBus, name: "Bus" },
     { Component: IconParkingCircle, name: "ParkingCircle" },
+    { Component: IconAnchor, name: "Anchor" },
+    { Component: IconBed, name: "Bed" },
+    { Component: IconBath, name: "Bath" },
+    { Component: IconDoorOpen, name: "DoorOpen" },
+    { Component: IconDoorClosed, name: "DoorClosed" },
+    { Component: IconBuilding, name: "Building" },
+    { Component: IconBuilding2, name: "Building2" },
+    { Component: IconFactory, name: "Factory" },
+    { Component: IconWarehouse, name: "Warehouse" },
+    { Component: IconLandmark, name: "Landmark" },
   ];
 
   const 布局视图 = [
     { Component: IconGrid, name: "Grid" },
     { Component: IconList, name: "List" },
+    { Component: IconListOrdered, name: "ListOrdered" },
+    { Component: IconListChecks, name: "ListChecks" },
     { Component: IconLayers, name: "Layers" },
     { Component: IconColumns, name: "Columns" },
+    { Component: IconTable, name: "Table" },
+    { Component: IconLayoutDashboard, name: "LayoutDashboard" },
+    { Component: IconPanelLeft, name: "PanelLeft" },
+    { Component: IconPanelRight, name: "PanelRight" },
+    { Component: IconPanelTop, name: "PanelTop" },
+    { Component: IconPanelBottom, name: "PanelBottom" },
     { Component: IconAlignLeft, name: "AlignLeft" },
     { Component: IconAlignCenter, name: "AlignCenter" },
     { Component: IconAlignRight, name: "AlignRight" },
+    { Component: IconAlignJustify, name: "AlignJustify" },
     { Component: IconType, name: "Type" },
+    { Component: IconBold, name: "Bold" },
+    { Component: IconItalic, name: "Italic" },
+    { Component: IconUnderline, name: "Underline" },
+    { Component: IconStrikethrough, name: "Strikethrough" },
+    { Component: IconHeading, name: "Heading" },
+    { Component: IconBaseline, name: "Baseline" },
+    { Component: IconWrapText, name: "WrapText" },
+    { Component: IconPencil, name: "Pencil" },
+    { Component: IconEraser, name: "Eraser" },
+    { Component: IconBrush, name: "Brush" },
+    { Component: IconPaintbrush, name: "Paintbrush" },
+    { Component: IconHighlighter, name: "Highlighter" },
+    { Component: IconPenTool, name: "PenTool" },
     { Component: IconCircle, name: "Circle" },
     { Component: IconSquare, name: "Square" },
+    { Component: IconTriangle, name: "Triangle" },
+    { Component: IconHexagon, name: "Hexagon" },
+    { Component: IconDiamond, name: "Diamond" },
     { Component: IconGripVertical, name: "GripVertical" },
     { Component: IconZoomIn, name: "ZoomIn" },
     { Component: IconZoomOut, name: "ZoomOut" },
-  ];
+    { Component: IconKanban, name: "Kanban" },
+    { Component: IconComponent, name: "Component" },
+    { Component: IconBlocks, name: "Blocks" },
+    { Component: IconWorkflow, name: "Workflow" },
+    { Component: IconMenu, name: "Menu" },
+      { Component: IconSlidersHorizontal, name: "SlidersHorizontal" },
+];
 
   const 数据图表 = [
     { Component: IconBarChart, name: "BarChart" },
     { Component: IconPieChart, name: "PieChart" },
     { Component: IconTrendingUp, name: "TrendingUp" },
     { Component: IconTrendingDown, name: "TrendingDown" },
+    { Component: IconWallet, name: "Wallet" },
+    { Component: IconCircleDollarSign, name: "CircleDollarSign" },
+    { Component: IconPercent, name: "Percent" },
+    { Component: IconCreditCard, name: "CreditCard" },
+    { Component: IconBanknote, name: "Banknote" },
+    { Component: IconCoins, name: "Coins" },
+    { Component: IconReceipt, name: "Receipt" },
+    { Component: IconDollarSign, name: "DollarSign" },
+    { Component: IconPiggyBank, name: "PiggyBank" },
+    { Component: IconShoppingCart, name: "ShoppingCart" },
+    { Component: IconShoppingBag, name: "ShoppingBag" },
+    { Component: IconPackage, name: "Package" },
+    { Component: IconGift, name: "Gift" },
+    { Component: IconTag, name: "Tag" },
+    { Component: IconBriefcase, name: "Briefcase" },
+    { Component: IconScale, name: "Scale" },
+    { Component: IconVote, name: "Vote" },
+    { Component: IconStamp, name: "Stamp" },
+    { Component: IconFlag, name: "Flag" },
   ];
 
-  /** 三、大型门户网站常见图标（按 ICON_ANALYSIS 小标题分类） */
+  const 设备网络 = [
+    { Component: IconLaptop, name: "Laptop" },
+    { Component: IconSmartphone, name: "Smartphone" },
+    { Component: IconTablet, name: "Tablet" },
+    { Component: IconMonitor, name: "Monitor" },
+    { Component: IconMonitorSplit, name: "MonitorSplit" },
+    { Component: IconKeyboard, name: "Keyboard" },
+    { Component: IconMouse, name: "Mouse" },
+    { Component: IconBattery, name: "Battery" },
+    { Component: IconBatteryCharging, name: "BatteryCharging" },
+    { Component: IconWifi, name: "Wifi" },
+    { Component: IconWifiOff, name: "WifiOff" },
+    { Component: IconPower, name: "Power" },
+    { Component: IconServer, name: "Server" },
+    { Component: IconHardDrive, name: "HardDrive" },
+    { Component: IconCpu, name: "Cpu" },
+    { Component: IconDatabase, name: "Database" },
+    { Component: IconBluetooth, name: "Bluetooth" },
+    { Component: IconPlug, name: "Plug" },
+    { Component: IconUnplug, name: "Unplug" },
+    { Component: IconCable, name: "Cable" },
+    { Component: IconUsb, name: "Usb" },
+    { Component: IconCircuitBoard, name: "CircuitBoard" },
+    { Component: IconRadar, name: "Radar" },
+    { Component: IconSatellite, name: "Satellite" },
+    { Component: IconOrbit, name: "Orbit" },
+  ];
+
+  const 天气自然 = [
+    { Component: IconSun, name: "Sun" },
+    { Component: IconMoon, name: "Moon" },
+    { Component: IconCloud, name: "Cloud" },
+    { Component: IconCloudRain, name: "CloudRain" },
+    { Component: IconCloudOff, name: "CloudOff" },
+    { Component: IconCloudLightning, name: "CloudLightning" },
+    { Component: IconCloudSnow, name: "CloudSnow" },
+    { Component: IconCloudy, name: "Cloudy" },
+    { Component: IconSnowflake, name: "Snowflake" },
+    { Component: IconWind, name: "Wind" },
+    { Component: IconThermometer, name: "Thermometer" },
+    { Component: IconUmbrella, name: "Umbrella" },
+    { Component: IconDroplet, name: "Droplet" },
+    { Component: IconLeaf, name: "Leaf" },
+    { Component: IconMountain, name: "Mountain" },
+    { Component: IconWaves, name: "Waves" },
+    { Component: IconSunrise, name: "Sunrise" },
+    { Component: IconSunset, name: "Sunset" },
+    { Component: IconFlower2, name: "Flower2" },
+    { Component: IconTreePine, name: "TreePine" },
+    { Component: IconEclipse, name: "Eclipse" },
+    { Component: IconCircleSplit, name: "CircleSplit" },
+  ];
+
+  const 餐饮生活 = [
+    { Component: IconUtensils, name: "Utensils" },
+    { Component: IconCoffee, name: "Coffee" },
+    { Component: IconWine, name: "Wine" },
+    { Component: IconCake, name: "Cake" },
+    { Component: IconPizza, name: "Pizza" },
+    { Component: IconBeer, name: "Beer" },
+    { Component: IconCookie, name: "Cookie" },
+    { Component: IconPill, name: "Pill" },
+    { Component: IconSyringe, name: "Syringe" },
+    { Component: IconStethoscope, name: "Stethoscope" },
+    { Component: IconDumbbell, name: "Dumbbell" },
+    { Component: IconLamp, name: "Lamp" },
+    { Component: IconLightbulb, name: "Lightbulb" },
+    { Component: IconRocket, name: "Rocket" },
+  ];
+
+  const 动物 = [
+    { Component: IconCat, name: "Cat" },
+    { Component: IconDog, name: "Dog" },
+    { Component: IconBird, name: "Bird" },
+    { Component: IconFish, name: "Fish" },
+  ];
+
+  const 工具开发 = [
+    { Component: IconWrench, name: "Wrench" },
+    { Component: IconCode, name: "Code" },
+    { Component: IconTerminal, name: "Terminal" },
+    { Component: IconBug, name: "Bug" },
+    { Component: IconTestTube, name: "TestTube" },
+    { Component: IconGitBranch, name: "GitBranch" },
+    { Component: IconGitCommit, name: "GitCommit" },
+    { Component: IconGitMerge, name: "GitMerge" },
+    { Component: IconGitPullRequest, name: "GitPullRequest" },
+    { Component: IconGitCompare, name: "GitCompare" },
+    { Component: IconBraces, name: "Braces" },
+    { Component: IconAtom, name: "Atom" },
+    { Component: IconBeaker, name: "Beaker" },
+    { Component: IconMicroscope, name: "Microscope" },
+    { Component: IconTelescope, name: "Telescope" },
+    { Component: IconToggleLeft, name: "ToggleLeft" },
+    { Component: IconToggleRight, name: "ToggleRight" },
+    { Component: IconBox, name: "Box" },
+    { Component: IconLanguages, name: "Languages" },
+  ];
+
+  const 其它零散 = [
+    { Component: IconPlus, name: "Plus" },
+    { Component: IconMinus, name: "Minus" },
+    { Component: IconPlusCircle, name: "PlusCircle" },
+    { Component: IconMinusCircle, name: "MinusCircle" },
+    { Component: IconEye, name: "Eye" },
+    { Component: IconEyeOff, name: "EyeOff" },
+    { Component: IconLogIn, name: "LogIn" },
+    { Component: IconLogOut, name: "LogOut" },
+    { Component: IconKey, name: "Key" },
+    { Component: IconFingerprint, name: "Fingerprint" },
+    { Component: IconGem, name: "Gem" },
+    { Component: IconGraduationCap, name: "GraduationCap" },
+  ];
+
+  /** 三、大型门户网站常见图标（场景速览，可与上文重复） */
   const 新闻资讯 = [
     { Component: IconFileText, name: "FileText" },
     { Component: IconRss, name: "Rss" },
@@ -336,7 +692,8 @@ export default function BasicIcon() {
     { Component: IconCamera, name: "Camera" },
     { Component: IconTv, name: "Tv" },
     { Component: IconFilm, name: "Film" },
-    { Component: IconCircleDot, name: "CircleDot" },
+    { Component: IconClapperboard, name: "Clapperboard" },
+    { Component: IconCaptions, name: "Captions" },
     { Component: IconBookmark, name: "Bookmark" },
   ];
   const 音乐音频 = [
@@ -344,6 +701,7 @@ export default function BasicIcon() {
     { Component: IconHeadphones, name: "Headphones" },
     { Component: IconMic, name: "Mic" },
     { Component: IconVolume, name: "Volume" },
+    { Component: IconSpeaker, name: "Speaker" },
     { Component: IconDisc, name: "Disc" },
     { Component: IconRadio, name: "Radio" },
     { Component: IconPodcast, name: "Podcast" },
@@ -352,17 +710,19 @@ export default function BasicIcon() {
     { Component: IconHeart, name: "Heart" },
     { Component: IconStar, name: "Star" },
     { Component: IconShare, name: "Share" },
+    { Component: IconSmile, name: "Smile" },
     { Component: IconMessageCircle, name: "MessageCircle" },
     { Component: IconAtSign, name: "AtSign" },
     { Component: IconThumbsUp, name: "ThumbsUp" },
     { Component: IconThumbsDown, name: "ThumbsDown" },
     { Component: IconSend, name: "Send" },
+    { Component: IconSticker, name: "Sticker" },
+    { Component: IconPartyPopper, name: "PartyPopper" },
   ];
   const 电商购物 = [
     { Component: IconShoppingCart, name: "ShoppingCart" },
     { Component: IconPackage, name: "Package" },
     { Component: IconCreditCard, name: "CreditCard" },
-    /** 钱包 / 法币符号 / 折扣占比，原「Web3」分类并入门户场景 */
     { Component: IconWallet, name: "Wallet" },
     { Component: IconCircleDollarSign, name: "CircleDollarSign" },
     { Component: IconPercent, name: "Percent" },
@@ -371,9 +731,9 @@ export default function BasicIcon() {
     { Component: IconTag, name: "Tag" },
     { Component: IconGift, name: "Gift" },
     { Component: IconReceipt, name: "Receipt" },
-    /** 扫码框与条码扫描并列（收银、核销） */
     { Component: IconScan, name: "Scan" },
     { Component: IconScanBarcode, name: "ScanBarcode" },
+    { Component: IconQrCode, name: "QrCode" },
   ];
   const 搜索发现 = [
     { Component: IconSearch, name: "Search" },
@@ -382,18 +742,19 @@ export default function BasicIcon() {
     { Component: IconList, name: "List" },
     { Component: IconSlidersHorizontal, name: "SlidersHorizontal" },
     { Component: IconSparkles, name: "Sparkles" },
-    /** 热门 / 热度，原「Web3」分类并入发现场景 */
     { Component: IconFlame, name: "Flame" },
     { Component: IconTrendingUp, name: "TrendingUp" },
+    { Component: IconRocket, name: "Rocket" },
+    { Component: IconLightbulb, name: "Lightbulb" },
     { Component: IconClock, name: "Clock" },
   ];
   const 用户会员 = [
     { Component: IconUser, name: "User" },
     { Component: IconUsers, name: "Users" },
     { Component: IconUserPlus, name: "UserPlus" },
+    { Component: IconCircleUser, name: "CircleUser" },
     { Component: IconBookmark, name: "Bookmark" },
     { Component: IconCrown, name: "Crown" },
-    /** 会员权益 / 虚拟资产展示，原「Web3」分类并入会员场景 */
     { Component: IconGem, name: "Gem" },
     { Component: IconTicket, name: "Ticket" },
     { Component: IconAward, name: "Award" },
@@ -401,6 +762,8 @@ export default function BasicIcon() {
   ];
   const 通知消息 = [
     { Component: IconBell, name: "Bell" },
+    { Component: IconBellRing, name: "BellRing" },
+    { Component: IconBellOff, name: "BellOff" },
     { Component: IconMail, name: "Mail" },
     { Component: IconMessageCircle, name: "MessageCircle" },
     { Component: IconInbox, name: "Inbox" },
@@ -414,148 +777,13 @@ export default function BasicIcon() {
     { Component: IconLogIn, name: "LogIn" },
     { Component: IconLogOut, name: "LogOut" },
     { Component: IconUserCog, name: "UserCog" },
-    /** 浅色 / 自动 / 深色；竖直黑白圆与显示器半分均可表示「自动」 */
     { Component: IconSun, name: "Sun" },
     { Component: IconCircleSplit, name: "CircleSplit" },
     { Component: IconMonitorSplit, name: "MonitorSplit" },
     { Component: IconMoon, name: "Moon" },
-    /** 主题色 / 取色（如 ColorPicker 后缀、外观设置） */
     { Component: IconPalette, name: "Palette" },
-  ];
-
-  /** 五、其它通用场景（按 ICON_ANALYSIS 小标题拆分展示） */
-  const 安全合规 = [
-    { Component: IconShield, name: "Shield" },
-    { Component: IconShieldCheck, name: "ShieldCheck" },
-    { Component: IconShieldAlert, name: "ShieldAlert" },
-    { Component: IconFingerprint, name: "Fingerprint" },
-    { Component: IconFileCheck, name: "FileCheck" },
-    { Component: IconClipboardCheck, name: "ClipboardCheck" },
-    { Component: IconLock, name: "Lock" },
-    { Component: IconKey, name: "Key" },
-  ];
-  const 文档合同 = [
-    { Component: IconFile, name: "File" },
-    { Component: IconFileText, name: "FileText" },
-    { Component: IconFilePlus, name: "FilePlus" },
-    { Component: IconFileX, name: "FileX" },
-    { Component: IconStickyNote, name: "StickyNote" },
-    { Component: IconScrollText, name: "ScrollText" },
-    { Component: IconSignature, name: "Signature" },
-    { Component: IconClipboard, name: "Clipboard" },
-  ];
-  const 教育学习 = [
-    { Component: IconBookOpen, name: "BookOpen" },
-    { Component: IconBookmark, name: "Bookmark" },
-    { Component: IconGraduationCap, name: "GraduationCap" },
-    { Component: IconLibrary, name: "Library" },
-    { Component: IconNotebookPen, name: "NotebookPen" },
-    { Component: IconLamp, name: "Lamp" },
-  ];
-  const 医疗健康 = [
-    { Component: IconHeartPulse, name: "HeartPulse" },
-    { Component: IconStethoscope, name: "Stethoscope" },
-    { Component: IconPill, name: "Pill" },
-    { Component: IconSyringe, name: "Syringe" },
-    { Component: IconActivity, name: "Activity" },
-  ];
-  const 政府公共 = [
-    { Component: IconBuilding, name: "Building" },
-    { Component: IconFlag, name: "Flag" },
-    { Component: IconLandmark, name: "Landmark" },
-    { Component: IconScale, name: "Scale" },
-    { Component: IconVote, name: "Vote" },
-    { Component: IconStamp, name: "Stamp" },
-  ];
-  const 出行地图 = [
-    { Component: IconMapPin, name: "MapPin" },
-    { Component: IconCompass, name: "Compass" },
-    { Component: IconTruck, name: "Truck" },
-    { Component: IconPlane, name: "Plane" },
-    { Component: IconShip, name: "Ship" },
-    { Component: IconTrain, name: "Train" },
-    { Component: IconNavigation, name: "Navigation" },
-    { Component: IconParkingCircle, name: "ParkingCircle" },
-  ];
-  const 餐饮生活 = [
-    { Component: IconGift, name: "Gift" },
-    { Component: IconHome, name: "Home" },
-    { Component: IconUtensils, name: "Utensils" },
-    { Component: IconCoffee, name: "Coffee" },
-    { Component: IconWine, name: "Wine" },
-    { Component: IconShoppingBag, name: "ShoppingBag" },
-  ];
-  const 天气自然 = [
-    { Component: IconSun, name: "Sun" },
-    { Component: IconCircleSplit, name: "CircleSplit" },
-    { Component: IconMonitorSplit, name: "MonitorSplit" },
-    { Component: IconMoon, name: "Moon" },
-    { Component: IconCloud, name: "Cloud" },
-    { Component: IconDroplet, name: "Droplet" },
-    { Component: IconCloudRain, name: "CloudRain" },
-    { Component: IconSnowflake, name: "Snowflake" },
-    { Component: IconWind, name: "Wind" },
-    { Component: IconThermometer, name: "Thermometer" },
-    { Component: IconUmbrella, name: "Umbrella" },
-  ];
-  const 工具开发 = [
-    { Component: IconWrench, name: "Wrench" },
-    { Component: IconCode, name: "Code" },
-    { Component: IconTerminal, name: "Terminal" },
-    { Component: IconCpu, name: "Cpu" },
-    { Component: IconDatabase, name: "Database" },
-    { Component: IconBug, name: "Bug" },
-    { Component: IconTestTube, name: "TestTube" },
-    { Component: IconGitBranch, name: "GitBranch" },
-    { Component: IconBraces, name: "Braces" },
-  ];
-  const 办公协作 = [
-    { Component: IconCalendar, name: "Calendar" },
-    { Component: IconClock, name: "Clock" },
-    { Component: IconUsers, name: "Users" },
-    { Component: IconMail, name: "Mail" },
-    { Component: IconKanban, name: "Kanban" },
-    { Component: IconTimer, name: "Timer" },
-    { Component: IconHandshake, name: "Handshake" },
-  ];
-  const 状态反馈其它 = [
-    { Component: IconCheck, name: "Check" },
-    { Component: IconXCircle, name: "XCircle" },
-    { Component: IconInfo, name: "Info" },
-    { Component: IconHelpCircle, name: "HelpCircle" },
-    { Component: IconLoader, name: "Loader" },
-    { Component: IconBan, name: "Ban" },
-  ];
-  const 其它零散 = [
-    { Component: IconPlus, name: "Plus" },
-    { Component: IconMinus, name: "Minus" },
-    { Component: IconPlusCircle, name: "PlusCircle" },
-    { Component: IconMinusCircle, name: "MinusCircle" },
-    { Component: IconEye, name: "Eye" },
-    { Component: IconEyeOff, name: "EyeOff" },
-    { Component: IconUpload, name: "Upload" },
-    { Component: IconMenu, name: "Menu" },
-    { Component: IconLogIn, name: "LogIn" },
-    { Component: IconLogOut, name: "LogOut" },
-    { Component: IconBox, name: "Box" },
-    { Component: IconBriefcase, name: "Briefcase" },
-    { Component: IconPackage, name: "Package" },
-    { Component: IconShoppingCart, name: "ShoppingCart" },
-    { Component: IconCreditCard, name: "CreditCard" },
-    { Component: IconBattery, name: "Battery" },
-    { Component: IconBatteryCharging, name: "BatteryCharging" },
-    { Component: IconWifi, name: "Wifi" },
-    { Component: IconWifiOff, name: "WifiOff" },
-    { Component: IconPower, name: "Power" },
-    { Component: IconServer, name: "Server" },
-    { Component: IconBanknote, name: "Banknote" },
-    { Component: IconCoins, name: "Coins" },
-    { Component: IconReceipt, name: "Receipt" },
-    { Component: IconDollarSign, name: "DollarSign" },
-    { Component: IconPiggyBank, name: "PiggyBank" },
-    { Component: IconHistory, name: "History" },
-    { Component: IconTarget, name: "Target" },
-    { Component: IconAward, name: "Award" },
+    { Component: IconLanguages, name: "Languages" },
+    { Component: IconAccessibility, name: "Accessibility" },
   ];
 
   /** 常见链上代币 Logo（品牌色，24×24） */
@@ -867,6 +1095,7 @@ import { IconFlagCN } from "@dreamer/ui-view/icons/flags/standalone/IconFlagCN.t
           等安全环境提供；成功或失败时顶部 Toast 轻提示（复制成功 / 复制失败）。
         </Paragraph>
 
+
         <div class="space-y-6">
           <Title level={3}>一、操作与导航</Title>
           <IconGroup title="操作" items={操作} level={4} />
@@ -874,9 +1103,10 @@ import { IconFlagCN } from "@dreamer/ui-view/icons/flags/standalone/IconFlagCN.t
         </div>
 
         <div class="space-y-6">
-          <Title level={3}>二、内容与媒体</Title>
-          <IconGroup title="内容" items={内容} level={4} />
+          <Title level={3}>二、内容、媒体与表情</Title>
+          <IconGroup title="内容 / 文件" items={内容} level={4} />
           <IconGroup title="媒体" items={媒体} level={4} />
+          <IconGroup title="表情 / 情绪" items={表情情绪} level={4} />
         </div>
 
         <div class="space-y-6">
@@ -893,27 +1123,21 @@ import { IconFlagCN } from "@dreamer/ui-view/icons/flags/standalone/IconFlagCN.t
         </div>
 
         <div class="space-y-6">
-          <Title level={3}>四、用户、社交与视图</Title>
+          <Title level={3}>四、用户、状态与视图</Title>
           <IconGroup title="状态 / 反馈" items={状态反馈} level={4} />
           <IconGroup title="用户 / 社交" items={用户社交} level={4} />
-          <IconGroup title="时间 / 地点" items={时间地点} level={4} />
-          <IconGroup title="布局 / 视图" items={布局视图} level={4} />
-          <IconGroup title="数据 / 图表" items={数据图表} level={4} />
+          <IconGroup title="时间 / 地点 / 出行" items={时间地点} level={4} />
+          <IconGroup title="布局 / 视图 / 编辑" items={布局视图} level={4} />
+          <IconGroup title="数据 / 图表 / 商务" items={数据图表} level={4} />
         </div>
 
         <div class="space-y-6">
-          <Title level={3}>五、其它通用场景</Title>
-          <IconGroup title="安全 / 合规" items={安全合规} level={4} />
-          <IconGroup title="文档 / 合同" items={文档合同} level={4} />
-          <IconGroup title="教育 / 学习" items={教育学习} level={4} />
-          <IconGroup title="医疗 / 健康" items={医疗健康} level={4} />
-          <IconGroup title="政府 / 公共" items={政府公共} level={4} />
-          <IconGroup title="出行 / 地图" items={出行地图} level={4} />
-          <IconGroup title="餐饮 / 生活" items={餐饮生活} level={4} />
+          <Title level={3}>五、设备、自然与其它场景</Title>
+          <IconGroup title="设备 / 网络" items={设备网络} level={4} />
           <IconGroup title="天气 / 自然" items={天气自然} level={4} />
+          <IconGroup title="餐饮 / 生活 / 健康" items={餐饮生活} level={4} />
+          <IconGroup title="动物" items={动物} level={4} />
           <IconGroup title="工具 / 开发" items={工具开发} level={4} />
-          <IconGroup title="办公 / 协作" items={办公协作} level={4} />
-          <IconGroup title="状态 / 反馈" items={状态反馈其它} level={4} />
           <IconGroup title="其它" items={其它零散} level={4} />
         </div>
 

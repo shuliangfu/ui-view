@@ -51,7 +51,15 @@ export function ContextMenu(props: ContextMenuProps): JSXRenderable {
 
   createEffect(() => {
     if (!open.value) return;
-    const close = () => {
+    // Ignore mousedown inside the menu so item onClick can fire.
+    // Document listener is capture-phase; stopPropagation on the menu cannot help.
+    const close = (e?: Event) => {
+      if (e) {
+        const t = e.target as Element | null;
+        if (t && typeof t.closest === "function" && t.closest("[data-dreamer-context-menu]")) {
+          return;
+        }
+      }
       open.value = false;
     };
     const onKey = (e: KeyboardEvent) => {
@@ -59,12 +67,12 @@ export function ContextMenu(props: ContextMenuProps): JSXRenderable {
     };
     // 下一宏任务再听 mousedown，避免本次右键事件链立刻关掉
     const t = globalThis.setTimeout?.(() => {
-      globalThis.addEventListener?.("mousedown", close, true);
+      globalThis.addEventListener?.("mousedown", close as EventListener, true);
     }, 0);
     globalThis.addEventListener?.("keydown", onKey);
     onCleanup(() => {
       if (t != null) globalThis.clearTimeout?.(t);
-      globalThis.removeEventListener?.("mousedown", close, true);
+      globalThis.removeEventListener?.("mousedown", close as EventListener, true);
       globalThis.removeEventListener?.("keydown", onKey);
     });
   });

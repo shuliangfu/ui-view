@@ -1,0 +1,26 @@
+/**
+ * 积木图标，24×24 stroke。
+ */
+import { Icon } from "../Icon.tsx";
+import type { JSXRenderable } from "@dreamer/view";
+import type { IconComponentProps } from "../Icon.tsx";
+
+const svg = (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    class="w-full h-full"
+    aria-hidden
+  >
+    <rect width="7" height="7" x="14" y="3" rx="1" />
+    <path d="M10 21V8a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-5a1 1 0 0 0-1-1H3" />
+  </svg>
+);
+
+export function IconBlocks(props?: IconComponentProps): JSXRenderable {
+  return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
+}

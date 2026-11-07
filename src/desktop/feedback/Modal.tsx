@@ -17,6 +17,10 @@
  * **`width` / `title` / `children` / `footer` 与 compileSource**：父级 MountFn 可能只合并首帧 props；**`width` / `title`** 与 `open` 同向可传零参 getter，
  * 本组件内用 {@link createMemo} 订阅，打开后改预设仍会更新宽高与标题。**`footer`** 同样经 memo 读 {@link ModalProps.footer}，避免底栏 VNode 卡在首帧（确认框危险/警告样式与回调不刷新）。
  * **`children`** 仅当不关弹窗、正文也要随同一 signal 变时再传 `children={() => …}`；普通静态子节点即可。
+ *
+ * **拖动**：`position` 只经 DOM `transform` 更新，**不**订入 Portal `buildModalMarkup`，避免整树重插／子树 remount。
+ * `onPositionChange` 仅在拖拽结束回调（便于宿主持久化），拖动过程不回写宿主。
+ * **标题状态挂点**：`#modal-title` 旁固定空 `[data-modal-title-status]`，宿主／子树可 DOM patch 绿点文案；勿用 `title` signal 驱动状态。
  */
 
 import {
@@ -27,6 +31,7 @@ import {
   createSignal,
   type JSXRenderable,
   onCleanup,
+  untrack,
 } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import { Overlay } from "../../shared/feedback/Overlay.tsx";
@@ -137,6 +142,18 @@ export interface ModalProps {
   keyboard?: boolean;
   /** 是否可拖动（标题栏拖拽），默认 false；传 true 时可拖移弹层 */
   draggable?: boolean;
+  /**
+   * 拖动位移初始值（相对默认落点的 translate x/y，单位 px）。
+   * 仅在挂载／`open` 从关→开时采用；之后以内部拖动为准。可传零参 getter。
+   */
+  defaultPosition?:
+    | { x: number; y: number }
+    | (() => { x: number; y: number } | undefined);
+  /**
+   * 拖动过程／结束时的位移回调（mouseup 再报一次最终值）。
+   * 用于宿主持久化 left/top 等价的 translate 偏移。
+   */
+  onPositionChange?: (pos: { x: number; y: number }) => void;
   /**
    * 每次打开弹层时是否初始为全屏布局；关闭后重置为窗口态。
    * 与 `fullscreenable` 独立；二者可同时使用（打开即全屏且保留切换按钮）。
@@ -264,10 +281,35 @@ function getBrowserBodyPortalHost(): HTMLElement | null {
  * @param setPosition 设置位移
  * @param enabled 是否启用拖动
  */
+
+function readModalDefaultPosition(
+  v: ModalProps["defaultPosition"],
+): { x: number; y: number } {
+  if (v == null) return { x: 0, y: 0 };
+  if (typeof v === "function") {
+    if ((v as () => unknown).length !== 0) return { x: 0, y: 0 };
+    const inner = (v as () => { x: number; y: number } | undefined)();
+    if (!inner || typeof inner !== "object") return { x: 0, y: 0 };
+    const x = Number((inner as { x?: unknown }).x);
+    const y = Number((inner as { y?: unknown }).y);
+    return {
+      x: Number.isFinite(x) ? x : 0,
+      y: Number.isFinite(y) ? y : 0,
+    };
+  }
+  const x = Number((v as { x?: unknown }).x);
+  const y = Number((v as { y?: unknown }).y);
+  return {
+    x: Number.isFinite(x) ? x : 0,
+    y: Number.isFinite(y) ? y : 0,
+  };
+}
+
 function useDrag(
   getPosition: () => { x: number; y: number },
   setPosition: (v: { x: number; y: number }) => void,
   enabled: boolean,
+  onDragEnd?: (pos: { x: number; y: number }) => void,
 ) {
   return (e: MouseEvent) => {
     if (!enabled) return;
@@ -276,13 +318,15 @@ function useDrag(
     const startY = e.clientY;
     const startPos = getPosition();
     let rafId = 0;
+    let last = startPos;
     const onMove = (ev: MouseEvent) => {
       const nextX = startPos.x + ev.clientX - startX;
       const nextY = startPos.y + ev.clientY - startY;
+      last = { x: nextX, y: nextY };
       if (rafId) globalThis.cancelAnimationFrame(rafId);
       rafId = globalThis.requestAnimationFrame(() => {
         rafId = 0;
-        setPosition({ x: nextX, y: nextY });
+        setPosition(last);
       });
     };
     const doc = typeof globalThis.document !== "undefined"
@@ -290,6 +334,9 @@ function useDrag(
       : null;
     const onUp = () => {
       if (rafId) globalThis.cancelAnimationFrame(rafId);
+      // Ensure final position applied + notify host (persist).
+      setPosition(last);
+      onDragEnd?.(last);
       if (!doc) return;
       doc.removeEventListener(
         "mousemove",
@@ -352,7 +399,31 @@ export function Modal(props: ModalProps): JSXRenderable {
    * 打开态才执行，会破坏 View 与同类框架的 **hook 调用顺序一致**，表现为点击后无更新、事件异常等。
    */
   const fullscreen = createSignal(false);
-  const position = createSignal({ x: 0, y: 0 });
+  const position = createSignal(readModalDefaultPosition(props.defaultPosition));
+  /** Dialog box DOM — drag writes transform here; must not feed Portal rebuild. */
+  let modalBoxEl: HTMLElement | null = null;
+
+  function applyModalBoxTransform(
+    el: HTMLElement | null,
+    pos: { x: number; y: number },
+    isFullscreen: boolean,
+  ): void {
+    if (!el) return;
+    if (isFullscreen) {
+      el.style.transform = "";
+      el.style.willChange = "";
+      return;
+    }
+    el.style.transform = `translate(${pos.x}px,${pos.y}px)`;
+    el.style.willChange = pos.x !== 0 || pos.y !== 0 ? "transform" : "";
+  }
+
+  // Drag／open：只改 style，不触发 Portal insert 重跑
+  createEffect(() => {
+    const pos = position.value;
+    const fs = fullscreen.value;
+    applyModalBoxTransform(modalBoxEl, pos, fs);
+  });
 
   /**
    * 在组件内订阅 `open`（`Signal` / getter），避免 Hybrid 下父级未重跑时 `open={sig.value}` 卡在首帧。
@@ -379,6 +450,8 @@ export function Modal(props: ModalProps): JSXRenderable {
   createEffect(() => {
     if (isOpen()) {
       fullscreen.value = !!startInFullscreen;
+      // Re-apply host defaultPosition on each open (e.g. restored from localStorage).
+      position.value = readModalDefaultPosition(props.defaultPosition);
     } else {
       fullscreen.value = false;
     }
@@ -463,13 +536,19 @@ export function Modal(props: ModalProps): JSXRenderable {
   const handleTitleMouseDown = useDrag(
     () => position.value,
     (v) => {
+      // Live drag: update internal position → DOM transform effect only.
       position.value = v;
     },
     draggable,
+    (v) => {
+      // Persist once on mouseup — host must not drive Portal rebuild props.
+      props.onPositionChange?.(v);
+    },
   );
 
   /**
-   * 弹层 DOM：Portal 的 `insert` getter 内调用时会订阅 `fullscreen` / `position` / {@link resolvedWidth} 等 memo。
+   * 弹层 DOM：Portal 的 `insert` getter 订阅 `fullscreen` / {@link resolvedWidth} 等。
+   * **不**订阅 `position`（拖动只改 DOM transform，见 {@link applyModalBoxTransform}）。
    * `style` 须为 **camelCase 对象**：compileSource 下模板字符串 style 会误生成 `Object.assign(el.style, string)` 导致浏览器抛错。
    */
   const buildModalMarkup = () => {
@@ -481,7 +560,8 @@ export function Modal(props: ModalProps): JSXRenderable {
     const children = resolvedChildren();
     const footer = resolvedFooter();
     const isFullscreen = fullscreen.value;
-    const pos = position.value;
+    // untrack：首帧带上位移，但不把 position 订进 Portal effect
+    const pos = untrack(() => position.value);
     const hasOffset = pos.x !== 0 || pos.y !== 0;
     const placement = props.placement;
     /** 写入 `CSSStyleDeclaration` 的扁平对象（勿用整段 cssText 字符串作 style={…}） */
@@ -549,6 +629,16 @@ export function Modal(props: ModalProps): JSXRenderable {
             className,
           )}
           style={modalBoxStyle}
+          ref={(el: HTMLElement | null) => {
+            modalBoxEl = el;
+            if (el) {
+              applyModalBoxTransform(
+                el,
+                untrack(() => position.value),
+                untrack(() => fullscreen.value),
+              );
+            }
+          }}
           onClick={(e: Event) => e.stopPropagation()}
         >
           {(title != null && title !== "")
@@ -558,26 +648,40 @@ export function Modal(props: ModalProps): JSXRenderable {
                   "shrink-0 px-6 py-4 border-b border-slate-200 dark:border-slate-600",
                   titleAlign === "center"
                     ? "relative flex min-h-14 items-center justify-center"
-                    : "flex items-center justify-between",
+                    : "flex items-center justify-between gap-2",
                   draggable && "cursor-grab active:cursor-grabbing select-none",
                 )}
                 onMouseDown={handleTitleMouseDown as unknown as (
                   e: Event,
                 ) => void}
               >
-                <h2
-                  id="modal-title"
+                {/*
+                  标题＋静态状态挂点：宿主／WebChat 只 DOM patch
+                  [data-modal-title-status]，勿用 title signal 驱动（防 Portal 重插）。
+                */}
+                <div
                   class={twMerge(
-                    "text-lg font-semibold min-w-0 truncate box-border",
+                    "flex min-w-0 items-center gap-2",
                     titleAlign === "center"
                       ? showHeaderActions
-                        ? "w-full text-center px-14 sm:px-16"
-                        : "w-full text-center px-1"
-                      : "flex-1 pr-2 text-left",
+                        ? "w-full justify-center px-14 sm:px-16"
+                        : "w-full justify-center px-1"
+                      : "flex-1 pr-2",
                   )}
                 >
-                  {title}
-                </h2>
+                  <h2
+                    id="modal-title"
+                    class="text-lg font-semibold min-w-0 truncate box-border"
+                  >
+                    {title}
+                  </h2>
+                  <span
+                    data-modal-title-status=""
+                    data-testid="modal-title-status"
+                    class="hidden shrink-0 items-center gap-1.5 text-xs font-normal text-slate-500 dark:text-slate-400"
+                    aria-live="polite"
+                  />
+                </div>
                 {showHeaderActions && (
                   <div
                     class={twMerge(

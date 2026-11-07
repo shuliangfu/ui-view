@@ -7,6 +7,11 @@
  * Chart.js 默认 `color: #666` 在暗色下对比不足；径向轴默认
  * `ticks.showLabelBackdrop: true` + 半透明白底会画出灰框——此处只改文字色，
  * **关闭**一切 tick／pointLabel backdrop，不为对比度加底。
+ *
+ * SSR／Hybrid（Deno `ssr-dom` 假 canvas 无 `getContext`）：**勿** `new Chart`，
+ * 否则 Chart.js 会打 `Failed to create chart: can't acquire context from the given item`。
+ * 仅在能拿到真实 2d context（且 `ctx.canvas === canvas`，对齐 DomPlatform）时创建；
+ * 客户端水合后 ref 再挂真实 canvas 再 create。
  */
 
 import {
@@ -243,8 +248,24 @@ function watchTheme(
 }
 
 /**
+ * 当前 canvas 能否被 Chart.js DomPlatform 拿到 2d context。
+ * Deno SSR 桩／无 getContext 的假节点返回 false——此时禁止 create，避免假绿与 console.error。
+ */
+function canAcquireChartContext(canvas: HTMLCanvasElement): boolean {
+  try {
+    if (typeof canvas.getContext !== "function") return false;
+    const ctx = canvas.getContext("2d");
+    // 与 chart.js DomPlatform.acquireContext 一致：context 存在且绑回同一 canvas
+    return !!(ctx && ctx.canvas === canvas);
+  } catch {
+    return false;
+  }
+}
+
+/**
  * 通用图表组件：根据 type / data / options 渲染 Chart.js 图表。
  * 在 canvas 挂载时 create Chart，在 data/options 变化时 update，在 unmount 时 destroy。
+ * 无真实 2d context（SSR）时只输出空 canvas，不 create。
  */
 export function ChartBase<T extends BaseChartProps["type"]>(
   props: BaseChartProps<T>,
@@ -270,6 +291,10 @@ export function ChartBase<T extends BaseChartProps["type"]>(
         ext._chart.options = merged as never;
         ext._chart.update();
       } else {
+        if (!canAcquireChartContext(el)) {
+          // SSR／stub：保留 <canvas> 占位，等客户端真实 DOM ref 再 create
+          return;
+        }
         ext._chart = new Chart(el, {
           type,
           data: data as never,
