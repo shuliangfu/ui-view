@@ -104,6 +104,13 @@ const MODAL_API: ApiRow[] = [
       "默认 false；传 keyboard 或 keyboard={true} 时支持按 Esc 触发 onClose",
   },
   {
+    name: "constrainToViewport",
+    type: "boolean",
+    default: "true",
+    description:
+      "拖动时限制在浏览器可视区内（不可拖出窗口）；仅 draggable 时生效；可 false 关闭。keepInView 为别名",
+  },
+  {
     name: "draggable",
     type: "boolean",
     default: "false",
@@ -715,7 +722,7 @@ demo.value = { open: true, preset: "lg" };
         <div class="space-y-4">
           <Title level={3}>可移动</Title>
           <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
-            draggable=true 时可通过拖拽标题栏移动弹层位置。
+            draggable=true 时可通过拖拽标题栏移动弹层位置；默认 constrainToViewport（可视区内，不可拖出窗口）。
           </Paragraph>
           <div class="flex gap-2">
             <Button

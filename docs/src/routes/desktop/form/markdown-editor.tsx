@@ -61,6 +61,25 @@ const MARKDOWN_EDITOR_API: ApiRow[] = [
     description: "textarea 行数",
   },
   {
+    name: "uploadAction",
+    type: "string",
+    default: "-",
+    description:
+      "插图上传路由前缀；推荐 /ui-view-upload（DEFAULT_UI_VIEW_UPLOAD_BASE_PATH）；勿写死 /upload；有值时工具栏显示插图并走路径协议",
+  },
+  {
+    name: "onUploadImage",
+    type: "(file: File) => string | Promise<string>",
+    default: "-",
+    description: "自定义插图上传；优先于 uploadAction",
+  },
+  {
+    name: "onPasteImage",
+    type: "(blob: Blob) => string | Promise<string>",
+    default: "-",
+    description: "粘贴图片上传；优先于 uploadAction",
+  },
+  {
     name: "allowFullscreen",
     type: "boolean",
     default: "false",

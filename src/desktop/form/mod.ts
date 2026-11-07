@@ -49,6 +49,7 @@ export type {
 } from "./Upload.tsx";
 export {
   DEFAULT_UPLOAD_CHUNK_SIZE,
+  DEFAULT_UI_VIEW_UPLOAD_BASE_PATH,
   defaultGetUploadResultUrl,
   fileMatchesAccept,
   formatUploadFileSize,
@@ -56,6 +57,7 @@ export {
   uploadActionWithPhase,
   uploadFilePhasedChunks,
   uploadFileSimple,
+  uploadFileViaUiViewBase,
 } from "../../shared/form/mod.ts";
 export type {
   ChunkedUploadOptions,

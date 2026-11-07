@@ -10,6 +10,7 @@
  * - **`scanPath`** 可为单个目录或目录数组（相对 cwd），按需只扫 `frontend`、`common` 等子树，避免扫 backend/mobile。
  * - `@source` 路径相对于生成文件所在目录书写，避免把本机绝对路径写入仓库。
  * - 插件入口：**{@link uiViewTailwindPlugin}**（返回 `Plugin`，含 `onInit`）。
+ * - 上传插件：**{@link uiViewUploadPlugin}**（**必填** `localDir`；默认前缀 `/ui-view-upload`；可选 `virusScan`／`image.dual`／`afterComplete`／file；见 `upload-plugin.ts`）。
  *
  * ### 使用顺序
  * 先注册本插件，再注册 Tailwind 官方/封装插件；并在样式入口 `@import` 生成的 `@source` 文件。
@@ -614,6 +615,8 @@ const COMPONENT_PATHS: Record<string, string[]> = {
     "src/shared/form/input-focus-ring.ts",
     "src/shared/basic/icons/ChevronDown.tsx",
     "src/shared/basic/icons/ChevronUp.tsx",
+    "src/desktop/data-display/table-editable.tsx",
+    "src/desktop/data-display/table-types.ts",
   ],
   "Dialog": [
     "src/desktop/feedback/Dialog.tsx",
@@ -632,6 +635,9 @@ const COMPONENT_PATHS: Record<string, string[]> = {
     "src/shared/basic/icons/Close.tsx",
     "src/shared/basic/icons/ExitFullscreen.tsx",
     "src/shared/basic/icons/Maximize2.tsx",
+  ],
+  "ContextMenu": [
+    "src/desktop/feedback/ContextMenu.tsx",
   ],
   "Popconfirm": [
     "src/desktop/feedback/Popconfirm.tsx",
@@ -1014,6 +1020,8 @@ const COMPONENT_PATHS: Record<string, string[]> = {
     "src/shared/form/MarkdownEditor.tsx",
     "src/desktop/feedback/Tooltip.tsx",
     "src/shared/form/input-focus-ring.ts",
+    "src/shared/form/upload-http.ts",
+    "src/shared/form/chunked-upload.ts",
   ],
   "Password": [
     "src/shared/form/Password.tsx",
@@ -1046,6 +1054,11 @@ const COMPONENT_PATHS: Record<string, string[]> = {
     "src/shared/basic/icons/Type.tsx",
     "src/shared/form/Input.tsx",
     "src/shared/form/input-autofill-classes.ts",
+    "src/shared/form/rich-text-editor-toolbar.tsx",
+    "src/shared/form/rich-text-editor-types.ts",
+    "src/shared/form/rich-text-editor-dom.ts",
+    "src/shared/form/upload-http.ts",
+    "src/shared/form/chunked-upload.ts",
   ],
   "Search": [
     "src/shared/form/Search.tsx",
@@ -1142,7 +1155,115 @@ const COMPONENT_PATHS: Record<string, string[]> = {
     "src/shared/basic/Icon.tsx",
     "src/shared/basic/icons/Check.tsx",
   ],
-};
+  "Cell": [
+    "src/shared/data-display/Cell.tsx",
+  ],
+  "CountDown": [
+    "src/shared/data-display/CountDown.tsx",
+    "src/shared/form/maybe-signal.ts",
+  ],
+  "DataPanel": [
+    "src/desktop/data-display/DataPanel.tsx",
+    "src/desktop/data-display/data-panel-chrome.tsx",
+    "src/desktop/data-display/data-panel-messages.ts",
+    "src/desktop/data-display/data-panel-utils.ts",
+    "src/desktop/data-display/data-panel-types.ts",
+    "src/desktop/data-display/data-panel-xlsx.ts",
+    "src/shared/basic/Button.tsx",
+    "src/shared/basic/button-variants.ts",
+    "src/shared/basic/Icon.tsx",
+    "src/shared/form/input-focus-ring.ts",
+    "src/shared/form/picker-portal-utils.ts",
+    "src/desktop/feedback/Modal.tsx",
+    "src/shared/basic/icons/ChevronDown.tsx",
+    "src/shared/basic/icons/ChevronUp.tsx",
+    "src/shared/basic/icons/Columns.tsx",
+    "src/shared/basic/icons/Copy.tsx",
+    "src/shared/basic/icons/Download.tsx",
+    "src/shared/basic/icons/Edit.tsx",
+    "src/shared/basic/icons/ExitFullscreen.tsx",
+    "src/shared/basic/icons/Eye.tsx",
+    "src/shared/basic/icons/List.tsx",
+    "src/shared/basic/icons/Maximize2.tsx",
+    "src/shared/basic/icons/Plus.tsx",
+    "src/shared/basic/icons/Printer.tsx",
+    "src/shared/basic/icons/Refresh.tsx",
+    "src/shared/basic/icons/Search.tsx",
+    "src/shared/basic/icons/Trash.tsx",
+    "src/shared/basic/icons/Upload.tsx",
+  ],
+  "DropdownMenu": [
+    "src/mobile/navigation/DropdownMenu.tsx",
+    "src/mobile/MobilePortalHostScope.tsx",
+  ],
+  "FloatButton": [
+    "src/shared/basic/FloatButton.tsx",
+  ],
+  "FloatingPanel": [
+    "src/mobile/feedback/FloatingPanel.tsx",
+    "src/mobile/MobilePortalHostScope.tsx",
+    "src/shared/feedback/controlled-open.ts",
+    "src/shared/feedback/portal-host.ts",
+  ],
+  "IndexBar": [
+    "src/mobile/navigation/IndexBar.tsx",
+    "src/shared/dom-guards.ts",
+  ],
+  "Message": [
+    "src/shared/feedback/Message.tsx",
+  ],
+  "NoticeBar": [
+    "src/shared/feedback/NoticeBar.tsx",
+  ],
+  "NumberKeyboard": [
+    "src/mobile/form/NumberKeyboard.tsx",
+    "src/mobile/MobilePortalHostScope.tsx",
+    "src/shared/feedback/controlled-open.ts",
+    "src/shared/feedback/portal-host.ts",
+  ],
+  "Overlay": [
+    "src/shared/feedback/Overlay.tsx",
+    "src/shared/feedback/controlled-open.ts",
+    "src/shared/feedback/portal-host.ts",
+  ],
+  "PasscodeInput": [
+    "src/mobile/form/PasscodeInput.tsx",
+    "src/shared/form/maybe-signal.ts",
+  ],
+  "QRCode": [
+    "src/shared/data-display/QRCode.tsx",
+    "src/shared/data-display/qrcode-matrix.ts",
+    "src/shared/form/maybe-signal.ts",
+  ],
+  "ShareSheet": [
+    "src/mobile/feedback/ShareSheet.tsx",
+    "src/mobile/MobilePortalHostScope.tsx",
+    "src/shared/feedback/controlled-open.ts",
+    "src/shared/feedback/portal-host.ts",
+  ],
+  "SignaturePad": [
+    "src/mobile/form/SignaturePad.tsx",
+    "src/shared/dom-guards.ts",
+  ],
+  "Splitter": [
+    "src/desktop/layout/Splitter.tsx",
+    "src/shared/form/maybe-signal.ts",
+  ],
+  "Tour": [
+    "src/shared/feedback/Tour.tsx",
+    "src/shared/feedback/controlled-open.ts",
+    "src/shared/feedback/portal-host.ts",
+    "src/shared/form/maybe-signal.ts",
+  ],
+  "VirtualList": [
+    "src/shared/data-display/VirtualList.tsx",
+    "src/shared/dom-guards.ts",
+  ],
+  "Watermark": [
+    "src/shared/data-display/Watermark.tsx",
+  ],
+}
+;
 
 /**
  * 匹配具名导入：主包、子路径（如 @dreamer/ui-view/mobile、/form）、jsr: spec。
@@ -1549,3 +1670,25 @@ export function uiViewTailwindPlugin(
     },
   };
 }
+
+// ---------------------------------------------------------------------------
+// Upload plugin (MultipartUploadHandler + optional dual AVIF) — server only
+// ---------------------------------------------------------------------------
+export {
+  createUiViewUploadAppConfig,
+  dualObjectKeys,
+  uiViewUploadPlugin,
+  wrapUploadCompletePipeline,
+} from "./upload-plugin.ts";
+export type {
+  UiViewUploadAfterComplete,
+  UiViewUploadAfterCompleteContext,
+  UiViewUploadAfterCompleteResult,
+  UiViewUploadAuthContext,
+  UiViewUploadCompleteBody,
+  UiViewUploadImageOptions,
+  UiViewUploadVirusScanOptions,
+  UiViewUploadPlugin,
+  UiViewUploadPluginOptions,
+  UiViewUploadStorage,
+} from "./upload-plugin.ts";

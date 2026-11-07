@@ -209,6 +209,14 @@ export default function FormUpload() {
           <code class="text-xs">runChunkedUpload</code> 自行接{" "}
           <code class="text-xs">fetch</code>（不必经过本组件）。
         </Paragraph>
+
+      <Paragraph class="mt-2 text-sm text-slate-600 dark:text-slate-300">
+        生产挂载请用 <code class="text-xs">uiViewUploadPlugin</code>（必填{" "}
+        <code class="text-xs">localDir</code>；默认前缀{" "}
+        <code class="text-xs">/ui-view-upload</code>，勿写死{" "}
+        <code class="text-xs">/upload</code>）。本页 docs 示例{" "}
+        <code class="text-xs">action="/api/upload"</code> 仅为文档站本地适配路由。
+      </Paragraph>
       </section>
 
       <section class="space-y-3">

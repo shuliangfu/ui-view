@@ -53,6 +53,7 @@ npx jsr add @dreamer/ui-view
 | `@dreamer/ui-view/icons/flags` | Country-flag catalog barrel |
 | `@dreamer/ui-view/icons/…` (Node/Bun via `package.json` `./icons/*` only) | **Single icon/flag file** deep path — **not** in `deno.json` (Deno forbids `*` exports) |
 | `@dreamer/ui-view/plugin` | Tailwind v4 on-demand `@source` plugin |
+| `@dreamer/ui-view/plugin/upload` | Server upload plugin (`localDir` required; default `/ui-view-upload`) |
 
 ### Tree-shaking / minimal bundle
 
@@ -254,7 +255,7 @@ DateTimePicker, TimePicker
 - **Progress** progress bar
 - **Result** result page
 
-**Desktop only:** Modal, Dialog, Tooltip, Popover, Popconfirm
+**Desktop only:** Modal (`constrainToViewport` default true), Dialog, Tooltip, Popover, Popconfirm
 
 **Mobile only:** BottomSheet, ActionSheet, PullRefresh, SwipeCell
 

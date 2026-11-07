@@ -58,7 +58,7 @@ export type {
 export { Result } from "./Result.tsx";
 export type { ResultProps, ResultStatus } from "./Result.tsx";
 
-export { Modal } from "./Modal.tsx";
+export { clampModalTranslateToViewport, Modal } from "./Modal.tsx";
 export type {
   ModalOpenInput,
   ModalPlacement,

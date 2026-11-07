@@ -15,6 +15,10 @@ import {
   uploadFilePhasedChunks,
   uploadFileSimple,
 } from "./upload-http.ts";
+export {
+  DEFAULT_UI_VIEW_UPLOAD_BASE_PATH,
+  uploadFileViaUiViewBase,
+} from "./upload-http.ts";
 import { commitMaybeSignal, type MaybeSignal } from "./maybe-signal.ts";
 
 /** 文件项状态（用于列表展示与进度） */

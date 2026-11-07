@@ -93,10 +93,17 @@ const RICH_TEXT_EDITOR_API: ApiRow[] = [
     description: "插入图片时回调，返回图片 URL",
   },
   {
+    name: "uploadAction",
+    type: "string",
+    default: "-",
+    description:
+      "插图上传路由前缀；推荐 /ui-view-upload（DEFAULT_UI_VIEW_UPLOAD_BASE_PATH）；勿写死 /upload；有值且无 onUploadImage 时走路径协议",
+  },
+  {
     name: "onUploadImage",
     type: "(file: File) => string | Promise<string>",
     default: "-",
-    description: "上传图片回调，返回 URL",
+    description: "上传图片回调，返回 URL；优先于 uploadAction",
   },
   {
     name: "onPasteImage",
@@ -119,6 +126,7 @@ const importCode =
   `import { Form } from "@dreamer/ui-view/form/form";
 import { FormItem } from "@dreamer/ui-view/form/form-item";
 import { RichTextEditor } from "@dreamer/ui-view/form/rich-text-editor";
+import { DEFAULT_UI_VIEW_UPLOAD_BASE_PATH } from "@dreamer/ui-view/form/upload";
 
 const html = createSignal("<p>初始</p>");
 <FormItem label="富文本">
@@ -127,6 +135,7 @@ const html = createSignal("<p>初始</p>");
     toolbarPreset="default"
     placeholder="输入内容…"
     minHeight="200px"
+    uploadAction={DEFAULT_UI_VIEW_UPLOAD_BASE_PATH}
   />
 </FormItem>`;
 
@@ -140,7 +149,7 @@ export default function FormRichTextEditor() {
       <section>
         <Title level={1}>RichTextEditor 富文本</Title>
         <Paragraph class="mt-2">
-          富文本编辑器：value、onChange、toolbarPreset（default/simple/full）、toolbar、placeholder、disabled、readOnly、minHeight、maxHeight、onInsertImage、onUploadImage、onPasteImage。宽度由
+          富文本编辑器：value、onChange、toolbarPreset（default/simple/full）、toolbar、placeholder、disabled、readOnly、minHeight、maxHeight、onInsertImage、uploadAction、onUploadImage、onPasteImage。宽度由
           class 控制，表单中需占满一列时传 class="w-full"。Tailwind v4 +
           light/dark。
         </Paragraph>

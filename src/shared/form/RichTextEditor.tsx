@@ -36,6 +36,7 @@ import {
   commitMaybeSignal,
   readMaybeSignal,
 } from "./maybe-signal.ts";
+import { uploadFileViaUiViewBase } from "./upload-http.ts";
 import { getFormPortalBodyHost } from "./picker-portal-utils.ts";
 import { isDomElement, isHtmlElement } from "../dom-guards.ts";
 import {
@@ -156,6 +157,7 @@ export function RichTextEditor(props: RichTextEditorProps): JSXRenderable {
     name,
     id,
     onInsertImage,
+    uploadAction,
     onUploadImage,
     onPasteImage,
     hideFocusRing = false,
@@ -1216,25 +1218,48 @@ export function RichTextEditor(props: RichTextEditorProps): JSXRenderable {
     });
   });
 
+  const resolveImageToUrl = async (
+    fileOrBlob: File | Blob,
+    kind: "upload" | "paste",
+  ): Promise<string | undefined> => {
+    if (kind === "upload" && onUploadImage && fileOrBlob instanceof File) {
+      const url = await onUploadImage(fileOrBlob);
+      return url || undefined;
+    }
+    if (kind === "paste" && onPasteImage) {
+      const url = await onPasteImage(fileOrBlob);
+      return url || undefined;
+    }
+    const action = (uploadAction ?? "").trim();
+    if (action) {
+      const file = fileOrBlob instanceof File
+        ? fileOrBlob
+        : new File(
+          [fileOrBlob],
+          `paste-${Date.now()}.png`,
+          { type: fileOrBlob.type || "image/png" },
+        );
+      return await uploadFileViaUiViewBase(action, file);
+    }
+    return await new Promise<string | undefined>((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const dataUrl = reader.result as string;
+        resolve(dataUrl || undefined);
+      };
+      reader.onerror = () => resolve(undefined);
+      reader.readAsDataURL(fileOrBlob);
+    });
+  };
+
   const handleUploadChange = (e: Event) => {
     const input = e.target as HTMLInputElement;
     const file = input.files?.[0];
     if (!file || !file.type.startsWith("image/")) return;
-    const resolveUrl = (url: string) => {
-      insertImageUrl(url);
-    };
-    if (onUploadImage) {
-      Promise.resolve(onUploadImage(file)).then((url) => {
-        if (url) resolveUrl(url);
-      });
-    } else {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const dataUrl = reader.result as string;
-        if (dataUrl) resolveUrl(dataUrl);
-      };
-      reader.readAsDataURL(file);
-    }
+    void resolveImageToUrl(file, "upload").then((url) => {
+      if (url) insertImageUrl(url);
+    });
+    input.value = "";
   };
 
   const handlePaste = (e: Event) => {
@@ -1247,21 +1272,9 @@ export function RichTextEditor(props: RichTextEditorProps): JSXRenderable {
         const blob = item.getAsFile();
         if (!blob) return;
         ev.preventDefault();
-        const resolveUrl = (url: string) => {
-          insertImageUrl(url);
-        };
-        if (onPasteImage) {
-          Promise.resolve(onPasteImage(blob)).then((url) => {
-            if (url) resolveUrl(url);
-          });
-        } else {
-          const reader = new FileReader();
-          reader.onload = () => {
-            const dataUrl = reader.result as string;
-            if (dataUrl) resolveUrl(dataUrl);
-          };
-          reader.readAsDataURL(blob);
-        }
+        void resolveImageToUrl(blob, "paste").then((url) => {
+          if (url) insertImageUrl(url);
+        });
         return;
       }
     }

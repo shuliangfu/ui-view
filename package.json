@@ -88,7 +88,8 @@
     "./mobile/form/transfer": "./src/mobile/form/Transfer.tsx",
     "./mobile/form/tree-select": "./src/mobile/form/TreeSelect.tsx",
     "./mobile/form/upload": "./src/mobile/form/Upload.tsx",
-    "./mobile/portal": "./src/mobile/MobilePortalHostScope.tsx"
+    "./mobile/portal": "./src/mobile/MobilePortalHostScope.tsx",
+    "./plugin/upload": "./upload-plugin.ts"
   },
   "scripts": {
     "test": "deno test -A tests/docs-sidebar-reconcile.test.ts",
@@ -120,5 +121,18 @@
     "view",
     "dreamer",
     "components"
-  ]
+  ],
+  "peerDependencies": {
+    "@dreamer/upload": "^2.0.1",
+    "@dreamer/image": "^1.1.0",
+    "@dreamer/plugin": "^1.1.0"
+  },
+  "peerDependenciesMeta": {
+    "@dreamer/upload": {
+      "optional": true
+    },
+    "@dreamer/image": {
+      "optional": true
+    }
+  }
 }

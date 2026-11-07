@@ -9,6 +9,13 @@ import {
 } from "./chunked-upload.ts";
 
 /**
+ * 与 {@link uiViewUploadPlugin} 默认 `basePath` 对齐的上传路由前缀。
+ * RichText／Markdown／Upload 示例请用此常量，**勿**写死 `/upload`。
+ */
+export const DEFAULT_UI_VIEW_UPLOAD_BASE_PATH = "/ui-view-upload";
+
+
+/**
  * 在 `action` URL 上设置查询参数 `phase`（保留已有 query）。
  *
  * @param action 绝对或相对上传地址
@@ -261,3 +268,122 @@ export function fileMatchesAccept(file: File, accept?: string): boolean {
   }
   return false;
 }
+
+export interface UploadViaUiViewBaseOptions {
+  method?: string;
+  headers?: Record<string, string>;
+  withCredentials?: boolean;
+  chunkSize?: number;
+  signal?: AbortSignal;
+  onProgress?: (loaded: number, total: number) => void;
+  /** 透传 init JSON 的 path（会话目录等） */
+  path?: string;
+  getValueFromResponse?: (res: Response) => Promise<string>;
+}
+
+/**
+ * 按 `uiViewUploadPlugin`／`MultipartUploadHandler` **路径协议**上传：
+ * `POST ${basePath}/init|chunk|complete`（**不是** `?phase=`）。
+ *
+ * @param basePath 路由前缀，推荐 {@link DEFAULT_UI_VIEW_UPLOAD_BASE_PATH}
+ * @param file 浏览器 File（粘贴 Blob 请先 `new File([blob], name, { type })`）
+ */
+export async function uploadFileViaUiViewBase(
+  basePath: string,
+  file: File,
+  options: UploadViaUiViewBaseOptions = {},
+): Promise<string> {
+  const root = (basePath || DEFAULT_UI_VIEW_UPLOAD_BASE_PATH).replace(/\/$/, "") ||
+    DEFAULT_UI_VIEW_UPLOAD_BASE_PATH;
+  const {
+    method = "POST",
+    headers,
+    withCredentials,
+    chunkSize = DEFAULT_UPLOAD_CHUNK_SIZE,
+    signal,
+    onProgress,
+    path,
+    getValueFromResponse = defaultGetUploadResultUrl,
+  } = options;
+  const cred = withCredentials ? "include" : "same-origin";
+  const chunks = Math.max(1, Math.ceil(file.size / chunkSize));
+
+  const initRes = await uploadFetchOk(`${root}/init`, {
+    method,
+    headers: { "Content-Type": "application/json", ...headers },
+    body: JSON.stringify({
+      filename: file.name,
+      fileSize: file.size,
+      mimeType: file.type || "application/octet-stream",
+      chunks,
+      ...(path ? { path } : {}),
+    }),
+    credentials: cred,
+    signal,
+  });
+  const initJson = (await initRes.json()) as {
+    uploadId?: string;
+    key?: string;
+  };
+  if (typeof initJson.uploadId !== "string" || !initJson.uploadId) {
+    throw new Error("init response missing uploadId");
+  }
+  if (typeof initJson.key !== "string" || !initJson.key) {
+    throw new Error("init response missing key");
+  }
+  const uploadId = initJson.uploadId;
+  const objectKey = initJson.key;
+  const partRecords: Array<{ index: number; etag: string }> = [];
+
+  let finalUrl = "";
+  await runChunkedUpload({
+    file,
+    chunkSize,
+    signal,
+    onProgress,
+    uploadChunk: async ({ chunk, chunkIndex, signal: sig }) => {
+      const fd = new FormData();
+      fd.set("uploadId", uploadId);
+      fd.set("key", objectKey);
+      fd.set("index", String(chunkIndex));
+      fd.set("file", chunk, `part-${chunkIndex}`);
+      const r = await uploadFetchOk(`${root}/chunk`, {
+        method,
+        headers,
+        body: fd,
+        credentials: cred,
+        signal: sig,
+      });
+      const ct = r.headers.get("content-type") ?? "";
+      if (!ct.includes("application/json")) {
+        throw new Error("chunk response must be application/json");
+      }
+      const chunkJson = (await r.json()) as { index?: number; etag?: string };
+      if (
+        typeof chunkJson.index !== "number" ||
+        typeof chunkJson.etag !== "string"
+      ) {
+        throw new Error("chunk response missing index or etag");
+      }
+      partRecords.push({ index: chunkJson.index, etag: chunkJson.etag });
+    },
+    complete: async ({ signal: sig }) => {
+      partRecords.sort((a, b) => a.index - b.index);
+      const r = await uploadFetchOk(`${root}/complete`, {
+        method,
+        headers: { "Content-Type": "application/json", ...headers },
+        body: JSON.stringify({
+          uploadId,
+          key: objectKey,
+          chunks: partRecords,
+          filename: file.name,
+        }),
+        credentials: cred,
+        signal: sig,
+      });
+      finalUrl = await getValueFromResponse(r);
+    },
+  });
+  return finalUrl;
+}
+

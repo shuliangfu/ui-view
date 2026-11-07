@@ -96,11 +96,13 @@ export type {
   ChunkUploadContext,
 } from "./chunked-upload.ts";
 export {
+  DEFAULT_UI_VIEW_UPLOAD_BASE_PATH,
   defaultGetUploadResultUrl,
   fileMatchesAccept,
   uploadActionWithPhase,
   uploadFilePhasedChunks,
   uploadFileSimple,
+  uploadFileViaUiViewBase,
 } from "./upload-http.ts";
 export { formatUploadFileSize, Upload } from "./Upload.tsx";
 export type {

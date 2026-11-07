@@ -23,6 +23,7 @@ import {
   wrapMarkdownPreviewCodeBlocks,
 } from "./markdown-preview-prism.ts";
 import { commitMaybeSignal, type MaybeSignal } from "./maybe-signal.ts";
+import { uploadFileViaUiViewBase } from "./upload-http.ts";
 import { isDomElement, isHtmlElementOf } from "../dom-guards.ts";
 
 /** 预览展示方式 */
@@ -78,6 +79,16 @@ export interface MarkdownEditorProps {
   rows?: number;
   /** 为 `true` 时显示全屏按钮（根节点 toggles `md-editor-fullscreen`）；默认 `false` 不显示 */
   allowFullscreen?: boolean;
+  /**
+   * 插图上传路由前缀（与 `uiViewUploadPlugin.basePath` 对齐）。
+   * 推荐 `DEFAULT_UI_VIEW_UPLOAD_BASE_PATH`（`/ui-view-upload`）；**勿**写死 `/upload`。
+   * 有值或提供 `onUploadImage` 时工具栏显示插图按钮，并走路径协议上传。
+   */
+  uploadAction?: string;
+  /** 自定义插图上传；优先于 `uploadAction` */
+  onUploadImage?: (file: File) => Promise<string> | string;
+  /** 粘贴图片：优先于 `uploadAction`；皆无且未开上传则不拦截粘贴 */
+  onPasteImage?: (blob: Blob) => Promise<string> | string;
   /** 多语言/自定义文案；未传字段走 {@link defaultMarkdownEditorMessages} */
   messages?: Partial<MarkdownEditorMessages>;
 }
@@ -86,6 +97,8 @@ export interface MarkdownEditorProps {
  * MarkdownEditor 用户可见文案；通过 {@link MarkdownEditorProps.messages} 覆盖即可本地化。
  */
 export interface MarkdownEditorMessages {
+  /** 工具栏「插入图片」 */
+  insertImage: string;
   /** 编辑区与切换按钮共用的「源码」label / aria-label */
   sourceLabel: string;
   /** 「预览」label / aria-label */
@@ -110,6 +123,7 @@ export interface MarkdownEditorMessages {
 
 /** 默认中文文案 */
 export const defaultMarkdownEditorMessages: MarkdownEditorMessages = {
+  insertImage: "插入图片",
   sourceLabel: "Markdown 源码",
   previewLabel: "Markdown 预览",
   renderPreview: "渲染预览",
@@ -264,6 +278,37 @@ function MdToolbarIconPreview() {
         fill="none"
         stroke="currentColor"
         stroke-width="2"
+      />
+    </svg>
+  );
+}
+
+/**
+ * 「插入图片」图标：相框 + 山峦，线框风格与 RTE 工具栏一致。
+ */
+function MdToolbarIconImage() {
+  return (
+    <svg
+      class={mdToolbarSvgCls}
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+    >
+      <rect
+        x="3"
+        y="5"
+        width="18"
+        height="14"
+        rx="2"
+        stroke-width="2"
+      />
+      <circle cx="8.5" cy="10" r="1.5" fill="currentColor" stroke="none" />
+      <path
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        d="M21 15l-5-5L5 19"
       />
     </svg>
   );
@@ -498,6 +543,9 @@ export function MarkdownEditor(props: MarkdownEditorProps): JSXRenderable {
     maxLength,
     rows = 12,
     allowFullscreen = false,
+    uploadAction,
+    onUploadImage,
+    onPasteImage,
   } = props;
 
   /** 全屏时用于切换 `md-editor-fullscreen` 的根容器 */
@@ -508,6 +556,88 @@ export function MarkdownEditor(props: MarkdownEditorProps): JSXRenderable {
   const editorRootDomId = id != null
     ? `${id}-md-editor-root`
     : `md-editor-root-${++mdEditorRootSeq}`;
+
+  const textareaRef = createRef<HTMLTextAreaElement>(null);
+  const mdUploadInputId = `${editorRootDomId}-upload`;
+  const canUploadImage = Boolean(
+    (uploadAction && uploadAction.trim()) || onUploadImage || onPasteImage,
+  );
+
+  const insertMarkdownImage = (url: string) => {
+    const ta = textareaRef.current;
+    const snippet = `![image](${url})`;
+    if (ta == null) {
+      const cur = typeof props.value === "function"
+        ? props.value()
+        : (props.value ?? "");
+      const next = `${cur}${cur && !cur.endsWith("\n") ? "\n" : ""}${snippet}`;
+      commitMaybeSignal(props.value, next);
+      onMarkdownChange?.(next);
+      return;
+    }
+    const start = ta.selectionStart ?? ta.value.length;
+    const end = ta.selectionEnd ?? start;
+    const next = ta.value.slice(0, start) + snippet + ta.value.slice(end);
+    ta.value = next;
+    commitMaybeSignal(props.value, next);
+    onMarkdownChange?.(next);
+    const caret = start + snippet.length;
+    ta.setSelectionRange(caret, caret);
+    ta.focus();
+  };
+
+  const resolveMdImageUrl = async (
+    fileOrBlob: File | Blob,
+    kind: "upload" | "paste",
+  ): Promise<string | undefined> => {
+    if (kind === "upload" && onUploadImage && fileOrBlob instanceof File) {
+      const url = await onUploadImage(fileOrBlob);
+      return url || undefined;
+    }
+    if (kind === "paste" && onPasteImage) {
+      const url = await onPasteImage(fileOrBlob);
+      return url || undefined;
+    }
+    const action = (uploadAction ?? "").trim();
+    if (!action) return undefined;
+    const file = fileOrBlob instanceof File
+      ? fileOrBlob
+      : new File(
+        [fileOrBlob],
+        `paste-${Date.now()}.png`,
+        { type: fileOrBlob.type || "image/png" },
+      );
+    return await uploadFileViaUiViewBase(action, file);
+  };
+
+  const handleMdUploadChange = (e: Event) => {
+    const input = e.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file || !file.type.startsWith("image/")) return;
+    void resolveMdImageUrl(file, "upload").then((url) => {
+      if (url) insertMarkdownImage(url);
+    });
+    input.value = "";
+  };
+
+  const handleMdPaste = (e: Event) => {
+    if (!canUploadImage) return;
+    const ev = e as ClipboardEvent;
+    const items = ev.clipboardData?.items;
+    if (!items) return;
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.type.indexOf("image") !== -1) {
+        const blob = item.getAsFile();
+        if (!blob) return;
+        ev.preventDefault();
+        void resolveMdImageUrl(blob, "paste").then((url) => {
+          if (url) insertMarkdownImage(url);
+        });
+        return;
+      }
+    }
+  };
 
   const previewRef = createRef<HTMLDivElement>(null);
   /** 有 `maxLength` 时字数徽标 DOM，仅用 `textContent` 更新，勿在 `return` 里读 `markdownSource` 绑定子节点文案（会整段重算导致 textarea 失焦） */
@@ -645,7 +775,7 @@ export function MarkdownEditor(props: MarkdownEditorProps): JSXRenderable {
     const showModeToolbar = showPreviewPane &&
       (preview === "tabs" || (showSplit && !wide));
     /** 是否渲染整条工具栏（模式组或至少全屏） */
-    const showToolbar = showModeToolbar || allowFullscreen;
+    const showToolbar = showModeToolbar || allowFullscreen || canUploadImage;
     const singlePaneMode = showPreviewPane &&
       (preview === "tabs" || (showSplit && !wide));
     const ariaDescribedBy = showPreviewPane && previewRegionId != null
@@ -692,6 +822,7 @@ export function MarkdownEditor(props: MarkdownEditorProps): JSXRenderable {
 
     const textareaNode = (
       <textarea
+        ref={textareaRef}
         id={id}
         name={name}
         rows={rows}
@@ -717,6 +848,7 @@ export function MarkdownEditor(props: MarkdownEditorProps): JSXRenderable {
         onBlur={onBlur}
         onFocus={onFocus}
         onKeyDown={onKeyDown}
+        onPaste={handleMdPaste}
       />
     );
 
@@ -854,6 +986,35 @@ export function MarkdownEditor(props: MarkdownEditorProps): JSXRenderable {
                       <MdToolbarIconPreview />
                     </button>
                   </MdToolbarItemTip>
+                </div>
+              )}
+              {canUploadImage && !readOnly && (
+                <div class={toolbarGroupCls}>
+                  <MdToolbarItemTip content={m.insertImage}>
+                    <button
+                      type="button"
+                      class={twMerge(
+                        toolbarBtnBase,
+                        controlBlueFocusRing(!hideFocusRing),
+                      )}
+                      disabled={disabled}
+                      aria-label={m.insertImage}
+                      onClick={() => {
+                        const el = document.getElementById(mdUploadInputId);
+                        if (el instanceof HTMLInputElement) el.click();
+                      }}
+                    >
+                      <MdToolbarIconImage />
+                    </button>
+                  </MdToolbarItemTip>
+                  <input
+                    id={mdUploadInputId}
+                    type="file"
+                    accept="image/*"
+                    class="hidden"
+                    disabled={disabled}
+                    onChange={handleMdUploadChange}
+                  />
                 </div>
               )}
             </div>

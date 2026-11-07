@@ -2,6 +2,7 @@
  * Modal 模态弹窗（View）。
  * 桌面居中弹层：遮罩、标题、内容、底部按钮；支持关闭、点击遮罩关闭、Esc、自定义宽度与 footer。
  * 支持拖动标题栏、全屏切换；全屏与关闭按钮并排于标题栏右侧。
+ * 拖动默认 `constrainToViewport`（可视区内，不可拖出窗口）；可显式 `false` 关闭。
  *
  * **客户端**：`open === true` 且存在真实 `globalThis.document.body` 时，用 {@link createPortal} 挂到 `body`；
  * Portal 路径下父级槽位返回**隐藏占位 `span`**（勿返回 `null`），避免 Hybrid 水合 `replaceSlot` 与仅 `null` 时更新链异常。
@@ -142,6 +143,14 @@ export interface ModalProps {
   keyboard?: boolean;
   /** 是否可拖动（标题栏拖拽），默认 false；传 true 时可拖移弹层 */
   draggable?: boolean;
+  /**
+   * 拖动时是否限制在浏览器可视区内（不可拖出窗口／看不见）。
+   * 默认 **true**；仅 `draggable` 时生效。传 `false` 可恢复无边界拖动。
+   * 别名语义同 `keepInView`。
+   */
+  constrainToViewport?: boolean;
+  /** @deprecated 请用 {@link ModalProps.constrainToViewport}；二者等价，后者优先 */
+  keepInView?: boolean;
   /**
    * 拖动位移初始值（相对默认落点的 translate x/y，单位 px）。
    * 仅在挂载／`open` 从关→开时采用；之后以内部拖动为准。可传零参 getter。
@@ -305,11 +314,52 @@ function readModalDefaultPosition(
   };
 }
 
+/**
+ * 将拟议 translate 偏移钳到视口内，使弹层矩形尽量留在可视区。
+ * 供拖动与单测复用。
+ *
+ * @param next 拟议 translate
+ * @param startPos mousedown 时的 translate
+ * @param startRect mousedown 时弹层 getBoundingClientRect
+ * @param viewport 视口宽高
+ * @param margin 边距（px），默认 0
+ */
+export function clampModalTranslateToViewport(
+  next: { x: number; y: number },
+  startPos: { x: number; y: number },
+  startRect: { left: number; top: number; width: number; height: number },
+  viewport: { width: number; height: number },
+  margin = 0,
+): { x: number; y: number } {
+  const dx = next.x - startPos.x;
+  const dy = next.y - startPos.y;
+  let left = startRect.left + dx;
+  let top = startRect.top + dy;
+  const w = startRect.width;
+  const h = startRect.height;
+  const vw = viewport.width;
+  const vh = viewport.height;
+  const minLeft = Math.min(margin, vw - w - margin);
+  const maxLeft = Math.max(margin, vw - w - margin);
+  const minTop = Math.min(margin, vh - h - margin);
+  const maxTop = Math.max(margin, vh - h - margin);
+  left = Math.min(Math.max(left, minLeft), maxLeft);
+  top = Math.min(Math.max(top, minTop), maxTop);
+  return {
+    x: startPos.x + (left - startRect.left),
+    y: startPos.y + (top - startRect.top),
+  };
+}
+
 function useDrag(
   getPosition: () => { x: number; y: number },
   setPosition: (v: { x: number; y: number }) => void,
   enabled: boolean,
   onDragEnd?: (pos: { x: number; y: number }) => void,
+  options?: {
+    constrainToViewport?: boolean;
+    getBoxEl?: () => HTMLElement | null;
+  },
 ) {
   return (e: MouseEvent) => {
     if (!enabled) return;
@@ -317,12 +367,24 @@ function useDrag(
     const startX = e.clientX;
     const startY = e.clientY;
     const startPos = getPosition();
+    const boxEl = options?.getBoxEl?.() ?? null;
+    const startRect = boxEl?.getBoundingClientRect?.() ?? null;
+    const constrain = options?.constrainToViewport !== false;
     let rafId = 0;
     let last = startPos;
+    const clamp = (raw: { x: number; y: number }) => {
+      if (!constrain || !startRect) return raw;
+      const vw = globalThis.innerWidth ?? startRect.width;
+      const vh = globalThis.innerHeight ?? startRect.height;
+      return clampModalTranslateToViewport(raw, startPos, startRect, {
+        width: vw,
+        height: vh,
+      });
+    };
     const onMove = (ev: MouseEvent) => {
       const nextX = startPos.x + ev.clientX - startX;
       const nextY = startPos.y + ev.clientY - startY;
-      last = { x: nextX, y: nextY };
+      last = clamp({ x: nextX, y: nextY });
       if (rafId) globalThis.cancelAnimationFrame(rafId);
       rafId = globalThis.requestAnimationFrame(() => {
         rafId = 0;
@@ -335,6 +397,7 @@ function useDrag(
     const onUp = () => {
       if (rafId) globalThis.cancelAnimationFrame(rafId);
       // Ensure final position applied + notify host (persist).
+      last = clamp(last);
       setPosition(last);
       onDragEnd?.(last);
       if (!doc) return;
@@ -382,6 +445,8 @@ export function Modal(props: ModalProps): JSXRenderable {
     destroyOnClose = false,
     keyboard = false,
     draggable = false,
+    constrainToViewport,
+    keepInView,
     fullscreen: startInFullscreen = false,
     fullscreenable = false,
     titleAlign = "center",
@@ -533,6 +598,9 @@ export function Modal(props: ModalProps): JSXRenderable {
     };
   });
 
+  /** 默认 true：拖动不可出可视区；显式 false 关闭。keepInView 为别名。 */
+  const constrainDrag = constrainToViewport ?? keepInView ?? true;
+
   const handleTitleMouseDown = useDrag(
     () => position.value,
     (v) => {
@@ -543,6 +611,10 @@ export function Modal(props: ModalProps): JSXRenderable {
     (v) => {
       // Persist once on mouseup — host must not drive Portal rebuild props.
       props.onPositionChange?.(v);
+    },
+    {
+      constrainToViewport: constrainDrag,
+      getBoxEl: () => modalBoxEl,
     },
   );
 
