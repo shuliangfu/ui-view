@@ -210,11 +210,17 @@ export const DATA_PANEL_CSS = `
   max-width: none !important;
   display: inline-flex !important;
 }
+/* 与 .dp-jump 一致：底栏 Select 触发器压到与分页按钮同高（测 heightDiff≤4） */
 .dp-pgsize button[aria-haspopup] {
   white-space: nowrap !important;
   width: auto !important;
+  padding: 0.25rem 0.5rem !important;
+  font-size: 0.875rem !important;
+  line-height: 1.25rem !important;
+  border-radius: 0.25rem !important;
+  gap: 0.25rem !important;
+  box-sizing: border-box !important;
 }
-/* 仅移动端压 Select 触发器；桌面交给 Select size=md 自身 */
 .dp-pgsize [role="listbox"] {
   top: auto;
   bottom: 100%;
@@ -294,14 +300,8 @@ export const DATA_PANEL_CSS = `
     width: 100% !important;
     text-align: center !important;
   }
-  .dp-pgsize button[aria-haspopup] {
-    padding: 0.25rem 0.5rem;
-    font-size: 0.875rem;
-    line-height: 1.25rem;
-    border-radius: 0.25rem;
-    gap: 0.25rem;
-  }
 }
+
 `;
 
 // ---------------------------------------------------------------- component
