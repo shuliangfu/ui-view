@@ -77,6 +77,48 @@ function delayMs(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
 }
 
+/** 已对 `browser.evaluate` 打过 tsx keepNames 补丁的标记 */
+const EVAL_TSX_KEEPNAMES_PATCHED = Symbol.for(
+  "ui-view.docsBrowser.evalTsxKeepNamesPatched",
+);
+
+/**
+ * Node + tsx（esbuild `keepNames: true`）会把 `page.evaluate` 回调里的
+ * `const sleep = ...` / `function sleep` 改写成 `__name(fn, "sleep")`。
+ * Playwright 把 `fn.toString()` 送进浏览器后，页内没有该 helper，于是抛
+ * `ReferenceError: __name is not defined`（Deno/Bun 不插或插法不同，故仅 Node 红）。
+ *
+ * 在每个 browser context 上包一层：若源码含 `__name`，则用 `new Function`
+ * 重建并注入恒等 `__name`，再交给原 `evaluate`（保留宿主超时）。
+ */
+function patchBrowserEvaluateForTsxKeepNames(
+  t: DocsBrowserTestContext,
+): void {
+  const browser = t.browser as
+    | (NonNullable<DocsBrowserTestContext["browser"]> & {
+      [EVAL_TSX_KEEPNAMES_PATCHED]?: boolean;
+    })
+    | undefined;
+  if (!browser?.evaluate || browser[EVAL_TSX_KEEPNAMES_PATCHED]) return;
+  const original = browser.evaluate.bind(browser);
+  browser.evaluate = ((fn: () => unknown) => {
+    if (typeof fn !== "function") {
+      return original(fn as () => unknown);
+    }
+    const src = Function.prototype.toString.call(fn);
+    if (!src.includes("__name")) {
+      return original(fn);
+    }
+    // 重建函数体在 Node 运行时生成，不再经 tsx keepNames；并把 __name 做成恒等。
+    const rebuilt = new Function(
+      "const __name = function (f) { return f; };" +
+        `return (${src}).apply(this, arguments);`,
+    ) as () => unknown;
+    return original(rebuilt);
+  }) as typeof browser.evaluate;
+  browser[EVAL_TSX_KEEPNAMES_PATCHED] = true;
+}
+
 /**
  * 轮询直到 `main` 内至少有一个 Dreamer 委托句柄（`__onclick` 等）。
  * `location.reload()` 后正文可能先出水、事件句柄稍后才挂上——CI 上固定 100ms 不够，
@@ -666,6 +708,7 @@ export const sharedEnv = {
     if (!t?.browser?.goto) return;
     await this.start();
     await _ensureAlive();
+    patchBrowserEvaluateForTsxKeepNames(t);
     const url = _singletonBaseUrl + (path.startsWith("/") ? path : "/" + path);
     const navMs = options?.navigationTimeoutMs ?? 60_000;
     /** 默认与 @dreamer/test 内 `page.goto` 一致；重型页可改为 `commit` */
@@ -694,6 +737,7 @@ export const sharedEnv = {
     t: DocsBrowserTestContext,
     options?: { minChars?: number; timeoutMs?: number },
   ): Promise<void> {
+    patchBrowserEvaluateForTsxKeepNames(t);
     const minChars = options?.minChars ?? STRICT_DOC_MAIN_MIN_CHARS;
     const timeoutMs = options?.timeoutMs ?? 18_000;
     await waitMainChars(t, minChars, timeoutMs);

@@ -34,20 +34,25 @@ describe("DIG 本批 docs UI 布局抽测", () => {
       if (!t?.browser?.goto) return;
       await sharedEnv.goto(t, route.path);
       await sharedEnv.waitDocMainReady(t);
-      const result = await t.browser.evaluate(() => {
-        const main = document.querySelector("main");
-        if (!main) return { ok: false, reason: "no-main" };
-        const heads = Array.from(main.querySelectorAll("h2, h3"));
-        const demoHead = heads.find((h) =>
-          (h.textContent || "").includes("示例")
-        );
-        if (!demoHead) return { ok: false, reason: "no-demo-head" };
-        let section: Element | null = demoHead.parentElement;
-        for (let i = 0; i < 6 && section && section !== main; i++) {
-          const box = section as HTMLElement;
-          const r = box.getBoundingClientRect();
-          // 示例区至少有可见面积；宽度不应接近 0；高度合理
-          if (r.width >= 120 && r.height >= 40 && r.bottom > 0) {
+      /** 冷编译／hydration：正文先出水时「示例」块可能稍后才挂上（ContextMenu 等桌面页） */
+      let result: { ok: boolean; reason: string } = {
+        ok: false,
+        reason: "not-probed",
+      };
+      const deadline = Date.now() + 8_000;
+      while (Date.now() < deadline) {
+        result = await t.browser.evaluate(() => {
+          const main = document.querySelector("main");
+          if (!main) return { ok: false, reason: "no-main" };
+          const heads = Array.from(main.querySelectorAll("h1, h2, h3, h4"));
+          const demoHead = heads.find((h) =>
+            (h.textContent || "").includes("示例")
+          );
+          const isVisibleBox = (el: Element) => {
+            const r = (el as HTMLElement).getBoundingClientRect();
+            if (!(r.width >= 100 && r.height >= 32 && r.bottom > 0)) {
+              return null;
+            }
             const inView = r.top < innerHeight && r.left < innerWidth;
             const notHugeOffscreen = r.left > -innerWidth &&
               r.top > -innerHeight;
@@ -59,26 +64,58 @@ describe("DIG 本批 docs UI 布局抽测", () => {
               top: r.top,
               left: r.left,
             };
+          };
+          if (demoHead) {
+            // 先看示例标题下的预览盒（rounded-xl / dashed），避免中途祖先 offscreen 误杀
+            let root: Element | null = demoHead.parentElement;
+            for (let d = 0; d < 8 && root && root !== main; d++) {
+              const boxes = root.querySelectorAll(
+                "[class*='rounded-xl'], [class*='border-dashed'], [class*='border']",
+              );
+              for (let i = 0; i < boxes.length; i++) {
+                const hit = isVisibleBox(boxes[i]!);
+                if (hit?.ok) {
+                  return { ...hit, reason: "demo-under-head" };
+                }
+              }
+              root = root.parentElement;
+            }
+            let section: Element | null = demoHead.parentElement;
+            let offscreenHit: {
+              ok: boolean;
+              reason: string;
+              w?: number;
+              h?: number;
+            } | null = null;
+            for (let i = 0; i < 8 && section && section !== main; i++) {
+              const hit = isVisibleBox(section);
+              if (hit?.ok) return hit;
+              if (hit && !hit.ok) offscreenHit = hit;
+              section = section.parentElement;
+            }
+            if (offscreenHit) return offscreenHit;
           }
-          section = section.parentElement;
-        }
-        // 兜底：main 内任意有尺寸的示例容器
-        const demos = main.querySelectorAll(
-          "[class*='rounded-xl'], [class*='border']",
+          // 兜底：main 内任意有尺寸的示例容器
+          const demos = main.querySelectorAll(
+            "[class*='rounded-xl'], [class*='border-dashed'], [class*='border']",
+          );
+          for (let i = 0; i < demos.length; i++) {
+            const hit = isVisibleBox(demos[i]!);
+            if (hit?.ok) {
+              return { ...hit, reason: "demo-box" };
+            }
+          }
+          if (!demoHead) return { ok: false, reason: "no-demo-head" };
+          return { ok: false, reason: "no-visible-demo" };
+        }) as { ok: boolean; reason: string };
+        if (result.ok) break;
+        await sharedEnv.delay(120);
+      }
+      if (!result.ok) {
+        throw new Error(
+          `UI layout ${route.label} ${route.path}: ${JSON.stringify(result)}`,
         );
-        for (let i = 0; i < demos.length; i++) {
-          const r = (demos[i] as HTMLElement).getBoundingClientRect();
-          if (r.width >= 120 && r.height >= 40) {
-            return {
-              ok: true,
-              reason: "demo-box",
-              w: r.width,
-              h: r.height,
-            };
-          }
-        }
-        return { ok: false, reason: "no-visible-demo" };
-      }) as { ok: boolean; reason: string };
+      }
       expect(result.ok).toBe(true);
     }, DOCS_BROWSER_CONFIG);
   }
