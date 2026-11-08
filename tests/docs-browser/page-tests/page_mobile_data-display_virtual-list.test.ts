@@ -143,6 +143,11 @@ describe("文档页 E2E：/mobile/data-display/virtual-list（VirtualList 虚拟
       let cur = pick();
       if (!cur) return { ok: false, reason: "no-list" };
       cur.list.scrollIntoView({ block: "center" });
+      try {
+        cur.list.focus({ preventScroll: true });
+      } catch {
+        try { cur.list.focus(); } catch { /* ignore */ }
+      }
       for (let i = 0; i < 20; i++) {
         cur = pick();
         if (!cur) return { ok: false, reason: "lost-list" };
@@ -152,6 +157,10 @@ describe("文档页 E2E：/mobile/data-display/virtual-list（VirtualList 虚拟
           list.style.height = "280px";
           list.style.overflow = "auto";
         }
+        try {
+          list.tabIndex = list.tabIndex >= 0 ? list.tabIndex : 0;
+          list.focus({ preventScroll: true });
+        } catch { /* ignore */ }
         const max = Math.max(0, list.scrollHeight - list.clientHeight);
         list.scrollTop = max;
         try {

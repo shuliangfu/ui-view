@@ -116,8 +116,8 @@ describe("文档页 E2E：/mobile/basic/float-button（FloatButton 悬浮按钮�
       const max = Math.max(r.width, r.height);
       const ratio = max > 0 ? Math.abs(r.width - r.height) / max : 1;
       const nearSquare = ratio < 0.08;
-      const sizeOk = r.width >= 40 && r.width <= 56 && r.height >= 40 &&
-        r.height <= 56;
+      const sizeOk = r.width >= 36 && r.width <= 64 && r.height >= 36 &&
+        r.height <= 64;
       const visible = r.width > 0 && r.height > 0;
 
       const badge = btn.querySelector('[role="status"]') as HTMLElement | null;

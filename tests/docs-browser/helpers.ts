@@ -78,12 +78,56 @@ function delayMs(ms: number): Promise<void> {
 }
 
 /**
- * 轮询直到 `main` 文本长度达标（配合 Playwright `waitFor` 优先）。
+ * 轮询直到 `main` 内至少有一个 Dreamer 委托句柄（`__onclick` 等）。
+ * `location.reload()` 后正文可能先出水、事件句柄稍后才挂上——CI 上固定 100ms 不够，
+ * 会导致 `__onclick` 未就绪时 `.click()` 也不走委托，UI 交互用例集体红。
  *
  * @param t 浏览器上下文
- * @param minChars 最小字符数
  * @param timeoutMs 超时毫秒
  */
+async function waitDreamerHandlers(
+  t: DocsBrowserTestContext,
+  timeoutMs: number,
+): Promise<void> {
+  if (!t?.browser?.evaluate) return;
+  const deadline = Date.now() + timeoutMs;
+  const wf = t.browser?.waitFor;
+  /** 作为 `new Function(body)` 的函数体：直接 return boolean */
+  const probeBody =
+    'const main = document.querySelector("main");' +
+    "if (!main) return false;" +
+    'const names = ["__onclick","__onchange","__oninput","__onkeydown","__onpointerdown"];' +
+    'const nodes = main.querySelectorAll("button,a,input,textarea,select,[role=\'button\'],[role=\'switch\'],[role=\'checkbox\'],[role=\'radio\'],[role=\'tab\'],[role=\'menuitem\'],[data-tree-expand-key]");' +
+    "for (let i = 0; i < nodes.length; i++) {" +
+    "  const el = nodes[i];" +
+    "  for (let j = 0; j < names.length; j++) {" +
+    "    if (typeof el[names[j]] === \"function\") return true;" +
+    "  }" +
+    "}" +
+    "return false;";
+  if (typeof wf === "function") {
+    const remaining = deadline - Date.now();
+    if (remaining > 0) {
+      try {
+        await wf(
+          new Function(probeBody) as () => boolean,
+          { timeout: remaining },
+        );
+        return;
+      } catch {
+        /* 继续兜底轮询 */
+      }
+    }
+  }
+  while (Date.now() < deadline) {
+    const ready = (await t.browser.evaluate(
+      new Function(probeBody) as () => boolean,
+    )) as boolean;
+    if (ready) return;
+    await delayMs(50);
+  }
+}
+
 async function waitMainChars(
   t: DocsBrowserTestContext,
   minChars: number,
@@ -239,12 +283,20 @@ function docsDevStartupDeadlineMs(): number {
  */
 function preferredPortStart(): number {
   try {
-    const pid = (globalThis as { Deno?: { pid?: number } }).Deno?.pid;
-    if (typeof pid === "number" && Number.isFinite(pid)) {
-      return PREFERRED_DOCS_PORT + Math.abs(pid % 180);
+    const denoPid = (globalThis as { Deno?: { pid?: number } }).Deno?.pid;
+    if (typeof denoPid === "number" && Number.isFinite(denoPid)) {
+      return PREFERRED_DOCS_PORT + Math.abs(denoPid % 180);
     }
   } catch {
-    /* 非 Deno 环境 */
+    /* ignore */
+  }
+  try {
+    const proc = (globalThis as { process?: { pid?: number } }).process;
+    if (typeof proc?.pid === "number" && Number.isFinite(proc.pid)) {
+      return PREFERRED_DOCS_PORT + Math.abs(proc.pid % 180);
+    }
+  } catch {
+    /* ignore */
   }
   return PREFERRED_DOCS_PORT;
 }
@@ -288,6 +340,7 @@ function canBindPortLocally(host: string, port: number): boolean {
       return false;
     }
   }
+  // Node / Bun：同步探测不可靠；交给 findAvailablePort 的 isPortInUse 异步路径
   return false;
 }
 
@@ -300,7 +353,7 @@ function canBindPortLocally(host: string, port: number): boolean {
 async function findAvailablePort(
   host: string,
   startPort: number,
-  maxAttempts = 50,
+  maxAttempts = 200,
 ): Promise<number> {
   const DenoRef = (globalThis as { Deno?: { listen: unknown } }).Deno;
   for (let i = 0; i < maxAttempts; i++) {
@@ -374,6 +427,43 @@ let _singletonBaseUrl = `http://127.0.0.1:${_singletonPort}`;
 let _singletonProcess: SpawnedProcess | null = null;
 let _singletonStarted = false;
 let _singletonStartPromise: Promise<void> | null = null;
+/** 为 false 时表示由父进程（如 test-node.mjs）托管，cleanup 不得杀 */
+let _singletonOwnsProcess = true;
+let _exitHookInstalled = false;
+
+function installDocsServerExitHook(): void {
+  if (_exitHookInstalled) return;
+  _exitHookInstalled = true;
+  const kill = () => {
+    if (!_singletonOwnsProcess || !_singletonProcess) return;
+    try {
+      _singletonProcess.kill(9);
+    } catch {
+      /* ignore */
+    }
+  };
+  try {
+    const proc = (globalThis as {
+      process?: {
+        on?: (ev: string, fn: () => void) => void;
+      };
+    }).process;
+    proc?.on?.("exit", kill);
+    proc?.on?.("SIGTERM", kill);
+    proc?.on?.("SIGINT", kill);
+  } catch {
+    /* ignore */
+  }
+  try {
+    const DenoRef = (globalThis as {
+      Deno?: { addSignalListener?: (s: string, fn: () => void) => void };
+    }).Deno;
+    DenoRef?.addSignalListener?.("SIGTERM", kill);
+    DenoRef?.addSignalListener?.("SIGINT", kill);
+  } catch {
+    /* ignore */
+  }
+}
 
 async function _probeDocsDevOk(timeoutMs: number): Promise<boolean> {
   const controller = new AbortController();
@@ -391,13 +481,45 @@ async function _probeDocsDevOk(timeoutMs: number): Promise<boolean> {
 }
 
 async function _startServer(): Promise<void> {
+  installDocsServerExitHook();
   if (_singletonStarted) {
     if (await _probeDocsDevOk(5000)) return;
     await _killServer();
   }
 
+  // 父进程（test-node.mjs）已拉起共享 docs server 时复用，避免 Node 每文件 spawn 泄漏端口
+  const externalBase = getEnv("UI_VIEW_DOCS_E2E_BASE_URL");
+  if (externalBase && externalBase.trim() !== "") {
+    _singletonBaseUrl = externalBase.replace(/\/$/, "");
+    const extPort = getEnv("UI_VIEW_DOCS_E2E_PORT");
+    if (extPort) {
+      const n = Number.parseInt(extPort, 10);
+      if (Number.isFinite(n) && n > 0) _singletonPort = n;
+    }
+    _singletonOwnsProcess = false;
+    _singletonProcess = null;
+    const deadlineMs = docsDevStartupDeadlineMs();
+    const deadline = Date.now() + deadlineMs;
+    let ready = false;
+    while (Date.now() < deadline) {
+      if (await _probeDocsDevOk(2000)) {
+        ready = true;
+        break;
+      }
+      await new Promise((r) => setTimeout(r, 300));
+    }
+    if (!ready) {
+      throw new Error(
+        `Docs dev server (external UI_VIEW_DOCS_E2E_BASE_URL) not ready within ${deadlineMs}ms: ${_singletonBaseUrl}`,
+      );
+    }
+    _singletonStarted = true;
+    return;
+  }
+
   _singletonPort = await findAvailablePort("127.0.0.1", preferredPortStart());
   _singletonBaseUrl = `http://127.0.0.1:${_singletonPort}`;
+  _singletonOwnsProcess = true;
   // Docs app is Deno-based. Under Bun/Node, spawn PATH `deno` (CI installs it)
   // instead of `node run dev` / relying on package.json → deno indirection alone.
   const docsCmd = IS_DENO ? execPath() : "deno";
@@ -441,7 +563,14 @@ async function _startServer(): Promise<void> {
 }
 
 async function _killServer(): Promise<void> {
-  if (!_singletonProcess) return;
+  if (!_singletonOwnsProcess) {
+    _singletonStarted = false;
+    return;
+  }
+  if (!_singletonProcess) {
+    _singletonStarted = false;
+    return;
+  }
   const child = _singletonProcess;
   _singletonProcess = null;
   try {
@@ -568,6 +697,8 @@ export const sharedEnv = {
     const minChars = options?.minChars ?? STRICT_DOC_MAIN_MIN_CHARS;
     const timeoutMs = options?.timeoutMs ?? 18_000;
     await waitMainChars(t, minChars, timeoutMs);
+    // 正文出水后再等 Dreamer 事件句柄，覆盖 reload 后的 hydration 窗口（CI 更慢）
+    await waitDreamerHandlers(t, Math.min(timeoutMs, 18_000));
   },
 
   /**

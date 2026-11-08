@@ -123,6 +123,10 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Verify tsx loader (Node docs-browser)
+        run: |
+          node --input-type=module -e "import { existsSync } from 'node:fs'; import { pathToFileURL } from 'node:url'; const u = typeof import.meta.resolve==='function' ? import.meta.resolve('tsx') : pathToFileURL('node_modules/tsx/dist/loader.mjs').href; console.log('tsx', u); if (!existsSync('node_modules/tsx/package.json')) process.exit(1);"
+
       - name: Install Playwright Chromium (Linux + system deps)
         if: runner.os == 'Linux'
         run: npx -y playwright@1.59.1 install --with-deps chromium
