@@ -238,7 +238,8 @@ export const DATA_PANEL_CSS = `
 }
 .dark .dp-fs { background: #0f172a !important; }
 .dp-fs .dp-card { border-radius: 0 !important; min-height: calc(100vh - 1.5rem) !important; }
-/* Mobile: zero top/left/right margin+padding on the table card; keep bottom spacing. */
+/* Mobile: flush table card top/left/right; keep bottom.
+   Pagination: stack controls above range, both centered; keep L/R/bottom padding. */
 @media (max-width: 639.98px) {
   .dp-card {
     margin-top: 0 !important;
@@ -251,8 +252,19 @@ export const DATA_PANEL_CSS = `
     padding-right: 0 !important;
   }
   .dp-pg {
-    padding-left: 0 !important;
-    padding-right: 0 !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+  }
+  .dp-pg-ctrls {
+    order: 1 !important;
+    justify-content: center !important;
+  }
+  .dp-range {
+    order: 2 !important;
+    width: 100% !important;
+    text-align: center !important;
   }
 }
 `;

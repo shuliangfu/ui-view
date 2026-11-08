@@ -2283,10 +2283,10 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
         class="dp-pg flex flex-wrap items-center justify-between gap-3 px-3 py-3 text-sm"
         data-testid="dp-pagination"
       >
-        <span data-testid="dp-range">
+        <span class="dp-range" data-testid="dp-range">
           {n === 0 ? m.rangeEmpty : tr(m.range, { from, to, total: n })}
         </span>
-        <div class="flex flex-wrap items-center gap-2">
+        <div class="dp-pg-ctrls flex flex-wrap items-center gap-2">
           <div class="dp-pgsize" data-testid="dp-pagesize">
             <Select
               size="xs"

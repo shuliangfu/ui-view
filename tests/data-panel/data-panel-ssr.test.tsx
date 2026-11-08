@@ -164,7 +164,7 @@ describe("DataPanel SSR：布尔属性与转义", () => {
     expect(DATA_PANEL_CSS).toContain("oklch(27.9% 0.041 260.031) 60%");
   });
 
-  it("移动端断点：卡片上／左／右外边距与表格区上／左／右内边距为 0（底边保留）", () => {
+  it("移动端断点：表格卡上／左／右贴边；分页居中且条数在下", () => {
     expect(DATA_PANEL_CSS).toContain("@media (max-width: 639.98px)");
     expect(DATA_PANEL_CSS).toContain(".dp-table-wrap");
     expect(DATA_PANEL_CSS).toContain("padding-top: 0 !important");
@@ -177,6 +177,12 @@ describe("DataPanel SSR：布尔属性与转义", () => {
     expect(DATA_PANEL_CSS).not.toMatch(
       /@media \(max-width: 639\.98px\)[^{]*\{[^}]*padding-bottom:\s*0/,
     );
+    // 分页：列布局、控件 order1、条数 order2 居中
+    expect(DATA_PANEL_CSS).toContain(".dp-pg-ctrls");
+    expect(DATA_PANEL_CSS).toContain(".dp-range");
+    expect(DATA_PANEL_CSS).toContain("flex-direction: column !important");
+    expect(DATA_PANEL_CSS).toContain("order: 1 !important");
+    expect(DATA_PANEL_CSS).toContain("order: 2 !important");
   });
 
   it("SSR 输出的 <style> 里选择器未被转义", async () => {
@@ -365,6 +371,8 @@ describe("DataPanel SSR：文案与自定义", () => {
     expect(off).toContain('data-testid="dp-pagination"');
     expect(off).toContain("dp-table-wrap");
     expect(off).toContain("dp-pg");
+    expect(off).toContain("dp-pg-ctrls");
+    expect(off).toContain("dp-range");
     const on = await html({});
     expect(on).toContain('data-testid="data-panel-toolbar"');
     const rec = await html({ toolbar: { refresh: true, print: false } });

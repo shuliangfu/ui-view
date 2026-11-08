@@ -1255,7 +1255,7 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
   );
 
   it(
-    "移动端：表格卡片上／左／右 margin·padding 为 0；桌面端表格区仍有间距",
+    "移动端：表格卡上／左／右贴边；分页控件居中、条数在下居中；桌面表格区仍有间距",
     async (t) => {
       if (!t?.browser?.goto) return;
       // deno-lint-ignore no-explicit-any
@@ -1278,6 +1278,8 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
       const k = ${P("demo-toolbar-off")};
       const card = getComputedStyle(D.q(k, ".dp-card"));
       const wrap = getComputedStyle(D.q(k, ".dp-table-wrap"));
+      const rangeBox = D.q(k, ".dp-range").getBoundingClientRect();
+      const ctrlsBox = D.q(k, ".dp-pg-ctrls").getBoundingClientRect();
       return {
         cardMT: parseFloat(card.marginTop),
         cardML: parseFloat(card.marginLeft),
@@ -1286,12 +1288,17 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
         wrapPL: parseFloat(wrap.paddingLeft),
         wrapPR: parseFloat(wrap.paddingRight),
         wrapPB: parseFloat(wrap.paddingBottom),
+        // desktop: range left of controls (same row)
+        deskSideBySide: rangeBox.right <= ctrlsBox.left + 2 ? 1 : 0,
+        deskSameRow: Math.abs(rangeBox.top - ctrlsBox.top) < 24 ? 1 : 0,
       };`,
       );
       expect(desk.wrapPT).toBeGreaterThan(0);
       expect(desk.wrapPL).toBeGreaterThan(0);
       expect(desk.wrapPR).toBeGreaterThan(0);
       expect(desk.wrapPB).toBeGreaterThan(0);
+      expect(desk.deskSideBySide).toBe(1);
+      expect(desk.deskSameRow).toBe(1);
 
       await page.setViewportSize({ width: 375, height: 812 });
       await ev(t, `await D.sleep(200);`);
@@ -1301,7 +1308,14 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
       const k = ${P("demo-toolbar-off")};
       const card = getComputedStyle(D.q(k, ".dp-card"));
       const wrap = getComputedStyle(D.q(k, ".dp-table-wrap"));
-      const pg = getComputedStyle(D.q(k, ".dp-pg"));
+      const pgEl = D.q(k, ".dp-pg");
+      const pg = getComputedStyle(pgEl);
+      const rangeEl = D.q(k, ".dp-range");
+      const ctrlsEl = D.q(k, ".dp-pg-ctrls");
+      const pgBox = pgEl.getBoundingClientRect();
+      const rangeBox = rangeEl.getBoundingClientRect();
+      const ctrlsBox = ctrlsEl.getBoundingClientRect();
+      const pgMid = pgBox.left + pgBox.width / 2;
       return {
         cardMT: parseFloat(card.marginTop),
         cardML: parseFloat(card.marginLeft),
@@ -1313,6 +1327,10 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
         pgPL: parseFloat(pg.paddingLeft),
         pgPR: parseFloat(pg.paddingRight),
         pgPB: parseFloat(pg.paddingBottom),
+        rangeBelow: rangeBox.top >= ctrlsBox.bottom - 2 ? 1 : 0,
+        rangeCenterDelta: Math.abs((rangeBox.left + rangeBox.right) / 2 - pgMid),
+        ctrlsCenterDelta: Math.abs((ctrlsBox.left + ctrlsBox.right) / 2 - pgMid),
+        pgW: pgBox.width,
       };`,
       );
       expect(mob.cardMT).toBe(0);
@@ -1322,9 +1340,13 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
       expect(mob.wrapPL).toBe(0);
       expect(mob.wrapPR).toBe(0);
       expect(mob.wrapPB).toBeGreaterThan(0);
-      expect(mob.pgPL).toBe(0);
-      expect(mob.pgPR).toBe(0);
+      expect(mob.pgPL).toBeGreaterThan(0);
+      expect(mob.pgPR).toBeGreaterThan(0);
       expect(mob.pgPB).toBeGreaterThan(0);
+      // mobile: controls centered; range below + centered
+      expect(mob.rangeBelow).toBe(1);
+      expect(mob.rangeCenterDelta).toBeLessThan(mob.pgW * 0.25);
+      expect(mob.ctrlsCenterDelta).toBeLessThan(mob.pgW * 0.25);
 
       // restore desktop viewport for subsequent tests in shared browser
       await page.setViewportSize({ width: 1280, height: 800 });
