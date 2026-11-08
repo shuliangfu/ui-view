@@ -358,6 +358,8 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
     sfields[sdef.name] = createSignal(initialQuery.filters[sdef.name] ?? "");
   }
   const jump = createSignal("");
+  /** 移动断点（≤639.98px）：底栏分页 Select／按钮用 xs；桌面 md */
+  const isNarrow = createSignal(false);
   let seq = 0;
 
   const listParams = (q: DataPanelQuery, forUrl: boolean) =>
@@ -473,6 +475,15 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
         void writeDataPanelPrefs(key, { fullscreen: false });
       }
     };
+    const mq = globalThis.matchMedia?.("(max-width: 639.98px)");
+    if (mq) {
+      const syncNarrow = () => {
+        isNarrow.value = mq.matches;
+      };
+      syncNarrow();
+      mq.addEventListener("change", syncNarrow);
+      onCleanup(() => mq.removeEventListener("change", syncNarrow));
+    }
     g.document?.addEventListener?.("keydown", onKey);
     onCleanup(() => {
       g.document?.removeEventListener?.("keydown", onKey);
@@ -2277,19 +2288,25 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
       if (p < 1 || p > last || p === q.page) return;
       setQuery({ page: p });
     };
-    const pbtn = "min-w-8 rounded border px-2 py-1 text-sm disabled:opacity-40";
+    /** 移动端 xs、桌面 md（与 Pagination.size 口径一致） */
+    const pgSize = isNarrow.value ? "xs" : "md";
+    const pbtn = pgSize === "xs"
+      ? "min-w-6 rounded border px-1 py-0.5 text-xs disabled:opacity-40"
+      : "min-w-8 rounded border px-2 py-1 text-sm disabled:opacity-40";
     return (
       <div
         class="dp-pg flex flex-wrap items-center justify-between gap-3 px-3 py-3 text-sm"
         data-testid="dp-pagination"
+        data-dp-pg-size={pgSize}
       >
         <span class="dp-range" data-testid="dp-range">
           {n === 0 ? m.rangeEmpty : tr(m.range, { from, to, total: n })}
         </span>
         <div class="dp-pg-ctrls flex flex-wrap items-center gap-2">
-          <div class="dp-pgsize" data-testid="dp-pagesize">
+          <div class="dp-pgsize" data-testid="dp-pagesize" data-size={pgSize}>
             <Select
-              size="xs"
+              size={pgSize}
+              class="inline-flex w-fit shrink-0 align-middle whitespace-nowrap [&>button]:!w-auto [&>button]:inline-flex [&>button]:whitespace-nowrap [&_[role=listbox]]:!flex [&_[role=listbox]]:!flex-col [&_[role=listbox]]:!w-max [&_[role=listbox]]:!min-w-full [&_[role=listbox]]:!right-auto [&_[role=option]]:!block [&_[role=option]]:!w-full [&_[role=option]]:whitespace-nowrap"
               value={createSignal(String(q.pageSize))}
               options={pageSizes.map((sz) => ({
                 value: String(sz),
@@ -2343,7 +2360,7 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
             {m.jump}
             <div class="dp-jump" data-testid="dp-jump">
               <Input
-                size="sm"
+                size={pgSize}
                 type="text"
                 value={jump}
                 onInput={(e: Event) => {

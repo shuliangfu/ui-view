@@ -202,9 +202,37 @@ export const DATA_PANEL_CSS = `
 .dp-jump input { padding: 0.25rem 0.5rem; font-size: 0.875rem; line-height: 1.25rem; border-radius: 0.25rem; text-align: center; -moz-appearance: textfield; appearance: textfield; }
 .dp-jump input::-webkit-outer-spin-button, .dp-jump input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 .dp-ed-wrap { min-width: 9.5rem; }
-.dp-pgsize { width: 6.75rem; flex: none; }
-.dp-pgsize button[aria-haspopup] { padding: 0.25rem 0.5rem; font-size: 0.875rem; line-height: 1.25rem; border-radius: 0.25rem; gap: 0.25rem; }
-.dp-pgsize [role="listbox"] { top: auto; bottom: 100%; margin-top: 0; margin-bottom: 0.25rem; }
+/* pageSize Select：宽度随文案与箭头自适应，勿固定过宽；nowrap 防换行 */
+.dp-pgsize { width: fit-content; flex: none; min-width: 0; max-width: none; }
+.dp-pgsize span.relative {
+  width: fit-content !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  display: inline-flex !important;
+}
+.dp-pgsize button[aria-haspopup] {
+  white-space: nowrap !important;
+  width: auto !important;
+}
+/* 仅移动端压 Select 触发器；桌面交给 Select size=md 自身 */
+.dp-pgsize [role="listbox"] {
+  top: auto;
+  bottom: 100%;
+  margin-top: 0;
+  margin-bottom: 0.25rem;
+  display: flex;
+  flex-direction: column;
+  width: max-content;
+  min-width: 100%;
+  right: auto;
+  left: 0;
+}
+.dp-pgsize [role="option"] {
+  display: block;
+  width: 100%;
+  white-space: nowrap;
+  box-sizing: border-box;
+}
 .dp-acts { display: inline-flex; align-items: center; justify-content: center; gap: 1px; }
 .dp-act [role="img"] { width: 1rem !important; height: 1rem !important; }
 .dp-act { background: transparent !important; border: 0 !important; box-shadow: none !important; padding: 2px !important; min-width: 0 !important; border-radius: 4px; color: #64748b !important; line-height: 1; cursor: pointer; transition: color 0.15s ease; }
@@ -265,6 +293,13 @@ export const DATA_PANEL_CSS = `
     order: 2 !important;
     width: 100% !important;
     text-align: center !important;
+  }
+  .dp-pgsize button[aria-haspopup] {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    border-radius: 0.25rem;
+    gap: 0.25rem;
   }
 }
 `;

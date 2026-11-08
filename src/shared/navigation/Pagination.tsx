@@ -1,6 +1,7 @@
 /**
  * Pagination 分页（View）。
  * 桌面/移动通用，移动可简化；支持当前页、总条数、每页条数、跳转、上一页/下一页。
+ * pageSize 选择器用库内 {@link Select}（自绘下拉），不渲染原生 `<select>`。
  */
 
 import { createSignal } from "@dreamer/view";
@@ -9,6 +10,7 @@ import { twMerge } from "tailwind-merge";
 /** 按需：单文件图标，避免经 icons/mod 拉入全表 */
 import { IconChevronLeft } from "../basic/icons/ChevronLeft.tsx";
 import { IconChevronRight } from "../basic/icons/ChevronRight.tsx";
+import { Select } from "../form/Select.tsx";
 import { getPaginationState } from "./pagination-utils.ts";
 
 /**
@@ -23,7 +25,7 @@ export interface PaginationMessages {
   next: string;
   /** 单个页码按钮 `aria-label`，参数为该页码 */
   pageLabel: (page: number) => string;
-  /** 每页条数选择器 `aria-label` */
+  /** 每页条数选择器 `aria-label` / Select 兜底文案 */
   pageSize: string;
   /** 每页条数下拉项文本，参数为条数 */
   pageSizeUnit: (n: number) => string;
@@ -48,6 +50,9 @@ export const defaultPaginationMessages: PaginationMessages = {
   totalText: (total) => `共 ${total} 条`,
 };
 
+/** 分页尺寸：影响页码按钮、条数 Select、跳转输入框；默认 md（现视觉） */
+export type PaginationSize = "xs" | "sm" | "md" | "lg";
+
 export interface PaginationProps {
   /** 当前页码（受控）；不传则内部 `Signal`（`createSignal`）；可为 getter / `() => ref.value` */
   current?: number | (() => number);
@@ -61,7 +66,7 @@ export interface PaginationProps {
   pageSize?: number | (() => number);
   /** 非受控时的默认每页条数，默认 10 */
   defaultPageSize?: number;
-  /** 每页条数选项（如 [10, 20, 50]）；传了则渲染条数切换器，onChange 会收到 (page, pageSize) */
+  /** 每页条数选项（如 [10, 20, 50]）；传了则渲染条数切换器（库内 Select），onChange 会收到 (page, pageSize) */
   pageSizeOptions?: number[];
   /** 页码/条数变化回调；当有 pageSizeOptions 时可能收到 (page, pageSize) */
   onChange: (page: number, pageSize?: number) => void;
@@ -80,6 +85,11 @@ export interface PaginationProps {
    * 不刷新页面；默认 false。初始值需由调用方从 URL 读取后传入 current/pageSize。
    */
   syncUrl?: boolean;
+  /**
+   * 尺寸：`xs`｜`sm`｜`md`｜`lg`；默认 `md`（与改造前视觉一致）。
+   * 同步作用于页码按钮、每页条数 Select、快速跳转输入框。
+   */
+  size?: PaginationSize;
   /** 额外 class */
   class?: string;
   /** 多语言/自定义文案；未传字段走 {@link defaultPaginationMessages} */
@@ -99,6 +109,60 @@ function updateUrlSearch(page: number, pageSize: number) {
   );
 }
 
+const sizeBtnCls: Record<PaginationSize, string> = {
+  xs:
+    "min-w-6 h-6 px-1 inline-flex items-center justify-center rounded text-xs font-medium border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed",
+  sm:
+    "min-w-7 h-7 px-1.5 inline-flex items-center justify-center rounded text-xs font-medium border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed",
+  md:
+    "min-w-8 h-8 px-2 inline-flex items-center justify-center rounded-md text-sm font-medium border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed",
+  lg:
+    "min-w-10 h-10 px-3 inline-flex items-center justify-center rounded-lg text-base font-medium border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed",
+};
+
+const sizeEllipsisCls: Record<PaginationSize, string> = {
+  xs: "min-w-6 h-6 flex items-center justify-center text-slate-400 text-xs",
+  sm: "min-w-7 h-7 flex items-center justify-center text-slate-400 text-xs",
+  md: "min-w-8 h-8 flex items-center justify-center text-slate-400",
+  lg: "min-w-10 h-10 flex items-center justify-center text-slate-400 text-base",
+};
+
+const sizeJumpInputCls: Record<PaginationSize, string> = {
+  xs:
+    "w-9 h-6 px-1 text-center rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-xs",
+  sm:
+    "w-10 h-7 px-1 text-center rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-xs",
+  md:
+    "w-12 h-8 px-1 text-center rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm",
+  lg:
+    "w-14 h-10 px-1 text-center rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-base",
+};
+
+/**
+ * pageSize Select：宽度跟文案＋箭头走（fit-content），禁止固定过宽留空；
+ * nowrap 防「页」掉行。各 size 仅字号／高度不同，宽度一律自适应。
+ */
+const sizeSelectWrapCls: Record<PaginationSize, string> = {
+  xs: "w-fit max-w-none",
+  sm: "w-fit max-w-none",
+  md: "w-fit max-w-none",
+  lg: "w-fit max-w-none",
+};
+
+const sizeTextCls: Record<PaginationSize, string> = {
+  xs: "text-xs",
+  sm: "text-xs",
+  md: "text-sm",
+  lg: "text-base",
+};
+
+const sizeIconCls: Record<PaginationSize, string> = {
+  xs: "w-3 h-3",
+  sm: "w-3.5 h-3.5",
+  md: "w-4 h-4",
+  lg: "w-5 h-5",
+}
+
 export function Pagination(props: PaginationProps): JSXRenderable {
   const {
     pageSize: pageSizeProp,
@@ -112,16 +176,21 @@ export function Pagination(props: PaginationProps): JSXRenderable {
     showTotal = false,
     disabled = false,
     syncUrl = false,
+    size = "md",
     class: className,
     messages,
   } = props;
   const m = { ...defaultPaginationMessages, ...messages };
+  const btnCls = sizeBtnCls[size];
+  const ellipsisCls = sizeEllipsisCls[size];
+  const jumpInputCls = sizeJumpInputCls[size];
+  const selectWrapCls = sizeSelectWrapCls[size];
+  const textCls = sizeTextCls[size];
+  const iconCls = sizeIconCls[size];
 
   const internalCurrentRef = createSignal(defaultCurrent);
   const internalPageSizeRef = createSignal(defaultPageSize);
 
-  const btnCls =
-    "min-w-8 h-8 px-2 inline-flex items-center justify-center rounded-md text-sm font-medium border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed";
   const activeCls =
     "border-blue-600 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 pointer-events-none";
 
@@ -157,6 +226,7 @@ export function Pagination(props: PaginationProps): JSXRenderable {
     <nav
       role="navigation"
       aria-label={m.nav}
+      data-pagination-size={size}
       class={twMerge("flex items-center gap-1 flex-wrap", className)}
     >
       {() => {
@@ -190,7 +260,12 @@ export function Pagination(props: PaginationProps): JSXRenderable {
         return (
           <>
             {showTotal && total != null && (
-              <span class="mr-2 text-sm text-slate-600 dark:text-slate-400 shrink-0">
+              <span
+                class={twMerge(
+                  "mr-2 text-slate-600 dark:text-slate-400 shrink-0",
+                  textCls,
+                )}
+              >
                 {typeof showTotal === "function"
                   ? showTotal(total, [from, to])
                   : m.totalText(total)}
@@ -204,7 +279,7 @@ export function Pagination(props: PaginationProps): JSXRenderable {
                 aria-label={m.prev}
                 onClick={() => onChange(safeCurrent - 1)}
               >
-                <IconChevronLeft class="w-4 h-4" />
+                <IconChevronLeft class={iconCls} />
               </button>
             )}
             {showPageNumbers &&
@@ -213,7 +288,7 @@ export function Pagination(props: PaginationProps): JSXRenderable {
                   ? (
                     <span
                       key={`ellipsis-${i}`}
-                      class="min-w-8 h-8 flex items-center justify-center text-slate-400"
+                      class={ellipsisCls}
                     >
                       …
                     </span>
@@ -240,41 +315,56 @@ export function Pagination(props: PaginationProps): JSXRenderable {
                 aria-label={m.next}
                 onClick={() => onChange(safeCurrent + 1)}
               >
-                <IconChevronRight class="w-4 h-4" />
+                <IconChevronRight class={iconCls} />
               </button>
             )}
             {pageSizeOptions != null && pageSizeOptions.length > 0 &&
               total != null &&
               (
-                <span class="ml-2 inline-flex items-center gap-1 text-sm text-slate-600 dark:text-slate-400 shrink-0">
-                  <select
-                    class="h-8 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm"
-                    value={String(pageSizeVal)}
+                <span
+                  class={twMerge(
+                    "ml-2 inline-flex items-center gap-1 text-slate-600 dark:text-slate-400 shrink-0 whitespace-nowrap",
+                    textCls,
+                  )}
+                  data-testid="pagination-pagesize"
+                >
+                  <Select
+                    size={size}
+                    disabled={disabled}
+                    class={twMerge(
+                      selectWrapCls,
+                      // 触发器贴文案（仅 >button）；listbox 竖排；面板按最长项；选项整行 nowrap
+                      "inline-flex w-fit shrink-0 align-middle whitespace-nowrap [&>button]:!w-auto [&>button]:inline-flex [&>button]:whitespace-nowrap [&_[role=listbox]]:!flex [&_[role=listbox]]:!flex-col [&_[role=listbox]]:!w-max [&_[role=listbox]]:!min-w-full [&_[role=listbox]]:!right-auto [&_[role=option]]:!block [&_[role=option]]:!w-full [&_[role=option]]:whitespace-nowrap",
+                    )}
+                    value={createSignal(String(pageSizeVal))}
+                    options={pageSizeOptions.map((n) => ({
+                      value: String(n),
+                      label: m.pageSizeUnit(n),
+                    }))}
+                    messages={{ triggerFallback: m.pageSize }}
                     onChange={(e: Event) => {
                       const v = parseInt(
-                        (e.target as HTMLSelectElement).value,
+                        (e.target as unknown as { value: string }).value,
                         10,
                       );
                       if (!Number.isNaN(v)) onChange(1, v);
                     }}
-                    aria-label={m.pageSize}
-                  >
-                    {pageSizeOptions.map((n) => (
-                      <option key={n} value={n}>
-                        {m.pageSizeUnit(n)}
-                      </option>
-                    ))}
-                  </select>
+                  />
                 </span>
               )}
             {showQuickJumper && (
-              <span class="ml-2 inline-flex items-center gap-1 text-sm text-slate-600 dark:text-slate-400">
+              <span
+                class={twMerge(
+                  "ml-2 inline-flex items-center gap-1 text-slate-600 dark:text-slate-400",
+                  textCls,
+                )}
+              >
                 {m.jumpTo}
                 <input
                   type="number"
                   min={1}
                   max={totalPages}
-                  class="w-12 h-8 px-1 text-center rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm"
+                  class={jumpInputCls}
                   onBlur={(e: Event) => {
                     const v = parseInt(
                       (e.target as HTMLInputElement).value,

@@ -60,7 +60,7 @@ const PAGINATION_API: ApiRow[] = [
     name: "pageSizeOptions",
     type: "number[]",
     default: "-",
-    description: "每页条数选项（如 [10, 20, 50]）",
+    description: "每页条数选项（如 [10, 20, 50]）；渲染库内 Select 自绘下拉，无原生 <select>",
   },
   {
     name: "onChange",
@@ -104,6 +104,13 @@ const PAGINATION_API: ApiRow[] = [
     default: "false",
     description:
       "为 true 时，页码/每页条数变化会写入 URL（?page=1&pageSize=10），不刷新页面",
+  },
+  {
+    name: "size",
+    type: '"xs" | "sm" | "md" | "lg"',
+    default: '"md"',
+    description:
+      "尺寸：同步作用于页码按钮、每页条数 Select、快速跳转；四档 xs｜sm｜md｜lg，默认 md 与改造前视觉一致；条数触发器宽度随文案＋箭头自适应、单行不换行",
   },
   { name: "class", type: "string", default: "-", description: "额外 class" },
   {
@@ -173,6 +180,25 @@ const exampleSyncUrl = `<Pagination
   syncUrl
 />`;
 
+
+const exampleSizes = `<>
+  <Pagination size="xs" defaultCurrent={1} total={80} pageSizeOptions={[10, 20]} onChange={() => {}} showPrevNext showTotal />
+  <Pagination size="sm" defaultCurrent={1} total={80} pageSizeOptions={[10, 20]} onChange={() => {}} showPrevNext showTotal />
+  <Pagination size="md" defaultCurrent={1} total={80} pageSizeOptions={[10, 20]} onChange={() => {}} showPrevNext showTotal />
+  <Pagination size="lg" defaultCurrent={1} total={80} pageSizeOptions={[10, 20]} onChange={() => {}} showPrevNext showTotal />
+</>`;
+
+const examplePageSizeSelect = `<Pagination
+  defaultCurrent={1}
+  defaultPageSize={10}
+  total={120}
+  pageSizeOptions={[10, 20, 50]}
+  onChange={handleChange}
+  showPrevNext
+  showTotal
+/>
+{/* pageSizeOptions 使用库内 Select，无原生 <select> */}`;
+
 /** 从当前 URL 读取 page / pageSize（用于 syncUrl 场景的初始值） */
 function getPageFromUrl(): { page: number; pageSize: number } {
   if (typeof globalThis.location === "undefined") {
@@ -202,7 +228,8 @@ export default function NavigationPagination() {
       <section>
         <Title level={1}>Pagination 分页</Title>
         <Paragraph class="mt-2">
-          分页：current、total、totalPages、pageSize、pageSizeOptions、onChange、showPrevNext、showPageNumbers、showQuickJumper、showTotal、disabled、syncUrl、class。
+          分页：current、total、totalPages、pageSize、pageSizeOptions、onChange、showPrevNext、showPageNumbers、showQuickJumper、showTotal、disabled、syncUrl、size、class。
+          每页条数切换使用库内 Select（自绘下拉），不渲染原生 {"<select>"}。尺寸 size 为 xs｜sm｜md｜lg，默认 md；条数触发器随文案＋箭头贴紧、单行不换行。
           使用 Tailwind v4，支持 light/dark 主题。
         </Paragraph>
       </section>
@@ -325,6 +352,100 @@ export default function NavigationPagination() {
             wrapLongLines
           />
         </div>
+
+        <div class="space-y-4" data-testid="demo-pagination-sizes">
+          <Title level={3}>尺寸 size（xs｜sm｜md｜lg）</Title>
+          <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+            默认 md。四档同步作用于页码按钮、每页条数 Select 与快速跳转；条数触发器宽度随文案＋箭头自适应、单行不换行。
+          </Paragraph>
+          <div class="space-y-4">
+            <div class="space-y-2">
+              <Paragraph class="text-xs text-slate-500">xs</Paragraph>
+              <Pagination
+                size="xs"
+                defaultCurrent={1}
+                defaultPageSize={10}
+                total={80}
+                pageSizeOptions={[10, 20, 50]}
+                onChange={handleChange}
+                showPrevNext
+                showTotal
+              />
+            </div>
+            <div class="space-y-2">
+              <Paragraph class="text-xs text-slate-500">sm</Paragraph>
+              <Pagination
+                size="sm"
+                defaultCurrent={1}
+                defaultPageSize={10}
+                total={80}
+                pageSizeOptions={[10, 20, 50]}
+                onChange={handleChange}
+                showPrevNext
+                showTotal
+              />
+            </div>
+            <div class="space-y-2">
+              <Paragraph class="text-xs text-slate-500">md（默认）</Paragraph>
+              <Pagination
+                size="md"
+                defaultCurrent={1}
+                defaultPageSize={10}
+                total={80}
+                pageSizeOptions={[10, 20, 50]}
+                onChange={handleChange}
+                showPrevNext
+                showTotal
+              />
+            </div>
+            <div class="space-y-2">
+              <Paragraph class="text-xs text-slate-500">lg</Paragraph>
+              <Pagination
+                size="lg"
+                defaultCurrent={1}
+                defaultPageSize={10}
+                total={80}
+                pageSizeOptions={[10, 20, 50]}
+                onChange={handleChange}
+                showPrevNext
+                showTotal
+              />
+            </div>
+          </div>
+          <CodeBlock
+            title="代码示例"
+            code={exampleSizes}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+        </div>
+
+        <div class="space-y-4" data-testid="demo-pagination-pagesize-select">
+          <Title level={3}>每页条数：库内 Select（无原生 select）</Title>
+          <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+            传入 pageSizeOptions 后渲染组件库 Select 自绘下拉；完整示例同上。
+          </Paragraph>
+          <Pagination
+            defaultCurrent={1}
+            defaultPageSize={10}
+            total={120}
+            pageSizeOptions={[10, 20, 50]}
+            onChange={handleChange}
+            showPrevNext
+            showTotal
+          />
+          <CodeBlock
+            title="代码示例"
+            code={examplePageSizeSelect}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+        </div>
+
       </section>
 
       <DocsMessagesSection

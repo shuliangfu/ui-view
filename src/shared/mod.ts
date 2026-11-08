@@ -759,6 +759,7 @@ export type {
   MenuProps,
   PageHeaderProps,
   PaginationProps,
+  PaginationSize,
   SidebarItem,
   SidebarProps,
   SidebarSubItem,

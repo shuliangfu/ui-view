@@ -15,7 +15,11 @@ export {
   type SidebarProps,
   type SidebarSubItem,
 } from "./Sidebar.tsx";
-export { Pagination, type PaginationProps } from "./Pagination.tsx";
+export {
+  Pagination,
+  type PaginationProps,
+  type PaginationSize,
+} from "./Pagination.tsx";
 export { Menu, type MenuItem, type MenuProps } from "./Menu.tsx";
 export {
   type StepItem,

@@ -651,6 +651,87 @@ describe("文档页 E2E：/desktop/navigation/pagination（Pagination 分页）"
   /**
    * UI·示例区主内容可见且有尺寸。
    */
+
+  /**
+   * size 四档可运行示例：各带 data-pagination-size，且 pageSize 为库内 Select（无原生 select）；触发器不换行。
+   */
+  it("尺寸示例：xs／sm／md／lg 可运行且无原生 select", async (t) => {
+    if (!t?.browser?.goto) return;
+    await sharedEnv.goto(t, DOC_PATH);
+    await sharedEnv.waitDocMainReady(t);
+    const got = await t.browser.evaluate(() => {
+      const box = document.querySelector(
+        '[data-testid="demo-pagination-sizes"]',
+      ) as HTMLElement | null;
+      if (!box) return { ok: false, reason: "no-sizes-demo" };
+      const navs = Array.from(
+        box.querySelectorAll('nav[role="navigation"][aria-label="分页"]'),
+      ) as HTMLElement[];
+      const sizes = navs.map((n) => n.getAttribute("data-pagination-size"));
+      const native = box.querySelectorAll("select").length;
+      const listboxTriggers = box.querySelectorAll(
+        'button[aria-haspopup="listbox"]',
+      ).length;
+      // open first pageSize select if present
+      const trigger = box.querySelector(
+        '[data-testid="pagination-pagesize"] button[aria-haspopup="listbox"]',
+      ) as HTMLButtonElement | null;
+      let opened = false;
+      if (trigger && !trigger.disabled) {
+        trigger.click();
+        opened = true;
+      }
+      const triggers = Array.from(
+        box.querySelectorAll(
+          '[data-testid="pagination-pagesize"] button[aria-haspopup="listbox"]',
+        ),
+      ) as HTMLElement[];
+      const wrapsOk = triggers.length > 0 && triggers.every((btn) => {
+        const label = btn.querySelector("span");
+        if (!label) return false;
+        const cs = getComputedStyle(label);
+        return cs.whiteSpace === "nowrap" || label.scrollWidth <= label.clientWidth + 1;
+      });
+      return {
+        ok: sizes.includes("xs") && sizes.includes("sm") && sizes.includes("md") &&
+          sizes.includes("lg") && native === 0 && listboxTriggers >= 4 && wrapsOk,
+        sizes,
+        native,
+        listboxTriggers,
+        opened,
+        wrapsOk,
+      };
+    }) as {
+      ok: boolean;
+      sizes?: string[];
+      native?: number;
+      reason?: string;
+    };
+    if (!got.ok) {
+      throw new Error(`Pagination sizes: ${JSON.stringify(got)}`);
+    }
+    expect(got.ok).toBe(true);
+  }, DOCS_BROWSER_CONFIG);
+
+  /** 完整示例：pageSize 为 Select，主内容区无原生 select */
+  it("完整示例：pageSize 为库内 Select（无原生 select）", async (t) => {
+    if (!t?.browser?.goto) return;
+    await sharedEnv.goto(t, DOC_PATH);
+    await sharedEnv.waitDocMainReady(t);
+    const got = await t.browser.evaluate(() => {
+      const main = document.querySelector("main");
+      if (!main) return { ok: false, reason: "no-main" };
+      const native = main.querySelectorAll(
+        'nav[role="navigation"] select',
+      ).length;
+      const triggers = main.querySelectorAll(
+        '[data-testid="pagination-pagesize"] button[aria-haspopup="listbox"]',
+      ).length;
+      return { ok: native === 0 && triggers >= 1, native, triggers };
+    }) as { ok: boolean };
+    expect(got.ok).toBe(true);
+  }, DOCS_BROWSER_CONFIG);
+
   it("UI·示例区可见有尺寸", async (t) => {
     if (!t?.browser?.goto) return;
     await sharedEnv.goto(t, DOC_PATH);

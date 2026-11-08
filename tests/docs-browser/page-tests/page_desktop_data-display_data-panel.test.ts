@@ -1280,6 +1280,7 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
       const wrap = getComputedStyle(D.q(k, ".dp-table-wrap"));
       const rangeBox = D.q(k, ".dp-range").getBoundingClientRect();
       const ctrlsBox = D.q(k, ".dp-pg-ctrls").getBoundingClientRect();
+      const pg = D.q(k, '[data-testid="dp-pagination"]');
       return {
         cardMT: parseFloat(card.marginTop),
         cardML: parseFloat(card.marginLeft),
@@ -1291,6 +1292,7 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
         // desktop: range left of controls (same row)
         deskSideBySide: rangeBox.right <= ctrlsBox.left + 2 ? 1 : 0,
         deskSameRow: Math.abs(rangeBox.top - ctrlsBox.top) < 24 ? 1 : 0,
+        pgSize: pg.getAttribute("data-dp-pg-size") || "",
       };`,
       );
       expect(desk.wrapPT).toBeGreaterThan(0);
@@ -1299,6 +1301,7 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
       expect(desk.wrapPB).toBeGreaterThan(0);
       expect(desk.deskSideBySide).toBe(1);
       expect(desk.deskSameRow).toBe(1);
+      expect(desk.pgSize).toBe("md");
 
       await page.setViewportSize({ width: 375, height: 812 });
       await ev(t, `await D.sleep(200);`);
@@ -1331,6 +1334,7 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
         rangeCenterDelta: Math.abs((rangeBox.left + rangeBox.right) / 2 - pgMid),
         ctrlsCenterDelta: Math.abs((ctrlsBox.left + ctrlsBox.right) / 2 - pgMid),
         pgW: pgBox.width,
+        pgSize: pgEl.getAttribute("data-dp-pg-size") || "",
       };`,
       );
       expect(mob.cardMT).toBe(0);
@@ -1347,6 +1351,7 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
       expect(mob.rangeBelow).toBe(1);
       expect(mob.rangeCenterDelta).toBeLessThan(mob.pgW * 0.25);
       expect(mob.ctrlsCenterDelta).toBeLessThan(mob.pgW * 0.25);
+      expect(mob.pgSize).toBe("xs");
 
       // restore desktop viewport for subsequent tests in shared browser
       await page.setViewportSize({ width: 1280, height: 800 });

@@ -718,6 +718,7 @@ export type {
   OpenOptions,
   PageHeaderProps,
   PaginationProps,
+  PaginationSize,
   ParagraphProps,
   PasswordProps,
   ProgressPercentInput,

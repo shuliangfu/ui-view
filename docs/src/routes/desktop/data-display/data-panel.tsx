@@ -205,7 +205,7 @@ const DATA_PANEL_API: DocsApiTableRow[] = [
     name: "class",
     type: "string",
     default: "-",
-    description: "额外 class（加在卡片上）。移动端（max-width: 639.98px）自带：卡片 margin-top/left/right=0，.dp-table-wrap padding-top/left/right=0（表格贴边）；分页控件居中、条数文案在分页下方并居中（.dp-pg 列布局）；桌面仍左右分布",
+    description: "额外 class（加在卡片上）。移动端（max-width: 639.98px）自带：卡片 margin-top/left/right=0，.dp-table-wrap padding-top/left/right=0（表格贴边）；分页控件居中、条数文案在分页下方并居中（.dp-pg 列布局）；底栏分页尺寸移动 xs／桌面 md；桌面仍左右分布",
   },
   {
     name: "children",
@@ -855,7 +855,7 @@ export default function DataDisplayDataPanel() {
             toolbar={false}
           />
           <p class="mt-2 text-xs text-slate-500" data-testid="demo-toolbar-off-hint">
-            toolbar=false 时整栏工具栏不出现；表格／分页仍渲染。移动端（≤639.98px）表格卡上／左／右贴边；分页控件居中，条数文案在分页下方并居中；桌面仍左右分布。
+            toolbar=false 时整栏工具栏不出现；表格／分页仍渲染。移动端（≤639.98px）表格卡上／左／右贴边；分页控件居中，条数文案在分页下方并居中；底栏分页尺寸移动 xs／桌面 md；桌面仍左右分布。
           </p>
         </DocsDemo>
 
