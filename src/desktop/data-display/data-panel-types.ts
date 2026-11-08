@@ -496,7 +496,7 @@ export function resolveRowActionCtrl(
 
 /** Throw if any custom toolbar key lacks `action`. Call at mount / before render. */
 export function assertToolbarConfig(
-  cfg: DataPanelToolbarConfig | undefined,
+  cfg: DataPanelToolbarConfig | false | undefined,
 ): void {
   if (!cfg) return;
   for (const [key, val] of Object.entries(cfg)) {

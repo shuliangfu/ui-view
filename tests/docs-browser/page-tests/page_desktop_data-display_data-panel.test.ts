@@ -168,7 +168,7 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
       t,
       `return document.querySelectorAll('[data-testid^="panel-demo-"]').length;`,
     );
-    expect(panels).toBe(22);
+    expect(panels).toBe(23);
   }, DOCS_BROWSER_CONFIG);
 
   it(
@@ -1219,7 +1219,43 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
   );
 
   it(
-    "刷新按钮重新加载当前页；每个面板互不影响（同页 22 个实例）",
+    "toolbar: false 整栏工具栏不出现；表格／分页仍在",
+    async (t) => {
+      if (!t?.browser?.goto) return;
+      // open() waits for dp-refresh; toolbar:false has none — wait on table instead
+      await sharedEnv.goto(t, DOC_PATH);
+      await sharedEnv.waitDocMainReady(t);
+      const ready = await ev<boolean>(
+        t,
+        `return await D.until(() => D.q(${P("demo-toolbar-off")}, '[data-testid="dp-table"]'), 30000);`,
+      );
+      expect(ready).toBe(true);
+      await ev(t, `await D.sleep(300);`);
+      const r = await ev<Record<string, unknown>>(
+        t,
+        `
+      const k = ${P("demo-toolbar-off")};
+      return {
+        toolbar: !!D.q(k, '[data-testid="data-panel-toolbar"]'),
+        table: !!D.q(k, '[data-testid="dp-table"]'),
+        pagination: !!D.q(k, '[data-testid="dp-pagination"]'),
+        refresh: !!D.q(k, '[data-testid="dp-refresh"]'),
+        hint: !!document.querySelector('[data-testid="demo-toolbar-off-hint"]'),
+        rows: D.rows(k).length,
+      };`,
+      );
+      expect(r.toolbar).toBe(false);
+      expect(r.table).toBe(true);
+      expect(r.pagination).toBe(true);
+      expect(r.refresh).toBe(false);
+      expect(r.hint).toBe(true);
+      expect((r.rows as number) > 0).toBe(true);
+    },
+    DOCS_BROWSER_CONFIG,
+  );
+
+  it(
+    "刷新按钮重新加载当前页；每个面板互不影响（同页 23 个实例）",
     async (t) => {
       if (!t?.browser?.goto) return;
       await open(t, "demo-crud");
@@ -1246,33 +1282,38 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
     DOCS_BROWSER_CONFIG,
   );
   it(
-    "22 个示例全部渲染：工具栏 / 表格 / 分页齐全，且水合后可交互",
+    "23 个示例：22 个有工具栏；toolbar:false 示例无工具栏，表格／分页齐全",
     async (t) => {
       if (!t?.browser?.goto) return;
       await open(t, "demo-basic");
       const r = await ev<Record<string, unknown>>(
         t,
         `
-      const keys = ["demo-basic","demo-search","demo-table","demo-crud","demo-batch","demo-page","demo-export","demo-remote","demo-dark","demo-locale","demo-defaults","demo-bool","demo-tb-fn","demo-ra-fn","demo-tb-custom","demo-ra-custom","demo-key-order","demo-enabled","demo-title","demo-can","demo-custom","demo-cell"];
+      const keys = ["demo-basic","demo-search","demo-table","demo-crud","demo-batch","demo-page","demo-export","demo-remote","demo-dark","demo-locale","demo-toolbar-off","demo-defaults","demo-bool","demo-tb-fn","demo-ra-fn","demo-tb-custom","demo-ra-custom","demo-key-order","demo-enabled","demo-title","demo-can","demo-custom","demo-cell"];
       await D.until(() => D.total("demo-remote") > 0, 10000);
       const out = {};
       for (const k of keys) {
+        const hasTb = !!D.q(k, '[data-testid="data-panel-toolbar"]');
         out[k] = {
-          toolbar: !!D.q(k, '[data-testid="data-panel-toolbar"]'),
+          toolbar: hasTb,
           table: !!D.q(k, '[data-testid="dp-table"]'),
           pagination: !!D.q(k, '[data-testid="dp-pagination"]'),
           rows: D.rows(k).length,
-          hydrated: !!D.q(k, '[data-testid="dp-refresh"]'),
+          // toolbar:false panel has no refresh; treat table presence as hydrated proxy
+          hydrated: k === "demo-toolbar-off"
+            ? !!D.q(k, '[data-testid="dp-table"]')
+            : !!D.q(k, '[data-testid="dp-refresh"]'),
           visible: D.q(k, ".dp-card").getBoundingClientRect().height > 100,
         };
       }
       return out;`,
       );
-      expect(Object.keys(r).length).toBe(22);
+      expect(Object.keys(r).length).toBe(23);
       for (const [k, v] of Object.entries(r)) {
         const o = v as Record<string, unknown>;
+        const expectTb = k !== "demo-toolbar-off";
         expect([k, o.toolbar, o.table, o.pagination, o.hydrated, o.visible])
-          .toEqual([k, true, true, true, true, true]);
+          .toEqual([k, expectTb, true, true, true, true]);
         expect((o.rows as number) > 0).toBe(true);
       }
     },

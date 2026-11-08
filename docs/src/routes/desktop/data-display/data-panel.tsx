@@ -171,10 +171,10 @@ const DATA_PANEL_API: DocsApiTableRow[] = [
   },
   {
     name: "toolbar",
-    type: "DataPanelToolbarConfig (Record)",
+    type: "false | DataPanelToolbarConfig (Record)",
     default: "{}",
     description:
-      "统合 Record（废止 toolbar.extra／order／toolbarExtra／onCreate）。声明项：省略 show→true、省略 disable→false；true|false 简写；对象可 show/disable/icon/label/title/tone/action；title／label 互落：tip=title??label??内置messages??key；无 label 有 title→显示用 title；无 title 有 label→tip 用 label；无 confirm 字段（确认写在 action 自管）；tone=default|primary|secondary|success|warning|danger|ghost（对齐 Button）；自定义必须 action；写入序＝显示序。batchStatus 为 TOOLBAR_BUILTIN：控批量条「设为…」显隐／disable（非工具栏图标）",
+      "`false`＝整栏工具栏不渲染（data-panel-toolbar 不出现）；省略／{}／Record＝统合 Record（废止 toolbar.extra／order／toolbarExtra／onCreate）。声明项：省略 show→true、省略 disable→false；键级 true|false 简写；对象可 show/disable/icon/label/title/tone/action；title／label 互落：tip=title??label??内置messages??key；无 label 有 title→显示用 title；无 title 有 label→tip 用 label；无 confirm 字段（确认写在 action 自管）；tone=default|primary|secondary|success|warning|danger|ghost（对齐 Button）；自定义必须 action；写入序＝显示序。batchStatus 为 TOOLBAR_BUILTIN：控批量条「设为…」显隐／disable（非工具栏图标）",
   },
   {
     name: "rowActions",
@@ -382,6 +382,14 @@ const localeCode =
   `<DataPanel locale="en-US" title="Users" data={rows} columns={columns} search={search} form={form} />
 // 覆盖部分文案
 <DataPanel messages={{ create: "新建", deleteTitle: "删除确认" }} ... />`;
+
+const toolbarOffCode = `// toolbar: false → 整栏工具栏不渲染（省略／Record 行为不变）
+<DataPanel
+  toolbar={false}
+  title="无工具栏"
+  data={rows}
+  columns={columns}
+/>`;
 
 const defaultsCode = `// 默认：省略 show→true、省略 disable→false；声明项不被 caps 藏
 // caps.create=false，但声明 create:{} / { disable:true } 仍显示
@@ -820,8 +828,9 @@ export default function DataDisplayDataPanel() {
         <div class="space-y-2">
           <Title level={2}>工具栏与操作列（统合 Record）</Title>
           <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
-            <code>toolbar</code>／<code>rowActions</code> 为统合 Record：
-            <code>true</code>／<code>false</code> 简写控显隐；对象可覆盖
+            <code>toolbar</code>／<code>rowActions</code> 为统合 Record；
+            <code>toolbar</code> 设为 <code>false</code> 时整栏工具栏不渲染。
+            键级 <code>true</code>／<code>false</code> 简写控显隐；对象可覆盖
             <code>show</code>／<code>disable</code>／<code>icon</code>／<code>label</code>／<code>title</code>／<code>tone</code>／<code>action</code>
             （默认 show=true、disable=false）。声明项不再用 caps 藏钮；
             <code>undefined</code>（如 capGate allow）才回落 caps。<code>title</code> 可省：不传时内置用 messages、自定义用
@@ -835,6 +844,20 @@ export default function DataDisplayDataPanel() {
             （前导 chrome 请放面板外）。<code>batchStatus</code> 是 TOOLBAR_BUILTIN：声明式控批量条「设为…」显隐／disable，UI 仍在选中批量条。
           </Paragraph>
         </div>
+
+        <DocsDemo title="toolbar: false 整栏隐藏" code={toolbarOffCode}>
+          <DataPanel
+            panelKey="demo-toolbar-off"
+            title="无工具栏"
+            data={makeDemoRows(5)}
+            columns={DEMO_COLUMNS}
+            form={DEMO_FORM}
+            toolbar={false}
+          />
+          <p class="mt-2 text-xs text-slate-500" data-testid="demo-toolbar-off-hint">
+            toolbar=false 时整栏工具栏不出现；表格／分页仍渲染。
+          </p>
+        </DocsDemo>
 
         <DocsDemo title="⓪ 默认：省略 show→显示、省略 disable→可点" code={defaultsCode}>
           <DataPanel

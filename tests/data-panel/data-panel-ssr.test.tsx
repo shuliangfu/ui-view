@@ -343,6 +343,18 @@ describe("DataPanel SSR：文案与自定义", () => {
     expect(h).toContain('data-testid="dp-select-1"');
   });
 
+  it("toolbar: false 整栏工具栏不渲染；省略仍渲染", async () => {
+    const off = await html({ toolbar: false });
+    expect(off).not.toContain('data-testid="data-panel-toolbar"');
+    expect(off).toContain('data-testid="dp-table"');
+    expect(off).toContain('data-testid="dp-pagination"');
+    const on = await html({});
+    expect(on).toContain('data-testid="data-panel-toolbar"');
+    const rec = await html({ toolbar: { refresh: true, print: false } });
+    expect(rec).toContain('data-testid="data-panel-toolbar"');
+    expect(rec).toContain('data-testid="dp-refresh"');
+  });
+
   it("toolbar.batchStatus:false 隐藏选择列（无 remove 时）", async () => {
     const h = await html({
       statusField: "status",

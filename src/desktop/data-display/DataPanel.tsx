@@ -188,11 +188,14 @@ export interface DataPanelProps {
   /** 能力开关；缺省按数据源方法推断。未在 toolbar/rowActions 声明的钮回落于此。 */
   caps?: Partial<DataPanelCaps>;
   /**
-   * Unified toolbar Record. Declared keys: omit show→true, omit disable→false (caller truth).
+   * Toolbar config, or `false` to hide the entire toolbar bar.
+   * - `false` → do not render the toolbar (`data-panel-toolbar`) at all
+   * - omit / `{}` / Record → Unified toolbar Record (existing behavior)
+   * Declared keys: omit show→true, omit disable→false (caller truth).
    * `undefined` value (e.g. capGate allow) still falls back to caps. Undeclared builtins → caps, after declared.
    * Object key write order = display order. Custom keys require `action`. No `extra` / `order`.
    */
-  toolbar?: DataPanelToolbarConfig;
+  toolbar?: false | DataPanelToolbarConfig;
   /**
    * Unified rowActions Record（同形；show/disable/action 可 (item)=>…）。
    * Custom keys require `action`. No `extra` / `order`.
@@ -285,7 +288,9 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
     ...(props.caps ?? {}),
   };
   // Caller overrides: show = resolve(caller, capsFallback). Handlers (action/on*) never imply visibility.
-  const tbCfg: DataPanelToolbarConfig = props.toolbar ?? {};
+  const toolbarHidden = props.toolbar === false;
+  const tbCfg: DataPanelToolbarConfig =
+    props.toolbar && typeof props.toolbar === "object" ? props.toolbar : {};
   const raCfg: DataPanelRowActionsConfig = props.rowActions ?? {};
   assertToolbarConfig(tbCfg);
   assertRowActionsConfig(raCfg);
@@ -1315,7 +1320,7 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
     }
   };
 
-  const toolbar = () => (
+  const toolbar = () => toolbarHidden ? null : (
     <div
       class="flex w-full flex-wrap items-center justify-end gap-2 border-b border-slate-200 px-3 py-2 dark:border-slate-700"
       data-testid="data-panel-toolbar"
