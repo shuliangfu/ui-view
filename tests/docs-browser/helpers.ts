@@ -398,8 +398,11 @@ async function _startServer(): Promise<void> {
 
   _singletonPort = await findAvailablePort("127.0.0.1", preferredPortStart());
   _singletonBaseUrl = `http://127.0.0.1:${_singletonPort}`;
-  const cmd = createCommand(execPath(), {
-    args: IS_DENO ? ["run", "-A", "src/main.ts"] : ["run", "dev"],
+  // Docs app is Deno-based. Under Bun/Node, spawn PATH `deno` (CI installs it)
+  // instead of `node run dev` / relying on package.json → deno indirection alone.
+  const docsCmd = IS_DENO ? execPath() : "deno";
+  const cmd = createCommand(docsCmd, {
+    args: ["run", "-A", "src/main.ts"],
     cwd: DOCS_ROOT,
     env: {
       ...getEnvAll(),

@@ -1,6 +1,5 @@
-# CI: 9-job matrix — 3 Deno v2.9 + 3 Bun + 3 Node 22 (Linux/macOS/Windows)
-# No Chromium, no Playwright — only the sidebar-reconcile unit test runs in CI.
-# Browser tests (tests/docs-browser/**) are local-only (require Playwright).
+# CI: 9-job matrix — Deno v2.9 + Bun + Node 22 × Linux/macOS/Windows
+# docs-browser (Playwright) runs on all cells except Bun + Windows.
 name: CI
 
 on:
@@ -11,6 +10,8 @@ on:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  # Docs E2E: allow slow cold start on CI runners
+  UI_VIEW_DOCS_DEV_START_MS: "180000"
 
 jobs:
   # ───────────────── Deno ─────────────────
@@ -20,6 +21,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
 
@@ -27,9 +29,21 @@ jobs:
         with:
           deno-version: v2.9
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
       - name: Cache dependencies
         continue-on-error: true
         run: deno cache src/mod.ts plugin.ts
+
+      - name: Install Playwright Chromium (Linux + system deps)
+        if: runner.os == 'Linux'
+        run: npx -y playwright@1.59.1 install --with-deps chromium
+
+      - name: Install Playwright Chromium
+        if: runner.os != 'Linux'
+        run: npx -y playwright@1.59.1 install chromium
 
       - name: Check
         run: deno check src/ plugin.ts
@@ -37,8 +51,8 @@ jobs:
       - name: Lint
         run: deno lint src/
 
-      - name: Test (Deno — unit only)
-        run: deno test -A --minimum-dependency-age=0 tests/docs-sidebar-reconcile.test.ts
+      - name: Test (Deno — unit + docs-browser)
+        run: deno test -A --minimum-dependency-age=0 tests/docs-sidebar-reconcile.test.ts tests/docs-browser/
 
   # ───────────────── Bun ─────────────────
   test-bun:
@@ -47,6 +61,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
 
@@ -54,11 +69,34 @@ jobs:
         with:
           bun-version: latest
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      # Docs app is Deno-based; needed for docs-browser (skipped on Windows below)
+      - uses: denoland/setup-deno@v2
+        if: matrix.os != 'windows-latest'
+        with:
+          deno-version: v2.9
+
       - name: Cache dependencies
         continue-on-error: true
         run: bun install || true
 
-      - name: Test (Bun — unit only)
+      - name: Install Playwright Chromium (Linux + system deps)
+        if: matrix.os != 'windows-latest' && runner.os == 'Linux'
+        run: npx -y playwright@1.59.1 install --with-deps chromium
+
+      - name: Install Playwright Chromium
+        if: matrix.os != 'windows-latest' && runner.os != 'Linux'
+        run: npx -y playwright@1.59.1 install chromium
+
+      - name: Test (Bun — unit + docs-browser)
+        if: matrix.os != 'windows-latest'
+        run: bun test tests/docs-sidebar-reconcile.test.ts tests/docs-browser/
+
+      - name: Test (Bun — unit only; docs-browser skipped on Windows)
+        if: matrix.os == 'windows-latest'
         run: bun test tests/docs-sidebar-reconcile.test.ts
 
   # ───────────────── Node.js 22+ ─────────────────
@@ -68,6 +106,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 180
     steps:
       - uses: actions/checkout@v4
 
@@ -75,8 +114,21 @@ jobs:
         with:
           node-version: "22"
 
+      # Docs E2E server entry is Deno
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9
+
       - name: Install dependencies
         run: npm install
 
-      - name: Test (Node.js)
+      - name: Install Playwright Chromium (Linux + system deps)
+        if: runner.os == 'Linux'
+        run: npx -y playwright@1.59.1 install --with-deps chromium
+
+      - name: Install Playwright Chromium
+        if: runner.os != 'Linux'
+        run: npx -y playwright@1.59.1 install chromium
+
+      - name: Test (Node.js — unit + docs-browser)
         run: node --import tsx --test-force-exit test-node.mjs
