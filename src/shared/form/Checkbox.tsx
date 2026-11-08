@@ -11,6 +11,16 @@ import { twMerge } from "tailwind-merge";
 import { controlBlueFocusRing } from "./input-focus-ring.ts";
 import type { MaybeSignal } from "./maybe-signal.ts";
 
+export interface CheckboxMessages {
+  /**
+   * 预留扩展键（可见文案走 children）。
+   * 保留空默认对象以便与其它表单控件同形传 `messages`。
+   */
+  _reserved?: string;
+}
+
+export const defaultCheckboxMessages: CheckboxMessages = {};
+
 export interface CheckboxProps {
   /** 是否选中；见 {@link MaybeSignal} */
   checked?: MaybeSignal<boolean>;
@@ -46,6 +56,8 @@ export interface CheckboxProps {
   children?: unknown;
   /** 为 true 时隐藏聚焦激活态边框；默认 false 显示 ring */
   hideFocusRing?: boolean;
+  /** 多语言／自定义文案；未传字段走 {@link defaultCheckboxMessages}；标签请用 children */
+  messages?: Partial<CheckboxMessages>;
 }
 
 /** 勾选框本体底纹（不含 ring） */
@@ -56,6 +68,11 @@ const labelCls =
 const errorCls = "[&_input]:border-red-500 text-red-600 dark:text-red-400";
 
 export function Checkbox(props: CheckboxProps): JSXRenderable {
+  const _m: CheckboxMessages = {
+    ...defaultCheckboxMessages,
+    ...(props.messages ?? {}),
+  };
+  void _m;
   const {
     checked: checkedMaybe,
     disabled = false,

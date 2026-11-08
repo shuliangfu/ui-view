@@ -31,6 +31,16 @@ export type TooltipPlacement =
   | "rightTop"
   | "rightBottom";
 
+export interface TooltipMessages {
+  /**
+   * 预留扩展键（当前气泡正文走 props.content）。
+   * 保留空默认对象以便 `messages?: Partial<TooltipMessages>` 与其它组件同形。
+   */
+  _reserved?: string;
+}
+
+export const defaultTooltipMessages: TooltipMessages = {};
+
 export interface TooltipProps {
   /** 提示文案或节点 */
   content: string | unknown;
@@ -44,6 +54,13 @@ export interface TooltipProps {
   class?: string;
   /** 气泡内容区 class（含 z-index 等，便于全屏编辑器等抬高） */
   overlayClass?: string;
+  /**
+   * 为 true 时强制隐藏且不再响应悬停。
+   * 传零参 getter 时可订阅 Signal（如 Popconfirm 打开时压掉同锚点 Tooltip）。
+   */
+  disabled?: boolean | (() => boolean);
+  /** 多语言／自定义文案；未传字段走 {@link defaultTooltipMessages}；正文请用 content */
+  messages?: Partial<TooltipMessages>;
 }
 
 const TOOLTIP_VIEWPORT_GAP_PX = 8;
@@ -59,6 +76,15 @@ const EMPTY_DOM_RECT = {
   x: 0,
   y: 0,
 } as unknown as DOMRect;
+
+
+/** 解析 {@link TooltipProps.disabled}（字面量或零参 getter）。 */
+function readTooltipDisabled(
+  disabled: boolean | (() => boolean) | undefined,
+): boolean {
+  if (disabled == null) return false;
+  return typeof disabled === "function" ? disabled() : disabled;
+}
 
 /**
  * 根据触发器视口矩形与 placement，计算 Portal 浮层 `fixed` 的 left/top/transform（像素）。
@@ -217,6 +243,12 @@ export function Tooltip(props: TooltipProps): JSXRenderable {
     class: className,
     overlayClass,
   } = props;
+  // merge for API parity; content remains the visible tip text
+  const _m: TooltipMessages = {
+    ...defaultTooltipMessages,
+    ...(props.messages ?? {}),
+  };
+  void _m;
 
   const tooltipId = `tooltip-${Math.random().toString(36).slice(2, 11)}`;
   const arrowCls = arrow ? arrowClass(placement) : "";
@@ -241,12 +273,22 @@ export function Tooltip(props: TooltipProps): JSXRenderable {
   };
 
   const onEnter = () => {
+    if (readTooltipDisabled(props.disabled)) return;
     syncFloatGeometry();
     visible.value = true;
   };
   const onLeave = () => {
     visible.value = false;
   };
+  /** 点击／按下触发器时收起（避免同锚点 Popconfirm 打开后 tip 仍挡确认钮） */
+  const onPointerDown = () => {
+    visible.value = false;
+  };
+
+  // disabled 变为 true 时立刻收起（订阅 getter 内 Signal）
+  createRenderEffect(() => {
+    if (readTooltipDisabled(props.disabled)) visible.value = false;
+  });
 
   createRenderEffect(() => {
     /** View 的 {@link createSignal} 用 `.value` 读写，勿写成 `visible()`（不会订阅、条件恒错） */
@@ -323,6 +365,7 @@ export function Tooltip(props: TooltipProps): JSXRenderable {
       aria-describedby={() => (visible.value ? tooltipId : undefined)}
       onMouseEnter={onEnter}
       onMouseLeave={onLeave}
+      onPointerDown={onPointerDown}
     >
       {children}
     </span>

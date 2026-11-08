@@ -267,19 +267,108 @@ describe("DataPanel SSR：文案与自定义", () => {
     expect(h).toContain(">Actions</th>");
   });
 
-  it("renderCell / rowExtra / toolbarExtra / children / class", async () => {
+  it("renderCell / children / class；无 toolbarExtra／rowExtra 槽", async () => {
     const h = await html({
       renderCell: { name: (r) => <b data-x="cell">{String(r.name)}!</b> },
-      rowExtra: (r) => <i data-x="extra">e{String(r.id)}</i>,
-      toolbarExtra: <span data-x="tbx">TBX</span>,
       children: <div data-x="child">CHILD</div>,
       class: "my-panel",
+      toolbar: {
+        create: false,
+        notify: { label: "通知", tone: "primary", action: () => {} },
+      },
+      rowActions: {
+        view: false,
+        edit: false,
+        remove: false,
+        freeze: {
+          label: "冻结",
+          tone: "danger",
+          action: () => {},
+        },
+      },
     });
     expect(h).toContain('<b data-x="cell">');
-    expect(h).toContain('data-x="extra"');
-    expect(h).toContain('data-x="tbx"');
     expect(h).toContain('data-x="child"');
     expect(h).toContain("dp-card my-panel");
+    // 双轨插槽已废止
+    expect(h).not.toContain('data-x="tbx"');
+    expect(h).not.toContain('data-x="extra"');
+    // tone 自定义经 Record（无 confirm 字段）
+    expect(h).toContain('data-testid="dp-tb-extra-notify"');
+    expect(h).toContain("通知");
+    expect(h).toContain('data-testid="dp-row-extra-freeze-1"');
+    expect(h).toContain("冻结");
+    expect(h).toContain("dp-act-del"); // tone=danger
+  });
+
+  it("title／label 互落 tip；batchStatus 为 TOOLBAR_BUILTIN（无工具栏图标）", async () => {
+    const h = await html({
+      statusField: "status",
+      statusValues: [
+        { value: "active", label: "启用" },
+        { value: "disabled", label: "停用" },
+      ],
+      caps: { batchStatus: true, create: false, print: false, import: false, export: false, columns: false, density: false, fullscreen: false, copy: false },
+      toolbar: {
+        refresh: true,
+        batchStatus: true, // Record 声明；UI 在批量条，非工具栏图标
+        assign: { label: "分配全部", action: () => {} },
+        titled: { title: "仅标题", action: () => {} }, // 无 label → 显示用 title
+        bare: { action: () => {} },
+      },
+      rowActions: {
+        view: false,
+        edit: false,
+        remove: false,
+        assign: { label: "分配", action: () => {} },
+      },
+      dataSource: {
+        sync: true,
+        list: () => ({ rows: [{ id: "1", name: "A", status: "active" }], total: 1 }),
+        setField: async () => ({ removed: 0, failed: [] }),
+        remove: async () => ({ removed: 0, failed: [] }),
+      },
+    });
+    // 自定义有 label → aria／可见文案用 label（tip 规则同）
+    expect(h).toContain("分配全部");
+    expect(h).toContain('data-testid="dp-tb-extra-assign"');
+    expect(h).toContain('data-testid="dp-tb-extra-titled"');
+    expect(h).toContain("仅标题"); // 无 label 有 title → 显示 title
+    expect(h).toContain('data-testid="dp-tb-extra-bare"');
+    expect(h).toContain('aria-label="分配"');
+    // batchStatus 不渲染工具栏图标（仍是 builtins，但 UI 在批量条）
+    expect(h).not.toContain('data-testid="dp-batch-status"');
+    expect(h).not.toContain('data-testid="dp-batch-status-');
+    // 选择列因 remove|batchStatus 出现；批量条仅选中后出现（SSR 无选中 → 无 batch-bar 内容）
+    expect(h).toContain('data-testid="dp-select-1"');
+  });
+
+  it("toolbar.batchStatus:false 隐藏选择列（无 remove 时）", async () => {
+    const h = await html({
+      statusField: "status",
+      statusValues: [{ value: "active", label: "启用" }],
+      caps: {
+        batchStatus: true,
+        remove: false,
+        create: false,
+        print: false,
+        import: false,
+        export: false,
+        columns: false,
+        density: false,
+        fullscreen: false,
+        copy: false,
+      },
+      toolbar: { batchStatus: false, refresh: true },
+      rowActions: { view: false, edit: false, remove: false },
+      dataSource: {
+        sync: true,
+        list: () => ({ rows: [{ id: "1", name: "A", status: "active" }], total: 1 }),
+        setField: async () => ({ removed: 0, failed: [] }),
+      },
+    });
+    expect(h).not.toContain('data-testid="dp-select-1"');
+    expect(h).not.toContain('data-testid="dp-batch-bar"');
   });
 
   it("panelKey 进入根节点 data-testid 与工具栏标记", async () => {
@@ -293,6 +382,99 @@ describe("DataPanel SSR：文案与自定义", () => {
     expect(h).toContain("dp-tb dp-tb-first dp-tb-nl");
     expect(h).toContain("dp-tb dp-tb-nf dp-tb-last");
     expect(h).toContain("dp-tb dp-tb-nf dp-tb-nl");
+  });
+
+
+  it("disable:true 仍渲染且带 disabled；show:false 才隐藏；声明省略 show→显示", async () => {
+    const h = await html({
+      caps: {
+        create: false,
+        print: false,
+        import: false,
+        export: false,
+        columns: false,
+        density: false,
+        fullscreen: false,
+        copy: false,
+      },
+      toolbar: {
+        create: { disable: true },
+        freeze: { label: "冻结", disable: false, action: () => {} },
+        ghost: { label: "幽灵", show: false, action: () => {} },
+        refresh: true,
+      },
+      rowActions: {
+        view: false,
+        edit: { disable: true },
+        remove: false,
+        assign: {
+          label: "分配",
+          disable: (item) => !!item.locked,
+          action: () => {},
+        },
+      },
+    });
+    const hasDisabledAttr = (chunk: string) =>
+      /<button\b[^>]*\sdisabled(?:=""|\s|>)/.test(chunk);
+    expect(h.includes('data-testid="dp-tb-extra-freeze"')).toBe(true);
+    expect(h.includes("冻结")).toBe(true);
+    expect(h.includes('data-testid="dp-tb-extra-ghost"')).toBe(false);
+    expect(h.includes("幽灵")).toBe(false);
+    expect(hasDisabledAttr(h.slice(0, h.indexOf("冻结") + 50))).toBe(true); // create before freeze
+    expect(h.includes('data-testid="dp-edit-1"')).toBe(true);
+    const afterEdit = h.slice(h.indexOf('data-testid="dp-edit-1"'), h.indexOf('data-testid="dp-edit-1"') + 900);
+    expect(hasDisabledAttr(afterEdit)).toBe(true);
+    const afterA1 = h.slice(
+      h.indexOf('data-testid="dp-row-extra-assign-1"'),
+      h.indexOf('data-testid="dp-row-extra-assign-1"') + 900,
+    );
+    expect(hasDisabledAttr(afterA1)).toBe(true);
+    const afterA2 = h.slice(
+      h.indexOf('data-testid="dp-row-extra-assign-2"'),
+      h.indexOf('data-testid="dp-row-extra-assign-2"') + 900,
+    );
+    expect(hasDisabledAttr(afterA2)).toBe(false);
+  });
+
+
+  it("toolbar／rowActions：无原生 HTML title 提示（仅 Tooltip）", async () => {
+    const h = await html({
+      caps: {
+        import: false,
+        export: false,
+        columns: false,
+        density: false,
+        fullscreen: false,
+        copy: false,
+      },
+      toolbar: {
+        create: true,
+        print: true,
+        refresh: true,
+        freeze: { label: "冻结", action: () => {} },
+      },
+      rowActions: {
+        view: true,
+        edit: true,
+        remove: false,
+        assign: { label: "分配", action: () => {} },
+      },
+    });
+    // 原生 title= 会与 Tooltip 叠成双提示；工具栏／行钮不得带 tip 文案作 HTML title
+    expect(h).not.toMatch(/\btitle="打印"/);
+    expect(h).not.toMatch(/\btitle="新建"/);
+    expect(h).not.toMatch(/\btitle="刷新"/);
+    expect(h).not.toMatch(/\btitle="查看"/);
+    expect(h).not.toMatch(/\btitle="编辑"/);
+    expect(h).not.toMatch(/\btitle="分配"/);
+    expect(h).not.toMatch(/\btitle="冻结"/);
+    expect(h).not.toMatch(/\btitle="assign"/);
+    expect(h).not.toMatch(/\btitle="freeze"/);
+    // 行钮可访问名仍在（Btn 外层 aria-label，不再用 title）
+    expect(h).toMatch(/aria-label="查看"/);
+    expect(h).toMatch(/aria-label="编辑"/);
+    expect(h).toMatch(/data-testid="dp-tb-extra-freeze"/);
+    expect(h).toMatch(/data-testid="dp-row-extra-assign-1"/);
   });
 
   it("工具栏按钮数量随能力变化", async () => {

@@ -1,4 +1,5 @@
 /**
+ * 无默认确定／取消脚；自定义 footer 时请 **确定在左、取消在右**（与 Dialog／Popconfirm 一致）。
  * Modal 组件文档页（标准文档结构：概述、引入、示例、API）
  * 路由: /desktop/feedback/modal
  * `Modal` 的 `open`：请传 **`createSignal` 返回值**或零参 getter；**`width`/`title`** 随 signal 变时请用 **`width={() => …}`**、**`title={() => …}`**（Modal 内 memo 订阅，勿只写 `width={sig.value}` 快照）。**`children`** 普通写 `<p>…</p>` 即可；仅当弹窗**已打开**时仍要正文随同一 signal 刷新，再传 **`children={() => …}`**。客户端浮层通过 **`@dreamer/view` 的 `createPortal`** 挂到 `globalThis.document.body`（hybrid/SSR 下需存在真实 document）。

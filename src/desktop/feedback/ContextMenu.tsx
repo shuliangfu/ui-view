@@ -25,7 +25,18 @@ export interface ContextMenuItem {
   danger?: boolean;
   onClick?: () => void;
   divider?: boolean;
+  /** 可选图标（VNode，显示在 label 左侧；对齐 ActionSheetAction.icon） */
+  icon?: unknown;
 }
+
+export interface ContextMenuMessages {
+  /** 菜单面板 aria-label */
+  menu: string;
+}
+
+export const defaultContextMenuMessages: ContextMenuMessages = {
+  menu: "上下文菜单",
+};
 
 export interface ContextMenuProps {
   /** 菜单项 */
@@ -35,10 +46,16 @@ export interface ContextMenuProps {
   class?: string;
   /** 菜单面板 class */
   menuClass?: string;
+  /** 多语言／自定义文案；未传字段走 {@link defaultContextMenuMessages} */
+  messages?: Partial<ContextMenuMessages>;
 }
 
 export function ContextMenu(props: ContextMenuProps): JSXRenderable {
   const { items, children, class: className, menuClass } = props;
+  const m: ContextMenuMessages = {
+    ...defaultContextMenuMessages,
+    ...(props.messages ?? {}),
+  };
   const open = createSignal(false);
   const pos = createSignal({ x: 0, y: 0 });
 
@@ -90,6 +107,7 @@ export function ContextMenu(props: ContextMenuProps): JSXRenderable {
         zIndex: CONTEXT_MENU_Z_INDEX,
       })}
       role="menu"
+        aria-label={m.menu}
       data-dreamer-context-menu=""
       onMouseDown={(e: Event) => e.stopPropagation()}
     >
@@ -110,6 +128,7 @@ export function ContextMenu(props: ContextMenuProps): JSXRenderable {
               disabled={it.disabled}
               class={twMerge(
                 "w-full text-left px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-40",
+                "flex items-center gap-2",
                 it.danger && "text-red-600 dark:text-red-400",
               )}
               onClick={() => {
@@ -118,7 +137,12 @@ export function ContextMenu(props: ContextMenuProps): JSXRenderable {
                 open.value = false;
               }}
             >
-              {it.label}
+              {it.icon != null && (
+                <span class="shrink-0 flex items-center justify-center [&>svg]:w-4 [&>svg]:h-4">
+                  {it.icon}
+                </span>
+              )}
+              <span class="flex-1 min-w-0">{it.label}</span>
             </button>
           )
       )}

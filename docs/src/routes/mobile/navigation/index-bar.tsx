@@ -9,11 +9,20 @@ import {
   DocsApiTable,
   type DocsApiTableRow,
 } from "../../../components/DocsApiTable.tsx";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
+import { MESSAGES_INDEX_BAR } from "../../../data/component-messages-rows.ts";
 import { MobileDocDemo } from "../../../components/MobileDocDemo.tsx";
 
 const API: DocsApiTableRow[] = [
   { name: "items", type: "IndexBarItem[]", default: "-", description: "分组" },
-  { name: "onSelect", type: "(index)=>void", default: "-", description: "选中索引" }
+  { name: "onSelect", type: "(index)=>void", default: "-", description: "选中索引" },
+  {
+    name: "messages",
+    type: "Partial<IndexBarMessages>",
+    default: "-",
+    description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
+  },
+
 ];
 
 const importCode = `import { IndexBar } from "@dreamer/ui-view/mobile/navigation";
@@ -62,6 +71,12 @@ export default function Page() {
         </MobileDocDemo>
         <CodeBlock title="代码示例" code={exampleDemo} language="tsx" showLineNumbers copyable wrapLongLines />
       </section>
+      <DocsMessagesSection
+        interfaceName="IndexBarMessages"
+        defaultExportName="defaultIndexBarMessages"
+        rows={MESSAGES_INDEX_BAR}
+      />
+
       <section class="space-y-3">
         <Title level={2}>API</Title>
         <DocsApiTable rows={API} />

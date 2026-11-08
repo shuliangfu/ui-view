@@ -10,6 +10,8 @@ import {
   DocsApiTable,
   type DocsApiTableRow,
 } from "../../../components/DocsApiTable.tsx";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
+import { MESSAGES_OVERLAY } from "../../../data/component-messages-rows.ts";
 
 const API: DocsApiTableRow[] = [
   { name: "open", type: "ControlledOpenInput", default: "-", description: "是否显示（传 Signal）" },
@@ -19,7 +21,13 @@ const API: DocsApiTableRow[] = [
   { name: "destroyOnClose", type: "boolean", default: "false", description: "关闭后销毁节点" },
   { name: "lockScroll", type: "boolean", default: "视 portal", description: "锁定 body 滚动" },
   { name: "zIndex", type: "number", default: "-", description: "层级" },
-  { name: "position", type: "fixed | absolute", default: "fixed", description: "定位" },
+  { name: "position", type: "fixed | absolute", default: "fixed", description: "定位" },  {
+    name: "messages",
+    type: "Partial<OverlayMessages>",
+    default: "-",
+    description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
+  },
+
 ];
 
 const importCode = `import { createSignal } from "@dreamer/view";
@@ -128,6 +136,12 @@ export default function Page() {
           <CodeBlock title="代码示例" code={exampleNoClick} language="tsx" showLineNumbers copyable wrapLongLines />
         </div>
       </section>
+      <DocsMessagesSection
+        interfaceName="OverlayMessages"
+        defaultExportName="defaultOverlayMessages"
+        rows={MESSAGES_OVERLAY}
+      />
+
       <section class="space-y-3">
         <Title level={2}>API</Title>
         <DocsApiTable rows={API} />

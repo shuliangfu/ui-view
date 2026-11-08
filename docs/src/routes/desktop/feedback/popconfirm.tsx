@@ -50,7 +50,7 @@ const POPCONFIRM_API: ApiRow[] = [
     name: "okText",
     type: "string",
     default: "确定",
-    description: "确定按钮文案",
+    description: "确定按钮文案；脚序固定确定在左、取消在右",
   },
   {
     name: "cancelText",

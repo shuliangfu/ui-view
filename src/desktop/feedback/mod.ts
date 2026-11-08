@@ -7,12 +7,12 @@
  *
  * @see {@link ./Modal.tsx} 模态框行为说明
  */
-export { ToastContainer } from "./Toast.tsx";
+export { ToastContainer, defaultToastMessages } from "./Toast.tsx";
 export { toast } from "./toast-store.ts";
 export type { ToastItem, ToastPlacement, ToastType } from "./toast-store.ts";
 export { clearToasts, removeToast } from "./toast-store.ts";
 
-export { MessageContainer } from "./Message.tsx";
+export { MessageContainer, defaultMessageMessages } from "./Message.tsx";
 export { message } from "./message-store.ts";
 export type {
   MessageItem,
@@ -21,7 +21,11 @@ export type {
 } from "./message-store.ts";
 export { clearMessages, removeMessage } from "./message-store.ts";
 
-export { NotificationContainer } from "./Notification.tsx";
+export {
+  NotificationContainer,
+  defaultNotificationMessages,
+} from "./Notification.tsx";
+export type { NotificationMessages } from "./Notification.tsx";
 export { notification } from "./notification-store.ts";
 export type {
   NotificationItem,
@@ -55,7 +59,7 @@ export type {
   ProgressType,
 } from "./Progress.tsx";
 
-export { Result } from "./Result.tsx";
+export { Result, defaultResultMessages } from "./Result.tsx";
 export type { ResultProps, ResultStatus } from "./Result.tsx";
 
 export { clampModalTranslateToViewport, Modal } from "./Modal.tsx";
@@ -74,8 +78,8 @@ export type {
   DialogProps,
   DialogVariant,
 } from "./Dialog.tsx";
-export { Tooltip } from "./Tooltip.tsx";
-export type { TooltipPlacement, TooltipProps } from "./Tooltip.tsx";
+export { Tooltip, defaultTooltipMessages } from "./Tooltip.tsx";
+export type { TooltipMessages, TooltipPlacement, TooltipProps } from "./Tooltip.tsx";
 export { Popover } from "./Popover.tsx";
 export type { PopoverPlacement, PopoverProps } from "./Popover.tsx";
 export { Popconfirm } from "./Popconfirm.tsx";
@@ -85,7 +89,7 @@ export type {
   PopconfirmProps,
 } from "./Popconfirm.tsx";
 
-export { Overlay } from "./Overlay.tsx";
+export { Overlay, defaultOverlayMessages } from "./Overlay.tsx";
 export type { OverlayProps } from "./Overlay.tsx";
 export { NoticeBar } from "./NoticeBar.tsx";
 export type {
@@ -97,5 +101,7 @@ export { defaultNoticeBarMessages } from "./NoticeBar.tsx";
 export { Tour } from "./Tour.tsx";
 export type { TourMessages, TourProps, TourStep } from "./Tour.tsx";
 export { defaultTourMessages } from "./Tour.tsx";
-export { ContextMenu } from "./ContextMenu.tsx";
-export type { ContextMenuItem, ContextMenuProps } from "./ContextMenu.tsx";
+export { ContextMenu, defaultContextMenuMessages } from "./ContextMenu.tsx";
+export type { ContextMenuItem, ContextMenuMessages, ContextMenuProps } from "./ContextMenu.tsx";
+export type { MessageContainerProps } from "./Message.tsx";
+export type { ToastContainerProps } from "./Toast.tsx";

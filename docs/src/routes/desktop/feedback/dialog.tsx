@@ -3,6 +3,7 @@
  * 路由: /desktop/feedback/dialog
  *
  * 示例含：基础确认、警告确认（warning）、危险（danger）、loading、自定义 footer。
+ * 默认定／取脚序：**确定在左、取消在右**（与 Popconfirm 一致）。
  * `open` 须传 **`Signal<boolean>`**（`createSignal` 返回值，如 `open={dialogOpen}`），勿写 `open={dialogOpen.value}`；底层 Modal 在 Hybrid 下需订阅 `.value`。
  */
 

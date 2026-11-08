@@ -35,9 +35,11 @@ export type { BackTopProps, BackTopTarget } from "./BackTop.tsx";
 export { TabBar, type TabBarItem, type TabBarProps } from "./TabBar.tsx";
 export { NavBar, type NavBarProps } from "./NavBar.tsx";
 
-export { IndexBar } from "./IndexBar.tsx";
+export { IndexBar, defaultIndexBarMessages } from "./IndexBar.tsx";
+export type { IndexBarMessages } from "./IndexBar.tsx";
 export type { IndexBarItem, IndexBarProps } from "./IndexBar.tsx";
-export { DropdownMenu } from "./DropdownMenu.tsx";
+export { DropdownMenu, defaultDropdownMenuMessages } from "./DropdownMenu.tsx";
+export type { DropdownMenuMessages } from "./DropdownMenu.tsx";
 export type {
   DropdownMenuItem,
   DropdownMenuOption,

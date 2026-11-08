@@ -9,13 +9,22 @@ import {
   DocsApiTable,
   type DocsApiTableRow,
 } from "../../../components/DocsApiTable.tsx";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
+import { MESSAGES_PASSCODE_INPUT } from "../../../data/component-messages-rows.ts";
 import { MobileDocDemo } from "../../../components/MobileDocDemo.tsx";
 
 const API: DocsApiTableRow[] = [
   { name: "value", type: "MaybeSignal<string>", default: "-", description: "受控值" },
   { name: "length", type: "number", default: "6", description: "位数" },
   { name: "mask", type: "boolean", default: "false", description: "掩码" },
-  { name: "onFinish", type: "(v)=>void", default: "-", description: "填满回调" }
+  { name: "onFinish", type: "(v)=>void", default: "-", description: "填满回调" },
+  {
+    name: "messages",
+    type: "Partial<PasscodeInputMessages>",
+    default: "-",
+    description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
+  },
+
 ];
 
 const importCode = `import { PasscodeInput } from "@dreamer/ui-view/mobile/form/passcode-input";
@@ -49,6 +58,12 @@ export default function Page() {
         </MobileDocDemo>
         <CodeBlock title="代码示例" code={exampleDemo} language="tsx" showLineNumbers copyable wrapLongLines />
       </section>
+      <DocsMessagesSection
+        interfaceName="PasscodeInputMessages"
+        defaultExportName="defaultPasscodeInputMessages"
+        rows={MESSAGES_PASSCODE_INPUT}
+      />
+
       <section class="space-y-3">
         <Title level={2}>API</Title>
         <DocsApiTable rows={API} />

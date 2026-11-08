@@ -168,7 +168,7 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
       t,
       `return document.querySelectorAll('[data-testid^="panel-demo-"]').length;`,
     );
-    expect(panels).toBe(12);
+    expect(panels).toBe(22);
   }, DOCS_BROWSER_CONFIG);
 
   it(
@@ -185,7 +185,7 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
       }>(
         t,
         `
-      const ids = ["dp-create","dp-search-toggle","dp-refresh","dp-print","dp-import","dp-export","dp-columns"];
+      const ids = ["dp-create","dp-search-toggle","dp-refresh","dp-print","dp-import","dp-export","dp-columns","dp-density","dp-fullscreen","dp-copy"];
       const btns = ids.map((id) => D.q(${
           P("demo-basic")
         }, '[data-testid="' + id + '"]'));
@@ -200,18 +200,19 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
         labels: btns.map((b) => b.getAttribute("aria-label") || ""),
       };`,
       );
-      expect(r.ids.length).toBe(7);
+      const n = r.ids.length;
+      expect(n).toBe(10);
       // 紧挨着：没有间隙（允许 ≤0 的 1px 重叠）
       for (const g of r.gaps) expect(g <= 0.01 && g >= -1.01).toBe(true);
       // 只有两端圆角
       expect(r.rads[0][0] > 0).toBe(true);
       expect(r.rads[0][1]).toBe(0);
-      for (let i = 1; i < 6; i++) expect(r.rads[i]).toEqual([0, 0]);
-      expect(r.rads[6][0]).toBe(0);
-      expect(r.rads[6][1] > 0).toBe(true);
+      for (let i = 1; i < n - 1; i++) expect(r.rads[i]).toEqual([0, 0]);
+      expect(r.rads[n - 1][0]).toBe(0);
+      expect(r.rads[n - 1][1] > 0).toBe(true);
       // 分割线：每个按钮左侧无边框，除最后一个外右侧恰好 1px → 相邻之间只有一条线
-      for (let i = 1; i < 7; i++) expect(r.borders[i][0]).toBe(0);
-      for (let i = 0; i < 6; i++) expect(r.borders[i][1]).toBe(1);
+      for (let i = 1; i < n; i++) expect(r.borders[i][0]).toBe(0);
+      for (let i = 0; i < n - 1; i++) expect(r.borders[i][1]).toBe(1);
       expect(r.labels).toEqual([
         "添加",
         "搜索",
@@ -220,6 +221,9 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
         "导入",
         "导出",
         "列设置",
+        "行高",
+        "全屏",
+        "复制",
       ]);
     },
     DOCS_BROWSER_CONFIG,
@@ -446,7 +450,7 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
       D.click(D.g('[data-testid="dp-col-createdAt"]'));
       await D.until(() => D.q(k, "thead").textContent.includes("创建时间"));
       out.hiddenAfter = true;
-      out.stored = localStorage.getItem("dp-cols-demo-table");
+      out.stored = localStorage.getItem("dp-prefs-demo-table");
       // 取消勾选姓名列 → 消失；重置列 → 恢复默认
       if (!document.querySelector('[data-testid="dp-col-name"]')) {
         D.click(D.q(k, '[data-testid="dp-columns"]'));
@@ -513,7 +517,7 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
 
       await open(t, "demo-table");
       // 清偏好并重进，保证默认 hidden 列状态
-      await ev(t, `localStorage.removeItem("dp-cols-demo-table");`);
+      await ev(t, `localStorage.removeItem("dp-prefs-demo-table"); localStorage.removeItem("dp-cols-demo-table");`);
       await open(t, "demo-table");
 
       const centerClick = async (sel: string) => {
@@ -557,7 +561,7 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
           menuOpen: !!document.querySelector('[data-testid="dp-column-menu"]'),
           header: D.q(${P("demo-table")}, "thead").textContent.includes("创建时间"),
           checked: !!(cb && cb.checked),
-          stored: localStorage.getItem("dp-cols-demo-table"),
+          stored: localStorage.getItem("dp-prefs-demo-table"),
         };`,
       );
       expect(afterShow.ok).toBe(true);
@@ -578,7 +582,7 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
           menuOpen: !!document.querySelector('[data-testid="dp-column-menu"]'),
           header: D.q(${P("demo-table")}, "thead").textContent.includes("创建时间"),
           checked: !!(cb && cb.checked),
-          stored: localStorage.getItem("dp-cols-demo-table"),
+          stored: localStorage.getItem("dp-prefs-demo-table"),
         };`,
       );
       expect(afterHide.ok).toBe(true);
@@ -611,7 +615,7 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
           nameChecked: !!(nameCb && nameCb.checked),
           createdChecked: !!(createdCb && createdCb.checked),
           resetColor: (() => { const b = document.querySelector('[data-testid="dp-col-reset"]'); return b ? getComputedStyle(b).color : ""; })(),
-          stored: localStorage.getItem("dp-cols-demo-table"),
+          stored: localStorage.getItem("dp-prefs-demo-table"),
         };`,
       );
       expect(afterReset.ok).toBe(true);
@@ -692,7 +696,7 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
     DOCS_BROWSER_CONFIG,
   );
 
-  it("批量状态与批量删除都需要确认；取消不生效，确认才执行", async (t) => {
+  it("批量设为／批量删除均走行内 Popconfirm；取消不生效，确认才执行", async (t) => {
     if (!t?.browser?.goto) return;
     await open(t, "demo-batch");
     const r = await ev<Record<string, unknown>>(
@@ -701,43 +705,63 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
       const k = ${P("demo-batch")};
       const out = {};
       const confirmOpen = () => document.querySelector('[data-testid="dp-confirm"]');
+      // messages.confirm 为「确 定」（中间空格，与表单脚一致）
+      const OK = "确 定";
+      const popHas = (txt) => !!D.popBtn(txt);
       D.click(D.q(k, '[data-testid="dp-select-2"]'));
       D.click(D.q(k, '[data-testid="dp-select-3"]'));
       await D.until(() => D.q(k, '[data-testid="dp-batch-bar"]'));
-      // 批量设为停用 → 确认框
+      // 批量设为停用 → 行内 Popconfirm（非 Modal／dp-confirm）
       D.click(D.q(k, '[data-testid="dp-batch-status-disabled"]'));
-      await D.until(confirmOpen);
-      out.statusText = D.text(document.querySelector('[data-testid="dp-confirm-text"]'));
-      D.click(D.g('[data-testid="dp-confirm-cancel"]'));
-      await D.until(() => !confirmOpen());
+      await D.until(() => popHas(OK));
+      out.statusNoModal = !confirmOpen() && !document.querySelector('[role="dialog"]');
+      out.statusText = D.text(D.pop().querySelector("div.text-sm"));
+      out.statusOkLeft = (() => {
+        const ok = D.popBtn(OK), cancel = D.popBtn("取消");
+        return !!ok && !!cancel && ok.getBoundingClientRect().left < cancel.getBoundingClientRect().left;
+      })();
+      D.click(D.popBtn("取消"));
+      await D.until(() => !D.pop());
       out.statusUnchanged = D.sw(k, 2).on === true && D.sw(k, 3).on === true;
       D.click(D.q(k, '[data-testid="dp-batch-status-disabled"]'));
-      await D.until(confirmOpen);
-      D.click(D.g('[data-testid="dp-confirm-ok"]'));
-      await D.until(() => !confirmOpen() && !D.q(k, '[data-testid="dp-batch-bar"]'));
+      await D.until(() => popHas(OK));
+      D.click(D.popBtn(OK));
+      await D.until(() => !D.pop() && D.sw(k, 2).on === false && D.sw(k, 3).on === false);
       out.statusChanged = D.sw(k, 2).on === false && D.sw(k, 3).on === false;
-      // 批量删除
+      await D.until(() => !D.q(k, '[data-testid="dp-batch-bar"]'));
+      // 批量删除：行内 Popconfirm（非大确认对话框）
       const total0 = D.total(k);
       D.click(D.q(k, '[data-testid="dp-select-2"]'));
       D.click(D.q(k, '[data-testid="dp-select-3"]'));
       await D.until(() => D.q(k, '[data-testid="dp-batch-delete"]'));
+      // size=sm on batch bar buttons（py-1.5 ≈ 30–36px；勿用默认 md）
+      out.batchSm = [...D.qa(k, '[data-testid="dp-batch-bar"] button')].every((b) => {
+        const h = b.getBoundingClientRect().height;
+        const cls = b.className || "";
+        return h > 0 && h <= 36 && cls.includes("py-1.5");
+      });
       D.click(D.q(k, '[data-testid="dp-batch-delete"]'));
-      await D.until(confirmOpen);
-      out.deleteText = D.text(document.querySelector('[data-testid="dp-confirm-text"]'));
+      await D.until(() => popHas("删除"));
+      out.deleteNoModal = !confirmOpen() && !document.querySelector('[role="dialog"]');
+      out.deleteText = D.text(D.pop().querySelector("div.text-sm"));
       out.notDeletedYet = D.total(k) === total0 && !!D.q(k, '[data-testid="dp-row-2"]');
-      D.click(D.g('[data-testid="dp-confirm-cancel"]'));
-      await D.until(() => !confirmOpen());
+      D.click(D.popBtn("取消"));
+      await D.until(() => !D.pop());
       out.stillThere = D.total(k) === total0;
       D.click(D.q(k, '[data-testid="dp-batch-delete"]'));
-      await D.until(confirmOpen);
-      D.click(D.g('[data-testid="dp-confirm-ok"]'));
+      await D.until(() => popHas("删除"));
+      D.click(D.popBtn("删除"));
       await D.until(() => D.total(k) === total0 - 2);
       out.deleted = D.total(k) === total0 - 2 && !D.q(k, '[data-testid="dp-row-2"]');
       return out;`,
     );
+    expect(r.statusNoModal).toBe(true);
     expect(r.statusText).toBe("确定将选中的 2 项设为「停用」吗？");
+    expect(r.statusOkLeft).toBe(true);
     expect(r.statusUnchanged).toBe(true);
     expect(r.statusChanged).toBe(true);
+    expect(r.batchSm).toBe(true);
+    expect(r.deleteNoModal).toBe(true);
     expect(r.deleteText).toBe("确定要删除选中的 2 项吗？此操作不可恢复。");
     expect(r.notDeletedYet).toBe(true);
     expect(r.stillThere).toBe(true);
@@ -1155,23 +1179,47 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
         t,
         `
       const k = ${P("demo-custom")};
+      const leading = document.querySelector('[data-testid="demo-custom-leading"]');
+      const freezeBtn = D.q(k, '[data-testid="dp-row-extra-freeze-2"]');
+      const notifyBtn = D.q(k, '[data-testid="dp-tb-extra-notify"]');
+      const hintEl = () => document.querySelector('[data-testid="demo-custom-hint"]');
+      // no confirm field: click runs action immediately (no Popconfirm)
+      freezeBtn.scrollIntoView({ block: "center" });
+      D.click(freezeBtn);
+      await D.until(() => /freeze:/.test(D.text(hintEl())), 3000);
+      const freezeHint = D.text(hintEl());
+      D.click(notifyBtn);
+      await D.until(() => /tb:notify/.test(D.text(hintEl())), 3000);
+      const hint = D.text(hintEl());
+      const pop = document.querySelector("[data-dreamer-popconfirm-panel]");
+      // Btn wraps: testid on outer span, tone class on inner Button
       return {
         cells: D.qa(k, '[data-testid="demo-custom-name"]').length,
-        extras: D.qa(k, '[data-testid="demo-custom-extra"]').map((e) => e.textContent.trim()),
-        toolbar: D.q(k, '[data-testid="data-panel-toolbar"]').textContent.includes("自定义工具栏内容"),
+        leading: leading ? leading.textContent.trim() : "",
         noCreate: !D.q(k, '[data-testid="dp-create"]'),
+        hasFreeze: !!freezeBtn,
+        hasNotify: !!notifyBtn,
+        freezeDelCls: !!(freezeBtn && freezeBtn.querySelector(".dp-act-del")),
+        freezeHint,
+        hint,
+        noPopconfirm: !pop,
       };`,
       );
       expect(c.cells).toBe(5);
-      expect(c.extras).toEqual(["#1", "#2", "#3", "#4", "#5"]);
-      expect(c.toolbar).toBe(true);
+      expect(String(c.leading)).toContain("面板外提示");
       expect(c.noCreate).toBe(true);
+      expect(c.hasFreeze).toBe(true);
+      expect(c.hasNotify).toBe(true);
+      expect(c.freezeDelCls).toBe(true);
+      expect(String(c.freezeHint)).toContain("freeze:2");
+      expect(String(c.hint)).toContain("tb:notify");
+      expect(c.noPopconfirm).toBe(true);
     },
     DOCS_BROWSER_CONFIG,
   );
 
   it(
-    "刷新按钮重新加载当前页；每个面板互不影响（同页 12 个实例）",
+    "刷新按钮重新加载当前页；每个面板互不影响（同页 22 个实例）",
     async (t) => {
       if (!t?.browser?.goto) return;
       await open(t, "demo-crud");
@@ -1193,19 +1241,19 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
       );
       expect(r.sameTotal).toBe(true);
       expect(r.otherNoBar).toBe(true);
-      expect(r.toolbars).toBe(12);
+      expect(r.toolbars).toBe(22);
     },
     DOCS_BROWSER_CONFIG,
   );
   it(
-    "12 个示例全部渲染：工具栏 / 表格 / 分页齐全，且水合后可交互",
+    "22 个示例全部渲染：工具栏 / 表格 / 分页齐全，且水合后可交互",
     async (t) => {
       if (!t?.browser?.goto) return;
       await open(t, "demo-basic");
       const r = await ev<Record<string, unknown>>(
         t,
         `
-      const keys = ["demo-basic","demo-search","demo-table","demo-crud","demo-batch","demo-page","demo-export","demo-remote","demo-dark","demo-locale","demo-custom","demo-cell"];
+      const keys = ["demo-basic","demo-search","demo-table","demo-crud","demo-batch","demo-page","demo-export","demo-remote","demo-dark","demo-locale","demo-defaults","demo-bool","demo-tb-fn","demo-ra-fn","demo-tb-custom","demo-ra-custom","demo-key-order","demo-enabled","demo-title","demo-can","demo-custom","demo-cell"];
       await D.until(() => D.total("demo-remote") > 0, 10000);
       const out = {};
       for (const k of keys) {
@@ -1220,7 +1268,7 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
       }
       return out;`,
       );
-      expect(Object.keys(r).length).toBe(12);
+      expect(Object.keys(r).length).toBe(22);
       for (const [k, v] of Object.entries(r)) {
         const o = v as Record<string, unknown>;
         expect([k, o.toolbar, o.table, o.pagination, o.hydrated, o.visible])
@@ -1985,6 +2033,57 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
           (await ev<string>(t, `return D.names(${P("demo-crud")})[3];`)) + "？",
       );
       expect(sw.total).toBe(8);
+    },
+    DOCS_BROWSER_CONFIG,
+  );
+  it(
+    "行删 Popconfirm 打开时同锚点 Tooltip「删除」不挡确认钮（tip 仍 top；打开时隐藏）",
+    async (t) => {
+      if (!t?.browser?.goto) return;
+      await open(t, "demo-crud");
+      const r = await ev<Record<string, unknown>>(
+        t,
+        `
+        const k = ${P("demo-crud")};
+        const wrap = D.q(k, '[data-testid="dp-delete-3"]');
+        wrap.scrollIntoView({ block: "center" });
+        await D.sleep(120);
+        // 先悬停出 Tooltip「删除」
+        wrap.dispatchEvent(new MouseEvent("mouseenter", { bubbles: true }));
+        await D.sleep(200);
+        const tipBefore = [...document.querySelectorAll('[role="tooltip"]')]
+          .filter((el) => (el.textContent || "").trim() === "删除")
+          .some((el) => {
+            const cs = getComputedStyle(el);
+            return cs.opacity !== "0" && cs.visibility !== "hidden";
+          });
+        D.click(wrap);
+        await D.until(() => D.pop());
+        await D.sleep(200);
+        const tips = [...document.querySelectorAll('[role="tooltip"]')]
+          .filter((el) => (el.textContent || "").trim() === "删除");
+        const tipVisible = tips.some((el) => {
+          const cs = getComputedStyle(el);
+          return cs.opacity !== "0" && cs.visibility !== "hidden" && el.getClientRects().length > 0;
+        });
+        const ok = D.popBtn("删除");
+        const panel = D.pop();
+        let tipBlocksOk = false;
+        if (tipVisible && ok) {
+          const tr = tips[0].getBoundingClientRect();
+          const or = ok.getBoundingClientRect();
+          tipBlocksOk = !(tr.bottom < or.top || tr.top > or.bottom || tr.right < or.left || tr.left > or.right);
+        }
+        D.click(D.popBtn("取消"));
+        await D.until(() => !D.pop());
+        return { tipBefore, tipVisible, tipBlocksOk, hasOk: !!ok, hasPanel: !!panel };
+        `,
+      );
+      // tip may or may not have shown before click depending on hover path; after open must not block
+      expect(r.hasOk).toBe(true);
+      expect(r.hasPanel).toBe(true);
+      expect(r.tipVisible).toBe(false);
+      expect(r.tipBlocksOk).toBe(false);
     },
     DOCS_BROWSER_CONFIG,
   );

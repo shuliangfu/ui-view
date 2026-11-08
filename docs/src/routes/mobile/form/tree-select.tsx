@@ -151,11 +151,11 @@ export default function MobileTreeSelectDoc() {
       </section>
 
       <section class="space-y-4">
-        <DocsMessagesSection
-          interfaceName="TreeSelectMessages"
-          defaultExportName="defaultTreeSelectMessages"
-          rows={MESSAGES_TREE_SELECT}
-        />
+      <DocsMessagesSection
+        interfaceName="TreeSelectMessages"
+        defaultExportName="defaultTreeSelectMessages"
+        rows={MESSAGES_TREE_SELECT}
+      />
 
         <Title level={2}>API</Title>
         <Paragraph class="text-sm text-slate-600 dark:text-slate-400">

@@ -64,6 +64,16 @@ function handleNotificationWrapClick(e: Event) {
   if (id) closeNotification(id);
 }
 
+
+export interface NotificationMessages {
+  /** 关闭按钮默认 aria-label（单项 closeAriaLabel 优先） */
+  close: string;
+}
+
+export const defaultNotificationMessages: NotificationMessages = {
+  close: "关闭",
+};
+
 /** 单条通知项 */
 function NotificationItemEl({ item }: { item: NotificationItem }) {
   return (
@@ -96,7 +106,7 @@ function NotificationItemEl({ item }: { item: NotificationItem }) {
       </div>
       <button
         type="button"
-        aria-label={item.closeAriaLabel ?? "关闭"}
+        aria-label={item.closeAriaLabel ?? defaultNotificationMessages.close}
         class="shrink-0 p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400"
         data-notification-close
         data-notification-id={item.id}

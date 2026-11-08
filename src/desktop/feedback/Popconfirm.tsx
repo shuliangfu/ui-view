@@ -1,6 +1,6 @@
 /**
  * Popconfirm 气泡确认框（View）。
- * 删除等二次确认：点击触发后显示带标题与「确定、取消」按钮；支持危险 / 警告样式（确定钮配色）。
+ * 删除等二次确认：点击触发后显示带标题与「确定、取消」按钮（**确定在左、取消在右**）；支持危险 / 警告样式（确定钮配色）。
  * 受控：`open` + `onOpenChange`；触发器 `onClick` 里应 `onOpenChange(true)` 或写 `sig.value = true`。
  *
  * **手写 JSX**：`open={sig.value}` 会在创建 VNode 时变成快照；须传 **`open={sig}`** 或零参 getter。
@@ -191,7 +191,7 @@ function buildPopconfirmTree(
       {openNow && typeof globalThis.document !== "undefined" && (
         <Portal mount={globalThis.document.body}>
           <div
-            class="fixed z-1065 overflow-visible pointer-events-auto"
+            class="fixed z-1080 overflow-visible pointer-events-auto"
             style={() =>
               getPortalStyle()}
           >
@@ -211,6 +211,7 @@ function buildPopconfirmTree(
                 )}
                 <div class="flex-1">
                   <div class="text-sm mb-3">{title}</div>
+                  {/* 脚序固定：确定在左、取消在右 */}
                   <div class="flex justify-end gap-2">
                     <Button
                       type="button"

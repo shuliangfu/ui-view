@@ -11,6 +11,8 @@ import { FormItem } from "@dreamer/ui-view/form/form-item";
 
 import { CodeBlock } from "@dreamer/ui-view/data-display";
 import { createSignal } from "@dreamer/view";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
+import { MESSAGES_CHECKBOX } from "../../../data/component-messages-rows.ts";
 
 interface ApiRow {
   name: string;
@@ -95,7 +97,13 @@ const CHECKBOX_API: ApiRow[] = [
     type: "unknown",
     default: "-",
     description: "文案或子节点",
+  },  {
+    name: "messages",
+    type: "Partial<CheckboxMessages>",
+    default: "-",
+    description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
   },
+
 ];
 
 const importCode = `import { Checkbox } from "@dreamer/ui-view/form/checkbox";
@@ -122,6 +130,7 @@ export default function FormCheckbox() {
           ，勿绑 <code class="text-sm">sig.value</code>{" "}
           快照。Tailwind v4 + light/dark。
         </Paragraph>
+        <Paragraph class="mt-2 text-sm text-slate-600 dark:text-slate-400">可见标签请用 <code>children</code>。<code>messages</code> 与其它表单控件同形预留（当前仅 <code>_reserved</code>）。</Paragraph>
       </section>
 
       <section class="space-y-3">
@@ -217,6 +226,12 @@ export default function FormCheckbox() {
           </section>
         </Form>
       </section>
+
+      <DocsMessagesSection
+        interfaceName="CheckboxMessages"
+        defaultExportName="defaultCheckboxMessages"
+        rows={MESSAGES_CHECKBOX}
+      />
 
       <section class="space-y-3">
         <Title level={2}>API</Title>

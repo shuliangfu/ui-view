@@ -511,12 +511,12 @@ export { Badge } from "./Badge.tsx";
 export type { BadgeProps } from "./Badge.tsx";
 export { Avatar } from "./Avatar.tsx";
 export type { AvatarProps, AvatarSize } from "./Avatar.tsx";
-export { Skeleton } from "./Skeleton.tsx";
-export type { SkeletonProps } from "./Skeleton.tsx";
-export { Spinner } from "./Spinner.tsx";
-export type { SpinnerProps } from "./Spinner.tsx";
+export { Skeleton, defaultSkeletonMessages } from "./Skeleton.tsx";
+export type { SkeletonMessages, SkeletonProps } from "./Skeleton.tsx";
+export { Spinner, defaultSpinnerMessages } from "./Spinner.tsx";
+export type { SpinnerMessages, SpinnerProps } from "./Spinner.tsx";
 
-export { FloatButton } from "./FloatButton.tsx";
+export { FloatButton, defaultFloatButtonMessages } from "./FloatButton.tsx";
 export type {
   FloatButtonItem,
   FloatButtonPlacement,

@@ -92,6 +92,8 @@ export interface ModalMessages {
   enterFullscreen: string;
   /** 退出全屏按钮 `aria-label` */
   exitFullscreen: string;
+  /** 遮罩 `aria-label` */
+  mask: string;
 }
 
 /** 默认中文文案 */
@@ -99,6 +101,7 @@ export const defaultModalMessages: ModalMessages = {
   close: "关闭",
   enterFullscreen: "全屏",
   exitFullscreen: "退出全屏",
+  mask: "遮罩",
 };
 
 export interface ModalProps {
@@ -117,7 +120,7 @@ export interface ModalProps {
   titleAlign?: ModalTitleAlign;
   /** 弹层内容；可传 `() => VNode` 零参 getter 与宽度同步更新 */
   children?: unknown;
-  /** 底部区域：传 VNode 或 null 不显示；不传时默认无 footer */
+  /** 底部区域：传 VNode 或 null 不显示；不传时默认无 footer。自定义「确定／取消」脚时请 **确定在左、取消在右**（与 Dialog／Popconfirm 一致）。 */
   footer?: unknown;
   /** 是否显示右上角关闭按钮，默认 true */
   closable?: boolean;
@@ -685,7 +688,7 @@ export function Modal(props: ModalProps): JSXRenderable {
               )}
               clickable={maskClosable}
               onClick={() => onClose?.()}
-              aria-label="遮罩"
+              aria-label={m.mask}
             />
           )
           : null}

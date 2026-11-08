@@ -250,11 +250,11 @@ export default function MobileScrollListDoc() {
       </section>
 
       <section class="space-y-4">
-        <DocsMessagesSection
-          interfaceName="ScrollListMessages"
-          defaultExportName="defaultScrollListMessages"
-          rows={MESSAGES_SCROLL_LIST}
-        />
+      <DocsMessagesSection
+        interfaceName="ScrollListMessages"
+        defaultExportName="defaultScrollListMessages"
+        rows={MESSAGES_SCROLL_LIST}
+      />
 
         <Title level={2}>API</Title>
         <DocsApiTable rows={SCROLL_LIST_API} />

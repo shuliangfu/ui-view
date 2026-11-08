@@ -8,6 +8,8 @@ import { Paragraph, Title } from "@dreamer/ui-view/basic";
 import { CodeBlock } from "@dreamer/ui-view/data-display";
 
 import { Tooltip } from "@dreamer/ui-view/feedback";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
+import { MESSAGES_TOOLTIP } from "../../../data/component-messages-rows.ts";
 /** API 属性行类型 */
 interface ApiRow {
   name: string;
@@ -44,6 +46,19 @@ const TOOLTIP_API: ApiRow[] = [
     description:
       "气泡外层（Portal 根节点）class，可传 z-index 等（如全屏编辑器内抬高）",
   },
+  {
+    name: "disabled",
+    type: "boolean | (() => boolean)",
+    default: "false",
+    description:
+      "为 true 时强制隐藏且不响应悬停；可传 getter（如 Popconfirm 打开时压掉同锚点 tip）。按下触发器也会收起 tip。",
+  },  {
+    name: "messages",
+    type: "Partial<TooltipMessages>",
+    default: "-",
+    description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
+  },
+
 ];
 
 const importCode = `import { Tooltip } from "@dreamer/ui-view/feedback";
@@ -87,6 +102,7 @@ export default function FeedbackTooltip() {
           裁切；无 body 时回退为包裹层内绝对定位。使用 Tailwind v4，支持
           light/dark 主题。
         </Paragraph>
+        <Paragraph class="mt-2 text-sm text-slate-600 dark:text-slate-400">气泡可见文案请用 <code>content</code>。<code>messages</code> 与其它组件同形预留（当前仅 <code>_reserved</code>）。</Paragraph>
       </section>
 
       <section class="space-y-3">
@@ -175,6 +191,12 @@ export default function FeedbackTooltip() {
           />
         </div>
       </section>
+
+      <DocsMessagesSection
+        interfaceName="TooltipMessages"
+        defaultExportName="defaultTooltipMessages"
+        rows={MESSAGES_TOOLTIP}
+      />
 
       <section class="space-y-3">
         <Title level={2}>API</Title>

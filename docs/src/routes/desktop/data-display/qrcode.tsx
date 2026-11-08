@@ -9,6 +9,8 @@ import {
   DocsApiTable,
   type DocsApiTableRow,
 } from "../../../components/DocsApiTable.tsx";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
+import { MESSAGES_QR_CODE } from "../../../data/component-messages-rows.ts";
 
 const API: DocsApiTableRow[] = [
   { name: "value", type: "MaybeSignal<string>", default: "-", description: "编码内容（示例用当前页 URL）" },
@@ -16,7 +18,13 @@ const API: DocsApiTableRow[] = [
   { name: "color", type: "string", default: "#0f172a", description: "前景色" },
   { name: "bgColor", type: "string", default: "#ffffff", description: "背景色" },
   { name: "includeMargin", type: "boolean", default: "true", description: "静默区白边" },
-  { name: "aria-label", type: "string", default: "二维码", description: "无障碍" },
+  { name: "aria-label", type: "string", default: "二维码", description: "无障碍" },  {
+    name: "messages",
+    type: "Partial<QRCodeMessages>",
+    default: "-",
+    description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
+  },
+
 ];
 
 const importCode = `import { QRCode } from "@dreamer/ui-view/data-display";
@@ -101,6 +109,12 @@ export default function Page() {
           />
         </div>
       </section>
+      <DocsMessagesSection
+        interfaceName="QRCodeMessages"
+        defaultExportName="defaultQRCodeMessages"
+        rows={MESSAGES_QR_CODE}
+      />
+
       <section class="space-y-3">
         <Title level={2}>API</Title>
         <DocsApiTable rows={API} />

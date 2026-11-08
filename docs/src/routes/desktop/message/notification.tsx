@@ -8,6 +8,8 @@ import { Button, Paragraph, Title } from "@dreamer/ui-view/basic";
 import { CodeBlock } from "@dreamer/ui-view/data-display";
 
 import { notification, toast } from "@dreamer/ui-view/feedback";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
+import { MESSAGES_NOTIFICATION } from "../../../data/component-messages-rows.ts";
 /** API 方法/选项行类型 */
 interface ApiRow {
   name: string;
@@ -94,6 +96,13 @@ const NOTIFICATION_OPTIONS: ApiRow[] = [
     description:
       "位置：top-right/top-center/top-left/bottom-right/bottom-center/bottom-left",
   },
+  {
+    name: "closeAriaLabel",
+    type: "string",
+    default: "-",
+    description: "关闭按钮 aria-label；缺省走 defaultNotificationMessages.close（见上文「文案（messages）」）",
+  },
+
 ];
 
 const importCode = `import { notification } from "@dreamer/ui-view/feedback";
@@ -409,7 +418,13 @@ export default function MessageNotification() {
         </div>
       </section>
 
-      {/* 4. API */}
+      <DocsMessagesSection
+        interfaceName="NotificationMessages"
+        defaultExportName="defaultNotificationMessages"
+        rows={MESSAGES_NOTIFICATION}
+      />
+
+{/* 4. API */}
       <section class="space-y-3">
         <Title level={2}>API</Title>
         <Paragraph class="text-sm text-slate-600 dark:text-slate-400">

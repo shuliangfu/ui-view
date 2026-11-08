@@ -9,6 +9,8 @@ import {
   DocsApiTable,
   type DocsApiTableRow,
 } from "../../../components/DocsApiTable.tsx";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
+import { MESSAGES_FLOAT_BUTTON } from "../../../data/component-messages-rows.ts";
 
 const API: DocsApiTableRow[] = [
   { name: "icon", type: "unknown", default: "+", description: "主按钮内容" },
@@ -19,7 +21,13 @@ const API: DocsApiTableRow[] = [
   { name: "badge", type: "number | boolean", default: "-", description: "徽标" },
   { name: "open", type: "boolean", default: "-", description: "受控展开" },
   { name: "onOpenChange", type: "(open)=>void", default: "-", description: "展开变化" },
-  { name: "offset", type: "number", default: "24", description: "距边 px" },
+  { name: "offset", type: "number", default: "24", description: "距边 px" },  {
+    name: "messages",
+    type: "Partial<FloatButtonMessages>",
+    default: "-",
+    description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
+  },
+
 ];
 
 const importCode = `import { FloatButton } from "@dreamer/ui-view/basic";
@@ -175,6 +183,12 @@ export default function Page() {
           <CodeBlock title="代码示例" code={exampleOpen} language="tsx" showLineNumbers copyable wrapLongLines />
         </div>
       </section>
+      <DocsMessagesSection
+        interfaceName="FloatButtonMessages"
+        defaultExportName="defaultFloatButtonMessages"
+        rows={MESSAGES_FLOAT_BUTTON}
+      />
+
       <section class="space-y-3">
         <Title level={2}>API</Title>
         <DocsApiTable rows={API} />

@@ -433,6 +433,12 @@ export const MESSAGES_DRAWER: DocsApiTableRow[] = [
     default: `"关闭"`,
     description: "关闭按钮 aria-label",
   },
+  {
+    name: "mask",
+    type: "string",
+    default: `"遮罩"`,
+    description: "遮罩 aria-label",
+  },
 ];
 
 export const MESSAGES_MODAL: DocsApiTableRow[] = [
@@ -1226,4 +1232,559 @@ export const MESSAGES_FLAG_IMG: DocsApiTableRow[] = [
     default: `"空 SVG"`,
     description: "svg 为空时 Icon title 占位",
   },
+];
+
+/** DataPanelMessages（locale 为 zh-CN／en-US；未列字段走 defaultDataPanelMessages／enDataPanelMessages） */
+export const MESSAGES_DATA_PANEL: DocsApiTableRow[] = [
+  {
+    name: "search",
+    type: "string",
+    default: `"搜索"`,
+    description: "搜索按钮／入口",
+  },
+  {
+    name: "create",
+    type: "string",
+    default: `"添加"`,
+    description: "新建／添加",
+  },
+  {
+    name: "refresh",
+    type: "string",
+    default: `"刷新"`,
+    description: "刷新",
+  },
+  {
+    name: "refreshed",
+    type: "string",
+    default: `"已刷新"`,
+    description: "工具栏刷新成功提示",
+  },
+  {
+    name: "print",
+    type: "string",
+    default: `"打印"`,
+    description: "打印",
+  },
+  {
+    name: "import",
+    type: "string",
+    default: `"导入"`,
+    description: "导入",
+  },
+  {
+    name: "export",
+    type: "string",
+    default: `"导出"`,
+    description: "导出",
+  },
+  {
+    name: "columns",
+    type: "string",
+    default: `"列设置"`,
+    description: "列设置",
+  },
+  {
+    name: "resetColumns",
+    type: "string",
+    default: `"重置列"`,
+    description: "重置列",
+  },
+  {
+    name: "density",
+    type: "string",
+    default: `"行高"`,
+    description: "行高／密度",
+  },
+  {
+    name: "densityCompact",
+    type: "string",
+    default: `"紧凑"`,
+    description: "紧凑档",
+  },
+  {
+    name: "densityComfortable",
+    type: "string",
+    default: `"舒适"`,
+    description: "舒适档",
+  },
+  {
+    name: "densityLoose",
+    type: "string",
+    default: `"宽松"`,
+    description: "宽松档",
+  },
+  {
+    name: "densitySet",
+    type: "string",
+    default: `"行高已设为{mode}"`,
+    description: "切换密度后的提示，{mode} 为当前档文案",
+  },
+  {
+    name: "enterFullscreen",
+    type: "string",
+    default: `"全屏"`,
+    description: "进入全屏",
+  },
+  {
+    name: "exitFullscreen",
+    type: "string",
+    default: `"退出全屏"`,
+    description: "退出全屏",
+  },
+  {
+    name: "copy",
+    type: "string",
+    default: `"复制"`,
+    description: "复制",
+  },
+  {
+    name: "copyDone",
+    type: "string",
+    default: `"已复制 {n} 行"`,
+    description: "已复制 {n} 行",
+  },
+  {
+    name: "copyEmpty",
+    type: "string",
+    default: `"请先勾选要复制的行"`,
+    description: "无选中时的提示",
+  },
+  {
+    name: "copyFailed",
+    type: "string",
+    default: `"复制失败"`,
+    description: "copyFailed",
+  },
+  {
+    name: "colSelect",
+    type: "string",
+    default: `"多选"`,
+    description: "列设置里「多选」列的显示名",
+  },
+  {
+    name: "colIndex",
+    type: "string",
+    default: `"序号"`,
+    description: "列设置里「序号」列的显示名",
+  },
+  {
+    name: "all",
+    type: "string",
+    default: `"全部"`,
+    description: "全部",
+  },
+  {
+    name: "reset",
+    type: "string",
+    default: `"重置"`,
+    description: "重置",
+  },
+  {
+    name: "searchSubmit",
+    type: "string",
+    default: `"搜索"`,
+    description: "搜索提交",
+  },
+  {
+    name: "total",
+    type: "string",
+    default: `"合计"`,
+    description: "合计",
+  },
+  {
+    name: "totalCount",
+    type: "string",
+    default: `"共 {total} 条记录"`,
+    description: "共 N 条；占位 {total}",
+  },
+  {
+    name: "range",
+    type: "string",
+    default: `"第 {from}-{to} 条，共 {total} 条"`,
+    description: "分页范围；占位 {from}/{to}/{total}",
+  },
+  {
+    name: "rangeEmpty",
+    type: "string",
+    default: `"暂无数据"`,
+    description: "无数据时的范围文案",
+  },
+  {
+    name: "perPage",
+    type: "string",
+    default: `"{n} 条/页"`,
+    description: "每页条数；占位 {n}",
+  },
+  {
+    name: "jump",
+    type: "string",
+    default: `"跳至"`,
+    description: "跳至",
+  },
+  {
+    name: "page",
+    type: "string",
+    default: `"页"`,
+    description: "页（跳页后缀）",
+  },
+  {
+    name: "selected",
+    type: "string",
+    default: `"已选 {n} 项"`,
+    description: "已选 N 项；占位 {n}",
+  },
+  {
+    name: "batchSet",
+    type: "string",
+    default: `"批量设为「{status}」"`,
+    description: "批量设为；占位 {status}",
+  },
+  {
+    name: "batchDelete",
+    type: "string",
+    default: `"批量删除"`,
+    description: "批量删除",
+  },
+  {
+    name: "clearSelection",
+    type: "string",
+    default: `"取消选择"`,
+    description: "取消选择",
+  },
+  {
+    name: "deleteTitle",
+    type: "string",
+    default: `"确认删除"`,
+    description: "删除确认标题（历史／兼容）",
+  },
+  {
+    name: "deleteAsk",
+    type: "string",
+    default: `"确定删除{name}？"`,
+    description: "行删问句；占位 {name}",
+  },
+  {
+    name: "deleteMany",
+    type: "string",
+    default: `"确定要删除选中的 {n} 项吗？此操作不可恢复。"`,
+    description: "批量删除问句；占位 {n}",
+  },
+  {
+    name: "batchConfirmTitle",
+    type: "string",
+    default: `"确认批量操作"`,
+    description: "批量确认标题（历史／兼容）",
+  },
+  {
+    name: "batchStatusAsk",
+    type: "string",
+    default: `"确定将选中的 {n} 项设为「{status}」吗？"`,
+    description: "批量设为问句；占位 {n}/{status}",
+  },
+  {
+    name: "partial",
+    type: "string",
+    default: `"已处理 {ok} 项，{fail} 项失败：{reason}"`,
+    description: "部分成功提示；占位 {ok}/{fail}/{reason}",
+  },
+  {
+    name: "importDone",
+    type: "string",
+    default: `"导入完成：成功 {created} 条，失败 {failed} 条"`,
+    description: "导入完成；占位 {created}/{failed}",
+  },
+  {
+    name: "importBad",
+    type: "string",
+    default: `"导入失败：文件格式不正确"`,
+    description: "导入失败（格式）",
+  },
+  {
+    name: "doubleClickToEdit",
+    type: "string",
+    default: `"双击编辑"`,
+    description: "双击编辑提示",
+  },
+  {
+    name: "add",
+    type: "string",
+    default: `"新增"`,
+    description: "新增（表单标题等）",
+  },
+  {
+    name: "edit",
+    type: "string",
+    default: `"编辑"`,
+    description: "编辑",
+  },
+  {
+    name: "view",
+    type: "string",
+    default: `"查看"`,
+    description: "查看",
+  },
+  {
+    name: "delete",
+    type: "string",
+    default: `"删除"`,
+    description: "删除（按钮／确认）",
+  },
+  {
+    name: "actions",
+    type: "string",
+    default: `"操作"`,
+    description: "操作列标题",
+  },
+  {
+    name: "confirm",
+    type: "string",
+    default: `"确 定"`,
+    description: "确定",
+  },
+  {
+    name: "cancel",
+    type: "string",
+    default: `"取消"`,
+    description: "取消",
+  },
+  {
+    name: "close",
+    type: "string",
+    default: `"关闭"`,
+    description: "查看详情弹窗页脚的「关闭」按钮",
+  },
+  {
+    name: "saved",
+    type: "string",
+    default: `"保存成功"`,
+    description: "保存成功",
+  },
+  {
+    name: "deleted",
+    type: "string",
+    default: `"已删除"`,
+    description: "已删除",
+  },
+  {
+    name: "loading",
+    type: "string",
+    default: `"加载中…"`,
+    description: "加载中",
+  },
+  {
+    name: "empty",
+    type: "string",
+    default: `"暂无数据"`,
+    description: "空数据",
+  },
+  {
+    name: "networkError",
+    type: "string",
+    default: `"网络错误，请重试"`,
+    description: "网络错误",
+  },
+  {
+    name: "invalid",
+    type: "string",
+    default: `"表单有误，请检查标红的字段"`,
+    description: "表单有误",
+  },
+  {
+    name: "required",
+    type: "string",
+    default: `"此项必填"`,
+    description: "必填",
+  },
+  {
+    name: "min",
+    type: "string",
+    default: `"不能小于 {n}"`,
+    description: "最小值；占位 {n}",
+  },
+  {
+    name: "max",
+    type: "string",
+    default: `"不能大于 {n}"`,
+    description: "最大值；占位 {n}",
+  },
+  {
+    name: "patternMismatch",
+    type: "string",
+    default: `"格式不正确"`,
+    description: "格式不正确",
+  },
+  {
+    name: "yes",
+    type: "string",
+    default: `"是"`,
+    description: "是",
+  },
+  {
+    name: "no",
+    type: "string",
+    default: `"否"`,
+    description: "否",
+  },
+  {
+    name: "exportFailed",
+    type: "string",
+    default: `"导出失败"`,
+    description: "导出失败",
+  },
+  {
+    name: "formatXlsx",
+    type: "string",
+    default: `"Excel (.xlsx)"`,
+    description: "导出格式 Excel",
+  },
+  {
+    name: "formatCsv",
+    type: "string",
+    default: `"CSV"`,
+    description: "导出格式 CSV",
+  },
+  {
+    name: "formatJson",
+    type: "string",
+    default: `"JSON"`,
+    description: "导出格式 JSON",
+  },
+  {
+    name: "formatXml",
+    type: "string",
+    default: `"XML"`,
+    description: "导出格式 XML",
+  },
+  {
+    name: "formatHtml",
+    type: "string",
+    default: `"HTML"`,
+    description: "导出格式 HTML",
+  },
+];
+
+/** TourMessages */
+export const MESSAGES_TOUR: DocsApiTableRow[] = [
+  { name: "next", type: "string", default: `"下一步"`, description: "下一步" },
+  { name: "prev", type: "string", default: `"上一步"`, description: "上一步" },
+  { name: "finish", type: "string", default: `"完成"`, description: "完成" },
+  { name: "skip", type: "string", default: `"跳过"`, description: "跳过" },
+  { name: "guide", type: "string", default: `"功能引导"`, description: "无 step.title 时浮层 aria-label" },
+];
+
+/** NoticeBarMessages */
+export const MESSAGES_NOTICE_BAR: DocsApiTableRow[] = [
+  { name: "close", type: "string", default: `"关闭"`, description: "关闭按钮 aria-label" },
+];
+
+/** ShareSheetMessages */
+export const MESSAGES_SHARE_SHEET: DocsApiTableRow[] = [
+  { name: "cancel", type: "string", default: `"取消"`, description: "底部取消文案" },
+  { name: "dialog", type: "string", default: `"分享"`, description: "面板 aria-label／对话名" },
+  { name: "close", type: "string", default: `"关闭"`, description: "关闭 aria-label" },
+];
+
+/** SignaturePadMessages */
+export const MESSAGES_SIGNATURE_PAD: DocsApiTableRow[] = [
+  { name: "clear", type: "string", default: `"清空"`, description: "清空按钮" },
+  { name: "empty", type: "string", default: `"请在此签名"`, description: "空板提示" },
+];
+
+/** NumberKeyboardMessages */
+export const MESSAGES_NUMBER_KEYBOARD: DocsApiTableRow[] = [
+  { name: "confirm", type: "string", default: `"完成"`, description: "完成／确认键" },
+  { name: "close", type: "string", default: `"关闭"`, description: "关闭 aria-label" },
+  { name: "delete", type: "string", default: `"删除"`, description: "删除键 aria-label" },
+];
+
+/** SpinnerMessages */
+export const MESSAGES_SPINNER: DocsApiTableRow[] = [
+  { name: "loading", type: "string", default: `"Loading"`, description: "role=status aria-label" },
+];
+
+/** SkeletonMessages */
+export const MESSAGES_SKELETON: DocsApiTableRow[] = [
+  { name: "loading", type: "string", default: `"Loading"`, description: "role=status aria-label" },
+];
+
+/** TreeMessages */
+export const MESSAGES_TREE: DocsApiTableRow[] = [
+  { name: "expand", type: "string", default: `"展开"`, description: "展开按钮 aria-label" },
+  { name: "collapse", type: "string", default: `"收起"`, description: "收起按钮 aria-label" },
+];
+
+/** NotificationMessages（命令式 open 的 closeAriaLabel 优先于默认 close） */
+export const MESSAGES_NOTIFICATION: DocsApiTableRow[] = [
+  { name: "close", type: "string", default: `"关闭"`, description: "关闭按钮默认 aria-label" },
+];
+
+/** FloatingPanelMessages */
+export const MESSAGES_FLOATING_PANEL: DocsApiTableRow[] = [
+  { name: "close", type: "string", default: `"关闭"`, description: "遮罩关闭 aria-label" },
+];
+
+/** IndexBarMessages */
+export const MESSAGES_INDEX_BAR: DocsApiTableRow[] = [
+  { name: "nav", type: "string", default: `"索引"`, description: "索引条 aria-label" },
+];
+
+/** DropdownMenuMessages */
+export const MESSAGES_DROPDOWN_MENU: DocsApiTableRow[] = [
+  { name: "close", type: "string", default: `"关闭"`, description: "遮罩关闭 aria-label" },
+];
+
+/** ResultMessages（未传 title 时按 status 回落） */
+export const MESSAGES_RESULT: DocsApiTableRow[] = [
+  { name: "success", type: "string", default: `"成功"`, description: "status=success 默认主标题" },
+  { name: "error", type: "string", default: `"失败"`, description: "status=error 默认主标题" },
+  { name: "info", type: "string", default: `"提示"`, description: "status=info 默认主标题" },
+  { name: "warning", type: "string", default: `"警告"`, description: "status=warning 默认主标题" },
+  { name: "forbidden", type: "string", default: `"403"`, description: "status=403 默认主标题" },
+  { name: "notFound", type: "string", default: `"404"`, description: "status=404 默认主标题" },
+];
+
+/** MessageMessages（正文走 message.success/error/… 的 content） */
+export const MESSAGES_MESSAGE: DocsApiTableRow[] = [
+  { name: "liveRegion", type: "string", default: `"消息提示"`, description: "容器 aria-live 区域 aria-label" },
+];
+
+/** ToastMessages（正文走 toast.success/error/… 的 content） */
+export const MESSAGES_TOAST: DocsApiTableRow[] = [
+  { name: "liveRegion", type: "string", default: `"轻提示"`, description: "容器 aria-live 区域 aria-label" },
+];
+
+/** ContextMenuMessages（项文案走 items[].label） */
+export const MESSAGES_CONTEXT_MENU: DocsApiTableRow[] = [
+  { name: "menu", type: "string", default: `"上下文菜单"`, description: "菜单面板 aria-label" },
+];
+
+/** TooltipMessages（可见正文走 props.content；messages 预留同形） */
+export const MESSAGES_TOOLTIP: DocsApiTableRow[] = [
+  { name: "_reserved", type: "string", default: "-", description: "预留扩展键；气泡正文请用 content" },
+];
+
+/** CheckboxMessages（标签走 children；messages 预留同形） */
+export const MESSAGES_CHECKBOX: DocsApiTableRow[] = [
+  { name: "_reserved", type: "string", default: "-", description: "预留扩展键；可见标签请用 children" },
+];
+
+/** PasscodeInputMessages */
+export const MESSAGES_PASSCODE_INPUT: DocsApiTableRow[] = [
+  { name: "label", type: "string", default: `"验证码"`, description: "无障碍标签；显式 aria-label 优先" },
+];
+
+/** FloatButtonMessages */
+export const MESSAGES_FLOAT_BUTTON: DocsApiTableRow[] = [
+  { name: "label", type: "string", default: `"悬浮按钮"`, description: "主按钮 aria-label；显式 aria-label 优先" },
+];
+
+/** OverlayMessages */
+export const MESSAGES_OVERLAY: DocsApiTableRow[] = [
+  { name: "label", type: "string", default: `"遮罩"`, description: "遮罩 aria-label；显式 aria-label 优先" },
+];
+
+/** QRCodeMessages */
+export const MESSAGES_QR_CODE: DocsApiTableRow[] = [
+  { name: "label", type: "string", default: `"二维码"`, description: "无障碍说明；显式 aria-label 优先" },
 ];

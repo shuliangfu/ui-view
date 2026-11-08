@@ -465,11 +465,11 @@ function renderRow(index: number, { removeButton }: { removeButton: unknown }) {
           <ApiTable rows={FORM_ITEM_API} />
         </div>
 
-        <DocsMessagesSection
-          interfaceName="FormListMessages"
-          defaultExportName="defaultFormListMessages"
-          rows={MESSAGES_FORM_LIST}
-        />
+      <DocsMessagesSection
+        interfaceName="FormListMessages"
+        defaultExportName="defaultFormListMessages"
+        rows={MESSAGES_FORM_LIST}
+      />
 
         <div class="space-y-2">
           <Title level={3}>FormList</Title>

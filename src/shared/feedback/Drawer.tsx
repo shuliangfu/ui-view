@@ -87,11 +87,14 @@ export interface DrawerProps {
 export interface DrawerMessages {
   /** 关闭按钮 `aria-label` */
   close: string;
+  /** 遮罩 `aria-label` */
+  mask: string;
 }
 
 /** 默认中文文案 */
 export const defaultDrawerMessages: DrawerMessages = {
   close: "关闭",
+  mask: "遮罩",
 };
 
 const defaultWidth = "360px";
@@ -353,7 +356,7 @@ export function Drawer(props: DrawerProps): JSXRenderable {
           class="bg-slate-900/35"
           clickable={maskClosable}
           onClick={() => onClose?.()}
-          aria-label="遮罩"
+          aria-label={m.mask}
         />
         <div
           ref={setDrawerRef}

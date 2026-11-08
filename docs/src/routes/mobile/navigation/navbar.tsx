@@ -214,11 +214,11 @@ export default function MobileNavBarDoc() {
       </section>
 
       <section class="space-y-4">
-        <DocsMessagesSection
-          interfaceName="NavBarMessages"
-          defaultExportName="defaultNavBarMessages"
-          rows={MESSAGES_MOBILE_NAV_BAR}
-        />
+      <DocsMessagesSection
+        interfaceName="NavBarMessages"
+        defaultExportName="defaultNavBarMessages"
+        rows={MESSAGES_MOBILE_NAV_BAR}
+      />
 
         <Title level={2}>API</Title>
         <Paragraph class="text-sm text-slate-600 dark:text-slate-400">

@@ -15,6 +15,15 @@ import {
   readMaybeSignal,
 } from "../../shared/form/maybe-signal.ts";
 
+export interface PasscodeInputMessages {
+  /** 无障碍标签；显式 `aria-label` 优先 */
+  label: string;
+}
+
+export const defaultPasscodeInputMessages: PasscodeInputMessages = {
+  label: "验证码",
+};
+
 export interface PasscodeInputProps {
   /** 当前值 */
   value?: MaybeSignal<string>;
@@ -31,11 +40,16 @@ export interface PasscodeInputProps {
   secludedInput?: boolean;
   disabled?: boolean;
   class?: string;
-  /** 无障碍标签 */
+  /** 无障碍标签；优先于 messages.label */
   "aria-label"?: string;
+  messages?: Partial<PasscodeInputMessages>;
 }
 
 export function PasscodeInput(props: PasscodeInputProps): JSXRenderable {
+  const m: PasscodeInputMessages = {
+    ...defaultPasscodeInputMessages,
+    ...(props.messages ?? {}),
+  };
   const {
     onChange,
     onFinish,
@@ -45,8 +59,9 @@ export function PasscodeInput(props: PasscodeInputProps): JSXRenderable {
     secludedInput = true,
     disabled = false,
     class: className,
-    "aria-label": ariaLabel = "验证码",
+    "aria-label": ariaLabelProp,
   } = props;
+  const ariaLabel = ariaLabelProp ?? m.label;
 
   const focused = createSignal(false);
   const inputRef = createSignal<HTMLInputElement | null>(null);

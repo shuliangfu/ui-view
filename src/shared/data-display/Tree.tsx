@@ -42,6 +42,19 @@ export interface TreeNode {
   children?: TreeNode[];
 }
 
+
+export interface TreeMessages {
+  /** 展开按钮 aria-label */
+  expand: string;
+  /** 收起按钮 aria-label */
+  collapse: string;
+}
+
+export const defaultTreeMessages: TreeMessages = {
+  expand: "展开",
+  collapse: "收起",
+};
+
 export interface TreeProps {
   /** 树数据 */
   treeData: TreeNode[];
@@ -78,6 +91,8 @@ export interface TreeProps {
   showLine?: boolean;
   /** 额外 class */
   class?: string;
+  /** 多语言／自定义文案；未传字段走 {@link defaultTreeMessages} */
+  messages?: Partial<TreeMessages>;
 }
 
 function getNodeByKey(nodes: TreeNode[], key: string): TreeNode | undefined {
@@ -184,6 +199,7 @@ function renderNode(
     checkable: boolean;
     showLine: boolean;
     blockNode: boolean;
+    messages: TreeMessages;
     onExpand: (key: string) => void;
     onSelect: (key: string) => void;
     onCheck: (key: string) => void;
@@ -266,7 +282,7 @@ function renderNode(
                 isLeaf && "invisible pointer-events-none",
               )}
               aria-expanded={hasChildren ? isExpanded : undefined}
-              aria-label={isExpanded ? "收起" : "展开"}
+              aria-label={isExpanded ? ctx.messages.collapse : ctx.messages.expand}
               disabled={disabled || isLeaf}
               onClick={(e: Event) => {
                 e.preventDefault();
@@ -372,6 +388,10 @@ export function Tree(props: TreeProps): JSXRenderable {
     showLine = false,
     class: className,
   } = props;
+  const treeMessages: TreeMessages = {
+    ...defaultTreeMessages,
+    ...(props.messages ?? {}),
+  };
 
   const getExpandedKeys = asGetter(controlledExpanded, defaultExpandedKeys);
   const getSelectedKeysProp = asGetter(
@@ -485,6 +505,7 @@ export function Tree(props: TreeProps): JSXRenderable {
     checkable,
     showLine,
     blockNode,
+    messages: treeMessages,
     onExpand: handleExpand,
     onSelect: handleSelect,
     onCheck: handleCheck,

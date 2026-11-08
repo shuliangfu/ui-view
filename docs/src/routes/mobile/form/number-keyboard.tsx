@@ -12,6 +12,8 @@ import {
   DocsApiTable,
   type DocsApiTableRow,
 } from "../../../components/DocsApiTable.tsx";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
+import { MESSAGES_NUMBER_KEYBOARD } from "../../../data/component-messages-rows.ts";
 import { MobileDocDemo } from "../../../components/MobileDocDemo.tsx";
 
 const API: DocsApiTableRow[] = [
@@ -21,6 +23,13 @@ const API: DocsApiTableRow[] = [
   { name: "onConfirm", type: "() => void", default: "-", description: "确认" },
   { name: "decimal", type: "boolean", default: "false", description: "是否显示小数点" },
   { name: "onClose", type: "() => void", default: "-", description: "关闭" },
+  {
+    name: "messages",
+    type: "Partial<NumberKeyboardMessages>",
+    default: "-",
+    description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
+  },
+
 ];
 
 const importCode = `import { createSignal } from "@dreamer/view";
@@ -86,6 +95,12 @@ export default function Page() {
         </MobileDocDemo>
         <CodeBlock title="代码示例" code={exampleDemo} language="tsx" showLineNumbers copyable wrapLongLines />
       </section>
+      <DocsMessagesSection
+        interfaceName="NumberKeyboardMessages"
+        defaultExportName="defaultNumberKeyboardMessages"
+        rows={MESSAGES_NUMBER_KEYBOARD}
+      />
+
       <section class="space-y-3">
         <Title level={2}>API</Title>
         <DocsApiTable rows={API} />

@@ -22,7 +22,7 @@ export { InputNumber } from "./InputNumber.tsx";
 export type { InputNumberProps } from "./InputNumber.tsx";
 export { AutoComplete } from "./AutoComplete.tsx";
 export type { AutoCompleteProps } from "./AutoComplete.tsx";
-export { Checkbox } from "./Checkbox.tsx";
+export { Checkbox, defaultCheckboxMessages } from "./Checkbox.tsx";
 export type { CheckboxProps } from "./Checkbox.tsx";
 export { CheckboxGroup } from "./CheckboxGroup.tsx";
 export type {

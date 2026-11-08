@@ -163,11 +163,11 @@ export default function MobileMultiSelectDoc() {
       </section>
 
       <section class="space-y-4">
-        <DocsMessagesSection
-          interfaceName="MultiSelectMessages"
-          defaultExportName="defaultMultiSelectMessages"
-          rows={MESSAGES_MULTI_SELECT}
-        />
+      <DocsMessagesSection
+        interfaceName="MultiSelectMessages"
+        defaultExportName="defaultMultiSelectMessages"
+        rows={MESSAGES_MULTI_SELECT}
+      />
 
         <Title level={2}>API</Title>
         <DocsApiTable rows={MULTI_API} />

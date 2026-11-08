@@ -6,6 +6,8 @@
 import { Paragraph, Skeleton, Title } from "@dreamer/ui-view/basic";
 
 import { CodeBlock } from "@dreamer/ui-view/data-display";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
+import { MESSAGES_SKELETON } from "../../../data/component-messages-rows.ts";
 interface ApiRow {
   name: string;
   type: string;
@@ -26,6 +28,13 @@ const SKELETON_API: ApiRow[] = [
     default: "-",
     description: "自定义宽高（如 w-full h-4）",
   },
+  {
+    name: "messages",
+    type: "Partial<SkeletonMessages>",
+    default: "-",
+    description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
+  },
+
 ];
 
 const importCode = `import { Skeleton } from "@dreamer/ui-view/basic";
@@ -161,6 +170,12 @@ export default function BasicSkeleton() {
           />
         </div>
       </section>
+
+      <DocsMessagesSection
+        interfaceName="SkeletonMessages"
+        defaultExportName="defaultSkeletonMessages"
+        rows={MESSAGES_SKELETON}
+      />
 
       <section class="space-y-3">
         <Title level={2}>API</Title>

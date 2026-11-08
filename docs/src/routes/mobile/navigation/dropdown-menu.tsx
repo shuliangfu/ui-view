@@ -11,12 +11,20 @@ import {
   DocsApiTable,
   type DocsApiTableRow,
 } from "../../../components/DocsApiTable.tsx";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
+import { MESSAGES_DROPDOWN_MENU } from "../../../data/component-messages-rows.ts";
 import { MobileDocDemo } from "../../../components/MobileDocDemo.tsx";
 
 const API: DocsApiTableRow[] = [
   { name: "items", type: "DropdownMenuItem[]", default: "-", description: "列定义" },
   { name: "value", type: "Record<string,string>", default: "-", description: "受控值（勿直接传 Signal，传 .value 并在 onChange 写回）" },
-  { name: "onChange", type: "(key,value)=>void", default: "-", description: "变更" },
+  { name: "onChange", type: "(key,value)=>void", default: "-", description: "变更" },  {
+    name: "messages",
+    type: "Partial<DropdownMenuMessages>",
+    default: "-",
+    description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
+  },
+
 ];
 
 const importCode = `import { MobilePortalHostScope } from "@dreamer/ui-view/mobile/portal";
@@ -145,6 +153,12 @@ export default function Page() {
 
         </div>
       </section>
+      <DocsMessagesSection
+        interfaceName="DropdownMenuMessages"
+        defaultExportName="defaultDropdownMenuMessages"
+        rows={MESSAGES_DROPDOWN_MENU}
+      />
+
       <section class="space-y-3">
         <Title level={2}>API</Title>
         <DocsApiTable rows={API} />

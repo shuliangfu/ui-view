@@ -20,6 +20,15 @@ import {
 } from "../../shared/feedback/controlled-open.ts";
 import { getBrowserBodyPortalHost } from "../../shared/feedback/portal-host.ts";
 
+export interface FloatingPanelMessages {
+  /** 遮罩关闭 aria-label */
+  close: string;
+}
+
+export const defaultFloatingPanelMessages: FloatingPanelMessages = {
+  close: "关闭",
+};
+
 export interface FloatingPanelProps {
   open?: ControlledOpenInput;
   onClose?: () => void;
@@ -33,6 +42,7 @@ export interface FloatingPanelProps {
   /** 显示拖拽条，默认 true */
   showHandle?: boolean;
   maskClosable?: boolean;
+  messages?: Partial<FloatingPanelMessages>;
 }
 
 export function FloatingPanel(props: FloatingPanelProps): JSXRenderable {
@@ -46,6 +56,10 @@ export function FloatingPanel(props: FloatingPanelProps): JSXRenderable {
     showHandle = true,
     maskClosable = true,
   } = props;
+  const m: FloatingPanelMessages = {
+    ...defaultFloatingPanelMessages,
+    ...(props.messages ?? {}),
+  };
 
   const isOpen = createMemo(() => readControlledOpenInput(props.open));
   const idx = createSignal(anchorIndexProp ?? Math.min(1, anchors.length - 1));
@@ -108,7 +122,7 @@ export function FloatingPanel(props: FloatingPanelProps): JSXRenderable {
         <button
           type="button"
           class="absolute inset-0 bg-slate-900/35"
-          aria-label="关闭"
+          aria-label={m.close}
           onClick={() => {
             if (maskClosable) onClose?.();
           }}

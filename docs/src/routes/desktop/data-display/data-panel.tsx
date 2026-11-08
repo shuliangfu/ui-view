@@ -3,7 +3,8 @@
  * 路由: /desktop/data-display/data-panel
  */
 
-import { Paragraph, Title } from "@dreamer/ui-view/basic";
+import { Button, Paragraph, Title } from "@dreamer/ui-view/basic";
+import { createSignal } from "@dreamer/view";
 
 import { CodeBlock, DataPanel } from "@dreamer/ui-view/data-display";
 import type { DataPanelDataSource } from "@dreamer/ui-view/data-display";
@@ -11,6 +12,8 @@ import {
   DocsApiTable,
   type DocsApiTableRow,
 } from "../../../components/DocsApiTable.tsx";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
+import { MESSAGES_DATA_PANEL } from "../../../data/component-messages-rows.ts";
 import { DocsDemo } from "../../../components/DocsDemo.tsx";
 import {
   CELL_COLUMNS,
@@ -20,9 +23,13 @@ import {
   createRemoteDemoSource,
   DEMO_COLUMNS,
   DEMO_FORM,
+  DEMO_HIDE_CHROME,
   DEMO_SEARCH,
   DEMO_STATUS_VALUES,
+  demoCan,
+  demoCapGate,
   makeDemoRows,
+  type DemoPerms,
 } from "../../../data/data-panel-demo.ts";
 
 const DATA_PANEL_API: DocsApiTableRow[] = [
@@ -108,26 +115,28 @@ const DATA_PANEL_API: DocsApiTableRow[] = [
     name: "statusField / statusValues",
     type: "string / {value,label}[]",
     default: "-",
-    description: "批量「设为…」按钮（需 dataSource.setField）",
+    description:
+      "批量条「设为…」数据（需 setField）。显隐／disable 由 toolbar.batchStatus（TOOLBAR_BUILTIN，未声明→caps.batchStatus）控制；仅选中行时出现在 dp-batch-bar",
   },
   {
     name: "caps",
     type: "Partial<DataPanelCaps>",
     default: "按数据源推断",
     description:
-      "能力开关：create / update / view / remove / batchStatus / import / export / print / columns / density / fullscreen / copy",
+      "能力开关回落：create / update / view / remove / batchStatus / import / export / print / columns / density / fullscreen / copy。batchStatus 亦为 toolbar TOOLBAR_BUILTIN",
   },
   {
     name: "locale",
     type: '"zh-CN" | "en-US"',
     default: '"zh-CN"',
-    description: "界面语言",
+    description:
+      "界面语言：选内置文案包（zh-CN→defaultDataPanelMessages，en-US→enDataPanelMessages）；再与 messages 浅合并。组件级 locale，与 ConfigProvider.locale 独立。",
   },
   {
     name: "messages",
     type: "Partial<DataPanelMessages>",
     default: "-",
-    description: "覆盖文案",
+    description: "覆盖文案；字段见上文「文案（messages）」表，勿将键摊入本表",
   },
   {
     name: "exportName",
@@ -155,22 +164,24 @@ const DATA_PANEL_API: DocsApiTableRow[] = [
     description: "接管导入；缺省走 dataSource.importRows",
   },
   {
-    name: "onCreate / onEdit / onView",
-    type: "function",
-    default: "-",
-    description: "替换内置 Modal 表单 / 详情",
-  },
-  {
     name: "renderCell",
     type: "Record<string, (row) => unknown>",
     default: "-",
     description: "按列自定义单元格",
   },
   {
-    name: "rowExtra / toolbarExtra",
-    type: "function / unknown",
-    default: "-",
-    description: "操作列额外按钮 / 工具栏左侧额外内容",
+    name: "toolbar",
+    type: "DataPanelToolbarConfig (Record)",
+    default: "{}",
+    description:
+      "统合 Record（废止 toolbar.extra／order／toolbarExtra／onCreate）。声明项：省略 show→true、省略 disable→false；true|false 简写；对象可 show/disable/icon/label/title/tone/action；title／label 互落：tip=title??label??内置messages??key；无 label 有 title→显示用 title；无 title 有 label→tip 用 label；无 confirm 字段（确认写在 action 自管）；tone=default|primary|secondary|success|warning|danger|ghost（对齐 Button）；自定义必须 action；写入序＝显示序。batchStatus 为 TOOLBAR_BUILTIN：控批量条「设为…」显隐／disable（非工具栏图标）",
+  },
+  {
+    name: "rowActions",
+    type: "DataPanelRowActionsConfig (Record)",
+    default: "{}",
+    description:
+      "统合 Record（废止 rowActions.extra／order／rowExtra／onEdit／onView）。同形；tone 同 toolbar；无 confirm 字段（确认写在 action）；title／label 互落同 toolbar（tip=title??label??messages??key；显示=label??title??key）；自定义必须 action(item)；内置 remove 自带 Popconfirm；写入序＝显示序",
   },
   {
     name: "selectable",
@@ -236,7 +247,7 @@ const SOURCE_API: DocsApiTableRow[] = [
     type: "{ removed, failed[] }",
     default: "-",
     description:
-      "删除；面板保证只在用户确认后才会调用（行内删除为按钮上方的小气泡「确定删除xxx？」，批量删除为确认对话框）",
+      "删除；面板保证只在用户确认后才会调用（行内／批量删除均为按钮上方的小气泡 Popconfirm）",
   },
   {
     name: "setField(ids, field, value)",
@@ -304,7 +315,7 @@ const tableCode = `// 排序：sortable 列表头点击 升序 → 降序 → �
   defaultSort={{ prop: "balance", order: "desc" }} />`;
 
 const crudCode =
-  `// 新增 / 编辑 / 查看都用 Modal；删除一律先确认（行内：图标上方的小气泡 Popconfirm；批量：确认对话框），确认后才调用 dataSource.remove
+  `// 新增 / 编辑 / 查看都用 Modal；删除／批量设为一律先确认（行内／批量均为小气泡 Popconfirm），确认后才调用；不走 Modal 确认对话框
 <DataPanel title="CRUD" data={rows} columns={columns} form={form}
   onDataChange={(next) => console.log(next)} />
 
@@ -316,7 +327,7 @@ const form: DataPanelFormField[] = [
 ];`;
 
 const batchCode =
-  `// 勾选多行 → 批量条出现：批量设为 / 批量删除（都需确认）/ 取消选择
+  `// 勾选多行 → 批量条出现：批量设为 / 批量删除（均为小气泡 Popconfirm）/ 取消选择
 <DataPanel title="批量" data={rows} columns={columns}
   statusField="status" statusValues={[{ value: "active", label: "启用" }, { value: "disabled", label: "停用" }]} />`;
 
@@ -372,10 +383,204 @@ const localeCode =
 // 覆盖部分文案
 <DataPanel messages={{ create: "新建", deleteTitle: "删除确认" }} ... />`;
 
-const customCode = `<DataPanel title="自定义" data={rows} columns={columns}
-  renderCell={{ name: (row) => <b>{String(row.name)}</b> }}
-  rowExtra={(row) => <button type="button">详情 {String(row.id)}</button>}
-  toolbarExtra={<span>自定义工具栏内容</span>} />`;
+const defaultsCode = `// 默认：省略 show→true、省略 disable→false；声明项不被 caps 藏
+// caps.create=false，但声明 create:{} / { disable:true } 仍显示
+<DataPanel
+  caps={{ create: false, update: false }}
+  toolbar={{
+    create: {},                 // 声明且未写 show → 显示（无视 caps.create=false）
+    refresh: { disable: true }, // 显示但禁用
+    // search 未声明 → 若无 search 项则 caps/回落不出现
+  }}
+  rowActions={{
+    edit: { disable: true },    // 声明 → 显示且禁用（无视 caps.update=false）
+    // view／remove 未声明 → 按 caps
+  }}
+/>`;
+
+const boolCode = `// ① true / false 简写控显隐（内置键）；未写的键仍按 caps 回落
+<DataPanel
+  toolbar={{
+    create: true,
+    search: true,
+    refresh: true,
+    print: false,
+    import: false,
+    export: false,
+  }}
+  rowActions={{
+    view: true,
+    edit: true,
+    remove: false, // 强制隐藏
+  }}
+/>`;
+
+const tbFnCode = `// ② toolbar：show / disable 无参函数（常接页面变量）
+const pageAllowAudit = () => pageFlags.audit;
+<DataPanel
+  toolbar={{
+    create: true,
+    audit: {
+      label: "审计",
+      show: () => pageAllowAudit(),       // false＝隐藏
+      disable: () => !pageAllowAudit(),  // true＝可见但禁用
+      action: () => console.log("audit"),
+    },
+    refresh: true,
+    ...hideChrome,
+  }}
+/>`;
+
+const raFnCode = `// ③ 操作列：show / disable / action 收当前行 item
+<DataPanel
+  rowActions={{
+    view: false,
+    edit: false,
+    remove: false,
+    assign: {
+      label: "分配",
+      show: (item) => true,                 // 始终可见
+      disable: (item) => !!item.locked,     // locked 行禁用
+      action: (item) => console.log("assign", item.id),
+    },
+  }}
+/>`;
+
+const tbCustomCode = `// ④a 自定义工具钮：未知 key 必须有 action（缺则校验抛错）
+<DataPanel
+  toolbar={{
+    create: true,
+    invite: {
+      label: "邀请",
+      action: () => console.log("invite"),
+    },
+    refresh: true,
+  }}
+/>`;
+
+const raCustomCode = `// ④b 自定义操作列：未知 key 必须有 action(item)
+<DataPanel
+  rowActions={{
+    view: true,
+    clone: {
+      label: "克隆",
+      action: (item) => console.log("clone", item.id),
+    },
+    edit: true,
+    remove: false,
+  }}
+/>`;
+
+const keyOrderCode = `// ⑤ 对象字面量写入序 = 显示序（create → audit → refresh → export）
+<DataPanel
+  toolbar={{
+    create: true,
+    audit: { label: "审计", action: () => {} },
+    refresh: true,
+    export: true,
+    // 其余 chrome 关掉，方便看序
+    print: false, import: false, columns: false,
+    density: false, fullscreen: false, copy: false,
+  }}
+/>`;
+
+const enabledCode = `// disable：默认 false；true／函数 true＝禁用仍可见（≠ show:false）
+<DataPanel
+  toolbar={{
+    create: { disable: true },          // 可见不可点
+    freeze: {
+      label: "冻结",
+      disable: () => true,              // 无参函数
+      action: () => {},
+    },
+    refresh: true,
+  }}
+  rowActions={{
+    view: true,
+    edit: { disable: true },            // 内置：可见禁用
+    remove: false,
+    assign: {
+      label: "分配",
+      disable: (item) => !!item.locked, // locked 行禁用
+      action: (item) => console.log(item.id),
+    },
+  }}
+/>`;
+
+
+const titleCode = `// title／label 互落：tip=title??label??messages??key；显示=label??title??key
+<DataPanel
+  toolbar={{
+    create: true,                       // 无 title → Tooltip「新建」等 messages
+    refresh: { title: "立刻刷新" },     // 显式覆盖内置默认
+    freeze: {
+      label: "冻结",
+      // 无 title → Tooltip 用 key「freeze」
+      action: () => {},
+    },
+  }}
+  rowActions={{
+    view: true,                         // 无 title → messages.view
+    edit: { title: "改资料" },          // 覆盖
+    remove: false,
+    assign: {
+      label: "分配",
+      // 无 title → Tooltip「assign」
+      action: (item) => console.log(item.id),
+    },
+  }}
+/>`;
+
+const canCode = `// ⑥ 对齐 admin：can() / capGate + 页面变量控 show
+// capGate(allow): allow→undefined（回落 caps）；!allow→false
+const perms = { "demo.view": true, "demo.write": false };
+const pageExport = true;
+
+function can(code: "demo.view" | "demo.write") {
+  return !!perms[code];
+}
+function capGate(allow: boolean): false | undefined {
+  return allow ? undefined : false;
+}
+
+<DataPanel
+  toolbar={{
+    create: capGate(can("demo.write")),
+    import: capGate(can("demo.write")),
+    export: {
+      show: () => can("demo.view"),
+      disable: () => !pageExport, // pageExport=false → 可见但禁用
+    },
+  }}
+  rowActions={{
+    view: capGate(can("demo.view") || can("demo.write")),
+    edit: capGate(can("demo.write")),
+    remove: capGate(can("demo.write")),
+    assign: {
+      label: "分配",
+      show: () => can("demo.write"),
+      action: (item) => console.log(item.id),
+    },
+  }}
+/>`;
+
+const customCode = `// tone 全档(Button) / tip=label??key；确认写在 action 自管；前导 chrome 放面板外
+<div>
+  <span className="text-sm text-slate-500">面板外提示</span>
+  <DataPanel title="自定义" data={rows} columns={columns} caps={{ create: false }}
+    renderCell={{ name: (row) => <b>{String(row.name)}</b> }}
+    toolbar={{
+      notify: { label: "通知", tone: "primary", action: () => {} },
+      batchStatus: true, // TOOLBAR_BUILTIN：控批量条「设为…」
+    }}
+    rowActions={{
+      freeze: {
+        label: "冻结", tone: "danger",
+        action: (row) => console.log(row.id), // 需确认则在 action 内自开 Popconfirm
+      },
+    }}
+  />
+</div>`;
 
 /** 单个示例块 */
 
@@ -394,6 +599,15 @@ const exampleDemo = `import { DataPanel } from "@dreamer/ui-view/data-display";
 export default function DataDisplayDataPanel() {
   const remote: DataPanelDataSource = createRemoteDemoSource(300);
   const cellSource: DataPanelDataSource = createCellDemoSource();
+  const actionHint = createSignal("");
+  /** Simulated admin perms + page flags (toggle in demo-can). */
+  const perms = createSignal<DemoPerms>({
+    "demo.view": true,
+    "demo.write": false,
+  });
+  const pageExport = createSignal(true);
+  const pageAllowAudit = createSignal(true);
+  const can = (code: keyof DemoPerms) => demoCan(perms.value, code);
   return (
     <div class="space-y-10">
       <section>
@@ -403,10 +617,12 @@ export default function DataDisplayDataPanel() {
           / 导出 / 列设置 / 行高 / 全屏 / 复制， 相邻按钮之间只有一条淡分割线）、搜索
           Modal（工具栏按钮打开）、表格下方的批量操作条、表格（排序、多选、行内编辑、合计、操作列）、
           分页，以及用 Modal 的新增 / 编辑 / 查看。<strong>
-            任何删除都必须先确认：行内删除弹出小气泡「确定删除xxx？」（红色「删除」+「取消」，点外部也会关闭），批量删除使用确认对话框
+            任何删除与批量「设为…」都必须先确认：行内／批量删除／批量设为均弹出小气泡 Popconfirm（确定在左、取消在右；点外部也会关闭），不用 Modal 确认对话框
           </strong>。 支持原生 xlsx 导出（零依赖），支持浅色 / 深色主题与 zh-CN
           / en-US。数据通过 <code>data</code> 或 <code>dataSource</code>{" "}
-          注入，与后端无关。
+          注入，与后端无关。工具栏／操作列用统合 <code>toolbar</code>／
+          <code>rowActions</code> Record 配置（写入序＝显示序；自定义键必须
+          <code>action</code>；已废止 <code>extra</code>／<code>order</code>）。
         </Paragraph>
       </section>
 
@@ -597,40 +813,442 @@ export default function DataDisplayDataPanel() {
           />
         </DocsDemo>
 
-        <DocsDemo title="自定义单元格 / 操作列 / 工具栏" code={customCode}>
-          <DataPanel
-            panelKey="demo-custom"
-            title="自定义"
-            data={makeDemoRows(5)}
-            columns={DEMO_COLUMNS}
-            caps={{ create: false }}
-            renderCell={{
-              name: (row) => (
-                <b data-testid="demo-custom-name">{String(row.name)}</b>
-              ),
-            }}
-            rowExtra={(row) => (
-              <span
-                class="mr-1 text-xs text-slate-500"
-                data-testid="demo-custom-extra"
-              >
-                #{String(row.id)}
-              </span>
-            )}
-            toolbarExtra={
-              <span class="mr-auto text-sm text-slate-500">
-                自定义工具栏内容
-              </span>
-            }
-          />
-        </DocsDemo>
+
       </section>
 
+      <section class="flex flex-col gap-10">
+        <div class="space-y-2">
+          <Title level={2}>工具栏与操作列（统合 Record）</Title>
+          <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+            <code>toolbar</code>／<code>rowActions</code> 为统合 Record：
+            <code>true</code>／<code>false</code> 简写控显隐；对象可覆盖
+            <code>show</code>／<code>disable</code>／<code>icon</code>／<code>label</code>／<code>title</code>／<code>tone</code>／<code>action</code>
+            （默认 show=true、disable=false）。声明项不再用 caps 藏钮；
+            <code>undefined</code>（如 capGate allow）才回落 caps。<code>title</code> 可省：不传时内置用 messages、自定义用
+            <code>title ?? label ?? 内置 messages ?? key</code>。无 <code>label</code> 有
+            <code>title</code> 时显示用 <code>title</code>；无 <code>title</code> 有 <code>label</code> 时 tip 用
+            <code>label</code>。无 <code>confirm</code> 字段：需要确认时在
+            <code>action</code> 内自管（内置 remove 仍自带 Popconfirm）。
+            <code>tone</code>：对齐 Button 全档 <code>default|primary|secondary|success|warning|danger|ghost</code>（内置 remove 默认 danger）。未知键＝自定义（必须
+            <code>action</code>）。写入序＝显示序。已<strong>废止</strong>
+            <code>toolbar.extra</code>／<code>rowActions.extra</code>／<code>order</code>／<code>toolbarExtra</code>／<code>rowExtra</code>
+            （前导 chrome 请放面板外）。<code>batchStatus</code> 是 TOOLBAR_BUILTIN：声明式控批量条「设为…」显隐／disable，UI 仍在选中批量条。
+          </Paragraph>
+        </div>
+
+        <DocsDemo title="⓪ 默认：省略 show→显示、省略 disable→可点" code={defaultsCode}>
+          <DataPanel
+            panelKey="demo-defaults"
+            title="声明默认 vs caps"
+            data={makeDemoRows(5)}
+            columns={DEMO_COLUMNS}
+            form={DEMO_FORM}
+            caps={{
+              create: false,
+              update: false,
+              print: false,
+              import: false,
+              export: false,
+              columns: false,
+              density: false,
+              fullscreen: false,
+              copy: false,
+            }}
+            toolbar={{
+              create: {},
+              refresh: { disable: true },
+            }}
+            rowActions={{
+              edit: { disable: true },
+            }}
+          />
+          <p class="mt-2 text-xs text-slate-500" data-testid="demo-defaults-hint">
+            caps 关 create／update，但声明项 create 空对象、edit 仅 disable 仍显示；refresh 禁用仍可见；未声明 view／remove 按 caps。
+          </p>
+        </DocsDemo>
+
+        <DocsDemo title="① true／false 简写控显隐" code={boolCode}>
+          <DataPanel
+            panelKey="demo-bool"
+            title="true／false 简写"
+            data={makeDemoRows(5)}
+            columns={DEMO_COLUMNS}
+            search={DEMO_SEARCH}
+            form={DEMO_FORM}
+            toolbar={{
+              create: true,
+              search: true,
+              refresh: true,
+              print: false,
+              import: false,
+              export: false,
+            }}
+            rowActions={{
+              view: true,
+              edit: true,
+              remove: false,
+            }}
+          />
+        </DocsDemo>
+
+        <DocsDemo title="② toolbar：show／disable 无参函数" code={tbFnCode}>
+          <div class="mb-2 flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              size="sm"
+              data-testid="demo-tb-fn-toggle"
+              onClick={() => {
+                pageAllowAudit.value = !pageAllowAudit.value;
+              }}
+            >
+              {() => pageAllowAudit.value ? "关闭权限（审计变禁用）" : "打开权限（审计可点）"}
+            </Button>
+            <span class="text-xs text-slate-500" data-testid="demo-tb-fn-flag">
+              {() => `pageAllowAudit=${String(pageAllowAudit.value)}`}
+            </span>
+          </div>
+          <DataPanel
+            panelKey="demo-tb-fn"
+            title="toolbar 函数 show"
+            data={makeDemoRows(5)}
+            columns={DEMO_COLUMNS}
+            form={DEMO_FORM}
+            toolbar={{
+              create: true,
+              audit: {
+                label: "审计",
+                show: () => true,
+                disable: () => !pageAllowAudit.value,
+                action: () => {
+                  actionHint.value = "toolbar:audit";
+                },
+              },
+              refresh: true,
+              ...DEMO_HIDE_CHROME,
+            }}
+          />
+          <p class="mt-2 text-xs text-slate-500" data-testid="demo-tb-fn-hint">
+            {() => actionHint.value || "pageAllowAudit=false 时审计仍可见但 disabled"}
+          </p>
+        </DocsDemo>
+
+        <DocsDemo title="③ 操作列：show／action(item)" code={raFnCode}>
+          <DataPanel
+            panelKey="demo-ra-fn"
+            title="操作列函数"
+            data={makeDemoRows(5)}
+            columns={DEMO_COLUMNS}
+            caps={{ create: false, update: false, remove: false, view: false }}
+            rowActions={{
+              view: false,
+              edit: false,
+              remove: false,
+              assign: {
+                label: "分配",
+                show: () => true,
+                disable: (item) => !!item.locked,
+                action: (item) => {
+                  actionHint.value = `row:assign:${String(item.id)}`;
+                },
+              },
+            }}
+          />
+          <p class="mt-2 text-xs text-slate-500" data-testid="demo-ra-fn-hint">
+            {() => actionHint.value || "locked 行「分配」仍可见但 disabled；点击看 item.id"}
+          </p>
+        </DocsDemo>
+
+        <DocsDemo title="④a 自定义工具钮（未知 key＋必 action）" code={tbCustomCode}>
+          <DataPanel
+            panelKey="demo-tb-custom"
+            title="自定义工具钮"
+            data={makeDemoRows(5)}
+            columns={DEMO_COLUMNS}
+            form={DEMO_FORM}
+            toolbar={{
+              create: true,
+              invite: {
+                label: "邀请",
+                action: () => {
+                  actionHint.value = "toolbar:invite";
+                },
+              },
+              refresh: true,
+              ...DEMO_HIDE_CHROME,
+            }}
+          />
+          <p class="mt-2 text-xs text-slate-500" data-testid="demo-tb-custom-hint">
+            {() => actionHint.value || "点击「邀请」"}
+          </p>
+        </DocsDemo>
+
+        <DocsDemo title="④b 自定义操作列（未知 key＋必 action(item)）" code={raCustomCode}>
+          <DataPanel
+            panelKey="demo-ra-custom"
+            title="自定义操作列"
+            data={makeDemoRows(5)}
+            columns={DEMO_COLUMNS}
+            form={DEMO_FORM}
+            rowActions={{
+              view: true,
+              clone: {
+                label: "克隆",
+                action: (item) => {
+                  actionHint.value = `row:clone:${String(item.id)}`;
+                },
+              },
+              edit: true,
+              remove: false,
+            }}
+          />
+          <p class="mt-2 text-xs text-slate-500" data-testid="demo-ra-custom-hint">
+            {() => actionHint.value || "写入序：view → clone → edit（无 remove）"}
+          </p>
+        </DocsDemo>
+
+        <DocsDemo title="⑤ 写入序＝显示序" code={keyOrderCode}>
+          <DataPanel
+            panelKey="demo-key-order"
+            title="写入序＝显示序"
+            data={makeDemoRows(5)}
+            columns={DEMO_COLUMNS}
+            form={DEMO_FORM}
+            toolbar={{
+              create: true,
+              audit: {
+                label: "审计",
+                action: () => {
+                  actionHint.value = "order:audit";
+                },
+              },
+              refresh: true,
+              export: true,
+              print: false,
+              import: false,
+              columns: false,
+              density: false,
+              fullscreen: false,
+              copy: false,
+            }}
+          />
+          <p class="mt-2 text-xs text-slate-500" data-testid="demo-key-order-hint">
+            工具栏从左到右：添加 → 审计 → 刷新 → 导出（与对象键顺序一致）
+          </p>
+        </DocsDemo>
+
+        <DocsDemo title="⑦ disable：禁用仍可见（≠ show:false）" code={enabledCode}>
+          <DataPanel
+            panelKey="demo-enabled"
+            title="disable 演示"
+            data={makeDemoRows(5)}
+            columns={DEMO_COLUMNS}
+            form={DEMO_FORM}
+            toolbar={{
+              create: { disable: true },
+              freeze: {
+                label: "冻结",
+                disable: () => true,
+                action: () => {
+                  actionHint.value = "should-not-fire";
+                },
+              },
+              refresh: true,
+              print: false,
+              import: false,
+              export: false,
+              columns: false,
+              density: false,
+              fullscreen: false,
+              copy: false,
+            }}
+            rowActions={{
+              view: true,
+              edit: { disable: true },
+              remove: false,
+              assign: {
+                label: "分配",
+                disable: (item) => !!item.locked,
+                action: (item) => {
+                  actionHint.value = `disable:assign:${String(item.id)}`;
+                },
+              },
+            }}
+          />
+          <p class="mt-2 text-xs text-slate-500" data-testid="demo-enabled-hint">
+            添加／冻结／编辑为 disabled 仍可见；locked 行「分配」禁用。show:false 才会隐藏。
+          </p>
+        </DocsDemo>
+
+
+        <DocsDemo title="⑧ title 可省：内置 messages／自定义 label??key／显式覆盖" code={titleCode}>
+          <DataPanel
+            panelKey="demo-title"
+            title="title Tooltip"
+            data={makeDemoRows(5)}
+            columns={DEMO_COLUMNS}
+            form={DEMO_FORM}
+            toolbar={{
+              create: true,
+              refresh: { title: "立刻刷新" },
+              freeze: {
+                label: "冻结",
+                action: () => {
+                  actionHint.value = "title:freeze";
+                },
+              },
+              print: false,
+              import: false,
+              export: false,
+              columns: false,
+              density: false,
+              fullscreen: false,
+              copy: false,
+            }}
+            rowActions={{
+              view: true,
+              edit: { title: "改资料" },
+              remove: false,
+              assign: {
+                label: "分配",
+                action: (item) => {
+                  actionHint.value = `title:assign:${String(item.id)}`;
+                },
+              },
+            }}
+          />
+          <p class="mt-2 text-xs text-slate-500" data-testid="demo-title-hint">
+            不传 title：内置悬停用 messages／label，自定义悬停用 key（如 freeze／assign）；传了则覆盖（立刻刷新／改资料）。
+          </p>
+        </DocsDemo>
+
+        <DocsDemo title="⑥ can()／页面变量控 show（对齐 admin）" code={canCode}>
+          <div class="mb-2 flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              size="sm"
+              data-testid="demo-can-toggle-write"
+              onClick={() => {
+                perms.value = {
+                  ...perms.value,
+                  "demo.write": !perms.value["demo.write"],
+                };
+              }}
+            >
+              {() => perms.value["demo.write"] ? "关闭 demo.write" : "打开 demo.write"}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              data-testid="demo-can-toggle-export"
+              onClick={() => {
+                pageExport.value = !pageExport.value;
+              }}
+            >
+              {() => pageExport.value ? "关闭 pageExport" : "打开 pageExport"}
+            </Button>
+            <span class="text-xs text-slate-500" data-testid="demo-can-flags">
+              {() =>
+                `write=${String(perms.value["demo.write"])} view=${String(perms.value["demo.view"])} pageExport=${String(pageExport.value)}`}
+            </span>
+          </div>
+          <DataPanel
+            panelKey="demo-can"
+            title="can()／页面变量"
+            data={makeDemoRows(5)}
+            columns={DEMO_COLUMNS}
+            form={DEMO_FORM}
+            search={DEMO_SEARCH}
+            toolbar={{
+              create: demoCapGate(can("demo.write")),
+              search: true,
+              refresh: true,
+              import: demoCapGate(can("demo.write")),
+              export: {
+                show: () => can("demo.view"),
+                disable: () => !pageExport.value,
+              },
+              print: false,
+              columns: false,
+              density: false,
+              fullscreen: false,
+              copy: false,
+            }}
+            rowActions={{
+              view: demoCapGate(can("demo.view") || can("demo.write")),
+              edit: demoCapGate(can("demo.write")),
+              remove: demoCapGate(can("demo.write")),
+              assign: {
+                label: "分配",
+                show: () => can("demo.write"),
+                action: (item) => {
+                  actionHint.value = `can:assign:${String(item.id)}`;
+                },
+              },
+            }}
+          />
+          <p class="mt-2 text-xs text-slate-500" data-testid="demo-can-hint">
+            {() =>
+              actionHint.value ||
+              "默认 write=false：无创建／导入／编辑／删除／分配；export 受 pageExport＆view 控制"}
+          </p>
+        </DocsDemo>
+
+        <DocsDemo title="tone／tip=label??key（无 confirm 字段／无双轨插槽）" code={customCode}>
+          <div class="flex flex-col gap-2">
+            <span class="text-sm text-slate-500" data-testid="demo-custom-leading">
+              面板外提示（原 toolbarExtra 迁此）
+            </span>
+            <DataPanel
+              panelKey="demo-custom"
+              title="自定义"
+              data={makeDemoRows(5)}
+              columns={DEMO_COLUMNS}
+              caps={{ create: false }}
+              renderCell={{
+                name: (row) => (
+                  <b data-testid="demo-custom-name">{String(row.name)}</b>
+                ),
+              }}
+              toolbar={{
+                notify: {
+                  label: "通知",
+                  tone: "primary",
+                  action: () => {
+                    actionHint.value = "tb:notify";
+                  },
+                },
+              }}
+              rowActions={{
+                view: false,
+                edit: false,
+                remove: false,
+                freeze: {
+                  label: "冻结",
+                  tone: "danger",
+                  action: (row) => {
+                    actionHint.value = `freeze:${String(row.id)}`;
+                  },
+                },
+              }}
+            />
+            <p class="text-xs text-slate-500" data-testid="demo-custom-hint">
+              {() => actionHint.value || "点「通知」／「冻结」直接跑 action（确认请在 action 自管）"}
+            </p>
+          </div>
+        </DocsDemo>
+
+      </section>
 
       <section class="flex flex-col gap-6">
         <Title level={2}>完整示例</Title>
         <CodeBlock title="代码示例" code={exampleDemo} language="tsx" showLineNumbers copyable wrapLongLines />
       </section>
+
+      <DocsMessagesSection
+        interfaceName="DataPanelMessages"
+        defaultExportName="defaultDataPanelMessages"
+        rows={MESSAGES_DATA_PANEL}
+      />
 
       <section class="space-y-3">
         <Title level={2}>API</Title>

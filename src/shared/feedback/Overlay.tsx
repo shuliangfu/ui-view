@@ -21,6 +21,15 @@ import {
 } from "./controlled-open.ts";
 import { getBrowserBodyPortalHost } from "./portal-host.ts";
 
+export interface OverlayMessages {
+  /** 遮罩 aria-label；显式 `aria-label` 优先 */
+  label: string;
+}
+
+export const defaultOverlayMessages: OverlayMessages = {
+  label: "遮罩",
+};
+
 export interface OverlayProps {
   /** 是否显示：`Signal` / 零参 getter / 布尔快照；嵌套场景常传 `true`（由父级控制挂载） */
   open?: ControlledOpenInput;
@@ -41,8 +50,9 @@ export interface OverlayProps {
   class?: string;
   /** 遮罩上的子内容（少见） */
   children?: unknown;
-  /** `aria-label`；`as="button"` 时尤重要 */
+  /** `aria-label`；优先于 messages.label；`as="button"` 时尤重要 */
   "aria-label"?: string;
+  messages?: Partial<OverlayMessages>;
   /**
    * 是否 Portal 到 `document.body`。
    * 嵌在 Modal／Drawer／ActionSheet／BottomSheet 根内时必须 `false`。
@@ -65,6 +75,10 @@ export interface OverlayProps {
  * 全屏／内联遮罩。
  */
 export function Overlay(props: OverlayProps): JSXRenderable {
+  const m: OverlayMessages = {
+    ...defaultOverlayMessages,
+    ...(props.messages ?? {}),
+  };
   const {
     onClick,
     clickable = true,
@@ -72,10 +86,11 @@ export function Overlay(props: OverlayProps): JSXRenderable {
     zIndex,
     class: className,
     children,
-    "aria-label": ariaLabel = "遮罩",
+    "aria-label": ariaLabelProp,
     portal = true,
     as = "div",
   } = props;
+  const ariaLabel = ariaLabelProp ?? m.label;
 
   const position = props.position ?? (portal ? "fixed" : "absolute");
   const lockScroll = props.lockScroll ?? portal;

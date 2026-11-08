@@ -11,6 +11,8 @@ import {
   DocsApiTable,
   type DocsApiTableRow,
 } from "../../../components/DocsApiTable.tsx";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
+import { MESSAGES_SHARE_SHEET } from "../../../data/component-messages-rows.ts";
 import { MobileDocDemo } from "../../../components/MobileDocDemo.tsx";
 
 const API: DocsApiTableRow[] = [
@@ -19,6 +21,13 @@ const API: DocsApiTableRow[] = [
   { name: "title", type: "string | null", default: "-", description: "标题" },
   { name: "onClose", type: "() => void", default: "-", description: "关闭" },
   { name: "cancelText", type: "string | null", default: "取消", description: "取消文案" },
+  {
+    name: "messages",
+    type: "Partial<ShareSheetMessages>",
+    default: "-",
+    description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
+  },
+
 ];
 
 const importCode = `import { createSignal } from "@dreamer/view";
@@ -75,6 +84,12 @@ export default function Page() {
         </MobileDocDemo>
         <CodeBlock title="代码示例" code={exampleDemo} language="tsx" showLineNumbers copyable wrapLongLines />
       </section>
+      <DocsMessagesSection
+        interfaceName="ShareSheetMessages"
+        defaultExportName="defaultShareSheetMessages"
+        rows={MESSAGES_SHARE_SHEET}
+      />
+
       <section class="space-y-3">
         <Title level={2}>API</Title>
         <DocsApiTable rows={API} />

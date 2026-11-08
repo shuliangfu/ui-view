@@ -8,6 +8,8 @@ import { Button, Paragraph, Title } from "@dreamer/ui-view/basic";
 import { CodeBlock } from "@dreamer/ui-view/data-display";
 
 import { message } from "@dreamer/ui-view/feedback";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
+import { MESSAGES_MESSAGE } from "../../../data/component-messages-rows.ts";
 /** API 方法/属性行类型 */
 interface ApiRow {
   name: string;
@@ -47,7 +49,13 @@ const MESSAGE_API: ApiRow[] = [
     type: "void",
     default: "-",
     description: "关闭全部全局提示",
+  },  {
+    name: "messages",
+    type: "Partial<MessageMessages>",
+    default: "-",
+    description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
   },
+
 ];
 
 const importCode = `import { message } from "@dreamer/ui-view/feedback";
@@ -82,6 +90,7 @@ export default function MessageMessage() {
           3000ms）， 调用 message.destroy() 可关闭全部。使用 Tailwind v4，支持
           light/dark 主题。
         </Paragraph>
+        <Paragraph class="mt-2 text-sm text-slate-600 dark:text-slate-400">提示正文由命令式 API 传入（如 <code>message.success("已保存")</code>），不走 messages。挂载 <code>&lt;MessageContainer messages=&#123;…&#125; /&gt;</code> 可覆盖 live region 标签。</Paragraph>
       </section>
 
       {/* 2. 引入 */}
@@ -227,6 +236,12 @@ export default function MessageMessage() {
       </section>
 
       {/* 4. API */}
+      <DocsMessagesSection
+        interfaceName="MessageMessages"
+        defaultExportName="defaultMessageMessages"
+        rows={MESSAGES_MESSAGE}
+      />
+
       <section class="space-y-3">
         <Title level={2}>API</Title>
         <Paragraph class="text-sm text-slate-600 dark:text-slate-400">

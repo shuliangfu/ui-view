@@ -6,12 +6,12 @@
  * @see {@link ./BottomSheet.tsx} 底部抽屉
  * @see {@link ./Dialog.tsx} 确认对话框（与桌面版同实现，re-export）
  */
-export { ToastContainer } from "./Toast.tsx";
+export { ToastContainer, defaultToastMessages } from "./Toast.tsx";
 export { toast } from "./toast-store.ts";
 export type { ToastItem, ToastPlacement, ToastType } from "./toast-store.ts";
 export { clearToasts, removeToast } from "./toast-store.ts";
 
-export { MessageContainer } from "./Message.tsx";
+export { MessageContainer, defaultMessageMessages } from "./Message.tsx";
 export { message } from "./message-store.ts";
 export type {
   MessageItem,
@@ -20,7 +20,11 @@ export type {
 } from "./message-store.ts";
 export { clearMessages, removeMessage } from "./message-store.ts";
 
-export { NotificationContainer } from "./Notification.tsx";
+export {
+  NotificationContainer,
+  defaultNotificationMessages,
+} from "./Notification.tsx";
+export type { NotificationMessages } from "./Notification.tsx";
 export { notification } from "./notification-store.ts";
 export type {
   NotificationItem,
@@ -54,7 +58,7 @@ export type {
   ProgressType,
 } from "./Progress.tsx";
 
-export { Result } from "./Result.tsx";
+export { Result, defaultResultMessages } from "./Result.tsx";
 export type { ResultProps, ResultStatus } from "./Result.tsx";
 
 export { BottomSheet } from "./BottomSheet.tsx";
@@ -76,7 +80,7 @@ export type {
   DialogVariant,
 } from "./Dialog.tsx";
 
-export { Overlay } from "./Overlay.tsx";
+export { Overlay, defaultOverlayMessages } from "./Overlay.tsx";
 export type { OverlayProps } from "./Overlay.tsx";
 export { NoticeBar } from "./NoticeBar.tsx";
 export type {
@@ -88,8 +92,8 @@ export { defaultNoticeBarMessages } from "./NoticeBar.tsx";
 export { Tour } from "./Tour.tsx";
 export type { TourMessages, TourProps, TourStep } from "./Tour.tsx";
 export { defaultTourMessages } from "./Tour.tsx";
-export { FloatingPanel } from "./FloatingPanel.tsx";
-export type { FloatingPanelProps } from "./FloatingPanel.tsx";
+export { FloatingPanel, defaultFloatingPanelMessages } from "./FloatingPanel.tsx";
+export type { FloatingPanelMessages, FloatingPanelProps } from "./FloatingPanel.tsx";
 export { ShareSheet } from "./ShareSheet.tsx";
 export type {
   ShareSheetMessages,
@@ -97,3 +101,5 @@ export type {
   ShareSheetProps,
 } from "./ShareSheet.tsx";
 export { defaultShareSheetMessages } from "./ShareSheet.tsx";
+export type { MessageContainerProps } from "./Message.tsx";
+export type { ToastContainerProps } from "./Toast.tsx";

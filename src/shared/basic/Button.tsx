@@ -34,6 +34,10 @@ export interface ButtonProps {
   type?: "button" | "submit" | "reset";
   /** 额外 class，与 Tailwind 合并 */
   class?: string;
+  /** E2E / 无障碍：写到原生 button */
+  "data-testid"?: string;
+  /** 无障碍名称（图标按钮必填） */
+  "aria-label"?: string;
   /** 点击回调 */
   onClick?: (e: Event) => void;
   /** 子节点（文案或图标等） */
@@ -91,6 +95,8 @@ export function Button(props: ButtonProps): JSXRenderable {
     class: className,
     onClick,
     children,
+    "data-testid": dataTestId,
+    "aria-label": ariaLabel,
   } = props;
   const size = resolveFormControlSize(sizeProp);
 
@@ -125,7 +131,9 @@ export function Button(props: ButtonProps): JSXRenderable {
       )}
       disabled={disabled || loading}
       aria-busy={loading ? true : undefined}
+      aria-label={ariaLabel}
       onClick={onClick}
+      data-testid={dataTestId}
       data-variant={variant}
       data-loading={loading ? "" : undefined}
       data-key={itemKey !== undefined ? String(itemKey) : undefined}

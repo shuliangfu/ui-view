@@ -46,7 +46,13 @@ export {
   type CollapseProps,
 } from "./Collapse.tsx";
 export { Carousel, type CarouselProps } from "./Carousel.tsx";
-export { Tree, type TreeNode, type TreeProps } from "./Tree.tsx";
+export {
+  Tree,
+  defaultTreeMessages,
+  type TreeMessages,
+  type TreeNode,
+  type TreeProps,
+} from "./Tree.tsx";
 export {
   Calendar,
   type CalendarDaySelectionMode,
@@ -73,6 +79,19 @@ export {
 export {
   DATA_PANEL_CSS,
   DataPanel,
+  assertRowActionsConfig,
+  assertToolbarConfig,
+  isRowBuiltin,
+  isToolbarBuiltin,
+  actionTipText,
+  actionDisplayText,
+  resolveActionCtrl,
+  resolveRowActionCtrl,
+  ROW_BUILTINS,
+  TOOLBAR_BUILTINS,
+  type ActionCtrl,
+  type ActionTone,
+  type RowActionCtrl,
   type DataPanelBulkResult,
   type DataPanelCaps,
   type DataPanelColumn,
@@ -88,9 +107,13 @@ export {
   type DataPanelProps,
   type DataPanelQuery,
   type DataPanelRow,
+  type DataPanelRowActionsConfig,
   type DataPanelSearchField,
   type DataPanelTone,
+  type DataPanelToolbarConfig,
   type DataPanelWriteResult,
+  type RowBuiltin,
+  type ToolbarBuiltin,
   refreshDataPanel,
 } from "./DataPanel.tsx";
 export {
@@ -108,6 +131,6 @@ export { buildXlsx, type XlsxSheet } from "./data-panel-xlsx.ts";
 
 export { Watermark, type WatermarkProps } from "./Watermark.tsx";
 export { CountDown, type CountDownProps, type CountDownTimeParts } from "./CountDown.tsx";
-export { QRCode, type QRCodeProps } from "./QRCode.tsx";
+export { QRCode, type QRCodeProps, defaultQRCodeMessages } from "./QRCode.tsx";
 export { VirtualList, type VirtualListProps } from "./VirtualList.tsx";
 export { Cell, CellGroup, type CellGroupProps, type CellProps } from "./Cell.tsx";

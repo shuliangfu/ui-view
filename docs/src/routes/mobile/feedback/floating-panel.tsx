@@ -11,6 +11,8 @@ import {
   DocsApiTable,
   type DocsApiTableRow,
 } from "../../../components/DocsApiTable.tsx";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
+import { MESSAGES_FLOATING_PANEL } from "../../../data/component-messages-rows.ts";
 import { MobileDocDemo } from "../../../components/MobileDocDemo.tsx";
 
 const API: DocsApiTableRow[] = [
@@ -18,7 +20,13 @@ const API: DocsApiTableRow[] = [
   { name: "anchors", type: "number[]", default: "[120,320,560]", description: "锚点高度（px，升序）" },
   { name: "anchorIndex", type: "number", default: "-", description: "当前锚点下标" },
   { name: "onClose", type: "() => void", default: "-", description: "遮罩关闭" },
-  { name: "onAnchorChange", type: "(index) => void", default: "-", description: "锚点变化" },
+  { name: "onAnchorChange", type: "(index) => void", default: "-", description: "锚点变化" },  {
+    name: "messages",
+    type: "Partial<FloatingPanelMessages>",
+    default: "-",
+    description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
+  },
+
 ];
 
 const importCode = `import { createSignal } from "@dreamer/view";
@@ -75,6 +83,12 @@ export default function Page() {
         </MobileDocDemo>
         <CodeBlock title="代码示例" code={exampleDemo} language="tsx" showLineNumbers copyable wrapLongLines />
       </section>
+      <DocsMessagesSection
+        interfaceName="FloatingPanelMessages"
+        defaultExportName="defaultFloatingPanelMessages"
+        rows={MESSAGES_FLOATING_PANEL}
+      />
+
       <section class="space-y-3">
         <Title level={2}>API</Title>
         <DocsApiTable rows={API} />

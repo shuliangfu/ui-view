@@ -32,15 +32,29 @@ export interface DropdownMenuItem {
   options: DropdownMenuOption[];
 }
 
+export interface DropdownMenuMessages {
+  /** 遮罩关闭 aria-label */
+  close: string;
+}
+
+export const defaultDropdownMenuMessages: DropdownMenuMessages = {
+  close: "关闭",
+};
+
 export interface DropdownMenuProps {
   items: DropdownMenuItem[];
   /** 各列当前值 value map */
   value?: Record<string, string>;
   onChange?: (key: string, value: string) => void;
   class?: string;
+  messages?: Partial<DropdownMenuMessages>;
 }
 
 export function DropdownMenu(props: DropdownMenuProps): JSXRenderable {
+  const m: DropdownMenuMessages = {
+    ...defaultDropdownMenuMessages,
+    ...(props.messages ?? {}),
+  };
   const { items, onChange, class: className } = props;
   const openKey = createSignal<string | null>(null);
   const local = createSignal<Record<string, string>>({});
@@ -76,7 +90,7 @@ export function DropdownMenu(props: DropdownMenuProps): JSXRenderable {
         <button
           type="button"
           class="absolute inset-0 z-10 bg-slate-900/30 pointer-events-auto"
-          aria-label="关闭"
+          aria-label={m.close}
           data-dreamer-dropdown-mask="scoped"
           onClick={close}
         />
@@ -138,7 +152,7 @@ export function DropdownMenu(props: DropdownMenuProps): JSXRenderable {
               <button
                 type="button"
                 class="fixed inset-0 z-10 bg-slate-900/30"
-                aria-label="关闭"
+                aria-label={m.close}
                 data-dreamer-dropdown-mask="fixed"
                 onClick={close}
               />

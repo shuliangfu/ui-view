@@ -1,6 +1,6 @@
 /**
  * Dialog 确认对话框（View）。
- * 可视为 Modal 简化版：标题、内容、确定/取消按钮；支持警告（橙色确定）、危险操作（红色确定）、加载态。
+ * 可视为 Modal 简化版：标题、内容、确定/取消按钮（**默认定钮在左、取消在右**）；支持警告（橙色确定）、危险操作（红色确定）、加载态。
  *
  * **`open` / `title`**：与 {@link Modal} 一致；`open` 请传 **`createSignal` 返回值** `open={sig}`，勿传 `open={sig.value}` 快照；`title` 支持零参 getter，与 Modal 相同。
  * **`danger` / `warning` / `confirmText`**：亦可传零参 getter；父级仅 `open` 走 Signal、自身不重跑时，快照布尔会卡在首帧，导致危险/警告底栏与按钮语义不更新。
@@ -137,6 +137,7 @@ function buildDialogDefaultFooter(
     ? "flex w-full flex-col gap-2.5 self-stretch"
     : "flex w-full flex-col gap-2.5 self-stretch sm:w-auto sm:flex-row sm:justify-end sm:gap-2 sm:self-center";
 
+  /** 脚序固定：确定在前（左）、取消在后（右）；纵排时同样先确定后取消 */
   const nodes = (
     <>
       {hasConfirm && (

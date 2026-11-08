@@ -211,11 +211,11 @@ export default function MobileActionSheetDoc() {
       </section>
 
       <section class="space-y-6">
-        <DocsMessagesSection
-          interfaceName="ActionSheetMessages"
-          defaultExportName="defaultActionSheetMessages"
-          rows={MESSAGES_ACTION_SHEET}
-        />
+      <DocsMessagesSection
+        interfaceName="ActionSheetMessages"
+        defaultExportName="defaultActionSheetMessages"
+        rows={MESSAGES_ACTION_SHEET}
+      />
 
         <Title level={2}>API</Title>
 

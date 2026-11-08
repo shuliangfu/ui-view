@@ -300,3 +300,31 @@ export function createCellDemoSource(): DataPanelDataSource {
     },
   } as DataPanelDataSource;
 }
+
+/**
+ * Docs helpers for toolbar / rowActions demos (mirrors admin capGate + chrome-off).
+ * Pure functions — no JSX.
+ */
+
+/** Hide chrome builtins so write-order demos stay readable. */
+export const DEMO_HIDE_CHROME = {
+  print: false,
+  import: false,
+  export: false,
+  columns: false,
+  density: false,
+  fullscreen: false,
+  copy: false,
+} as const;
+
+/** Like admin `capGate`: allow → undefined (fall back to caps); deny → false. */
+export function demoCapGate(allow: boolean): false | undefined {
+  return allow ? undefined : false;
+}
+
+/** Tiny permission map for docs (simulates admin `can("…")`). */
+export type DemoPerms = { "demo.view": boolean; "demo.write": boolean };
+
+export function demoCan(perms: DemoPerms, code: keyof DemoPerms): boolean {
+  return !!perms[code];
+}

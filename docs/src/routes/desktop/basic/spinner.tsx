@@ -6,6 +6,8 @@
 import { Paragraph, Spinner, Title } from "@dreamer/ui-view/basic";
 
 import { CodeBlock } from "@dreamer/ui-view/data-display";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
+import { MESSAGES_SPINNER } from "../../../data/component-messages-rows.ts";
 interface ApiRow {
   name: string;
   type: string;
@@ -26,6 +28,13 @@ const SPINNER_API: ApiRow[] = [
     default: "-",
     description: "额外 class（如颜色 text-green-600）",
   },
+  {
+    name: "messages",
+    type: "Partial<SpinnerMessages>",
+    default: "-",
+    description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
+  },
+
 ];
 
 const importCode = `import { Spinner } from "@dreamer/ui-view/basic";
@@ -101,6 +110,12 @@ export default function BasicSpinner() {
           />
         </div>
       </section>
+
+      <DocsMessagesSection
+        interfaceName="SpinnerMessages"
+        defaultExportName="defaultSpinnerMessages"
+        rows={MESSAGES_SPINNER}
+      />
 
       <section class="space-y-3">
         <Title level={2}>API</Title>

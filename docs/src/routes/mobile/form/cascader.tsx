@@ -161,11 +161,11 @@ export default function MobileCascaderDoc() {
       </section>
 
       <section class="space-y-4">
-        <DocsMessagesSection
-          interfaceName="CascaderMessages"
-          defaultExportName="defaultCascaderMessages"
-          rows={MESSAGES_CASCADER}
-        />
+      <DocsMessagesSection
+        interfaceName="CascaderMessages"
+        defaultExportName="defaultCascaderMessages"
+        rows={MESSAGES_CASCADER}
+      />
 
         <Title level={2}>API</Title>
         <Paragraph class="text-sm text-slate-600 dark:text-slate-400">

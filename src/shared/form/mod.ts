@@ -9,7 +9,7 @@ export type { MaybeSignal } from "./maybe-signal.ts";
 export { readMaybeSignal } from "./maybe-signal.ts";
 export { AutoComplete } from "./AutoComplete.tsx";
 export type { AutoCompleteProps } from "./AutoComplete.tsx";
-export { Checkbox } from "./Checkbox.tsx";
+export { Checkbox, defaultCheckboxMessages } from "./Checkbox.tsx";
 export type { CheckboxProps } from "./Checkbox.tsx";
 export { CheckboxGroup } from "./CheckboxGroup.tsx";
 export type {

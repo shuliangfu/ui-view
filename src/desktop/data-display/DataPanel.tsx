@@ -3,8 +3,8 @@
  *
  * 一块完整的「列表管理」面板：卡片标题栏 + 工具栏按钮组（添加 / 搜索 / 刷新 / 打印 / 导入 / 导出 / 列设置 / 行高 / 全屏 / 复制，
  * 相邻按钮之间只有一条淡分割线）+ 搜索 Modal（工具栏按钮打开，提交即搜索、重置即清空） + 批量操作条 + 表格（排序、多选、行内编辑、合计行、
- * 操作列）+ 分页（每页条数、页码、跳页）。新增 / 编辑 / 查看使用 Modal，**任何删除都必须先确认（行内删除为图标上方的小气泡 Popconfirm，批量删除为确认对话框）**，
- * 绝不直接删除。导出支持 xlsx（原生 OOXML）/ csv / json / xml / html，支持浅色与深色主题（`.dark`）。
+ * 操作列）+ 分页（每页条数、页码、跳页）。新增 / 编辑 / 查看使用 Modal；**任何删除与批量「设为…」都必须先确认（行内删除／批量删除／批量设为均为按钮上方的小气泡 Popconfirm）**，
+ * 绝不走 Modal 确认对话框，也绝不直接执行。导出支持 xlsx（原生 OOXML）/ csv / json / xml / html，支持浅色与深色主题（`.dark`）。
  *
  * 数据通过 props 注入，与任何后端无关：
  * - `data`：本地数组，面板内置本地数据源（过滤 / 排序 / 分页 / 合计 / 增删改全部在内存完成）；
@@ -61,26 +61,45 @@ import {
   queryToParams,
   validateForm,
 } from "./data-panel-utils.ts";
-import type {
-  DataPanelBulkResult,
-  DataPanelCaps,
-  DataPanelColumn,
-  DataPanelDataSource,
-  DataPanelDensity,
-  DataPanelExportFormat,
-  DataPanelFormField,
-  DataPanelListResult,
-  DataPanelLocale,
-  DataPanelMessages,
-  DataPanelOption,
-  DataPanelQuery,
-  DataPanelRow,
-  DataPanelSearchField,
-  DataPanelTone,
-  DataPanelWriteResult,
+import {
+  assertRowActionsConfig,
+  assertToolbarConfig,
+  isRowBuiltin,
+  isToolbarBuiltin,
+  resolveActionCtrl,
+  actionTipText,
+  actionDisplayText,
+  resolveRowActionCtrl,
+  ROW_BUILTINS,
+  TOOLBAR_BUILTINS,
+  type ActionCtrl,
+  type ActionTone,
+  type DataPanelBulkResult,
+  type DataPanelCaps,
+  type DataPanelColumn,
+  type DataPanelDataSource,
+  type DataPanelDensity,
+  type DataPanelExportFormat,
+  type DataPanelFormField,
+  type DataPanelListResult,
+  type DataPanelLocale,
+  type DataPanelMessages,
+  type DataPanelOption,
+  type DataPanelQuery,
+  type DataPanelRow,
+  type DataPanelRowActionsConfig,
+  type DataPanelSearchField,
+  type DataPanelTone,
+  type DataPanelToolbarConfig,
+  type DataPanelWriteResult,
+  type RowActionCtrl,
+  type RowBuiltin,
+  type ToolbarBuiltin,
 } from "./data-panel-types.ts";
 
 export type {
+  ActionCtrl,
+  ActionTone,
   DataPanelBulkResult,
   DataPanelCaps,
   DataPanelColumn,
@@ -94,10 +113,27 @@ export type {
   DataPanelOption,
   DataPanelQuery,
   DataPanelRow,
+  DataPanelRowActionsConfig,
   DataPanelSearchField,
   DataPanelTone,
+  DataPanelToolbarConfig,
   DataPanelWriteResult,
+  RowActionCtrl,
+  RowBuiltin,
+  ToolbarBuiltin,
 };
+export {
+  assertRowActionsConfig,
+  assertToolbarConfig,
+  isRowBuiltin,
+  isToolbarBuiltin,
+  resolveActionCtrl,
+  actionTipText,
+  actionDisplayText,
+  resolveRowActionCtrl,
+  ROW_BUILTINS,
+  TOOLBAR_BUILTINS,
+} from "./data-panel-types.ts";
 
 /** 导出时传给 `onExport` 的上下文 */
 export interface DataPanelExportContext {
@@ -143,11 +179,25 @@ export interface DataPanelProps {
   defaultSort?: { prop: string; order: "asc" | "desc" };
   /** 固定过滤（并入每次查询，不出现在 URL） */
   fixed?: Record<string, string>;
-  /** 批量状态字段与可选值（开启「批量设为…」按钮，需要 dataSource.setField） */
+  /**
+   * Batch bar「设为…」field + values. Gated by `toolbar.batchStatus` (TOOLBAR_BUILTIN;
+   * undeclared → caps.batchStatus). Bar appears when rows are selected. Needs setField.
+   */
   statusField?: string;
   statusValues?: { value: string; label: string }[];
-  /** 能力开关；缺省按数据源方法推断 */
+  /** 能力开关；缺省按数据源方法推断。未在 toolbar/rowActions 声明的钮回落于此。 */
   caps?: Partial<DataPanelCaps>;
+  /**
+   * Unified toolbar Record. Declared keys: omit show→true, omit disable→false (caller truth).
+   * `undefined` value (e.g. capGate allow) still falls back to caps. Undeclared builtins → caps, after declared.
+   * Object key write order = display order. Custom keys require `action`. No `extra` / `order`.
+   */
+  toolbar?: DataPanelToolbarConfig;
+  /**
+   * Unified rowActions Record（同形；show/disable/action 可 (item)=>…）。
+   * Custom keys require `action`. No `extra` / `order`.
+   */
+  rowActions?: DataPanelRowActionsConfig;
   /** 界面语言（内置 zh-CN / en-US），默认 zh-CN */
   locale?: DataPanelLocale;
   /** 覆盖文案 */
@@ -156,18 +206,8 @@ export interface DataPanelProps {
   exportName?: string;
   /** 初始行高密度，默认 comfortable（舒适） */
   defaultDensity?: DataPanelDensity;
-  /** 自定义新增（替代内置 Modal 表单） */
-  onCreate?: () => void;
-  /** 自定义编辑 */
-  onEdit?: (row: DataPanelRow) => void;
-  /** 自定义查看 */
-  onView?: (row: DataPanelRow) => void;
   /** 自定义单元格渲染（按列 prop） */
   renderCell?: Record<string, (row: DataPanelRow) => unknown>;
-  /** 操作列额外按钮（渲染在标准操作之前） */
-  rowExtra?: (row: DataPanelRow) => unknown;
-  /** 工具栏左侧额外内容 */
-  toolbarExtra?: unknown;
   /** 任一写操作成功后回调 */
   onChanged?: () => void;
   /** 是否显示选择列与批量条（有删除 / 批量状态能力时默认 true） */
@@ -244,8 +284,35 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
     copy: true,
     ...(props.caps ?? {}),
   };
+  // Caller overrides: show = resolve(caller, capsFallback). Handlers (action/on*) never imply visibility.
+  const tbCfg: DataPanelToolbarConfig = props.toolbar ?? {};
+  const raCfg: DataPanelRowActionsConfig = props.rowActions ?? {};
+  assertToolbarConfig(tbCfg);
+  assertRowActionsConfig(raCfg);
+  const tbResolved = (name: ToolbarBuiltin, fallback: boolean) =>
+    resolveActionCtrl(tbCfg[name], fallback);
+  const rowResolved = (
+    name: RowBuiltin,
+    row: DataPanelRow,
+    fallback: boolean,
+  ) => resolveRowActionCtrl(raCfg[name], row, fallback);
+  /** Whether a builtin row action might appear for any row (drives actions column). */
+  const rowMayShow = (name: RowBuiltin, fallback: boolean): boolean => {
+    const raw = raCfg[name];
+    // Key absent → undeclared path uses fallback (caps). Key present with undefined → same.
+    if (!(name in raCfg)) return fallback;
+    if (raw === undefined) return fallback;
+    if (typeof raw === "boolean") return raw;
+    if (typeof raw.show === "function") return true;
+    // Declared object: omit show → true (caller truth)
+    return resolveRowActionCtrl(raw, {}, fallback).show;
+  };
+  const hasCustomRowAction = Object.keys(raCfg).some((k) => !isRowBuiltin(k));
+  /** toolbar.batchStatus gate (Record); UI = batch bar, not a toolbar icon. */
+  const batchStatusCtrl = () =>
+    resolveActionCtrl(tbCfg.batchStatus, caps.batchStatus);
   const selectable = props.selectable !== false &&
-    (caps.remove || caps.batchStatus);
+    (caps.remove || batchStatusCtrl().show);
   const statusField = props.statusField;
   const isLocked = (r: DataPanelRow) => !!r.locked;
 
@@ -412,17 +479,7 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
     void writeDataPanelPrefs(key, { hidden: next });
   }
 
-  // ---- 确认对话框（所有删除 / 批量状态都经过它）
-  type Confirm = {
-    title: string;
-    text: string;
-    danger?: boolean;
-    okText: string;
-    run: () => Promise<void>;
-  };
-  const confirm = createSignal<Confirm | null>(null);
-  const confirmBusy = createSignal(false);
-
+  // ---- 确认一律小气泡 Popconfirm（行内删除／批量删除／批量设为）；不走 Modal 确认对话框
   const rowName = (r: DataPanelRow): string => {
     const c = columns[0];
     return String(r[c?.prop ?? rowKey] ?? r.name ?? r.username ?? idOf(r));
@@ -451,7 +508,7 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
     }
   }
 
-  /** 真正执行删除（行内气泡确认与批量确认框共用） */
+  /** 真正执行删除（行内／批量气泡确认共用） */
   async function doRemove(ids: string[]): Promise<void> {
     if (!ds.remove) return;
     const r = await guarded(() => ds.remove!(ids));
@@ -460,35 +517,21 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
     props.onChanged?.();
   }
 
-  /** 批量删除：保留确认对话框；单行删除走行内 Popconfirm（见操作列） */
-  function askDelete(ids: string[]): void {
-    if (!ds.remove) return;
-    confirm.value = {
-      title: m.deleteTitle,
-      text: tr(m.deleteMany, { n: ids.length }),
-      danger: true,
-      okText: m.delete,
-      run: () => doRemove(ids),
-    };
-  }
-
-  /** 当前打开删除气泡确认的行 id */
-  const popRow = createSignal<string | null>(null);
-
-  function askStatus(ids: string[], value: string, label: string): void {
+  /** 真正执行批量设为（气泡确认后） */
+  async function doSetStatus(ids: string[], value: string): Promise<void> {
     if (!ds.setField || !statusField) return;
-    confirm.value = {
-      title: m.batchConfirmTitle,
-      text: tr(m.batchStatusAsk, { n: ids.length, status: label }),
-      okText: m.confirm,
-      run: async () => {
-        const r = await guarded(() => ds.setField!(ids, statusField, value));
-        if (r) reportBulk(r, m.saved);
-        await load(false);
-        props.onChanged?.();
-      },
-    };
+    const r = await guarded(() => ds.setField!(ids, statusField, value));
+    if (r) reportBulk(r, m.saved);
+    await load(false);
+    props.onChanged?.();
   }
+
+  /** 当前打开删除气泡确认的行 id（单行） */
+  const popRow = createSignal<string | null>(null);
+  /** 批量删除气泡是否打开 */
+  const popBatch = createSignal(false);
+  /** 批量「设为…」气泡：打开中的 status value；null 关闭 */
+  const popStatus = createSignal<string | null>(null);
 
   // ---- 行内编辑
   const editing = createSignal<{ id: string; prop: string } | null>(null);
@@ -611,13 +654,11 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
   // ---- 查看 Modal
   const viewRow = createSignal<DataPanelRow | null>(null);
 
-  const doCreate = () => (props.onCreate ? props.onCreate() : openForm());
-  const doEdit = (
-    r: DataPanelRow,
-  ) => (props.onEdit ? props.onEdit(r) : openForm(r));
-  const doView = (
-    r: DataPanelRow,
-  ) => (props.onView ? props.onView(r) : (viewRow.value = r));
+  const doCreate = () => openForm();
+  const doEdit = (r: DataPanelRow) => openForm(r);
+  const doView = (r: DataPanelRow) => {
+    viewRow.value = r;
+  };
 
   // ---- 导出 / 打印 / 导入
   async function fetchAll(): Promise<DataPanelListResult> {
@@ -858,21 +899,163 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
   );
 
   // ---- 工具栏
-  // 与下方按钮组的渲染顺序一致
-  const toolIds = (): string[][] => [
-    ...(caps.create || props.onCreate ? [["dp-create", m.create]] : []),
-    ...(searchDefs.length > 0 ? [["dp-search-toggle", m.search]] : []),
-    ["dp-refresh", m.refresh],
-    ...(caps.print ? [["dp-print", m.print]] : []),
-    ...(caps.import || props.onImportRows ? [["dp-import", m.import]] : []),
-    ...(caps.export ? [["dp-export", m.export]] : []),
-    ...(caps.columns ? [["dp-columns", m.columns]] : []),
-    ...(caps.density ? [["dp-density", m.density]] : []),
-    ...(caps.fullscreen
-      ? [["dp-fullscreen", panelFs.value ? m.exitFullscreen : m.enterFullscreen]]
-      : []),
-    ...(caps.copy ? [["dp-copy", m.copy]] : []),
-  ];
+  // Object.keys write order = display order; undeclared builtins append in TOOLBAR_BUILTINS order.
+  const TB_FALLBACK: Record<ToolbarBuiltin, boolean> = {
+    create: caps.create,
+    batchStatus: caps.batchStatus,
+    search: searchDefs.length > 0,
+    refresh: true,
+    print: caps.print,
+    import: caps.import,
+    export: caps.export,
+    columns: caps.columns,
+    density: caps.density,
+    fullscreen: caps.fullscreen,
+    copy: caps.copy,
+  };
+  type TbSlot =
+    | {
+      kind: "builtin";
+      name: ToolbarBuiltin;
+      disable: boolean;
+      title?: string;
+      label?: string;
+      tone?: ActionTone;
+      action?: () => void;
+    }
+    | {
+      kind: "custom";
+      key: string;
+      disable: boolean;
+      label: unknown;
+      icon?: unknown;
+      title?: string;
+      tone?: ActionTone;
+      action: () => void;
+    };
+
+  /**
+   * Always wrap with Tooltip when content is non-empty.
+   * Callers resolve content via actionTipText: title ?? label ?? builtin ?? key.
+   * 工具栏／操作列 tip 默认 placement=top；Popconfirm 打开时用 `disabled` 压掉同锚点 tip（不挡确认钮）。
+   */
+  const tipWrap = (
+    content: string | undefined,
+    node: unknown,
+    opts?: {
+      placement?: "top" | "bottom";
+      disabled?: boolean | (() => boolean);
+    },
+  ) =>
+    content
+      ? (
+        <Tooltip
+          content={content}
+          placement={opts?.placement ?? "top"}
+          disabled={opts?.disabled}
+        >
+          {node}
+        </Tooltip>
+      )
+      : node;
+
+  const toneActCls = (tone?: ActionTone): string => {
+    if (!tone || tone === "default") return "";
+    // danger keeps legacy dp-act-del (tests / existing styles) plus dp-act-danger
+    if (tone === "danger") return " dp-act-del dp-act-danger";
+    return ` dp-act-${tone}`;
+  };
+
+  const toolbarSlots = (): TbSlot[] => {
+    const slots: TbSlot[] = [];
+    const declared = new Set<string>();
+    for (const key of Object.keys(tbCfg)) {
+      declared.add(key);
+      if (isToolbarBuiltin(key)) {
+        // batchStatus: Record gate only — UI is selection batch bar, not a toolbar icon.
+        if (key === "batchStatus") continue;
+        // Declared: object omit show→true; undefined value → caps (capGate allow).
+        const r = resolveActionCtrl(tbCfg[key], TB_FALLBACK[key]);
+        if (!r.show) continue;
+        slots.push({
+          kind: "builtin",
+          name: key,
+          disable: r.disable,
+          title: r.title,
+          label: r.label,
+          tone: r.tone,
+          action: r.action,
+        });
+        continue;
+      }
+      const raw = tbCfg[key];
+      // assertToolbarConfig already ensured action exists for custom keys
+      if (typeof raw !== "object" || raw === null) continue;
+      const r = resolveActionCtrl(raw, true);
+      if (!r.show) continue;
+      slots.push({
+        kind: "custom",
+        key,
+        disable: r.disable,
+        label: actionDisplayText(key, raw.label, r.title),
+        icon: raw.icon,
+        title: r.title,
+        tone: r.tone,
+        action: r.action!,
+      });
+    }
+    for (const name of TOOLBAR_BUILTINS) {
+      if (declared.has(name)) continue;
+      if (name === "batchStatus") continue; // Record gate only
+      const r = tbResolved(name, TB_FALLBACK[name]);
+      if (!r.show) continue;
+      slots.push({
+        kind: "builtin",
+        name,
+        disable: r.disable,
+        title: r.title,
+        label: r.label,
+        tone: r.tone,
+      });
+    }
+    return slots;
+  };
+
+  const TB_IDS: Record<ToolbarBuiltin, string> = {
+    create: "dp-create",
+    batchStatus: "dp-batch-status",
+    search: "dp-search-toggle",
+    refresh: "dp-refresh",
+    print: "dp-print",
+    import: "dp-import",
+    export: "dp-export",
+    columns: "dp-columns",
+    density: "dp-density",
+    fullscreen: "dp-fullscreen",
+    copy: "dp-copy",
+  };
+  const toolIds = (): string[][] =>
+    toolbarSlots().map((s) => {
+      if (s.kind === "custom") {
+        const label = typeof s.label === "string" ? s.label : s.key;
+        return [`dp-tb-extra-${s.key}`, label];
+      }
+      const labels: Record<ToolbarBuiltin, string> = {
+        create: m.create,
+        batchStatus: m.batchSet.replace("{status}", "…"),
+        search: m.search,
+        refresh: m.refresh,
+        print: m.print,
+        import: m.import,
+        export: m.export,
+        columns: m.columns,
+        density: m.density,
+        fullscreen: panelFs.value ? m.exitFullscreen : m.enterFullscreen,
+        copy: m.copy,
+      };
+      return [TB_IDS[s.name], labels[s.name]];
+    });
+
   const tagToolbar = (): boolean => {
     const root = g.document?.querySelector?.(`[data-dp-tools="${key}"]`);
     if (!root) return false;
@@ -883,16 +1066,15 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
       const b = btns[i];
       b.setAttribute("data-testid", id);
       b.setAttribute("aria-label", label);
-      b.setAttribute("title", label);
+      // 不要 HTML title：与 ui-view Tooltip 叠成双提示
+      b.removeAttribute("title");
     });
     return true;
   };
   onMount(() => {
     if (onServer()) return;
-    // DOM 在挂载后才插入（水合时还会被替换一次）：短暂重试
     for (const ms of [0, 30, 120, 400, 1000]) setTimeout(tagToolbar, ms);
   });
-  // 结构：ButtonGroup.dp-tool-group > Tooltip/Dropdown 包装 > Button。不要在这些按钮外再包一层。
   const posCls = (id: string): string => {
     const ids = toolIds().map((x) => x[0]);
     const i = ids.indexOf(id);
@@ -903,12 +1085,26 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
   };
   const toolBtn = (
     id: string,
-    label: string,
+    messageLabel: string,
     onClick: () => void,
     icon: unknown,
+    disable = false,
+    title?: string,
+    ctrlLabel?: string,
   ) => (
-    <Tooltip content={label} placement="top">
-      <Button type="button" size="sm" class={posCls(id)} onClick={onClick}>
+    <Tooltip
+      content={actionTipText(id, title, ctrlLabel, messageLabel)}
+      placement="top"
+    >
+      <Button
+        type="button"
+        size="sm"
+        class={posCls(id)}
+        disabled={disable}
+        data-testid={id}
+        aria-label={actionTipText(id, title, ctrlLabel, messageLabel)}
+        onClick={onClick}
+      >
         {icon}
       </Button>
     </Tooltip>
@@ -994,113 +1190,167 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
     </div>
   );
 
+  const renderTbBuiltin = (
+    name: ToolbarBuiltin,
+    disable: boolean,
+    action?: () => void,
+    title?: string,
+    label?: string,
+  ) => {
+    switch (name) {
+      case "create":
+        return toolBtn("dp-create", m.create, action ?? doCreate, <IconPlus size="sm" />, disable, title, label);
+      case "search":
+        return toolBtn("dp-search-toggle", m.search, action ?? openSearch, <IconSearch size="sm" />, disable, title, label);
+      case "refresh":
+        return (
+          <Tooltip content={actionTipText("refresh", title, label, m.refresh)} placement="top">
+            <Button
+              type="button"
+              size="sm"
+              class={posCls("dp-refresh")}
+              disabled={loading.value || disable}
+              data-testid="dp-refresh"
+              aria-label={actionTipText("refresh", title, label, m.refresh)}
+              aria-busy={loading.value ? true : undefined}
+              onClick={action ?? (() => void refreshFromToolbar())}
+            >
+              <span class={loading.value ? "inline-flex animate-spin" : "inline-flex"}>
+                <IconRefresh size="sm" />
+              </span>
+            </Button>
+          </Tooltip>
+        );
+      case "print":
+        return toolBtn("dp-print", m.print, action ?? printTable, <IconPrinter size="sm" />, disable, title, label);
+      case "import":
+        return toolBtn("dp-import", m.import, action ?? pickImport, <IconUpload size="sm" />, disable, title, label);
+      case "export":
+        return tipWrap(
+          actionTipText("export", title, label, m.export),
+          <Dropdown overlay={exportMenu} placement="bottomRight" trigger="click">
+            <Button type="button" size="sm" class={posCls("dp-export")} disabled={disable} data-testid="dp-export" aria-label={actionTipText("export", title, label, m.export)}>
+              <IconDownload size="sm" />
+            </Button>
+          </Dropdown>,
+        );
+      case "columns":
+        return tipWrap(
+          actionTipText("columns", title, label, m.columns),
+          <Dropdown
+            overlay={columnMenu}
+            placement="bottomRight"
+            trigger="click"
+            closeOnOverlayClick={false}
+          >
+            <Button type="button" size="sm" class={posCls("dp-columns")} disabled={disable} data-testid="dp-columns" aria-label={actionTipText("columns", title, label, m.columns)}>
+              <IconColumns size="sm" />
+            </Button>
+          </Dropdown>,
+        );
+      case "density":
+        return tipWrap(
+          actionTipText("density", title, label, m.density),
+          (
+          <Dropdown
+            open={densityOpen}
+            onOpenChange={(o) => {
+              densityOpen.value = o;
+            }}
+            overlay={densityMenu}
+            placement="bottomRight"
+            trigger="click"
+            closeOnOverlayClick
+          >
+            <Button type="button" size="sm" class={posCls("dp-density")} disabled={disable} data-testid="dp-density" aria-label={actionTipText("density", title, label, m.density)}>
+              <IconList size="sm" />
+            </Button>
+          </Dropdown>
+          ),
+        );
+      case "fullscreen":
+        return (
+          <Tooltip
+            content={actionTipText(
+              "fullscreen",
+              title,
+              label,
+              panelFs.value ? m.exitFullscreen : m.enterFullscreen,
+            )}
+            placement="top"
+          >
+            <Button
+              type="button"
+              size="sm"
+              class={posCls("dp-fullscreen")}
+              disabled={disable}
+              data-testid="dp-fullscreen"
+              aria-label={actionTipText(
+                "fullscreen",
+                title,
+                label,
+                panelFs.value ? m.exitFullscreen : m.enterFullscreen,
+              )}
+              onClick={toggleFullscreen}
+            >
+              {panelFs.value
+                ? <IconExitFullscreen size="sm" />
+                : <IconMaximize2 size="sm" />}
+            </Button>
+          </Tooltip>
+        );
+      case "copy":
+        return toolBtn(
+          "dp-copy",
+          m.copy,
+          action ?? (() => void copySelected()),
+          <IconCopy size="sm" />,
+          disable,
+          title,
+          label,
+        );
+      case "batchStatus":
+        // Record gate only — rendered in batch bar
+        return null;
+    }
+  };
+
   const toolbar = () => (
     <div
       class="flex w-full flex-wrap items-center justify-end gap-2 border-b border-slate-200 px-3 py-2 dark:border-slate-700"
       data-testid="data-panel-toolbar"
     >
-      {props.toolbarExtra}
       <div class="contents" data-dp-tools={key}>
         <ButtonGroup attached class="dp-tool-group">
-          {(caps.create || props.onCreate) &&
-            toolBtn("dp-create", m.create, doCreate, <IconPlus size="sm" />)}
-          {searchDefs.length > 0 &&
-            toolBtn(
-              "dp-search-toggle",
-              m.search,
-              openSearch,
-              <IconSearch size="sm" />,
-            )}
-          <Tooltip content={m.refresh} placement="top">
-            <Button
-              type="button"
-              size="sm"
-              class={posCls("dp-refresh")}
-              disabled={loading.value}
-              aria-busy={loading.value ? true : undefined}
-              onClick={() => void refreshFromToolbar()}
-            >
-              <span
-                class={loading.value
-                  ? "inline-flex animate-spin"
-                  : "inline-flex"}
-              >
-                <IconRefresh size="sm" />
-              </span>
-            </Button>
-          </Tooltip>
-          {caps.print &&
-            toolBtn("dp-print", m.print, printTable, <IconPrinter size="sm" />)}
-          {(caps.import || props.onImportRows) &&
-            toolBtn(
-              "dp-import",
-              m.import,
-              pickImport,
-              <IconUpload size="sm" />,
-            )}
-          {caps.export && (
-            <Dropdown
-              overlay={exportMenu}
-              placement="bottomRight"
-              trigger="click"
-            >
-              <Button type="button" size="sm" class={posCls("dp-export")}>
-                <IconDownload size="sm" />
-              </Button>
-            </Dropdown>
-          )}
-          {caps.columns && (
-            <Dropdown
-              overlay={columnMenu}
-              placement="bottomRight"
-              trigger="click"
-              closeOnOverlayClick={false}
-            >
-              <Button type="button" size="sm" class={posCls("dp-columns")}>
-                <IconColumns size="sm" />
-              </Button>
-            </Dropdown>
-          )}
-          {caps.density && (
-            <Dropdown
-              open={densityOpen}
-              onOpenChange={(o) => {
-                densityOpen.value = o;
-              }}
-              overlay={densityMenu}
-              placement="bottomRight"
-              trigger="click"
-              closeOnOverlayClick
-            >
-              <Button type="button" size="sm" class={posCls("dp-density")}>
-                <IconList size="sm" />
-              </Button>
-            </Dropdown>
-          )}
-          {caps.fullscreen && (
-            <Tooltip
-              content={panelFs.value ? m.exitFullscreen : m.enterFullscreen}
-              placement="top"
-            >
-              <Button
-                type="button"
-                size="sm"
-                class={posCls("dp-fullscreen")}
-                onClick={toggleFullscreen}
-              >
-                {panelFs.value
-                  ? <IconExitFullscreen size="sm" />
-                  : <IconMaximize2 size="sm" />}
-              </Button>
-            </Tooltip>
-          )}
-          {caps.copy &&
-            toolBtn(
-              "dp-copy",
-              m.copy,
-              () => void copySelected(),
-              <IconCopy size="sm" />,
-            )}
+          {toolbarSlots().map((s) => {
+            if (s.kind === "custom") {
+              const tip = actionTipText(
+                s.key,
+                s.title,
+                typeof s.label === "string" ? s.label : undefined,
+              );
+              const variant = s.tone; // full ColorVariant / ActionTone
+              const btn = (
+                <span
+                  class="inline-flex"
+                  data-testid={`dp-tb-extra-${s.key}`}
+                >
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={variant}
+                    class={posCls(`dp-tb-extra-${s.key}`)}
+                    disabled={s.disable}
+                    onClick={() => s.action()}
+                  >
+                    {s.icon != null ? s.icon : s.label}
+                  </Button>
+                </span>
+              );
+              return tipWrap(tip, btn);
+            }
+            return renderTbBuiltin(s.name, s.disable, s.action, s.title, s.label);
+          })}
         </ButtonGroup>
       </div>
     </div>
@@ -1183,11 +1433,12 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
     </form>
   );
 
-  // ---- 批量条
+  // ---- 批量条（batchStatus 显隐／disable 跟 toolbar.batchStatus）
   const batchBar = () => {
     const ids = selected.value;
     if (!ids.length) return null;
     const sv = props.statusValues ?? [];
+    const bs = batchStatusCtrl();
     return (
       <div
         class="flex flex-wrap items-center gap-2 border-t border-slate-200 bg-sky-50 px-4 py-2 text-sm dark:border-slate-700 dark:bg-slate-800"
@@ -1196,34 +1447,66 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
         <span data-testid="dp-selected-count">
           {tr(m.selected, { n: ids.length })}
         </span>
-        {caps.batchStatus &&
+        {bs.show &&
           sv.map((s) => (
+            <Popconfirm
+              open={() => popStatus.value === s.value}
+              placement="top"
+              title={tr(m.batchStatusAsk, { n: ids.length, status: s.label })}
+              okText={m.confirm}
+              cancelText={m.cancel}
+              overlayClass="dp-pop"
+              onOpenChange={(o: boolean) => {
+                if (!o) popStatus.value = null;
+              }}
+              onConfirm={() => void doSetStatus(ids, s.value)}
+            >
+              <Btn
+                type="button"
+                size="sm"
+                data-testid={`dp-batch-status-${s.value}`}
+                disabled={bs.disable}
+                onClick={() => (popStatus.value = s.value)}
+              >
+                {tr(m.batchSet, { status: s.label })}
+              </Btn>
+            </Popconfirm>
+          ))}
+        {caps.remove && (
+          <Popconfirm
+            open={() => popBatch.value}
+            placement="top"
+            danger
+            title={tr(m.deleteMany, { n: ids.length })}
+            okText={m.delete}
+            cancelText={m.cancel}
+            overlayClass="dp-pop"
+            onOpenChange={(o: boolean) => {
+              if (!o) popBatch.value = false;
+            }}
+            onConfirm={() => void doRemove(ids)}
+          >
             <Btn
               type="button"
               size="sm"
-              data-testid={`dp-batch-status-${s.value}`}
-              onClick={() => askStatus(ids, s.value, s.label)}
+              variant="danger"
+              data-testid="dp-batch-delete"
+              onClick={() => (popBatch.value = true)}
             >
-              {tr(m.batchSet, { status: s.label })}
+              {m.batchDelete}
             </Btn>
-          ))}
-        {caps.remove && (
-          <Btn
-            type="button"
-            size="sm"
-            variant="danger"
-            data-testid="dp-batch-delete"
-            onClick={() => askDelete(ids)}
-          >
-            {m.batchDelete}
-          </Btn>
+          </Popconfirm>
         )}
         <Btn
           type="button"
           size="sm"
           variant="ghost"
           data-testid="dp-batch-clear"
-          onClick={() => (selected.value = [])}
+          onClick={() => {
+            popBatch.value = false;
+            popStatus.value = null;
+            selected.value = [];
+          }}
         >
           {m.clearSelection}
         </Btn>
@@ -1236,7 +1519,9 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
     const custom = props.renderCell?.[c.prop];
     if (custom) return custom(row);
     const raw = row[c.prop];
-    const canEdit = caps.update || !!props.onEdit || statusField === c.prop;
+    // Inline edit: rowActions.edit ?? caps.update; statusField still editable when shown.
+    const canEdit = rowResolved("edit", row, caps.update).show ||
+      statusField === c.prop;
     const isSwitch = c.inline === "switch" && !!c.options &&
       c.options.length === 2;
     if (isSwitch && canEdit) {
@@ -1567,8 +1852,92 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
 
   // ---- 表格
   const offset = () => (query.value.page - 1) * query.value.pageSize;
-  const acts = !!(caps.view || caps.update || caps.remove || props.onEdit ||
-    props.onView || props.rowExtra);
+  // Action column: builtin rowActions ?? caps, plus custom Record keys.
+  const ROW_FALLBACK: Record<RowBuiltin, boolean> = {
+    view: caps.view,
+    edit: caps.update,
+    remove: caps.remove,
+  };
+  const acts = !!(
+    rowMayShow("view", caps.view) ||
+    rowMayShow("edit", caps.update) ||
+    rowMayShow("remove", caps.remove) ||
+    hasCustomRowAction
+  );
+
+  type RowSlot =
+    | {
+      kind: "builtin";
+      name: RowBuiltin;
+      disable: boolean;
+      title?: string;
+      label?: string;
+      tone?: ActionTone;
+      action?: (row: DataPanelRow) => void;
+    }
+    | {
+      kind: "custom";
+      key: string;
+      disable: boolean;
+      label: unknown;
+      icon?: unknown;
+      title?: string;
+      tone?: ActionTone;
+      action: (row: DataPanelRow) => void;
+    };
+
+  /** Row actions: Object.keys write order; undeclared builtins append in ROW_BUILTINS order. */
+  const rowSlots = (r: DataPanelRow): RowSlot[] => {
+    const slots: RowSlot[] = [];
+    const declared = new Set<string>();
+    for (const key of Object.keys(raCfg)) {
+      declared.add(key);
+      if (isRowBuiltin(key)) {
+        // Declared: object omit show→true; undefined value → caps (capGate allow).
+        const res = resolveRowActionCtrl(raCfg[key], r, ROW_FALLBACK[key]);
+        if (!res.show) continue;
+        slots.push({
+          kind: "builtin",
+          name: key,
+          disable: res.disable,
+          title: res.title,
+          label: res.label,
+          tone: res.tone,
+          action: res.action,
+        });
+        continue;
+      }
+      const raw = raCfg[key];
+      if (typeof raw !== "object" || raw === null) continue;
+      const res = resolveRowActionCtrl(raw, r, true);
+      if (!res.show) continue;
+      slots.push({
+        kind: "custom",
+        key,
+        disable: res.disable,
+        label: actionDisplayText(key, res.label, res.title),
+        icon: res.icon,
+        title: res.title,
+        tone: res.tone,
+        action: res.action!,
+      });
+    }
+    for (const name of ROW_BUILTINS) {
+      if (declared.has(name)) continue;
+      const res = rowResolved(name, r, ROW_FALLBACK[name]);
+      if (!res.show) continue;
+      slots.push({
+        kind: "builtin",
+        name,
+        disable: res.disable,
+        title: res.title,
+        label: res.label,
+        tone: res.tone,
+        action: res.action,
+      });
+    }
+    return slots;
+  };
 
   const sortIcon = (prop: string) => {
     const q = query.value;
@@ -1715,63 +2084,133 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
                   {acts && (
                     <td class="whitespace-nowrap border border-slate-200 px-2 py-1.5 text-center dark:border-slate-700">
                       <span class="dp-acts">
-                        {props.rowExtra?.(r)}
-                        {(caps.view || props.onView) && (
-                          <Btn
-                            type="button"
-                            size="sm"
-                            variant="ghost"
-                            class={ICON_BTN}
-                            aria-label={m.view}
-                            data-testid={`dp-view-${idOf(r)}`}
-                            onClick={() => doView(r)}
-                          >
-                            <IconEye size="xs" />
-                          </Btn>
-                        )}
-                        {(caps.update || props.onEdit) && (
-                          <Btn
-                            type="button"
-                            size="sm"
-                            variant="ghost"
-                            class={ICON_BTN}
-                            aria-label={m.edit}
-                            data-testid={`dp-edit-${idOf(r)}`}
-                            onClick={() => doEdit(r)}
-                          >
-                            <IconEdit size="xs" />
-                          </Btn>
-                        )}
-                        {caps.remove && (
-                          <Popconfirm
-                            open={() => popRow.value === idOf(r)}
-                            placement="top"
-                            danger
-                            title={tr(m.deleteAsk, { name: rowName(r) })}
-                            okText={m.delete}
-                            cancelText={m.cancel}
-                            overlayClass="dp-pop"
-                            onOpenChange={(o: boolean) => {
-                              if (!o && popRow.value === idOf(r)) {
-                                popRow.value = null;
-                              }
-                            }}
-                            onConfirm={() => void doRemove([idOf(r)])}
-                          >
-                            <Btn
-                              type="button"
-                              size="sm"
-                              variant="ghost"
-                              class={`${ICON_BTN} dp-act-del`}
-                              {...bool("disabled", isLocked(r))}
-                              aria-label={m.delete}
-                              data-testid={`dp-delete-${idOf(r)}`}
-                              onClick={() => (popRow.value = idOf(r))}
+                        {rowSlots(r).map((s) => {
+                          if (s.kind === "custom") {
+                            const tip = actionTipText(
+                              s.key,
+                              s.title,
+                              typeof s.label === "string" ? s.label : undefined,
+                            );
+                            const aria = typeof s.label === "string"
+                              ? s.label
+                              : s.key;
+                            const btn = (
+                              <Btn
+                                type="button"
+                                size="sm"
+                                variant="ghost"
+                                class={`${ICON_BTN}${toneActCls(s.tone)}`}
+                                disabled={s.disable || isLocked(r)}
+                                aria-label={aria}
+                                data-testid={`dp-row-extra-${s.key}-${idOf(r)}`}
+                                onClick={() => s.action(r)}
+                              >
+                                {s.icon != null ? s.icon : s.label}
+                              </Btn>
+                            );
+                            return tipWrap(tip, btn);
+                          }
+                          if (s.name === "view") {
+                            const run = () =>
+                              (s.action ? s.action(r) : doView(r));
+                            return tipWrap(
+                              actionTipText("view", s.title, s.label, m.view),
+                              <Btn
+                                type="button"
+                                size="sm"
+                                variant="ghost"
+                                class={`${ICON_BTN}${toneActCls(s.tone)}`}
+                                disabled={s.disable}
+                                aria-label={m.view}
+                                data-testid={`dp-view-${idOf(r)}`}
+                                onClick={run}
+                              >
+                                <IconEye size="xs" />
+                              </Btn>,
+                            );
+                          }
+                          if (s.name === "edit") {
+                            const run = () =>
+                              (s.action ? s.action(r) : doEdit(r));
+                            return tipWrap(
+                              actionTipText("edit", s.title, s.label, m.edit),
+                              <Btn
+                                type="button"
+                                size="sm"
+                                variant="ghost"
+                                class={`${ICON_BTN}${toneActCls(s.tone)}`}
+                                disabled={s.disable}
+                                aria-label={m.edit}
+                                data-testid={`dp-edit-${idOf(r)}`}
+                                onClick={run}
+                              >
+                                <IconEdit size="xs" />
+                              </Btn>,
+                            );
+                          }
+                          // remove: custom action → direct; no action → builtin Popconfirm.
+                          const remTone = s.tone ?? "danger";
+                          if (s.action) {
+                            return tipWrap(
+                              actionTipText("remove", s.title, s.label, m.delete),
+                              <Btn
+                                type="button"
+                                size="sm"
+                                variant="ghost"
+                                class={`${ICON_BTN}${toneActCls(remTone)}`}
+                                {...bool(
+                                  "disabled",
+                                  isLocked(r) || s.disable,
+                                )}
+                                aria-label={m.delete}
+                                data-testid={`dp-delete-${idOf(r)}`}
+                                onClick={() => s.action!(r)}
+                              >
+                                <IconTrash size="xs" />
+                              </Btn>,
+                            );
+                          }
+                          return tipWrap(
+                            actionTipText("remove", s.title, undefined, m.delete),
+                            (
+                            <Popconfirm
+                              open={() => popRow.value === idOf(r)}
+                              placement="top"
+                              danger
+                              title={tr(m.deleteAsk, { name: rowName(r) })}
+                              okText={m.delete}
+                              cancelText={m.cancel}
+                              overlayClass="dp-pop"
+                              onOpenChange={(o: boolean) => {
+                                if (!o && popRow.value === idOf(r)) {
+                                  popRow.value = null;
+                                }
+                              }}
+                              onConfirm={() => void doRemove([idOf(r)])}
                             >
-                              <IconTrash size="xs" />
-                            </Btn>
-                          </Popconfirm>
-                        )}
+                              <Btn
+                                type="button"
+                                size="sm"
+                                variant="ghost"
+                                class={`${ICON_BTN}${toneActCls(remTone)}`}
+                                {...bool(
+                                  "disabled",
+                                  isLocked(r) || s.disable,
+                                )}
+                                aria-label={m.delete}
+                                data-testid={`dp-delete-${idOf(r)}`}
+                                onClick={() => (popRow.value = idOf(r))}
+                              >
+                                <IconTrash size="xs" />
+                              </Btn>
+                            </Popconfirm>
+                            ),
+                            {
+                              // Popconfirm open: hide same-anchor Tooltip
+                              disabled: () => popRow.value === idOf(r),
+                            },
+                          );
+                        })}
                       </span>
                     </td>
                   )}
@@ -2204,50 +2643,6 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
         onClose={() => (viewRow.value = null)}
         // deno-lint-ignore jsx-no-children-prop
         children={viewBody}
-      />
-      <Modal
-        open={() => confirm.value !== null}
-        title={() => confirm.value?.title ?? ""}
-        width="sm"
-        keyboard
-        destroyOnClose
-        onClose={() => (confirm.value = null)}
-        // deno-lint-ignore jsx-no-children-prop
-        children={() => (
-          <div data-testid="dp-confirm">
-            <p class="mb-5 text-sm" data-testid="dp-confirm-text">
-              {confirm.value?.text}
-            </p>
-            <div class="flex justify-end gap-2">
-              <Btn
-                type="button"
-                data-testid="dp-confirm-cancel"
-                onClick={() => (confirm.value = null)}
-              >
-                {m.cancel}
-              </Btn>
-              <Btn
-                type="button"
-                variant={confirm.value?.danger ? "danger" : "primary"}
-                loading={confirmBusy.value}
-                data-testid="dp-confirm-ok"
-                onClick={async () => {
-                  const c = confirm.value;
-                  if (!c || confirmBusy.value) return;
-                  confirmBusy.value = true;
-                  try {
-                    await c.run();
-                  } finally {
-                    confirmBusy.value = false;
-                    confirm.value = null;
-                  }
-                }}
-              >
-                {confirm.value?.okText}
-              </Btn>
-            </div>
-          </div>
-        )}
       />
     </div>
   );

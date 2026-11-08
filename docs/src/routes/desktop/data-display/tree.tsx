@@ -10,6 +10,8 @@ import {
   DocsApiTable,
   type DocsApiTableRow,
 } from "../../../components/DocsApiTable.tsx";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
+import { MESSAGES_TREE } from "../../../data/component-messages-rows.ts";
 
 const API: DocsApiTableRow[] = [
   { name: "treeData", type: "TreeNode[]", default: "-", description: "树数据" },
@@ -66,6 +68,13 @@ const API: DocsApiTableRow[] = [
   { name: "onSelect", type: "(keys, info) => void", default: "-", description: "选中变化" },
   { name: "onCheck", type: "(keys) => void", default: "-", description: "勾选变化" },
   { name: "class", type: "string", default: "-", description: "容器 class" },
+  {
+    name: "messages",
+    type: "Partial<TreeMessages>",
+    default: "-",
+    description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
+  },
+
 ];
 
 const importCode = `import { createSignal } from "@dreamer/view";
@@ -321,6 +330,12 @@ export default function Page() {
           <CodeBlock code={exampleBlock} language="tsx" />
         </div>
       </section>
+
+      <DocsMessagesSection
+        interfaceName="TreeMessages"
+        defaultExportName="defaultTreeMessages"
+        rows={MESSAGES_TREE}
+      />
 
       <section class="space-y-3">
         <Title level={2}>API</Title>

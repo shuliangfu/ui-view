@@ -11,6 +11,15 @@ import {
 } from "../form/maybe-signal.ts";
 import { qrMatrix } from "./qrcode-matrix.ts";
 
+export interface QRCodeMessages {
+  /** 无障碍说明；显式 `aria-label` 优先 */
+  label: string;
+}
+
+export const defaultQRCodeMessages: QRCodeMessages = {
+  label: "二维码",
+};
+
 export interface QRCodeProps {
   /** 编码内容 */
   value: MaybeSignal<string>;
@@ -24,19 +33,25 @@ export interface QRCodeProps {
   includeMargin?: boolean;
   /** 额外 class */
   class?: string;
-  /** 无障碍说明 */
+  /** 无障碍说明；优先于 messages.label */
   "aria-label"?: string;
+  messages?: Partial<QRCodeMessages>;
 }
 
 export function QRCode(props: QRCodeProps): JSXRenderable {
+  const m: QRCodeMessages = {
+    ...defaultQRCodeMessages,
+    ...(props.messages ?? {}),
+  };
   const {
     size = 128,
     color = "#0f172a",
     bgColor = "#ffffff",
     includeMargin = true,
     class: className,
-    "aria-label": ariaLabel = "二维码",
+    "aria-label": ariaLabelProp,
   } = props;
+  const ariaLabel = ariaLabelProp ?? m.label;
 
   const matrix = createMemo(() => {
     const v = readMaybeSignal(props.value) ?? "";

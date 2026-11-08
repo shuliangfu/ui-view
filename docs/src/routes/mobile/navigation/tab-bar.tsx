@@ -244,11 +244,11 @@ export default function MobileTabBarDoc() {
       </section>
 
       <section class="space-y-6">
-        <DocsMessagesSection
-          interfaceName="TabBarMessages"
-          defaultExportName="defaultTabBarMessages"
-          rows={MESSAGES_TAB_BAR}
-        />
+      <DocsMessagesSection
+        interfaceName="TabBarMessages"
+        defaultExportName="defaultTabBarMessages"
+        rows={MESSAGES_TAB_BAR}
+      />
 
         <Title level={2}>API</Title>
         <div class="space-y-3">

@@ -130,12 +130,13 @@ export async function writeDataPanelPrefs(
 
 /**
  * Button 不转发 `data-testid` / `aria-label`：给外层 span 打标，既有稳定的 E2E 选择器，也有可访问名称。
+ * 不用 HTML `title`（避免与外层 Tooltip 双提示）；可访问名用 aria-label。
  */
 // deno-lint-ignore no-explicit-any
 export function Btn(props: any) {
   const { "data-testid": testid, "aria-label": label, ...rest } = props;
   return (
-    <span class="inline-flex" data-testid={testid} title={label}>
+    <span class="inline-flex" data-testid={testid} aria-label={label}>
       <Button {...rest} />
     </span>
   );
@@ -208,11 +209,23 @@ export const DATA_PANEL_CSS = `
 .dp-act [role="img"] { width: 1rem !important; height: 1rem !important; }
 .dp-act { background: transparent !important; border: 0 !important; box-shadow: none !important; padding: 2px !important; min-width: 0 !important; border-radius: 4px; color: #64748b !important; line-height: 1; cursor: pointer; transition: color 0.15s ease; }
 .dp-act:hover:not(:disabled) { background: transparent !important; border: 0 !important; color: #2563eb !important; }
-.dp-act-del:hover:not(:disabled) { color: #dc2626 !important; }
+.dp-act-del:hover:not(:disabled), .dp-act-danger:hover:not(:disabled) { color: #dc2626 !important; }
+.dp-act-primary:hover:not(:disabled) { color: #1d4ed8 !important; }
+.dp-act-secondary:hover:not(:disabled) { color: #475569 !important; }
+.dp-act-success:hover:not(:disabled) { color: #16a34a !important; }
+.dp-act-warning:hover:not(:disabled) { color: #d97706 !important; }
+.dp-act-ghost:hover:not(:disabled) { color: #334155 !important; }
+.dp-act-default:hover:not(:disabled) { color: #2563eb !important; }
 .dp-act:disabled { opacity: 0.4; color: #94a3b8 !important; cursor: not-allowed !important; }
 .dark .dp-act { color: #94a3b8 !important; }
 .dark .dp-act:hover:not(:disabled) { color: #60a5fa !important; }
-.dark .dp-act-del:hover:not(:disabled) { color: #f87171 !important; }
+.dark .dp-act-del:hover:not(:disabled), .dark .dp-act-danger:hover:not(:disabled) { color: #f87171 !important; }
+.dark .dp-act-primary:hover:not(:disabled) { color: #93c5fd !important; }
+.dark .dp-act-secondary:hover:not(:disabled) { color: #cbd5e1 !important; }
+.dark .dp-act-success:hover:not(:disabled) { color: #4ade80 !important; }
+.dark .dp-act-warning:hover:not(:disabled) { color: #fbbf24 !important; }
+.dark .dp-act-ghost:hover:not(:disabled) { color: #e2e8f0 !important; }
+.dark .dp-act-default:hover:not(:disabled) { color: #60a5fa !important; }
 .dark .dp-act:disabled { color: #64748b !important; }
 .dark .dp-card { background: var(--dp-panel-body-bg, #18212f) !important; }
 .dp-den-compact td, .dp-den-compact th { padding-top: 0.25rem !important; padding-bottom: 0.25rem !important; }

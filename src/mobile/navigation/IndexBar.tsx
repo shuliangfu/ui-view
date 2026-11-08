@@ -20,6 +20,15 @@ export interface IndexBarItem {
   children?: unknown;
 }
 
+export interface IndexBarMessages {
+  /** 索引条 nav aria-label */
+  nav: string;
+}
+
+export const defaultIndexBarMessages: IndexBarMessages = {
+  nav: "索引",
+};
+
 export interface IndexBarProps {
   items: IndexBarItem[];
   class?: string;
@@ -27,10 +36,15 @@ export interface IndexBarProps {
   sidebarClass?: string;
   /** 点击索引／滚动联动时回调 */
   onSelect?: (index: string) => void;
+  messages?: Partial<IndexBarMessages>;
 }
 
 export function IndexBar(props: IndexBarProps): JSXRenderable {
   const { items, class: className, sidebarClass, onSelect } = props;
+  const m: IndexBarMessages = {
+    ...defaultIndexBarMessages,
+    ...(props.messages ?? {}),
+  };
   const active = createSignal(items[0]?.index ?? "");
   const panelRefs = new Map<string, HTMLElement>();
   let listEl: HTMLElement | null = null;
@@ -110,7 +124,7 @@ export function IndexBar(props: IndexBarProps): JSXRenderable {
           sidebarClass,
         )}
         role="navigation"
-        aria-label="索引"
+        aria-label={m.nav}
       >
         {items.map((it) => (
           <button

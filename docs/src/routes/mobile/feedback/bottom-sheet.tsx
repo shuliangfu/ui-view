@@ -246,11 +246,11 @@ export default function MobileBottomSheetDoc() {
       </section>
 
       <section class="space-y-4">
-        <DocsMessagesSection
-          interfaceName="BottomSheetMessages"
-          defaultExportName="defaultBottomSheetMessages"
-          rows={MESSAGES_BOTTOM_SHEET}
-        />
+      <DocsMessagesSection
+        interfaceName="BottomSheetMessages"
+        defaultExportName="defaultBottomSheetMessages"
+        rows={MESSAGES_BOTTOM_SHEET}
+      />
 
         <Title level={2}>API</Title>
         <Paragraph class="text-sm text-slate-600 dark:text-slate-400">

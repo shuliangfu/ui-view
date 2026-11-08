@@ -3,12 +3,12 @@
  * 三者在有 `document.body` 且**列表非空**时才 `createPortal` 挂到 `body`（避免空列表时残留 `view-portal` 包装节点）；
  * 纯 SSR 无 `body` 时回退为根内 getter；Portal 内 getter 读各 `*List()` 以订阅模块级列表。
  */
-export { ToastContainer } from "./Toast.tsx";
+export { ToastContainer, defaultToastMessages } from "./Toast.tsx";
 export { toast } from "./toast-store.ts";
 export type { ToastItem, ToastPlacement, ToastType } from "./toast-store.ts";
 export { clearToasts, removeToast } from "./toast-store.ts";
 
-export { MessageContainer } from "./Message.tsx";
+export { MessageContainer, defaultMessageMessages } from "./Message.tsx";
 export { message } from "./message-store.ts";
 export type {
   MessageItem,
@@ -17,7 +17,11 @@ export type {
 } from "./message-store.ts";
 export { clearMessages, removeMessage } from "./message-store.ts";
 
-export { NotificationContainer } from "./Notification.tsx";
+export {
+  NotificationContainer,
+  defaultNotificationMessages,
+} from "./Notification.tsx";
+export type { NotificationMessages } from "./Notification.tsx";
 export { notification } from "./notification-store.ts";
 export type {
   NotificationItem,
@@ -55,10 +59,10 @@ export type {
   ProgressType,
 } from "./Progress.tsx";
 
-export { Result } from "./Result.tsx";
+export { Result, defaultResultMessages } from "./Result.tsx";
 export type { ResultProps, ResultStatus } from "./Result.tsx";
 
-export { Overlay } from "./Overlay.tsx";
+export { Overlay, defaultOverlayMessages } from "./Overlay.tsx";
 export type { OverlayProps } from "./Overlay.tsx";
 
 export { NoticeBar } from "./NoticeBar.tsx";
@@ -72,3 +76,5 @@ export { defaultNoticeBarMessages } from "./NoticeBar.tsx";
 export { Tour } from "./Tour.tsx";
 export type { TourMessages, TourProps, TourStep } from "./Tour.tsx";
 export { defaultTourMessages } from "./Tour.tsx";
+export type { MessageContainerProps } from "./Message.tsx";
+export type { ToastContainerProps } from "./Toast.tsx";

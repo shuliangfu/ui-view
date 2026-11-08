@@ -10,6 +10,8 @@ import {
   DocsApiTable,
   type DocsApiTableRow,
 } from "../../../components/DocsApiTable.tsx";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
+import { MESSAGES_NOTICE_BAR } from "../../../data/component-messages-rows.ts";
 
 const API: DocsApiTableRow[] = [
   { name: "content", type: "unknown", default: "-", description: "文案" },
@@ -22,6 +24,13 @@ const API: DocsApiTableRow[] = [
   { name: "scrollable", type: "boolean", default: "false", description: "长文横向滚动" },
   { name: "onClick", type: "() => void", default: "-", description: "整条点击" },
   { name: "class", type: "string", default: "-", description: "额外 class" },
+  {
+    name: "messages",
+    type: "Partial<NoticeBarMessages>",
+    default: "-",
+    description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
+  },
+
 ];
 
 const importCode = `import { NoticeBar } from "@dreamer/ui-view/feedback";
@@ -158,6 +167,12 @@ export default function Page() {
           <CodeBlock title="代码示例" code={exampleIconClick} language="tsx" showLineNumbers copyable wrapLongLines />
         </div>
       </section>
+      <DocsMessagesSection
+        interfaceName="NoticeBarMessages"
+        defaultExportName="defaultNoticeBarMessages"
+        rows={MESSAGES_NOTICE_BAR}
+      />
+
       <section class="space-y-3">
         <Title level={2}>API</Title>
         <DocsApiTable rows={API} />

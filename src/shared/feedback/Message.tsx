@@ -66,10 +66,26 @@ function MessageItemEl({ item }: { item: MessageItem }) {
 /** 与 Toast/Notification 同级最高层级 */
 const MESSAGE_Z_INDEX = 2147483647;
 
+export interface MessageMessages {
+  /** 有待展示条目时容器 live region 的 aria-label */
+  liveRegion: string;
+}
+
+export const defaultMessageMessages: MessageMessages = {
+  liveRegion: "消息提示",
+};
+
+export interface MessageContainerProps {
+  /** 多语言／自定义文案；正文仍由 message.success/error/… 的 content 传入 */
+  messages?: Partial<MessageMessages>;
+}
+
 /**
  * 浮层 VNode：在 Portal getter 或 SSR 回退内读 `messageList()` 以订阅列表。
  */
-function renderMessageOverlay(): JSXRenderable {
+function renderMessageOverlay(
+  messages: MessageMessages = defaultMessageMessages,
+): JSXRenderable {
   const list = messageList();
   if (list.length === 0) return null;
   const byPlacement = new Map<MessagePlacement, MessageItem[]>();
@@ -83,6 +99,7 @@ function renderMessageOverlay(): JSXRenderable {
       class="fixed inset-0 pointer-events-none flex flex-col"
       style={{ zIndex: MESSAGE_Z_INDEX }}
       aria-live="polite"
+      aria-label={messages.liveRegion}
     >
       {MESSAGE_PLACEMENTS.map((placement) => {
         const items = byPlacement.get(placement) ?? [];
@@ -132,7 +149,11 @@ function renderMessageOverlay(): JSXRenderable {
 /**
  * Message 容器：有 `body` 时 Portal 挂 `body`；无 `body` 时回退根内 getter。
  */
-export function MessageContainer(): JSXRenderable {
+export function MessageContainer(props: MessageContainerProps = {}): JSXRenderable {
+  const m: MessageMessages = {
+    ...defaultMessageMessages,
+    ...(props.messages ?? {}),
+  };
   /**
    * 仅在有待展示条目时创建 Portal，避免列表为空时 `body` 下残留空 `view-portal` 包装（与 Toast 同向）。
    */
@@ -140,7 +161,7 @@ export function MessageContainer(): JSXRenderable {
     const host = getBrowserBodyPortalHost();
     if (host == null) return;
     if (messageList().length === 0) return;
-    const root = createPortal(() => renderMessageOverlay(), host);
+    const root = createPortal(() => renderMessageOverlay(m), host);
     onCleanup(() => {
       root.unmount();
     });
@@ -156,5 +177,5 @@ export function MessageContainer(): JSXRenderable {
       />
     );
   }
-  return () => renderMessageOverlay();
+  return () => renderMessageOverlay(m);
 }

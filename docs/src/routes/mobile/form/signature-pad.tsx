@@ -9,12 +9,21 @@ import {
   DocsApiTable,
   type DocsApiTableRow,
 } from "../../../components/DocsApiTable.tsx";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
+import { MESSAGES_SIGNATURE_PAD } from "../../../data/component-messages-rows.ts";
 import { MobileDocDemo } from "../../../components/MobileDocDemo.tsx";
 
 const API: DocsApiTableRow[] = [
   { name: "height", type: "number", default: "180", description: "高度" },
   { name: "penColor", type: "string", default: "#0f172a", description: "笔色" },
-  { name: "onChange", type: "(dataUrl|null)=>void", default: "-", description: "变更" }
+  { name: "onChange", type: "(dataUrl|null)=>void", default: "-", description: "变更" },
+  {
+    name: "messages",
+    type: "Partial<SignaturePadMessages>",
+    default: "-",
+    description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
+  },
+
 ];
 
 const importCode = `import { SignaturePad } from "@dreamer/ui-view/mobile/form/signature-pad";
@@ -45,6 +54,12 @@ export default function Page() {
         </MobileDocDemo>
         <CodeBlock title="代码示例" code={exampleDemo} language="tsx" showLineNumbers copyable wrapLongLines />
       </section>
+      <DocsMessagesSection
+        interfaceName="SignaturePadMessages"
+        defaultExportName="defaultSignaturePadMessages"
+        rows={MESSAGES_SIGNATURE_PAD}
+      />
+
       <section class="space-y-3">
         <Title level={2}>API</Title>
         <DocsApiTable rows={API} />

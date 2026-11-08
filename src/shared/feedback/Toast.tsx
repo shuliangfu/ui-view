@@ -48,10 +48,26 @@ function ToastItemEl({ item }: { item: ToastItem }) {
   );
 }
 
+export interface ToastMessages {
+  /** 有待展示条目时容器 live region 的 aria-label */
+  liveRegion: string;
+}
+
+export const defaultToastMessages: ToastMessages = {
+  liveRegion: "轻提示",
+};
+
+export interface ToastContainerProps {
+  /** 多语言／自定义文案；正文仍由 toast.success/error/… 的 content 传入 */
+  messages?: Partial<ToastMessages>;
+}
+
 /**
  * 浮层 VNode：在 Portal getter 或 SSR 回退 getter 内调用，读 `toastList()` 以订阅列表。
  */
-function renderToastOverlay(): JSXRenderable {
+function renderToastOverlay(
+  messages: ToastMessages = defaultToastMessages,
+): JSXRenderable {
   const list = toastList();
   if (list.length === 0) return null;
   const byPlacement = new Map<string, ToastItem[]>();
@@ -66,6 +82,7 @@ function renderToastOverlay(): JSXRenderable {
       class="fixed inset-0 pointer-events-none flex flex-col"
       style={{ zIndex: 2147483647 }}
       aria-live="polite"
+      aria-label={messages.liveRegion}
     >
       {PLACEMENTS.map((placement) => {
         const items = byPlacement.get(placement) ?? [];
@@ -137,7 +154,11 @@ function renderToastOverlay(): JSXRenderable {
 /**
  * Toast 容器：有 `body` 时内容经 Portal 挂到 `body`；纯 SSR 无 `body` 时回退为根内 getter。
  */
-export function ToastContainer(): JSXRenderable {
+export function ToastContainer(props: ToastContainerProps = {}): JSXRenderable {
+  const m: ToastMessages = {
+    ...defaultToastMessages,
+    ...(props.messages ?? {}),
+  };
   /**
    * 仅在有待展示条目时创建 Portal：`createPortal` 会立刻在 `body` 下插入包装节点，
    * 若首帧即 `createPortal` 而 `renderToastOverlay` 为 null，会留下空 `view-portal` div。
@@ -146,7 +167,7 @@ export function ToastContainer(): JSXRenderable {
     const host = getBrowserBodyPortalHost();
     if (host == null) return;
     if (toastList().length === 0) return;
-    const root = createPortal(() => renderToastOverlay(), host);
+    const root = createPortal(() => renderToastOverlay(m), host);
     onCleanup(() => {
       root.unmount();
     });
@@ -162,5 +183,5 @@ export function ToastContainer(): JSXRenderable {
       />
     );
   }
-  return () => renderToastOverlay();
+  return () => renderToastOverlay(m);
 }

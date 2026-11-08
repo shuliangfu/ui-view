@@ -7,10 +7,21 @@ import type { SizeVariant } from "../../shared/types.ts";
 import type { JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 
+export interface SpinnerMessages {
+  /** role=status 的 aria-label */
+  loading: string;
+}
+
+export const defaultSpinnerMessages: SpinnerMessages = {
+  loading: "Loading",
+};
+
 export interface SpinnerProps {
   size?: SizeVariant;
   /** 额外 class */
   class?: string;
+  /** 多语言／自定义文案；未传字段走 {@link defaultSpinnerMessages} */
+  messages?: Partial<SpinnerMessages>;
 }
 
 const sizeClasses: Record<SizeVariant, string> = {
@@ -22,13 +33,17 @@ const sizeClasses: Record<SizeVariant, string> = {
 
 export function Spinner(props: SpinnerProps): JSXRenderable {
   const { size = "md", class: className } = props;
+  const m: SpinnerMessages = {
+    ...defaultSpinnerMessages,
+    ...(props.messages ?? {}),
+  };
   const base =
     "inline-block rounded-full border-current border-t-transparent animate-spin motion-reduce:animate-none text-blue-600 dark:text-blue-400";
   return (
     <span
       class={twMerge(base, sizeClasses[size], className)}
       role="status"
-      aria-label="Loading"
+      aria-label={m.loading}
     />
   );
 }

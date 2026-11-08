@@ -24,6 +24,15 @@ export interface FloatButtonItem {
   badge?: number | boolean;
 }
 
+export interface FloatButtonMessages {
+  /** 主按钮无障碍标签；显式 `aria-label` 优先 */
+  label: string;
+}
+
+export const defaultFloatButtonMessages: FloatButtonMessages = {
+  label: "悬浮按钮",
+};
+
 export interface FloatButtonProps {
   /** 主按钮内容 */
   icon?: unknown;
@@ -42,8 +51,9 @@ export interface FloatButtonProps {
    * @default "fixed"
    */
   position?: "fixed" | "absolute";
-  /** 主按钮 aria-label */
+  /** 主按钮 aria-label；优先于 messages.label */
   "aria-label"?: string;
+  messages?: Partial<FloatButtonMessages>;
   /** 徽标 */
   badge?: number | boolean;
   class?: string;
@@ -96,6 +106,10 @@ function BadgeDot(props: { badge?: number | boolean }) {
 }
 
 export function FloatButton(props: FloatButtonProps): JSXRenderable {
+  const m: FloatButtonMessages = {
+    ...defaultFloatButtonMessages,
+    ...(props.messages ?? {}),
+  };
   const {
     icon = "+",
     onClick,
@@ -109,8 +123,9 @@ export function FloatButton(props: FloatButtonProps): JSXRenderable {
     class: className,
     offset = 24,
     zIndex = 280,
-    "aria-label": ariaLabel = "悬浮按钮",
+    "aria-label": ariaLabelProp,
   } = props;
+  const ariaLabel = ariaLabelProp ?? m.label;
 
   const innerOpen = createSignal(false);
   const hasMenu = (items?.length ?? 0) > 0;

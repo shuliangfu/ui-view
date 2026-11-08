@@ -42,6 +42,8 @@ export interface TourMessages {
   prev: string;
   finish: string;
   skip: string;
+  /** 无 step.title 时浮层 aria-label */
+  guide: string;
 }
 
 export const defaultTourMessages: TourMessages = {
@@ -49,6 +51,7 @@ export const defaultTourMessages: TourMessages = {
   prev: "上一步",
   finish: "完成",
   skip: "跳过",
+  guide: "功能引导",
 };
 
 export interface TourProps {
@@ -277,7 +280,7 @@ export function Tour(props: TourProps): JSXRenderable {
         aria-modal="true"
         aria-labelledby={step.title != null ? titleId : undefined}
         aria-describedby={step.description != null ? descId : undefined}
-        aria-label={step.title == null ? "功能引导" : undefined}
+        aria-label={step.title == null ? m.guide : undefined}
         data-dreamer-tour="root"
       >
         {/* 全屏拦截：挡住页面触发钮；视觉变暗由高亮 box-shadow 承担 */}

@@ -264,11 +264,11 @@ export default function MobilePullRefreshDoc() {
       </section>
 
       <section class="space-y-4">
-        <DocsMessagesSection
-          interfaceName="PullRefreshMessages"
-          defaultExportName="defaultPullRefreshMessages"
-          rows={MESSAGES_PULL_REFRESH}
-        />
+      <DocsMessagesSection
+        interfaceName="PullRefreshMessages"
+        defaultExportName="defaultPullRefreshMessages"
+        rows={MESSAGES_PULL_REFRESH}
+      />
 
         <Title level={2}>API</Title>
         <DocsApiTable rows={PULL_REFRESH_API} />

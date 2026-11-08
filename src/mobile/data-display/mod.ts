@@ -43,7 +43,13 @@ export {
   type CollapseProps,
 } from "./Collapse.tsx";
 export { Carousel, type CarouselProps } from "./Carousel.tsx";
-export { Tree, type TreeNode, type TreeProps } from "./Tree.tsx";
+export {
+  Tree,
+  defaultTreeMessages,
+  type TreeMessages,
+  type TreeNode,
+  type TreeProps,
+} from "./Tree.tsx";
 export {
   Calendar,
   type CalendarDaySelectionMode,
@@ -64,6 +70,6 @@ export {
 
 export { Watermark, type WatermarkProps } from "./Watermark.tsx";
 export { CountDown, type CountDownProps, type CountDownTimeParts } from "./CountDown.tsx";
-export { QRCode, type QRCodeProps } from "./QRCode.tsx";
+export { QRCode, type QRCodeProps, defaultQRCodeMessages } from "./QRCode.tsx";
 export { VirtualList, type VirtualListProps } from "./VirtualList.tsx";
 export { Cell, CellGroup, type CellGroupProps, type CellProps } from "./Cell.tsx";

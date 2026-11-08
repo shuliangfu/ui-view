@@ -21,13 +21,36 @@ export type ResultStatus =
   | "403"
   | "404";
 
+export interface ResultMessages {
+  /** status=success 且未传 title 时的默认主标题 */
+  success: string;
+  error: string;
+  info: string;
+  warning: string;
+  /** status=403 */
+  forbidden: string;
+  /** status=404 */
+  notFound: string;
+}
+
+export const defaultResultMessages: ResultMessages = {
+  success: "成功",
+  error: "失败",
+  info: "提示",
+  warning: "警告",
+  forbidden: "403",
+  notFound: "404",
+};
+
 export interface ResultProps {
   /** 结果状态，决定默认图标与配色 */
   status?: ResultStatus;
-  /** 主标题 */
+  /** 主标题；缺省时用 messages 对应 status 文案 */
   title?: string;
   /** 副标题/描述 */
   subTitle?: string;
+  /** 多语言／自定义文案；未传字段走 {@link defaultResultMessages} */
+  messages?: Partial<ResultMessages>;
   /** 自定义图标（覆盖 status 默认图标） */
   icon?: unknown;
   /** 操作区（如按钮组），渲染在副标题下方 */
@@ -66,6 +89,19 @@ export function Result(props: ResultProps): JSXRenderable {
     children,
     class: className,
   } = props;
+  const m: ResultMessages = {
+    ...defaultResultMessages,
+    ...(props.messages ?? {}),
+  };
+  const statusTitle: Record<ResultStatus, string> = {
+    success: m.success,
+    error: m.error,
+    info: m.info,
+    warning: m.warning,
+    "403": m.forbidden,
+    "404": m.notFound,
+  };
+  const displayTitle = title != null && title !== "" ? title : statusTitle[status];
 
   const IconComponent = statusIconMap[status];
   const iconCls = statusIconClasses[status];
@@ -93,9 +129,9 @@ export function Result(props: ResultProps): JSXRenderable {
             <IconComponent class="w-full h-full" />
           </span>
         )}
-      {title != null && title !== "" && (
+      {displayTitle != null && displayTitle !== "" && (
         <h2 class="text-xl font-semibold text-slate-900 dark:text-slate-100 mb-2">
-          {title}
+          {displayTitle}
         </h2>
       )}
       {subTitle != null && subTitle !== "" && (

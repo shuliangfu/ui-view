@@ -10,6 +10,8 @@ import {
   DocsApiTable,
   type DocsApiTableRow,
 } from "../../../components/DocsApiTable.tsx";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
+import { MESSAGES_TOUR } from "../../../data/component-messages-rows.ts";
 
 const API: DocsApiTableRow[] = [
   { name: "open", type: "ControlledOpenInput", default: "-", description: "是否打开（传 Signal）" },
@@ -20,6 +22,13 @@ const API: DocsApiTableRow[] = [
   { name: "onFinish", type: "() => void", default: "-", description: "完成" },
   { name: "showSkip", type: "boolean", default: "true", description: "显示跳过" },
   { name: "keyboard", type: "boolean", default: "true", description: "Esc 关闭" },
+  {
+    name: "messages",
+    type: "Partial<TourMessages>",
+    default: "-",
+    description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
+  },
+
 ];
 
 const importCode = `import { createSignal } from "@dreamer/view";
@@ -247,6 +256,12 @@ export default function Page() {
 
         </div>
       </section>
+      <DocsMessagesSection
+        interfaceName="TourMessages"
+        defaultExportName="defaultTourMessages"
+        rows={MESSAGES_TOUR}
+      />
+
       <section class="space-y-3">
         <Title level={2}>API</Title>
         <DocsApiTable rows={API} />
