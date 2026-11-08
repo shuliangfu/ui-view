@@ -2280,7 +2280,7 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
     const pbtn = "min-w-8 rounded border px-2 py-1 text-sm disabled:opacity-40";
     return (
       <div
-        class="flex flex-wrap items-center justify-between gap-3 px-3 py-3 text-sm"
+        class="dp-pg flex flex-wrap items-center justify-between gap-3 px-3 py-3 text-sm"
         data-testid="dp-pagination"
       >
         <span data-testid="dp-range">
@@ -2610,7 +2610,7 @@ export function DataPanel(props: DataPanelProps): JSXRenderable {
       >
         {toolbar}
         {/* 固定插槽：响应式子节点插在静态兄弟之后会落到卡片底部；批量条在表格下方，选中行不会把表格顶下去 */}
-        <div class="px-2.5 py-2.5">{table}</div>
+        <div class="dp-table-wrap px-2.5 py-2.5">{table}</div>
         <div data-testid="dp-batch-slot">{batchBar}</div>
         {pagination}
       </Card>

@@ -238,6 +238,23 @@ export const DATA_PANEL_CSS = `
 }
 .dark .dp-fs { background: #0f172a !important; }
 .dp-fs .dp-card { border-radius: 0 !important; min-height: calc(100vh - 1.5rem) !important; }
+/* Mobile: zero top/left/right margin+padding on the table card; keep bottom spacing. */
+@media (max-width: 639.98px) {
+  .dp-card {
+    margin-top: 0 !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+  .dp-table-wrap {
+    padding-top: 0 !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+  .dp-pg {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+}
 `;
 
 // ---------------------------------------------------------------- component

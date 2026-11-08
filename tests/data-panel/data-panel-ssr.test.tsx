@@ -164,6 +164,21 @@ describe("DataPanel SSR：布尔属性与转义", () => {
     expect(DATA_PANEL_CSS).toContain("oklch(27.9% 0.041 260.031) 60%");
   });
 
+  it("移动端断点：卡片上／左／右外边距与表格区上／左／右内边距为 0（底边保留）", () => {
+    expect(DATA_PANEL_CSS).toContain("@media (max-width: 639.98px)");
+    expect(DATA_PANEL_CSS).toContain(".dp-table-wrap");
+    expect(DATA_PANEL_CSS).toContain("padding-top: 0 !important");
+    expect(DATA_PANEL_CSS).toContain("padding-left: 0 !important");
+    expect(DATA_PANEL_CSS).toContain("padding-right: 0 !important");
+    expect(DATA_PANEL_CSS).toContain("margin-top: 0 !important");
+    expect(DATA_PANEL_CSS).toContain("margin-left: 0 !important");
+    expect(DATA_PANEL_CSS).toContain("margin-right: 0 !important");
+    // 底边不在移动规则里清零（保留 py-2.5 / 桌面间距）
+    expect(DATA_PANEL_CSS).not.toMatch(
+      /@media \(max-width: 639\.98px\)[^{]*\{[^}]*padding-bottom:\s*0/,
+    );
+  });
+
   it("SSR 输出的 <style> 里选择器未被转义", async () => {
     const h = await html();
     const m = /<style>([\s\S]*?)<\/style>/.exec(h)!;
@@ -348,6 +363,8 @@ describe("DataPanel SSR：文案与自定义", () => {
     expect(off).not.toContain('data-testid="data-panel-toolbar"');
     expect(off).toContain('data-testid="dp-table"');
     expect(off).toContain('data-testid="dp-pagination"');
+    expect(off).toContain("dp-table-wrap");
+    expect(off).toContain("dp-pg");
     const on = await html({});
     expect(on).toContain('data-testid="data-panel-toolbar"');
     const rec = await html({ toolbar: { refresh: true, print: false } });

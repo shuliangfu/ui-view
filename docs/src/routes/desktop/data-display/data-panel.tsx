@@ -205,7 +205,7 @@ const DATA_PANEL_API: DocsApiTableRow[] = [
     name: "class",
     type: "string",
     default: "-",
-    description: "额外 class（加在卡片上）",
+    description: "额外 class（加在卡片上）。移动端（max-width: 639.98px）自带：卡片 margin-top/left/right=0，.dp-table-wrap padding-top/left/right=0，.dp-pg padding-left/right=0；底边与桌面间距保留",
   },
   {
     name: "children",
@@ -855,7 +855,7 @@ export default function DataDisplayDataPanel() {
             toolbar={false}
           />
           <p class="mt-2 text-xs text-slate-500" data-testid="demo-toolbar-off-hint">
-            toolbar=false 时整栏工具栏不出现；表格／分页仍渲染。
+            toolbar=false 时整栏工具栏不出现；表格／分页仍渲染。移动端（≤639.98px）卡片上／左／右外边距与表格区上／左／右内边距为 0，底边保留；桌面端间距不变。
           </p>
         </DocsDemo>
 

@@ -1255,6 +1255,84 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
   );
 
   it(
+    "移动端：表格卡片上／左／右 margin·padding 为 0；桌面端表格区仍有间距",
+    async (t) => {
+      if (!t?.browser?.goto) return;
+      // deno-lint-ignore no-explicit-any
+      const page = (t.browser as any).page as {
+        setViewportSize?: (s: { width: number; height: number }) => Promise<void>;
+      } | undefined;
+      if (!page?.setViewportSize) return;
+      await sharedEnv.goto(t, DOC_PATH);
+      await sharedEnv.waitDocMainReady(t);
+      await ev(
+        t,
+        `return await D.until(() => D.q(${P("demo-toolbar-off")}, ".dp-table-wrap"), 30000);`,
+      );
+
+      await page.setViewportSize({ width: 1280, height: 800 });
+      await ev(t, `await D.sleep(200);`);
+      const desk = await ev<Record<string, number>>(
+        t,
+        `
+      const k = ${P("demo-toolbar-off")};
+      const card = getComputedStyle(D.q(k, ".dp-card"));
+      const wrap = getComputedStyle(D.q(k, ".dp-table-wrap"));
+      return {
+        cardMT: parseFloat(card.marginTop),
+        cardML: parseFloat(card.marginLeft),
+        cardMR: parseFloat(card.marginRight),
+        wrapPT: parseFloat(wrap.paddingTop),
+        wrapPL: parseFloat(wrap.paddingLeft),
+        wrapPR: parseFloat(wrap.paddingRight),
+        wrapPB: parseFloat(wrap.paddingBottom),
+      };`,
+      );
+      expect(desk.wrapPT).toBeGreaterThan(0);
+      expect(desk.wrapPL).toBeGreaterThan(0);
+      expect(desk.wrapPR).toBeGreaterThan(0);
+      expect(desk.wrapPB).toBeGreaterThan(0);
+
+      await page.setViewportSize({ width: 375, height: 812 });
+      await ev(t, `await D.sleep(200);`);
+      const mob = await ev<Record<string, number>>(
+        t,
+        `
+      const k = ${P("demo-toolbar-off")};
+      const card = getComputedStyle(D.q(k, ".dp-card"));
+      const wrap = getComputedStyle(D.q(k, ".dp-table-wrap"));
+      const pg = getComputedStyle(D.q(k, ".dp-pg"));
+      return {
+        cardMT: parseFloat(card.marginTop),
+        cardML: parseFloat(card.marginLeft),
+        cardMR: parseFloat(card.marginRight),
+        wrapPT: parseFloat(wrap.paddingTop),
+        wrapPL: parseFloat(wrap.paddingLeft),
+        wrapPR: parseFloat(wrap.paddingRight),
+        wrapPB: parseFloat(wrap.paddingBottom),
+        pgPL: parseFloat(pg.paddingLeft),
+        pgPR: parseFloat(pg.paddingRight),
+        pgPB: parseFloat(pg.paddingBottom),
+      };`,
+      );
+      expect(mob.cardMT).toBe(0);
+      expect(mob.cardML).toBe(0);
+      expect(mob.cardMR).toBe(0);
+      expect(mob.wrapPT).toBe(0);
+      expect(mob.wrapPL).toBe(0);
+      expect(mob.wrapPR).toBe(0);
+      expect(mob.wrapPB).toBeGreaterThan(0);
+      expect(mob.pgPL).toBe(0);
+      expect(mob.pgPR).toBe(0);
+      expect(mob.pgPB).toBeGreaterThan(0);
+
+      // restore desktop viewport for subsequent tests in shared browser
+      await page.setViewportSize({ width: 1280, height: 800 });
+    },
+    DOCS_BROWSER_CONFIG,
+  );
+
+  it(
     "刷新按钮重新加载当前页；每个面板互不影响（同页 23 个实例）",
     async (t) => {
       if (!t?.browser?.goto) return;
