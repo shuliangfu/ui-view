@@ -1,5 +1,6 @@
 # CI: 9-job matrix — Deno v2.9 + Bun + Node 22 × Linux/macOS/Windows
 # docs-browser (Playwright) runs on all cells except Bun + Windows.
+# Linux: ubuntu-24.04 (not ubuntu-latest=26.04); Playwright 1.59.1 lacks chromium for 26.04 — same as view/dweb.
 name: CI
 
 on:
@@ -19,7 +20,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-24.04, macos-latest, windows-latest]  # pin 24.04: ubuntu-latest is 26.04; Playwright 1.59.1 has no chromium for ubuntu26.04
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
     steps:
@@ -59,7 +60,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-24.04, macos-latest, windows-latest]  # pin 24.04: ubuntu-latest is 26.04; Playwright 1.59.1 has no chromium for ubuntu26.04
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
     steps:
@@ -104,7 +105,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-24.04, macos-latest, windows-latest]  # pin 24.04: ubuntu-latest is 26.04; Playwright 1.59.1 has no chromium for ubuntu26.04
     runs-on: ${{ matrix.os }}
     timeout-minutes: 180
     steps:

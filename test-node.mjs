@@ -38,7 +38,7 @@ for (const file of testFiles) {
   const rel = relative(process.cwd(), full);
   console.log(`▶ ${rel}`);
   const result = spawnSync(
-    process.execPath(),
+    process.execPath,
     ["--import", "tsx", "--test-force-exit", full],
     {
       stdio: "inherit",
