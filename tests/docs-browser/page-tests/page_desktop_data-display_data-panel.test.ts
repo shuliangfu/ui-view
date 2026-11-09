@@ -132,6 +132,57 @@ async function open(t: T, panel: string): Promise<void> {
 
 const P = (k: string) => JSON.stringify(k);
 
+
+/**
+ * Compare CSS colors across rgb/rgba/oklch/oklab serializations.
+ * Composites each color onto white and black so alpha + wide-gamut rounding stay stable
+ * (direct getImageData on low-alpha fills can quantize badly in Chromium).
+ */
+async function colorsClose(
+  t: T,
+  pairs: Array<[string, string]>,
+  rgbTol = 10,
+  _alphaTol = 0.03,
+): Promise<boolean> {
+  return await ev<boolean>(
+    t,
+    `const pairs = ${JSON.stringify(pairs)};
+     const rgbTol = ${rgbTol};
+     const cv = document.createElement("canvas");
+     cv.width = cv.height = 1;
+     const cx = cv.getContext("2d", { willReadFrequently: true });
+     const sample = (c, bg) => {
+       cx.fillStyle = bg; cx.fillRect(0, 0, 1, 1);
+       cx.fillStyle = c; cx.fillRect(0, 0, 1, 1);
+       const d = cx.getImageData(0, 0, 1, 1).data;
+       return [d[0], d[1], d[2]];
+     };
+     return pairs.every(([a, b]) => {
+       const aw = sample(a, "#ffffff"), bw = sample(b, "#ffffff");
+       const ak = sample(a, "#000000"), bk = sample(b, "#000000");
+       return [0, 1, 2].every((i) =>
+         Math.abs(aw[i] - bw[i]) <= rgbTol && Math.abs(ak[i] - bk[i]) <= rgbTol
+       );
+     });`,
+  );
+}
+
+/** Chromium may serialize "no shadow" as none or fully-transparent zero-offset layers. */
+function isNoBoxShadow(s: string): boolean {
+  if (!s || s === "none") return true;
+  const meaningful = s
+    .replace(
+      /rgba?\(\s*0(?:\.0+)?\s*,\s*0(?:\.0+)?\s*,\s*0(?:\.0+)?\s*,\s*0(?:\.0+)?\s*\)/gi,
+      "",
+    )
+    .replace(/oklab\([^)]*?\/\s*0(?:\.0+)?\s*\)/gi, "")
+    .replace(/oklch\([^)]*?\/\s*0(?:\.0+)?\s*\)/gi, "")
+    .replace(/\b0px\b/gi, "")
+    .replace(/[, ]+/g, "");
+  return meaningful.length === 0;
+}
+
+
 describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面板）", () => {
   it("本页关键词命中且 main 内完成浅层交互探针", async (t) => {
     if (!t?.browser?.goto) return;
@@ -243,9 +294,13 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
       }, '[data-testid="dp-refresh"]'));
        return { bg: c.backgroundColor, bd: c.borderRightColor, fg: c.color };`,
     );
-    expect(light.bg).toBe("rgb(241, 245, 249)");
-    expect(light.bd).toBe("rgb(226, 232, 240)");
-    expect(light.fg).toBe("rgb(51, 65, 85)");
+    expect(
+      await colorsClose(t, [
+        [light.bg, "rgb(241, 245, 249)"],
+        [light.bd, "rgb(226, 232, 240)"],
+        [light.fg, "rgb(51, 65, 85)"],
+      ]),
+    ).toBe(true);
     const dark = await ev<{ bg: string; bd: string; card: string }>(
       t,
       `const c = getComputedStyle(D.q(${
@@ -254,9 +309,13 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
        const card = getComputedStyle(D.q(${P("demo-dark")}, ".dp-card"));
        return { bg: c.backgroundColor, bd: c.borderRightColor, card: card.backgroundColor };`,
     );
-    expect(dark.bg).toBe("rgb(15, 23, 42)");
-    expect(dark.bd).toBe("rgb(30, 41, 59)");
-    expect(dark.card).toBe("rgb(24, 33, 47)");
+    expect(
+      await colorsClose(t, [
+        [dark.bg, "rgb(15, 23, 42)"],
+        [dark.bd, "rgb(30, 41, 59)"],
+        [dark.card, "rgb(24, 33, 47)"],
+      ]),
+    ).toBe(true);
     // 浅色面板的卡片不会被染成深色
     const lightCard = await ev<string>(
       t,
@@ -264,7 +323,7 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
         P("demo-basic")
       }, ".dp-card")).backgroundColor;`,
     );
-    expect(lightCard).not.toBe("rgb(24, 33, 47)");
+    expect(await colorsClose(t, [[lightCard, "rgb(24, 33, 47)"]])).toBe(false);
   }, DOCS_BROWSER_CONFIG);
 
   it("深色面板：URL page 越界时仍显示行（夹页，非整表空）", async (t) => {
@@ -324,10 +383,10 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
          tagRatio: tag ? Math.round(D.contrast(tag) * 100) / 100 : 0,
        };`,
     );
-    // must not stay near-black (light-page inherited)
-    expect(out.cellFg).not.toBe("rgb(15, 23, 42)");
-    expect(out.cellFg).not.toBe("rgb(0, 0, 0)");
-    expect(out.rangeFg).not.toBe("rgb(15, 23, 42)");
+    // must not stay near-black (light-page inherited); compare across rgb/oklch
+    expect(await colorsClose(t, [[out.cellFg, "rgb(15, 23, 42)"]])).toBe(false);
+    expect(await colorsClose(t, [[out.cellFg, "rgb(0, 0, 0)"]])).toBe(false);
+    expect(await colorsClose(t, [[out.rangeFg, "rgb(15, 23, 42)"]])).toBe(false);
     // WCAG AA-ish for body text on dark panel
     expect(out.cellRatio).toBeGreaterThanOrEqual(4.5);
     expect(out.rangeRatio).toBeGreaterThanOrEqual(4.5);
@@ -361,10 +420,14 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
       await page.hover(rowSel);
       await ev(t, `await D.sleep(250);`);
       const hovered = await probe(rowSel);
-      expect(hovered.bg).toBe(DWEB_ADMIN_DARK_HOVER);
-      expect(hovered.bg).not.toBe(before.bg);
-      // 近白色底会让文字不可读：悬停底色必须是深色
-      expect(hovered.bg.startsWith("oklab(0.2")).toBe(true);
+      expect(
+        await colorsClose(t, [[hovered.bg, DWEB_ADMIN_DARK_HOVER]], 4, 0.05),
+      ).toBe(true);
+      expect(await colorsClose(t, [[hovered.bg, before.bg]])).toBe(false);
+      // 近白色底会让文字不可读：悬停底色必须是深色（rgb/oklab 均可）
+      expect(
+        await colorsClose(t, [[hovered.bg, "rgba(30, 41, 59, 0.6)"]], 4, 0.05),
+      ).toBe(true);
       // 文字 / 标签 / 按钮颜色不因悬停变化
       expect(hovered.fg).toBe(before.fg);
       expect(hovered.tag).toBe(before.tag);
@@ -374,12 +437,16 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
         '[data-testid="panel-demo-dark"] [data-testid^="dp-row-"]:nth-child(2)';
       await page.hover(row2);
       await ev(t, `await D.sleep(250);`);
-      expect((await probe(row2)).bg).toBe(DWEB_ADMIN_DARK_HOVER);
-      // 浅色面板悬停不受影响（仍为浅色）
+      expect(
+        await colorsClose(t, [[(await probe(row2)).bg, DWEB_ADMIN_DARK_HOVER]], 4, 0.05),
+      ).toBe(true);
+      // 浅色面板悬停不受影响（仍为浅色 slate-50）
       const light = '[data-testid="panel-demo-basic"] [data-testid^="dp-row-"]';
       await page.hover(light);
       await ev(t, `await D.sleep(250);`);
-      expect((await probe(light)).bg.startsWith("oklch(0.98")).toBe(true);
+      expect(
+        await colorsClose(t, [[(await probe(light)).bg, "rgb(248, 250, 252)"]]),
+      ).toBe(true);
     },
     DOCS_BROWSER_CONFIG,
   );
@@ -830,7 +897,9 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
       expect(afterReset.hasCreated).toBe(false);
       expect(afterReset.nameChecked).toBe(true);
       expect(afterReset.createdChecked).toBe(false);
-      expect(String(afterReset.resetColor)).not.toBe("rgb(100, 116, 139)");
+      expect(
+        await colorsClose(t, [[String(afterReset.resetColor), "rgb(100, 116, 139)"]]),
+      ).toBe(false);
       expect(String(afterReset.stored)).toContain("createdAt");
       expect(String(afterReset.stored)).not.toContain('"name"');
 
@@ -1653,21 +1722,35 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
       };
       const light = await state();
       expect(light.dark).toBe(false);
-      expect(light.tb).toBe("rgb(241, 245, 249)");
-      expect((await hoverBg()).startsWith("oklch(0.98")).toBe(true);
+      expect(await colorsClose(t, [[light.tb, "rgb(241, 245, 249)"]])).toBe(true);
+      // slate-50 row hover — accept rgb or oklch serialization
+      expect(
+        await colorsClose(t, [[await hoverBg(), "rgb(248, 250, 252)"]]),
+      ).toBe(true);
       await clickToggle();
       const dark = await state();
       expect(dark.dark).toBe(true);
-      expect(dark.card).toBe("rgb(24, 33, 47)");
-      expect(dark.tb).toBe("rgb(15, 23, 42)");
-      // 与 dweb-admin 深色行悬停一致
-      expect(await hoverBg()).toBe("oklab(0.279 -0.00709772 -0.040381 / 0.6)");
+      expect(
+        await colorsClose(t, [
+          [dark.card, "rgb(24, 33, 47)"],
+          [dark.tb, "rgb(15, 23, 42)"],
+        ]),
+      ).toBe(true);
+      // 与 dweb-admin 深色行悬停一致（oklab / rgb 等价）
+      expect(
+        await colorsClose(t, [[
+          await hoverBg(),
+          "oklab(0.279 -0.00709772 -0.040381 / 0.6)",
+        ]], 4, 0.05),
+      ).toBe(true);
       await clickToggle();
       const back = await state();
       expect(back.dark).toBe(false);
-      expect(back.card).toBe(light.card);
-      expect(back.tb).toBe("rgb(241, 245, 249)");
-      expect((await hoverBg()).startsWith("oklch(0.98")).toBe(true);
+      expect(await colorsClose(t, [[back.card, light.card]])).toBe(true);
+      expect(await colorsClose(t, [[back.tb, "rgb(241, 245, 249)"]])).toBe(true);
+      expect(
+        await colorsClose(t, [[await hoverBg(), "rgb(248, 250, 252)"]]),
+      ).toBe(true);
     },
     DOCS_BROWSER_CONFIG,
   );
@@ -1895,8 +1978,10 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
       const light = await scan();
       expect(light.n > 0).toBe(true);
       for (const it of light.items) {
-        // 浅色保持原样：不使用深色模式的半透明底
-        expect(it.bg.includes("0.15)")).toBe(false);
+        // 浅色保持原样：不使用深色模式的半透明底（rgb 0.15 或 oklab / 0.15）
+        expect(/0\.15\s*\)/.test(it.bg) || /\/\s*0\.15\s*\)/.test(it.bg)).toBe(
+          false,
+        );
         expect([it.text, it.ratio >= 4.5]).toEqual([it.text, true]);
       }
       await ev(
@@ -1910,26 +1995,21 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
       for (const k of ["管理员", "编辑", "访客", "启用", "停用"]) {
         expect(by[k] !== undefined).toBe(true);
       }
-      expect([by["管理员"].fg, by["管理员"].bg]).toEqual([
-        "rgb(252, 165, 165)",
-        "rgba(239, 68, 68, 0.15)",
-      ]);
-      expect([by["启用"].fg, by["启用"].bg]).toEqual([
-        "rgb(134, 239, 172)",
-        "rgba(34, 197, 94, 0.15)",
-      ]);
-      expect([by["停用"].fg, by["停用"].bg]).toEqual([
-        "rgb(253, 224, 71)",
-        "rgba(234, 179, 8, 0.15)",
-      ]);
-      expect([by["编辑"].fg, by["编辑"].bg]).toEqual([
-        "rgb(125, 211, 252)",
-        "rgba(56, 189, 248, 0.15)",
-      ]);
-      expect([by["访客"].fg, by["访客"].bg]).toEqual([
-        "rgb(203, 213, 225)",
-        "rgba(148, 163, 184, 0.15)",
-      ]);
+      // TONE tokens: danger red / success emerald / warning amber / info sky / default slate
+      expect(
+        await colorsClose(t, [
+          [by["管理员"].fg, "rgb(252, 165, 165)"], // red-300
+          [by["管理员"].bg, "rgba(239, 68, 68, 0.15)"], // red-500/15
+          [by["启用"].fg, "rgb(110, 231, 183)"], // emerald-300
+          [by["启用"].bg, "rgba(16, 185, 129, 0.15)"], // emerald-500/15
+          [by["停用"].fg, "rgb(252, 211, 77)"], // amber-300
+          [by["停用"].bg, "rgba(245, 158, 11, 0.15)"], // amber-500/15
+          [by["编辑"].fg, "rgb(125, 211, 252)"], // sky-300
+          [by["编辑"].bg, "rgba(56, 189, 248, 0.15)"], // sky-400/15
+          [by["访客"].fg, "rgb(203, 213, 225)"], // slate-300
+          [by["访客"].bg, "rgba(148, 163, 184, 0.15)"], // slate-400/15
+        ]),
+      ).toBe(true);
       for (const it of dark.items) {
         expect([it.text, it.ratio >= 4.5]).toEqual([it.text, true]);
       }
@@ -2359,8 +2439,9 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
         `[data-testid="panel-demo-basic"] [data-testid="dp-${kind}-${id}"]`;
       const check = async (dark: boolean) => {
         const tag = dark ? "dark" : "light";
+        // ICON_BTN: slate-500 / dark slate-400; hover blue-600/400 (theme blue==sky palette)
         const base = dark ? "rgb(148, 163, 184)" : "rgb(100, 116, 139)";
-        const hover = dark ? "rgb(96, 165, 250)" : "rgb(37, 99, 235)";
+        const hover = dark ? "rgb(56, 189, 248)" : "rgb(2, 132, 199)";
         await page.mouse.move(2, 2);
         // DEMO_ROW_ACTIONS：仅 view＋edit（无 delete）
         const noDel = await ev<boolean>(
@@ -2374,18 +2455,26 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
             `[data-testid="panel-demo-basic"] [data-testid="dp-row-2"] td:first-child`,
           );
           const s0 = await style(sel);
-          // 无边框、无底色、无阴影
+          // 无边框、无底色、无阴影（none 或全透明 0 偏移均视为无阴影）
           expect([tag, kind, s0.bw]).toEqual([tag, kind, "0px,0px,0px,0px"]);
-          expect([tag, kind, s0.bg]).toEqual([tag, kind, "rgba(0, 0, 0, 0)"]);
-          expect([tag, kind, s0.shadow]).toEqual([tag, kind, "none"]);
-          expect([tag, kind, s0.color]).toEqual([tag, kind, base]);
+          expect(
+            await colorsClose(t, [[String(s0.bg), "rgba(0, 0, 0, 0)"]]),
+          ).toBe(true);
+          expect([tag, kind, isNoBoxShadow(String(s0.shadow))]).toEqual([
+            tag,
+            kind,
+            true,
+          ]);
+          expect(await colorsClose(t, [[String(s0.color), base]])).toBe(true);
           // 悬停：只变色，仍无边框 / 底色
           await page.hover(`${sel} button`);
           await ev(t, `await D.sleep(300);`);
           const s1 = await style(sel);
-          expect([tag, kind, s1.color]).toEqual([tag, kind, hover]);
+          expect(await colorsClose(t, [[String(s1.color), hover]])).toBe(true);
           expect([tag, kind, s1.bw]).toEqual([tag, kind, "0px,0px,0px,0px"]);
-          expect([tag, kind, s1.bg]).toEqual([tag, kind, "rgba(0, 0, 0, 0)"]);
+          expect(
+            await colorsClose(t, [[String(s1.bg), "rgba(0, 0, 0, 0)"]]),
+          ).toBe(true);
           expect([tag, kind, s1.opacity]).toEqual([tag, kind, "1"]);
         }
         // 图标紧凑：16px 图标（与表格文字同大），view→edit 间距 4–8px
