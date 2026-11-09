@@ -94,7 +94,15 @@ const config: AppConfig = {
     // },
     // client: { entry: "...", output: "dist/client", engine: "view", bundle: {}, html: {}, sourcemap: true, debug: false },
     // assets: { css: { extract: true, minify: true, autoprefix: true }, images: {}, publicDir: "public", assetsDir: "assets" },
-    // build: { mode: "prod", clean: true, cache: true, incremental: true, silent: false, logLevel: "info" },
+    // BuildAppConfig.build → esbuild BuildOptions（app.build.build.clean）
+    build: {
+      mode: "prod",
+      clean: true,
+      cache: true,
+      incremental: true,
+      silent: false,
+      logLevel: "info",
+    },
   },
 
   // ========== Logger ==========

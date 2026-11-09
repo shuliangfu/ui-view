@@ -179,40 +179,36 @@ describe("DataPanel SSR：布尔属性与转义", () => {
     expect(h).toContain("&lt;img");
   });
 
-  it("内联样式不含 SSR 会转义的字符（>、&、<），否则服务端首帧样式失效", () => {
-    expect(DATA_PANEL_CSS).not.toMatch(/[<>&]/);
-    // 深色行悬停：显式规则（slate-800 @ 60%，与 dweb-admin 一致），行带 dp-row 类
-    expect(DATA_PANEL_CSS).toContain(".dark .dp-row:hover");
-    expect(DATA_PANEL_CSS).toContain("oklch(27.9% 0.041 260.031) 60%");
+  it("DATA_PANEL_CSS 已清空（样式迁 Tailwind，不再注入内联 <style>）", () => {
+    expect(DATA_PANEL_CSS).toBe("");
   });
 
-  it("移动端断点：表格卡上／左／右贴边；分页居中且条数在下", () => {
-    expect(DATA_PANEL_CSS).toContain("@media (max-width: 639.98px)");
-    expect(DATA_PANEL_CSS).toContain(".dp-table-wrap");
-    expect(DATA_PANEL_CSS).toContain("padding-top: 0 !important");
-    expect(DATA_PANEL_CSS).toContain("padding-left: 0 !important");
-    expect(DATA_PANEL_CSS).toContain("padding-right: 0 !important");
-    expect(DATA_PANEL_CSS).toContain("margin-top: 0 !important");
-    expect(DATA_PANEL_CSS).toContain("margin-left: 0 !important");
-    expect(DATA_PANEL_CSS).toContain("margin-right: 0 !important");
-    // 底边不在移动规则里清零（保留 py-2.5 / 桌面间距）
-    expect(DATA_PANEL_CSS).not.toMatch(
-      /@media \(max-width: 639\.98px\)[^{]*\{[^}]*padding-bottom:\s*0/,
-    );
-    // 分页：列布局、控件 order1、条数 order2 居中
-    expect(DATA_PANEL_CSS).toContain(".dp-pg-ctrls");
-    expect(DATA_PANEL_CSS).toContain(".dp-range");
-    expect(DATA_PANEL_CSS).toContain("flex-direction: column !important");
-    expect(DATA_PANEL_CSS).toContain("order: 1 !important");
-    expect(DATA_PANEL_CSS).toContain("order: 2 !important");
-  });
-
-  it("SSR 输出的 <style> 里选择器未被转义", async () => {
+  it("移动端断点：表格卡上／左／右贴边；分页居中且条数在下（Tailwind max-sm）", async () => {
     const h = await html();
-    const m = /<style>([\s\S]*?)<\/style>/.exec(h)!;
-    expect(m[1]).toContain(".dp-tb-nf");
-    expect(m[1]).not.toContain("&gt;");
-    expect(m[1]).not.toContain("&amp;");
+    // 卡片／表格外包：max-sm 清上／左右 margin／padding
+    expect(h).toContain("max-sm:!mx-0");
+    expect(h).toContain("max-sm:!mt-0");
+    expect(h).toContain("dp-table-wrap");
+    expect(h).toContain("max-sm:!px-0");
+    expect(h).toContain("max-sm:!pt-0");
+    // 底边不在移动规则里清零（保留 py-2.5）
+    expect(h).toContain("py-2.5");
+    expect(h).not.toMatch(/dp-table-wrap[^"]*max-sm:!pb-0/);
+    // 分页：列布局、控件 order1、条数 order2 居中
+    expect(h).toContain("dp-pg-ctrls");
+    expect(h).toContain("dp-range");
+    expect(h).toContain("max-sm:!flex-col");
+    expect(h).toContain("max-sm:!order-1");
+    expect(h).toContain("max-sm:!order-2");
+  });
+
+  it("SSR 不再注入 DataPanel 面板 CSS；工具栏类为 Tailwind", async () => {
+    const h = await html();
+    // 不应再有面板大块 <style>（打印 HTML 的 <style> 在新窗口字符串里，不在面板 SSR）
+    expect(h).not.toContain(".dp-tb-nf {");
+    expect(h).toContain("dp-tb");
+    expect(h).toContain("dp-tb-nf");
+    expect(h).toContain("dark:hover:!bg-slate-800/60");
   });
 });
 

@@ -1,6 +1,6 @@
 /**
  * @module desktop/data-display/data-panel-chrome
- * @description DataPanel 刷新注册表、环境探测、本地偏好（@dreamer/storage/client）、工具按钮壳与面板 CSS。
+ * @description DataPanel 刷新注册表、环境探测、本地偏好（@dreamer/storage/client）、工具按钮壳与面板 Tailwind 类常量。
  */
 
 import { Button } from "../../shared/basic/Button.tsx";
@@ -153,178 +153,123 @@ export const COL_SELECT = "__select";
 export const COL_INDEX = "__index";
 export const COL_ACTIONS = "__actions";
 
-/** 标签配色：浅色沿用 Tailwind 类；深色由 DATA_PANEL_CSS 的 `.dark .dp-tag-*` 覆盖（半透明底 + 亮字） */
+/** 标签配色：浅色 + dark: 半透明底／亮字（原 `.dark .dp-tag-*`） */
 export const TONE: Record<Tone, string> = {
-  success: "dp-tag dp-tag-success bg-emerald-100 text-emerald-700",
-  warning: "dp-tag dp-tag-warning bg-amber-100 text-amber-700",
-  danger: "dp-tag dp-tag-danger bg-red-100 text-red-700",
-  info: "dp-tag dp-tag-info bg-sky-100 text-sky-700",
-  default: "dp-tag dp-tag-default bg-slate-100 text-slate-600",
+  success:
+    "dp-tag dp-tag-success bg-emerald-100 text-emerald-700 dark:!bg-emerald-500/15 dark:!text-emerald-300",
+  warning:
+    "dp-tag dp-tag-warning bg-amber-100 text-amber-700 dark:!bg-amber-500/15 dark:!text-amber-300",
+  danger:
+    "dp-tag dp-tag-danger bg-red-100 text-red-700 dark:!bg-red-500/15 dark:!text-red-300",
+  info:
+    "dp-tag dp-tag-info bg-sky-100 text-sky-700 dark:!bg-sky-400/15 dark:!text-sky-300",
+  default:
+    "dp-tag dp-tag-default bg-slate-100 text-slate-600 dark:!bg-slate-400/15 dark:!text-slate-300",
 };
 
 /** 开关滑动动画时长（Switch 的 0.2s 过渡，略长一点保证播完再重渲染） */
 export const SWITCH_ANIM_MS = 230;
 
-/** 操作列图标按钮：样式见 DATA_PANEL_CSS 的 .dp-act*（无边框 / 无底色，仅图标色变化） */
-export const ICON_BTN = "dp-act";
+/**
+ * 操作列图标按钮：无边框／无底色，仅图标色变化（原 `.dp-act`）。
+ * 保留 `dp-act` 标记类供测／选择器；视觉全走 Tailwind（含 `!` 压 Button 默认）。
+ */
+export const ICON_BTN =
+  "dp-act inline-flex items-center justify-center !bg-transparent !border-0 !shadow-none !p-0.5 !min-w-0 rounded !text-slate-500 leading-none cursor-pointer transition-colors duration-150 hover:!bg-transparent hover:!border-0 hover:!text-blue-600 disabled:opacity-40 disabled:!text-slate-400 disabled:!cursor-not-allowed dark:!text-slate-400 dark:hover:!text-blue-400 dark:disabled:!text-slate-500 [&_[role=img]]:!h-4 [&_[role=img]]:!w-4";
+
+/** 操作列 tone 悬停色（拼在 ICON_BTN 后；danger 另带 `dp-act-del` 标记） */
+export const ACT_TONE_HOVER: Record<string, string> = {
+  danger: "hover:!text-red-600 dark:hover:!text-red-400",
+  primary: "hover:!text-blue-700 dark:hover:!text-blue-300",
+  secondary: "hover:!text-slate-600 dark:hover:!text-slate-300",
+  success: "hover:!text-green-600 dark:hover:!text-green-400",
+  warning: "hover:!text-amber-600 dark:hover:!text-amber-400",
+  ghost: "hover:!text-slate-700 dark:hover:!text-slate-200",
+  default: "hover:!text-blue-600 dark:hover:!text-blue-400",
+};
 
 /**
- * 面板自带样式（作用域在 `.dp-*` 类名下，不依赖 Tailwind 扫描）：
- * - 工具栏按钮组：相邻按钮之间**只有一条**淡分割线（左侧按钮自己的右边框）；
- * - 注意：SSR 会转义 `<style>` 文本里的 `>` / `&` / `<`，所以这里**不得使用子选择器**，位置用 `.dp-tb-first/-last/-nf/-nl` 类表达；
- * - 深色模式下面板主体用 `--dp-panel-body-bg`（默认 #18212f，比深色卡片再深约半档）；
- * - 深色正文／分页摘要用 `--dp-panel-fg`／`--dp-panel-muted`（勿依赖浅色页 body 继承，否则局部 .dark 会近黑字不可见）。
+ * 工具栏按钮壳（原 `.dp-tb` + first/last/nf/nl）。
+ * 标记类 `dp-tb*` 仍保留（SSR／测）；尺寸／色／圆角拼接用 Tailwind `!`。
  */
-export const DATA_PANEL_CSS = `
-.dp-tb {
-  box-sizing: border-box; width: 2.625rem; height: 2.125rem; padding: 0 !important; line-height: 1;
-  border-radius: 0 !important;
-  background-color: #f1f5f9 !important; border-color: #e2e8f0 !important; color: #334155 !important;
-}
-.dp-tb [role="img"] { width: 1rem !important; height: 1rem !important; }
-.dp-tb:hover:not(:disabled) { background-color: #e2e8f0 !important; color: #0f172a !important; }
-.dark .dp-tb { background-color: #0f172a !important; border-color: #1e293b !important; color: #e2e8f0 !important; }
-.dark .dp-tb:hover:not(:disabled) { background-color: #1e293b !important; color: #fff !important; }
-.dp-tb-first { border-top-left-radius: 5px !important; border-bottom-left-radius: 5px !important; }
-.dp-tb-last { border-top-right-radius: 5px !important; border-bottom-right-radius: 5px !important; }
-.dp-tb-nf { border-left-width: 0 !important; }
-.dp-tb-nl { border-right-width: 1px !important; box-shadow: none !important; }
-/* 深色行悬停：与 dweb-admin 一致（Tailwind 的 dark:hover:bg-slate-800/60，即 slate-800 @ 60%）；显式写出，避免被浅色 hover:bg-slate-50 盖住导致近白底 */
-.dark .dp-row:hover { background-color: color-mix(in oklab, oklch(27.9% 0.041 260.031) 60%, transparent) !important; }
-.dark .dp-tag-danger { background-color: rgba(239, 68, 68, 0.15) !important; color: #fca5a5 !important; }
-.dark .dp-tag-success { background-color: rgba(34, 197, 94, 0.15) !important; color: #86efac !important; }
-.dark .dp-tag-warning { background-color: rgba(234, 179, 8, 0.15) !important; color: #fde047 !important; }
-.dark .dp-tag-info { background-color: rgba(56, 189, 248, 0.15) !important; color: #7dd3fc !important; }
-.dark .dp-tag-default { background-color: rgba(148, 163, 184, 0.15) !important; color: #cbd5e1 !important; }
-.dp-cell-edit { display: inline-block; min-width: 1.5rem; padding: 0 4px; border-radius: 4px; cursor: text; }
-.dp-cell-edit:hover { background-color: #e2e8f0; }
-.dark .dp-cell-edit:hover { background-color: #334155; }
-.dp-pop { background-color: #fff !important; border-color: #e2e8f0 !important; color: #0f172a !important; }
-.dark .dp-pop { background-color: #1e293b !important; border-color: #475569 !important; color: #f1f5f9 !important; }
-.dark .dp-pop [aria-hidden="true"] { background-color: #1e293b !important; border-color: #475569 !important; }
-.dp-jump { width: 3.5rem; flex: none; }
-.dp-jump input { padding: 0.25rem 0.5rem; font-size: 0.875rem; line-height: 1.25rem; border-radius: 0.25rem; text-align: center; -moz-appearance: textfield; appearance: textfield; }
-.dp-jump input::-webkit-outer-spin-button, .dp-jump input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-.dp-ed-wrap { min-width: 9.5rem; }
-/* pageSize Select：宽度随文案与箭头自适应，勿固定过宽；nowrap 防换行 */
-.dp-pgsize { width: fit-content; flex: none; min-width: 0; max-width: none; }
-.dp-pgsize span.relative {
-  width: fit-content !important;
-  min-width: 0 !important;
-  max-width: none !important;
-  display: inline-flex !important;
-}
-/* 与 .dp-jump 一致：底栏 Select 触发器压到与分页按钮同高（测 heightDiff≤4） */
-.dp-pgsize button[aria-haspopup] {
-  white-space: nowrap !important;
-  width: auto !important;
-  padding: 0.25rem 0.5rem !important;
-  font-size: 0.875rem !important;
-  line-height: 1.25rem !important;
-  border-radius: 0.25rem !important;
-  gap: 0.25rem !important;
-  box-sizing: border-box !important;
-}
-.dp-pgsize [role="listbox"] {
-  top: auto;
-  bottom: 100%;
-  margin-top: 0;
-  margin-bottom: 0.25rem;
-  display: flex;
-  flex-direction: column;
-  width: max-content;
-  min-width: 100%;
-  right: auto;
-  left: 0;
-}
-.dp-pgsize [role="option"] {
-  display: block;
-  width: 100%;
-  white-space: nowrap;
-  box-sizing: border-box;
-}
-.dp-acts { display: inline-flex; align-items: center; justify-content: center; gap: 1px; }
-.dp-act [role="img"] { width: 1rem !important; height: 1rem !important; }
-.dp-act { background: transparent !important; border: 0 !important; box-shadow: none !important; padding: 2px !important; min-width: 0 !important; border-radius: 4px; color: #64748b !important; line-height: 1; cursor: pointer; transition: color 0.15s ease; }
-.dp-act:hover:not(:disabled) { background: transparent !important; border: 0 !important; color: #2563eb !important; }
-.dp-act-del:hover:not(:disabled), .dp-act-danger:hover:not(:disabled) { color: #dc2626 !important; }
-.dp-act-primary:hover:not(:disabled) { color: #1d4ed8 !important; }
-.dp-act-secondary:hover:not(:disabled) { color: #475569 !important; }
-.dp-act-success:hover:not(:disabled) { color: #16a34a !important; }
-.dp-act-warning:hover:not(:disabled) { color: #d97706 !important; }
-.dp-act-ghost:hover:not(:disabled) { color: #334155 !important; }
-.dp-act-default:hover:not(:disabled) { color: #2563eb !important; }
-.dp-act:disabled { opacity: 0.4; color: #94a3b8 !important; cursor: not-allowed !important; }
-.dark .dp-act { color: #94a3b8 !important; }
-.dark .dp-act:hover:not(:disabled) { color: #60a5fa !important; }
-.dark .dp-act-del:hover:not(:disabled), .dark .dp-act-danger:hover:not(:disabled) { color: #f87171 !important; }
-.dark .dp-act-primary:hover:not(:disabled) { color: #93c5fd !important; }
-.dark .dp-act-secondary:hover:not(:disabled) { color: #cbd5e1 !important; }
-.dark .dp-act-success:hover:not(:disabled) { color: #4ade80 !important; }
-.dark .dp-act-warning:hover:not(:disabled) { color: #fbbf24 !important; }
-.dark .dp-act-ghost:hover:not(:disabled) { color: #e2e8f0 !important; }
-.dark .dp-act-default:hover:not(:disabled) { color: #60a5fa !important; }
-.dark .dp-act:disabled { color: #64748b !important; }
-.dark .dp-card {
-  background: var(--dp-panel-body-bg, #18212f) !important;
-  /* 正文色：局部 .dark 包裹时不能依赖页面 body 继承（浅色页仍是近黑字） */
-  color: var(--dp-panel-fg, #e2e8f0) !important;
-}
-.dark .dp-card th { color: var(--dp-panel-fg, #f1f5f9) !important; }
-/* td／就地编辑文案显式设色（勿用 inherit：中间层或预检色会盖掉 .dp-card color） */
-.dark .dp-card td,
-.dark .dp-card .dp-cell-edit {
-  color: var(--dp-panel-fg, #e2e8f0) !important;
-}
-.dark .dp-range {
-  color: var(--dp-panel-muted, #cbd5e1) !important;
-}
-.dark .dp-card [data-testid="dp-total-count"] {
-  color: var(--dp-panel-muted, #cbd5e1) !important;
-}
-.dp-den-compact td, .dp-den-compact th { padding-top: 0.25rem !important; padding-bottom: 0.25rem !important; }
-.dp-den-loose td, .dp-den-loose th { padding-top: 0.875rem !important; padding-bottom: 0.875rem !important; }
-.dp-fs {
-  position: fixed !important; inset: 0 !important; z-index: 9999 !important;
-  width: 100vw !important; height: 100vh !important; max-width: 100vw !important; max-height: 100vh !important;
-  overflow: auto !important; box-sizing: border-box !important; padding: 0.75rem !important;
-  background: #fff !important; margin: 0 !important; border-radius: 0 !important;
-}
-.dark .dp-fs {
-  background: #0f172a !important;
-  color: var(--dp-panel-fg, #e2e8f0) !important;
-}
-.dp-fs .dp-card { border-radius: 0 !important; min-height: calc(100vh - 1.5rem) !important; }
-/* Mobile: flush table card top/left/right; keep bottom.
-   Pagination: stack controls above range, both centered; keep L/R/bottom padding. */
-@media (max-width: 639.98px) {
-  .dp-card {
-    margin-top: 0 !important;
-    margin-left: 0 !important;
-    margin-right: 0 !important;
-  }
-  .dp-table-wrap {
-    padding-top: 0 !important;
-    padding-left: 0 !important;
-    padding-right: 0 !important;
-  }
-  .dp-pg {
-    flex-direction: column !important;
-    align-items: center !important;
-    justify-content: center !important;
-    text-align: center !important;
-  }
-  .dp-pg-ctrls {
-    order: 1 !important;
-    justify-content: center !important;
-  }
-  .dp-range {
-    order: 2 !important;
-    width: 100% !important;
-    text-align: center !important;
-  }
+/** 工具栏按钮 Tailwind 壳（不含位置标记类） */
+export const TB_STYLE =
+  "box-border !h-[2.125rem] !w-[2.625rem] !p-0 leading-none !rounded-none !bg-slate-100 !border-slate-200 !text-slate-700 hover:enabled:!bg-slate-200 hover:enabled:!text-slate-900 dark:!bg-slate-900 dark:!border-slate-800 dark:!text-slate-200 dark:hover:enabled:!bg-slate-800 dark:hover:enabled:!text-white [&_[role=img]]:!h-4 [&_[role=img]]:!w-4";
+export const TB_FIRST_STYLE = "!rounded-l-[5px]";
+export const TB_LAST_STYLE = "!rounded-r-[5px]";
+export const TB_NF_STYLE = "!border-l-0";
+export const TB_NL_STYLE = "!border-r !shadow-none";
+
+/** 行悬停：压浅色 `hover:bg-slate-50`（原 `.dark .dp-row:hover` slate-800@60%） */
+export const ROW_CLS =
+  "dp-row hover:bg-slate-50 dark:hover:!bg-slate-800/60";
+
+/** 就地编辑可点区（原 `.dp-cell-edit`） */
+export const CELL_EDIT_CLS =
+  "dp-cell-edit inline-block min-w-6 cursor-text rounded px-1 hover:bg-slate-200 dark:hover:bg-slate-700";
+
+/** Popconfirm／Popover 浮层覆盖（原 `.dp-pop`；保留标记类） */
+export const POP_OVERLAY_CLS =
+  "dp-pop !border-slate-200 !bg-white !text-slate-900 dark:!border-slate-600 dark:!bg-slate-800 dark:!text-slate-100 dark:[&_[aria-hidden=true]]:!border-slate-600 dark:[&_[aria-hidden=true]]:!bg-slate-800";
+
+/** 跳页输入壳（原 `.dp-jump`；隐藏 number spin） */
+export const JUMP_CLS =
+  "dp-jump w-14 shrink-0 [&_input]:rounded [&_input]:px-2 [&_input]:py-1 [&_input]:text-center [&_input]:text-sm [&_input]:leading-5 [&_input]:[appearance:textfield] [&_input::-webkit-inner-spin-button]:appearance-none [&_input::-webkit-outer-spin-button]:appearance-none";
+
+/** 就地编辑器外层最小宽（原 `.dp-ed-wrap`） */
+export const ED_WRAP_CLS = "dp-ed-wrap min-w-[9.5rem]";
+
+/** 底栏 pageSize Select 壳（原 `.dp-pgsize`） */
+export const PGSIZE_WRAP_CLS = "dp-pgsize w-fit min-w-0 max-w-none shrink-0";
+
+/** pageSize Select 上的子选择器压 Button／listbox（原 `.dp-pgsize …`） */
+export const PGSIZE_SELECT_CLS =
+  "inline-flex w-fit shrink-0 align-middle whitespace-nowrap [&_span.relative]:!inline-flex [&_span.relative]:!w-fit [&_span.relative]:!min-w-0 [&_span.relative]:!max-w-none [&_button[aria-haspopup]]:!box-border [&_button[aria-haspopup]]:!w-auto [&_button[aria-haspopup]]:!gap-1 [&_button[aria-haspopup]]:!rounded [&_button[aria-haspopup]]:!px-2 [&_button[aria-haspopup]]:!py-1 [&_button[aria-haspopup]]:!text-sm [&_button[aria-haspopup]]:!leading-5 [&_button[aria-haspopup]]:!whitespace-nowrap [&_[role=listbox]]:!bottom-full [&_[role=listbox]]:!left-0 [&_[role=listbox]]:!right-auto [&_[role=listbox]]:!top-auto [&_[role=listbox]]:!mt-0 [&_[role=listbox]]:!mb-1 [&_[role=listbox]]:!flex [&_[role=listbox]]:!w-max [&_[role=listbox]]:!min-w-full [&_[role=listbox]]:!flex-col [&_[role=option]]:!block [&_[role=option]]:!w-full [&_[role=option]]:whitespace-nowrap";
+
+/** 操作列图标组（原 `.dp-acts`） */
+export const ACTS_CLS = "dp-acts inline-flex items-center justify-center gap-px";
+
+/**
+ * 面板卡片（原 `.dp-card` + 深色变量正文色）。
+ * 移动端 max-sm 上／左／右贴边（原 @media）。
+ */
+export const CARD_STYLE =
+  "max-sm:!mx-0 max-sm:!mt-0 dark:!bg-[var(--dp-panel-body-bg,#18212f)] dark:!text-[var(--dp-panel-fg,#e2e8f0)] dark:[&_th]:!text-[var(--dp-panel-fg,#f1f5f9)] dark:[&_td]:!text-[var(--dp-panel-fg,#e2e8f0)] dark:[&_.dp-cell-edit]:!text-[var(--dp-panel-fg,#e2e8f0)] dark:[&_[data-testid=dp-total-count]]:!text-[var(--dp-panel-muted,#cbd5e1)]";
+
+/** 表格外包（原 `.dp-table-wrap`；移动端顶／左右 padding 清零） */
+export const TABLE_WRAP_CLS =
+  "dp-table-wrap px-2.5 py-2.5 max-sm:!px-0 max-sm:!pt-0";
+
+/** 分页条（原 `.dp-pg`；移动端列布局居中） */
+export const PG_CLS =
+  "dp-pg flex flex-wrap items-center justify-between gap-3 px-3 py-3 text-sm max-sm:!flex-col max-sm:!items-center max-sm:!justify-center max-sm:!text-center";
+
+/** 分页控件组（原 `.dp-pg-ctrls`） */
+export const PG_CTRLS_CLS =
+  "dp-pg-ctrls flex flex-wrap items-center gap-2 max-sm:!order-1 max-sm:!justify-center";
+
+/** 条数文案（原 `.dp-range`） */
+export const RANGE_CLS =
+  "dp-range max-sm:!order-2 max-sm:!w-full max-sm:!text-center dark:!text-[var(--dp-panel-muted,#cbd5e1)]";
+
+/** 全屏壳（原 `.dp-fs`） */
+export const FS_CLS =
+  "dp-fs !fixed !inset-0 !z-[9999] !m-0 !box-border !h-screen !max-h-screen !w-screen !max-w-screen !overflow-auto !rounded-none !bg-white !p-3 dark:!bg-slate-900 dark:!text-[var(--dp-panel-fg,#e2e8f0)] [&_.dp-card]:!min-h-[calc(100vh-1.5rem)] [&_.dp-card]:!rounded-none";
+
+/** 行高：compact／comfortable／loose（原 `.dp-den-*`） */
+export function densityTableCls(
+  density: "compact" | "comfortable" | "loose",
+): string {
+  const base = `relative overflow-x-auto dp-den-${density}`;
+  if (density === "compact") return `${base} [&_td]:!py-1 [&_th]:!py-1`;
+  if (density === "loose") return `${base} [&_td]:!py-3.5 [&_th]:!py-3.5`;
+  return base;
 }
 
-`;
+/**
+ * @deprecated 样式已迁 Tailwind（见本文件 `TONE`／`ICON_BTN`／`CARD_STYLE` 等）。
+ * 保留空串导出以免破坏旧 import；DataPanel 不再注入 `<style>`。
+ */
+export const DATA_PANEL_CSS = "";
 
 // ---------------------------------------------------------------- component

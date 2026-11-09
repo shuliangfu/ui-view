@@ -1,6 +1,8 @@
 /**
  * App root component
  * 主题由 @dreamer/plugins/theme 在 onResponse 中注入防闪脚本并设置 html class，无需在此写脚本。
+ * 视口高度链：否则根布局 min-h-screen 会随内容无限增高，flex-1 min-h-0 无法收缩，
+ * 侧栏/main 的 overflow-y-auto 不生效，滚轮只能作用在 body（表现为仅顶栏附近能滚动）。。。。
  */
 
 import type { VNode } from "@dreamer/view";
@@ -13,7 +15,7 @@ interface AppProps {
 
 export default function App({
   children,
-  title = "docs",
+  title = "docs 文档网站",
   description = "使用 @dreamer/dweb 构建",
 }: AppProps) {
   return (
@@ -29,7 +31,7 @@ export default function App({
         {
           /*
            * 固定视口高度链：否则根布局 min-h-screen 会随内容无限增高，flex-1 min-h-0 无法收缩，
-           * 侧栏/main 的 overflow-y-auto 不生效，滚轮只能作用在 body（表现为仅顶栏附近能滚动）。
+           * 侧栏/main 的 overflow-y-auto 不生效，滚轮只能作用在 body（表现为仅顶栏附近能滚动）。。。。
            */
         }
         <div id="app" className="h-full min-h-0 flex flex-col">

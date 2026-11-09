@@ -360,6 +360,12 @@
   --animate-shake: shake 0.5s infinite;
   --animate-pulse: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   --animate-fadeIn2: fadeIn 0.2s ease-in-out forwards;
+  --animate-notice-bar-marquee: notice-bar-marquee 12s linear infinite;
+}
+
+@keyframes notice-bar-marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
 }
 
 /* 正文选中色与主色呼应 */

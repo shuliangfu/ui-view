@@ -316,15 +316,35 @@ export interface PanelProps {
 }
 
 import {
+  ACT_TONE_HOVER,
+  ACTS_CLS,
   bool,
   Btn,
-  DATA_PANEL_CSS,
+  CARD_STYLE,
+  CELL_EDIT_CLS,
+  densityTableCls,
+  ED_WRAP_CLS,
+  FS_CLS,
   g,
   ICON_BTN,
+  JUMP_CLS,
   onServer,
+  PG_CLS,
+  PG_CTRLS_CLS,
+  PGSIZE_SELECT_CLS,
+  PGSIZE_WRAP_CLS,
+  POP_OVERLAY_CLS,
+  RANGE_CLS,
   readDataPanelPrefs,
   refreshers,
+  ROW_CLS,
   SWITCH_ANIM_MS,
+  TABLE_WRAP_CLS,
+  TB_FIRST_STYLE,
+  TB_LAST_STYLE,
+  TB_NF_STYLE,
+  TB_NL_STYLE,
+  TB_STYLE,
   TONE,
   writeDataPanelPrefs,
 } from "./data-panel-chrome.tsx";
@@ -1163,9 +1183,10 @@ export function DataPanel(props: PanelProps): JSXRenderable {
 
   const toneActCls = (tone?: ActionTone): string => {
     if (!tone || tone === "default") return "";
+    const hover = ACT_TONE_HOVER[tone] ?? "";
     // danger keeps legacy dp-act-del (tests / existing styles) plus dp-act-danger
-    if (tone === "danger") return " dp-act-del dp-act-danger";
-    return ` dp-act-${tone}`;
+    if (tone === "danger") return ` dp-act-del dp-act-danger ${hover}`;
+    return ` dp-act-${tone} ${hover}`;
   };
 
   const toolbarSlots = (): TbSlot[] => {
@@ -1279,8 +1300,11 @@ export function DataPanel(props: PanelProps): JSXRenderable {
     const ids = toolIds().map((x) => x[0]);
     const i = ids.indexOf(id);
     const n = ids.length;
+    // 标记类紧挨（SSR 测断言 `dp-tb dp-tb-first …`）；视觉走 TB_*_STYLE
     return `px-2.5 dp-tb${i === 0 ? " dp-tb-first" : " dp-tb-nf"}${
       i === n - 1 ? " dp-tb-last" : " dp-tb-nl"
+    } ${TB_STYLE} ${i === 0 ? TB_FIRST_STYLE : TB_NF_STYLE} ${
+      i === n - 1 ? TB_LAST_STYLE : TB_NL_STYLE
     }`;
   };
   const toolBtn = (
@@ -1702,7 +1726,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
               title={tr(m.batchStatusAsk, { n: ids.length, status: s.label })}
               okText={m.confirm}
               cancelText={m.cancel}
-              overlayClass="dp-pop"
+              overlayClass={POP_OVERLAY_CLS}
               onOpenChange={(o: boolean) => {
                 if (!o) popStatus.value = null;
               }}
@@ -1727,7 +1751,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
             title={tr(m.deleteMany, { n: ids.length })}
             okText={m.delete}
             cancelText={m.cancel}
-            overlayClass="dp-pop"
+            overlayClass={POP_OVERLAY_CLS}
             onOpenChange={(o: boolean) => {
               if (!o) popBatch.value = false;
             }}
@@ -1806,7 +1830,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
       }
       return (
         <span
-          class="dp-cell-edit"
+          class={CELL_EDIT_CLS}
           title={m.doubleClickToEdit}
           data-testid={`dp-edit-${c.prop}-${idOf(row)}`}
           onDblClick={() => (editing.value = { id: idOf(row), prop: colProp(c) })}
@@ -2015,7 +2039,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
     }
     return (
       <div
-        class="dp-ed-wrap"
+        class={ED_WRAP_CLS}
         tabIndex={-1}
         ref={setup}
         data-testid={testid}
@@ -2274,7 +2298,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
     const hasTotals = cols.some((c) => c.total) && data.length > 0;
     return (
       <div
-        class={`relative overflow-x-auto dp-den-${density.value}`}
+        class={densityTableCls(density.value)}
         data-density={density.value}
       >
         {loading.value && (
@@ -2360,8 +2384,10 @@ export function DataPanel(props: PanelProps): JSXRenderable {
               )
               : data.map((r, i) => (
                 <tr
-                  class={`dp-row hover:bg-slate-50 ${
-                    i % 2 ? "bg-slate-50/50 dark:bg-slate-900/40" : ""
+                  class={`${ROW_CLS} ${
+                    i % 2
+                      ? "bg-slate-50/50 dark:bg-slate-900/40"
+                      : "bg-white dark:bg-slate-900"
                   }`}
                   data-testid={`dp-row-${idOf(r)}`}
                 >
@@ -2394,7 +2420,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
                     if (isActionsColumn(c)) {
                       return (
                         <td class="whitespace-nowrap border border-slate-200 px-2 py-1.5 text-center dark:border-slate-700">
-                          <span class="dp-acts">
+                          <span class={ACTS_CLS}>
                             {rowSlots(r).map((s) => {
                               if (s.kind === "custom") {
                                 const tip = actionTipText(
@@ -2491,7 +2517,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
                                   title={tr(m.deleteAsk, { name: rowName(r) })}
                                   okText={m.delete}
                                   cancelText={m.cancel}
-                                  overlayClass="dp-pop"
+                                  overlayClass={POP_OVERLAY_CLS}
                                   onOpenChange={(o: boolean) => {
                                     if (!o && popRow.value === idOf(r)) {
                                       popRow.value = null;
@@ -2610,18 +2636,18 @@ export function DataPanel(props: PanelProps): JSXRenderable {
       : "min-w-8 rounded border px-2 py-1 text-sm disabled:opacity-40";
     return (
       <div
-        class="dp-pg flex flex-wrap items-center justify-between gap-3 px-3 py-3 text-sm"
+        class={PG_CLS}
         data-testid="dp-pagination"
         data-dp-pg-size={pgSize}
       >
-        <span class="dp-range" data-testid="dp-range">
+        <span class={RANGE_CLS} data-testid="dp-range">
           {n === 0 ? m.rangeEmpty : tr(m.range, { from, to, total: n })}
         </span>
-        <div class="dp-pg-ctrls flex flex-wrap items-center gap-2">
-          <div class="dp-pgsize" data-testid="dp-pagesize" data-size={pgSize}>
+        <div class={PG_CTRLS_CLS}>
+          <div class={PGSIZE_WRAP_CLS} data-testid="dp-pagesize" data-size={pgSize}>
             <Select
               size={pgSize}
-              class="inline-flex w-fit shrink-0 align-middle whitespace-nowrap [&>button]:!w-auto [&>button]:inline-flex [&>button]:whitespace-nowrap [&_[role=listbox]]:!flex [&_[role=listbox]]:!flex-col [&_[role=listbox]]:!w-max [&_[role=listbox]]:!min-w-full [&_[role=listbox]]:!right-auto [&_[role=option]]:!block [&_[role=option]]:!w-full [&_[role=option]]:whitespace-nowrap"
+              class={PGSIZE_SELECT_CLS}
               value={createSignal(String(q.pageSize))}
               options={pageSizes.map((sz) => ({
                 value: String(sz),
@@ -2673,7 +2699,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
           </button>
           <label class="flex items-center gap-1">
             {m.jump}
-            <div class="dp-jump" data-testid="dp-jump">
+            <div class={JUMP_CLS} data-testid="dp-jump">
               <Input
                 size={pgSize}
                 type="text"
@@ -2946,10 +2972,9 @@ export function DataPanel(props: PanelProps): JSXRenderable {
 
   return (
     <div class="contents" data-testid={`panel-${key}`}>
-      <style>{DATA_PANEL_CSS}</style>
       {() => (
       <div
-        class={panelFs.value ? "dp-fs" : undefined}
+        class={panelFs.value ? FS_CLS : undefined}
         data-dp-shell={key}
         data-testid="dp-shell"
         data-fullscreen={panelFs.value ? "true" : undefined}
@@ -2957,7 +2982,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
       <Card
         bordered
         size="sm"
-        class={`dp-card${props.class ? ` ${props.class}` : ""}`}
+        class={`dp-card${props.class ? ` ${props.class}` : ""} ${CARD_STYLE}`}
         title={
           <span
             class="inline-flex min-w-0 items-center gap-2"
@@ -2976,7 +3001,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
       >
         {toolbar}
         {/* 固定插槽：响应式子节点插在静态兄弟之后会落到卡片底部；批量条在表格下方，选中行不会把表格顶下去 */}
-        <div class="dp-table-wrap px-2.5 py-2.5">{table}</div>
+        <div class={TABLE_WRAP_CLS}>{table}</div>
         <div data-testid="dp-batch-slot">{batchBar}</div>
         {pagination}
       </Card>

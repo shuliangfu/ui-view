@@ -15,6 +15,9 @@ import { toast } from "../feedback/toast-store.ts"
 import { PRISM_TOKEN_CSS } from "../prism-token-styles.ts"
 import { isHtmlElement } from "../dom-guards.ts";
 
+/** 已注入 Prism token CSS 的 Document（Document once）。 */
+const prismTokenCssInjectedForDoc: WeakMap<Document, boolean> = new WeakMap();
+
 /**
  * 与 {@link PRISM_TOKEN_CSS} 相同；保留此导出名以免破坏依赖方。
  */
@@ -166,10 +169,10 @@ export function CodeBlock(props: CodeBlockProps): JSXRenderable {
   };
 
   /**
-   * 注入 Prism token 样式（每个 CodeBlock 根节点一次）。
+   * 注入 Prism token 样式：同一 Document 只插一次到 `head`（与 Markdown 预览一致）。
    * 注意：@dreamer/view 的 scheduleFunctionRef 可能在元素尚未挂入 document 时调用 ref，
-   * 部分运行时下 detached 节点的 ownerDocument 可能为 undefined，需回退到 globalThis.document；
-   * 若当前仍无可用 Document，则跳过且不设置 _codeBlockStyle，便于后续 ref 再次尝试注入。
+   * detached 节点的 ownerDocument 可能为 undefined，需回退到 globalThis.document；
+   * 若当前仍无可用 Document，则跳过且不设置标记，便于后续 ref 再次尝试。
    */
   const setWrapperRef = (el: unknown) => {
     if (!isElementNodeForInsert(el)) return;
@@ -182,12 +185,19 @@ export function CodeBlock(props: CodeBlockProps): JSXRenderable {
       (typeof globalThis.document !== "undefined"
         ? globalThis.document
         : undefined);
-    if (!doc?.createElement) return;
+    if (!doc?.head?.appendChild || !doc.createElement) return;
 
     marked._codeBlockStyle = true;
+    if (prismTokenCssInjectedForDoc.get(doc)) return;
+    if (doc.head.querySelector('style[data-code-block-prism="1"]')) {
+      prismTokenCssInjectedForDoc.set(doc, true);
+      return;
+    }
+    prismTokenCssInjectedForDoc.set(doc, true);
     const style = doc.createElement("style");
+    style.setAttribute("data-code-block-prism", "1");
     style.textContent = PRISM_TOKEN_CSS;
-    wrapper.insertBefore(style, wrapper.firstChild);
+    doc.head.appendChild(style);
   };
 
   return (

@@ -36,7 +36,7 @@ interface RootLayoutProps {
 }
 
 /**
- * 文档站顶栏单独成组件：仅在此读取 {@link docsNavSidebarAttached}，把订阅限制在顶栏子树。
+ * 文档站顶栏单独成组件：仅在此读取 {@link docsNavSidebarAttached}，把订阅限制在顶栏子树。。。。
  *
  * 若放在 RootLayout 根组件里读该 signal，子路由的 desktop/mobile `_layout` 在 onMount 里写 `true` 会触发
  * **整棵根布局**重渲染，子布局可能被卸掉并执行 onCleanup（写 `false`），再挂载 onMount（写 `true`），

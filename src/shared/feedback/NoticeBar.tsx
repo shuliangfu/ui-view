@@ -102,7 +102,7 @@ export function NoticeBar(props: NoticeBarProps): JSXRenderable {
               <div
                 class={twMerge(
                   scrollable &&
-                    "inline-block animate-[notice-bar-marquee_12s_linear_infinite] motion-reduce:animate-none pr-8",
+                    "inline-block animate-notice-bar-marquee motion-reduce:animate-none pr-8",
                 )}
               >
                 {body}
@@ -124,9 +124,6 @@ export function NoticeBar(props: NoticeBarProps): JSXRenderable {
               >
                 ×
               </button>
-            )}
-            {scrollable && (
-              <style>{`@keyframes notice-bar-marquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}`}</style>
             )}
           </div>
         );
