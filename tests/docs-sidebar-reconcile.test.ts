@@ -2,7 +2,7 @@
  * @fileoverview 侧栏 path 与 `collectDesktopDocsRoutes` 扫描结果对账（无浏览器、无 dev）
  */
 
-import { dirname, join } from "@dreamer/runtime-adapter";
+import { dirname, getEnv, join } from "@dreamer/runtime-adapter";
 import { describe, expect, it } from "@dreamer/test";
 import { sharedEnv } from "./docs-browser/helpers.ts";
 import { collectDesktopDocsRoutes } from "./collect-desktop-routes.ts";
@@ -56,8 +56,11 @@ describe("侧栏与文件路由对账（无浏览器）", () => {
   /**
    * 在首个 docs-browser 用例拉起 Playwright 之前预热共享 docs server，
    * 避免 Windows CI 上「浏览器已起、server 冷启数十秒」导致页被关掉。
+   * Bun Windows 仅跑本文件时可设 UI_VIEW_SKIP_DOCS_DEV_WARMUP=1 跳过（无需起 docs）。
    */
   it("预热 docs dev（供后续 docs-browser 复用）", async () => {
+    const flag = getEnv("UI_VIEW_SKIP_DOCS_DEV_WARMUP");
+    if (flag === "1" || flag === "true") return;
     await sharedEnv.start();
   }, {
     sanitizeOps: false,

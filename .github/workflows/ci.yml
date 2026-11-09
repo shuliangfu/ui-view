@@ -63,8 +63,38 @@ jobs:
       - name: Lint
         run: deno lint src/
 
-      - name: Test (Deno — unit + docs-browser)
-        run: deno test -A --minimum-dependency-age=0 tests/docs-sidebar-reconcile.test.ts tests/docs-browser/
+      # Shard docs-browser so macOS process/thread table can reset between batches.
+      # Long single-process runs (~2h) end in Playwright/Deno spawn WouldBlock (os error 35).
+      - name: Raise process limits (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          ulimit -n 10240 || true
+          ulimit -u 2048 || true
+          ulimit -a || true
+
+      - name: Test (Deno — reconcile + top-level docs-browser)
+        shell: bash
+        run: |
+          if [ "${{ runner.os }}" = "macOS" ]; then ulimit -n 10240 || true; ulimit -u 2048 || true; fi
+          deno test -A --minimum-dependency-age=0 \
+            tests/docs-sidebar-reconcile.test.ts \
+            tests/docs-browser/*.test.ts
+
+      - name: Test (Deno — page-tests desktop)
+        shell: bash
+        run: |
+          if [ "${{ runner.os }}" = "macOS" ]; then ulimit -n 10240 || true; ulimit -u 2048 || true; fi
+          deno test -A --minimum-dependency-age=0 \
+            tests/docs-sidebar-reconcile.test.ts \
+            tests/docs-browser/page-tests/page_desktop*.test.ts
+
+      - name: Test (Deno — page-tests mobile)
+        shell: bash
+        run: |
+          if [ "${{ runner.os }}" = "macOS" ]; then ulimit -n 10240 || true; ulimit -u 2048 || true; fi
+          deno test -A --minimum-dependency-age=0 \
+            tests/docs-sidebar-reconcile.test.ts \
+            tests/docs-browser/page-tests/page_mobile*.test.ts
 
   # ───────────────── Bun ─────────────────
   test-bun:
@@ -94,17 +124,16 @@ jobs:
         with:
           node-version: "22"
 
-      # Docs app is Deno-based; needed for docs-browser (skipped on Windows below)
+      # Docs app is Deno-based; reconcile warmup spawns PATH `deno` even when docs-browser is skipped on Windows
       - name: Setup Deno
         id: setup-deno-bun
-        if: matrix.os != 'windows-latest'
         continue-on-error: true
         uses: denoland/setup-deno@v2
         with:
           deno-version: v2.9
 
       - name: Setup Deno (retry)
-        if: matrix.os != 'windows-latest' && steps.setup-deno-bun.outcome == 'failure'
+        if: steps.setup-deno-bun.outcome == 'failure'
         uses: denoland/setup-deno@v2
         with:
           deno-version: v2.9
@@ -127,6 +156,9 @@ jobs:
 
       - name: Test (Bun — unit only; docs-browser skipped on Windows)
         if: matrix.os == 'windows-latest'
+        env:
+          # No docs-browser on this cell; skip sharedEnv.start() so we do not spawn a unused docs server
+          UI_VIEW_SKIP_DOCS_DEV_WARMUP: "1"
         run: bun test tests/docs-sidebar-reconcile.test.ts
 
   # ───────────────── Node.js 22+ ─────────────────

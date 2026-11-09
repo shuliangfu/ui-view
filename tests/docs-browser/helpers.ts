@@ -682,6 +682,20 @@ function isDeadBrowserNavError(err: unknown): boolean {
     .test(msg);
 }
 
+/**
+ * macOS CI 长跑末段常见：进程／线程表耗尽，spawn Chromium／Deno 报
+ * `WouldBlock` / `Resource temporarily unavailable (os error 35)`。
+ */
+function isResourceExhaustedSpawnError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err);
+  return /WouldBlock|Resource temporarily unavailable|os error 35|EAGAIN|EMFILE|too many open files/i
+    .test(msg);
+}
+
+function isRecoverableBrowserError(err: unknown): boolean {
+  return isDeadBrowserNavError(err) || isResourceExhaustedSpawnError(err);
+}
+
 type PlaywrightBrowserHandle = {
   isConnected?: () => boolean;
   newPage?: () => Promise<{
@@ -728,14 +742,18 @@ function rebindDocsBrowserFromContext(
 }
 
 /**
- * 导航前页已死：优先同 Browser newPage；整机断开则清缓存并 createBrowserContext 重建。
+ * 导航前页已死／spawn 资源耗尽：优先同 Browser newPage；否则清浏览器后带退避重建。
+ * os35 时多等几拍再 launch，避免立刻再撞进程上限。
  */
 async function recoverDocsBrowserPage(
   t: DocsBrowserTestContext,
+  opts?: { resourceExhausted?: boolean },
 ): Promise<void> {
   const mutable = t.browser as MutableDocsBrowser | undefined;
   const pw = mutable?.browser;
+  const skipReuse = opts?.resourceExhausted === true;
   if (
+    !skipReuse &&
     pw &&
     typeof pw.newPage === "function" &&
     (typeof pw.isConnected !== "function" || pw.isConnected())
@@ -757,17 +775,43 @@ async function recoverDocsBrowserPage(
     }
   }
   await cleanupAllBrowsers().catch(() => {});
-  await delayMs(120);
-  const ctx = await createBrowserContext({
+  // Resource exhaustion: longer settle so unreaped Chromium helpers can exit
+  const settleMs = opts?.resourceExhausted
+    ? (platform() === "darwin" ? 2500 : 1500)
+    : 120;
+  await delayMs(settleMs);
+
+  const browserOpts = {
     enabled: true,
     headless: true,
-    browserSource: "test",
+    browserSource: "test" as const,
     entryPoint: entryPointForBrowser(),
     bodyContent: '<div id="root"></div>',
     browserMode: true,
     moduleLoadTimeout: 20_000,
-  });
-  rebindDocsBrowserFromContext(t, ctx);
+  };
+  let lastErr: unknown;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      if (attempt > 0) {
+        await cleanupAllBrowsers().catch(() => {});
+        await delayMs(800 * attempt + (opts?.resourceExhausted ? 1200 : 0));
+      }
+      const ctx = await createBrowserContext(browserOpts);
+      rebindDocsBrowserFromContext(t, ctx);
+      return;
+    } catch (err) {
+      lastErr = err;
+      if (!isResourceExhaustedSpawnError(err) && attempt === 0) {
+        // non-exhaustion first failure: one more try then throw
+        continue;
+      }
+      if (!isResourceExhaustedSpawnError(err) && attempt >= 1) break;
+    }
+  }
+  throw lastErr instanceof Error
+    ? lastErr
+    : new Error(String(lastErr ?? "recoverDocsBrowserPage failed"));
 }
 
 export const sharedEnv = {
@@ -824,9 +868,11 @@ export const sharedEnv = {
     try {
       await navigate();
     } catch (err) {
-      // CI（尤 Windows）首条 docs-browser：冷启 server 期间 Chromium 偶发断开
-      if (!isDeadBrowserNavError(err)) throw err;
-      await recoverDocsBrowserPage(t);
+      // CI：冷启断开，或 macOS 长跑末段 WouldBlock／os35
+      if (!isRecoverableBrowserError(err)) throw err;
+      await recoverDocsBrowserPage(t, {
+        resourceExhausted: isResourceExhaustedSpawnError(err),
+      });
       await navigate();
     }
     const waitMainMs = options?.waitMainTimeoutMs ?? 25_000;
