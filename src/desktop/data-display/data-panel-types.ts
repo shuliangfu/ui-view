@@ -28,7 +28,9 @@ export type ColumnType =
   /** 多选勾选列（columns 驱动；对齐旧顶层 selectable／dreamer-vue type:selection） */
   | "selection"
   /** 行号／序号列（columns 驱动；label 可省，默认 "#"） */
-  | "index";
+  | "index"
+  /** 行操作列（columns 驱动；按钮配置写在列的 `actions`；label 可省，回落 messages.actions） */
+  | "actions";
 
 /** 选项（tag 列、select 搜索 / 表单项共用） */
 export interface Option {
@@ -40,17 +42,17 @@ export interface Option {
 /** 列定义 */
 export interface Column {
   /**
-   * 行字段名。
-   * `type:"selection"` 用 `"__select"`；`type:"index"` 用 `"__index"`（与内置常量对齐）。
+   * 行字段名（数据列必填）。
+   * 系统列可省：`selection`→`__select`，`index`→`__index`，`actions`→`__actions`（仍可显式覆盖）。
    */
-  prop: string;
+  prop?: string;
   /**
-   * 表头文案。
-   * `type:"index"` 建议传 `"#"`（或不喜欢可改成「序号」等）；解析器对空串仍回落 `"#"`。
-   * `type:"selection"` 可传 `""`（列设置显示用 messages.colSelect）。
+   * 表头文案（数据列建议必填）。
+   * 系统列可省：`selection`→`""`（列设置用 messages.colSelect）；`index`→`"#"`；`actions`→`""`（表头回落 messages.actions）。
+   * 仍可显式传自定义文案；空串按上列默认处理。
    */
-  label: string;
-  /** 展示类型，默认 text；`selection`／`index` 为系统列 */
+  label?: string;
+  /** 展示类型，默认 text；`selection`／`index`／`actions` 为系统列 */
   type?: ColumnType;
   /**
    * 日期／时间展示格式（优先于默认切片）。
@@ -98,6 +100,12 @@ export interface Column {
    * 不再用「首个 switch 列」隐式推导。
    */
   batch?: boolean;
+  /**
+   * 仅 `type:"actions"`：行操作 Record（原顶层 rowActions）。
+   * 内置 view／edit／remove＋自定义 key；写入序＝显示序；自定义必须 `action(item)`。
+   * 省略键回落 caps；声明键请写明确 true｜false｜object。
+   */
+  actions?: RowActionsConfig;
   /**
    * 按行文案／节点（对齐旧 `options.value(row)`）。
    * 可返回：**任意可渲染节点**——string／number、JSX／VNode、组件（如 Icon）、DOM Node，
@@ -506,9 +514,9 @@ export function isRowBuiltin(key: string): key is RowBuiltin {
 export type PanelToolbarConfig = Record<string, ActionCtrl>;
 
 /**
- * Unified Record config（对齐旧 actions；show/disable/action 可 (item)=>…）。
- * 省略键 → 内置回落 caps；声明键请写明确 true｜false｜object。
- * Abolished: `extra` arrays and `order` mix fields.
+ * 操作列按钮 Record（写在 `Column.actions`，`type:"actions"`）。
+ * 同形：show／disable／action 可 (item)=>…；省略键 → 内置回落 caps；声明键请写明确 true｜false｜object。
+ * Abolished: 顶层 `rowActions`、`extra` arrays、`order`。
  */
 export type RowActionsConfig = Record<string, RowActionCtrl>;
 
@@ -661,7 +669,7 @@ export function assertToolbarConfig(
   }
 }
 
-/** Throw if any custom rowActions key lacks `action`. Call at mount / before render. */
+/** Throw if any custom `Column.actions` key lacks `action`. Call at mount / before render. */
 export function assertRowActionsConfig(
   cfg: RowActionsConfig | undefined,
 ): void {
@@ -672,7 +680,7 @@ export function assertRowActionsConfig(
       continue;
     }
     throw new Error(
-      `DataPanel rowActions custom key "${key}" requires action(row); ` +
+      `DataPanel column.actions custom key "${key}" requires action(row); ` +
         `got ${val === null ? "null" : typeof val === "object" ? typeof (val as { action?: unknown }).action : typeof val}`,
     );
   }
@@ -683,6 +691,9 @@ export type Density = "compact" | "comfortable" | "loose";
 
 /** 导出格式 */
 export type ExportFormat = "xlsx" | "csv" | "json" | "xml" | "html";
+
+/** 导入格式（无 html） */
+export type ImportFormat = "xlsx" | "csv" | "json" | "xml";
 
 /** 界面语言 */
 export type Locale = "zh-CN" | "en-US";

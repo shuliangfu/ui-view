@@ -28,6 +28,7 @@ import {
   createCellDemoSource,
   createRemoteDemoSource,
   DEMO_COLUMNS,
+  DEMO_COLUMNS_CODE,
   DEMO_FORM,
   DEMO_FORM_RICH,
   DEMO_HIDE_CHROME,
@@ -36,6 +37,7 @@ import {
   demoCapGate,
   makeDemoRows,
   type DemoPerms,
+  withRowActions,
 } from "../../../data/data-panel-demo.ts";
 
 const DATA_PANEL_API: DocsApiTableRow[] = [
@@ -49,7 +51,7 @@ const DATA_PANEL_API: DocsApiTableRow[] = [
     name: "columns",
     type: "Column[]",
     default: "-",
-    description: "列定义（含 selection／index、date／datetime.format）。详见下方 Columns 表。",
+    description: "列定义（含 selection／index／actions、date／datetime.format）。详见下方 Columns 表。",
   },
   {
     name: "data",
@@ -169,7 +171,7 @@ const DATA_PANEL_API: DocsApiTableRow[] = [
     type: "Partial<Caps>",
     default: "按数据源推断",
     description:
-      "能力开关：create／update／view／remove／batchStatus／import／…。batchStatus 不在 toolbar；默认＝存在 column.batch:true（switch＋两档 options）且有 setField。toolbar／rowActions 声明键请写明确 true｜false｜object",
+      "能力开关：create／update／view／remove／batchStatus／import／…。batchStatus 不在 toolbar；默认＝存在 column.batch:true（switch＋两档 options）且有 setField。toolbar／column.actions 声明键请写明确 true｜false｜object",
   },
   {
     name: "locale",
@@ -207,7 +209,7 @@ const DATA_PANEL_API: DocsApiTableRow[] = [
     name: "onImportRows",
     type: "(rows) => void",
     default: "-",
-    description: "接管导入；缺省走 dataSource.importRows",
+    description: "接管导入（xlsx／csv／json／xml）；缺省走 dataSource.importRows",
   },
   {
     name: "renderCell",
@@ -222,13 +224,7 @@ const DATA_PANEL_API: DocsApiTableRow[] = [
     description:
       "`false`＝整栏不渲染；省略／{}／Record＝统合 Record（废止 extra／order）。声明项写明确 true｜false｜object（省略键才回落 caps）；对象可 show／disable／icon／label／title／tone／action；写入序＝显示序。批量「设为…」不在 toolbar，见 caps.batchStatus＋column.batch",
   },
-  {
-    name: "rowActions",
-    type: "RowActionsConfig (Record)",
-    default: "{}",
-    description:
-      "统合 Record（废止 rowActions.extra／order／rowExtra／onEdit／onView）。同形；tone 同 toolbar；无 confirm 字段（确认写在 action）；title／label 互落同 toolbar（tip=title??label??messages??key；显示=label??title??key）；自定义必须 action(item)；内置 remove 自带 Popconfirm；写入序＝显示序",
-  },
+  
   {
     name: "isRowDisabled",
     type: "(row) => boolean",
@@ -268,23 +264,30 @@ const COLUMNS_API: DocsApiTableRow[] = [
   {
     name: "prop",
     type: "string",
-    default: "-",
+    default: "系统列可省",
     description:
-      "行字段名（必填）。`type:\"selection\"` 用 `\"__select\"`；`type:\"index\"` 用 `\"__index\"`（与 PANEL_COL_* 对齐）。",
+      "行字段名。数据列必填；系统列可省（默认 `__select`／`__index`／`__actions`）。",
   },
   {
     name: "label",
     type: "string",
-    default: "-",
+    default: "系统列可省",
     description:
-      "表头文案（必填）。`type:\"index\"` 建议 `\"#\"`（空串解析后回落 `#`）；`type:\"selection\"` 可传 `\"\"`（列设置用 messages.colSelect）。",
+      "表头文案。数据列建议必填；系统列可省（selection 空／列设置文案；index 默认 `#`；actions 回落 messages.actions）。",
   },
   {
     name: "type",
-    type: '"text"|"number"|"money"|"date"|"datetime"|"tag"|"bool"|"image"|"link"|"selection"|"index"',
+    type: '"text"|"number"|"money"|"date"|"datetime"|"tag"|"bool"|"image"|"link"|"selection"|"index"|"actions"',
     default: '"text"',
     description:
-      "展示类型。`selection`＝多选勾选列；`index`＝行号／序号列（均可写进 columns 控制顺序／文案；未声明时兼容自动前置）。",
+      "展示类型。系统列写 `{ type:\"selection\" }`／`{ type:\"index\" }`／`{ type:\"actions\" }` 即可（prop／label 可省）。操作按钮写在列的 `actions` Record；未声明时兼容自动补。",
+  },
+  {
+    name: "actions",
+    type: "RowActionsConfig",
+    default: "-",
+    description:
+      "仅 type:\"actions\"。行操作 Record（写在本列，勿再顶层配置）：内置 view／edit／remove＋自定义；写入序＝显示序；自定义必须 action(item)；省略键回落 caps。",
   },
   {
     name: "format",
@@ -714,8 +717,8 @@ import type { Column, FormField, SearchField } from "@dreamer/ui-view/data-displ
 // importRows → POST …/create，body { rows }（单条 create 仍传对象）
 
 const columns: Column[] = [
-  { type: "selection", prop: "__select", label: "" },
-  { type: "index", prop: "__index", label: "#" },
+  { type: "selection" },
+  { type: "index" },
   { prop: "name", label: "姓名", sortable: true, inline: "text" },
   { prop: "email", label: "邮箱", sortable: true },
   { prop: "role", label: "角色", type: "tag", options: [
@@ -729,6 +732,11 @@ const columns: Column[] = [
   ] },
   { prop: "balance", label: "余额", type: "money", sortable: true, total: true },
   { prop: "createdAt", label: "创建时间", type: "datetime", format: "YYYY-MM-DD HH:mm", hidden: true },
+  { type: "actions", actions: {
+    view: true,
+    edit: true,
+    remove: false,
+  } },
 ];
 const search: SearchField[] = [
   { prop: "name" },
@@ -762,8 +770,8 @@ import type { Column, FormField, SearchField } from "@dreamer/ui-view/data-displ
 // apiMode:"restful"：GET/POST /api/orders · PUT/DELETE /api/orders/:id · import → POST …/import
 
 const columns: Column[] = [
-  { type: "selection", prop: "__select", label: "" },
-  { type: "index", prop: "__index", label: "#" },
+  { type: "selection" },
+  { type: "index" },
   { prop: "name", label: "姓名", sortable: true, inline: "text" },
   { prop: "email", label: "邮箱", sortable: true },
   { prop: "role", label: "角色", type: "tag", options: [
@@ -777,6 +785,11 @@ const columns: Column[] = [
   ] },
   { prop: "balance", label: "余额", type: "money", sortable: true, total: true },
   { prop: "createdAt", label: "创建时间", type: "datetime", format: "YYYY-MM-DD HH:mm", hidden: true },
+  { type: "actions", actions: {
+    view: true,
+    edit: true,
+    remove: false,
+  } },
 ];
 const search: SearchField[] = [
   { prop: "name" },
@@ -812,17 +825,58 @@ const rows = [
   { id: "2", name: "Bob", email: "bob@example.com", role: "editor", status: "disabled", balance: 80 },
 ];
 const columns: Column[] = [
+  { type: "selection" },
+  { type: "index" },
   { prop: "name", label: "姓名", sortable: true, inline: "text" },
-  { prop: "role", label: "角色", type: "tag", options: [
-    { value: "admin", label: "管理员", tone: "danger" },
-    { value: "editor", label: "编辑", tone: "info" },
-    { value: "viewer", label: "访客" },
-  ] },
-  { prop: "status", label: "状态", type: "tag", inline: "switch", batch: true, options: [
-    { value: "active", label: "启用", tone: "success" },
-    { value: "disabled", label: "停用", tone: "warning" },
-  ] },
-  { prop: "balance", label: "余额", type: "money", sortable: true, total: true },
+  { prop: "email", label: "邮箱", sortable: true },
+  {
+    prop: "role",
+    label: "角色",
+    type: "tag",
+    options: [
+      { value: "admin", label: "管理员", tone: "danger" },
+      { value: "editor", label: "编辑", tone: "info" },
+      { value: "viewer", label: "访客", tone: "default" },
+    ],
+  },
+  {
+    prop: "status",
+    label: "状态",
+    type: "tag",
+    inline: "switch",
+    batch: true,
+    options: [
+      { value: "active", label: "启用", tone: "success" },
+      { value: "disabled", label: "停用", tone: "warning" },
+    ],
+  },
+  {
+    prop: "balance",
+    label: "余额",
+    type: "money",
+    sortable: true,
+    total: true,
+  },
+  {
+    prop: "score",
+    label: "积分",
+    type: "number",
+    sortable: true,
+    inline: "number",
+  },
+  {
+    prop: "createdAt",
+    label: "创建时间",
+    type: "datetime",
+    format: "YYYY-MM-DD HH:mm",
+    sortable: true,
+    hidden: true,
+  },
+  { type: "actions", actions: {
+    view: true,
+    edit: true,
+    remove: false,
+  } },
 ];
 const search: SearchField[] = [
   { prop: "name" },
@@ -851,18 +905,58 @@ const columnsCode = `const rows = [
   { id: "2", name: "Bob", role: "editor", status: "disabled", balance: 80, createdAt: "2026-01-02T00:00:00.000Z" },
 ];
 const columns: Column[] = [
+  { type: "selection" },
+  { type: "index" },
   { prop: "name", label: "姓名", sortable: true, inline: "text" },
-  { prop: "role", label: "角色", type: "tag", options: [
-    { value: "admin", label: "管理员", tone: "danger" },
-    { value: "editor", label: "编辑", tone: "info" },
-    { value: "viewer", label: "访客" },
-  ] },
-  { prop: "status", label: "状态", type: "tag", inline: "switch", batch: true, options: [
-    { value: "active", label: "启用", tone: "success" },
-    { value: "disabled", label: "停用", tone: "warning" },
-  ] },
-  { prop: "balance", label: "余额", type: "money", sortable: true, total: true },
-  { prop: "createdAt", label: "创建时间", type: "datetime", format: "YYYY-MM-DD HH:mm", hidden: true },
+  { prop: "email", label: "邮箱", sortable: true },
+  {
+    prop: "role",
+    label: "角色",
+    type: "tag",
+    options: [
+      { value: "admin", label: "管理员", tone: "danger" },
+      { value: "editor", label: "编辑", tone: "info" },
+      { value: "viewer", label: "访客", tone: "default" },
+    ],
+  },
+  {
+    prop: "status",
+    label: "状态",
+    type: "tag",
+    inline: "switch",
+    batch: true,
+    options: [
+      { value: "active", label: "启用", tone: "success" },
+      { value: "disabled", label: "停用", tone: "warning" },
+    ],
+  },
+  {
+    prop: "balance",
+    label: "余额",
+    type: "money",
+    sortable: true,
+    total: true,
+  },
+  {
+    prop: "score",
+    label: "积分",
+    type: "number",
+    sortable: true,
+    inline: "number",
+  },
+  {
+    prop: "createdAt",
+    label: "创建时间",
+    type: "datetime",
+    format: "YYYY-MM-DD HH:mm",
+    sortable: true,
+    hidden: true,
+  },
+  { type: "actions", actions: {
+    view: true,
+    edit: true,
+    remove: false,
+  } },
 ];
 // search／form 键用 prop；label／options／switch 开闭从同 prop 列继承
 const search: SearchField[] = [
@@ -884,6 +978,7 @@ const colFnRows = [
   { id: "3", name: "Carol", flag: 1, level: 1 },
 ];
 const colFnColumns: Column[] = [
+  { type: "index" },
   { prop: "name", label: "姓名" },
   {
     prop: "flag",
@@ -920,12 +1015,19 @@ const colFnColumns: Column[] = [
         ? '<b style="color:#059669">ON</b>'
         : '<span style="color:#94a3b8">OFF</span>',
   },
+  { type: "actions", actions: {
+    view: true,
+    edit: true,
+    remove: false,
+  } },
 ];
 const colFnCode = `const rows = [
   { id: "1", name: "Alice", flag: 1, level: 1 },
   { id: "2", name: "Bob", flag: 0, level: 0 },
 ];
 const columns: Column[] = [
+  { type: "selection" },
+  { type: "index" },
   { prop: "name", label: "姓名" },
   {
     prop: "flag", label: "标记", type: "tag",
@@ -944,6 +1046,11 @@ const columns: Column[] = [
       ? '<b style="color:#059669">ON</b>'
       : '<span style="color:#94a3b8">OFF</span>',
   },
+  { type: "actions", actions: {
+    view: true,
+    edit: true,
+    remove: false,
+  } },
 ];
 <DataPanel title="列函数显示" data={rows} columns={columns}
   formTitle={(row) => row.id ? \`修改 · \${row.name}\` : "添加用户"}
@@ -956,17 +1063,58 @@ const basicCode = `const rows = [
   { id: "2", name: "Bob", email: "bob@example.com", role: "editor", status: "disabled", balance: 80 },
 ];
 const columns: Column[] = [
+  { type: "selection" },
+  { type: "index" },
   { prop: "name", label: "姓名", sortable: true, inline: "text" },
-  { prop: "role", label: "角色", type: "tag", options: [
-    { value: "admin", label: "管理员", tone: "danger" },
-    { value: "editor", label: "编辑", tone: "info" },
-    { value: "viewer", label: "访客" },
-  ] },
-  { prop: "status", label: "状态", type: "tag", inline: "switch", batch: true, options: [
-    { value: "active", label: "启用", tone: "success" },
-    { value: "disabled", label: "停用", tone: "warning" },
-  ] },
-  { prop: "balance", label: "余额", type: "money", sortable: true, total: true },
+  { prop: "email", label: "邮箱", sortable: true },
+  {
+    prop: "role",
+    label: "角色",
+    type: "tag",
+    options: [
+      { value: "admin", label: "管理员", tone: "danger" },
+      { value: "editor", label: "编辑", tone: "info" },
+      { value: "viewer", label: "访客", tone: "default" },
+    ],
+  },
+  {
+    prop: "status",
+    label: "状态",
+    type: "tag",
+    inline: "switch",
+    batch: true,
+    options: [
+      { value: "active", label: "启用", tone: "success" },
+      { value: "disabled", label: "停用", tone: "warning" },
+    ],
+  },
+  {
+    prop: "balance",
+    label: "余额",
+    type: "money",
+    sortable: true,
+    total: true,
+  },
+  {
+    prop: "score",
+    label: "积分",
+    type: "number",
+    sortable: true,
+    inline: "number",
+  },
+  {
+    prop: "createdAt",
+    label: "创建时间",
+    type: "datetime",
+    format: "YYYY-MM-DD HH:mm",
+    sortable: true,
+    hidden: true,
+  },
+  { type: "actions", actions: {
+    view: true,
+    edit: true,
+    remove: false,
+  } },
 ];
 const search: SearchField[] = [
   { prop: "name" },
@@ -995,17 +1143,58 @@ const searchCode = `const rows = [
   { id: "2", name: "Bob", email: "bob@example.com", role: "editor", status: "disabled", balance: 80 },
 ];
 const columns: Column[] = [
+  { type: "selection" },
+  { type: "index" },
   { prop: "name", label: "姓名", sortable: true, inline: "text" },
-  { prop: "role", label: "角色", type: "tag", options: [
-    { value: "admin", label: "管理员", tone: "danger" },
-    { value: "editor", label: "编辑", tone: "info" },
-    { value: "viewer", label: "访客" },
-  ] },
-  { prop: "status", label: "状态", type: "tag", inline: "switch", batch: true, options: [
-    { value: "active", label: "启用", tone: "success" },
-    { value: "disabled", label: "停用", tone: "warning" },
-  ] },
-  { prop: "balance", label: "余额", type: "money", sortable: true, total: true },
+  { prop: "email", label: "邮箱", sortable: true },
+  {
+    prop: "role",
+    label: "角色",
+    type: "tag",
+    options: [
+      { value: "admin", label: "管理员", tone: "danger" },
+      { value: "editor", label: "编辑", tone: "info" },
+      { value: "viewer", label: "访客", tone: "default" },
+    ],
+  },
+  {
+    prop: "status",
+    label: "状态",
+    type: "tag",
+    inline: "switch",
+    batch: true,
+    options: [
+      { value: "active", label: "启用", tone: "success" },
+      { value: "disabled", label: "停用", tone: "warning" },
+    ],
+  },
+  {
+    prop: "balance",
+    label: "余额",
+    type: "money",
+    sortable: true,
+    total: true,
+  },
+  {
+    prop: "score",
+    label: "积分",
+    type: "number",
+    sortable: true,
+    inline: "number",
+  },
+  {
+    prop: "createdAt",
+    label: "创建时间",
+    type: "datetime",
+    format: "YYYY-MM-DD HH:mm",
+    sortable: true,
+    hidden: true,
+  },
+  { type: "actions", actions: {
+    view: true,
+    edit: true,
+    remove: false,
+  } },
 ];
 const search: SearchField[] = [
   { prop: "name" },
@@ -1031,17 +1220,58 @@ const rows = [
   { id: "2", name: "Bob", email: "bob@example.com", role: "editor", status: "disabled", balance: 80 },
 ];
 const columns: Column[] = [
+  { type: "selection" },
+  { type: "index" },
   { prop: "name", label: "姓名", sortable: true, inline: "text" },
-  { prop: "role", label: "角色", type: "tag", options: [
-    { value: "admin", label: "管理员", tone: "danger" },
-    { value: "editor", label: "编辑", tone: "info" },
-    { value: "viewer", label: "访客" },
-  ] },
-  { prop: "status", label: "状态", type: "tag", inline: "switch", batch: true, options: [
-    { value: "active", label: "启用", tone: "success" },
-    { value: "disabled", label: "停用", tone: "warning" },
-  ] },
-  { prop: "balance", label: "余额", type: "money", sortable: true, total: true },
+  { prop: "email", label: "邮箱", sortable: true },
+  {
+    prop: "role",
+    label: "角色",
+    type: "tag",
+    options: [
+      { value: "admin", label: "管理员", tone: "danger" },
+      { value: "editor", label: "编辑", tone: "info" },
+      { value: "viewer", label: "访客", tone: "default" },
+    ],
+  },
+  {
+    prop: "status",
+    label: "状态",
+    type: "tag",
+    inline: "switch",
+    batch: true,
+    options: [
+      { value: "active", label: "启用", tone: "success" },
+      { value: "disabled", label: "停用", tone: "warning" },
+    ],
+  },
+  {
+    prop: "balance",
+    label: "余额",
+    type: "money",
+    sortable: true,
+    total: true,
+  },
+  {
+    prop: "score",
+    label: "积分",
+    type: "number",
+    sortable: true,
+    inline: "number",
+  },
+  {
+    prop: "createdAt",
+    label: "创建时间",
+    type: "datetime",
+    format: "YYYY-MM-DD HH:mm",
+    sortable: true,
+    hidden: true,
+  },
+  { type: "actions", actions: {
+    view: true,
+    edit: true,
+    remove: false,
+  } },
 ];
 const search: SearchField[] = [
   { prop: "name" },
@@ -1070,17 +1300,58 @@ const rows = [
   { id: "2", name: "Bob", email: "bob@example.com", role: "editor", status: "disabled", balance: 80 },
 ];
 const columns: Column[] = [
+  { type: "selection" },
+  { type: "index" },
   { prop: "name", label: "姓名", sortable: true, inline: "text" },
-  { prop: "role", label: "角色", type: "tag", options: [
-    { value: "admin", label: "管理员", tone: "danger" },
-    { value: "editor", label: "编辑", tone: "info" },
-    { value: "viewer", label: "访客" },
-  ] },
-  { prop: "status", label: "状态", type: "tag", inline: "switch", batch: true, options: [
-    { value: "active", label: "启用", tone: "success" },
-    { value: "disabled", label: "停用", tone: "warning" },
-  ] },
-  { prop: "balance", label: "余额", type: "money", sortable: true, total: true },
+  { prop: "email", label: "邮箱", sortable: true },
+  {
+    prop: "role",
+    label: "角色",
+    type: "tag",
+    options: [
+      { value: "admin", label: "管理员", tone: "danger" },
+      { value: "editor", label: "编辑", tone: "info" },
+      { value: "viewer", label: "访客", tone: "default" },
+    ],
+  },
+  {
+    prop: "status",
+    label: "状态",
+    type: "tag",
+    inline: "switch",
+    batch: true,
+    options: [
+      { value: "active", label: "启用", tone: "success" },
+      { value: "disabled", label: "停用", tone: "warning" },
+    ],
+  },
+  {
+    prop: "balance",
+    label: "余额",
+    type: "money",
+    sortable: true,
+    total: true,
+  },
+  {
+    prop: "score",
+    label: "积分",
+    type: "number",
+    sortable: true,
+    inline: "number",
+  },
+  {
+    prop: "createdAt",
+    label: "创建时间",
+    type: "datetime",
+    format: "YYYY-MM-DD HH:mm",
+    sortable: true,
+    hidden: true,
+  },
+  { type: "actions", actions: {
+    view: true,
+    edit: true,
+    remove: false,
+  } },
 ];
 const search: SearchField[] = [
   { prop: "name" },
@@ -1105,17 +1376,58 @@ const crudCode =
   { id: "2", name: "Bob", email: "bob@example.com", role: "editor", status: "disabled", balance: 80 },
 ];
 const columns: Column[] = [
+  { type: "selection" },
+  { type: "index" },
   { prop: "name", label: "姓名", sortable: true, inline: "text" },
-  { prop: "role", label: "角色", type: "tag", options: [
-    { value: "admin", label: "管理员", tone: "danger" },
-    { value: "editor", label: "编辑", tone: "info" },
-    { value: "viewer", label: "访客" },
-  ] },
-  { prop: "status", label: "状态", type: "tag", inline: "switch", batch: true, options: [
-    { value: "active", label: "启用", tone: "success" },
-    { value: "disabled", label: "停用", tone: "warning" },
-  ] },
-  { prop: "balance", label: "余额", type: "money", sortable: true, total: true },
+  { prop: "email", label: "邮箱", sortable: true },
+  {
+    prop: "role",
+    label: "角色",
+    type: "tag",
+    options: [
+      { value: "admin", label: "管理员", tone: "danger" },
+      { value: "editor", label: "编辑", tone: "info" },
+      { value: "viewer", label: "访客", tone: "default" },
+    ],
+  },
+  {
+    prop: "status",
+    label: "状态",
+    type: "tag",
+    inline: "switch",
+    batch: true,
+    options: [
+      { value: "active", label: "启用", tone: "success" },
+      { value: "disabled", label: "停用", tone: "warning" },
+    ],
+  },
+  {
+    prop: "balance",
+    label: "余额",
+    type: "money",
+    sortable: true,
+    total: true,
+  },
+  {
+    prop: "score",
+    label: "积分",
+    type: "number",
+    sortable: true,
+    inline: "number",
+  },
+  {
+    prop: "createdAt",
+    label: "创建时间",
+    type: "datetime",
+    format: "YYYY-MM-DD HH:mm",
+    sortable: true,
+    hidden: true,
+  },
+  { type: "actions", actions: {
+    view: true,
+    edit: true,
+    remove: false,
+  } },
 ];
 const search: SearchField[] = [
   { prop: "name" },
@@ -1141,17 +1453,58 @@ const rows = [
   { id: "2", name: "Bob", email: "bob@example.com", role: "editor", status: "disabled", balance: 80 },
 ];
 const columns: Column[] = [
+  { type: "selection" },
+  { type: "index" },
   { prop: "name", label: "姓名", sortable: true, inline: "text" },
-  { prop: "role", label: "角色", type: "tag", options: [
-    { value: "admin", label: "管理员", tone: "danger" },
-    { value: "editor", label: "编辑", tone: "info" },
-    { value: "viewer", label: "访客" },
-  ] },
-  { prop: "status", label: "状态", type: "tag", inline: "switch", batch: true, options: [
-    { value: "active", label: "启用", tone: "success" },
-    { value: "disabled", label: "停用", tone: "warning" },
-  ] },
-  { prop: "balance", label: "余额", type: "money", sortable: true, total: true },
+  { prop: "email", label: "邮箱", sortable: true },
+  {
+    prop: "role",
+    label: "角色",
+    type: "tag",
+    options: [
+      { value: "admin", label: "管理员", tone: "danger" },
+      { value: "editor", label: "编辑", tone: "info" },
+      { value: "viewer", label: "访客", tone: "default" },
+    ],
+  },
+  {
+    prop: "status",
+    label: "状态",
+    type: "tag",
+    inline: "switch",
+    batch: true,
+    options: [
+      { value: "active", label: "启用", tone: "success" },
+      { value: "disabled", label: "停用", tone: "warning" },
+    ],
+  },
+  {
+    prop: "balance",
+    label: "余额",
+    type: "money",
+    sortable: true,
+    total: true,
+  },
+  {
+    prop: "score",
+    label: "积分",
+    type: "number",
+    sortable: true,
+    inline: "number",
+  },
+  {
+    prop: "createdAt",
+    label: "创建时间",
+    type: "datetime",
+    format: "YYYY-MM-DD HH:mm",
+    sortable: true,
+    hidden: true,
+  },
+  { type: "actions", actions: {
+    view: true,
+    edit: true,
+    remove: false,
+  } },
 ];
 const search: SearchField[] = [
   { prop: "name" },
@@ -1174,17 +1527,58 @@ const pageCode =
   { id: "2", name: "Bob", email: "bob@example.com", role: "editor", status: "disabled", balance: 80 },
 ];
 const columns: Column[] = [
+  { type: "selection" },
+  { type: "index" },
   { prop: "name", label: "姓名", sortable: true, inline: "text" },
-  { prop: "role", label: "角色", type: "tag", options: [
-    { value: "admin", label: "管理员", tone: "danger" },
-    { value: "editor", label: "编辑", tone: "info" },
-    { value: "viewer", label: "访客" },
-  ] },
-  { prop: "status", label: "状态", type: "tag", inline: "switch", batch: true, options: [
-    { value: "active", label: "启用", tone: "success" },
-    { value: "disabled", label: "停用", tone: "warning" },
-  ] },
-  { prop: "balance", label: "余额", type: "money", sortable: true, total: true },
+  { prop: "email", label: "邮箱", sortable: true },
+  {
+    prop: "role",
+    label: "角色",
+    type: "tag",
+    options: [
+      { value: "admin", label: "管理员", tone: "danger" },
+      { value: "editor", label: "编辑", tone: "info" },
+      { value: "viewer", label: "访客", tone: "default" },
+    ],
+  },
+  {
+    prop: "status",
+    label: "状态",
+    type: "tag",
+    inline: "switch",
+    batch: true,
+    options: [
+      { value: "active", label: "启用", tone: "success" },
+      { value: "disabled", label: "停用", tone: "warning" },
+    ],
+  },
+  {
+    prop: "balance",
+    label: "余额",
+    type: "money",
+    sortable: true,
+    total: true,
+  },
+  {
+    prop: "score",
+    label: "积分",
+    type: "number",
+    sortable: true,
+    inline: "number",
+  },
+  {
+    prop: "createdAt",
+    label: "创建时间",
+    type: "datetime",
+    format: "YYYY-MM-DD HH:mm",
+    sortable: true,
+    hidden: true,
+  },
+  { type: "actions", actions: {
+    view: true,
+    edit: true,
+    remove: false,
+  } },
 ];
 const search: SearchField[] = [
   { prop: "name" },
@@ -1208,17 +1602,58 @@ const exportCode =
   { id: "2", name: "Bob", email: "bob@example.com", role: "editor", status: "disabled", balance: 80 },
 ];
 const columns: Column[] = [
+  { type: "selection" },
+  { type: "index" },
   { prop: "name", label: "姓名", sortable: true, inline: "text" },
-  { prop: "role", label: "角色", type: "tag", options: [
-    { value: "admin", label: "管理员", tone: "danger" },
-    { value: "editor", label: "编辑", tone: "info" },
-    { value: "viewer", label: "访客" },
-  ] },
-  { prop: "status", label: "状态", type: "tag", inline: "switch", batch: true, options: [
-    { value: "active", label: "启用", tone: "success" },
-    { value: "disabled", label: "停用", tone: "warning" },
-  ] },
-  { prop: "balance", label: "余额", type: "money", sortable: true, total: true },
+  { prop: "email", label: "邮箱", sortable: true },
+  {
+    prop: "role",
+    label: "角色",
+    type: "tag",
+    options: [
+      { value: "admin", label: "管理员", tone: "danger" },
+      { value: "editor", label: "编辑", tone: "info" },
+      { value: "viewer", label: "访客", tone: "default" },
+    ],
+  },
+  {
+    prop: "status",
+    label: "状态",
+    type: "tag",
+    inline: "switch",
+    batch: true,
+    options: [
+      { value: "active", label: "启用", tone: "success" },
+      { value: "disabled", label: "停用", tone: "warning" },
+    ],
+  },
+  {
+    prop: "balance",
+    label: "余额",
+    type: "money",
+    sortable: true,
+    total: true,
+  },
+  {
+    prop: "score",
+    label: "积分",
+    type: "number",
+    sortable: true,
+    inline: "number",
+  },
+  {
+    prop: "createdAt",
+    label: "创建时间",
+    type: "datetime",
+    format: "YYYY-MM-DD HH:mm",
+    sortable: true,
+    hidden: true,
+  },
+  { type: "actions", actions: {
+    view: true,
+    edit: true,
+    remove: false,
+  } },
 ];
 const search: SearchField[] = [
   { prop: "name" },
@@ -1233,7 +1668,7 @@ const form: FormField[] = [
   { prop: "status", type: "switch", initial: "active" },
 ];
 
-// 工具栏导出 xlsx／csv／json／xml／html；导入 .csv／.json
+// 工具栏导出 xlsx／csv／json／xml／html；导入下拉 xlsx／csv／json／xml（无 html）再选文件
 <DataPanel title="导出导入" data={rows} columns={columns} exportName="users" />
 
 // 也可只用导出函数
@@ -1270,6 +1705,8 @@ const rows = [
     birthday: "1991-02-11", loginAt: "2026-01-02T10:30:00.000Z", remark: "第 2 位用户的备注" },
 ];
 const columns: Column[] = [
+  { type: "selection" },
+  { type: "index" },
   { prop: "name", label: "姓名", inline: "text" },
   { prop: "score", label: "积分", type: "number", inline: "number" },
   { prop: "role", label: "角色", type: "tag", inline: "select", options: roleOptions },
@@ -1278,6 +1715,11 @@ const columns: Column[] = [
   { prop: "birthday", label: "生日", type: "date", inline: "date" },
   { prop: "loginAt", label: "最近登录", type: "datetime", inline: "datetime" },
   { prop: "remark", label: "备注", inline: "textarea" },
+  { type: "actions", actions: {
+    view: true,
+    edit: true,
+    remove: false,
+  } },
 ];
 // 本地：data={rows}；若要拦截保存失败等，可改 dataSource（如 createLocalDataSource）
 <DataPanel title="单元格编辑" data={rows} columns={columns} />`;
@@ -1332,6 +1774,43 @@ const source: DataSource = {
   },
 };
 
+// columns／search／form 与「基础用法」一致（操作列仅 view＋edit）
+const columns: Column[] = [
+  { type: "selection" },
+  { type: "index" },
+  { prop: "name", label: "姓名", sortable: true, inline: "text" },
+  { prop: "email", label: "邮箱", sortable: true },
+  { prop: "role", label: "角色", type: "tag", options: [
+    { value: "admin", label: "管理员", tone: "danger" },
+    { value: "editor", label: "编辑", tone: "info" },
+    { value: "viewer", label: "访客", tone: "default" },
+  ] },
+  { prop: "status", label: "状态", type: "tag", inline: "switch", batch: true, options: [
+    { value: "active", label: "启用", tone: "success" },
+    { value: "disabled", label: "停用", tone: "warning" },
+  ] },
+  { prop: "balance", label: "余额", type: "money", sortable: true, total: true },
+  { prop: "score", label: "积分", type: "number", sortable: true, inline: "number" },
+  { prop: "createdAt", label: "创建时间", type: "datetime", format: "YYYY-MM-DD HH:mm", sortable: true, hidden: true },
+  { type: "actions", actions: {
+    view: true,
+    edit: true,
+    remove: false,
+  } },
+];
+const search: SearchField[] = [
+  { prop: "name" },
+  { prop: "role", type: "select" },
+  { prop: "status", type: "select" },
+];
+const form: FormField[] = [
+  { prop: "name", required: true },
+  { prop: "email", required: true },
+  { prop: "role", type: "select", required: true, initial: "viewer" },
+  { prop: "balance", type: "number", min: 0, initial: 0 },
+  { prop: "status", type: "switch", initial: "active" },
+];
+
 <DataPanel
   title="远程数据"
   dataSource={source}
@@ -1348,17 +1827,58 @@ const rows = [
   { id: "2", name: "Bob", email: "bob@example.com", role: "editor", status: "disabled", balance: 80 },
 ];
 const columns: Column[] = [
+  { type: "selection" },
+  { type: "index" },
   { prop: "name", label: "姓名", sortable: true, inline: "text" },
-  { prop: "role", label: "角色", type: "tag", options: [
-    { value: "admin", label: "管理员", tone: "danger" },
-    { value: "editor", label: "编辑", tone: "info" },
-    { value: "viewer", label: "访客" },
-  ] },
-  { prop: "status", label: "状态", type: "tag", inline: "switch", batch: true, options: [
-    { value: "active", label: "启用", tone: "success" },
-    { value: "disabled", label: "停用", tone: "warning" },
-  ] },
-  { prop: "balance", label: "余额", type: "money", sortable: true, total: true },
+  { prop: "email", label: "邮箱", sortable: true },
+  {
+    prop: "role",
+    label: "角色",
+    type: "tag",
+    options: [
+      { value: "admin", label: "管理员", tone: "danger" },
+      { value: "editor", label: "编辑", tone: "info" },
+      { value: "viewer", label: "访客", tone: "default" },
+    ],
+  },
+  {
+    prop: "status",
+    label: "状态",
+    type: "tag",
+    inline: "switch",
+    batch: true,
+    options: [
+      { value: "active", label: "启用", tone: "success" },
+      { value: "disabled", label: "停用", tone: "warning" },
+    ],
+  },
+  {
+    prop: "balance",
+    label: "余额",
+    type: "money",
+    sortable: true,
+    total: true,
+  },
+  {
+    prop: "score",
+    label: "积分",
+    type: "number",
+    sortable: true,
+    inline: "number",
+  },
+  {
+    prop: "createdAt",
+    label: "创建时间",
+    type: "datetime",
+    format: "YYYY-MM-DD HH:mm",
+    sortable: true,
+    hidden: true,
+  },
+  { type: "actions", actions: {
+    view: true,
+    edit: true,
+    remove: false,
+  } },
 ];
 const search: SearchField[] = [
   { prop: "name" },
@@ -1383,17 +1903,58 @@ const localeCode =
   { id: "2", name: "Bob", email: "bob@example.com", role: "editor", status: "disabled", balance: 80 },
 ];
 const columns: Column[] = [
+  { type: "selection" },
+  { type: "index" },
   { prop: "name", label: "姓名", sortable: true, inline: "text" },
-  { prop: "role", label: "角色", type: "tag", options: [
-    { value: "admin", label: "管理员", tone: "danger" },
-    { value: "editor", label: "编辑", tone: "info" },
-    { value: "viewer", label: "访客" },
-  ] },
-  { prop: "status", label: "状态", type: "tag", inline: "switch", batch: true, options: [
-    { value: "active", label: "启用", tone: "success" },
-    { value: "disabled", label: "停用", tone: "warning" },
-  ] },
-  { prop: "balance", label: "余额", type: "money", sortable: true, total: true },
+  { prop: "email", label: "邮箱", sortable: true },
+  {
+    prop: "role",
+    label: "角色",
+    type: "tag",
+    options: [
+      { value: "admin", label: "管理员", tone: "danger" },
+      { value: "editor", label: "编辑", tone: "info" },
+      { value: "viewer", label: "访客", tone: "default" },
+    ],
+  },
+  {
+    prop: "status",
+    label: "状态",
+    type: "tag",
+    inline: "switch",
+    batch: true,
+    options: [
+      { value: "active", label: "启用", tone: "success" },
+      { value: "disabled", label: "停用", tone: "warning" },
+    ],
+  },
+  {
+    prop: "balance",
+    label: "余额",
+    type: "money",
+    sortable: true,
+    total: true,
+  },
+  {
+    prop: "score",
+    label: "积分",
+    type: "number",
+    sortable: true,
+    inline: "number",
+  },
+  {
+    prop: "createdAt",
+    label: "创建时间",
+    type: "datetime",
+    format: "YYYY-MM-DD HH:mm",
+    sortable: true,
+    hidden: true,
+  },
+  { type: "actions", actions: {
+    view: true,
+    edit: true,
+    remove: false,
+  } },
 ];
 const search: SearchField[] = [
   { prop: "name" },
@@ -1426,17 +1987,58 @@ const rows = [
   { id: "2", name: "Bob", email: "bob@example.com", role: "editor", status: "disabled", balance: 80 },
 ];
 const columns: Column[] = [
+  { type: "selection" },
+  { type: "index" },
   { prop: "name", label: "姓名", sortable: true, inline: "text" },
-  { prop: "role", label: "角色", type: "tag", options: [
-    { value: "admin", label: "管理员", tone: "danger" },
-    { value: "editor", label: "编辑", tone: "info" },
-    { value: "viewer", label: "访客" },
-  ] },
-  { prop: "status", label: "状态", type: "tag", inline: "switch", batch: true, options: [
-    { value: "active", label: "启用", tone: "success" },
-    { value: "disabled", label: "停用", tone: "warning" },
-  ] },
-  { prop: "balance", label: "余额", type: "money", sortable: true, total: true },
+  { prop: "email", label: "邮箱", sortable: true },
+  {
+    prop: "role",
+    label: "角色",
+    type: "tag",
+    options: [
+      { value: "admin", label: "管理员", tone: "danger" },
+      { value: "editor", label: "编辑", tone: "info" },
+      { value: "viewer", label: "访客", tone: "default" },
+    ],
+  },
+  {
+    prop: "status",
+    label: "状态",
+    type: "tag",
+    inline: "switch",
+    batch: true,
+    options: [
+      { value: "active", label: "启用", tone: "success" },
+      { value: "disabled", label: "停用", tone: "warning" },
+    ],
+  },
+  {
+    prop: "balance",
+    label: "余额",
+    type: "money",
+    sortable: true,
+    total: true,
+  },
+  {
+    prop: "score",
+    label: "积分",
+    type: "number",
+    sortable: true,
+    inline: "number",
+  },
+  {
+    prop: "createdAt",
+    label: "创建时间",
+    type: "datetime",
+    format: "YYYY-MM-DD HH:mm",
+    sortable: true,
+    hidden: true,
+  },
+  { type: "actions", actions: {
+    view: true,
+    edit: true,
+    remove: false,
+  } },
 ];
 const search: SearchField[] = [
   { prop: "name" },
@@ -1468,10 +2070,13 @@ const defaultsCode = `// 默认：省略 show→true、省略 disable→false；
     refresh: { disable: true }, // 显示但禁用
     // search 未声明 → 若无 search 项则 caps/回落不出现
   }}
-  rowActions={{
+  columns={[
+    ...DEMO_COLUMNS.filter((c) => c.type !== "actions"),
+    { type: "actions", actions: {
     edit: { disable: true },    // 声明 → 显示且禁用（无视 caps.update=false）
     // view／remove 未声明 → 按 caps
-  }}
+  } },
+  ]}
 />`;
 
 const boolCode = `// ① true / false 简写控显隐（内置键）；未写的键仍按 caps 回落
@@ -1485,11 +2090,14 @@ const boolCode = `// ① true / false 简写控显隐（内置键）；未写的
     import: false,
     export: false,
   }}
-  rowActions={{
+  columns={[
+    ...DEMO_COLUMNS.filter((c) => c.type !== "actions"),
+    { type: "actions", actions: {
     view: true,
     edit: true,
     remove: false, // 强制隐藏
-  }}
+  } },
+  ]}
 />`;
 
 const tbFnCode = `// ② toolbar：show / disable 无参函数（常接页面变量）
@@ -1498,17 +2106,58 @@ const rows = [
   { id: "2", name: "Bob", email: "bob@example.com", role: "editor", status: "disabled", balance: 80 },
 ];
 const columns: Column[] = [
+  { type: "selection" },
+  { type: "index" },
   { prop: "name", label: "姓名", sortable: true, inline: "text" },
-  { prop: "role", label: "角色", type: "tag", options: [
-    { value: "admin", label: "管理员", tone: "danger" },
-    { value: "editor", label: "编辑", tone: "info" },
-    { value: "viewer", label: "访客" },
-  ] },
-  { prop: "status", label: "状态", type: "tag", inline: "switch", batch: true, options: [
-    { value: "active", label: "启用", tone: "success" },
-    { value: "disabled", label: "停用", tone: "warning" },
-  ] },
-  { prop: "balance", label: "余额", type: "money", sortable: true, total: true },
+  { prop: "email", label: "邮箱", sortable: true },
+  {
+    prop: "role",
+    label: "角色",
+    type: "tag",
+    options: [
+      { value: "admin", label: "管理员", tone: "danger" },
+      { value: "editor", label: "编辑", tone: "info" },
+      { value: "viewer", label: "访客", tone: "default" },
+    ],
+  },
+  {
+    prop: "status",
+    label: "状态",
+    type: "tag",
+    inline: "switch",
+    batch: true,
+    options: [
+      { value: "active", label: "启用", tone: "success" },
+      { value: "disabled", label: "停用", tone: "warning" },
+    ],
+  },
+  {
+    prop: "balance",
+    label: "余额",
+    type: "money",
+    sortable: true,
+    total: true,
+  },
+  {
+    prop: "score",
+    label: "积分",
+    type: "number",
+    sortable: true,
+    inline: "number",
+  },
+  {
+    prop: "createdAt",
+    label: "创建时间",
+    type: "datetime",
+    format: "YYYY-MM-DD HH:mm",
+    sortable: true,
+    hidden: true,
+  },
+  { type: "actions", actions: {
+    view: true,
+    edit: true,
+    remove: false,
+  } },
 ];
 const search: SearchField[] = [
   { prop: "name" },
@@ -1549,7 +2198,9 @@ const hideChrome = {
 const raFnCode = `// ③ 操作列：show / disable / action 收当前行 item
 // 节选：rows／columns 同「基础用法」
 <DataPanel
-  rowActions={{
+  columns={[
+    ...DEMO_COLUMNS.filter((c) => c.type !== "actions"),
+    { type: "actions", actions: {
     view: false,
     edit: false,
     remove: false,
@@ -1559,7 +2210,8 @@ const raFnCode = `// ③ 操作列：show / disable / action 收当前行 item
       disable: (item) => !!item.locked,     // locked 行禁用
       action: (item) => console.log("assign", item.id),
     },
-  }}
+  } },
+  ]}
 />`;
 
 const tbCustomCode = `// ④a 自定义工具钮：未知 key 必须有 action（缺则校验抛错）
@@ -1578,7 +2230,9 @@ const tbCustomCode = `// ④a 自定义工具钮：未知 key 必须有 action�
 const raCustomCode = `// ④b 自定义操作列：未知 key 必须有 action(item)
 // 节选：rows／columns 同「基础用法」
 <DataPanel
-  rowActions={{
+  columns={[
+    ...DEMO_COLUMNS.filter((c) => c.type !== "actions"),
+    { type: "actions", actions: {
     view: true,
     clone: {
       label: "克隆",
@@ -1586,7 +2240,8 @@ const raCustomCode = `// ④b 自定义操作列：未知 key 必须有 action(i
     },
     edit: true,
     remove: false,
-  }}
+  } },
+  ]}
 />`;
 
 const keyOrderCode = `// ⑤ 对象字面量写入序 = 显示序（create → audit → refresh → export）
@@ -1615,7 +2270,9 @@ const enabledCode = `// disable：默认 false；true／函数 true＝禁用仍�
     },
     refresh: true,
   }}
-  rowActions={{
+  columns={[
+    ...DEMO_COLUMNS.filter((c) => c.type !== "actions"),
+    { type: "actions", actions: {
     view: true,
     edit: { disable: true },            // 内置：可见禁用
     remove: false,
@@ -1624,7 +2281,8 @@ const enabledCode = `// disable：默认 false；true／函数 true＝禁用仍�
       disable: (item) => !!item.locked, // locked 行禁用
       action: (item) => console.log(item.id),
     },
-  }}
+  } },
+  ]}
 />`;
 
 
@@ -1640,7 +2298,9 @@ const titleCode = `// title／label 互落：tip=title??label??messages??key；�
       action: () => {},
     },
   }}
-  rowActions={{
+  columns={[
+    ...DEMO_COLUMNS.filter((c) => c.type !== "actions"),
+    { type: "actions", actions: {
     view: true,                         // 无 title → messages.view
     edit: { title: "改资料" },          // 覆盖
     remove: false,
@@ -1649,41 +2309,13 @@ const titleCode = `// title／label 互落：tip=title??label??messages??key；�
       // 无 title → Tooltip「assign」
       action: (item) => console.log(item.id),
     },
-  }}
+  } },
+  ]}
 />`;
 
 const canCode = `// ⑥ 对齐 admin：can()＋显式 true｜false（勿 undefined 绕 caps）
 // capGate(allow): allow→undefined（回落 caps）；!allow→false
-const rows = [
-  { id: "1", name: "Alice", email: "alice@example.com", role: "admin", status: "active", balance: 120 },
-  { id: "2", name: "Bob", email: "bob@example.com", role: "editor", status: "disabled", balance: 80 },
-];
-const columns: Column[] = [
-  { prop: "name", label: "姓名", sortable: true, inline: "text" },
-  { prop: "role", label: "角色", type: "tag", options: [
-    { value: "admin", label: "管理员", tone: "danger" },
-    { value: "editor", label: "编辑", tone: "info" },
-    { value: "viewer", label: "访客" },
-  ] },
-  { prop: "status", label: "状态", type: "tag", inline: "switch", batch: true, options: [
-    { value: "active", label: "启用", tone: "success" },
-    { value: "disabled", label: "停用", tone: "warning" },
-  ] },
-  { prop: "balance", label: "余额", type: "money", sortable: true, total: true },
-];
-const search: SearchField[] = [
-  { prop: "name" },
-  { prop: "role", type: "select" },
-  { prop: "status", type: "select" },
-];
-const form: FormField[] = [
-  { prop: "name", required: true },
-  { prop: "email", required: true, pattern: "^[^@\s]+@[^@\s]+$" },
-  { prop: "role", type: "select", required: true, initial: "viewer" },
-  { prop: "balance", type: "number", min: 0, initial: 0 },
-  { prop: "status", type: "switch", initial: "active" },
-];
-
+// 节选：rows／search／form 同「基础用法」
 const perms = { "demo.view": true, "demo.write": false };
 const pageExport = true;
 
@@ -1695,74 +2327,65 @@ function capGate(allow: boolean): false | undefined {
 }
 
 <DataPanel
-  title="权限门控"
+  title="can()／页面变量"
   data={rows}
-  columns={columns}
+  search={search}
+  form={form}
+  columns={[
+    ...DEMO_COLUMNS.filter((c) => c.type !== "actions"),
+    { type: "actions", actions: {
+      view: capGate(can("demo.view") || can("demo.write")),
+      edit: capGate(can("demo.write")),
+      remove: capGate(can("demo.write")),
+      assign: {
+        label: "分配",
+        show: () => can("demo.write"),
+        action: (item) => console.log(item.id),
+      },
+    } },
+  ]}
   toolbar={{
     create: capGate(can("demo.write")),
+    search: true,
+    refresh: true,
     import: capGate(can("demo.write")),
     export: {
       show: () => can("demo.view"),
-      disable: () => !pageExport, // pageExport=false → 可见但禁用
+      disable: () => !pageExport,
     },
-  }}
-  rowActions={{
-    view: capGate(can("demo.view") || can("demo.write")),
-    edit: capGate(can("demo.write")),
-    remove: capGate(can("demo.write")),
-    assign: {
-      label: "分配",
-      show: () => can("demo.write"),
-      action: (item) => console.log(item.id),
-    },
+    print: false,
+    columns: false,
+    density: false,
+    fullscreen: false,
+    copy: false,
   }}
 />`;
 
 const customCode = `// tone 全档(Button) / tip=label??key；确认写在 action 自管；前导 chrome 放面板外
-const rows = [
-  { id: "1", name: "Alice", email: "alice@example.com", role: "admin", status: "active", balance: 120 },
-  { id: "2", name: "Bob", email: "bob@example.com", role: "editor", status: "disabled", balance: 80 },
-];
-const columns: Column[] = [
-  { prop: "name", label: "姓名", sortable: true, inline: "text" },
-  { prop: "role", label: "角色", type: "tag", options: [
-    { value: "admin", label: "管理员", tone: "danger" },
-    { value: "editor", label: "编辑", tone: "info" },
-    { value: "viewer", label: "访客" },
-  ] },
-  { prop: "status", label: "状态", type: "tag", inline: "switch", batch: true, options: [
-    { value: "active", label: "启用", tone: "success" },
-    { value: "disabled", label: "停用", tone: "warning" },
-  ] },
-  { prop: "balance", label: "余额", type: "money", sortable: true, total: true },
-];
-const search: SearchField[] = [
-  { prop: "name" },
-  { prop: "role", type: "select" },
-  { prop: "status", type: "select" },
-];
-const form: FormField[] = [
-  { prop: "name", required: true },
-  { prop: "email", required: true, pattern: "^[^@\s]+@[^@\s]+$" },
-  { prop: "role", type: "select", required: true, initial: "viewer" },
-  { prop: "balance", type: "number", min: 0, initial: 0 },
-  { prop: "status", type: "switch", initial: "active" },
-];
-
+// 节选：rows 同「基础用法」；本示例关掉内置操作，只留自定义「冻结」
 <div>
   <span className="text-sm text-slate-500">面板外提示</span>
-  <DataPanel title="自定义" data={rows} columns={columns}
+  <DataPanel
+    title="自定义"
+    data={rows}
+    caps={{ create: false }}
     renderCell={{ name: (row) => <b>{String(row.name)}</b> }}
-    caps={{ create: false, batchStatus: true }}
     toolbar={{
       notify: { label: "通知", tone: "primary", action: () => {} },
     }}
-    rowActions={{
-      freeze: {
-        label: "冻结", tone: "danger",
-        action: (row) => console.log(row.id), // 需确认则在 action 内自开 Popconfirm
-      },
-    }}
+    columns={[
+      ...DEMO_COLUMNS.filter((c) => c.type !== "actions"),
+      { type: "actions", actions: {
+        view: false,
+        edit: false,
+        remove: false,
+        freeze: {
+          label: "冻结",
+          tone: "danger",
+          action: (row) => console.log(row.id), // 需确认则在 action 内自开 Popconfirm
+        },
+      } },
+    ]}
   />
 </div>`;
 
@@ -1775,6 +2398,8 @@ const rows = [
   { id: "2", name: "Bob", email: "bob@example.com", role: "editor", status: "disabled", balance: 80 },
 ];
 const columns: Column[] = [
+  { type: "selection" },
+  { type: "index" },
   { prop: "name", label: "姓名", sortable: true, inline: "text" },
   { prop: "role", label: "角色", type: "tag", options: [
     { value: "admin", label: "管理员", tone: "danger" },
@@ -1786,6 +2411,11 @@ const columns: Column[] = [
     { value: "disabled", label: "停用", tone: "warning" },
   ] },
   { prop: "balance", label: "余额", type: "money", sortable: true, total: true },
+  { type: "actions", actions: {
+    view: true,
+    edit: true,
+    remove: false,
+  } },
 ];
 const search: SearchField[] = [
   { prop: "name" },
@@ -1818,8 +2448,8 @@ const rows = [
 ];
 
 const columns: Column[] = [
-  { type: "selection", prop: "__select", label: "" }, // 多选列（写入 columns）
-  { type: "index", prop: "__index", label: "#" },     // 序号列
+  { type: "selection" }, // 多选列（写入 columns）
+  { type: "index" },     // 序号列
   { prop: "name", label: "姓名", sortable: true },
   // 声明式 options 仍可用
   { prop: "role", label: "角色", type: "tag", options: [
@@ -1846,6 +2476,11 @@ const columns: Column[] = [
       ? '<b style="color:#059669">ON</b>'
       : '<span style="color:#94a3b8">OFF</span>',
   },
+  { type: "actions", actions: {
+    view: true,
+    edit: true,
+    remove: false,
+  } },
 ];
 
 const search: SearchField[] = [
@@ -1912,10 +2547,10 @@ export default function DataDisplayDataPanel() {
           Modal（工具栏按钮打开）、表格下方的批量操作条、表格（排序、多选、行内编辑、合计、操作列）、
           分页，以及用 Modal 的新增 / 编辑 / 查看。<strong>
             任何删除与批量「设为…」都必须先确认：行内／批量删除／批量设为均弹出小气泡 Popconfirm（确定在左、取消在右；点外部也会关闭），不用 Modal 确认对话框
-          </strong>。 支持原生 xlsx 导出（零依赖），支持浅色 / 深色主题与 zh-CN
+          </strong>。 支持原生 xlsx 导出／导入（零依赖），支持浅色 / 深色主题与 zh-CN
           / en-US。数据通过 <code>data</code> 或 <code>dataSource</code>{" "}
           注入，与后端无关。工具栏／操作列用统合 <code>toolbar</code>／
-          <code>rowActions</code> Record 配置（写入序＝显示序；自定义键必须
+          <code>columns</code> 里 <code>type:&quot;actions&quot;</code> 的 <code>actions</code> Record（写入序＝显示序；自定义键必须
           <code>action</code>；已废止 <code>extra</code>／<code>order</code>）。
         </Paragraph>
       </section>
@@ -2128,7 +2763,7 @@ export default function DataDisplayDataPanel() {
         </DocsDemo>
 
         <DocsDemo
-          title="导出 xlsx / csv / json / xml / html 与导入"
+          title="导出 xlsx / csv / json / xml / html 与导入 xlsx / csv / json / xml"
           code={exportCode}
         >
           <DataPanel
@@ -2245,7 +2880,7 @@ export default function DataDisplayDataPanel() {
                 balance: "Balance",
                 score: "Score",
                 createdAt: "Created",
-              } as Record<string, string>)[c.prop] ?? c.label,
+              } as Record<string, string>)[c.prop!] ?? c.label,
             }))}
             search={[{ name: "name", label: "Name" }]}
             form={DEMO_FORM.map((f) => ({ ...f }))}
@@ -2260,7 +2895,7 @@ export default function DataDisplayDataPanel() {
         <div class="space-y-2">
           <Title level={2}>工具栏与操作列（统合 Record）</Title>
           <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
-            <code>toolbar</code>／<code>rowActions</code> 为统合 Record；
+            <code>toolbar</code> 与操作列 <code>actions</code> 为统合 Record；
             <code>toolbar</code> 设为 <code>false</code> 时整栏工具栏不渲染。
             键级 <code>true</code>／<code>false</code> 简写控显隐；对象可覆盖
             <code>show</code>／<code>disable</code>／<code>icon</code>／<code>label</code>／<code>title</code>／<code>tone</code>／<code>action</code>
@@ -2272,7 +2907,7 @@ export default function DataDisplayDataPanel() {
             <code>action</code> 内自管（内置 remove 仍自带 Popconfirm）。
             <code>tone</code>：对齐 Button 全档 <code>default|primary|secondary|success|warning|danger|ghost</code>（内置 remove 默认 danger）。未知键＝自定义（必须
             <code>action</code>）。写入序＝显示序。已<strong>废止</strong>
-            <code>toolbar.extra</code>／<code>rowActions.extra</code>／<code>order</code>／<code>toolbarExtra</code>／<code>rowExtra</code>
+            <code>toolbar.extra</code>／<code>order</code>／<code>toolbarExtra</code>／<code>rowExtra</code>／旧顶层行操作配置
             （前导 chrome 请放面板外）。批量「设为…」由 <code>caps.batchStatus</code>＋列 <code>batch:true</code> 控制，不在 toolbar。
           </Paragraph>
         </div>
@@ -2296,7 +2931,9 @@ export default function DataDisplayDataPanel() {
             panelKey="demo-defaults"
             title="声明默认 vs caps"
             data={makeDemoRows(5)}
-            columns={DEMO_COLUMNS}
+            columns={withRowActions({
+              edit: { disable: true },
+            })}
             form={DEMO_FORM}
             caps={{
               create: false,
@@ -2313,9 +2950,7 @@ export default function DataDisplayDataPanel() {
               create: {},
               refresh: { disable: true },
             }}
-            rowActions={{
-              edit: { disable: true },
-            }}
+            
           />
           <p class="mt-2 text-xs text-slate-500" data-testid="demo-defaults-hint">
             caps 关 create／update，但声明项 create 空对象、edit 仅 disable 仍显示；refresh 禁用仍可见；未声明 view／remove 按 caps。
@@ -2327,7 +2962,11 @@ export default function DataDisplayDataPanel() {
             panelKey="demo-bool"
             title="true／false 简写"
             data={makeDemoRows(5)}
-            columns={DEMO_COLUMNS}
+            columns={withRowActions({
+              view: true,
+              edit: true,
+              remove: false,
+            })}
             search={DEMO_SEARCH}
             form={DEMO_FORM}
             toolbar={{
@@ -2338,11 +2977,7 @@ export default function DataDisplayDataPanel() {
               import: false,
               export: false,
             }}
-            rowActions={{
-              view: true,
-              edit: true,
-              remove: false,
-            }}
+            
           />
         </DocsDemo>
 
@@ -2392,9 +3027,7 @@ export default function DataDisplayDataPanel() {
             panelKey="demo-ra-fn"
             title="操作列函数"
             data={makeDemoRows(5)}
-            columns={DEMO_COLUMNS}
-            caps={{ create: false, update: false, remove: false, view: false }}
-            rowActions={{
+            columns={withRowActions({
               view: false,
               edit: false,
               remove: false,
@@ -2406,7 +3039,9 @@ export default function DataDisplayDataPanel() {
                   actionHint.value = `row:assign:${String(item.id)}`;
                 },
               },
-            }}
+            })}
+            caps={{ create: false, update: false, remove: false, view: false }}
+            
           />
           <p class="mt-2 text-xs text-slate-500" data-testid="demo-ra-fn-hint">
             {() => actionHint.value || "locked 行「分配」仍可见但 disabled；点击看 item.id"}
@@ -2442,9 +3077,7 @@ export default function DataDisplayDataPanel() {
             panelKey="demo-ra-custom"
             title="自定义操作列"
             data={makeDemoRows(5)}
-            columns={DEMO_COLUMNS}
-            form={DEMO_FORM}
-            rowActions={{
+            columns={withRowActions({
               view: true,
               clone: {
                 label: "克隆",
@@ -2454,7 +3087,9 @@ export default function DataDisplayDataPanel() {
               },
               edit: true,
               remove: false,
-            }}
+            })}
+            form={DEMO_FORM}
+            
           />
           <p class="mt-2 text-xs text-slate-500" data-testid="demo-ra-custom-hint">
             {() => actionHint.value || "写入序：view → clone → edit（无 remove）"}
@@ -2496,7 +3131,18 @@ export default function DataDisplayDataPanel() {
             panelKey="demo-enabled"
             title="disable 演示"
             data={makeDemoRows(5)}
-            columns={DEMO_COLUMNS}
+            columns={withRowActions({
+              view: true,
+              edit: { disable: true },
+              remove: false,
+              assign: {
+                label: "分配",
+                disable: (item) => !!item.locked,
+                action: (item) => {
+                  actionHint.value = `disable:assign:${String(item.id)}`;
+                },
+              },
+            })}
             form={DEMO_FORM}
             toolbar={{
               create: { disable: true },
@@ -2516,18 +3162,7 @@ export default function DataDisplayDataPanel() {
               fullscreen: false,
               copy: false,
             }}
-            rowActions={{
-              view: true,
-              edit: { disable: true },
-              remove: false,
-              assign: {
-                label: "分配",
-                disable: (item) => !!item.locked,
-                action: (item) => {
-                  actionHint.value = `disable:assign:${String(item.id)}`;
-                },
-              },
-            }}
+            
           />
           <p class="mt-2 text-xs text-slate-500" data-testid="demo-enabled-hint">
             添加／冻结／编辑为 disabled 仍可见；locked 行「分配」禁用。show:false 才会隐藏。
@@ -2540,7 +3175,17 @@ export default function DataDisplayDataPanel() {
             panelKey="demo-title"
             title="title Tooltip"
             data={makeDemoRows(5)}
-            columns={DEMO_COLUMNS}
+            columns={withRowActions({
+              view: true,
+              edit: { title: "改资料" },
+              remove: false,
+              assign: {
+                label: "分配",
+                action: (item) => {
+                  actionHint.value = `title:assign:${String(item.id)}`;
+                },
+              },
+            })}
             form={DEMO_FORM}
             toolbar={{
               create: true,
@@ -2559,17 +3204,7 @@ export default function DataDisplayDataPanel() {
               fullscreen: false,
               copy: false,
             }}
-            rowActions={{
-              view: true,
-              edit: { title: "改资料" },
-              remove: false,
-              assign: {
-                label: "分配",
-                action: (item) => {
-                  actionHint.value = `title:assign:${String(item.id)}`;
-                },
-              },
-            }}
+            
           />
           <p class="mt-2 text-xs text-slate-500" data-testid="demo-title-hint">
             不传 title：内置悬停用 messages／label，自定义悬停用 key（如 freeze／assign）；传了则覆盖（立刻刷新／改资料）。
@@ -2610,7 +3245,18 @@ export default function DataDisplayDataPanel() {
             panelKey="demo-can"
             title="can()／页面变量"
             data={makeDemoRows(5)}
-            columns={DEMO_COLUMNS}
+            columns={withRowActions({
+              view: demoCapGate(can("demo.view") || can("demo.write")),
+              edit: demoCapGate(can("demo.write")),
+              remove: demoCapGate(can("demo.write")),
+              assign: {
+                label: "分配",
+                show: () => can("demo.write"),
+                action: (item) => {
+                  actionHint.value = `can:assign:${String(item.id)}`;
+                },
+              },
+            })}
             form={DEMO_FORM}
             search={DEMO_SEARCH}
             toolbar={{
@@ -2628,18 +3274,7 @@ export default function DataDisplayDataPanel() {
               fullscreen: false,
               copy: false,
             }}
-            rowActions={{
-              view: demoCapGate(can("demo.view") || can("demo.write")),
-              edit: demoCapGate(can("demo.write")),
-              remove: demoCapGate(can("demo.write")),
-              assign: {
-                label: "分配",
-                show: () => can("demo.write"),
-                action: (item) => {
-                  actionHint.value = `can:assign:${String(item.id)}`;
-                },
-              },
-            }}
+            
           />
           <p class="mt-2 text-xs text-slate-500" data-testid="demo-can-hint">
             {() =>
@@ -2657,7 +3292,18 @@ export default function DataDisplayDataPanel() {
               panelKey="demo-custom"
               title="自定义"
               data={makeDemoRows(5)}
-              columns={DEMO_COLUMNS}
+              columns={withRowActions({
+                view: false,
+                edit: false,
+                remove: false,
+                freeze: {
+                  label: "冻结",
+                  tone: "danger",
+                  action: (row) => {
+                    actionHint.value = `freeze:${String(row.id)}`;
+                  },
+                },
+              })}
               caps={{ create: false }}
               renderCell={{
                 name: (row) => (
@@ -2673,18 +3319,7 @@ export default function DataDisplayDataPanel() {
                   },
                 },
               }}
-              rowActions={{
-                view: false,
-                edit: false,
-                remove: false,
-                freeze: {
-                  label: "冻结",
-                  tone: "danger",
-                  action: (row) => {
-                    actionHint.value = `freeze:${String(row.id)}`;
-                  },
-                },
-              }}
+              
             />
             <p class="text-xs text-slate-500" data-testid="demo-custom-hint">
               {() => actionHint.value || "点「通知」／「冻结」直接跑 action（确认请在 action 自管）"}
@@ -2712,7 +3347,10 @@ export default function DataDisplayDataPanel() {
           <code class="text-xs">formatter</code>（可返回 Icon／span／JSX／可信 HTML）、
           <code class="text-xs">format</code>（date／datetime）、
           <code class="text-xs">type:"selection"</code>／
-          <code class="text-xs">type:"index"</code>
+          <code class="text-xs">type:"index"</code>／
+          <code class="text-xs">type:"actions"</code>
+          （系统列可省 prop／label；操作配置写在{" "}
+          <code class="text-xs">actions</code>）
           写在同一份本地定义里（含 <code class="text-xs">rows</code>）。服务端场景可去掉{" "}
           <code class="text-xs">data</code>，改用 <code class="text-xs">dataSource</code>＋
           <code class="text-xs">initial</code>。
@@ -2771,8 +3409,10 @@ export default function DataDisplayDataPanel() {
       <section class="space-y-3">
         <Title level={2}>Columns（Column）</Title>
         <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
-          序号／多选：
-          <code class="text-xs">type:"index"|"selection"</code>。
+          序号／多选／操作：
+          <code class="text-xs">type:"index"|"selection"|"actions"</code>
+          （prop／label 可省；操作按钮写在列的{" "}
+          <code class="text-xs">actions</code>）。
           日期格式：
           <code class="text-xs">format:"YYYY-MM-DD HH:mm"</code>。
         </Paragraph>
@@ -2836,22 +3476,6 @@ export default function DataDisplayDataPanel() {
         <DocsApiTable rows={SOURCE_API} nameColumnHeader="方法" />
         <Title level={3}>createApiDataSource</Title>
         <DocsApiTable rows={API_SOURCE_API} nameColumnHeader="项" />
-        <CodeBlock
-          title="action：baseRoute=/api/users"
-          code={apiActionCode}
-          language="tsx"
-          showLineNumbers
-          copyable
-          wrapLongLines
-        />
-        <CodeBlock
-          title="restful：baseRoute=/api/orders"
-          code={apiRestfulCode}
-          language="tsx"
-          showLineNumbers
-          copyable
-          wrapLongLines
-        />
       </section>
 
       <DocsMessagesSection

@@ -51,6 +51,7 @@ import {
   formatMessage,
   resolveDataPanelMessages,
 } from "./data-panel-messages.ts";
+import { parseXlsx } from "./data-panel-xlsx.ts";
 import {
   buildExportFile,
   createLocalDataSource,
@@ -59,6 +60,8 @@ import {
   formatMoney,
   pageList,
   parseCsv,
+  parseJsonRows,
+  parseXmlRows,
   enrichFormFields,
   enrichSearchFields,
   fieldLayoutStyle,
@@ -75,7 +78,9 @@ import {
   resolvePanelColumns,
   isSelectionColumn,
   isIndexColumn,
+  isActionsColumn,
   isSystemColumn,
+  colProp,
 } from "./data-panel-utils.ts";
 import {
   createApiDataSource,
@@ -100,6 +105,7 @@ import {
   type DataSource,
   type Density,
   type ExportFormat,
+  type ImportFormat,
   type FieldRule,
   type FormField,
   type ListResult,
@@ -128,6 +134,7 @@ export type {
   DataSource,
   Density,
   ExportFormat,
+  ImportFormat,
   FieldRule,
   FormField,
   ListResult,
@@ -256,7 +263,7 @@ export interface PanelProps {
   defaultSort?: { prop: string; order: "asc" | "desc" };
   /** 固定过滤（并入每次查询，不出现在 URL） */
   fixed?: Record<string, string>;
-  /** 能力开关；缺省按数据源方法推断。未在 toolbar/rowActions 声明的钮回落于此。 */
+  /** 能力开关；缺省按数据源方法推断。未在 toolbar／column.actions 声明的钮回落于此。 */
   caps?: Partial<Caps>;
   /**
    * Toolbar config, or `false` to hide the entire toolbar bar.
@@ -267,11 +274,6 @@ export interface PanelProps {
    * Object key write order = display order. Custom keys require `action`. No `extra` / `order`.
    */
   toolbar?: false | PanelToolbarConfig;
-  /**
-   * Unified rowActions Record（同形；show/disable/action 可 (item)=>…）。
-   * Custom keys require `action`. No `extra` / `order`.
-   */
-  rowActions?: RowActionsConfig;
   /** 界面语言（内置 zh-CN / en-US），默认 zh-CN */
   locale?: Locale;
   /** 覆盖文案 */
@@ -295,7 +297,7 @@ export interface PanelProps {
    * 缺省时回落 `!!row.locked` 以兼容旧数据。
    */
   isRowDisabled?: (row: Row) => boolean;
-  /** 接管导入：收到解析后的 CSV / JSON 行（缺省时走 dataSource.importRows） */
+  /** 接管导入：收到解析后的行（xlsx／csv／json／xml；缺省时走 dataSource.importRows） */
   onImportRows?: (rows: Record<string, string>[]) => void;
   /** 接管导出：缺省时面板自行拉取全部行并生成文件下载 */
   onExport?: (
@@ -404,7 +406,11 @@ export function DataPanel(props: PanelProps): JSXRenderable {
   const toolbarHidden = props.toolbar === false;
   const tbCfg: PanelToolbarConfig =
     props.toolbar && typeof props.toolbar === "object" ? props.toolbar : {};
-  const raCfg: RowActionsConfig = props.rowActions ?? {};
+  /** 行操作配置：来自 columns 里 type:"actions" 的 `actions` 字段（废止顶层 rowActions） */
+  const actionsColIn = inputColumns.find(
+    (c) => c.type === "actions" || c.prop === "__actions",
+  );
+  const raCfg: RowActionsConfig = actionsColIn?.actions ?? {};
   assertToolbarConfig(tbCfg);
   assertRowActionsConfig(raCfg);
   const tbResolved = (name: ToolbarBuiltin, fallback: boolean) =>
@@ -429,10 +435,17 @@ export function DataPanel(props: PanelProps): JSXRenderable {
   /** 批量「设为…」：仅 caps.batchStatus（已挪出 toolbar）；UI 仍在选中批量条 */
   const batchStatusOn = caps.batchStatus;
   const needSelection = caps.remove || batchStatusOn;
-  /** 含 selection／index 的完整列（显式 columns 优先；缺省兼容自动前置） */
+  const needActions = !!(
+    rowMayShow("view", caps.view) ||
+    rowMayShow("edit", caps.update) ||
+    rowMayShow("remove", caps.remove) ||
+    hasCustomRowAction
+  );
+  /** 含 selection／index／actions 的完整列（显式 columns 优先；缺省兼容自动补） */
   const panelColumns = resolvePanelColumns(inputColumns, {
     selectable: props.selectable,
     needSelection,
+    needActions,
   });
   /** 数据列（解析后，不含系统列） */
   const columns = panelColumns.filter((c) => !isSystemColumn(c));
@@ -597,11 +610,13 @@ export function DataPanel(props: PanelProps): JSXRenderable {
   /** 可见数据列 */
   const dataColumnsVisible = () =>
     columnsVisible().filter((c) => !isSystemColumn(c));
-  const showSelectCol = () =>
-    columnsVisible().some((c) => isSelectionColumn(c));
   const showIndexCol = () => columnsVisible().some((c) => isIndexColumn(c));
   const indexColLabel = () =>
     panelColumns.find((c) => isIndexColumn(c))?.label || "#";
+  const actionsColLabel = () => {
+    const lab = panelColumns.find((c) => isActionsColumn(c))?.label;
+    return (lab && String(lab).trim()) ? lab : m.actions;
+  };
   /** 重置列：回到列定义里的 default hidden */
   const defaultHidden = (): Record<string, boolean> =>
     Object.fromEntries(
@@ -926,17 +941,10 @@ export function DataPanel(props: PanelProps): JSXRenderable {
     w.print();
   }
 
-  /** 解析导入文件的文本（按扩展名选 JSON / CSV），表头可为列文案或字段名 */
-  async function importText(name: string, text: string): Promise<void> {
-    let parsed: Record<string, string>[];
-    if (name.toLowerCase().endsWith(".json")) {
-      const j = JSON.parse(text);
-      parsed = (Array.isArray(j) ? j : []).map((o: Record<string, unknown>) =>
-        Object.fromEntries(
-          Object.entries(o).map(([k, v]) => [k, String(v ?? "")]),
-        )
-      );
-    } else parsed = parseCsv(text);
+  /** 把解析后的行写入（表头可为列文案或字段名） */
+  async function applyImportedRows(
+    parsed: Record<string, string>[],
+  ): Promise<void> {
     if (props.onImportRows) return props.onImportRows(parsed);
     const byLabel = new Map(columns.map((c) => [c.label, c.prop]));
     const mapped = parsed.map((r) =>
@@ -954,18 +962,37 @@ export function DataPanel(props: PanelProps): JSXRenderable {
     props.onChanged?.();
   }
 
-  function pickImport(): void {
+  /** 按所选导入格式打开文件选择器并解析 */
+  function pickImport(fmt: ImportFormat): void {
     const doc = g.document;
     if (!doc) return;
+    const accept: Record<ImportFormat, string> = {
+      xlsx:
+        ".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      csv: ".csv,text/csv",
+      json: ".json,application/json",
+      xml: ".xml,application/xml,text/xml",
+    };
     const input = doc.createElement("input");
     input.type = "file";
-    input.accept = ".csv,.json,text/csv,application/json";
+    input.accept = accept[fmt];
     input.setAttribute("data-testid", "dp-import-input");
+    input.setAttribute("data-import-format", fmt);
     input.onchange = async () => {
       const file = input.files?.[0];
       if (!file) return;
       try {
-        await importText(file.name, await file.text());
+        let parsed: Record<string, string>[];
+        if (fmt === "xlsx") {
+          parsed = await parseXlsx(new Uint8Array(await file.arrayBuffer()));
+        } else if (fmt === "json") {
+          parsed = parseJsonRows(await file.text());
+        } else if (fmt === "xml") {
+          parsed = parseXmlRows(await file.text());
+        } else {
+          parsed = parseCsv(await file.text());
+        }
+        await applyImportedRows(parsed);
       } catch {
         message.error(m.importBad);
       }
@@ -1283,6 +1310,29 @@ export function DataPanel(props: PanelProps): JSXRenderable {
     </Tooltip>
   );
 
+  const importMenu = (
+    <div
+      class="flex min-w-32 flex-col gap-0.5 p-1"
+      data-testid="dp-import-menu"
+    >
+      {(["xlsx", "csv", "json", "xml"] as const).map((f) => (
+        <button
+          type="button"
+          class="rounded px-2 py-1.5 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-800"
+          data-testid={`dp-import-${f}`}
+          onClick={() => pickImport(f)}
+        >
+          {{
+            xlsx: m.formatXlsx,
+            csv: m.formatCsv,
+            json: m.formatJson,
+            xml: m.formatXml,
+          }[f]}
+        </button>
+      ))}
+    </div>
+  );
+
   const exportMenu = (
     <div
       class="flex min-w-32 flex-col gap-0.5 p-1"
@@ -1327,6 +1377,8 @@ export function DataPanel(props: PanelProps): JSXRenderable {
           ? (c.label || m.colSelect)
           : isIndexColumn(c)
           ? (c.label || m.colIndex || "#")
+          : isActionsColumn(c)
+          ? (c.label || m.actions)
           : (c.label || prop);
         return (
           <label class="flex cursor-pointer items-center gap-2 text-sm">
@@ -1385,7 +1437,17 @@ export function DataPanel(props: PanelProps): JSXRenderable {
       case "print":
         return toolBtn("dp-print", m.print, action ?? printTable, <IconPrinter size="sm" />, disable, title, label);
       case "import":
-        return toolBtn("dp-import", m.import, action ?? pickImport, <IconUpload size="sm" />, disable, title, label);
+        if (action) {
+          return toolBtn("dp-import", m.import, action, <IconUpload size="sm" />, disable, title, label);
+        }
+        return tipWrap(
+          actionTipText("import", title, label, m.import),
+          <Dropdown overlay={importMenu} placement="bottomRight" trigger="click">
+            <Button type="button" size="sm" class={posCls("dp-import")} disabled={disable} data-testid="dp-import" aria-label={actionTipText("import", title, label, m.import)}>
+              <IconUpload size="sm" />
+            </Button>
+          </Dropdown>,
+        );
       case "export":
         return tipWrap(
           actionTipText("export", title, label, m.export),
@@ -1701,10 +1763,10 @@ export function DataPanel(props: PanelProps): JSXRenderable {
 
   // ---- 单元格
   function cell(c: Column, row: Row): unknown {
-    const custom = props.renderCell?.[c.prop];
+    const custom = props.renderCell?.[colProp(c)];
     if (custom) return custom(row);
-    const raw = row[c.prop];
-    // Inline edit: rowActions.edit ?? caps.update；inline:switch 列本身可切换（不依赖 edit 能力）
+    const raw = row[colProp(c)];
+    // Inline edit: column.actions.edit ?? caps.update；inline:switch 列本身可切换（不依赖 edit 能力）
     const canEdit = rowResolved("edit", row, caps.update).show ||
       c.inline === "switch";
     const isSwitch = c.inline === "switch" && !!c.options &&
@@ -1729,7 +1791,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
               const next = (e.target as unknown as { checked: boolean })
                 .checked;
               setTimeout(
-                () => void setField(row, c.prop, next ? on.value : off.value),
+                () => void setField(row, colProp(c), next ? on.value : off.value),
                 SWITCH_ANIM_MS,
               );
             }}
@@ -1747,7 +1809,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
           class="dp-cell-edit"
           title={m.doubleClickToEdit}
           data-testid={`dp-edit-${c.prop}-${idOf(row)}`}
-          onDblClick={() => (editing.value = { id: idOf(row), prop: c.prop })}
+          onDblClick={() => (editing.value = { id: idOf(row), prop: colProp(c) })}
         >
           {plainCell(c, row, raw)}
         </span>
@@ -1823,7 +1885,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
         }
         value = draft ? d.toISOString() : "";
       }
-      void setField(row, c.prop, value);
+      void setField(row, colProp(c), value);
     };
     /**
      * ref：记录根节点、聚焦，并用原生监听处理失焦 / 点外部 / 键盘
@@ -2097,18 +2159,13 @@ export function DataPanel(props: PanelProps): JSXRenderable {
 
   // ---- 表格
   const offset = () => (query.value.page - 1) * query.value.pageSize;
-  // Action column: builtin rowActions ?? caps, plus custom Record keys.
+  // Action buttons: column.actions ?? caps, plus custom Record keys.
+  // 操作列出现与否／位置／表头／按钮由 columns 的 type:"actions"（及列上 actions）决定。
   const ROW_FALLBACK: Record<RowBuiltin, boolean> = {
     view: caps.view,
     edit: caps.update,
     remove: caps.remove,
   };
-  const acts = !!(
-    rowMayShow("view", caps.view) ||
-    rowMayShow("edit", caps.update) ||
-    rowMayShow("remove", caps.remove) ||
-    hasCustomRowAction
-  );
 
   type RowSlot =
     | {
@@ -2233,51 +2290,59 @@ export function DataPanel(props: PanelProps): JSXRenderable {
         <table class="w-full border-collapse text-sm" data-testid="dp-table">
           <thead>
             <tr class="bg-slate-50 text-left dark:bg-slate-800">
-              {showSelectCol() && (
-                <th class="w-10 border border-slate-200 px-2 py-2 text-center dark:border-slate-700">
-                  <input
-                    type="checkbox"
-                    {...bool("checked", allSel)}
-                    data-testid="dp-select-all"
-                    onChange={() => (selected.value = allSel
-                      ? []
-                      : selectableRows.map(idOf))}
-                  />
-                </th>
-              )}
-              {showIndexCol() && (
-                <th
-                  class="w-12 border border-slate-200 px-2 py-2 text-center dark:border-slate-700"
-                  data-testid="dp-colhead-index"
-                >
-                  {indexColLabel()}
-                </th>
-              )}
-              {cols.map((c) => (
-                <th
-                  class="whitespace-nowrap border border-slate-200 px-3 py-2 font-medium dark:border-slate-700"
-                  style={c.width ? `width:${c.width}px` : undefined}
-                >
-                  {c.sortable
-                    ? (
-                      <button
-                        type="button"
-                        class="inline-flex items-center hover:text-blue-600"
-                        data-testid={`dp-sort-${c.prop}`}
-                        onClick={() => toggleSort(c.prop!)}
-                      >
-                        {c.label}
-                        {sortIcon(c.prop!)}
-                      </button>
-                    )
-                    : c.label}
-                </th>
-              ))}
-              {acts && (
-                <th class="border border-slate-200 px-3 py-2 text-center font-medium dark:border-slate-700">
-                  {m.actions}
-                </th>
-              )}
+              {displayCols.map((c) => {
+                if (isSelectionColumn(c)) {
+                  return (
+                    <th class="w-10 border border-slate-200 px-2 py-2 text-center dark:border-slate-700">
+                      <input
+                        type="checkbox"
+                        {...bool("checked", allSel)}
+                        data-testid="dp-select-all"
+                        onChange={() => (selected.value = allSel
+                          ? []
+                          : selectableRows.map(idOf))}
+                      />
+                    </th>
+                  );
+                }
+                if (isIndexColumn(c)) {
+                  return (
+                    <th
+                      class="w-12 border border-slate-200 px-2 py-2 text-center dark:border-slate-700"
+                      data-testid="dp-colhead-index"
+                    >
+                      {indexColLabel()}
+                    </th>
+                  );
+                }
+                if (isActionsColumn(c)) {
+                  return (
+                    <th class="border border-slate-200 px-3 py-2 text-center font-medium dark:border-slate-700">
+                      {actionsColLabel()}
+                    </th>
+                  );
+                }
+                return (
+                  <th
+                    class="whitespace-nowrap border border-slate-200 px-3 py-2 font-medium dark:border-slate-700"
+                    style={c.width ? `width:${c.width}px` : undefined}
+                  >
+                    {c.sortable
+                      ? (
+                        <button
+                          type="button"
+                          class="inline-flex items-center hover:text-blue-600"
+                          data-testid={`dp-sort-${c.prop}`}
+                          onClick={() => toggleSort(c.prop!)}
+                        >
+                          {c.label}
+                          {sortIcon(c.prop!)}
+                        </button>
+                      )
+                      : c.label}
+                  </th>
+                );
+              })}
             </tr>
           </thead>
           <tbody>
@@ -2285,8 +2350,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
               ? (
                 <tr>
                   <td
-                    colSpan={cols.length + (showIndexCol() ? 1 : 0) +
-                      (showSelectCol() ? 1 : 0) + (acts ? 1 : 0)}
+                    colSpan={displayCols.length}
                     class="border border-slate-200 px-3 py-8 text-center text-slate-400 dark:border-slate-700"
                     data-testid="dp-empty"
                   >
@@ -2301,165 +2365,173 @@ export function DataPanel(props: PanelProps): JSXRenderable {
                   }`}
                   data-testid={`dp-row-${idOf(r)}`}
                 >
-                  {showSelectCol() && (
-                    <td class="border border-slate-200 px-2 py-1.5 text-center dark:border-slate-700">
-                      <input
-                        type="checkbox"
-                        {...bool("disabled", isLocked(r))}
-                        {...bool("checked", sel.includes(idOf(r)))}
-                        data-testid={`dp-select-${idOf(r)}`}
-                        onChange={() => {
-                          const cur = selected.value;
-                          selected.value = cur.includes(idOf(r))
-                            ? cur.filter((x) => x !== idOf(r))
-                            : [...cur, idOf(r)];
-                        }}
-                      />
-                    </td>
-                  )}
-                  {showIndexCol() && (
-                    <td class="border border-slate-200 px-2 py-1.5 text-center text-slate-500 dark:border-slate-700 dark:text-slate-400">
-                      {offset() + i + 1}
-                    </td>
-                  )}
-                  {cols.map((c) => (
-                    <td class="border border-slate-200 px-3 py-1.5 dark:border-slate-700">
-                      {cell(c, r)}
-                    </td>
-                  ))}
-                  {acts && (
-                    <td class="whitespace-nowrap border border-slate-200 px-2 py-1.5 text-center dark:border-slate-700">
-                      <span class="dp-acts">
-                        {rowSlots(r).map((s) => {
-                          if (s.kind === "custom") {
-                            const tip = actionTipText(
-                              s.key,
-                              s.title,
-                              typeof s.label === "string" ? s.label : undefined,
-                            );
-                            const aria = typeof s.label === "string"
-                              ? s.label
-                              : s.key;
-                            const btn = (
-                              <Btn
-                                type="button"
-                                size="sm"
-                                variant="ghost"
-                                class={`${ICON_BTN}${toneActCls(s.tone)}`}
-                                disabled={s.disable || isLocked(r)}
-                                aria-label={aria}
-                                data-testid={`dp-row-extra-${s.key}-${idOf(r)}`}
-                                onClick={() => s.action(r)}
-                              >
-                                {s.icon != null ? s.icon : s.label}
-                              </Btn>
-                            );
-                            return tipWrap(tip, btn);
-                          }
-                          if (s.name === "view") {
-                            const run = () =>
-                              (s.action ? s.action(r) : doView(r));
-                            return tipWrap(
-                              actionTipText("view", s.title, s.label, m.view),
-                              <Btn
-                                type="button"
-                                size="sm"
-                                variant="ghost"
-                                class={`${ICON_BTN}${toneActCls(s.tone)}`}
-                                disabled={s.disable}
-                                aria-label={m.view}
-                                data-testid={`dp-view-${idOf(r)}`}
-                                onClick={run}
-                              >
-                                <IconEye size="xs" />
-                              </Btn>,
-                            );
-                          }
-                          if (s.name === "edit") {
-                            const run = () =>
-                              (s.action ? s.action(r) : doEdit(r));
-                            return tipWrap(
-                              actionTipText("edit", s.title, s.label, m.edit),
-                              <Btn
-                                type="button"
-                                size="sm"
-                                variant="ghost"
-                                class={`${ICON_BTN}${toneActCls(s.tone)}`}
-                                disabled={s.disable}
-                                aria-label={m.edit}
-                                data-testid={`dp-edit-${idOf(r)}`}
-                                onClick={run}
-                              >
-                                <IconEdit size="xs" />
-                              </Btn>,
-                            );
-                          }
-                          // remove: custom action → direct; no action → builtin Popconfirm.
-                          const remTone = s.tone ?? "danger";
-                          if (s.action) {
-                            return tipWrap(
-                              actionTipText("remove", s.title, s.label, m.delete),
-                              <Btn
-                                type="button"
-                                size="sm"
-                                variant="ghost"
-                                class={`${ICON_BTN}${toneActCls(remTone)}`}
-                                {...bool(
-                                  "disabled",
-                                  isLocked(r) || s.disable,
-                                )}
-                                aria-label={m.delete}
-                                data-testid={`dp-delete-${idOf(r)}`}
-                                onClick={() => s.action!(r)}
-                              >
-                                <IconTrash size="xs" />
-                              </Btn>,
-                            );
-                          }
-                          return tipWrap(
-                            actionTipText("remove", s.title, undefined, m.delete),
-                            (
-                            <Popconfirm
-                              open={() => popRow.value === idOf(r)}
-                              placement="top"
-                              danger
-                              title={tr(m.deleteAsk, { name: rowName(r) })}
-                              okText={m.delete}
-                              cancelText={m.cancel}
-                              overlayClass="dp-pop"
-                              onOpenChange={(o: boolean) => {
-                                if (!o && popRow.value === idOf(r)) {
-                                  popRow.value = null;
-                                }
-                              }}
-                              onConfirm={() => void doRemove([idOf(r)])}
-                            >
-                              <Btn
-                                type="button"
-                                size="sm"
-                                variant="ghost"
-                                class={`${ICON_BTN}${toneActCls(remTone)}`}
-                                {...bool(
-                                  "disabled",
-                                  isLocked(r) || s.disable,
-                                )}
-                                aria-label={m.delete}
-                                data-testid={`dp-delete-${idOf(r)}`}
-                                onClick={() => (popRow.value = idOf(r))}
-                              >
-                                <IconTrash size="xs" />
-                              </Btn>
-                            </Popconfirm>
-                            ),
-                            {
-                              // Popconfirm open: hide same-anchor Tooltip
-                              disabled: () => popRow.value === idOf(r),
-                            },
-                          );
-                        })}
-                      </span>
-                    </td>
-                  )}
+                  {displayCols.map((c) => {
+                    if (isSelectionColumn(c)) {
+                      return (
+                        <td class="border border-slate-200 px-2 py-1.5 text-center dark:border-slate-700">
+                          <input
+                            type="checkbox"
+                            {...bool("disabled", isLocked(r))}
+                            {...bool("checked", sel.includes(idOf(r)))}
+                            data-testid={`dp-select-${idOf(r)}`}
+                            onChange={() => {
+                              const cur = selected.value;
+                              selected.value = cur.includes(idOf(r))
+                                ? cur.filter((x) => x !== idOf(r))
+                                : [...cur, idOf(r)];
+                            }}
+                          />
+                        </td>
+                      );
+                    }
+                    if (isIndexColumn(c)) {
+                      return (
+                        <td class="border border-slate-200 px-2 py-1.5 text-center text-slate-500 dark:border-slate-700 dark:text-slate-400">
+                          {offset() + i + 1}
+                        </td>
+                      );
+                    }
+                    if (isActionsColumn(c)) {
+                      return (
+                        <td class="whitespace-nowrap border border-slate-200 px-2 py-1.5 text-center dark:border-slate-700">
+                          <span class="dp-acts">
+                            {rowSlots(r).map((s) => {
+                              if (s.kind === "custom") {
+                                const tip = actionTipText(
+                                  s.key,
+                                  s.title,
+                                  typeof s.label === "string" ? s.label : undefined,
+                                );
+                                const aria = typeof s.label === "string"
+                                  ? s.label
+                                  : s.key;
+                                const btn = (
+                                  <Btn
+                                    type="button"
+                                    size="sm"
+                                    variant="ghost"
+                                    class={`${ICON_BTN}${toneActCls(s.tone)}`}
+                                    disabled={s.disable || isLocked(r)}
+                                    aria-label={aria}
+                                    data-testid={`dp-row-extra-${s.key}-${idOf(r)}`}
+                                    onClick={() => s.action(r)}
+                                  >
+                                    {s.icon != null ? s.icon : s.label}
+                                  </Btn>
+                                );
+                                return tipWrap(tip, btn);
+                              }
+                              if (s.name === "view") {
+                                const run = () =>
+                                  (s.action ? s.action(r) : doView(r));
+                                return tipWrap(
+                                  actionTipText("view", s.title, s.label, m.view),
+                                  <Btn
+                                    type="button"
+                                    size="sm"
+                                    variant="ghost"
+                                    class={`${ICON_BTN}${toneActCls(s.tone)}`}
+                                    disabled={s.disable}
+                                    aria-label={m.view}
+                                    data-testid={`dp-view-${idOf(r)}`}
+                                    onClick={run}
+                                  >
+                                    <IconEye size="xs" />
+                                  </Btn>,
+                                );
+                              }
+                              if (s.name === "edit") {
+                                const run = () =>
+                                  (s.action ? s.action(r) : doEdit(r));
+                                return tipWrap(
+                                  actionTipText("edit", s.title, s.label, m.edit),
+                                  <Btn
+                                    type="button"
+                                    size="sm"
+                                    variant="ghost"
+                                    class={`${ICON_BTN}${toneActCls(s.tone)}`}
+                                    disabled={s.disable}
+                                    aria-label={m.edit}
+                                    data-testid={`dp-edit-${idOf(r)}`}
+                                    onClick={run}
+                                  >
+                                    <IconEdit size="xs" />
+                                  </Btn>,
+                                );
+                              }
+                              // remove: custom action → direct; no action → builtin Popconfirm.
+                              const remTone = s.tone ?? "danger";
+                              if (s.action) {
+                                return tipWrap(
+                                  actionTipText("remove", s.title, s.label, m.delete),
+                                  <Btn
+                                    type="button"
+                                    size="sm"
+                                    variant="ghost"
+                                    class={`${ICON_BTN}${toneActCls(remTone)}`}
+                                    {...bool(
+                                      "disabled",
+                                      isLocked(r) || s.disable,
+                                    )}
+                                    aria-label={m.delete}
+                                    data-testid={`dp-delete-${idOf(r)}`}
+                                    onClick={() => s.action!(r)}
+                                  >
+                                    <IconTrash size="xs" />
+                                  </Btn>,
+                                );
+                              }
+                              return tipWrap(
+                                actionTipText("remove", s.title, undefined, m.delete),
+                                (
+                                <Popconfirm
+                                  open={() => popRow.value === idOf(r)}
+                                  placement="top"
+                                  danger
+                                  title={tr(m.deleteAsk, { name: rowName(r) })}
+                                  okText={m.delete}
+                                  cancelText={m.cancel}
+                                  overlayClass="dp-pop"
+                                  onOpenChange={(o: boolean) => {
+                                    if (!o && popRow.value === idOf(r)) {
+                                      popRow.value = null;
+                                    }
+                                  }}
+                                  onConfirm={() => void doRemove([idOf(r)])}
+                                >
+                                  <Btn
+                                    type="button"
+                                    size="sm"
+                                    variant="ghost"
+                                    class={`${ICON_BTN}${toneActCls(remTone)}`}
+                                    {...bool(
+                                      "disabled",
+                                      isLocked(r) || s.disable,
+                                    )}
+                                    aria-label={m.delete}
+                                    data-testid={`dp-delete-${idOf(r)}`}
+                                    onClick={() => (popRow.value = idOf(r))}
+                                  >
+                                    <IconTrash size="xs" />
+                                  </Btn>
+                                </Popconfirm>
+                                ),
+                                {
+                                  // Popconfirm open: hide same-anchor Tooltip
+                                  disabled: () => popRow.value === idOf(r),
+                                },
+                              );
+                            })}
+                          </span>
+                        </td>
+                      );
+                    }
+                    return (
+                      <td class="border border-slate-200 px-3 py-1.5 dark:border-slate-700">
+                        {cell(c, r)}
+                      </td>
+                    );
+                  })}
                 </tr>
               ))}
           </tbody>
@@ -2469,36 +2541,49 @@ export function DataPanel(props: PanelProps): JSXRenderable {
                 class="bg-slate-50 font-semibold dark:bg-slate-800"
                 data-testid="dp-totals"
               >
-                {showSelectCol() && (
-                  <td class="border border-slate-200 dark:border-slate-700" />
-                )}
-                {showIndexCol() && (
-                  <td class="border border-slate-200 px-2 py-2 text-center dark:border-slate-700">
-                    {m.total}
-                  </td>
-                )}
-                {cols.map((c, ci) => (
-                  <td
-                    class="border border-slate-200 px-3 py-2 dark:border-slate-700"
-                    data-testid={`dp-total-${c.prop}`}
-                  >
-                    {(() => {
-                      const val = c.total
-                        ? (c.type === "money"
-                          ? formatMoney(t[c.prop])
-                          : String(t[c.prop] ?? 0))
-                        : "";
-                      if (!showIndexCol() && ci === 0 && !val) return m.total;
-                      if (!showIndexCol() && ci === 0 && val) {
-                        return `${m.total} ${val}`;
-                      }
-                      return val;
-                    })()}
-                  </td>
-                ))}
-                {acts && (
-                  <td class="border border-slate-200 dark:border-slate-700" />
-                )}
+                {displayCols.map((c, ci) => {
+                  if (isSelectionColumn(c)) {
+                    return (
+                      <td class="border border-slate-200 dark:border-slate-700" />
+                    );
+                  }
+                  if (isIndexColumn(c)) {
+                    return (
+                      <td class="border border-slate-200 px-2 py-2 text-center dark:border-slate-700">
+                        {m.total}
+                      </td>
+                    );
+                  }
+                  if (isActionsColumn(c)) {
+                    return (
+                      <td class="border border-slate-200 dark:border-slate-700" />
+                    );
+                  }
+                  const dataIdx = displayCols
+                    .slice(0, ci)
+                    .filter((x) => !isSystemColumn(x)).length;
+                  const val = c.total
+                    ? (c.type === "money"
+                      ? formatMoney(t[c.prop])
+                      : String(t[c.prop] ?? 0))
+                    : "";
+                  return (
+                    <td
+                      class="border border-slate-200 px-3 py-2 dark:border-slate-700"
+                      data-testid={`dp-total-${c.prop}`}
+                    >
+                      {(() => {
+                        if (!showIndexCol() && dataIdx === 0 && !val) {
+                          return m.total;
+                        }
+                        if (!showIndexCol() && dataIdx === 0 && val) {
+                          return `${m.total} ${val}`;
+                        }
+                        return val;
+                      })()}
+                    </td>
+                  );
+                })}
               </tr>
             </tfoot>
           )}

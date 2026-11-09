@@ -1,5 +1,5 @@
 /**
- * Unified toolbar / rowActions Record: assert, resolve, disable (not hide).
+ * Unified toolbar / column.actions Record: assert, resolve, disable (not hide).
  */
 import { describe, expect, it } from "@dreamer/test";
 import {
@@ -182,14 +182,14 @@ describe("DataPanel ActionCtrl unified Record", () => {
     assertToolbarConfig(toolbar);
     expect(Object.keys(toolbar)).toEqual(["create", "myBtn", "search"]);
 
-    const rowActions: RowActionsConfig = {
+    const actionsCfg: RowActionsConfig = {
       assign: { label: "A", action: () => {} },
       view: false,
       edit: false,
       remove: false,
     };
-    assertRowActionsConfig(rowActions);
-    expect(Object.keys(rowActions)).toEqual([
+    assertRowActionsConfig(actionsCfg);
+    expect(Object.keys(actionsCfg)).toEqual([
       "assign",
       "view",
       "edit",

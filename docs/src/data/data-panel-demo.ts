@@ -1,7 +1,7 @@
 /**
  * @fileoverview DataPanel 文档页示例数据与列 / 搜索 / 表单定义（纯数据，无 JSX）。
  */
-import type { Column, DataSource, FormField, Row, SearchField } from "@dreamer/ui-view/data-display";
+import type { Column, DataSource, FormField, Row, RowActionsConfig, SearchField } from "@dreamer/ui-view/data-display";
 import { createLocalDataSource } from "@dreamer/ui-view/data-display";
 const NAMES = [
   "Alice",
@@ -46,9 +46,16 @@ export function makeDemoRows(n = 25): Row[] {
   }));
 }
 
+/** 文档 DEMO 默认操作列：多数仅 view＋edit（remove:false 与实机一致，避免 caps 补删除）；自定义／控显隐见专门示例 */
+export const DEMO_ROW_ACTIONS: RowActionsConfig = {
+  view: true,
+  edit: true,
+  remove: false,
+};
+
 export const DEMO_COLUMNS: Column[] = [
-  { type: "selection", prop: "__select", label: "" },
-  { type: "index", prop: "__index", label: "#" },
+  { type: "selection" },
+  { type: "index" },
   { prop: "name", label: "姓名", sortable: true, inline: "text" },
   { prop: "email", label: "邮箱", sortable: true },
   {
@@ -94,7 +101,71 @@ export const DEMO_COLUMNS: Column[] = [
     sortable: true,
     hidden: true,
   },
+  { type: "actions", actions: DEMO_ROW_ACTIONS },
 ];
+
+/** 与 {@link DEMO_COLUMNS} 同步的文档 code 片段（系统列短写法） */
+export const DEMO_COLUMNS_CODE = `const columns: Column[] = [
+  { type: "selection" },
+  { type: "index" },
+  { prop: "name", label: "姓名", sortable: true, inline: "text" },
+  { prop: "email", label: "邮箱", sortable: true },
+  {
+    prop: "role",
+    label: "角色",
+    type: "tag",
+    options: [
+      { value: "admin", label: "管理员", tone: "danger" },
+      { value: "editor", label: "编辑", tone: "info" },
+      { value: "viewer", label: "访客", tone: "default" },
+    ],
+  },
+  {
+    prop: "status",
+    label: "状态",
+    type: "tag",
+    inline: "switch",
+    batch: true,
+    options: [
+      { value: "active", label: "启用", tone: "success" },
+      { value: "disabled", label: "停用", tone: "warning" },
+    ],
+  },
+  {
+    prop: "balance",
+    label: "余额",
+    type: "money",
+    sortable: true,
+    total: true,
+  },
+  {
+    prop: "score",
+    label: "积分",
+    type: "number",
+    sortable: true,
+    inline: "number",
+  },
+  {
+    prop: "createdAt",
+    label: "创建时间",
+    type: "datetime",
+    format: "YYYY-MM-DD HH:mm",
+    sortable: true,
+    hidden: true,
+  },
+  { type: "actions", actions: {
+    view: true,
+    edit: true,
+    remove: false,
+  } },
+];`;
+
+/** 把操作配置挂到 DEMO_COLUMNS 的 actions 列（docs／测挂操作配置到 actions 列） */
+export function withRowActions(actions: RowActionsConfig): Column[] {
+  return DEMO_COLUMNS.map((c) =>
+    c.type === "actions" ? { ...c, actions } : c
+  );
+}
 
 /** 键用 prop；options／label 可从 DEMO_COLUMNS 同 prop 继承（面板内 enrich） */
 export const DEMO_SEARCH: SearchField[] = [
@@ -197,6 +268,8 @@ export function makeCellRows(n = 5): Row[] {
 }
 
 export const CELL_COLUMNS: Column[] = [
+  { type: "selection" },
+  { type: "index" },
   { prop: "name", label: "姓名（text）", inline: "text" },
   { prop: "score", label: "积分（number）", type: "number", inline: "number" },
   {
@@ -232,6 +305,7 @@ export const CELL_COLUMNS: Column[] = [
     inline: "datetime",
   },
   { prop: "remark", label: "备注（textarea）", inline: "textarea" },
+  { type: "actions", actions: DEMO_ROW_ACTIONS },
 ];
 
 /** 单元格编辑示例同款的「新增 / 编辑」表单：覆盖全部字段类型，控件均为 ui-view 自带组件 */
@@ -293,7 +367,7 @@ export function createCellDemoSource(): DataSource {
 }
 
 /**
- * Docs helpers for toolbar / rowActions demos（显式 true｜false，一层真相）。
+ * Docs helpers for toolbar／操作列 demos（显式 true｜false，一层真相）。
  * Pure functions — no JSX.
  */
 

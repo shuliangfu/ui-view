@@ -151,6 +151,7 @@ export const bool = (k: string, v: unknown): Record<string, true> =>
 /** 列偏好里系统列键（与业务 prop 隔离） */
 export const COL_SELECT = "__select";
 export const COL_INDEX = "__index";
+export const COL_ACTIONS = "__actions";
 
 /** 标签配色：浅色沿用 Tailwind 类；深色由 DATA_PANEL_CSS 的 `.dark .dp-tag-*` 覆盖（半透明底 + 亮字） */
 export const TONE: Record<Tone, string> = {

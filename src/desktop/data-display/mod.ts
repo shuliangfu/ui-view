@@ -99,6 +99,7 @@ export {
   type Density,
   type ExportContext,
   type ExportFormat,
+  type ImportFormat,
   type FieldRule,
   type FormField,
   type ListResult,
@@ -130,9 +131,14 @@ export {
   resolvePanelColumns,
   isSelectionColumn,
   isIndexColumn,
+  isActionsColumn,
   isSystemColumn,
   PANEL_COL_SELECT,
   PANEL_COL_INDEX,
+  PANEL_COL_ACTIONS,
+  parseCsv,
+  parseJsonRows,
+  parseXmlRows,
   type ExportFile,
   type LocalDataSource,
   type LocalDataSourceOptions,
@@ -147,7 +153,11 @@ export {
   type ApiDataSourceOptions,
   type ApiMode,
 } from "./data-panel-api-source.ts";
-export { buildXlsx, type XlsxSheet } from "./data-panel-xlsx.ts";
+export {
+  buildXlsx,
+  parseXlsx,
+  type XlsxSheet,
+} from "./data-panel-xlsx.ts";
 
 export { Watermark, type WatermarkProps } from "./Watermark.tsx";
 export { CountDown, type CountDownProps, type CountDownTimeParts } from "./CountDown.tsx";

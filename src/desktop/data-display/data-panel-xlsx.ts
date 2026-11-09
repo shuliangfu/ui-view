@@ -1,7 +1,7 @@
 /**
- * 零依赖 xlsx（OOXML）写入：生成真正的 .xlsx 工作簿（ZIP「存储」模式，无压缩），
+ * 零依赖 xlsx（OOXML）读写：写出真正的 .xlsx 工作簿（ZIP「存储」模式，无压缩），
  * 首行表头加粗白字蓝底并冻结，数字单元格为数值类型，文本使用 inlineStr。
- * 仅供 DataPanel 导出使用；浏览器 / Deno / Node 通用（不依赖 DOM）。
+ * 导入支持存储／deflate 压缩的 OOXML，解析首个工作表；浏览器 / Deno / Node 通用（不依赖 DOM）。
  */
 
 /** xlsx 单元格：字符串、数字或空 */
@@ -237,3 +237,205 @@ export function buildXlsx(sheet: XlsxSheet): Uint8Array {
 /** .xlsx 的 MIME */
 export const XLSX_MIME =
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+
+
+const dec = new TextDecoder();
+
+/** 解压 ZIP deflate-raw（method 8） */
+async function inflateRaw(data: Uint8Array): Promise<Uint8Array> {
+  const ds = new DecompressionStream("deflate-raw");
+  // 拷贝为独立 ArrayBuffer，避免 SharedArrayBuffer／BlobPart 类型摩擦
+  const copy = new Uint8Array(data.byteLength);
+  copy.set(data);
+  const stream = new Blob([copy]).stream().pipeThrough(ds);
+  return new Uint8Array(await new Response(stream).arrayBuffer());
+}
+
+/** 列字母（A／AA）→ 0 起下标 */
+export function colLettersToIndex(letters: string): number {
+  let n = 0;
+  for (const ch of letters.toUpperCase()) {
+    n = n * 26 + (ch.charCodeAt(0) - 64);
+  }
+  return n - 1;
+}
+
+/** 还原 `xmlEscape` */
+export function xmlUnescape(s: string): string {
+  return s
+    .replaceAll("&lt;", "<")
+    .replaceAll("&gt;", ">")
+    .replaceAll("&quot;", '"')
+    .replaceAll("&apos;", "'")
+    .replaceAll("&amp;", "&");
+}
+
+/** 解析 ZIP（method 0 存储／8 deflate）；返回 name → bytes */
+export async function unzipEntries(
+  zip: Uint8Array,
+): Promise<Map<string, Uint8Array>> {
+  const dv = new DataView(zip.buffer, zip.byteOffset, zip.byteLength);
+  let eocd = -1;
+  for (let i = zip.length - 22; i >= 0; i--) {
+    if (dv.getUint32(i, true) === 0x06054b50) {
+      eocd = i;
+      break;
+    }
+  }
+  if (eocd < 0) throw new Error("invalid zip: EOCD missing");
+  const count = dv.getUint16(eocd + 10, true);
+  let cd = dv.getUint32(eocd + 16, true);
+  const out = new Map<string, Uint8Array>();
+  for (let i = 0; i < count; i++) {
+    if (dv.getUint32(cd, true) !== 0x02014b50) {
+      throw new Error("invalid zip: central directory");
+    }
+    const method = dv.getUint16(cd + 10, true);
+    const compSize = dv.getUint32(cd + 20, true);
+    const uncompSize = dv.getUint32(cd + 24, true);
+    const nameLen = dv.getUint16(cd + 28, true);
+    const extraLen = dv.getUint16(cd + 30, true);
+    const commentLen = dv.getUint16(cd + 32, true);
+    const lho = dv.getUint32(cd + 42, true);
+    const name = dec.decode(zip.subarray(cd + 46, cd + 46 + nameLen));
+    if (dv.getUint32(lho, true) !== 0x04034b50) {
+      throw new Error(`invalid zip local header: ${name}`);
+    }
+    const lMethod = dv.getUint16(lho + 8, true);
+    const lNameLen = dv.getUint16(lho + 26, true);
+    const lExtraLen = dv.getUint16(lho + 28, true);
+    let lComp = dv.getUint32(lho + 18, true);
+    if (lComp === 0) lComp = compSize;
+    const start = lho + 30 + lNameLen + lExtraLen;
+    const raw = zip.subarray(start, start + lComp);
+    const m = method || lMethod;
+    let data: Uint8Array;
+    if (m === 0) data = raw;
+    else if (m === 8) data = await inflateRaw(raw);
+    else throw new Error(`unsupported zip method ${m} for ${name}`);
+    if (uncompSize && data.length !== uncompSize && m === 0) {
+      // 存储模式下长度应一致；deflate 后以实际为准
+    }
+    out.set(name, data);
+    cd += 46 + nameLen + extraLen + commentLen;
+  }
+  return out;
+}
+
+function parseSharedStrings(xml: string): string[] {
+  const out: string[] = [];
+  // <si>…<t>…</t>…</si>（可能含 rich text 多段 <t>）
+  const siRe = /<si\b[^>]*>([\s\S]*?)<\/si>/gi;
+  let m: RegExpExecArray | null;
+  while ((m = siRe.exec(xml))) {
+    const parts: string[] = [];
+    const tRe = /<t\b[^>]*>([\s\S]*?)<\/t>/gi;
+    let t: RegExpExecArray | null;
+    while ((t = tRe.exec(m[1]))) parts.push(xmlUnescape(t[1]));
+    out.push(parts.join(""));
+  }
+  return out;
+}
+
+/** 工作表 XML → 二维字符串表（稀疏列按最大列对齐） */
+export function parseSheetXmlToMatrix(
+  xml: string,
+  shared: string[] = [],
+): string[][] {
+  const rows: { r: number; cells: Map<number, string> }[] = [];
+  const rowRe = /<row\b([^>]*)>([\s\S]*?)<\/row>/gi;
+  let rm: RegExpExecArray | null;
+  while ((rm = rowRe.exec(xml))) {
+    const rowAttr = rm[1];
+    const inner = rm[2];
+    const rMatch = /\br="(\d+)"/.exec(rowAttr);
+    const rNum = rMatch ? Number(rMatch[1]) : rows.length + 1;
+    const cells = new Map<number, string>();
+    const cellRe = /<c\b([^>]*)>([\s\S]*?)<\/c>|<c\b([^>]*)\/>/gi;
+    let cm: RegExpExecArray | null;
+    while ((cm = cellRe.exec(inner))) {
+      const attrs = cm[1] ?? cm[3] ?? "";
+      const body = cm[2] ?? "";
+      const ref = /\br="([A-Z]+)(\d+)"/i.exec(attrs);
+      if (!ref) continue;
+      const col = colLettersToIndex(ref[1]);
+      const t = /\bt="([^"]+)"/.exec(attrs)?.[1] ?? "";
+      let val = "";
+      if (t === "inlineStr") {
+        const tm = /<t\b[^>]*>([\s\S]*?)<\/t>/i.exec(body);
+        val = tm ? xmlUnescape(tm[1]) : "";
+      } else if (t === "s") {
+        const vm = /<v\b[^>]*>([\s\S]*?)<\/v>/i.exec(body);
+        const idx = vm ? Number(vm[1]) : NaN;
+        val = Number.isFinite(idx) ? (shared[idx] ?? "") : "";
+      } else if (t === "str" || t === "b") {
+        const vm = /<v\b[^>]*>([\s\S]*?)<\/v>/i.exec(body);
+        val = vm ? xmlUnescape(vm[1]) : "";
+      } else {
+        const is = /<is\b[^>]*>[\s\S]*?<t\b[^>]*>([\s\S]*?)<\/t>/i.exec(body);
+        if (is) val = xmlUnescape(is[1]);
+        else {
+          const vm = /<v\b[^>]*>([\s\S]*?)<\/v>/i.exec(body);
+          val = vm ? xmlUnescape(vm[1]) : "";
+        }
+      }
+      cells.set(col, val);
+    }
+    rows.push({ r: rNum, cells });
+  }
+  rows.sort((a, b) => a.r - b.r);
+  let maxCol = -1;
+  for (const row of rows) {
+    for (const c of row.cells.keys()) maxCol = Math.max(maxCol, c);
+  }
+  if (maxCol < 0) return [];
+  return rows.map((row) => {
+    const arr = Array.from({ length: maxCol + 1 }, () => "");
+    for (const [c, v] of row.cells) arr[c] = v;
+    return arr;
+  });
+}
+
+/**
+ * 解析 .xlsx 字节 → 以首行表头为键的行（字符串值）。
+ * 读取 workbook 指向的首个 worksheet；支持 inlineStr／共享字符串／数值。
+ */
+export async function parseXlsx(
+  data: Uint8Array,
+): Promise<Record<string, string>[]> {
+  const files = await unzipEntries(data);
+  const wb = files.get("xl/workbook.xml");
+  const rels = files.get("xl/_rels/workbook.xml.rels");
+  let sheetPath = "xl/worksheets/sheet1.xml";
+  if (wb && rels) {
+    const sheet = /<sheet\b[^>]*\br:id="([^"]+)"/i.exec(dec.decode(wb));
+    if (sheet) {
+      const id = sheet[1];
+      const re = new RegExp(
+        `<Relationship\\b[^>]*\\bId="${id}"[^>]*\\bTarget="([^"]+)"`,
+        "i",
+      );
+      const m = re.exec(dec.decode(rels));
+      if (m) {
+        const target = m[1].replace(/^\//, "");
+        sheetPath = target.startsWith("xl/")
+          ? target
+          : `xl/${target}`;
+      }
+    }
+  }
+  const sheetBytes = files.get(sheetPath) ??
+    files.get("xl/worksheets/sheet1.xml");
+  if (!sheetBytes) throw new Error("xlsx worksheet missing");
+  const sstBytes = files.get("xl/sharedStrings.xml");
+  const shared = sstBytes ? parseSharedStrings(dec.decode(sstBytes)) : [];
+  const matrix = parseSheetXmlToMatrix(dec.decode(sheetBytes), shared);
+  if (matrix.length < 2) return [];
+  const [head, ...rest] = matrix;
+  const keys = head.map((h) => h.trim());
+  return rest
+    .filter((r) => r.some((c) => c !== ""))
+    .map((r) =>
+      Object.fromEntries(keys.map((k, i) => [k || `col${i}`, (r[i] ?? "").trim()]))
+    );
+}

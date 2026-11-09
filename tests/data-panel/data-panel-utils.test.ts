@@ -1,6 +1,6 @@
 /**
  * @fileoverview DataPanel 纯逻辑：展示值、CSV、分页页码、查询序列化、本地过滤 / 排序 / 分页 / 合计、
- * 增删改与批量、表单校验、五种导出格式、文案。
+ * 增删改与批量、表单校验、五种导出格式、JSON／XML 导入解析、文案。
  */
 import { describe, expect, it } from "@dreamer/test";
 import {
@@ -14,6 +14,8 @@ import {
   formatMoney,
   pageList,
   parseCsv,
+  parseJsonRows,
+  parseXmlRows,
   queryFromParams,
   queryToParams,
   resolveBatchStatusColumn,
@@ -127,29 +129,42 @@ describe("展示值", () => {
     )).toBe("2026/11/10");
   });
 
-  it("resolvePanelColumns：index／selection 由 columns 驱动；label 默认 #", () => {
+  it("resolvePanelColumns：index／selection／actions 由 columns 驱动；label 默认 #", () => {
     const cols = resolvePanelColumns(
       [
-        { type: "selection", prop: "__select", label: "" },
-        { type: "index", prop: "__index", label: "" },
+        { type: "selection" },
+        { type: "index" },
         { prop: "name", label: "姓名" },
+        { type: "actions" },
       ],
-      { needSelection: false, autoIndex: false },
+      { needSelection: false, autoIndex: false, needActions: false },
     );
-    expect(cols.map((c) => c.type)).toEqual(["selection", "index", undefined]);
+    expect(cols.map((c) => c.type)).toEqual([
+      "selection",
+      "index",
+      undefined,
+      "actions",
+    ]);
     expect(cols[1].label).toBe("#");
-    // 无显式 index 时兼容自动前置
+    expect(cols[0].prop).toBe("__select");
+    expect(cols[1].prop).toBe("__index");
+    expect(cols[3].prop).toBe("__actions");
+    // 无显式时兼容：selection／index 前置，actions 末尾追加
     const auto = resolvePanelColumns(
       [{ prop: "name", label: "姓名" }],
-      { needSelection: true, selectable: undefined },
+      { needSelection: true, needActions: true, selectable: undefined },
     );
-    expect(auto[0].type).toBe("selection");
-    expect(auto[1].type).toBe("index");
+    expect(auto.map((c) => c.type)).toEqual([
+      "selection",
+      "index",
+      undefined,
+      "actions",
+    ]);
     expect(auto[1].label).toBe("#");
     // selectable:false 去掉 selection
     const noSel = resolvePanelColumns(
       [{ prop: "name", label: "姓名" }],
-      { needSelection: true, selectable: false },
+      { needSelection: true, selectable: false, needActions: false },
     );
     expect(noSel.some((c) => c.type === "selection")).toBe(false);
     expect(noSel[0].type).toBe("index");
@@ -284,6 +299,44 @@ describe("parseCsv", () => {
   });
   it("缺失列补空串", () => {
     expect(parseCsv("a,b,c\n1,2")).toEqual([{ a: "1", b: "2", c: "" }]);
+  });
+});
+
+describe("parseJsonRows", () => {
+  it("数组对象 → 字符串字段；非数组空", () => {
+    expect(parseJsonRows('[{"a":1,"b":null},{"a":"x"}]')).toEqual([
+      { a: "1", b: "" },
+      { a: "x" },
+    ]);
+    expect(parseJsonRows('{"a":1}')).toEqual([]);
+  });
+});
+
+describe("parseXmlRows", () => {
+  it("解析导出 XML 并还原转义", () => {
+    const xml =
+      `<?xml version="1.0" encoding="UTF-8"?>\n<rows>\n  <row>\n    <name>A&lt;B</name>\n    <email>a@b.com</email>\n  </row>\n</rows>\n`;
+    expect(parseXmlRows(xml)).toEqual([{ name: "A<B", email: "a@b.com" }]);
+  });
+
+  it("与 buildExportFile(xml) 往返", () => {
+    const cols = [
+      { prop: "name", label: "姓名" },
+      { prop: "note", label: "备注" },
+    ];
+    const rows = [{ name: "Tom", note: "a<b>&c" }];
+    const f = buildExportFile({
+      format: "xml",
+      title: "t",
+      basename: "t",
+      columns: cols,
+      rows,
+      messages: M,
+      dateStamp: "20260102",
+    });
+    expect(parseXmlRows(f.data as string)).toEqual([
+      { name: "Tom", note: "a<b>&c" },
+    ]);
   });
 });
 

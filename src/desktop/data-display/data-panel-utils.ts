@@ -1,6 +1,6 @@
 /**
  * DataPanel 纯逻辑工具（无 DOM 依赖，可在测试里直接调用）：
- * 单元格展示、CSV 解析、分页页码、查询序列化、本地数据源、导出文件构建。
+ * 单元格展示、CSV／JSON／XML 解析、分页页码、查询序列化、本地数据源、导出文件构建。
  */
 import { formatMessage } from "./data-panel-messages.ts";
 import type {
@@ -24,6 +24,7 @@ import {
   XLSX_MIME,
   type XlsxCell,
   xmlEscape,
+  xmlUnescape,
 } from "./data-panel-xlsx.ts";
 
 const p2 = (n: number) => String(n).padStart(2, "0");
@@ -107,7 +108,7 @@ export function resolveColumnFn(
   col: Column,
   row: Row,
 ): unknown | undefined {
-  const raw = row[col.prop];
+  const raw = row[colProp(col)];
   if (typeof col.formatter === "function") return col.formatter(row, raw);
   if (typeof col.value === "function") return col.value(row);
   return undefined;
@@ -119,7 +120,7 @@ function displayValueDefault(
   row: Row,
   m: Pick<Messages, "yes" | "no">,
 ): string {
-  const raw = row[col.prop];
+  const raw = row[colProp(col)];
   switch (col.type) {
     case "tag": {
       if (Array.isArray(raw)) {
@@ -203,6 +204,33 @@ export function parseCsv(text: string): Record<string, string>[] {
   return rest.map((r) =>
     Object.fromEntries(head.map((h, i) => [h.trim(), (r[i] ?? "").trim()]))
   );
+}
+
+/** 解析 JSON 数组 → 字符串字段行（非数组则空） */
+export function parseJsonRows(text: string): Record<string, string>[] {
+  const j = JSON.parse(text);
+  return (Array.isArray(j) ? j : []).map((o: Record<string, unknown>) =>
+    Object.fromEntries(
+      Object.entries(o ?? {}).map(([k, v]) => [k, String(v ?? "")]),
+    )
+  );
+}
+
+/** 解析 DataPanel XML 导出（`<rows><row><prop>…</prop></row></rows>`） */
+export function parseXmlRows(text: string): Record<string, string>[] {
+  const rows: Record<string, string>[] = [];
+  const rowRe = /<row\b[^>]*>([\s\S]*?)<\/row>/gi;
+  let m: RegExpExecArray | null;
+  while ((m = rowRe.exec(text))) {
+    const obj: Record<string, string> = {};
+    const cellRe = /<([A-Za-z_][\w.-]*)\b[^>]*>([\s\S]*?)<\/\1>/g;
+    let c: RegExpExecArray | null;
+    while ((c = cellRe.exec(m[1]))) {
+      obj[c[1]] = xmlUnescape(c[2]).trim();
+    }
+    if (Object.keys(obj).length) rows.push(obj);
+  }
+  return rows;
 }
 
 /** 分页页码序列：首 2 页、末 2 页、当前页 ±1，缺口用 "…" */
@@ -299,7 +327,7 @@ export function normalizeColumns(
   columns: readonly Column[],
 ): Column[] {
   return columns.map((c) => {
-    if (c.type === "selection" || c.type === "index") return c;
+    if (c.type === "selection" || c.type === "index" || c.type === "actions") return c;
     if (c.inline || !c.edit) return c;
     const inline = c.options && c.options.length === 2 ? "switch" as const : "text" as const;
     return { ...c, inline };
@@ -309,6 +337,20 @@ export function normalizeColumns(
 /** 与 data-panel-chrome 的 COL_SELECT／COL_INDEX 对齐（避免 utils↔chrome 循环依赖） */
 export const PANEL_COL_SELECT = "__select";
 export const PANEL_COL_INDEX = "__index";
+export const PANEL_COL_ACTIONS = "__actions";
+
+/** 列 prop（系统列解析后必有；数据列调用方应提供） */
+export function colProp(c: Pick<Column, "prop">): string {
+  return c.prop ?? "";
+}
+
+/** 列 label（空则回落 prop） */
+export function colLabel(c: Pick<Column, "prop" | "label">): string {
+  const lab = c.label;
+  if (lab != null && String(lab).trim()) return String(lab);
+  return c.prop ?? "";
+}
+
 
 export function isSelectionColumn(c: Column): boolean {
   return c.type === "selection" || c.prop === PANEL_COL_SELECT;
@@ -318,8 +360,15 @@ export function isIndexColumn(c: Column): boolean {
   return c.type === "index" || c.prop === PANEL_COL_INDEX;
 }
 
+export function isActionsColumn(c: Column): boolean {
+  return c.type === "actions" || c.prop === PANEL_COL_ACTIONS;
+}
+
+/** 解析后保证 prop／label 为 string（供渲染／导出） */
+export type ResolvedColumn = Column & { prop: string; label: string };
+
 export function isSystemColumn(c: Column): boolean {
-  return isSelectionColumn(c) || isIndexColumn(c);
+  return isSelectionColumn(c) || isIndexColumn(c) || isActionsColumn(c);
 }
 
 export type ResolvePanelColumnsOptions = {
@@ -332,21 +381,28 @@ export type ResolvePanelColumnsOptions = {
    * 默认 true；传 false 则完全由 columns 决定。
    */
   autoIndex?: boolean;
+  /**
+   * 是否需要操作列（column.actions／caps 可能出钮）——无显式 actions 列时兼容追加到末尾。
+   * 显式 `{ type:"actions" }` 时位置／label 完全由 columns 决定。
+   */
+  needActions?: boolean;
 };
 
 /**
- * 解析面板列：规范化 selection／index，并按需兼容前置系统列。
- * - 显式 `{ type:"index", label? }`：label 缺省为 `"#"`；位置随 columns 写入序
- * - 显式 `{ type:"selection" }`：多选列；`selectable:false` 时剔除
+ * 解析面板列：规范化 selection／index／actions，并按需兼容补系统列。
+ * - `{ type:"selection" }`：prop／label 可省（默认 `__select`／`""`）；`selectable:false` 时剔除
+ * - `{ type:"index" }`：prop／label 可省（默认 `__index`／`"#"`）；位置随 columns 写入序
+ * - `{ type:"actions" }`：prop／label 可省（默认 `__actions`／`""`，表头回落 messages.actions）
  * - 未声明 index 且 autoIndex≠false：前置默认序号列（旧行为）
  * - 未声明 selection 且 needSelection 且 selectable≠false：前置多选列（旧 selectable 行为）
+ * - 未声明 actions 且 needActions：末尾追加操作列（兼容旧「有钮即出列」）
  */
 export function resolvePanelColumns(
   columns: readonly Column[],
   opts: ResolvePanelColumnsOptions = {},
-): Column[] {
+): ResolvedColumn[] {
   const autoIndex = opts.autoIndex !== false;
-  const mapped = normalizeColumns(columns).map((c) => {
+  const mapped: ResolvedColumn[] = normalizeColumns(columns).map((c) => {
     if (c.type === "selection" || c.prop === PANEL_COL_SELECT) {
       return {
         ...c,
@@ -363,12 +419,26 @@ export function resolvePanelColumns(
         label: (c.label && String(c.label).trim()) ? c.label : "#",
       };
     }
-    return { ...c, label: (c.label && String(c.label).trim()) ? c.label : c.prop };
+    if (c.type === "actions" || c.prop === PANEL_COL_ACTIONS) {
+      return {
+        ...c,
+        type: "actions" as const,
+        prop: c.prop || PANEL_COL_ACTIONS,
+        label: c.label ?? "",
+      };
+    }
+    const prop = c.prop ?? "";
+    return {
+      ...c,
+      prop,
+      label: (c.label && String(c.label).trim()) ? c.label : prop,
+    };
   });
 
   const hasSel = mapped.some(isSelectionColumn);
   const hasIdx = mapped.some(isIndexColumn);
-  const prepend: Column[] = [];
+  const hasAct = mapped.some(isActionsColumn);
+  const prepend: ResolvedColumn[] = [];
   if (!hasSel && opts.selectable !== false && opts.needSelection) {
     prepend.push({
       type: "selection",
@@ -379,7 +449,14 @@ export function resolvePanelColumns(
   if (!hasIdx && autoIndex) {
     prepend.push({ type: "index", prop: PANEL_COL_INDEX, label: "#" });
   }
-  let out = [...prepend, ...mapped];
+  let out: ResolvedColumn[] = [...prepend, ...mapped];
+  if (!hasAct && opts.needActions) {
+    out = [...out, {
+      type: "actions",
+      prop: PANEL_COL_ACTIONS,
+      label: "",
+    }];
+  }
   if (opts.selectable === false) {
     out = out.filter((c) => !isSelectionColumn(c));
   }
@@ -402,7 +479,7 @@ export function enrichSearchFields(
   search: readonly SearchField[],
   columns: readonly Column[],
 ): SearchField[] {
-  const byProp = new Map(columns.map((c) => [c.prop, c]));
+  const byProp = new Map(columns.map((c) => [colProp(c), c]));
   return search.map((s) => {
     const key = fieldProp(s);
     const col = key ? byProp.get(key) : undefined;
@@ -426,7 +503,7 @@ export function enrichFormFields(
   form: readonly FormField[],
   columns: readonly Column[],
 ): FormField[] {
-  const byProp = new Map(columns.map((c) => [c.prop, c]));
+  const byProp = new Map(columns.map((c) => [colProp(c), c]));
   return form.map((f) => {
     const key = fieldProp(f);
     const col = key ? byProp.get(key) : undefined;
@@ -470,7 +547,7 @@ export function resolveBatchStatusColumn(
   );
   if (!col?.options) return null;
   return {
-    field: col.prop,
+    field: colProp(col),
     values: col.options.map((o) => ({ value: o.value, label: o.label })),
   };
 }
@@ -847,11 +924,11 @@ export function createLocalDataSource(
       for (const c of opts.columns) {
         if (c.total) {
           const sum = rows.reduce(
-            (s, r) => s + (Number(r[c.prop]) || 0),
+            (s, r) => s + (Number(r[colProp(c)]) || 0),
             0,
           );
           // 去掉浮点累加误差（12769.800000000001 → 12769.8）
-          totals[c.prop] = Math.round(sum * 1e6) / 1e6;
+          totals[colProp(c)] = Math.round(sum * 1e6) / 1e6;
         }
       }
       const start = (q.page - 1) * q.pageSize;
@@ -949,7 +1026,12 @@ const csvCell = (s: string) =>
 
 /** 构建 xlsx / csv / json / xml / html 导出文件（仅处理传入的 rows；分页拉取由组件完成） */
 export function buildExportFile(o: BuildExportOptions): ExportFile {
-  const { columns, rows } = o;
+  const columns = o.columns.map((c): ResolvedColumn => ({
+    ...c,
+    prop: c.prop ?? "",
+    label: colLabel(c),
+  }));
+  const { rows } = o;
   const heads = columns.map((c) => c.label);
   const table = rows.map((r) =>
     columns.map((c) => displayValue(c, r, o.messages))
@@ -961,7 +1043,7 @@ export function buildExportFile(o: BuildExportOptions): ExportFile {
     case "xlsx": {
       const bodyRows: XlsxCell[][] = rows.map((r, i) =>
         columns.map((c, j) => {
-          const raw = r[c.prop];
+          const raw = r[colProp(c)];
           if (
             (c.type === "number" || c.type === "money") && raw !== null &&
             raw !== "" && raw !== undefined && Number.isFinite(Number(raw))

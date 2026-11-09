@@ -1252,7 +1252,7 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
     expect(r.headerNoName).toBe("邮箱,角色,状态,余额,积分,创建时间");
   }, DOCS_BROWSER_CONFIG);
 
-  it("导入：选择 CSV 后新增行；打印按钮会打开打印窗口", async (t) => {
+  it("导入：下拉选 CSV 后新增行；打印按钮会打开打印窗口", async (t) => {
     if (!t?.browser?.goto) return;
     await open(t, "demo-export");
     const r = await ev<Record<string, unknown>>(
@@ -1273,6 +1273,8 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
         return origClick.call(this);
       };
       D.click(D.q(k, '[data-testid="dp-import"]'));
+      await D.until(() => document.querySelector('[data-testid="dp-import-csv"]'));
+      D.click(D.g('[data-testid="dp-import-csv"]'));
       await D.until(() => D.total(k) === total0 + 2);
       out.imported = D.total(k) === total0 + 2;
       out.firstNames = D.names(k).slice(0, 2);

@@ -10,9 +10,11 @@ import {
   type Column,
   type DataSource,
   type PanelProps,
+  type RowActionsConfig,
 } from "../../src/desktop/data-display/DataPanel.tsx";
 
 const COLUMNS: Column[] = [
+  { type: "index" },
   { prop: "name", label: "姓名", sortable: true },
   {
     prop: "status",
@@ -29,6 +31,11 @@ const COLUMNS: Column[] = [
   { prop: "balance", label: "余额", type: "money", total: true },
   { prop: "secret", label: "隐藏列", hidden: true },
 ];
+
+/** 挂操作配置到 COLUMNS 的 actions 列 */
+function withActions(actions: RowActionsConfig): Column[] {
+  return [...COLUMNS, { type: "actions", actions }];
+}
 
 function data(n: number) {
   return Array.from({ length: n }, (_, i) => ({
@@ -310,10 +317,10 @@ describe("DataPanel SSR：文案与自定义", () => {
     const h = await html({
       title: "详情定制",
       data: [{ id: "1", name: "Alice", flag: 1 }],
-      columns: [{ prop: "name", label: "姓名" }, { prop: "flag", label: "标记" }],
+      columns: [{ prop: "name", label: "姓名" }, { prop: "flag", label: "标记" },
+        { type: "actions", actions: { view: true, edit: false, remove: false } }],
       caps: { create: false, update: false, view: true, remove: false, import: false, export: false, print: false, columns: false, density: false, fullscreen: false, copy: false },
-      rowActions: { view: true, edit: false, remove: false },
-      viewSchemas: (row) => [
+            viewSchemas: (row) => [
         { label: "名", value: row.name },
         { label: "旗", children: <em data-x="vs">{String(row.flag)}</em> },
       ],
@@ -379,15 +386,7 @@ describe("DataPanel SSR：文案与自定义", () => {
   });
 
   it("renderCell / children / class；无 toolbarExtra／rowExtra 槽", async () => {
-    const h = await html({
-      renderCell: { name: (r) => <b data-x="cell">{String(r.name)}!</b> },
-      children: <div data-x="child">CHILD</div>,
-      class: "my-panel",
-      toolbar: {
-        create: false,
-        notify: { label: "通知", tone: "primary", action: () => {} },
-      },
-      rowActions: {
+    const h = await html({columns: withActions({
         view: false,
         edit: false,
         remove: false,
@@ -396,8 +395,16 @@ describe("DataPanel SSR：文案与自定义", () => {
           tone: "danger",
           action: () => {},
         },
+      }),
+      
+      renderCell: { name: (r) => <b data-x="cell">{String(r.name)}!</b> },
+      children: <div data-x="child">CHILD</div>,
+      class: "my-panel",
+      toolbar: {
+        create: false,
+        notify: { label: "通知", tone: "primary", action: () => {} },
       },
-    });
+          });
     expect(h).toContain('<b data-x="cell">');
     expect(h).toContain('data-x="child"');
     expect(h).toContain("dp-card my-panel");
@@ -413,7 +420,13 @@ describe("DataPanel SSR：文案与自定义", () => {
   });
 
   it("title／label 互落 tip；batchStatus 不在工具栏（caps＋column.batch）", async () => {
-    const h = await html({
+    const h = await html({columns: withActions({
+        view: false,
+        edit: false,
+        remove: false,
+        assign: { label: "分配", action: () => {} },
+      }),
+      
       caps: { batchStatus: true, create: false, print: false, import: false, export: false, columns: false, density: false, fullscreen: false, copy: false },
       toolbar: {
         refresh: true,
@@ -421,13 +434,7 @@ describe("DataPanel SSR：文案与自定义", () => {
         titled: { title: "仅标题", action: () => {} }, // 无 label → 显示用 title
         bare: { action: () => {} },
       },
-      rowActions: {
-        view: false,
-        edit: false,
-        remove: false,
-        assign: { label: "分配", action: () => {} },
-      },
-      dataSource: {
+            dataSource: {
         sync: true,
         list: () => ({ rows: [{ id: "1", name: "A", status: "active" }], total: 1 }),
         setField: async () => ({ removed: 0, failed: [] }),
@@ -465,7 +472,8 @@ describe("DataPanel SSR：文案与自定义", () => {
   });
 
   it("caps.batchStatus:false 隐藏选择列（无 remove 时）", async () => {
-    const h = await html({
+    const h = await html({columns: withActions({ view: false, edit: false, remove: false }),
+      
       caps: {
         batchStatus: false,
         remove: false,
@@ -479,8 +487,7 @@ describe("DataPanel SSR：文案与自定义", () => {
         copy: false,
       },
       toolbar: { refresh: true },
-      rowActions: { view: false, edit: false, remove: false },
-      dataSource: {
+            dataSource: {
         sync: true,
         list: () => ({ rows: [{ id: "1", name: "A", status: "active" }], total: 1 }),
         setField: async () => ({ removed: 0, failed: [] }),
@@ -505,7 +512,17 @@ describe("DataPanel SSR：文案与自定义", () => {
 
 
   it("disable:true 仍渲染且带 disabled；show:false 才隐藏；声明省略 show→显示", async () => {
-    const h = await html({
+    const h = await html({columns: withActions({
+        view: false,
+        edit: { disable: true },
+        remove: false,
+        assign: {
+          label: "分配",
+          disable: (item) => !!item.locked,
+          action: () => {},
+        },
+      }),
+      
       caps: {
         create: false,
         print: false,
@@ -522,17 +539,7 @@ describe("DataPanel SSR：文案与自定义", () => {
         ghost: { label: "幽灵", show: false, action: () => {} },
         refresh: true,
       },
-      rowActions: {
-        view: false,
-        edit: { disable: true },
-        remove: false,
-        assign: {
-          label: "分配",
-          disable: (item) => !!item.locked,
-          action: () => {},
-        },
-      },
-    });
+          });
     const hasDisabledAttr = (chunk: string) =>
       /<button\b[^>]*\sdisabled(?:=""|\s|>)/.test(chunk);
     expect(h.includes('data-testid="dp-tb-extra-freeze"')).toBe(true);
@@ -556,8 +563,14 @@ describe("DataPanel SSR：文案与自定义", () => {
   });
 
 
-  it("toolbar／rowActions：无原生 HTML title 提示（仅 Tooltip）", async () => {
-    const h = await html({
+  it("toolbar／column.actions：无原生 HTML title 提示（仅 Tooltip）", async () => {
+    const h = await html({columns: withActions({
+        view: true,
+        edit: true,
+        remove: false,
+        assign: { label: "分配", action: () => {} },
+      }),
+      
       caps: {
         import: false,
         export: false,
@@ -572,13 +585,7 @@ describe("DataPanel SSR：文案与自定义", () => {
         refresh: true,
         freeze: { label: "冻结", action: () => {} },
       },
-      rowActions: {
-        view: true,
-        edit: true,
-        remove: false,
-        assign: { label: "分配", action: () => {} },
-      },
-    });
+          });
     // 原生 title= 会与 Tooltip 叠成双提示；工具栏／行钮不得带 tip 文案作 HTML title
     expect(h).not.toMatch(/\btitle="打印"/);
     expect(h).not.toMatch(/\btitle="新建"/);

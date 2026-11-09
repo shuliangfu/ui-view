@@ -7,8 +7,11 @@ import {
   buildXlsx,
   crc32,
   neutralizeFormula,
+  parseXlsx,
+  unzipEntries,
   xlsxColumnName,
   xmlEscape,
+  xmlUnescape,
   zipStore,
 } from "../../src/desktop/data-display/data-panel-xlsx.ts";
 
@@ -182,5 +185,38 @@ describe("buildXlsx", () => {
     const st = dec.decode(files.get("xl/styles.xml"));
     expect(st).toContain("FF3C8DBC");
     expect(st).toContain('<cellXfs count="3">');
+  });
+});
+
+describe("parseXlsx", () => {
+  it("xmlUnescape 还原转义", () => {
+    expect(xmlUnescape("a&lt;b&gt;&amp;&quot;c&quot;")).toBe(`a<b>&"c"`);
+  });
+
+  it("unzipEntries 读回 zipStore", async () => {
+    const enc = new TextEncoder();
+    const zip = zipStore([
+      { name: "a.txt", data: enc.encode("hi") },
+      { name: "b/c.txt", data: enc.encode("ok") },
+    ]);
+    const files = await unzipEntries(zip);
+    expect(dec.decode(files.get("a.txt")!)).toBe("hi");
+    expect(dec.decode(files.get("b/c.txt")!)).toBe("ok");
+  });
+
+  it("buildXlsx → parseXlsx 往返（表头／文本／数字）", async () => {
+    const bytes = buildXlsx({
+      name: "用户",
+      headers: ["姓名", "余额"],
+      rows: [
+        ["Alice", 12.5],
+        ["Bob<1>", 0],
+      ],
+    });
+    const rows = await parseXlsx(bytes);
+    expect(rows).toEqual([
+      { "姓名": "Alice", "余额": "12.5" },
+      { "姓名": "Bob<1>", "余额": "0" },
+    ]);
   });
 });
