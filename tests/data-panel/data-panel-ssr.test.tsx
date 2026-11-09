@@ -7,17 +7,19 @@ import { renderToString } from "@dreamer/view/ssr";
 import {
   DATA_PANEL_CSS,
   DataPanel,
-  type DataPanelColumn,
-  type DataPanelDataSource,
-  type DataPanelProps,
+  type Column,
+  type DataSource,
+  type PanelProps,
 } from "../../src/desktop/data-display/DataPanel.tsx";
 
-const COLUMNS: DataPanelColumn[] = [
+const COLUMNS: Column[] = [
   { prop: "name", label: "姓名", sortable: true },
   {
     prop: "status",
     label: "状态",
     type: "tag",
+    inline: "switch",
+    batch: true,
     options: [{ value: "on", label: "启用", tone: "success" }, {
       value: "off",
       label: "停用",
@@ -41,7 +43,7 @@ function data(n: number) {
 
 const FORM = [{ name: "name", label: "姓名", required: true }];
 
-async function html(props: Partial<DataPanelProps> = {}): Promise<string> {
+async function html(props: Partial<PanelProps> = {}): Promise<string> {
   return String(
     await renderToString(() => (
       <DataPanel
@@ -107,6 +109,19 @@ describe("DataPanel SSR：首帧内容", () => {
     const h2 = await html({ initialQuery: { page: 2 } });
     expect(h2).toContain("第 11-20 条，共 25 条");
     expect(h2).toContain("User 11");
+  });
+
+  it("首帧 page 越界（同页 URL 残留）夹回末页：有行、范围不倒置", async () => {
+    // 复现：共 6 条、pageSize 10、page=2 → 旧行为 rows=[]、「第 11-6 条」
+    const h = await html({
+      data: data(6),
+      initialQuery: { page: 2, pageSize: 10 },
+    });
+    expect(h).not.toContain('data-testid="dp-empty"');
+    expect((h.match(/data-testid="dp-row-/g) ?? []).length).toBe(6);
+    expect(h).toContain("第 1-6 条，共 6 条");
+    expect(h).toContain("共 6 条记录");
+    expect(h).toContain("User 1");
   });
 
   it("initialQuery.filters 在首帧生效", async () => {
@@ -212,8 +227,9 @@ describe("DataPanel SSR：能力开关", () => {
   });
 
   it("caps 可以关闭 remove / view / update", async () => {
+    // 关 remove 后若仍有 column.batch:true，默认仍开 batchStatus → 选择列还在；一并关掉才无选择列
     const h = await html({
-      caps: { remove: false, view: false, update: false },
+      caps: { remove: false, view: false, update: false, batchStatus: false },
     });
     expect(h).not.toContain('data-testid="dp-delete-2"');
     expect(h).not.toContain('data-testid="dp-view-2"');
@@ -238,7 +254,7 @@ describe("DataPanel SSR：能力开关", () => {
 
   it("异步数据源：服务端不请求，首帧是空表（挂载后再加载）", async () => {
     let calls = 0;
-    const ds: DataPanelDataSource = {
+    const ds: DataSource = {
       list() {
         calls++;
         return Promise.resolve({ rows: data(3), total: 3 });
@@ -251,7 +267,7 @@ describe("DataPanel SSR：能力开关", () => {
 
   it("initial 预取数据直接渲染，且不调用 list", async () => {
     let calls = 0;
-    const ds: DataPanelDataSource = {
+    const ds: DataSource = {
       list() {
         calls++;
         return Promise.resolve({ rows: [], total: 0 });
@@ -269,7 +285,7 @@ describe("DataPanel SSR：能力开关", () => {
   });
 
   it("同步数据源（sync: true）首帧直出", async () => {
-    const ds: DataPanelDataSource = {
+    const ds: DataSource = {
       sync: true,
       list: () => ({ rows: data(4), total: 4 }),
     };
@@ -286,6 +302,80 @@ describe("DataPanel SSR：文案与自定义", () => {
     expect(h).toContain("10 / page");
     expect(h).toContain("Sum");
     expect(h).toContain(">Actions</th>");
+  });
+
+
+
+  it("viewSchemas：定制详情项（对齐旧 view.schemas）", async () => {
+    const h = await html({
+      title: "详情定制",
+      data: [{ id: "1", name: "Alice", flag: 1 }],
+      columns: [{ prop: "name", label: "姓名" }, { prop: "flag", label: "标记" }],
+      caps: { create: false, update: false, view: true, remove: false, import: false, export: false, print: false, columns: false, density: false, fullscreen: false, copy: false },
+      rowActions: { view: true, edit: false, remove: false },
+      viewSchemas: (row) => [
+        { label: "名", value: row.name },
+        { label: "旗", children: <em data-x="vs">{String(row.flag)}</em> },
+      ],
+    });
+    // 打开 view 需交互；SSR 仅校验面板壳存在。详情内容在 open 后——此处至少不炸
+    expect(h).toContain("详情定制");
+    expect(h.includes("dp-view") || h.includes("详情定制")).toBe(true);
+  });
+
+  it("column value／color／formatter：文本标签／JSX／可信 HTML；formTitle／viewTitle", async () => {
+    const h = await html({
+      title: "列函数",
+      data: [
+        { id: "1", name: "Alice", flag: 1 },
+        { id: "2", name: "Bob", flag: 0 },
+      ],
+      columns: [
+        { prop: "name", label: "姓名" },
+        {
+          prop: "flag",
+          label: "标记",
+          type: "tag",
+          value: (r) => (r.flag === 1 ? "开启" : "关闭"),
+          color: (r) => (r.flag === 1 ? "success" : "danger"),
+        },
+        {
+          prop: "flag",
+          label: "节点",
+          value: (r) => <b data-x="flag-node">{r.flag === 1 ? "Y" : "N"}</b>,
+        },
+        {
+          prop: "flag",
+          label: "HTML",
+          formatter: (_r, raw) =>
+            raw === 1 ? '<i data-x="flag-html">ON</i>' : "<i>OFF</i>",
+        },
+      ],
+      formTitle: (row) => (row.id ? `修改 · ${row.name}` : "添加用户"),
+      searchTitle: "筛选用户",
+      viewTitle: (row) => `详情 · ${row.name}`,
+      form: [{ prop: "name", required: true }],
+      caps: {
+        create: true,
+        update: true,
+        view: true,
+        remove: false,
+        import: false,
+        export: false,
+        print: false,
+        columns: false,
+        density: false,
+        fullscreen: false,
+        copy: false,
+      },
+    });
+    expect(h).toContain("开启");
+    expect(h).toContain("关闭");
+    expect(h).toContain("dp-tag-success");
+    expect(h).toContain("dp-tag-danger");
+    expect(h).toContain('data-x="flag-node"');
+    // 可信 HTML 经 ref 写入；SSR 下 ref 会跑 ssr-dom innerHTML
+    expect(h.includes("flag-html") || h.includes("<i")).toBe(true);
   });
 
   it("renderCell / children / class；无 toolbarExtra／rowExtra 槽", async () => {
@@ -322,17 +412,11 @@ describe("DataPanel SSR：文案与自定义", () => {
     expect(h).toContain("dp-act-del"); // tone=danger
   });
 
-  it("title／label 互落 tip；batchStatus 为 TOOLBAR_BUILTIN（无工具栏图标）", async () => {
+  it("title／label 互落 tip；batchStatus 不在工具栏（caps＋column.batch）", async () => {
     const h = await html({
-      statusField: "status",
-      statusValues: [
-        { value: "active", label: "启用" },
-        { value: "disabled", label: "停用" },
-      ],
       caps: { batchStatus: true, create: false, print: false, import: false, export: false, columns: false, density: false, fullscreen: false, copy: false },
       toolbar: {
         refresh: true,
-        batchStatus: true, // Record 声明；UI 在批量条，非工具栏图标
         assign: { label: "分配全部", action: () => {} },
         titled: { title: "仅标题", action: () => {} }, // 无 label → 显示用 title
         bare: { action: () => {} },
@@ -357,10 +441,10 @@ describe("DataPanel SSR：文案与自定义", () => {
     expect(h).toContain("仅标题"); // 无 label 有 title → 显示 title
     expect(h).toContain('data-testid="dp-tb-extra-bare"');
     expect(h).toContain('aria-label="分配"');
-    // batchStatus 不渲染工具栏图标（仍是 builtins，但 UI 在批量条）
+    // batchStatus 不在 toolbar builtins；UI 仅在选中批量条
     expect(h).not.toContain('data-testid="dp-batch-status"');
     expect(h).not.toContain('data-testid="dp-batch-status-');
-    // 选择列因 remove|batchStatus 出现；批量条仅选中后出现（SSR 无选中 → 无 batch-bar 内容）
+    // 选择列因 remove|caps.batchStatus 出现；批量条仅选中后出现（SSR 无选中 → 无 batch-bar 内容）
     expect(h).toContain('data-testid="dp-select-1"');
   });
 
@@ -380,12 +464,10 @@ describe("DataPanel SSR：文案与自定义", () => {
     expect(rec).toContain('data-testid="dp-refresh"');
   });
 
-  it("toolbar.batchStatus:false 隐藏选择列（无 remove 时）", async () => {
+  it("caps.batchStatus:false 隐藏选择列（无 remove 时）", async () => {
     const h = await html({
-      statusField: "status",
-      statusValues: [{ value: "active", label: "启用" }],
       caps: {
-        batchStatus: true,
+        batchStatus: false,
         remove: false,
         create: false,
         print: false,
@@ -396,7 +478,7 @@ describe("DataPanel SSR：文案与自定义", () => {
         fullscreen: false,
         copy: false,
       },
-      toolbar: { batchStatus: false, refresh: true },
+      toolbar: { refresh: true },
       rowActions: { view: false, edit: false, remove: false },
       dataSource: {
         sync: true,

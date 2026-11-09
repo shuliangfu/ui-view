@@ -4,18 +4,19 @@
  */
 import { formatMessage } from "./data-panel-messages.ts";
 import type {
-  DataPanelBulkResult,
-  DataPanelColumn,
-  DataPanelDataSource,
-  DataPanelExportFormat,
-  DataPanelFormField,
-  DataPanelImportResult,
-  DataPanelListResult,
-  DataPanelMessages,
-  DataPanelQuery,
-  DataPanelRow,
-  DataPanelSearchField,
-  DataPanelWriteResult,
+  BulkResult,
+  Column,
+  DataSource,
+  ExportFormat,
+  FieldRule,
+  FormField,
+  ImportResult,
+  ListResult,
+  Messages,
+  Query,
+  Row,
+  SearchField,
+  WriteResult,
 } from "./data-panel-types.ts";
 import {
   buildXlsx,
@@ -27,14 +28,39 @@ import {
 
 const p2 = (n: number) => String(n).padStart(2, "0");
 
-/** "YYYY-MM-DD HH:mm:ss"（运行环境本地时区）；空 / 无效返回原值或 "" */
-export function formatDateTime(v: unknown): string {
+/**
+ * 按格式输出日期时间（运行环境本地时区）。
+ * @param format 令牌 `YYYY` `MM` `DD` `HH` `mm` `ss`；缺省 `YYYY-MM-DD HH:mm:ss`
+ * 空 / 无效返回原值或 ""。
+ */
+export function formatDateTime(
+  v: unknown,
+  format = "YYYY-MM-DD HH:mm:ss",
+): string {
   if (v === null || v === undefined || v === "") return "";
-  const d = v instanceof Date ? v : new Date(String(v));
+  // 纯日期串 + 只要日期格式：避免时区换算造成前后一天
+  const raw = String(v);
+  if (
+    /^\d{4}-\d{2}-\d{2}$/.test(raw) &&
+    !format.includes("H") && !format.includes("m") && !format.includes("s")
+  ) {
+    const [y, mo, d] = raw.split("-");
+    return format
+      .replace(/YYYY/g, y)
+      .replace(/MM/g, mo)
+      .replace(/DD/g, d);
+  }
+  const d = v instanceof Date ? v : new Date(raw);
   if (Number.isNaN(d.getTime())) return String(v);
-  return `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())} ${
-    p2(d.getHours())
-  }:${p2(d.getMinutes())}:${p2(d.getSeconds())}`;
+  const map: Record<string, string> = {
+    YYYY: String(d.getFullYear()),
+    MM: p2(d.getMonth() + 1),
+    DD: p2(d.getDate()),
+    HH: p2(d.getHours()),
+    mm: p2(d.getMinutes()),
+    ss: p2(d.getSeconds()),
+  };
+  return format.replace(/YYYY|MM|DD|HH|mm|ss/g, (tok) => map[tok] ?? tok);
 }
 
 /** 金额：千分位 + 两位小数；非数字返回 "" */
@@ -49,11 +75,49 @@ export function formatMoney(v: unknown): string {
   });
 }
 
-/** 单元格的纯文本展示值（tag 用选项文案、日期格式化、布尔本地化等），导出 / 打印 / 详情共用 */
-export function displayValue(
-  col: DataPanelColumn,
-  row: DataPanelRow,
-  m: Pick<DataPanelMessages, "yes" | "no">,
+/** 是否像可信 HTML 片段（以 `<` 开头且含 `>`）；供列 value／formatter 注入 */
+export function looksLikeHtml(s: string): boolean {
+  const t = s.trim();
+  return t.startsWith("<") && t.includes(">");
+}
+
+/** 把 value／formatter 的返回值压成纯文本（导出／打印／详情）；节点／HTML 回落空串由调用方再退字段原文 */
+export function cellResultToText(v: unknown): string {
+  if (v === null || v === undefined) return "";
+  if (typeof v === "string") {
+    if (looksLikeHtml(v)) {
+      // 粗剥标签，仅作导出兜底
+      return v.replace(/<[^>]*>/g, "").trim();
+    }
+    return v;
+  }
+  if (typeof v === "number" || typeof v === "boolean") return String(v);
+  if (typeof v === "object") {
+    const n = v as { textContent?: unknown; nodeType?: number };
+    if (typeof n.textContent === "string") return n.textContent;
+  }
+  return "";
+}
+
+/**
+ * 解析列上的函数式展示：`formatter` 优先于 `value`。
+ * 返回 `undefined` 表示未声明函数，调用方走声明式 options／默认类型。
+ */
+export function resolveColumnFn(
+  col: Column,
+  row: Row,
+): unknown | undefined {
+  const raw = row[col.prop];
+  if (typeof col.formatter === "function") return col.formatter(row, raw);
+  if (typeof col.value === "function") return col.value(row);
+  return undefined;
+}
+
+/** 声明式／默认类型的纯文本展示（不含 value／formatter） */
+function displayValueDefault(
+  col: Column,
+  row: Row,
+  m: Pick<Messages, "yes" | "no">,
 ): string {
   const raw = row[col.prop];
   switch (col.type) {
@@ -67,16 +131,13 @@ export function displayValue(
       return o ? o.label : (raw == null ? "" : String(raw));
     }
     case "date": {
-      // 纯日期串（YYYY-MM-DD）原样展示，避免时区换算造成前后一天
-      const str = String(raw ?? "");
-      return /^\d{4}-\d{2}-\d{2}/.test(str)
-        ? str.slice(0, 10)
-        : formatDateTime(raw).slice(0, 10);
+      const fmt = col.format ?? "YYYY-MM-DD";
+      return formatDateTime(raw, fmt);
     }
     case "bool":
       return raw ? m.yes : m.no;
     case "datetime":
-      return formatDateTime(raw);
+      return formatDateTime(raw, col.format ?? "YYYY-MM-DD HH:mm:ss");
     case "money":
       return formatMoney(raw);
     case "number": {
@@ -91,6 +152,22 @@ export function displayValue(
       if (Array.isArray(raw)) return raw.join(", ");
       return typeof raw === "object" ? JSON.stringify(raw) : String(raw);
   }
+}
+
+/** 单元格的纯文本展示值（tag 用选项文案、日期格式化、布尔本地化等），导出 / 打印 / 详情共用 */
+export function displayValue(
+  col: Column,
+  row: Row,
+  m: Pick<Messages, "yes" | "no">,
+): string {
+  const fn = resolveColumnFn(col, row);
+  if (fn !== undefined) {
+    const t = cellResultToText(fn);
+    if (t !== "") return t;
+    // 节点／空 HTML：回落声明式，避免导出空白
+    return displayValueDefault(col, row, m);
+  }
+  return displayValueDefault(col, row, m);
 }
 
 /** 极简 CSV 解析（引号、逗号、换行）→ 以表头为键的行 */
@@ -143,7 +220,7 @@ export function pageList(cur: number, last: number): (number | "…")[] {
 
 /** 查询 → URLSearchParams（`forUrl` 时省略默认值，用于地址栏同步） */
 export function queryToParams(
-  q: DataPanelQuery,
+  q: Query,
   opts: {
     forUrl: boolean;
     defaultPageSize?: number;
@@ -158,10 +235,10 @@ export function queryToParams(
   }
   const ds = opts.defaultSort;
   const isDefault = (!q.sort && !ds) ||
-    (ds && q.sort === ds.prop && (q.order === 1 ? "asc" : "desc") === ds.order);
+    (ds && q.sort === ds.prop && q.order === ds.order);
   if (q.sort && (!opts.forUrl || !isDefault)) {
     p.set("sort", q.sort);
-    p.set("order", q.order === -1 ? "desc" : "asc");
+    p.set("order", q.order === "desc" ? "desc" : "asc");
   }
   for (const [k, v] of Object.entries(q.filters)) {
     if (v !== "" && !(opts.fixed && k in opts.fixed)) p.set(k, v);
@@ -172,39 +249,265 @@ export function queryToParams(
   return p;
 }
 
+/**
+ * URLSearchParams → 查询片段（与 {@link queryToParams} forUrl 约定对称）。
+ * - `page` / `pageSize`：正整数才采纳
+ * - `sort` + `order`（asc｜desc，默认 asc）
+ * - 搜索字段：仅 `searchNames` 中的 key；空串忽略；`fixed` 中的 key 不从 URL 读（固定过滤不进地址栏）
+ * 未知 query key 忽略（避免污染 filters）。
+ */
+export function queryFromParams(
+  params: URLSearchParams,
+  opts: {
+    searchNames: readonly string[];
+    fixed?: Record<string, string>;
+  },
+): Partial<Query> {
+  const out: Partial<Query> = {};
+  const pageRaw = params.get("page");
+  if (pageRaw != null && pageRaw !== "") {
+    const page = Number.parseInt(pageRaw, 10);
+    if (Number.isFinite(page) && page >= 1) out.page = page;
+  }
+  const psRaw = params.get("pageSize");
+  if (psRaw != null && psRaw !== "") {
+    const pageSize = Number.parseInt(psRaw, 10);
+    if (Number.isFinite(pageSize) && pageSize >= 1) out.pageSize = pageSize;
+  }
+  const sort = params.get("sort");
+  if (sort) {
+    out.sort = sort;
+    out.order = params.get("order") === "desc" ? "desc" : "asc";
+  }
+  const filters: Record<string, string> = {};
+  const fixed = opts.fixed ?? {};
+  for (const name of opts.searchNames) {
+    if (name in fixed) continue;
+    const v = params.get(name);
+    if (v != null && v !== "") filters[name] = v;
+  }
+  if (Object.keys(filters).length > 0) out.filters = filters;
+  return out;
+}
+
+
+/**
+ * 列规范化：旧 `edit:true` → 补 `inline`（两档 options→switch，否则 text）。
+ * 已写 `inline` 时不动。
+ */
+export function normalizeColumns(
+  columns: readonly Column[],
+): Column[] {
+  return columns.map((c) => {
+    if (c.type === "selection" || c.type === "index") return c;
+    if (c.inline || !c.edit) return c;
+    const inline = c.options && c.options.length === 2 ? "switch" as const : "text" as const;
+    return { ...c, inline };
+  });
+}
+
+/** 与 data-panel-chrome 的 COL_SELECT／COL_INDEX 对齐（避免 utils↔chrome 循环依赖） */
+export const PANEL_COL_SELECT = "__select";
+export const PANEL_COL_INDEX = "__index";
+
+export function isSelectionColumn(c: Column): boolean {
+  return c.type === "selection" || c.prop === PANEL_COL_SELECT;
+}
+
+export function isIndexColumn(c: Column): boolean {
+  return c.type === "index" || c.prop === PANEL_COL_INDEX;
+}
+
+export function isSystemColumn(c: Column): boolean {
+  return isSelectionColumn(c) || isIndexColumn(c);
+}
+
+export type ResolvePanelColumnsOptions = {
+  /** @deprecated 顶层 selectable：false 强制去掉 selection 列 */
+  selectable?: boolean;
+  /** 是否需要多选（如 caps.remove／batchStatus）——无显式 selection 列时兼容前置 */
+  needSelection?: boolean;
+  /**
+   * 无显式 index 列时是否自动前置默认序号列（本仓旧默认）。
+   * 默认 true；传 false 则完全由 columns 决定。
+   */
+  autoIndex?: boolean;
+};
+
+/**
+ * 解析面板列：规范化 selection／index，并按需兼容前置系统列。
+ * - 显式 `{ type:"index", label? }`：label 缺省为 `"#"`；位置随 columns 写入序
+ * - 显式 `{ type:"selection" }`：多选列；`selectable:false` 时剔除
+ * - 未声明 index 且 autoIndex≠false：前置默认序号列（旧行为）
+ * - 未声明 selection 且 needSelection 且 selectable≠false：前置多选列（旧 selectable 行为）
+ */
+export function resolvePanelColumns(
+  columns: readonly Column[],
+  opts: ResolvePanelColumnsOptions = {},
+): Column[] {
+  const autoIndex = opts.autoIndex !== false;
+  const mapped = normalizeColumns(columns).map((c) => {
+    if (c.type === "selection" || c.prop === PANEL_COL_SELECT) {
+      return {
+        ...c,
+        type: "selection" as const,
+        prop: c.prop || PANEL_COL_SELECT,
+        label: c.label ?? "",
+      };
+    }
+    if (c.type === "index" || c.prop === PANEL_COL_INDEX) {
+      return {
+        ...c,
+        type: "index" as const,
+        prop: c.prop || PANEL_COL_INDEX,
+        label: (c.label && String(c.label).trim()) ? c.label : "#",
+      };
+    }
+    return { ...c, label: (c.label && String(c.label).trim()) ? c.label : c.prop };
+  });
+
+  const hasSel = mapped.some(isSelectionColumn);
+  const hasIdx = mapped.some(isIndexColumn);
+  const prepend: Column[] = [];
+  if (!hasSel && opts.selectable !== false && opts.needSelection) {
+    prepend.push({
+      type: "selection",
+      prop: PANEL_COL_SELECT,
+      label: "",
+    });
+  }
+  if (!hasIdx && autoIndex) {
+    prepend.push({ type: "index", prop: PANEL_COL_INDEX, label: "#" });
+  }
+  let out = [...prepend, ...mapped];
+  if (opts.selectable === false) {
+    out = out.filter((c) => !isSelectionColumn(c));
+  }
+  return out;
+}
+
+
+/** search／form 字段键：优先 `prop`，兼容旧 `name` */
+export function fieldProp(
+  f: { prop?: string; name?: string },
+): string {
+  return f.prop ?? f.name ?? "";
+}
+
+/**
+ * 用 columns 补全 search 项：缺 label／type／options 时从同 prop 列继承。
+ * 键统一写出为 `prop`（保留传入的 name 仅当无 prop）。
+ */
+export function enrichSearchFields(
+  search: readonly SearchField[],
+  columns: readonly Column[],
+): SearchField[] {
+  const byProp = new Map(columns.map((c) => [c.prop, c]));
+  return search.map((s) => {
+    const key = fieldProp(s);
+    const col = key ? byProp.get(key) : undefined;
+    const type = s.type ??
+      (col?.type === "tag" || col?.options ? "select" : undefined);
+    return {
+      ...s,
+      prop: key || undefined,
+      label: s.label ?? col?.label ?? key,
+      type,
+      options: s.options ?? col?.options,
+    };
+  }).filter((s) => fieldProp(s) !== "");
+}
+
+/**
+ * 用 columns 补全 form 项：缺 label／options 时从同 prop 列继承；
+ * switch 无 onOff 时用列两档 options 的 value 作 [开,关]。
+ */
+export function enrichFormFields(
+  form: readonly FormField[],
+  columns: readonly Column[],
+): FormField[] {
+  const byProp = new Map(columns.map((c) => [c.prop, c]));
+  return form.map((f) => {
+    const key = fieldProp(f);
+    const col = key ? byProp.get(key) : undefined;
+    const type = f.type ??
+      (col?.inline === "switch"
+        ? "switch"
+        : col?.options
+        ? "select"
+        : undefined);
+    let onOff = f.onOff;
+    if (
+      (type === "switch" || f.type === "switch") && !onOff &&
+      col?.options && col.options.length >= 2
+    ) {
+      onOff = [col.options[0].value, col.options[1].value];
+    }
+    return {
+      ...f,
+      prop: key || undefined,
+      label: f.label ?? col?.label ?? key,
+      type,
+      options: f.options ?? col?.options,
+      onOff,
+    };
+  }).filter((f) => fieldProp(f) !== "");
+}
+
+/**
+ * 批量「设为…」目标列：须显式 `batch: true`，且 `inline:"switch"`＋恰好两档 options。
+ * - field ← column.prop
+ * - values ← options 的 {value,label}
+ */
+export function resolveBatchStatusColumn(
+  columns: readonly Column[],
+): { field: string; values: { value: string; label: string }[] } | null {
+  const col = columns.find(
+    (c) =>
+      c.batch === true &&
+      c.inline === "switch" &&
+      (c.options?.length ?? 0) === 2,
+  );
+  if (!col?.options) return null;
+  return {
+    field: col.prop,
+    values: col.options.map((o) => ({ value: o.value, label: o.label })),
+  };
+}
+
 // ------------------------------------------------------------------ local data source
 
 /** `createLocalDataSource` 选项 */
 export interface LocalDataSourceOptions {
   /** 初始数据（会被拷贝；后续增删改在内部副本上进行） */
-  rows: DataPanelRow[];
-  columns: DataPanelColumn[];
-  search?: DataPanelSearchField[];
-  form?: DataPanelFormField[];
+  rows: Row[];
+  columns: Column[];
+  search?: SearchField[];
+  form?: FormField[];
   /** 主键字段，默认 id */
   rowKey?: string;
   /** 固定过滤（总是并入 filters） */
   fixed?: Record<string, string>;
   /** 数据变化回调（新增 / 编辑 / 删除 / 批量 / 导入之后） */
-  onChange?: (rows: DataPanelRow[]) => void;
+  onChange?: (rows: Row[]) => void;
   /** 为 false 时不提供 create/update/remove/setField/importRows（只读） */
   writable?: boolean;
 }
 
 /** 本地数据源：在内存数组上完成过滤、排序、分页、合计与增删改，同步返回 */
-export interface LocalDataSource extends DataPanelDataSource {
+export interface LocalDataSource extends DataSource {
   sync: true;
-  create?(values: Record<string, unknown>): DataPanelWriteResult;
-  update?(id: string, values: Record<string, unknown>): DataPanelWriteResult;
-  remove?(ids: string[]): DataPanelBulkResult;
-  setField?(ids: string[], field: string, value: unknown): DataPanelBulkResult;
-  importRows?(rows: Record<string, string>[]): DataPanelImportResult;
+  create?(values: Record<string, unknown>): WriteResult;
+  update?(id: string, values: Record<string, unknown>): WriteResult;
+  remove?(ids: string[]): BulkResult;
+  setField?(ids: string[], field: string, value: unknown): BulkResult;
+  importRows?(rows: Record<string, string>[]): ImportResult;
 
-  list(query: DataPanelQuery): DataPanelListResult;
+  list(query: Query): ListResult;
   /** 当前全部行（副本） */
-  getRows(): DataPanelRow[];
+  getRows(): Row[];
   /** 整体替换数据 */
-  setRows(rows: DataPanelRow[]): void;
+  setRows(rows: Row[]): void;
 }
 
 function cmp(a: unknown, b: unknown): number {
@@ -223,15 +526,15 @@ function cmp(a: unknown, b: unknown): number {
 
 /** 本地过滤：按搜索项逐个匹配 */
 export function filterRows(
-  rows: DataPanelRow[],
+  rows: Row[],
   filters: Record<string, string>,
-  search: DataPanelSearchField[],
-): DataPanelRow[] {
+  search: SearchField[],
+): Row[] {
   const entries = Object.entries(filters).filter(([, v]) => v !== "");
   if (!entries.length) return rows;
   return rows.filter((row) =>
     entries.every(([name, val]) => {
-      const def = search.find((s) => s.name === name);
+      const def = search.find((s) => fieldProp(s) === name);
       const field = def?.field ?? name;
       const raw = row[field];
       const text = raw == null ? "" : String(raw);
@@ -260,46 +563,250 @@ export function filterRows(
   );
 }
 
-/** 校验表单值（必填 / min / max / pattern），返回字段 → 错误文案 */
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const isEmptyVal = (v: unknown): boolean =>
+  v === undefined || v === null || v === "" ||
+  (Array.isArray(v) && v.length === 0);
+
+function failMsg(
+  ruleMsg: string | undefined,
+  fieldMsg: string | undefined,
+  fallback: string,
+): string {
+  return ruleMsg || fieldMsg || fallback;
+}
+
+/** 执行单条 FieldRule；通过返回 null，失败返回文案 */
+export function applyFieldRule(
+  rule: FieldRule,
+  value: unknown,
+  values: Record<string, unknown>,
+  opts: {
+    fieldType?: string;
+    fieldMessage?: string;
+    m: Pick<Messages, "required" | "min" | "max" | "patternMismatch">;
+  },
+): string | null {
+  const { m, fieldMessage, fieldType } = opts;
+  const empty = isEmptyVal(value);
+  if (rule.required && empty) {
+    return failMsg(rule.message, fieldMessage, m.required);
+  }
+  if (empty) return null;
+
+  if (rule.validator) {
+    const r = rule.validator(value, values);
+    if (typeof r === "string" && r) return r;
+    if (r === false) return failMsg(rule.message, fieldMessage, m.patternMismatch);
+    // true / void → continue other checks on same rule? treat as pass for validator part
+  }
+
+  const asNum = fieldType === "number" || rule.type === "number";
+  if (asNum || rule.type === "number") {
+    const n = Number(value);
+    if (!Number.isFinite(n)) {
+      return failMsg(rule.message, fieldMessage, m.patternMismatch);
+    }
+    if (rule.min !== undefined && n < rule.min) {
+      return failMsg(rule.message, fieldMessage, formatMessage(m.min, { n: rule.min }));
+    }
+    if (rule.max !== undefined && n > rule.max) {
+      return failMsg(rule.message, fieldMessage, formatMessage(m.max, { n: rule.max }));
+    }
+  } else {
+    const s = typeof value === "string" ? value : String(value);
+    if (rule.min !== undefined && s.length < rule.min) {
+      return failMsg(rule.message, fieldMessage, formatMessage(m.min, { n: rule.min }));
+    }
+    if (rule.max !== undefined && s.length > rule.max) {
+      return failMsg(rule.message, fieldMessage, formatMessage(m.max, { n: rule.max }));
+    }
+  }
+
+  if (rule.pattern != null) {
+    try {
+      const re = typeof rule.pattern === "string"
+        ? new RegExp(rule.pattern)
+        : rule.pattern;
+      if (!re.test(String(value))) {
+        return failMsg(rule.message, fieldMessage, m.patternMismatch);
+      }
+    } catch { /* ignore bad regexp */ }
+  }
+
+  if (rule.type === "email" && !EMAIL_RE.test(String(value))) {
+    return failMsg(rule.message, fieldMessage, m.patternMismatch);
+  }
+  if (rule.type === "url") {
+    try {
+      const u = new URL(String(value));
+      if (!/^https?:$/i.test(u.protocol)) {
+        return failMsg(rule.message, fieldMessage, m.patternMismatch);
+      }
+    } catch {
+      return failMsg(rule.message, fieldMessage, m.patternMismatch);
+    }
+  }
+  if (rule.type === "string" && typeof value !== "string") {
+    return failMsg(rule.message, fieldMessage, m.patternMismatch);
+  }
+  return null;
+}
+
+type FieldLike = {
+  prop?: string;
+  name?: string;
+  type?: string;
+  required?: boolean;
+  min?: number;
+  max?: number;
+  pattern?: string;
+  maxlength?: number;
+  message?: string;
+  rules?: FieldRule[];
+};
+
+function validateFieldLike(
+  f: FieldLike,
+  values: Record<string, unknown>,
+  m: Pick<Messages, "required" | "min" | "max" | "patternMismatch">,
+  skipRequiredPasswordEdit: boolean,
+): string | undefined {
+  const key = fieldProp(f);
+  const v = values[key];
+  const empty = isEmptyVal(v);
+
+  if (f.rules && f.rules.length) {
+    for (const rule of f.rules) {
+      // 编辑密码留空：跳过 required
+      if (
+        skipRequiredPasswordEdit && rule.required && empty && f.type === "password"
+      ) continue;
+      const err = applyFieldRule(rule, v, values, {
+        fieldType: f.type,
+        fieldMessage: f.message,
+        m,
+      });
+      if (err) return err;
+    }
+    // rules 跑完仍可做 maxlength 硬限制
+    if (!empty && f.maxlength != null && String(v).length > f.maxlength) {
+      return failMsg(undefined, f.message, formatMessage(m.max, { n: f.maxlength }));
+    }
+    return undefined;
+  }
+
+  // 简写路径
+  if (empty) {
+    if (f.required && !skipRequiredPasswordEdit) {
+      return failMsg(undefined, f.message, m.required);
+    }
+    return undefined;
+  }
+  if (f.type === "number") {
+    const n = Number(v);
+    if (!Number.isFinite(n)) {
+      return failMsg(undefined, f.message, m.patternMismatch);
+    }
+    if (f.min !== undefined && n < f.min) {
+      return failMsg(undefined, f.message, formatMessage(m.min, { n: f.min }));
+    }
+    if (f.max !== undefined && n > f.max) {
+      return failMsg(undefined, f.message, formatMessage(m.max, { n: f.max }));
+    }
+  } else {
+    const s = String(v);
+    if (f.min !== undefined && s.length < f.min) {
+      return failMsg(undefined, f.message, formatMessage(m.min, { n: f.min }));
+    }
+    if (f.max !== undefined && s.length > f.max) {
+      return failMsg(undefined, f.message, formatMessage(m.max, { n: f.max }));
+    }
+    if (f.maxlength != null && s.length > f.maxlength) {
+      return failMsg(undefined, f.message, formatMessage(m.max, { n: f.maxlength }));
+    }
+  }
+  if (f.pattern && typeof v === "string") {
+    try {
+      if (!new RegExp(f.pattern).test(v)) {
+        return failMsg(undefined, f.message, m.patternMismatch);
+      }
+    } catch { /* ignore */ }
+  }
+  return undefined;
+}
+
+/** 校验表单值（rules 优先；兼容 required／min／max／pattern／maxlength 简写） */
 export function validateForm(
-  form: DataPanelFormField[],
+  form: FormField[],
   values: Record<string, unknown>,
   isEdit: boolean,
-  m: Pick<DataPanelMessages, "required" | "min" | "max" | "patternMismatch">,
+  m: Pick<Messages, "required" | "min" | "max" | "patternMismatch">,
 ): Record<string, string> {
   const errs: Record<string, string> = {};
   for (const f of form) {
     if (f.createOnly && isEdit) continue;
     if (f.editOnly && !isEdit) continue;
-    const v = values[f.name];
-    const empty = v === undefined || v === null || v === "" ||
-      (Array.isArray(v) && v.length === 0);
-    if (empty) {
-      // 编辑时密码留空表示不修改
-      if (f.required && !(f.type === "password" && isEdit)) {
-        errs[f.name] = m.required;
-      }
-      continue;
-    }
-    if (f.type === "number") {
-      const n = Number(v);
-      if (!Number.isFinite(n)) {
-        errs[f.name] = m.patternMismatch;
-        continue;
-      }
-      if (f.min !== undefined && n < f.min) {
-        errs[f.name] = formatMessage(m.min, { n: f.min });
-      } else if (f.max !== undefined && n > f.max) {
-        errs[f.name] = formatMessage(m.max, { n: f.max });
-      }
-    } else if (f.pattern && typeof v === "string") {
-      try {
-        if (!new RegExp(f.pattern).test(v)) errs[f.name] = m.patternMismatch;
-      } catch { /* 非法正则忽略 */ }
-    }
+    const key = fieldProp(f);
+    const skipPwd = isEdit && f.type === "password" && isEmptyVal(values[key]);
+    const err = validateFieldLike(f, values, m, skipPwd);
+    if (err) errs[key] = err;
   }
   return errs;
 }
+
+/** 校验搜索项（rules／required／pattern／maxlength）；无规则时返回空 */
+export function validateSearchFields(
+  search: SearchField[],
+  values: Record<string, unknown>,
+  m: Pick<Messages, "required" | "min" | "max" | "patternMismatch">,
+): Record<string, string> {
+  const errs: Record<string, string> = {};
+  for (const f of search) {
+    const has =
+      (f.rules && f.rules.length > 0) ||
+      f.required ||
+      f.pattern ||
+      f.maxlength != null;
+    if (!has) continue;
+    const key = fieldProp(f);
+    const err = validateFieldLike(f, values, m, false);
+    if (err) errs[key] = err;
+  }
+  return errs;
+}
+
+/** 栅格跨列：span ?? cols，夹到 1–12 */
+export function fieldSpan(
+  f: { span?: number; cols?: number },
+): number | undefined {
+  const raw = f.span ?? f.cols;
+  if (raw == null || !Number.isFinite(raw)) return undefined;
+  return Math.min(12, Math.max(1, Math.round(raw)));
+}
+
+/** 表单／搜索项布局 style（width＋gridColumn） */
+export function fieldLayoutStyle(
+  f: { span?: number; cols?: number; width?: string | number },
+): Record<string, string> | undefined {
+  const style: Record<string, string> = {};
+  const sp = fieldSpan(f);
+  if (sp != null) style.gridColumn = `span ${sp} / span ${sp}`;
+  if (f.width != null && f.width !== "") {
+    style.width = typeof f.width === "number" ? `${f.width}px` : String(f.width);
+  }
+  return Object.keys(style).length ? style : undefined;
+}
+
+/** 是否启用 12 列栅格（任一字段带 span／cols／width） */
+export function useFieldGrid(
+  fields: readonly { span?: number; cols?: number; width?: string | number }[],
+): boolean {
+  return fields.some(
+    (f) => f.span != null || f.cols != null || (f.width != null && f.width !== ""),
+  );
+}
+
 
 /** 创建本地数据源 */
 export function createLocalDataSource(
@@ -307,20 +814,21 @@ export function createLocalDataSource(
 ): LocalDataSource {
   const key = opts.rowKey ?? "id";
   const search = opts.search ?? [];
-  let store: DataPanelRow[] = opts.rows.map((r) => ({ ...r }));
+  let store: Row[] = opts.rows.map((r) => ({ ...r }));
   let seq = store.reduce((n, r) => Math.max(n, Number(r[key]) || 0), 0);
   const changed = () => opts.onChange?.(store.map((r) => ({ ...r })));
-  const idOf = (r: DataPanelRow) => String(r[key]);
+  const idOf = (r: Row) => String(r[key]);
 
   const convert = (
     values: Record<string, unknown>,
   ): Record<string, unknown> => {
     const out = { ...values };
     for (const f of opts.form ?? []) {
+      const key = fieldProp(f);
       if (
-        f.type === "number" && out[f.name] !== undefined && out[f.name] !== ""
+        f.type === "number" && out[key] !== undefined && out[key] !== ""
       ) {
-        out[f.name] = Number(out[f.name]);
+        out[key] = Number(out[key]);
       }
     }
     return out;
@@ -332,7 +840,7 @@ export function createLocalDataSource(
       const filters = { ...q.filters, ...(opts.fixed ?? {}) };
       let rows = filterRows(store, filters, search);
       if (q.sort) {
-        const dir = q.order === -1 ? -1 : 1;
+        const dir = q.order === "desc" ? -1 : 1;
         rows = [...rows].sort((a, b) => dir * cmp(a[q.sort], b[q.sort]));
       }
       const totals: Record<string, number> = {};
@@ -360,18 +868,18 @@ export function createLocalDataSource(
   };
   if (opts.writable === false) return src;
 
-  src.create = (values): DataPanelWriteResult => {
+  src.create = (values): WriteResult => {
     seq += 1;
     store = [{ ...convert(values), [key]: String(seq) }, ...store];
     changed();
   };
-  src.update = (id, values): DataPanelWriteResult => {
+  src.update = (id, values): WriteResult => {
     const i = store.findIndex((r) => idOf(r) === id);
     if (i < 0) return { ok: false, message: "not found" };
     store[i] = { ...store[i], ...convert(values) };
     changed();
   };
-  src.remove = (ids): DataPanelBulkResult => {
+  src.remove = (ids): BulkResult => {
     const failed: { id: string; error: string }[] = [];
     let removed = 0;
     for (const id of ids) {
@@ -386,7 +894,7 @@ export function createLocalDataSource(
     if (removed) changed();
     return { removed, failed };
   };
-  src.setField = (ids, field, value): DataPanelBulkResult => {
+  src.setField = (ids, field, value): BulkResult => {
     const failed: { id: string; error: string }[] = [];
     let removed = 0;
     for (const id of ids) {
@@ -414,21 +922,23 @@ export function createLocalDataSource(
 // ------------------------------------------------------------------ export
 
 /** 导出产物 */
-export interface DataPanelExportFile {
+export interface ExportFile {
   filename: string;
   mime: string;
   data: Uint8Array | string;
 }
 
+
+
 /** `buildExportFile` 入参 */
 export interface BuildExportOptions {
-  format: DataPanelExportFormat;
+  format: ExportFormat;
   title: string;
   /** 文件名（不含扩展名与日期） */
   basename: string;
-  columns: DataPanelColumn[];
-  rows: DataPanelRow[];
-  messages: Pick<DataPanelMessages, "yes" | "no" | "total">;
+  columns: Column[];
+  rows: Row[];
+  messages: Pick<Messages, "yes" | "no" | "total">;
   totals?: Record<string, number>;
   /** 固定日期串（测试用），默认今天 YYYYMMDD */
   dateStamp?: string;
@@ -438,7 +948,7 @@ const csvCell = (s: string) =>
   /[",\r\n]/.test(s) ? `"${s.replaceAll('"', '""')}"` : s;
 
 /** 构建 xlsx / csv / json / xml / html 导出文件（仅处理传入的 rows；分页拉取由组件完成） */
-export function buildExportFile(o: BuildExportOptions): DataPanelExportFile {
+export function buildExportFile(o: BuildExportOptions): ExportFile {
   const { columns, rows } = o;
   const heads = columns.map((c) => c.label);
   const table = rows.map((r) =>

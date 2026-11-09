@@ -6,7 +6,7 @@ import { Paragraph, Title } from "@dreamer/ui-view/basic";
 import { DocsApiTable, type DocsApiTableRow } from "./DocsApiTable.tsx";
 
 /**
- * 在 **API** 章节之上渲染「文案（messages）」说明 + 独立表格（不与 props 表混排）。
+ * 渲染「文案（messages）」说明 + 独立表格（不与 props 表混排；建议放在 API 章节之下）。
  *
  * @param props.interfaceName - TS 接口名，便于读者在源码中跳转
  * @param props.defaultExportName - 包内默认文案导出名，如 defaultDatePickerMessages
@@ -38,7 +38,7 @@ export function DocsMessagesSection(props: {
           一层浅合并
         </strong>（只替换你写的子键）。 下列表格<strong>
           仅描述文案字段
-        </strong>，与下方 API 中的运行时 props 表分开。
+        </strong>，与 API 中的运行时 props 表分开。
       </Paragraph>
       <DocsApiTable rows={rows} nameColumnHeader="字段" />
     </section>

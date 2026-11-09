@@ -150,13 +150,17 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
       const need of [
         "基础用法",
         "搜索表单（Modal）",
+        "工具栏搜索 ↔ 地址栏",
         "表格",
+        "列显示函数",
+        "校验／尺寸",
         "新增 / 编辑 Modal 与删除确认",
         "批量操作",
         "单元格编辑",
         "分页",
         "导出",
-        "远程数据源",
+        "远程 dataSource",
+        "自动请求列表",
         "深色主题",
         "多语言",
         "自定义",
@@ -168,7 +172,7 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
       t,
       `return document.querySelectorAll('[data-testid^="panel-demo-"]').length;`,
     );
-    expect(panels).toBe(23);
+    expect(panels).toBe(28);
   }, DOCS_BROWSER_CONFIG);
 
   it(
@@ -261,6 +265,74 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
       }, ".dp-card")).backgroundColor;`,
     );
     expect(lightCard).not.toBe("rgb(24, 33, 47)");
+  }, DOCS_BROWSER_CONFIG);
+
+  it("深色面板：URL page 越界时仍显示行（夹页，非整表空）", async (t) => {
+    if (!t?.browser?.goto) return;
+    // 复现截图：同页其它面板把 ?page=2 写入地址栏后，6 行深色面板曾 rows=[]、「第 11-6 条」
+    await sharedEnv.goto(t, DOC_PATH + "?page=2&pageSize=10");
+    await sharedEnv.waitDocMainReady(t);
+    const ok = await ev<boolean>(
+      t,
+      `return await D.until(() => D.q("demo-dark", '[data-testid="dp-refresh"]'), 30000);`,
+    );
+    expect(ok).toBe(true);
+    await ev(t, `await D.sleep(400);`);
+    const out = await ev<{ rows: number; range: string; empty: boolean; total: number }>(
+      t,
+      `const k = "demo-dark";
+       return {
+         rows: D.rows(k).length,
+         range: D.text(D.q(k, '[data-testid="dp-range"]')),
+         empty: !!D.q(k, '[data-testid="dp-empty"]'),
+         total: D.total(k),
+       };`,
+    );
+    expect(out.empty).toBe(false);
+    expect(out.rows).toBeGreaterThan(0);
+    expect(out.total).toBe(6);
+    expect(out.range).toBe("第 1-6 条，共 6 条");
+  }, DOCS_BROWSER_CONFIG);
+
+  it("深色面板：单元格正文与分页摘要高对比浅色（不继承浅色页近黑字）", async (t) => {
+    if (!t?.browser?.goto) return;
+    await open(t, "demo-dark");
+    const out = await ev<{
+      cellFg: string;
+      rangeFg: string;
+      cellRatio: number;
+      rangeRatio: number;
+      tagRatio: number;
+    }>(
+      t,
+      `const k = ${P("demo-dark")};
+       const cell = D.q(k, '[data-testid^="dp-row-"] td:nth-child(2)') || D.q(k, '[data-testid^="dp-row-"] td');
+       // prefer a text cell: find first td whose text looks like a name (no switch/tag-only)
+       const row = D.q(k, '[data-testid^="dp-row-"]');
+       const tds = [...row.querySelectorAll("td")];
+       const textTd = tds.find((td) => {
+         const t = (td.innerText || "").trim();
+         return t && !td.querySelector("button,[role=switch],input,span.inline-block.rounded");
+       }) || tds[1] || tds[0];
+       const range = D.q(k, '[data-testid="dp-range"]');
+       const tag = row.querySelector("span.inline-block.rounded, .dp-tag");
+       return {
+         cellFg: getComputedStyle(textTd).color,
+         rangeFg: getComputedStyle(range).color,
+         cellRatio: Math.round(D.contrast(textTd) * 100) / 100,
+         rangeRatio: Math.round(D.contrast(range) * 100) / 100,
+         tagRatio: tag ? Math.round(D.contrast(tag) * 100) / 100 : 0,
+       };`,
+    );
+    // must not stay near-black (light-page inherited)
+    expect(out.cellFg).not.toBe("rgb(15, 23, 42)");
+    expect(out.cellFg).not.toBe("rgb(0, 0, 0)");
+    expect(out.rangeFg).not.toBe("rgb(15, 23, 42)");
+    // WCAG AA-ish for body text on dark panel
+    expect(out.cellRatio).toBeGreaterThanOrEqual(4.5);
+    expect(out.rangeRatio).toBeGreaterThanOrEqual(4.5);
+    // tag still readable (regression guard)
+    if (out.tagRatio > 0) expect(out.tagRatio).toBeGreaterThanOrEqual(4.5);
   }, DOCS_BROWSER_CONFIG);
 
   it(
@@ -418,6 +490,140 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
     expect((r.after as number) < 9).toBe(true);
     expect(r.allDisabledAdmins).toBe(true);
   }, DOCS_BROWSER_CONFIG);
+
+  it(
+    "工具栏搜索：提交后地址栏 replaceState 写入 name／role（无 syncUrl 开关）",
+    async (t) => {
+      if (!t?.browser?.goto) return;
+      await open(t, "demo-sync-url");
+      const r = await ev<Record<string, unknown>>(
+        t,
+        `
+      const k = ${P("demo-sync-url")};
+      // 清掉可能残留的 query，再经工具栏搜索写入
+      history.replaceState(null, "", location.pathname);
+      const out = {};
+      D.click(D.q(k, '[data-testid="dp-search-toggle"]'));
+      await D.until(() => document.querySelector('[role="dialog"] [data-testid="dp-search"]'));
+      D.fill(document.querySelector('[role="dialog"] [data-testid="dp-f-name"] input'), "Alice");
+      const roleWrap = document.querySelector('[role="dialog"] [data-testid="dp-f-role"]');
+      await D.pick(roleWrap, "管理员");
+      D.click(D.g('[data-testid="dp-search-submit"]'));
+      await D.until(() => !document.querySelector('[data-testid="dp-search"]'));
+      await D.until(() => /name=Alice/.test(location.search), 5000);
+      out.search = location.search;
+      out.hasName = /(?:^|[?&])name=Alice(?:&|$)/.test(location.search);
+      out.hasRole = /(?:^|[?&])role=admin(?:&|$)/.test(location.search);
+      return out;`,
+      );
+      expect(r.hasName).toBe(true);
+      expect(r.hasRole).toBe(true);
+      expect(String(r.search)).toContain("name=Alice");
+    },
+    DOCS_BROWSER_CONFIG,
+  );
+
+  it(
+    "分页：翻页写 page、改条数写 pageSize（无 search 也同步，无开关）",
+    async (t) => {
+      if (!t?.browser?.goto) return;
+      await open(t, "demo-page");
+      const r = await ev<Record<string, unknown>>(
+        t,
+        `
+      const k = ${P("demo-page")};
+      history.replaceState(null, "", location.pathname);
+      const out = {};
+      const range = () => D.text(D.q(k, '[data-testid="dp-range"]'));
+      // 8 页时首页页码钮为 1,2,…,7,8，无 dp-page-3；用下一页两次到第 3 页
+      D.click(D.q(k, '[data-testid="dp-next"]'));
+      await D.until(() => range().startsWith("第 6-10"), 5000);
+      D.click(D.q(k, '[data-testid="dp-next"]'));
+      await D.until(() => range().startsWith("第 11-15"), 5000);
+      await D.until(() => /(?:^|[?&])page=3(?:&|$)/.test(location.search), 5000);
+      out.afterPage = location.search;
+      out.hasPage3 = /(?:^|[?&])page=3(?:&|$)/.test(location.search);
+      const sz = D.q(k, '[data-testid="dp-pagesize"]');
+      await D.pick(sz, "20 条/页");
+      await D.until(() => range().startsWith("第 1-20"), 5000);
+      await D.until(() => /(?:^|[?&])pageSize=20(?:&|$)/.test(location.search), 5000);
+      out.afterSize = location.search;
+      out.hasPageSize20 = /(?:^|[?&])pageSize=20(?:&|$)/.test(location.search);
+      // 改条数重置到第 1 页 → page 省略
+      out.pageOmitted = !/(?:^|[?&])page=/.test(location.search);
+      return out;`,
+      );
+      expect(r.hasPage3).toBe(true);
+      expect(r.hasPageSize20).toBe(true);
+      expect(r.pageOmitted).toBe(true);
+    },
+    DOCS_BROWSER_CONFIG,
+  );
+
+  it(
+    "分页：带 ?page=3 进入时回填页码与范围（无 search）",
+    async (t) => {
+      if (!t?.browser?.goto) return;
+      await sharedEnv.goto(t, DOC_PATH + "?page=3");
+      await sharedEnv.waitDocMainReady(t);
+      const ok = await ev<boolean>(
+        t,
+        `return await D.until(() => D.q("demo-page", '[data-testid="dp-refresh"]'), 30000);`,
+      );
+      expect(ok).toBe(true);
+      await ev(t, `await D.sleep(400);`);
+      const r = await ev<Record<string, unknown>>(
+        t,
+        `
+      const k = ${P("demo-page")};
+      const range = D.text(D.q(k, '[data-testid="dp-range"]'));
+      const btn = D.q(k, '[data-testid="dp-page-3"]');
+      return {
+        range,
+        page3Blue: !!(btn && /bg-blue-600/.test(btn.className)),
+        starts: range.startsWith("第 11-15"),
+      };`,
+      );
+      expect(r.starts).toBe(true);
+      expect(r.page3Blue).toBe(true);
+      expect(String(r.range)).toContain("第 11-15");
+    },
+    DOCS_BROWSER_CONFIG,
+  );
+
+  it(
+    "工具栏搜索：硬刷带 query 时回填表单并过滤（URL → 工具栏搜索 Modal）",
+    async (t) => {
+      if (!t?.browser?.goto) return;
+      await sharedEnv.goto(t, DOC_PATH + "?name=Alice&role=admin");
+      await sharedEnv.waitDocMainReady(t);
+      const ok = await ev<boolean>(
+        t,
+        `return await D.until(() => D.q("demo-sync-url", '[data-testid="dp-refresh"]'), 30000);`,
+      );
+      expect(ok).toBe(true);
+      await ev(t, `await D.sleep(300);`);
+      const r = await ev<Record<string, unknown>>(
+        t,
+        `
+      const k = ${P("demo-sync-url")};
+      const out = { total: D.total(k) };
+      D.click(D.q(k, '[data-testid="dp-search-toggle"]'));
+      await D.until(() => document.querySelector('[role="dialog"] [data-testid="dp-search"]'));
+      out.name = document.querySelector('[role="dialog"] [data-testid="dp-f-name"] input')?.value;
+      out.role = D.hidden(document.querySelector('[role="dialog"] [data-testid="dp-f-role"]'));
+      out.roleLabel = D.picked(document.querySelector('[role="dialog"] [data-testid="dp-f-role"]'));
+      out.allMatch = D.rows(k).every((row) =>
+        row.textContent.includes("Alice") && row.textContent.includes("管理员"));
+      return out;`,
+      );
+      expect(r.name).toBe("Alice");
+      expect(r.role).toBe("admin");
+      expect((r.total as number) > 0).toBe(true);
+      expect(r.allMatch).toBe(true);
+    },
+    DOCS_BROWSER_CONFIG,
+  );
 
   it(
     "表格：排序三态、合计、hidden 列与列设置、行内开关与行内编辑",
@@ -1360,7 +1566,7 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
   );
 
   it(
-    "刷新按钮重新加载当前页；每个面板互不影响（同页 23 个实例）",
+    "刷新按钮重新加载当前页；每个面板互不影响（同页 28 个实例）",
     async (t) => {
       if (!t?.browser?.goto) return;
       await open(t, "demo-crud");
@@ -1382,20 +1588,22 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
       );
       expect(r.sameTotal).toBe(true);
       expect(r.otherNoBar).toBe(true);
-      expect(r.toolbars).toBe(22);
+      expect(r.toolbars).toBe(27);
     },
     DOCS_BROWSER_CONFIG,
   );
   it(
-    "23 个示例：22 个有工具栏；toolbar:false 示例无工具栏，表格／分页齐全",
+    "28 个示例：27 个有工具栏；toolbar:false 示例无工具栏，表格／分页齐全",
     async (t) => {
       if (!t?.browser?.goto) return;
       await open(t, "demo-basic");
       const r = await ev<Record<string, unknown>>(
         t,
         `
-      const keys = ["demo-basic","demo-search","demo-table","demo-crud","demo-batch","demo-page","demo-export","demo-remote","demo-dark","demo-locale","demo-toolbar-off","demo-defaults","demo-bool","demo-tb-fn","demo-ra-fn","demo-tb-custom","demo-ra-custom","demo-key-order","demo-enabled","demo-title","demo-can","demo-custom","demo-cell"];
+      const keys = ["demo-basic","demo-search","demo-sync-url","demo-table","demo-col-fn","demo-crud","demo-batch","demo-page","demo-export","demo-remote","demo-api-users-action","demo-api-orders-restful","demo-dark","demo-locale","demo-toolbar-off","demo-defaults","demo-bool","demo-tb-fn","demo-ra-fn","demo-tb-custom","demo-ra-custom","demo-key-order","demo-enabled","demo-title","demo-can","demo-custom","demo-cell","demo-schemas-full"];
       await D.until(() => D.total("demo-remote") > 0, 10000);
+      await D.until(() => D.total("demo-api-users-action") > 0, 10000);
+      await D.until(() => D.total("demo-api-orders-restful") > 0, 10000);
       const out = {};
       for (const k of keys) {
         const hasTb = !!D.q(k, '[data-testid="data-panel-toolbar"]');
@@ -1413,7 +1621,7 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
       }
       return out;`,
       );
-      expect(Object.keys(r).length).toBe(23);
+      expect(Object.keys(r).length).toBe(28);
       for (const [k, v] of Object.entries(r)) {
         const o = v as Record<string, unknown>;
         const expectTb = k !== "demo-toolbar-off";

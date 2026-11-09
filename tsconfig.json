@@ -8,8 +8,18 @@
     "skipLibCheck": true,
     "jsx": "react-jsx",
     "jsxImportSource": "@dreamer/view",
-    "lib": ["dom", "dom.iterable", "esnext"],
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
     "types": []
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "tests/**/*.ts", "plugin.ts"]
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "tests/**/*.ts",
+    "tests/**/*.tsx",
+    "plugin.ts"
+  ]
 }

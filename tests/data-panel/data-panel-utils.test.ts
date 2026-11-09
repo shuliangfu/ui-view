@@ -7,13 +7,22 @@ import {
   buildExportFile,
   createLocalDataSource,
   displayValue,
+  normalizeColumns,
   filterRows,
   formatDateTime,
+  resolvePanelColumns,
   formatMoney,
   pageList,
   parseCsv,
+  queryFromParams,
   queryToParams,
+  resolveBatchStatusColumn,
   validateForm,
+  applyFieldRule,
+  useFieldGrid,
+  fieldLayoutStyle,
+  fieldSpan,
+  validateSearchFields,
 } from "../../src/desktop/data-display/data-panel-utils.ts";
 import {
   defaultDataPanelMessages,
@@ -22,15 +31,15 @@ import {
   resolveDataPanelMessages,
 } from "../../src/desktop/data-display/data-panel-messages.ts";
 import type {
-  DataPanelColumn,
-  DataPanelFormField,
-  DataPanelQuery,
-  DataPanelSearchField,
+  Column,
+  FormField,
+  Query,
+  SearchField,
 } from "../../src/desktop/data-display/data-panel-types.ts";
 
 const M = defaultDataPanelMessages;
 
-const COLUMNS: DataPanelColumn[] = [
+const COLUMNS: Column[] = [
   { prop: "name", label: "姓名", sortable: true },
   {
     prop: "role",
@@ -46,7 +55,7 @@ const COLUMNS: DataPanelColumn[] = [
   { prop: "vip", label: "VIP", type: "bool" },
   { prop: "tags", label: "标签" },
 ];
-const SEARCH: DataPanelSearchField[] = [
+const SEARCH: SearchField[] = [
   { name: "name", label: "姓名" },
   { name: "role", label: "角色", type: "select" },
   { name: "born", label: "出生", type: "date" },
@@ -54,7 +63,7 @@ const SEARCH: DataPanelSearchField[] = [
   { name: "scoreMax", label: "最高分", field: "score", match: "to" },
   { name: "scoreEq", label: "积分", field: "score", match: "num" },
 ];
-const FORM: DataPanelFormField[] = [
+const FORM: FormField[] = [
   { name: "name", label: "姓名", required: true },
   { name: "balance", label: "余额", type: "number", min: 0, max: 1000 },
   { name: "code", label: "编码", pattern: "^[A-Z]{3}$" },
@@ -77,11 +86,11 @@ function rows(n = 23) {
   }));
 }
 
-const Q: DataPanelQuery = {
+const Q: Query = {
   page: 1,
   pageSize: 10,
   sort: "",
-  order: 1,
+  order: "asc",
   filters: {},
 };
 
@@ -96,6 +105,56 @@ describe("展示值", () => {
     expect(formatDateTime(undefined)).toBe("");
     expect(formatDateTime("not a date")).toBe("not a date");
   });
+
+  it("formatDateTime：自定义 format（不要秒／只要日期）", () => {
+    expect(formatDateTime(new Date(2026, 10, 10, 10, 30, 45), "YYYY-MM-DD HH:mm"))
+      .toBe("2026-11-10 10:30");
+    expect(formatDateTime("2026-11-10", "YYYY-MM-DD")).toBe("2026-11-10");
+    expect(formatDateTime("2026-11-10", "YYYY/MM/DD")).toBe("2026/11/10");
+  });
+
+  it("displayValue：column.format 作用于 date／datetime", () => {
+    const row = { id: "1", at: "2026-11-10T10:30:45" };
+    expect(displayValue(
+      { prop: "at", label: "时间", type: "datetime", format: "YYYY-MM-DD HH:mm" },
+      row,
+      { yes: "是", no: "否" },
+    )).toBe("2026-11-10 10:30");
+    expect(displayValue(
+      { prop: "at", label: "日", type: "date", format: "YYYY/MM/DD" },
+      { id: "1", at: "2026-11-10" },
+      { yes: "是", no: "否" },
+    )).toBe("2026/11/10");
+  });
+
+  it("resolvePanelColumns：index／selection 由 columns 驱动；label 默认 #", () => {
+    const cols = resolvePanelColumns(
+      [
+        { type: "selection", prop: "__select", label: "" },
+        { type: "index", prop: "__index", label: "" },
+        { prop: "name", label: "姓名" },
+      ],
+      { needSelection: false, autoIndex: false },
+    );
+    expect(cols.map((c) => c.type)).toEqual(["selection", "index", undefined]);
+    expect(cols[1].label).toBe("#");
+    // 无显式 index 时兼容自动前置
+    const auto = resolvePanelColumns(
+      [{ prop: "name", label: "姓名" }],
+      { needSelection: true, selectable: undefined },
+    );
+    expect(auto[0].type).toBe("selection");
+    expect(auto[1].type).toBe("index");
+    expect(auto[1].label).toBe("#");
+    // selectable:false 去掉 selection
+    const noSel = resolvePanelColumns(
+      [{ prop: "name", label: "姓名" }],
+      { needSelection: true, selectable: false },
+    );
+    expect(noSel.some((c) => c.type === "selection")).toBe(false);
+    expect(noSel[0].type).toBe("index");
+  });
+
 
   it("formatMoney：千分位两位小数，非数字为空", () => {
     expect(formatMoney(1234.5)).toBe("1,234.50");
@@ -138,6 +197,79 @@ describe("展示值", () => {
   });
 });
 
+
+describe("displayValue 函数列", () => {
+it("displayValue：value／formatter／节点回落", () => {
+    const row = { id: "1", flag: 1, name: "A" };
+    expect(
+      displayValue(
+        {
+          prop: "flag",
+          label: "f",
+          type: "tag",
+          value: (r) => (r.flag === 1 ? "开启" : "关闭"),
+        },
+        row,
+        M,
+      ),
+    ).toBe("开启");
+    expect(
+      displayValue(
+        {
+          prop: "flag",
+          label: "f",
+          formatter: (_r, raw) => (raw === 1 ? "ON" : "OFF"),
+          value: () => "ignored",
+        },
+        row,
+        M,
+      ),
+    ).toBe("ON");
+    // HTML → 剥标签
+    expect(
+      displayValue(
+        {
+          prop: "flag",
+          label: "f",
+          formatter: () => '<b style="color:green">ON</b>',
+        },
+        row,
+        M,
+      ),
+    ).toBe("ON");
+    // 节点无 textContent 时回落声明式 options
+    expect(
+      displayValue(
+        {
+          prop: "flag",
+          label: "f",
+          type: "tag",
+          options: [{ value: "1", label: "开" }],
+          value: () => ({ nodeType: 1 }),
+        },
+        { id: "1", flag: "1" },
+        M,
+      ),
+    ).toBe("开");
+  });
+});
+
+
+describe("normalizeColumns", () => {
+  it("normalizeColumns：edit→inline；已有 inline 不动", () => {
+    const cols = normalizeColumns([
+      { prop: "a", label: "A", edit: true },
+      { prop: "b", label: "B", edit: true, options: [{ value: "1", label: "开" }, { value: "0", label: "关" }] },
+      { prop: "c", label: "C", edit: true, inline: "number" },
+      { prop: "d", label: "D" },
+    ]);
+    expect(cols[0].inline).toBe("text");
+    expect(cols[1].inline).toBe("switch");
+    expect(cols[2].inline).toBe("number");
+    expect(cols[3].inline).toBeUndefined();
+  });
+});
+
 describe("parseCsv", () => {
   it("引号、逗号、换行、BOM、空行", () => {
     const csv = '\uFEFF姓名,备注\r\nAlice,"a,b"\r\n"Bo""b","line1\nline2"\n\n';
@@ -172,7 +304,7 @@ describe("queryToParams", () => {
   const base = {
     ...Q,
     sort: "name",
-    order: -1 as const,
+    order: "desc" as const,
     filters: { name: "x", kind: "a", empty: "" },
   };
   it("请求参数：始终带 pageSize，固定过滤并入", () => {
@@ -190,7 +322,7 @@ describe("queryToParams", () => {
   });
   it("地址栏：省略默认值与固定过滤", () => {
     const p = queryToParams(
-      { ...base, page: 3, sort: "name", order: -1 },
+      { ...base, page: 3, sort: "name", order: "desc" },
       {
         forUrl: true,
         fixed: { kind: "a" },
@@ -203,6 +335,142 @@ describe("queryToParams", () => {
     expect(q.get("sort")).toBe("name");
     expect(queryToParams(Q, { forUrl: true, defaultPageSize: 10 }).toString())
       .toBe("");
+  });
+});
+
+
+describe("queryFromParams（page／pageSize／搜索 ↔ URL 回填）", () => {
+  const names = ["name", "role"] as const;
+  it("读 page／pageSize／sort／order／搜索字段；忽略空与未知 key；跳过 fixed", () => {
+    const p = new URLSearchParams(
+      "page=2&pageSize=20&sort=balance&order=desc&name=Ada&role=admin&fixedK=x&noise=1",
+    );
+    const q = queryFromParams(p, {
+      searchNames: names,
+      fixed: { fixedK: "keep" },
+    });
+    expect(q.page).toBe(2);
+    expect(q.pageSize).toBe(20);
+    expect(q.sort).toBe("balance");
+    expect(q.order).toBe("desc");
+    expect(q.filters).toEqual({ name: "Ada", role: "admin" });
+    expect(q.filters?.fixedK).toBeUndefined();
+  });
+  it("非法／缺省数字忽略；order 默认 asc；空串 filters 不产出", () => {
+    const p = new URLSearchParams("page=0&pageSize=abc&sort=name&name=&role=");
+    const q = queryFromParams(p, { searchNames: names });
+    expect(q.page).toBeUndefined();
+    expect(q.pageSize).toBeUndefined();
+    expect(q.sort).toBe("name");
+    expect(q.order).toBe("asc");
+    expect(q.filters).toBeUndefined();
+  });
+  it("无 searchNames 仍读 page／pageSize（分页默认同步不依赖 search）", () => {
+    const p = new URLSearchParams("page=3&pageSize=20&name=x");
+    const q = queryFromParams(p, { searchNames: [] });
+    expect(q.page).toBe(3);
+    expect(q.pageSize).toBe(20);
+    expect(q.filters).toBeUndefined();
+  });
+  it("与 queryToParams(forUrl) 往返：写出再读回（默认值省略）", () => {
+    const written = queryToParams(
+      {
+        page: 3,
+        pageSize: 50,
+        sort: "name",
+        order: "desc",
+        filters: { name: "x", role: "admin", secret: "no" },
+      },
+      {
+        forUrl: true,
+        defaultPageSize: 10,
+        defaultSort: { prop: "id", order: "asc" },
+        fixed: { secret: "no" },
+      },
+    );
+    const back = queryFromParams(written, {
+      searchNames: ["name", "role", "secret"],
+      fixed: { secret: "no" },
+    });
+    expect(back.page).toBe(3);
+    expect(back.pageSize).toBe(50);
+    expect(back.sort).toBe("name");
+    expect(back.order).toBe("desc");
+    expect(back.filters).toEqual({ name: "x", role: "admin" });
+  });
+});
+
+describe("resolveBatchStatusColumn（批量设为 ← column.batch:true）", () => {
+  it("须 batch:true＋inline:switch＋两档 options；映射 field／values", () => {
+    const got = resolveBatchStatusColumn([
+      { prop: "name", label: "姓名" },
+      {
+        prop: "status",
+        label: "状态",
+        type: "tag",
+        inline: "switch",
+        batch: true,
+        options: [
+          { value: "active", label: "启用", tone: "success" },
+          { value: "disabled", label: "停用", tone: "warning" },
+        ],
+      },
+    ]);
+    expect(got).toEqual({
+      field: "status",
+      values: [
+        { value: "active", label: "启用" },
+        { value: "disabled", label: "停用" },
+      ],
+    });
+  });
+  it("仅 switch 无 batch → null；batch 但非两档 → null", () => {
+    expect(resolveBatchStatusColumn([
+      {
+        prop: "status",
+        label: "状态",
+        inline: "switch",
+        options: [
+          { value: "on", label: "开" },
+          { value: "off", label: "关" },
+        ],
+      },
+    ])).toBeNull();
+    expect(resolveBatchStatusColumn([
+      {
+        prop: "status",
+        label: "状态",
+        inline: "switch",
+        batch: true,
+        options: [{ value: "on", label: "开" }],
+      },
+    ])).toBeNull();
+    expect(resolveBatchStatusColumn([])).toBeNull();
+  });
+  it("多个 batch:true 取第一个", () => {
+    const got = resolveBatchStatusColumn([
+      {
+        prop: "locked",
+        label: "锁定",
+        inline: "switch",
+        batch: true,
+        options: [
+          { value: "1", label: "是" },
+          { value: "0", label: "否" },
+        ],
+      },
+      {
+        prop: "status",
+        label: "状态",
+        inline: "switch",
+        batch: true,
+        options: [
+          { value: "active", label: "启用" },
+          { value: "disabled", label: "停用" },
+        ],
+      },
+    ]);
+    expect(got?.field).toBe("locked");
   });
 });
 
@@ -253,11 +521,11 @@ describe("createLocalDataSource：查询", () => {
 
   it("排序：升序 / 降序 / 数字 / 字符串", () => {
     const s = src();
-    expect(s.list({ ...Q, sort: "name", order: -1 }).rows[0].name).toBe(
+    expect(s.list({ ...Q, sort: "name", order: "desc" }).rows[0].name).toBe(
       "User23",
     );
-    expect(s.list({ ...Q, sort: "score", order: -1 }).rows[0].score).toBe(66);
-    expect(s.list({ ...Q, sort: "balance", order: 1 }).rows[0].id).toBe("1");
+    expect(s.list({ ...Q, sort: "score", order: "desc" }).rows[0].score).toBe(66);
+    expect(s.list({ ...Q, sort: "balance", order: "asc" }).rows[0].id).toBe("1");
   });
 
   it("合计：只对 total 列，浮点误差被消除", () => {
@@ -543,5 +811,90 @@ describe("messages", () => {
         ],
       ).toBe("string");
     }
+  });
+});
+
+
+describe("validateForm rules／search／layout", () => {
+  const Mm = { required: "必填", min: "最小 {n}", max: "最大 {n}", patternMismatch: "格式错" };
+
+  it("rules：required message、email type、min/max 长度、validator", () => {
+    const form = [
+      {
+        prop: "name",
+        rules: [
+          { required: true, message: "姓名不能为空" },
+          { min: 2, max: 5, message: "长度 2–5" },
+        ],
+      },
+      {
+        prop: "email",
+        rules: [{ type: "email" as const, message: "邮箱不对" }],
+      },
+      {
+        prop: "code",
+        rules: [{
+          validator: (v: unknown) => (v === "ok" ? true : "必须 ok"),
+        }],
+      },
+    ];
+    expect(validateForm(form, {}, false, Mm).name).toBe("姓名不能为空");
+    expect(validateForm(form, { name: "A" }, false, Mm).name).toBe("长度 2–5");
+    expect(validateForm(form, { name: "AliceX" }, false, Mm).name).toBe("长度 2–5");
+    expect(validateForm(form, { name: "Al", email: "x", code: "ok" }, false, Mm).email).toBe("邮箱不对");
+    expect(validateForm(form, { name: "Al", email: "a@b.co", code: "no" }, false, Mm).code).toBe("必须 ok");
+    expect(validateForm(form, { name: "Al", email: "a@b.co", code: "ok" }, false, Mm)).toEqual({});
+  });
+
+  it("简写 message／maxlength；编辑密码留空跳过 required", () => {
+    expect(
+      validateForm(
+        [{ prop: "n", required: true, message: "自定义必填" }],
+        {},
+        false,
+        Mm,
+      ).n,
+    ).toBe("自定义必填");
+    expect(
+      validateForm(
+        [{ prop: "n", maxlength: 3 }],
+        { n: "abcd" },
+        false,
+        Mm,
+      ).n,
+    ).toBe("最大 3");
+    expect(
+      validateForm(
+        [{ prop: "pw", type: "password", required: true }],
+        { pw: "" },
+        true,
+        Mm,
+      ),
+    ).toEqual({});
+  });
+
+  it("validateSearchFields：仅有规则的项", () => {
+    const search = [
+      { prop: "q" },
+      { prop: "code", required: true, message: "码必填" },
+    ];
+    expect(validateSearchFields(search, { q: "", code: "" }, Mm)).toEqual({
+      code: "码必填",
+    });
+    expect(validateSearchFields(search, { q: "", code: "1" }, Mm)).toEqual({});
+  });
+
+  it("fieldSpan／fieldLayoutStyle／useFieldGrid", () => {
+    expect(fieldSpan({ span: 6 })).toBe(6);
+    expect(fieldSpan({ cols: 3 })).toBe(3);
+    expect(fieldSpan({ span: 99 })).toBe(12);
+    expect(fieldLayoutStyle({ span: 4, width: "50%" })).toEqual({
+      gridColumn: "span 4 / span 4",
+      width: "50%",
+    });
+    expect(fieldLayoutStyle({ width: 200 })).toEqual({ width: "200px" });
+    expect(useFieldGrid([{}])).toBe(false);
+    expect(useFieldGrid([{ span: 6 }])).toBe(true);
+    expect(useFieldGrid([{ width: "50%" }])).toBe(true);
   });
 });

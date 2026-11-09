@@ -91,8 +91,26 @@ function waitHttpOk(url, deadlineMs) {
   })();
 }
 
+
+/** Node <20 lacks --test-force-exit; omit so older local PATH nodes still run. */
+function supportsTestForceExit() {
+  try {
+    const r = spawnSync(process.execPath, ["--test-force-exit", "--eval", "0"], {
+      encoding: "utf8",
+    });
+    // Unknown option → non-zero + stderr mentions the flag; supported → eval runs.
+    const err = `${r.stderr || ""}${r.stdout || ""}`;
+    if (/bad option|unknown option|unrecognized/i.test(err)) return false;
+    return r.status === 0 || !/bad option/i.test(err);
+  } catch {
+    return false;
+  }
+}
+const TEST_FORCE_EXIT = supportsTestForceExit();
+
 const tsxImport = resolveTsxImport();
 console.log(`tsx loader: ${tsxImport}`);
+console.log(`--test-force-exit: ${TEST_FORCE_EXIT ? "on" : "off (unsupported by this Node)"}`);
 
 const unitFiles = ["tests/docs-sidebar-reconcile.test.ts"];
 const browserFiles = collectTestFiles(resolve("tests/docs-browser"))
@@ -158,7 +176,9 @@ for (const file of testFiles) {
   console.log(`▶ ${rel}`);
   const result = spawnSync(
     process.execPath,
-    ["--import", tsxImport, "--test-force-exit", full],
+    TEST_FORCE_EXIT
+      ? ["--import", tsxImport, "--test-force-exit", full]
+      : ["--import", tsxImport, full],
     {
       stdio: "inherit",
       env: childEnv,

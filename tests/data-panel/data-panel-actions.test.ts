@@ -13,8 +13,8 @@ import {
   resolveRowActionCtrl,
   ROW_BUILTINS,
   TOOLBAR_BUILTINS,
-  type DataPanelRowActionsConfig,
-  type DataPanelToolbarConfig,
+  type RowActionsConfig,
+  type PanelToolbarConfig,
 } from "../../src/desktop/data-display/data-panel-types.ts";
 
 describe("DataPanel ActionCtrl unified Record", () => {
@@ -63,7 +63,7 @@ describe("DataPanel ActionCtrl unified Record", () => {
   });
 
   it("undeclared vs declared: undefined ctrl → caps; {} → show", () => {
-    // undeclared / capGate allow path
+    // undeclared → caps fallback
     expect(resolveActionCtrl(undefined, false).show).toBe(false);
     // declared empty object
     expect(resolveActionCtrl({}, false).show).toBe(true);
@@ -174,7 +174,7 @@ describe("DataPanel ActionCtrl unified Record", () => {
   });
 
   it("Object.keys write order is display order for declared keys", () => {
-    const toolbar: DataPanelToolbarConfig = {
+    const toolbar: PanelToolbarConfig = {
       create: true,
       myBtn: { label: "Mine", action: () => {}, disable: false },
       search: true,
@@ -182,7 +182,7 @@ describe("DataPanel ActionCtrl unified Record", () => {
     assertToolbarConfig(toolbar);
     expect(Object.keys(toolbar)).toEqual(["create", "myBtn", "search"]);
 
-    const rowActions: DataPanelRowActionsConfig = {
+    const rowActions: RowActionsConfig = {
       assign: { label: "A", action: () => {} },
       view: false,
       edit: false,
@@ -313,9 +313,9 @@ describe("DataPanel ActionCtrl unified Record", () => {
     expect("confirm" in (r as object)).toBe(false);
   });
 
-  it("batchStatus is TOOLBAR_BUILTIN (Record-gated; UI = batch bar)", () => {
-    expect(isToolbarBuiltin("batchStatus")).toBe(true);
-    expect([...TOOLBAR_BUILTINS]).toContain("batchStatus");
+  it("batchStatus 已挪出 TOOLBAR_BUILTINS（改 caps.batchStatus＋column.batch）", () => {
+    expect(isToolbarBuiltin("batchStatus")).toBe(false);
+    expect([...TOOLBAR_BUILTINS]).not.toContain("batchStatus");
     // undeclared → caps; declared false hides
     expect(resolveActionCtrl(undefined, true).show).toBe(true);
     expect(resolveActionCtrl(false, true).show).toBe(false);

@@ -1234,7 +1234,7 @@ export const MESSAGES_FLAG_IMG: DocsApiTableRow[] = [
   },
 ];
 
-/** DataPanelMessages（locale 为 zh-CN／en-US；未列字段走 defaultDataPanelMessages／enDataPanelMessages） */
+/** Messages（zh-CN／en-US；未列字段走 defaultDataPanelMessages／enDataPanelMessages） */
 export const MESSAGES_DATA_PANEL: DocsApiTableRow[] = [
   {
     name: "search",

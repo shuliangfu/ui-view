@@ -129,7 +129,7 @@
     "check": "deno check src plugin.ts upload.ts",
     "publish:jsr": "deno publish",
     "publish:jsr:dry-run": "deno publish --dry-run --allow-dirty",
-    "test:node": "node --import tsx --test-force-exit test-node.mjs"
+    "test:node": "node --import tsx test-node.mjs"
   },
   "imports": {
     "@dreamer/markdown": "jsr:@dreamer/markdown@^1.1.1",

@@ -1,13 +1,13 @@
 /**
  * DataPanel 公共类型：列、搜索项、表单项、查询、数据源与文案。
- * 与具体后端无关：所有数据读写通过 {@link DataPanelDataSource} 注入。
+ * 与具体后端无关：所有数据读写通过 {@link DataSource} 注入。
  */
 
-/** 数据行：键值对；主键字段默认为 `id`（见 `DataPanelProps.rowKey`）。 */
-export type DataPanelRow = Record<string, unknown>;
+/** 数据行：键值对；主键字段默认为 `id`（见 `PanelProps.rowKey`）。 */
+export type Row = Record<string, unknown>;
 
 /** 标签 / 提示色调 */
-export type DataPanelTone =
+export type Tone =
   | "success"
   | "warning"
   | "danger"
@@ -15,7 +15,7 @@ export type DataPanelTone =
   | "default";
 
 /** 列展示类型 */
-export type DataPanelColumnType =
+export type ColumnType =
   | "text"
   | "number"
   | "money"
@@ -24,29 +24,48 @@ export type DataPanelColumnType =
   | "tag"
   | "bool"
   | "image"
-  | "link";
+  | "link"
+  /** 多选勾选列（columns 驱动；对齐旧顶层 selectable／dreamer-vue type:selection） */
+  | "selection"
+  /** 行号／序号列（columns 驱动；label 可省，默认 "#"） */
+  | "index";
 
 /** 选项（tag 列、select 搜索 / 表单项共用） */
-export interface DataPanelOption {
+export interface Option {
   value: string;
   label: string;
-  tone?: DataPanelTone;
+  tone?: Tone;
 }
 
 /** 列定义 */
-export interface DataPanelColumn {
-  /** 行字段名 */
+export interface Column {
+  /**
+   * 行字段名。
+   * `type:"selection"` 用 `"__select"`；`type:"index"` 用 `"__index"`（与内置常量对齐）。
+   */
   prop: string;
-  /** 表头文案 */
+  /**
+   * 表头文案。
+   * `type:"index"` 建议传 `"#"`（或不喜欢可改成「序号」等）；解析器对空串仍回落 `"#"`。
+   * `type:"selection"` 可传 `""`（列设置显示用 messages.colSelect）。
+   */
   label: string;
-  /** 展示类型，默认 text */
-  type?: DataPanelColumnType;
+  /** 展示类型，默认 text；`selection`／`index` 为系统列 */
+  type?: ColumnType;
+  /**
+   * 日期／时间展示格式（优先于默认切片）。
+   * 仅对 `type:"date"`／`type:"datetime"`（及未声明 type 但 raw 为日期时经 formatter 除外）生效。
+   * 支持令牌：`YYYY` `MM` `DD` `HH` `mm` `ss`。
+   * 例：`"YYYY-MM-DD HH:mm"` → `2026-11-10 10:30`（不要秒）；date 缺省等同 `YYYY-MM-DD`，datetime 缺省 `YYYY-MM-DD HH:mm:ss`。
+   * 更复杂节点请用 `formatter`／`value`（本字段不覆盖它们）。
+   */
+  format?: string;
   /** 是否可点击表头排序（服务端 / 本地数据源均走 `list(query)`） */
   sortable?: boolean;
   /** 列宽（px） */
   width?: number;
   /** tag 列：值 → 文案 / 色调；switch/select 行内编辑也用 */
-  options?: DataPanelOption[];
+  options?: Option[];
   /**
    * 行内编辑（单元格编辑）：
    * - `switch`：两个 options 的开关，点击即切换并保存；
@@ -63,28 +82,132 @@ export interface DataPanelColumn {
     | "textarea"
     | "date"
     | "datetime";
+  /**
+   * 对齐旧 `columns[].edit`：为 true 且未写 `inline` 时，自动启用行内编辑
+   * （两档 options → `switch`，否则 `text`）。新代码请直接写 `inline`。
+   */
+  edit?: boolean;
   /** 页脚合计行：显示 `list()` 返回 `totals[prop]` */
   total?: boolean;
   /** 默认隐藏，可在「列设置」里打开 */
   hidden?: boolean;
   /** 不参与导出 */
   noExport?: boolean;
+  /**
+   * 显式标记为批量「设为…」目标列（须配合 `inline:"switch"` 与恰好两档 `options`）。
+   * 不再用「首个 switch 列」隐式推导。
+   */
+  batch?: boolean;
+  /**
+   * 按行文案／节点（对齐旧 `options.value(row)`）。
+   * 可返回：**任意可渲染节点**——string／number、JSX／VNode、组件（如 Icon）、DOM Node，
+   * 或以 `<` 开头的**可信 HTML 字符串**（经面板注入；勿传入不可信用户输入）。
+   * 声明式 `options[{value,label,tone}]` 仍保留；复杂按行逻辑走本函数。
+   * 与 `formatter` 并存时以 `formatter` 为准；面板级 `renderCell[prop]` 最优先。
+   */
+  value?: (row: Row) => unknown;
+  /**
+   * 按行色调（对齐旧 `options.color(row)`）。返回 {@link Tone}。
+   * 仅当 `value`／`formatter` 结果为原始文本（string／number／boolean）时包成 `dp-tag`；
+   * 若返回自定义节点／HTML，由调用方自行上色，本字段忽略。
+   */
+  color?: (row: Row) => Tone;
+  /**
+   * 统一格式化：`(row, raw) =>` **任意可渲染节点**（同 {@link Column.value}）。
+   * 覆盖默认展示与 `value`；导出／打印／详情只取可转文本的结果，节点／HTML 回落字段原文。
+   */
+  formatter?: (row: Row, raw: unknown) => unknown;
 }
 
-/** 搜索项 */
-export interface DataPanelSearchField {
-  name: string;
+/**
+ * 详情 Modal 项（对齐旧 `view.schemas` 的 `{ label, value }`）。
+ * `children` 优先；否则用 `value`（可为节点）；再否则按 `prop` 从行取值。
+ */
+export interface ViewSchema {
   label: string;
+  /** 直接展示的值（string／number／JSX／节点均可） */
+  value?: unknown;
+  /** 同 DescriptionsItem.children；若与 value 同写以 children 为准 */
+  children?: unknown;
+  /** 从行读取的字段；无 value／children 时使用 */
+  prop?: string;
+  span?: number;
+}
+
+/** 搜索项（键统一 `prop`；旧 `name` 等同 prop，兼容保留） */
+/** 表单／搜索字段校验规则（对齐旧 schemas.rules；简单＋复杂） */
+export interface FieldRule {
+  /** 必填 */
+  required?: boolean;
+  /**
+   * 下限：`type:"number"`／字段 type number → 数值最小；
+   * 否则按字符串最小长度。
+   */
+  min?: number;
+  /**
+   * 上限：数值最大或字符串最大长度（同上）。
+   */
+  max?: number;
+  /** 正则（string 或 RegExp） */
+  pattern?: string | RegExp;
+  /** 内置类型检查 */
+  type?: "string" | "number" | "email" | "url";
+  /**
+   * 同步自定义校验。返回：
+   * - `string` → 错误文案；
+   * - `false` → 失败，用 `message` 或内置文案；
+   * - `true`／`void` → 通过。
+   */
+  validator?: (
+    value: unknown,
+    values: Record<string, unknown>,
+  ) => string | boolean | void;
+  /** 失败文案（对齐旧 `rules[].message`） */
+  message?: string;
+  /** 触发时机（面板提交时一律校验；预留 blur／change） */
+  trigger?: "blur" | "change" | "submit";
+}
+
+export interface SearchField {
+  /** 字段键（与 columns.prop／URL query key 对齐）；缺省回落 `name` */
+  prop?: string;
+  /** @deprecated 用 `prop`；二者都写时以 `prop` 为准 */
+  name?: string;
+  /** 缺省时从同 prop 的 column.label 继承 */
+  label?: string;
   type?: "text" | "select" | "date";
-  options?: DataPanelOption[];
+  /** 缺省时从同 prop 的 column.options 继承 */
+  options?: Option[];
   /** 本地数据源匹配方式：contains（text 默认）/ eq（select 默认）/ from / to / num */
   match?: "contains" | "eq" | "from" | "to" | "num";
-  /** 行字段名，缺省与 `name` 相同 */
+  /** 行字段名，缺省与 prop／name 相同 */
   field?: string;
+  /** 输入占位（对齐旧 search.schemas.placeholder） */
+  placeholder?: string;
+  /** 下方提示；有校验错误时隐藏（对齐旧 hint） */
+  hint?: string;
+  /** 校验规则（提交搜索时执行；对齐旧 schemas.rules） */
+  rules?: FieldRule[];
+  /** 无 rules 时，简写 required／pattern 失败的默认文案 */
+  message?: string;
+  /** 搜索必填（无 rules 时的简写） */
+  required?: boolean;
+  /** 搜索正则简写 */
+  pattern?: string;
+  /**
+   * 栅格跨列（1–12）。表单／搜索容器为 12 列时生效；与 `cols` 同义，二者同写以 `span` 为准。
+   */
+  span?: number;
+  /** @see span */
+  cols?: number;
+  /** 控件／项宽度（CSS 长度或 px 数字），对齐旧 schemas.width（如 `"50%"`／200） */
+  width?: string | number;
+  /** 输入最大字符数（对齐 maxlength；传给 Input） */
+  maxlength?: number;
 }
 
 /** 表单控件类型 */
-export type DataPanelFormType =
+export type FormType =
   | "text"
   | "textarea"
   | "number"
@@ -95,48 +218,78 @@ export type DataPanelFormType =
   | "date"
   | "datetime";
 
-/** 新增 / 编辑 Modal 里的表单项 */
-export interface DataPanelFormField {
-  name: string;
-  label: string;
-  type?: DataPanelFormType;
-  options?: DataPanelOption[];
+/** 新增 / 编辑 Modal 里的表单项（键统一 `prop`；旧 `name` 等同 prop） */
+export interface FormField {
+  /** 字段键（与 columns.prop 对齐）；缺省回落 `name` */
+  prop?: string;
+  /** @deprecated 用 `prop`；二者都写时以 `prop` 为准 */
+  name?: string;
+  /** 缺省时从同 prop 的 column.label 继承 */
+  label?: string;
+  type?: FormType;
+  /** 缺省时从同 prop 的 column.options 继承（select／switch 等） */
+  options?: Option[];
   required?: boolean;
   min?: number;
   max?: number;
-  /** 正则（字符串） */
+  /** 正则（字符串）；复杂场景请用 `rules` */
   pattern?: string;
   placeholder?: string;
+  /** 下方提示；有校验错误时隐藏（对齐旧 form.schemas.hint） */
+  hint?: string;
+  /**
+   * 校验规则数组（对齐旧 `rules:[{ required, message, min, max, pattern, type, validator }]`）。
+   * 有 `rules` 时优先走规则；仍兼容字段级 required／min／max／pattern 简写。
+   */
+  rules?: FieldRule[];
+  /** 简写校验失败时的默认文案（无 rules[].message 时回落） */
+  message?: string;
   /** 新建时的初始值 */
   initial?: string | number | boolean;
   /** 创建后不可再改（编辑时只读） */
   createOnly?: boolean;
   /** 仅编辑时显示 */
   editOnly?: boolean;
-  /** switch：存储值 [开, 关]，默认 [true, false] */
+  /**
+   * 栅格跨列（1–12）。有任一字段写 span／cols／width 时容器切 12 列；缺省整行（12）。
+   * 与 `cols` 同义，同写以 `span` 为准。
+   */
+  span?: number;
+  /** @see span */
+  cols?: number;
+  /** 项宽度（CSS 长度或 px 数字），对齐旧 form.schemas.width */
+  width?: string | number;
+  /** 输入最大字符数（text／textarea／password）；校验亦作字符串上限 */
+  maxlength?: number;
+  /** textarea 行数，默认 4 */
+  rows?: number;
+  /**
+   * @deprecated switch 默认吃同 prop 列的两档 options（[0]=开，[1]=关）；
+   * 仅无对应列时再写 onOff，默认 ["true","false"]。
+   */
   onOff?: [string, string];
 }
 
-/** 列表查询（page 从 1 起；order 1 升序 / -1 降序） */
-export interface DataPanelQuery {
+/** 列表查询（page 从 1 起；order 对外统一 asc｜desc） */
+export interface Query {
   page: number;
   pageSize: number;
   sort: string;
-  order: 1 | -1;
+  order: "asc" | "desc";
   /** 搜索字段 → 原始字符串（仅非空） */
   filters: Record<string, string>;
 }
 
 /** `list()` 返回 */
-export interface DataPanelListResult {
-  rows: DataPanelRow[];
+export interface ListResult {
+  rows: Row[];
   total: number;
   /** 合计行数据：列 prop → 数值 */
   totals?: Record<string, number>;
 }
 
 /** 新增 / 编辑结果；失败时可带整体或字段级错误 */
-export type DataPanelWriteResult =
+export type WriteResult =
   | void
   | { ok: true }
   | {
@@ -150,14 +303,14 @@ export type DataPanelWriteResult =
   };
 
 /** 批量操作结果 */
-export interface DataPanelBulkResult {
+export interface BulkResult {
   /** 成功处理条数 */
   removed: number;
   failed: { id: string; error: string }[];
 }
 
 /** 导入结果 */
-export interface DataPanelImportResult {
+export interface ImportResult {
   created: number;
   failed: number;
 }
@@ -168,40 +321,39 @@ type MaybePromise<T> = T | Promise<T>;
  * 数据源：所有读写都经过它。`list` 必需，其余按需提供，缺省的能力对应按钮 / 列会自动隐藏。
  * `list` 同步返回时首屏可 SSR 直出（`createLocalDataSource` 即如此）。
  */
-export interface DataPanelDataSource {
+export interface DataSource {
   /** 为 true 表示 `list` 同步返回：首帧（含 SSR）直接渲染，无需挂载后再请求 */
   sync?: boolean;
-  list(query: DataPanelQuery): MaybePromise<DataPanelListResult>;
-  create?(values: Record<string, unknown>): MaybePromise<DataPanelWriteResult>;
+  list(query: Query): MaybePromise<ListResult>;
+  create?(values: Record<string, unknown>): MaybePromise<WriteResult>;
   update?(
     id: string,
     values: Record<string, unknown>,
-  ): MaybePromise<DataPanelWriteResult>;
+  ): MaybePromise<WriteResult>;
   /** 删除；面板保证只在用户确认对话后才会调用 */
-  remove?(ids: string[]): MaybePromise<DataPanelBulkResult>;
+  remove?(ids: string[]): MaybePromise<BulkResult>;
   /** 给多行设置同一字段（批量状态 / 行内编辑） */
   setField?(
     ids: string[],
     field: string,
     value: unknown,
-  ): MaybePromise<DataPanelBulkResult>;
+  ): MaybePromise<BulkResult>;
   /** 导入 CSV / JSON 解析后的行 */
   importRows?(
     rows: Record<string, string>[],
-  ): MaybePromise<DataPanelImportResult>;
+  ): MaybePromise<ImportResult>;
 }
 
 /** 能力开关（缺省按数据源方法是否存在推断） */
-export interface DataPanelCaps {
+export interface Caps {
   create: boolean;
   update: boolean;
   view: boolean;
   remove: boolean;
   /**
-   * Batch「设为…」capability fallback for `toolbar.batchStatus` (a TOOLBAR_BUILTIN).
-   * UI still lives in the selection batch bar (`dp-batch-bar`) when rows are
-   * selected; show / disable follow `toolbar.batchStatus` (undeclared → this caps).
-   * Needs `statusField` / `statusValues` + dataSource.setField.
+   * Batch「设为…」唯一能力开关（不在 toolbar 冒充）。
+   * UI 在选中批量条 `dp-batch-bar`；默认：存在 `column.batch:true`（且 switch＋两档 options）
+   * 且 dataSource.setField 时为 true。调用方可显式 true｜false 覆盖。
    */
   batchStatus: boolean;
   import: boolean;
@@ -223,11 +375,11 @@ export interface DataPanelCaps {
  * - omit `show` → true; omit `disable` → false (both optional)
  * - show / disable may be zero-arg functions (evaluated when building slots)
  * - `disable: true` (or fn→true) = still visible, button disabled — NOT the same as show:false
- * - `ctrl === undefined` (e.g. admin capGate allow) → show falls back to caller-supplied caps
+ * - 未声明的内置键 → 回落 caps（一层真相）；声明则须明确 true｜false｜object（勿用 undefined 绕）
  * - unknown keys are custom; custom keys MUST provide `action` (asserted at mount)
  * - object literal key order = display order; undeclared builtins append after, in default order
  * - no `confirm` field: callers who need confirmation open Popconfirm/dialog inside `action`
- * - `batchStatus` is a TOOLBAR_BUILTIN (Record-gated); UI is the selection batch bar, not a toolbar icon
+ * - 批量「设为…」不在 toolbar：见 caps.batchStatus ＋ column.batch
  */
 /**
  * Action button tone — full Button ColorVariant set.
@@ -274,9 +426,9 @@ export type ActionCtrl =
 export type RowActionCtrl =
   | boolean
   | {
-    show?: boolean | ((item: DataPanelRow) => boolean);
+    show?: boolean | ((item: Row) => boolean);
     /** Default false. true / fn→true = disabled but still visible. */
-    disable?: boolean | ((item: DataPanelRow) => boolean);
+    disable?: boolean | ((item: Row) => boolean);
     icon?: unknown;
     /**
      * Visible / aria text. Omit → fall back to resolved `title` then key.
@@ -288,16 +440,15 @@ export type RowActionCtrl =
      * Also used as display text when `label` is omitted.
      * Confirm UX belongs in `action` (caller-managed) — no confirm field.
      */
-    title?: string | ((item: DataPanelRow) => string);
+    title?: string | ((item: Row) => string);
     /** Visual tone (Button ColorVariant). Default "default"; builtin remove uses danger. */
     tone?: ActionTone;
     /** Builtin: omit → default handler. Custom key: required (assert throws if missing). */
-    action?: (item: DataPanelRow) => void;
+    action?: (item: Row) => void;
   };
 
 export type ToolbarBuiltin =
   | "create"
-  | "batchStatus"
   | "search"
   | "refresh"
   | "print"
@@ -313,7 +464,6 @@ export type RowBuiltin = "view" | "edit" | "remove";
 /** Default toolbar display order for undeclared builtins. */
 export const TOOLBAR_BUILTINS: readonly ToolbarBuiltin[] = [
   "create",
-  "batchStatus",
   "search",
   "refresh",
   "print",
@@ -349,18 +499,18 @@ export function isRowBuiltin(key: string): key is RowBuiltin {
  * Abolished: `extra` arrays and `order` mix fields.
  */
 /**
- * Unified Record config. Values may be `undefined` (e.g. admin `capGate(allow)` →
- * undefined keeps caps fallback; `false` force-hides).
+ * Unified Record config（对齐旧 tools 一眼 true｜false）。
+ * 省略键 → 内置回落 caps；声明键请写明确 true｜false｜object（勿传 undefined 绕 caps）。
  * Abolished: `extra` arrays and `order` mix fields.
  */
-export type DataPanelToolbarConfig = Record<string, ActionCtrl | undefined>;
+export type PanelToolbarConfig = Record<string, ActionCtrl>;
 
 /**
- * Unified Record config (same shape as toolbar; show/disable/action may be (item)=>…).
- * `undefined` entries = fall back to caps (admin capGate pattern).
+ * Unified Record config（对齐旧 actions；show/disable/action 可 (item)=>…）。
+ * 省略键 → 内置回落 caps；声明键请写明确 true｜false｜object。
  * Abolished: `extra` arrays and `order` mix fields.
  */
-export type DataPanelRowActionsConfig = Record<string, RowActionCtrl | undefined>;
+export type RowActionsConfig = Record<string, RowActionCtrl>;
 
 /** Evaluate boolean | (() => boolean); undefined → fallback. */
 function evalFlag(
@@ -373,8 +523,8 @@ function evalFlag(
 
 /** Evaluate boolean | ((item) => boolean); undefined → fallback. */
 function evalRowFlag(
-  val: boolean | ((item: DataPanelRow) => boolean) | undefined,
-  item: DataPanelRow,
+  val: boolean | ((item: Row) => boolean) | undefined,
+  item: Row,
   fallback: boolean,
 ): boolean {
   if (val === undefined) return fallback;
@@ -391,8 +541,8 @@ function evalTitle(
 }
 
 function evalRowTitle(
-  val: string | ((item: DataPanelRow) => string) | undefined,
-  item: DataPanelRow,
+  val: string | ((item: Row) => string) | undefined,
+  item: Row,
 ): string | undefined {
   if (val === undefined) return undefined;
   const s = typeof val === "function" ? val(item) : val;
@@ -433,9 +583,9 @@ export function actionDisplayText(
 
 /**
  * Resolve toolbar ActionCtrl → { show, disable, action? }.
- * - `undefined` ctrl → show = fallbackShow (caps / undeclared); disable = false
+ * - 未声明（调用方传入 undefined／省略）→ show = fallbackShow（caps）；disable = false
  * - boolean → show = that value; disable = false
- * - object → omit show defaults **true** (caller truth; NOT caps); omit disable defaults false
+ * - object → omit show defaults **true**；omit disable defaults false（声明即 caller 真相，不回落 caps）
  * Functions for show/disable are invoked with no args.
  */
 export function resolveActionCtrl(
@@ -466,11 +616,11 @@ export function resolveActionCtrl(
 /**
  * Resolve a row-action entry for one item (current row).
  * Same defaults: object omit show → true; omit disable → false;
- * `undefined` ctrl → fallbackShow (caps).
+ * 未声明 → fallbackShow (caps)。
  */
 export function resolveRowActionCtrl(
   ctrl: RowActionCtrl | undefined,
-  item: DataPanelRow,
+  item: Row,
   fallbackShow: boolean,
 ): {
   show: boolean;
@@ -479,7 +629,7 @@ export function resolveRowActionCtrl(
   label?: string;
   title?: string;
   tone?: ActionTone;
-  action?: (item: DataPanelRow) => void;
+  action?: (item: Row) => void;
 } {
   if (ctrl === undefined) return { show: fallbackShow, disable: false };
   if (typeof ctrl === "boolean") return { show: ctrl, disable: false };
@@ -496,7 +646,7 @@ export function resolveRowActionCtrl(
 
 /** Throw if any custom toolbar key lacks `action`. Call at mount / before render. */
 export function assertToolbarConfig(
-  cfg: DataPanelToolbarConfig | false | undefined,
+  cfg: PanelToolbarConfig | false | undefined,
 ): void {
   if (!cfg) return;
   for (const [key, val] of Object.entries(cfg)) {
@@ -513,7 +663,7 @@ export function assertToolbarConfig(
 
 /** Throw if any custom rowActions key lacks `action`. Call at mount / before render. */
 export function assertRowActionsConfig(
-  cfg: DataPanelRowActionsConfig | undefined,
+  cfg: RowActionsConfig | undefined,
 ): void {
   if (!cfg) return;
   for (const [key, val] of Object.entries(cfg)) {
@@ -529,16 +679,16 @@ export function assertRowActionsConfig(
 }
 
 /** 表格行高密度 */
-export type DataPanelDensity = "compact" | "comfortable" | "loose";
+export type Density = "compact" | "comfortable" | "loose";
 
 /** 导出格式 */
-export type DataPanelExportFormat = "xlsx" | "csv" | "json" | "xml" | "html";
+export type ExportFormat = "xlsx" | "csv" | "json" | "xml" | "html";
 
 /** 界面语言 */
-export type DataPanelLocale = "zh-CN" | "en-US";
+export type Locale = "zh-CN" | "en-US";
 
 /** 可本地化文案；`{x}` 为占位符 */
-export interface DataPanelMessages {
+export interface Messages {
   search: string;
   create: string;
   refresh: string;

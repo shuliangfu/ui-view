@@ -1,8 +1,8 @@
 /** DataPanel 内置文案（zh-CN / en-US）与占位符替换。 */
-import type { DataPanelLocale, DataPanelMessages } from "./data-panel-types.ts";
+import type { Locale, Messages } from "./data-panel-types.ts";
 
 /** 简体中文（默认） */
-export const defaultDataPanelMessages: DataPanelMessages = {
+export const defaultDataPanelMessages: Messages = {
   search: "搜索",
   create: "添加",
   refresh: "刷新",
@@ -77,7 +77,7 @@ export const defaultDataPanelMessages: DataPanelMessages = {
 };
 
 /** English */
-export const enDataPanelMessages: DataPanelMessages = {
+export const enDataPanelMessages: Messages = {
   search: "Search",
   create: "Add",
   refresh: "Refresh",
@@ -153,9 +153,9 @@ export const enDataPanelMessages: DataPanelMessages = {
 
 /** 按语言取内置文案，再浅合并 `override` */
 export function resolveDataPanelMessages(
-  locale: DataPanelLocale | undefined,
-  override?: Partial<DataPanelMessages>,
-): DataPanelMessages {
+  locale: Locale | undefined,
+  override?: Partial<Messages>,
+): Messages {
   const base = locale === "en-US"
     ? enDataPanelMessages
     : defaultDataPanelMessages;

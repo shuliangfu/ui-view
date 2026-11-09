@@ -4,7 +4,7 @@
  */
 
 import { Button } from "../../shared/basic/Button.tsx";
-import type { DataPanelTone } from "./data-panel-types.ts";
+import type { Tone } from "./data-panel-types.ts";
 import {
   BrowserStorage,
   LocalStorageAdapter,
@@ -48,11 +48,13 @@ export function onServer(): boolean {
 }
 
 /** DataPanel 本地偏好（列显隐 / 行高 / 全屏）；按 panelKey 隔离 */
-export interface DataPanelPrefs {
+export interface Prefs {
   hidden?: Record<string, boolean>;
   density?: "compact" | "comfortable" | "loose";
   fullscreen?: boolean;
 }
+
+
 
 function prefsKey(panelKey: string): string {
   return `dp-prefs-${panelKey}`;
@@ -77,9 +79,9 @@ function getDpBrowserStorage(): BrowserStorage | null {
   return dpBrowserStorage;
 }
 
-function isPrefsShape(v: unknown): v is DataPanelPrefs {
+function isPrefsShape(v: unknown): v is Prefs {
   if (!v || typeof v !== "object") return false;
-  const o = v as DataPanelPrefs;
+  const o = v as Prefs;
   return o.hidden !== undefined || o.density !== undefined ||
     o.fullscreen !== undefined;
 }
@@ -87,11 +89,11 @@ function isPrefsShape(v: unknown): v is DataPanelPrefs {
 /** 读偏好（仅 `@dreamer/storage/client` BrowserStorage）；兼容旧 `dp-cols-*` 与曾直写的 prefs JSON */
 export async function readDataPanelPrefs(
   panelKey: string,
-): Promise<DataPanelPrefs> {
+): Promise<Prefs> {
   const store = getDpBrowserStorage();
   if (!store) return {};
   try {
-    const v = await store.get<DataPanelPrefs>(prefsKey(panelKey));
+    const v = await store.get<Prefs>(prefsKey(panelKey));
     if (isPrefsShape(v)) return v;
 
     // 兼容：本机曾用 raw localStorage JSON 写入的 prefs（无 BrowserStorage 信封）
@@ -104,7 +106,7 @@ export async function readDataPanelPrefs(
     // 兼容更旧：仅列显隐 `dp-cols-*`
     const legacy = adapter.get(legacyColsKey(panelKey));
     if (legacy && typeof legacy === "object" && !Array.isArray(legacy)) {
-      const prefs: DataPanelPrefs = {
+      const prefs: Prefs = {
         hidden: legacy as Record<string, boolean>,
       };
       await store.set(prefsKey(panelKey), prefs);
@@ -117,13 +119,13 @@ export async function readDataPanelPrefs(
 /** 浅合并写回（仅 `@dreamer/storage/client` BrowserStorage.set） */
 export async function writeDataPanelPrefs(
   panelKey: string,
-  patch: DataPanelPrefs,
+  patch: Prefs,
 ): Promise<void> {
   const store = getDpBrowserStorage();
   if (!store) return;
   try {
     const cur = await readDataPanelPrefs(panelKey);
-    const next: DataPanelPrefs = { ...cur, ...patch };
+    const next: Prefs = { ...cur, ...patch };
     await store.set(prefsKey(panelKey), next);
   } catch { /* ignore */ }
 }
@@ -151,7 +153,7 @@ export const COL_SELECT = "__select";
 export const COL_INDEX = "__index";
 
 /** 标签配色：浅色沿用 Tailwind 类；深色由 DATA_PANEL_CSS 的 `.dark .dp-tag-*` 覆盖（半透明底 + 亮字） */
-export const TONE: Record<DataPanelTone, string> = {
+export const TONE: Record<Tone, string> = {
   success: "dp-tag dp-tag-success bg-emerald-100 text-emerald-700",
   warning: "dp-tag dp-tag-warning bg-amber-100 text-amber-700",
   danger: "dp-tag dp-tag-danger bg-red-100 text-red-700",
@@ -169,7 +171,8 @@ export const ICON_BTN = "dp-act";
  * 面板自带样式（作用域在 `.dp-*` 类名下，不依赖 Tailwind 扫描）：
  * - 工具栏按钮组：相邻按钮之间**只有一条**淡分割线（左侧按钮自己的右边框）；
  * - 注意：SSR 会转义 `<style>` 文本里的 `>` / `&` / `<`，所以这里**不得使用子选择器**，位置用 `.dp-tb-first/-last/-nf/-nl` 类表达；
- * - 深色模式下面板主体用 `--dp-panel-body-bg`（默认 #18212f，比深色卡片再深约半档）。
+ * - 深色模式下面板主体用 `--dp-panel-body-bg`（默认 #18212f，比深色卡片再深约半档）；
+ * - 深色正文／分页摘要用 `--dp-panel-fg`／`--dp-panel-muted`（勿依赖浅色页 body 继承，否则局部 .dark 会近黑字不可见）。
  */
 export const DATA_PANEL_CSS = `
 .dp-tb {
@@ -261,7 +264,23 @@ export const DATA_PANEL_CSS = `
 .dark .dp-act-ghost:hover:not(:disabled) { color: #e2e8f0 !important; }
 .dark .dp-act-default:hover:not(:disabled) { color: #60a5fa !important; }
 .dark .dp-act:disabled { color: #64748b !important; }
-.dark .dp-card { background: var(--dp-panel-body-bg, #18212f) !important; }
+.dark .dp-card {
+  background: var(--dp-panel-body-bg, #18212f) !important;
+  /* 正文色：局部 .dark 包裹时不能依赖页面 body 继承（浅色页仍是近黑字） */
+  color: var(--dp-panel-fg, #e2e8f0) !important;
+}
+.dark .dp-card th { color: var(--dp-panel-fg, #f1f5f9) !important; }
+/* td／就地编辑文案显式设色（勿用 inherit：中间层或预检色会盖掉 .dp-card color） */
+.dark .dp-card td,
+.dark .dp-card .dp-cell-edit {
+  color: var(--dp-panel-fg, #e2e8f0) !important;
+}
+.dark .dp-range {
+  color: var(--dp-panel-muted, #cbd5e1) !important;
+}
+.dark .dp-card [data-testid="dp-total-count"] {
+  color: var(--dp-panel-muted, #cbd5e1) !important;
+}
 .dp-den-compact td, .dp-den-compact th { padding-top: 0.25rem !important; padding-bottom: 0.25rem !important; }
 .dp-den-loose td, .dp-den-loose th { padding-top: 0.875rem !important; padding-bottom: 0.875rem !important; }
 .dp-fs {
@@ -270,7 +289,10 @@ export const DATA_PANEL_CSS = `
   overflow: auto !important; box-sizing: border-box !important; padding: 0.75rem !important;
   background: #fff !important; margin: 0 !important; border-radius: 0 !important;
 }
-.dark .dp-fs { background: #0f172a !important; }
+.dark .dp-fs {
+  background: #0f172a !important;
+  color: var(--dp-panel-fg, #e2e8f0) !important;
+}
 .dp-fs .dp-card { border-radius: 0 !important; min-height: calc(100vh - 1.5rem) !important; }
 /* Mobile: flush table card top/left/right; keep bottom.
    Pagination: stack controls above range, both centered; keep L/R/bottom padding. */

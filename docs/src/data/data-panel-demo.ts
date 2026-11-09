@@ -1,7 +1,7 @@
 /**
  * @fileoverview DataPanel 文档页示例数据与列 / 搜索 / 表单定义（纯数据，无 JSX）。
  */
-import type { DataPanelColumn, DataPanelDataSource, DataPanelFormField, DataPanelRow, DataPanelSearchField } from "@dreamer/ui-view/data-display";
+import type { Column, DataSource, FormField, Row, SearchField } from "@dreamer/ui-view/data-display";
 import { createLocalDataSource } from "@dreamer/ui-view/data-display";
 const NAMES = [
   "Alice",
@@ -32,7 +32,7 @@ const NAMES = [
 ];
 
 /** 生成演示用户（可复现） */
-export function makeDemoRows(n = 25): DataPanelRow[] {
+export function makeDemoRows(n = 25): Row[] {
   return Array.from({ length: n }, (_, i) => ({
     id: String(i + 1),
     name: NAMES[i % NAMES.length] + (i >= NAMES.length ? ` ${i}` : ""),
@@ -46,7 +46,9 @@ export function makeDemoRows(n = 25): DataPanelRow[] {
   }));
 }
 
-export const DEMO_COLUMNS: DataPanelColumn[] = [
+export const DEMO_COLUMNS: Column[] = [
+  { type: "selection", prop: "__select", label: "" },
+  { type: "index", prop: "__index", label: "#" },
   { prop: "name", label: "姓名", sortable: true, inline: "text" },
   { prop: "email", label: "邮箱", sortable: true },
   {
@@ -64,6 +66,7 @@ export const DEMO_COLUMNS: DataPanelColumn[] = [
     label: "状态",
     type: "tag",
     inline: "switch",
+    batch: true,
     options: [
       { value: "active", label: "启用", tone: "success" },
       { value: "disabled", label: "停用", tone: "warning" },
@@ -87,71 +90,61 @@ export const DEMO_COLUMNS: DataPanelColumn[] = [
     prop: "createdAt",
     label: "创建时间",
     type: "datetime",
+    format: "YYYY-MM-DD HH:mm",
     sortable: true,
     hidden: true,
   },
 ];
 
-export const DEMO_SEARCH: DataPanelSearchField[] = [
-  { name: "name", label: "姓名" },
-  {
-    name: "role",
-    label: "角色",
-    type: "select",
-    options: [
-      { value: "admin", label: "管理员" },
-      { value: "editor", label: "编辑" },
-      { value: "viewer", label: "访客" },
-    ],
-  },
-  {
-    name: "status",
-    label: "状态",
-    type: "select",
-    options: [
-      { value: "active", label: "启用" },
-      { value: "disabled", label: "停用" },
-    ],
-  },
+/** 键用 prop；options／label 可从 DEMO_COLUMNS 同 prop 继承（面板内 enrich） */
+export const DEMO_SEARCH: SearchField[] = [
+  { prop: "name", placeholder: "姓名关键字", hint: "支持模糊匹配", maxlength: 40 },
+  { prop: "role", type: "select" },
+  { prop: "status", type: "select" },
 ];
 
-export const DEMO_FORM: DataPanelFormField[] = [
-  { name: "name", label: "姓名", required: true, placeholder: "请输入姓名" },
+export const DEMO_FORM: FormField[] = [
+  { prop: "name", required: true, placeholder: "请输入姓名" },
   {
-    name: "email",
-    label: "邮箱",
+    prop: "email",
     required: true,
     pattern: "^[^@\\s]+@[^@\\s]+$",
   },
-  {
-    name: "role",
-    label: "角色",
-    type: "select",
-    required: true,
-    initial: "viewer",
-    options: [
-      { value: "admin", label: "管理员" },
-      { value: "editor", label: "编辑" },
-      { value: "viewer", label: "访客" },
-    ],
-  },
-  { name: "balance", label: "余额", type: "number", min: 0, initial: 0 },
-  {
-    name: "status",
-    label: "启用",
-    type: "switch",
-    onOff: ["active", "disabled"],
-    initial: "active",
-  },
+  { prop: "role", type: "select", required: true, initial: "viewer" },
+  { prop: "balance", type: "number", min: 0, initial: 0 },
+  // switch 开／关值从同 prop 列两档 options 继承，无需 onOff
+  { prop: "status", type: "switch", initial: "active" },
 ];
 
-export const DEMO_STATUS_VALUES = [
-  { value: "active", label: "启用" },
-  { value: "disabled", label: "停用" },
+/** 文档「校验／尺寸」示例用的富表单（rules／hint／span／maxlength） */
+export const DEMO_FORM_RICH: FormField[] = [
+  {
+    prop: "name",
+    placeholder: "请输入姓名",
+    hint: "2–20 个字符",
+    maxlength: 20,
+    span: 6,
+    rules: [
+      { required: true, message: "姓名不能为空" },
+      { min: 2, max: 20, message: "姓名长度 2–20" },
+    ],
+  },
+  {
+    prop: "email",
+    placeholder: "name@example.com",
+    span: 6,
+    rules: [
+      { required: true, message: "邮箱不能为空" },
+      { type: "email", message: "邮箱格式不正确" },
+    ],
+  },
+  { prop: "role", type: "select", required: true, initial: "viewer", span: 6 },
+  { prop: "balance", type: "number", min: 0, initial: 0, span: 6 },
+  { prop: "status", type: "switch", initial: "active", span: 12, hint: "行内亦可切换" },
 ];
 
 /** 模拟远程接口：异步 + 延迟，内部复用本地引擎做过滤 / 排序 / 分页 */
-export function createRemoteDemoSource(latency = 400): DataPanelDataSource {
+export function createRemoteDemoSource(latency = 400): DataSource {
   const inner = createLocalDataSource({
     rows: makeDemoRows(60),
     columns: DEMO_COLUMNS,
@@ -189,7 +182,7 @@ export const CELL_TAG_OPTIONS = [
 ];
 
 /** 单元格编辑示例数据：每种可编辑类型一列 */
-export function makeCellRows(n = 5): DataPanelRow[] {
+export function makeCellRows(n = 5): Row[] {
   return Array.from({ length: n }, (_, i) => ({
     id: String(i + 1),
     name: NAMES[i % NAMES.length],
@@ -203,7 +196,7 @@ export function makeCellRows(n = 5): DataPanelRow[] {
   }));
 }
 
-export const CELL_COLUMNS: DataPanelColumn[] = [
+export const CELL_COLUMNS: Column[] = [
   { prop: "name", label: "姓名（text）", inline: "text" },
   { prop: "score", label: "积分（number）", type: "number", inline: "number" },
   {
@@ -225,6 +218,7 @@ export const CELL_COLUMNS: DataPanelColumn[] = [
     label: "状态（switch）",
     type: "tag",
     inline: "switch",
+    batch: true,
     options: [
       { value: "active", label: "启用", tone: "success" },
       { value: "disabled", label: "停用", tone: "warning" },
@@ -241,43 +235,40 @@ export const CELL_COLUMNS: DataPanelColumn[] = [
 ];
 
 /** 单元格编辑示例同款的「新增 / 编辑」表单：覆盖全部字段类型，控件均为 ui-view 自带组件 */
-export const CELL_FORM: DataPanelFormField[] = [
-  { name: "name", label: "姓名（text）", required: true },
+export const CELL_FORM: FormField[] = [
+  { prop: "name", label: "姓名（text）", required: true },
   {
-    name: "score",
+    prop: "score",
     label: "积分（number）",
     type: "number",
     min: 0,
     initial: 0,
   },
   {
-    name: "role",
+    prop: "role",
     label: "角色（select）",
     type: "select",
     required: true,
     initial: "viewer",
-    options: CELL_ROLE_OPTIONS,
   },
   {
-    name: "tags",
+    prop: "tags",
     label: "标签（multiselect）",
     type: "multiselect",
-    options: CELL_TAG_OPTIONS,
   },
   {
-    name: "status",
+    prop: "status",
     label: "状态（switch）",
     type: "switch",
-    onOff: ["active", "disabled"],
     initial: "active",
   },
-  { name: "birthday", label: "生日（date）", type: "date" },
-  { name: "loginAt", label: "最近登录（datetime）", type: "datetime" },
-  { name: "remark", label: "备注（textarea）", type: "textarea" },
+  { prop: "birthday", label: "生日（date）", type: "date" },
+  { prop: "loginAt", label: "最近登录（datetime）", type: "datetime" },
+  { prop: "remark", label: "备注（textarea）", type: "textarea" },
 ];
 
 /** 单元格编辑示例的数据源：同步本地引擎 + 可切换的「保存失败」 */
-export function createCellDemoSource(): DataPanelDataSource {
+export function createCellDemoSource(): DataSource {
   const inner = createLocalDataSource({
     rows: makeCellRows(5),
     columns: CELL_COLUMNS,
@@ -298,11 +289,11 @@ export function createCellDemoSource(): DataPanelDataSource {
       }
       return inner.setField!(ids, field, value);
     },
-  } as DataPanelDataSource;
+  } as DataSource;
 }
 
 /**
- * Docs helpers for toolbar / rowActions demos (mirrors admin capGate + chrome-off).
+ * Docs helpers for toolbar / rowActions demos（显式 true｜false，一层真相）。
  * Pure functions — no JSX.
  */
 
@@ -317,9 +308,9 @@ export const DEMO_HIDE_CHROME = {
   copy: false,
 } as const;
 
-/** Like admin `capGate`: allow → undefined (fall back to caps); deny → false. */
-export function demoCapGate(allow: boolean): false | undefined {
-  return allow ? undefined : false;
+/** 显式能力门：true 显示／false 隐藏（勿再返回 undefined 绕 caps）。 */
+export function demoCapGate(allow: boolean): boolean {
+  return allow;
 }
 
 /** Tiny permission map for docs (simulates admin `can("…")`). */
