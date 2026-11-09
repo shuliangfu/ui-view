@@ -19,6 +19,7 @@ import {
 } from "@dreamer/runtime-adapter";
 import type { SpawnedProcess } from "@dreamer/runtime-adapter";
 import { cleanupAllBrowsers, expect } from "@dreamer/test";
+import { createBrowserContext } from "@dreamer/test/browser";
 
 /**
  * 文档页 E2E 用的浏览器上下文（与 `DOCS_BROWSER_CONFIG` 下 TestContext.browser 一致）。
@@ -673,6 +674,102 @@ async function _ensureAlive(timeoutMs = 5000): Promise<void> {
  *
  * **线程安全**：并发 `start()` 只会启动一次（Promise 去重）。
  */
+
+/** Playwright「页／上下文／浏览器已关」类错误（CI 首测冷启时偶发） */
+function isDeadBrowserNavError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err);
+  return /Target page, context or browser has been closed|browser is disconnected|Target closed|Browser closed|Connection closed/i
+    .test(msg);
+}
+
+type PlaywrightBrowserHandle = {
+  isConnected?: () => boolean;
+  newPage?: () => Promise<{
+    goto: (
+      url: string,
+      options?: { waitUntil?: string; timeout?: number },
+    ) => Promise<unknown>;
+    setDefaultTimeout?: (ms: number) => void;
+    setDefaultNavigationTimeout?: (ms: number) => void;
+  }>;
+};
+
+type MutableDocsBrowser = NonNullable<DocsBrowserTestContext["browser"]> & {
+  browser?: PlaywrightBrowserHandle;
+  [key: symbol]: unknown;
+};
+
+/**
+ * 把新建的 BrowserContext 绑回当前 TestContext.browser（evaluate／goto／page）。
+ */
+function rebindDocsBrowserFromContext(
+  t: DocsBrowserTestContext,
+  ctx: {
+    browser: unknown;
+    page: unknown;
+    evaluate: (fn: () => unknown) => Promise<unknown>;
+    goto: (url: string) => Promise<void>;
+    waitFor: (
+      fn: () => boolean,
+      options?: { timeout?: number },
+    ) => Promise<void>;
+  },
+): void {
+  const browser = t.browser as MutableDocsBrowser | undefined;
+  if (!browser) return;
+  browser.browser = ctx.browser as PlaywrightBrowserHandle;
+  browser.page = ctx.page as NonNullable<
+    DocsBrowserTestContext["browser"]
+  >["page"];
+  browser.evaluate = ctx.evaluate.bind(ctx) as typeof browser.evaluate;
+  browser.goto = ctx.goto.bind(ctx) as typeof browser.goto;
+  browser.waitFor = ctx.waitFor.bind(ctx) as typeof browser.waitFor;
+  delete browser[EVAL_TSX_KEEPNAMES_PATCHED];
+}
+
+/**
+ * 导航前页已死：优先同 Browser newPage；整机断开则清缓存并 createBrowserContext 重建。
+ */
+async function recoverDocsBrowserPage(
+  t: DocsBrowserTestContext,
+): Promise<void> {
+  const mutable = t.browser as MutableDocsBrowser | undefined;
+  const pw = mutable?.browser;
+  if (
+    pw &&
+    typeof pw.newPage === "function" &&
+    (typeof pw.isConnected !== "function" || pw.isConnected())
+  ) {
+    try {
+      const newPage = await pw.newPage();
+      try {
+        newPage.setDefaultTimeout?.(60_000);
+        newPage.setDefaultNavigationTimeout?.(60_000);
+      } catch {
+        /* ignore */
+      }
+      mutable!.page = newPage as NonNullable<
+        DocsBrowserTestContext["browser"]
+      >["page"];
+      return;
+    } catch {
+      /* fall through */
+    }
+  }
+  await cleanupAllBrowsers().catch(() => {});
+  await delayMs(120);
+  const ctx = await createBrowserContext({
+    enabled: true,
+    headless: true,
+    browserSource: "test",
+    entryPoint: entryPointForBrowser(),
+    bodyContent: '<div id="root"></div>',
+    browserMode: true,
+    moduleLoadTimeout: 20_000,
+  });
+  rebindDocsBrowserFromContext(t, ctx);
+}
+
 export const sharedEnv = {
   /**
    * 启动 dev server（幂等，已启动则跳过）。
@@ -708,19 +805,29 @@ export const sharedEnv = {
     if (!t?.browser?.goto) return;
     await this.start();
     await _ensureAlive();
-    patchBrowserEvaluateForTsxKeepNames(t);
     const url = _singletonBaseUrl + (path.startsWith("/") ? path : "/" + path);
     const navMs = options?.navigationTimeoutMs ?? 60_000;
     /** 默认与 @dreamer/test 内 `page.goto` 一致；重型页可改为 `commit` */
     const waitUntil = options?.waitUntil ?? "domcontentloaded";
-    const page = t.browser.page;
-    if (typeof page?.goto === "function") {
-      await page.goto(url, {
-        waitUntil,
-        timeout: navMs,
-      });
-    } else {
-      await t.browser.goto(url);
+    const navigate = async () => {
+      patchBrowserEvaluateForTsxKeepNames(t);
+      const page = t.browser!.page;
+      if (typeof page?.goto === "function") {
+        await page.goto(url, {
+          waitUntil,
+          timeout: navMs,
+        });
+      } else {
+        await t.browser!.goto!(url);
+      }
+    };
+    try {
+      await navigate();
+    } catch (err) {
+      // CI（尤 Windows）首条 docs-browser：冷启 server 期间 Chromium 偶发断开
+      if (!isDeadBrowserNavError(err)) throw err;
+      await recoverDocsBrowserPage(t);
+      await navigate();
     }
     const waitMainMs = options?.waitMainTimeoutMs ?? 25_000;
     await waitMainChars(t, GOTO_MAIN_MIN_CHARS, waitMainMs);

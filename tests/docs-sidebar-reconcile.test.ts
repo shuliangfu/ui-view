@@ -4,6 +4,7 @@
 
 import { dirname, join } from "@dreamer/runtime-adapter";
 import { describe, expect, it } from "@dreamer/test";
+import { sharedEnv } from "./docs-browser/helpers.ts";
 import { collectDesktopDocsRoutes } from "./collect-desktop-routes.ts";
 import {
   extractDesktopSidebarPathsFromLayout,
@@ -50,5 +51,17 @@ describe("侧栏与文件路由对账（无浏览器）", () => {
     expect(DESKTOP_ROUTES_SCANNED.length).toBeGreaterThanOrEqual(
       SIDEBAR_COMPONENT_PATHS.length,
     );
+  });
+
+  /**
+   * 在首个 docs-browser 用例拉起 Playwright 之前预热共享 docs server，
+   * 避免 Windows CI 上「浏览器已起、server 冷启数十秒」导致页被关掉。
+   */
+  it("预热 docs dev（供后续 docs-browser 复用）", async () => {
+    await sharedEnv.start();
+  }, {
+    sanitizeOps: false,
+    sanitizeResources: false,
+    timeout: 180_000,
   });
 });

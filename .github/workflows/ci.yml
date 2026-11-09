@@ -22,11 +22,22 @@ jobs:
       matrix:
         os: [ubuntu-24.04, macos-latest, windows-latest]  # pin 24.04: ubuntu-latest is 26.04; Playwright 1.59.1 has no chromium for ubuntu26.04
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 120
+    # docs-browser on macOS Deno regularly approaches ~2h; match Node headroom
+    timeout-minutes: 180
     steps:
       - uses: actions/checkout@v4
 
-      - uses: denoland/setup-deno@v2
+      # GitHub releases CDN occasionally returns 504; action has short retry — one extra attempt
+      - name: Setup Deno
+        id: setup-deno
+        continue-on-error: true
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9
+
+      - name: Setup Deno (retry)
+        if: steps.setup-deno.outcome == 'failure'
+        uses: denoland/setup-deno@v2
         with:
           deno-version: v2.9
 
@@ -66,7 +77,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: oven-sh/setup-bun@v2
+      - name: Setup Bun
+        id: setup-bun
+        continue-on-error: true
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Setup Bun (retry)
+        if: steps.setup-bun.outcome == 'failure'
+        uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
 
@@ -75,8 +95,17 @@ jobs:
           node-version: "22"
 
       # Docs app is Deno-based; needed for docs-browser (skipped on Windows below)
-      - uses: denoland/setup-deno@v2
+      - name: Setup Deno
+        id: setup-deno-bun
         if: matrix.os != 'windows-latest'
+        continue-on-error: true
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9
+
+      - name: Setup Deno (retry)
+        if: matrix.os != 'windows-latest' && steps.setup-deno-bun.outcome == 'failure'
+        uses: denoland/setup-deno@v2
         with:
           deno-version: v2.9
 
@@ -116,7 +145,16 @@ jobs:
           node-version: "22"
 
       # Docs E2E server entry is Deno
-      - uses: denoland/setup-deno@v2
+      - name: Setup Deno
+        id: setup-deno-node
+        continue-on-error: true
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9
+
+      - name: Setup Deno (retry)
+        if: steps.setup-deno-node.outcome == 'failure'
+        uses: denoland/setup-deno@v2
         with:
           deno-version: v2.9
 
