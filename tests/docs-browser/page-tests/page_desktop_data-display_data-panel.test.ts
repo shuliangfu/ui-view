@@ -860,7 +860,8 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
       const box0 = box();
       out.noBarBefore = !D.q(k, '[data-testid="dp-batch-bar"]');
       out.lockedDisabled = D.q(k, '[data-testid="dp-select-1"]').disabled === true;
-      out.lockedDeleteDisabled = D.q(k, '[data-testid="dp-delete-1"] button').disabled === true;
+      // DEMO 默认 remove:false：无行删按钮；locked 仅约束多选
+      out.noRowDelete = !D.q(k, '[data-testid="dp-delete-1"]');
       D.click(D.q(k, '[data-testid="dp-select-all"]'));
       await D.until(() => D.q(k, '[data-testid="dp-batch-bar"]'));
       const bar = D.q(k, '[data-testid="dp-batch-bar"]').getBoundingClientRect();
@@ -881,7 +882,7 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
       );
       expect(r.noBarBefore).toBe(true);
       expect(r.lockedDisabled).toBe(true);
-      expect(r.lockedDeleteDisabled).toBe(true);
+      expect(r.noRowDelete).toBe(true);
       expect(r.sameTop).toBe(true);
       expect(r.sameBoxOnSelect).toBe(true);
       expect(r.sameBoxAfterClear).toBe(true);
@@ -975,7 +976,7 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
   }, DOCS_BROWSER_CONFIG);
 
   it(
-    "新增 / 编辑 / 查看使用 Modal，表单校验；删除必须经过确认对话框",
+    "新增 / 编辑 / 查看使用 Modal，表单校验（DEMO 默认无行删）",
     async (t) => {
       if (!t?.browser?.goto) return;
       await open(t, "demo-crud");
@@ -986,7 +987,6 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
       const out = {};
 const footerOrder = () => { const a = document.querySelector('[role="dialog"] [data-testid="dp-form-submit"]'), b = document.querySelector('[role="dialog"] [data-testid="dp-form-cancel"]'); if (!a || !b) return "missing"; const ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect(); return (ra.left < rb.left && Math.abs(ra.top - rb.top) < 2 ? "ok" : "swapped") + ":" + a.textContent.replace(/\\s/g, "") + "," + b.textContent.replace(/\\s/g, ""); };
       const dialogForm = () => document.querySelector('[role="dialog"] [data-testid="dp-form"]');
-      const confirmOpen = () => document.querySelector('[data-testid="dp-confirm"]');
       const total0 = D.total(k);
       // 新增：空提交 → 必填错误；非法邮箱 → 格式错误
       D.click(D.q(k, '[data-testid="dp-create"]'));
@@ -1040,26 +1040,11 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
       window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
       await D.until(() => !document.querySelector('[role="dialog"]'), 3000);
-      // 删除：点击只弹小气泡确认（不是大弹窗），行仍在；取消 / 点击外部关闭且不删除；确认才删除
-      const delBtn = () => D.q(k, '[data-testid="dp-delete-' + newId + '"]');
-      D.click(delBtn());
-      await D.until(() => D.pop());
-      out.noModal = !confirmOpen() && !document.querySelector('[role="dialog"]');
-      out.confirmText = D.text(D.pop().querySelector("div.text-sm"));
-      out.rowStillThere = !!D.q(k, '[data-testid="dp-row-' + newId + '"]') && D.total(k) === total0 + 1;
-      D.click(D.popBtn("取消"));
-      await D.until(() => !D.pop());
-      out.cancelKeeps = !!D.q(k, '[data-testid="dp-row-' + newId + '"]') && D.total(k) === total0 + 1;
-      D.click(delBtn());
-      await D.until(() => D.pop());
-      document.body.click();
-      out.outsideClosed = await D.until(() => !D.pop(), 3000);
-      out.outsideKeeps = D.total(k) === total0 + 1;
-      D.click(delBtn());
-      await D.until(() => D.pop());
-      D.click(D.popBtn("删除"));
-      await D.until(() => D.total(k) === total0);
-      out.deleted = !D.q(k, '[data-testid="dp-row-' + newId + '"]');
+      // DEMO_COLUMNS remove:false：无 dp-delete；仅断言操作列有 view／edit
+      out.hasView = !!D.q(k, '[data-testid="dp-view-' + newId + '"]');
+      out.hasEdit = !!D.q(k, '[data-testid="dp-edit-' + newId + '"]');
+      out.noDelete = !D.q(k, '[data-testid="dp-delete-' + newId + '"]');
+      out.rowKept = !!D.q(k, '[data-testid="dp-row-' + newId + '"]') && D.total(k) === total0 + 1;
       return out;`,
       );
       expect(r.createTitle).toContain("新增");
@@ -1077,13 +1062,10 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
       expect(r.edited).toBe(true);
       expect(r.cancelKept).toBe(true);
       expect(r.viewShows).toBe(true);
-      expect(r.noModal).toBe(true);
-      expect(r.confirmText).toBe("确定删除Newbie 2？");
-      expect(r.outsideClosed).toBe(true);
-      expect(r.outsideKeeps).toBe(true);
-      expect(r.rowStillThere).toBe(true);
-      expect(r.cancelKeeps).toBe(true);
-      expect(r.deleted).toBe(true);
+      expect(r.hasView).toBe(true);
+      expect(r.hasEdit).toBe(true);
+      expect(r.noDelete).toBe(true);
+      expect(r.rowKept).toBe(true);
     },
     DOCS_BROWSER_CONFIG,
   );
@@ -1294,7 +1276,7 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
     expect(r.printHtml).toBe(true);
   }, DOCS_BROWSER_CONFIG);
 
-  it("远程（异步）数据源：加载、翻页、搜索、新增、删除确认", async (t) => {
+  it("远程（异步）数据源：加载、翻页、搜索、新增（DEMO 默认无行删）", async (t) => {
     if (!t?.browser?.goto) return;
     await open(t, "demo-remote");
     const r = await ev<Record<string, unknown>>(
@@ -1329,15 +1311,11 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
       D.click(D.g('[data-testid="dp-form-submit"]'));
       await D.until(() => D.total(k) === t0 + 1, 5000);
       out.created = D.total(k) === t0 + 1;
-      // 删除：确认前不调用 remove
+      // DEMO_COLUMNS remove:false：无行删；断言 view／edit 存在
       const id = D.rows(k)[0].getAttribute("data-testid").replace("dp-row-", "");
-      D.click(D.q(k, '[data-testid="dp-delete-' + id + '"]'));
-      await D.until(() => D.pop());
-      await D.sleep(700);
-      out.notDeletedBeforeConfirm = D.total(k) === t0 + 1;
-      D.click(D.popBtn("删除"));
-      await D.until(() => D.total(k) === t0, 5000);
-      out.deleted = D.total(k) === t0;
+      out.hasView = !!D.q(k, '[data-testid="dp-view-' + id + '"]');
+      out.hasEdit = !!D.q(k, '[data-testid="dp-edit-' + id + '"]');
+      out.noDelete = !D.q(k, '[data-testid="dp-delete-' + id + '"]');
       return out;`,
     );
     expect(r.total).toBe(60);
@@ -1349,8 +1327,9 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
     );
     expect(r.backToPage1).toBe(true);
     expect(r.created).toBe(true);
-    expect(r.notDeletedBeforeConfirm).toBe(true);
-    expect(r.deleted).toBe(true);
+    expect(r.hasView).toBe(true);
+    expect(r.hasEdit).toBe(true);
+    expect(r.noDelete).toBe(true);
   }, DOCS_BROWSER_CONFIG);
 
   it(
@@ -1737,9 +1716,11 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
         D.click(D.q(k, '[data-testid="dp-columns"]'));
         await D.sleep(300);
         document.body.click();
-        D.click(D.q(k, '[data-testid="dp-delete-2"]'));
-        await D.until(() => D.pop());
-        D.click(D.popBtn("取消"));
+        // DEMO 默认无行删：点 view 开详情再关，覆盖操作列交互
+        D.click(D.q(k, '[data-testid="dp-view-2"]'));
+        await D.until(() => document.querySelector('[role="dialog"]'));
+        window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+        await D.until(() => !document.querySelector('[role="dialog"]'), 3000);
         await D.sleep(300);
         `,
         );
@@ -2301,150 +2282,65 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
       expect([p, r[p].ratio >= 4.5]).toEqual([p, true]);
     }
   }, DOCS_BROWSER_CONFIG);
+  // 原「行删小气泡／Popconfirm+Tooltip」依赖行内 dp-delete。现行 DEMO_ROW_ACTIONS.remove=false；
+  // demo-can 的 remove 为挂载期 boolean，toggle write 后行删仍不出现。勿为过测改 DEMO。
+  // 行删 Popconfirm 视觉改由 tests/data-panel 单元测或将来静态 remove:true 示例再挂浏览器测。
   it(
-    "行删除用小气泡确认：箭头在按钮上方、问号图标在左、红色删除 + 取消；浅色 / 深色；取消 / 点外部不删除；确认才删",
+    "无静态 remove 的 DEMO：basic／crud／can(默认) 无 dp-delete；ra-custom 有 clone 无 remove",
     async (t) => {
       if (!t?.browser?.goto) return;
+      await open(t, "demo-basic");
+      const basic = await ev<Record<string, unknown>>(
+        t,
+        `const k = ${P("demo-basic")};
+         return {
+           noDel: !D.q(k, '[data-testid^="dp-delete-"]'),
+           hasView: !!D.q(k, '[data-testid="dp-view-2"]'),
+           hasEdit: !!D.q(k, '[data-testid="dp-edit-2"]'),
+         };`,
+      );
+      expect(basic.noDel).toBe(true);
+      expect(basic.hasView).toBe(true);
+      expect(basic.hasEdit).toBe(true);
+
       await open(t, "demo-crud");
-      const measure = () =>
-        ev<Record<string, unknown>>(
-          t,
-          `
-        const k = ${P("demo-crud")};
-        const out = {};
-        D.q(k, '[data-testid="dp-delete-3"]').scrollIntoView({ block: "center" });
-        await D.sleep(150);
-        D.click(D.q(k, '[data-testid="dp-delete-3"]'));
-        await D.until(() => D.pop());
-        await D.sleep(300);
-        // 气泡打开会重建触发器：重新取按钮
-        const btn = D.q(k, '[data-testid="dp-delete-3"] button') || D.q(k, '[data-testid="dp-delete-3"]');
-        const panel = D.pop();
-        const pr = panel.getBoundingClientRect(), br = btn.getBoundingClientRect();
-        const name = D.names(k)[2];
-        out.text = D.text(panel.querySelector("div.text-sm"));
-        out.name = name;
-        out.above = pr.bottom <= br.top + 1;
-        out.centered = Math.abs((pr.left + pr.width / 2) - (br.left + br.width / 2)) < 6;
-        out.small = pr.width < 360 && pr.height < 140;
-        out.inBody = panel.closest("[data-dreamer-popconfirm-panel]") !== null && !document.querySelector('[role="dialog"]');
-        const icon = panel.querySelector("svg");
-        out.iconLeft = !!icon && icon.getBoundingClientRect().right <= panel.querySelector("div.text-sm").getBoundingClientRect().left + 1;
-        const arrow = panel.querySelector('[aria-hidden="true"]');
-        out.arrow = !!arrow && arrow.getBoundingClientRect().height > 0;
-        const ok = D.popBtn("删除"), cancel = D.popBtn("取消");
-        out.btns = !!ok && !!cancel && ok.getBoundingClientRect().left < cancel.getBoundingClientRect().left;
-        const okBg = D.rgba(getComputedStyle(ok).backgroundColor);
-        out.okRed = okBg[0] > 180 && okBg[1] < 90 && okBg[2] < 90;
-        const cs = getComputedStyle(panel);
-        out.panelBg = cs.backgroundColor;
-        out.panelFg = cs.color;
-        out.ratio = Math.round(D.contrast(panel.querySelector("div.text-sm")) * 100) / 100;
-        out.arrowBg = arrow ? getComputedStyle(arrow).backgroundColor : "";
-        D.click(cancel);
-        await D.until(() => !D.pop());
-        return out;`,
-        );
-      const light = await measure();
-      expect(light.text).toBe("确定删除" + light.name + "？");
-      expect(light.above).toBe(true);
-      expect(light.centered).toBe(true);
-      expect(light.small).toBe(true);
-      expect(light.inBody).toBe(true);
-      expect(light.iconLeft).toBe(true);
-      expect(light.arrow).toBe(true);
-      expect(light.btns).toBe(true);
-      expect(light.okRed).toBe(true);
-      expect(light.panelBg).toBe("rgb(255, 255, 255)");
-      expect((light.ratio as number) >= 4.5).toBe(true);
-      await ev(
+      const crud = await ev<boolean>(
         t,
-        `const b = [...document.querySelectorAll("button")].find((x) => x.querySelector("[data-theme-icon]") && x.offsetParent !== null);
-       b.click(); await D.sleep(700);`,
+        `return !D.q(${P("demo-crud")}, '[data-testid^="dp-delete-"]');`,
       );
-      const dark = await measure();
-      expect(dark.text).toBe("确定删除" + dark.name + "？");
-      expect(dark.above).toBe(true);
-      expect(dark.okRed).toBe(true);
-      expect(dark.panelBg).toBe("rgb(30, 41, 59)");
-      expect(dark.arrowBg).toBe("rgb(30, 41, 59)");
-      expect((dark.ratio as number) >= 4.5).toBe(true);
-      // 切换行：打开 A 后点 B 的删除 → 只有 B 的气泡
-      const sw = await ev<Record<string, unknown>>(
+      expect(crud).toBe(true);
+
+      await open(t, "demo-can");
+      const can0 = await ev<Record<string, unknown>>(
         t,
-        `const k = ${P("demo-crud")};
-       D.click(D.q(k, '[data-testid="dp-delete-3"]'));
-       await D.until(() => D.pop());
-       D.click(D.q(k, '[data-testid="dp-delete-4"]'));
-       await D.sleep(400);
-       const pops = document.querySelectorAll(".dp-pop");
-       const out = { count: pops.length, text: pops[0] ? D.text(pops[0].querySelector("div.text-sm")) : "", total: D.total(k) };
-       document.body.click();
-       await D.until(() => !D.pop());
-       return out;`,
+        `const k = ${P("demo-can")};
+         return {
+           noDel: !D.q(k, '[data-testid^="dp-delete-"]'),
+           flags: D.text(document.querySelector('[data-testid="demo-can-flags"]')),
+         };`,
       );
-      expect(sw.count).toBe(1);
-      expect(String(sw.text)).toBe(
-        "确定删除" +
-          (await ev<string>(t, `return D.names(${P("demo-crud")})[3];`)) + "？",
+      expect(can0.noDel).toBe(true);
+      expect(String(can0.flags)).toContain("write=false");
+
+      await open(t, "demo-ra-custom");
+      const custom = await ev<Record<string, unknown>>(
+        t,
+        `const k = ${P("demo-ra-custom")};
+         return {
+           noDel: !D.q(k, '[data-testid^="dp-delete-"]'),
+           hasClone: !!D.q(k, '[data-testid="dp-row-extra-clone-2"]') || !!D.q(k, '[data-testid^="dp-row-extra-clone-"]'),
+           hasView: !!D.q(k, '[data-testid^="dp-view-"]'),
+         };`,
       );
-      expect(sw.total).toBe(8);
+      expect(custom.noDel).toBe(true);
+      expect(custom.hasClone).toBe(true);
+      expect(custom.hasView).toBe(true);
     },
     DOCS_BROWSER_CONFIG,
   );
+
   it(
-    "行删 Popconfirm 打开时同锚点 Tooltip「删除」不挡确认钮（tip 仍 top；打开时隐藏）",
-    async (t) => {
-      if (!t?.browser?.goto) return;
-      await open(t, "demo-crud");
-      const r = await ev<Record<string, unknown>>(
-        t,
-        `
-        const k = ${P("demo-crud")};
-        const wrap = D.q(k, '[data-testid="dp-delete-3"]');
-        wrap.scrollIntoView({ block: "center" });
-        await D.sleep(120);
-        // 先悬停出 Tooltip「删除」
-        wrap.dispatchEvent(new MouseEvent("mouseenter", { bubbles: true }));
-        await D.sleep(200);
-        const tipBefore = [...document.querySelectorAll('[role="tooltip"]')]
-          .filter((el) => (el.textContent || "").trim() === "删除")
-          .some((el) => {
-            const cs = getComputedStyle(el);
-            return cs.opacity !== "0" && cs.visibility !== "hidden";
-          });
-        D.click(wrap);
-        await D.until(() => D.pop());
-        await D.sleep(200);
-        const tips = [...document.querySelectorAll('[role="tooltip"]')]
-          .filter((el) => (el.textContent || "").trim() === "删除");
-        const tipVisible = tips.some((el) => {
-          const cs = getComputedStyle(el);
-          return cs.opacity !== "0" && cs.visibility !== "hidden" && el.getClientRects().length > 0;
-        });
-        const ok = D.popBtn("删除");
-        const panel = D.pop();
-        let tipBlocksOk = false;
-        if (tipVisible && ok) {
-          const tr = tips[0].getBoundingClientRect();
-          const or = ok.getBoundingClientRect();
-          tipBlocksOk = !(tr.bottom < or.top || tr.top > or.bottom || tr.right < or.left || tr.left > or.right);
-        }
-        D.click(D.popBtn("取消"));
-        await D.until(() => !D.pop());
-        return { tipBefore, tipVisible, tipBlocksOk, hasOk: !!ok, hasPanel: !!panel };
-        `,
-      );
-      // tip may or may not have shown before click depending on hover path; after open must not block
-      expect(r.hasOk).toBe(true);
-      expect(r.hasPanel).toBe(true);
-      expect(r.tipVisible).toBe(false);
-      expect(r.tipBlocksOk).toBe(false);
-    },
-    DOCS_BROWSER_CONFIG,
-  );
-  it(
-    "操作列图标：无边框无底色的纯图标、图标之间有间距；悬停只变色；禁用删除为半透明灰 + not-allowed（浅色 / 深色）",
+    "操作列图标：无边框无底色的纯图标、图标之间有间距；悬停只变色（DEMO 默认仅 view＋edit）",
     async (t) => {
       if (!t?.browser?.goto) return;
       await open(t, "demo-basic");
@@ -2465,9 +2361,14 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
         const tag = dark ? "dark" : "light";
         const base = dark ? "rgb(148, 163, 184)" : "rgb(100, 116, 139)";
         const hover = dark ? "rgb(96, 165, 250)" : "rgb(37, 99, 235)";
-        const hoverDel = dark ? "rgb(248, 113, 113)" : "rgb(220, 38, 38)";
         await page.mouse.move(2, 2);
-        for (const kind of ["view", "edit", "delete"]) {
+        // DEMO_ROW_ACTIONS：仅 view＋edit（无 delete）
+        const noDel = await ev<boolean>(
+          t,
+          `return !document.querySelector('[data-testid="panel-demo-basic"] [data-testid="dp-delete-2"]');`,
+        );
+        expect([tag, noDel]).toEqual([tag, true]);
+        for (const kind of ["view", "edit"]) {
           const sel = row("2", kind);
           await page.hover(
             `[data-testid="panel-demo-basic"] [data-testid="dp-row-2"] td:first-child`,
@@ -2482,35 +2383,17 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
           await page.hover(`${sel} button`);
           await ev(t, `await D.sleep(300);`);
           const s1 = await style(sel);
-          expect([tag, kind, s1.color]).toEqual([
-            tag,
-            kind,
-            kind === "delete" ? hoverDel : hover,
-          ]);
+          expect([tag, kind, s1.color]).toEqual([tag, kind, hover]);
           expect([tag, kind, s1.bw]).toEqual([tag, kind, "0px,0px,0px,0px"]);
           expect([tag, kind, s1.bg]).toEqual([tag, kind, "rgba(0, 0, 0, 0)"]);
           expect([tag, kind, s1.opacity]).toEqual([tag, kind, "1"]);
         }
-        // 禁用的删除（locked 行）：半透明灰、not-allowed，悬停不变色，同样无边框 / 底色
-        const dsel = row("1", "delete");
-        await page.hover(`${dsel}`);
-        await ev(t, `await D.sleep(300);`);
-        const d = await style(dsel);
-        expect([tag, d.disabled]).toEqual([tag, 1]);
-        expect([tag, d.opacity]).toEqual([tag, "0.4"]);
-        expect([tag, d.cursor]).toEqual([tag, "not-allowed"]);
-        expect([tag, d.color]).toEqual([
-          tag,
-          dark ? "rgb(100, 116, 139)" : "rgb(148, 163, 184)",
-        ]);
-        expect([tag, d.bg]).toEqual([tag, "rgba(0, 0, 0, 0)"]);
-        expect([tag, d.bw]).toEqual([tag, "0px,0px,0px,0px"]);
-        // 图标紧凑：16px 图标（与表格文字同大），相邻图标之间 4–8px（几乎相邻）
+        // 图标紧凑：16px 图标（与表格文字同大），view→edit 间距 4–8px
         const geo = await ev<{ sizes: number[][]; gaps: number[] }>(
           t,
-          `const r = ["view","edit","delete"].map((k) => document.querySelector('[data-testid="panel-demo-basic"] [data-testid="dp-' + k + '-2"] svg').getBoundingClientRect());
+          `const r = ["view","edit"].map((k) => document.querySelector('[data-testid="panel-demo-basic"] [data-testid="dp-' + k + '-2"] svg').getBoundingClientRect());
          return { sizes: r.map((x) => [Math.round(x.width * 10) / 10, Math.round(x.height * 10) / 10]),
-           gaps: [r[1].left - r[0].right, r[2].left - r[1].right].map((v) => Math.round(v * 10) / 10) };`,
+           gaps: [r[1].left - r[0].right].map((v) => Math.round(v * 10) / 10) };`,
         );
         for (const sz of geo.sizes) {
           expect([
