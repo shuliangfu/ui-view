@@ -1722,7 +1722,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
           sv.map((s) => (
             <Popconfirm
               open={() => popStatus.value === s.value}
-              placement="top"
+              placement="auto"
               title={tr(m.batchStatusAsk, { n: ids.length, status: s.label })}
               okText={m.confirm}
               cancelText={m.cancel}
@@ -1746,7 +1746,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
         {caps.remove && (
           <Popconfirm
             open={() => popBatch.value}
-            placement="top"
+            placement="auto"
             danger
             title={tr(m.deleteMany, { n: ids.length })}
             okText={m.delete}
@@ -2512,7 +2512,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
                                 (
                                 <Popconfirm
                                   open={() => popRow.value === idOf(r)}
-                                  placement="top"
+                                  placement="auto"
                                   danger
                                   title={tr(m.deleteAsk, { name: rowName(r) })}
                                   okText={m.delete}

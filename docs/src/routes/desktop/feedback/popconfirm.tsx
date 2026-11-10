@@ -78,10 +78,10 @@ const POPCONFIRM_API: ApiRow[] = [
   },
   {
     name: "placement",
-    type: "string",
-    default: "top",
+    type: 'auto | top | topLeft | topRight | bottom | bottomLeft | bottomRight | left | right | …',
+    default: "auto",
     description:
-      "气泡相对触发器的位置：top / topLeft / topRight / bottom / bottomLeft / bottomRight / left / right",
+      "气泡相对触发器的位置。默认 auto：优选上方，边挡住则朝相反方向展开（右挡→左、上挡→下），箭头跟随实际方位。传入写死方位则不翻转。",
   },
   {
     name: "arrow",
@@ -192,10 +192,27 @@ const exampleDanger = `<Popconfirm
   }}>删除</Button>
 </Popconfirm>`;
 
+const exampleAuto = `<Popconfirm
+  open={openAuto}
+  placement="auto"
+  danger
+  title="删除后无法恢复，确定删除吗？"
+  okText="删除"
+  cancelText="取消"
+  onOpenChange={(o) => {
+    openAuto.value = o;
+  }}
+>
+  <Button type="button" variant="danger" onClick={() => (openAuto.value = true)}>
+    靠右删除
+  </Button>
+</Popconfirm>`;
+
 export default function FeedbackPopconfirm() {
   const open = createSignal(false);
   const openWarning = createSignal(false);
   const openDanger = createSignal(false);
+  const openAuto = createSignal(false);
 
   return (
     <div class="space-y-10">
@@ -204,7 +221,7 @@ export default function FeedbackPopconfirm() {
         <Paragraph class="mt-2">
           气泡确认框：title、onConfirm、onCancel、okText、cancelText；支持
           open/onOpenChange
-          受控、danger、warning、showIcon、placement、arrow。点击确定或取消后
+          受控、danger、warning、showIcon、placement（默认 auto，贴边自动翻转）、arrow。点击确定或取消后
           {" "}
           <strong>关闭浮层由组件内部完成</strong>（写回{" "}
           <code class="text-xs">open</code>
@@ -353,6 +370,55 @@ export default function FeedbackPopconfirm() {
           <CodeBlock
             title="代码示例（danger）"
             code={exampleDanger}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+        </div>
+        <div class="space-y-4" data-demo="auto-flip-right">
+          <Title level={3}>贴边自动翻转（placement=auto）</Title>
+          <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+            触发器贴在视口最右侧，使气泡右侧被挡住。默认{" "}
+            <code class="text-xs">placement=&quot;auto&quot;</code>
+            {" "}会改向左展开，取消按钮完整可见；箭头跟随实际方位。写死{" "}
+            <code class="text-xs">top</code>
+            {" "}等方位则保持原方向、不翻转。
+          </Paragraph>
+          <div class="-mr-3 sm:-mr-6 lg:-mr-10 pr-2">
+            <div class="rounded-lg border border-dashed border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/40 px-3 py-3">
+                <div class="flex justify-end">
+                  <Popconfirm
+                    open={openAuto}
+                    placement="auto"
+                    danger
+                    title="删除后无法恢复，确定删除吗？"
+                    okText="删除"
+                    cancelText="取消"
+                    onOpenChange={(o) => {
+                      openAuto.value = o;
+                    }}
+                    onConfirm={() => {
+                      console.log("auto：已确认删除");
+                    }}
+                  >
+                    <Button
+                      type="button"
+                      variant="danger"
+                      data-demo-trigger="popconfirm-auto-right"
+                      onClick={() => {
+                        openAuto.value = true;
+                      }}
+                    >
+                      靠右删除
+                    </Button>
+                  </Popconfirm>
+                </div>
+            </div>
+          </div>
+          <CodeBlock
+            title="代码示例（贴右边，auto 向左展开）"
+            code={exampleAuto}
             language="tsx"
             showLineNumbers
             copyable

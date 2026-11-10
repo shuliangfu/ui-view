@@ -1,6 +1,7 @@
 /**
  * Tour 漫游式引导（View）。
- * 按步骤高亮目标并展示说明气泡；支持受控 `open`／`current`、四向 placement、Esc／焦点与步骤切换时滚动入视。
+ * 按步骤高亮目标并展示说明气泡；支持受控 `open`／`current`、四向 placement 与 `auto`、Esc／焦点与步骤切换时滚动入视。
+ * `placement="auto"` 时优选下方，边挡住则朝相反方向展开。
  *
  * 浮层经 Portal 挂 `document.body`，`z-index` 高于文档示例触发钮，避免「开始引导」等按钮叠在气泡／高亮之间。
  */
@@ -25,6 +26,12 @@ import {
   type MaybeSignal,
   readMaybeSignal,
 } from "../form/maybe-signal.ts";
+import {
+  flipPlacementToFit,
+  popBoxForPlacement,
+  type FullPopStylePlacement,
+  type PopSize,
+} from "./popFixedStyle.ts";
 
 export interface TourStep {
   /** 目标选择器（querySelector）或 HTMLElement／getter */
@@ -33,8 +40,8 @@ export interface TourStep {
   title?: unknown;
   /** 说明 */
   description?: unknown;
-  /** 气泡相对目标的放置，默认 bottom */
-  placement?: "top" | "bottom" | "left" | "right";
+  /** 气泡相对目标的放置，默认 `bottom`；传 `"auto"` 时优选下方，边挡住则朝相反方向展开 */
+  placement?: "top" | "bottom" | "left" | "right" | "auto";
 }
 
 export interface TourMessages {
@@ -90,43 +97,55 @@ function clamp(n: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, n));
 }
 
+const TOUR_GAP_PX = 12;
+const TOUR_ESTIMATED_SIZE: PopSize = { width: 320, height: 160 };
+const TOUR_VIEW_PADDING = 12;
+
+function tourPreferredPlacement(
+  placement: TourStep["placement"],
+): FullPopStylePlacement {
+  if (placement == null || placement === "auto") return "bottom";
+  return placement;
+}
+
 /**
- * 按 placement 计算气泡 fixed 坐标（尽量不溢出视口）。
+ * 按 placement 计算气泡 fixed 坐标。
+ * `auto`：优选下方，边挡住则朝相反方向（与共享 {@link flipPlacementToFit} 同规则）；
+ * 写死方位保持原侧，仅在交叉轴上夹入视口，避免改掉既有示例的固定方向。
+ *
+ * @param rect - 目标元素视口矩形
+ * @param placement - 步骤声明的方位
+ * @param size - 已测气泡尺寸；未知时用估计值
+ * @returns style 与已解析方位
  */
 function computeBubbleStyle(
   rect: DOMRect,
   placement: TourStep["placement"],
-): Record<string, string> {
-  const gap = 12;
-  const bw = 320;
-  const bh = 160;
+  size: PopSize = TOUR_ESTIMATED_SIZE,
+): { style: Record<string, string>; placement: FullPopStylePlacement } {
+  const gap = TOUR_GAP_PX;
+  const bw = size.width > 0 ? size.width : TOUR_ESTIMATED_SIZE.width;
+  const bh = size.height > 0 ? size.height : TOUR_ESTIMATED_SIZE.height;
   const vw = globalThis.innerWidth ?? 400;
   const vh = globalThis.innerHeight ?? 600;
-  const place = placement ?? "bottom";
-
-  let top = rect.bottom + gap;
-  let left = rect.left;
-
-  if (place === "top") {
-    top = rect.top - bh - gap;
-    left = rect.left + rect.width / 2 - bw / 2;
-  } else if (place === "bottom") {
-    top = rect.bottom + gap;
-    left = rect.left + rect.width / 2 - bw / 2;
-  } else if (place === "left") {
-    top = rect.top + rect.height / 2 - bh / 2;
-    left = rect.left - bw - gap;
-  } else if (place === "right") {
-    top = rect.top + rect.height / 2 - bh / 2;
-    left = rect.right + gap;
-  }
-
-  top = clamp(top, 12, Math.max(12, vh - bh - 12));
-  left = clamp(left, 12, Math.max(12, vw - bw - 12));
+  const viewport = { width: vw, height: vh };
+  const popup = { width: bw, height: bh };
+  const preferred = tourPreferredPlacement(placement);
+  const resolved = placement === "auto"
+    ? flipPlacementToFit(preferred, rect, popup, viewport, gap, TOUR_VIEW_PADDING)
+    : preferred;
+  const box = popBoxForPlacement(rect, resolved, popup, gap);
+  let top = box.top;
+  let left = box.left;
+  top = clamp(top, TOUR_VIEW_PADDING, Math.max(TOUR_VIEW_PADDING, vh - bh - TOUR_VIEW_PADDING));
+  left = clamp(left, TOUR_VIEW_PADDING, Math.max(TOUR_VIEW_PADDING, vw - bw - TOUR_VIEW_PADDING));
   return {
-    top: `${top}px`,
-    left: `${left}px`,
-    width: `min(100% - 24px, ${bw}px)`,
+    style: {
+      top: `${top}px`,
+      left: `${left}px`,
+      width: `min(100% - 24px, ${TOUR_ESTIMATED_SIZE.width}px)`,
+    },
+    placement: resolved,
   };
 }
 
@@ -144,6 +163,7 @@ export function Tour(props: TourProps): JSXRenderable {
   const isOpen = createMemo(() => readControlledOpenInput(props.open));
   const rectSig = createSignal<DOMRect | null>(null);
   const panelRef = createSignal<HTMLElement | null>(null);
+  const bubbleSize = createSignal<PopSize>({ width: 0, height: 0 });
   /** 非受控步进：docs／多数用法不传 `current`，须有内部索引，否则「下一步」空操作 */
   const innerCurrent = createSignal(0);
 
@@ -170,6 +190,7 @@ export function Tour(props: TourProps): JSXRenderable {
   createEffect(() => {
     if (!isOpen()) {
       rectSig.value = null;
+      bubbleSize.value = { width: 0, height: 0 };
       // 关闭时复位非受控步，下次打开从第 0 步开始
       if (props.current === undefined) innerCurrent.set(0);
       return;
@@ -260,8 +281,11 @@ export function Tour(props: TourProps): JSXRenderable {
         boxShadow: "0 0 0 9999px rgba(15, 23, 42, 0.6)",
       }
       : null;
-    const bubbleStyle = rect
-      ? computeBubbleStyle(rect, step.placement)
+    const computed = rect
+      ? computeBubbleStyle(rect, step.placement, bubbleSize.value)
+      : null;
+    const bubbleStyle = computed
+      ? computed.style
       : {
         top: "30%",
         left: "50%",
@@ -299,11 +323,22 @@ export function Tour(props: TourProps): JSXRenderable {
         )}
         <div
           ref={(el: unknown) => {
-            panelRef.value = (el as HTMLElement | null) ?? null;
+            const node = (el as HTMLElement | null) ?? null;
+            panelRef.value = node;
+            if (node) {
+              const fr = node.getBoundingClientRect();
+              if (fr.width > 0 && fr.height > 0) {
+                const prev = bubbleSize.value;
+                if (prev.width !== fr.width || prev.height !== fr.height) {
+                  bubbleSize.value = { width: fr.width, height: fr.height };
+                }
+              }
+            }
           }}
           class="absolute z-10 rounded-xl bg-white dark:bg-slate-800 p-4 shadow-xl text-slate-900 dark:text-slate-100"
           style={bubbleStyle}
           data-dreamer-tour="bubble"
+          data-dreamer-placement={computed ? computed.placement : undefined}
           data-tour-step={String(idx)}
         >
           {step.title != null && (

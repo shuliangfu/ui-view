@@ -27,9 +27,10 @@ const TOOLTIP_API: ApiRow[] = [
   },
   {
     name: "placement",
-    type: "top | right | bottom | left",
+    type: "auto | top | right | bottom | left | …",
     default: "top",
-    description: "气泡位置",
+    description:
+      "气泡位置。传 auto 时优选上方，边挡住则朝相反方向展开（右挡→左、上挡→下），箭头跟随实际方位。写死方位不翻转。",
   },
   { name: "children", type: "unknown", default: "-", description: "触发元素" },
   {
@@ -88,13 +89,19 @@ const exampleNoArrow = `<Tooltip
   <span>无箭头</span>
 </Tooltip>`;
 
+const exampleAuto = `<div class="flex justify-end">
+  <Tooltip content="右边被挡时向左展开，箭头跟随实际方位" placement="auto">
+    <span>靠右悬停</span>
+  </Tooltip>
+</div>`;
+
 export default function FeedbackTooltip() {
   return (
     <div class="space-y-10">
       <section>
         <Title level={1}>Tooltip 悬停提示</Title>
         <Paragraph class="mt-2">
-          悬停提示：触发器悬停时显示气泡；支持 placement、箭头。有{" "}
+          悬停提示：触发器悬停时显示气泡；支持 placement（含 auto 贴边翻转）、箭头。有{" "}
           <code class="text-xs">document.body</code> 时气泡经{" "}
           <code class="text-xs">createPortal</code> 挂到 body，
           <code class="text-xs">fixed</code> 对齐视口，避免父级{" "}
@@ -184,6 +191,39 @@ export default function FeedbackTooltip() {
           <CodeBlock
             title="代码示例"
             code={exampleNoArrow}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+        </div>
+        <div class="space-y-4" data-demo="auto-flip-right">
+          <Title level={3}>贴边自动翻转（placement=auto）</Title>
+          <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+            触发器贴在视口最右侧。{" "}
+            <code class="text-xs">placement=&quot;auto&quot;</code>
+            {" "}时右边被挡会向左展开，箭头跟随实际方位。
+          </Paragraph>
+          <div class="-mr-3 sm:-mr-6 lg:-mr-10 pr-2">
+            <div class="rounded-lg border border-dashed border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/40 px-3 py-3">
+                <div class="flex justify-end">
+                  <Tooltip
+                    content="右边被挡时向左展开，箭头跟随实际方位"
+                    placement="auto"
+                  >
+                    <span
+                      data-demo-trigger="tooltip-auto-right"
+                      class="px-3 py-1.5 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 cursor-default"
+                    >
+                      靠右悬停
+                    </span>
+                  </Tooltip>
+                </div>
+            </div>
+          </div>
+          <CodeBlock
+            title="代码示例（贴右边，auto 向左展开）"
+            code={exampleAuto}
             language="tsx"
             showLineNumbers
             copyable

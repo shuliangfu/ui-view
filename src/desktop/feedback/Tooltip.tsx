@@ -1,6 +1,6 @@
 /**
  * Tooltip 悬停提示（View）。
- * 桌面常用：触发器悬停时显示气泡；支持 placement、箭头。
+ * 桌面常用：触发器悬停时显示气泡；支持 placement、箭头。`placement="auto"` 时优选上方，边挡住则朝相反方向展开，箭头跟随实际方位。
  *
  * **布局**：有可用 `document.body` 时，气泡经 {@link createPortal} 挂到 body，`position:fixed` + 视口坐标，
  * 避免祖先 `overflow: hidden | auto` 裁切；否则回退为包裹层内 `absolute`（SSR / hybrid）。
@@ -16,20 +16,16 @@ import {
 } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import { getBrowserBodyPortalHost } from "../../shared/feedback/portal-host.ts";
+import {
+  computeArrowAnchorStyle,
+  resolveAutoPopPlacement,
+  type AutoPopPlacement,
+  type FullPopStylePlacement,
+  type PopSize,
+} from "./popFixedStyle.ts";
 
-export type TooltipPlacement =
-  | "top"
-  | "topLeft"
-  | "topRight"
-  | "bottom"
-  | "bottomLeft"
-  | "bottomRight"
-  | "left"
-  | "leftTop"
-  | "leftBottom"
-  | "right"
-  | "rightTop"
-  | "rightBottom";
+/** 含 `auto`：优选上方并在贴边时翻转；写死方位不翻转 */
+export type TooltipPlacement = AutoPopPlacement;
 
 export interface TooltipMessages {
   /**
@@ -44,7 +40,7 @@ export const defaultTooltipMessages: TooltipMessages = {};
 export interface TooltipProps {
   /** 提示文案或节点 */
   content: string | unknown;
-  /** 气泡位置，默认 "top" */
+  /** 气泡位置，默认 `"top"`；传 `"auto"` 时优选上方，边挡住则朝相反方向展开，箭头跟随实际方位 */
   placement?: TooltipPlacement;
   /** 触发元素（子节点） */
   children?: unknown;
@@ -89,12 +85,12 @@ function readTooltipDisabled(
 /**
  * 根据触发器视口矩形与 placement，计算 Portal 浮层 `fixed` 的 left/top/transform（像素）。
  *
- * @param placement - 气泡相对触发器的方位
+ * @param placement - 已解析的具体方位（不含 auto）
  * @param rect - 触发器 {@link DOMRect}
  * @param gap - 与触发器边距（px）
  */
 function getTooltipFixedStyle(
-  placement: TooltipPlacement,
+  placement: FullPopStylePlacement,
   rect: DOMRect,
   gap: number,
 ): { left: string; top: string; transform: string } {
@@ -187,30 +183,18 @@ function getTooltipFixedStyle(
 }
 
 /**
- * 箭头：在气泡内的方位（与 placement 对应）。
+ * 箭头外观 class；沿边位置由 {@link computeArrowAnchorStyle} 对准触发器中线。
  *
  * @param placement - 气泡相对触发器的方位
  * @returns Tailwind 定位类名字符串
  */
-function arrowClass(placement: TooltipPlacement): string {
-  const base = "absolute w-2 h-2 rotate-45 bg-slate-800 dark:bg-slate-700";
-  if (placement.startsWith("top")) {
-    return `${base} bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2`;
-  }
-  if (placement.startsWith("bottom")) {
-    return `${base} top-0 left-1/2 -translate-x-1/2 -translate-y-1/2`;
-  }
-  if (placement.startsWith("left")) {
-    return `${base} right-0 top-1/2 -translate-y-1/2 translate-x-1/2`;
-  }
-  if (placement.startsWith("right")) {
-    return `${base} left-0 top-1/2 -translate-y-1/2 -translate-x-1/2`;
-  }
-  return base;
+function arrowClass(_placement: FullPopStylePlacement): string {
+  void _placement;
+  return "absolute w-2 h-2 bg-slate-800 dark:bg-slate-700";
 }
 
 /** 相对包裹层、按 placement 对齐（仅无 Portal 时的回退路径） */
-const placementClasses: Record<TooltipPlacement, string> = {
+const placementClasses: Record<FullPopStylePlacement, string> = {
   top: "bottom-full left-1/2 -translate-x-1/2 mb-2",
   topLeft: "bottom-full left-0 mb-2",
   topRight: "bottom-full right-0 mb-2",
@@ -251,25 +235,67 @@ export function Tooltip(props: TooltipProps): JSXRenderable {
   void _m;
 
   const tooltipId = `tooltip-${Math.random().toString(36).slice(2, 11)}`;
-  const arrowCls = arrow ? arrowClass(placement) : "";
-  const posCls = placementClasses[placement];
-
+  const preferred: AutoPopPlacement = placement;
+  const initialResolved: FullPopStylePlacement = preferred === "auto" ? "top" : preferred;
+  const resolvedPlacement = createSignal<FullPopStylePlacement>(initialResolved);
+  const popupSize = createSignal<PopSize>({ width: 0, height: 0 });
   const wrapRef = createRef<HTMLSpanElement>(null);
+  let tooltipPanelEl: HTMLElement | null = null;
   const visible = createSignal(false);
   const floatStyle = createSignal(
-    getTooltipFixedStyle(placement, EMPTY_DOM_RECT, TOOLTIP_VIEWPORT_GAP_PX),
+    getTooltipFixedStyle(initialResolved, EMPTY_DOM_RECT, TOOLTIP_VIEWPORT_GAP_PX),
   );
+  const arrowStyle = createSignal<Record<string, string>>({});
+  const posCls = placementClasses[initialResolved];
 
   const portalHostOk = getBrowserBodyPortalHost() != null;
 
-  const syncFloatGeometry = () => {
+  const syncFloatGeometry = (measured?: PopSize) => {
     const el = wrapRef.current;
     if (el == null) return;
-    floatStyle.value = getTooltipFixedStyle(
-      placement,
+    if (measured && measured.width > 0 && measured.height > 0) {
+      const prev = popupSize.value;
+      if (prev.width !== measured.width || prev.height !== measured.height) {
+        popupSize.value = measured;
+      }
+    }
+    const resolved = resolveAutoPopPlacement({
+      trigger: el.getBoundingClientRect(),
+      preferred,
+      popup: measured ?? popupSize.value,
+      autoPrefers: "top",
+      gap: TOOLTIP_VIEWPORT_GAP_PX,
+    });
+    if (resolvedPlacement.value !== resolved) resolvedPlacement.value = resolved;
+    const next = getTooltipFixedStyle(
+      resolved,
       el.getBoundingClientRect(),
       TOOLTIP_VIEWPORT_GAP_PX,
     );
+    const prev = floatStyle.value;
+    if (prev.left !== next.left || prev.top !== next.top || prev.transform !== next.transform) {
+      floatStyle.value = next;
+    }
+    if (tooltipPanelEl) {
+      const panel = tooltipPanelEl.getBoundingClientRect();
+      if (panel.width > 0 && panel.height > 0) {
+        const nextArrow = computeArrowAnchorStyle(
+          resolved,
+          el.getBoundingClientRect(),
+          panel,
+        );
+        const prevArrow = arrowStyle.value;
+        if (
+          prevArrow.left !== nextArrow.left ||
+          prevArrow.top !== nextArrow.top ||
+          prevArrow.right !== nextArrow.right ||
+          prevArrow.bottom !== nextArrow.bottom ||
+          prevArrow.transform !== nextArrow.transform
+        ) {
+          arrowStyle.value = nextArrow;
+        }
+      }
+    }
   };
 
   const onEnter = () => {
@@ -305,10 +331,12 @@ export function Tooltip(props: TooltipProps): JSXRenderable {
 
     const root = createPortal(() => {
       const st = floatStyle.value;
+      const place = resolvedPlacement.value;
       return (
         <div
           id={tooltipId}
           role="tooltip"
+          data-dreamer-placement={place}
           class={twMerge(
             "fixed z-1070 pointer-events-none transition-opacity duration-150 opacity-100 visible",
             overlayClass,
@@ -318,10 +346,32 @@ export function Tooltip(props: TooltipProps): JSXRenderable {
             top: st.top,
             transform: st.transform,
           }}
+          ref={(node: HTMLElement | null) => {
+            if (node == null) {
+              tooltipPanelEl = null;
+              return;
+            }
+            tooltipPanelEl = node;
+            const fr = node.getBoundingClientRect();
+            if (fr.width > 0 && fr.height > 0) {
+              const prev = popupSize.value;
+              if (prev.width !== fr.width || prev.height !== fr.height) {
+                syncFloatGeometry({ width: fr.width, height: fr.height });
+              } else {
+                syncFloatGeometry(undefined);
+              }
+            }
+          }}
         >
           <div class={bubbleInnerCls}>
             {typeof content === "string" ? content : content}
-            {arrow && <span class={arrowCls} />}
+            {arrow && (
+              <span
+                class={arrowClass(place)}
+                style={arrowStyle.value}
+                data-dreamer-arrow=""
+              />
+            )}
           </div>
         </div>
       );
@@ -352,7 +402,20 @@ export function Tooltip(props: TooltipProps): JSXRenderable {
           )}
         >
           {typeof content === "string" ? content : content}
-          {arrow && <span class={arrowCls} />}
+          {arrow && (
+            <span
+              class={twMerge(
+                arrowClass(initialResolved),
+                initialResolved.startsWith("top")
+                  ? "bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2"
+                  : initialResolved.startsWith("bottom")
+                  ? "top-0 left-1/2 -translate-x-1/2 -translate-y-1/2"
+                  : initialResolved.startsWith("left")
+                  ? "right-0 top-1/2 -translate-y-1/2 translate-x-1/2"
+                  : "left-0 top-1/2 -translate-y-1/2 -translate-x-1/2",
+              )}
+            />
+          )}
         </span>
       </span>
     );

@@ -15,7 +15,7 @@ import { MESSAGES_TOUR } from "../../../data/component-messages-rows.ts";
 
 const API: DocsApiTableRow[] = [
   { name: "open", type: "ControlledOpenInput", default: "-", description: "是否打开（传 Signal）" },
-  { name: "steps", type: "TourStep[]", default: "-", description: "步骤（title／description／target／placement）" },
+  { name: "steps", type: "TourStep[]", default: "-", description: "步骤（title／description／target／placement）。placement 含 auto：优选下方，边挡住则朝相反方向展开。" },
   { name: "current", type: "MaybeSignal<number>", default: "-", description: "受控当前步；不传则内部步进" },
   { name: "onCurrentChange", type: "(index) => void", default: "-", description: "步变化" },
   { name: "onClose", type: "() => void", default: "-", description: "关闭／跳过" },
@@ -122,12 +122,31 @@ const examplePlace = `const openPlace = createSignal(false);
 {/* stepsPlace 含 top / bottom / left / right 等 placement */}`;
 
 
+const exampleAuto = `<div class="flex justify-end">
+  <div id="tour-auto-right" class="rounded-lg border border-dashed px-4 py-3">靠右目标</div>
+</div>
+<Button onClick={() => (openAuto.value = true)}>开始贴边引导</Button>
+<Tour
+  open={openAuto}
+  steps={[
+    {
+      title: "贴边翻转",
+      description: "目标在视口最右侧，placement=auto，右边被挡时气泡向左展开。",
+      target: "#tour-auto-right",
+      placement: "auto",
+    },
+  ]}
+  onClose={() => (openAuto.value = false)}
+  onFinish={() => (openAuto.value = false)}
+/>`;
+
 export default function Page() {
   const open = createSignal(false);
   const openControlled = createSignal(false);
   const current = createSignal(0);
   const openNoSkip = createSignal(false);
   const openPlace = createSignal(false);
+  const openAuto = createSignal(false);
 
   return (
     <div class="space-y-8">
@@ -135,7 +154,7 @@ export default function Page() {
         <Title level={1}>Tour</Title>
         <Paragraph>
           分步漫游：spotlight 高亮 target。不传 current 时内部步进（「下一步」可用）；也可受控
-          current。开始后触发钮隐藏，避免叠穿气泡。
+          current。开始后触发钮隐藏，避免叠穿气泡。步骤 placement 可传 auto，贴边时自动翻转到有空间的一侧。
         </Paragraph>
       </div>
       <section class="space-y-3">
@@ -254,6 +273,59 @@ export default function Page() {
           </div>
           <CodeBlock title="代码示例" code={examplePlace} language="tsx" showLineNumbers copyable wrapLongLines />
 
+        </div>
+        <div class="space-y-2" data-demo="auto-flip-right">
+          <Title level={3}>贴边自动翻转（placement=auto）</Title>
+          <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+            引导目标贴在视口最右侧。步骤使用{" "}
+            <code class="text-xs">placement=&quot;auto&quot;</code>
+            ，右边被挡时气泡向左展开。
+          </Paragraph>
+          <div class="-mr-3 sm:-mr-6 lg:-mr-10 pr-2">
+            <div class="rounded-lg border border-dashed border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/40 px-3 py-3 space-y-3">
+                <div class="flex justify-end">
+                  <div
+                    id="tour-auto-right"
+                    data-demo-trigger="tour-auto-right"
+                    class="rounded-lg border border-dashed border-slate-400 dark:border-slate-500 px-4 py-3 text-sm bg-white dark:bg-slate-900"
+                  >
+                    靠右目标
+                  </div>
+                </div>
+                <div class="flex justify-end">
+                  <Button
+                    type="button"
+                    size="sm"
+                    data-demo-trigger="tour-auto-start"
+                    onClick={() => (openAuto.value = true)}
+                  >
+                    开始贴边引导
+                  </Button>
+                </div>
+                <Tour
+                  open={openAuto}
+                  steps={[
+                    {
+                      title: "贴边翻转",
+                      description:
+                        "目标在视口最右侧，placement=auto，右边被挡时气泡向左展开。",
+                      target: "#tour-auto-right",
+                      placement: "auto",
+                    },
+                  ]}
+                  onClose={() => (openAuto.value = false)}
+                  onFinish={() => (openAuto.value = false)}
+                />
+            </div>
+          </div>
+          <CodeBlock
+            title="代码示例（靠右目标，auto 向左展开）"
+            code={exampleAuto}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
         </div>
       </section>
       <DocsMessagesSection

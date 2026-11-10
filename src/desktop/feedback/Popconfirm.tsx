@@ -6,7 +6,7 @@
  * **手写 JSX**：`open={sig.value}` 会在创建 VNode 时变成快照；须传 **`open={sig}`** 或零参 getter。
  *
  * **定位**：面板经 {@link Portal} 挂到 `document.body` 且 `position: fixed`，
- * 由 {@link computePopFixedStyle} 按 `placement` 与触发器 `getBoundingClientRect` 对齐，避免被祖先 `overflow` 裁剪。
+ * 由 {@link computeAutoPopFixedStyle} 按 `placement` 与触发器 `getBoundingClientRect` 对齐，避免被祖先 `overflow` 裁剪。`placement` 默认 `"auto"`：优选上方，边挡住则朝相反方向展开，箭头跟随实际方位。
  * 打开期间用 rAF 循环同步视口位置（与 {@link Popover} 一致）以随滚动/窗口变化贴住触发器。
  *
  * 根层不挂全屏遮罩；点外部由 `document` 上 `click` 冒泡关闭。
@@ -20,21 +20,18 @@ import { readSignalValue, safeIsSignal, writeSignalValue } from "../../shared/sa
 import { twMerge } from "tailwind-merge";
 import { Button } from "../../shared/basic/Button.tsx";
 import {
-  computePopFixedStyle,
+  computeArrowAnchorStyle,
+  computeAutoPopFixedStyle,
+  popArrowSide,
+  type AutoPopPlacement,
   type FullPopStylePlacement,
+  type PopSize,
 } from "./popFixedStyle.ts";
 /** 按需：单文件图标，避免经 icons/mod 拉入全表 */
 import { IconHelpCircle } from "../../shared/basic/icons/HelpCircle.tsx";
 
-export type PopconfirmPlacement =
-  | "top"
-  | "topLeft"
-  | "topRight"
-  | "bottom"
-  | "bottomLeft"
-  | "bottomRight"
-  | "left"
-  | "right";
+/** 含 `auto`：优选上方，边挡住则朝相反方向展开；写死方位不翻转 */
+export type PopconfirmPlacement = AutoPopPlacement;
 
 /** `open`：布尔快照、`Signal<boolean>`（`createSignal` 返回值）或零参 getter（与 Modal `open` 同向） */
 export type PopconfirmOpenInput =
@@ -66,7 +63,7 @@ export interface PopconfirmProps {
   warning?: boolean;
   /** 是否显示问号图标，默认 true */
   showIcon?: boolean;
-  /** 气泡位置，默认 "top" */
+  /** 气泡位置，默认 `"auto"`（优选上方，边挡住则朝相反方向展开；箭头跟随实际方位） */
   placement?: PopconfirmPlacement;
   /**
    * 是否显示指向触发器的小箭头（与 {@link Popover} 同向：旋转方片 + 边框），默认 true。
@@ -100,26 +97,19 @@ export const defaultPopconfirmMessages: PopconfirmMessages = {
 const POPCONFIRM_PANEL_ATTR = "data-dreamer-popconfirm-panel";
 
 /**
- * 根据 `placement` 生成指向触发器一侧的箭头 class（与 {@link Popover} 的 `arrowClass` 同算法）。
+ * 箭头外观 class（色彩、缺边）；沿边位置由 {@link computeArrowAnchorStyle} 对准触发器中线。
  *
- * @param placement - 气泡方位
+ * @param placement - 已解析的具体气泡方位（不含 auto）
  * @returns 箭头根节点的 Tailwind 类名字符串
  */
-function popconfirmArrowClass(placement: PopconfirmPlacement): string {
+function popconfirmArrowClass(placement: FullPopStylePlacement): string {
   const base =
-    "absolute z-1 w-2 h-2 rotate-45 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 pointer-events-none";
-  if (placement.startsWith("top")) {
-    return `${base} bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 border-t-0 border-l-0`;
-  }
-  if (placement.startsWith("bottom")) {
-    return `${base} top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 border-b-0 border-r-0`;
-  }
-  if (placement.startsWith("left")) {
-    return `${base} right-0 top-1/2 -translate-y-1/2 translate-x-1/2 border-b-0 border-l-0`;
-  }
-  if (placement.startsWith("right")) {
-    return `${base} left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 border-t-0 border-r-0`;
-  }
+    "absolute z-1 w-2 h-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 pointer-events-none";
+  const side = popArrowSide(placement);
+  if (side === "bottom") return `${base} border-t-0 border-l-0`;
+  if (side === "top") return `${base} border-b-0 border-r-0`;
+  if (side === "right") return `${base} border-b-0 border-l-0`;
+  if (side === "left") return `${base} border-t-0 border-r-0`;
   return base;
 }
 
@@ -144,7 +134,9 @@ function readPopconfirmOpenInput(v: PopconfirmOpenInput | undefined): boolean {
  *
  * @param props - 组件 props
  * @param openNow - 当前是否展开面板
- * @param getPortalStyle - 返回挂到 `document.body` 的 `fixed` 外层上 `style` 对象（`computePopFixedStyle` 结果）
+ * @param getPortalStyle - 返回挂到 `document.body` 的 `fixed` 外层上 `style` 对象
+ * @param getResolvedPlacement - 已解析的具体方位（`auto` 翻转后），箭头与 data 属性跟随它
+ * @param getArrowStyle - 箭头内联位置（对准触发器中线）
  * @param okVariant - 确定按钮变体
  * @param iconToneCls - 图标颜色类
  * @param handleConfirm - 确定处理
@@ -156,6 +148,8 @@ function buildPopconfirmTree(
   props: PopconfirmProps,
   openNow: boolean,
   getPortalStyle: () => Record<string, string>,
+  getResolvedPlacement: () => FullPopStylePlacement,
+  getArrowStyle: () => Record<string, string>,
   okVariant: "primary" | "danger" | "warning",
   iconToneCls: string,
   handleConfirm: () => void,
@@ -173,14 +167,13 @@ function buildPopconfirmTree(
     okText = _msg.ok,
     cancelText = _msg.cancel,
     showIcon = true,
-    placement = "top",
     arrow = true,
     children,
     class: className,
     overlayClass,
   } = props;
 
-  const arrowCls = arrow ? popconfirmArrowClass(placement) : "";
+  const arrowCls = () => arrow ? popconfirmArrowClass(getResolvedPlacement()) : "";
 
   return (
     <span
@@ -198,6 +191,7 @@ function buildPopconfirmTree(
             <span
               ref={setFloatingRef}
               data-dreamer-popconfirm-panel=""
+              data-dreamer-placement={() => getResolvedPlacement()}
               class={twMerge(
                 "relative z-0 block min-w-[200px] max-w-[min(24rem,calc(100vw-1rem))] rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-lg text-slate-900 dark:text-slate-100 p-3 box-border",
                 overlayClass,
@@ -232,7 +226,7 @@ function buildPopconfirmTree(
                   </div>
                 </div>
               </div>
-              {arrow && <span class={arrowCls} aria-hidden="true" />}
+              {arrow && <span class={arrowCls} style={getArrowStyle} aria-hidden="true" data-dreamer-arrow="" />}
             </span>
           </div>
         </Portal>
@@ -285,8 +279,12 @@ export function Popconfirm(props: PopconfirmProps): JSXRenderable {
     ? "text-amber-500 dark:text-amber-400"
     : "text-slate-400 dark:text-slate-500";
 
-  /** 与 {@link computePopFixedStyle} 同源的挂 body 的 `style` 对象，打开时 rAF 更新以贴住触发器 */
+  /** 与 {@link computeAutoPopFixedStyle} 同源的挂 body 的 `style` 对象，打开时 rAF 更新以贴住触发器 */
   const portalFixedStyle = createSignal<Record<string, string>>({});
+  /** `auto` 翻转后的具体方位，供箭头与 data-dreamer-placement 跟随 */
+  const resolvedPlacement = createSignal<FullPopStylePlacement>("top");
+  const popupSize = createSignal<PopSize>({ width: 0, height: 0 });
+  const arrowStyle = createSignal<Record<string, string>>({});
 
   /**
    * 与 Popover 一致：仅打开时 rAF 循环 + resize/VisualViewport 补一帧，避免全页/容器内滚动时浮层脱节。
@@ -294,14 +292,38 @@ export function Popconfirm(props: PopconfirmProps): JSXRenderable {
   createEffect(() => {
     if (!isOpen() || typeof globalThis.window === "undefined") {
       portalFixedStyle.value = {};
+      popupSize.value = { width: 0, height: 0 };
+      arrowStyle.value = {};
       return;
     }
     void (props.placement);
+    void popupSize.value;
     const run = () => {
       if (!triggerEl) return;
       const tr = triggerEl.getBoundingClientRect();
-      const p = (props.placement ?? "top") as FullPopStylePlacement;
-      portalFixedStyle.value = computePopFixedStyle(tr, p);
+      const preferred = (props.placement ?? "auto") as AutoPopPlacement;
+      if (floatingEl) {
+        const fr = floatingEl.getBoundingClientRect();
+        if (fr.width > 0 && fr.height > 0) {
+          const prev = popupSize.value;
+          if (prev.width !== fr.width || prev.height !== fr.height) {
+            popupSize.value = { width: fr.width, height: fr.height };
+          }
+        }
+      }
+      const computed = computeAutoPopFixedStyle(tr, preferred, popupSize.value, {
+        autoPrefers: "top",
+      });
+      portalFixedStyle.value = computed.style;
+      if (resolvedPlacement.value !== computed.placement) {
+        resolvedPlacement.value = computed.placement;
+      }
+      if (floatingEl) {
+        const panel = floatingEl.getBoundingClientRect();
+        if (panel.width > 0 && panel.height > 0) {
+          arrowStyle.value = computeArrowAnchorStyle(computed.placement, tr, panel);
+        }
+      }
     };
     run();
     let rafLoop = 0;
@@ -334,10 +356,9 @@ export function Popconfirm(props: PopconfirmProps): JSXRenderable {
    * @param el - ref 回调收到的节点
    */
   const setTriggerRef = (el: unknown) => {
+    // 忽略 unmount 时的 null：重挂时可能先挂新节点再卸旧节点，null 会把已写好的新引用清掉。
     if (el != null && typeof el === "object" && "getBoundingClientRect" in el) {
       triggerEl = el as HTMLElement;
-    } else {
-      triggerEl = null;
     }
   };
 
@@ -349,8 +370,6 @@ export function Popconfirm(props: PopconfirmProps): JSXRenderable {
   const setFloatingRef = (el: unknown) => {
     if (el != null && typeof el === "object" && "getBoundingClientRect" in el) {
       floatingEl = el as HTMLElement;
-    } else {
-      floatingEl = null;
     }
   };
 
@@ -406,6 +425,8 @@ export function Popconfirm(props: PopconfirmProps): JSXRenderable {
       props,
       isOpen(),
       () => portalFixedStyle.value,
+      () => resolvedPlacement.value,
+      () => arrowStyle.value,
       okVariant,
       iconToneCls,
       handleConfirm,

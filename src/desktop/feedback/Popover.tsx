@@ -1,6 +1,7 @@
 /**
  * Popover 弹出面板（View）。
  * 桌面常用：悬停触发，显示带标题的面板；支持 placement、箭头。
+ * `placement="auto"` 时优选上方，边挡住则朝相反方向展开，箭头跟随实际方位。
  * 浮层经 {@link Portal} 挂到 `document.body` 且 `position: fixed`，与触发器视口坐标对齐，避免被祖先 `overflow` 裁剪；
  * 显示期间用 `requestAnimationFrame` 持续同步 `getBoundingClientRect`（与 Popconfirm、Dropdown 的 body + fixed 浮层策略一致）以跟滚动同帧。
  */
@@ -8,28 +9,24 @@
 import { createEffect, createSignal, Portal, Show } from "@dreamer/view";
 import type { JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
-import { computePopFixedStyle } from "./popFixedStyle.ts";
+import {
+  computeArrowAnchorStyle,
+  computeAutoPopFixedStyle,
+  popArrowSide,
+  type AutoPopPlacement,
+  type FullPopStylePlacement,
+  type PopSize,
+} from "./popFixedStyle.ts";
 
-export type PopoverPlacement =
-  | "top"
-  | "topLeft"
-  | "topRight"
-  | "bottom"
-  | "bottomLeft"
-  | "bottomRight"
-  | "left"
-  | "leftTop"
-  | "leftBottom"
-  | "right"
-  | "rightTop"
-  | "rightBottom";
+/** 含 `auto`：优选上方并在贴边时翻转；写死方位不翻转 */
+export type PopoverPlacement = AutoPopPlacement;
 
 export interface PopoverProps {
   /** 面板标题（可选） */
   title?: string | null;
   /** 面板内容 */
   content: string | unknown;
-  /** 气泡位置，默认 "top" */
+  /** 气泡位置，默认 `"top"`；传 `"auto"` 时优选上方，边挡住则朝相反方向展开，箭头跟随实际方位 */
   placement?: PopoverPlacement;
   /** 触发元素（子节点） */
   children?: unknown;
@@ -51,26 +48,19 @@ export interface PopoverProps {
 }
 
 /**
- * 小箭头 class：与原先 `w-2 h-2 rotate-45` 缺边样式一致，相对面板 `relative` 根绝对定位。
+ * 箭头外观 class（色彩、缺边）；沿边位置由 {@link computeArrowAnchorStyle} 对准触发器中线。
  *
  * @param p - 气泡方位
  * @returns 箭头根节点 class
  */
-function arrowClass(p: PopoverPlacement): string {
+function arrowClass(p: FullPopStylePlacement): string {
   const base =
-    "absolute w-2 h-2 rotate-45 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600";
-  if (p.startsWith("top")) {
-    return `${base} bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 border-t-0 border-l-0`;
-  }
-  if (p.startsWith("bottom")) {
-    return `${base} top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 border-b-0 border-r-0`;
-  }
-  if (p.startsWith("left")) {
-    return `${base} right-0 top-1/2 -translate-y-1/2 translate-x-1/2 border-b-0 border-l-0`;
-  }
-  if (p.startsWith("right")) {
-    return `${base} left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 border-t-0 border-r-0`;
-  }
+    "absolute w-2 h-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600";
+  const side = popArrowSide(p);
+  if (side === "bottom") return `${base} border-t-0 border-l-0`;
+  if (side === "top") return `${base} border-b-0 border-r-0`;
+  if (side === "right") return `${base} border-b-0 border-l-0`;
+  if (side === "left") return `${base} border-t-0 border-r-0`;
   return base;
 }
 
@@ -102,10 +92,15 @@ export function Popover(props: PopoverProps): JSXRenderable {
 
   /** 是否展示 Portal 内容（等效于原先 `group-hover` 显示） */
   const showOverlay = createSignal(false);
-  /** 挂到 body 的 `fixed` 外层的内联位置（`computePopFixedStyle` 结果） */
+  /** 挂到 body 的 `fixed` 外层的内联位置（`computeAutoPopFixedStyle` 结果） */
   const portalFixedStyle = createSignal<Record<string, string>>({});
-  const arrowCls = arrow ? arrowClass(placement) : "";
+  const preferred: AutoPopPlacement = placement;
+  const initialResolved: FullPopStylePlacement = preferred === "auto" ? "top" : preferred;
+  const resolvedPlacement = createSignal<FullPopStylePlacement>(initialResolved);
+  const popupSize = createSignal<PopSize>({ width: 0, height: 0 });
+  const arrowStyle = createSignal<Record<string, string>>({});
   let triggerEl: HTMLElement | null = null;
+  let overlayEl: HTMLElement | null = null;
 
   /**
    * 显示浮层时：rAF 循环 + resize 复用与 Dropdown/Popconfirm 同策略，保证全页与容器内滚动不脱节。
@@ -113,13 +108,37 @@ export function Popover(props: PopoverProps): JSXRenderable {
   createEffect(() => {
     if (!showOverlay.value || typeof globalThis.window === "undefined") {
       portalFixedStyle.value = {};
+      popupSize.value = { width: 0, height: 0 };
+      arrowStyle.value = {};
       return;
     }
-    void placement;
+    void preferred;
+    void popupSize.value;
     const run = () => {
       if (!triggerEl) return;
       const tr = triggerEl.getBoundingClientRect();
-      portalFixedStyle.value = computePopFixedStyle(tr, placement);
+      if (overlayEl) {
+        const fr = overlayEl.getBoundingClientRect();
+        if (fr.width > 0 && fr.height > 0) {
+          const prev = popupSize.value;
+          if (prev.width !== fr.width || prev.height !== fr.height) {
+            popupSize.value = { width: fr.width, height: fr.height };
+          }
+        }
+      }
+      const computed = computeAutoPopFixedStyle(tr, preferred, popupSize.value, {
+        autoPrefers: "top",
+      });
+      portalFixedStyle.value = computed.style;
+      if (resolvedPlacement.value !== computed.placement) {
+        resolvedPlacement.value = computed.placement;
+      }
+      if (overlayEl) {
+        const panel = overlayEl.getBoundingClientRect();
+        if (panel.width > 0 && panel.height > 0) {
+          arrowStyle.value = computeArrowAnchorStyle(computed.placement, tr, panel);
+        }
+      }
     };
     run();
     let rafLoop = 0;
@@ -196,10 +215,14 @@ export function Popover(props: PopoverProps): JSXRenderable {
               class="pointer-events-auto fixed z-50 min-w-0 max-w-[min(320px,calc(100vw-1rem))] overflow-visible transition-opacity duration-150"
               style={() =>
                 portalFixedStyle.value}
+              data-dreamer-placement={() => resolvedPlacement.value}
               onMouseEnter={onHoverEnter as (e: Event) => void}
               onMouseLeave={onHoverLeave as (e: Event) => void}
             >
               <span
+                ref={(el: HTMLElement) => {
+                  overlayEl = el;
+                }}
                 class={twMerge(
                   "relative z-0 block min-w-[140px] max-w-[320px] rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-lg text-slate-900 dark:text-slate-100",
                   overlayClass,
@@ -213,7 +236,13 @@ export function Popover(props: PopoverProps): JSXRenderable {
                 <div class="px-3 py-2 text-sm">
                   {typeof content === "string" ? content : content}
                 </div>
-                {arrow && <span class={arrowCls} />}
+                {arrow && (
+                  <span
+                    class={() => arrowClass(resolvedPlacement.value)}
+                    style={() => arrowStyle.value}
+                    data-dreamer-arrow=""
+                  />
+                )}
               </span>
             </div>
           </Portal>

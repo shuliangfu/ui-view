@@ -2,6 +2,7 @@
  * ContextMenu 右键菜单（View）。
  * 在触发区 `contextmenu` 时弹出；经 {@link Portal} 挂 `document.body` + `fixed` + 行内高 z-index，
  * 避免祖先 `overflow`／层叠上下文裁切（docs `main` 为 `overflow-y-auto`）。
+ * 默认按点击坐标向右下展开；右边挡住则向左，下边挡住则向上（与 Popconfirm 等共享 {@link resolvePointFixedPosition}）。
  * 旧实现用无效 Tailwind `z-400`（未进 CSS）+ 命令式 `createPortal` 时机不稳，菜单常落在触发区内被裁切。
  */
 
@@ -14,6 +15,10 @@ import {
   onCleanup,
 } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
+import {
+  resolvePointFixedPosition,
+  type PopSize,
+} from "./popFixedStyle.ts";
 
 /** 高于文档站 sticky 顶栏／main `z-10`、与 Dropdown 浮层同级 */
 const CONTEXT_MENU_Z_INDEX = "99999";
@@ -58,11 +63,30 @@ export function ContextMenu(props: ContextMenuProps): JSXRenderable {
   };
   const open = createSignal(false);
   const pos = createSignal({ x: 0, y: 0 });
+  const menuSize = createSignal<PopSize>({ width: 0, height: 0 });
+  let menuEl: HTMLElement | null = null;
+  let clickPoint = { x: 0, y: 0 };
+
+  const applyPointPosition = (size: PopSize) => {
+    if (typeof globalThis.window === "undefined") {
+      pos.value = { ...clickPoint };
+      return;
+    }
+    const next = resolvePointFixedPosition(
+      clickPoint.x,
+      clickPoint.y,
+      size,
+      { width: globalThis.window.innerWidth, height: globalThis.window.innerHeight },
+    );
+    pos.value = { x: next.x, y: next.y };
+  };
 
   const onContext = (e: MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    pos.value = { x: e.clientX, y: e.clientY };
+    clickPoint = { x: e.clientX, y: e.clientY };
+    menuSize.value = { width: 0, height: 0 };
+    applyPointPosition({ width: 0, height: 0 });
     open.value = true;
   };
 
@@ -94,8 +118,28 @@ export function ContextMenu(props: ContextMenuProps): JSXRenderable {
     });
   });
 
+  createEffect(() => {
+    if (!open.value || typeof globalThis.window === "undefined") return;
+    const run = () => {
+      if (!menuEl) return;
+      const fr = menuEl.getBoundingClientRect();
+      if (!(fr.width > 0 && fr.height > 0)) return;
+      const prev = menuSize.value;
+      if (prev.width !== fr.width || prev.height !== fr.height) {
+        menuSize.value = { width: fr.width, height: fr.height };
+      }
+      applyPointPosition({ width: fr.width, height: fr.height });
+    };
+    run();
+    const raf = globalThis.requestAnimationFrame(run);
+    onCleanup(() => globalThis.cancelAnimationFrame(raf));
+  });
+
   const menu = (
     <div
+      ref={(el: HTMLElement) => {
+        menuEl = el;
+      }}
       class={twMerge(
         "fixed min-w-40 rounded-lg border border-slate-200 dark:border-slate-600",
         "bg-white dark:bg-slate-800 py-1 shadow-xl text-sm",
@@ -109,6 +153,21 @@ export function ContextMenu(props: ContextMenuProps): JSXRenderable {
       role="menu"
         aria-label={m.menu}
       data-dreamer-context-menu=""
+      data-dreamer-placement={() => {
+        const s = menuSize.value;
+        if (!(s.width > 0 && s.height > 0) || typeof globalThis.window === "undefined") {
+          return "bottomLeft";
+        }
+        const resolved = resolvePointFixedPosition(
+          clickPoint.x,
+          clickPoint.y,
+          s,
+          { width: globalThis.window.innerWidth, height: globalThis.window.innerHeight },
+        );
+        const y = resolved.flippedY ? "top" : "bottom";
+        // 相对点击点：未翻转时向右下展开，左上角对齐点击坐标
+        return `${y}${resolved.flippedX ? "Left" : "Right"}`;
+      }}
       onMouseDown={(e: Event) => e.stopPropagation()}
     >
       {items.map((it) =>
