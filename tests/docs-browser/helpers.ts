@@ -182,26 +182,142 @@ async function waitDreamerHandlers(
   }
 }
 
-async function waitMainChars(
+/**
+ * 等当前文档资源加载完成：`document.readyState === "complete"`
+ * （对应 window `load`：HTML + CSS/JS/图片等子资源）。
+ * 不把 Playwright `goto` 的 `waitUntil` 改成 `load` / `domcontentloaded`：
+ * 那两项在 macOS CI 长跑末段曾让导航本身拖满 60s 测试超时。
+ * `waitUntil: commit` 之后旧文档可能已经是 complete，必须同时等到目标路由。
+ *
+ * @param t 浏览器上下文
+ * @param timeoutMs 超时毫秒；超时抛出含 readyState / pathname 的明确错误
+ * @param expectedPath 可选：目标 pathname，避免把旧页的 complete 当成新页已加载
+ */
+async function waitDocumentComplete(
   t: DocsBrowserTestContext,
-  minChars: number,
   timeoutMs: number,
+  expectedPath?: string,
 ): Promise<void> {
-  /** 整段等待共用截止时刻，避免「waitFor 跑满 + 轮询再跑满」叠加超过单次调用上限（曾拖满 60s 测试超时） */
+  if (typeof t?.browser?.evaluate !== "function") {
+    throw new Error("Target page, context or browser has been closed");
+  }
   const deadline = Date.now() + timeoutMs;
+  const pathCheck = expectedPath
+    ? `const expected = ${JSON.stringify(expectedPath)};` +
+      "const p = (location.pathname || '/').replace(/\\/+$/, '') || '/';" +
+      "const e = expected.replace(/\\/+$/, '') || '/';" +
+      "if (p !== e && !p.endsWith(e)) return false;"
+    : "";
+  const probeBody = pathCheck + 'return document.readyState === "complete";';
+  const snapshotBody =
+    "return {" +
+    '  readyState: String(document.readyState || ""),' +
+    '  pathname: String(location.pathname || ""),' +
+    '  title: String(document.title || "")' +
+    "};";
   const wf = t.browser?.waitFor;
   if (typeof wf === "function") {
     const remaining = deadline - Date.now();
     if (remaining > 0) {
       try {
-        // 浏览器内执行的函数不能闭包 Node/Deno 侧变量：把 minChars 内联进函数体，
-        // 否则页内会抛 "minChars is not defined"（pageerror）
         await wf(
-          new Function(
-            `const main = document.querySelector("main"); return (main?.innerText?.length ?? 0) >= ${
-              Number(minChars)
-            };`,
-          ) as () => boolean,
+          new Function(probeBody) as () => boolean,
+          { timeout: remaining },
+        );
+        return;
+      } catch (err) {
+        if (isMissingPageMethodError(err) || isDeadBrowserNavError(err)) {
+          throw new Error("Target page, context or browser has been closed");
+        }
+        /* 继续兜底轮询（仍在同一 deadline 内），最后抛出更清楚的超时信息 */
+      }
+    }
+  }
+  while (Date.now() < deadline) {
+    try {
+      const ready = (await t.browser.evaluate(
+        new Function(probeBody) as () => boolean,
+      )) as boolean;
+      if (ready) return;
+    } catch (err) {
+      if (isMissingPageMethodError(err) || isDeadBrowserNavError(err)) {
+        throw new Error("Target page, context or browser has been closed");
+      }
+      throw err;
+    }
+    await delayMs(50);
+  }
+  let snap = { readyState: "unknown", pathname: "", title: "" };
+  try {
+    snap = (await t.browser.evaluate(
+      new Function(snapshotBody) as () => typeof snap,
+    )) as typeof snap;
+  } catch {
+    /* 超时信息尽量带上快照 */
+  }
+  const want = expectedPath ? `，期望路由 ${expectedPath}` : "";
+  throw new Error(
+    `文档资源未在 ${timeoutMs}ms 内加载完成（document.readyState === "complete"）` +
+      `${want}；当前 readyState=${snap.readyState} pathname=${snap.pathname}` +
+      (snap.title ? ` title=${snap.title}` : ""),
+  );
+}
+
+/**
+ * 导航后的统一就绪链，共用一段超时预算，避免 complete + main + 句柄串行叠满 60s 测试超时。
+ * 顺序：资源加载完成 → 目标路由 main 出字 → Dreamer 事件句柄。
+ *
+ * @param t 浏览器上下文
+ * @param timeoutMs 整段等待上限
+ * @param expectedPath 目标 pathname
+ */
+async function waitAfterDocsNavigate(
+  t: DocsBrowserTestContext,
+  timeoutMs: number,
+  expectedPath?: string,
+): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  const need = (step: string): number => {
+    const ms = deadline - Date.now();
+    if (ms <= 0) {
+      throw new Error(
+        `导航后等待超时：在「${step}」之前已用尽 ${timeoutMs}ms`,
+      );
+    }
+    return ms;
+  };
+  await waitDocumentComplete(t, need("资源加载完成"), expectedPath);
+  await waitMainChars(t, GOTO_MAIN_MIN_CHARS, need("main 出字"), expectedPath);
+  await waitDreamerHandlers(t, Math.min(need("Dreamer 事件句柄"), 18_000));
+}
+
+async function waitMainChars(
+  t: DocsBrowserTestContext,
+  minChars: number,
+  timeoutMs: number,
+  expectedPath?: string,
+): Promise<void> {
+  /** 整段等待共用截止时刻，避免「waitFor 跑满 + 轮询再跑满」叠加超过单次调用上限（曾拖满 60s 测试超时） */
+  const deadline = Date.now() + timeoutMs;
+  const wf = t.browser?.waitFor;
+  // 浏览器内不能闭包宿主变量：把 minChars / 目标 pathname 内联进函数体。
+  // waitUntil: commit 后旧文档的 main 可能仍在，必须等到新路由的正文。
+  const pathCheck = expectedPath
+    ? `const expected = ${JSON.stringify(expectedPath)};` +
+      "const p = (location.pathname || '/').replace(/\\/+$/, '') || '/';" +
+      "const e = expected.replace(/\\/+$/, '') || '/';" +
+      "if (p !== e && !p.endsWith(e)) return false;"
+    : "";
+  const probeSrc = pathCheck +
+    `const main = document.querySelector("main"); return (main?.innerText?.length ?? 0) >= ${
+      Number(minChars)
+    };`;
+  if (typeof wf === "function") {
+    const remaining = deadline - Date.now();
+    if (remaining > 0) {
+      try {
+        await wf(
+          new Function(probeSrc) as () => boolean,
           { timeout: remaining },
         );
         return;
@@ -215,11 +331,10 @@ async function waitMainChars(
   }
   while (Date.now() < deadline) {
     try {
-      const len = (await t.browser!.evaluate(() => {
-        const main = document.querySelector("main");
-        return main?.innerText?.length ?? 0;
-      })) as number;
-      if (len >= minChars) return;
+      const ready = (await t.browser!.evaluate(
+        new Function(probeSrc) as () => boolean,
+      )) as boolean;
+      if (ready) return;
     } catch (err) {
       if (isMissingPageMethodError(err) || isDeadBrowserNavError(err)) {
         throw new Error("Target page, context or browser has been closed");
@@ -942,8 +1057,14 @@ async function recoverAndRevisit(
   await recoverDocsBrowserPage(t, opts);
   if (!_lastGoto) return;
   const path = _lastGoto.path;
-  const url = _singletonBaseUrl + (path.startsWith("/") ? path : "/" + path);
+  const docsPath = path.startsWith("/") ? path : "/" + path;
+  const url = _singletonBaseUrl + docsPath;
   await navigateDocsPage(t, url, _lastGoto.options);
+  await waitAfterDocsNavigate(
+    t,
+    _lastGoto.options?.waitMainTimeoutMs ?? 25_000,
+    docsPath,
+  );
 }
 
 export const sharedEnv = {
@@ -969,7 +1090,9 @@ export const sharedEnv = {
 
   /**
    * 导航到 docs 路径。首次调用自动启动 dev server。
-   * 导航后以 `main` 文本长度为准就绪，避免固定 sleep。
+   * 默认 `waitUntil: commit`（避免 macOS CI `domcontentloaded` / `load` 拖满 60s），
+   * 随后等 `document.readyState === "complete"`（资源加载完），再等目标路由
+   * `main` 出字与 Dreamer 事件句柄，避免未加载完就点击或断言。
    *
    * @param options.navigationTimeoutMs 传给 Playwright `page.goto`；默认 60s，重型页请用 {@link HEAVY_DOC_GOTO_OPTIONS}
    */
@@ -984,7 +1107,8 @@ export const sharedEnv = {
     _lastGoto = { path, options };
     await this.start();
     await _ensureAlive();
-    const url = _singletonBaseUrl + (path.startsWith("/") ? path : "/" + path);
+    const docsPath = path.startsWith("/") ? path : "/" + path;
+    const url = _singletonBaseUrl + docsPath;
     const waitMainMs = options?.waitMainTimeoutMs ?? 25_000;
     const run = async () => {
       if (typeof t.browser?.page?.goto !== "function") {
@@ -993,7 +1117,9 @@ export const sharedEnv = {
         });
       }
       await navigateDocsPage(t, url, options);
-      await waitMainChars(t, GOTO_MAIN_MIN_CHARS, waitMainMs);
+      // commit 后：资源加载完 → 目标路由 main 出字 → Dreamer 句柄。
+      // 句柄未挂时 `.click()` 不走委托（Modal 点得开「打开」却找不到「确定」）。
+      await waitAfterDocsNavigate(t, waitMainMs, docsPath);
     };
     try {
       await run();
@@ -1022,9 +1148,25 @@ export const sharedEnv = {
     const minChars = options?.minChars ?? STRICT_DOC_MAIN_MIN_CHARS;
     const timeoutMs = options?.timeoutMs ?? 18_000;
     const once = async () => {
-      await waitMainChars(t, minChars, timeoutMs);
+      const expectedPath = _lastGoto?.path
+        ? (_lastGoto.path.startsWith("/")
+          ? _lastGoto.path
+          : "/" + _lastGoto.path)
+        : undefined;
+      const deadline = Date.now() + timeoutMs;
+      const need = (step: string): number => {
+        const ms = deadline - Date.now();
+        if (ms <= 0) {
+          throw new Error(
+            `文档就绪等待超时：在「${step}」之前已用尽 ${timeoutMs}ms`,
+          );
+        }
+        return ms;
+      };
+      await waitDocumentComplete(t, need("资源加载完成"), expectedPath);
+      await waitMainChars(t, minChars, need("main 出字"), expectedPath);
       // 正文出水后再等 Dreamer 事件句柄，覆盖 reload 后的 hydration 窗口（CI 更慢）
-      await waitDreamerHandlers(t, Math.min(timeoutMs, 18_000));
+      await waitDreamerHandlers(t, Math.min(need("Dreamer 事件句柄"), 18_000));
     };
     try {
       await once();
