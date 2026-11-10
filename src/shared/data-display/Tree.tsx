@@ -340,7 +340,7 @@ function renderNode(
           class={twMerge(
             "tree-children",
             ctx.showLine &&
-              "ml-[11px] border-l border-slate-200 dark:border-slate-600",
+              "ml-2.75 border-l border-slate-200 dark:border-slate-600",
           )}
           data-tree-children-key={node.key}
           data-tree-show-line={ctx.showLine ? "true" : undefined}
@@ -358,7 +358,7 @@ function renderNode(
                 {ctx.showLine && (
                   <span
                     aria-hidden="true"
-                    class="pointer-events-none absolute left-0 top-[14px] w-3 border-t border-slate-200 dark:border-slate-600"
+                    class="pointer-events-none absolute left-0 top-3.5 w-3 border-t border-slate-200 dark:border-slate-600"
                   />
                 )}
                 {renderNode(child, depth + 1, ctx)}
