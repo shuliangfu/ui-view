@@ -121,7 +121,8 @@ function patchBrowserEvaluateForTsxKeepNames(
 }
 
 /**
- * 轮询直到 `main` 内至少有一个 Dreamer 委托句柄（`__onclick` 等）。
+ * 轮询直到页面上至少有一个 Dreamer 委托句柄（`__onclick` 等）。
+ * 首页 `/` 没有 `<main>`，句柄常挂在顶栏（如主题切换），故在 `document.body` 内查找。
  * `location.reload()` 后正文可能先出水、事件句柄稍后才挂上——CI 上固定 100ms 不够，
  * 会导致 `__onclick` 未就绪时 `.click()` 也不走委托，UI 交互用例集体红。
  *
@@ -138,10 +139,10 @@ async function waitDreamerHandlers(
   const deadline = Date.now() + timeoutMs;
   const wf = t.browser?.waitFor;
   /** 作为 `new Function(body)` 的函数体：直接 return boolean */
-  const probeBody = 'const main = document.querySelector("main");' +
-    "if (!main) return false;" +
+  const probeBody = "const root = document.body;" +
+    "if (!root) return false;" +
     'const names = ["__onclick","__onchange","__oninput","__onkeydown","__onpointerdown"];' +
-    "const nodes = main.querySelectorAll(\"button,a,input,textarea,select,[role='button'],[role='switch'],[role='checkbox'],[role='radio'],[role='tab'],[role='menuitem'],[data-tree-expand-key]\");" +
+    "const nodes = root.querySelectorAll(\"button,a,input,textarea,select,[role='button'],[role='switch'],[role='checkbox'],[role='radio'],[role='tab'],[role='menuitem'],[data-tree-expand-key]\");" +
     "for (let i = 0; i < nodes.length; i++) {" +
     "  const el = nodes[i];" +
     "  for (let j = 0; j < names.length; j++) {" +
@@ -313,7 +314,7 @@ async function waitMainChars(
   // waitUntil: commit 后旧文档的 main 可能仍在，必须等到新路由的正文。
   const pathCheck = expectedPath ? docsPathnameCheckSrc(expectedPath) : "";
   const probeSrc = pathCheck +
-    `const main = document.querySelector("main"); return (main?.innerText?.length ?? 0) >= ${
+    `const root = document.querySelector("main") || document.body; return (root?.innerText?.length ?? 0) >= ${
       Number(minChars)
     };`;
   if (typeof wf === "function") {
@@ -347,6 +348,11 @@ async function waitMainChars(
     }
     await delayMs(40);
   }
+  throw new Error(
+    `文档正文未在 ${timeoutMs}ms 内出字（至少 ${minChars} 字` +
+      (expectedPath ? `，期望路由 ${expectedPath}` : "") +
+      "）",
+  );
 }
 
 /**
