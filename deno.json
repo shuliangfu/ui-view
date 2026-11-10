@@ -138,8 +138,8 @@
     "@dreamer/runtime-adapter": "jsr:@dreamer/runtime-adapter@^1.2.2",
     "@dreamer/service": "jsr:@dreamer/service@^1.1.0",
     "@dreamer/storage/client": "jsr:@dreamer/storage@^1.1.0/client",
-    "@dreamer/test": "jsr:@dreamer/test@^1.2.3",
-    "@dreamer/test/browser": "jsr:@dreamer/test@^1.2.3/browser",
+    "@dreamer/test": "jsr:@dreamer/test@^1.2.4",
+    "@dreamer/test/browser": "jsr:@dreamer/test@^1.2.4/browser",
     "@dreamer/view": "jsr:@dreamer/view@^3.0.4",
     "@dreamer/upload": "jsr:@dreamer/upload@^2.0.1",
     "@dreamer/upload/adapters": "jsr:@dreamer/upload@^2.0.1/adapters",
@@ -151,7 +151,7 @@
     "prismjs": "npm:prismjs@1.30.0"
   },
   "nodeModulesDir": "auto",
-  "minimumDependencyAge": "0",
+  "minimumDependencyAge": 0,
   "compilerOptions": {
     "jsx": "react-jsx",
     "jsxImportSource": "@dreamer/view",

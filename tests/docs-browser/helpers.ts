@@ -46,13 +46,13 @@ export type DocsBrowserTestContext = {
  * `sharedEnv.goto` 第三参：重型文档路由（如 ConfigProvider）冷编译时可能超过默认 60s 导航超时。
  */
 export type SharedEnvGotoOptions = {
-  /** Playwright `page.goto` 的 timeout；默认 60000，与 @dreamer/test 一致 */
+  /** Playwright `page.goto` 的 timeout；默认 60000 */
   navigationTimeoutMs?: number;
   /** `goto` 后 `waitMainChars` 等待 main 就绪的上限 */
   waitMainTimeoutMs?: number;
   /**
-   * Playwright 导航完成条件。重型 SPA（Vite 冷编译）下 `domcontentloaded` 可能长时间不满足，
-   * 改用 `commit`（导航已提交）后再由 `waitMainChars` 轮询 main 正文更稳。
+   * Playwright 导航完成条件。默认已是 `commit`：macOS CI 长跑末段 `domcontentloaded`
+   * 可能拖满 60s 测试超时；提交后再由 `waitMainChars` 轮询 main 正文。
    */
   waitUntil?: "commit" | "domcontentloaded" | "load";
 };
@@ -132,19 +132,20 @@ async function waitDreamerHandlers(
   t: DocsBrowserTestContext,
   timeoutMs: number,
 ): Promise<void> {
-  if (!t?.browser?.evaluate) return;
+  if (typeof t?.browser?.evaluate !== "function") {
+    throw new Error("Target page, context or browser has been closed");
+  }
   const deadline = Date.now() + timeoutMs;
   const wf = t.browser?.waitFor;
   /** 作为 `new Function(body)` 的函数体：直接 return boolean */
-  const probeBody =
-    'const main = document.querySelector("main");' +
+  const probeBody = 'const main = document.querySelector("main");' +
     "if (!main) return false;" +
     'const names = ["__onclick","__onchange","__oninput","__onkeydown","__onpointerdown"];' +
-    'const nodes = main.querySelectorAll("button,a,input,textarea,select,[role=\'button\'],[role=\'switch\'],[role=\'checkbox\'],[role=\'radio\'],[role=\'tab\'],[role=\'menuitem\'],[data-tree-expand-key]");' +
+    "const nodes = main.querySelectorAll(\"button,a,input,textarea,select,[role='button'],[role='switch'],[role='checkbox'],[role='radio'],[role='tab'],[role='menuitem'],[data-tree-expand-key]\");" +
     "for (let i = 0; i < nodes.length; i++) {" +
     "  const el = nodes[i];" +
     "  for (let j = 0; j < names.length; j++) {" +
-    "    if (typeof el[names[j]] === \"function\") return true;" +
+    '    if (typeof el[names[j]] === "function") return true;' +
     "  }" +
     "}" +
     "return false;";
@@ -157,16 +158,26 @@ async function waitDreamerHandlers(
           { timeout: remaining },
         );
         return;
-      } catch {
+      } catch (err) {
+        if (isMissingPageMethodError(err) || isDeadBrowserNavError(err)) {
+          throw new Error("Target page, context or browser has been closed");
+        }
         /* 继续兜底轮询 */
       }
     }
   }
   while (Date.now() < deadline) {
-    const ready = (await t.browser.evaluate(
-      new Function(probeBody) as () => boolean,
-    )) as boolean;
-    if (ready) return;
+    try {
+      const ready = (await t.browser.evaluate(
+        new Function(probeBody) as () => boolean,
+      )) as boolean;
+      if (ready) return;
+    } catch (err) {
+      if (isMissingPageMethodError(err) || isDeadBrowserNavError(err)) {
+        throw new Error("Target page, context or browser has been closed");
+      }
+      throw err;
+    }
     await delayMs(50);
   }
 }
@@ -194,17 +205,27 @@ async function waitMainChars(
           { timeout: remaining },
         );
         return;
-      } catch {
+      } catch (err) {
+        if (isMissingPageMethodError(err) || isDeadBrowserNavError(err)) {
+          throw new Error("Target page, context or browser has been closed");
+        }
         /* 继续兜底轮询（仍在同一 deadline 内） */
       }
     }
   }
   while (Date.now() < deadline) {
-    const len = (await t.browser!.evaluate(() => {
-      const main = document.querySelector("main");
-      return main?.innerText?.length ?? 0;
-    })) as number;
-    if (len >= minChars) return;
+    try {
+      const len = (await t.browser!.evaluate(() => {
+        const main = document.querySelector("main");
+        return main?.innerText?.length ?? 0;
+      })) as number;
+      if (len >= minChars) return;
+    } catch (err) {
+      if (isMissingPageMethodError(err) || isDeadBrowserNavError(err)) {
+        throw new Error("Target page, context or browser has been closed");
+      }
+      throw err;
+    }
     await delayMs(40);
   }
 }
@@ -220,76 +241,87 @@ export async function shallowInteractMainHere(
   mainTextFallback: string,
 ): Promise<void> {
   if (!t?.browser) return;
-  const probe = (await t.browser.evaluate(() => {
-    const main = document.querySelector("main");
-    if (!main) return { ok: false, acted: false };
-    const listbox = main.querySelector(
-      'button[aria-haspopup="listbox"]',
-    ) as HTMLButtonElement | null;
-    if (listbox && !listbox.disabled) {
-      listbox.click();
-      return { ok: true, acted: true };
-    }
-    const range = main.querySelector(
-      'input[type="range"]',
-    ) as HTMLInputElement | null;
-    if (range) {
-      const max = Number(range.max) || 100;
-      const cur = Number(range.value) || 0;
-      range.value = String(Math.min(max, cur + 5));
-      range.dispatchEvent(new Event("input", { bubbles: true }));
-      return { ok: true, acted: true };
-    }
-    const cb = main.querySelector(
-      'input[type="checkbox"]:not(:disabled)',
-    ) as HTMLInputElement | null;
-    if (cb) {
-      cb.click();
-      return { ok: true, acted: true };
-    }
-    const rad = main.querySelector(
-      'input[type="radio"]:not(:disabled)',
-    ) as HTMLInputElement | null;
-    if (rad) {
-      rad.click();
-      return { ok: true, acted: true };
-    }
-    const fileInput = main.querySelector(
-      'input[type="file"]:not(:disabled)',
-    ) as HTMLInputElement | null;
-    if (fileInput) {
-      fileInput.click();
-      return { ok: true, acted: true };
-    }
-    const input = main.querySelector(
-      "textarea:not(:disabled), input:not([type=hidden]):not([type=button]):not([type=submit]):not([type=file]):not(:disabled)",
-    ) as HTMLInputElement | null;
-    if (input) {
-      input.focus();
-      input.value = "e2e-probe";
-      input.dispatchEvent(new Event("input", { bubbles: true }));
-      return { ok: true, acted: true };
-    }
-    const btn = main.querySelector(
-      'button[type="button"]:not([disabled]), button:not([type]):not([disabled])',
-    ) as HTMLButtonElement | null;
-    if (btn) {
-      btn.click();
-      return { ok: true, acted: true };
-    }
-    const table = main.querySelector("table");
-    if (table) {
-      const cellBtn = table.querySelector(
-        "td button, td a",
-      ) as HTMLElement | null;
-      if (cellBtn) {
-        cellBtn.click();
+  const runProbe = () =>
+    t.browser!.evaluate(() => {
+      const main = document.querySelector("main");
+      if (!main) return { ok: false, acted: false };
+      const listbox = main.querySelector(
+        'button[aria-haspopup="listbox"]',
+      ) as HTMLButtonElement | null;
+      if (listbox && !listbox.disabled) {
+        listbox.click();
         return { ok: true, acted: true };
       }
-    }
-    const len = main.innerText?.length ?? 0;
-    return { ok: true, acted: false, len };
-  })) as { ok: boolean; acted?: boolean; len?: number };
+      const range = main.querySelector(
+        'input[type="range"]',
+      ) as HTMLInputElement | null;
+      if (range) {
+        const max = Number(range.max) || 100;
+        const cur = Number(range.value) || 0;
+        range.value = String(Math.min(max, cur + 5));
+        range.dispatchEvent(new Event("input", { bubbles: true }));
+        return { ok: true, acted: true };
+      }
+      const cb = main.querySelector(
+        'input[type="checkbox"]:not(:disabled)',
+      ) as HTMLInputElement | null;
+      if (cb) {
+        cb.click();
+        return { ok: true, acted: true };
+      }
+      const rad = main.querySelector(
+        'input[type="radio"]:not(:disabled)',
+      ) as HTMLInputElement | null;
+      if (rad) {
+        rad.click();
+        return { ok: true, acted: true };
+      }
+      const fileInput = main.querySelector(
+        'input[type="file"]:not(:disabled)',
+      ) as HTMLInputElement | null;
+      if (fileInput) {
+        fileInput.click();
+        return { ok: true, acted: true };
+      }
+      const input = main.querySelector(
+        "textarea:not(:disabled), input:not([type=hidden]):not([type=button]):not([type=submit]):not([type=file]):not(:disabled)",
+      ) as HTMLInputElement | null;
+      if (input) {
+        input.focus();
+        input.value = "e2e-probe";
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+        return { ok: true, acted: true };
+      }
+      const btn = main.querySelector(
+        'button[type="button"]:not([disabled]), button:not([type]):not([disabled])',
+      ) as HTMLButtonElement | null;
+      if (btn) {
+        btn.click();
+        return { ok: true, acted: true };
+      }
+      const table = main.querySelector("table");
+      if (table) {
+        const cellBtn = table.querySelector(
+          "td button, td a",
+        ) as HTMLElement | null;
+        if (cellBtn) {
+          cellBtn.click();
+          return { ok: true, acted: true };
+        }
+      }
+      const len = main.innerText?.length ?? 0;
+      return { ok: true, acted: false, len };
+    }) as Promise<{ ok: boolean; acted?: boolean; len?: number }>;
+  let probe: { ok: boolean; acted?: boolean; len?: number };
+  try {
+    probe = await runProbe();
+  } catch (err) {
+    if (!isRecoverableBrowserError(err)) throw err;
+    await recoverAndRevisit(t, {
+      resourceExhausted: isResourceExhaustedSpawnError(err),
+    });
+    probe = await runProbe();
+  }
 
   expect(probe.ok).toBe(true);
   if (!probe.acted) {
@@ -692,9 +724,24 @@ function isResourceExhaustedSpawnError(err: unknown): boolean {
     .test(msg);
 }
 
-function isRecoverableBrowserError(err: unknown): boolean {
-  return isDeadBrowserNavError(err) || isResourceExhaustedSpawnError(err);
+/**
+ * `@dreamer/test` 在用例超时的 finally 里会把共享 `browserCtx.page` 置为 undefined。
+ * Deno 超时与下一例 setup 竞态时，`evaluate` / `waitForFunction` 会打在空 page 上。
+ */
+function isMissingPageMethodError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err);
+  return /Cannot read propert(?:y|ies) of undefined \(reading '(?:evaluate|goto|waitForFunction|waitFor)'\)/i
+    .test(msg);
 }
+
+function isRecoverableBrowserError(err: unknown): boolean {
+  return isDeadBrowserNavError(err) ||
+    isResourceExhaustedSpawnError(err) ||
+    isMissingPageMethodError(err);
+}
+
+/** 最近一次 `sharedEnv.goto` 的路径，供 page 被摘掉后恢复并重新导航 */
+let _lastGoto: { path: string; options?: SharedEnvGotoOptions } | undefined;
 
 type PlaywrightBrowserHandle = {
   isConnected?: () => boolean;
@@ -712,6 +759,59 @@ type MutableDocsBrowser = NonNullable<DocsBrowserTestContext["browser"]> & {
   browser?: PlaywrightBrowserHandle;
   [key: symbol]: unknown;
 };
+
+type DocsPlaywrightPage =
+  & NonNullable<
+    NonNullable<DocsBrowserTestContext["browser"]>["page"]
+  >
+  & {
+    evaluate?: (fn: () => unknown) => Promise<unknown>;
+    waitForFunction?: (
+      fn: () => boolean,
+      options?: { timeout?: number },
+    ) => Promise<unknown>;
+    setDefaultTimeout?: (ms: number) => void;
+    setDefaultNavigationTimeout?: (ms: number) => void;
+  };
+
+/**
+ * `t.browser` 是 @dreamer/test 的包装对象，`evaluate` 闭包读的是内部 `context.page`。
+ * 只改 `t.browser.page` 不够，必须把 evaluate／goto／waitFor 一并指到新 page。
+ */
+function rebindDocsBrowserToPage(
+  t: DocsBrowserTestContext,
+  newPage: DocsPlaywrightPage,
+): void {
+  const browser = t.browser as MutableDocsBrowser | undefined;
+  if (!browser) return;
+  try {
+    newPage.setDefaultTimeout?.(60_000);
+    newPage.setDefaultNavigationTimeout?.(60_000);
+  } catch {
+    /* ignore */
+  }
+  browser.page = newPage;
+  if (typeof newPage.evaluate === "function") {
+    const pageEvaluate = newPage.evaluate.bind(newPage);
+    browser.evaluate = ((fn: () => unknown) =>
+      pageEvaluate(fn)) as typeof browser.evaluate;
+  }
+  const pageGoto = newPage.goto.bind(newPage);
+  browser.goto = (async (url: string) => {
+    await pageGoto(url, { waitUntil: "domcontentloaded", timeout: 60_000 });
+  }) as typeof browser.goto;
+  if (typeof newPage.waitForFunction === "function") {
+    const pageWait = newPage.waitForFunction.bind(newPage);
+    browser.waitFor = (async (
+      fn: () => boolean,
+      options?: { timeout?: number },
+    ) => {
+      const timeoutMs = options?.timeout ?? 10_000;
+      await pageWait(fn, { timeout: timeoutMs });
+    }) as typeof browser.waitFor;
+  }
+  delete browser[EVAL_TSX_KEEPNAMES_PATCHED];
+}
 
 /**
  * 把新建的 BrowserContext 绑回当前 TestContext.browser（evaluate／goto／page）。
@@ -760,15 +860,10 @@ async function recoverDocsBrowserPage(
   ) {
     try {
       const newPage = await pw.newPage();
-      try {
-        newPage.setDefaultTimeout?.(60_000);
-        newPage.setDefaultNavigationTimeout?.(60_000);
-      } catch {
-        /* ignore */
-      }
-      mutable!.page = newPage as NonNullable<
-        DocsBrowserTestContext["browser"]
-      >["page"];
+      rebindDocsBrowserToPage(
+        t,
+        newPage as DocsPlaywrightPage,
+      );
       return;
     } catch {
       /* fall through */
@@ -814,6 +909,43 @@ async function recoverDocsBrowserPage(
     : new Error(String(lastErr ?? "recoverDocsBrowserPage failed"));
 }
 
+async function navigateDocsPage(
+  t: DocsBrowserTestContext,
+  url: string,
+  options?: SharedEnvGotoOptions,
+): Promise<void> {
+  patchBrowserEvaluateForTsxKeepNames(t);
+  const navMs = options?.navigationTimeoutMs ?? 60_000;
+  // 默认 commit：domcontentloaded 在 macOS CI 长跑末段可能拖满 60s 测试超时
+  const waitUntil = options?.waitUntil ?? "commit";
+  const page = t.browser?.page;
+  if (typeof page?.goto === "function") {
+    await page.goto(url, {
+      waitUntil,
+      timeout: navMs,
+    });
+    return;
+  }
+  if (typeof t.browser?.goto !== "function") {
+    throw new Error("Target page, context or browser has been closed");
+  }
+  await t.browser.goto(url);
+}
+
+/**
+ * 超时竞态或资源耗尽后重建 page，并回到最近一次文档路由（空白新页不能直接 wait main）。
+ */
+async function recoverAndRevisit(
+  t: DocsBrowserTestContext,
+  opts?: { resourceExhausted?: boolean },
+): Promise<void> {
+  await recoverDocsBrowserPage(t, opts);
+  if (!_lastGoto) return;
+  const path = _lastGoto.path;
+  const url = _singletonBaseUrl + (path.startsWith("/") ? path : "/" + path);
+  await navigateDocsPage(t, url, _lastGoto.options);
+}
+
 export const sharedEnv = {
   /**
    * 启动 dev server（幂等，已启动则跳过）。
@@ -846,37 +978,33 @@ export const sharedEnv = {
     path: string,
     options?: SharedEnvGotoOptions,
   ): Promise<void> {
-    if (!t?.browser?.goto) return;
+    if (!t?.browser?.goto && typeof t.browser?.page?.goto !== "function") {
+      return;
+    }
+    _lastGoto = { path, options };
     await this.start();
     await _ensureAlive();
     const url = _singletonBaseUrl + (path.startsWith("/") ? path : "/" + path);
-    const navMs = options?.navigationTimeoutMs ?? 60_000;
-    /** 默认与 @dreamer/test 内 `page.goto` 一致；重型页可改为 `commit` */
-    const waitUntil = options?.waitUntil ?? "domcontentloaded";
-    const navigate = async () => {
-      patchBrowserEvaluateForTsxKeepNames(t);
-      const page = t.browser!.page;
-      if (typeof page?.goto === "function") {
-        await page.goto(url, {
-          waitUntil,
-          timeout: navMs,
+    const waitMainMs = options?.waitMainTimeoutMs ?? 25_000;
+    const run = async () => {
+      if (typeof t.browser?.page?.goto !== "function") {
+        await recoverDocsBrowserPage(t, {
+          resourceExhausted: false,
         });
-      } else {
-        await t.browser!.goto!(url);
       }
+      await navigateDocsPage(t, url, options);
+      await waitMainChars(t, GOTO_MAIN_MIN_CHARS, waitMainMs);
     };
     try {
-      await navigate();
+      await run();
     } catch (err) {
-      // CI：冷启断开，或 macOS 长跑末段 WouldBlock／os35
+      // CI：冷启断开、超时后 page 被置空，或 macOS 长跑末段 WouldBlock／os35
       if (!isRecoverableBrowserError(err)) throw err;
       await recoverDocsBrowserPage(t, {
         resourceExhausted: isResourceExhaustedSpawnError(err),
       });
-      await navigate();
+      await run();
     }
-    const waitMainMs = options?.waitMainTimeoutMs ?? 25_000;
-    await waitMainChars(t, GOTO_MAIN_MIN_CHARS, waitMainMs);
   },
 
   /**
@@ -893,22 +1021,43 @@ export const sharedEnv = {
     patchBrowserEvaluateForTsxKeepNames(t);
     const minChars = options?.minChars ?? STRICT_DOC_MAIN_MIN_CHARS;
     const timeoutMs = options?.timeoutMs ?? 18_000;
-    await waitMainChars(t, minChars, timeoutMs);
-    // 正文出水后再等 Dreamer 事件句柄，覆盖 reload 后的 hydration 窗口（CI 更慢）
-    await waitDreamerHandlers(t, Math.min(timeoutMs, 18_000));
+    const once = async () => {
+      await waitMainChars(t, minChars, timeoutMs);
+      // 正文出水后再等 Dreamer 事件句柄，覆盖 reload 后的 hydration 窗口（CI 更慢）
+      await waitDreamerHandlers(t, Math.min(timeoutMs, 18_000));
+    };
+    try {
+      await once();
+    } catch (err) {
+      if (!isRecoverableBrowserError(err)) throw err;
+      await recoverAndRevisit(t, {
+        resourceExhausted: isResourceExhaustedSpawnError(err),
+      });
+      await once();
+    }
   },
 
   /**
    * 读取 `main` 内文本
    */
   async getMainText(
-    t: { browser?: { evaluate: (fn: () => string) => Promise<unknown> } },
+    t: DocsBrowserTestContext,
   ): Promise<string> {
     if (!t?.browser) return "";
-    return (await t.browser.evaluate(() => {
-      const main = document.querySelector("main");
-      return main?.innerText ?? "";
-    })) as string;
+    const read = async () =>
+      (await t.browser!.evaluate(() => {
+        const main = document.querySelector("main");
+        return main?.innerText ?? "";
+      })) as string;
+    try {
+      return await read();
+    } catch (err) {
+      if (!isRecoverableBrowserError(err)) throw err;
+      await recoverAndRevisit(t, {
+        resourceExhausted: isResourceExhaustedSpawnError(err),
+      });
+      return await read();
+    }
   },
 
   /** 固定暂停（毫秒） */
