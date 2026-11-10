@@ -183,6 +183,20 @@ async function waitDreamerHandlers(
 }
 
 /**
+ * 浏览器内路由核对：goto 可能传入带 query / hash 的完整路径，
+ * 只与 location.pathname 比对（页面随后可能改写 search）。
+ */
+function docsPathnameCheckSrc(expectedPath: string): string {
+  return (
+    `const expected = ${JSON.stringify(expectedPath)};` +
+    "const raw = String(expected).split('#')[0];" +
+    "const e = (raw.split('?')[0] || '/').replace(/\\/+$/, '') || '/';" +
+    "const p = (location.pathname || '/').replace(/\\/+$/, '') || '/';" +
+    "if (p !== e && !p.endsWith(e)) return false;"
+  );
+}
+
+/**
  * 等当前文档资源加载完成：`document.readyState === "complete"`
  * （对应 window `load`：HTML + CSS/JS/图片等子资源）。
  * 不把 Playwright `goto` 的 `waitUntil` 改成 `load` / `domcontentloaded`：
@@ -191,7 +205,7 @@ async function waitDreamerHandlers(
  *
  * @param t 浏览器上下文
  * @param timeoutMs 超时毫秒；超时抛出含 readyState / pathname 的明确错误
- * @param expectedPath 可选：目标 pathname，避免把旧页的 complete 当成新页已加载
+ * @param expectedPath 可选：目标路由（可带 query / hash；比对时只取 pathname），避免把旧页的 complete 当成新页已加载
  */
 async function waitDocumentComplete(
   t: DocsBrowserTestContext,
@@ -202,12 +216,7 @@ async function waitDocumentComplete(
     throw new Error("Target page, context or browser has been closed");
   }
   const deadline = Date.now() + timeoutMs;
-  const pathCheck = expectedPath
-    ? `const expected = ${JSON.stringify(expectedPath)};` +
-      "const p = (location.pathname || '/').replace(/\\/+$/, '') || '/';" +
-      "const e = expected.replace(/\\/+$/, '') || '/';" +
-      "if (p !== e && !p.endsWith(e)) return false;"
-    : "";
+  const pathCheck = expectedPath ? docsPathnameCheckSrc(expectedPath) : "";
   const probeBody = pathCheck + 'return document.readyState === "complete";';
   const snapshotBody =
     "return {" +
@@ -269,7 +278,7 @@ async function waitDocumentComplete(
  *
  * @param t 浏览器上下文
  * @param timeoutMs 整段等待上限
- * @param expectedPath 目标 pathname
+ * @param expectedPath 目标路由（可带 query / hash；比对时只取 pathname）
  */
 async function waitAfterDocsNavigate(
   t: DocsBrowserTestContext,
@@ -302,12 +311,7 @@ async function waitMainChars(
   const wf = t.browser?.waitFor;
   // 浏览器内不能闭包宿主变量：把 minChars / 目标 pathname 内联进函数体。
   // waitUntil: commit 后旧文档的 main 可能仍在，必须等到新路由的正文。
-  const pathCheck = expectedPath
-    ? `const expected = ${JSON.stringify(expectedPath)};` +
-      "const p = (location.pathname || '/').replace(/\\/+$/, '') || '/';" +
-      "const e = expected.replace(/\\/+$/, '') || '/';" +
-      "if (p !== e && !p.endsWith(e)) return false;"
-    : "";
+  const pathCheck = expectedPath ? docsPathnameCheckSrc(expectedPath) : "";
   const probeSrc = pathCheck +
     `const main = document.querySelector("main"); return (main?.innerText?.length ?? 0) >= ${
       Number(minChars)
