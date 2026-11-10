@@ -23,6 +23,13 @@ interface ApiRow {
 
 const TEXTAREA_API: ApiRow[] = [
   {
+    name: "size",
+    type: '"xs" | "sm" | "md" | "lg"',
+    default: '"md"',
+    description: "尺寸：xs、sm、md、lg；也可由外层 Form 的 size 注入",
+  },
+
+  {
     name: "value",
     type: "string | (() => string) | Signal<string>",
     default: "-",
@@ -71,6 +78,18 @@ const TEXTAREA_API: ApiRow[] = [
     type: "string",
     default: "-",
     description: "占位文案",
+  },
+  {
+    name: "label",
+    type: "string",
+    default: "-",
+    description: "描边内嵌标签，效果见 Input「描边内嵌标签」；空且未聚焦在框内，聚焦或有值后上到边框左上缺口",
+  },
+  {
+    name: "floatingLabel",
+    type: "boolean",
+    default: "false",
+    description: "为 true 且未设 label 时，用 placeholder 作为描边内嵌标签",
   },
   { name: "class", type: "string", default: "-", description: "额外 class" },
   {
@@ -284,6 +303,32 @@ export default function FormTextarea() {
   value=""
   rows={5}
 />`}
+              language="tsx"
+              showLineNumbers
+              copyable
+              wrapLongLines
+            />
+          </section>
+          <section class="space-y-4">
+            <Title level={3}>size（xs / sm / md / lg）</Title>
+            <FormItem label="xs">
+              <Textarea size="xs" placeholder="xs" value="" rows={2} />
+            </FormItem>
+            <FormItem label="sm">
+              <Textarea size="sm" placeholder="sm" value="" rows={2} />
+            </FormItem>
+            <FormItem label="md（默认）">
+              <Textarea size="md" placeholder="md" value="" rows={2} />
+            </FormItem>
+            <FormItem label="lg">
+              <Textarea size="lg" placeholder="lg" value="" rows={2} />
+            </FormItem>
+            <CodeBlock
+              title="代码示例"
+              code={`<Textarea size="xs" placeholder="xs" value="" rows={2} />
+<Textarea size="sm" placeholder="sm" value="" rows={2} />
+<Textarea size="md" placeholder="md" value="" rows={2} />
+<Textarea size="lg" placeholder="lg" value="" rows={2} />`}
               language="tsx"
               showLineNumbers
               copyable

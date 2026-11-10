@@ -138,6 +138,28 @@ export default function MobileTimePickerDoc() {
             wrapLongLines
           />
         </div>
+        <div class="space-y-4">
+          <Title level={3}>size（xs / sm / md / lg）</Title>
+          <MobileDocDemo>
+            <div class="flex flex-col gap-3 p-2">
+              <TimePicker size="xs" class="w-full" placeholder="xs" />
+              <TimePicker size="sm" class="w-full" placeholder="sm" />
+              <TimePicker size="md" class="w-full" placeholder="md" />
+              <TimePicker size="lg" class="w-full" placeholder="lg" />
+            </div>
+          </MobileDocDemo>
+          <CodeBlock
+            title="代码示例"
+            code={`<TimePicker size="xs" placeholder="xs" />
+<TimePicker size="sm" placeholder="sm" />
+<TimePicker size="md" placeholder="md" />
+<TimePicker size="lg" placeholder="lg" />`}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+        </div>
       </section>
 
       <DocsMessagesSection

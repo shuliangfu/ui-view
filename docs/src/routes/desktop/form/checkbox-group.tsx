@@ -21,6 +21,13 @@ interface ApiRow {
 
 const CHECKBOX_GROUP_API: ApiRow[] = [
   {
+    name: "size",
+    type: '"xs" | "sm" | "md" | "lg"',
+    default: '"md"',
+    description: "尺寸：xs、sm、md、lg；也可由外层 Form 的 size 注入",
+  },
+
+  {
     name: "options",
     type: "Array<{value, label, disabled?}>",
     default: "-",
@@ -235,6 +242,32 @@ export default function FormCheckboxGroup() {
   onChange={() => {}}
   disabled
 />`}
+              language="tsx"
+              showLineNumbers
+              copyable
+              wrapLongLines
+            />
+          </section>
+          <section class="space-y-4">
+            <Title level={3}>size（xs / sm / md / lg）</Title>
+            <FormItem label="xs">
+              <CheckboxGroup size="xs" options={options} value={["a"]} />
+            </FormItem>
+            <FormItem label="sm">
+              <CheckboxGroup size="sm" options={options} value={["a"]} />
+            </FormItem>
+            <FormItem label="md（默认）">
+              <CheckboxGroup size="md" options={options} value={["a"]} />
+            </FormItem>
+            <FormItem label="lg">
+              <CheckboxGroup size="lg" options={options} value={["a"]} />
+            </FormItem>
+            <CodeBlock
+              title="代码示例"
+              code={`<CheckboxGroup size="xs" options={options} value={["a"]} />
+<CheckboxGroup size="sm" options={options} value={["a"]} />
+<CheckboxGroup size="md" options={options} value={["a"]} />
+<CheckboxGroup size="lg" options={options} value={["a"]} />`}
               language="tsx"
               showLineNumbers
               copyable

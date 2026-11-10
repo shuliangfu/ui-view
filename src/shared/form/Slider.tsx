@@ -16,6 +16,8 @@
 import { createEffect, createRef } from "@dreamer/view";
 import type { JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
+import type { SizeVariant } from "../types.ts";
+import { resolveFormControlSize } from "./form-control-context.ts";
 import { commitMaybeSignal, type MaybeSignal } from "./maybe-signal.ts";
 
 /**
@@ -35,6 +37,8 @@ export const defaultSliderMessages: SliderMessages = {
 };
 
 export interface SliderProps {
+  /** 控件尺寸，与 Input 相同；也可由外层 Form 的 size 注入 */
+  size?: SizeVariant;
   /** 当前值；见 {@link MaybeSignal}（单值或 range 元组） */
   value?: MaybeSignal<number | [number, number]>;
   /** 最小值 */
@@ -82,6 +86,31 @@ const trackCls =
 
 /** 单滑块轨道：横向 */
 const trackHorizontalCls = "h-2 w-full";
+
+const sliderTrackH: Record<SizeVariant, string> = {
+  xs: "h-1",
+  sm: "h-1.5",
+  md: "h-2",
+  lg: "h-2.5",
+};
+const sliderThumbWh: Record<SizeVariant, string> = {
+  xs: "[&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:w-3 [&::-moz-range-thumb]:h-3 [&::-moz-range-thumb]:w-3",
+  sm: "[&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4",
+  md: "[&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-5 [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:w-5",
+  lg: "[&::-webkit-slider-thumb]:h-6 [&::-webkit-slider-thumb]:w-6 [&::-moz-range-thumb]:h-6 [&::-moz-range-thumb]:w-6",
+};
+const sliderThumbMt: Record<SizeVariant, string> = {
+  xs: "[&::-webkit-slider-thumb]:-mt-[4px] [&::-webkit-slider-runnable-track]:h-1 [&::-moz-range-track]:h-1",
+  sm: "[&::-webkit-slider-thumb]:-mt-[5px] [&::-webkit-slider-runnable-track]:h-1.5 [&::-moz-range-track]:h-1.5",
+  md: "[&::-webkit-slider-thumb]:-mt-[6px] [&::-webkit-slider-runnable-track]:h-2 [&::-moz-range-track]:h-2",
+  lg: "[&::-webkit-slider-thumb]:-mt-[7px] [&::-webkit-slider-runnable-track]:h-2.5 [&::-moz-range-track]:h-2.5",
+};
+const sliderHitH: Record<SizeVariant, string> = {
+  xs: "h-7",
+  sm: "h-8",
+  md: "h-10",
+  lg: "h-12",
+};
 
 /**
  * 横向 range：原生轨道透明，由底层 div 画灰轨与蓝条，两枚 input 叠放只负责拇指交互。
@@ -145,6 +174,8 @@ function armPointerDragEnd(flag: { current: boolean }) {
 }
 
 export function Slider(props: SliderProps): JSXRenderable {
+  const size = resolveFormControlSize(props.size);
+  const sizeTrack = twMerge(sliderThumbWh[size], sliderThumbMt[size], sliderTrackH[size]);
   const singleInputRef = createRef<HTMLInputElement>();
   const rangeLowRef = createRef<HTMLInputElement>();
   const rangeHighRef = createRef<HTMLInputElement>();
@@ -412,8 +443,8 @@ export function Slider(props: SliderProps): JSXRenderable {
 
       /** 竖向与横向单轨一致 h-2 细轨，拇指仍为 h-5，旋转后视觉上滑线细、滑点大于滑线 */
       const trackClsWithDir = vertical
-        ? twMerge(trackCls, "w-40 h-2 -rotate-90")
-        : twMerge(trackCls, trackHorizontalCls);
+        ? twMerge(trackCls, sizeTrack, "w-40", sliderTrackH[size], "-rotate-90")
+        : twMerge(trackCls, trackHorizontalCls, sizeTrack);
       const wrapperCls = vertical
         ? "flex flex-row gap-2 items-center min-h-40 min-w-0 h-40"
         : "";
@@ -424,14 +455,14 @@ export function Slider(props: SliderProps): JSXRenderable {
       if (!vertical) {
         return (
           <div class={twMerge("relative w-full py-1", className)}>
-            <div class="relative h-10 w-full">
+            <div class={twMerge("relative w-full", sliderHitH[size])}>
               <div
-                class="pointer-events-none absolute left-0 right-0 top-1/2 h-2 -translate-y-1/2 rounded-full bg-slate-200 dark:bg-slate-600"
+                class={twMerge("pointer-events-none absolute left-0 right-0 top-1/2 -translate-y-1/2 rounded-full bg-slate-200 dark:bg-slate-600", sliderTrackH[size])}
                 aria-hidden="true"
               />
               <div
                 ref={rangeFillBarRef}
-                class="pointer-events-none absolute top-1/2 h-2 -translate-y-1/2 rounded-full bg-blue-600 dark:bg-blue-500"
+                class={twMerge("pointer-events-none absolute top-1/2 -translate-y-1/2 rounded-full bg-blue-600 dark:bg-blue-500", sliderTrackH[size])}
                 style={{ left: "0%", width: "0%" }}
                 aria-hidden="true"
               />
@@ -443,7 +474,7 @@ export function Slider(props: SliderProps): JSXRenderable {
                 max={max}
                 step={step}
                 disabled={disabled}
-                class={rangeOverlayThumbCls}
+                class={twMerge(rangeOverlayThumbCls, sizeTrack, sliderHitH[size])}
                 onPointerDown={onRangePointerDown}
                 onInput={onLowInput}
                 onChange={onLowChange}
@@ -456,7 +487,7 @@ export function Slider(props: SliderProps): JSXRenderable {
                 max={max}
                 step={step}
                 disabled={disabled}
-                class={rangeOverlayThumbCls}
+                class={twMerge(rangeOverlayThumbCls, sizeTrack, sliderHitH[size])}
                 onPointerDown={onRangePointerDown}
                 onInput={onHighInput}
                 onChange={onHighChange}
@@ -504,10 +535,10 @@ export function Slider(props: SliderProps): JSXRenderable {
 
     /** 竖向：旋转前 w-40=轨长、h-2=与横向相同的细轨宽（旋转后即为竖条粗细） */
     const trackClsWithDir = vertical
-      ? twMerge(trackCls, "w-40 h-2")
-      : twMerge(trackCls, trackHorizontalCls);
+      ? twMerge(trackCls, sizeTrack, "w-40", sliderTrackH[size])
+      : twMerge(trackCls, trackHorizontalCls, sizeTrack);
     const wrapperCls = vertical
-      ? "inline-flex justify-center items-center h-40 min-h-40 min-w-5 shrink-0 [&>input]:rotate-[-90deg] [&>input]:w-40 [&>input]:h-2"
+      ? twMerge("inline-flex justify-center items-center h-40 min-h-40 min-w-5 shrink-0 [&>input]:rotate-[-90deg] [&>input]:w-40", `[&>input]:${sliderTrackH[size]}`)
       : "";
 
     /**

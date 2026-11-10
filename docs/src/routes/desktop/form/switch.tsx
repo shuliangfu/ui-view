@@ -21,6 +21,13 @@ interface ApiRow {
 
 const SWITCH_API: ApiRow[] = [
   {
+    name: "size",
+    type: '"xs" | "sm" | "md" | "lg"',
+    default: '"md"',
+    description: "尺寸：xs、sm、md、lg；也可由外层 Form 的 size 注入",
+  },
+
+  {
     name: "checked",
     type: "boolean | (() => boolean) | Signal<boolean>",
     default: "-",
@@ -217,6 +224,32 @@ export default function FormSwitch() {
               code={`<Switch checked={false} error />
 <Switch checked={false} disabled />
 <Switch checked disabled />`}
+              language="tsx"
+              showLineNumbers
+              copyable
+              wrapLongLines
+            />
+          </section>
+          <section class="space-y-4">
+            <Title level={3}>size（xs / sm / md / lg）</Title>
+            <FormItem label="xs">
+              <Switch size="xs" checked />
+            </FormItem>
+            <FormItem label="sm">
+              <Switch size="sm" checked />
+            </FormItem>
+            <FormItem label="md（默认）">
+              <Switch size="md" checked />
+            </FormItem>
+            <FormItem label="lg">
+              <Switch size="lg" checked />
+            </FormItem>
+            <CodeBlock
+              title="代码示例"
+              code={`<Switch size="xs" checked />
+<Switch size="sm" checked />
+<Switch size="md" checked />
+<Switch size="lg" checked />`}
               language="tsx"
               showLineNumbers
               copyable

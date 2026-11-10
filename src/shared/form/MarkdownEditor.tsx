@@ -22,6 +22,8 @@ import {
   isMarkdownPreviewDomHost,
   wrapMarkdownPreviewCodeBlocks,
 } from "./markdown-preview-prism.ts";
+import type { SizeVariant } from "../types.ts";
+import { resolveFormControlSize } from "./form-control-context.ts";
 import { commitMaybeSignal, type MaybeSignal } from "./maybe-signal.ts";
 import { uploadFileViaUiViewBase } from "./upload-http.ts";
 import { isDomElement, isHtmlElementOf } from "../dom-guards.ts";
@@ -30,6 +32,8 @@ import { isDomElement, isHtmlElementOf } from "../dom-guards.ts";
 export type MarkdownEditorPreviewMode = "off" | "split" | "tabs";
 
 export interface MarkdownEditorProps {
+  /** 控件尺寸，与 Input 相同；也可由外层 Form 的 size 注入 */
+  size?: SizeVariant;
   /** Markdown 源码；见 {@link MaybeSignal} */
   value?: MaybeSignal<string>;
   /** 占位文案 */
@@ -547,6 +551,13 @@ export function MarkdownEditor(props: MarkdownEditorProps): JSXRenderable {
     onUploadImage,
     onPasteImage,
   } = props;
+  const size = resolveFormControlSize(props.size);
+  const mdSizeRoot: Record<SizeVariant, string> = {
+    xs: "[&_button]:p-1 [&_button]:min-w-[22px] [&_button]:min-h-[22px] [&_button]:text-xs [&_textarea]:px-2 [&_textarea]:py-1 [&_textarea]:text-xs",
+    sm: "[&_button]:p-1 [&_button]:min-w-[24px] [&_button]:min-h-[24px] [&_button]:text-xs [&_textarea]:px-2.5 [&_textarea]:py-1.5 [&_textarea]:text-sm",
+    md: "",
+    lg: "[&_button]:p-2 [&_button]:min-w-[32px] [&_button]:min-h-[32px] [&_button]:text-base [&_textarea]:px-4 [&_textarea]:py-2.5 [&_textarea]:text-base",
+  };
 
   /** 全屏时用于切换 `md-editor-fullscreen` 的根容器 */
   const rootRef = createRef<HTMLDivElement>(null);
@@ -922,6 +933,7 @@ export function MarkdownEditor(props: MarkdownEditorProps): JSXRenderable {
           !hideFocusRing &&
             "has-[textarea:focus]:border-blue-500 dark:has-[textarea:focus]:border-blue-400",
           "[&.md-editor-fullscreen]:fixed [&.md-editor-fullscreen]:inset-0 [&.md-editor-fullscreen]:z-9999 [&.md-editor-fullscreen]:border-0 [&.md-editor-fullscreen]:bg-white [&.md-editor-fullscreen]:dark:bg-slate-900 [&.md-editor-fullscreen]:flex [&.md-editor-fullscreen]:flex-col",
+          mdSizeRoot[size],
           className,
         )}
       >

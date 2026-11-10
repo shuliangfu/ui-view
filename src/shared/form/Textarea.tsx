@@ -11,11 +11,18 @@ import {
 import { twMerge } from "tailwind-merge";
 import { FormItemControlIdContext } from "./form-item-control-id.ts";
 import {
+  OutlinedField,
+  outlinedControlClass,
+  resolveOutlinedLabel,
+} from "./outlined-field.tsx";
+import { resolveFormControlSize } from "./form-control-context.ts";
+import {
   controlBlueFocusRing,
   controlErrorBorder,
   controlErrorFocusRing,
 } from "./input-focus-ring.ts";
 import { commitMaybeSignal, type MaybeSignal } from "./maybe-signal.ts";
+import type { SizeVariant } from "../types.ts";
 
 /**
  * Textarea 内置文案。
@@ -31,12 +38,21 @@ export const defaultTextareaMessages: TextareaMessages = {
 };
 
 export interface TextareaProps {
+  /** 尺寸，与 {@link import("./Input.tsx").Input} 相同：xs、sm、md、lg */
+  size?: SizeVariant;
   /** 是否禁用 */
   disabled?: boolean;
   /** 为 true 时隐藏聚焦激活态边框；默认 false 显示 ring */
   hideFocusRing?: boolean;
   /** 占位文案 */
   placeholder?: string;
+  /**
+   * 描边内嵌标签；也可用 FormItem 的 `labelPosition="outline"`。
+   * 空且未聚焦时在框内上方，聚焦或有值后上到边框左上缺口。
+   */
+  label?: string;
+  /** 为 true 且未设 `label` 时，用 `placeholder` 作为描边内嵌标签 */
+  floatingLabel?: boolean;
   /** 行数（高度） */
   rows?: number;
   /** 输入值（受控可选）；见 {@link MaybeSignal} */
@@ -79,7 +95,13 @@ export interface TextareaProps {
 
 /** 基础底纹（不含 ring）；`w-full min-w-0` 覆盖原生 textarea 默认 cols 导致的窄宽度，并在 grid/flex 子项中正确伸缩 */
 const textareaSurface =
-  "box-border w-full min-w-0 border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 border-slate-300 dark:border-slate-600 focus:outline-hidden disabled:opacity-50 disabled:cursor-not-allowed transition-colors px-3 py-2 text-sm rounded-lg resize-y min-h-[80px]";
+  "box-border w-full min-w-0 border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 border-slate-300 dark:border-slate-600 focus:outline-hidden disabled:opacity-50 disabled:cursor-not-allowed transition-colors resize-y";
+const textareaSizeClasses: Record<SizeVariant, string> = {
+  xs: "px-2.5 py-1 text-xs rounded-md min-h-[64px]",
+  sm: "px-3 py-1.5 text-sm rounded-md min-h-[72px]",
+  md: "px-3 py-2 text-sm rounded-lg min-h-[80px]",
+  lg: "px-4 py-2.5 text-base rounded-lg min-h-[96px]",
+};
 const readOnlyCls = "bg-slate-50 dark:bg-slate-800/80 cursor-default";
 
 /**
@@ -108,8 +130,11 @@ function TextareaLengthDisplay(props: {
 
 export function Textarea(props: TextareaProps): JSXRenderable {
   const {
+    size: sizeProp,
     disabled = false,
     placeholder,
+    label,
+    floatingLabel = false,
     rows = 3,
     value,
     maxLength,
@@ -132,6 +157,7 @@ export function Textarea(props: TextareaProps): JSXRenderable {
     messages,
   } = props;
   const m = { ...defaultTextareaMessages, ...messages };
+  const size = resolveFormControlSize(sizeProp);
 
   /** 在 {@link import("./FormItem.tsx").FormItem} 下且未显式 `id` 时，与 `label[for]` 自动对齐 */
   const fromFormItem = useContext(FormItemControlIdContext);
@@ -164,25 +190,36 @@ export function Textarea(props: TextareaProps): JSXRenderable {
    * 经 `setProperty` 会变成 `textarea.maxLength = undefined`，部分引擎按 0 处理，导致无法输入任何字符；
    * 显式传 `maxLength={200}` 时值为正数，故仅该分支正常。
    */
+  const outlined = resolveOutlinedLabel({
+    label,
+    floatingLabel,
+    placeholder,
+    required,
+    useInnerLabel: true,
+  });
+
   const textareaProps = {
     id: resolvedId,
     ref: textareaRef,
     name,
     rows,
     value,
-    placeholder,
+    placeholder: outlined?.nativePlaceholder ?? placeholder,
     disabled,
     readOnly,
     ...(maxLength != null ? { maxLength } : {}),
     "aria-required": required,
     "aria-invalid": error,
+    ...(outlined ? { "aria-label": outlined.text } : {}),
     class: twMerge(
       textareaSurface,
-      controlBlueFocusRing(!hideFocusRing),
-      error && controlErrorBorder,
-      error && !hideFocusRing && controlErrorFocusRing(true),
-      readOnly && readOnlyCls,
-      className,
+      textareaSizeClasses[size],
+      controlBlueFocusRing(!hideFocusRing && !outlined),
+      error && !outlined && controlErrorBorder,
+      error && !hideFocusRing && !outlined && controlErrorFocusRing(true),
+      readOnly && !outlined && readOnlyCls,
+      outlined && outlinedControlClass,
+      outlined ? undefined : className,
     ),
     onInput: handleInput,
     onChange: handleChange,
@@ -194,20 +231,39 @@ export function Textarea(props: TextareaProps): JSXRenderable {
     onPaste,
   };
 
+  const area = <textarea {...textareaProps} />;
+  const field = outlined
+    ? (
+      <OutlinedField
+        label={outlined.text}
+        requiredMark={outlined.requiredMark}
+        size={size}
+        error={error}
+        disabled={disabled}
+        readOnly={readOnly}
+        hideFocusRing={hideFocusRing}
+        innerAlign="start"
+        class={maxLength == null ? className : undefined}
+      >
+        {area}
+      </OutlinedField>
+    )
+    : area;
+
   if (maxLength == null) {
     /**
      * 与 {@link Input} 无 addon 分支一致：避免多包一层 `() => <textarea />` 在 View `insert` 下与受控
      * `value` 叠用导致整段 DOM 重建、输入失焦。
      */
-    return <textarea {...textareaProps} />;
+    return field;
   }
 
   /**
    * 外壳稳定；字数由函数子局部读 value（与 Password 强度槽同理），勿包整段 `() =>`。
    */
   return (
-    <div class="w-full min-w-0">
-      <textarea {...textareaProps} />
+    <div class={twMerge("w-full min-w-0", className)}>
+      {field}
       {() => (
         <TextareaLengthDisplay
           value={value}

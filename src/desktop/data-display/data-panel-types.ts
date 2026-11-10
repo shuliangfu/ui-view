@@ -128,18 +128,17 @@ export interface Column {
 }
 
 /**
- * 详情 Modal 项（对齐旧 `view.schemas` 的 `{ label, value }`）。
- * `children` 优先；否则用 `value`（可为节点）；再否则按 `prop` 从行取值。
+ * 详情项（`PanelProps.view.props` 数组，写法同列字段）。
+ * 与列同一套字段配置；另可 `click`。底部按钮写在与 title 平级的 `view.actions`，不要写在 props 里。
  */
-export interface ViewSchema {
-  label: string;
-  /** 直接展示的值（string／number／JSX／节点均可） */
-  value?: unknown;
-  /** 同 DescriptionsItem.children；若与 value 同写以 children 为准 */
-  children?: unknown;
-  /** 从行读取的字段；无 value／children 时使用 */
-  prop?: string;
-  span?: number;
+export type ViewClick = "toggle" | ((row: Row) => void);
+
+export interface ViewItem extends Column {
+  /**
+   * 详情字段点击：`toggle` 在两档 options 间切换并走 setField／update；
+   * 或自定义 `(row)=>…`。
+   */
+  click?: ViewClick;
 }
 
 /** 搜索项（键统一 `prop`；旧 `name` 等同 prop，兼容保留） */
@@ -276,6 +275,35 @@ export interface FormField {
    * 仅无对应列时再写 onOff，默认 ["true","false"]。
    */
   onOff?: [string, string];
+}
+
+/**
+ * form / search / view 的统一段配置：`title` 为弹层标题，`props` 为字段数组
+ * （与列同一套字段配置）；底部按钮写在与 title 平级的 `actions`（不要写在 props 末项）。
+ */
+export interface FormConfig {
+  title?: string | ((row: Row) => string);
+  props: FormField[];
+  /** 可选底部按钮（与列操作同一套 Record）。表单确定／取消仍走官方 Modal 脚。 */
+  actions?: RowActionsConfig;
+}
+
+export interface SearchConfig {
+  title?: string | (() => string);
+  props: SearchField[];
+  /** 可选底部按钮（与列操作同一套 Record）。搜索确定／取消仍走官方 Modal 脚。 */
+  actions?: RowActionsConfig;
+}
+
+export interface ViewConfig {
+  /** 详情弹层标题；支持 `(row)=>string`，如 `` `详情 · ${row.name}` `` */
+  title?: string | ((row: Row) => string);
+  props: ViewItem[];
+  /**
+   * 底部按钮（与列操作同一套 Record）。内置只有 close（默认显示、靠右最后）。
+   * 自定义：`action(row)` 或 `href`。不写时底部只留关闭。
+   */
+  actions?: RowActionsConfig;
 }
 
 /** 列表查询（page 从 1 起；order 对外统一 asc｜desc） */
@@ -451,8 +479,10 @@ export type RowActionCtrl =
     title?: string | ((item: Row) => string);
     /** Visual tone (Button ColorVariant). Default "default"; builtin remove uses danger. */
     tone?: ActionTone;
-    /** Builtin: omit → default handler. Custom key: required (assert throws if missing). */
+    /** Builtin: omit → default handler. Custom key: required unless `href` is set. */
     action?: (item: Row) => void;
+    /** 打开链接（string 或 (row)=>string）。自定义键可与 action 二选一。 */
+    href?: string | ((item: Row) => string);
   };
 
 export type ToolbarBuiltin =
@@ -638,9 +668,11 @@ export function resolveRowActionCtrl(
   title?: string;
   tone?: ActionTone;
   action?: (item: Row) => void;
+  href?: string;
 } {
   if (ctrl === undefined) return { show: fallbackShow, disable: false };
   if (typeof ctrl === "boolean") return { show: ctrl, disable: false };
+  const href = ctrl.href;
   return {
     show: evalRowFlag(ctrl.show, item, true),
     disable: evalRowFlag(ctrl.disable, item, false),
@@ -649,6 +681,7 @@ export function resolveRowActionCtrl(
     title: evalRowTitle(ctrl.title, item),
     tone: ctrl.tone,
     action: ctrl.action,
+    href: typeof href === "function" ? href(item) : href,
   };
 }
 
@@ -659,12 +692,21 @@ export function assertToolbarConfig(
   if (!cfg) return;
   for (const [key, val] of Object.entries(cfg)) {
     if (isToolbarBuiltin(key)) continue;
-    if (typeof val === "object" && val !== null && typeof val.action === "function") {
+    if (
+      typeof val === "object" && val !== null &&
+      typeof val.action === "function"
+    ) {
       continue;
     }
     throw new Error(
       `DataPanel toolbar custom key "${key}" requires action(); ` +
-        `got ${val === null ? "null" : typeof val === "object" ? typeof (val as { action?: unknown }).action : typeof val}`,
+        `got ${
+          val === null
+            ? "null"
+            : typeof val === "object"
+            ? typeof (val as { action?: unknown }).action
+            : typeof val
+        }`,
     );
   }
 }
@@ -675,13 +717,22 @@ export function assertRowActionsConfig(
 ): void {
   if (!cfg) return;
   for (const [key, val] of Object.entries(cfg)) {
-    if (isRowBuiltin(key)) continue;
-    if (typeof val === "object" && val !== null && typeof val.action === "function") {
+    if (isRowBuiltin(key) || key === "close") continue;
+    if (
+      typeof val === "object" && val !== null &&
+      (typeof val.action === "function" || val.href != null)
+    ) {
       continue;
     }
     throw new Error(
-      `DataPanel column.actions custom key "${key}" requires action(row); ` +
-        `got ${val === null ? "null" : typeof val === "object" ? typeof (val as { action?: unknown }).action : typeof val}`,
+      `DataPanel column.actions custom key "${key}" requires action(row) or href; ` +
+        `got ${
+          val === null
+            ? "null"
+            : typeof val === "object"
+            ? typeof (val as { action?: unknown }).action
+            : typeof val
+        }`,
     );
   }
 }

@@ -158,6 +158,28 @@ export default function MobileCascaderDoc() {
             wrapLongLines
           />
         </div>
+        <div class="space-y-4">
+          <Title level={3}>size（xs / sm / md / lg）</Title>
+          <MobileDocDemo>
+            <div class="flex flex-col gap-3 p-2">
+              <Cascader size="xs" options={OPTIONS} class="w-full" placeholder="xs" />
+              <Cascader size="sm" options={OPTIONS} class="w-full" placeholder="sm" />
+              <Cascader size="md" options={OPTIONS} class="w-full" placeholder="md" />
+              <Cascader size="lg" options={OPTIONS} class="w-full" placeholder="lg" />
+            </div>
+          </MobileDocDemo>
+          <CodeBlock
+            title="代码示例"
+            code={`<Cascader size="xs" options={OPTIONS} placeholder="xs" />
+<Cascader size="sm" options={OPTIONS} placeholder="sm" />
+<Cascader size="md" options={OPTIONS} placeholder="md" />
+<Cascader size="lg" options={OPTIONS} placeholder="lg" />`}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+        </div>
       </section>
 
       <section class="space-y-4">

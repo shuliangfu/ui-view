@@ -24,6 +24,13 @@ interface ApiRow {
 
 const UPLOAD_API: ApiRow[] = [
   {
+    name: "size",
+    type: '"xs" | "sm" | "md" | "lg"',
+    default: '"md"',
+    description: "尺寸：xs、sm、md、lg；也可由外层 Form 的 size 注入",
+  },
+
+  {
     name: "action",
     type: "string",
     default: "-",
@@ -338,9 +345,8 @@ export default function FormUpload() {
                 multiple
                 onValueChange={(v) => hiddenPreview.value = v}
               />
-            
-          <CodeBlock title="代码示例" code={exampleActionDemo} language="tsx" showLineNumbers copyable wrapLongLines />
-</FormItem>
+            </FormItem>
+            <CodeBlock title="代码示例" code={exampleActionDemo} language="tsx" showLineNumbers copyable wrapLongLines />
           </section>
 
           <section class="space-y-4">
@@ -410,9 +416,8 @@ export default function FormUpload() {
                 accept="image/*"
                 triggerLabel="上传图片"
               />
-            
-          <CodeBlock title="代码示例" code={exampleMultiNoDrag} language="tsx" showLineNumbers copyable wrapLongLines />
-</FormItem>
+            </FormItem>
+            <CodeBlock title="代码示例" code={exampleMultiNoDrag} language="tsx" showLineNumbers copyable wrapLongLines />
           </section>
 
           <section class="space-y-4">
@@ -424,6 +429,32 @@ export default function FormUpload() {
                 name="disabledDemo"
               />
             </FormItem>
+          </section>
+          <section class="space-y-4">
+            <Title level={3}>size（xs / sm / md / lg）</Title>
+            <FormItem label="xs">
+              <Upload size="xs" action="/api/upload" name="size-xs" drag={false} triggerLabel="xs" />
+            </FormItem>
+            <FormItem label="sm">
+              <Upload size="sm" action="/api/upload" name="size-sm" drag={false} triggerLabel="sm" />
+            </FormItem>
+            <FormItem label="md（默认）">
+              <Upload size="md" action="/api/upload" name="size-md" drag={false} triggerLabel="md" />
+            </FormItem>
+            <FormItem label="lg">
+              <Upload size="lg" action="/api/upload" name="size-lg" drag={false} triggerLabel="lg" />
+            </FormItem>
+            <CodeBlock
+              title="代码示例"
+              code={`<Upload size="xs" action="/api/upload" drag={false} triggerLabel="xs" />
+<Upload size="sm" action="/api/upload" drag={false} triggerLabel="sm" />
+<Upload size="md" action="/api/upload" drag={false} triggerLabel="md" />
+<Upload size="lg" action="/api/upload" drag={false} triggerLabel="lg" />`}
+              language="tsx"
+              showLineNumbers
+              copyable
+              wrapLongLines
+            />
           </section>
         </Form>
       </section>

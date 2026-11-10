@@ -54,6 +54,18 @@ const PASSWORD_API: ApiRow[] = [
     description: "占位文案",
   },
   {
+    name: "label",
+    type: "string",
+    default: "-",
+    description: "描边内嵌标签，效果见 Input「描边内嵌标签」；空且未聚焦在框内，聚焦或有值后上到边框左上缺口",
+  },
+  {
+    name: "floatingLabel",
+    type: "boolean",
+    default: "false",
+    description: "为 true 且未设 label 时，用 placeholder 作为描边内嵌标签",
+  },
+  {
     name: "showStrength",
     type: "boolean",
     default: "false",

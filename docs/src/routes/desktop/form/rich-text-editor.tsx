@@ -23,6 +23,13 @@ interface ApiRow {
 
 const RICH_TEXT_EDITOR_API: ApiRow[] = [
   {
+    name: "size",
+    type: '"xs" | "sm" | "md" | "lg"',
+    default: '"md"',
+    description: "尺寸：xs、sm、md、lg；也可由外层 Form 的 size 注入",
+  },
+
+  {
     name: "value",
     type: "string | (() => string) | Signal<string>",
     default: "-",
@@ -261,6 +268,32 @@ export default function FormRichTextEditor() {
             <CodeBlock
               title="代码示例"
               code={`<RichTextEditor readOnly /> / <RichTextEditor disabled />`}
+              language="tsx"
+              showLineNumbers
+              copyable
+              wrapLongLines
+            />
+          </section>
+          <section class="space-y-4">
+            <Title level={3}>size（xs / sm / md / lg）</Title>
+            <FormItem label="xs">
+              <RichTextEditor size="xs" toolbarPreset="simple" placeholder="xs" minHeight="120px" />
+            </FormItem>
+            <FormItem label="sm">
+              <RichTextEditor size="sm" toolbarPreset="simple" placeholder="sm" minHeight="120px" />
+            </FormItem>
+            <FormItem label="md（默认）">
+              <RichTextEditor size="md" toolbarPreset="simple" placeholder="md" minHeight="120px" />
+            </FormItem>
+            <FormItem label="lg">
+              <RichTextEditor size="lg" toolbarPreset="simple" placeholder="lg" minHeight="120px" />
+            </FormItem>
+            <CodeBlock
+              title="代码示例"
+              code={`<RichTextEditor size="xs" toolbarPreset="simple" minHeight="120px" />
+<RichTextEditor size="sm" toolbarPreset="simple" minHeight="120px" />
+<RichTextEditor size="md" toolbarPreset="simple" minHeight="120px" />
+<RichTextEditor size="lg" toolbarPreset="simple" minHeight="120px" />`}
               language="tsx"
               showLineNumbers
               copyable

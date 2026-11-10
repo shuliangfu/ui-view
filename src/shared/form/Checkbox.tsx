@@ -8,8 +8,10 @@ import { type Signal } from "@dreamer/view";
 import { safeIsSignal, writeSignalValue } from "../safe-signal.ts";
 import type { JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
+import { resolveFormControlSize } from "./form-control-context.ts";
 import { controlBlueFocusRing } from "./input-focus-ring.ts";
 import type { MaybeSignal } from "./maybe-signal.ts";
+import type { SizeVariant } from "../types.ts";
 
 export interface CheckboxMessages {
   /**
@@ -22,6 +24,8 @@ export interface CheckboxMessages {
 export const defaultCheckboxMessages: CheckboxMessages = {};
 
 export interface CheckboxProps {
+  /** 尺寸，与 {@link import("./Input.tsx").Input} 相同：xs、sm、md、lg */
+  size?: SizeVariant;
   /** 是否选中；见 {@link MaybeSignal} */
   checked?: MaybeSignal<boolean>;
   /** 是否禁用 */
@@ -62,9 +66,23 @@ export interface CheckboxProps {
 
 /** 勾选框本体底纹（不含 ring） */
 const checkboxInputSurface =
-  "h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-blue-600 focus:outline-hidden dark:bg-slate-800 dark:checked:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer";
+  "rounded border-slate-300 dark:border-slate-600 text-blue-600 focus:outline-hidden dark:bg-slate-800 dark:checked:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer";
 const labelCls =
-  "inline-flex items-center gap-2 cursor-pointer text-sm text-slate-700 dark:text-slate-300";
+  "inline-flex items-center cursor-pointer text-slate-700 dark:text-slate-300";
+
+const checkboxSizeClasses: Record<SizeVariant, string> = {
+  xs: "h-3 w-3",
+  sm: "h-3.5 w-3.5",
+  md: "h-4 w-4",
+  lg: "h-5 w-5",
+};
+const checkboxLabelSize: Record<SizeVariant, string> = {
+  xs: "gap-1.5 text-xs",
+  sm: "gap-2 text-sm",
+  md: "gap-2 text-sm",
+  lg: "gap-2 text-base",
+};
+
 const errorCls = "[&_input]:border-red-500 text-red-600 dark:text-red-400";
 
 export function Checkbox(props: CheckboxProps): JSXRenderable {
@@ -74,6 +92,7 @@ export function Checkbox(props: CheckboxProps): JSXRenderable {
   };
   void _m;
   const {
+    size: sizeProp,
     checked: checkedMaybe,
     disabled = false,
     error = false,
@@ -91,6 +110,7 @@ export function Checkbox(props: CheckboxProps): JSXRenderable {
     id,
     children,
   } = props;
+  const size = resolveFormControlSize(sizeProp);
 
   /**
    * 用户切换时：若 `checked` 为 Signal 则回写；再调用外部 `onChange`。
@@ -110,7 +130,7 @@ export function Checkbox(props: CheckboxProps): JSXRenderable {
   const checkedForInput = checkedMaybe === undefined ? false : checkedMaybe;
 
   return (
-    <label class={twMerge(labelCls, error && errorCls, className)}>
+    <label class={twMerge(labelCls, checkboxLabelSize[size], error && errorCls, className)}>
       <input
         type="checkbox"
         id={id}
@@ -121,6 +141,7 @@ export function Checkbox(props: CheckboxProps): JSXRenderable {
         aria-invalid={error}
         class={twMerge(
           checkboxInputSurface,
+          checkboxSizeClasses[size],
           controlBlueFocusRing(!hideFocusRing),
         )}
         onChange={handleChange}

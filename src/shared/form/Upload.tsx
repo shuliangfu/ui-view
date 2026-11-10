@@ -19,7 +19,9 @@ export {
   DEFAULT_UI_VIEW_UPLOAD_BASE_PATH,
   uploadFileViaUiViewBase,
 } from "./upload-http.ts";
+import { resolveFormControlSize } from "./form-control-context.ts";
 import { commitMaybeSignal, type MaybeSignal } from "./maybe-signal.ts";
+import type { SizeVariant } from "../types.ts";
 
 /** 文件项状态（用于列表展示与进度） */
 export type UploadFileStatus = "pending" | "uploading" | "done" | "error";
@@ -63,6 +65,8 @@ export interface UploadCoreProps {
   multiple?: boolean;
   /** 接受的文件类型，如 "image/*"、".pdf" */
   accept?: string;
+  /** 控件尺寸，与 {@link import("./Input.tsx").Input} 相同：xs、sm、md、lg（不是文件字节数） */
+  size?: SizeVariant;
   /** 是否禁用 */
   disabled?: boolean;
   /** 是否展示拖拽区域，默认 true；为 false 时为 IconUpload + 文案触发条 */
@@ -192,8 +196,26 @@ const fileInputOverlayCls =
   "absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0 disabled:cursor-not-allowed";
 
 const dropZoneCls =
-  "border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg p-6 text-center text-sm text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50 transition-colors motion-reduce:transition-none";
+  "border-2 border-dashed border-slate-300 dark:border-slate-600 text-center text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50 transition-colors motion-reduce:transition-none";
 const dropZoneActiveCls = "border-blue-500 bg-blue-50/50 dark:bg-blue-900/20";
+const uploadTriggerSize: Record<SizeVariant, string> = {
+  xs: "min-h-7 rounded-md",
+  sm: "min-h-8 rounded-md",
+  md: "min-h-10 rounded-lg",
+  lg: "min-h-12 rounded-lg",
+};
+const uploadTriggerInnerSize: Record<SizeVariant, string> = {
+  xs: "min-h-7 gap-1.5 px-2.5 py-1 text-xs",
+  sm: "min-h-8 gap-2 px-3 py-1.5 text-sm",
+  md: "min-h-10 gap-2 px-3 py-2 text-sm",
+  lg: "min-h-12 gap-2 px-4 py-2.5 text-base",
+};
+const uploadDropSize: Record<SizeVariant, string> = {
+  xs: "rounded-md p-3 text-xs min-h-[80px]",
+  sm: "rounded-md p-4 text-sm min-h-[96px]",
+  md: "rounded-lg p-6 text-sm min-h-[120px]",
+  lg: "rounded-lg p-8 text-base min-h-[144px]",
+};
 
 /**
  * 与 {@link Upload} 绑定的可变状态（列表、隐藏域副本、上传句柄）。
@@ -333,6 +355,7 @@ function canPreviewUploadedImage(url: string, accept?: string): boolean {
  */
 export function Upload(props: UploadProps): JSXRenderable {
   const {
+    size: sizeProp,
     multiple = false,
     accept,
     disabled = false,
@@ -364,6 +387,7 @@ export function Upload(props: UploadProps): JSXRenderable {
     messages,
   } = props;
   const m = { ...defaultUploadMessages, ...messages };
+  const size = resolveFormControlSize(sizeProp);
   const dragPlaceholder = props.dragPlaceholder ?? m.dragPlaceholder;
   const triggerLabel = props.triggerLabel ?? m.triggerLabel;
 
@@ -644,14 +668,15 @@ export function Upload(props: UploadProps): JSXRenderable {
   const triggerBar = (
     <div
       class={twMerge(
-        "relative flex min-h-10 w-full max-w-full items-stretch overflow-hidden rounded-lg border border-slate-300 bg-white dark:border-slate-600 dark:bg-slate-800",
+        "relative flex w-full max-w-full items-stretch overflow-hidden border border-slate-300 bg-white dark:border-slate-600 dark:bg-slate-800",
+        uploadTriggerSize[size],
         !hideFocusRing &&
           "focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent dark:focus-within:ring-blue-400",
         disabled && "opacity-50",
       )}
     >
       {fileInputOverlay}
-      <div class="pointer-events-none flex min-h-10 min-w-0 flex-1 items-center gap-2 px-3 py-2 text-sm text-slate-700 dark:text-slate-200">
+      <div class={twMerge("pointer-events-none flex min-w-0 flex-1 items-center text-slate-700 dark:text-slate-200", uploadTriggerInnerSize[size])}>
         {showTriggerIcon && (
           <IconUpload
             size="sm"
@@ -683,7 +708,8 @@ export function Upload(props: UploadProps): JSXRenderable {
           <div
             class={twMerge(
               dropZoneCls,
-              "relative min-h-[120px] flex items-center justify-center",
+              uploadDropSize[size],
+              "relative flex items-center justify-center",
               !hideFocusRing &&
                 "focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent dark:focus-within:ring-blue-400",
             )}
@@ -699,7 +725,7 @@ export function Upload(props: UploadProps): JSXRenderable {
                   class="text-slate-400 dark:text-slate-500"
                 />
               )}
-              <span class="text-sm">{dragPlaceholder}</span>
+              <span>{dragPlaceholder}</span>
             </div>
           </div>
         )

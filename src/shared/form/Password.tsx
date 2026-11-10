@@ -8,6 +8,11 @@ import { type JSXRenderable, useContext } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import { resolveFormControlSize } from "./form-control-context.ts";
 import { FormItemControlIdContext } from "./form-item-control-id.ts";
+import {
+  OutlinedField,
+  outlinedControlClass,
+  resolveOutlinedLabel,
+} from "./outlined-field.tsx";
 import type { SizeVariant } from "../types.ts";
 import {
   autofillVisualClass,
@@ -53,6 +58,13 @@ export interface PasswordProps {
   hideFocusRing?: boolean;
   /** 占位文案 */
   placeholder?: string;
+  /**
+   * 描边内嵌标签；也可用 FormItem 的 `labelPosition="outline"`。
+   * 空且未聚焦时在框内，聚焦或有值后上到边框左上缺口。
+   */
+  label?: string;
+  /** 为 true 且未设 `label` 时，用 `placeholder` 作为描边内嵌标签 */
+  floatingLabel?: boolean;
   /** 输入值（受控可选）；见 {@link MaybeSignal} */
   value?: MaybeSignal<string>;
   /** 是否显示明文（由父组件控制，用于显隐切换） */
@@ -152,6 +164,8 @@ export function Password(props: PasswordProps): JSXRenderable {
     onToggleShow,
     showStrength = false,
     hideFocusRing = false,
+    label,
+    floatingLabel = false,
     class: className,
     onInput,
     onChange,
@@ -202,21 +216,30 @@ export function Password(props: PasswordProps): JSXRenderable {
     onChange?.(e);
   };
 
+  const outlined = resolveOutlinedLabel({
+    label,
+    floatingLabel,
+    placeholder,
+    useInnerLabel: true,
+  });
+
   const inputProps = {
     type: showPassword ? "text" : "password",
     id: resolvedId,
     name,
     autoComplete: nativeAutoComplete,
     value,
-    placeholder,
+    placeholder: outlined?.nativePlaceholder ?? placeholder,
     disabled,
+    ...(outlined ? { "aria-label": outlined.text } : {}),
     class: twMerge(
       inputSurfaceBase,
       autofillVisualClass(autoComplete),
-      controlBlueFocusRing(!hideFocusRing),
+      controlBlueFocusRing(!hideFocusRing && !outlined),
       sizeCls,
       onToggleShow || showStrength ? "pr-10" : undefined,
-      !onToggleShow && !showStrength ? className : undefined,
+      outlined && outlinedControlClass,
+      !onToggleShow && !showStrength && !outlined ? className : undefined,
     ),
     onInput: handleInput,
     onChange: handleChange,
@@ -228,12 +251,29 @@ export function Password(props: PasswordProps): JSXRenderable {
     onPaste,
   };
 
+  const wrapField = (inner: JSXRenderable, hideInnerLabel = false) =>
+    outlined
+      ? (
+        <OutlinedField
+          label={outlined.text}
+          requiredMark={outlined.requiredMark}
+          size={size}
+          disabled={disabled}
+          hideFocusRing={hideFocusRing}
+          hideInnerLabel={hideInnerLabel}
+          class={!onToggleShow && !showStrength ? className : undefined}
+        >
+          {inner}
+        </OutlinedField>
+      )
+      : inner;
+
   if (!onToggleShow && !showStrength) {
     /**
      * 与 {@link Input} 无 addon 分支一致：勿 `() => <input />`，避免与受控 value 的
      * createRenderEffect 叠用导致键入重建 DOM、立刻失焦。
      */
-    return <input {...inputProps} />;
+    return wrapField(<input {...inputProps} />);
   }
 
   /**
@@ -241,7 +281,9 @@ export function Password(props: PasswordProps): JSXRenderable {
    * （`showPassword` 为父级传入的布尔 prop；切换时本函数整体重跑属预期。）
    */
   return (
-    <div class={twMerge("relative", className)}>
+    <div class={className}>
+      {wrapField(
+        <div class="relative">
       <input {...inputProps} class={twMerge("w-full", inputProps.class)} />
       {onToggleShow && (
         <button
@@ -292,6 +334,8 @@ export function Password(props: PasswordProps): JSXRenderable {
               </svg>
             )}
         </button>
+      )}
+        </div>,
       )}
       {
         /**

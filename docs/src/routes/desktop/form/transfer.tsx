@@ -23,6 +23,13 @@ interface ApiRow {
 
 const TRANSFER_API: ApiRow[] = [
   {
+    name: "size",
+    type: '"xs" | "sm" | "md" | "lg"',
+    default: '"md"',
+    description: "尺寸：xs、sm、md、lg；也可由外层 Form 的 size 注入",
+  },
+
+  {
     name: "dataSource",
     type: "Array<{key, title, disabled?}>",
     default: "-",
@@ -242,6 +249,32 @@ const targetKeys = createSignal<string[]>(["1"]);
   targetKeys={targetKeys}
 />
 // 整组：<Transfer disabled />`}
+              language="tsx"
+              showLineNumbers
+              copyable
+              wrapLongLines
+            />
+          </section>
+          <section class="space-y-4">
+            <Title level={3}>size（xs / sm / md / lg）</Title>
+            <FormItem label="xs">
+              <Transfer size="xs" dataSource={data} targetKeys={targetKeys} titles={["待选", "已选"]} listStyle={{ width: 160, height: 120 }} />
+            </FormItem>
+            <FormItem label="sm">
+              <Transfer size="sm" dataSource={data} targetKeys={targetKeys} titles={["待选", "已选"]} listStyle={{ width: 160, height: 120 }} />
+            </FormItem>
+            <FormItem label="md（默认）">
+              <Transfer size="md" dataSource={data} targetKeys={targetKeys} titles={["待选", "已选"]} listStyle={{ width: 160, height: 120 }} />
+            </FormItem>
+            <FormItem label="lg">
+              <Transfer size="lg" dataSource={data} targetKeys={targetKeys} titles={["待选", "已选"]} listStyle={{ width: 160, height: 120 }} />
+            </FormItem>
+            <CodeBlock
+              title="代码示例"
+              code={`<Transfer size="xs" dataSource={data} targetKeys={targetKeys} titles={["待选", "已选"]} />
+<Transfer size="sm" dataSource={data} targetKeys={targetKeys} titles={["待选", "已选"]} />
+<Transfer size="md" dataSource={data} targetKeys={targetKeys} titles={["待选", "已选"]} />
+<Transfer size="lg" dataSource={data} targetKeys={targetKeys} titles={["待选", "已选"]} />`}
               language="tsx"
               showLineNumbers
               copyable

@@ -18,6 +18,8 @@ import {
 } from "../safe-signal.ts";
 import type { JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
+import type { SizeVariant } from "../types.ts";
+import { resolveFormControlSize } from "./form-control-context.ts";
 import { commitMaybeSignal, type MaybeSignal } from "./maybe-signal.ts";
 
 export interface TransferItem {
@@ -61,6 +63,8 @@ export const defaultTransferMessages: TransferMessages = {
 };
 
 export interface TransferProps {
+  /** 控件尺寸，与 Input 相同；也可由外层 Form 的 size 注入 */
+  size?: SizeVariant;
   /** 数据源 */
   dataSource: TransferItem[];
   /** 右侧（已选）key 列表（受控）；见 {@link MaybeSignal} */
@@ -112,6 +116,31 @@ function filterTransferItems(
 const transferListShellCls =
   "border border-slate-200 dark:border-slate-600 rounded-lg overflow-hidden flex flex-col";
 
+const transferTitleCls: Record<SizeVariant, string> = {
+  xs: "px-2 py-1 text-xs",
+  sm: "px-2.5 py-1.5 text-sm",
+  md: "px-3 py-2 text-sm",
+  lg: "px-3 py-2.5 text-base",
+};
+const transferSearchCls: Record<SizeVariant, string> = {
+  xs: "px-2 py-0.5 text-xs",
+  sm: "px-2 py-1 text-sm",
+  md: "px-2 py-1 text-sm",
+  lg: "px-2.5 py-1.5 text-base",
+};
+const transferItemCls: Record<SizeVariant, string> = {
+  xs: "px-1.5 py-1 text-xs",
+  sm: "px-2 py-1 text-sm",
+  md: "px-2 py-1.5 text-sm",
+  lg: "px-2.5 py-2 text-base",
+};
+const transferBtnCls: Record<SizeVariant, string> = {
+  xs: "px-1.5 py-0.5 text-xs",
+  sm: "px-2 py-1 text-sm",
+  md: "px-2 py-1 text-sm",
+  lg: "px-2.5 py-1.5 text-base",
+};
+
 /** 穿梭列参数 */
 type TransferColumnProps = {
   title: string;
@@ -133,6 +162,7 @@ type TransferColumnProps = {
   countFormatter: (n: number) => string;
   /** 列底部「，已选 N」格式化函数 */
   selectedSuffixFormatter: (n: number) => string;
+  size: SizeVariant;
 };
 
 /**
@@ -156,6 +186,7 @@ function TransferColumn(props: TransferColumnProps) {
     disabled = false,
     countFormatter,
     selectedSuffixFormatter,
+    size,
   } = props;
 
   // 搜索框绑定上层 searchRef（非列内 createSignal），父级 getter 重跑时仍为同一信号，避免输入框重挂载失焦。
@@ -164,7 +195,7 @@ function TransferColumn(props: TransferColumnProps) {
       class={twMerge(transferListShellCls, "min-w-0 shrink-0")}
       style={{ width: `${listStyle.width ?? 200}px` }}
     >
-      <div class="px-3 py-2 border-b border-slate-200 dark:border-slate-600 font-medium text-slate-700 dark:text-slate-300">
+      <div class={twMerge("border-b border-slate-200 dark:border-slate-600 font-medium text-slate-700 dark:text-slate-300", transferTitleCls[size])}>
         {title}
       </div>
       {showSearch && (
@@ -172,7 +203,7 @@ function TransferColumn(props: TransferColumnProps) {
           type="text"
           role="searchbox"
           autocomplete="off"
-          class="m-2 px-2 py-1 text-sm border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 w-[calc(100%-1rem)]"
+          class={twMerge("m-2 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 w-[calc(100%-1rem)]", transferSearchCls[size])}
           placeholder={searchPlaceholder}
           value={() => readSignalValue(searchRef) ?? ""}
           onInput={(e: Event) => {
@@ -208,7 +239,7 @@ function TransferColumn(props: TransferColumnProps) {
                       <button
                         type="button"
                         class={twMerge(
-                          "w-full text-left px-2 py-1.5 rounded text-sm cursor-pointer border-0 bg-transparent",
+                          twMerge("w-full text-left rounded cursor-pointer border-0 bg-transparent", transferItemCls[size]),
                           item.disabled || disabled
                             ? "opacity-60 cursor-not-allowed"
                             : "hover:bg-slate-100 dark:hover:bg-slate-700",
@@ -260,6 +291,7 @@ export function Transfer(props: TransferProps): JSXRenderable {
     class: className,
     messages,
   } = props;
+  const size = resolveFormControlSize(props.size);
   const m = { ...defaultTransferMessages, ...messages };
   const titles: [string, string] = props.titles ??
     [m.sourceTitle, m.targetTitle];
@@ -295,8 +327,10 @@ export function Transfer(props: TransferProps): JSXRenderable {
     writeSignalValue(rightSelectedKeysRef, []);
   };
 
-  const btnCls =
-    "px-2 py-1 text-sm border border-slate-300 dark:border-slate-600 rounded hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed";
+  const btnCls = twMerge(
+    "border border-slate-300 dark:border-slate-600 rounded hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed",
+    transferBtnCls[size],
+  );
 
   return () => {
     if (getDocument() == null) {
@@ -328,6 +362,7 @@ export function Transfer(props: TransferProps): JSXRenderable {
           onSearch={(v) => onSearch?.("left", v)}
           render={render}
           listStyle={listStyle}
+          size={size}
           onToggleSelect={(key) => {
             leftSelectedKeysRef((prev: string[] | undefined) => {
               const cur = prev ?? [];
@@ -403,6 +438,7 @@ export function Transfer(props: TransferProps): JSXRenderable {
           onSearch={(v) => onSearch?.("right", v)}
           render={render}
           listStyle={listStyle}
+          size={size}
           onToggleSelect={(key) => {
             rightSelectedKeysRef((prev: string[] | undefined) => {
               const cur = prev ?? [];

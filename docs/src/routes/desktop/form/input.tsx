@@ -8,6 +8,8 @@ import { Link, Paragraph, Title } from "@dreamer/ui-view/basic";
 import { Form } from "@dreamer/ui-view/form/form";
 import { FormItem } from "@dreamer/ui-view/form/form-item";
 import { Input } from "@dreamer/ui-view/form/input";
+import { Password } from "@dreamer/ui-view/form/password";
+import { Textarea } from "@dreamer/ui-view/form/textarea";
 
 import { CodeBlock } from "@dreamer/ui-view/data-display";
 
@@ -43,7 +45,19 @@ const INPUT_API: ApiRow[] = [
     name: "placeholder",
     type: "string",
     default: "-",
-    description: "占位文案",
+    description: "占位文案；与 floatingLabel 同时用时，空且未聚焦显示在框内，输入或聚焦后上到边框",
+  },
+  {
+    name: "label",
+    type: "string",
+    default: "-",
+    description: "描边内嵌标签：字坐在边框左上缺口中，线从字两边断开；空且未聚焦时在框内，聚焦或有值后上浮",
+  },
+  {
+    name: "floatingLabel",
+    type: "boolean",
+    default: "false",
+    description: "为 true 且未设 label 时，用 placeholder 作为描边内嵌标签。已设 label 时无效",
   },
   {
     name: "value",
@@ -169,12 +183,6 @@ const val = createSignal("");
 </FormItem>`;
 
 
-const exampleLabelLeft = `<FormItem label="用户名" labelPosition="left">
-  <Input placeholder="左侧标签" />
-</FormItem>`;
-
-const exampleAlignLeft = `<Input class="text-left" placeholder="左对齐" />`;
-
 export default function FormInput() {
   const valPlaceholder = createSignal("");
   const valRequired = createSignal("");
@@ -192,6 +200,13 @@ export default function FormInput() {
   /** 自动填充文档示例：邮箱/密码 */
   const valAutofillEmail = createSignal("");
   const valAutofillPassword = createSignal("");
+  const valOutlineEmpty = createSignal("");
+  const valOutlineFilled = createSignal("梁扶");
+  const valOutlineFloat = createSignal("");
+  const valOutlineItem = createSignal("");
+  const valOutlineColor = createSignal("");
+  const valOutlinePwd = createSignal("");
+  const valOutlineArea = createSignal("");
 
   return (
     <div class="space-y-10 w-full">
@@ -199,7 +214,7 @@ export default function FormInput() {
         <Title level={1}>Input 单行输入</Title>
         <Paragraph class="mt-2">
           单行输入框，支持
-          size、placeholder、value、type、readOnly、required、error、disabled、prefix、suffix、allowClear。宽度由
+          size、placeholder、label、floatingLabel、value、type、readOnly、required、error、disabled、prefix、suffix、allowClear。宽度由
           class 控制，表单中需占满一列时传 class="w-full"。Tailwind v4 +
           light/dark。
         </Paragraph>
@@ -441,8 +456,6 @@ export default function FormInput() {
             <Form layout="vertical" class="w-full">
               <div class="rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50/50 dark:bg-slate-800/30 p-5 space-y-6">
                 <div>
-          <CodeBlock title="代码示例" code={exampleLabelLeft} language="tsx" showLineNumbers copyable wrapLongLines />
-
                   <Title
                     level={3}
                     class="text-sm! font-medium! mb-3! text-slate-600 dark:text-slate-400"
@@ -486,9 +499,7 @@ export default function FormInput() {
                         value={valLeft3}
                         placeholder="必填"
                       />
-                    
-          <CodeBlock title="代码示例" code={exampleAlignLeft} language="tsx" showLineNumbers copyable wrapLongLines />
-</FormItem>
+                    </FormItem>
                   </div>
                 </div>
                 <div class="pt-2 border-t border-slate-200 dark:border-slate-600">
@@ -749,6 +760,91 @@ const password = createSignal("");
                 showLineNumbers
                 copyable
                 title="代码示例（与自动填充/暗色底对齐的推荐写法）"
+                wrapLongLines
+              />
+            </div>
+          </section>
+
+          <section class="space-y-4" id="outline-label">
+            <Title level={3}>描边内嵌标签</Title>
+            <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+              字坐在输入框边框左上缺口里，线从字两边断开（fieldset / legend
+              真缺口，不靠底色去盖线）。空且未聚焦时提示在框内；聚焦或输入后，提示上到边框。可在
+              Input / Password / Textarea 上写{" "}
+              <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">label</code>
+              ，或设{" "}
+              <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">
+                floatingLabel
+              </code>{" "}
+              把 placeholder 上浮；也可在 FormItem 上写{" "}
+              <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">
+                labelPosition="outline"
+              </code>
+              ，不必两边都写。
+            </Paragraph>
+            <div class="grid gap-4 sm:grid-cols-2 w-full max-w-xl">
+              <Input
+                id="outline-empty"
+                label="用户名"
+                value={valOutlineEmpty}
+              />
+              <Input
+                id="outline-filled"
+                label="用户名"
+                value={valOutlineFilled}
+              />
+            </div>
+            <Input
+              id="outline-float"
+              class="max-w-xl"
+              floatingLabel
+              placeholder="请输入邮箱"
+              value={valOutlineFloat}
+            />
+            <Form layout="vertical" class="w-full max-w-xl">
+              <FormItem
+                label="手机号"
+                required
+                labelPosition="outline"
+                id="outline-item"
+              >
+                <Input id="outline-item" value={valOutlineItem} />
+              </FormItem>
+            </Form>
+            <div class="grid gap-4 sm:grid-cols-2 w-full max-w-xl">
+              <Password
+                id="outline-pwd"
+                label="密码"
+                value={valOutlinePwd}
+              />
+              <Textarea
+                id="outline-area"
+                label="简介"
+                rows={3}
+                value={valOutlineArea}
+              />
+            </div>
+            <div class="max-w-xl rounded-xl bg-teal-50 p-4 dark:bg-teal-950/40">
+              <Input
+                id="outline-color"
+                label="备注"
+                placeholder="聚焦后可另写说明"
+                value={valOutlineColor}
+              />
+            </div>
+            <div class="w-full">
+              <CodeBlock
+                code={`<Input label="用户名" value={name} />
+<Input floatingLabel placeholder="请输入邮箱" value={email} />
+<FormItem label="手机号" required labelPosition="outline">
+  <Input value={phone} />
+</FormItem>
+<Password label="密码" value={pwd} />
+<Textarea label="简介" value={bio} />`}
+                language="tsx"
+                showLineNumbers
+                copyable
+                title="代码示例"
                 wrapLongLines
               />
             </div>

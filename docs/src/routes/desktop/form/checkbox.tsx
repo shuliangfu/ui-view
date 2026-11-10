@@ -23,6 +23,13 @@ interface ApiRow {
 
 const CHECKBOX_API: ApiRow[] = [
   {
+    name: "size",
+    type: '"xs" | "sm" | "md" | "lg"',
+    default: '"md"',
+    description: "尺寸：xs、sm、md、lg；也可由外层 Form 的 size 注入",
+  },
+
+  {
     name: "checked",
     type: "boolean | (() => boolean)",
     default: "-",
@@ -218,6 +225,32 @@ export default function FormCheckbox() {
 >
   同意协议
 </Checkbox>`}
+              language="tsx"
+              showLineNumbers
+              copyable
+              wrapLongLines
+            />
+          </section>
+          <section class="space-y-4">
+            <Title level={3}>size（xs / sm / md / lg）</Title>
+            <FormItem label="xs">
+              <Checkbox size="xs" checked>xs</Checkbox>
+            </FormItem>
+            <FormItem label="sm">
+              <Checkbox size="sm" checked>sm</Checkbox>
+            </FormItem>
+            <FormItem label="md（默认）">
+              <Checkbox size="md" checked>md</Checkbox>
+            </FormItem>
+            <FormItem label="lg">
+              <Checkbox size="lg" checked>lg</Checkbox>
+            </FormItem>
+            <CodeBlock
+              title="代码示例"
+              code={`<Checkbox size="xs" checked>xs</Checkbox>
+<Checkbox size="sm" checked>sm</Checkbox>
+<Checkbox size="md" checked>md</Checkbox>
+<Checkbox size="lg" checked>lg</Checkbox>`}
               language="tsx"
               showLineNumbers
               copyable

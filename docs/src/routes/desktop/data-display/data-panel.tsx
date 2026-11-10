@@ -6,12 +6,21 @@
 import { Button, Paragraph, Title } from "@dreamer/ui-view/basic";
 import { createSignal } from "@dreamer/view";
 
-import { CodeBlock, DataPanel } from "@dreamer/ui-view/data-display";
+import {
+  CodeBlock,
+  DataPanel,
+  validateForm,
+} from "@dreamer/ui-view/data-display";
 import type {
   Column,
   DataSource,
+  FormField,
   Row,
 } from "@dreamer/ui-view/data-display";
+import { Form } from "@dreamer/ui-view/form/form";
+import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { Password } from "@dreamer/ui-view/form/password";
+import { Modal, toast } from "@dreamer/ui-view/feedback";
 import { IconCheck } from "@dreamer/ui-view/icons/Check.tsx";
 import { IconBan } from "@dreamer/ui-view/icons/Ban.tsx";
 import {
@@ -35,8 +44,8 @@ import {
   DEMO_SEARCH,
   demoCan,
   demoCapGate,
-  makeDemoRows,
   type DemoPerms,
+  makeDemoRows,
   withRowActions,
 } from "../../../data/data-panel-demo.ts";
 
@@ -51,7 +60,8 @@ const DATA_PANEL_API: DocsApiTableRow[] = [
     name: "columns",
     type: "Column[]",
     default: "-",
-    description: "列定义（含 selection／index／actions、date／datetime.format）。详见下方 Columns 表。",
+    description:
+      "列定义（含 selection／index／actions、date／datetime.format）。详见下方 Columns 表。",
   },
   {
     name: "data",
@@ -96,43 +106,24 @@ const DATA_PANEL_API: DocsApiTableRow[] = [
   },
   {
     name: "search",
-    type: "SearchField[]",
-    default: "[]",
-    description: "搜索项；非空则工具栏搜索＋URL 同步。详见 Search 表。",
+    type: "{ title?, props: SearchField[] }",
+    default: "—",
+    description:
+      "搜索弹层：title 为标题（string 或 ()=>string），props 与列同一套字段配置。非空则工具栏搜索＋URL 同步。详见 Search 表。",
   },
   {
     name: "form",
-    type: "FormField[]",
-    default: "[]",
-    description: "增改 Modal 表单项。详见 Form 表。",
-  },
-  {
-    name: "formTitle",
-    type: "string | ((row) => string)",
-    default: "`${edit|add} · ${title}`",
+    type: "{ title?, props: FormField[] }",
+    default: "—",
     description:
-      "增改 Modal 标题。函数：新增时 row 为 {}（无 id），编辑时为当前行，如 row => row.id ? `修改用户` : `添加用户`",
+      "增改弹层：title 为标题（string 或 (row)=>string；新增时 row 为 {}），props 为表单项（与列同一套字段配置）。详见 Form 表。",
   },
   {
-    name: "searchTitle",
-    type: "string | (() => string)",
-    default: "`${search} · ${title}`",
-    description:
-      "搜索 Modal 标题。如 `筛选用户` 或 () => `搜索 · ${count}`",
-  },
-  {
-    name: "viewTitle",
-    type: "string | ((row) => string)",
-    default: "`${view} · ${title}`",
-    description:
-      "详情 Modal 标题。函数收到当前行，如 row => `用户详情 · ${row.name}`",
-  },
-  {
-    name: "viewSchemas",
-    type: "ViewSchema[] | ((row) => ViewSchema[])",
+    name: "view",
+    type: "{ title?, props: ViewItem[], actions? }",
     default: "columns＋form",
     description:
-      "详情项：{ label, value? | children? | prop?, span? }；函数按行生成；缺省回落列＋表单字段",
+      '详情弹层：title 为查看弹窗标题（string 或 (row)=>string，如 `详情 · ${row.name}`）；props 只放字段，与列同一套配置，缺省展示从同 prop 列继承；actions 与 title 平级，为底部按钮（与列操作同一套 Record；内置 close 默认靠右最后）。自定义按钮 action(row) 或 href；字段 click:"toggle" 或 click:(row)=>…。不写时回落列＋表单，底部只留关闭。不写 actions 时底部只留关闭',
   },
   {
     name: "panelKey",
@@ -209,7 +200,8 @@ const DATA_PANEL_API: DocsApiTableRow[] = [
     name: "onImportRows",
     type: "(rows) => void",
     default: "-",
-    description: "接管导入（xlsx／csv／json／xml）；缺省走 dataSource.importRows",
+    description:
+      "接管导入（xlsx／csv／json／xml）；缺省走 dataSource.importRows",
   },
   {
     name: "renderCell",
@@ -224,7 +216,7 @@ const DATA_PANEL_API: DocsApiTableRow[] = [
     description:
       "`false`＝整栏不渲染；省略／{}／Record＝统合 Record（废止 extra／order）。声明项写明确 true｜false｜object（省略键才回落 caps）；对象可 show／disable／icon／label／title／tone／action；写入序＝显示序。批量「设为…」不在 toolbar，见 caps.batchStatus＋column.batch",
   },
-  
+
   {
     name: "isRowDisabled",
     type: "(row) => boolean",
@@ -236,7 +228,7 @@ const DATA_PANEL_API: DocsApiTableRow[] = [
     type: "boolean",
     default: "（按需）",
     description:
-      "@deprecated 顶层开关。优先在 columns 写 `{ type:\"selection\", prop:\"__select\", label:\"\" }` 控制多选列位置／有无。false＝强制去掉 selection；省略时若 needSelection（caps.remove／batchStatus）且 columns 未声明 selection，仍自动前置多选列。",
+      '@deprecated 顶层开关。优先在 columns 写 `{ type:"selection", prop:"__select", label:"" }` 控制多选列位置／有无。false＝强制去掉 selection；省略时若 needSelection（caps.remove／batchStatus）且 columns 未声明 selection，仍自动前置多选列。',
   },
   {
     name: "onChanged",
@@ -248,7 +240,8 @@ const DATA_PANEL_API: DocsApiTableRow[] = [
     name: "class",
     type: "string",
     default: "-",
-    description: "额外 class（加在卡片上）。移动端（max-width: 639.98px）自带：卡片 margin-top/left/right=0，.dp-table-wrap padding-top/left/right=0（表格贴边）；分页控件居中、条数文案在分页下方并居中（.dp-pg 列布局）；底栏分页尺寸移动 xs／桌面 md；桌面仍左右分布",
+    description:
+      "额外 class（加在卡片上）。移动端（max-width: 639.98px）自带：卡片 margin-top/left/right=0，.dp-table-wrap padding-top/left/right=0（表格贴边）；分页控件居中、条数文案在分页下方并居中（.dp-pg 列布局）；底栏分页尺寸移动 xs／桌面 md；桌面仍左右分布",
   },
   {
     name: "children",
@@ -257,7 +250,6 @@ const DATA_PANEL_API: DocsApiTableRow[] = [
     description: "面板根节点内的额外内容",
   },
 ];
-
 
 /** Columns 字段全表（Column） */
 const COLUMNS_API: DocsApiTableRow[] = [
@@ -277,24 +269,25 @@ const COLUMNS_API: DocsApiTableRow[] = [
   },
   {
     name: "type",
-    type: '"text"|"number"|"money"|"date"|"datetime"|"tag"|"bool"|"image"|"link"|"selection"|"index"|"actions"',
+    type:
+      '"text"|"number"|"money"|"date"|"datetime"|"tag"|"bool"|"image"|"link"|"selection"|"index"|"actions"',
     default: '"text"',
     description:
-      "展示类型。系统列写 `{ type:\"selection\" }`／`{ type:\"index\" }`／`{ type:\"actions\" }` 即可（prop／label 可省）。操作按钮写在列的 `actions` Record；未声明时兼容自动补。",
+      '展示类型。系统列写 `{ type:"selection" }`／`{ type:"index" }`／`{ type:"actions" }` 即可（prop／label 可省）。操作按钮写在列的 `actions` Record；未声明时兼容自动补。',
   },
   {
     name: "actions",
     type: "RowActionsConfig",
     default: "-",
     description:
-      "仅 type:\"actions\"。行操作 Record（写在本列，勿再顶层配置）：内置 view／edit／remove＋自定义；写入序＝显示序；自定义必须 action(item)；省略键回落 caps。",
+      '仅 type:"actions"。行操作 Record（写在本列，勿再顶层配置）：内置 view／edit／remove＋自定义；写入序＝显示序；自定义必须 action(item)；省略键回落 caps。',
   },
   {
     name: "format",
     type: "string",
     default: 'date→"YYYY-MM-DD"；datetime→"YYYY-MM-DD HH:mm:ss"',
     description:
-      "日期／时间展示格式，仅 `type:\"date\"`／`\"datetime\"`。令牌：`YYYY` `MM` `DD` `HH` `mm` `ss`。例：`\"YYYY-MM-DD HH:mm\"` → `2026-11-10 10:30`（不要秒）。不覆盖 `formatter`／`value`／`renderCell`。",
+      '日期／时间展示格式，仅 `type:"date"`／`"datetime"`。令牌：`YYYY` `MM` `DD` `HH` `mm` `ss`。例：`"YYYY-MM-DD HH:mm"` → `2026-11-10 10:30`（不要秒）。不覆盖 `formatter`／`value`／`renderCell`。',
   },
   {
     name: "sortable",
@@ -317,7 +310,8 @@ const COLUMNS_API: DocsApiTableRow[] = [
   },
   {
     name: "inline",
-    type: '"switch"|"select"|"multiselect"|"text"|"number"|"textarea"|"date"|"datetime"',
+    type:
+      '"switch"|"select"|"multiselect"|"text"|"number"|"textarea"|"date"|"datetime"',
     default: "-",
     description:
       "列内就地编辑（≠ form Modal）。switch 点即存；其余双击进入，失焦／Enter 存、Esc 取消。",
@@ -339,7 +333,8 @@ const COLUMNS_API: DocsApiTableRow[] = [
     name: "hidden",
     type: "boolean",
     default: "-",
-    description: "默认隐藏，可在「列设置」打开；例 `{ prop:\"createdAt\", type:\"datetime\", format:\"YYYY-MM-DD HH:mm\", hidden:true }`",
+    description:
+      '默认隐藏，可在「列设置」打开；例 `{ prop:"createdAt", type:"datetime", format:"YYYY-MM-DD HH:mm", hidden:true }`',
   },
   {
     name: "noExport",
@@ -352,7 +347,7 @@ const COLUMNS_API: DocsApiTableRow[] = [
     type: "boolean",
     default: "-",
     description:
-      "批量「设为…」目标列；须 `inline:\"switch\"`＋恰好两档 options。caps.batchStatus 默认据此推断。",
+      '批量「设为…」目标列；须 `inline:"switch"`＋恰好两档 options。caps.batchStatus 默认据此推断。',
   },
   {
     name: "value",
@@ -500,7 +495,8 @@ const FORM_API: DocsApiTableRow[] = [
   },
   {
     name: "type",
-    type: '"text"|"textarea"|"number"|"select"|"multiselect"|"switch"|"password"|"date"|"datetime"',
+    type:
+      '"text"|"textarea"|"number"|"select"|"multiselect"|"switch"|"password"|"date"|"datetime"',
     default: '"text"',
     description: "控件类型",
   },
@@ -673,7 +669,8 @@ const API_SOURCE_API: DocsApiTableRow[] = [
     name: "opts.resource",
     type: "string",
     default: "-",
-    description: '资源名（如 "users"）。仅 baseRoute 1 段时必填；≥2 段忽略。勿用 pathname 猜',
+    description:
+      '资源名（如 "users"）。仅 baseRoute 1 段时必填；≥2 段忽略。勿用 pathname 猜',
   },
   {
     name: "opts.apiMode",
@@ -709,7 +706,8 @@ const API_SOURCE_API: DocsApiTableRow[] = [
   },
 ];
 
-const apiActionCode = `import { DataPanel } from "@dreamer/ui-view/data-display";
+const apiActionCode =
+  `import { DataPanel } from "@dreamer/ui-view/data-display";
 import type { Column, FormField, SearchField } from "@dreamer/ui-view/data-display";
 
 // 不传 data、不传 dataSource；baseRoute ≥2 段直接作资源根（不拼 resource）
@@ -738,18 +736,22 @@ const columns: Column[] = [
     remove: false,
   } },
 ];
-const search: SearchField[] = [
+const search = {
+  props: [
   { prop: "name" },
   { prop: "role", type: "select" },
   { prop: "status", type: "select" },
-];
-const form: FormField[] = [
+  ],
+};
+const form = {
+  props: [
   { prop: "name", required: true },
   { prop: "email", required: true, pattern: "^[^@\\s]+@[^@\\s]+$" },
   { prop: "role", type: "select", required: true, initial: "viewer" },
   { prop: "balance", type: "number", min: 0, initial: 0 },
   { prop: "status", type: "switch", initial: "active" },
-];
+  ],
+};
 
 <DataPanel
   title="用户（action）"
@@ -763,7 +765,8 @@ const form: FormField[] = [
 />
 `;
 
-const apiRestfulCode = `import { DataPanel } from "@dreamer/ui-view/data-display";
+const apiRestfulCode =
+  `import { DataPanel } from "@dreamer/ui-view/data-display";
 import type { Column, FormField, SearchField } from "@dreamer/ui-view/data-display";
 
 // 不传 data、不传 dataSource；baseRoute ≥2 段直接作资源根
@@ -791,18 +794,22 @@ const columns: Column[] = [
     remove: false,
   } },
 ];
-const search: SearchField[] = [
+const search = {
+  props: [
   { prop: "name" },
   { prop: "role", type: "select" },
   { prop: "status", type: "select" },
-];
-const form: FormField[] = [
+  ],
+};
+const form = {
+  props: [
   { prop: "name", required: true },
   { prop: "email", required: true, pattern: "^[^@\\s]+@[^@\\s]+$" },
   { prop: "role", type: "select", required: true, initial: "viewer" },
   { prop: "balance", type: "number", min: 0, initial: 0 },
   { prop: "status", type: "switch", initial: "active" },
-];
+  ],
+};
 
 <DataPanel
   title="订单（restful）"
@@ -815,8 +822,6 @@ const form: FormField[] = [
   pageSize={10}
 />
 `;
-
-
 
 const importCode = `import { DataPanel } from "@dreamer/ui-view/data-display";
 
@@ -878,18 +883,22 @@ const columns: Column[] = [
     remove: false,
   } },
 ];
-const search: SearchField[] = [
+const search = {
+  props: [
   { prop: "name" },
   { prop: "role", type: "select" },
   { prop: "status", type: "select" },
-];
-const form: FormField[] = [
+  ],
+};
+const form = {
+  props: [
   { prop: "name", required: true },
   { prop: "email", required: true, pattern: "^[^@\\s]+@[^@\\s]+$" },
   { prop: "role", type: "select", required: true, initial: "viewer" },
   { prop: "balance", type: "number", min: 0, initial: 0 },
   { prop: "status", type: "switch", initial: "active" },
-];
+  ],
+};
 
 <DataPanel
   title="用户管理"
@@ -959,18 +968,21 @@ const columns: Column[] = [
   } },
 ];
 // search／form 键用 prop；label／options／switch 开闭从同 prop 列继承
-const search: SearchField[] = [
+const search = {
+  props: [
   { prop: "name" }, { prop: "role", type: "select" }, { prop: "status", type: "select" },
-];
-const form: FormField[] = [
+  ],
+};
+const form = {
+  props: [
   { prop: "name", required: true },
   { prop: "role", type: "select", required: true },
   { prop: "status", type: "switch", initial: "active" },
-];
+  ],
+};
 // 函数式列显示见「列显示函数」示例（value／color／formatter）
 <DataPanel title="列定义" data={rows} columns={columns} search={search} form={form} />
 `;
-
 
 const colFnRows = [
   { id: "1", name: "Alice", flag: 1, level: 0 },
@@ -1015,11 +1027,14 @@ const colFnColumns: Column[] = [
         ? '<b style="color:#059669">ON</b>'
         : '<span style="color:#94a3b8">OFF</span>',
   },
-  { type: "actions", actions: {
-    view: true,
-    edit: true,
-    remove: false,
-  } },
+  {
+    type: "actions",
+    actions: {
+      view: true,
+      edit: true,
+      remove: false,
+    },
+  },
 ];
 const colFnCode = `const rows = [
   { id: "1", name: "Alice", flag: 1, level: 1 },
@@ -1053,9 +1068,27 @@ const columns: Column[] = [
   } },
 ];
 <DataPanel title="列函数显示" data={rows} columns={columns}
-  formTitle={(row) => row.id ? \`修改 · \${row.name}\` : "添加用户"}
-  searchTitle="筛选用户"
-  viewTitle={(row) => \`详情 · \${row.name}\`}
+  search={{ title: "筛选用户", props: [{ prop: "name" }] }}
+  form={{
+    title: (row) => row.id ? \`修改 · \${row.name}\` : "添加用户",
+    props: [
+      { prop: "name", required: true },
+      { prop: "flag", type: "number", initial: 0 },
+      { prop: "level", type: "number", initial: 0 },
+    ],
+  }}
+  view={{
+    title: (row) => \`详情 · \${row.name}\`,
+    props: [
+      { prop: "name", label: "姓名" },
+      {
+        prop: "flag",
+        label: "标记",
+        value: (row) => row.flag === 1 ? "开启" : "关闭",
+      },
+      { prop: "level", label: "级别" },
+    ],
+  }}
   caps={{ create: false, remove: false }} />`;
 
 const basicCode = `const rows = [
@@ -1116,18 +1149,22 @@ const columns: Column[] = [
     remove: false,
   } },
 ];
-const search: SearchField[] = [
+const search = {
+  props: [
   { prop: "name" },
   { prop: "role", type: "select" },
   { prop: "status", type: "select" },
-];
-const form: FormField[] = [
+  ],
+};
+const form = {
+  props: [
   { prop: "name", required: true },
   { prop: "email", required: true, pattern: "^[^@\\s]+@[^@\\s]+$" },
   { prop: "role", type: "select", required: true, initial: "viewer" },
   { prop: "balance", type: "number", min: 0, initial: 0 },
   { prop: "status", type: "switch", initial: "active" },
-];
+  ],
+};
 
 <DataPanel
   panelKey="demo-basic"
@@ -1196,18 +1233,23 @@ const columns: Column[] = [
     remove: false,
   } },
 ];
-const search: SearchField[] = [
+const search = {
+  title: "筛选条件",
+  props: [
   { prop: "name" },
   { prop: "role", type: "select" },
   { prop: "status", type: "select" },
-];
-const form: FormField[] = [
+  ],
+};
+const form = {
+  props: [
   { prop: "name", required: true },
   { prop: "email", required: true, pattern: "^[^@\\s]+@[^@\\s]+$" },
   { prop: "role", type: "select", required: true, initial: "viewer" },
   { prop: "balance", type: "number", min: 0, initial: 0 },
   { prop: "status", type: "switch", initial: "active" },
-];
+  ],
+};
 
 // 分页／排序默认写地址栏；配置 search → 工具栏搜索字段一并同步（无开关）
 <DataPanel title="用户" data={rows} columns={columns} search={search}
@@ -1273,18 +1315,22 @@ const columns: Column[] = [
     remove: false,
   } },
 ];
-const search: SearchField[] = [
+const search = {
+  props: [
   { prop: "name" },
   { prop: "role", type: "select" },
   { prop: "status", type: "select" },
-];
-const form: FormField[] = [
+  ],
+};
+const form = {
+  props: [
   { prop: "name", required: true },
   { prop: "email", required: true, pattern: "^[^@\\s]+@[^@\\s]+$" },
   { prop: "role", type: "select", required: true, initial: "viewer" },
   { prop: "balance", type: "number", min: 0, initial: 0 },
   { prop: "status", type: "switch", initial: "active" },
-];
+  ],
+};
 
 <DataPanel
   panelKey="demo-sync-url"
@@ -1294,7 +1340,8 @@ const form: FormField[] = [
   search={search}
 />`;
 
-const tableCode = `// 排序／合计／行内编辑／隐藏列；禁用行优先 isRowDisabled（兼容 row.locked）
+const tableCode =
+  `// 排序／合计／行内编辑／隐藏列；禁用行优先 isRowDisabled（兼容 row.locked）
 const rows = [
   { id: "1", name: "Alice", email: "alice@example.com", role: "admin", status: "active", balance: 120, locked: true },
   { id: "2", name: "Bob", email: "bob@example.com", role: "editor", status: "disabled", balance: 80 },
@@ -1353,25 +1400,28 @@ const columns: Column[] = [
     remove: false,
   } },
 ];
-const search: SearchField[] = [
+const search = {
+  props: [
   { prop: "name" },
   { prop: "role", type: "select" },
   { prop: "status", type: "select" },
-];
-const form: FormField[] = [
+  ],
+};
+const form = {
+  props: [
   { prop: "name", required: true },
   { prop: "email", required: true, pattern: "^[^@\s]+@[^@\s]+$" },
   { prop: "role", type: "select", required: true, initial: "viewer" },
   { prop: "balance", type: "number", min: 0, initial: 0 },
   { prop: "status", type: "switch", initial: "active" },
-];
+  ],
+};
 
 <DataPanel title="表格" data={rows} columns={columns} form={form}
   defaultSort={{ prop: "balance", order: "desc" }}
   isRowDisabled={(row) => !!row.locked} />`;
 
-const crudCode =
-  `const rows = [
+const crudCode = `const rows = [
   { id: "1", name: "Alice", email: "alice@example.com", role: "admin", status: "active", balance: 120 },
   { id: "2", name: "Bob", email: "bob@example.com", role: "editor", status: "disabled", balance: 80 },
 ];
@@ -1429,18 +1479,22 @@ const columns: Column[] = [
     remove: false,
   } },
 ];
-const search: SearchField[] = [
+const search = {
+  props: [
   { prop: "name" },
   { prop: "role", type: "select" },
   { prop: "status", type: "select" },
-];
-const form: FormField[] = [
+  ],
+};
+const form = {
+  props: [
   { prop: "name", required: true },
   { prop: "email", required: true, pattern: "^[^@\\s]+@[^@\\s]+$" },
   { prop: "role", type: "select", required: true, initial: "viewer" },
   { prop: "balance", type: "number", min: 0, initial: 0 },
   { prop: "status", type: "switch", initial: "active" },
-];
+  ],
+};
 
 // 新增／编辑／查看 Modal；删除／批量设为走 Popconfirm
 <DataPanel title="CRUD" data={rows} columns={columns} form={form}
@@ -1506,23 +1560,26 @@ const columns: Column[] = [
     remove: false,
   } },
 ];
-const search: SearchField[] = [
+const search = {
+  props: [
   { prop: "name" },
   { prop: "role", type: "select" },
   { prop: "status", type: "select" },
-];
-const form: FormField[] = [
+  ],
+};
+const form = {
+  props: [
   { prop: "name", required: true },
   { prop: "email", required: true, pattern: "^[^@\\s]+@[^@\\s]+$" },
   { prop: "role", type: "select", required: true, initial: "viewer" },
   { prop: "balance", type: "number", min: 0, initial: 0 },
   { prop: "status", type: "switch", initial: "active" },
-];
+  ],
+};
 
 <DataPanel title="批量" data={rows} columns={columns} form={form} />`;
 
-const pageCode =
-  `const rows = [
+const pageCode = `const rows = [
   { id: "1", name: "Alice", email: "alice@example.com", role: "admin", status: "active", balance: 120 },
   { id: "2", name: "Bob", email: "bob@example.com", role: "editor", status: "disabled", balance: 80 },
 ];
@@ -1580,24 +1637,27 @@ const columns: Column[] = [
     remove: false,
   } },
 ];
-const search: SearchField[] = [
+const search = {
+  props: [
   { prop: "name" },
   { prop: "role", type: "select" },
   { prop: "status", type: "select" },
-];
-const form: FormField[] = [
+  ],
+};
+const form = {
+  props: [
   { prop: "name", required: true },
   { prop: "email", required: true, pattern: "^[^@\\s]+@[^@\\s]+$" },
   { prop: "role", type: "select", required: true, initial: "viewer" },
   { prop: "balance", type: "number", min: 0, initial: 0 },
   { prop: "status", type: "switch", initial: "active" },
-];
+  ],
+};
 
 <DataPanel title="分页" data={rows} columns={columns} pageSize={5} pageSizes={[5, 10, 20]} />
 // 翻页／改条数自动写 ?page=／?pageSize=（无 search 也同步；page=1 与默认 pageSize 省略）`;
 
-const exportCode =
-  `const rows = [
+const exportCode = `const rows = [
   { id: "1", name: "Alice", email: "alice@example.com", role: "admin", status: "active", balance: 120 },
   { id: "2", name: "Bob", email: "bob@example.com", role: "editor", status: "disabled", balance: 80 },
 ];
@@ -1655,18 +1715,22 @@ const columns: Column[] = [
     remove: false,
   } },
 ];
-const search: SearchField[] = [
+const search = {
+  props: [
   { prop: "name" },
   { prop: "role", type: "select" },
   { prop: "status", type: "select" },
-];
-const form: FormField[] = [
+  ],
+};
+const form = {
+  props: [
   { prop: "name", required: true },
   { prop: "email", required: true, pattern: "^[^@\s]+@[^@\s]+$" },
   { prop: "role", type: "select", required: true, initial: "viewer" },
   { prop: "balance", type: "number", min: 0, initial: 0 },
   { prop: "status", type: "switch", initial: "active" },
-];
+  ],
+};
 
 // 工具栏导出 xlsx／csv／json／xml／html；导入下拉 xlsx／csv／json／xml（无 html）再选文件
 <DataPanel title="导出导入" data={rows} columns={columns} exportName="users" />
@@ -1798,18 +1862,22 @@ const columns: Column[] = [
     remove: false,
   } },
 ];
-const search: SearchField[] = [
+const search = {
+  props: [
   { prop: "name" },
   { prop: "role", type: "select" },
   { prop: "status", type: "select" },
-];
-const form: FormField[] = [
+  ],
+};
+const form = {
+  props: [
   { prop: "name", required: true },
   { prop: "email", required: true },
   { prop: "role", type: "select", required: true, initial: "viewer" },
   { prop: "balance", type: "number", min: 0, initial: 0 },
   { prop: "status", type: "switch", initial: "active" },
-];
+  ],
+};
 
 <DataPanel
   title="远程数据"
@@ -1880,25 +1948,28 @@ const columns: Column[] = [
     remove: false,
   } },
 ];
-const search: SearchField[] = [
+const search = {
+  props: [
   { prop: "name" },
   { prop: "role", type: "select" },
   { prop: "status", type: "select" },
-];
-const form: FormField[] = [
+  ],
+};
+const form = {
+  props: [
   { prop: "name", required: true },
   { prop: "email", required: true, pattern: "^[^@\s]+@[^@\s]+$" },
   { prop: "role", type: "select", required: true, initial: "viewer" },
   { prop: "balance", type: "number", min: 0, initial: 0 },
   { prop: "status", type: "switch", initial: "active" },
-];
+  ],
+};
 
 <div class="dark">
   <DataPanel title="用户管理" data={rows} columns={columns} search={search} form={form} />
 </div>`;
 
-const localeCode =
-  `const rows = [
+const localeCode = `const rows = [
   { id: "1", name: "Alice", email: "alice@example.com", role: "admin", status: "active", balance: 120 },
   { id: "2", name: "Bob", email: "bob@example.com", role: "editor", status: "disabled", balance: 80 },
 ];
@@ -1956,18 +2027,22 @@ const columns: Column[] = [
     remove: false,
   } },
 ];
-const search: SearchField[] = [
+const search = {
+  props: [
   { prop: "name" },
   { prop: "role", type: "select" },
   { prop: "status", type: "select" },
-];
-const form: FormField[] = [
+  ],
+};
+const form = {
+  props: [
   { prop: "name", required: true },
   { prop: "email", required: true, pattern: "^[^@\s]+@[^@\s]+$" },
   { prop: "role", type: "select", required: true, initial: "viewer" },
   { prop: "balance", type: "number", min: 0, initial: 0 },
   { prop: "status", type: "switch", initial: "active" },
-];
+  ],
+};
 
 <DataPanel locale="en-US" title="Users" data={rows} columns={columns} search={search} form={form} />
 // 覆盖部分文案（可叠在同一面板上）
@@ -1981,7 +2056,8 @@ const form: FormField[] = [
   messages={{ create: "新建", deleteTitle: "删除确认" }}
 />`;
 
-const toolbarOffCode = `// toolbar: false → 整栏工具栏不渲染（省略／Record 行为不变）
+const toolbarOffCode =
+  `// toolbar: false → 整栏工具栏不渲染（省略／Record 行为不变）
 const rows = [
   { id: "1", name: "Alice", email: "alice@example.com", role: "admin", status: "active", balance: 120 },
   { id: "2", name: "Bob", email: "bob@example.com", role: "editor", status: "disabled", balance: 80 },
@@ -2040,18 +2116,22 @@ const columns: Column[] = [
     remove: false,
   } },
 ];
-const search: SearchField[] = [
+const search = {
+  props: [
   { prop: "name" },
   { prop: "role", type: "select" },
   { prop: "status", type: "select" },
-];
-const form: FormField[] = [
+  ],
+};
+const form = {
+  props: [
   { prop: "name", required: true },
   { prop: "email", required: true, pattern: "^[^@\s]+@[^@\s]+$" },
   { prop: "role", type: "select", required: true, initial: "viewer" },
   { prop: "balance", type: "number", min: 0, initial: 0 },
   { prop: "status", type: "switch", initial: "active" },
-];
+  ],
+};
 
 <DataPanel
   toolbar={false}
@@ -2060,7 +2140,8 @@ const form: FormField[] = [
   columns={columns}
 />`;
 
-const defaultsCode = `// 默认：省略 show→true、省略 disable→false；声明项不被 caps 藏
+const defaultsCode =
+  `// 默认：省略 show→true、省略 disable→false；声明项不被 caps 藏
 // caps.create=false，但声明 create:{} / { disable:true } 仍显示
 // 节选：rows／columns 同「基础用法」
 <DataPanel
@@ -2159,18 +2240,22 @@ const columns: Column[] = [
     remove: false,
   } },
 ];
-const search: SearchField[] = [
+const search = {
+  props: [
   { prop: "name" },
   { prop: "role", type: "select" },
   { prop: "status", type: "select" },
-];
-const form: FormField[] = [
+  ],
+};
+const form = {
+  props: [
   { prop: "name", required: true },
   { prop: "email", required: true, pattern: "^[^@\s]+@[^@\s]+$" },
   { prop: "role", type: "select", required: true, initial: "viewer" },
   { prop: "balance", type: "number", min: 0, initial: 0 },
   { prop: "status", type: "switch", initial: "active" },
-];
+  ],
+};
 
 const pageFlags = { audit: true };
 const pageAllowAudit = () => pageFlags.audit;
@@ -2244,7 +2329,8 @@ const raCustomCode = `// ④b 自定义操作列：未知 key 必须有 action(i
   ]}
 />`;
 
-const keyOrderCode = `// ⑤ 对象字面量写入序 = 显示序（create → audit → refresh → export）
+const keyOrderCode =
+  `// ⑤ 对象字面量写入序 = 显示序（create → audit → refresh → export）
 // 节选：rows／columns 同「基础用法」
 <DataPanel
   toolbar={{
@@ -2258,7 +2344,8 @@ const keyOrderCode = `// ⑤ 对象字面量写入序 = 显示序（create → a
   }}
 />`;
 
-const enabledCode = `// disable：默认 false；true／函数 true＝禁用仍可见（≠ show:false）
+const enabledCode =
+  `// disable：默认 false；true／函数 true＝禁用仍可见（≠ show:false）
 // 节选：rows／columns 同「基础用法」
 <DataPanel
   toolbar={{
@@ -2285,8 +2372,8 @@ const enabledCode = `// disable：默认 false；true／函数 true＝禁用仍�
   ]}
 />`;
 
-
-const titleCode = `// title／label 互落：tip=title??label??messages??key；显示=label??title??key
+const titleCode =
+  `// title／label 互落：tip=title??label??messages??key；显示=label??title??key
 // 节选：rows／columns 同「基础用法」
 <DataPanel
   toolbar={{
@@ -2313,7 +2400,8 @@ const titleCode = `// title／label 互落：tip=title??label??messages??key；�
   ]}
 />`;
 
-const canCode = `// ⑥ 对齐 admin：can()＋显式 true｜false（勿 undefined 绕 caps）
+const canCode =
+  `// ⑥ 对齐 admin：can()＋显式 true｜false（勿 undefined 绕 caps）
 // capGate(allow): allow→undefined（回落 caps）；!allow→false
 // 节选：rows／search／form 同「基础用法」
 const perms = { "demo.view": true, "demo.write": false };
@@ -2361,7 +2449,8 @@ function capGate(allow: boolean): false | undefined {
   }}
 />`;
 
-const customCode = `// tone 全档(Button) / tip=label??key；确认写在 action 自管；前导 chrome 放面板外
+const customCode =
+  `// tone 全档(Button) / tip=label??key；确认写在 action 自管；前导 chrome 放面板外
 // 节选：rows 同「基础用法」；本示例关掉内置操作，只留自定义「冻结」
 <div>
   <span className="text-sm text-slate-500">面板外提示</span>
@@ -2391,6 +2480,159 @@ const customCode = `// tone 全档(Button) / tip=label??key；确认写在 actio
 
 /** 单个示例块 */
 
+/** 修改密码表单：与 DataPanel 新增密码字段同一套 FieldRule（必填、6～64 位、两次一致） */
+const PWD_FORM: FormField[] = [
+  {
+    prop: "password",
+    type: "password",
+    label: "密码",
+    rules: [
+      { required: true, message: "密码不能为空" },
+      { min: 6, max: 64, message: "密码长度 6–64 位" },
+    ],
+  },
+  {
+    prop: "confirmPassword",
+    type: "password",
+    label: "确认密码",
+    rules: [
+      { required: true, message: "确认密码不能为空" },
+      {
+        validator: (value, values) =>
+          value === values.password ? true : "两次密码不一致",
+      },
+    ],
+  },
+];
+
+/** validateForm 回落文案（规则上已写中文 message，一般不会用到） */
+const PWD_VALIDATE_MSG = {
+  required: "此项必填",
+  min: "不能小于 {n}",
+  max: "不能大于 {n}",
+  patternMismatch: "格式不正确",
+};
+
+const viewCode = `import { createSignal } from "@dreamer/view";
+import { DataPanel, validateForm } from "@dreamer/ui-view/data-display";
+import type { FormField } from "@dreamer/ui-view/data-display";
+import { Form } from "@dreamer/ui-view/form/form";
+import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { Password } from "@dreamer/ui-view/form/password";
+import { Button } from "@dreamer/ui-view/basic";
+import { Modal, toast } from "@dreamer/ui-view/feedback";
+
+const pwd = createSignal(null);
+const password = createSignal("");
+const confirmPassword = createSignal("");
+const pwdErrors = createSignal({});
+
+const pwdForm: FormField[] = [
+  {
+    prop: "password",
+    type: "password",
+    label: "密码",
+    rules: [
+      { required: true, message: "密码不能为空" },
+      { min: 6, max: 64, message: "密码长度 6–64 位" },
+    ],
+  },
+  {
+    prop: "confirmPassword",
+    type: "password",
+    label: "确认密码",
+    rules: [
+      { required: true, message: "确认密码不能为空" },
+      {
+        validator: (value, values) =>
+          value === values.password ? true : "两次密码不一致",
+      },
+    ],
+  },
+];
+
+function openPwd(row) {
+  pwd.value = row;
+  password.value = "";
+  confirmPassword.value = "";
+  pwdErrors.value = {};
+}
+
+function closePwd() {
+  pwd.value = null;
+  password.value = "";
+  confirmPassword.value = "";
+  pwdErrors.value = {};
+}
+
+function submitPwd() {
+  const errs = validateForm(
+    pwdForm,
+    { password: password.value, confirmPassword: confirmPassword.value },
+    false,
+    { required: "此项必填", min: "不能小于 {n}", max: "不能大于 {n}", patternMismatch: "格式不正确" },
+  );
+  if (Object.keys(errs).length) {
+    pwdErrors.value = errs;
+    return;
+  }
+  closePwd();
+  toast.success("密码已修改");
+}
+
+<DataPanel
+  title="用户管理"
+  data={rows}
+  columns={columns}
+  view={{
+    title: (row) => \`详情 · \${row.name}\`,
+    props: [
+      { prop: "name", label: "姓名" },
+      { prop: "email", label: "邮箱" },
+      {
+        prop: "status",
+        label: "状态",
+        type: "tag",
+        options: [
+          { value: "active", label: "启用", tone: "success" },
+          { value: "disabled", label: "停用" },
+        ],
+        click: "toggle",
+      },
+      { prop: "createdAt", label: "创建时间", type: "datetime", format: "YYYY-MM-DD HH:mm" },
+    ],
+    actions: {
+      password: { label: "密码", action: (row) => openPwd(row) },
+      site: { label: "主页", href: (row) => \`/u/\${row.id}\` },
+      close: true,
+    },
+  }}
+>
+  <Modal
+    open={() => pwd.value !== null}
+    title="修改密码"
+    width="xs"
+    keyboard
+    destroyOnClose
+    onClose={closePwd}
+    footer={
+      <>
+        <Button type="button" variant="primary" onClick={submitPwd}>确定</Button>
+        <Button type="button" variant="default" onClick={closePwd}>取消</Button>
+      </>
+    }
+  >
+    <Form class="w-full" onSubmit={submitPwd}>
+      <FormItem class="w-full" label="密码" required error={pwdErrors.value.password}>
+        <Password class="w-full" value={password} newPassword autoComplete={true} placeholder="请输入密码" />
+      </FormItem>
+      <FormItem class="w-full" label="确认密码" required error={pwdErrors.value.confirmPassword}>
+        <Password class="w-full" value={confirmPassword} newPassword autoComplete={true} placeholder="请再次输入密码" />
+      </FormItem>
+    </Form>
+  </Modal>
+</DataPanel>`;
+
 const exampleDemo = `import { DataPanel } from "@dreamer/ui-view/data-display";
 
 const rows = [
@@ -2417,18 +2659,22 @@ const columns: Column[] = [
     remove: false,
   } },
 ];
-const search: SearchField[] = [
+const search = {
+  props: [
   { prop: "name" },
   { prop: "role", type: "select" },
   { prop: "status", type: "select" },
-];
-const form: FormField[] = [
+  ],
+};
+const form = {
+  props: [
   { prop: "name", required: true },
   { prop: "email", required: true, pattern: "^[^@\\s]+@[^@\\s]+$" },
   { prop: "role", type: "select", required: true, initial: "viewer" },
   { prop: "balance", type: "number", min: 0, initial: 0 },
   { prop: "status", type: "switch", initial: "active" },
-];
+  ],
+};
 
 <DataPanel
   title="用户管理"
@@ -2439,9 +2685,8 @@ const form: FormField[] = [
   form={form}
 />`;
 
-
-
-const schemasFullCode = `// —— 本地完整定义（含 rows）；服务端可省 data／用 dataSource + initial ——
+const schemasFullCode =
+  `// —— 本地完整定义（含 rows）；服务端可省 data／用 dataSource + initial ——
 const rows = [
   { id: "1", name: "Alice", email: "a@ex.com", role: "admin", status: "active", balance: 120, flag: 1, level: 1 },
   { id: "2", name: "Bob", email: "b@ex.com", role: "editor", status: "disabled", balance: 80, flag: 0, level: 0 },
@@ -2483,12 +2728,17 @@ const columns: Column[] = [
   } },
 ];
 
-const search: SearchField[] = [
-  { prop: "name", placeholder: "姓名关键字", hint: "模糊匹配", maxlength: 40, span: 6 },
-  { prop: "role", type: "select", span: 6 },
-];
+const search = {
+  title: "筛选用户",
+  props: [
+    { prop: "name", placeholder: "姓名关键字", hint: "模糊匹配", maxlength: 40, span: 6 },
+    { prop: "role", type: "select", span: 6 },
+  ],
+};
 
-const form: FormField[] = [
+const form = {
+  title: (row) => row.id ? \`修改 · \${row.name}\` : "添加用户",
+  props: [
   {
     prop: "name", span: 6, maxlength: 20, placeholder: "请输入姓名", hint: "2–20 字",
     rules: [
@@ -2507,28 +2757,58 @@ const form: FormField[] = [
   { prop: "status", type: "switch", initial: "active", span: 6 },
   { prop: "note", type: "textarea", rows: 3, maxlength: 200, span: 12, cols: 12,
     placeholder: "备注", hint: "选填" },
-];
+  ],
+};
 
 <DataPanel
   title="用户管理"
   data={rows}                 // 本地：写全 rows；远程可改 dataSource + initial
   columns={columns}
   search={search}
-  searchTitle="筛选用户"      // 搜索 Modal 标题
   form={form}
-  formTitle={(row) => row.id ? \`修改 · \${row.name}\` : "添加用户"}
-  viewTitle={(row) => \`详情 · \${row.name}\`}
-  viewSchemas={(row) => [
-    { label: "姓名", value: row.name },
-    { label: "邮箱", prop: "email" },
-  ]}
+  view={{
+    title: (row) => \`详情 · \${row.name}\`,
+    props: [
+      { prop: "name", label: "姓名" },
+      { prop: "email", label: "邮箱" },
+    ],
+  }}
 />`;
-
 
 export default function DataDisplayDataPanel() {
   const remote: DataSource = createRemoteDemoSource(300);
   const cellSource: DataSource = createCellDemoSource();
   const actionHint = createSignal("");
+  const pwd = createSignal<Row | null>(null);
+  const password = createSignal("");
+  const confirmPassword = createSignal("");
+  const pwdErrors = createSignal<Record<string, string>>({});
+  const openPwd = (row: Row) => {
+    pwd.value = row;
+    password.value = "";
+    confirmPassword.value = "";
+    pwdErrors.value = {};
+  };
+  const closePwd = () => {
+    pwd.value = null;
+    password.value = "";
+    confirmPassword.value = "";
+    pwdErrors.value = {};
+  };
+  const submitPwd = () => {
+    const errs = validateForm(
+      PWD_FORM,
+      { password: password.value, confirmPassword: confirmPassword.value },
+      false,
+      PWD_VALIDATE_MSG,
+    );
+    if (Object.keys(errs).length) {
+      pwdErrors.value = errs;
+      return;
+    }
+    closePwd();
+    toast.success("密码已修改");
+  };
   /** Simulated admin perms + page flags (toggle in demo-can). */
   const perms = createSignal<DemoPerms>({
     "demo.view": true,
@@ -2543,14 +2823,19 @@ export default function DataDisplayDataPanel() {
         <Title level={1}>DataPanel 数据面板</Title>
         <Paragraph class="mt-2">
           一块完整的列表管理面板：工具栏按钮组（添加 / 搜索 / 刷新 / 打印 / 导入
-          / 导出 / 列设置 / 行高 / 全屏 / 复制， 相邻按钮之间只有一条淡分割线）、搜索
+          / 导出 / 列设置 / 行高 / 全屏 / 复制，
+          相邻按钮之间只有一条淡分割线）、搜索
           Modal（工具栏按钮打开）、表格下方的批量操作条、表格（排序、多选、行内编辑、合计、操作列）、
           分页，以及用 Modal 的新增 / 编辑 / 查看。<strong>
-            任何删除与批量「设为…」都必须先确认：行内／批量删除／批量设为均弹出小气泡 Popconfirm（确定在左、取消在右；点外部也会关闭），不用 Modal 确认对话框
-          </strong>。 支持原生 xlsx 导出／导入（零依赖），支持浅色 / 深色主题与 zh-CN
-          / en-US。数据通过 <code>data</code> 或 <code>dataSource</code>{" "}
+            任何删除与批量「设为…」都必须先确认：行内／批量删除／批量设为均弹出小气泡
+            Popconfirm（确定在左、取消在右；点外部也会关闭），不用 Modal
+            确认对话框
+          </strong>。 支持原生 xlsx 导出／导入（零依赖），支持浅色 / 深色主题与
+          zh-CN / en-US。数据通过 <code>data</code> 或 <code>dataSource</code>
+          {" "}
           注入，与后端无关。工具栏／操作列用统合 <code>toolbar</code>／
-          <code>columns</code> 里 <code>type:&quot;actions&quot;</code> 的 <code>actions</code> Record（写入序＝显示序；自定义键必须
+          <code>columns</code> 里 <code>type:&quot;actions&quot;</code> 的{" "}
+          <code>actions</code> Record（写入序＝显示序；自定义键必须
           <code>action</code>；已废止 <code>extra</code>／<code>order</code>）。
         </Paragraph>
       </section>
@@ -2582,8 +2867,8 @@ export default function DataDisplayDataPanel() {
             title="用户管理"
             data={makeDemoRows(25)}
             columns={DEMO_COLUMNS}
-            search={DEMO_SEARCH}
-            form={DEMO_FORM}
+            search={{ props: DEMO_SEARCH }}
+            form={{ props: DEMO_FORM }}
             exportName="users"
           />
         </DocsDemo>
@@ -2596,8 +2881,7 @@ export default function DataDisplayDataPanel() {
             columns={DEMO_COLUMNS.map((c) =>
               c.prop === "status" ? { ...c, inline: undefined } : c
             )}
-            search={DEMO_SEARCH}
-            searchTitle="筛选条件"
+            search={{ title: "筛选条件", props: DEMO_SEARCH }}
             initialQuery={{ filters: { role: "admin" } }}
             caps={{ create: false }}
           />
@@ -2605,9 +2889,12 @@ export default function DataDisplayDataPanel() {
 
         <DocsDemo title="工具栏搜索 ↔ 地址栏" code={syncUrlCode}>
           <Paragraph class="mb-3 text-sm text-slate-600 dark:text-slate-400">
-            分页（<code class="text-xs">page</code>／<code class="text-xs">pageSize</code>）与排序默认与地址栏双向同步，无需开关；配置了{" "}
+            分页（<code class="text-xs">page</code>／<code class="text-xs">
+              pageSize
+            </code>）与排序默认与地址栏双向同步，无需开关；配置了{" "}
             <code class="text-xs">search</code>{" "}
-            后搜索字段一并写入。点工具栏搜索、提交或改分页／排序，地址栏自动{" "}
+            后搜索字段一并写入。点工具栏搜索、提交或改分页／排序，地址栏自动
+            {" "}
             <code class="text-xs">replaceState</code> 为{" "}
             <code class="text-xs">?name=…&amp;role=…&amp;page=…</code>
             ；硬刷或打开带 query 的链接会回填。空值删 key；fixed 永不进 URL。
@@ -2618,59 +2905,76 @@ export default function DataDisplayDataPanel() {
               title="用户管理"
               data={makeDemoRows(25)}
               columns={DEMO_COLUMNS}
-              search={DEMO_SEARCH}
-              form={DEMO_FORM}
+              search={{ props: DEMO_SEARCH }}
+              form={{ props: DEMO_FORM }}
             />
           </div>
         </DocsDemo>
 
-        <DocsDemo title="表格：排序 / 合计 / 行内编辑 / 隐藏列" code={tableCode}>
+        <DocsDemo
+          title="表格：排序 / 合计 / 行内编辑 / 隐藏列"
+          code={tableCode}
+        >
           <DataPanel
             panelKey="demo-table"
             title="表格功能"
             data={makeDemoRows(8)}
             columns={DEMO_COLUMNS}
             defaultSort={{ prop: "balance", order: "desc" }}
-            form={DEMO_FORM}
+            form={{ props: DEMO_FORM }}
             caps={{ create: false, remove: false }}
           />
         </DocsDemo>
 
-        <DocsDemo title="列显示函数（value／color／formatter → 任意节点）" code={colFnCode}>
+        <DocsDemo
+          title="列显示函数（value／color／formatter → 任意节点）"
+          code={colFnCode}
+        >
           <Paragraph class="mb-3 text-sm text-slate-600 dark:text-slate-400">
-            声明式 <code class="text-xs">options</code> 仍可用；复杂按行逻辑用{" "}
+            声明式 <code class="text-xs">options</code> 仍可用；复杂按行逻辑用
+            {" "}
             <code class="text-xs">value(row)</code>／
             <code class="text-xs">color(row)</code>／
             <code class="text-xs">formatter(row, raw)</code>
             。返回值可为 string、JSX／span、Icon 组件，或以{" "}
-            <code class="text-xs">&lt;</code> 开头的可信 HTML 字符串。
-            另：<code class="text-xs">formTitle</code>／
-            <code class="text-xs">searchTitle</code>／
-            <code class="text-xs">viewTitle</code>{" "}
-            分别定制增改／搜索／详情 Modal 标题（form／view 为{" "}
-            <code class="text-xs">string | (row)=&gt;string</code>；search 为{" "}
-            <code class="text-xs">string | ()=&gt;string</code>）。
+            <code class="text-xs">&lt;</code>{" "}
+            开头的可信 HTML 字符串。 另：<code class="text-xs">form</code>／
+            <code class="text-xs">search</code>／
+            <code class="text-xs">view</code> 一律写成{" "}
+            <code class="text-xs">{"{ title, props }"}</code>
+            ；<code class="text-xs">title</code> 为弹层标题（form／view 为{" "}
+            <code class="text-xs">string | (row)=&gt;string</code>；search 为
+            {" "}
+            <code class="text-xs">string | ()=&gt;string</code>），
+            <code class="text-xs">props</code> 与列同一套字段配置。
           </Paragraph>
           <DataPanel
             panelKey="demo-col-fn"
             title="列函数显示"
             data={colFnRows}
             columns={colFnColumns}
-            formTitle={(row) =>
-              row.id ? `修改 · ${String(row.name ?? "")}` : "添加用户"
-            }
-            searchTitle="筛选用户"
-            viewTitle={(row) => `详情 · ${String(row.name ?? "")}`}
-            viewSchemas={(row) => [
-              { label: "姓名", value: row.name },
-              {
-                label: "标记",
-                children: row.flag === 1
-                  ? <span class="text-emerald-600">开启</span>
-                  : <span class="text-slate-400">关闭</span>,
-              },
-              { label: "级别", prop: "level" },
-            ]}
+            search={{ title: "筛选用户", props: [{ prop: "name" }] }}
+            form={{
+              title: (row) =>
+                row.id ? `修改 · ${String(row.name ?? "")}` : "添加用户",
+              props: [
+                { prop: "name", required: true },
+                { prop: "flag", type: "number", initial: 0 },
+                { prop: "level", type: "number", initial: 0 },
+              ],
+            }}
+            view={{
+              title: (row) => `详情 · ${String(row.name ?? "")}`,
+              props: [
+                { prop: "name", label: "姓名" },
+                {
+                  prop: "flag",
+                  label: "标记",
+                  value: (row) => row.flag === 1 ? "开启" : "关闭",
+                },
+                { prop: "level", label: "级别" },
+              ],
+            }}
             caps={{
               create: true,
               update: true,
@@ -2684,17 +2988,15 @@ export default function DataDisplayDataPanel() {
               fullscreen: false,
               copy: false,
             }}
-            form={[
-              { prop: "name", required: true },
-              { prop: "flag", type: "number", initial: 0 },
-              { prop: "level", type: "number", initial: 0 },
-            ]}
           />
         </DocsDemo>
 
         <DocsDemo title="单元格编辑" code={cellCode}>
           <p class="mb-2 text-sm text-slate-600 dark:text-slate-300">
-            <code>inline</code>＝列内就地编辑（双击进入编辑），区别于工具栏／行操作打开的{" "}
+            <code>
+              inline
+            </code>＝列内就地编辑（双击进入编辑），区别于工具栏／行操作打开的
+            {" "}
             <code>form</code> Modal。
           </p>
           <label class="mb-2 flex items-center gap-2 text-sm">
@@ -2713,7 +3015,7 @@ export default function DataDisplayDataPanel() {
             title="单元格编辑"
             dataSource={cellSource}
             columns={CELL_COLUMNS}
-            form={CELL_FORM}
+            form={{ props: CELL_FORM }}
             caps={{
               create: false,
               remove: false,
@@ -2731,7 +3033,7 @@ export default function DataDisplayDataPanel() {
             title="CRUD"
             data={makeDemoRows(8)}
             columns={DEMO_COLUMNS}
-            form={DEMO_FORM}
+            form={{ props: DEMO_FORM }}
           />
         </DocsDemo>
 
@@ -2741,7 +3043,7 @@ export default function DataDisplayDataPanel() {
             title="批量操作"
             data={makeDemoRows(10)}
             columns={DEMO_COLUMNS}
-            form={DEMO_FORM}
+            form={{ props: DEMO_FORM }}
           />
         </DocsDemo>
 
@@ -2771,33 +3073,37 @@ export default function DataDisplayDataPanel() {
             title="导出导入"
             data={makeDemoRows(15)}
             columns={DEMO_COLUMNS}
-            form={DEMO_FORM}
+            form={{ props: DEMO_FORM }}
             exportName="users"
           />
         </DocsDemo>
 
-        <DocsDemo title="远程 dataSource（list + fetch 后台 API）" code={remoteCode}>
+        <DocsDemo
+          title="远程 dataSource（list + fetch 后台 API）"
+          code={remoteCode}
+        >
           <Paragraph class="mb-2 text-sm text-slate-600 dark:text-slate-400">
             前端：<code class="text-xs">list</code>+
             <code class="text-xs">fetch</code> 拼 query，返回{" "}
             <code class="text-xs">{"{ rows, total }"}</code>，
-            <code class="text-xs">sync: false</code>。
-            下方面板为内存异步模拟。
+            <code class="text-xs">sync: false</code>。 下方面板为内存异步模拟。
           </Paragraph>
           <DataPanel
             panelKey="demo-remote"
             title="远程数据"
             dataSource={remote}
             columns={DEMO_COLUMNS}
-            search={DEMO_SEARCH}
-            form={DEMO_FORM}
+            search={{ props: DEMO_SEARCH }}
+            form={{ props: DEMO_FORM }}
           />
         </DocsDemo>
 
-        <DocsDemo title="自动请求列表 · action（baseRoute=/api/users）" code={apiActionCode}>
+        <DocsDemo
+          title="自动请求列表 · action（baseRoute=/api/users）"
+          code={apiActionCode}
+        >
           <Paragraph class="mb-2 text-sm text-slate-600 dark:text-slate-400">
-            <strong>不传</strong>{" "}
-            <code class="text-xs">data</code>／
+            <strong>不传</strong> <code class="text-xs">data</code>／
             <code class="text-xs">dataSource</code>
             。
             <code class="text-xs">baseRoute=&quot;/api/users&quot;</code>
@@ -2815,16 +3121,18 @@ export default function DataDisplayDataPanel() {
             title="用户（action）"
             baseRoute="/api/users"
             columns={DEMO_COLUMNS}
-            search={DEMO_SEARCH}
-            form={DEMO_FORM}
+            search={{ props: DEMO_SEARCH }}
+            form={{ props: DEMO_FORM }}
             pageSize={10}
           />
         </DocsDemo>
 
-        <DocsDemo title="自动请求列表 · restful（baseRoute=/api/orders）" code={apiRestfulCode}>
+        <DocsDemo
+          title="自动请求列表 · restful（baseRoute=/api/orders）"
+          code={apiRestfulCode}
+        >
           <Paragraph class="mb-2 text-sm text-slate-600 dark:text-slate-400">
-            <strong>不传</strong>{" "}
-            <code class="text-xs">data</code>／
+            <strong>不传</strong> <code class="text-xs">data</code>／
             <code class="text-xs">dataSource</code>
             。
             <code class="text-xs">baseRoute=&quot;/api/orders&quot;</code>
@@ -2845,8 +3153,8 @@ export default function DataDisplayDataPanel() {
             baseRoute="/api/orders"
             apiMode="restful"
             columns={DEMO_COLUMNS}
-            search={DEMO_SEARCH}
-            form={DEMO_FORM}
+            search={{ props: DEMO_SEARCH }}
+            form={{ props: DEMO_FORM }}
             pageSize={10}
           />
         </DocsDemo>
@@ -2858,8 +3166,8 @@ export default function DataDisplayDataPanel() {
               title="深色面板"
               data={makeDemoRows(6)}
               columns={DEMO_COLUMNS}
-              search={DEMO_SEARCH}
-              form={DEMO_FORM}
+              search={{ props: DEMO_SEARCH }}
+              form={{ props: DEMO_FORM }}
             />
           </div>
         </DocsDemo>
@@ -2882,13 +3190,11 @@ export default function DataDisplayDataPanel() {
                 createdAt: "Created",
               } as Record<string, string>)[c.prop!] ?? c.label,
             }))}
-            search={[{ name: "name", label: "Name" }]}
-            form={DEMO_FORM.map((f) => ({ ...f }))}
+            search={{ props: [{ name: "name", label: "Name" }] }}
+            form={{ props: DEMO_FORM.map((f) => ({ ...f })) }}
             messages={{ create: "New" }}
           />
         </DocsDemo>
-
-
       </section>
 
       <section class="flex flex-col gap-10">
@@ -2896,19 +3202,33 @@ export default function DataDisplayDataPanel() {
           <Title level={2}>工具栏与操作列（统合 Record）</Title>
           <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
             <code>toolbar</code> 与操作列 <code>actions</code> 为统合 Record；
-            <code>toolbar</code> 设为 <code>false</code> 时整栏工具栏不渲染。
-            键级 <code>true</code>／<code>false</code> 简写控显隐；对象可覆盖
-            <code>show</code>／<code>disable</code>／<code>icon</code>／<code>label</code>／<code>title</code>／<code>tone</code>／<code>action</code>
+            <code>toolbar</code> 设为 <code>false</code>{" "}
+            时整栏工具栏不渲染。 键级 <code>true</code>／<code>false</code>{" "}
+            简写控显隐；对象可覆盖
+            <code>show</code>／<code>disable</code>／<code>icon</code>／<code>
+              label
+            </code>／<code>title</code>／<code>tone</code>／<code>action</code>
             （默认 show=true、disable=false）。声明项不再用 caps 藏钮；
-            <code>undefined</code>（如 capGate allow）才回落 caps。<code>title</code> 可省：不传时内置用 messages、自定义用
-            <code>title ?? label ?? 内置 messages ?? key</code>。无 <code>label</code> 有
-            <code>title</code> 时显示用 <code>title</code>；无 <code>title</code> 有 <code>label</code> 时 tip 用
+            <code>undefined</code>（如 capGate allow）才回落 caps。<code>
+              title
+            </code>{" "}
+            可省：不传时内置用 messages、自定义用
+            <code>title ?? label ?? 内置 messages ?? key</code>。无{" "}
+            <code>label</code> 有
+            <code>title</code> 时显示用 <code>title</code>；无{" "}
+            <code>title</code> 有 <code>label</code> 时 tip 用
             <code>label</code>。无 <code>confirm</code> 字段：需要确认时在
             <code>action</code> 内自管（内置 remove 仍自带 Popconfirm）。
-            <code>tone</code>：对齐 Button 全档 <code>default|primary|secondary|success|warning|danger|ghost</code>（内置 remove 默认 danger）。未知键＝自定义（必须
+            <code>tone</code>：对齐 Button 全档{" "}
+            <code>
+              default|primary|secondary|success|warning|danger|ghost
+            </code>（内置 remove 默认 danger）。未知键＝自定义（必须
             <code>action</code>）。写入序＝显示序。已<strong>废止</strong>
-            <code>toolbar.extra</code>／<code>order</code>／<code>toolbarExtra</code>／<code>rowExtra</code>／旧顶层行操作配置
-            （前导 chrome 请放面板外）。批量「设为…」由 <code>caps.batchStatus</code>＋列 <code>batch:true</code> 控制，不在 toolbar。
+            <code>toolbar.extra</code>／<code>order</code>／<code>
+              toolbarExtra
+            </code>／<code>rowExtra</code>／旧顶层行操作配置 （前导 chrome
+            请放面板外）。批量「设为…」由 <code>caps.batchStatus</code>＋列{" "}
+            <code>batch:true</code> 控制，不在 toolbar。
           </Paragraph>
         </div>
 
@@ -2918,15 +3238,23 @@ export default function DataDisplayDataPanel() {
             title="无工具栏"
             data={makeDemoRows(5)}
             columns={DEMO_COLUMNS}
-            form={DEMO_FORM}
+            form={{ props: DEMO_FORM }}
             toolbar={false}
           />
-          <p class="mt-2 text-xs text-slate-500" data-testid="demo-toolbar-off-hint">
-            toolbar=false 时整栏工具栏不出现；表格／分页仍渲染。移动端（≤639.98px）表格卡上／左／右贴边；分页控件居中，条数文案在分页下方并居中；底栏分页尺寸移动 xs／桌面 md；桌面仍左右分布。
+          <p
+            class="mt-2 text-xs text-slate-500"
+            data-testid="demo-toolbar-off-hint"
+          >
+            toolbar=false
+            时整栏工具栏不出现；表格／分页仍渲染。移动端（≤639.98px）表格卡上／左／右贴边；分页控件居中，条数文案在分页下方并居中；底栏分页尺寸移动
+            xs／桌面 md；桌面仍左右分布。
           </p>
         </DocsDemo>
 
-        <DocsDemo title="⓪ 默认：省略 show→显示、省略 disable→可点" code={defaultsCode}>
+        <DocsDemo
+          title="⓪ 默认：省略 show→显示、省略 disable→可点"
+          code={defaultsCode}
+        >
           <DataPanel
             panelKey="demo-defaults"
             title="声明默认 vs caps"
@@ -2934,7 +3262,7 @@ export default function DataDisplayDataPanel() {
             columns={withRowActions({
               edit: { disable: true },
             })}
-            form={DEMO_FORM}
+            form={{ props: DEMO_FORM }}
             caps={{
               create: false,
               update: false,
@@ -2950,10 +3278,13 @@ export default function DataDisplayDataPanel() {
               create: {},
               refresh: { disable: true },
             }}
-            
           />
-          <p class="mt-2 text-xs text-slate-500" data-testid="demo-defaults-hint">
-            caps 关 create／update，但声明项 create 空对象、edit 仅 disable 仍显示；refresh 禁用仍可见；未声明 view／remove 按 caps。
+          <p
+            class="mt-2 text-xs text-slate-500"
+            data-testid="demo-defaults-hint"
+          >
+            caps 关 create／update，但声明项 create 空对象、edit 仅 disable
+            仍显示；refresh 禁用仍可见；未声明 view／remove 按 caps。
           </p>
         </DocsDemo>
 
@@ -2967,8 +3298,8 @@ export default function DataDisplayDataPanel() {
               edit: true,
               remove: false,
             })}
-            search={DEMO_SEARCH}
-            form={DEMO_FORM}
+            search={{ props: DEMO_SEARCH }}
+            form={{ props: DEMO_FORM }}
             toolbar={{
               create: true,
               search: true,
@@ -2977,7 +3308,6 @@ export default function DataDisplayDataPanel() {
               import: false,
               export: false,
             }}
-            
           />
         </DocsDemo>
 
@@ -2991,7 +3321,9 @@ export default function DataDisplayDataPanel() {
                 pageAllowAudit.value = !pageAllowAudit.value;
               }}
             >
-              {() => pageAllowAudit.value ? "关闭权限（审计变禁用）" : "打开权限（审计可点）"}
+              {() => pageAllowAudit.value
+                ? "关闭权限（审计变禁用）"
+                : "打开权限（审计可点）"}
             </Button>
             <span class="text-xs text-slate-500" data-testid="demo-tb-fn-flag">
               {() => `pageAllowAudit=${String(pageAllowAudit.value)}`}
@@ -3002,7 +3334,7 @@ export default function DataDisplayDataPanel() {
             title="toolbar 函数 show"
             data={makeDemoRows(5)}
             columns={DEMO_COLUMNS}
-            form={DEMO_FORM}
+            form={{ props: DEMO_FORM }}
             toolbar={{
               create: true,
               audit: {
@@ -3018,7 +3350,8 @@ export default function DataDisplayDataPanel() {
             }}
           />
           <p class="mt-2 text-xs text-slate-500" data-testid="demo-tb-fn-hint">
-            {() => actionHint.value || "pageAllowAudit=false 时审计仍可见但 disabled"}
+            {() => actionHint.value ||
+              "pageAllowAudit=false 时审计仍可见但 disabled"}
           </p>
         </DocsDemo>
 
@@ -3041,20 +3374,24 @@ export default function DataDisplayDataPanel() {
               },
             })}
             caps={{ create: false, update: false, remove: false, view: false }}
-            
           />
           <p class="mt-2 text-xs text-slate-500" data-testid="demo-ra-fn-hint">
-            {() => actionHint.value || "locked 行「分配」仍可见但 disabled；点击看 item.id"}
+            {() =>
+              actionHint.value ||
+              "locked 行「分配」仍可见但 disabled；点击看 item.id"}
           </p>
         </DocsDemo>
 
-        <DocsDemo title="④a 自定义工具钮（未知 key＋必 action）" code={tbCustomCode}>
+        <DocsDemo
+          title="④a 自定义工具钮（未知 key＋必 action）"
+          code={tbCustomCode}
+        >
           <DataPanel
             panelKey="demo-tb-custom"
             title="自定义工具钮"
             data={makeDemoRows(5)}
             columns={DEMO_COLUMNS}
-            form={DEMO_FORM}
+            form={{ props: DEMO_FORM }}
             toolbar={{
               create: true,
               invite: {
@@ -3067,12 +3404,18 @@ export default function DataDisplayDataPanel() {
               ...DEMO_HIDE_CHROME,
             }}
           />
-          <p class="mt-2 text-xs text-slate-500" data-testid="demo-tb-custom-hint">
+          <p
+            class="mt-2 text-xs text-slate-500"
+            data-testid="demo-tb-custom-hint"
+          >
             {() => actionHint.value || "点击「邀请」"}
           </p>
         </DocsDemo>
 
-        <DocsDemo title="④b 自定义操作列（未知 key＋必 action(item)）" code={raCustomCode}>
+        <DocsDemo
+          title="④b 自定义操作列（未知 key＋必 action(item)）"
+          code={raCustomCode}
+        >
           <DataPanel
             panelKey="demo-ra-custom"
             title="自定义操作列"
@@ -3088,11 +3431,14 @@ export default function DataDisplayDataPanel() {
               edit: true,
               remove: false,
             })}
-            form={DEMO_FORM}
-            
+            form={{ props: DEMO_FORM }}
           />
-          <p class="mt-2 text-xs text-slate-500" data-testid="demo-ra-custom-hint">
-            {() => actionHint.value || "写入序：view → clone → edit（无 remove）"}
+          <p
+            class="mt-2 text-xs text-slate-500"
+            data-testid="demo-ra-custom-hint"
+          >
+            {() =>
+              actionHint.value || "写入序：view → clone → edit（无 remove）"}
           </p>
         </DocsDemo>
 
@@ -3102,7 +3448,7 @@ export default function DataDisplayDataPanel() {
             title="写入序＝显示序"
             data={makeDemoRows(5)}
             columns={DEMO_COLUMNS}
-            form={DEMO_FORM}
+            form={{ props: DEMO_FORM }}
             toolbar={{
               create: true,
               audit: {
@@ -3121,12 +3467,18 @@ export default function DataDisplayDataPanel() {
               copy: false,
             }}
           />
-          <p class="mt-2 text-xs text-slate-500" data-testid="demo-key-order-hint">
+          <p
+            class="mt-2 text-xs text-slate-500"
+            data-testid="demo-key-order-hint"
+          >
             工具栏从左到右：添加 → 审计 → 刷新 → 导出（与对象键顺序一致）
           </p>
         </DocsDemo>
 
-        <DocsDemo title="⑦ disable：禁用仍可见（≠ show:false）" code={enabledCode}>
+        <DocsDemo
+          title="⑦ disable：禁用仍可见（≠ show:false）"
+          code={enabledCode}
+        >
           <DataPanel
             panelKey="demo-enabled"
             title="disable 演示"
@@ -3143,7 +3495,7 @@ export default function DataDisplayDataPanel() {
                 },
               },
             })}
-            form={DEMO_FORM}
+            form={{ props: DEMO_FORM }}
             toolbar={{
               create: { disable: true },
               freeze: {
@@ -3162,15 +3514,20 @@ export default function DataDisplayDataPanel() {
               fullscreen: false,
               copy: false,
             }}
-            
           />
-          <p class="mt-2 text-xs text-slate-500" data-testid="demo-enabled-hint">
-            添加／冻结／编辑为 disabled 仍可见；locked 行「分配」禁用。show:false 才会隐藏。
+          <p
+            class="mt-2 text-xs text-slate-500"
+            data-testid="demo-enabled-hint"
+          >
+            添加／冻结／编辑为 disabled 仍可见；locked
+            行「分配」禁用。show:false 才会隐藏。
           </p>
         </DocsDemo>
 
-
-        <DocsDemo title="⑧ title 可省：内置 messages／自定义 label??key／显式覆盖" code={titleCode}>
+        <DocsDemo
+          title="⑧ title 可省：内置 messages／自定义 label??key／显式覆盖"
+          code={titleCode}
+        >
           <DataPanel
             panelKey="demo-title"
             title="title Tooltip"
@@ -3186,7 +3543,7 @@ export default function DataDisplayDataPanel() {
                 },
               },
             })}
-            form={DEMO_FORM}
+            form={{ props: DEMO_FORM }}
             toolbar={{
               create: true,
               refresh: { title: "立刻刷新" },
@@ -3204,10 +3561,10 @@ export default function DataDisplayDataPanel() {
               fullscreen: false,
               copy: false,
             }}
-            
           />
           <p class="mt-2 text-xs text-slate-500" data-testid="demo-title-hint">
-            不传 title：内置悬停用 messages／label，自定义悬停用 key（如 freeze／assign）；传了则覆盖（立刻刷新／改资料）。
+            不传 title：内置悬停用 messages／label，自定义悬停用 key（如
+            freeze／assign）；传了则覆盖（立刻刷新／改资料）。
           </p>
         </DocsDemo>
 
@@ -3224,7 +3581,10 @@ export default function DataDisplayDataPanel() {
                 };
               }}
             >
-              {() => perms.value["demo.write"] ? "关闭 demo.write" : "打开 demo.write"}
+              {() =>
+                perms.value["demo.write"]
+                  ? "关闭 demo.write"
+                  : "打开 demo.write"}
             </Button>
             <Button
               type="button"
@@ -3238,7 +3598,9 @@ export default function DataDisplayDataPanel() {
             </Button>
             <span class="text-xs text-slate-500" data-testid="demo-can-flags">
               {() =>
-                `write=${String(perms.value["demo.write"])} view=${String(perms.value["demo.view"])} pageExport=${String(pageExport.value)}`}
+                `write=${String(perms.value["demo.write"])} view=${
+                  String(perms.value["demo.view"])
+                } pageExport=${String(pageExport.value)}`}
             </span>
           </div>
           <DataPanel
@@ -3257,8 +3619,8 @@ export default function DataDisplayDataPanel() {
                 },
               },
             })}
-            form={DEMO_FORM}
-            search={DEMO_SEARCH}
+            form={{ props: DEMO_FORM }}
+            search={{ props: DEMO_SEARCH }}
             toolbar={{
               create: demoCapGate(can("demo.write")),
               search: true,
@@ -3274,18 +3636,22 @@ export default function DataDisplayDataPanel() {
               fullscreen: false,
               copy: false,
             }}
-            
           />
           <p class="mt-2 text-xs text-slate-500" data-testid="demo-can-hint">
-            {() =>
-              actionHint.value ||
+            {() => actionHint.value ||
               "默认 write=false：无创建／导入／编辑／删除／分配；export 受 pageExport＆view 控制"}
           </p>
         </DocsDemo>
 
-        <DocsDemo title="tone／tip=label??key（无 confirm 字段／无双轨插槽）" code={customCode}>
+        <DocsDemo
+          title="tone／tip=label??key（无 confirm 字段／无双轨插槽）"
+          code={customCode}
+        >
           <div class="flex flex-col gap-2">
-            <span class="text-sm text-slate-500" data-testid="demo-custom-leading">
+            <span
+              class="text-sm text-slate-500"
+              data-testid="demo-custom-leading"
+            >
               面板外提示（原 toolbarExtra 迁此）
             </span>
             <DataPanel
@@ -3319,40 +3685,194 @@ export default function DataDisplayDataPanel() {
                   },
                 },
               }}
-              
             />
             <p class="text-xs text-slate-500" data-testid="demo-custom-hint">
-              {() => actionHint.value || "点「通知」／「冻结」直接跑 action（确认请在 action 自管）"}
+              {() => actionHint.value ||
+                "点「通知」／「冻结」直接跑 action（确认请在 action 自管）"}
             </p>
           </div>
         </DocsDemo>
 
+        <DocsDemo title="查看详情（view）" code={viewCode}>
+          <Paragraph class="mb-3 text-sm text-slate-600 dark:text-slate-400">
+            <code class="text-xs">view</code> 与{" "}
+            <code class="text-xs">form</code>／
+            <code class="text-xs">search</code> 一样写成{" "}
+            <code class="text-xs">{"{ title, props, actions? }"}</code>
+            。<code class="text-xs">title</code> 是查看弹窗标题（
+            <code class="text-xs">string</code> 或{" "}
+            <code class="text-xs">(row)=&gt;string</code>，如{" "}
+            <code class="text-xs">{"详情 · ${row.name}"}</code>
+            ）；<code class="text-xs">props</code>{" "}
+            只放字段，与列同一套配置，缺省从同 prop 列继承；
+            <code class="text-xs">click:&quot;toggle&quot;</code>{" "}
+            点击状态会切换并写入（走 setField／update，刷新详情和列表）。{" "}
+            <code class="text-xs">actions</code>{" "}
+            与 title 平级，是底部按钮（与列操作同一套 Record；内置{" "}
+            <code class="text-xs">close</code> 默认靠右最后）。 自定义按钮用
+            {" "}
+            <code class="text-xs">action(row)</code> 打开另一个 Modal（仍放在
+            {" "}
+            <code class="text-xs">children</code>）， 或{" "}
+            <code class="text-xs">href</code>。不写{" "}
+            <code class="text-xs">view</code>{" "}
+            时仍按列＋表单回落，底部只留关闭。不写{" "}
+            <code class="text-xs">view.actions</code> 时底部只留关闭。
+          </Paragraph>
+          <div data-testid="demo-view">
+            <DataPanel
+              panelKey="demo-view"
+              title="用户管理"
+              data={makeDemoRows(8)}
+              columns={DEMO_COLUMNS}
+              view={{
+                title: (row) => `详情 · ${String(row.name ?? "")}`,
+                props: [
+                  { prop: "name", label: "姓名" },
+                  { prop: "email", label: "邮箱" },
+                  {
+                    prop: "status",
+                    label: "状态",
+                    type: "tag",
+                    options: [
+                      { value: "active", label: "启用", tone: "success" },
+                      { value: "disabled", label: "停用" },
+                    ],
+                    click: "toggle",
+                  },
+                  {
+                    prop: "createdAt",
+                    label: "创建时间",
+                    type: "datetime",
+                    format: "YYYY-MM-DD HH:mm",
+                  },
+                ],
+                actions: {
+                  password: {
+                    label: "密码",
+                    action: (row) => openPwd(row),
+                  },
+                  site: { label: "主页", href: (row) => `/u/${row.id}` },
+                  close: true,
+                },
+              }}
+              caps={{
+                create: false,
+                update: false,
+                remove: false,
+                import: false,
+                export: false,
+                print: false,
+                columns: false,
+                density: false,
+                fullscreen: false,
+                copy: false,
+              }}
+            >
+              <Modal
+                open={() => pwd.value !== null}
+                title="修改密码"
+                width="xs"
+                keyboard
+                destroyOnClose
+                onClose={closePwd}
+                footer={
+                  <>
+                    <Button
+                      type="button"
+                      variant="primary"
+                      data-testid="demo-view-pwd-submit"
+                      onClick={submitPwd}
+                    >
+                      确定
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="default"
+                      data-testid="demo-view-pwd-cancel"
+                      onClick={closePwd}
+                    >
+                      取消
+                    </Button>
+                  </>
+                }
+              >
+                {() => (
+                  <Form class="w-full" onSubmit={submitPwd}>
+                    <FormItem
+                      class="w-full"
+                      label="密码"
+                      required
+                      id="demo-view-pwd"
+                      error={pwdErrors.value.password}
+                    >
+                      <Password
+                        id="demo-view-pwd"
+                        class="w-full"
+                        value={password}
+                        newPassword
+                        autoComplete={true}
+                        placeholder="请输入密码"
+                      />
+                    </FormItem>
+                    <FormItem
+                      class="w-full"
+                      label="确认密码"
+                      required
+                      id="demo-view-pwd-confirm"
+                      error={pwdErrors.value.confirmPassword}
+                    >
+                      <Password
+                        id="demo-view-pwd-confirm"
+                        class="w-full"
+                        value={confirmPassword}
+                        newPassword
+                        autoComplete={true}
+                        placeholder="请再次输入密码"
+                      />
+                    </FormItem>
+                  </Form>
+                )}
+              </Modal>
+            </DataPanel>
+          </div>
+        </DocsDemo>
       </section>
 
       <section class="flex flex-col gap-6">
         <Title level={2}>完整示例</Title>
-        <CodeBlock title="代码示例" code={exampleDemo} language="tsx" showLineNumbers copyable wrapLongLines />
+        <CodeBlock
+          title="代码示例"
+          code={exampleDemo}
+          language="tsx"
+          showLineNumbers
+          copyable
+          wrapLongLines
+        />
       </section>
 
       <section class="flex flex-col gap-6">
         <Title level={2}>参数写法总览</Title>
         <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
-          下列示例把 <code class="text-xs">formTitle</code>／
-          <code class="text-xs">searchTitle</code>／
-          <code class="text-xs">viewTitle</code>、
+          下列示例把 <code class="text-xs">form</code>／
+          <code class="text-xs">search</code>／
+          <code class="text-xs">view</code> 的{" "}
+          <code class="text-xs">{"{ title, props }"}</code>、
           <code class="text-xs">rules</code>／message／placeholder／hint、
           span／cols／width／min／max／maxlength、以及列
           <code class="text-xs">value</code>／
           <code class="text-xs">color</code>／
-          <code class="text-xs">formatter</code>（可返回 Icon／span／JSX／可信 HTML）、
+          <code class="text-xs">formatter</code>（可返回 Icon／span／JSX／可信
+          HTML）、
           <code class="text-xs">format</code>（date／datetime）、
           <code class="text-xs">type:"selection"</code>／
           <code class="text-xs">type:"index"</code>／
           <code class="text-xs">type:"actions"</code>
           （系统列可省 prop／label；操作配置写在{" "}
-          <code class="text-xs">actions</code>）
-          写在同一份本地定义里（含 <code class="text-xs">rows</code>）。服务端场景可去掉{" "}
-          <code class="text-xs">data</code>，改用 <code class="text-xs">dataSource</code>＋
+          <code class="text-xs">actions</code>） 写在同一份本地定义里（含{" "}
+          <code class="text-xs">rows</code>）。服务端场景可去掉{" "}
+          <code class="text-xs">data</code>，改用{" "}
+          <code class="text-xs">dataSource</code>＋
           <code class="text-xs">initial</code>。
         </Paragraph>
         <CodeBlock
@@ -3362,24 +3882,29 @@ export default function DataDisplayDataPanel() {
           showLineNumbers
           wrapLongLines
         />
-        <DocsDemo title="校验／尺寸／标题（rules · hint · span · formTitle）" code={schemasFullCode}>
+        <DocsDemo
+          title="校验／尺寸／标题（rules · hint · span · form.title）"
+          code={schemasFullCode}
+        >
           <DataPanel
             panelKey="demo-schemas-full"
             title="用户管理"
             data={makeDemoRows(8)}
             columns={DEMO_COLUMNS}
-            search={DEMO_SEARCH}
-            searchTitle="筛选用户"
-            form={DEMO_FORM_RICH}
-            formTitle={(row) =>
-              row.id ? `修改 · ${String(row.name ?? "")}` : "添加用户"
-            }
-            viewTitle={(row) => `详情 · ${String(row.name ?? "")}`}
-            viewSchemas={(row) => [
-              { label: "姓名", value: row.name },
-              { label: "邮箱", prop: "email" },
-              { label: "余额", prop: "balance" },
-            ]}
+            search={{ title: "筛选用户", props: DEMO_SEARCH }}
+            form={{
+              title: (row) =>
+                row.id ? `修改 · ${String(row.name ?? "")}` : "添加用户",
+              props: DEMO_FORM_RICH,
+            }}
+            view={{
+              title: (row) => `详情 · ${String(row.name ?? "")}`,
+              props: [
+                { prop: "name", label: "姓名" },
+                { prop: "email", label: "邮箱" },
+                { prop: "balance", label: "余额" },
+              ],
+            }}
             caps={{
               import: false,
               export: false,
@@ -3396,12 +3921,14 @@ export default function DataDisplayDataPanel() {
       <section class="space-y-3">
         <Title level={2}>API</Title>
         <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
-          属性一览。Modal 标题：
-          <code class="text-xs">formTitle</code>／
-          <code class="text-xs">searchTitle</code>／
-          <code class="text-xs">viewTitle</code>
-          （均可 <code class="text-xs">string</code> 或函数；增改新增时 row 为{" "}
-          <code class="text-xs">{"{}"}</code>）。
+          属性一览。<code class="text-xs">form</code>／
+          <code class="text-xs">search</code>／
+          <code class="text-xs">view</code> 一律写成{" "}
+          <code class="text-xs">{"{ title, props }"}</code>
+          。<code class="text-xs">title</code> 为弹层标题（
+          <code class="text-xs">string</code> 或函数；增改新增时 row 为{" "}
+          <code class="text-xs">{"{}"}</code>
+          ）；<code class="text-xs">props</code> 为字段数组。
         </Paragraph>
         <DocsApiTable rows={DATA_PANEL_API} />
       </section>
@@ -3412,8 +3939,7 @@ export default function DataDisplayDataPanel() {
           序号／多选／操作：
           <code class="text-xs">type:"index"|"selection"|"actions"</code>
           （prop／label 可省；操作按钮写在列的{" "}
-          <code class="text-xs">actions</code>）。
-          日期格式：
+          <code class="text-xs">actions</code>）。 日期格式：
           <code class="text-xs">format:"YYYY-MM-DD HH:mm"</code>。
         </Paragraph>
         <DocsApiTable rows={COLUMNS_API} />
@@ -3432,20 +3958,16 @@ export default function DataDisplayDataPanel() {
       <section class="space-y-3">
         <Title level={2}>数据源（DataSource）</Title>
         <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
-          拉数优先级：显式{" "}
-          <code class="text-xs">dataSource</code>
+          拉数优先级：显式 <code class="text-xs">dataSource</code>
           {" ＞ 传入 "}
           <code class="text-xs">data</code>
           （本地源、不自动请求）＞ 二者皆无且给了{" "}
           <code class="text-xs">baseRoute</code>
-          时才{" "}
-          <code class="text-xs">createApiDataSource</code>
+          时才 <code class="text-xs">createApiDataSource</code>
           拉 list（
           <code class="text-xs">baseRoute</code>
-          ≥2 段直接作根；仅 1 段再拼{" "}
-          <code class="text-xs">resource</code>
-          ）。导入仍可用{" "}
-          <code class="text-xs">onImportRows</code>
+          ≥2 段直接作根；仅 1 段再拼 <code class="text-xs">resource</code>
+          ）。导入仍可用 <code class="text-xs">onImportRows</code>
           逃生。
         </Paragraph>
         <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
@@ -3458,10 +3980,8 @@ export default function DataDisplayDataPanel() {
           ）；
           <code class="text-xs">GET …/view/:id</code>。
           <code class="text-xs">importRows</code>
-          无单独 import 端点，走{" "}
-          <code class="text-xs">POST …/create</code>
-          ，body{" "}
-          <code class="text-xs">{"{ rows }"}</code>
+          无单独 import 端点，走 <code class="text-xs">POST …/create</code>
+          ，body <code class="text-xs">{"{ rows }"}</code>
           （与单条对象区分）。
         </Paragraph>
         <Paragraph class="text-sm text-slate-600 dark:text-slate-400">

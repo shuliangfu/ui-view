@@ -167,6 +167,28 @@ export default function MobileDateTimePickerDoc() {
             wrapLongLines
           />
         </div>
+        <div class="space-y-4">
+          <Title level={3}>size（xs / sm / md / lg）</Title>
+          <MobileDocDemo>
+            <div class="flex flex-col gap-3 p-2">
+              <DateTimePicker size="xs" class="w-full" placeholder="xs" />
+              <DateTimePicker size="sm" class="w-full" placeholder="sm" />
+              <DateTimePicker size="md" class="w-full" placeholder="md" />
+              <DateTimePicker size="lg" class="w-full" placeholder="lg" />
+            </div>
+          </MobileDocDemo>
+          <CodeBlock
+            title="代码示例"
+            code={`<DateTimePicker size="xs" placeholder="xs" />
+<DateTimePicker size="sm" placeholder="sm" />
+<DateTimePicker size="md" placeholder="md" />
+<DateTimePicker size="lg" placeholder="lg" />`}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+        </div>
       </section>
 
       <DocsMessagesSection

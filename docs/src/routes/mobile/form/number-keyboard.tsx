@@ -17,6 +17,7 @@ import { MESSAGES_NUMBER_KEYBOARD } from "../../../data/component-messages-rows.
 import { MobileDocDemo } from "../../../components/MobileDocDemo.tsx";
 
 const API: DocsApiTableRow[] = [
+  { name: "size", type: '"xs" | "sm" | "md" | "lg"', default: '"md"', description: "尺寸：xs、sm、md、lg；也可由外层 Form 的 size 注入" },
   { name: "open", type: "ControlledOpenInput", default: "-", description: "是否打开" },
   { name: "onInput", type: "(key: string) => void", default: "-", description: "按键输入" },
   { name: "onDelete", type: "() => void", default: "-", description: "删除" },
@@ -54,6 +55,8 @@ const value = createSignal("");
 export default function Page() {
   const open = createSignal(false);
   const digits = createSignal("");
+  const sizeOpen = createSignal(false);
+  const kbSize = createSignal<"xs" | "sm" | "md" | "lg">("md");
   return (
     <div class="space-y-8">
       <div>
@@ -94,6 +97,42 @@ export default function Page() {
           </MobilePortalHostScope>
         </MobileDocDemo>
         <CodeBlock title="代码示例" code={exampleDemo} language="tsx" showLineNumbers copyable wrapLongLines />
+        <Title level={3}>size（xs / sm / md / lg）</Title>
+        <MobileDocDemo class="flex min-h-[360px] flex-col p-4">
+          <MobilePortalHostScope class="flex min-h-0 flex-1 flex-col gap-3">
+            <div class="flex flex-wrap justify-center gap-2">
+              {(["xs", "sm", "md", "lg"] as const).map((s) => (
+                <Button
+                  type="button"
+                  onClick={() => {
+                    kbSize.value = s;
+                    sizeOpen.value = true;
+                  }}
+                >
+                  {s}
+                </Button>
+              ))}
+            </div>
+            {() => (
+              <NumberKeyboard
+                size={kbSize.value}
+                open={sizeOpen}
+                onClose={() => (sizeOpen.value = false)}
+              />
+            )}
+          </MobilePortalHostScope>
+        </MobileDocDemo>
+        <CodeBlock
+          title="代码示例"
+          code={`<NumberKeyboard size="xs" open={open} />
+<NumberKeyboard size="sm" open={open} />
+<NumberKeyboard size="md" open={open} />
+<NumberKeyboard size="lg" open={open} />`}
+          language="tsx"
+          showLineNumbers
+          copyable
+          wrapLongLines
+        />
       </section>
       <DocsMessagesSection
         interfaceName="NumberKeyboardMessages"

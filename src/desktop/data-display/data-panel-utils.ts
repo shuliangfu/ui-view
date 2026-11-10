@@ -4,6 +4,7 @@
  */
 import { formatMessage } from "./data-panel-messages.ts";
 import type {
+  ActionTone,
   BulkResult,
   Column,
   DataSource,
@@ -15,9 +16,13 @@ import type {
   Messages,
   Query,
   Row,
+  RowActionsConfig,
   SearchField,
+  ViewConfig,
+  ViewItem,
   WriteResult,
 } from "./data-panel-types.ts";
+import { actionDisplayText, resolveRowActionCtrl } from "./data-panel-types.ts";
 import {
   buildXlsx,
   neutralizeFormula,
@@ -318,7 +323,6 @@ export function queryFromParams(
   return out;
 }
 
-
 /**
  * 列规范化：旧 `edit:true` → 补 `inline`（两档 options→switch，否则 text）。
  * 已写 `inline` 时不动。
@@ -327,9 +331,13 @@ export function normalizeColumns(
   columns: readonly Column[],
 ): Column[] {
   return columns.map((c) => {
-    if (c.type === "selection" || c.type === "index" || c.type === "actions") return c;
+    if (c.type === "selection" || c.type === "index" || c.type === "actions") {
+      return c;
+    }
     if (c.inline || !c.edit) return c;
-    const inline = c.options && c.options.length === 2 ? "switch" as const : "text" as const;
+    const inline = c.options && c.options.length === 2
+      ? "switch" as const
+      : "text" as const;
     return { ...c, inline };
   });
 }
@@ -350,7 +358,6 @@ export function colLabel(c: Pick<Column, "prop" | "label">): string {
   if (lab != null && String(lab).trim()) return String(lab);
   return c.prop ?? "";
 }
-
 
 export function isSelectionColumn(c: Column): boolean {
   return c.type === "selection" || c.prop === PANEL_COL_SELECT;
@@ -462,7 +469,6 @@ export function resolvePanelColumns(
   }
   return out;
 }
-
 
 /** search／form 字段键：优先 `prop`，兼容旧 `name` */
 export function fieldProp(
@@ -674,7 +680,9 @@ export function applyFieldRule(
   if (rule.validator) {
     const r = rule.validator(value, values);
     if (typeof r === "string" && r) return r;
-    if (r === false) return failMsg(rule.message, fieldMessage, m.patternMismatch);
+    if (r === false) {
+      return failMsg(rule.message, fieldMessage, m.patternMismatch);
+    }
     // true / void → continue other checks on same rule? treat as pass for validator part
   }
 
@@ -685,18 +693,34 @@ export function applyFieldRule(
       return failMsg(rule.message, fieldMessage, m.patternMismatch);
     }
     if (rule.min !== undefined && n < rule.min) {
-      return failMsg(rule.message, fieldMessage, formatMessage(m.min, { n: rule.min }));
+      return failMsg(
+        rule.message,
+        fieldMessage,
+        formatMessage(m.min, { n: rule.min }),
+      );
     }
     if (rule.max !== undefined && n > rule.max) {
-      return failMsg(rule.message, fieldMessage, formatMessage(m.max, { n: rule.max }));
+      return failMsg(
+        rule.message,
+        fieldMessage,
+        formatMessage(m.max, { n: rule.max }),
+      );
     }
   } else {
     const s = typeof value === "string" ? value : String(value);
     if (rule.min !== undefined && s.length < rule.min) {
-      return failMsg(rule.message, fieldMessage, formatMessage(m.min, { n: rule.min }));
+      return failMsg(
+        rule.message,
+        fieldMessage,
+        formatMessage(m.min, { n: rule.min }),
+      );
     }
     if (rule.max !== undefined && s.length > rule.max) {
-      return failMsg(rule.message, fieldMessage, formatMessage(m.max, { n: rule.max }));
+      return failMsg(
+        rule.message,
+        fieldMessage,
+        formatMessage(m.max, { n: rule.max }),
+      );
     }
   }
 
@@ -757,7 +781,8 @@ function validateFieldLike(
     for (const rule of f.rules) {
       // 编辑密码留空：跳过 required
       if (
-        skipRequiredPasswordEdit && rule.required && empty && f.type === "password"
+        skipRequiredPasswordEdit && rule.required && empty &&
+        f.type === "password"
       ) continue;
       const err = applyFieldRule(rule, v, values, {
         fieldType: f.type,
@@ -768,7 +793,11 @@ function validateFieldLike(
     }
     // rules 跑完仍可做 maxlength 硬限制
     if (!empty && f.maxlength != null && String(v).length > f.maxlength) {
-      return failMsg(undefined, f.message, formatMessage(m.max, { n: f.maxlength }));
+      return failMsg(
+        undefined,
+        f.message,
+        formatMessage(m.max, { n: f.maxlength }),
+      );
     }
     return undefined;
   }
@@ -800,7 +829,11 @@ function validateFieldLike(
       return failMsg(undefined, f.message, formatMessage(m.max, { n: f.max }));
     }
     if (f.maxlength != null && s.length > f.maxlength) {
-      return failMsg(undefined, f.message, formatMessage(m.max, { n: f.maxlength }));
+      return failMsg(
+        undefined,
+        f.message,
+        formatMessage(m.max, { n: f.maxlength }),
+      );
     }
   }
   if (f.pattern && typeof v === "string") {
@@ -840,8 +873,7 @@ export function validateSearchFields(
 ): Record<string, string> {
   const errs: Record<string, string> = {};
   for (const f of search) {
-    const has =
-      (f.rules && f.rules.length > 0) ||
+    const has = (f.rules && f.rules.length > 0) ||
       f.required ||
       f.pattern ||
       f.maxlength != null;
@@ -870,7 +902,9 @@ export function fieldLayoutStyle(
   const sp = fieldSpan(f);
   if (sp != null) style.gridColumn = `span ${sp} / span ${sp}`;
   if (f.width != null && f.width !== "") {
-    style.width = typeof f.width === "number" ? `${f.width}px` : String(f.width);
+    style.width = typeof f.width === "number"
+      ? `${f.width}px`
+      : String(f.width);
   }
   return Object.keys(style).length ? style : undefined;
 }
@@ -880,10 +914,10 @@ export function useFieldGrid(
   fields: readonly { span?: number; cols?: number; width?: string | number }[],
 ): boolean {
   return fields.some(
-    (f) => f.span != null || f.cols != null || (f.width != null && f.width !== ""),
+    (f) =>
+      f.span != null || f.cols != null || (f.width != null && f.width !== ""),
   );
 }
-
 
 /** 创建本地数据源 */
 export function createLocalDataSource(
@@ -1005,8 +1039,6 @@ export interface ExportFile {
   data: Uint8Array | string;
 }
 
-
-
 /** `buildExportFile` 入参 */
 export interface BuildExportOptions {
   format: ExportFormat;
@@ -1120,4 +1152,124 @@ export function buildExportFile(o: BuildExportOptions): ExportFile {
       };
     }
   }
+}
+
+/** 把同 prop 列的展示配置补到详情项上（项上已写的字段优先）。 */
+export function enrichViewField(
+  item: ViewItem,
+  columns: readonly Column[],
+): ViewItem {
+  const key = item.prop;
+  if (!key) return item;
+  const col = columns.find((c) => colProp(c) === key);
+  if (!col) return item;
+  return { ...col, ...item, click: item.click };
+}
+
+/** 取出 form / search / view 的 `props` 字段数组。 */
+export function fieldsOf<T>(
+  section: { props?: readonly T[] } | undefined,
+): T[] {
+  return [...(section?.props ?? [])];
+}
+
+/** `view` 里的展示字段，并按列继承缺省配置。未传 view 时返回 undefined。 */
+export function resolveViewFields(
+  view: ViewConfig | undefined,
+  columns: readonly Column[],
+): ViewItem[] | undefined {
+  if (!view) return undefined;
+  return fieldsOf(view).map((it) => enrichViewField(it, columns));
+}
+
+/** `view.actions` 按钮 Record；没有则 undefined（底部只留默认 close）。 */
+export function resolveViewActionsCfg(
+  view: ViewConfig | undefined,
+): RowActionsConfig | undefined {
+  return view?.actions;
+}
+
+/** click:"toggle"：在恰好两档 options 之间切换；否则返回 undefined。 */
+export function toggleOptionValue(
+  current: unknown,
+  options: { value: string }[] | undefined,
+): string | undefined {
+  if (!options || options.length !== 2) return undefined;
+  return String(current) === options[0].value
+    ? options[1].value
+    : options[0].value;
+}
+
+/** 不写 view 时详情回落：数据列 + 表单中尚未出现的字段（跳过 password）。 */
+export function fallbackViewItems(
+  columns: readonly Column[],
+  form: readonly FormField[] = [],
+): { prop: string; label: string }[] {
+  const items: { prop: string; label: string }[] = [];
+  const seen = new Set<string>();
+  for (const c of columns) {
+    if (isSystemColumn(c)) continue;
+    const prop = colProp(c);
+    if (!prop) continue;
+    seen.add(prop);
+    items.push({ prop, label: c.label ?? prop });
+  }
+  for (const f of form) {
+    const prop = fieldProp(f);
+    if (!prop || seen.has(prop) || f.type === "password") continue;
+    items.push({ prop, label: f.label ?? prop });
+  }
+  return items;
+}
+
+export interface ViewFooterSlot {
+  key: string;
+  label: string;
+  disable: boolean;
+  title?: string;
+  tone?: ActionTone;
+  href?: string;
+  action?: (item: Row) => void;
+  builtinClose?: boolean;
+}
+
+/**
+ * 查看底部按钮：自定义键按写入序（跳过 close），close 默认显示且始终靠右最后。
+ */
+export function resolveViewFooterActions(
+  cfg: RowActionsConfig | undefined,
+  row: Row,
+  closeLabel: string,
+): ViewFooterSlot[] {
+  const actions = cfg ?? {};
+  const slots: ViewFooterSlot[] = [];
+  for (const key of Object.keys(actions)) {
+    if (key === "close") continue;
+    const raw = actions[key];
+    if (typeof raw !== "object" || raw === null) continue;
+    const res = resolveRowActionCtrl(raw, row, true);
+    if (!res.show) continue;
+    slots.push({
+      key,
+      label: actionDisplayText(key, res.label, res.title),
+      disable: res.disable,
+      title: res.title,
+      tone: res.tone,
+      href: res.href,
+      action: res.action,
+    });
+  }
+  const closeRes = resolveRowActionCtrl(actions.close, row, true);
+  if (closeRes.show) {
+    slots.push({
+      key: "close",
+      label: closeRes.label || closeRes.title || closeLabel,
+      disable: closeRes.disable,
+      title: closeRes.title,
+      tone: closeRes.tone,
+      action: closeRes.action,
+      builtinClose: true,
+    });
+  }
+  return slots;
 }

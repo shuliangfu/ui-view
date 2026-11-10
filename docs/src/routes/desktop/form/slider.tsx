@@ -23,6 +23,13 @@ interface ApiRow {
 
 const SLIDER_API: ApiRow[] = [
   {
+    name: "size",
+    type: '"xs" | "sm" | "md" | "lg"',
+    default: '"md"',
+    description: "尺寸：xs、sm、md、lg；也可由外层 Form 的 size 注入",
+  },
+
+  {
     name: "value",
     type:
       "number | [number, number] | (() => number | [number, number]) | Signal<number | [number, number]>",
@@ -240,9 +247,8 @@ const range = createSignal<[number, number]>([20, 80]);
                   {() => `当前值：${singleVal()}（与上方「单值」共用 Signal）`}
                 </span>
               </div>
-            
-          <CodeBlock title="代码示例" code={exampleVertical} language="tsx" showLineNumbers copyable wrapLongLines />
-</FormItem>
+            </FormItem>
+            <CodeBlock title="代码示例" code={exampleVertical} language="tsx" showLineNumbers copyable wrapLongLines />
           </section>
 
           <section class="space-y-4">
@@ -280,6 +286,32 @@ const step = createSignal(30);
     当前值：60（禁用，不可拖动）
   </span>
 </div>`}
+              language="tsx"
+              showLineNumbers
+              copyable
+              wrapLongLines
+            />
+          </section>
+          <section class="space-y-4">
+            <Title level={3}>size（xs / sm / md / lg）</Title>
+            <FormItem label="xs">
+              <Slider size="xs" value={40} min={0} max={100} />
+            </FormItem>
+            <FormItem label="sm">
+              <Slider size="sm" value={40} min={0} max={100} />
+            </FormItem>
+            <FormItem label="md（默认）">
+              <Slider size="md" value={40} min={0} max={100} />
+            </FormItem>
+            <FormItem label="lg">
+              <Slider size="lg" value={40} min={0} max={100} />
+            </FormItem>
+            <CodeBlock
+              title="代码示例"
+              code={`<Slider size="xs" value={40} min={0} max={100} />
+<Slider size="sm" value={40} min={0} max={100} />
+<Slider size="md" value={40} min={0} max={100} />
+<Slider size="lg" value={40} min={0} max={100} />`}
               language="tsx"
               showLineNumbers
               copyable

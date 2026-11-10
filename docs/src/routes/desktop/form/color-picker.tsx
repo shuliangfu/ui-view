@@ -23,6 +23,13 @@ interface ApiRow {
 
 const COLOR_PICKER_API: ApiRow[] = [
   {
+    name: "size",
+    type: '"xs" | "sm" | "md" | "lg"',
+    default: '"md"',
+    description: "尺寸：xs、sm、md、lg；也可由外层 Form 的 size 注入",
+  },
+
+  {
     name: "value",
     type: "string | (() => string) | Signal<string>",
     default: "#000000",
@@ -424,6 +431,34 @@ const hex = createSignal("#3b82f6");
             wrapLongLines
           />
         </div>
+
+        <section class="space-y-4">
+          <Title level={3}>size（xs / sm / md / lg）</Title>
+          <Form layout="vertical" class="w-full max-w-xs space-y-3">
+            <FormItem label="xs">
+              <ColorPicker size="xs" value="#3b82f6" />
+            </FormItem>
+            <FormItem label="sm">
+              <ColorPicker size="sm" value="#3b82f6" />
+            </FormItem>
+            <FormItem label="md（默认）">
+              <ColorPicker size="md" value="#3b82f6" />
+            </FormItem>
+            <FormItem label="lg">
+              <ColorPicker size="lg" value="#3b82f6" />
+            </FormItem>
+          </Form>
+          <CodeBlock
+            title="代码"
+            code={`<ColorPicker size="xs" value="#3b82f6" />
+<ColorPicker size="sm" value="#3b82f6" />
+<ColorPicker size="md" value="#3b82f6" />
+<ColorPicker size="lg" value="#3b82f6" />`}
+            language="tsx"
+            showLineNumbers
+            wrapLongLines
+          />
+        </section>
       </section>
 
       <DocsMessagesSection

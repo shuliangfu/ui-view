@@ -170,6 +170,28 @@ export default function MobileDatePickerDoc() {
             wrapLongLines
           />
         </div>
+        <div class="space-y-4">
+          <Title level={3}>size（xs / sm / md / lg）</Title>
+          <MobileDocDemo>
+            <div class="flex flex-col gap-3 p-2">
+              <DatePicker size="xs" class="w-full" placeholder="xs" />
+              <DatePicker size="sm" class="w-full" placeholder="sm" />
+              <DatePicker size="md" class="w-full" placeholder="md" />
+              <DatePicker size="lg" class="w-full" placeholder="lg" />
+            </div>
+          </MobileDocDemo>
+          <CodeBlock
+            title="代码示例"
+            code={`<DatePicker size="xs" placeholder="xs" />
+<DatePicker size="sm" placeholder="sm" />
+<DatePicker size="md" placeholder="md" />
+<DatePicker size="lg" placeholder="lg" />`}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+        </div>
       </section>
 
       <DocsMessagesSection

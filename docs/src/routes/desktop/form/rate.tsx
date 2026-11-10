@@ -23,6 +23,13 @@ interface ApiRow {
 
 const RATE_API: ApiRow[] = [
   {
+    name: "size",
+    type: '"xs" | "sm" | "md" | "lg"',
+    default: '"md"',
+    description: "尺寸：xs、sm、md、lg；也可由外层 Form 的 size 注入",
+  },
+
+  {
     name: "value",
     type: "number | (() => number) | Signal<number>",
     default: "-",
@@ -170,6 +177,32 @@ export default function FormRate() {
   count={5}
   disabled
 />`}
+              language="tsx"
+              showLineNumbers
+              copyable
+              wrapLongLines
+            />
+          </section>
+          <section class="space-y-4">
+            <Title level={3}>size（xs / sm / md / lg）</Title>
+            <FormItem label="xs">
+              <Rate size="xs" value={3} />
+            </FormItem>
+            <FormItem label="sm">
+              <Rate size="sm" value={3} />
+            </FormItem>
+            <FormItem label="md（默认）">
+              <Rate size="md" value={3} />
+            </FormItem>
+            <FormItem label="lg">
+              <Rate size="lg" value={3} />
+            </FormItem>
+            <CodeBlock
+              title="代码示例"
+              code={`<Rate size="xs" value={3} />
+<Rate size="sm" value={3} />
+<Rate size="md" value={3} />
+<Rate size="lg" value={3} />`}
               language="tsx"
               showLineNumbers
               copyable

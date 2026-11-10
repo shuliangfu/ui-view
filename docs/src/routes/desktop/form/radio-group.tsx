@@ -21,6 +21,13 @@ interface ApiRow {
 
 const RADIO_GROUP_API: ApiRow[] = [
   {
+    name: "size",
+    type: '"xs" | "sm" | "md" | "lg"',
+    default: '"md"',
+    description: "尺寸：xs、sm、md、lg；也可由外层 Form 的 size 注入",
+  },
+
+  {
     name: "name",
     type: "string",
     default: "-",
@@ -244,6 +251,32 @@ export default function FormRadioGroup() {
   onChange={() => {}}
   disabled
 />`}
+              language="tsx"
+              showLineNumbers
+              copyable
+              wrapLongLines
+            />
+          </section>
+          <section class="space-y-4">
+            <Title level={3}>size（xs / sm / md / lg）</Title>
+            <FormItem label="xs">
+              <RadioGroup name="size-xs" size="xs" options={options} value="a" />
+            </FormItem>
+            <FormItem label="sm">
+              <RadioGroup name="size-sm" size="sm" options={options} value="a" />
+            </FormItem>
+            <FormItem label="md（默认）">
+              <RadioGroup name="size-md" size="md" options={options} value="a" />
+            </FormItem>
+            <FormItem label="lg">
+              <RadioGroup name="size-lg" size="lg" options={options} value="a" />
+            </FormItem>
+            <CodeBlock
+              title="代码示例"
+              code={`<RadioGroup name="size-xs" size="xs" options={options} value="a" />
+<RadioGroup name="size-sm" size="sm" options={options} value="a" />
+<RadioGroup name="size-md" size="md" options={options} value="a" />
+<RadioGroup name="size-lg" size="lg" options={options} value="a" />`}
               language="tsx"
               showLineNumbers
               copyable

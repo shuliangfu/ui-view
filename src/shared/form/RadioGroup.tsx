@@ -14,6 +14,7 @@ import {
   readMaybeSignal,
 } from "./maybe-signal.ts";
 import { Radio } from "./Radio.tsx";
+import type { SizeVariant } from "../types.ts";
 
 export interface RadioGroupOption {
   value: string;
@@ -43,6 +44,8 @@ export interface RadioGroupProps {
   direction?: RadioGroupDirection;
   /** 额外 class（作用于容器） */
   class?: string;
+  /** 尺寸，传给组内每个 Radio */
+  size?: SizeVariant;
 }
 
 export function RadioGroup(props: RadioGroupProps): JSXRenderable {
@@ -55,6 +58,7 @@ export function RadioGroup(props: RadioGroupProps): JSXRenderable {
     onChange,
     direction = "horizontal",
     class: className,
+    size,
   } = props;
 
   const directionCls = direction === "horizontal"
@@ -86,6 +90,7 @@ export function RadioGroup(props: RadioGroupProps): JSXRenderable {
             checked={() => readMaybeSignal(valueProp) === opt.value}
             disabled={disabled || opt.disabled}
             error={error}
+            size={size}
             onChange={() => commitValue(opt.value)}
           >
             {opt.label}

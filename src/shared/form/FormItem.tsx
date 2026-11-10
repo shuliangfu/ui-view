@@ -1,6 +1,6 @@
 /**
  * FormItem 表单项包装（View）。
- * 提供标签、必填星号（可单独关闭显示）、错误提示；支持标签在上方或左侧，左侧时可左对齐/右对齐。
+ * 提供标签、必填星号（可单独关闭显示）、错误提示；支持标签在上方、左侧，或描边内嵌（字坐在控件边框左上缺口里）。左侧时可左对齐/右对齐。
  * 可配合 Form 使用，将 error/required 通过 class 影响子控件样式。
  */
 
@@ -10,9 +10,10 @@ import {
   FormItemControlIdContext,
   resolveFormItemControlId,
 } from "./form-item-control-id.ts";
+import { FormItemOutlineLabelContext } from "./outlined-field.tsx";
 
-/** 标签位置：上方（默认）或左侧 */
-export type FormItemLabelPosition = "top" | "left";
+/** 标签位置：上方（默认）、左侧，或描边内嵌（字在边框左上缺口，无线穿过） */
+export type FormItemLabelPosition = "top" | "left" | "outline";
 
 /** 标签对齐（仅 labelPosition=left 时有效）：左对齐或右对齐 */
 export type FormItemLabelAlign = "left" | "right";
@@ -29,7 +30,10 @@ export interface FormItemProps {
   hideRequiredMark?: boolean;
   /** 错误文案（展示在下方并给容器加 error 样式） */
   error?: string;
-  /** 标签位置：上方 或 左侧 */
+  /**
+   * 标签位置：上方、左侧，或描边内嵌。
+   * `outline` 不渲染外部标签，把文案交给子控件（Input / Password / Textarea）做成边框左上缺口内的浮动标签。
+   */
   labelPosition?: FormItemLabelPosition;
   /** 标签对齐（仅当 labelPosition=left 时有效）：左对齐 / 右对齐 */
   labelAlign?: FormItemLabelAlign;
@@ -98,7 +102,8 @@ export function FormItem(props: FormItemProps): JSXRenderable {
     /** 是否绘制必填星号：必填且未显式隐藏 */
     const showRequiredAsterisk = required && !hideRequiredMark;
 
-    const labelEl = label != null
+    const isOutline = labelPosition === "outline";
+    const labelEl = label != null && !isOutline
       ? (
         <label
           for={controlId}
@@ -121,14 +126,18 @@ export function FormItem(props: FormItemProps): JSXRenderable {
         </label>
       )
       : null;
+    const outlineValue = isOutline && label != null
+      ? { label, requiredMark: showRequiredAsterisk }
+      : undefined;
 
     return (
       <FormItemControlIdContext.Provider value={controlId}>
+        <FormItemOutlineLabelContext.Provider value={outlineValue}>
         <div
           class={twMerge(
             "flex flex-col my-3",
             hasError &&
-              "[&_input]:border-red-500 [&_textarea]:border-red-500 dark:[&_input]:border-red-500 dark:[&_textarea]:border-red-500",
+              "[&:not(:has(fieldset))_input]:border-red-500 [&:not(:has(fieldset))_textarea]:border-red-500 dark:[&:not(:has(fieldset))_input]:border-red-500 dark:[&:not(:has(fieldset))_textarea]:border-red-500 [&_fieldset]:border-red-500 dark:[&_fieldset]:border-red-500",
             className,
           )}
           role={hasError ? "alert" : undefined}
@@ -172,6 +181,7 @@ export function FormItem(props: FormItemProps): JSXRenderable {
             </div>
           )}
         </div>
+        </FormItemOutlineLabelContext.Provider>
       </FormItemControlIdContext.Provider>
     );
   };

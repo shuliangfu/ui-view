@@ -14,6 +14,7 @@ import {
   readMaybeSignal,
 } from "./maybe-signal.ts";
 import { Checkbox } from "./Checkbox.tsx";
+import type { SizeVariant } from "../types.ts";
 
 export interface CheckboxGroupOption {
   value: string;
@@ -43,6 +44,8 @@ export interface CheckboxGroupProps {
   direction?: CheckboxGroupDirection;
   /** 额外 class（作用于容器） */
   class?: string;
+  /** 尺寸，传给组内每个 Checkbox */
+  size?: SizeVariant;
 }
 
 export function CheckboxGroup(props: CheckboxGroupProps): JSXRenderable {
@@ -55,6 +58,7 @@ export function CheckboxGroup(props: CheckboxGroupProps): JSXRenderable {
     onChange,
     direction = "horizontal",
     class: className,
+    size,
   } = props;
 
   const directionCls = direction === "horizontal"
@@ -87,6 +91,7 @@ export function CheckboxGroup(props: CheckboxGroupProps): JSXRenderable {
               (readMaybeSignal(valueProp) ?? []).includes(opt.value)}
             disabled={disabled || opt.disabled}
             error={error}
+            size={size}
             onChange={(e: Event) => {
               const el = e.target as HTMLInputElement;
               const resolved = readMaybeSignal(valueProp) ?? [];

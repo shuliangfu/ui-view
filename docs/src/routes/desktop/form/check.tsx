@@ -24,6 +24,13 @@ interface ApiRow {
 
 const CHECKBOX_API: ApiRow[] = [
   {
+    name: "size",
+    type: '"xs" | "sm" | "md" | "lg"',
+    default: '"md"',
+    description: "尺寸：xs、sm、md、lg；也可由外层 Form 的 size 注入",
+  },
+
+  {
     name: "checked",
     type: "boolean | (() => boolean) | Signal<boolean>",
     default: "-",
@@ -55,6 +62,13 @@ const CHECKBOX_API: ApiRow[] = [
 ];
 
 const CHECKBOX_GROUP_API: ApiRow[] = [
+  {
+    name: "size",
+    type: '"xs" | "sm" | "md" | "lg"',
+    default: '"md"',
+    description: "尺寸：xs、sm、md、lg；也可由外层 Form 的 size 注入",
+  },
+
   {
     name: "options",
     type: "Array<{value, label, disabled?}>",
@@ -91,6 +105,13 @@ const CHECKBOX_GROUP_API: ApiRow[] = [
 ];
 
 const RADIO_GROUP_API: ApiRow[] = [
+  {
+    name: "size",
+    type: '"xs" | "sm" | "md" | "lg"',
+    default: '"md"',
+    description: "尺寸：xs、sm、md、lg；也可由外层 Form 的 size 注入",
+  },
+
   {
     name: "name",
     type: "string",
@@ -133,6 +154,13 @@ const RADIO_GROUP_API: ApiRow[] = [
 ];
 
 const SWITCH_API: ApiRow[] = [
+  {
+    name: "size",
+    type: '"xs" | "sm" | "md" | "lg"',
+    default: '"md"',
+    description: "尺寸：xs、sm、md、lg；也可由外层 Form 的 size 注入",
+  },
+
   {
     name: "checked",
     type: "boolean | (() => boolean) | Signal<boolean>",
@@ -327,6 +355,36 @@ export default function FormCheck() {
             <CodeBlock
               title="代码示例"
               code={`<Switch disabled />`}
+              language="tsx"
+              showLineNumbers
+              copyable
+              wrapLongLines
+            />
+          </section>
+          <section class="space-y-4">
+            <Title level={3}>size（xs / sm / md / lg）</Title>
+            <FormItem label="xs">
+              <Switch size="xs" checked />
+              <Checkbox size="xs" checked class="ml-3">xs</Checkbox>
+            </FormItem>
+            <FormItem label="sm">
+              <Switch size="sm" checked />
+              <Checkbox size="sm" checked class="ml-3">sm</Checkbox>
+            </FormItem>
+            <FormItem label="md（默认）">
+              <Switch size="md" checked />
+              <Checkbox size="md" checked class="ml-3">md</Checkbox>
+            </FormItem>
+            <FormItem label="lg">
+              <Switch size="lg" checked />
+              <Checkbox size="lg" checked class="ml-3">lg</Checkbox>
+            </FormItem>
+            <CodeBlock
+              title="代码示例"
+              code={`<Switch size="xs" checked />
+<Checkbox size="xs" checked>xs</Checkbox>
+<Switch size="lg" checked />
+<Checkbox size="lg" checked>lg</Checkbox>`}
               language="tsx"
               showLineNumbers
               copyable

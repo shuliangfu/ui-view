@@ -13,7 +13,12 @@
  *
  * **SSR / 水合**：布尔属性只在为 true 时输出；`sync` 数据源（含 `data` 模式）首帧同步渲染，水合前后 DOM 一致。
  */
-import { createSignal, type JSXRenderable, onCleanup, onMount } from "@dreamer/view";
+import {
+  createSignal,
+  type JSXRenderable,
+  onCleanup,
+  onMount,
+} from "@dreamer/view";
 import { Button, ButtonGroup } from "../basic/Button.tsx";
 import { IconChevronDown } from "../../shared/basic/icons/ChevronDown.tsx";
 import { IconChevronUp } from "../../shared/basic/icons/ChevronUp.tsx";
@@ -54,75 +59,81 @@ import {
 import { parseXlsx } from "./data-panel-xlsx.ts";
 import {
   buildExportFile,
+  colProp,
   createLocalDataSource,
   displayValue,
-  formatDateTime,
-  formatMoney,
-  pageList,
-  parseCsv,
-  parseJsonRows,
-  parseXmlRows,
   enrichFormFields,
   enrichSearchFields,
   fieldLayoutStyle,
   fieldProp,
+  fieldsOf,
+  formatDateTime,
+  formatMoney,
+  isActionsColumn,
+  isIndexColumn,
+  isSelectionColumn,
+  isSystemColumn,
   looksLikeHtml,
   normalizeColumns,
+  pageList,
+  parseCsv,
+  parseJsonRows,
+  parseXmlRows,
   queryFromParams,
   queryToParams,
   resolveBatchStatusColumn,
   resolveColumnFn,
+  resolvePanelColumns,
+  resolveViewActionsCfg,
+  resolveViewFields,
+  resolveViewFooterActions,
+  toggleOptionValue,
   useFieldGrid,
   validateForm,
   validateSearchFields,
-  resolvePanelColumns,
-  isSelectionColumn,
-  isIndexColumn,
-  isActionsColumn,
-  isSystemColumn,
-  colProp,
 } from "./data-panel-utils.ts";
+import { type ApiMode, createApiDataSource } from "./data-panel-api-source.ts";
 import {
-  createApiDataSource,
-  type ApiMode,
-} from "./data-panel-api-source.ts";
-import {
+  type ActionCtrl,
+  actionDisplayText,
+  actionTipText,
+  type ActionTone,
   assertRowActionsConfig,
   assertToolbarConfig,
-  isRowBuiltin,
-  isToolbarBuiltin,
-  resolveActionCtrl,
-  actionTipText,
-  actionDisplayText,
-  resolveRowActionCtrl,
-  ROW_BUILTINS,
-  TOOLBAR_BUILTINS,
-  type ActionCtrl,
-  type ActionTone,
   type BulkResult,
   type Caps,
   type Column,
   type DataSource,
   type Density,
   type ExportFormat,
-  type ImportFormat,
   type FieldRule,
+  type FormConfig,
   type FormField,
+  type ImportFormat,
+  isRowBuiltin,
+  isToolbarBuiltin,
   type ListResult,
   type Locale,
   type Messages,
   type Option,
+  type PanelToolbarConfig,
   type Query,
+  resolveActionCtrl,
+  resolveRowActionCtrl,
   type Row,
+  ROW_BUILTINS,
+  type RowActionCtrl,
   type RowActionsConfig,
+  type RowBuiltin,
+  type SearchConfig,
   type SearchField,
   type Tone,
-  type ViewSchema,
-  type PanelToolbarConfig,
-  type WriteResult,
-  type RowActionCtrl,
-  type RowBuiltin,
+  TOOLBAR_BUILTINS,
   type ToolbarBuiltin,
+  type ViewClick,
+  type ViewConfig,
+  type ViewItem,
+  type WriteResult,
 } from "./data-panel-types.ts";
 
 export type {
@@ -134,34 +145,38 @@ export type {
   DataSource,
   Density,
   ExportFormat,
-  ImportFormat,
   FieldRule,
+  FormConfig,
   FormField,
+  ImportFormat,
   ListResult,
   Locale,
   Messages,
   Option,
+  PanelToolbarConfig,
   Query,
   Row,
+  RowActionCtrl,
   RowActionsConfig,
+  RowBuiltin,
+  SearchConfig,
   SearchField,
   Tone,
-  ViewSchema,
-  PanelToolbarConfig,
-  WriteResult,
-  RowActionCtrl,
-  RowBuiltin,
   ToolbarBuiltin,
+  ViewClick,
+  ViewConfig,
+  ViewItem,
+  WriteResult,
 };
 
 export {
+  actionDisplayText,
+  actionTipText,
   assertRowActionsConfig,
   assertToolbarConfig,
   isRowBuiltin,
   isToolbarBuiltin,
   resolveActionCtrl,
-  actionTipText,
-  actionDisplayText,
   resolveRowActionCtrl,
   ROW_BUILTINS,
   TOOLBAR_BUILTINS,
@@ -187,45 +202,28 @@ export interface PanelProps {
   title: string;
   /** 列定义 */
   columns: Column[];
-  /** 搜索项（键用 prop；工具栏搜索打开 Modal）；非空时自动与地址栏双向同步，无开关。options／label 可从 columns 继承 */
-  search?: SearchField[];
-  /** 新增 / 编辑 Modal 的表单项 */
-  form?: FormField[];
   /**
-   * 增改 Modal 标题（对齐旧 `form.title`）：`string` 或 `(row)=>string`。
-   * 新增时 `row` 为 `{}`（无 id）；编辑时为当前行。缺省 `${edit|add} · ${title}`。
+   * 搜索弹层：`{ title, props }`。`props` 与列同一套字段配置（键用 prop）；
+   * 非空时工具栏搜索＋地址栏双向同步。options／label 可从 columns 继承。
    */
-  formTitle?: string | ((row: Row) => string);
+  search?: SearchConfig;
   /**
-   * 搜索 Modal 标题（对齐旧搜索弹层标题）：`string` 或 `()=>string`。
-   * 缺省 `${search} · ${title}`。
+   * 增改弹层：`{ title, props }`。`title` 为 `string` 或 `(row)=>string`
+   * （新增时 `row` 为 `{}`，编辑时为当前行；缺省 `${edit|add} · ${title}`）。
+   * `props` 为表单项（与列同一套字段配置）。确定／取消仍走官方 Modal 脚。
    */
-  searchTitle?: string | (() => string);
+  form?: FormConfig;
   /**
-   * 详情 Modal 标题（对齐旧 `view.title`）：`string` 或 `(row)=>string`。
-   * 缺省 `${view} · ${title}`。
+   * 详情弹层：`{ title, props, actions? }`。`title` 为查看弹窗标题（`string` 或 `(row)=>string`，
+   * 如 `` `详情 · ${row.name}` ``；缺省 `${view} · ${title}`）。
+   * `props` 只放字段，与列同一套配置：prop／label／type／format／options／value／formatter／click。
+   * 缺省展示从同 prop 的列继承。`actions` 与 title 平级，为底部按钮（与列操作同一套 Record；
+   * 内置只有 close，默认显示、靠右最后）。自定义按钮：`action(row)` 开另一个 Modal（放在 children），
+   * 或 `href`（string 或 (row)=>string）。
+   * 字段 `click:"toggle"`（两档 options 时切换并走 setField／update，刷新当前详情行和列表）
+   * 或 `click:(row)=>…`。不写时回落 columns＋form，底部只留关闭。不写 `actions` 时底部只留关闭。
    */
-  viewTitle?: string | ((row: Row) => string);
-  /**
-   * 详情项（对齐旧 `view.schemas`）：数组或 `(row)=>` 数组。
-   * 项：`{ label, value?, children?, prop?, span? }`；`children`＞`value`＞`prop` 取行字段。
-   * 缺省时回落 columns＋form 字段。
-   */
-  viewSchemas?:
-    | {
-      label: string;
-      value?: unknown;
-      children?: unknown;
-      prop?: string;
-      span?: number;
-    }[]
-    | ((row: Row) => {
-      label: string;
-      value?: unknown;
-      children?: unknown;
-      prop?: string;
-      span?: number;
-    }[]);
+  view?: ViewConfig;
   /** 本地数据（内置本地数据源）。传入则不自动请求列表；优先级低于显式 `dataSource`，高于 `baseRoute`（API） */
   data?: Row[];
   /** 自定义数据源；若传入则走它，勿再自造拉数（优先于 `data`／`baseRoute`） */
@@ -351,8 +349,6 @@ import {
 
 export { DATA_PANEL_CSS, refreshDataPanel } from "./data-panel-chrome.tsx";
 
-
-
 export function DataPanel(props: PanelProps): JSXRenderable {
   const m = resolveDataPanelMessages(props.locale, props.messages);
   const tr = (tpl: string, params?: Record<string, string | number>) =>
@@ -365,10 +361,15 @@ export function DataPanel(props: PanelProps): JSXRenderable {
   const dataInputColumns = inputColumns.filter(
     (c) => !isSelectionColumn(c) && !isIndexColumn(c),
   );
-  const searchDefs = enrichSearchFields(props.search ?? [], dataInputColumns);
-  const formDefs = enrichFormFields(props.form ?? [], dataInputColumns);
+  const searchFields = fieldsOf(props.search);
+  const formFields = fieldsOf(props.form);
+  const viewItems = fieldsOf(props.view);
+  const searchDefs = enrichSearchFields(searchFields, dataInputColumns);
+  const formDefs = enrichFormFields(formFields, dataInputColumns);
   const pageSizes = props.pageSizes ?? [10, 20, 50, 100];
   const defaultPageSize = props.pageSize ?? 10;
+  const canWriteLocal = formDefs.length > 0 || !!props.onDataChange ||
+    viewItems.some((it) => it.click === "toggle");
 
   // 拉数优先级：dataSource ＞ data（本地、不自动请求）＞ 二者皆无＋baseRoute → API
   const ds: DataSource = props.dataSource
@@ -382,7 +383,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
       rowKey,
       fixed: props.fixed,
       onChange: props.onDataChange,
-      writable: !!(props.form && props.form.length) || !!props.onDataChange,
+      writable: canWriteLocal,
     })
     : props.baseRoute
     ? createApiDataSource({
@@ -399,7 +400,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
       rowKey,
       fixed: props.fixed,
       onChange: props.onDataChange,
-      writable: !!(props.form && props.form.length) || !!props.onDataChange,
+      writable: canWriteLocal,
     });
 
   /** 批量「设为…」：column.batch:true 且 inline:switch＋两档 options */
@@ -433,6 +434,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
   const raCfg: RowActionsConfig = actionsColIn?.actions ?? {};
   assertToolbarConfig(tbCfg);
   assertRowActionsConfig(raCfg);
+  assertRowActionsConfig(resolveViewActionsCfg(props.view));
   const tbResolved = (name: ToolbarBuiltin, fallback: boolean) =>
     resolveActionCtrl(tbCfg[name], fallback);
   const rowResolved = (
@@ -478,13 +480,15 @@ export function DataPanel(props: PanelProps): JSXRenderable {
    * （与 queryToParams 约定对称）；无 location 时（SSR）跳过。
    */
   const urlSync = true;
-  const urlPartial: Partial<Query> =
-    urlSync && g.location?.search
-      ? queryFromParams(new URLSearchParams(g.location.search.replace(/^\?/, "")), {
+  const urlPartial: Partial<Query> = urlSync && g.location?.search
+    ? queryFromParams(
+      new URLSearchParams(g.location.search.replace(/^\?/, "")),
+      {
         searchNames: searchDefs.map((s) => fieldProp(s)),
         fixed: props.fixed,
-      })
-      : {};
+      },
+    )
+    : {};
   const iq = props.initialQuery ?? {};
   let initialQuery: Query = {
     page: urlPartial.page ?? iq.page ?? 1,
@@ -527,6 +531,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
   const densityOpen = createSignal(false);
   const panelFs = createSignal(false);
   const selected = createSignal<string[]>([]);
+  const viewRow = createSignal<Row | null>(null);
   const hidden = createSignal<Record<string, boolean>>(
     Object.fromEntries(
       columns.filter((c) => c.hidden).map((c) => [c.prop, true]),
@@ -537,10 +542,13 @@ export function DataPanel(props: PanelProps): JSXRenderable {
   const searchErrors = createSignal<Record<string, string>>({});
   const sfields: Record<string, ReturnType<typeof createSignal<string>>> = {};
   for (const sdef of searchDefs) {
-    sfields[fieldProp(sdef)] = createSignal(initialQuery.filters[fieldProp(sdef)] ?? "");
+    sfields[fieldProp(sdef)] = createSignal(
+      initialQuery.filters[fieldProp(sdef)] ?? "",
+    );
   }
-  const fieldRequired = (f: { required?: boolean; rules?: { required?: boolean }[] }) =>
-    !!f.required || !!(f.rules && f.rules.some((r) => r.required));
+  const fieldRequired = (
+    f: { required?: boolean; rules?: { required?: boolean }[] },
+  ) => !!f.required || !!(f.rules && f.rules.some((r) => r.required));
   const jump = createSignal("");
   /** 移动断点（≤639.98px）：底栏分页 Select／按钮用 xs；桌面 md */
   const isNarrow = createSignal(false);
@@ -594,6 +602,11 @@ export function DataPanel(props: PanelProps): JSXRenderable {
       return load(syncUrl, opts);
     }
     rows.value = res.rows;
+    const open = viewRow.value;
+    if (open) {
+      const fresh = res.rows.find((row) => idOf(row) === idOf(open));
+      if (fresh) viewRow.value = fresh;
+    }
     total.value = res.total;
     totals.value = res.totals ?? {};
     selected.value = [];
@@ -640,7 +653,9 @@ export function DataPanel(props: PanelProps): JSXRenderable {
   /** 重置列：回到列定义里的 default hidden */
   const defaultHidden = (): Record<string, boolean> =>
     Object.fromEntries(
-      panelColumns.filter((c) => c.hidden && c.prop).map((c) => [c.prop!, true]),
+      panelColumns.filter((c) => c.hidden && c.prop).map((
+        c,
+      ) => [c.prop!, true]),
     );
 
   // ---- 首次加载（异步数据源）与本地偏好（@dreamer/storage/client：列／密度／全屏）
@@ -773,7 +788,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
   // ---- 新增 / 编辑 Modal
   const formOpen = createSignal(false);
   const formId = createSignal("");
-  /** 当前增改行；新增时为 null（formTitle 回调收到 `{}`） */
+  /** 当前增改行；新增时为 null（form.title 回调收到 `{}`） */
   const formRow = createSignal<Row | null>(null);
   const formBusy = createSignal(false);
   const formErrors = createSignal<Record<string, string>>({});
@@ -817,11 +832,15 @@ export function DataPanel(props: PanelProps): JSXRenderable {
       if (f.createOnly && isEdit) continue;
       if (f.editOnly && !isEdit) continue;
       const v = fields[fieldProp(f)].value;
-      if (f.type === "multiselect") body[fieldProp(f)] = v.split(",").filter(Boolean);
-      else if (f.type === "number") body[fieldProp(f)] = v === "" ? "" : Number(v);
-      else if (f.type === "datetime") body[fieldProp(f)] = v.replace(" ", "T");
-      else if (f.type === "switch" && !f.onOff) body[fieldProp(f)] = v === "true";
-      else if (f.type === "password" && isEdit && v === "") continue;
+      if (f.type === "multiselect") {
+        body[fieldProp(f)] = v.split(",").filter(Boolean);
+      } else if (f.type === "number") {
+        body[fieldProp(f)] = v === "" ? "" : Number(v);
+      } else if (f.type === "datetime") {
+        body[fieldProp(f)] = v.replace(" ", "T");
+      } else if (f.type === "switch" && !f.onOff) {
+        body[fieldProp(f)] = v === "true";
+      } else if (f.type === "password" && isEdit && v === "") continue;
       else body[fieldProp(f)] = v;
     }
     return body;
@@ -863,8 +882,6 @@ export function DataPanel(props: PanelProps): JSXRenderable {
   }
 
   // ---- 查看 Modal
-  const viewRow = createSignal<Row | null>(null);
-
   const doCreate = () => openForm();
   const doEdit = (r: Row) => openForm(r);
   const doView = (r: Row) => {
@@ -939,7 +956,8 @@ export function DataPanel(props: PanelProps): JSXRenderable {
         ">",
         "&gt;",
       );
-    const head = cols.map((c) => `<th>${esc(c.label ?? c.prop ?? "")}</th>`).join("");
+    const head = cols.map((c) => `<th>${esc(c.label ?? c.prop ?? "")}</th>`)
+      .join("");
     const body = rows.value
       .map((r) =>
         `<tr>${
@@ -1436,12 +1454,31 @@ export function DataPanel(props: PanelProps): JSXRenderable {
   ) => {
     switch (name) {
       case "create":
-        return toolBtn("dp-create", m.create, action ?? doCreate, <IconPlus size="sm" />, disable, title, label);
+        return toolBtn(
+          "dp-create",
+          m.create,
+          action ?? doCreate,
+          <IconPlus size="sm" />,
+          disable,
+          title,
+          label,
+        );
       case "search":
-        return toolBtn("dp-search-toggle", m.search, action ?? openSearch, <IconSearch size="sm" />, disable, title, label);
+        return toolBtn(
+          "dp-search-toggle",
+          m.search,
+          action ?? openSearch,
+          <IconSearch size="sm" />,
+          disable,
+          title,
+          label,
+        );
       case "refresh":
         return (
-          <Tooltip content={actionTipText("refresh", title, label, m.refresh)} placement="top">
+          <Tooltip
+            content={actionTipText("refresh", title, label, m.refresh)}
+            placement="top"
+          >
             <Button
               type="button"
               size="sm"
@@ -1452,22 +1489,53 @@ export function DataPanel(props: PanelProps): JSXRenderable {
               aria-busy={loading.value ? true : undefined}
               onClick={action ?? (() => void refreshFromToolbar())}
             >
-              <span class={loading.value ? "inline-flex animate-spin" : "inline-flex"}>
+              <span
+                class={loading.value
+                  ? "inline-flex animate-spin"
+                  : "inline-flex"}
+              >
                 <IconRefresh size="sm" />
               </span>
             </Button>
           </Tooltip>
         );
       case "print":
-        return toolBtn("dp-print", m.print, action ?? printTable, <IconPrinter size="sm" />, disable, title, label);
+        return toolBtn(
+          "dp-print",
+          m.print,
+          action ?? printTable,
+          <IconPrinter size="sm" />,
+          disable,
+          title,
+          label,
+        );
       case "import":
         if (action) {
-          return toolBtn("dp-import", m.import, action, <IconUpload size="sm" />, disable, title, label);
+          return toolBtn(
+            "dp-import",
+            m.import,
+            action,
+            <IconUpload size="sm" />,
+            disable,
+            title,
+            label,
+          );
         }
         return tipWrap(
           actionTipText("import", title, label, m.import),
-          <Dropdown overlay={importMenu} placement="bottomRight" trigger="click">
-            <Button type="button" size="sm" class={posCls("dp-import")} disabled={disable} data-testid="dp-import" aria-label={actionTipText("import", title, label, m.import)}>
+          <Dropdown
+            overlay={importMenu}
+            placement="bottomRight"
+            trigger="click"
+          >
+            <Button
+              type="button"
+              size="sm"
+              class={posCls("dp-import")}
+              disabled={disable}
+              data-testid="dp-import"
+              aria-label={actionTipText("import", title, label, m.import)}
+            >
               <IconUpload size="sm" />
             </Button>
           </Dropdown>,
@@ -1475,8 +1543,19 @@ export function DataPanel(props: PanelProps): JSXRenderable {
       case "export":
         return tipWrap(
           actionTipText("export", title, label, m.export),
-          <Dropdown overlay={exportMenu} placement="bottomRight" trigger="click">
-            <Button type="button" size="sm" class={posCls("dp-export")} disabled={disable} data-testid="dp-export" aria-label={actionTipText("export", title, label, m.export)}>
+          <Dropdown
+            overlay={exportMenu}
+            placement="bottomRight"
+            trigger="click"
+          >
+            <Button
+              type="button"
+              size="sm"
+              class={posCls("dp-export")}
+              disabled={disable}
+              data-testid="dp-export"
+              aria-label={actionTipText("export", title, label, m.export)}
+            >
               <IconDownload size="sm" />
             </Button>
           </Dropdown>,
@@ -1490,7 +1569,14 @@ export function DataPanel(props: PanelProps): JSXRenderable {
             trigger="click"
             closeOnOverlayClick={false}
           >
-            <Button type="button" size="sm" class={posCls("dp-columns")} disabled={disable} data-testid="dp-columns" aria-label={actionTipText("columns", title, label, m.columns)}>
+            <Button
+              type="button"
+              size="sm"
+              class={posCls("dp-columns")}
+              disabled={disable}
+              data-testid="dp-columns"
+              aria-label={actionTipText("columns", title, label, m.columns)}
+            >
               <IconColumns size="sm" />
             </Button>
           </Dropdown>,
@@ -1499,20 +1585,27 @@ export function DataPanel(props: PanelProps): JSXRenderable {
         return tipWrap(
           actionTipText("density", title, label, m.density),
           (
-          <Dropdown
-            open={densityOpen}
-            onOpenChange={(o) => {
-              densityOpen.value = o;
-            }}
-            overlay={densityMenu}
-            placement="bottomRight"
-            trigger="click"
-            closeOnOverlayClick
-          >
-            <Button type="button" size="sm" class={posCls("dp-density")} disabled={disable} data-testid="dp-density" aria-label={actionTipText("density", title, label, m.density)}>
-              <IconList size="sm" />
-            </Button>
-          </Dropdown>
+            <Dropdown
+              open={densityOpen}
+              onOpenChange={(o) => {
+                densityOpen.value = o;
+              }}
+              overlay={densityMenu}
+              placement="bottomRight"
+              trigger="click"
+              closeOnOverlayClick
+            >
+              <Button
+                type="button"
+                size="sm"
+                class={posCls("dp-density")}
+                disabled={disable}
+                data-testid="dp-density"
+                aria-label={actionTipText("density", title, label, m.density)}
+              >
+                <IconList size="sm" />
+              </Button>
+            </Dropdown>
           ),
         );
       case "fullscreen":
@@ -1559,51 +1652,59 @@ export function DataPanel(props: PanelProps): JSXRenderable {
     }
   };
 
-  const toolbar = () => toolbarHidden ? null : (
-    <div
-      class="flex w-full flex-wrap items-center justify-end gap-2 border-b border-slate-200 px-3 py-2 dark:border-slate-700"
-      data-testid="data-panel-toolbar"
-    >
-      <div class="contents" data-dp-tools={key}>
-        <ButtonGroup attached class="dp-tool-group">
-          {toolbarSlots().map((s) => {
-            if (s.kind === "custom") {
-              const tip = actionTipText(
-                s.key,
-                s.title,
-                typeof s.label === "string" ? s.label : undefined,
-              );
-              const variant = s.tone; // full ColorVariant / ActionTone
-              const btn = (
-                <span
-                  class="inline-flex"
-                  data-testid={`dp-tb-extra-${s.key}`}
-                >
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={variant}
-                    class={posCls(`dp-tb-extra-${s.key}`)}
-                    disabled={s.disable}
-                    onClick={() => s.action()}
+  const toolbar = () =>
+    toolbarHidden ? null : (
+      <div
+        class="flex w-full flex-wrap items-center justify-end gap-2 border-b border-slate-200 px-3 py-2 dark:border-slate-700"
+        data-testid="data-panel-toolbar"
+      >
+        <div class="contents" data-dp-tools={key}>
+          <ButtonGroup attached class="dp-tool-group">
+            {toolbarSlots().map((s) => {
+              if (s.kind === "custom") {
+                const tip = actionTipText(
+                  s.key,
+                  s.title,
+                  typeof s.label === "string" ? s.label : undefined,
+                );
+                const variant = s.tone; // full ColorVariant / ActionTone
+                const btn = (
+                  <span
+                    class="inline-flex"
+                    data-testid={`dp-tb-extra-${s.key}`}
                   >
-                    {s.icon != null ? s.icon : s.label}
-                  </Button>
-                </span>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={variant}
+                      class={posCls(`dp-tb-extra-${s.key}`)}
+                      disabled={s.disable}
+                      onClick={() => s.action()}
+                    >
+                      {s.icon != null ? s.icon : s.label}
+                    </Button>
+                  </span>
+                );
+                return tipWrap(tip, btn);
+              }
+              return renderTbBuiltin(
+                s.name,
+                s.disable,
+                s.action,
+                s.title,
+                s.label,
               );
-              return tipWrap(tip, btn);
-            }
-            return renderTbBuiltin(s.name, s.disable, s.action, s.title, s.label);
-          })}
-        </ButtonGroup>
+            })}
+          </ButtonGroup>
+        </div>
       </div>
-    </div>
-  );
+    );
 
   // ---- 搜索表单（Modal）：提交即搜索，重置即清空
   function openSearch(): void {
     for (const sdef of searchDefs) {
-      sfields[fieldProp(sdef)].value = query.value.filters[fieldProp(sdef)] ?? "";
+      sfields[fieldProp(sdef)].value = query.value.filters[fieldProp(sdef)] ??
+        "";
     }
     searchErrors.value = {};
     searchOpen.value = true;
@@ -1634,7 +1735,9 @@ export function DataPanel(props: PanelProps): JSXRenderable {
   }
   const searchBody = () => (
     <form
-      class={useFieldGrid(searchDefs) ? "grid grid-cols-12 gap-3" : "grid gap-3"}
+      class={useFieldGrid(searchDefs)
+        ? "grid grid-cols-12 gap-3"
+        : "grid gap-3"}
       data-testid="dp-search"
       onSubmit={(e: Event) => {
         e.preventDefault();
@@ -1675,8 +1778,11 @@ export function DataPanel(props: PanelProps): JSXRenderable {
                       value={sig}
                       placeholder={sdef.placeholder}
                       onInput={(e: Event) => {
-                        let v = (e.target as unknown as { value: string }).value;
-                        if (sdef.maxlength != null && v.length > sdef.maxlength) {
+                        let v =
+                          (e.target as unknown as { value: string }).value;
+                        if (
+                          sdef.maxlength != null && v.length > sdef.maxlength
+                        ) {
                           v = v.slice(0, sdef.maxlength);
                         }
                         sig.value = v;
@@ -1686,7 +1792,10 @@ export function DataPanel(props: PanelProps): JSXRenderable {
                 )}
             </FormItem>
             {sdef.hint && !err && (
-              <p class="m-0 -mt-1 text-xs text-slate-500 dark:text-slate-400" data-testid={`dp-hint-${fieldProp(sdef)}`}>
+              <p
+                class="m-0 -mt-1 text-xs text-slate-500 dark:text-slate-400"
+                data-testid={`dp-hint-${fieldProp(sdef)}`}
+              >
                 {sdef.hint}
               </p>
             )}
@@ -1815,7 +1924,8 @@ export function DataPanel(props: PanelProps): JSXRenderable {
               const next = (e.target as unknown as { checked: boolean })
                 .checked;
               setTimeout(
-                () => void setField(row, colProp(c), next ? on.value : off.value),
+                () =>
+                  void setField(row, colProp(c), next ? on.value : off.value),
                 SWITCH_ANIM_MS,
               );
             }}
@@ -1833,7 +1943,10 @@ export function DataPanel(props: PanelProps): JSXRenderable {
           class={CELL_EDIT_CLS}
           title={m.doubleClickToEdit}
           data-testid={`dp-edit-${c.prop}-${idOf(row)}`}
-          onDblClick={() => (editing.value = { id: idOf(row), prop: colProp(c) })}
+          onDblClick={() => (editing.value = {
+            id: idOf(row),
+            prop: colProp(c),
+          })}
         >
           {plainCell(c, row, raw)}
         </span>
@@ -2276,7 +2389,9 @@ export function DataPanel(props: PanelProps): JSXRenderable {
   function toggleSort(prop: string): void {
     const q = query.value;
     if (q.sort !== prop) return setQuery({ sort: prop, order: "asc", page: 1 });
-    if (q.order === "asc") return setQuery({ sort: prop, order: "desc", page: 1 });
+    if (q.order === "asc") {
+      return setQuery({ sort: prop, order: "desc", page: 1 });
+    }
     // 第三次点击：回到默认排序
     const ds0 = props.defaultSort;
     setQuery({
@@ -2426,7 +2541,9 @@ export function DataPanel(props: PanelProps): JSXRenderable {
                                 const tip = actionTipText(
                                   s.key,
                                   s.title,
-                                  typeof s.label === "string" ? s.label : undefined,
+                                  typeof s.label === "string"
+                                    ? s.label
+                                    : undefined,
                                 );
                                 const aria = typeof s.label === "string"
                                   ? s.label
@@ -2439,7 +2556,9 @@ export function DataPanel(props: PanelProps): JSXRenderable {
                                     class={`${ICON_BTN}${toneActCls(s.tone)}`}
                                     disabled={s.disable || isLocked(r)}
                                     aria-label={aria}
-                                    data-testid={`dp-row-extra-${s.key}-${idOf(r)}`}
+                                    data-testid={`dp-row-extra-${s.key}-${
+                                      idOf(r)
+                                    }`}
                                     onClick={() => s.action(r)}
                                   >
                                     {s.icon != null ? s.icon : s.label}
@@ -2448,10 +2567,15 @@ export function DataPanel(props: PanelProps): JSXRenderable {
                                 return tipWrap(tip, btn);
                               }
                               if (s.name === "view") {
-                                const run = () =>
-                                  (s.action ? s.action(r) : doView(r));
+                                const run =
+                                  () => (s.action ? s.action(r) : doView(r));
                                 return tipWrap(
-                                  actionTipText("view", s.title, s.label, m.view),
+                                  actionTipText(
+                                    "view",
+                                    s.title,
+                                    s.label,
+                                    m.view,
+                                  ),
                                   <Btn
                                     type="button"
                                     size="sm"
@@ -2467,10 +2591,15 @@ export function DataPanel(props: PanelProps): JSXRenderable {
                                 );
                               }
                               if (s.name === "edit") {
-                                const run = () =>
-                                  (s.action ? s.action(r) : doEdit(r));
+                                const run =
+                                  () => (s.action ? s.action(r) : doEdit(r));
                                 return tipWrap(
-                                  actionTipText("edit", s.title, s.label, m.edit),
+                                  actionTipText(
+                                    "edit",
+                                    s.title,
+                                    s.label,
+                                    m.edit,
+                                  ),
                                   <Btn
                                     type="button"
                                     size="sm"
@@ -2489,7 +2618,12 @@ export function DataPanel(props: PanelProps): JSXRenderable {
                               const remTone = s.tone ?? "danger";
                               if (s.action) {
                                 return tipWrap(
-                                  actionTipText("remove", s.title, s.label, m.delete),
+                                  actionTipText(
+                                    "remove",
+                                    s.title,
+                                    s.label,
+                                    m.delete,
+                                  ),
                                   <Btn
                                     type="button"
                                     size="sm"
@@ -2508,39 +2642,48 @@ export function DataPanel(props: PanelProps): JSXRenderable {
                                 );
                               }
                               return tipWrap(
-                                actionTipText("remove", s.title, undefined, m.delete),
+                                actionTipText(
+                                  "remove",
+                                  s.title,
+                                  undefined,
+                                  m.delete,
+                                ),
                                 (
-                                <Popconfirm
-                                  open={() => popRow.value === idOf(r)}
-                                  placement="auto"
-                                  danger
-                                  title={tr(m.deleteAsk, { name: rowName(r) })}
-                                  okText={m.delete}
-                                  cancelText={m.cancel}
-                                  overlayClass={POP_OVERLAY_CLS}
-                                  onOpenChange={(o: boolean) => {
-                                    if (!o && popRow.value === idOf(r)) {
-                                      popRow.value = null;
-                                    }
-                                  }}
-                                  onConfirm={() => void doRemove([idOf(r)])}
-                                >
-                                  <Btn
-                                    type="button"
-                                    size="sm"
-                                    variant="ghost"
-                                    class={`${ICON_BTN}${toneActCls(remTone)}`}
-                                    {...bool(
-                                      "disabled",
-                                      isLocked(r) || s.disable,
-                                    )}
-                                    aria-label={m.delete}
-                                    data-testid={`dp-delete-${idOf(r)}`}
-                                    onClick={() => (popRow.value = idOf(r))}
+                                  <Popconfirm
+                                    open={() => popRow.value === idOf(r)}
+                                    placement="auto"
+                                    danger
+                                    title={tr(m.deleteAsk, {
+                                      name: rowName(r),
+                                    })}
+                                    okText={m.delete}
+                                    cancelText={m.cancel}
+                                    overlayClass={POP_OVERLAY_CLS}
+                                    onOpenChange={(o: boolean) => {
+                                      if (!o && popRow.value === idOf(r)) {
+                                        popRow.value = null;
+                                      }
+                                    }}
+                                    onConfirm={() => void doRemove([idOf(r)])}
                                   >
-                                    <IconTrash size="xs" />
-                                  </Btn>
-                                </Popconfirm>
+                                    <Btn
+                                      type="button"
+                                      size="sm"
+                                      variant="ghost"
+                                      class={`${ICON_BTN}${
+                                        toneActCls(remTone)
+                                      }`}
+                                      {...bool(
+                                        "disabled",
+                                        isLocked(r) || s.disable,
+                                      )}
+                                      aria-label={m.delete}
+                                      data-testid={`dp-delete-${idOf(r)}`}
+                                      onClick={() => (popRow.value = idOf(r))}
+                                    >
+                                      <IconTrash size="xs" />
+                                    </Btn>
+                                  </Popconfirm>
                                 ),
                                 {
                                   // Popconfirm open: hide same-anchor Tooltip
@@ -2644,7 +2787,11 @@ export function DataPanel(props: PanelProps): JSXRenderable {
           {n === 0 ? m.rangeEmpty : tr(m.range, { from, to, total: n })}
         </span>
         <div class={PG_CTRLS_CLS}>
-          <div class={PGSIZE_WRAP_CLS} data-testid="dp-pagesize" data-size={pgSize}>
+          <div
+            class={PGSIZE_WRAP_CLS}
+            data-testid="dp-pagesize"
+            data-size={pgSize}
+          >
             <Select
               size={pgSize}
               class={PGSIZE_SELECT_CLS}
@@ -2773,7 +2920,9 @@ export function DataPanel(props: PanelProps): JSXRenderable {
                   value={sig}
                   disabled={ro}
                   placeholder={!f.required &&
-                      !(f.options ?? []).some((o) => o.value === "")
+                      !(f.options ?? []).some((o) =>
+                        o.value === ""
+                      )
                     ? "—"
                     : undefined}
                   options={(f.options ?? []).map((o) => ({
@@ -2796,7 +2945,9 @@ export function DataPanel(props: PanelProps): JSXRenderable {
                   }))}
                   onChange={(e: Event) => {
                     const v = (e.target as unknown as { value: unknown }).value;
-                    if (Array.isArray(v)) sig.value = v.join(",");
+                    if (Array.isArray(v)) {
+                      sig.value = v.join(",");
+                    }
                   }}
                 />
               </div>
@@ -2883,7 +3034,10 @@ export function DataPanel(props: PanelProps): JSXRenderable {
                 {control}
               </FormItem>
               {f.hint && !err && (
-                <p class="m-0 -mt-1 text-xs text-slate-500 dark:text-slate-400" data-testid={`dp-fld-hint-${fieldProp(f)}`}>
+                <p
+                  class="m-0 -mt-1 text-xs text-slate-500 dark:text-slate-400"
+                  data-testid={`dp-fld-hint-${fieldProp(f)}`}
+                >
                   {f.hint}
                 </p>
               )}
@@ -2920,28 +3074,44 @@ export function DataPanel(props: PanelProps): JSXRenderable {
     const r = viewRow.value;
     if (!r) return null;
     const items: { label: string; children: unknown; span?: number }[] = [];
-    const vs = props.viewSchemas;
-    if (vs) {
-      const list = typeof vs === "function" ? vs(r) : vs;
-      for (const it of list) {
-        let children: unknown = it.children;
-        if (children === undefined) children = it.value;
-        if (children === undefined && it.prop) {
-          const col = columns.find((c) => c.prop === it.prop);
-          children = col
-            ? (displayValue(col, r, m) || "—")
-            : (r[it.prop] == null || r[it.prop] === "" ? "—" : String(r[it.prop]));
-        }
+    const viewFields = resolveViewFields(props.view, columns);
+    if (viewFields) {
+      for (const f of viewFields) {
+        const prop = colProp(f);
+        let children: unknown = plainCell(f, r, r[prop]);
         if (children === undefined || children === null || children === "") {
           children = "—";
         }
-        items.push({ label: it.label, children, span: it.span });
+        const click = f.click;
+        if (click) {
+          children = (
+            <button
+              type="button"
+              class="cursor-pointer appearance-none border-0 bg-transparent p-0 text-left text-inherit"
+              data-testid={`dp-view-click-${prop}`}
+              onClick={() => {
+                if (click === "toggle") {
+                  const next = toggleOptionValue(r[prop], f.options);
+                  if (next !== undefined) void setField(r, prop, next);
+                } else {
+                  click(r);
+                }
+              }}
+            >
+              {children}
+            </button>
+          );
+        }
+        items.push({ label: f.label ?? prop, children });
       }
     } else {
       const seen = new Set<string>();
       for (const c of columns) {
         seen.add(c.prop);
-        items.push({ label: c.label, children: displayValue(c, r, m) || "—" });
+        items.push({
+          label: c.label,
+          children: displayValue(c, r, m) || "—",
+        });
       }
       for (const f of formDefs) {
         if (seen.has(fieldProp(f)) || f.type === "password") continue;
@@ -2954,17 +3124,51 @@ export function DataPanel(props: PanelProps): JSXRenderable {
         });
       }
     }
+    const slots = resolveViewFooterActions(
+      viewFields ? resolveViewActionsCfg(props.view) : undefined,
+      r,
+      m.close,
+    );
     return (
       <div data-testid="dp-view">
         <Descriptions bordered column={1} size="sm" items={items} />
         <div class="mt-4 flex justify-end gap-2" data-testid="dp-view-footer">
-          <Btn
-            type="button"
-            data-testid="dp-view-close"
-            onClick={() => (viewRow.value = null)}
-          >
-            {m.close}
-          </Btn>
+          {slots.map((s) => {
+            if (s.builtinClose) {
+              return (
+                <Btn
+                  type="button"
+                  disabled={s.disable}
+                  data-testid="dp-view-close"
+                  onClick={() => {
+                    s.action?.(r);
+                    viewRow.value = null;
+                  }}
+                >
+                  {s.label}
+                </Btn>
+              );
+            }
+            const onAct = () => {
+              if (s.disable) return;
+              if (s.href) {
+                g.open?.(s.href, "_self");
+                return;
+              }
+              s.action?.(r);
+            };
+            return (
+              <Btn
+                type="button"
+                variant={s.tone ?? "default"}
+                disabled={s.disable}
+                data-testid={`dp-view-action-${s.key}`}
+                onClick={onAct}
+              >
+                {s.label}
+              </Btn>
+            );
+          })}
         </div>
       </div>
     );
@@ -2973,39 +3177,42 @@ export function DataPanel(props: PanelProps): JSXRenderable {
   return (
     <div class="contents" data-testid={`panel-${key}`}>
       {() => (
-      <div
-        class={panelFs.value ? FS_CLS : undefined}
-        data-dp-shell={key}
-        data-testid="dp-shell"
-        data-fullscreen={panelFs.value ? "true" : undefined}
-      >
-      <Card
-        bordered
-        size="sm"
-        class={`dp-card${props.class ? ` ${props.class}` : ""} ${CARD_STYLE}`}
-        title={
-          <span
-            class="inline-flex min-w-0 items-center gap-2"
-            data-testid="data-panel"
+        <div
+          class={panelFs.value ? FS_CLS : undefined}
+          data-dp-shell={key}
+          data-testid="dp-shell"
+          data-fullscreen={panelFs.value ? "true" : undefined}
+        >
+          <Card
+            bordered
+            size="sm"
+            class={`dp-card${
+              props.class ? ` ${props.class}` : ""
+            } ${CARD_STYLE}`}
+            title={
+              <span
+                class="inline-flex min-w-0 items-center gap-2"
+                data-testid="data-panel"
+              >
+                <IconList size="sm" />
+                <span class="truncate">{props.title}</span>
+              </span>
+            }
+            extra={
+              <span class="text-sm font-normal" data-testid="dp-total-count">
+                {() =>
+                  tr(m.totalCount, { total: total.value })}
+              </span>
+            }
+            bodyClass="p-0"
           >
-            <IconList size="sm" />
-            <span class="truncate">{props.title}</span>
-          </span>
-        }
-        extra={
-          <span class="text-sm font-normal" data-testid="dp-total-count">
-            {() => tr(m.totalCount, { total: total.value })}
-          </span>
-        }
-        bodyClass="p-0"
-      >
-        {toolbar}
-        {/* 固定插槽：响应式子节点插在静态兄弟之后会落到卡片底部；批量条在表格下方，选中行不会把表格顶下去 */}
-        <div class={TABLE_WRAP_CLS}>{table}</div>
-        <div data-testid="dp-batch-slot">{batchBar}</div>
-        {pagination}
-      </Card>
-      </div>
+            {toolbar}
+            {/* 固定插槽：响应式子节点插在静态兄弟之后会落到卡片底部；批量条在表格下方，选中行不会把表格顶下去 */}
+            <div class={TABLE_WRAP_CLS}>{table}</div>
+            <div data-testid="dp-batch-slot">{batchBar}</div>
+            {pagination}
+          </Card>
+        </div>
       )}
 
       {props.children}
@@ -3013,7 +3220,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
       <Modal
         open={formOpen}
         title={() => {
-          const ft = props.formTitle;
+          const ft = props.form?.title;
           if (typeof ft === "function") {
             return ft(formRow.value ?? ({} as Row));
           }
@@ -3030,7 +3237,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
       <Modal
         open={searchOpen}
         title={() => {
-          const st = props.searchTitle;
+          const st = props.search?.title;
           if (typeof st === "function") return st();
           if (typeof st === "string") return st;
           return `${m.search} · ${props.title}`;
@@ -3045,7 +3252,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
       <Modal
         open={() => viewRow.value !== null}
         title={() => {
-          const vt = props.viewTitle;
+          const vt = props.view?.title;
           const row = viewRow.value;
           if (typeof vt === "function") {
             return row ? vt(row) : `${m.view} · ${props.title}`;

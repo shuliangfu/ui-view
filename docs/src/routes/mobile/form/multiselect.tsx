@@ -160,6 +160,28 @@ export default function MobileMultiSelectDoc() {
           <CodeBlock title="代码示例" code={exampleControlled} language="tsx" showLineNumbers copyable wrapLongLines />
 
         </div>
+        <div class="space-y-4">
+          <Title level={3}>size（xs / sm / md / lg）</Title>
+          <MobileDocDemo>
+            <div class="flex flex-col gap-3 p-2">
+              <MultiSelect size="xs" class="w-full" options={OPTIONS} value={[]} placeholder="xs" />
+              <MultiSelect size="sm" class="w-full" options={OPTIONS} value={[]} placeholder="sm" />
+              <MultiSelect size="md" class="w-full" options={OPTIONS} value={[]} placeholder="md" />
+              <MultiSelect size="lg" class="w-full" options={OPTIONS} value={[]} placeholder="lg" />
+            </div>
+          </MobileDocDemo>
+          <CodeBlock
+            title="代码示例"
+            code={`<MultiSelect size="xs" options={OPTIONS} placeholder="xs" />
+<MultiSelect size="sm" options={OPTIONS} placeholder="sm" />
+<MultiSelect size="md" options={OPTIONS} placeholder="md" />
+<MultiSelect size="lg" options={OPTIONS} placeholder="lg" />`}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+        </div>
       </section>
 
       <section class="space-y-4">

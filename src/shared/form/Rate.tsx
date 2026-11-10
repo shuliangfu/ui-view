@@ -7,11 +7,13 @@
 
 import { createEffect, createRef, type JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
+import { resolveFormControlSize } from "./form-control-context.ts";
 import {
   commitMaybeSignal,
   type MaybeSignal,
   readMaybeSignal,
 } from "./maybe-signal.ts";
+import type { SizeVariant } from "../types.ts";
 
 /**
  * Rate 内置文案。
@@ -27,6 +29,8 @@ export const defaultRateMessages: RateMessages = {
 };
 
 export interface RateProps {
+  /** 尺寸，与 {@link import("./Input.tsx").Input} 相同：xs、sm、md、lg */
+  size?: SizeVariant;
   /** 星数，默认 5 */
   count?: number;
   /** 当前分数 0～count；见 {@link MaybeSignal} */
@@ -46,7 +50,13 @@ export interface RateProps {
   messages?: Partial<RateMessages>;
 }
 
-const starCls = "size-6 text-slate-300 dark:text-slate-500 transition-colors motion-reduce:transition-none";
+const starCls = "text-slate-300 dark:text-slate-500 transition-colors motion-reduce:transition-none";
+const starSizeClasses: Record<SizeVariant, string> = {
+  xs: "inline-flex size-4 items-center justify-center text-base leading-none",
+  sm: "inline-flex size-5 items-center justify-center text-xl leading-none",
+  md: "inline-flex size-6 items-center justify-center text-2xl leading-none",
+  lg: "inline-flex size-8 items-center justify-center text-3xl leading-none",
+};
 const starActiveCls = "text-amber-400 dark:text-amber-500";
 
 /**
@@ -70,6 +80,7 @@ function scoreFromStarClick(
 
 export function Rate(props: RateProps): JSXRenderable {
   const {
+    size: sizeProp,
     count = 5,
     value,
     allowHalf = false,
@@ -79,6 +90,8 @@ export function Rate(props: RateProps): JSXRenderable {
     messages,
   } = props;
   const m = { ...defaultRateMessages, ...messages };
+  const size = resolveFormControlSize(sizeProp);
+  const starClsSized = twMerge(starCls, starSizeClasses[size]);
   const rootRef = createRef<HTMLElement>();
 
   /** 与 {@link AutoComplete} 相同：aria 写回 DOM，勿把 value 绑进会重建外壳的 getter */
@@ -134,25 +147,23 @@ export function Rate(props: RateProps): JSXRenderable {
             >
               {allowHalf && half
                 ? (
-                  <span class="inline-block relative">
-                    <span class={starCls} aria-hidden="true">
+                  <span class="relative inline-block">
+                    <span class={starClsSized} aria-hidden="true">
                       ★
                     </span>
                     <span
-                      class={twMerge(
-                        starCls,
-                        starActiveCls,
-                        "absolute left-0 top-0 w-1/2 overflow-hidden",
-                      )}
+                      class="absolute inset-y-0 left-0 w-1/2 overflow-hidden"
                       aria-hidden="true"
                     >
-                      ★
+                      <span class={twMerge(starClsSized, starActiveCls)}>
+                        ★
+                      </span>
                     </span>
                   </span>
                 )
                 : (
                   <span
-                    class={full ? twMerge(starCls, starActiveCls) : starCls}
+                    class={full ? twMerge(starClsSized, starActiveCls) : starClsSized}
                     aria-hidden="true"
                   >
                     ★

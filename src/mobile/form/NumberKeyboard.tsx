@@ -12,6 +12,8 @@ import {
   useContext,
 } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
+import type { SizeVariant } from "../../shared/types.ts";
+import { resolveFormControlSize } from "../../shared/form/form-control-context.ts";
 import { MobilePortalHostContext } from "../MobilePortalHostScope.tsx";
 import {
   type ControlledOpenInput,
@@ -20,6 +22,8 @@ import {
 import { getBrowserBodyPortalHost } from "../../shared/feedback/portal-host.ts";
 
 export interface NumberKeyboardProps {
+  /** 控件尺寸，与 Input 相同；也可由外层 Form 的 size 注入 */
+  size?: SizeVariant;
   open?: ControlledOpenInput;
   onClose?: () => void;
   /** 按下数字／小数点 */
@@ -64,6 +68,19 @@ export function NumberKeyboard(props: NumberKeyboardProps): JSXRenderable {
     class: className,
     maskClosable = true,
   } = props;
+  const size = resolveFormControlSize(props.size);
+  const keySizeCls: Record<SizeVariant, string> = {
+    xs: "h-9 text-sm",
+    sm: "h-10 text-base",
+    md: "h-12 text-lg",
+    lg: "h-14 text-xl",
+  };
+  const confirmSizeCls: Record<SizeVariant, string> = {
+    xs: "h-9 text-sm",
+    sm: "h-10 text-sm",
+    md: "h-11 text-base",
+    lg: "h-12 text-lg",
+  };
   const m = { ...defaultNumberKeyboardMessages, ...(props.messages ?? {}) };
   const isOpen = createMemo(() => readControlledOpenInput(props.open));
   /** 机内 Portal：Context 为 `{ getHost }`，勿当成 HTMLElement */
@@ -122,7 +139,7 @@ export function NumberKeyboard(props: NumberKeyboardProps): JSXRenderable {
                 <button
                   type="button"
                   key={k}
-                  class="h-12 rounded-lg bg-white dark:bg-slate-800 text-lg font-medium active:bg-slate-200 dark:active:bg-slate-700"
+                  class={twMerge("rounded-lg bg-white dark:bg-slate-800 font-medium active:bg-slate-200 dark:active:bg-slate-700", keySizeCls[size])}
                   aria-label={k === "delete" ? m.delete : label}
                   onClick={() => emitKey(k)}
                 >
@@ -134,7 +151,7 @@ export function NumberKeyboard(props: NumberKeyboardProps): JSXRenderable {
           {showConfirm && (
             <button
               type="button"
-              class="mt-2 w-full h-11 rounded-lg bg-blue-600 text-white font-medium active:bg-blue-500"
+              class={twMerge("mt-2 w-full rounded-lg bg-blue-600 text-white font-medium active:bg-blue-500", confirmSizeCls[size])}
               onClick={() => {
                 onConfirm?.();
                 if (!onConfirm) onClose?.();

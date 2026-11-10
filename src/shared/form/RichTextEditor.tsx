@@ -36,6 +36,7 @@ import {
   commitMaybeSignal,
   readMaybeSignal,
 } from "./maybe-signal.ts";
+import { resolveFormControlSize } from "./form-control-context.ts";
 import { uploadFileViaUiViewBase } from "./upload-http.ts";
 import { getFormPortalBodyHost } from "./picker-portal-utils.ts";
 import { isDomElement, isHtmlElement } from "../dom-guards.ts";
@@ -162,6 +163,13 @@ export function RichTextEditor(props: RichTextEditorProps): JSXRenderable {
     onPasteImage,
     hideFocusRing = false,
   } = props;
+  const size = resolveFormControlSize(props.size);
+  const rteSizeRoot: Record<string, string> = {
+    xs: "[&_button]:p-1 [&_button]:min-w-[22px] [&_button]:min-h-[22px] [&_button]:text-xs [&_[data-rte-editor]]:px-2 [&_[data-rte-editor]]:py-1 [&_[data-rte-editor]]:text-xs [&_[data-rte-source-editor]]:px-2 [&_[data-rte-source-editor]]:py-1 [&_[data-rte-source-editor]]:text-xs",
+    sm: "[&_button]:p-1 [&_button]:min-w-[24px] [&_button]:min-h-[24px] [&_button]:text-xs [&_[data-rte-editor]]:px-2.5 [&_[data-rte-editor]]:py-1.5 [&_[data-rte-editor]]:text-sm [&_[data-rte-source-editor]]:px-2.5 [&_[data-rte-source-editor]]:py-1.5 [&_[data-rte-source-editor]]:text-sm",
+    md: "",
+    lg: "[&_button]:p-2 [&_button]:min-w-[32px] [&_button]:min-h-[32px] [&_button]:text-base [&_[data-rte-editor]]:px-4 [&_[data-rte-editor]]:py-2.5 [&_[data-rte-editor]]:text-base [&_[data-rte-source-editor]]:px-4 [&_[data-rte-source-editor]]:py-2.5 [&_[data-rte-source-editor]]:text-base",
+  };
 
   const toolbarGroups = customToolbar
     ? normalizeToolbarConfig(customToolbar)
@@ -1968,6 +1976,7 @@ export function RichTextEditor(props: RichTextEditorProps): JSXRenderable {
       id={`${editorId}-root`}
       class={twMerge(
         "rounded-lg overflow-hidden border border-slate-300 dark:border-slate-600 relative",
+        rteSizeRoot[size],
         /** 限制最大高度时根为纵向 flex，正文在子级滚动；`max-h` 用变量便于全屏态覆盖。 */
         maxHeight &&
           "flex min-h-0 max-h-[var(--rte-max-body)] flex-col [&.rte-fullscreen]:max-h-none",

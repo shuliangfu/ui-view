@@ -8,6 +8,7 @@
 
 import { twMerge } from "tailwind-merge";
 import type { JSXRenderable } from "@dreamer/view";
+import { type MaybeSignal, readMaybeSignal } from "./maybe-signal.ts";
 
 /**
  * FormList 内置文案。
@@ -41,8 +42,11 @@ export interface FormListRenderRowContext {
 }
 
 export interface FormListProps {
-  /** 当前列表项数量或项列表（用于渲染行数）；若为 number 则仅用于长度，每行用 index 区分 */
-  items: unknown[] | number;
+  /**
+   * 当前列表项数量或项列表（用于渲染行数）；若为 number 则仅用于长度，每行用 index 区分。
+   * 与全库表单一致为 {@link MaybeSignal}：请传 signal 或 `() => n`，勿写 `items={count.value}`（首轮数字快照，增删无效）。
+   */
+  items: MaybeSignal<unknown[] | number>;
   /** 新增一项时回调 */
   onAdd?: () => void;
   /** 移除指定索引项时回调 */
@@ -103,7 +107,12 @@ function removeButtonForRow(
   );
 }
 
+/**
+ * compileSource 下父级本征 patch 会 merge `liveProps` 而不再次调用本函数。
+ * 须在内层 getter 每次执行时从 `props` 读取 `items`，否则增删行后行数停在首轮快照。
+ */
 export function FormList(props: FormListProps): JSXRenderable {
+  return () => {
   const {
     items,
     onAdd,
@@ -116,7 +125,8 @@ export function FormList(props: FormListProps): JSXRenderable {
   const m = { ...defaultFormListMessages, ...messages };
   const addButtonText = props.addButtonText ?? m.addButton;
 
-  const length = typeof items === "number" ? items : items.length;
+  const list = readMaybeSignal(items) ?? items;
+  const length = typeof list === "number" ? list : list.length;
 
   return (
     <div class={twMerge(wrapCls, className)} role="group" aria-label={m.list}>
@@ -151,4 +161,5 @@ export function FormList(props: FormListProps): JSXRenderable {
       )}
     </div>
   );
+  };
 }

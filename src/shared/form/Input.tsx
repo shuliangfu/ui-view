@@ -12,6 +12,11 @@ import {
 import { twMerge } from "tailwind-merge";
 import { resolveFormControlSize } from "./form-control-context.ts";
 import { FormItemControlIdContext } from "./form-item-control-id.ts";
+import {
+  OutlinedField,
+  outlinedControlClass,
+  resolveOutlinedLabel,
+} from "./outlined-field.tsx";
 import type { SizeVariant } from "../types.ts";
 import {
   compositeShellFocusRingFromInput,
@@ -51,6 +56,17 @@ export interface InputProps {
   hideFocusRing?: boolean;
   /** 占位文案 */
   placeholder?: string;
+  /**
+   * 描边内嵌标签：文字坐在边框左上缺口中（真缺口，不靠底色遮挡）。
+   * 空且未聚焦时显示在框内；聚焦或有值后上浮到边框。
+   * 也可由 FormItem 的 `labelPosition="outline"` 下传，不必两边都写。
+   */
+  label?: string;
+  /**
+   * 为 true 且未设 `label` 时，用 `placeholder` 作为描边内嵌标签（输入后提示上到边框）。
+   * 已设 `label` 时本项无效。
+   */
+  floatingLabel?: boolean;
   /** 输入值（受控可选）；见 {@link MaybeSignal}，`value={sig}` 与 `value={() => sig()}` 均可 */
   value?: MaybeSignal<string>;
   /** 原生 type，如 text、password、email */
@@ -357,6 +373,8 @@ export function Input(props: InputProps): JSXRenderable {
     suffix,
     allowClear = false,
     hideFocusRing = false,
+    label,
+    floatingLabel = false,
     class: className,
     onInput,
     onChange,
@@ -418,29 +436,45 @@ export function Input(props: InputProps): JSXRenderable {
     handleInput({ target: el } as unknown as Event);
   };
 
+  const hasAddon = prefix != null && prefix !== false ||
+    suffix != null && suffix !== false ||
+    allowClear;
+
+  const outlined = type !== "file"
+    ? resolveOutlinedLabel({
+      label,
+      floatingLabel,
+      placeholder,
+      required,
+      useInnerLabel: !hasAddon,
+    })
+    : undefined;
+
   const inputSpreadProps = {
     type,
     ref: inputRef,
     id: resolvedId,
     name,
     autoComplete: nativeAutoComplete,
-    placeholder,
+    placeholder: outlined?.nativePlaceholder ?? placeholder,
     // 布尔属性仅为 true 时输出：SSR 会把 false 序列化成 disabled="false" / readonly="false"，
     // 而 HTML 里只要写了该属性就为真（水合前输入框会被锁成只读 / 禁用）
     ...(disabled ? { disabled: true } : {}),
     ...(readOnly ? { readOnly: true } : {}),
     "aria-required": required,
     "aria-invalid": error,
+    ...(outlined ? { "aria-label": outlined.text } : {}),
     class: twMerge(
       inputSurfaceBase,
       autofillVisualClass(autoComplete),
-      controlBlueFocusRing(!hideFocusRing),
+      controlBlueFocusRing(!hideFocusRing && !outlined),
       sizeCls,
-      !prefix && !suffix && !allowClear ? "w-full min-w-0" : undefined,
-      error && controlErrorBorder,
-      error && !hideFocusRing && controlErrorFocusRing(true),
-      readOnly && readOnlyCls,
-      !prefix && !suffix && !allowClear ? className : undefined,
+      !hasAddon ? "w-full min-w-0" : undefined,
+      error && !outlined && controlErrorBorder,
+      error && !hideFocusRing && !outlined && controlErrorFocusRing(true),
+      readOnly && !outlined && readOnlyCls,
+      outlined && outlinedControlClass,
+      !hasAddon && !outlined ? className : undefined,
     ),
     onInput: handleInput,
     onChange: handleChange,
@@ -454,19 +488,34 @@ export function Input(props: InputProps): JSXRenderable {
     ...(multiple ? { multiple: true as boolean } : {}),
   };
 
-  const hasAddon = prefix != null && prefix !== false ||
-    suffix != null && suffix !== false ||
-    allowClear;
+  const inputNode = type === "file"
+    ? <input {...inputSpreadProps} />
+    : <input {...inputSpreadProps} value={value} />;
 
   if (!hasAddon) {
     /**
      * 勿再包一层 `() => <input />`：`@dreamer/view` 的 `insert` 会把「函数子」挂进 effect，
      * 与受控 `value` 的细粒度 `createRenderEffect` 叠在一起时，部分场景会在每次键入后整段重建 input DOM，表现为立刻失焦。
      * Preact 版 `@dreamer/ui-preact` 的 `Input` 此处已直接返回 VNode，本包与之对齐。
+     * 描边外壳是稳定 fieldset，不包 `() =>`。
      */
-    return type === "file"
-      ? <input {...inputSpreadProps} />
-      : <input {...inputSpreadProps} value={value} />;
+    if (outlined) {
+      return (
+        <OutlinedField
+          label={outlined.text}
+          requiredMark={outlined.requiredMark}
+          size={size}
+          error={error}
+          disabled={disabled}
+          readOnly={readOnly}
+          hideFocusRing={hideFocusRing}
+          class={className}
+        >
+          {inputNode}
+        </OutlinedField>
+      );
+    }
+    return inputNode;
   }
 
   const shellCls = twMerge(
@@ -474,21 +523,22 @@ export function Input(props: InputProps): JSXRenderable {
     inputSurfaceBase,
     sizeRoundedClasses[size],
     sizeTextClasses[size],
-    !hideFocusRing &&
+    !outlined && !hideFocusRing &&
       (error
         ? "has-[input:focus]:ring-2 has-[input:focus]:ring-red-500 dark:has-[input:focus]:ring-red-500 has-[input:focus]:border-transparent dark:has-[input:focus]:border-transparent"
         : compositeShellFocusRingFromInput(true)),
-    error && controlErrorBorder,
-    readOnly && readOnlyCls,
-    disabled && "opacity-50",
-    className,
+    error && !outlined && controlErrorBorder,
+    readOnly && !outlined && readOnlyCls,
+    disabled && !outlined && "opacity-50",
+    outlined && outlinedControlClass,
+    !outlined ? className : undefined,
   );
 
   /**
    * 与无 addon / {@link InputNumber} 一致：直接返回稳定外壳，**勿** `return () => { value(); ... }`。
    * 清除钮显隐由 {@link InputClearOrSuffix} 局部订阅，键入时不替换中间 input DOM。
    */
-  return (
+  const shell = (
     <InputGroupShell
       size={size}
       shellCls={shellCls}
@@ -501,7 +551,7 @@ export function Input(props: InputProps): JSXRenderable {
       name={name}
       nativeAutoComplete={nativeAutoComplete}
       autoCompleteHint={autoComplete}
-      placeholder={placeholder}
+      placeholder={outlined?.nativePlaceholder ?? placeholder}
       disabled={disabled}
       readOnly={readOnly}
       required={required}
@@ -521,4 +571,22 @@ export function Input(props: InputProps): JSXRenderable {
       multiple={multiple}
     />
   );
+  if (outlined) {
+    return (
+      <OutlinedField
+        label={outlined.text}
+        requiredMark={outlined.requiredMark}
+        size={size}
+        error={error}
+        disabled={disabled}
+        readOnly={readOnly}
+        hideFocusRing={hideFocusRing}
+        hideInnerLabel
+        class={className}
+      >
+        {shell}
+      </OutlinedField>
+    );
+  }
+  return shell;
 }

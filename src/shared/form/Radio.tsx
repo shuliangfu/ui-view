@@ -8,10 +8,14 @@ import { type Signal } from "@dreamer/view";
 import { safeIsSignal, writeSignalValue } from "../safe-signal.ts";
 import type { JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
+import { resolveFormControlSize } from "./form-control-context.ts";
 import { controlBlueFocusRing } from "./input-focus-ring.ts";
 import type { MaybeSignal } from "./maybe-signal.ts";
+import type { SizeVariant } from "../types.ts";
 
 export interface RadioProps {
+  /** 尺寸，与 {@link import("./Input.tsx").Input} 相同：xs、sm、md、lg */
+  size?: SizeVariant;
   /** 是否选中；见 {@link MaybeSignal} */
   checked?: MaybeSignal<boolean>;
   /** 是否禁用 */
@@ -48,13 +52,26 @@ export interface RadioProps {
 
 /** 单选圆钮底纹（不含 ring） */
 const radioInputSurface =
-  "h-4 w-4 rounded-full border-slate-300 dark:border-slate-600 text-blue-600 focus:outline-hidden dark:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer";
+  "rounded-full border-slate-300 dark:border-slate-600 text-blue-600 focus:outline-hidden dark:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer";
 const labelCls =
-  "inline-flex items-center gap-2 cursor-pointer text-sm text-slate-700 dark:text-slate-300";
+  "inline-flex items-center cursor-pointer text-slate-700 dark:text-slate-300";
+const radioSizeClasses: Record<SizeVariant, string> = {
+  xs: "h-3 w-3",
+  sm: "h-3.5 w-3.5",
+  md: "h-4 w-4",
+  lg: "h-5 w-5",
+};
+const radioLabelSize: Record<SizeVariant, string> = {
+  xs: "gap-1.5 text-xs",
+  sm: "gap-2 text-sm",
+  md: "gap-2 text-sm",
+  lg: "gap-2 text-base",
+};
 const errorCls = "[&_input]:border-red-500 text-red-600 dark:text-red-400";
 
 export function Radio(props: RadioProps): JSXRenderable {
   const {
+    size: sizeProp,
     checked: checkedMaybe,
     disabled = false,
     error = false,
@@ -72,6 +89,7 @@ export function Radio(props: RadioProps): JSXRenderable {
     id,
     children,
   } = props;
+  const size = resolveFormControlSize(sizeProp);
 
   /**
    * 选中变化时：若 `checked` 为 Signal 则回写；再调用外部 `onChange`。
@@ -89,7 +107,7 @@ export function Radio(props: RadioProps): JSXRenderable {
   const checkedForInput = checkedMaybe === undefined ? false : checkedMaybe;
 
   return (
-    <label class={twMerge(labelCls, error && errorCls, className)}>
+    <label class={twMerge(labelCls, radioLabelSize[size], error && errorCls, className)}>
       <input
         type="radio"
         id={id}
@@ -98,7 +116,7 @@ export function Radio(props: RadioProps): JSXRenderable {
         checked={checkedForInput}
         disabled={disabled}
         aria-invalid={error}
-        class={twMerge(radioInputSurface, controlBlueFocusRing(!hideFocusRing))}
+        class={twMerge(radioInputSurface, radioSizeClasses[size], controlBlueFocusRing(!hideFocusRing))}
         onChange={handleChange}
         onBlur={onBlur}
         onFocus={onFocus}

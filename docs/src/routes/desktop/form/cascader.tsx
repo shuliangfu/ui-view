@@ -544,6 +544,35 @@ export default function FormCascaderDoc() {
             wrapLongLines
           />
         </section>
+
+        <section class="space-y-4">
+          <Title level={3}>size（xs / sm / md / lg）</Title>
+          <Form layout="vertical" class="w-full max-w-lg space-y-3">
+            <FormItem label="xs">
+              <Cascader size="xs" options={OPTIONS} value={[]} class="w-full" placeholder="xs" />
+            </FormItem>
+            <FormItem label="sm">
+              <Cascader size="sm" options={OPTIONS} value={[]} class="w-full" placeholder="sm" />
+            </FormItem>
+            <FormItem label="md（默认）">
+              <Cascader size="md" options={OPTIONS} value={[]} class="w-full" placeholder="md" />
+            </FormItem>
+            <FormItem label="lg">
+              <Cascader size="lg" options={OPTIONS} value={[]} class="w-full" placeholder="lg" />
+            </FormItem>
+          </Form>
+          <CodeBlock
+            title="代码示例"
+            code={`<Cascader size="xs" options={OPTIONS} class="w-full" />
+<Cascader size="sm" options={OPTIONS} class="w-full" />
+<Cascader size="md" options={OPTIONS} class="w-full" />
+<Cascader size="lg" options={OPTIONS} class="w-full" />`}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+        </section>
       </section>
 
       <DocsMessagesSection

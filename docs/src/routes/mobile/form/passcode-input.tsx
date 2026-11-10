@@ -14,6 +14,7 @@ import { MESSAGES_PASSCODE_INPUT } from "../../../data/component-messages-rows.t
 import { MobileDocDemo } from "../../../components/MobileDocDemo.tsx";
 
 const API: DocsApiTableRow[] = [
+  { name: "size", type: '"xs" | "sm" | "md" | "lg"', default: '"md"', description: "尺寸：xs、sm、md、lg；也可由外层 Form 的 size 注入" },
   { name: "value", type: "MaybeSignal<string>", default: "-", description: "受控值" },
   { name: "length", type: "number", default: "6", description: "位数" },
   { name: "mask", type: "boolean", default: "false", description: "掩码" },
@@ -57,6 +58,26 @@ export default function Page() {
           <div class="p-4 flex justify-center"><PasscodeInput length={6} /></div>
         </MobileDocDemo>
         <CodeBlock title="代码示例" code={exampleDemo} language="tsx" showLineNumbers copyable wrapLongLines />
+        <Title level={3}>size（xs / sm / md / lg）</Title>
+        <MobileDocDemo>
+          <div class="p-4 flex flex-col items-center gap-3">
+            <PasscodeInput size="xs" length={4} />
+            <PasscodeInput size="sm" length={4} />
+            <PasscodeInput size="md" length={4} />
+            <PasscodeInput size="lg" length={4} />
+          </div>
+        </MobileDocDemo>
+        <CodeBlock
+          title="代码示例"
+          code={`<PasscodeInput size="xs" length={4} />
+<PasscodeInput size="sm" length={4} />
+<PasscodeInput size="md" length={4} />
+<PasscodeInput size="lg" length={4} />`}
+          language="tsx"
+          showLineNumbers
+          copyable
+          wrapLongLines
+        />
       </section>
       <DocsMessagesSection
         interfaceName="PasscodeInputMessages"

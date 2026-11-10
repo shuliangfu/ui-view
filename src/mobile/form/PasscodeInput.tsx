@@ -9,6 +9,8 @@ import {
   type JSXRenderable,
 } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
+import type { SizeVariant } from "../../shared/types.ts";
+import { resolveFormControlSize } from "../../shared/form/form-control-context.ts";
 import {
   commitMaybeSignal,
   type MaybeSignal,
@@ -25,6 +27,8 @@ export const defaultPasscodeInputMessages: PasscodeInputMessages = {
 };
 
 export interface PasscodeInputProps {
+  /** 控件尺寸，与 Input 相同；也可由外层 Form 的 size 注入 */
+  size?: SizeVariant;
   /** 当前值 */
   value?: MaybeSignal<string>;
   onChange?: (value: string) => void;
@@ -61,6 +65,19 @@ export function PasscodeInput(props: PasscodeInputProps): JSXRenderable {
     class: className,
     "aria-label": ariaLabelProp,
   } = props;
+  const size = resolveFormControlSize(props.size);
+  const cellSizeCls: Record<SizeVariant, string> = {
+    xs: "size-7 text-sm",
+    sm: "size-8 text-base",
+    md: "size-10 text-lg",
+    lg: "size-12 text-xl",
+  };
+  const gapCls: Record<SizeVariant, string> = {
+    xs: "gap-1",
+    sm: "gap-1.5",
+    md: "gap-2",
+    lg: "gap-2.5",
+  };
   const ariaLabel = ariaLabelProp ?? m.label;
 
   const focused = createSignal(false);
@@ -89,7 +106,8 @@ export function PasscodeInput(props: PasscodeInputProps): JSXRenderable {
         <div
           key={i}
           class={twMerge(
-            "flex size-10 items-center justify-center rounded-lg border text-lg font-semibold",
+            "flex items-center justify-center rounded-lg border font-semibold",
+            cellSizeCls[size],
             "border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900",
             active && "border-blue-500 ring-2 ring-blue-500/30",
           )}
@@ -103,7 +121,7 @@ export function PasscodeInput(props: PasscodeInputProps): JSXRenderable {
 
   return () => (
     <div
-      class={twMerge("passcode-input relative inline-flex gap-2", className)}
+      class={twMerge("passcode-input relative inline-flex", gapCls[size], className)}
       role="group"
       aria-label={ariaLabel}
       onClick={() => {

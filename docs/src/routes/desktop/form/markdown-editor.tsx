@@ -23,6 +23,13 @@ interface ApiRow {
 
 const MARKDOWN_EDITOR_API: ApiRow[] = [
   {
+    name: "size",
+    type: '"xs" | "sm" | "md" | "lg"',
+    default: '"md"',
+    description: "尺寸：xs、sm、md、lg；也可由外层 Form 的 size 注入",
+  },
+
+  {
     name: "value",
     type: "string | (() => string) | Signal<string>",
     default: "-",
@@ -340,6 +347,32 @@ export default function FormMarkdownEditor() {
             <CodeBlock
               title="代码示例"
               code={`<MarkdownEditor maxLength={200} preview="split" />`}
+              language="tsx"
+              showLineNumbers
+              copyable
+              wrapLongLines
+            />
+          </section>
+          <section class="space-y-4">
+            <Title level={3}>size（xs / sm / md / lg）</Title>
+            <FormItem label="xs">
+              <MarkdownEditor size="xs" preview="off" editorMinHeightClass="min-h-[96px]" placeholder="xs" />
+            </FormItem>
+            <FormItem label="sm">
+              <MarkdownEditor size="sm" preview="off" editorMinHeightClass="min-h-[96px]" placeholder="sm" />
+            </FormItem>
+            <FormItem label="md（默认）">
+              <MarkdownEditor size="md" preview="off" editorMinHeightClass="min-h-[96px]" placeholder="md" />
+            </FormItem>
+            <FormItem label="lg">
+              <MarkdownEditor size="lg" preview="off" editorMinHeightClass="min-h-[96px]" placeholder="lg" />
+            </FormItem>
+            <CodeBlock
+              title="代码示例"
+              code={`<MarkdownEditor size="xs" preview="off" editorMinHeightClass="min-h-[96px]" />
+<MarkdownEditor size="sm" preview="off" editorMinHeightClass="min-h-[96px]" />
+<MarkdownEditor size="md" preview="off" editorMinHeightClass="min-h-[96px]" />
+<MarkdownEditor size="lg" preview="off" editorMinHeightClass="min-h-[96px]" />`}
               language="tsx"
               showLineNumbers
               copyable

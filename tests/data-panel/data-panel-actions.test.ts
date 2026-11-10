@@ -104,6 +104,7 @@ describe("DataPanel ActionCtrl unified Record", () => {
       title: undefined,
       tone: undefined,
       action: undefined,
+      href: undefined,
     });
     expect(resolveRowActionCtrl(undefined, item, false).show).toBe(false);
   });
@@ -160,6 +161,12 @@ describe("DataPanel ActionCtrl unified Record", () => {
     expect(() =>
       assertRowActionsConfig({
         assign: { label: "A", action: () => {}, disable: (i) => !!i.locked },
+      })
+    ).not.toThrow();
+    expect(() =>
+      assertRowActionsConfig({
+        site: { label: "主页", href: (row) => `/u/${row.id}` },
+        close: true,
       })
     ).not.toThrow();
   });

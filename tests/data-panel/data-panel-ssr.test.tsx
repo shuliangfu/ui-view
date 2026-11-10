@@ -5,9 +5,9 @@
 import { describe, expect, it } from "@dreamer/test";
 import { renderToString } from "@dreamer/view/ssr";
 import {
+  type Column,
   DATA_PANEL_CSS,
   DataPanel,
-  type Column,
   type DataSource,
   type PanelProps,
   type RowActionsConfig,
@@ -48,7 +48,7 @@ function data(n: number) {
   }));
 }
 
-const FORM = [{ name: "name", label: "姓名", required: true }];
+const FORM = { props: [{ name: "name", label: "姓名", required: true }] };
 
 async function html(props: Partial<PanelProps> = {}): Promise<string> {
   return String(
@@ -133,7 +133,7 @@ describe("DataPanel SSR：首帧内容", () => {
 
   it("initialQuery.filters 在首帧生效", async () => {
     const h = await html({
-      search: [{ name: "name", label: "姓名" }],
+      search: { props: [{ name: "name", label: "姓名" }] },
       initialQuery: { filters: { name: "User 2" } },
     });
     // User 2, User 20-25
@@ -307,26 +307,62 @@ describe("DataPanel SSR：文案与自定义", () => {
     expect(h).toContain(">Actions</th>");
   });
 
-
-
-  it("viewSchemas：定制详情项（对齐旧 view.schemas）", async () => {
+  it("view/form/search 对象配置：{ title, props } 首帧不炸", async () => {
     const h = await html({
-      title: "详情定制",
-      data: [{ id: "1", name: "Alice", flag: 1 }],
-      columns: [{ prop: "name", label: "姓名" }, { prop: "flag", label: "标记" },
-        { type: "actions", actions: { view: true, edit: false, remove: false } }],
-      caps: { create: false, update: false, view: true, remove: false, import: false, export: false, print: false, columns: false, density: false, fullscreen: false, copy: false },
-            viewSchemas: (row) => [
-        { label: "名", value: row.name },
-        { label: "旗", children: <em data-x="vs">{String(row.flag)}</em> },
+      title: "查看对象",
+      data: [{ id: "1", name: "Alice", email: "a@x.com", status: "active" }],
+      columns: [
+        { prop: "name", label: "姓名" },
+        {
+          prop: "status",
+          label: "状态",
+          type: "tag",
+          options: [
+            { value: "active", label: "启用" },
+            { value: "disabled", label: "停用" },
+          ],
+        },
+        { type: "actions", actions: { view: true, edit: true, remove: false } },
       ],
+      caps: {
+        create: true,
+        update: true,
+        view: true,
+        remove: false,
+        import: false,
+        export: false,
+        print: false,
+        columns: false,
+        density: false,
+        fullscreen: false,
+        copy: false,
+      },
+      search: {
+        title: "查询",
+        props: [{ prop: "name", label: "姓名" }],
+      },
+      form: {
+        title: (row) => (row.id ? `修改 · ${row.name}` : "注册用户"),
+        props: [{ prop: "name", label: "姓名", required: true }],
+      },
+      view: {
+        title: (row) => `详情 · ${row.name}`,
+        props: [
+          { prop: "name" },
+          { prop: "status", click: "toggle" },
+        ],
+        actions: {
+          password: { label: "密码", action: () => {} },
+          site: { label: "主页", href: (row) => `/u/${row.id}` },
+          close: true,
+        },
+      },
     });
-    // 打开 view 需交互；SSR 仅校验面板壳存在。详情内容在 open 后——此处至少不炸
-    expect(h).toContain("详情定制");
-    expect(h.includes("dp-view") || h.includes("详情定制")).toBe(true);
+    expect(h).toContain("查看对象");
+    expect(h).toContain('data-testid="dp-view-1"');
   });
 
-  it("column value／color／formatter：文本标签／JSX／可信 HTML；formTitle／viewTitle", async () => {
+  it("column value／color／formatter：文本标签／JSX／可信 HTML", async () => {
     const h = await html({
       title: "列函数",
       data: [
@@ -354,10 +390,18 @@ describe("DataPanel SSR：文案与自定义", () => {
             raw === 1 ? '<i data-x="flag-html">ON</i>' : "<i>OFF</i>",
         },
       ],
-      formTitle: (row) => (row.id ? `修改 · ${row.name}` : "添加用户"),
-      searchTitle: "筛选用户",
-      viewTitle: (row) => `详情 · ${row.name}`,
-      form: [{ prop: "name", required: true }],
+      search: {
+        title: "筛选用户",
+        props: [{ prop: "name", label: "姓名" }],
+      },
+      form: {
+        title: (row) => (row.id ? `修改 · ${row.name}` : "添加用户"),
+        props: [{ prop: "name", required: true }],
+      },
+      view: {
+        title: (row) => `详情 · ${row.name}`,
+        props: [{ prop: "name" }, { prop: "flag", label: "标记" }],
+      },
       caps: {
         create: true,
         update: true,
@@ -382,7 +426,8 @@ describe("DataPanel SSR：文案与自定义", () => {
   });
 
   it("renderCell / children / class；无 toolbarExtra／rowExtra 槽", async () => {
-    const h = await html({columns: withActions({
+    const h = await html({
+      columns: withActions({
         view: false,
         edit: false,
         remove: false,
@@ -392,7 +437,7 @@ describe("DataPanel SSR：文案与自定义", () => {
           action: () => {},
         },
       }),
-      
+
       renderCell: { name: (r) => <b data-x="cell">{String(r.name)}!</b> },
       children: <div data-x="child">CHILD</div>,
       class: "my-panel",
@@ -400,7 +445,7 @@ describe("DataPanel SSR：文案与自定义", () => {
         create: false,
         notify: { label: "通知", tone: "primary", action: () => {} },
       },
-          });
+    });
     expect(h).toContain('<b data-x="cell">');
     expect(h).toContain('data-x="child"');
     expect(h).toContain("dp-card my-panel");
@@ -416,23 +461,37 @@ describe("DataPanel SSR：文案与自定义", () => {
   });
 
   it("title／label 互落 tip；batchStatus 不在工具栏（caps＋column.batch）", async () => {
-    const h = await html({columns: withActions({
+    const h = await html({
+      columns: withActions({
         view: false,
         edit: false,
         remove: false,
         assign: { label: "分配", action: () => {} },
       }),
-      
-      caps: { batchStatus: true, create: false, print: false, import: false, export: false, columns: false, density: false, fullscreen: false, copy: false },
+
+      caps: {
+        batchStatus: true,
+        create: false,
+        print: false,
+        import: false,
+        export: false,
+        columns: false,
+        density: false,
+        fullscreen: false,
+        copy: false,
+      },
       toolbar: {
         refresh: true,
         assign: { label: "分配全部", action: () => {} },
         titled: { title: "仅标题", action: () => {} }, // 无 label → 显示用 title
         bare: { action: () => {} },
       },
-            dataSource: {
+      dataSource: {
         sync: true,
-        list: () => ({ rows: [{ id: "1", name: "A", status: "active" }], total: 1 }),
+        list: () => ({
+          rows: [{ id: "1", name: "A", status: "active" }],
+          total: 1,
+        }),
         setField: async () => ({ removed: 0, failed: [] }),
         remove: async () => ({ removed: 0, failed: [] }),
       },
@@ -468,8 +527,9 @@ describe("DataPanel SSR：文案与自定义", () => {
   });
 
   it("caps.batchStatus:false 隐藏选择列（无 remove 时）", async () => {
-    const h = await html({columns: withActions({ view: false, edit: false, remove: false }),
-      
+    const h = await html({
+      columns: withActions({ view: false, edit: false, remove: false }),
+
       caps: {
         batchStatus: false,
         remove: false,
@@ -483,9 +543,12 @@ describe("DataPanel SSR：文案与自定义", () => {
         copy: false,
       },
       toolbar: { refresh: true },
-            dataSource: {
+      dataSource: {
         sync: true,
-        list: () => ({ rows: [{ id: "1", name: "A", status: "active" }], total: 1 }),
+        list: () => ({
+          rows: [{ id: "1", name: "A", status: "active" }],
+          total: 1,
+        }),
         setField: async () => ({ removed: 0, failed: [] }),
       },
     });
@@ -500,15 +563,17 @@ describe("DataPanel SSR：文案与自定义", () => {
   });
 
   it("工具栏按钮位置类：首个无左边框处理、末个无右边框处理", async () => {
-    const h = await html({ search: [{ name: "name", label: "姓名" }] });
+    const h = await html({
+      search: { props: [{ name: "name", label: "姓名" }] },
+    });
     expect(h).toContain("dp-tb dp-tb-first dp-tb-nl");
     expect(h).toContain("dp-tb dp-tb-nf dp-tb-last");
     expect(h).toContain("dp-tb dp-tb-nf dp-tb-nl");
   });
 
-
   it("disable:true 仍渲染且带 disabled；show:false 才隐藏；声明省略 show→显示", async () => {
-    const h = await html({columns: withActions({
+    const h = await html({
+      columns: withActions({
         view: false,
         edit: { disable: true },
         remove: false,
@@ -518,7 +583,7 @@ describe("DataPanel SSR：文案与自定义", () => {
           action: () => {},
         },
       }),
-      
+
       caps: {
         create: false,
         print: false,
@@ -535,7 +600,7 @@ describe("DataPanel SSR：文案与自定义", () => {
         ghost: { label: "幽灵", show: false, action: () => {} },
         refresh: true,
       },
-          });
+    });
     const hasDisabledAttr = (chunk: string) =>
       /<button\b[^>]*\sdisabled(?:=""|\s|>)/.test(chunk);
     expect(h.includes('data-testid="dp-tb-extra-freeze"')).toBe(true);
@@ -544,7 +609,10 @@ describe("DataPanel SSR：文案与自定义", () => {
     expect(h.includes("幽灵")).toBe(false);
     expect(hasDisabledAttr(h.slice(0, h.indexOf("冻结") + 50))).toBe(true); // create before freeze
     expect(h.includes('data-testid="dp-edit-1"')).toBe(true);
-    const afterEdit = h.slice(h.indexOf('data-testid="dp-edit-1"'), h.indexOf('data-testid="dp-edit-1"') + 900);
+    const afterEdit = h.slice(
+      h.indexOf('data-testid="dp-edit-1"'),
+      h.indexOf('data-testid="dp-edit-1"') + 900,
+    );
     expect(hasDisabledAttr(afterEdit)).toBe(true);
     const afterA1 = h.slice(
       h.indexOf('data-testid="dp-row-extra-assign-1"'),
@@ -558,15 +626,15 @@ describe("DataPanel SSR：文案与自定义", () => {
     expect(hasDisabledAttr(afterA2)).toBe(false);
   });
 
-
   it("toolbar／column.actions：无原生 HTML title 提示（仅 Tooltip）", async () => {
-    const h = await html({columns: withActions({
+    const h = await html({
+      columns: withActions({
         view: true,
         edit: true,
         remove: false,
         assign: { label: "分配", action: () => {} },
       }),
-      
+
       caps: {
         import: false,
         export: false,
@@ -581,7 +649,7 @@ describe("DataPanel SSR：文案与自定义", () => {
         refresh: true,
         freeze: { label: "冻结", action: () => {} },
       },
-          });
+    });
     // 原生 title= 会与 Tooltip 叠成双提示；工具栏／行钮不得带 tip 文案作 HTML title
     expect(h).not.toMatch(/\btitle="打印"/);
     expect(h).not.toMatch(/\btitle="新建"/);
@@ -605,7 +673,11 @@ describe("DataPanel SSR：文案与自定义", () => {
     // 添加 + 导入 + 刷新 + 打印 + 导出 + 列设置 + 行高 + 全屏 + 复制
     expect(count(await html())).toBe(9);
     // + 搜索
-    expect(count(await html({ search: [{ name: "name", label: "姓名" }] })))
+    expect(
+      count(
+        await html({ search: { props: [{ name: "name", label: "姓名" }] } }),
+      ),
+    )
       .toBe(10);
     // 只读：刷新 + 打印 + 导出 + 列设置 + 行高 + 全屏 + 复制
     expect(count(await html({ form: undefined }))).toBe(7);

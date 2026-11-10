@@ -12,10 +12,14 @@ import { createSignal, type Signal } from "@dreamer/view";
 import { readSignalValue, safeIsSignal, writeSignalValue } from "../safe-signal.ts";
 import type { JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
+import { resolveFormControlSize } from "./form-control-context.ts";
 import { commitMaybeSignal, readMaybeSignal } from "./maybe-signal.ts";
 import type { MaybeSignal } from "./maybe-signal.ts";
+import type { SizeVariant } from "../types.ts";
 
 export interface SwitchProps {
+  /** 尺寸，与 {@link import("./Input.tsx").Input} 相同：xs、sm、md、lg */
+  size?: SizeVariant;
   /**
    * 是否开启；见 {@link MaybeSignal}（内部透传至原生 `input`，由 View 对 `checked` 做细粒度绑定）。
    */
@@ -54,6 +58,33 @@ export interface SwitchProps {
   hideFocusRing?: boolean;
 }
 
+
+const switchTrackSize: Record<SizeVariant, string> = {
+  xs: "h-4 w-7",
+  sm: "h-5 w-9",
+  md: "h-6 w-11",
+  lg: "h-7 w-14",
+};
+const switchThumbSize: Record<SizeVariant, string> = {
+  xs: "h-3 w-3",
+  sm: "h-4 w-4",
+  md: "h-5 w-5",
+  lg: "h-6 w-6",
+};
+/** md 保持原 1.25rem 行程；其余按轨宽减滑块与左右留白估算 */
+const switchThumbTravel: Record<SizeVariant, string> = {
+  xs: "0.75rem",
+  sm: "1rem",
+  md: "1.25rem",
+  lg: "1.75rem",
+};
+const switchLabelSize: Record<SizeVariant, string> = {
+  xs: "text-xs",
+  sm: "text-sm",
+  md: "text-sm",
+  lg: "text-base",
+};
+
 /**
  * 开/关视觉状态：由 Signal/非受控本地 Signal/字面量/ getter 解包，供轨道色与 `translate` 复用。
  * 滑块**放在轨道容器内** `absolute`，避免在宽 `label`（如带「开/关」文）中相对外框错位。
@@ -72,6 +103,7 @@ function getSwitchOn(
 
 export function Switch(props: SwitchProps): JSXRenderable {
   const {
+    size: sizeProp,
     checked: checkedMaybe,
     disabled = false,
     error = false,
@@ -89,6 +121,7 @@ export function Switch(props: SwitchProps): JSXRenderable {
     unCheckedChildren,
     hideFocusRing = false,
   } = props;
+  const size = resolveFormControlSize(sizeProp);
 
   /** 未传 `checked` 时用本地 Signal 模拟受控，以便滑块/轨道与 `input` 同相。 */
   const isUncontrolled = checkedMaybe === undefined;
@@ -118,7 +151,8 @@ export function Switch(props: SwitchProps): JSXRenderable {
   return (
     <label
       class={twMerge(
-        "relative inline-flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300",
+        "relative inline-flex items-center gap-2 text-slate-700 dark:text-slate-300",
+        switchLabelSize[size],
         disabled ? "cursor-not-allowed" : "cursor-pointer",
         error && "text-red-600 dark:text-red-400",
         className,
@@ -161,7 +195,8 @@ export function Switch(props: SwitchProps): JSXRenderable {
         class={() => {
           const on = getSwitchOn(checkedMaybe, isUncontrolled, localChecked);
           return twMerge(
-            "relative h-6 w-11 shrink-0 overflow-hidden rounded-full border transition-colors motion-reduce:transition-none",
+            "relative shrink-0 overflow-hidden rounded-full border transition-colors motion-reduce:transition-none",
+            switchTrackSize[size],
             "peer-focus:ring-2 peer-focus:ring-blue-500 peer-focus:ring-offset-0",
             "peer-disabled:cursor-not-allowed peer-disabled:opacity-50",
             on
@@ -182,14 +217,15 @@ export function Switch(props: SwitchProps): JSXRenderable {
         }
         <span
           class={twMerge(
-            "pointer-events-none absolute left-px top-1/2 block h-5 w-5 rounded-full",
+            "pointer-events-none absolute left-px top-1/2 block rounded-full",
+            switchThumbSize[size],
             "bg-white shadow ring-0 dark:bg-slate-200",
             "transition-[transform] duration-200 motion-reduce:transition-none will-change-transform",
           )}
           style={() => ({
             // 1.25rem 与 `translate-x-5` / 轨宽 `w-11` 下的行程一致
             transform: getSwitchOn(checkedMaybe, isUncontrolled, localChecked)
-              ? "translate(1.25rem, -50%)"
+              ? `translate(${switchThumbTravel[size]}, -50%)`
               : "translate(0, -50%)",
           })}
         />

@@ -40,9 +40,9 @@ export const FORM_ITEM_API: FormDocsApiRow[] = [
   },
   {
     name: "labelPosition",
-    type: '"top" | "left"',
+    type: '"top" | "left" | "outline"',
     default: "top",
-    description: "标签在控件上方或左侧",
+    description: "标签在控件上方、左侧，或描边内嵌（字坐在子控件边框左上缺口，线从字两边断开；空值时在框内，聚焦或输入后上到边框）。outline 目前由 Input / Password / Textarea 承接",
   },
   {
     name: "labelAlign",

@@ -148,6 +148,28 @@ export default function MobileTreeSelectDoc() {
             wrapLongLines
           />
         </div>
+        <div class="space-y-4">
+          <Title level={3}>size（xs / sm / md / lg）</Title>
+          <MobileDocDemo>
+            <div class="flex flex-col gap-3 p-2">
+              <TreeSelect size="xs" options={TREE_OPTIONS} class="w-full" placeholder="xs" />
+              <TreeSelect size="sm" options={TREE_OPTIONS} class="w-full" placeholder="sm" />
+              <TreeSelect size="md" options={TREE_OPTIONS} class="w-full" placeholder="md" />
+              <TreeSelect size="lg" options={TREE_OPTIONS} class="w-full" placeholder="lg" />
+            </div>
+          </MobileDocDemo>
+          <CodeBlock
+            title="代码示例"
+            code={`<TreeSelect size="xs" options={TREE_OPTIONS} placeholder="xs" />
+<TreeSelect size="sm" options={TREE_OPTIONS} placeholder="sm" />
+<TreeSelect size="md" options={TREE_OPTIONS} placeholder="md" />
+<TreeSelect size="lg" options={TREE_OPTIONS} placeholder="lg" />`}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+        </div>
       </section>
 
       <section class="space-y-4">

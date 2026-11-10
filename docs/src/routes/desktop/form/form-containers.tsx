@@ -50,9 +50,9 @@ const FORM_API: FormDocsApiRow[] = [
 const FORM_LIST_API: FormDocsApiRow[] = [
   {
     name: "items",
-    type: "unknown[] | number",
+    type: "unknown[] | number | (() => unknown[] | number) | Signal<unknown[] | number>",
     default: "-",
-    description: "列表长度：数组用 length，number 仅表示行数（行索引 0..n-1）",
+    description: "列表长度：数组用 length，number 仅表示行数（行索引 0..n-1）。与全库表单一致为 MaybeSignal；请传行数 signal 本身，勿写 items={count.value}（快照失步，增删无效）。",
   },
   {
     name: "onAdd",
@@ -113,6 +113,8 @@ const formListRowValues = createSignal<string[]>(["", ""]);
  *
  * 勿用 `items={rowValues.value.length}`：在父组件 JSX 里读 `rowValues.value` 会订阅整份数组，
  * 每次按键都会触发整页重跑；@dreamer/view 对「数组子节点」会整段替换 DOM，导致 Input 失焦。
+ * 也勿写 `items={formListLength.value}`：那是首轮数字快照，添加/删除行不会反映到列表。
+ * 请把行数 signal 本身传给 `items`（FormList 内部订阅）。
  * 行内文案仍由 {@link formListRowValues} 驱动，Input 的 `value={() => …}` 单独细粒度订阅即可。
  */
 const formListLength = createSignal(formListRowValues.value.length);
@@ -245,6 +247,9 @@ const exampleFormItem = `<FormItem label="用户名" required labelPosition="top
 </FormItem>
 <FormItem label="邮箱" labelPosition="left">
   <Input />
+</FormItem>
+<FormItem label="手机号" required labelPosition="outline">
+  <Input />
 </FormItem>`;
 
 export default function FormContainersDoc() {
@@ -305,6 +310,22 @@ export default function FormContainersDoc() {
             </div>
             <div class="space-y-2">
               <p class="text-sm font-medium text-slate-700 dark:text-slate-300">
+                horizontal
+              </p>
+              <Form
+                layout="horizontal"
+                class="w-full max-w-md border border-dashed border-slate-200 dark:border-slate-600 rounded-lg p-4"
+              >
+                <FormItem label="账号" id="fc-h1">
+                  <Input id="fc-h1" placeholder="horizontal" value="" />
+                </FormItem>
+                <FormItem label="备注" id="fc-h2">
+                  <Input id="fc-h2" placeholder="第二项" value="" />
+                </FormItem>
+              </Form>
+            </div>
+            <div class="space-y-2">
+              <p class="text-sm font-medium text-slate-700 dark:text-slate-300">
                 inline
               </p>
               <Form
@@ -316,12 +337,11 @@ export default function FormContainersDoc() {
                 </FormItem>
                 <FormItem label="类型" id="fc-i2">
                   <Input id="fc-i2" placeholder="筛选" value="" />
-                
-          <CodeBlock title="代码示例" code={exampleFormLayout} language="tsx" showLineNumbers copyable wrapLongLines />
-</FormItem>
+                </FormItem>
               </Form>
             </div>
           </div>
+          <CodeBlock title="代码示例" code={exampleFormLayout} language="tsx" showLineNumbers copyable wrapLongLines />
         </div>
 
         <div class="space-y-4">
@@ -335,6 +355,10 @@ export default function FormContainersDoc() {
               labelAlign="right"
             </code>{" "}
             常用于对齐标签列；{" "}
+            <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">
+              labelPosition="outline"
+            </code>{" "}
+            把标签嵌进输入框边框左上缺口；{" "}
             <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">
               hideRequiredMark
             </code>{" "}
@@ -360,10 +384,17 @@ export default function FormContainersDoc() {
                 placeholder="左侧标签 + 右对齐"
                 value=""
               />
-            
-          <CodeBlock title="代码示例" code={exampleFormItem} language="tsx" showLineNumbers copyable wrapLongLines />
-</FormItem>
+            </FormItem>
+            <FormItem
+              label="手机号"
+              required
+              labelPosition="outline"
+              id="fc-outline"
+            >
+              <Input id="fc-outline" value="" />
+            </FormItem>
           </Form>
+          <CodeBlock title="代码示例" code={exampleFormItem} language="tsx" showLineNumbers copyable wrapLongLines />
         </div>
 
         <div class="space-y-4">
@@ -397,7 +428,7 @@ export default function FormContainersDoc() {
           </Paragraph>
           <Form layout="vertical" class="w-full max-w-xl">
             <FormList
-              items={formListLength.value}
+              items={formListLength}
               onAdd={formListDocOnAdd}
               onRemove={formListDocOnRemove}
               addButtonText="添加一行"
@@ -435,7 +466,7 @@ function renderRow(index: number, { removeButton }: { removeButton: unknown }) {
 }
 
 <FormList
-  items={rowCount.value}
+  items={rowCount}
   onAdd={onAdd}
   onRemove={onRemove}
   renderRow={renderRow}

@@ -9,10 +9,33 @@ import {
   onCleanup,
 } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
+import type { SizeVariant } from "../../shared/types.ts";
+import { resolveFormControlSize } from "../../shared/form/form-control-context.ts";
 import { isHtmlElement } from "../../shared/dom-guards.ts";
 
+const signaturePadHeight: Record<SizeVariant, number> = {
+  xs: 120,
+  sm: 150,
+  md: 180,
+  lg: 220,
+};
+const signatureClearCls: Record<SizeVariant, string> = {
+  xs: "text-xs px-1.5 py-0.5",
+  sm: "text-sm px-2 py-1",
+  md: "text-sm px-2 py-1",
+  lg: "text-base px-2.5 py-1",
+};
+const signatureEmptyCls: Record<SizeVariant, string> = {
+  xs: "text-xs",
+  sm: "text-sm",
+  md: "text-sm",
+  lg: "text-base",
+};
+
 export interface SignaturePadProps {
-  /** 画布高度，默认 180 */
+  /** 控件尺寸，与 Input 相同；也可由外层 Form 的 size 注入 */
+  size?: SizeVariant;
+  /** 画布高度；未传时按 size 取默认（md 为 180） */
   height?: number;
   /** 笔触颜色 */
   penColor?: string;
@@ -50,8 +73,9 @@ export interface SignaturePadHandle {
 }
 
 export function SignaturePad(props: SignaturePadProps): JSXRenderable {
+  const size = resolveFormControlSize(props.size);
   const {
-    height = 180,
+    height = signaturePadHeight[size],
     penColor = "#0f172a",
     penWidth = 2.5,
     backgroundColor = "#ffffff",
@@ -169,7 +193,7 @@ export function SignaturePad(props: SignaturePadProps): JSXRenderable {
         {() =>
           empty.value
             ? (
-              <div class="pointer-events-none absolute inset-0 flex items-center justify-center text-sm text-slate-400">
+              <div class={twMerge("pointer-events-none absolute inset-0 flex items-center justify-center text-slate-400", signatureEmptyCls[size])}>
                 {m.empty}
               </div>
             )
@@ -178,7 +202,7 @@ export function SignaturePad(props: SignaturePadProps): JSXRenderable {
       <div class="mt-2 flex justify-end">
         <button
           type="button"
-          class="text-sm text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 px-2 py-1"
+          class={twMerge("text-slate-500 hover:text-slate-800 dark:hover:text-slate-200", signatureClearCls[size])}
           disabled={disabled}
           onClick={() => clear()}
         >

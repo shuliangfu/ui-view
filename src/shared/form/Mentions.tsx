@@ -7,8 +7,10 @@
 import { createEffect, createSignal, type Signal } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import type { JSXRenderable } from "@dreamer/view";
+import { resolveFormControlSize } from "./form-control-context.ts";
 import { controlBlueFocusRing } from "./input-focus-ring.ts";
 import { commitMaybeSignal, type MaybeSignal } from "./maybe-signal.ts";
+import type { SizeVariant } from "../types.ts";
 
 /** 候选选项 */
 export interface MentionOption {
@@ -33,6 +35,8 @@ export const defaultMentionsMessages: MentionsMessages = {
 };
 
 export interface MentionsProps {
+  /** 尺寸，与 {@link import("./Input.tsx").Input} 相同：xs、sm、md、lg */
+  size?: SizeVariant;
   /** 当前值（受控可选）；见 {@link MaybeSignal} */
   value?: MaybeSignal<string>;
   /** 占位文案 */
@@ -77,7 +81,13 @@ export interface MentionsProps {
 
 /** 文本区底纹（不含 ring） */
 const textareaSurface =
-  "border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 border-slate-300 dark:border-slate-600 focus:outline-hidden disabled:opacity-50 disabled:cursor-not-allowed transition-colors px-3 py-2 text-sm rounded-lg resize-y min-h-[80px]";
+  "border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 border-slate-300 dark:border-slate-600 focus:outline-hidden disabled:opacity-50 disabled:cursor-not-allowed transition-colors resize-y";
+const textareaSizeClasses: Record<SizeVariant, string> = {
+  xs: "px-2.5 py-1 text-xs rounded-md min-h-[64px]",
+  sm: "px-3 py-1.5 text-sm rounded-md min-h-[72px]",
+  md: "px-3 py-2 text-sm rounded-lg min-h-[80px]",
+  lg: "px-4 py-2.5 text-base rounded-lg min-h-[96px]",
+};
 
 const dropdownCls =
   "absolute z-10 mt-1 w-full min-w-[160px] max-h-48 overflow-auto rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-lg py-1";
@@ -170,6 +180,7 @@ function MentionsDropdown(props: {
 
 export function Mentions(props: MentionsProps): JSXRenderable {
   const {
+    size: sizeProp,
     value,
     rows = 3,
     disabled = false,
@@ -191,6 +202,7 @@ export function Mentions(props: MentionsProps): JSXRenderable {
     messages,
   } = props;
   const m = { ...defaultMentionsMessages, ...messages };
+  const size = resolveFormControlSize(sizeProp);
   const placeholder = props.placeholder ?? m.placeholder;
 
   // 禁止在组件体内读 value()、showDropdown()、dropdownOptions()：会订阅 signal，导致根 effect 重跑、整树重建、textarea 被替换失焦。value 透传给 textarea；下拉由子组件读。
@@ -311,7 +323,7 @@ export function Mentions(props: MentionsProps): JSXRenderable {
     value,
     placeholder,
     disabled,
-    class: twMerge(textareaSurface, controlBlueFocusRing(!hideFocusRing)),
+    class: twMerge(textareaSurface, textareaSizeClasses[size], controlBlueFocusRing(!hideFocusRing)),
     "aria-expanded": () => {
       const open = typeof showDropdown === "function"
         ? Boolean(showDropdown())

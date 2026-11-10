@@ -189,6 +189,28 @@ export default function MobileSelectDoc() {
           <CodeBlock title="代码示例" code={exampleControlled} language="tsx" showLineNumbers copyable wrapLongLines />
 
         </div>
+        <div class="space-y-4">
+          <Title level={3}>size（xs / sm / md / lg）</Title>
+          <MobileDocDemo>
+            <div class="flex flex-col gap-3 p-2">
+              <Select size="xs" class="w-full" options={OPTIONS} value="" placeholder="xs" />
+              <Select size="sm" class="w-full" options={OPTIONS} value="" placeholder="sm" />
+              <Select size="md" class="w-full" options={OPTIONS} value="" placeholder="md" />
+              <Select size="lg" class="w-full" options={OPTIONS} value="" placeholder="lg" />
+            </div>
+          </MobileDocDemo>
+          <CodeBlock
+            title="代码示例"
+            code={`<Select size="xs" options={OPTIONS} placeholder="xs" />
+<Select size="sm" options={OPTIONS} placeholder="sm" />
+<Select size="md" options={OPTIONS} placeholder="md" />
+<Select size="lg" options={OPTIONS} placeholder="lg" />`}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+        </div>
       </section>
 
       <DocsMessagesSection

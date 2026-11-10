@@ -3,6 +3,7 @@
  * @description RichTextEditor 公开类型与默认文案。
  */
 
+import type { SizeVariant } from "../types.ts";
 import type { MaybeSignal } from "./maybe-signal.ts";
 
 /** 工具栏丰富程度预设 */
@@ -255,6 +256,8 @@ export const defaultRichTextEditorMessages: RichTextEditorMessages = {
  * @returns 包装后的节点
  */
 export interface RichTextEditorProps {
+  /** 控件尺寸，与 Input 相同；也可由外层 Form 的 size 注入 */
+  size?: SizeVariant;
   /** 当前内容（HTML 字符串）；见 {@link MaybeSignal} */
   value?: MaybeSignal<string>;
   /** 内容变化回调（输出 HTML） */

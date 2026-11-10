@@ -20,8 +20,10 @@ import {
 import { twMerge } from "tailwind-merge";
 import { IconDroplet } from "../basic/icons/Droplet.tsx";
 import { IconPalette } from "../basic/icons/Palette.tsx";
+import { resolveFormControlSize } from "./form-control-context.ts";
 import { controlBlueFocusRing } from "./input-focus-ring.ts";
 import { Input } from "./Input.tsx";
+import type { SizeVariant } from "../types.ts";
 import {
   pickerPortalZClass,
   registerPickerFixedOverlayPositionAndOutsideClick,
@@ -90,6 +92,8 @@ export const defaultColorPickerMessages: ColorPickerMessages = {
 };
 
 export interface ColorPickerProps {
+  /** 尺寸，与 {@link import("./Input.tsx").Input} 相同：xs、sm、md、lg（作用于触发器） */
+  size?: SizeVariant;
   /** 当前颜色 #rrggbb；见 {@link MaybeSignal} */
   value?: MaybeSignal<string>;
   /** 是否禁用 */
@@ -698,8 +702,28 @@ function ColorPickerPanelInterior(props: ColorPickerPanelInteriorProps) {
   };
 }
 
+const colorTriggerSize: Record<SizeVariant, string> = {
+  xs: "h-7 rounded-md px-1.5 text-xs",
+  sm: "h-8 rounded-md px-2 text-sm",
+  md: "h-10 rounded-lg px-2 text-sm",
+  lg: "h-12 rounded-lg px-2.5 text-base",
+};
+const colorSwatchTriggerSize: Record<SizeVariant, string> = {
+  xs: "h-7 w-7 rounded-md p-0.5",
+  sm: "h-8 w-8 rounded-md p-1",
+  md: "h-10 w-10 rounded-lg p-1",
+  lg: "h-12 w-12 rounded-lg p-1",
+};
+const colorChipSize: Record<SizeVariant, string> = {
+  xs: "h-4 w-4",
+  sm: "h-5 w-5",
+  md: "h-6 w-6",
+  lg: "h-7 w-7",
+};
+
 export function ColorPicker(props: ColorPickerProps): JSXRenderable {
   const {
+    size: sizeProp,
     disabled = false,
     onChange,
     onInput,
@@ -714,6 +738,7 @@ export function ColorPicker(props: ColorPickerProps): JSXRenderable {
     messages,
   } = props;
   const m = { ...defaultColorPickerMessages, ...messages };
+  const size = resolveFormControlSize(sizeProp);
 
   /**
    * 当前受控颜色（#rrggbb）。
@@ -1118,8 +1143,14 @@ export function ColorPicker(props: ColorPickerProps): JSXRenderable {
           class={() =>
             twMerge(
               swatchOnly
-                ? "box-border flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-slate-300 bg-white p-1 text-left dark:border-slate-600 dark:bg-slate-800"
-                : "flex h-10 w-full min-w-[80px] items-center gap-2 rounded-lg border border-slate-300 bg-white px-2 text-left text-sm text-slate-900 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100",
+                ? twMerge(
+                  "box-border flex w-10 shrink-0 items-center justify-center border border-slate-300 bg-white text-left dark:border-slate-600 dark:bg-slate-800",
+                  colorSwatchTriggerSize[size],
+                )
+                : twMerge(
+                  "flex w-full min-w-[80px] items-center gap-2 border border-slate-300 bg-white text-left text-slate-900 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100",
+                  colorTriggerSize[size],
+                ),
               !swatchOnly && showSuffixIcon && "pr-9",
               disabled && "cursor-not-allowed opacity-50",
               !disabled &&
@@ -1142,7 +1173,7 @@ export function ColorPicker(props: ColorPickerProps): JSXRenderable {
           <span
             class={swatchOnly
               ? "block h-full w-full min-h-0 min-w-0 rounded border border-slate-200 dark:border-slate-600"
-              : "h-6 w-6 shrink-0 rounded border border-slate-200 dark:border-slate-600"}
+              : twMerge(colorChipSize[size], "shrink-0 rounded border border-slate-200 dark:border-slate-600")}
             style={() => ({ backgroundColor: triggerDisplayHexNow() })}
             aria-hidden
           />
