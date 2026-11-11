@@ -159,8 +159,10 @@ export {
   type ApiMode,
   apiQueryParams,
   createApiDataSource,
+  currentPageRoute,
   joinApiPath,
   normalizeListPayload,
+  normalizePageRoute,
   resolveApiRoot,
 } from "./data-panel-api-source.ts";
 export { buildXlsx, parseXlsx, type XlsxSheet } from "./data-panel-xlsx.ts";

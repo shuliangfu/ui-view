@@ -1,9 +1,12 @@
 /**
- * HTTP DataSource factory：显式 `baseRoute`（＋可选 `resource`），勿用页面 pathname 猜资源。
+ * HTTP DataSource factory：由 `baseRoute` 解析资源根。
  *
  * `baseRoute` 去首尾 `/` 后按 `/` 分段：
- * - **≥2 段**（如 `"/api/users"`）→ 直接作资源根，不再拼 `resource`
- * - **仅 1 段**（如 `"/api"`）→ 再拼 `resource`（当前资源路由段）
+ * - **≥2 段**（如 `"/api/users"`）→ 直接作资源根，不再拼 `resource` 或当前路由
+ * - **仅 1 段**（如 `"/api"`）→ 优先拼显式 `resource`；未传则拼 {@link currentPageRoute}
+ *   （当前页面 pathname，去掉末尾 `/` 与索引段 `index`）。
+ *   例：打开 `http://127.0.0.1:8810/rbac/admins` 且 `baseRoute="/api"` → `/api/rbac/admins`。
+ *   不要把 `index` 拼进路径（`/user` 或 `/user/index` 都得到 `/api/user`，不会写成 `/api/user-index`）。
  *
  * - `apiMode: "action"`（默认）：list GET 资源根；create POST …/create；
  *   update POST …/update（body 含 id）；remove POST …/remove（body `{ ids }`）；
@@ -30,13 +33,14 @@ export type ApiMode = "action" | "restful";
 export interface ApiDataSourceOptions {
   /**
    * 路由前缀或完整资源根，如 `"/api"` 或 `"/api/users"`。
-   * 去首尾 `/` 后按 `/` 分段：≥2 段直接作根；仅 1 段再拼 {@link ApiDataSourceOptions.resource}。
+   * 去首尾 `/` 后按 `/` 分段：≥2 段直接作根；仅 1 段再拼 {@link ApiDataSourceOptions.resource}，
+   * 未传 `resource` 时改拼 {@link currentPageRoute}。
    */
   baseRoute: string;
   /**
-   * 资源名／当前资源路由段，如 `"users"`。
-   * **仅当 `baseRoute` 只有 1 段时必填**（拼成 `/api/users`）；≥2 段时忽略。
-   * 勿从页面 pathname 推断。
+   * 资源名／当前资源路由段，如 `"users"` 或 `"rbac/admins"`。
+   * **仅当 `baseRoute` 只有 1 段时生效**；≥2 段时忽略。
+   * 不传则自动使用当前页面路由（见 {@link currentPageRoute}）。
    */
   resource?: string;
   /** 默认 `"action"` */
@@ -93,11 +97,44 @@ export function joinApiPath(...parts: string[]): string {
 }
 
 /**
- * 由 `baseRoute`（＋可选 `resource`）解析资源根。
- * - `baseRoute` 去首尾 `/` 分段后 **≥2** → `"/" + segments.join("/")`（不再拼 resource）
- * - **仅 1 段** → 再拼 `resource`（缺 resource 抛错）
+ * 把页面 pathname 收成资源路由段。
+ * 去掉 query／hash、首尾 `/`，并丢掉末尾索引段 `index`（索引路由访问时可省略）。
+ * 例：`/rbac/admins`、`/user/index` → `/user`、`/user/active` 保持不变。
  */
-export function resolveApiRoot(baseRoute: string, resource?: string): string {
+export function normalizePageRoute(pathname: string): string {
+  let path = String(pathname ?? "").trim();
+  const q = path.indexOf("?");
+  if (q >= 0) path = path.slice(0, q);
+  const h = path.indexOf("#");
+  if (h >= 0) path = path.slice(0, h);
+  try {
+    path = decodeURI(path);
+  } catch { /* keep raw */ }
+  const segs = path.replace(/^\/+/, "").replace(/\/+$/, "").split("/").filter((
+    s,
+  ) => s !== "");
+  while (segs.length && segs[segs.length - 1] === "index") segs.pop();
+  return segs.length ? `/${segs.join("/")}` : "/";
+}
+
+/** 当前页面访问路由，如打开 `http://127.0.0.1:8810/rbac/admins` 得到 `/rbac/admins`。 */
+export function currentPageRoute(): string {
+  const loc = (globalThis as { location?: { pathname?: string } }).location;
+  return normalizePageRoute(String(loc?.pathname ?? ""));
+}
+
+/**
+ * 由 `baseRoute`（＋可选 `resource`／当前页面路由）解析资源根。
+ * - `baseRoute` 去首尾 `/` 分段后 **≥2** → `"/" + segments.join("/")`（不再拼 resource／页面路由）
+ * - **仅 1 段** → 再拼显式 `resource`；未传则拼 `pageRoute`（默认 {@link currentPageRoute}）
+ * - 不要把 `index` 拼进结果（由 {@link normalizePageRoute} 去掉）
+ * @param pageRoute 可注入的当前路由（单测／SSR）；不传则读 `location.pathname`
+ */
+export function resolveApiRoot(
+  baseRoute: string,
+  resource?: string,
+  pageRoute?: string,
+): string {
   const raw = String(baseRoute ?? "").trim();
   if (!raw) {
     throw new Error('createApiDataSource: "baseRoute" is required');
@@ -110,10 +147,12 @@ export function resolveApiRoot(baseRoute: string, resource?: string): string {
     return `/${segments.join("/")}`;
   }
   if (segments.length === 1) {
-    const res = String(resource ?? "").trim();
+    const explicit = String(resource ?? "").trim();
+    const page = normalizePageRoute(pageRoute ?? currentPageRoute());
+    const res = explicit || (page !== "/" ? page : "");
     if (!res) {
       throw new Error(
-        'createApiDataSource: "resource" is required when baseRoute has only one segment (e.g. baseRoute:"/api", resource:"users")',
+        'createApiDataSource: "resource" is required when baseRoute has only one segment and the current page route is empty (e.g. baseRoute:"/api" on "/rbac/admins" → "/api/rbac/admins")',
       );
     }
     return joinApiPath(`/${segments[0]}`, res);
@@ -263,10 +302,12 @@ async function readBody(res: Response): Promise<unknown> {
  * 创建基于 `baseRoute`（＋可选 `resource`）的远程 {@link DataSource}。
  *
  * ```ts
- * // 1 段：再拼 resource
- * const ds = createApiDataSource({ baseRoute: "/api", resource: "users" });
- * // ≥2 段：直接作根
- * const ds2 = createApiDataSource({ baseRoute: "/api/users" });
+ * // 推荐：baseRoute 只传 "/api"，自动拼当前页面路由
+ * // 打开 /rbac/admins → GET /api/rbac/admins
+ * const ds = createApiDataSource({ baseRoute: "/api" });
+ * // 仍可显式指定 resource，或把完整根写在 baseRoute 里
+ * const ds2 = createApiDataSource({ baseRoute: "/api", resource: "users" });
+ * const ds3 = createApiDataSource({ baseRoute: "/api/users" });
  * // restful
  * const rest = createApiDataSource({
  *   baseRoute: "/api/users", apiMode: "restful",

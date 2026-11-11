@@ -9,7 +9,7 @@
  * 数据通过 props 注入，与任何后端无关：
  * - `data`：本地数组，面板内置本地数据源（过滤 / 排序 / 分页 / 合计 / 增删改全部在内存完成）；
  * - `dataSource`：自定义 {@link DataSource}，`list(query)` 返回当前页，其余写操作按需提供。
- * - 拉数优先级：显式 `dataSource` ＞ 传入 `data`（本地源、不自动请求）＞ 二者皆无且给了 `baseRoute`（1 段时再拼 `resource`；≥2 段直接作根）时才 {@link createApiDataSource} 拉列表。勿用 pathname 猜资源。
+ * - 拉数优先级：显式 `dataSource` ＞ 传入 `data`（本地源、不自动请求）＞ 二者皆无且给了 `baseRoute`（1 段时拼显式 `resource`，未传则自动取当前页面路由；≥2 段直接作根）时才 {@link createApiDataSource} 拉列表。
  *
  * **SSR / 水合**：布尔属性只在为 true 时输出；`sync` 数据源（含 `data` 模式）首帧同步渲染，水合前后 DOM 一致。
  */
@@ -245,13 +245,15 @@ export interface PanelProps {
   /**
    * 路由前缀或完整资源根（如 `"/api"` 或 `"/api/users"`）。
    * **仅当未传 `data` 且未传 `dataSource`** 时调用 {@link createApiDataSource} 并拉 list。
-   * 去首尾 `/` 分段：≥2 段直接作根；仅 1 段再拼 {@link PanelProps.resource}。
-   * **须显式传入**，勿用页面 pathname 推断。
+   * 去首尾 `/` 分段：≥2 段直接作根；仅 1 段再拼 {@link PanelProps.resource}，
+   * 未传 `resource` 时自动取当前页面路由（如打开 `/rbac/admins` 且 `baseRoute="/api"` → `/api/rbac/admins`）。
+   * 不要把 `index` 拼进路径。
    */
   baseRoute?: string;
   /**
-   * 资源名／当前资源路由段（如 `"users"`）。
-   * **仅当 `baseRoute` 只有 1 段时需要**；≥2 段时忽略。仅在无 `data`／无 `dataSource` 时生效。
+   * 资源名／当前资源路由段（如 `"users"` 或 `"rbac/admins"`）。
+   * **仅当 `baseRoute` 只有 1 段时生效**；≥2 段时忽略。不传则自动使用当前页面路由。
+   * 仅在无 `data`／无 `dataSource` 时生效。
    */
   resource?: string;
   /**

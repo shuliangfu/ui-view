@@ -84,14 +84,14 @@ const DATA_PANEL_API: DocsApiTableRow[] = [
     type: "string",
     default: "-",
     description:
-      '路由前缀或完整资源根（如 "/api" 或 "/api/users"）。去首尾 / 分段：≥2 段直接作根；仅 1 段再拼 resource。仅无 data／无 dataSource 时 createApiDataSource 并拉 list。勿用 pathname 猜',
+      '路由前缀或完整资源根（如 "/api" 或 "/api/users"）。去首尾 / 分段：≥2 段直接作根；仅 1 段再拼 resource，未传则自动取当前页面路由（打开 /rbac/admins 且 baseRoute="/api" → /api/rbac/admins）。不要把 index 拼进路径。仅无 data／无 dataSource 时 createApiDataSource 并拉 list',
   },
   {
     name: "resource",
     type: "string",
     default: "-",
     description:
-      '资源名／当前资源路由段（如 "users"）。仅 baseRoute 为 1 段时需要；≥2 段忽略。仅无 data／无 dataSource 时生效',
+      '资源名／当前资源路由段（如 "users" 或 "rbac/admins"）。仅 baseRoute 为 1 段时生效；≥2 段忽略。不传则自动使用当前页面路由。仅无 data／无 dataSource 时生效',
   },
   {
     name: "apiMode",
@@ -769,21 +769,21 @@ const API_SOURCE_API: DocsApiTableRow[] = [
     type: "(opts) => ApiDataSource",
     default: "-",
     description:
-      "工厂。必填 baseRoute；resource 仅在 baseRoute 为 1 段时需要。返回异步 DataSource（list／create／update／remove／importRows／view）",
+      '工厂。必填 baseRoute；推荐只传 "/api"，未传 resource 时自动拼当前页面路由。返回异步 DataSource（list／create／update／remove／importRows／view）',
   },
   {
     name: "opts.baseRoute",
     type: "string",
     default: "-",
     description:
-      '如 "/api" 或 "/api/users"。去首尾 / 分段：≥2 段直接作资源根；仅 1 段再拼 resource',
+      '如 "/api" 或 "/api/users"。去首尾 / 分段：≥2 段直接作资源根；仅 1 段再拼 resource，未传则拼当前页面路由',
   },
   {
     name: "opts.resource",
     type: "string",
     default: "-",
     description:
-      '资源名（如 "users"）。仅 baseRoute 1 段时必填；≥2 段忽略。勿用 pathname 猜',
+      '资源名（如 "users" 或 "rbac/admins"）。仅 baseRoute 1 段时生效；≥2 段忽略。不传则自动使用当前页面路由',
   },
   {
     name: "opts.apiMode",
@@ -823,8 +823,9 @@ const apiActionCode =
   `import { DataPanel } from "@dreamer/ui-view/data-display";
 import type { Column, FormField, SearchField } from "@dreamer/ui-view/data-display";
 
-// 不传 data、不传 dataSource；baseRoute ≥2 段直接作资源根（不拼 resource）
-// 默认 apiMode:"action"：GET /api/users · POST …/create｜update｜remove
+// 推荐：baseRoute 只传 "/api"，自动拼当前页面路由（打开 /rbac/admins → /api/rbac/admins）
+// 也可把完整根写在 baseRoute（≥2 段直接作根，不拼 resource／当前路由）
+// 默认 apiMode:"action"：GET 根 · POST …/create｜update｜remove
 // importRows → POST …/create，body { rows }（单条 create 仍传对象）
 
 const columns: Column[] = [

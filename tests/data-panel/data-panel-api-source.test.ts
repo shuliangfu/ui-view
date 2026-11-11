@@ -8,6 +8,7 @@ import {
   createApiDataSource,
   joinApiPath,
   normalizeListPayload,
+  normalizePageRoute,
   resolveApiRoot,
 } from "../../src/desktop/data-display/data-panel-api-source.ts";
 import type { Query } from "../../src/desktop/data-display/data-panel-types.ts";
@@ -27,11 +28,36 @@ describe("joinApiPath / apiQueryParams / normalizeListPayload", () => {
     expect(joinApiPath("/api", "users", "create")).toBe("/api/users/create");
   });
 
-  it("resolveApiRoot：1 段拼 resource；≥2 段直接作根", () => {
+  it("normalizePageRoute 去掉 query／hash／末尾 index", () => {
+    expect(normalizePageRoute("/rbac/admins")).toBe("/rbac/admins");
+    expect(normalizePageRoute("/rbac/admins/")).toBe("/rbac/admins");
+    expect(normalizePageRoute("/user")).toBe("/user");
+    expect(normalizePageRoute("/user/index")).toBe("/user");
+    expect(normalizePageRoute("/user/index/")).toBe("/user");
+    expect(normalizePageRoute("/user/active")).toBe("/user/active");
+    expect(normalizePageRoute("/user/index?page=1#top")).toBe("/user");
+    expect(normalizePageRoute("/")).toBe("/");
+    expect(normalizePageRoute("")).toBe("/");
+  });
+
+  it("resolveApiRoot：1 段拼 resource 或当前页面路由；≥2 段直接作根", () => {
     expect(resolveApiRoot("/api", "users")).toBe("/api/users");
     expect(resolveApiRoot("/api/users")).toBe("/api/users");
     expect(resolveApiRoot("/api/users/")).toBe("/api/users");
-    expect(() => resolveApiRoot("/api")).toThrow();
+    expect(resolveApiRoot("/api", "rbac/admins")).toBe("/api/rbac/admins");
+    expect(resolveApiRoot("/api", undefined, "/rbac/admins")).toBe(
+      "/api/rbac/admins",
+    );
+    expect(resolveApiRoot("/api", undefined, "/user")).toBe("/api/user");
+    expect(resolveApiRoot("/api", undefined, "/user/index")).toBe("/api/user");
+    expect(resolveApiRoot("/api", undefined, "/user/active")).toBe(
+      "/api/user/active",
+    );
+    // 显式 resource 优先于当前页面路由
+    expect(resolveApiRoot("/api", "users", "/rbac/admins")).toBe("/api/users");
+    // 无 resource 且当前路由为空时仍抛错（便于单测／SSR）
+    expect(() => resolveApiRoot("/api", undefined, "")).toThrow();
+    expect(() => resolveApiRoot("/api", undefined, "/")).toThrow();
   });
 
   it("apiQueryParams 扁平 filters", () => {
@@ -49,14 +75,19 @@ describe("joinApiPath / apiQueryParams / normalizeListPayload", () => {
       total: 1,
     });
     expect(
-      normalizeListPayload({ data: { rows: [{ id: "2" }], total: 3, totals: { a: 1 } } }),
+      normalizeListPayload({
+        data: { rows: [{ id: "2" }], total: 3, totals: { a: 1 } },
+      }),
     ).toEqual({ rows: [{ id: "2" }], total: 3, totals: { a: 1 } });
   });
 });
 
 type Call = { method: string; url: string; body?: unknown };
 
-function mockFetch(calls: Call[], handler: (c: Call) => { status?: number; json: unknown }) {
+function mockFetch(
+  calls: Call[],
+  handler: (c: Call) => { status?: number; json: unknown },
+) {
   return (async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
     const method = (init?.method ?? "GET").toUpperCase();
@@ -88,12 +119,23 @@ describe("createApiDataSource action", () => {
         if (c.method === "GET" && c.url.startsWith("/api/users?")) {
           return { json: { rows: [{ id: "1" }], total: 1 } };
         }
-        if (c.url === "/api/users/view/1") return { json: { id: "1", name: "A" } };
+        if (c.url === "/api/users/view/1") {
+          return { json: { id: "1", name: "A" } };
+        }
         if (c.url === "/api/users/create") {
-          return { json: { ok: true, created: Array.isArray((c.body as { rows?: unknown })?.rows) ? 2 : 1 } };
+          return {
+            json: {
+              ok: true,
+              created: Array.isArray((c.body as { rows?: unknown })?.rows)
+                ? 2
+                : 1,
+            },
+          };
         }
         if (c.url === "/api/users/update") return { json: { ok: true } };
-        if (c.url === "/api/users/remove") return { json: { removed: 1, failed: [] } };
+        if (c.url === "/api/users/remove") {
+          return { json: { removed: 1, failed: [] } };
+        }
         return { status: 404, json: { error: "no" } };
       }),
     });
@@ -125,9 +167,12 @@ describe("createApiDataSource action", () => {
     expect(createBody.rows).toBeUndefined();
   });
 
-  it("缺 baseRoute／1 段缺 resource 抛错；≥2 段可不传 resource", () => {
-    expect(() => createApiDataSource({ baseRoute: "", resource: "u" })).toThrow();
-    expect(() => createApiDataSource({ baseRoute: "/api", resource: "" })).toThrow();
+  it("缺 baseRoute 抛错；1 段且当前路由为空时缺 resource 抛错；≥2 段可不传 resource", () => {
+    expect(() => createApiDataSource({ baseRoute: "", resource: "u" }))
+      .toThrow();
+    expect(() => createApiDataSource({ baseRoute: "/api", resource: "" }))
+      .toThrow();
+    // Deno 测试环境无 location.pathname，等价于当前路由为空
     expect(() => createApiDataSource({ baseRoute: "/api" })).toThrow();
     const ds = createApiDataSource({
       baseRoute: "/api/users",
@@ -151,13 +196,21 @@ describe("createApiDataSource restful", () => {
         if (c.method === "GET" && c.url === "/api/users/9") {
           return { json: { data: { id: "9" } } };
         }
-        if (c.method === "POST" && c.url === "/api/users") return { json: { ok: true } };
-        if (c.method === "PUT" && c.url === "/api/users/9") return { json: { ok: true } };
-        if (c.method === "DELETE" && c.url === "/api/users/9") return { json: {} };
+        if (c.method === "POST" && c.url === "/api/users") {
+          return { json: { ok: true } };
+        }
+        if (c.method === "PUT" && c.url === "/api/users/9") {
+          return { json: { ok: true } };
+        }
+        if (c.method === "DELETE" && c.url === "/api/users/9") {
+          return { json: {} };
+        }
         if (c.method === "DELETE" && c.url === "/api/users/8") {
           return { status: 500, json: { message: "boom" } };
         }
-        if (c.url === "/api/users/import") return { json: { created: 1, failed: 0 } };
+        if (c.url === "/api/users/import") {
+          return { json: { created: 1, failed: 0 } };
+        }
         return { status: 404, json: {} };
       }),
     });
