@@ -575,7 +575,7 @@ function IconItem(
   return (
     <button
       type="button"
-      class="flex w-full min-w-[88px] max-w-full flex-col items-center gap-1.5 p-3 rounded-lg border border-slate-200 dark:border-slate-500 bg-white dark:bg-slate-800 text-center text-slate-700 dark:text-slate-200 cursor-pointer transition-shadow hover:border-slate-300 hover:bg-slate-50 dark:hover:border-slate-400 dark:hover:bg-slate-700/80 focus:outline-none focus:ring-2 focus:ring-slate-400 dark:focus:ring-slate-500"
+      class="flex w-full min-w-22 max-w-full flex-col items-center gap-1.5 p-3 rounded-lg border border-slate-200 dark:border-slate-500 bg-white dark:bg-slate-800 text-center text-slate-700 dark:text-slate-200 cursor-pointer transition-shadow hover:border-slate-300 hover:bg-slate-50 dark:hover:border-slate-400 dark:hover:bg-slate-700/80 focus:outline-none focus:ring-2 focus:ring-slate-400 dark:focus:ring-slate-500"
       aria-label={copyLabel}
       onClick={() => {
         copyIconComponentSnippet(exportName);
