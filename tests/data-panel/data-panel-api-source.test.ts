@@ -40,11 +40,20 @@ describe("joinApiPath / apiQueryParams / normalizeListPayload", () => {
     expect(normalizePageRoute("")).toBe("/");
   });
 
-  it("resolveApiRoot：1 段拼 resource 或当前页面路由；≥2 段直接作根", () => {
-    expect(resolveApiRoot("/api", "users")).toBe("/api/users");
+  it("完整 baseRoute（如 /api/admins）直接使用，不再取当前页面路由", () => {
+    expect(resolveApiRoot("/api/admins")).toBe("/api/admins");
+    expect(resolveApiRoot("/api/admins/")).toBe("/api/admins");
     expect(resolveApiRoot("/api/users")).toBe("/api/users");
-    expect(resolveApiRoot("/api/users/")).toBe("/api/users");
-    expect(resolveApiRoot("/api", "rbac/admins")).toBe("/api/rbac/admins");
+    // 即使传入当前页或 resource，也不能再拼上去
+    expect(resolveApiRoot("/api/admins", undefined, "/rbac/admins")).toBe(
+      "/api/admins",
+    );
+    expect(resolveApiRoot("/api/admins", "users", "/rbac/roles")).toBe(
+      "/api/admins",
+    );
+  });
+
+  it("只传 /api 时才自动拼接当前页面路由", () => {
     expect(resolveApiRoot("/api", undefined, "/rbac/admins")).toBe(
       "/api/rbac/admins",
     );
@@ -53,6 +62,8 @@ describe("joinApiPath / apiQueryParams / normalizeListPayload", () => {
     expect(resolveApiRoot("/api", undefined, "/user/active")).toBe(
       "/api/user/active",
     );
+    expect(resolveApiRoot("/api", "users")).toBe("/api/users");
+    expect(resolveApiRoot("/api", "rbac/admins")).toBe("/api/rbac/admins");
     // 显式 resource 优先于当前页面路由
     expect(resolveApiRoot("/api", "users", "/rbac/admins")).toBe("/api/users");
     // 无 resource 且当前路由为空时仍抛错（便于单测／SSR）
@@ -165,6 +176,31 @@ describe("createApiDataSource action", () => {
     const createBody = calls[2].body as Record<string, unknown>;
     expect(createBody.name).toBe("A");
     expect(createBody.rows).toBeUndefined();
+  });
+
+  it("createApiDataSource：只传 /api 才拼当前路由；传入 /api/admins 则不再取", () => {
+    const g = globalThis as { location?: { pathname?: string } };
+    const prev = Object.getOwnPropertyDescriptor(globalThis, "location");
+    Object.defineProperty(globalThis, "location", {
+      configurable: true,
+      writable: true,
+      value: { pathname: "/rbac/admins" },
+    });
+    try {
+      expect(createApiDataSource({ baseRoute: "/api" }).root).toBe(
+        "/api/rbac/admins",
+      );
+      expect(createApiDataSource({ baseRoute: "/api/admins" }).root).toBe(
+        "/api/admins",
+      );
+      expect(
+        createApiDataSource({ baseRoute: "/api/admins", resource: "users" })
+          .root,
+      ).toBe("/api/admins");
+    } finally {
+      if (prev) Object.defineProperty(globalThis, "location", prev);
+      else delete g.location;
+    }
   });
 
   it("缺 baseRoute 抛错；1 段且当前路由为空时缺 resource 抛错；≥2 段可不传 resource", () => {

@@ -125,8 +125,9 @@ export function currentPageRoute(): string {
 
 /**
  * 由 `baseRoute`（＋可选 `resource`／当前页面路由）解析资源根。
- * - `baseRoute` 去首尾 `/` 分段后 **≥2** → `"/" + segments.join("/")`（不再拼 resource／页面路由）
- * - **仅 1 段** → 再拼显式 `resource`；未传则拼 `pageRoute`（默认 {@link currentPageRoute}）
+ * - 传入较完整路径（去首尾 `/` 后 **≥2** 段，如 `"/api/admins"`）→ 直接作根，不再自动取当前页面路由，也不再拼 `resource`
+ * - **只传** `"/api"` 这类 1 段前缀 → 再拼显式 `resource`；未传则拼 `pageRoute`（默认 {@link currentPageRoute}）
+ *   例：当前页 `/rbac/admins` → `/api/rbac/admins`
  * - 不要把 `index` 拼进结果（由 {@link normalizePageRoute} 去掉）
  * @param pageRoute 可注入的当前路由（单测／SSR）；不传则读 `location.pathname`
  */
