@@ -101,6 +101,19 @@ const DATA_PANEL_API: DocsApiTableRow[] = [
       "仅无 data／无 dataSource 且由 baseRoute 生成时生效。action：GET 根／POST …/create｜update｜remove、importRows→create 且 body { rows }；restful：GET/POST 根、PUT/DELETE 根/:id、importRows→POST …/import",
   },
   {
+    name: "apiHeaders",
+    type: "HeadersInit | (() => HeadersInit | Promise<HeadersInit>)",
+    default: "-",
+    description:
+      '仅 baseRoute 自动建源时生效。传给 createApiDataSource 的请求头（可函数）。用于 CSRF 等，例：() => ({ "X-CSRF-Token": token })。',
+  },
+  {
+    name: "apiCredentials",
+    type: "RequestCredentials",
+    default: "浏览器默认（一般为 same-origin）",
+    description: "仅 baseRoute 自动建源时生效。传给 fetch 的 credentials。",
+  },
+  {
     name: "onDataChange",
     type: "(rows) => void",
     default: "-",

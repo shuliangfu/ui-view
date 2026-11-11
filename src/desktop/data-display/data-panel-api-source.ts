@@ -163,10 +163,20 @@ export function normalizeListPayload(body: unknown): ListResult {
     : { rows, total };
 }
 
+/**
+ * 从失败响应体取可读文案。
+ * 兼容顶层 `message`／`error`／`msg`，以及 CSRF 等嵌套 `{ error: { message } }`。
+ */
 function messageFromBody(body: unknown, fallback: string): string {
   if (!isRecord(body)) return fallback;
-  const m = body.message ?? body.error ?? body.msg;
-  return typeof m === "string" && m ? m : fallback;
+  const top = body.message ?? body.error ?? body.msg;
+  if (typeof top === "string" && top) return top;
+  // @dreamer/middlewares csrf：{ error: { code, message, status } }
+  if (isRecord(top)) {
+    const nested = top.message ?? top.msg;
+    if (typeof nested === "string" && nested) return nested;
+  }
+  return fallback;
 }
 
 function writeFromResponse(

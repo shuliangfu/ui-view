@@ -259,6 +259,15 @@ export interface PanelProps {
    * @see createApiDataSource
    */
   apiMode?: ApiMode;
+  /**
+   * 传给 {@link createApiDataSource} 的请求头（固定或函数）。
+   * 仅 `baseRoute` 自动建源时生效；用于 CSRF 等（如 `{ "X-CSRF-Token": token }`）。
+   */
+  apiHeaders?: HeadersInit | (() => HeadersInit | Promise<HeadersInit>);
+  /**
+   * 传给 fetch 的 `credentials`。仅 `baseRoute` 自动建源时生效；默认由浏览器决定（一般为 same-origin）。
+   */
+  apiCredentials?: RequestCredentials;
   /** `data` 模式下数据变化时回调（新增 / 编辑 / 删除 / 批量 / 导入） */
   onDataChange?: (rows: Row[]) => void;
   /** 首屏数据（服务端预取）；提供后挂载时不再请求 */
@@ -407,6 +416,8 @@ export function DataPanel(props: PanelProps): JSXRenderable {
       resource: props.resource,
       apiMode: props.apiMode,
       rowKey,
+      headers: props.apiHeaders,
+      credentials: props.apiCredentials,
     })
     : createLocalDataSource({
       rows: [],
