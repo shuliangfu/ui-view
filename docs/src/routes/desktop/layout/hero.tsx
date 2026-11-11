@@ -129,6 +129,11 @@ const exampleRight = `<Hero
   media="${bgUrl}"
 />`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "Hero 英雄区 / 首屏 · ui-view",
+};
+
 export default function LayoutHero() {
   return (
     <div class="space-y-10">

@@ -62,13 +62,13 @@ const TOAST_API: ApiRow[] = [
     type: "void",
     default: "-",
     description: "关闭全部 Toast",
-  },  {
+  },
+  {
     name: "messages",
     type: "Partial<ToastMessages>",
     default: "-",
     description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
   },
-
 ];
 
 const importCode = `import { toast } from "@dreamer/ui-view/feedback";
@@ -93,6 +93,11 @@ toast.show("info", "不自动关闭", 0, "bottom");`;
 
 const _exampleDestroy = `toast.destroy();`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "Toast 轻提示 · ui-view",
+};
+
 export default function MessageToast() {
   return (
     <div class="space-y-10">
@@ -104,7 +109,12 @@ export default function MessageToast() {
           支持 success、error、info、warning 类型，可配置 duration（默认
           3000ms，0 表示不自动关闭）。使用 Tailwind v4，支持 light/dark 主题。
         </Paragraph>
-        <Paragraph class="mt-2 text-sm text-slate-600 dark:text-slate-400">提示正文由命令式 API 传入（如 <code>toast.info("加载中")</code>）。挂载 <code>&lt;ToastContainer messages=&#123;…&#125; /&gt;</code> 可覆盖 live region 标签。</Paragraph>
+        <Paragraph class="mt-2 text-sm text-slate-600 dark:text-slate-400">
+          提示正文由命令式 API 传入（如{" "}
+          <code>toast.info("加载中")</code>）。挂载{" "}
+          <code>&lt;ToastContainer messages=&#123;…&#125; /&gt;</code>{" "}
+          可覆盖 live region 标签。
+        </Paragraph>
       </section>
 
       {/* 2. 引入 */}

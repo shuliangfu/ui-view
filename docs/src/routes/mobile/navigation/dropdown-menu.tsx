@@ -16,18 +16,34 @@ import { MESSAGES_DROPDOWN_MENU } from "../../../data/component-messages-rows.ts
 import { MobileDocDemo } from "../../../components/MobileDocDemo.tsx";
 
 const API: DocsApiTableRow[] = [
-  { name: "items", type: "DropdownMenuItem[]", default: "-", description: "列定义" },
-  { name: "value", type: "Record<string,string>", default: "-", description: "受控值（勿直接传 Signal，传 .value 并在 onChange 写回）" },
-  { name: "onChange", type: "(key,value)=>void", default: "-", description: "变更" },  {
+  {
+    name: "items",
+    type: "DropdownMenuItem[]",
+    default: "-",
+    description: "列定义",
+  },
+  {
+    name: "value",
+    type: "Record<string,string>",
+    default: "-",
+    description: "受控值（勿直接传 Signal，传 .value 并在 onChange 写回）",
+  },
+  {
+    name: "onChange",
+    type: "(key,value)=>void",
+    default: "-",
+    description: "变更",
+  },
+  {
     name: "messages",
     type: "Partial<DropdownMenuMessages>",
     default: "-",
     description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
   },
-
 ];
 
-const importCode = `import { MobilePortalHostScope } from "@dreamer/ui-view/mobile/portal";
+const importCode =
+  `import { MobilePortalHostScope } from "@dreamer/ui-view/mobile/portal";
 
 <MobilePortalHostScope>
   <DropdownMenu
@@ -62,7 +78,6 @@ const items = [
     ],
   },
 ];
-
 
 const exampleBasic = `<MobilePortalHostScope>
   <DropdownMenu
@@ -99,9 +114,16 @@ const exampleValue = `const value = createSignal({ sort: "n", filter: "a" });
   />
 </MobilePortalHostScope>`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "DropdownMenu · ui-view",
+};
 
 export default function Page() {
-  const value = createSignal<Record<string, string>>({ sort: "n", filter: "a" });
+  const value = createSignal<Record<string, string>>({
+    sort: "n",
+    filter: "a",
+  });
   return (
     <div class="space-y-8">
       <div>
@@ -126,8 +148,14 @@ export default function Page() {
               </div>
             </MobilePortalHostScope>
           </MobileDocDemo>
-          <CodeBlock title="代码示例" code={exampleBasic} language="tsx" showLineNumbers copyable wrapLongLines />
-
+          <CodeBlock
+            title="代码示例"
+            code={exampleBasic}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
         </div>
         <div class="space-y-2">
           <Title level={3}>受控 value</Title>
@@ -149,8 +177,14 @@ export default function Page() {
               )}
             </MobilePortalHostScope>
           </MobileDocDemo>
-          <CodeBlock title="代码示例" code={exampleValue} language="tsx" showLineNumbers copyable wrapLongLines />
-
+          <CodeBlock
+            title="代码示例"
+            code={exampleValue}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
         </div>
       </section>
       <DocsMessagesSection

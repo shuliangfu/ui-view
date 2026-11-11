@@ -184,6 +184,11 @@ const form = createForm({
   <Button type="submit" variant="primary">提交</Button>
 </Form>`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "RichTextEditor 富文本 · ui-view",
+};
+
 export default function FormRichTextEditor() {
   const val = createSignal("");
   const valSimple = createSignal("");

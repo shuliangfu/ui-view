@@ -88,6 +88,11 @@ const exampleThemeLocale = `<ConfigProvider
 const exampleGetConfig =
   `子树外 getConfig(): theme={getConfig().theme ?? "-"}, locale={getConfig().locale ?? "-"}, componentSize={getConfig().componentSize ?? "-"}`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "ConfigProvider 全局配置 · ui-view",
+};
+
 export default function OtherConfigProvider() {
   const theme = createSignal<"light" | "dark">("light");
 
@@ -101,7 +106,17 @@ export default function OtherConfigProvider() {
           等分开写（顶层优先）；子树内通过 getConfig() 读取。 使用 Tailwind
           v4，支持 light/dark 主题。
         </Paragraph>
-        <Paragraph class="mt-2 text-sm text-slate-600 dark:text-slate-400">关于文案：<code>ConfigProvider.locale</code> 为全局偏好字符串，子树可通过 <code>getConfig().locale</code> 读取；<strong>不会自动注入</strong>各组件的 <code>messages</code>。组件内置文案请传 <code>messages</code>（见各组件「文案（messages）」表）；仅 <code>DataPanel</code> 另有组件级 <code>locale="zh-CN"|"en-US"</code> 选择内置文案包后再与 <code>messages</code> 浅合并，且与 ConfigProvider.locale 独立。</Paragraph>
+        <Paragraph class="mt-2 text-sm text-slate-600 dark:text-slate-400">
+          关于文案：<code>ConfigProvider.locale</code>{" "}
+          为全局偏好字符串，子树可通过 <code>getConfig().locale</code>{" "}
+          读取；<strong>不会自动注入</strong>各组件的{" "}
+          <code>messages</code>。组件内置文案请传{" "}
+          <code>messages</code>（见各组件「文案（messages）」表）；仅{" "}
+          <code>DataPanel</code> 另有组件级 <code>locale="zh-CN"|"en-US"</code>
+          {" "}
+          选择内置文案包后再与 <code>messages</code>{" "}
+          浅合并，且与 ConfigProvider.locale 独立。
+        </Paragraph>
       </section>
 
       <section class="space-y-3">

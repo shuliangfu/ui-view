@@ -11,9 +11,19 @@ import {
 } from "../../../components/DocsApiTable.tsx";
 
 const API: DocsApiTableRow[] = [
-  { name: "orientation", type: "horizontal|vertical", default: "horizontal", description: "方向" },
-  { name: "sizes", type: "MaybeSignal<number[]>", default: "均分", description: "百分比" },
-  { name: "minSize", type: "number", default: "10", description: "最小百分比" }
+  {
+    name: "orientation",
+    type: "horizontal|vertical",
+    default: "horizontal",
+    description: "方向",
+  },
+  {
+    name: "sizes",
+    type: "MaybeSignal<number[]>",
+    default: "均分",
+    description: "百分比",
+  },
+  { name: "minSize", type: "number", default: "10", description: "最小百分比" },
 ];
 
 const importCode = `import { Splitter } from "@dreamer/ui-view/layout";
@@ -23,12 +33,15 @@ const importCode = `import { Splitter } from "@dreamer/ui-view/layout";
   <div class="p-3">右侧面板</div>
 </Splitter>`;
 
-
 const exampleDemo = `<Splitter>
   <div class="p-3 bg-slate-50">左</div>
   <div class="p-3">右</div>
 </Splitter>`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "Splitter · ui-view",
+};
 
 export default function Page() {
   return (
@@ -44,9 +57,21 @@ export default function Page() {
       <section class="space-y-3">
         <Title level={2}>示例</Title>
         <div class="rounded-xl border border-slate-200 dark:border-slate-700 p-4 bg-white dark:bg-slate-900">
-          <div class="h-48 border rounded-lg overflow-hidden"><Splitter><div class="p-3 bg-slate-50 dark:bg-slate-800">左</div><div class="p-3">右</div></Splitter></div>
+          <div class="h-48 border rounded-lg overflow-hidden">
+            <Splitter>
+              <div class="p-3 bg-slate-50 dark:bg-slate-800">左</div>
+              <div class="p-3">右</div>
+            </Splitter>
+          </div>
         </div>
-        <CodeBlock title="代码示例" code={exampleDemo} language="tsx" showLineNumbers copyable wrapLongLines />
+        <CodeBlock
+          title="代码示例"
+          code={exampleDemo}
+          language="tsx"
+          showLineNumbers
+          copyable
+          wrapLongLines
+        />
       </section>
       <section class="space-y-3">
         <Title level={2}>API</Title>

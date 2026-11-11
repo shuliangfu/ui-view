@@ -3,7 +3,13 @@
  * 路由: /
  */
 
-import { IconBrandGithub, Link, Paragraph, Text, Title } from "@dreamer/ui-view/basic";
+import {
+  IconBrandGithub,
+  Link,
+  Paragraph,
+  Text,
+  Title,
+} from "@dreamer/ui-view/basic";
 
 import { Card, CodeBlock } from "@dreamer/ui-view/data-display";
 
@@ -64,6 +70,11 @@ const FEATURES = [
     icon: "🧩",
   },
 ];
+
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "ui-view",
+};
 
 export default function Home() {
   /* 与文档主栏一致：正文 flex-auto 以免 flex-1 限高导致内容叠在页脚上 */

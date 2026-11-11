@@ -198,6 +198,7 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
     for (
       const need of [
         "基础用法",
+        "列对齐",
         "搜索表单（Modal）",
         "工具栏搜索 ↔ 地址栏",
         "表格",
@@ -224,7 +225,7 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
       t,
       `return document.querySelectorAll('[data-testid^="panel-demo-"]').length;`,
     );
-    expect(panels).toBe(31);
+    expect(panels).toBe(32);
   }, DOCS_BROWSER_CONFIG);
 
   it(
@@ -1670,7 +1671,7 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
   );
 
   it(
-    "刷新按钮重新加载当前页；每个面板互不影响（同页 31 个实例）",
+    "刷新按钮重新加载当前页；每个面板互不影响（同页 32 个实例）",
     async (t) => {
       if (!t?.browser?.goto) return;
       await open(t, "demo-crud");
@@ -1692,32 +1693,33 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
       );
       expect(r.sameTotal).toBe(true);
       expect(r.otherNoBar).toBe(true);
-      expect(r.toolbars).toBe(30);
+      expect(r.toolbars).toBe(31);
     },
     DOCS_BROWSER_CONFIG,
   );
   it(
-    "31 个示例：30 个有工具栏；toolbar:false 示例无工具栏，表格／分页齐全",
+    "32 个示例：31 个有工具栏；toolbar:false 示例无工具栏，表格／分页齐全",
     async (t) => {
       if (!t?.browser?.goto) return;
       await open(t, "demo-basic");
       const r = await ev<Record<string, unknown>>(
         t,
         `
-      const keys = ["demo-basic","demo-search","demo-sync-url","demo-table","demo-col-fn","demo-crud","demo-batch","demo-page","demo-export","demo-remote","demo-api-users-action","demo-api-orders-restful","demo-dark","demo-locale","demo-toolbar-off","demo-defaults","demo-bool","demo-tb-fn","demo-ra-fn","demo-tb-custom","demo-ra-custom","demo-key-order","demo-enabled","demo-title","demo-can","demo-custom","demo-cell","demo-schemas-full","demo-view","demo-form-view-render","demo-field-render"];
+      const keys = ["demo-basic","demo-align","demo-search","demo-sync-url","demo-table","demo-col-fn","demo-crud","demo-batch","demo-page","demo-export","demo-remote","demo-api-users-action","demo-api-orders-restful","demo-dark","demo-locale","demo-toolbar-off","demo-defaults","demo-bool","demo-tb-fn","demo-ra-fn","demo-tb-custom","demo-ra-custom","demo-key-order","demo-enabled","demo-title","demo-can","demo-custom","demo-cell","demo-schemas-full","demo-view","demo-form-view-render","demo-field-render"];
       await D.until(() => D.total("demo-remote") > 0, 10000);
       await D.until(() => D.total("demo-api-users-action") > 0, 10000);
       await D.until(() => D.total("demo-api-orders-restful") > 0, 10000);
       const out = {};
       for (const k of keys) {
         const hasTb = !!D.q(k, '[data-testid="data-panel-toolbar"]');
+        // toolbar:false／demo-align（refresh:false）无刷新钮：用表格存在作 hydrated 代理
+        const noRefresh = k === "demo-toolbar-off" || k === "demo-align";
         out[k] = {
           toolbar: hasTb,
           table: !!D.q(k, '[data-testid="dp-table"]'),
           pagination: !!D.q(k, '[data-testid="dp-pagination"]'),
           rows: D.rows(k).length,
-          // toolbar:false panel has no refresh; treat table presence as hydrated proxy
-          hydrated: k === "demo-toolbar-off"
+          hydrated: noRefresh
             ? !!D.q(k, '[data-testid="dp-table"]')
             : !!D.q(k, '[data-testid="dp-refresh"]'),
           visible: D.q(k, ".dp-card").getBoundingClientRect().height > 100,
@@ -1725,7 +1727,7 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
       }
       return out;`,
       );
-      expect(Object.keys(r).length).toBe(31);
+      expect(Object.keys(r).length).toBe(32);
       for (const [k, v] of Object.entries(r)) {
         const o = v as Record<string, unknown>;
         const expectTb = k !== "demo-toolbar-off";
@@ -2904,6 +2906,61 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
     },
     DOCS_BROWSER_CONFIG,
   );
+
+  /**
+   * 文档小节「列对齐」：role 居中、balance 单元格右对齐且表头居中；系统列固定居中。
+   * demo-align 关闭了 refresh，不能走 open()（等 dp-refresh），改等表格行。
+   */
+  it("严格·列对齐（align / headerAlign）", async (t) => {
+    if (!t?.browser?.goto) return;
+    await sharedEnv.goto(t, DOC_PATH);
+    await sharedEnv.waitDocMainReady(t);
+    const r = await ev<{
+      nameTh: string;
+      nameTd: string;
+      roleTh: string;
+      roleTd: string;
+      balTh: string;
+      balTd: string;
+      balFoot: string;
+      idxTh: string;
+      idxTd: string;
+      actTh: string;
+    }>(
+      t,
+      `
+      const k = ${P("demo-align")};
+      await D.until(() => D.rows(k).length > 0, 30000);
+      await D.sleep(300);
+      const table = D.q(k, '[data-testid="dp-table"]');
+      const ths = [...table.querySelectorAll("thead th")];
+      const row = D.rows(k)[0];
+      const tds = [...row.querySelectorAll("td")];
+      const foot = D.q(k, '[data-testid="dp-totals"]');
+      const ftds = foot ? [...foot.querySelectorAll("td")] : [];
+      const ta = (el) => el ? getComputedStyle(el).textAlign : "";
+      // selection, index, name, email, role, balance, actions
+      return {
+        idxTh: ta(ths[1]), idxTd: ta(tds[1]),
+        nameTh: ta(ths[2]), nameTd: ta(tds[2]),
+        roleTh: ta(ths[4]), roleTd: ta(tds[4]),
+        balTh: ta(ths[5]), balTd: ta(tds[5]),
+        balFoot: ta(ftds[5]),
+        actTh: ta(ths[6]),
+      };
+    `,
+    );
+    expect(r.idxTh).toBe("center");
+    expect(r.idxTd).toBe("center");
+    expect(r.nameTh).toBe("left");
+    expect(r.nameTd).toBe("left");
+    expect(r.roleTh).toBe("center");
+    expect(r.roleTd).toBe("center");
+    expect(r.balTh).toBe("center");
+    expect(r.balTd).toBe("right");
+    expect(r.balFoot).toBe("right");
+    expect(r.actTh).toBe("center");
+  }, DOCS_BROWSER_CONFIG);
 
   /**
    * 文档小节「自定义扩展：form.render / view.render」：打开新增与查看，断言自定义主体节点。

@@ -81,6 +81,11 @@ const exampleBasic = `<ChartBubble
   class="w-full h-64"
 />`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "ChartBubble 气泡图 · ui-view",
+};
+
 export default function ChartsBubble() {
   return (
     <div class="space-y-10">

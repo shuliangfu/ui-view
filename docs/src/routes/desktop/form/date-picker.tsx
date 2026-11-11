@@ -185,6 +185,11 @@ const form = createForm({
   <Button type="submit" variant="primary">提交</Button>
 </Form>`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "DatePicker 日期选择 · ui-view",
+};
+
 export default function FormDatePicker() {
   const today = localTodayYmd();
   /** min/max 与「有默认值」示例同年，保证默认选中日在可选范围内 */

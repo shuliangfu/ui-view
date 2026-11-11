@@ -16,17 +16,42 @@ import { MESSAGES_FLOATING_PANEL } from "../../../data/component-messages-rows.t
 import { MobileDocDemo } from "../../../components/MobileDocDemo.tsx";
 
 const API: DocsApiTableRow[] = [
-  { name: "open", type: "ControlledOpenInput", default: "-", description: "是否打开" },
-  { name: "anchors", type: "number[]", default: "[120,320,560]", description: "锚点高度（px，升序）" },
-  { name: "anchorIndex", type: "number", default: "-", description: "当前锚点下标" },
-  { name: "onClose", type: "() => void", default: "-", description: "遮罩关闭" },
-  { name: "onAnchorChange", type: "(index) => void", default: "-", description: "锚点变化" },  {
+  {
+    name: "open",
+    type: "ControlledOpenInput",
+    default: "-",
+    description: "是否打开",
+  },
+  {
+    name: "anchors",
+    type: "number[]",
+    default: "[120,320,560]",
+    description: "锚点高度（px，升序）",
+  },
+  {
+    name: "anchorIndex",
+    type: "number",
+    default: "-",
+    description: "当前锚点下标",
+  },
+  {
+    name: "onClose",
+    type: "() => void",
+    default: "-",
+    description: "遮罩关闭",
+  },
+  {
+    name: "onAnchorChange",
+    type: "(index) => void",
+    default: "-",
+    description: "锚点变化",
+  },
+  {
     name: "messages",
     type: "Partial<FloatingPanelMessages>",
     default: "-",
     description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
   },
-
 ];
 
 const importCode = `import { createSignal } from "@dreamer/view";
@@ -41,13 +66,16 @@ const open = createSignal(false);
   <div class="p-4">面板内容</div>
 </FloatingPanel>`;
 
-
 const exampleDemo = `const open = createSignal(false);
 <Button onClick={() => (open.value = true)}>打开</Button>
 <FloatingPanel open={open} onClose={() => (open.value = false)}>
   面板内容
 </FloatingPanel>`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "FloatingPanel · ui-view",
+};
 
 export default function Page() {
   const open = createSignal(false);
@@ -56,7 +84,8 @@ export default function Page() {
       <div>
         <Title level={1}>FloatingPanel</Title>
         <Paragraph>
-          底部多锚点可拖拽浮动面板。文档示例包在 MobilePortalHostScope 内，遮罩限制在示意框。
+          底部多锚点可拖拽浮动面板。文档示例包在 MobilePortalHostScope
+          内，遮罩限制在示意框。
         </Paragraph>
       </div>
       <section class="space-y-3">
@@ -81,7 +110,14 @@ export default function Page() {
             </FloatingPanel>
           </MobilePortalHostScope>
         </MobileDocDemo>
-        <CodeBlock title="代码示例" code={exampleDemo} language="tsx" showLineNumbers copyable wrapLongLines />
+        <CodeBlock
+          title="代码示例"
+          code={exampleDemo}
+          language="tsx"
+          showLineNumbers
+          copyable
+          wrapLongLines
+        />
       </section>
       <DocsMessagesSection
         interfaceName="FloatingPanelMessages"

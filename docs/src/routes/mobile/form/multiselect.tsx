@@ -111,6 +111,11 @@ const mobileMultiSelectControlledVal = createSignal<string[]>(["x"]);
 const exampleControlled = `const value = createSignal(["a"]);
 <MultiSelect value={value} options={[{ value: "a", label: "A" }, { value: "b", label: "B" }]} />`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "MultiSelect 多选（移动） · ui-view",
+};
+
 export default function MobileMultiSelectDoc() {
   return (
     <div class="w-full max-w-3xl space-y-10">

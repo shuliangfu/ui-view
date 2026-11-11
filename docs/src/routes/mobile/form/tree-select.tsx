@@ -118,6 +118,11 @@ const options = [
 /** 与 Select 移动文档相同：Signal 放模块级，保证受控写回与订阅正确 */
 const mobileTreeSelectVal = createSignal("fe");
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "TreeSelect 树选择（移动） · ui-view",
+};
+
 export default function MobileTreeSelectDoc() {
   return (
     <div class="w-full max-w-3xl space-y-10">

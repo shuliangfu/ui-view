@@ -276,6 +276,11 @@ const form = createForm({
   <Button type="submit" variant="primary">提交</Button>
 </Form>`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "Cascader 级联选择 · ui-view",
+};
+
 export default function FormCascaderDoc() {
   const val = createSignal<string[]>([]);
   /** 二级静态示例（市 / 区）受控值 */

@@ -126,6 +126,11 @@ const form = createForm({
   <Button type="submit" variant="primary">提交</Button>
 </Form>`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "RadioGroup 单选组 · ui-view",
+};
+
 export default function FormRadioGroup() {
   const val = createSignal("r1");
   const val2 = createSignal("r2");

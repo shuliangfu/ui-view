@@ -34,7 +34,6 @@ const SPINNER_API: ApiRow[] = [
     default: "-",
     description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
   },
-
 ];
 
 const importCode = `import { Spinner } from "@dreamer/ui-view/basic";
@@ -49,6 +48,11 @@ const exampleSize = `<Spinner size="xs" />
 
 const exampleClass = `<Spinner class="text-green-600" />
 <Spinner class="text-red-500" size="lg" />`;
+
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "Spinner 加载 · ui-view",
+};
 
 export default function BasicSpinner() {
   return (

@@ -81,6 +81,11 @@ const exampleCustom = `<Empty
   footer={<Button variant="ghost" size="sm">刷新</Button>}
 />`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "Empty 空状态 · ui-view",
+};
+
 export default function DataDisplayEmpty() {
   return (
     <div class="space-y-10">

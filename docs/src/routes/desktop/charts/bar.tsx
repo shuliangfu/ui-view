@@ -72,6 +72,11 @@ const exampleBasic = `<ChartBar
   class="w-full h-64"
 />`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "ChartBar 柱状图 · ui-view",
+};
+
 export default function ChartsBar() {
   return (
     <div class="space-y-10">

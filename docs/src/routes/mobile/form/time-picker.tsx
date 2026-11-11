@@ -112,6 +112,11 @@ const mobileTimePickerVal = createSignal("09:30");
 /**
  * TimePicker 移动文档页。
  */
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "TimePicker 时间（移动） · ui-view",
+};
+
 export default function MobileTimePickerDoc() {
   return (
     <div class="w-full max-w-3xl space-y-10">

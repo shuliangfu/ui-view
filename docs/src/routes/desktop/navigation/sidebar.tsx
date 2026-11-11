@@ -133,6 +133,10 @@ const exampleDemo = `import { Sidebar } from "@dreamer/ui-view/navigation";
   getCurrentPath={() => "/desktop/basic/button"}
 />`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "Sidebar 侧栏 · ui-view",
+};
 
 export default function NavigationSidebarDoc() {
   return (
@@ -174,8 +178,14 @@ export default function NavigationSidebarDoc() {
         </div>
       </section>
 
-      
-        <CodeBlock title="代码示例" code={exampleDemo} language="tsx" showLineNumbers copyable wrapLongLines />
+      <CodeBlock
+        title="代码示例"
+        code={exampleDemo}
+        language="tsx"
+        showLineNumbers
+        copyable
+        wrapLongLines
+      />
       <DocsMessagesSection
         interfaceName="SidebarMessages"
         defaultExportName="defaultSidebarMessages"

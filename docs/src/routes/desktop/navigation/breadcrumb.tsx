@@ -99,6 +99,11 @@ const exampleOnItemClick = `<Breadcrumb
   onItemClick={(item, index) => console.log(item.label, index)}
 />`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "Breadcrumb 面包屑 · ui-view",
+};
+
 export default function NavigationBreadcrumb() {
   const items = [
     { label: "首页", href: "#" },

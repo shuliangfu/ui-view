@@ -15,17 +15,22 @@ import { MobileDocDemo } from "../../../components/MobileDocDemo.tsx";
 
 const API: DocsApiTableRow[] = [
   { name: "items", type: "IndexBarItem[]", default: "-", description: "分组" },
-  { name: "onSelect", type: "(index)=>void", default: "-", description: "选中索引" },
+  {
+    name: "onSelect",
+    type: "(index)=>void",
+    default: "-",
+    description: "选中索引",
+  },
   {
     name: "messages",
     type: "Partial<IndexBarMessages>",
     default: "-",
     description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
   },
-
 ];
 
-const importCode = `import { IndexBar } from "@dreamer/ui-view/mobile/navigation";
+const importCode =
+  `import { IndexBar } from "@dreamer/ui-view/mobile/navigation";
 
 <IndexBar
   items={[
@@ -36,11 +41,14 @@ const importCode = `import { IndexBar } from "@dreamer/ui-view/mobile/navigation
   onSelect={(index) => console.log(index)}
 />`;
 
-
 const exampleDemo = `<IndexBar indexList={["A","B","C"]}>
   {/* 分组列表 */}
 </IndexBar>`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "IndexBar · ui-view",
+};
 
 export default function Page() {
   return (
@@ -60,8 +68,24 @@ export default function Page() {
             <IndexBar
               class="h-full"
               items={[
-                { index: "A", children: <div><Cell title="Alice" /><Cell title="Amy" /></div> },
-                { index: "B", children: <div><Cell title="Bob" /><Cell title="Bella" /></div> },
+                {
+                  index: "A",
+                  children: (
+                    <div>
+                      <Cell title="Alice" />
+                      <Cell title="Amy" />
+                    </div>
+                  ),
+                },
+                {
+                  index: "B",
+                  children: (
+                    <div>
+                      <Cell title="Bob" />
+                      <Cell title="Bella" />
+                    </div>
+                  ),
+                },
                 { index: "C", children: <Cell title="Carol" /> },
                 { index: "D", children: <Cell title="David" /> },
                 { index: "Z", children: <Cell title="Zoe" /> },
@@ -69,7 +93,14 @@ export default function Page() {
             />
           </div>
         </MobileDocDemo>
-        <CodeBlock title="代码示例" code={exampleDemo} language="tsx" showLineNumbers copyable wrapLongLines />
+        <CodeBlock
+          title="代码示例"
+          code={exampleDemo}
+          language="tsx"
+          showLineNumbers
+          copyable
+          wrapLongLines
+        />
       </section>
       <DocsMessagesSection
         interfaceName="IndexBarMessages"

@@ -6,6 +6,11 @@
 import { Link, Paragraph, Title } from "@dreamer/ui-view/mobile/basic";
 
 import { CodeBlock } from "@dreamer/ui-view/mobile/data-display";
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "移动端组件 · ui-view",
+};
+
 export default function MobileIndex() {
   return (
     <div class="w-full max-w-3xl space-y-10">

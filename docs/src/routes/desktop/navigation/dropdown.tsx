@@ -3,7 +3,17 @@
  * 路由: /desktop/navigation/dropdown
  */
 
-import { Avatar, Button, IconLogOut, IconMoon, IconSettings, IconUser, IconUserCog, Paragraph, Title } from "@dreamer/ui-view/basic";
+import {
+  Avatar,
+  Button,
+  IconLogOut,
+  IconMoon,
+  IconSettings,
+  IconUser,
+  IconUserCog,
+  Paragraph,
+  Title,
+} from "@dreamer/ui-view/basic";
 
 import { CodeBlock } from "@dreamer/ui-view/data-display";
 
@@ -225,6 +235,11 @@ const dropdownMenuItemLinkClass = `block w-full ${dropdownMenuItemInteractive}`;
 
 /** 带图标的行（flex） */
 const itemClass = `flex items-center gap-2 ${dropdownMenuItemInteractive}`;
+
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "Dropdown 下拉菜单 · ui-view",
+};
 
 export default function NavigationDropdown() {
   const overlay = (

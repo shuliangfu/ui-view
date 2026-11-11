@@ -209,6 +209,11 @@ const form = createForm({
   <Button type="submit" variant="primary">提交</Button>
 </Form>`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "DateTimePicker 日期时间 · ui-view",
+};
+
 export default function FormDateTimePickerDoc() {
   const now = localNowDateTime();
   const rangeYear = new Date().getFullYear();

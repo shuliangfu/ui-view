@@ -189,6 +189,11 @@ const form = createForm({
   <Button type="submit" variant="primary">提交</Button>
 </Form>`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "TreeSelect 树选择 · ui-view",
+};
+
 export default function FormTreeSelectDoc() {
   const val = createSignal("");
   const valDeep = createSignal("");

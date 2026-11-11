@@ -1,31 +1,53 @@
 /**
  * QRCode 文档页。路由: /mobile/data-display/qrcode
  */
-import { QRCode, CodeBlock } from "@dreamer/ui-view/mobile/data-display";
+import { CodeBlock, QRCode } from "@dreamer/ui-view/mobile/data-display";
 import { Paragraph, Title } from "@dreamer/ui-view/mobile/basic";
-import { DocsApiTable, type DocsApiTableRow } from "../../../components/DocsApiTable.tsx";
+import {
+  DocsApiTable,
+  type DocsApiTableRow,
+} from "../../../components/DocsApiTable.tsx";
 import { MobileDocDemo } from "../../../components/MobileDocDemo.tsx";
 
 const API: DocsApiTableRow[] = [
-  { name: "value / size / color / bgColor / includeMargin", type: "—", default: "-", description: "与桌面一致" },
+  {
+    name: "value / size / color / bgColor / includeMargin",
+    type: "—",
+    default: "-",
+    description: "与桌面一致",
+  },
 ];
-const importCode = `import { QRCode } from "@dreamer/ui-view/mobile/data-display";
+const importCode =
+  `import { QRCode } from "@dreamer/ui-view/mobile/data-display";
 const value = globalThis.location?.href ?? "https://example.com";
 <QRCode value={value} size={148} />`;
 
-const exampleUrl = `const value = globalThis.location?.href ?? "https://example.com";
+const exampleUrl =
+  `const value = globalThis.location?.href ?? "https://example.com";
 
 <QRCode value={value} size={148} />`;
 
 const exampleStyle = `<QRCode value="m-96" size={96} />
 <QRCode value="m-brand" size={96} color="#1d4ed8" bgColor="#eff6ff" />`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "QRCode · ui-view",
+};
+
 export default function Page() {
-  const value = globalThis.location?.href ?? "https://ui-view.dreamer.local/mobile/data-display/qrcode";
+  const value = globalThis.location?.href ??
+    "https://ui-view.dreamer.local/mobile/data-display/qrcode";
   return (
     <div class="space-y-8">
-      <div><Title level={1}>QRCode</Title><Paragraph>value 取当前页 URL；可调尺寸与颜色。</Paragraph></div>
-      <section class="space-y-3"><Title level={2}>引入</Title><CodeBlock code={importCode} language="tsx" /></section>
+      <div>
+        <Title level={1}>QRCode</Title>
+        <Paragraph>value 取当前页 URL；可调尺寸与颜色。</Paragraph>
+      </div>
+      <section class="space-y-3">
+        <Title level={2}>引入</Title>
+        <CodeBlock code={importCode} language="tsx" />
+      </section>
       <section class="space-y-6">
         <Title level={2}>示例</Title>
         <div class="space-y-2">
@@ -47,7 +69,12 @@ export default function Page() {
           <Title level={3}>尺寸与颜色</Title>
           <MobileDocDemo class="p-4 flex gap-4 items-end justify-center">
             <QRCode value="m-96" size={96} />
-            <QRCode value="m-brand" size={96} color="#1d4ed8" bgColor="#eff6ff" />
+            <QRCode
+              value="m-brand"
+              size={96}
+              color="#1d4ed8"
+              bgColor="#eff6ff"
+            />
           </MobileDocDemo>
           <CodeBlock
             title="代码示例"
@@ -59,7 +86,10 @@ export default function Page() {
           />
         </div>
       </section>
-      <section class="space-y-3"><Title level={2}>API</Title><DocsApiTable rows={API} /></section>
+      <section class="space-y-3">
+        <Title level={2}>API</Title>
+        <DocsApiTable rows={API} />
+      </section>
     </div>
   );
 }

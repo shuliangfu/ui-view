@@ -60,6 +60,8 @@ import { parseXlsx } from "./data-panel-xlsx.ts";
 import {
   buildExportFile,
   colProp,
+  columnAlignFlexJustify,
+  columnAlignTextClass,
   createLocalDataSource,
   displayValue,
   enrichFormFields,
@@ -82,7 +84,9 @@ import {
   queryFromParams,
   queryToParams,
   resolveBatchStatusColumn,
+  resolveColumnAlign,
   resolveColumnFn,
+  resolveColumnHeaderAlign,
   resolvePanelColumns,
   resolveViewActionsCfg,
   resolveViewFields,
@@ -2473,16 +2477,22 @@ export function DataPanel(props: PanelProps): JSXRenderable {
                     </th>
                   );
                 }
+                // 数据列：headerAlign 优先，否则跟 align，默认左；系统列仍走上方居中分支
+                const headAlign = resolveColumnHeaderAlign(c);
                 return (
                   <th
-                    class="whitespace-nowrap border border-slate-200 px-3 py-2 font-medium dark:border-slate-700"
+                    class={`whitespace-nowrap border border-slate-200 px-3 py-2 font-medium dark:border-slate-700 ${
+                      columnAlignTextClass(headAlign)
+                    }`}
                     style={c.width ? `width:${c.width}px` : undefined}
                   >
                     {c.sortable
                       ? (
                         <button
                           type="button"
-                          class="inline-flex items-center hover:text-blue-600"
+                          class={`inline-flex w-full items-center hover:text-blue-600 ${
+                            columnAlignFlexJustify(headAlign)
+                          }`}
                           data-testid={`dp-sort-${c.prop}`}
                           onClick={() => toggleSort(c.prop!)}
                         >
@@ -2708,7 +2718,11 @@ export function DataPanel(props: PanelProps): JSXRenderable {
                       );
                     }
                     return (
-                      <td class="border border-slate-200 px-3 py-1.5 dark:border-slate-700">
+                      <td
+                        class={`border border-slate-200 px-3 py-1.5 dark:border-slate-700 ${
+                          columnAlignTextClass(resolveColumnAlign(c))
+                        }`}
+                      >
                         {cell(c, r)}
                       </td>
                     );
@@ -2750,7 +2764,9 @@ export function DataPanel(props: PanelProps): JSXRenderable {
                     : "";
                   return (
                     <td
-                      class="border border-slate-200 px-3 py-2 dark:border-slate-700"
+                      class={`border border-slate-200 px-3 py-2 dark:border-slate-700 ${
+                        columnAlignTextClass(resolveColumnAlign(c))
+                      }`}
                       data-testid={`dp-total-${c.prop}`}
                     >
                       {(() => {

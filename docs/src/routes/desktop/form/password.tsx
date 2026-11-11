@@ -190,6 +190,11 @@ const val = createSignal("");
   />
 </FormItem>`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "Password 密码输入 · ui-view",
+};
+
 export default function FormPassword() {
   const val = createSignal("");
   const valNoStrength = createSignal("");

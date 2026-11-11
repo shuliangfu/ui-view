@@ -30,7 +30,9 @@ export async function GET(request: Request): Promise<Response> {
         "Cache-Control": "public, max-age=300",
         "X-Content-Type-Options": "nosniff",
         /** 强制下载／附件，降低 SVG／HTML 误当页面执行面 */
-        "Content-Disposition": `attachment; filename="${basename(key).replace(/"/g, "")}"`,
+        "Content-Disposition": `attachment; filename="${
+          basename(key).replace(/"/g, "")
+        }"`,
       },
     });
   } catch {

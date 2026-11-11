@@ -77,6 +77,11 @@ const exampleClass = `<Avatar
   B
 </Avatar>`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "Avatar 头像 · ui-view",
+};
+
 export default function BasicAvatar() {
   return (
     <div class="space-y-10">

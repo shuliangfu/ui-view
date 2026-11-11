@@ -117,6 +117,11 @@ const openKeysHorizontal = createSignal<string[]>([]);
   usePopoverSubmenu
 />`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "Menu 菜单列表 · ui-view",
+};
+
 export default function NavigationMenu() {
   const items = [
     { key: "1", label: "选项一" },

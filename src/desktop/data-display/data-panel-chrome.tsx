@@ -5,10 +5,7 @@
 
 import { Button } from "../../shared/basic/Button.tsx";
 import type { Tone } from "./data-panel-types.ts";
-import {
-  BrowserStorage,
-  LocalStorageAdapter,
-} from "@dreamer/storage/client";
+import { BrowserStorage, LocalStorageAdapter } from "@dreamer/storage/client";
 
 // ---------------------------------------------------------------- refresh registry
 export const refreshers = new Map<string, () => Promise<void>>();
@@ -53,8 +50,6 @@ export interface Prefs {
   density?: "compact" | "comfortable" | "loose";
   fullscreen?: boolean;
 }
-
-
 
 function prefsKey(panelKey: string): string {
   return `dp-prefs-${panelKey}`;
@@ -201,8 +196,7 @@ export const TB_NF_STYLE = "!border-l-0";
 export const TB_NL_STYLE = "!border-r !shadow-none";
 
 /** 行悬停：压浅色 `hover:bg-slate-50`（原 `.dark .dp-row:hover` slate-800@60%） */
-export const ROW_CLS =
-  "dp-row hover:bg-slate-50 dark:hover:!bg-slate-800/60";
+export const ROW_CLS = "dp-row hover:bg-slate-50 dark:hover:!bg-slate-800/60";
 
 /** 就地编辑可点区（原 `.dp-cell-edit`） */
 export const CELL_EDIT_CLS =
@@ -227,7 +221,8 @@ export const PGSIZE_SELECT_CLS =
   "inline-flex w-fit shrink-0 align-middle whitespace-nowrap [&_span.relative]:!inline-flex [&_span.relative]:!w-fit [&_span.relative]:!min-w-0 [&_span.relative]:!max-w-none [&_button[aria-haspopup]]:!box-border [&_button[aria-haspopup]]:!w-auto [&_button[aria-haspopup]]:!gap-1 [&_button[aria-haspopup]]:!rounded [&_button[aria-haspopup]]:!px-2 [&_button[aria-haspopup]]:!py-1 [&_button[aria-haspopup]]:!text-sm [&_button[aria-haspopup]]:!leading-5 [&_button[aria-haspopup]]:!whitespace-nowrap [&_[role=listbox]]:!bottom-full [&_[role=listbox]]:!left-0 [&_[role=listbox]]:!right-auto [&_[role=listbox]]:!top-auto [&_[role=listbox]]:!mt-0 [&_[role=listbox]]:!mb-1 [&_[role=listbox]]:!flex [&_[role=listbox]]:!w-max [&_[role=listbox]]:!min-w-full [&_[role=listbox]]:!flex-col [&_[role=option]]:!block [&_[role=option]]:!w-full [&_[role=option]]:whitespace-nowrap";
 
 /** 操作列图标组（原 `.dp-acts`） */
-export const ACTS_CLS = "dp-acts inline-flex items-center justify-center gap-px";
+export const ACTS_CLS =
+  "dp-acts inline-flex items-center justify-center gap-px";
 
 /**
  * 面板卡片（原 `.dp-card` + 深色变量正文色）。

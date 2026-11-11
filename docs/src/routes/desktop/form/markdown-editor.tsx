@@ -242,6 +242,11 @@ const form = createForm({
   <Button type="submit" variant="primary">提交</Button>
 </Form>`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "MarkdownEditor · ui-view",
+};
+
 export default function FormMarkdownEditor() {
   const splitVal = createSignal(DEMO_MD);
   const tabsVal = createSignal("# 标签模式\n\n切换「预览」查看渲染。");

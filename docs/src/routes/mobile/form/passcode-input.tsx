@@ -75,6 +75,11 @@ const passcodeCreateForm = createForm<PasscodeCreateFormValues>({
   },
 });
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "PasscodeInput · ui-view",
+};
+
 export default function Page() {
   return (
     <div class="space-y-8">

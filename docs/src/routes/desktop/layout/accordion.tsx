@@ -108,6 +108,11 @@ const exampleDisabled = `<Accordion
   onChange={() => {}}
 />`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "Accordion 手风琴折叠 · ui-view",
+};
+
 export default function LayoutAccordion() {
   const expandedKeys = createSignal<string[]>(["1"]);
 

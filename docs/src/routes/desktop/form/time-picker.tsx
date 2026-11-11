@@ -135,6 +135,11 @@ const form = createForm({
   <Button type="submit" variant="primary">提交</Button>
 </Form>`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "TimePicker 时间选择 · ui-view",
+};
+
 export default function FormTimePicker() {
   const val = createSignal("");
   const val2 = createSignal("14:30");

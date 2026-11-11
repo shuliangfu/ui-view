@@ -81,6 +81,11 @@ const exampleModeYear = `<Calendar value={value} mode="year" />`;
 
 const exampleFullscreen = `<Calendar value={value} fullscreen />`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "Calendar 日历 · ui-view",
+};
+
 export default function DataDisplayCalendar() {
   const value = createSignal(new Date());
 

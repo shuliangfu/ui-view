@@ -34,6 +34,11 @@ const mobileForm = createForm<MobileDemoValues>({
   },
 });
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "Form · createForm（移动） · ui-view",
+};
+
 export default function MobileFormContainersDoc() {
   return (
     <div class="space-y-8 w-full">

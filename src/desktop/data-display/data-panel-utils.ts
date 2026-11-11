@@ -347,6 +347,53 @@ export const PANEL_COL_SELECT = "__select";
 export const PANEL_COL_INDEX = "__index";
 export const PANEL_COL_ACTIONS = "__actions";
 
+/** 列文本对齐（与 {@link Column.align}／`headerAlign` 一致） */
+export type ColumnAlign = "left" | "center" | "right";
+
+/**
+ * 解析数据列单元格对齐；缺省左对齐。
+ *
+ * @param c - 列配置（只读 `align`）
+ */
+export function resolveColumnAlign(
+  c: Pick<Column, "align">,
+): ColumnAlign {
+  return c.align ?? "left";
+}
+
+/**
+ * 解析数据列表头对齐：`headerAlign` 优先，否则跟 `align`，再否则左对齐。
+ *
+ * @param c - 列配置
+ */
+export function resolveColumnHeaderAlign(
+  c: Pick<Column, "align" | "headerAlign">,
+): ColumnAlign {
+  return c.headerAlign ?? c.align ?? "left";
+}
+
+/**
+ * 对齐 → Tailwind `text-*` class。
+ *
+ * @param align - 左／中／右
+ */
+export function columnAlignTextClass(align: ColumnAlign): string {
+  if (align === "center") return "text-center";
+  if (align === "right") return "text-right";
+  return "text-left";
+}
+
+/**
+ * 对齐 → 表头排序按钮等 `inline-flex` 容器的 `justify-*`。
+ *
+ * @param align - 左／中／右
+ */
+export function columnAlignFlexJustify(align: ColumnAlign): string {
+  if (align === "center") return "justify-center";
+  if (align === "right") return "justify-end";
+  return "justify-start";
+}
+
 /** 列 prop（系统列解析后必有；数据列调用方应提供） */
 export function colProp(c: Pick<Column, "prop">): string {
   return c.prop ?? "";

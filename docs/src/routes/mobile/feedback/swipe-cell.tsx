@@ -79,7 +79,8 @@ const ACTION_API: DocsApiTableRow[] = [
   },
 ];
 
-const importCode = `import { SwipeCell } from "@dreamer/ui-view/mobile/feedback";
+const importCode =
+  `import { SwipeCell } from "@dreamer/ui-view/mobile/feedback";
 
 <SwipeCell
   rightActions={[
@@ -96,6 +97,11 @@ const exampleBothSides = `<SwipeCell
 >
   <div class="px-4 py-3">左滑或右滑</div>
 </SwipeCell>`;
+
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "SwipeCell 滑动单元格 · ui-view",
+};
 
 export default function MobileSwipeCellDoc() {
   return (

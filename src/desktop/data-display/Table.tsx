@@ -10,7 +10,6 @@
  * （或行选择回调里读 `props.dataSource`）；运行时见 `@dreamer/view` 的 `reconcileIntrinsicFunctionChild`（`vnode-mount.ts`）。
  */
 
-
 import { createEffect, createSignal, type Signal } from "@dreamer/view";
 import type { JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
@@ -22,9 +21,9 @@ import { IconChevronUp } from "../../shared/basic/icons/ChevronUp.tsx";
 import { getPaginationState } from "../../shared/navigation/pagination-utils.ts";
 import {
   defaultTableMessages,
+  type SortOrder,
   TABLE_PAGINATION_ACTIVE_CLS,
   TABLE_PAGINATION_BTN_CLS,
-  type SortOrder,
   type TableColumnEditable,
   type TableMessages,
   type TableProps,
@@ -42,8 +41,8 @@ import {
   TABLE_EDIT_PENDING_REFOCUS_MAX_WAIT_STEPS,
   TABLE_EDIT_PICKER_FOCUS_SETTLE_MAX_STEPS,
   tableEditFindOpenPickerDialogRoot,
-  tableEditSlotToken,
   type TableEditingTarget,
+  tableEditSlotToken,
 } from "./table-editable.tsx";
 
 export type {

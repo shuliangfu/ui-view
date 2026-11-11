@@ -96,6 +96,11 @@ const keyboardCreateForm = createForm<KeyboardCreateFormValues>({
 /** 与 createForm 示例共用的键盘开关（模块级） */
 const keyboardCreateFormOpen = createSignal(false);
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "NumberKeyboard · ui-view",
+};
+
 export default function Page() {
   const open = createSignal(false);
   const digits = createSignal("");

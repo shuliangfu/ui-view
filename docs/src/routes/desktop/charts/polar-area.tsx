@@ -70,6 +70,11 @@ const exampleBasic = `<ChartPolarArea
   class="w-full h-64"
 />`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "ChartPolarArea 极区图 · ui-view",
+};
+
 export default function ChartsPolarArea() {
   return (
     <div class="space-y-10">

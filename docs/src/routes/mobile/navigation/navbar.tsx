@@ -129,9 +129,13 @@ const importCode = `import { NavBar } from "@dreamer/ui-view/mobile/navigation";
   onClickRight={() => {}}
 />`;
 
+const exampleFixed =
+  `<Navbar title="标题" fixed placeholder left={<span>返回</span>} />`;
 
-const exampleFixed = `<Navbar title="标题" fixed placeholder left={<span>返回</span>} />`;
-
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "NavBar 顶栏 · ui-view",
+};
 
 export default function MobileNavBarDoc() {
   return (
@@ -208,17 +212,23 @@ export default function MobileNavBarDoc() {
               正文从占位下方开始，不被 NavBar 盖住。
             </div>
           </MobileDocDemo>
-          <CodeBlock title="代码示例" code={exampleFixed} language="tsx" showLineNumbers copyable wrapLongLines />
-
+          <CodeBlock
+            title="代码示例"
+            code={exampleFixed}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
         </div>
       </section>
 
       <section class="space-y-4">
-      <DocsMessagesSection
-        interfaceName="NavBarMessages"
-        defaultExportName="defaultNavBarMessages"
-        rows={MESSAGES_MOBILE_NAV_BAR}
-      />
+        <DocsMessagesSection
+          interfaceName="NavBarMessages"
+          defaultExportName="defaultNavBarMessages"
+          rows={MESSAGES_MOBILE_NAV_BAR}
+        />
 
         <Title level={2}>API</Title>
         <Paragraph class="text-sm text-slate-600 dark:text-slate-400">

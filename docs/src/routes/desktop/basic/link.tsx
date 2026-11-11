@@ -125,6 +125,11 @@ const exampleLinkButton =
   链接按钮（主色）
 </Link>`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "Link 链接 · ui-view",
+};
+
 export default function BasicLink() {
   return (
     <div class="space-y-10">

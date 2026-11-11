@@ -59,7 +59,8 @@ const svg = \`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 5 3"><rect wi
 
 <FlagImg svg={svg} size="md" />`;
 
-const exampleWithSvg = `const svg = \`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 5 3"><rect width="5" height="3" fill="#dc2626"/></svg>\`;
+const exampleWithSvg =
+  `const svg = \`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 5 3"><rect width="5" height="3" fill="#dc2626"/></svg>\`;
 
 <FlagImg svg={svg} size="lg" title="示例旗" />`;
 
@@ -68,6 +69,11 @@ const exampleEmpty = `<FlagImg svg="" size="md" />`;
 /**
  * FlagImg 文档页：概述、引入、示例、文案表、API。
  */
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "FlagImg 国旗渲染 · ui-view",
+};
+
 export default function BasicFlagImgDoc() {
   return (
     <div class="w-full max-w-3xl space-y-10">

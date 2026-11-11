@@ -80,6 +80,11 @@ const exampleSizeClosable =
 const exampleDisabledRounded = `<Tag disabled>disabled</Tag>
 <Tag rounded>rounded</Tag>`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "Tag 标签 · ui-view",
+};
+
 export default function DataDisplayTag() {
   const closed = createSignal(false);
 

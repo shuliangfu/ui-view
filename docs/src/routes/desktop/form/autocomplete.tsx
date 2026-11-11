@@ -148,6 +148,11 @@ const autoCompleteForm = createForm<AutoCompleteFormValues>({
   },
 });
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "AutoComplete 自动完成 · ui-view",
+};
+
 export default function FormAutoCompleteDoc() {
   const q = createSignal("");
   const qSizeXs = createSignal("");

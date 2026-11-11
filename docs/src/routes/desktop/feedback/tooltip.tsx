@@ -53,13 +53,13 @@ const TOOLTIP_API: ApiRow[] = [
     default: "false",
     description:
       "为 true 时强制隐藏且不响应悬停；可传 getter（如 Popconfirm 打开时压掉同锚点 tip）。按下触发器也会收起 tip。",
-  },  {
+  },
+  {
     name: "messages",
     type: "Partial<TooltipMessages>",
     default: "-",
     description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
   },
-
 ];
 
 const importCode = `import { Tooltip } from "@dreamer/ui-view/feedback";
@@ -95,21 +95,29 @@ const exampleAuto = `<div class="flex justify-end">
   </Tooltip>
 </div>`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "Tooltip 悬停提示 · ui-view",
+};
+
 export default function FeedbackTooltip() {
   return (
     <div class="space-y-10">
       <section>
         <Title level={1}>Tooltip 悬停提示</Title>
         <Paragraph class="mt-2">
-          悬停提示：触发器悬停时显示气泡；支持 placement（含 auto 贴边翻转）、箭头。有{" "}
-          <code class="text-xs">document.body</code> 时气泡经{" "}
-          <code class="text-xs">createPortal</code> 挂到 body，
+          悬停提示：触发器悬停时显示气泡；支持 placement（含 auto
+          贴边翻转）、箭头。有 <code class="text-xs">document.body</code>{" "}
+          时气泡经 <code class="text-xs">createPortal</code> 挂到 body，
           <code class="text-xs">fixed</code> 对齐视口，避免父级{" "}
           <code class="text-xs">overflow</code>{" "}
           裁切；无 body 时回退为包裹层内绝对定位。使用 Tailwind v4，支持
           light/dark 主题。
         </Paragraph>
-        <Paragraph class="mt-2 text-sm text-slate-600 dark:text-slate-400">气泡可见文案请用 <code>content</code>。<code>messages</code> 与其它组件同形预留（当前仅 <code>_reserved</code>）。</Paragraph>
+        <Paragraph class="mt-2 text-sm text-slate-600 dark:text-slate-400">
+          气泡可见文案请用 <code>content</code>。<code>messages</code>{" "}
+          与其它组件同形预留（当前仅 <code>_reserved</code>）。
+        </Paragraph>
       </section>
 
       <section class="space-y-3">
@@ -201,24 +209,24 @@ export default function FeedbackTooltip() {
           <Title level={3}>贴边自动翻转（placement=auto）</Title>
           <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
             触发器贴在视口最右侧。{" "}
-            <code class="text-xs">placement=&quot;auto&quot;</code>
-            {" "}时右边被挡会向左展开，箭头跟随实际方位。
+            <code class="text-xs">placement=&quot;auto&quot;</code>{" "}
+            时右边被挡会向左展开，箭头跟随实际方位。
           </Paragraph>
           <div class="-mr-3 sm:-mr-6 lg:-mr-10 pr-2">
             <div class="rounded-lg border border-dashed border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/40 px-3 py-3">
-                <div class="flex justify-end">
-                  <Tooltip
-                    content="右边被挡时向左展开，箭头跟随实际方位"
-                    placement="auto"
+              <div class="flex justify-end">
+                <Tooltip
+                  content="右边被挡时向左展开，箭头跟随实际方位"
+                  placement="auto"
+                >
+                  <span
+                    data-demo-trigger="tooltip-auto-right"
+                    class="px-3 py-1.5 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 cursor-default"
                   >
-                    <span
-                      data-demo-trigger="tooltip-auto-right"
-                      class="px-3 py-1.5 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 cursor-default"
-                    >
-                      靠右悬停
-                    </span>
-                  </Tooltip>
-                </div>
+                    靠右悬停
+                  </span>
+                </Tooltip>
+              </div>
             </div>
           </div>
           <CodeBlock

@@ -75,6 +75,11 @@ const exampleFull = `<PageHeader
   footer={<p class="text-sm text-slate-500">底部说明文字</p>}
 />`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "PageHeader 页头 · ui-view",
+};
+
 export default function NavigationPageHeader() {
   return (
     <div class="space-y-10">

@@ -101,6 +101,11 @@ const examplePosition = `<BackTop
   bottom={80}
 />`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "BackTop 回到顶部 · ui-view",
+};
+
 export default function OtherBackTop() {
   const visible = createSignal(false);
 

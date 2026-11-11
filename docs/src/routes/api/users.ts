@@ -20,9 +20,26 @@ type User = {
 };
 
 const NAMES = [
-  "Alice", "Bob", "Carol", "David", "Eve", "Frank", "Grace", "Heidi", "Ivan",
-  "Judy", "Mallory", "Niaj", "Olivia", "Peggy", "Rupert", "Sybil", "Trent",
-  "Victor", "Walter", "Zoe",
+  "Alice",
+  "Bob",
+  "Carol",
+  "David",
+  "Eve",
+  "Frank",
+  "Grace",
+  "Heidi",
+  "Ivan",
+  "Judy",
+  "Mallory",
+  "Niaj",
+  "Olivia",
+  "Peggy",
+  "Rupert",
+  "Sybil",
+  "Trent",
+  "Victor",
+  "Walter",
+  "Zoe",
 ];
 
 function seed(n = 28): User[] {
@@ -52,7 +69,10 @@ function lastSeg(path: string): string {
 function list(req: Request) {
   const u = new URL(req.url);
   const page = Math.max(1, Number(u.searchParams.get("page") || 1) || 1);
-  const pageSize = Math.max(1, Number(u.searchParams.get("pageSize") || 10) || 10);
+  const pageSize = Math.max(
+    1,
+    Number(u.searchParams.get("pageSize") || 10) || 10,
+  );
   const sort = u.searchParams.get("sort") || "";
   const order = u.searchParams.get("order") === "desc" ? "desc" : "asc";
   let rows = [...store];
@@ -73,8 +93,12 @@ function list(req: Request) {
       const av = a[key];
       const bv = b[key];
       if (av === bv) return 0;
-      if (typeof av === "number" && typeof bv === "number") return (av - bv) * dir;
-      return String(av).localeCompare(String(bv), undefined, { numeric: true }) * dir;
+      if (typeof av === "number" && typeof bv === "number") {
+        return (av - bv) * dir;
+      }
+      return String(av).localeCompare(String(bv), undefined, {
+        numeric: true,
+      }) * dir;
     });
   }
   const total = rows.length;
@@ -112,14 +136,22 @@ export function GET(request: Request): Response {
 /** POST /api/users/create|update|remove（同文件 :method） */
 export async function POST(request: Request): Promise<Response> {
   const action = lastSeg(pathOf(request));
-  const body = await request.json().catch(() => ({})) as Record<string, unknown>;
+  const body = await request.json().catch(() => ({})) as Record<
+    string,
+    unknown
+  >;
   if (action === "create") {
     if (Array.isArray(body.rows)) {
       let created = 0;
       let failed = 0;
       for (const row of body.rows) {
         try {
-          createOne((row && typeof row === "object" ? row : {}) as Record<string, unknown>);
+          createOne(
+            (row && typeof row === "object" ? row : {}) as Record<
+              string,
+              unknown
+            >,
+          );
           created++;
         } catch {
           failed++;
@@ -149,7 +181,9 @@ export async function POST(request: Request): Promise<Response> {
       email: body.email !== undefined ? String(body.email) : prev.email,
       role: body.role !== undefined ? String(body.role) : prev.role,
       status: body.status !== undefined ? String(body.status) : prev.status,
-      balance: body.balance !== undefined ? Number(body.balance) || 0 : prev.balance,
+      balance: body.balance !== undefined
+        ? Number(body.balance) || 0
+        : prev.balance,
     };
     store = [...store.slice(0, i), next, ...store.slice(i + 1)];
     return json({ ok: true, row: next });

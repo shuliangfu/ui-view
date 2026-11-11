@@ -71,7 +71,10 @@ export interface ApiDataSource extends DataSource {
   view(id: string): Promise<Row | null>;
 }
 
-function trimSlashes(s: string, ends: "start" | "end" | "both" = "both"): string {
+function trimSlashes(
+  s: string,
+  ends: "start" | "end" | "both" = "both",
+): string {
   let out = s;
   if (ends === "start" || ends === "both") out = out.replace(/^\/+/, "");
   if (ends === "end" || ends === "both") out = out.replace(/\/+$/, "");
@@ -99,9 +102,10 @@ export function resolveApiRoot(baseRoute: string, resource?: string): string {
   if (!raw) {
     throw new Error('createApiDataSource: "baseRoute" is required');
   }
-  const segments = raw.replace(/^\/+/, "").replace(/\/+$/, "").split("/").filter(
-    (s) => s !== "",
-  );
+  const segments = raw.replace(/^\/+/, "").replace(/\/+$/, "").split("/")
+    .filter(
+      (s) => s !== "",
+    );
   if (segments.length >= 2) {
     return `/${segments.join("/")}`;
   }
@@ -116,7 +120,6 @@ export function resolveApiRoot(baseRoute: string, resource?: string): string {
   }
   throw new Error('createApiDataSource: "baseRoute" is required');
 }
-
 
 /** list 查询 → URLSearchParams（page／pageSize／sort／order＋filters 扁平键） */
 export function apiQueryParams(query: Query): URLSearchParams {
@@ -155,7 +158,9 @@ export function normalizeListPayload(body: unknown): ListResult {
       Object.entries(inner.totals).filter(([, v]) => typeof v === "number"),
     ) as Record<string, number>
     : undefined;
-  return totals && Object.keys(totals).length ? { rows, total, totals } : { rows, total };
+  return totals && Object.keys(totals).length
+    ? { rows, total, totals }
+    : { rows, total };
 }
 
 function messageFromBody(body: unknown, fallback: string): string {
@@ -177,7 +182,9 @@ function writeFromResponse(
         : undefined,
       messages: isRecord(body.messages)
         ? Object.fromEntries(
-          Object.entries(body.messages).filter(([, v]) => typeof v === "string"),
+          Object.entries(body.messages).filter(([, v]) =>
+            typeof v === "string"
+          ),
         ) as Record<string, string>
         : undefined,
     };

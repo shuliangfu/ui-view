@@ -194,6 +194,11 @@ const exampleLoading = `<Dialog
   onCancel={() => openLoading.value = false}
 />`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "Dialog 确认对话框 · ui-view",
+};
+
 export default function FeedbackDialog() {
   const open = createSignal(false);
   const openWarning = createSignal(false);

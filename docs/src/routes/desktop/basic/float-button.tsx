@@ -14,20 +14,50 @@ import { MESSAGES_FLOAT_BUTTON } from "../../../data/component-messages-rows.ts"
 
 const API: DocsApiTableRow[] = [
   { name: "icon", type: "unknown", default: "+", description: "主按钮内容" },
-  { name: "items", type: "FloatButtonItem[]", default: "-", description: "展开子项" },
-  { name: "shape", type: "circle | square", default: "circle", description: "形状（正圆／正方）" },
-  { name: "placement", type: "bottom-right | …", default: "bottom-right", description: "角落" },
-  { name: "position", type: '"fixed" | "absolute"', default: "fixed", description: "fixed=视口；文档示例用 absolute" },
-  { name: "badge", type: "number | boolean", default: "-", description: "徽标" },
+  {
+    name: "items",
+    type: "FloatButtonItem[]",
+    default: "-",
+    description: "展开子项",
+  },
+  {
+    name: "shape",
+    type: "circle | square",
+    default: "circle",
+    description: "形状（正圆／正方）",
+  },
+  {
+    name: "placement",
+    type: "bottom-right | …",
+    default: "bottom-right",
+    description: "角落",
+  },
+  {
+    name: "position",
+    type: '"fixed" | "absolute"',
+    default: "fixed",
+    description: "fixed=视口；文档示例用 absolute",
+  },
+  {
+    name: "badge",
+    type: "number | boolean",
+    default: "-",
+    description: "徽标",
+  },
   { name: "open", type: "boolean", default: "-", description: "受控展开" },
-  { name: "onOpenChange", type: "(open)=>void", default: "-", description: "展开变化" },
-  { name: "offset", type: "number", default: "24", description: "距边 px" },  {
+  {
+    name: "onOpenChange",
+    type: "(open)=>void",
+    default: "-",
+    description: "展开变化",
+  },
+  { name: "offset", type: "number", default: "24", description: "距边 px" },
+  {
     name: "messages",
     type: "Partial<FloatButtonMessages>",
     default: "-",
     description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
   },
-
 ];
 
 const importCode = `import { FloatButton } from "@dreamer/ui-view/basic";
@@ -50,7 +80,6 @@ function DemoBox(props: { label: string; children?: unknown }) {
     </div>
   );
 }
-
 
 const exampleCircle = `<FloatButton
   position="absolute"
@@ -92,6 +121,11 @@ const exampleOpen = `const open = createSignal(false);
   ]}
 />`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "FloatButton · ui-view",
+};
+
 export default function Page() {
   const open = createSignal(false);
   return (
@@ -99,7 +133,8 @@ export default function Page() {
       <div>
         <Title level={1}>FloatButton</Title>
         <Paragraph>
-          角悬浮按钮，可展开子操作。文档示例 position=&quot;absolute&quot; 落在示意框内；产品默认 fixed 视口。
+          角悬浮按钮，可展开子操作。文档示例 position=&quot;absolute&quot;
+          落在示意框内；产品默认 fixed 视口。
         </Paragraph>
       </div>
       <section class="space-y-3">
@@ -125,7 +160,14 @@ export default function Page() {
               />
             </DemoBox>
           </div>
-          <CodeBlock title="代码示例" code={exampleCircle} language="tsx" showLineNumbers copyable wrapLongLines />
+          <CodeBlock
+            title="代码示例"
+            code={exampleCircle}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
         </div>
 
         <div class="space-y-2">
@@ -140,25 +182,40 @@ export default function Page() {
               />
             </DemoBox>
           </div>
-          <CodeBlock title="代码示例" code={exampleSquare} language="tsx" showLineNumbers copyable wrapLongLines />
+          <CodeBlock
+            title="代码示例"
+            code={exampleSquare}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
         </div>
 
         <div class="space-y-2">
           <Title level={3}>placement 四角</Title>
           <div class="rounded-xl border border-slate-200 dark:border-slate-700 p-4 bg-white dark:bg-slate-900 grid sm:grid-cols-2 gap-3">
-            {(["bottom-right", "bottom-left", "top-right", "top-left"] as const).map((p) => (
-              <DemoBox label={p}>
-                <FloatButton
-                  position="absolute"
-                  placement={p}
-                  offset={12}
-                  aria-label={p}
-                  icon="·"
-                />
-              </DemoBox>
-            ))}
+            {(["bottom-right", "bottom-left", "top-right", "top-left"] as const)
+              .map((p) => (
+                <DemoBox label={p}>
+                  <FloatButton
+                    position="absolute"
+                    placement={p}
+                    offset={12}
+                    aria-label={p}
+                    icon="·"
+                  />
+                </DemoBox>
+              ))}
           </div>
-          <CodeBlock title="代码示例" code={examplePlacement} language="tsx" showLineNumbers copyable wrapLongLines />
+          <CodeBlock
+            title="代码示例"
+            code={examplePlacement}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
         </div>
 
         <div class="space-y-2">
@@ -180,7 +237,14 @@ export default function Page() {
               />
             </DemoBox>
           </div>
-          <CodeBlock title="代码示例" code={exampleOpen} language="tsx" showLineNumbers copyable wrapLongLines />
+          <CodeBlock
+            title="代码示例"
+            code={exampleOpen}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
         </div>
       </section>
       <DocsMessagesSection

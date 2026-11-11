@@ -163,6 +163,11 @@ const qty = createSignal("10");
   />
 </FormItem>`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "InputNumber 数字输入 · ui-view",
+};
+
 export default function FormInputNumber() {
   return (
     <div class="space-y-10">

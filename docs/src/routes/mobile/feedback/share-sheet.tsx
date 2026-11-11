@@ -16,18 +16,32 @@ import { MESSAGES_SHARE_SHEET } from "../../../data/component-messages-rows.ts";
 import { MobileDocDemo } from "../../../components/MobileDocDemo.tsx";
 
 const API: DocsApiTableRow[] = [
-  { name: "open", type: "ControlledOpenInput", default: "-", description: "是否打开" },
-  { name: "options", type: "ShareSheetOption[]", default: "-", description: "分享选项" },
+  {
+    name: "open",
+    type: "ControlledOpenInput",
+    default: "-",
+    description: "是否打开",
+  },
+  {
+    name: "options",
+    type: "ShareSheetOption[]",
+    default: "-",
+    description: "分享选项",
+  },
   { name: "title", type: "string | null", default: "-", description: "标题" },
   { name: "onClose", type: "() => void", default: "-", description: "关闭" },
-  { name: "cancelText", type: "string | null", default: "取消", description: "取消文案" },
+  {
+    name: "cancelText",
+    type: "string | null",
+    default: "取消",
+    description: "取消文案",
+  },
   {
     name: "messages",
     type: "Partial<ShareSheetMessages>",
     default: "-",
     description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
   },
-
 ];
 
 const importCode = `import { createSignal } from "@dreamer/view";
@@ -44,11 +58,14 @@ const open = createSignal(false);
   onClose={() => (open.value = false)}
 />`;
 
-
 const exampleDemo = `const open = createSignal(false);
 <Button onClick={() => (open.value = true)}>分享</Button>
 <ShareSheet open={open} onClose={() => (open.value = false)} options={[/* … */]} />`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "ShareSheet · ui-view",
+};
 
 export default function Page() {
   const open = createSignal(false);
@@ -82,7 +99,14 @@ export default function Page() {
             />
           </MobilePortalHostScope>
         </MobileDocDemo>
-        <CodeBlock title="代码示例" code={exampleDemo} language="tsx" showLineNumbers copyable wrapLongLines />
+        <CodeBlock
+          title="代码示例"
+          code={exampleDemo}
+          language="tsx"
+          showLineNumbers
+          copyable
+          wrapLongLines
+        />
       </section>
       <DocsMessagesSection
         interfaceName="ShareSheetMessages"

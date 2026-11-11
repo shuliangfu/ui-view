@@ -14,20 +14,31 @@ import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx
 import { MESSAGES_CONTEXT_MENU } from "../../../data/component-messages-rows.ts";
 
 const API: DocsApiTableRow[] = [
-  { name: "items", type: "ContextMenuItem[]", default: "-", description: "菜单项（label／icon／onClick／danger／divider／disabled）" },
-  { name: "children", type: "unknown", default: "-", description: "触发区（右键）" },
+  {
+    name: "items",
+    type: "ContextMenuItem[]",
+    default: "-",
+    description: "菜单项（label／icon／onClick／danger／divider／disabled）",
+  },
+  {
+    name: "children",
+    type: "unknown",
+    default: "-",
+    description: "触发区（右键）",
+  },
   {
     name: "定位",
     type: "（内置 auto）",
     default: "auto",
-    description: "无 placement 属性。菜单按点击坐标向右下展开；右边挡住则向左，下边挡住则向上，避免贴边被裁。",
-  },  {
+    description:
+      "无 placement 属性。菜单按点击坐标向右下展开；右边挡住则向左，下边挡住则向上，避免贴边被裁。",
+  },
+  {
     name: "messages",
     type: "Partial<ContextMenuMessages>",
     default: "-",
     description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
   },
-
 ];
 
 const importCode = `import { ContextMenu } from "@dreamer/ui-view/feedback";
@@ -89,14 +100,27 @@ const exampleAuto = `<div class="flex justify-end">
   </ContextMenu>
 </div>`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "ContextMenu · ui-view",
+};
+
 export default function Page() {
   const tip = createSignal("");
   return (
     <div class="space-y-8">
       <div>
         <Title level={1}>ContextMenu</Title>
-        <Paragraph>右键菜单：图标、分割线、危险项、禁用项；Portal 浮层。菜单默认向点击处右下展开，右边挡住则向左、下边挡住则向上。</Paragraph>
-        <Paragraph class="mt-2 text-sm text-slate-600 dark:text-slate-400">菜单项文案走 <code>items[].label</code>（可 VNode）；<code>messages.menu</code> 仅覆盖面板 aria-label。</Paragraph>
+        <Paragraph>
+          右键菜单：图标、分割线、危险项、禁用项；Portal
+          浮层。菜单默认向点击处右下展开，右边挡住则向左、下边挡住则向上。
+        </Paragraph>
+        <Paragraph class="mt-2 text-sm text-slate-600 dark:text-slate-400">
+          菜单项文案走{" "}
+          <code>items[].label</code>（可 VNode）；<code>messages.menu</code>
+          {" "}
+          仅覆盖面板 aria-label。
+        </Paragraph>
       </div>
       <section class="space-y-3">
         <Title level={2}>引入</Title>
@@ -110,7 +134,11 @@ export default function Page() {
           <div class="rounded-xl border border-slate-200 dark:border-slate-700 p-4 bg-white dark:bg-slate-900 space-y-2">
             <ContextMenu
               items={[
-                { key: "copy", label: "复制", onClick: () => (tip.value = "复制") },
+                {
+                  key: "copy",
+                  label: "复制",
+                  onClick: () => (tip.value = "复制"),
+                },
                 { key: "div1", label: "", divider: true },
                 {
                   key: "del",
@@ -127,7 +155,11 @@ export default function Page() {
             </ContextMenu>
             {() =>
               tip.value
-                ? <p class="text-sm text-slate-500" role="status">操作：{tip.value}</p>
+                ? (
+                  <p class="text-sm text-slate-500" role="status">
+                    操作：{tip.value}
+                  </p>
+                )
                 : null}
           </div>
           <CodeBlock
@@ -145,10 +177,19 @@ export default function Page() {
           <div class="rounded-xl border border-slate-200 dark:border-slate-700 p-4 bg-white dark:bg-slate-900">
             <ContextMenu
               items={[
-                { key: "edit", label: "编辑", onClick: () => (tip.value = "编辑") },
+                {
+                  key: "edit",
+                  label: "编辑",
+                  onClick: () => (tip.value = "编辑"),
+                },
                 { key: "share", label: "分享（禁用）", disabled: true },
                 { key: "d", label: "", divider: true },
-                { key: "del", label: "删除", danger: true, onClick: () => (tip.value = "删除") },
+                {
+                  key: "del",
+                  label: "删除",
+                  danger: true,
+                  onClick: () => (tip.value = "删除"),
+                },
               ]}
             >
               <div class="p-8 border border-dashed rounded-lg text-sm text-slate-500">
@@ -172,29 +213,37 @@ export default function Page() {
           </Paragraph>
           <div class="-mr-3 sm:-mr-6 lg:-mr-10 pr-2">
             <div class="rounded-lg border border-dashed border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/40 px-3 py-3">
-                <div class="flex justify-end">
-                  <ContextMenu
-                    items={[
-                      { key: "copy", label: "复制", onClick: () => (tip.value = "复制") },
-                      { key: "edit", label: "编辑", onClick: () => (tip.value = "编辑") },
-                      { key: "div1", label: "", divider: true },
-                      {
-                        key: "del",
-                        label: "删除",
-                        danger: true,
-                        icon: <IconTrash size="sm" />,
-                        onClick: () => (tip.value = "删除"),
-                      },
-                    ]}
+              <div class="flex justify-end">
+                <ContextMenu
+                  items={[
+                    {
+                      key: "copy",
+                      label: "复制",
+                      onClick: () => (tip.value = "复制"),
+                    },
+                    {
+                      key: "edit",
+                      label: "编辑",
+                      onClick: () => (tip.value = "编辑"),
+                    },
+                    { key: "div1", label: "", divider: true },
+                    {
+                      key: "del",
+                      label: "删除",
+                      danger: true,
+                      icon: <IconTrash size="sm" />,
+                      onClick: () => (tip.value = "删除"),
+                    },
+                  ]}
+                >
+                  <div
+                    data-demo-trigger="contextmenu-auto-right"
+                    class="w-40 p-8 border border-dashed rounded-lg text-sm text-slate-500 bg-white dark:bg-slate-900"
                   >
-                    <div
-                      data-demo-trigger="contextmenu-auto-right"
-                      class="w-40 p-8 border border-dashed rounded-lg text-sm text-slate-500 bg-white dark:bg-slate-900"
-                    >
-                      靠右右键
-                    </div>
-                  </ContextMenu>
-                </div>
+                    靠右右键
+                  </div>
+                </ContextMenu>
+              </div>
             </div>
           </div>
           <CodeBlock

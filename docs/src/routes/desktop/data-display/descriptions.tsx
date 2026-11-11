@@ -83,7 +83,8 @@ const DESCRIPTIONS_API: ApiRow[] = [
   { name: "class", type: "string", default: "-", description: "容器 class" },
 ];
 
-const importCode = `import { Descriptions } from "@dreamer/ui-view/data-display";
+const importCode =
+  `import { Descriptions } from "@dreamer/ui-view/data-display";
 
 const items = [{ label: "姓名", children: "张三" }, { label: "年龄", children: "28" }, ...];
 <Descriptions
@@ -163,6 +164,11 @@ const exampleSizeColon = `<Descriptions
   colon={false}
   title="无冒号"
 />`;
+
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "Descriptions 描述列表 · ui-view",
+};
 
 export default function DataDisplayDescriptions() {
   /** column=1：每行一组；label 故意长短不一，内容偏复杂 */

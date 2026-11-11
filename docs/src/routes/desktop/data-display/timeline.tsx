@@ -55,6 +55,11 @@ const exampleLeft = `<Timeline
   mode="left"
 />`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "Timeline 时间轴 · ui-view",
+};
+
 export default function DataDisplayTimeline() {
   const items = [
     {

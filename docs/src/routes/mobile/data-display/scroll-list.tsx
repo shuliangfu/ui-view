@@ -2,7 +2,7 @@
  * ScrollList 文档页（概述、引入、示例、API）。路由: /mobile/data-display/scroll-list
  */
 
-import { ScrollList, CodeBlock } from "@dreamer/ui-view/mobile/data-display";
+import { CodeBlock, ScrollList } from "@dreamer/ui-view/mobile/data-display";
 import { Paragraph, Title } from "@dreamer/ui-view/mobile/basic";
 import { createMemo, createSignal } from "@dreamer/view";
 import type { JSXRenderable } from "@dreamer/view";
@@ -94,7 +94,8 @@ const SCROLL_LIST_API: DocsApiTableRow[] = [
   },
 ];
 
-const importCode = `import { ScrollList } from "@dreamer/ui-view/mobile/data-display";
+const importCode =
+  `import { ScrollList } from "@dreamer/ui-view/mobile/data-display";
 import { createSignal } from "@dreamer/view";
 
 const refreshLoading = createSignal(false);
@@ -197,6 +198,11 @@ function ScrollListDocInteractiveDemo(): JSXRenderable {
   );
 }
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "ScrollList 滚动列表 · ui-view",
+};
+
 export default function MobileScrollListDoc() {
   return (
     <div class="w-full max-w-3xl space-y-10">
@@ -250,11 +256,11 @@ export default function MobileScrollListDoc() {
       </section>
 
       <section class="space-y-4">
-      <DocsMessagesSection
-        interfaceName="ScrollListMessages"
-        defaultExportName="defaultScrollListMessages"
-        rows={MESSAGES_SCROLL_LIST}
-      />
+        <DocsMessagesSection
+          interfaceName="ScrollListMessages"
+          defaultExportName="defaultScrollListMessages"
+          rows={MESSAGES_SCROLL_LIST}
+        />
 
         <Title level={2}>API</Title>
         <DocsApiTable rows={SCROLL_LIST_API} />

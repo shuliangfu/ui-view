@@ -80,6 +80,11 @@ const exampleChildren = `<Badge variant="primary">New</Badge>
 <Badge variant="danger">Hot</Badge>
 <Badge variant="success">Pro</Badge>`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "Badge 角标 / 徽章 · ui-view",
+};
+
 export default function BasicBadge() {
   return (
     <div class="space-y-10">

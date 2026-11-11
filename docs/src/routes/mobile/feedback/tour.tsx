@@ -15,9 +15,19 @@ import { MESSAGES_TOUR } from "../../../data/component-messages-rows.ts";
 import { MobileDocDemo } from "../../../components/MobileDocDemo.tsx";
 
 const API: DocsApiTableRow[] = [
-  { name: "open", type: "ControlledOpenInput", default: "-", description: "是否打开" },
+  {
+    name: "open",
+    type: "ControlledOpenInput",
+    default: "-",
+    description: "是否打开",
+  },
   { name: "steps", type: "TourStep[]", default: "-", description: "步骤" },
-  { name: "current", type: "MaybeSignal<number>", default: "-", description: "受控步；不传则内部步进" },
+  {
+    name: "current",
+    type: "MaybeSignal<number>",
+    default: "-",
+    description: "受控步；不传则内部步进",
+  },
   { name: "showSkip", type: "boolean", default: "true", description: "跳过" },
   {
     name: "messages",
@@ -25,14 +35,12 @@ const API: DocsApiTableRow[] = [
     default: "-",
     description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
   },
-
 ];
 
 const importCode = `import { createSignal } from "@dreamer/view";
 
 const open = createSignal(false);
 <Tour open={open} steps={[...]} onClose={() => (open.value = false)} />`;
-
 
 const exampleBasic = `const open = createSignal(false);
 const steps = [
@@ -58,20 +66,36 @@ const current = createSignal(0);
   onFinish={() => (openCtrl.value = false)}
 />`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "Tour · ui-view",
+};
 
 export default function Page() {
   const open = createSignal(false);
   const openCtrl = createSignal(false);
   const current = createSignal(0);
   const steps = [
-    { title: "欢迎", description: "这是第一步：高亮左侧目标。", target: "#m-tour-a", placement: "bottom" as const },
-    { title: "继续", description: "第二步：高亮右侧目标。", target: "#m-tour-b", placement: "bottom" as const },
+    {
+      title: "欢迎",
+      description: "这是第一步：高亮左侧目标。",
+      target: "#m-tour-a",
+      placement: "bottom" as const,
+    },
+    {
+      title: "继续",
+      description: "第二步：高亮右侧目标。",
+      target: "#m-tour-b",
+      placement: "bottom" as const,
+    },
   ];
   return (
     <div class="space-y-8">
       <div>
         <Title level={1}>Tour</Title>
-        <Paragraph>移动端漫游引导；非受控可点「下一步」；亦可受控 current。</Paragraph>
+        <Paragraph>
+          移动端漫游引导；非受控可点「下一步」；亦可受控 current。
+        </Paragraph>
       </div>
       <section class="space-y-3">
         <Title level={2}>引入</Title>
@@ -83,17 +107,35 @@ export default function Page() {
           <Title level={3}>基础（非受控步进）</Title>
           <MobileDocDemo class="p-4 space-y-3">
             <div class="flex gap-3">
-              <div id="m-tour-a" class="rounded-lg border border-dashed px-3 py-5 text-sm flex-1">目标 A</div>
-              <div id="m-tour-b" class="rounded-lg border border-dashed px-3 py-5 text-sm flex-1">目标 B</div>
+              <div
+                id="m-tour-a"
+                class="rounded-lg border border-dashed px-3 py-5 text-sm flex-1"
+              >
+                目标 A
+              </div>
+              <div
+                id="m-tour-b"
+                class="rounded-lg border border-dashed px-3 py-5 text-sm flex-1"
+              >
+                目标 B
+              </div>
             </div>
             {() =>
               !open.value
                 ? (
                   <div data-tour-trigger="start">
-                    <Button type="button" onClick={() => (open.value = true)}>开始引导</Button>
+                    <Button type="button" onClick={() => (open.value = true)}>
+                      开始引导
+                    </Button>
                   </div>
                 )
-                : <div class="h-9" data-tour-trigger="placeholder" aria-hidden="true" />}
+                : (
+                  <div
+                    class="h-9"
+                    data-tour-trigger="placeholder"
+                    aria-hidden="true"
+                  />
+                )}
             <Tour
               open={open}
               steps={steps}
@@ -101,17 +143,32 @@ export default function Page() {
               onFinish={() => (open.value = false)}
             />
           </MobileDocDemo>
-          <CodeBlock title="代码示例" code={exampleBasic} language="tsx" showLineNumbers copyable wrapLongLines />
-
+          <CodeBlock
+            title="代码示例"
+            code={exampleBasic}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
         </div>
         <div class="space-y-2">
           <Title level={3}>受控 current</Title>
           <MobileDocDemo class="p-4 space-y-2">
-            <div id="m-tour-c" class="rounded-lg border border-dashed px-3 py-4 text-sm">受控目标</div>
-            <Button type="button" size="sm" onClick={() => {
-              current.value = 0;
-              openCtrl.value = true;
-            }}>
+            <div
+              id="m-tour-c"
+              class="rounded-lg border border-dashed px-3 py-4 text-sm"
+            >
+              受控目标
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => {
+                current.value = 0;
+                openCtrl.value = true;
+              }}
+            >
               打开受控
             </Button>
             <Tour
@@ -119,14 +176,25 @@ export default function Page() {
               current={current}
               onCurrentChange={(i) => (current.value = i)}
               steps={[
-                { title: "一步", description: "受控", target: "#m-tour-c", placement: "bottom" },
+                {
+                  title: "一步",
+                  description: "受控",
+                  target: "#m-tour-c",
+                  placement: "bottom",
+                },
               ]}
               onClose={() => (openCtrl.value = false)}
               onFinish={() => (openCtrl.value = false)}
             />
           </MobileDocDemo>
-          <CodeBlock title="代码示例" code={exampleCtrl} language="tsx" showLineNumbers copyable wrapLongLines />
-
+          <CodeBlock
+            title="代码示例"
+            code={exampleCtrl}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
         </div>
       </section>
       <DocsMessagesSection

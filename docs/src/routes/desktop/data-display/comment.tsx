@@ -74,6 +74,11 @@ const exampleReplies = `<Comment
   <p>带回复的评论。</p>
 </Comment>`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "Comment 评论 · ui-view",
+};
+
 export default function DataDisplayComment() {
   return (
     <div class="space-y-10">

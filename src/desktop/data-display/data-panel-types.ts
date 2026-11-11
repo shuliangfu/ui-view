@@ -66,6 +66,16 @@ export interface Column {
   format?: string;
   /** 是否可点击表头排序（服务端 / 本地数据源均走 `list(query)`） */
   sortable?: boolean;
+  /**
+   * 单元格文本对齐（数据列）。默认 `left`。
+   * 系统列 `selection`／`index`／`actions` 固定居中，忽略本字段。
+   */
+  align?: "left" | "center" | "right";
+  /**
+   * 表头标题对齐（数据列）。**不传**时与 `align` 一致；二者皆未设则为 `left`。
+   * 用于「表头居中、单元格仍左／右」等；系统列忽略本字段。
+   */
+  headerAlign?: "left" | "center" | "right";
   /** 列宽（px） */
   width?: number;
   /** tag 列：值 → 文案 / 色调；switch/select 行内编辑也用 */

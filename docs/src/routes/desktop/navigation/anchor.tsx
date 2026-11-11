@@ -82,6 +82,11 @@ const exampleBasic = `const links = [
 ];
 <Anchor links={links} activeKey={activeKey.value} onChange={(k) => activeKey.value = k} />`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "Anchor 锚点 · ui-view",
+};
+
 export default function NavigationAnchor() {
   const activeKey = createSignal("section1");
 

@@ -88,6 +88,11 @@ const exampleCols24 = `<Grid
   <GridItem span={16}>span 16</GridItem>
 </Grid>`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "Grid 栅格 · ui-view",
+};
+
 export default function LayoutGrid() {
   return (
     <div class="space-y-10">

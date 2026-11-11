@@ -128,6 +128,11 @@ const mobileSelectControlledVal = createSignal("a");
 const exampleControlled = `const value = createSignal("a");
 <Select value={value} options={[{ value: "a", label: "A" }, { value: "b", label: "B" }]} />`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "Select 单选（移动） · ui-view",
+};
+
 export default function MobileSelectDoc() {
   return (
     <div class="w-full max-w-3xl space-y-10">

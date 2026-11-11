@@ -327,6 +327,11 @@ const exampleCreateForm = `const form = createForm({
   </div>
 </Form>`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "Form · FormItem · FormList · createForm · ui-view",
+};
+
 export default function FormContainersDoc() {
   return (
     <div class="space-y-10 w-full">

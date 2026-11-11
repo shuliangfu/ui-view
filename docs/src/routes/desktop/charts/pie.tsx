@@ -64,6 +64,11 @@ const exampleBasic = `<ChartPie
   class="w-full h-64"
 />`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "ChartPie 饼图 · ui-view",
+};
+
 export default function ChartsPie() {
   return (
     <div class="space-y-10">

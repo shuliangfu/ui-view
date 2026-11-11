@@ -127,6 +127,11 @@ const form = createForm({
   <Button type="submit" variant="primary">提交</Button>
 </Form>`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "Rate 评分 · ui-view",
+};
+
 export default function FormRate() {
   const val = createSignal(0);
   /** 半星示例：初始 3.5，第 4 颗星左橙右灰；也可点星左/右半边改分 */

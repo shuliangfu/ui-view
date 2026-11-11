@@ -121,6 +121,11 @@ const activeKeyControlled = createSignal<string[]>([
   "1",
 ]);
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "Collapse 折叠面板 · ui-view",
+};
+
 export default function DataDisplayCollapse() {
   const items = [
     {

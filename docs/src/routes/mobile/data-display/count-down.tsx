@@ -2,7 +2,7 @@
  * CountDown 文档页。路由: /mobile/data-display/count-down
  */
 
-import { CountDown, CodeBlock } from "@dreamer/ui-view/mobile/data-display";
+import { CodeBlock, CountDown } from "@dreamer/ui-view/mobile/data-display";
 import { Paragraph, Title } from "@dreamer/ui-view/mobile/basic";
 import {
   DocsApiTable,
@@ -11,19 +11,43 @@ import {
 import { MobileDocDemo } from "../../../components/MobileDocDemo.tsx";
 
 const API: DocsApiTableRow[] = [
-  { name: "target", type: "MaybeSignal<number|Date>", default: "-", description: "结束时刻" },
-  { name: "remaining", type: "MaybeSignal<number>", default: "-", description: "剩余毫秒" },
-  { name: "onFinish", type: "() => void", default: "-", description: "结束回调" },
-  { name: "render", type: "(parts)=>unknown", default: "-", description: "自定义展示" }
+  {
+    name: "target",
+    type: "MaybeSignal<number|Date>",
+    default: "-",
+    description: "结束时刻",
+  },
+  {
+    name: "remaining",
+    type: "MaybeSignal<number>",
+    default: "-",
+    description: "剩余毫秒",
+  },
+  {
+    name: "onFinish",
+    type: "() => void",
+    default: "-",
+    description: "结束回调",
+  },
+  {
+    name: "render",
+    type: "(parts)=>unknown",
+    default: "-",
+    description: "自定义展示",
+  },
 ];
 
-const importCode = `import { CountDown } from "@dreamer/ui-view/mobile/data-display";
+const importCode =
+  `import { CountDown } from "@dreamer/ui-view/mobile/data-display";
 
 <CountDown target={Date.now() + 3_661_000} />`;
 
-
 const exampleDemo = `<CountDown target={Date.now() + 3_661_000} />`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "CountDown · ui-view",
+};
 
 export default function Page() {
   return (
@@ -39,9 +63,18 @@ export default function Page() {
       <section class="space-y-3">
         <Title level={2}>示例</Title>
         <MobileDocDemo>
-          <div class="p-4 text-center text-lg"><CountDown target={Date.now() + 3661000} /></div>
+          <div class="p-4 text-center text-lg">
+            <CountDown target={Date.now() + 3661000} />
+          </div>
         </MobileDocDemo>
-        <CodeBlock title="代码示例" code={exampleDemo} language="tsx" showLineNumbers copyable wrapLongLines />
+        <CodeBlock
+          title="代码示例"
+          code={exampleDemo}
+          language="tsx"
+          showLineNumbers
+          copyable
+          wrapLongLines
+        />
       </section>
       <section class="space-y-3">
         <Title level={2}>API</Title>

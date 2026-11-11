@@ -73,7 +73,8 @@ const BUTTON_API: ApiRow[] = [
   },
 ];
 
-const importCode = `import { Button, ButtonGroup } from "@dreamer/ui-view/basic";
+const importCode =
+  `import { Button, ButtonGroup } from "@dreamer/ui-view/basic";
 
 <Button variant="primary" onClick={() => console.log("click")}>
   确定
@@ -159,6 +160,11 @@ const exampleButtonGroupSpaced = `<ButtonGroup attached={false}>
   <Button variant="default" size="sm">刷新</Button>
   <Button variant="primary" size="sm">导出</Button>
 </ButtonGroup>`;
+
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "Button 按钮 · ui-view",
+};
 
 export default function BasicButton() {
   return (

@@ -238,7 +238,6 @@ export function buildXlsx(sheet: XlsxSheet): Uint8Array {
 export const XLSX_MIME =
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
-
 const dec = new TextDecoder();
 
 /** 解压 ZIP deflate-raw（method 8） */
@@ -418,9 +417,7 @@ export async function parseXlsx(
       const m = re.exec(dec.decode(rels));
       if (m) {
         const target = m[1].replace(/^\//, "");
-        sheetPath = target.startsWith("xl/")
-          ? target
-          : `xl/${target}`;
+        sheetPath = target.startsWith("xl/") ? target : `xl/${target}`;
       }
     }
   }
@@ -436,6 +433,8 @@ export async function parseXlsx(
   return rest
     .filter((r) => r.some((c) => c !== ""))
     .map((r) =>
-      Object.fromEntries(keys.map((k, i) => [k || `col${i}`, (r[i] ?? "").trim()]))
+      Object.fromEntries(
+        keys.map((k, i) => [k || `col${i}`, (r[i] ?? "").trim()]),
+      )
     );
 }

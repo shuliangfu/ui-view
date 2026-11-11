@@ -83,7 +83,8 @@ const TAB_BAR_ITEM_API: DocsApiTableRow[] = [
 /**
  * 引入区与「文案标签」示例共用：与预览一致（三项 + fixed=false）。
  */
-const introAndTextTabsCode = `import { TabBar } from "@dreamer/ui-view/mobile/navigation";
+const introAndTextTabsCode =
+  `import { TabBar } from "@dreamer/ui-view/mobile/navigation";
 
 const activeKey = createSignal("home");
 
@@ -101,7 +102,8 @@ const activeKey = createSignal("home");
 /**
  * 「图标 + 角标」示例：与预览一致。
  */
-const iconBadgeExampleCode = `import { TabBar } from "@dreamer/ui-view/mobile/navigation";
+const iconBadgeExampleCode =
+  `import { TabBar } from "@dreamer/ui-view/mobile/navigation";
 
 const activeKey = createSignal("home");
 
@@ -129,6 +131,11 @@ const activeKey = createSignal("home");
   activeKey={activeKey}
   onChange={(k) => (activeKey.value = k)}
 />`;
+
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "TabBar 底部标签栏 · ui-view",
+};
 
 export default function MobileTabBarDoc() {
   const activeKey = createSignal("home");
@@ -244,11 +251,11 @@ export default function MobileTabBarDoc() {
       </section>
 
       <section class="space-y-6">
-      <DocsMessagesSection
-        interfaceName="TabBarMessages"
-        defaultExportName="defaultTabBarMessages"
-        rows={MESSAGES_TAB_BAR}
-      />
+        <DocsMessagesSection
+          interfaceName="TabBarMessages"
+          defaultExportName="defaultTabBarMessages"
+          rows={MESSAGES_TAB_BAR}
+        />
 
         <Title level={2}>API</Title>
         <div class="space-y-3">

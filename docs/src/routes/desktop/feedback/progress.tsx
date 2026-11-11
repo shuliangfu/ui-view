@@ -170,6 +170,11 @@ export function Demo() {
   );
 }`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "Progress 进度条 · ui-view",
+};
+
 export default function FeedbackProgress() {
   /** 动态进度 0–100 */
   const dynamicPercent = createSignal(0);

@@ -111,6 +111,11 @@ const exampleDisabled = `{() => (
 )}
 // options 中某项设置 disabled: true 即可禁用该项`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "Segmented 分段控制器 · ui-view",
+};
+
 export default function DataDisplaySegmented() {
   /** 各示例使用独立 signal，互不影响 */
   const valueBasic = createSignal("列表");

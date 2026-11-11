@@ -238,6 +238,11 @@ const curRandom = createSignal(0);
   interval={${DEMO_AUTOPLAY_INTERVAL_MS}}
 />`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "Carousel 轮播图 · ui-view",
+};
+
 export default function DataDisplayCarousel() {
   const current = createSignal(0);
   /** autoplay 示例用独立 current，避免与 dots+arrows 共用导致双份 patch、闪烁与乱跳 */

@@ -789,4 +789,3 @@ export function renderEditableCellDisplay<T extends Record<string, unknown>>(
     }
   }
 }
-

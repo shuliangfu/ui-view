@@ -34,7 +34,6 @@ const SKELETON_API: ApiRow[] = [
     default: "-",
     description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
   },
-
 ];
 
 const importCode = `import { Skeleton } from "@dreamer/ui-view/basic";
@@ -70,6 +69,11 @@ const examplePage =
     </div>
   </main>
 </div>`;
+
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "Skeleton 骨架屏 · ui-view",
+};
 
 export default function BasicSkeleton() {
   return (

@@ -146,6 +146,11 @@ const form = createForm({
   <Button type="submit" variant="primary">提交</Button>
 </Form>`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "Slider 滑块 · ui-view",
+};
+
 export default function FormSlider() {
   /** 与 Slider 的 value 绑定同一 Signal；Slider 在 onInput 路径内会 commitMaybeSignal，首屏即有文案且拖动跟手 */
   const singleVal = createSignal(50);

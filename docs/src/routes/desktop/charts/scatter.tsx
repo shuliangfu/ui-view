@@ -79,6 +79,11 @@ const exampleBasic = `<ChartScatter
   class="w-full h-64"
 />`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "ChartScatter 散点图 · ui-view",
+};
+
 export default function ChartsScatter() {
   return (
     <div class="space-y-10">

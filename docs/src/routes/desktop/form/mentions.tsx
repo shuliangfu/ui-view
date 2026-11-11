@@ -177,6 +177,11 @@ const opts = createSignal<MentionOption[]>([]);
   onSelectOption={handleSelect}
 />`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "Mentions 提及 · ui-view",
+};
+
 export default function FormMentions() {
   const val = createSignal("");
   const val2 = createSignal("你好 @张三 请查收");

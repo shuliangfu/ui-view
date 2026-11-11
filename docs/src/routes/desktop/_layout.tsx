@@ -27,7 +27,11 @@ const BASIC_SUBMENU = [
   { path: "/desktop/basic/avatar", label: "Avatar", desc: "头像" },
   { path: "/desktop/basic/skeleton", label: "Skeleton", desc: "骨架屏" },
   { path: "/desktop/basic/spinner", label: "Spinner", desc: "加载旋转" },
-  { path: "/desktop/basic/float-button", label: "FloatButton", desc: "悬浮按钮" },
+  {
+    path: "/desktop/basic/float-button",
+    label: "FloatButton",
+    desc: "悬浮按钮",
+  },
 ] as const;
 
 /**
@@ -120,7 +124,11 @@ const FEEDBACK_SUBMENU = [
   { path: "/desktop/feedback/notice-bar", label: "NoticeBar", desc: "通知栏" },
   { path: "/desktop/feedback/overlay", label: "Overlay", desc: "遮罩层" },
   { path: "/desktop/feedback/tour", label: "Tour", desc: "漫游引导" },
-  { path: "/desktop/feedback/context-menu", label: "ContextMenu", desc: "右键菜单" },
+  {
+    path: "/desktop/feedback/context-menu",
+    label: "ContextMenu",
+    desc: "右键菜单",
+  },
 ] as const;
 
 /** 布局与容器下的二级子菜单，对应路由 /layout/xxx */
@@ -214,7 +222,11 @@ const DATA_DISPLAY_SUBMENU = [
     desc: "代码块",
   },
   { path: "/desktop/data-display/watermark", label: "Watermark", desc: "水印" },
-  { path: "/desktop/data-display/count-down", label: "CountDown", desc: "倒计时" },
+  {
+    path: "/desktop/data-display/count-down",
+    label: "CountDown",
+    desc: "倒计时",
+  },
   { path: "/desktop/data-display/qrcode", label: "QRCode", desc: "二维码" },
   {
     path: "/desktop/data-display/virtual-list",

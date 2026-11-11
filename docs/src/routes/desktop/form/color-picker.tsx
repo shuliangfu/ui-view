@@ -151,6 +151,11 @@ const form = createForm({
   <Button type="submit" variant="primary">提交</Button>
 </Form>`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "ColorPicker 颜色选择 · ui-view",
+};
+
 export default function FormColorPickerDoc() {
   const defaultHex = createSignal("#3b82f6");
   const swatchHex = createSignal("#10b981");

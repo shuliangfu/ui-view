@@ -1,7 +1,14 @@
 /**
  * @fileoverview DataPanel 文档页示例数据与列 / 搜索 / 表单定义（纯数据，无 JSX）。
  */
-import type { Column, DataSource, FormField, Row, RowActionsConfig, SearchField } from "@dreamer/ui-view/data-display";
+import type {
+  Column,
+  DataSource,
+  FormField,
+  Row,
+  RowActionsConfig,
+  SearchField,
+} from "@dreamer/ui-view/data-display";
 import { createLocalDataSource } from "@dreamer/ui-view/data-display";
 const NAMES = [
   "Alice",
@@ -62,6 +69,8 @@ export const DEMO_COLUMNS: Column[] = [
     prop: "role",
     label: "角色",
     type: "tag",
+    /** 标签列：表头与单元格居中 */
+    align: "center",
     options: [
       { value: "admin", label: "管理员", tone: "danger" },
       { value: "editor", label: "编辑", tone: "info" },
@@ -74,6 +83,7 @@ export const DEMO_COLUMNS: Column[] = [
     type: "tag",
     inline: "switch",
     batch: true,
+    align: "center",
     options: [
       { value: "active", label: "启用", tone: "success" },
       { value: "disabled", label: "停用", tone: "warning" },
@@ -85,6 +95,9 @@ export const DEMO_COLUMNS: Column[] = [
     type: "money",
     sortable: true,
     total: true,
+    /** 金额：单元格／合计右对齐；表头单独居中（演示 headerAlign） */
+    align: "right",
+    headerAlign: "center",
   },
   {
     prop: "score",
@@ -92,6 +105,7 @@ export const DEMO_COLUMNS: Column[] = [
     type: "number",
     sortable: true,
     inline: "number",
+    align: "right",
   },
   {
     prop: "createdAt",
@@ -104,6 +118,65 @@ export const DEMO_COLUMNS: Column[] = [
   { type: "actions", actions: DEMO_ROW_ACTIONS },
 ];
 
+/**
+ * 列对齐专用示例列（精简）：标签居中、金额右对齐且表头居中。
+ * 多选／序号／操作列固定居中，无需配置。
+ */
+export const ALIGN_DEMO_COLUMNS: Column[] = [
+  { type: "selection" },
+  { type: "index" },
+  { prop: "name", label: "姓名", sortable: true },
+  { prop: "email", label: "邮箱" },
+  {
+    prop: "role",
+    label: "角色",
+    type: "tag",
+    align: "center",
+    options: [
+      { value: "admin", label: "管理员", tone: "danger" },
+      { value: "editor", label: "编辑", tone: "info" },
+      { value: "viewer", label: "访客", tone: "default" },
+    ],
+  },
+  {
+    prop: "balance",
+    label: "余额",
+    type: "money",
+    total: true,
+    align: "right",
+    headerAlign: "center",
+  },
+  { type: "actions", actions: { view: true, edit: false, remove: false } },
+];
+
+/** 与 {@link ALIGN_DEMO_COLUMNS} 同步的代码示例 */
+export const ALIGN_DEMO_COLUMNS_CODE = `const columns: Column[] = [
+  { type: "selection" }, // 多选：固定居中
+  { type: "index" },     // 序号：固定居中
+  { prop: "name", label: "姓名", sortable: true }, // 默认左对齐
+  { prop: "email", label: "邮箱" },
+  {
+    prop: "role",
+    label: "角色",
+    type: "tag",
+    align: "center", // 表头＋单元格居中
+    options: [
+      { value: "admin", label: "管理员", tone: "danger" },
+      { value: "editor", label: "编辑", tone: "info" },
+      { value: "viewer", label: "访客", tone: "default" },
+    ],
+  },
+  {
+    prop: "balance",
+    label: "余额",
+    type: "money",
+    total: true,
+    align: "right",        // 单元格／合计右对齐
+    headerAlign: "center", // 表头单独居中
+  },
+  { type: "actions", actions: { view: true, edit: false, remove: false } }, // 操作：固定居中
+];`;
+
 /** 与 {@link DEMO_COLUMNS} 同步的文档 code 片段（系统列短写法） */
 export const DEMO_COLUMNS_CODE = `const columns: Column[] = [
   { type: "selection" },
@@ -114,6 +187,7 @@ export const DEMO_COLUMNS_CODE = `const columns: Column[] = [
     prop: "role",
     label: "角色",
     type: "tag",
+    align: "center",
     options: [
       { value: "admin", label: "管理员", tone: "danger" },
       { value: "editor", label: "编辑", tone: "info" },
@@ -126,6 +200,7 @@ export const DEMO_COLUMNS_CODE = `const columns: Column[] = [
     type: "tag",
     inline: "switch",
     batch: true,
+    align: "center",
     options: [
       { value: "active", label: "启用", tone: "success" },
       { value: "disabled", label: "停用", tone: "warning" },
@@ -137,6 +212,8 @@ export const DEMO_COLUMNS_CODE = `const columns: Column[] = [
     type: "money",
     sortable: true,
     total: true,
+    align: "right",
+    headerAlign: "center",
   },
   {
     prop: "score",
@@ -144,6 +221,7 @@ export const DEMO_COLUMNS_CODE = `const columns: Column[] = [
     type: "number",
     sortable: true,
     inline: "number",
+    align: "right",
   },
   {
     prop: "createdAt",
@@ -162,14 +240,17 @@ export const DEMO_COLUMNS_CODE = `const columns: Column[] = [
 
 /** 把操作配置挂到 DEMO_COLUMNS 的 actions 列（docs／测挂操作配置到 actions 列） */
 export function withRowActions(actions: RowActionsConfig): Column[] {
-  return DEMO_COLUMNS.map((c) =>
-    c.type === "actions" ? { ...c, actions } : c
-  );
+  return DEMO_COLUMNS.map((c) => c.type === "actions" ? { ...c, actions } : c);
 }
 
 /** 键用 prop；options／label 可从 DEMO_COLUMNS 同 prop 继承（面板内 enrich） */
 export const DEMO_SEARCH: SearchField[] = [
-  { prop: "name", placeholder: "姓名关键字", hint: "支持模糊匹配", maxlength: 40 },
+  {
+    prop: "name",
+    placeholder: "姓名关键字",
+    hint: "支持模糊匹配",
+    maxlength: 40,
+  },
   { prop: "role", type: "select" },
   { prop: "status", type: "select" },
 ];
@@ -211,7 +292,13 @@ export const DEMO_FORM_RICH: FormField[] = [
   },
   { prop: "role", type: "select", required: true, initial: "viewer", span: 6 },
   { prop: "balance", type: "number", min: 0, initial: 0, span: 6 },
-  { prop: "status", type: "switch", initial: "active", span: 12, hint: "行内亦可切换" },
+  {
+    prop: "status",
+    type: "switch",
+    initial: "active",
+    span: 12,
+    hint: "行内亦可切换",
+  },
 ];
 
 /** 模拟远程接口：异步 + 延迟，内部复用本地引擎做过滤 / 排序 / 分页 */

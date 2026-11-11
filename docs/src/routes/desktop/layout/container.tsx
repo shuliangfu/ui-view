@@ -73,6 +73,11 @@ const exampleCenteredPadded = `<Container
   <p>不居中、无默认内边距</p>
 </Container>`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "Container 最大宽度容器 · ui-view",
+};
+
 export default function LayoutContainer() {
   return (
     <div class="space-y-10">

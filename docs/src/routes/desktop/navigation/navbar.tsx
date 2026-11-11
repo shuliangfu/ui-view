@@ -123,6 +123,10 @@ const exampleDemo = `import { Link } from "@dreamer/ui-view/basic";
   }
 />`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "NavBar 顶栏（桌面） · ui-view",
+};
 
 export default function NavigationDesktopNavBarDoc() {
   return (
@@ -194,8 +198,14 @@ export default function NavigationDesktopNavBarDoc() {
         </div>
       </section>
 
-      
-        <CodeBlock title="代码示例" code={exampleDemo} language="tsx" showLineNumbers copyable wrapLongLines />
+      <CodeBlock
+        title="代码示例"
+        code={exampleDemo}
+        language="tsx"
+        showLineNumbers
+        copyable
+        wrapLongLines
+      />
       <DocsMessagesSection
         interfaceName="DesktopNavBarMessages"
         defaultExportName="defaultDesktopNavBarMessages"

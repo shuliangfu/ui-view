@@ -123,6 +123,11 @@ const exampleErrorWideAndTall = `<Image
   height={280}
 />`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "Image 图片 · ui-view",
+};
+
 export default function DataDisplayImage() {
   /**
    * 与 ui-preact 文档对齐：picsum 带 `random`，整页刷新换图；

@@ -106,6 +106,11 @@ const exampleFullWidth = `{() => (
 
 const exampleDisabled = `items 中某项设置 disabled: true 即可禁用该标签`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "Tabs 标签页 · ui-view",
+};
+
 export default function LayoutTabs() {
   const activeKey = createSignal("a");
 

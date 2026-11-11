@@ -157,6 +157,11 @@ const exampleCustomTitle = `<Drawer
   <p>title 可传入任意 VNode，不限于纯文本。</p>
 </Drawer>`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "Drawer 侧边抽屉 · ui-view",
+};
+
 export default function FeedbackDrawer() {
   const openRight = createSignal(false);
   const openLeft = createSignal(false);

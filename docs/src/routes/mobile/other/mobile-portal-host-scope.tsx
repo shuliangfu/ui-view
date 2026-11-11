@@ -29,7 +29,8 @@ const SCOPE_API: DocsApiTableRow[] = [
   },
 ];
 
-const importCode = `import { MobilePortalHostScope } from "@dreamer/ui-view/mobile/portal";
+const importCode =
+  `import { MobilePortalHostScope } from "@dreamer/ui-view/mobile/portal";
 
 const open = createSignal(false);
 
@@ -39,6 +40,11 @@ const open = createSignal(false);
     遮罩相对于本 Scope
   </BottomSheet>
 </MobilePortalHostScope>`;
+
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "MobilePortalHostScope 机内 Portal 锚点 · ui-view",
+};
 
 export default function MobilePortalHostScopeDoc() {
   const open = createSignal(false);

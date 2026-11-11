@@ -100,6 +100,11 @@ const exampleBasic = `<Statistic
 const exampleTrend = `<Statistic title="环比" value={12.5} suffix="%" />
 <Statistic title="同比" value={-3.2} suffix="%" />`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "Statistic 统计数值 · ui-view",
+};
+
 export default function DataDisplayStatistic() {
   return (
     <div class="space-y-10">

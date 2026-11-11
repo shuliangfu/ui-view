@@ -98,7 +98,8 @@ const PULL_REFRESH_API: DocsApiTableRow[] = [
   },
 ];
 
-const importCode = `import { PullRefresh } from "@dreamer/ui-view/mobile/feedback";
+const importCode =
+  `import { PullRefresh } from "@dreamer/ui-view/mobile/feedback";
 
 const loading = createSignal(false);
 
@@ -142,6 +143,11 @@ function makeRandomPullRows(
     };
   });
 }
+
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "PullRefresh 下拉刷新 · ui-view",
+};
 
 export default function MobilePullRefreshDoc() {
   const loading = createSignal(false);
@@ -264,11 +270,11 @@ export default function MobilePullRefreshDoc() {
       </section>
 
       <section class="space-y-4">
-      <DocsMessagesSection
-        interfaceName="PullRefreshMessages"
-        defaultExportName="defaultPullRefreshMessages"
-        rows={MESSAGES_PULL_REFRESH}
-      />
+        <DocsMessagesSection
+          interfaceName="PullRefreshMessages"
+          defaultExportName="defaultPullRefreshMessages"
+          rows={MESSAGES_PULL_REFRESH}
+        />
 
         <Title level={2}>API</Title>
         <DocsApiTable rows={PULL_REFRESH_API} />

@@ -105,7 +105,8 @@ const ACTION_ITEM_API: DocsApiTableRow[] = [
   },
 ];
 
-const importCode = `import { ActionSheet } from "@dreamer/ui-view/mobile/feedback";
+const importCode =
+  `import { ActionSheet } from "@dreamer/ui-view/mobile/feedback";
 
 const open = createSignal(false);
 
@@ -120,7 +121,6 @@ const open = createSignal(false);
   cancelText="取消"
 />`;
 
-
 const exampleNoTitle = `const open = createSignal(false);
 
 <ActionSheet
@@ -128,6 +128,11 @@ const exampleNoTitle = `const open = createSignal(false);
   actions={[{ key: "a", label: "操作 A" }]}
   onClose={() => (open.value = false)}
 />`;
+
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "ActionSheet 操作表 · ui-view",
+};
 
 export default function MobileActionSheetDoc() {
   const open = createSignal(false);
@@ -205,17 +210,23 @@ export default function MobileActionSheetDoc() {
               cancelText="关闭"
             />
           </MobileDocDemo>
-          <CodeBlock title="代码示例" code={exampleNoTitle} language="tsx" showLineNumbers copyable wrapLongLines />
-
+          <CodeBlock
+            title="代码示例"
+            code={exampleNoTitle}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
         </div>
       </section>
 
       <section class="space-y-6">
-      <DocsMessagesSection
-        interfaceName="ActionSheetMessages"
-        defaultExportName="defaultActionSheetMessages"
-        rows={MESSAGES_ACTION_SHEET}
-      />
+        <DocsMessagesSection
+          interfaceName="ActionSheetMessages"
+          defaultExportName="defaultActionSheetMessages"
+          rows={MESSAGES_ACTION_SHEET}
+        />
 
         <Title level={2}>API</Title>
 

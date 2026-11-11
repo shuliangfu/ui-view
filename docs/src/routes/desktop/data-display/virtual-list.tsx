@@ -2,7 +2,7 @@
  * VirtualList 文档页。路由: /desktop/data-display/virtual-list
  */
 
-import { VirtualList, CodeBlock } from "@dreamer/ui-view/data-display";
+import { CodeBlock, VirtualList } from "@dreamer/ui-view/data-display";
 import { Paragraph, Title } from "@dreamer/ui-view/basic";
 import {
   DocsApiTable,
@@ -11,13 +11,33 @@ import {
 
 const API: DocsApiTableRow[] = [
   { name: "data", type: "T[]", default: "-", description: "数据" },
-  { name: "itemHeight", type: "number", default: "-", description: "定高 px；与 getItemHeight 二选一" },
-  { name: "getItemHeight", type: "(item, index) => number", default: "-", description: "动态行高" },
+  {
+    name: "itemHeight",
+    type: "number",
+    default: "-",
+    description: "定高 px；与 getItemHeight 二选一",
+  },
+  {
+    name: "getItemHeight",
+    type: "(item, index) => number",
+    default: "-",
+    description: "动态行高",
+  },
   { name: "height", type: "number", default: "320", description: "容器高" },
   { name: "overscan", type: "number", default: "4", description: "上下缓冲行" },
-  { name: "rowKey", type: "(item,i)=>string|number", default: "index", description: "行 key" },
+  {
+    name: "rowKey",
+    type: "(item,i)=>string|number",
+    default: "index",
+    description: "行 key",
+  },
   { name: "empty", type: "unknown", default: "-", description: "空态" },
-  { name: "renderItem", type: "(item,i)=>unknown", default: "-", description: "行渲染" },
+  {
+    name: "renderItem",
+    type: "(item,i)=>unknown",
+    default: "-",
+    description: "行渲染",
+  },
 ];
 
 const TOTAL = 2000;
@@ -32,8 +52,8 @@ const rows = Array.from({ length: ${TOTAL} }, (_, i) => i + 1);
   renderItem={(n) => <div class="px-3 leading-9">Item {n}</div>}
 />`;
 
-
-const exampleFixed = `const rows = Array.from({ length: 2000 }, (_, i) => i + 1);
+const exampleFixed =
+  `const rows = Array.from({ length: 2000 }, (_, i) => i + 1);
 
 <VirtualList
   height={320}
@@ -65,6 +85,10 @@ const exampleEmpty = `<VirtualList
   renderItem={() => null}
 />`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "VirtualList · ui-view",
+};
 
 export default function Page() {
   const rows = Array.from({ length: TOTAL }, (_, i) => i + 1);
@@ -101,8 +125,14 @@ export default function Page() {
               )}
             />
           </div>
-          <CodeBlock title="代码示例" code={exampleFixed} language="tsx" showLineNumbers copyable wrapLongLines />
-
+          <CodeBlock
+            title="代码示例"
+            code={exampleFixed}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
         </div>
 
         <div class="space-y-2">
@@ -121,8 +151,14 @@ export default function Page() {
               )}
             />
           </div>
-          <CodeBlock title="代码示例" code={exampleDynamic} language="tsx" showLineNumbers copyable wrapLongLines />
-
+          <CodeBlock
+            title="代码示例"
+            code={exampleDynamic}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
         </div>
 
         <div class="space-y-2">
@@ -136,8 +172,14 @@ export default function Page() {
               renderItem={() => null}
             />
           </div>
-          <CodeBlock title="代码示例" code={exampleEmpty} language="tsx" showLineNumbers copyable wrapLongLines />
-
+          <CodeBlock
+            title="代码示例"
+            code={exampleEmpty}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
         </div>
       </section>
       <section class="space-y-3">

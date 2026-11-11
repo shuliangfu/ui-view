@@ -144,6 +144,11 @@ const examplePlaintext = `<CodeBlock
   title="plaintext"
 />`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "CodeBlock 代码块 · ui-view",
+};
+
 export default function DataDisplayCodeBlock() {
   const copied = createSignal(false);
 

@@ -32,13 +32,14 @@ import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx
 import { MESSAGES_DATA_PANEL } from "../../../data/component-messages-rows.ts";
 import { DocsDemo } from "../../../components/DocsDemo.tsx";
 import {
+  ALIGN_DEMO_COLUMNS,
+  ALIGN_DEMO_COLUMNS_CODE,
   CELL_COLUMNS,
   CELL_FORM,
   cellDemoState,
   createCellDemoSource,
   createRemoteDemoSource,
   DEMO_COLUMNS,
-  DEMO_COLUMNS_CODE,
   DEMO_FORM,
   DEMO_FORM_RICH,
   DEMO_HIDE_CHROME,
@@ -296,6 +297,20 @@ const COLUMNS_API: DocsApiTableRow[] = [
     type: "boolean",
     default: "false",
     description: "表头可点排序（走 list(query).sort／order）",
+  },
+  {
+    name: "align",
+    type: '"left"|"center"|"right"',
+    default: '"left"',
+    description:
+      "单元格文本对齐。系统列 selection／index／actions 固定居中，忽略本字段。",
+  },
+  {
+    name: "headerAlign",
+    type: '"left"|"center"|"right"',
+    default: "同 align；皆未设则为 left",
+    description:
+      '表头标题对齐。不传时与 align 一致。系统列忽略。例：表头居中、金额单元格右对齐可写 headerAlign:"center", align:"right"。',
   },
   {
     name: "width",
@@ -789,16 +804,16 @@ const columns: Column[] = [
   { type: "index" },
   { prop: "name", label: "姓名", sortable: true, inline: "text" },
   { prop: "email", label: "邮箱", sortable: true },
-  { prop: "role", label: "角色", type: "tag", options: [
+  { prop: "role", label: "角色", type: "tag", align: "center", options: [
     { value: "admin", label: "管理员", tone: "danger" },
     { value: "editor", label: "编辑", tone: "info" },
     { value: "viewer", label: "访客", tone: "default" },
   ] },
-  { prop: "status", label: "状态", type: "tag", inline: "switch", batch: true, options: [
+  { prop: "status", label: "状态", type: "tag", inline: "switch", batch: true, align: "center", options: [
     { value: "active", label: "启用", tone: "success" },
     { value: "disabled", label: "停用", tone: "warning" },
   ] },
-  { prop: "balance", label: "余额", type: "money", sortable: true, total: true },
+  { prop: "balance", label: "余额", type: "money", sortable: true, total: true, align: "right" },
   { prop: "createdAt", label: "创建时间", type: "datetime", format: "YYYY-MM-DD HH:mm", hidden: true },
   { type: "actions", actions: {
     view: true,
@@ -847,16 +862,16 @@ const columns: Column[] = [
   { type: "index" },
   { prop: "name", label: "姓名", sortable: true, inline: "text" },
   { prop: "email", label: "邮箱", sortable: true },
-  { prop: "role", label: "角色", type: "tag", options: [
+  { prop: "role", label: "角色", type: "tag", align: "center", options: [
     { value: "admin", label: "管理员", tone: "danger" },
     { value: "editor", label: "编辑", tone: "info" },
     { value: "viewer", label: "访客", tone: "default" },
   ] },
-  { prop: "status", label: "状态", type: "tag", inline: "switch", batch: true, options: [
+  { prop: "status", label: "状态", type: "tag", inline: "switch", batch: true, align: "center", options: [
     { value: "active", label: "启用", tone: "success" },
     { value: "disabled", label: "停用", tone: "warning" },
   ] },
-  { prop: "balance", label: "余额", type: "money", sortable: true, total: true },
+  { prop: "balance", label: "余额", type: "money", sortable: true, total: true, align: "right" },
   { prop: "createdAt", label: "创建时间", type: "datetime", format: "YYYY-MM-DD HH:mm", hidden: true },
   { type: "actions", actions: {
     view: true,
@@ -908,6 +923,7 @@ const columns: Column[] = [
     prop: "role",
     label: "角色",
     type: "tag",
+    align: "center",
     options: [
       { value: "admin", label: "管理员", tone: "danger" },
       { value: "editor", label: "编辑", tone: "info" },
@@ -920,6 +936,7 @@ const columns: Column[] = [
     type: "tag",
     inline: "switch",
     batch: true,
+    align: "center",
     options: [
       { value: "active", label: "启用", tone: "success" },
       { value: "disabled", label: "停用", tone: "warning" },
@@ -931,6 +948,7 @@ const columns: Column[] = [
     type: "money",
     sortable: true,
     total: true,
+    align: "right",
   },
   {
     prop: "score",
@@ -938,6 +956,7 @@ const columns: Column[] = [
     type: "number",
     sortable: true,
     inline: "number",
+    align: "right",
   },
   {
     prop: "createdAt",
@@ -992,6 +1011,7 @@ const columns: Column[] = [
     prop: "role",
     label: "角色",
     type: "tag",
+    align: "center",
     options: [
       { value: "admin", label: "管理员", tone: "danger" },
       { value: "editor", label: "编辑", tone: "info" },
@@ -1004,6 +1024,7 @@ const columns: Column[] = [
     type: "tag",
     inline: "switch",
     batch: true,
+    align: "center",
     options: [
       { value: "active", label: "启用", tone: "success" },
       { value: "disabled", label: "停用", tone: "warning" },
@@ -1015,6 +1036,7 @@ const columns: Column[] = [
     type: "money",
     sortable: true,
     total: true,
+    align: "right",
   },
   {
     prop: "score",
@@ -1022,6 +1044,7 @@ const columns: Column[] = [
     type: "number",
     sortable: true,
     inline: "number",
+    align: "right",
   },
   {
     prop: "createdAt",
@@ -1174,6 +1197,7 @@ const columns: Column[] = [
     prop: "role",
     label: "角色",
     type: "tag",
+    align: "center",
     options: [
       { value: "admin", label: "管理员", tone: "danger" },
       { value: "editor", label: "编辑", tone: "info" },
@@ -1186,6 +1210,7 @@ const columns: Column[] = [
     type: "tag",
     inline: "switch",
     batch: true,
+    align: "center",
     options: [
       { value: "active", label: "启用", tone: "success" },
       { value: "disabled", label: "停用", tone: "warning" },
@@ -1197,6 +1222,7 @@ const columns: Column[] = [
     type: "money",
     sortable: true,
     total: true,
+    align: "right",
   },
   {
     prop: "score",
@@ -1204,6 +1230,7 @@ const columns: Column[] = [
     type: "number",
     sortable: true,
     inline: "number",
+    align: "right",
   },
   {
     prop: "createdAt",
@@ -1258,6 +1285,7 @@ const columns: Column[] = [
     prop: "role",
     label: "角色",
     type: "tag",
+    align: "center",
     options: [
       { value: "admin", label: "管理员", tone: "danger" },
       { value: "editor", label: "编辑", tone: "info" },
@@ -1270,6 +1298,7 @@ const columns: Column[] = [
     type: "tag",
     inline: "switch",
     batch: true,
+    align: "center",
     options: [
       { value: "active", label: "启用", tone: "success" },
       { value: "disabled", label: "停用", tone: "warning" },
@@ -1281,6 +1310,7 @@ const columns: Column[] = [
     type: "money",
     sortable: true,
     total: true,
+    align: "right",
   },
   {
     prop: "score",
@@ -1288,6 +1318,7 @@ const columns: Column[] = [
     type: "number",
     sortable: true,
     inline: "number",
+    align: "right",
   },
   {
     prop: "createdAt",
@@ -1340,6 +1371,7 @@ const columns: Column[] = [
     prop: "role",
     label: "角色",
     type: "tag",
+    align: "center",
     options: [
       { value: "admin", label: "管理员", tone: "danger" },
       { value: "editor", label: "编辑", tone: "info" },
@@ -1352,6 +1384,7 @@ const columns: Column[] = [
     type: "tag",
     inline: "switch",
     batch: true,
+    align: "center",
     options: [
       { value: "active", label: "启用", tone: "success" },
       { value: "disabled", label: "停用", tone: "warning" },
@@ -1363,6 +1396,7 @@ const columns: Column[] = [
     type: "money",
     sortable: true,
     total: true,
+    align: "right",
   },
   {
     prop: "score",
@@ -1370,6 +1404,7 @@ const columns: Column[] = [
     type: "number",
     sortable: true,
     inline: "number",
+    align: "right",
   },
   {
     prop: "createdAt",
@@ -1425,6 +1460,7 @@ const columns: Column[] = [
     prop: "role",
     label: "角色",
     type: "tag",
+    align: "center",
     options: [
       { value: "admin", label: "管理员", tone: "danger" },
       { value: "editor", label: "编辑", tone: "info" },
@@ -1437,6 +1473,7 @@ const columns: Column[] = [
     type: "tag",
     inline: "switch",
     batch: true,
+    align: "center",
     options: [
       { value: "active", label: "启用", tone: "success" },
       { value: "disabled", label: "停用", tone: "warning" },
@@ -1448,6 +1485,7 @@ const columns: Column[] = [
     type: "money",
     sortable: true,
     total: true,
+    align: "right",
   },
   {
     prop: "score",
@@ -1455,6 +1493,7 @@ const columns: Column[] = [
     type: "number",
     sortable: true,
     inline: "number",
+    align: "right",
   },
   {
     prop: "createdAt",
@@ -1504,6 +1543,7 @@ const columns: Column[] = [
     prop: "role",
     label: "角色",
     type: "tag",
+    align: "center",
     options: [
       { value: "admin", label: "管理员", tone: "danger" },
       { value: "editor", label: "编辑", tone: "info" },
@@ -1516,6 +1556,7 @@ const columns: Column[] = [
     type: "tag",
     inline: "switch",
     batch: true,
+    align: "center",
     options: [
       { value: "active", label: "启用", tone: "success" },
       { value: "disabled", label: "停用", tone: "warning" },
@@ -1527,6 +1568,7 @@ const columns: Column[] = [
     type: "money",
     sortable: true,
     total: true,
+    align: "right",
   },
   {
     prop: "score",
@@ -1534,6 +1576,7 @@ const columns: Column[] = [
     type: "number",
     sortable: true,
     inline: "number",
+    align: "right",
   },
   {
     prop: "createdAt",
@@ -1585,6 +1628,7 @@ const columns: Column[] = [
     prop: "role",
     label: "角色",
     type: "tag",
+    align: "center",
     options: [
       { value: "admin", label: "管理员", tone: "danger" },
       { value: "editor", label: "编辑", tone: "info" },
@@ -1597,6 +1641,7 @@ const columns: Column[] = [
     type: "tag",
     inline: "switch",
     batch: true,
+    align: "center",
     options: [
       { value: "active", label: "启用", tone: "success" },
       { value: "disabled", label: "停用", tone: "warning" },
@@ -1608,6 +1653,7 @@ const columns: Column[] = [
     type: "money",
     sortable: true,
     total: true,
+    align: "right",
   },
   {
     prop: "score",
@@ -1615,6 +1661,7 @@ const columns: Column[] = [
     type: "number",
     sortable: true,
     inline: "number",
+    align: "right",
   },
   {
     prop: "createdAt",
@@ -1662,6 +1709,7 @@ const columns: Column[] = [
     prop: "role",
     label: "角色",
     type: "tag",
+    align: "center",
     options: [
       { value: "admin", label: "管理员", tone: "danger" },
       { value: "editor", label: "编辑", tone: "info" },
@@ -1674,6 +1722,7 @@ const columns: Column[] = [
     type: "tag",
     inline: "switch",
     batch: true,
+    align: "center",
     options: [
       { value: "active", label: "启用", tone: "success" },
       { value: "disabled", label: "停用", tone: "warning" },
@@ -1685,6 +1734,7 @@ const columns: Column[] = [
     type: "money",
     sortable: true,
     total: true,
+    align: "right",
   },
   {
     prop: "score",
@@ -1692,6 +1742,7 @@ const columns: Column[] = [
     type: "number",
     sortable: true,
     inline: "number",
+    align: "right",
   },
   {
     prop: "createdAt",
@@ -1740,6 +1791,7 @@ const columns: Column[] = [
     prop: "role",
     label: "角色",
     type: "tag",
+    align: "center",
     options: [
       { value: "admin", label: "管理员", tone: "danger" },
       { value: "editor", label: "编辑", tone: "info" },
@@ -1752,6 +1804,7 @@ const columns: Column[] = [
     type: "tag",
     inline: "switch",
     batch: true,
+    align: "center",
     options: [
       { value: "active", label: "启用", tone: "success" },
       { value: "disabled", label: "停用", tone: "warning" },
@@ -1763,6 +1816,7 @@ const columns: Column[] = [
     type: "money",
     sortable: true,
     total: true,
+    align: "right",
   },
   {
     prop: "score",
@@ -1770,6 +1824,7 @@ const columns: Column[] = [
     type: "number",
     sortable: true,
     inline: "number",
+    align: "right",
   },
   {
     prop: "createdAt",
@@ -1842,7 +1897,7 @@ const columns: Column[] = [
   { type: "selection" },
   { type: "index" },
   { prop: "name", label: "姓名", inline: "text" },
-  { prop: "score", label: "积分", type: "number", inline: "number" },
+  { prop: "score", label: "积分", type: "number", inline: "number", align: "right" },
   { prop: "role", label: "角色", type: "tag", inline: "select", options: roleOptions },
   { prop: "tags", label: "标签", type: "tag", inline: "multiselect", options: tagOptions },
   { prop: "status", label: "状态", type: "tag", inline: "switch", options: statusOptions },
@@ -1914,17 +1969,17 @@ const columns: Column[] = [
   { type: "index" },
   { prop: "name", label: "姓名", sortable: true, inline: "text" },
   { prop: "email", label: "邮箱", sortable: true },
-  { prop: "role", label: "角色", type: "tag", options: [
+  { prop: "role", label: "角色", type: "tag", align: "center", options: [
     { value: "admin", label: "管理员", tone: "danger" },
     { value: "editor", label: "编辑", tone: "info" },
     { value: "viewer", label: "访客", tone: "default" },
   ] },
-  { prop: "status", label: "状态", type: "tag", inline: "switch", batch: true, options: [
+  { prop: "status", label: "状态", type: "tag", inline: "switch", batch: true, align: "center", options: [
     { value: "active", label: "启用", tone: "success" },
     { value: "disabled", label: "停用", tone: "warning" },
   ] },
-  { prop: "balance", label: "余额", type: "money", sortable: true, total: true },
-  { prop: "score", label: "积分", type: "number", sortable: true, inline: "number" },
+  { prop: "balance", label: "余额", type: "money", sortable: true, total: true, align: "right" },
+  { prop: "score", label: "积分", type: "number", sortable: true, inline: "number", align: "right" },
   { prop: "createdAt", label: "创建时间", type: "datetime", format: "YYYY-MM-DD HH:mm", sortable: true, hidden: true },
   { type: "actions", actions: {
     view: true,
@@ -1973,6 +2028,7 @@ const columns: Column[] = [
     prop: "role",
     label: "角色",
     type: "tag",
+    align: "center",
     options: [
       { value: "admin", label: "管理员", tone: "danger" },
       { value: "editor", label: "编辑", tone: "info" },
@@ -1985,6 +2041,7 @@ const columns: Column[] = [
     type: "tag",
     inline: "switch",
     batch: true,
+    align: "center",
     options: [
       { value: "active", label: "启用", tone: "success" },
       { value: "disabled", label: "停用", tone: "warning" },
@@ -1996,6 +2053,7 @@ const columns: Column[] = [
     type: "money",
     sortable: true,
     total: true,
+    align: "right",
   },
   {
     prop: "score",
@@ -2003,6 +2061,7 @@ const columns: Column[] = [
     type: "number",
     sortable: true,
     inline: "number",
+    align: "right",
   },
   {
     prop: "createdAt",
@@ -2052,6 +2111,7 @@ const columns: Column[] = [
     prop: "role",
     label: "角色",
     type: "tag",
+    align: "center",
     options: [
       { value: "admin", label: "管理员", tone: "danger" },
       { value: "editor", label: "编辑", tone: "info" },
@@ -2064,6 +2124,7 @@ const columns: Column[] = [
     type: "tag",
     inline: "switch",
     batch: true,
+    align: "center",
     options: [
       { value: "active", label: "启用", tone: "success" },
       { value: "disabled", label: "停用", tone: "warning" },
@@ -2075,6 +2136,7 @@ const columns: Column[] = [
     type: "money",
     sortable: true,
     total: true,
+    align: "right",
   },
   {
     prop: "score",
@@ -2082,6 +2144,7 @@ const columns: Column[] = [
     type: "number",
     sortable: true,
     inline: "number",
+    align: "right",
   },
   {
     prop: "createdAt",
@@ -2141,6 +2204,7 @@ const columns: Column[] = [
     prop: "role",
     label: "角色",
     type: "tag",
+    align: "center",
     options: [
       { value: "admin", label: "管理员", tone: "danger" },
       { value: "editor", label: "编辑", tone: "info" },
@@ -2153,6 +2217,7 @@ const columns: Column[] = [
     type: "tag",
     inline: "switch",
     batch: true,
+    align: "center",
     options: [
       { value: "active", label: "启用", tone: "success" },
       { value: "disabled", label: "停用", tone: "warning" },
@@ -2164,6 +2229,7 @@ const columns: Column[] = [
     type: "money",
     sortable: true,
     total: true,
+    align: "right",
   },
   {
     prop: "score",
@@ -2171,6 +2237,7 @@ const columns: Column[] = [
     type: "number",
     sortable: true,
     inline: "number",
+    align: "right",
   },
   {
     prop: "createdAt",
@@ -2265,6 +2332,7 @@ const columns: Column[] = [
     prop: "role",
     label: "角色",
     type: "tag",
+    align: "center",
     options: [
       { value: "admin", label: "管理员", tone: "danger" },
       { value: "editor", label: "编辑", tone: "info" },
@@ -2277,6 +2345,7 @@ const columns: Column[] = [
     type: "tag",
     inline: "switch",
     batch: true,
+    align: "center",
     options: [
       { value: "active", label: "启用", tone: "success" },
       { value: "disabled", label: "停用", tone: "warning" },
@@ -2288,6 +2357,7 @@ const columns: Column[] = [
     type: "money",
     sortable: true,
     total: true,
+    align: "right",
   },
   {
     prop: "score",
@@ -2295,6 +2365,7 @@ const columns: Column[] = [
     type: "number",
     sortable: true,
     inline: "number",
+    align: "right",
   },
   {
     prop: "createdAt",
@@ -2784,16 +2855,16 @@ const columns: Column[] = [
   { type: "selection" },
   { type: "index" },
   { prop: "name", label: "姓名", sortable: true, inline: "text" },
-  { prop: "role", label: "角色", type: "tag", options: [
+  { prop: "role", label: "角色", type: "tag", align: "center", options: [
     { value: "admin", label: "管理员", tone: "danger" },
     { value: "editor", label: "编辑", tone: "info" },
     { value: "viewer", label: "访客" },
   ] },
-  { prop: "status", label: "状态", type: "tag", inline: "switch", batch: true, options: [
+  { prop: "status", label: "状态", type: "tag", inline: "switch", batch: true, align: "center", options: [
     { value: "active", label: "启用", tone: "success" },
     { value: "disabled", label: "停用", tone: "warning" },
   ] },
-  { prop: "balance", label: "余额", type: "money", sortable: true, total: true },
+  { prop: "balance", label: "余额", type: "money", sortable: true, total: true, align: "right" },
   { type: "actions", actions: {
     view: true,
     edit: true,
@@ -2838,7 +2909,7 @@ const columns: Column[] = [
   { type: "index" },     // 序号列
   { prop: "name", label: "姓名", sortable: true },
   // 声明式 options 仍可用
-  { prop: "role", label: "角色", type: "tag", options: [
+  { prop: "role", label: "角色", type: "tag", align: "center", options: [
     { value: "admin", label: "管理员", tone: "danger" },
     { value: "editor", label: "编辑", tone: "info" },
   ]},
@@ -2915,6 +2986,11 @@ const form = {
     ],
   }}
 />`;
+
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "DataPanel 数据面板 · ui-view",
+};
 
 export default function DataDisplayDataPanel() {
   const remote: DataSource = createRemoteDemoSource(300);
@@ -3011,6 +3087,40 @@ export default function DataDisplayDataPanel() {
             search={{ props: DEMO_SEARCH }}
             form={{ props: DEMO_FORM }}
             exportName="users"
+          />
+        </DocsDemo>
+
+        <DocsDemo
+          title="列对齐（align / headerAlign）"
+          code={`import { DataPanel } from "@dreamer/ui-view/data-display";
+import type { Column } from "@dreamer/ui-view/data-display";
+
+${ALIGN_DEMO_COLUMNS_CODE}
+
+<DataPanel
+  panelKey="demo-align"
+  title="列对齐"
+  data={rows}
+  columns={columns}
+/>`}
+        >
+          <Paragraph class="mb-3 text-sm text-slate-600 dark:text-slate-400">
+            <code>align</code> 控制单元格（含合计行）；
+            <code>headerAlign</code> 控制表头（不传则跟{" "}
+            <code>align</code>）。多选／序号／操作列固定居中，无需配置。
+          </Paragraph>
+          <DataPanel
+            panelKey="demo-align"
+            title="列对齐"
+            data={makeDemoRows(8)}
+            columns={ALIGN_DEMO_COLUMNS}
+            caps={{ create: false }}
+            toolbar={{
+              create: false,
+              search: false,
+              refresh: false,
+              ...DEMO_HIDE_CHROME,
+            }}
           />
         </DocsDemo>
 

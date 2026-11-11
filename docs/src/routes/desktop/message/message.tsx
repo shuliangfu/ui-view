@@ -49,13 +49,13 @@ const MESSAGE_API: ApiRow[] = [
     type: "void",
     default: "-",
     description: "关闭全部全局提示",
-  },  {
+  },
+  {
     name: "messages",
     type: "Partial<MessageMessages>",
     default: "-",
     description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
   },
-
 ];
 
 const importCode = `import { message } from "@dreamer/ui-view/feedback";
@@ -78,6 +78,11 @@ const exampleDuration = `message.info("5 秒后关闭", 5000);`;
 
 const exampleDestroy = `message.destroy();`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "Message 全局提示 · ui-view",
+};
+
 export default function MessageMessage() {
   return (
     <div class="space-y-10">
@@ -90,7 +95,12 @@ export default function MessageMessage() {
           3000ms）， 调用 message.destroy() 可关闭全部。使用 Tailwind v4，支持
           light/dark 主题。
         </Paragraph>
-        <Paragraph class="mt-2 text-sm text-slate-600 dark:text-slate-400">提示正文由命令式 API 传入（如 <code>message.success("已保存")</code>），不走 messages。挂载 <code>&lt;MessageContainer messages=&#123;…&#125; /&gt;</code> 可覆盖 live region 标签。</Paragraph>
+        <Paragraph class="mt-2 text-sm text-slate-600 dark:text-slate-400">
+          提示正文由命令式 API 传入（如{" "}
+          <code>message.success("已保存")</code>），不走 messages。挂载{" "}
+          <code>&lt;MessageContainer messages=&#123;…&#125; /&gt;</code>{" "}
+          可覆盖 live region 标签。
+        </Paragraph>
       </section>
 
       {/* 2. 引入 */}

@@ -113,6 +113,11 @@ const exampleStatus = `<Steps items={[
 /** 模块级 signal：0/1/2 对应第 1/2/3 步；示例主按钮在末步直接「已完成」，不再写入 current=n */
 const current = createSignal(0);
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "Steps 步骤条 · ui-view",
+};
+
 export default function NavigationSteps() {
   const items = [
     { title: "步骤一", description: "填写基本信息" },

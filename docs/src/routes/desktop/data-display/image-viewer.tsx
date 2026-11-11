@@ -5,7 +5,11 @@
 
 import { createSignal } from "@dreamer/view";
 import { Button, Paragraph, Title } from "@dreamer/ui-view/basic";
-import { CodeBlock, ImageViewer, type ImageViewerTransition } from "@dreamer/ui-view/data-display";
+import {
+  CodeBlock,
+  ImageViewer,
+  type ImageViewerTransition,
+} from "@dreamer/ui-view/data-display";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_IMAGE_VIEWER } from "../../../data/component-messages-rows.ts";
 
@@ -159,6 +163,11 @@ const exampleTransitionButtons =
   transition={viewerTransition}
   ...
 />`;
+
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "ImageViewer 图片查看器 · ui-view",
+};
 
 export default function DataDisplayImageViewer() {
   const open = createSignal(false);

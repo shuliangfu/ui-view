@@ -91,6 +91,11 @@ const exampleWrap = `<Stack
   <div>1</div><div>2</div><div>3</div><div>4</div>
 </Stack>`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "Stack 堆叠 · ui-view",
+};
+
 export default function LayoutStack() {
   return (
     <div class="space-y-10">

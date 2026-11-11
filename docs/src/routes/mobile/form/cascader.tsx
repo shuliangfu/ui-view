@@ -129,6 +129,11 @@ const val = createSignal<string[]>([]);
 /** 模块级 Signal，与桌面 Cascader 文档受控约定一致 */
 const mobileCascaderVal = createSignal<string[]>([]);
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "Cascader 级联（移动） · ui-view",
+};
+
 export default function MobileCascaderDoc() {
   return (
     <div class="w-full max-w-3xl space-y-10">

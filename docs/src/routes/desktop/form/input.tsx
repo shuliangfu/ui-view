@@ -199,6 +199,11 @@ const val = createSignal("");
   />
 </FormItem>`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "Input 单行输入 · ui-view",
+};
+
 export default function FormInput() {
   const valPlaceholder = createSignal("");
   const valRequired = createSignal("");

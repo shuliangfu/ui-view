@@ -78,6 +78,11 @@ const exampleBasic = `<ChartLine
   class="w-full h-64"
 />`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "ChartLine 折线图 · ui-view",
+};
+
 export default function ChartsLine() {
   return (
     <div class="space-y-10">

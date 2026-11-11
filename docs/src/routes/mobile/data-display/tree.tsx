@@ -3,7 +3,7 @@
  */
 
 import { createSignal } from "@dreamer/view";
-import { Tree, CodeBlock } from "@dreamer/ui-view/mobile/data-display";
+import { CodeBlock, Tree } from "@dreamer/ui-view/mobile/data-display";
 import type { TreeNode } from "@dreamer/ui-view/mobile/data-display";
 import { Paragraph, Title } from "@dreamer/ui-view/mobile/basic";
 import {
@@ -89,7 +89,6 @@ const lineExpanded = createSignal<string[]>(["1"]);
 const blockExpanded = createSignal<string[]>(["1"]);
 const blockChecked = createSignal<string[]>([]);
 
-
 const exampleCascade = `<Tree
   treeData={treeData}
   checkable
@@ -130,15 +129,20 @@ const exampleBlock = `<Tree
   onCheck={(keys) => (blockChecked.value = keys)}
 />`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "Tree · ui-view",
+};
 
 export default function Page() {
   return (
     <div class="space-y-8">
       <div>
         <Title level={1}>Tree</Title>
-                <Paragraph>
-          移动端树形。箭头＝展开；checkbox＝勾选（默认联动／半选，不写 selected）；
-          标题／行＝仅本节点 selected。checkStrictly 关联动。另有 showLine／blockNode。
+        <Paragraph>
+          移动端树形。箭头＝展开；checkbox＝勾选（默认联动／半选，不写
+          selected）； 标题／行＝仅本节点 selected。checkStrictly 关联动。另有
+          showLine／blockNode。
         </Paragraph>
       </div>
       <section class="space-y-3">
@@ -150,82 +154,114 @@ export default function Page() {
 
         <div class="space-y-2">
           <Title level={3}>展开 / 选中 / 勾选</Title>
-          <div data-tree-demo="cascade"><MobileDocDemo class="p-3 space-y-2">
-            <Tree
-              treeData={treeData}
-              checkable
-              defaultExpandedKeys={["1"]}
-              expandedKeys={expandedKeys}
-              onExpand={(keys) => (expandedKeys.value = keys)}
-              checkedKeys={checkedKeys}
-              onCheck={(keys) => (checkedKeys.value = keys)}
-            />
-            {() => (
-              <p class="text-xs text-slate-500" data-tree-keys-display="">
-                已勾选: {checkedKeys.value.join(", ") || "-"}（共{" "}
-                {checkedKeys.value.length}）
-              </p>
-            )}
-          </MobileDocDemo></div>
-          <CodeBlock title="代码示例" code={exampleCascade} language="tsx" showLineNumbers copyable wrapLongLines />
-
+          <div data-tree-demo="cascade">
+            <MobileDocDemo class="p-3 space-y-2">
+              <Tree
+                treeData={treeData}
+                checkable
+                defaultExpandedKeys={["1"]}
+                expandedKeys={expandedKeys}
+                onExpand={(keys) => (expandedKeys.value = keys)}
+                checkedKeys={checkedKeys}
+                onCheck={(keys) => (checkedKeys.value = keys)}
+              />
+              {() => (
+                <p class="text-xs text-slate-500" data-tree-keys-display="">
+                  已勾选: {checkedKeys.value.join(", ") || "-"}（共{" "}
+                  {checkedKeys.value.length}）
+                </p>
+              )}
+            </MobileDocDemo>
+          </div>
+          <CodeBlock
+            title="代码示例"
+            code={exampleCascade}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
         </div>
 
         <div class="space-y-2">
           <Title level={3}>严格勾选 checkStrictly</Title>
-          <div data-tree-demo="strict"><MobileDocDemo class="p-3 space-y-2">
-            <Tree
-              treeData={treeData}
-              checkable
-              checkStrictly
-              defaultExpandedKeys={["1"]}
-              expandedKeys={strictExpanded}
-              onExpand={(keys) => (strictExpanded.value = keys)}
-              checkedKeys={strictChecked}
-              onCheck={(keys) => (strictChecked.value = keys)}
-            />
-            {() => (
-              <p class="text-xs text-slate-500">
-                严格已勾选: {strictChecked.value.join(", ") || "-"}（共{" "}
-                {strictChecked.value.length}）
-              </p>
-            )}
-          </MobileDocDemo></div>
-          <CodeBlock title="代码示例" code={exampleStrict} language="tsx" showLineNumbers copyable wrapLongLines />
-
+          <div data-tree-demo="strict">
+            <MobileDocDemo class="p-3 space-y-2">
+              <Tree
+                treeData={treeData}
+                checkable
+                checkStrictly
+                defaultExpandedKeys={["1"]}
+                expandedKeys={strictExpanded}
+                onExpand={(keys) => (strictExpanded.value = keys)}
+                checkedKeys={strictChecked}
+                onCheck={(keys) => (strictChecked.value = keys)}
+              />
+              {() => (
+                <p class="text-xs text-slate-500">
+                  严格已勾选: {strictChecked.value.join(", ") || "-"}（共{" "}
+                  {strictChecked.value.length}）
+                </p>
+              )}
+            </MobileDocDemo>
+          </div>
+          <CodeBlock
+            title="代码示例"
+            code={exampleStrict}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
         </div>
 
         <div class="space-y-2">
           <Title level={3}>showLine 连接线</Title>
-          <div data-tree-demo="show-line"><MobileDocDemo class="p-3">
-            <Tree
-              treeData={treeData}
-              showLine
-              defaultExpandedKeys={["1"]}
-              expandedKeys={lineExpanded}
-              onExpand={(keys) => (lineExpanded.value = keys)}
-            />
-          </MobileDocDemo></div>
-          <CodeBlock title="代码示例" code={exampleLine} language="tsx" showLineNumbers copyable wrapLongLines />
-
+          <div data-tree-demo="show-line">
+            <MobileDocDemo class="p-3">
+              <Tree
+                treeData={treeData}
+                showLine
+                defaultExpandedKeys={["1"]}
+                expandedKeys={lineExpanded}
+                onExpand={(keys) => (lineExpanded.value = keys)}
+              />
+            </MobileDocDemo>
+          </div>
+          <CodeBlock
+            title="代码示例"
+            code={exampleLine}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
         </div>
 
         <div class="space-y-2">
           <Title level={3}>blockNode 块级行</Title>
-          <div data-tree-demo="block-node"><MobileDocDemo class="p-3 space-y-2">
-            <Tree
-              treeData={treeData}
-              blockNode
-              checkable
-              defaultExpandedKeys={["1"]}
-              expandedKeys={blockExpanded}
-              onExpand={(keys) => (blockExpanded.value = keys)}
-              checkedKeys={blockChecked}
-              onCheck={(keys) => (blockChecked.value = keys)}
-            />
-          </MobileDocDemo></div>
-          <CodeBlock title="代码示例" code={exampleBlock} language="tsx" showLineNumbers copyable wrapLongLines />
-
+          <div data-tree-demo="block-node">
+            <MobileDocDemo class="p-3 space-y-2">
+              <Tree
+                treeData={treeData}
+                blockNode
+                checkable
+                defaultExpandedKeys={["1"]}
+                expandedKeys={blockExpanded}
+                onExpand={(keys) => (blockExpanded.value = keys)}
+                checkedKeys={blockChecked}
+                onCheck={(keys) => (blockChecked.value = keys)}
+              />
+            </MobileDocDemo>
+          </div>
+          <CodeBlock
+            title="代码示例"
+            code={exampleBlock}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
         </div>
       </section>
       <section class="space-y-3">

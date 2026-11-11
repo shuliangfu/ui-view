@@ -15,6 +15,11 @@ const QUICK = [
   { href: "/desktop/charts/line", label: "图表 · 折线图" },
 ] as const;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "桌面版组件 · ui-view",
+};
+
 export default function DesktopIndex() {
   return (
     <div class="w-full max-w-4xl space-y-12">
@@ -71,9 +76,7 @@ export default function DesktopIndex() {
           <code class="text-sm">
             icons/flags/standalone/IconFlagCN.tsx
           </code>
-          。禁止对主入口{" "}
-          <code class="text-sm">import *</code>{" "}
-          再扫{" "}
+          。禁止对主入口 <code class="text-sm">import *</code> 再扫{" "}
           <code class="text-sm">Object.keys</code>
           ；国旗不再从根入口／icons barrel 全量导出。详见仓库 README「Entry
           points／按需导入」。

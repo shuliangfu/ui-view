@@ -3,9 +3,13 @@
  */
 import { describe, expect, it } from "@dreamer/test";
 import {
+  columnAlignFlexJustify,
+  columnAlignTextClass,
   enrichViewField,
   fallbackViewItems,
   fieldsOf,
+  resolveColumnAlign,
+  resolveColumnHeaderAlign,
   resolveViewActionsCfg,
   resolveViewFields,
   resolveViewFooterActions,
@@ -228,5 +232,18 @@ describe("DataPanel view / form / search 配置", () => {
       render: (ctx: { defaultNode: unknown }) => `wrap:${ctx.defaultNode}`,
     };
     expect(viewItem.render({ defaultNode: "Ada" })).toBe("wrap:Ada");
+  });
+
+  it("Column.align / headerAlign 解析与 class", () => {
+    expect(resolveColumnAlign({})).toBe("left");
+    expect(resolveColumnAlign({ align: "right" })).toBe("right");
+    expect(resolveColumnHeaderAlign({ align: "right" })).toBe("right");
+    expect(resolveColumnHeaderAlign({ align: "right", headerAlign: "center" }))
+      .toBe("center");
+    expect(columnAlignTextClass("left")).toBe("text-left");
+    expect(columnAlignTextClass("center")).toBe("text-center");
+    expect(columnAlignTextClass("right")).toBe("text-right");
+    expect(columnAlignFlexJustify("center")).toBe("justify-center");
+    expect(columnAlignFlexJustify("right")).toBe("justify-end");
   });
 });

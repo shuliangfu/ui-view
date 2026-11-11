@@ -66,6 +66,11 @@ const exampleVertical = `<span>左</span>
 <Divider type="vertical" dashed />
 <span>右</span>`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "Divider 分割线 · ui-view",
+};
+
 export default function LayoutDivider() {
   return (
     <div class="space-y-10">

@@ -5,7 +5,11 @@
 
 import { Button, ButtonGroup, Paragraph, Title } from "@dreamer/ui-view/basic";
 
-import { CodeBlock, Table, type TableColumn } from "@dreamer/ui-view/data-display";
+import {
+  CodeBlock,
+  Table,
+  type TableColumn,
+} from "@dreamer/ui-view/data-display";
 import { createSignal } from "@dreamer/view";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_TABLE } from "../../../data/component-messages-rows.ts";
@@ -328,7 +332,8 @@ type EditableDocRow = {
   level: string;
 };
 
-const exampleEditable = `import type { TableColumn } from "@dreamer/ui-view/data-display";
+const exampleEditable =
+  `import type { TableColumn } from "@dreamer/ui-view/data-display";
 import { Table } from "@dreamer/ui-view/data-display";
 type EditableRow = {
   key: string;
@@ -614,6 +619,11 @@ function TableDocEditableDemo() {
     </div>
   );
 }
+
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "Table 表格 · ui-view",
+};
 
 export default function DataDisplayTable() {
   const expandedKeys = createSignal<string[]>([]);

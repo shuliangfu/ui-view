@@ -64,6 +64,11 @@ const signatureCreateForm = createForm<SignatureCreateFormValues>({
   },
 });
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "SignaturePad · ui-view",
+};
+
 export default function Page() {
   return (
     <div class="space-y-8">

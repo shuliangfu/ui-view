@@ -142,6 +142,11 @@ const exampleNestedMessages = `<DateTimePicker
   }}
 />`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "DateTimePicker 日期时间（移动） · ui-view",
+};
+
 export default function MobileDateTimePickerDoc() {
   return (
     <div class="w-full max-w-3xl space-y-10">

@@ -113,6 +113,11 @@ function ColorRow({ tokenName }: { tokenName: string }) {
 }
 
 /** 主题颜色文档页 */
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "主题颜色 · ui-view",
+};
+
 export default function OtherThemeColors() {
   return (
     <div class="space-y-10">

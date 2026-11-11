@@ -15,9 +15,24 @@ import { MESSAGES_NOTICE_BAR } from "../../../data/component-messages-rows.ts";
 import { MobileDocDemo } from "../../../components/MobileDocDemo.tsx";
 
 const API: DocsApiTableRow[] = [
-  { name: "tone", type: "info|success|warning|danger", default: "info", description: "色调" },
-  { name: "closable", type: "boolean", default: "false", description: "可关闭" },
-  { name: "scrollable", type: "boolean", default: "false", description: "长文滚动" },
+  {
+    name: "tone",
+    type: "info|success|warning|danger",
+    default: "info",
+    description: "色调",
+  },
+  {
+    name: "closable",
+    type: "boolean",
+    default: "false",
+    description: "可关闭",
+  },
+  {
+    name: "scrollable",
+    type: "boolean",
+    default: "false",
+    description: "长文滚动",
+  },
   { name: "visible", type: "boolean", default: "-", description: "受控可见" },
   {
     name: "messages",
@@ -25,14 +40,15 @@ const API: DocsApiTableRow[] = [
     default: "-",
     description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
   },
-
 ];
 
-const importCode = `import { NoticeBar } from "@dreamer/ui-view/mobile/feedback";
+const importCode =
+  `import { NoticeBar } from "@dreamer/ui-view/mobile/feedback";
 
 <NoticeBar tone="warning" closable content="系统将于今晚维护" />`;
 
-const exampleClosable = `<NoticeBar tone="warning" closable content="系统将于今晚维护" />`;
+const exampleClosable =
+  `<NoticeBar tone="warning" closable content="系统将于今晚维护" />`;
 
 const exampleTone = `<NoticeBar tone="info" content="信息" />
 <NoticeBar tone="success" content="成功" />
@@ -59,6 +75,11 @@ const exampleScroll = `const visible = createSignal(true);
   </Button>
 )}`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "NoticeBar · ui-view",
+};
+
 export default function Page() {
   const visible = createSignal(true);
   return (
@@ -78,7 +99,14 @@ export default function Page() {
           <MobileDocDemo class="space-y-3 p-4">
             <NoticeBar tone="warning" closable content="系统将于今晚维护" />
           </MobileDocDemo>
-          <CodeBlock title="代码示例" code={exampleClosable} language="tsx" showLineNumbers copyable wrapLongLines />
+          <CodeBlock
+            title="代码示例"
+            code={exampleClosable}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
         </div>
         <div class="space-y-2">
           <Title level={3}>色调</Title>
@@ -87,7 +115,14 @@ export default function Page() {
             <NoticeBar tone="success" content="成功" />
             <NoticeBar tone="danger" content="危险" />
           </MobileDocDemo>
-          <CodeBlock title="代码示例" code={exampleTone} language="tsx" showLineNumbers copyable wrapLongLines />
+          <CodeBlock
+            title="代码示例"
+            code={exampleTone}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
         </div>
         <div class="space-y-2">
           <Title level={3}>滚动 + 受控</Title>
@@ -109,12 +144,23 @@ export default function Page() {
                   />
                 )
                 : (
-                  <Button type="button" size="sm" onClick={() => (visible.value = true)}>
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => (visible.value = true)}
+                  >
                     重新显示
                   </Button>
                 )}
           </MobileDocDemo>
-          <CodeBlock title="代码示例" code={exampleScroll} language="tsx" showLineNumbers copyable wrapLongLines />
+          <CodeBlock
+            title="代码示例"
+            code={exampleScroll}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
         </div>
       </section>
       <DocsMessagesSection

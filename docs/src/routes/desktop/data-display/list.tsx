@@ -99,6 +99,11 @@ const exampleGrid = `<List
   bordered
 />`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "List 列表 · ui-view",
+};
+
 export default function DataDisplayList() {
   const items = [
     { key: "1", children: "列表项 1", extra: "详情" },

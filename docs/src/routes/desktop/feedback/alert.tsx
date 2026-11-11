@@ -171,6 +171,11 @@ const exampleBanner = `<Alert
  */
 const closableAlertDemoVisible = createSignal(true);
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "Alert 静态提示条 · ui-view",
+};
+
 export default function FeedbackAlert() {
   return (
     <div class="space-y-10">

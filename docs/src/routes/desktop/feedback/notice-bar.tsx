@@ -15,14 +15,49 @@ import { MESSAGES_NOTICE_BAR } from "../../../data/component-messages-rows.ts";
 
 const API: DocsApiTableRow[] = [
   { name: "content", type: "unknown", default: "-", description: "文案" },
-  { name: "children", type: "unknown", default: "-", description: "子节点（优先于 content）" },
-  { name: "tone", type: "info|success|warning|danger", default: "info", description: "色调" },
+  {
+    name: "children",
+    type: "unknown",
+    default: "-",
+    description: "子节点（优先于 content）",
+  },
+  {
+    name: "tone",
+    type: "info|success|warning|danger",
+    default: "info",
+    description: "色调",
+  },
   { name: "icon", type: "unknown", default: "-", description: "左侧前缀" },
-  { name: "closable", type: "boolean", default: "false", description: "可关闭" },
-  { name: "onClose", type: "() => void", default: "-", description: "关闭回调" },
-  { name: "visible", type: "boolean", default: "-", description: "受控可见；不传则点 × 内部隐藏" },
-  { name: "scrollable", type: "boolean", default: "false", description: "长文横向滚动" },
-  { name: "onClick", type: "() => void", default: "-", description: "整条点击" },
+  {
+    name: "closable",
+    type: "boolean",
+    default: "false",
+    description: "可关闭",
+  },
+  {
+    name: "onClose",
+    type: "() => void",
+    default: "-",
+    description: "关闭回调",
+  },
+  {
+    name: "visible",
+    type: "boolean",
+    default: "-",
+    description: "受控可见；不传则点 × 内部隐藏",
+  },
+  {
+    name: "scrollable",
+    type: "boolean",
+    default: "false",
+    description: "长文横向滚动",
+  },
+  {
+    name: "onClick",
+    type: "() => void",
+    default: "-",
+    description: "整条点击",
+  },
   { name: "class", type: "string", default: "-", description: "额外 class" },
   {
     name: "messages",
@@ -30,20 +65,19 @@ const API: DocsApiTableRow[] = [
     default: "-",
     description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
   },
-
 ];
 
 const importCode = `import { NoticeBar } from "@dreamer/ui-view/feedback";
 
 <NoticeBar tone="warning" closable content="系统将于今晚 23:00 维护，请提前保存" />`;
 
-
 const exampleTone = `<NoticeBar tone="info" content="信息：同步已完成" />
 <NoticeBar tone="success" content="成功：配置已保存" />
 <NoticeBar tone="warning" content="警告：磁盘空间不足" />
 <NoticeBar tone="danger" content="危险：认证即将过期" />`;
 
-const exampleClosable = `<NoticeBar tone="warning" closable content="系统将于今晚维护" />`;
+const exampleClosable =
+  `<NoticeBar tone="warning" closable content="系统将于今晚维护" />`;
 
 const exampleScroll = `<NoticeBar
   tone="info"
@@ -74,6 +108,11 @@ const exampleIconClick = `<NoticeBar
   onClick={() => {}}
 />`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "NoticeBar · ui-view",
+};
+
 export default function Page() {
   const controlledVisible = createSignal(true);
   const tip = createSignal("");
@@ -82,7 +121,8 @@ export default function Page() {
       <div>
         <Title level={1}>NoticeBar</Title>
         <Paragraph>
-          块级通知条：色调、可关闭、长文滚动、受控可见。未传 visible 时点 × 内部隐藏。
+          块级通知条：色调、可关闭、长文滚动、受控可见。未传 visible 时点 ×
+          内部隐藏。
         </Paragraph>
       </div>
       <section class="space-y-3">
@@ -100,7 +140,14 @@ export default function Page() {
             <NoticeBar tone="warning" content="警告：磁盘空间不足" />
             <NoticeBar tone="danger" content="危险：认证即将过期" />
           </div>
-          <CodeBlock title="代码示例" code={exampleTone} language="tsx" showLineNumbers copyable wrapLongLines />
+          <CodeBlock
+            title="代码示例"
+            code={exampleTone}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
         </div>
 
         <div class="space-y-2">
@@ -108,7 +155,14 @@ export default function Page() {
           <div class="rounded-xl border border-slate-200 dark:border-slate-700 p-4 bg-white dark:bg-slate-900">
             <NoticeBar tone="warning" closable content="系统将于今晚维护" />
           </div>
-          <CodeBlock title="代码示例" code={exampleClosable} language="tsx" showLineNumbers copyable wrapLongLines />
+          <CodeBlock
+            title="代码示例"
+            code={exampleClosable}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
         </div>
 
         <div class="space-y-2">
@@ -120,7 +174,14 @@ export default function Page() {
               content="欢迎使用组件库 —— 本条为长文案横向滚动示意，请关注发布说明与变更日志。"
             />
           </div>
-          <CodeBlock title="代码示例" code={exampleScroll} language="tsx" showLineNumbers copyable wrapLongLines />
+          <CodeBlock
+            title="代码示例"
+            code={exampleScroll}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
         </div>
 
         <div class="space-y-2">
@@ -147,7 +208,14 @@ export default function Page() {
                   </Button>
                 )}
           </div>
-          <CodeBlock title="代码示例" code={exampleVisible} language="tsx" showLineNumbers copyable wrapLongLines />
+          <CodeBlock
+            title="代码示例"
+            code={exampleVisible}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
         </div>
 
         <div class="space-y-2">
@@ -161,10 +229,21 @@ export default function Page() {
             />
             {() =>
               tip.value
-                ? <p class="text-sm text-slate-500" role="status">{tip.value}</p>
+                ? (
+                  <p class="text-sm text-slate-500" role="status">
+                    {tip.value}
+                  </p>
+                )
                 : null}
           </div>
-          <CodeBlock title="代码示例" code={exampleIconClick} language="tsx" showLineNumbers copyable wrapLongLines />
+          <CodeBlock
+            title="代码示例"
+            code={exampleIconClick}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
         </div>
       </section>
       <DocsMessagesSection

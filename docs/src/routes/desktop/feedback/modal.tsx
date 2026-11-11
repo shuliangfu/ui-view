@@ -220,6 +220,11 @@ const openFullscreenInitial = createSignal(false);
 const openKeyboard = createSignal(false);
 const openCustomClass = createSignal(false);
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "Modal 模态弹窗 · ui-view",
+};
+
 export default function FeedbackModal() {
   return (
     <div class="space-y-10">
@@ -723,7 +728,8 @@ demo.value = { open: true, preset: "lg" };
         <div class="space-y-4">
           <Title level={3}>可移动</Title>
           <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
-            draggable=true 时可通过拖拽标题栏移动弹层位置；默认 keepInView（可视区内，不可拖出窗口）。
+            draggable=true 时可通过拖拽标题栏移动弹层位置；默认
+            keepInView（可视区内，不可拖出窗口）。
           </Paragraph>
           <div class="flex gap-2">
             <Button

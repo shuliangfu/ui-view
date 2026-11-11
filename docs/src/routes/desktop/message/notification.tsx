@@ -100,9 +100,9 @@ const NOTIFICATION_OPTIONS: ApiRow[] = [
     name: "closeAriaLabel",
     type: "string",
     default: "-",
-    description: "关闭按钮 aria-label；缺省走 defaultNotificationMessages.close（见上文「文案（messages）」）",
+    description:
+      "关闭按钮 aria-label；缺省走 defaultNotificationMessages.close（见上文「文案（messages）」）",
   },
-
 ];
 
 const importCode = `import { notification } from "@dreamer/ui-view/feedback";
@@ -169,6 +169,11 @@ const exampleDurationZero = `notification.open({
   type: "info",
   duration: 0,
 });`;
+
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "Notification 消息通知框 · ui-view",
+};
 
 export default function MessageNotification() {
   return (
@@ -424,7 +429,7 @@ export default function MessageNotification() {
         rows={MESSAGES_NOTIFICATION}
       />
 
-{/* 4. API */}
+      {/* 4. API */}
       <section class="space-y-3">
         <Title level={2}>API</Title>
         <Paragraph class="text-sm text-slate-600 dark:text-slate-400">

@@ -95,14 +95,19 @@ const exampleAuto = `<div class="flex justify-end">
   </Popover>
 </div>`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "Popover 弹出面板 · ui-view",
+};
+
 export default function FeedbackPopover() {
   return (
     <div class="space-y-10">
       <section>
         <Title level={1}>Popover 弹出面板</Title>
         <Paragraph class="mt-2">
-          弹出面板：悬停触发，带标题与内容；支持 placement（含 auto 贴边翻转）、箭头。使用 Tailwind
-          v4，支持 light/dark 主题。
+          弹出面板：悬停触发，带标题与内容；支持 placement（含 auto
+          贴边翻转）、箭头。使用 Tailwind v4，支持 light/dark 主题。
         </Paragraph>
       </section>
 
@@ -199,25 +204,25 @@ export default function FeedbackPopover() {
           <Title level={3}>贴边自动翻转（placement=auto）</Title>
           <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
             触发器贴在视口最右侧。{" "}
-            <code class="text-xs">placement=&quot;auto&quot;</code>
-            {" "}时右边被挡会向左展开，箭头跟随实际方位。
+            <code class="text-xs">placement=&quot;auto&quot;</code>{" "}
+            时右边被挡会向左展开，箭头跟随实际方位。
           </Paragraph>
           <div class="-mr-3 sm:-mr-6 lg:-mr-10 pr-2">
             <div class="rounded-lg border border-dashed border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/40 px-3 py-3">
-                <div class="flex justify-end">
-                  <Popover
-                    title="贴边翻转"
-                    content="右边被挡时向左展开，箭头跟随实际方位"
-                    placement="auto"
+              <div class="flex justify-end">
+                <Popover
+                  title="贴边翻转"
+                  content="右边被挡时向左展开，箭头跟随实际方位"
+                  placement="auto"
+                >
+                  <span
+                    data-demo-trigger="popover-auto-right"
+                    class="px-3 py-1.5 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 cursor-default"
                   >
-                    <span
-                      data-demo-trigger="popover-auto-right"
-                      class="px-3 py-1.5 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 cursor-default"
-                    >
-                      靠右悬停
-                    </span>
-                  </Popover>
-                </div>
+                    靠右悬停
+                  </span>
+                </Popover>
+              </div>
             </div>
           </div>
           <CodeBlock

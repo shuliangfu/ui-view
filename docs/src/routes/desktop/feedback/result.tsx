@@ -50,13 +50,13 @@ const RESULT_API: ApiRow[] = [
     default: "-",
     description: "额外内容（渲染在 extra 下方）",
   },
-  { name: "class", type: "string", default: "-", description: "最外层 class" },  {
+  { name: "class", type: "string", default: "-", description: "最外层 class" },
+  {
     name: "messages",
     type: "Partial<ResultMessages>",
     default: "-",
     description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
   },
-
 ];
 
 const importCode = `import { Button } from "@dreamer/ui-view/basic";
@@ -108,6 +108,11 @@ const example403404 = `<Result
   extra={<Button variant="primary">返回首页</Button>}
 />`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "Result 结果页 · ui-view",
+};
+
 export default function FeedbackResult() {
   return (
     <div class="space-y-10">
@@ -118,7 +123,13 @@ export default function FeedbackResult() {
           等结果态；支持标题、副标题、自定义图标、操作区。 使用 Tailwind
           v4，支持 light/dark 主题。
         </Paragraph>
-        <Paragraph class="mt-2 text-sm text-slate-600 dark:text-slate-400">无独立内置长文案表之外：主标题可用 <code>title</code>；未传时按 <code>status</code> 回落 <code>messages</code>（success／error／…）。副标题用 <code>subTitle</code>，操作区用 <code>extra</code>／<code>children</code>。</Paragraph>
+        <Paragraph class="mt-2 text-sm text-slate-600 dark:text-slate-400">
+          无独立内置长文案表之外：主标题可用 <code>title</code>；未传时按{" "}
+          <code>status</code> 回落{" "}
+          <code>messages</code>（success／error／…）。副标题用{" "}
+          <code>subTitle</code>，操作区用{" "}
+          <code>extra</code>／<code>children</code>。
+        </Paragraph>
       </section>
 
       <section class="space-y-3">

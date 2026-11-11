@@ -98,6 +98,11 @@ const exampleLoadingBorderedSize = `<Card loading title="加载中">...</Card>
 </Card>
 <Card title="尺寸" size="sm">...</Card>`;
 
+/** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+export const metadata = {
+  title: "Card 卡片 · ui-view",
+};
+
 export default function DataDisplayCard() {
   return (
     <div class="space-y-10">
