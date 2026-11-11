@@ -133,6 +133,7 @@ export {
 } from "./data-panel-messages.ts";
 export {
   buildExportFile,
+  columnWidthStyle,
   createLocalDataSource,
   type ExportFile,
   formatDateTime,

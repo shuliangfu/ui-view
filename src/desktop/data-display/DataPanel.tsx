@@ -62,6 +62,7 @@ import {
   colProp,
   columnAlignFlexJustify,
   columnAlignTextClass,
+  columnWidthStyle,
   createLocalDataSource,
   displayValue,
   enrichFormFields,
@@ -986,7 +987,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
     w.document.write(
       `<!doctype html><title>${
         esc(props.title)
-      }</title><style>body{font:13px sans-serif}table{border-collapse:collapse;width:100%}td,th{border:1px solid #999;padding:4px 8px;text-align:left}</style><h3>${
+      }</title><style>body{font:13px sans-serif}table{border-collapse:collapse;width:100%}td,th{border:1px solid #999;padding:4px 8px;text-align:center}</style><h3>${
         esc(props.title)
       }</h3><table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`,
     );
@@ -2477,14 +2478,14 @@ export function DataPanel(props: PanelProps): JSXRenderable {
                     </th>
                   );
                 }
-                // 数据列：headerAlign 优先，否则跟 align，默认左；系统列仍走上方居中分支
+                // 数据列：headerAlign 优先，否则跟 align，默认居中；支持 width／minWidth／maxWidth
                 const headAlign = resolveColumnHeaderAlign(c);
                 return (
                   <th
                     class={`whitespace-nowrap border border-slate-200 px-3 py-2 font-medium dark:border-slate-700 ${
                       columnAlignTextClass(headAlign)
                     }`}
-                    style={c.width ? `width:${c.width}px` : undefined}
+                    style={columnWidthStyle(c)}
                   >
                     {c.sortable
                       ? (
@@ -2722,6 +2723,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
                         class={`border border-slate-200 px-3 py-1.5 dark:border-slate-700 ${
                           columnAlignTextClass(resolveColumnAlign(c))
                         }`}
+                        style={columnWidthStyle(c)}
                       >
                         {cell(c, r)}
                       </td>
@@ -2767,6 +2769,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
                       class={`border border-slate-200 px-3 py-2 dark:border-slate-700 ${
                         columnAlignTextClass(resolveColumnAlign(c))
                       }`}
+                      style={columnWidthStyle(c)}
                       data-testid={`dp-total-${c.prop}`}
                     >
                       {(() => {
@@ -2950,10 +2953,13 @@ export function DataPanel(props: PanelProps): JSXRenderable {
           void submitForm();
         }}
       >
-        {formDefs.filter((f) => (id ? true : !f.editOnly)).map((f) => {
+        {formDefs.filter((f) => {
+          // 新建隐藏 editOnly；编辑隐藏 createOnly
+          if (!id) return !f.editOnly;
+          return !f.createOnly;
+        }).map((f) => {
           const prop = fieldProp(f);
           const sig = fields[prop];
-          const ro = !!id && !!f.createOnly;
           const type = f.type ?? "text";
           const lay = fieldLayoutStyle(f);
           let control: unknown;
@@ -2966,7 +2972,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
               multiValue: mfields[prop],
               mode,
               row: formRow.value,
-              disabled: ro,
+              disabled: false,
               error: errs[prop],
             };
             control = (
@@ -2982,7 +2988,6 @@ export function DataPanel(props: PanelProps): JSXRenderable {
                   value={sig}
                   maxLength={f.maxlength}
                   placeholder={f.placeholder}
-                  {...bool("disabled", ro)}
                   onInput={(
                     e: Event,
                   ) => (sig.value =
@@ -2996,7 +3001,6 @@ export function DataPanel(props: PanelProps): JSXRenderable {
                 <Select
                   size="sm"
                   value={sig}
-                  disabled={ro}
                   placeholder={!f.required &&
                       !(f.options ?? []).some((o) =>
                         o.value === ""
@@ -3016,7 +3020,6 @@ export function DataPanel(props: PanelProps): JSXRenderable {
                 <MultiSelect
                   size="sm"
                   value={mfields[fieldProp(f)]}
-                  disabled={ro}
                   options={(f.options ?? []).map((o) => ({
                     value: o.value,
                     label: o.label,
@@ -3037,7 +3040,6 @@ export function DataPanel(props: PanelProps): JSXRenderable {
               <span data-testid={`dp-fld-${fieldProp(f)}`}>
                 <Switch
                   checked={() => sig.value === on}
-                  disabled={ro}
                   onChange={(e: Event) => {
                     sig.value =
                       (e.target as unknown as { checked: boolean }).checked
@@ -3053,7 +3055,6 @@ export function DataPanel(props: PanelProps): JSXRenderable {
                 <InputNumber
                   size="sm"
                   value={sig}
-                  disabled={ro}
                   placeholder={f.placeholder}
                 />
               </div>
@@ -3064,7 +3065,6 @@ export function DataPanel(props: PanelProps): JSXRenderable {
                 <DatePicker
                   size="sm"
                   value={sig}
-                  disabled={ro}
                   placeholder={f.placeholder}
                 />
               </div>
@@ -3075,7 +3075,6 @@ export function DataPanel(props: PanelProps): JSXRenderable {
                 <DateTimePicker
                   size="sm"
                   value={sig}
-                  disabled={ro}
                   format="YYYY-MM-DD HH:mm"
                   placeholder={f.placeholder}
                 />
@@ -3087,7 +3086,6 @@ export function DataPanel(props: PanelProps): JSXRenderable {
                 <Input
                   type={type === "password" ? "password" : "text"}
                   value={sig}
-                  {...bool("readOnly", ro)}
                   autoComplete={type === "password" ? "new-password" : "off"}
                   placeholder={f.placeholder}
                   onInput={(e: Event) => {

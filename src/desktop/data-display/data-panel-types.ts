@@ -67,17 +67,27 @@ export interface Column {
   /** 是否可点击表头排序（服务端 / 本地数据源均走 `list(query)`） */
   sortable?: boolean;
   /**
-   * 单元格文本对齐（数据列）。默认 `left`。
+   * 单元格文本对齐（数据列）。默认 `center`。
    * 系统列 `selection`／`index`／`actions` 固定居中，忽略本字段。
    */
   align?: "left" | "center" | "right";
   /**
-   * 表头标题对齐（数据列）。**不传**时与 `align` 一致；二者皆未设则为 `left`。
+   * 表头标题对齐（数据列）。**不传**时与 `align` 一致；二者皆未设则为 `center`。
    * 用于「表头居中、单元格仍左／右」等；系统列忽略本字段。
    */
   headerAlign?: "left" | "center" | "right";
   /** 列宽（px） */
   width?: number;
+  /**
+   * 列最小宽度（px）。
+   * 与 `width`／`maxWidth` 一并写到表头与单元格 style。
+   */
+  minWidth?: number;
+  /**
+   * 列最大宽度（px）。
+   * 与 `width`／`minWidth` 一并写到表头与单元格 style。
+   */
+  maxWidth?: number;
   /** tag 列：值 → 文案 / 色调；switch/select 行内编辑也用 */
   options?: Option[];
   /**
@@ -273,7 +283,7 @@ export interface FormFieldRenderCtx {
   mode: "create" | "edit";
   /** 编辑时为当前行；新增为 null */
   row: Row | null;
-  /** 只读（如 createOnly 在编辑态） */
+  /** 控件禁用（如字段级自定义 render） */
   disabled: boolean;
   /** 当前字段校验错误 */
   error?: string;
@@ -307,9 +317,9 @@ export interface FormField {
   message?: string;
   /** 新建时的初始值 */
   initial?: string | number | boolean;
-  /** 创建后不可再改（编辑时只读） */
+  /** 仅新建时显示（编辑时不渲染、不校验、不提交；如密码） */
   createOnly?: boolean;
-  /** 仅编辑时显示 */
+  /** 仅编辑时显示（新建时不渲染） */
   editOnly?: boolean;
   /**
    * 栅格跨列（1–12）。有任一字段写 span／cols／width 时容器切 12 列；缺省整行（12）。

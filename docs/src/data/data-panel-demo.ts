@@ -153,7 +153,7 @@ export const ALIGN_DEMO_COLUMNS: Column[] = [
 export const ALIGN_DEMO_COLUMNS_CODE = `const columns: Column[] = [
   { type: "selection" }, // 多选：固定居中
   { type: "index" },     // 序号：固定居中
-  { prop: "name", label: "姓名", sortable: true }, // 默认左对齐
+  { prop: "name", label: "姓名", sortable: true }, // 默认居中
   { prop: "email", label: "邮箱" },
   {
     prop: "role",

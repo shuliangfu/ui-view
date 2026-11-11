@@ -301,22 +301,37 @@ const COLUMNS_API: DocsApiTableRow[] = [
   {
     name: "align",
     type: '"left"|"center"|"right"',
-    default: '"left"',
+    default: '"center"',
     description:
-      "单元格文本对齐。系统列 selection／index／actions 固定居中，忽略本字段。",
+      "单元格文本对齐。默认居中。系统列 selection／index／actions 固定居中，忽略本字段。",
   },
   {
     name: "headerAlign",
     type: '"left"|"center"|"right"',
-    default: "同 align；皆未设则为 left",
+    default: "同 align；皆未设则为 center",
     description:
-      '表头标题对齐。不传时与 align 一致。系统列忽略。例：表头居中、金额单元格右对齐可写 headerAlign:"center", align:"right"。',
+      '表头标题对齐。不传时与 align 一致；二者皆未设则居中。系统列忽略。例：金额单元格右对齐可写 align:"right"；表头单独居中可再写 headerAlign:"center"。',
   },
   {
     name: "width",
     type: "number",
     default: "-",
-    description: "列宽（px）",
+    description:
+      "列宽（px）。与 minWidth／maxWidth 一并写到表头与单元格 style。",
+  },
+  {
+    name: "minWidth",
+    type: "number",
+    default: "-",
+    description:
+      "列最小宽度（px）。与 width／maxWidth 一并写到表头与单元格 style。",
+  },
+  {
+    name: "maxWidth",
+    type: "number",
+    default: "-",
+    description:
+      "列最大宽度（px）。与 width／minWidth 一并写到表头与单元格 style。",
   },
   {
     name: "options",
@@ -576,13 +591,13 @@ const FORM_API: DocsApiTableRow[] = [
     name: "createOnly",
     type: "boolean",
     default: "-",
-    description: "创建后不可再改（编辑只读／不提交）",
+    description: "仅新建时显示；编辑时不渲染、不校验、不提交（如密码）",
   },
   {
     name: "editOnly",
     type: "boolean",
     default: "-",
-    description: "仅编辑时显示",
+    description: "仅编辑时显示；新建时不渲染",
   },
   {
     name: "span / cols",
@@ -3105,7 +3120,7 @@ ${ALIGN_DEMO_COLUMNS_CODE}
 />`}
         >
           <Paragraph class="mb-3 text-sm text-slate-600 dark:text-slate-400">
-            <code>align</code> 控制单元格（含合计行）；
+            <code>align</code> 控制单元格（含合计行，默认居中）；
             <code>headerAlign</code> 控制表头（不传则跟{" "}
             <code>align</code>）。多选／序号／操作列固定居中，无需配置。
           </Paragraph>

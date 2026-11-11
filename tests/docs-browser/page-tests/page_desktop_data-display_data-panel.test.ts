@@ -2952,8 +2952,8 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
     );
     expect(r.idxTh).toBe("center");
     expect(r.idxTd).toBe("center");
-    expect(r.nameTh).toBe("left");
-    expect(r.nameTd).toBe("left");
+    expect(r.nameTh).toBe("center");
+    expect(r.nameTd).toBe("center");
     expect(r.roleTh).toBe("center");
     expect(r.roleTd).toBe("center");
     expect(r.balTh).toBe("center");

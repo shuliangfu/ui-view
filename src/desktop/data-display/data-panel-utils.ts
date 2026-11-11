@@ -351,25 +351,42 @@ export const PANEL_COL_ACTIONS = "__actions";
 export type ColumnAlign = "left" | "center" | "right";
 
 /**
- * 解析数据列单元格对齐；缺省左对齐。
+ * 解析数据列单元格对齐；缺省居中。
  *
  * @param c - 列配置（只读 `align`）
  */
 export function resolveColumnAlign(
   c: Pick<Column, "align">,
 ): ColumnAlign {
-  return c.align ?? "left";
+  return c.align ?? "center";
 }
 
 /**
- * 解析数据列表头对齐：`headerAlign` 优先，否则跟 `align`，再否则左对齐。
+ * 解析数据列表头对齐：`headerAlign` 优先，否则跟 `align`，再否则居中。
  *
  * @param c - 列配置
  */
 export function resolveColumnHeaderAlign(
   c: Pick<Column, "align" | "headerAlign">,
 ): ColumnAlign {
-  return c.headerAlign ?? c.align ?? "left";
+  return c.headerAlign ?? c.align ?? "center";
+}
+
+/**
+ * 将列宽相关字段拼成内联 style 字符串（`width`／`min-width`／`max-width`，单位 px）。
+ * 无任何宽度字段时返回 `undefined`。
+ *
+ * @param c - 含宽度字段的列定义
+ * @returns CSS 声明串，或无宽度时 `undefined`
+ */
+export function columnWidthStyle(
+  c: Pick<Column, "width" | "minWidth" | "maxWidth">,
+): string | undefined {
+  const parts: string[] = [];
+  if (c.width != null) parts.push(`width:${c.width}px`);
+  if (c.minWidth != null) parts.push(`min-width:${c.minWidth}px`);
+  if (c.maxWidth != null) parts.push(`max-width:${c.maxWidth}px`);
+  return parts.length > 0 ? parts.join(";") : undefined;
 }
 
 /**

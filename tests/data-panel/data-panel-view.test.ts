@@ -5,6 +5,7 @@ import { describe, expect, it } from "@dreamer/test";
 import {
   columnAlignFlexJustify,
   columnAlignTextClass,
+  columnWidthStyle,
   enrichViewField,
   fallbackViewItems,
   fieldsOf,
@@ -235,7 +236,7 @@ describe("DataPanel view / form / search 配置", () => {
   });
 
   it("Column.align / headerAlign 解析与 class", () => {
-    expect(resolveColumnAlign({})).toBe("left");
+    expect(resolveColumnAlign({})).toBe("center");
     expect(resolveColumnAlign({ align: "right" })).toBe("right");
     expect(resolveColumnHeaderAlign({ align: "right" })).toBe("right");
     expect(resolveColumnHeaderAlign({ align: "right", headerAlign: "center" }))
@@ -245,5 +246,16 @@ describe("DataPanel view / form / search 配置", () => {
     expect(columnAlignTextClass("right")).toBe("text-right");
     expect(columnAlignFlexJustify("center")).toBe("justify-center");
     expect(columnAlignFlexJustify("right")).toBe("justify-end");
+  });
+
+  it("Column.width / minWidth / maxWidth 拼 style", () => {
+    expect(columnWidthStyle({})).toBeUndefined();
+    expect(columnWidthStyle({ width: 120 })).toBe("width:120px");
+    expect(columnWidthStyle({ minWidth: 80, maxWidth: 240 })).toBe(
+      "min-width:80px;max-width:240px",
+    );
+    expect(columnWidthStyle({ width: 100, minWidth: 60, maxWidth: 200 })).toBe(
+      "width:100px;min-width:60px;max-width:200px",
+    );
   });
 });
