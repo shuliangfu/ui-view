@@ -111,5 +111,4 @@ describe("文档页 E2E：/mobile/feedback/share-sheet（ShareSheet 分享面板
     }) as { ok: boolean };
     expect(got.ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
-
 });

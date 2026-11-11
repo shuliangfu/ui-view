@@ -14,7 +14,6 @@ import {
  */
 export const DEFAULT_UI_VIEW_UPLOAD_BASE_PATH = "/ui-view-upload";
 
-
 /**
  * 在 `action` URL 上设置查询参数 `phase`（保留已有 query）。
  *
@@ -293,7 +292,8 @@ export async function uploadFileViaUiViewBase(
   file: File,
   options: UploadViaUiViewBaseOptions = {},
 ): Promise<string> {
-  const root = (basePath || DEFAULT_UI_VIEW_UPLOAD_BASE_PATH).replace(/\/$/, "") ||
+  const root =
+    (basePath || DEFAULT_UI_VIEW_UPLOAD_BASE_PATH).replace(/\/$/, "") ||
     DEFAULT_UI_VIEW_UPLOAD_BASE_PATH;
   const {
     method = "POST",
@@ -386,4 +386,3 @@ export async function uploadFileViaUiViewBase(
   });
   return finalUrl;
 }
-

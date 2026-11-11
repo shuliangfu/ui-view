@@ -5,7 +5,11 @@
  */
 
 import { describe, expect, it } from "@dreamer/test";
-import { DOCS_BROWSER_CONFIG, sharedEnv } from "../helpers.ts";
+import {
+  assertStrictDocSection,
+  DOCS_BROWSER_CONFIG,
+  sharedEnv,
+} from "../helpers.ts";
 
 /** 固定为本文档 path，便于复制到其他页时改为对应路由 */
 const DOC_PATH = "/desktop/form/check";
@@ -17,7 +21,9 @@ describe("文档页 E2E：/desktop/form/check（Checkbox / Radio / Switch 合页
     await sharedEnv.waitDocMainReady(t, { minChars: 36 });
     const text = await sharedEnv.getMainText(t);
     expect(text.length).toBeGreaterThanOrEqual(48);
-    expect(text).toMatch(/Checkbox|复选|Radio|单选|Switch|开关/i);
+    expect(text).toMatch(
+      /createForm|Checkbox|复选|Radio|单选|Switch|开关/i,
+    );
     expect(await clickFirstCheckboxHere(t)).toBe(true);
     expect(await clickFirstRadioHere(t)).toBe(true);
     expect(await clickFirstSwitchHere(t)).toBe(true);
@@ -586,7 +592,13 @@ describe("文档页 E2E：/desktop/form/check（Checkbox / Radio / Switch 合页
     expect(ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
 
-
+  /**
+   * 文档小节「与 createForm」：在 main 内定位对应 h3，于该示例区块内完成一次交互。
+   */
+  it("严格·与 createForm", async (t) => {
+    if (!t?.browser?.goto) return;
+    await assertStrictDocSection(t, DOC_PATH);
+  }, DOCS_BROWSER_CONFIG);
 
   /**
    * UI·勾选 checkbox 切换 checked。
@@ -625,7 +637,6 @@ describe("文档页 E2E：/desktop/form/check（Checkbox / Radio / Switch 合页
     }) as { on: boolean };
     expect(after.on).not.toBe(before.on);
   }, DOCS_BROWSER_CONFIG);
-
 });
 
 /** 本文件内：点击 main 内首个 checkbox */

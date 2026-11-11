@@ -106,5 +106,4 @@ describe("文档页 E2E：/desktop/layout/splitter（Splitter 分割面板）", 
     }) as { ok: boolean };
     expect(got.ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
-
 });

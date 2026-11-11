@@ -89,7 +89,6 @@ describe("文档页 E2E：/desktop/basic/button（Button 按钮）", () => {
     expect(ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
 
-
   /**
    * UI·主按钮可见可点，disabled 不可点。
    */
@@ -116,5 +115,4 @@ describe("文档页 E2E：/desktop/basic/button（Button 按钮）", () => {
     expect(got.ok).toBe(true);
     expect(got.n).toBeGreaterThan(3);
   }, DOCS_BROWSER_CONFIG);
-
 });

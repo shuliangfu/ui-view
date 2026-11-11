@@ -4,11 +4,21 @@
  * 下拉打开时支持方向键与 Enter 选择；`onSelectOption` 由父级插入正文（常见为保留 `@` + label）。
  */
 
-import { createEffect, createSignal, type Signal } from "@dreamer/view";
+import {
+  createEffect,
+  createSignal,
+  type JSXRenderable,
+  type Signal,
+  useContext,
+} from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
-import type { JSXRenderable } from "@dreamer/view";
 import { resolveFormControlSize } from "./form-control-context.ts";
-import { controlBlueFocusRing } from "./input-focus-ring.ts";
+import { FormItemControlIdContext } from "./form-item-control-id.ts";
+import {
+  controlBlueFocusRing,
+  controlErrorBorder,
+  controlErrorFocusRing,
+} from "./input-focus-ring.ts";
 import { commitMaybeSignal, type MaybeSignal } from "./maybe-signal.ts";
 import type { SizeVariant } from "../types.ts";
 
@@ -39,6 +49,8 @@ export interface MentionsProps {
   size?: SizeVariant;
   /** 当前值（受控可选）；见 {@link MaybeSignal} */
   value?: MaybeSignal<string>;
+  /** 错误状态（红框 + aria-invalid）；可与 FormItem / createForm bind 联用 */
+  error?: boolean;
   /** 占位文案 */
   placeholder?: string;
   /** 行数 */
@@ -81,7 +93,7 @@ export interface MentionsProps {
 
 /** 文本区底纹（不含 ring） */
 const textareaSurface =
-  "border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 border-slate-300 dark:border-slate-600 focus:outline-hidden disabled:opacity-50 disabled:cursor-not-allowed transition-colors resize-y";
+  "border bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 border-slate-300 dark:border-slate-600 focus:outline-hidden disabled:opacity-50 disabled:cursor-not-allowed transition-colors resize-y";
 const textareaSizeClasses: Record<SizeVariant, string> = {
   xs: "px-2.5 py-1 text-xs rounded-md min-h-[64px]",
   sm: "px-3 py-1.5 text-sm rounded-md min-h-[72px]",
@@ -197,6 +209,7 @@ export function Mentions(props: MentionsProps): JSXRenderable {
     onSelectOption,
     class: className,
     hideFocusRing = false,
+    error = false,
     name,
     id,
     messages,
@@ -204,6 +217,8 @@ export function Mentions(props: MentionsProps): JSXRenderable {
   const m = { ...defaultMentionsMessages, ...messages };
   const size = resolveFormControlSize(sizeProp);
   const placeholder = props.placeholder ?? m.placeholder;
+  const fromFormItem = useContext(FormItemControlIdContext);
+  const resolvedId = id ?? fromFormItem;
 
   // 禁止在组件体内读 value()、showDropdown()、dropdownOptions()：会订阅 signal，导致根 effect 重跑、整树重建、textarea 被替换失焦。value 透传给 textarea；下拉由子组件读。
 
@@ -317,13 +332,20 @@ export function Mentions(props: MentionsProps): JSXRenderable {
   };
 
   const textareaProps = {
-    id,
+    id: resolvedId,
     name,
     rows,
     value,
     placeholder,
     disabled,
-    class: twMerge(textareaSurface, textareaSizeClasses[size], controlBlueFocusRing(!hideFocusRing)),
+    "aria-invalid": error,
+    class: twMerge(
+      textareaSurface,
+      textareaSizeClasses[size],
+      controlBlueFocusRing(!hideFocusRing && !error),
+      error && controlErrorBorder,
+      error && !hideFocusRing && controlErrorFocusRing(true),
+    ),
     "aria-expanded": () => {
       const open = typeof showDropdown === "function"
         ? Boolean(showDropdown())

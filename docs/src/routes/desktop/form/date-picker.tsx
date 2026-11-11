@@ -3,13 +3,16 @@
  * 路由: /desktop/form/date-picker
  */
 
-import { Paragraph, Title } from "@dreamer/ui-view/basic";
+import { Button, Link, Paragraph, Title } from "@dreamer/ui-view/basic";
 
 import { DatePicker } from "@dreamer/ui-view/form/date-picker";
+import { createForm } from "@dreamer/ui-view/form/create-form";
 import { Form } from "@dreamer/ui-view/form/form";
 import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { formRules } from "@dreamer/ui-view/form/form-rules";
 
 import { CodeBlock } from "@dreamer/ui-view/data-display";
+import { message } from "@dreamer/ui-view/feedback";
 import { createSignal } from "@dreamer/view";
 import { DocsApiTable } from "../../../components/DocsApiTable.tsx";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
@@ -114,6 +117,12 @@ const DATEPICKER_API: ApiRow[] = [
   { name: "name", type: "string", default: "-", description: "原生 name" },
   { name: "id", type: "string", default: "-", description: "原生 id" },
   {
+    name: "error",
+    type: "boolean",
+    default: "false",
+    description: "错误状态（红框）；可与 createForm 绑定联用",
+  },
+  {
     name: "messages",
     type: "Partial<DatePickerMessages>",
     default: "-",
@@ -140,12 +149,41 @@ const val = createSignal(localTodayYmd());
   />
 </FormItem>`;
 
-
 const exampleNestedMessages = `<DatePicker
   messages={{
     calendarNav: { /* PickerCalendarNavMessages */ },
   }}
 />`;
+
+/** createForm 演示字段（模块级） */
+type DatePickerDemoValues = { date: string };
+
+/** DatePicker + bind 联用演示 store */
+const datePickerDemoForm = createForm<DatePickerDemoValues>({
+  initialValues: { date: "" },
+  fields: { date: { rules: [formRules.required("请选择日期")] } },
+});
+
+/** 与 createForm 示例的 CodeBlock 源码 */
+const exampleCreateForm =
+  `import { createForm, formRules } from "@dreamer/ui-view/form";
+import { Form } from "@dreamer/ui-view/form/form";
+import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { DatePicker } from "@dreamer/ui-view/form/date-picker";
+import { Button } from "@dreamer/ui-view/basic";
+import { message } from "@dreamer/ui-view/feedback";
+
+const form = createForm({
+  initialValues: { date: "" },
+  fields: { date: { rules: [formRules.required("请选择日期")] } },
+});
+
+<Form form={form} onFinish={() => { message.success("已提交"); }}>
+  <FormItem name="date" label="日期">
+    <DatePicker {...form.bind("date")} />
+  </FormItem>
+  <Button type="submit" variant="primary">提交</Button>
+</Form>`;
 
 export default function FormDatePicker() {
   const today = localTodayYmd();
@@ -191,7 +229,18 @@ export default function FormDatePicker() {
           value、onChange、min、max、size、disabled、placeholder。区间与多选时
           onChange 的 value 为 JSON 字符串。日期区间请使用{" "}
           <code class="text-sm">mode="range"</code>
-          。宽度由 class 控制。Tailwind v4 + light/dark。
+          。宽度由 class 控制。Tailwind v4 + light/dark。与{" "}
+          <Link
+            href="/desktop/form/form-containers"
+            className="text-teal-600 hover:underline dark:text-teal-400"
+          >
+            Form / createForm
+          </Link>{" "}
+          联用时展开{" "}
+          <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">
+            {"{...form.bind(name)}"}
+          </code>
+          （单日 mode）。
         </Paragraph>
       </section>
 
@@ -208,6 +257,33 @@ export default function FormDatePicker() {
 
       <section class="space-y-8">
         <Title level={2}>示例</Title>
+
+        <section class="space-y-4">
+          <Title level={3}>与 createForm</Title>
+          <Form
+            form={datePickerDemoForm}
+            layout="vertical"
+            class="w-full max-w-md border border-dashed border-slate-200 dark:border-slate-600 rounded-lg p-4"
+            onFinish={() => {
+              message.success("已提交");
+            }}
+          >
+            <FormItem name="date" label="日期">
+              <DatePicker {...datePickerDemoForm.bind("date")} />
+            </FormItem>
+            <Button type="submit" variant="primary">
+              提交
+            </Button>
+          </Form>
+          <CodeBlock
+            title="代码示例"
+            code={exampleCreateForm}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+        </section>
 
         <Form layout="vertical" class="w-full space-y-6">
           <section class="space-y-4">
@@ -441,7 +517,14 @@ const valLg = createSignal(today);
       </section>
 
       <section class="space-y-3">
-          <CodeBlock title="代码示例" code={exampleNestedMessages} language="tsx" showLineNumbers copyable wrapLongLines />
+        <CodeBlock
+          title="代码示例"
+          code={exampleNestedMessages}
+          language="tsx"
+          showLineNumbers
+          copyable
+          wrapLongLines
+        />
 
         <Title level={2}>API</Title>
         <Paragraph class="text-sm text-slate-600 dark:text-slate-400">

@@ -5,12 +5,17 @@
  */
 
 import { twMerge } from "tailwind-merge";
-import type { JSXRenderable } from "@dreamer/view";
+import { type JSXRenderable, useContext } from "@dreamer/view";
 /** 按需：单文件图标，避免经 icons/mod 拉入全表 */
 import { IconSearch } from "../basic/icons/Search.tsx";
 import type { SizeVariant } from "../types.ts";
 import { resolveFormControlSize } from "./form-control-context.ts";
-import { controlBlueFocusRing } from "./input-focus-ring.ts";
+import { FormItemControlIdContext } from "./form-item-control-id.ts";
+import {
+  controlBlueFocusRing,
+  controlErrorBorder,
+  controlErrorFocusRing,
+} from "./input-focus-ring.ts";
 import { commitMaybeSignal, type MaybeSignal } from "./maybe-signal.ts";
 
 /**
@@ -43,6 +48,8 @@ export interface SearchProps {
   placeholder?: string;
   /** 输入值（受控可选）；见 {@link MaybeSignal} */
   value?: MaybeSignal<string>;
+  /** 错误状态（红框 + aria-invalid）；可与 FormItem / createForm bind 联用 */
+  error?: boolean;
   /** 额外 class（作用于包裹容器） */
   class?: string;
   /** 输入回调 */
@@ -80,7 +87,7 @@ const sizeClasses: Record<SizeVariant, string> = {
 
 /** 输入区底纹（不含 ring，由 {@link controlBlueFocusRing}(`!hideFocusRing`) 控制） */
 const inputSurface =
-  "border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 border-slate-300 dark:border-slate-600 focus:outline-hidden disabled:opacity-50 disabled:cursor-not-allowed transition-colors";
+  "border bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 border-slate-300 dark:border-slate-600 focus:outline-hidden disabled:opacity-50 disabled:cursor-not-allowed transition-colors";
 
 /** 清除 / 搜索按钮共用底纹（不含 ring） */
 const btnSurface =
@@ -107,12 +114,15 @@ export function Search(props: SearchProps): JSXRenderable {
     onSearch,
     name,
     id,
+    error = false,
     hideFocusRing = false,
     messages,
   } = props;
   const m = { ...defaultSearchMessages, ...messages };
   const placeholder = props.placeholder ?? m.placeholder;
   const size = resolveFormControlSize(sizeProp);
+  const fromFormItem = useContext(FormItemControlIdContext);
+  const resolvedId = id ?? fromFormItem;
 
   const sizeCls = sizeClasses[size];
   // 禁止在组件体内读 value()：会订阅 signal，导致根 effect 重跑、整树重建、input 被替换失焦。
@@ -172,15 +182,18 @@ export function Search(props: SearchProps): JSXRenderable {
       </span>
       <input
         type="search"
-        id={id}
+        id={resolvedId}
         name={name}
         value={value}
         placeholder={placeholder}
         disabled={disabled}
+        aria-invalid={error}
         class={twMerge(
           "w-full",
           inputSurface,
-          controlBlueFocusRing(!hideFocusRing),
+          controlBlueFocusRing(!hideFocusRing && !error),
+          error && controlErrorBorder,
+          error && !hideFocusRing && controlErrorFocusRing(true),
           sizeCls,
           onSearch ? "pr-20" : "pr-9",
           "[&::-webkit-search-cancel-button]:appearance-none [&::-webkit-search-cancel-button]:[-webkit-appearance:none]",

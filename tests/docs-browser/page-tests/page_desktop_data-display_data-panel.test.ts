@@ -132,7 +132,6 @@ async function open(t: T, panel: string): Promise<void> {
 
 const P = (k: string) => JSON.stringify(k);
 
-
 /**
  * Compare CSS colors across rgb/rgba/oklch/oklab serializations.
  * Composites each color onto white and black so alpha + wide-gamut rounding stay stable
@@ -182,7 +181,6 @@ function isNoBoxShadow(s: string): boolean {
   return meaningful.length === 0;
 }
 
-
 describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面板）", () => {
   it("本页关键词命中且 main 内完成浅层交互探针", async (t) => {
     if (!t?.browser?.goto) return;
@@ -216,6 +214,8 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
         "多语言",
         "自定义",
         "查看详情",
+        "自定义扩展：form.render / view.render",
+        "自定义扩展：FormField.render",
       ]
     ) {
       expect(heads.some((h) => h.includes(need))).toBe(true);
@@ -224,7 +224,7 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
       t,
       `return document.querySelectorAll('[data-testid^="panel-demo-"]').length;`,
     );
-    expect(panels).toBe(29);
+    expect(panels).toBe(31);
   }, DOCS_BROWSER_CONFIG);
 
   it(
@@ -338,7 +338,9 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
     );
     expect(ok).toBe(true);
     await ev(t, `await D.sleep(400);`);
-    const out = await ev<{ rows: number; range: string; empty: boolean; total: number }>(
+    const out = await ev<
+      { rows: number; range: string; empty: boolean; total: number }
+    >(
       t,
       `const k = "demo-dark";
        return {
@@ -354,18 +356,20 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
     expect(out.range).toBe("第 1-6 条，共 6 条");
   }, DOCS_BROWSER_CONFIG);
 
-  it("深色面板：单元格正文与分页摘要高对比浅色（不继承浅色页近黑字）", async (t) => {
-    if (!t?.browser?.goto) return;
-    await open(t, "demo-dark");
-    const out = await ev<{
-      cellFg: string;
-      rangeFg: string;
-      cellRatio: number;
-      rangeRatio: number;
-      tagRatio: number;
-    }>(
-      t,
-      `const k = ${P("demo-dark")};
+  it(
+    "深色面板：单元格正文与分页摘要高对比浅色（不继承浅色页近黑字）",
+    async (t) => {
+      if (!t?.browser?.goto) return;
+      await open(t, "demo-dark");
+      const out = await ev<{
+        cellFg: string;
+        rangeFg: string;
+        cellRatio: number;
+        rangeRatio: number;
+        tagRatio: number;
+      }>(
+        t,
+        `const k = ${P("demo-dark")};
        const cell = D.q(k, '[data-testid^="dp-row-"] td:nth-child(2)') || D.q(k, '[data-testid^="dp-row-"] td');
        // prefer a text cell: find first td whose text looks like a name (no switch/tag-only)
        const row = D.q(k, '[data-testid^="dp-row-"]');
@@ -383,17 +387,23 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
          rangeRatio: Math.round(D.contrast(range) * 100) / 100,
          tagRatio: tag ? Math.round(D.contrast(tag) * 100) / 100 : 0,
        };`,
-    );
-    // must not stay near-black (light-page inherited); compare across rgb/oklch
-    expect(await colorsClose(t, [[out.cellFg, "rgb(15, 23, 42)"]])).toBe(false);
-    expect(await colorsClose(t, [[out.cellFg, "rgb(0, 0, 0)"]])).toBe(false);
-    expect(await colorsClose(t, [[out.rangeFg, "rgb(15, 23, 42)"]])).toBe(false);
-    // WCAG AA-ish for body text on dark panel
-    expect(out.cellRatio).toBeGreaterThanOrEqual(4.5);
-    expect(out.rangeRatio).toBeGreaterThanOrEqual(4.5);
-    // tag still readable (regression guard)
-    if (out.tagRatio > 0) expect(out.tagRatio).toBeGreaterThanOrEqual(4.5);
-  }, DOCS_BROWSER_CONFIG);
+      );
+      // must not stay near-black (light-page inherited); compare across rgb/oklch
+      expect(await colorsClose(t, [[out.cellFg, "rgb(15, 23, 42)"]])).toBe(
+        false,
+      );
+      expect(await colorsClose(t, [[out.cellFg, "rgb(0, 0, 0)"]])).toBe(false);
+      expect(await colorsClose(t, [[out.rangeFg, "rgb(15, 23, 42)"]])).toBe(
+        false,
+      );
+      // WCAG AA-ish for body text on dark panel
+      expect(out.cellRatio).toBeGreaterThanOrEqual(4.5);
+      expect(out.rangeRatio).toBeGreaterThanOrEqual(4.5);
+      // tag still readable (regression guard)
+      if (out.tagRatio > 0) expect(out.tagRatio).toBeGreaterThanOrEqual(4.5);
+    },
+    DOCS_BROWSER_CONFIG,
+  );
 
   it(
     "深色模式：行悬停底色与 dweb-admin 一致（slate-800 @ 60%），文字不变；浅色不变",
@@ -439,7 +449,12 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
       await page.hover(row2);
       await ev(t, `await D.sleep(250);`);
       expect(
-        await colorsClose(t, [[(await probe(row2)).bg, DWEB_ADMIN_DARK_HOVER]], 4, 0.05),
+        await colorsClose(
+          t,
+          [[(await probe(row2)).bg, DWEB_ADMIN_DARK_HOVER]],
+          4,
+          0.05,
+        ),
       ).toBe(true);
       // 浅色面板悬停不受影响（仍为浅色 slate-50）
       const light = '[data-testid="panel-demo-basic"] [data-testid^="dp-row-"]';
@@ -791,11 +806,16 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
 
       await open(t, "demo-table");
       // 清偏好并重进，保证默认 hidden 列状态
-      await ev(t, `localStorage.removeItem("dp-prefs-demo-table"); localStorage.removeItem("dp-cols-demo-table");`);
+      await ev(
+        t,
+        `localStorage.removeItem("dp-prefs-demo-table"); localStorage.removeItem("dp-cols-demo-table");`,
+      );
       await open(t, "demo-table");
 
       const centerClick = async (sel: string) => {
-        const box = await ev<{ x: number; y: number; w: number; h: number } | null>(
+        const box = await ev<
+          { x: number; y: number; w: number; h: number } | null
+        >(
           t,
           `const el = document.querySelector(${JSON.stringify(sel)});
            if (!el) return null;
@@ -810,7 +830,9 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
 
       const before = await ev<boolean>(
         t,
-        `return D.q(${P("demo-table")}, "thead").textContent.includes("创建时间");`,
+        `return D.q(${
+          P("demo-table")
+        }, "thead").textContent.includes("创建时间");`,
       );
       expect(before).toBe(false);
 
@@ -828,12 +850,16 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
       const afterShow = await ev<Record<string, unknown>>(
         t,
         `
-        const ok = await D.until(() => D.q(${P("demo-table")}, "thead").textContent.includes("创建时间"));
+        const ok = await D.until(() => D.q(${
+          P("demo-table")
+        }, "thead").textContent.includes("创建时间"));
         const cb = document.querySelector('[data-testid="dp-col-createdAt"]');
         return {
           ok,
           menuOpen: !!document.querySelector('[data-testid="dp-column-menu"]'),
-          header: D.q(${P("demo-table")}, "thead").textContent.includes("创建时间"),
+          header: D.q(${
+          P("demo-table")
+        }, "thead").textContent.includes("创建时间"),
           checked: !!(cb && cb.checked),
           stored: localStorage.getItem("dp-prefs-demo-table"),
         };`,
@@ -849,12 +875,16 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
       const afterHide = await ev<Record<string, unknown>>(
         t,
         `
-        const ok = await D.until(() => !D.q(${P("demo-table")}, "thead").textContent.includes("创建时间"));
+        const ok = await D.until(() => !D.q(${
+          P("demo-table")
+        }, "thead").textContent.includes("创建时间"));
         const cb = document.querySelector('[data-testid="dp-col-createdAt"]');
         return {
           ok,
           menuOpen: !!document.querySelector('[data-testid="dp-column-menu"]'),
-          header: D.q(${P("demo-table")}, "thead").textContent.includes("创建时间"),
+          header: D.q(${
+          P("demo-table")
+        }, "thead").textContent.includes("创建时间"),
           checked: !!(cb && cb.checked),
           stored: localStorage.getItem("dp-prefs-demo-table"),
         };`,
@@ -869,7 +899,9 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
       await centerClick('[data-testid="dp-col-name"]');
       await ev(
         t,
-        `await D.until(() => !D.q(${P("demo-table")}, "thead").textContent.includes("姓名"));`,
+        `await D.until(() => !D.q(${
+          P("demo-table")
+        }, "thead").textContent.includes("姓名"));`,
       );
       await centerClick('[data-testid="dp-col-reset"]');
       const afterReset = await ev<Record<string, unknown>>(
@@ -884,8 +916,12 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
         return {
           ok,
           menuOpen: !!document.querySelector('[data-testid="dp-column-menu"]'),
-          hasName: D.q(${P("demo-table")}, "thead").textContent.includes("姓名"),
-          hasCreated: D.q(${P("demo-table")}, "thead").textContent.includes("创建时间"),
+          hasName: D.q(${
+          P("demo-table")
+        }, "thead").textContent.includes("姓名"),
+          hasCreated: D.q(${
+          P("demo-table")
+        }, "thead").textContent.includes("创建时间"),
           nameChecked: !!(nameCb && nameCb.checked),
           createdChecked: !!(createdCb && createdCb.checked),
           resetColor: (() => { const b = document.querySelector('[data-testid="dp-col-reset"]'); return b ? getComputedStyle(b).color : ""; })(),
@@ -899,7 +935,10 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
       expect(afterReset.nameChecked).toBe(true);
       expect(afterReset.createdChecked).toBe(false);
       expect(
-        await colorsClose(t, [[String(afterReset.resetColor), "rgb(100, 116, 139)"]]),
+        await colorsClose(t, [[
+          String(afterReset.resetColor),
+          "rgb(100, 116, 139)",
+        ]]),
       ).toBe(false);
       expect(String(afterReset.stored)).toContain("createdAt");
       expect(String(afterReset.stored)).not.toContain('"name"');
@@ -973,12 +1012,14 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
     DOCS_BROWSER_CONFIG,
   );
 
-  it("批量设为／批量删除均走行内 Popconfirm；取消不生效，确认才执行", async (t) => {
-    if (!t?.browser?.goto) return;
-    await open(t, "demo-batch");
-    const r = await ev<Record<string, unknown>>(
-      t,
-      `
+  it(
+    "批量设为／批量删除均走行内 Popconfirm；取消不生效，确认才执行",
+    async (t) => {
+      if (!t?.browser?.goto) return;
+      await open(t, "demo-batch");
+      const r = await ev<Record<string, unknown>>(
+        t,
+        `
       const k = ${P("demo-batch")};
       const out = {};
       const confirmOpen = () => document.querySelector('[data-testid="dp-confirm"]');
@@ -1031,19 +1072,21 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
       await D.until(() => D.total(k) === total0 - 2);
       out.deleted = D.total(k) === total0 - 2 && !D.q(k, '[data-testid="dp-row-2"]');
       return out;`,
-    );
-    expect(r.statusNoModal).toBe(true);
-    expect(r.statusText).toBe("确定将选中的 2 项设为「停用」吗？");
-    expect(r.statusOkLeft).toBe(true);
-    expect(r.statusUnchanged).toBe(true);
-    expect(r.statusChanged).toBe(true);
-    expect(r.batchSm).toBe(true);
-    expect(r.deleteNoModal).toBe(true);
-    expect(r.deleteText).toBe("确定要删除选中的 2 项吗？此操作不可恢复。");
-    expect(r.notDeletedYet).toBe(true);
-    expect(r.stillThere).toBe(true);
-    expect(r.deleted).toBe(true);
-  }, DOCS_BROWSER_CONFIG);
+      );
+      expect(r.statusNoModal).toBe(true);
+      expect(r.statusText).toBe("确定将选中的 2 项设为「停用」吗？");
+      expect(r.statusOkLeft).toBe(true);
+      expect(r.statusUnchanged).toBe(true);
+      expect(r.statusChanged).toBe(true);
+      expect(r.batchSm).toBe(true);
+      expect(r.deleteNoModal).toBe(true);
+      expect(r.deleteText).toBe("确定要删除选中的 2 项吗？此操作不可恢复。");
+      expect(r.notDeletedYet).toBe(true);
+      expect(r.stillThere).toBe(true);
+      expect(r.deleted).toBe(true);
+    },
+    DOCS_BROWSER_CONFIG,
+  );
 
   it(
     "新增 / 编辑 / 查看使用 Modal，表单校验（DEMO 默认无行删）",
@@ -1064,8 +1107,8 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
       out.createTitle = D.text(document.querySelector('[role="dialog"] h2'));
       out.createOrder = footerOrder();
       D.click(D.g('[data-testid="dp-form-submit"]'));
-      await D.until(() => document.querySelector('[data-testid="dp-form-error"]'));
-      out.invalidTop = D.text(document.querySelector('[data-testid="dp-form-error"]'));
+      await D.until(() => document.querySelector('[role="dialog"]').textContent.includes("此项必填"));
+      out.invalidTop = !!document.querySelector('[data-testid="dp-form-error"]');
       out.stillOpen = !!dialogForm();
       out.errorsShown = document.querySelector('[role="dialog"]').textContent.includes("此项必填");
       D.fill(document.querySelector('[data-testid="dp-fld-name"] input'), "Newbie");
@@ -1121,7 +1164,7 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
       // 页脚按钮顺序：「确定」在左、「取消」在右（新增 / 编辑一致）
       expect(r.createOrder).toBe("ok:确定,取消");
       expect(r.editOrder).toBe("ok:确定,取消");
-      expect(r.invalidTop).toBe("表单有误，请检查标红的字段");
+      expect(r.invalidTop).toBe(false);
       expect(r.stillOpen).toBe(true);
       expect(r.errorsShown).toBe(true);
       expect(r.patternError).toBe(true);
@@ -1346,12 +1389,14 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
     expect(r.printHtml).toBe(true);
   }, DOCS_BROWSER_CONFIG);
 
-  it("远程（异步）数据源：加载、翻页、搜索、新增（DEMO 默认无行删）", async (t) => {
-    if (!t?.browser?.goto) return;
-    await open(t, "demo-remote");
-    const r = await ev<Record<string, unknown>>(
-      t,
-      `
+  it(
+    "远程（异步）数据源：加载、翻页、搜索、新增（DEMO 默认无行删）",
+    async (t) => {
+      if (!t?.browser?.goto) return;
+      await open(t, "demo-remote");
+      const r = await ev<Record<string, unknown>>(
+        t,
+        `
       const k = ${P("demo-remote")};
       const out = {};
       await D.until(() => D.total(k) === 60, 10000);
@@ -1387,20 +1432,22 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
       out.hasEdit = !!D.q(k, '[data-testid="dp-edit-' + id + '"]');
       out.noDelete = !D.q(k, '[data-testid="dp-delete-' + id + '"]');
       return out;`,
-    );
-    expect(r.total).toBe(60);
-    expect(r.rows).toBe(10);
-    expect(r.sawLoading).toBeTruthy();
-    expect(r.page2).toBe("第 11-20 条，共 60 条");
-    expect((r.searched as number) < 60 && (r.searched as number) >= 1).toBe(
-      true,
-    );
-    expect(r.backToPage1).toBe(true);
-    expect(r.created).toBe(true);
-    expect(r.hasView).toBe(true);
-    expect(r.hasEdit).toBe(true);
-    expect(r.noDelete).toBe(true);
-  }, DOCS_BROWSER_CONFIG);
+      );
+      expect(r.total).toBe(60);
+      expect(r.rows).toBe(10);
+      expect(r.sawLoading).toBeTruthy();
+      expect(r.page2).toBe("第 11-20 条，共 60 条");
+      expect((r.searched as number) < 60 && (r.searched as number) >= 1).toBe(
+        true,
+      );
+      expect(r.backToPage1).toBe(true);
+      expect(r.created).toBe(true);
+      expect(r.hasView).toBe(true);
+      expect(r.hasEdit).toBe(true);
+      expect(r.noDelete).toBe(true);
+    },
+    DOCS_BROWSER_CONFIG,
+  );
 
   it(
     "en-US 文案与 messages 覆盖；自定义单元格 / 操作列 / 工具栏",
@@ -1484,7 +1531,9 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
       await sharedEnv.waitDocMainReady(t);
       const ready = await ev<boolean>(
         t,
-        `return await D.until(() => D.q(${P("demo-toolbar-off")}, '[data-testid="dp-table"]'), 30000);`,
+        `return await D.until(() => D.q(${
+          P("demo-toolbar-off")
+        }, '[data-testid="dp-table"]'), 30000);`,
       );
       expect(ready).toBe(true);
       await ev(t, `await D.sleep(300);`);
@@ -1517,14 +1566,18 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
       if (!t?.browser?.goto) return;
       // deno-lint-ignore no-explicit-any
       const page = (t.browser as any).page as {
-        setViewportSize?: (s: { width: number; height: number }) => Promise<void>;
+        setViewportSize?: (
+          s: { width: number; height: number },
+        ) => Promise<void>;
       } | undefined;
       if (!page?.setViewportSize) return;
       await sharedEnv.goto(t, DOC_PATH);
       await sharedEnv.waitDocMainReady(t);
       await ev(
         t,
-        `return await D.until(() => D.q(${P("demo-toolbar-off")}, ".dp-table-wrap"), 30000);`,
+        `return await D.until(() => D.q(${
+          P("demo-toolbar-off")
+        }, ".dp-table-wrap"), 30000);`,
       );
 
       await page.setViewportSize({ width: 1280, height: 800 });
@@ -1617,7 +1670,7 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
   );
 
   it(
-    "刷新按钮重新加载当前页；每个面板互不影响（同页 29 个实例）",
+    "刷新按钮重新加载当前页；每个面板互不影响（同页 31 个实例）",
     async (t) => {
       if (!t?.browser?.goto) return;
       await open(t, "demo-crud");
@@ -1639,19 +1692,19 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
       );
       expect(r.sameTotal).toBe(true);
       expect(r.otherNoBar).toBe(true);
-      expect(r.toolbars).toBe(28);
+      expect(r.toolbars).toBe(30);
     },
     DOCS_BROWSER_CONFIG,
   );
   it(
-    "29 个示例：28 个有工具栏；toolbar:false 示例无工具栏，表格／分页齐全",
+    "31 个示例：30 个有工具栏；toolbar:false 示例无工具栏，表格／分页齐全",
     async (t) => {
       if (!t?.browser?.goto) return;
       await open(t, "demo-basic");
       const r = await ev<Record<string, unknown>>(
         t,
         `
-      const keys = ["demo-basic","demo-search","demo-sync-url","demo-table","demo-col-fn","demo-crud","demo-batch","demo-page","demo-export","demo-remote","demo-api-users-action","demo-api-orders-restful","demo-dark","demo-locale","demo-toolbar-off","demo-defaults","demo-bool","demo-tb-fn","demo-ra-fn","demo-tb-custom","demo-ra-custom","demo-key-order","demo-enabled","demo-title","demo-can","demo-custom","demo-cell","demo-schemas-full","demo-view"];
+      const keys = ["demo-basic","demo-search","demo-sync-url","demo-table","demo-col-fn","demo-crud","demo-batch","demo-page","demo-export","demo-remote","demo-api-users-action","demo-api-orders-restful","demo-dark","demo-locale","demo-toolbar-off","demo-defaults","demo-bool","demo-tb-fn","demo-ra-fn","demo-tb-custom","demo-ra-custom","demo-key-order","demo-enabled","demo-title","demo-can","demo-custom","demo-cell","demo-schemas-full","demo-view","demo-form-view-render","demo-field-render"];
       await D.until(() => D.total("demo-remote") > 0, 10000);
       await D.until(() => D.total("demo-api-users-action") > 0, 10000);
       await D.until(() => D.total("demo-api-orders-restful") > 0, 10000);
@@ -1672,7 +1725,7 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
       }
       return out;`,
       );
-      expect(Object.keys(r).length).toBe(29);
+      expect(Object.keys(r).length).toBe(31);
       for (const [k, v] of Object.entries(r)) {
         const o = v as Record<string, unknown>;
         const expectTb = k !== "demo-toolbar-off";
@@ -1723,7 +1776,9 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
       };
       const light = await state();
       expect(light.dark).toBe(false);
-      expect(await colorsClose(t, [[light.tb, "rgb(241, 245, 249)"]])).toBe(true);
+      expect(await colorsClose(t, [[light.tb, "rgb(241, 245, 249)"]])).toBe(
+        true,
+      );
       // slate-50 row hover — accept rgb or oklch serialization
       expect(
         await colorsClose(t, [[await hoverBg(), "rgb(248, 250, 252)"]]),
@@ -1739,16 +1794,23 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
       ).toBe(true);
       // 与 dweb-admin 深色行悬停一致（oklab / rgb 等价）
       expect(
-        await colorsClose(t, [[
-          await hoverBg(),
-          "oklab(0.279 -0.00709772 -0.040381 / 0.6)",
-        ]], 4, 0.05),
+        await colorsClose(
+          t,
+          [[
+            await hoverBg(),
+            "oklab(0.279 -0.00709772 -0.040381 / 0.6)",
+          ]],
+          4,
+          0.05,
+        ),
       ).toBe(true);
       await clickToggle();
       const back = await state();
       expect(back.dark).toBe(false);
       expect(await colorsClose(t, [[back.card, light.card]])).toBe(true);
-      expect(await colorsClose(t, [[back.tb, "rgb(241, 245, 249)"]])).toBe(true);
+      expect(await colorsClose(t, [[back.tb, "rgb(241, 245, 249)"]])).toBe(
+        true,
+      );
       expect(
         await colorsClose(t, [[await hoverBg(), "rgb(248, 250, 252)"]]),
       ).toBe(true);
@@ -2844,6 +2906,65 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
   );
 
   /**
+   * 文档小节「自定义扩展：form.render / view.render」：打开新增与查看，断言自定义主体节点。
+   */
+  it("严格·自定义扩展：form.render / view.render", async (t) => {
+    if (!t?.browser?.goto) return;
+    await open(t, "demo-form-view-render");
+    const r = await ev<{
+      formOk: boolean;
+      viewOk: boolean;
+      formMode: string;
+    }>(
+      t,
+      `
+      const k = ${P("demo-form-view-render")};
+      D.click(D.q(k, '[data-testid="dp-create"]'));
+      await D.until(() => document.querySelector('[data-testid="demo-form-render-body"]'));
+      const formBody = document.querySelector('[data-testid="demo-form-render-body"]');
+      const formOk = !!formBody && /mode=create/.test(formBody.textContent || "");
+      const formMode = (formBody?.textContent || "").trim();
+      D.click(D.g('[data-testid="demo-form-render-close"]'));
+      await D.until(() => !document.querySelector('[data-testid="demo-form-render-body"]'));
+      D.click(D.q(k, '[data-testid^="dp-view-"]'));
+      await D.until(() => document.querySelector('[data-testid="demo-view-render-body"]'));
+      const viewBody = document.querySelector('[data-testid="demo-view-render-body"]');
+      const viewOk = !!viewBody && /自定义详情/.test(viewBody.textContent || "");
+      const close = document.querySelector('[data-testid="dp-view-close"]');
+      if (close) D.click(close);
+      return { formOk, viewOk, formMode };
+    `,
+    );
+    expect(r.formOk).toBe(true);
+    expect(r.viewOk).toBe(true);
+    expect(r.formMode).toMatch(/mode=create/);
+  }, DOCS_BROWSER_CONFIG);
+
+  /**
+   * 文档小节「自定义扩展：FormField.render」：编辑行后可见自定义 email 输入。
+   */
+  it("严格·自定义扩展：FormField.render", async (t) => {
+    if (!t?.browser?.goto) return;
+    await open(t, "demo-field-render");
+    const r = await ev<{ ok: boolean; typed: string }>(
+      t,
+      `
+      const k = ${P("demo-field-render")};
+      const editBtn = D.q(k, '[data-testid="dp-edit-1"]') || D.q(k, '[data-testid="dp-edit-2"]');
+      if (!editBtn) return { ok: false, typed: "no-edit" };
+      D.click(editBtn);
+      await D.until(() => document.querySelector('[data-testid="demo-field-render-email"] input'));
+      const input = document.querySelector('[data-testid="demo-field-render-email"] input');
+      if (!input) return { ok: false, typed: "no-input" };
+      D.fill(input, "custom@example.com");
+      return { ok: true, typed: input.value };
+    `,
+    );
+    expect(r.ok).toBe(true);
+    expect(r.typed).toBe("custom@example.com");
+  }, DOCS_BROWSER_CONFIG);
+
+  /**
    * UI·示例区主内容可见且有尺寸。
    */
   it("UI·示例区可见有尺寸", async (t) => {
@@ -2860,5 +2981,4 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
     }) as { ok: boolean };
     expect(got.ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
-
 });

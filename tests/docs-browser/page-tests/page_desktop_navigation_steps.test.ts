@@ -368,5 +368,4 @@ describe("文档页 E2E：/desktop/navigation/steps（Steps 步骤条）", () =>
     }) as { ok: boolean };
     expect(got.ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
-
 });

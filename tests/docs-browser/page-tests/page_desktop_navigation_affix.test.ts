@@ -172,5 +172,4 @@ describe("文档页 E2E：/desktop/navigation/affix（Affix 固钉）", () => {
     }) as { ok: boolean };
     expect(got.ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
-
 });

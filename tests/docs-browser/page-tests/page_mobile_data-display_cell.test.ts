@@ -130,5 +130,4 @@ describe("文档页 E2E：/mobile/data-display/cell（Cell 单元格）", () => 
     expect(got.n).toBeGreaterThan(0);
     expect(got.status.length).toBeGreaterThan(0);
   }, DOCS_BROWSER_CONFIG);
-
 });

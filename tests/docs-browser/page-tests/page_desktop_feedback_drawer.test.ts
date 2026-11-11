@@ -88,7 +88,9 @@ describe("文档页 E2E：/desktop/feedback/drawer（Drawer 抽屉）", () => {
           const tx = (x.textContent || "").trim();
           return aria === "关闭" || tx === "确定";
         },
-      ) as (HTMLButtonElement & { __onclick?: (ev: Event) => void }) | undefined;
+      ) as
+        | (HTMLButtonElement & { __onclick?: (ev: Event) => void })
+        | undefined;
       if (!b) return false;
       b.click();
       return true;
@@ -204,7 +206,6 @@ describe("文档页 E2E：/desktop/feedback/drawer（Drawer 抽屉）", () => {
     expect(ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
 
-
   /**
    * UI·示例区主内容可见且有尺寸。
    */
@@ -222,5 +223,4 @@ describe("文档页 E2E：/desktop/feedback/drawer（Drawer 抽屉）", () => {
     }) as { ok: boolean };
     expect(got.ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
-
 });

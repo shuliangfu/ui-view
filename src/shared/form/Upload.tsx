@@ -4,9 +4,15 @@
  * 结果写入隐藏域 `name`；可见 `type="file"` 不带 `name`。分片约定见 `upload-http.ts`。
  */
 
-import { createSignal, getOwner, type Owner, type Signal } from "@dreamer/view";
+import {
+  createSignal,
+  getOwner,
+  type JSXRenderable,
+  type Owner,
+  type Signal,
+  useContext,
+} from "@dreamer/view";
 import { safeRandomUUID } from "../utils/safe-random-uuid.ts";
-import type { JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import { IconUpload } from "../basic/icons/Upload.tsx";
 import { DEFAULT_UPLOAD_CHUNK_SIZE } from "./chunked-upload.ts";
@@ -20,6 +26,8 @@ export {
   uploadFileViaUiViewBase,
 } from "./upload-http.ts";
 import { resolveFormControlSize } from "./form-control-context.ts";
+import { FormItemControlIdContext } from "./form-item-control-id.ts";
+import { controlErrorBorder } from "./input-focus-ring.ts";
 import { commitMaybeSignal, type MaybeSignal } from "./maybe-signal.ts";
 import type { SizeVariant } from "../types.ts";
 
@@ -79,6 +87,8 @@ export interface UploadCoreProps {
   triggerLabel?: string;
   /** 为 true 时关闭触发/拖拽区的 focus-within ring */
   hideFocusRing?: boolean;
+  /** 错误状态（触发区红框）；可与 FormItem / createForm bind 联用 */
+  error?: boolean;
   /**
    * 为 true 时上传成功后在列表项下展示图片缩略图；默认 false。
    * `accept` 含 `image` 时任意成功 URL 均尝试预览，否则按 URL 后缀 / `data:image/` 判断。
@@ -362,10 +372,11 @@ export function Upload(props: UploadProps): JSXRenderable {
     drag = true,
     showTriggerIcon = true,
     hideFocusRing = false,
+    error = false,
     preview = false,
     class: className,
     name,
-    id,
+    id: idProp,
     action,
     method,
     headers,
@@ -388,6 +399,9 @@ export function Upload(props: UploadProps): JSXRenderable {
   } = props;
   const m = { ...defaultUploadMessages, ...messages };
   const size = resolveFormControlSize(sizeProp);
+  const fromFormItem = useContext(FormItemControlIdContext);
+  /** 显式 id 优先，否则 FormItem 下发的控件 id */
+  const id = idProp ?? fromFormItem;
   const dragPlaceholder = props.dragPlaceholder ?? m.dragPlaceholder;
   const triggerLabel = props.triggerLabel ?? m.triggerLabel;
 
@@ -670,13 +684,22 @@ export function Upload(props: UploadProps): JSXRenderable {
       class={twMerge(
         "relative flex w-full max-w-full items-stretch overflow-hidden border border-slate-300 bg-white dark:border-slate-600 dark:bg-slate-800",
         uploadTriggerSize[size],
-        !hideFocusRing &&
+        error && controlErrorBorder,
+        !hideFocusRing && !error &&
           "focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent dark:focus-within:ring-blue-400",
+        error && !hideFocusRing &&
+          "focus-within:ring-2 focus-within:ring-red-500 dark:focus-within:ring-red-500",
         disabled && "opacity-50",
       )}
+      aria-invalid={error}
     >
       {fileInputOverlay}
-      <div class={twMerge("pointer-events-none flex min-w-0 flex-1 items-center text-slate-700 dark:text-slate-200", uploadTriggerInnerSize[size])}>
+      <div
+        class={twMerge(
+          "pointer-events-none flex min-w-0 flex-1 items-center text-slate-700 dark:text-slate-200",
+          uploadTriggerInnerSize[size],
+        )}
+      >
         {showTriggerIcon && (
           <IconUpload
             size="sm"
@@ -710,9 +733,13 @@ export function Upload(props: UploadProps): JSXRenderable {
               dropZoneCls,
               uploadDropSize[size],
               "relative flex items-center justify-center",
-              !hideFocusRing &&
+              error && controlErrorBorder,
+              !hideFocusRing && !error &&
                 "focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent dark:focus-within:ring-blue-400",
+              error && !hideFocusRing &&
+                "focus-within:ring-2 focus-within:ring-red-500 dark:focus-within:ring-red-500",
             )}
+            aria-invalid={error}
             onDrop={handleDrop as unknown as (e: Event) => void}
             onDragOver={handleDragOver as unknown as (e: Event) => void}
             onDragLeave={handleDragLeave as unknown as (e: Event) => void}

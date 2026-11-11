@@ -95,6 +95,8 @@ export {
   type FieldRule,
   type FormConfig,
   type FormField,
+  type FormFieldRenderCtx,
+  type FormRenderCtx,
   type ImportFormat,
   isRowBuiltin,
   isToolbarBuiltin,
@@ -121,6 +123,8 @@ export {
   type ViewClick,
   type ViewConfig,
   type ViewItem,
+  type ViewItemRenderCtx,
+  type ViewRenderCtx,
   type WriteResult,
 } from "./DataPanel.tsx";
 export {

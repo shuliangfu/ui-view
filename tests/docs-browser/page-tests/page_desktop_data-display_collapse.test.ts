@@ -367,7 +367,6 @@ describe("文档页 E2E：/desktop/data-display/collapse（Collapse 折叠）", 
     }) as { ok: boolean };
     expect(got.ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
-
 });
 
 /** 本文件内：折叠首块头 */

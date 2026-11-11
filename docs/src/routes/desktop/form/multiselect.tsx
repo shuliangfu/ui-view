@@ -3,13 +3,16 @@
  * 路由: /desktop/form/multiselect
  */
 
-import { Paragraph, Title } from "@dreamer/ui-view/basic";
+import { Button, Link, Paragraph, Title } from "@dreamer/ui-view/basic";
 
+import { createForm } from "@dreamer/ui-view/form/create-form";
 import { Form } from "@dreamer/ui-view/form/form";
 import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { formRules } from "@dreamer/ui-view/form/form-rules";
 import { MultiSelect } from "@dreamer/ui-view/form/multiselect";
 
 import { CodeBlock } from "@dreamer/ui-view/data-display";
+import { message } from "@dreamer/ui-view/feedback";
 import { createSignal } from "@dreamer/view";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_MULTI_SELECT } from "../../../data/component-messages-rows.ts";
@@ -70,6 +73,12 @@ const MULTISELECT_API: ApiRow[] = [
   { name: "id", type: "string", default: "-", description: "原生 id" },
   { name: "class", type: "string", default: "-", description: "额外 class" },
   {
+    name: "error",
+    type: "boolean",
+    default: "false",
+    description: "错误状态（红框）；可与 createForm 绑定联用",
+  },
+  {
     name: "messages",
     type: "Partial<MultiSelectMessages>",
     default: "-",
@@ -83,8 +92,7 @@ const options = [
   { value: "c", label: "选项 C", disabled: true },
 ];
 
-const importCode =
-  `import { Form } from "@dreamer/ui-view/form/form";
+const importCode = `import { Form } from "@dreamer/ui-view/form/form";
 import { FormItem } from "@dreamer/ui-view/form/form-item";
 import { MultiSelect } from "@dreamer/ui-view/form/multiselect";
 
@@ -93,6 +101,50 @@ const val = createSignal<string[]>([]);
 <FormItem label="多选">
   <MultiSelect options={options} value={val} />
 </FormItem>`;
+
+/** createForm 演示字段（模块级） */
+type MultiSelectDemoValues = { tags: string[] };
+
+/** MultiSelect + bind 联用演示 store */
+const multiSelectDemoForm = createForm<MultiSelectDemoValues>({
+  initialValues: { tags: [] },
+  fields: {
+    tags: {
+      rules: [
+        formRules.custom((v) =>
+          Array.isArray(v) && v.length > 0 ? undefined : "请至少选一项"
+        ),
+      ],
+    },
+  },
+});
+
+/** 与 createForm 示例的 CodeBlock 源码 */
+const exampleCreateForm =
+  `import { createForm, formRules } from "@dreamer/ui-view/form";
+import { Form } from "@dreamer/ui-view/form/form";
+import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { MultiSelect } from "@dreamer/ui-view/form/multiselect";
+import { Button } from "@dreamer/ui-view/basic";
+import { message } from "@dreamer/ui-view/feedback";
+
+const form = createForm({
+  initialValues: { tags: [] as string[] },
+  fields: {
+    tags: {
+      rules: [formRules.custom((v) =>
+        Array.isArray(v) && v.length > 0 ? undefined : "请至少选一项"
+      )],
+    },
+  },
+});
+
+<Form form={form} onFinish={() => { message.success("已提交"); }}>
+  <FormItem name="tags" label="标签">
+    <MultiSelect {...form.bind("tags")} options={options} />
+  </FormItem>
+  <Button type="submit" variant="primary">提交</Button>
+</Form>`;
 
 export default function FormMultiSelect() {
   const val = createSignal<string[]>([]);
@@ -108,7 +160,18 @@ export default function FormMultiSelect() {
           value）与勾选列表；未选时触发条显示
           placeholder（默认「请选择」），已选时展示已选项标签（顿号分隔）。宽度由
           class 控制，表单中需占满一列时传 class="w-full"。Tailwind v4 +
-          light/dark。
+          light/dark。与{" "}
+          <Link
+            href="/desktop/form/form-containers"
+            className="text-teal-600 hover:underline dark:text-teal-400"
+          >
+            Form / createForm
+          </Link>{" "}
+          联用时展开{" "}
+          <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">
+            {"{...form.bind(name)}"}
+          </code>
+          （onChange 为 Event；值为 string[]）。
         </Paragraph>
       </section>
 
@@ -125,6 +188,36 @@ export default function FormMultiSelect() {
 
       <section class="space-y-8">
         <Title level={2}>示例</Title>
+
+        <section class="space-y-4">
+          <Title level={3}>与 createForm</Title>
+          <Form
+            form={multiSelectDemoForm}
+            layout="vertical"
+            class="w-full max-w-md border border-dashed border-slate-200 dark:border-slate-600 rounded-lg p-4"
+            onFinish={() => {
+              message.success("已提交");
+            }}
+          >
+            <FormItem name="tags" label="标签">
+              <MultiSelect
+                {...multiSelectDemoForm.bind("tags")}
+                options={options}
+              />
+            </FormItem>
+            <Button type="submit" variant="primary">
+              提交
+            </Button>
+          </Form>
+          <CodeBlock
+            title="代码示例"
+            code={exampleCreateForm}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+        </section>
 
         <Form layout="vertical" class="w-full space-y-6">
           <section class="space-y-4">

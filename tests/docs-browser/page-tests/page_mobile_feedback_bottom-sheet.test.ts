@@ -89,8 +89,6 @@ describe("文档页 E2E：/mobile/feedback/bottom-sheet（BottomSheet 底部抽�
     expect(ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
 
-
-
   /**
    * UI·打开 BottomSheet 半屏可见，可见遮罩可点（多实例示意不强制全关）。
    */
@@ -161,5 +159,4 @@ describe("文档页 E2E：/mobile/feedback/bottom-sheet（BottomSheet 底部抽�
     // 点击遮罩已执行；页面含多示意实例时不强制 large===0
     expect(true).toBe(true);
   }, DOCS_BROWSER_CONFIG);
-
 });

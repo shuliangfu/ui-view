@@ -48,8 +48,8 @@ export type {
   UploadProps,
 } from "./Upload.tsx";
 export {
-  DEFAULT_UPLOAD_CHUNK_SIZE,
   DEFAULT_UI_VIEW_UPLOAD_BASE_PATH,
+  DEFAULT_UPLOAD_CHUNK_SIZE,
   defaultGetUploadResultUrl,
   fileMatchesAccept,
   formatUploadFileSize,
@@ -77,6 +77,28 @@ export type {
 } from "./FormItem.tsx";
 export { FormList } from "./FormList.tsx";
 export type { FormListProps } from "./FormList.tsx";
+export {
+  createForm,
+  formRules,
+  FormStoreContext,
+  runFormRules,
+  useFormStore,
+} from "../../shared/form/mod.ts";
+export type {
+  CreateFormOptions,
+  FormFieldBind,
+  FormFieldBindChecked,
+  FormFieldBindTargetKeys,
+  FormFieldBindValue,
+  FormFieldMeta,
+  FormRule,
+  FormStore,
+  FormValidateFail,
+  FormValidateOk,
+  FormValidateResult,
+  FormValidateTrigger,
+  FormValues,
+} from "../../shared/form/mod.ts";
 export { RichTextEditor } from "./RichTextEditor.tsx";
 export type {
   RichTextEditorProps,
@@ -124,7 +146,10 @@ export type {
   NumberKeyboardProps,
 } from "./NumberKeyboard.tsx";
 export { defaultNumberKeyboardMessages } from "./NumberKeyboard.tsx";
-export { PasscodeInput, defaultPasscodeInputMessages } from "./PasscodeInput.tsx";
+export {
+  defaultPasscodeInputMessages,
+  PasscodeInput,
+} from "./PasscodeInput.tsx";
 export type { PasscodeInputProps } from "./PasscodeInput.tsx";
 export { SignaturePad } from "./SignaturePad.tsx";
 export type {

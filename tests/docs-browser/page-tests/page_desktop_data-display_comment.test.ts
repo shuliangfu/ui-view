@@ -255,5 +255,4 @@ describe("文档页 E2E：/desktop/data-display/comment（Comment 评论）", ()
     }) as { ok: boolean };
     expect(got.ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
-
 });

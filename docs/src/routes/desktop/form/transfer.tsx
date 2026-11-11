@@ -3,13 +3,16 @@
  * 路由: /desktop/form/transfer
  */
 
-import { Paragraph, Title } from "@dreamer/ui-view/basic";
+import { Button, Link, Paragraph, Title } from "@dreamer/ui-view/basic";
 
+import { createForm } from "@dreamer/ui-view/form/create-form";
 import { Form } from "@dreamer/ui-view/form/form";
 import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { formRules } from "@dreamer/ui-view/form/form-rules";
 import { Transfer } from "@dreamer/ui-view/form/transfer";
 
 import { CodeBlock } from "@dreamer/ui-view/data-display";
+import { message } from "@dreamer/ui-view/feedback";
 import { createSignal } from "@dreamer/view";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_TRANSFER } from "../../../data/component-messages-rows.ts";
@@ -113,6 +116,12 @@ const TRANSFER_API: ApiRow[] = [
   },
   { name: "class", type: "string", default: "-", description: "额外 class" },
   {
+    name: "error",
+    type: "boolean",
+    default: "false",
+    description: "错误状态（红框）；可与 createForm 绑定联用",
+  },
+  {
     name: "messages",
     type: "Partial<TransferMessages>",
     default: "-",
@@ -143,6 +152,54 @@ const targetKeys = createSignal<string[]>([]);
   />
 </FormItem>`;
 
+/** createForm 演示字段（模块级） */
+type TransferDemoValues = { keys: string[] };
+
+/** Transfer + bindTargetKeys 联用演示 store */
+const transferDemoForm = createForm<TransferDemoValues>({
+  initialValues: { keys: [] },
+  fields: {
+    keys: {
+      rules: [
+        formRules.custom((v) =>
+          Array.isArray(v) && v.length > 0 ? undefined : "请至少选择一项"
+        ),
+      ],
+    },
+  },
+});
+
+/** 与 createForm 示例的 CodeBlock 源码 */
+const exampleCreateForm =
+  `import { createForm, formRules } from "@dreamer/ui-view/form";
+import { Form } from "@dreamer/ui-view/form/form";
+import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { Transfer } from "@dreamer/ui-view/form/transfer";
+import { Button } from "@dreamer/ui-view/basic";
+import { message } from "@dreamer/ui-view/feedback";
+
+const form = createForm({
+  initialValues: { keys: [] as string[] },
+  fields: {
+    keys: {
+      rules: [formRules.custom((v) =>
+        Array.isArray(v) && v.length > 0 ? undefined : "请至少选择一项"
+      )],
+    },
+  },
+});
+
+<Form form={form} onFinish={() => { message.success("已提交"); }}>
+  <FormItem name="keys" label="穿梭">
+    <Transfer
+      {...form.bindTargetKeys("keys")}
+      dataSource={data}
+      titles={["待选", "已选"]}
+    />
+  </FormItem>
+  <Button type="submit" variant="primary">提交</Button>
+</Form>`;
+
 export default function FormTransfer() {
   const targetKeys = createSignal<string[]>([]);
   const targetKeys2 = createSignal<string[]>(["2", "4"]);
@@ -157,7 +214,18 @@ export default function FormTransfer() {
           穿梭框：dataSource、targetKeys、onChange、titles、showSearch、searchPlaceholder、可选
           searchValue（仅初始文案）、onSearch（输入通知）、filterOption、render、listStyle、disabled。宽度由
           class 控制，表单中需占满一列时传 class="w-full"。Tailwind v4 +
-          light/dark。
+          light/dark。与{" "}
+          <Link
+            href="/desktop/form/form-containers"
+            className="text-teal-600 hover:underline dark:text-teal-400"
+          >
+            Form / createForm
+          </Link>{" "}
+          联用时展开{" "}
+          <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">
+            {"{...form.bindTargetKeys(name)}"}
+          </code>
+          。
         </Paragraph>
       </section>
 
@@ -174,6 +242,37 @@ export default function FormTransfer() {
 
       <section class="space-y-8">
         <Title level={2}>示例</Title>
+
+        <section class="space-y-4">
+          <Title level={3}>与 createForm</Title>
+          <Form
+            form={transferDemoForm}
+            layout="vertical"
+            class="w-full max-w-md border border-dashed border-slate-200 dark:border-slate-600 rounded-lg p-4"
+            onFinish={() => {
+              message.success("已提交");
+            }}
+          >
+            <FormItem name="keys" label="穿梭">
+              <Transfer
+                {...transferDemoForm.bindTargetKeys("keys")}
+                dataSource={data}
+                titles={["待选", "已选"]}
+              />
+            </FormItem>
+            <Button type="submit" variant="primary">
+              提交
+            </Button>
+          </Form>
+          <CodeBlock
+            title="代码示例"
+            code={exampleCreateForm}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+        </section>
 
         <Form layout="vertical" class="w-full space-y-6">
           <section class="space-y-4">
@@ -258,16 +357,40 @@ const targetKeys = createSignal<string[]>(["1"]);
           <section class="space-y-4">
             <Title level={3}>size（xs / sm / md / lg）</Title>
             <FormItem label="xs">
-              <Transfer size="xs" dataSource={data} targetKeys={targetKeys} titles={["待选", "已选"]} listStyle={{ width: 160, height: 120 }} />
+              <Transfer
+                size="xs"
+                dataSource={data}
+                targetKeys={targetKeys}
+                titles={["待选", "已选"]}
+                listStyle={{ width: 160, height: 120 }}
+              />
             </FormItem>
             <FormItem label="sm">
-              <Transfer size="sm" dataSource={data} targetKeys={targetKeys} titles={["待选", "已选"]} listStyle={{ width: 160, height: 120 }} />
+              <Transfer
+                size="sm"
+                dataSource={data}
+                targetKeys={targetKeys}
+                titles={["待选", "已选"]}
+                listStyle={{ width: 160, height: 120 }}
+              />
             </FormItem>
             <FormItem label="md（默认）">
-              <Transfer size="md" dataSource={data} targetKeys={targetKeys} titles={["待选", "已选"]} listStyle={{ width: 160, height: 120 }} />
+              <Transfer
+                size="md"
+                dataSource={data}
+                targetKeys={targetKeys}
+                titles={["待选", "已选"]}
+                listStyle={{ width: 160, height: 120 }}
+              />
             </FormItem>
             <FormItem label="lg">
-              <Transfer size="lg" dataSource={data} targetKeys={targetKeys} titles={["待选", "已选"]} listStyle={{ width: 160, height: 120 }} />
+              <Transfer
+                size="lg"
+                dataSource={data}
+                targetKeys={targetKeys}
+                titles={["待选", "已选"]}
+                listStyle={{ width: 160, height: 120 }}
+              />
             </FormItem>
             <CodeBlock
               title="代码示例"

@@ -146,14 +146,18 @@ describe("文档页 E2E：/mobile/data-display/virtual-list（VirtualList 虚拟
       try {
         cur.list.focus({ preventScroll: true });
       } catch {
-        try { cur.list.focus(); } catch { /* ignore */ }
+        try {
+          cur.list.focus();
+        } catch { /* ignore */ }
       }
       for (let i = 0; i < 20; i++) {
         cur = pick();
         if (!cur) return { ok: false, reason: "lost-list" };
         const { list } = cur;
         /** 强制可滚：避免内联 height 未生效时 clientHeight 撑满 */
-        if (list.clientHeight < 40 || list.scrollHeight <= list.clientHeight + 2) {
+        if (
+          list.clientHeight < 40 || list.scrollHeight <= list.clientHeight + 2
+        ) {
           list.style.height = "280px";
           list.style.overflow = "auto";
         }
@@ -170,7 +174,9 @@ describe("文档页 E2E：/mobile/data-display/virtual-list（VirtualList 虚拟
         }
         list.dispatchEvent(new Event("scroll", { bubbles: true }));
         await sleep(50);
-        if (list.isConnected && list.scrollTop > Math.max(10, max * 0.85)) break;
+        if (list.isConnected && list.scrollTop > Math.max(10, max * 0.85)) {
+          break;
+        }
       }
       await sleep(150);
       cur = pick();

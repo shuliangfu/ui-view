@@ -365,5 +365,4 @@ describe("文档页 E2E：/desktop/data-display/carousel（Carousel 轮播）", 
     }) as { ok: boolean };
     expect(got.ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
-
 });

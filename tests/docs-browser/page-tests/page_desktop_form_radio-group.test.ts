@@ -6,6 +6,7 @@
 
 import { describe, expect, it } from "@dreamer/test";
 import {
+  assertStrictDocSection,
   DOCS_BROWSER_CONFIG,
   runKeywordAndShallowHere,
   sharedEnv,
@@ -18,7 +19,7 @@ describe("文档页 E2E：/desktop/form/radio-group（RadioGroup 单选组）", 
   it("本页关键词命中且 main 内完成浅层交互探针", async (t) => {
     if (!t?.browser?.goto) return;
     await runKeywordAndShallowHere(t, DOC_PATH, [
-      /RadioGroup|单选/i,
+      /createForm|RadioGroup|单选/i,
     ]);
   }, DOCS_BROWSER_CONFIG);
 
@@ -581,11 +582,18 @@ describe("文档页 E2E：/desktop/form/radio-group（RadioGroup 单选组）", 
     expect(ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
 
-
-
   /**
    * UI·点选另一 radio 更新选中。
    */
+
+  /**
+   * 文档小节「与 createForm」：在 main 内定位对应 h3，于该示例区块内完成一次交互。
+   */
+  it("严格·与 createForm", async (t) => {
+    if (!t?.browser?.goto) return;
+    await assertStrictDocSection(t, DOC_PATH);
+  }, DOCS_BROWSER_CONFIG);
+
   it("UI·点选 radio 切换", async (t) => {
     if (!t?.browser?.goto) return;
     await sharedEnv.goto(t, DOC_PATH);
@@ -622,5 +630,4 @@ describe("文档页 E2E：/desktop/form/radio-group（RadioGroup 单选组）", 
     }) as { checked: number };
     expect(after.checked).not.toBe(before.checked);
   }, DOCS_BROWSER_CONFIG);
-
 });

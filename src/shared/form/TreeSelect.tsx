@@ -1,5 +1,4 @@
 /** 树选择展示形态：`dropdown` 缩进浮层；`native` 单原生 select，选项文案为完整路径（移动触控） */
-import type { JSXRenderable } from "@dreamer/view";
 export type TreeSelectAppearance = "dropdown" | "native";
 
 /**
@@ -12,7 +11,13 @@ export type TreeSelectAppearance = "dropdown" | "native";
  * 选中后对外 `value` 仍是节点 `value`（如 `fe`），`onChange` 与 Select 一样可用 `target.value`。
  */
 
-import { createEffect, createSignal, onCleanup } from "@dreamer/view";
+import {
+  createEffect,
+  createSignal,
+  type JSXRenderable,
+  onCleanup,
+  useContext,
+} from "@dreamer/view";
 import {
   installInlineDropdownOutsideClickClose,
   pickInlineDropdownOption,
@@ -22,10 +27,13 @@ import { twMerge } from "tailwind-merge";
 import { IconChevronDown } from "../basic/icons/ChevronDown.tsx";
 import {
   controlBlueFocusRing,
+  controlErrorBorder,
+  controlErrorFocusRing,
   nativeSelectSurface,
   pickerTriggerSurface,
 } from "./input-focus-ring.ts";
 import { resolveFormControlSize } from "./form-control-context.ts";
+import { FormItemControlIdContext } from "./form-item-control-id.ts";
 import {
   commitMaybeSignal,
   type MaybeSignal,
@@ -62,9 +70,12 @@ export interface TreeSelectProps {
   options: TreeSelectOption[];
   /** 当前选中节点的 value；见 {@link MaybeSignal} */
   value?: MaybeSignal<string>;
+  /** 错误状态；可与 FormItem / createForm bind 联用 */
+  error?: boolean;
   size?: SizeVariant;
   disabled?: boolean;
   onChange?: (e: Event) => void;
+  onBlur?: (e: Event) => void;
   placeholder?: string;
   class?: string;
   name?: string;
@@ -148,9 +159,11 @@ function TreeSelectNativeBranch(props: Omit<TreeSelectProps, "appearance">) {
     size: sizeProp,
     disabled = false,
     onChange,
+    onBlur,
     class: className,
     name,
     id,
+    error = false,
     hideFocusRing = false,
     value,
     messages,
@@ -160,6 +173,8 @@ function TreeSelectNativeBranch(props: Omit<TreeSelectProps, "appearance">) {
   const flat = flattenTreeSelectOptions(options);
   const size = resolveFormControlSize(sizeProp);
   const sizeCls = sizeClassesNative[size];
+  const fromFormItem = useContext(FormItemControlIdContext);
+  const resolvedId = id ?? fromFormItem;
 
   /**
    * 选中值变更：写回 Signal 并触发 `onChange`。
@@ -174,18 +189,22 @@ function TreeSelectNativeBranch(props: Omit<TreeSelectProps, "appearance">) {
 
   return (
     <select
-      id={id}
+      id={resolvedId}
       name={name}
       value={value}
       disabled={disabled}
+      aria-invalid={error}
       class={twMerge(
         "w-full touch-manipulation",
         nativeSelectSurface,
-        controlBlueFocusRing(!hideFocusRing),
+        controlBlueFocusRing(!hideFocusRing && !error),
+        error && controlErrorBorder,
+        error && !hideFocusRing && controlErrorFocusRing(true),
         sizeCls,
         className,
       )}
       onChange={handleChange}
+      onBlur={onBlur}
     >
       <option value="">{placeholder}</option>
       {flat.map((opt) => (
@@ -207,9 +226,11 @@ function TreeSelectDropdownBranch(props: Omit<TreeSelectProps, "appearance">) {
     size: sizeProp,
     disabled = false,
     onChange,
+    onBlur,
     class: className,
     name,
     id,
+    error = false,
     hideFocusRing = false,
     value,
     messages,
@@ -217,6 +238,8 @@ function TreeSelectDropdownBranch(props: Omit<TreeSelectProps, "appearance">) {
   const m = { ...defaultTreeSelectMessages, ...messages };
   const placeholder = props.placeholder ?? m.placeholder;
   const size = resolveFormControlSize(sizeProp);
+  const fromFormItem = useContext(FormItemControlIdContext);
+  const resolvedId = id ?? fromFormItem;
 
   const openState = createSignal(false);
   const sizeCls = sizeClassesDropdown[size];
@@ -290,8 +313,9 @@ function TreeSelectDropdownBranch(props: Omit<TreeSelectProps, "appearance">) {
       />
       <button
         type="button"
-        id={id}
+        id={resolvedId}
         disabled={disabled}
+        aria-invalid={error}
         aria-haspopup="listbox"
         aria-expanded={() => openState.value}
         aria-label={() => {
@@ -303,9 +327,12 @@ function TreeSelectDropdownBranch(props: Omit<TreeSelectProps, "appearance">) {
         class={twMerge(
           "w-full min-w-0",
           pickerTriggerSurface,
-          controlBlueFocusRing(!hideFocusRing),
+          controlBlueFocusRing(!hideFocusRing && !error),
+          error && controlErrorBorder,
+          error && !hideFocusRing && controlErrorFocusRing(true),
           sizeCls,
         )}
+        onBlur={onBlur}
         onClick={() => {
           if (disabled) return;
           if (openState.value) {

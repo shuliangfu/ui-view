@@ -89,7 +89,6 @@ describe("文档页 E2E：/desktop/navigation/navbar（Navbar 导航栏）", () 
     expect(ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
 
-
   /**
    * UI·顶栏可见且含导航区。
    */
@@ -104,11 +103,13 @@ describe("文档页 E2E：/desktop/navigation/navbar（Navbar 导航栏）", () 
       ) as HTMLElement | null;
       if (!header) {
         // fallback: any sticky/fixed top bar in main
-        const cand = Array.from(document.querySelectorAll("main *")).find((el) => {
-          const s = getComputedStyle(el as HTMLElement);
-          return (s.position === "sticky" || s.position === "fixed") &&
-            (el as HTMLElement).getBoundingClientRect().height > 32;
-        }) as HTMLElement | undefined;
+        const cand = Array.from(document.querySelectorAll("main *")).find(
+          (el) => {
+            const s = getComputedStyle(el as HTMLElement);
+            return (s.position === "sticky" || s.position === "fixed") &&
+              (el as HTMLElement).getBoundingClientRect().height > 32;
+          },
+        ) as HTMLElement | undefined;
         if (!cand) return { ok: false, reason: "no-header" };
         const r = cand.getBoundingClientRect();
         return { ok: r.width > 80 && r.height > 32, w: r.width, h: r.height };
@@ -118,5 +119,4 @@ describe("文档页 E2E：/desktop/navigation/navbar（Navbar 导航栏）", () 
     }) as { ok: boolean };
     expect(got.ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
-
 });

@@ -3,8 +3,13 @@
  */
 
 import { TreeSelect } from "@dreamer/ui-view/mobile/form/tree-select";
-import { Paragraph, Title } from "@dreamer/ui-view/mobile/basic";
+import { Form } from "@dreamer/ui-view/mobile/form/form";
+import { FormItem } from "@dreamer/ui-view/mobile/form/form-item";
+import { Button, Link, Paragraph, Title } from "@dreamer/ui-view/mobile/basic";
 import { CodeBlock } from "@dreamer/ui-view/mobile/data-display";
+import { createForm } from "@dreamer/ui-view/form/create-form";
+import { formRules } from "@dreamer/ui-view/form/form-rules";
+import { message } from "@dreamer/ui-view/feedback";
 import { createSignal } from "@dreamer/view";
 import {
   DocsApiTable,
@@ -13,6 +18,17 @@ import {
 import { MobileDocDemo } from "../../../components/MobileDocDemo.tsx";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_TREE_SELECT } from "../../../data/component-messages-rows.ts";
+
+/** createForm 演示字段 */
+type TreeSelectCreateFormValues = { dept: string };
+
+/** 与 createForm 联用演示 store */
+const treeSelectCreateForm = createForm<TreeSelectCreateFormValues>({
+  initialValues: { dept: "" },
+  fields: {
+    dept: { rules: [formRules.required("请选择部门")] },
+  },
+});
 
 const TREE_OPTIONS = [
   {
@@ -81,7 +97,8 @@ const TREE_API: DocsApiTableRow[] = [
   },
 ];
 
-const importCode = `import { TreeSelect } from "@dreamer/ui-view/mobile/form/tree-select";
+const importCode =
+  `import { TreeSelect } from "@dreamer/ui-view/mobile/form/tree-select";
 
 const val = createSignal("");
 
@@ -111,7 +128,26 @@ export default function MobileTreeSelectDoc() {
           <code class="text-sm">dropdown</code>（缩进浮层）。需要单原生{" "}
           <code class="text-sm">select</code>、选项展示完整路径（如「研发 /
           前端」）时传{" "}
-          <code class="text-sm">appearance=&quot;native&quot;</code>。
+          <code class="text-sm">appearance=&quot;native&quot;</code>
+          。与{" "}
+          <Link
+            href="/mobile/form/form-containers"
+            className="text-teal-600 hover:underline dark:text-teal-400"
+          >
+            Form / createForm（移动）
+          </Link>
+          、
+          <Link
+            href="/desktop/form/form-containers"
+            className="text-teal-600 hover:underline dark:text-teal-400"
+          >
+            桌面 Form 容器
+          </Link>{" "}
+          联用：展开{" "}
+          <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">
+            {"{...form.bind(name)}"}
+          </code>
+          。
         </Paragraph>
       </section>
 
@@ -128,6 +164,55 @@ export default function MobileTreeSelectDoc() {
 
       <section class="space-y-8">
         <Title level={2}>示例</Title>
+
+        <div class="space-y-4">
+          <Title level={3}>与 createForm</Title>
+          <MobileDocDemo>
+            <Form
+              form={treeSelectCreateForm}
+              layout="vertical"
+              class="w-full"
+              onFinish={() => {
+                message.success("已提交");
+              }}
+            >
+              <FormItem name="dept" label="部门">
+                <TreeSelect
+                  options={TREE_OPTIONS}
+                  {...treeSelectCreateForm.bind("dept")}
+                  placeholder="请选择部门"
+                  class="w-full"
+                />
+              </FormItem>
+              <Button type="submit" variant="primary" class="w-full">
+                提交
+              </Button>
+            </Form>
+          </MobileDocDemo>
+          <CodeBlock
+            title="代码示例"
+            code={`import { createForm } from "@dreamer/ui-view/form/create-form";
+import { formRules } from "@dreamer/ui-view/form/form-rules";
+import { Form } from "@dreamer/ui-view/mobile/form/form";
+import { FormItem } from "@dreamer/ui-view/mobile/form/form-item";
+import { TreeSelect } from "@dreamer/ui-view/mobile/form/tree-select";
+
+const form = createForm({
+  initialValues: { dept: "" },
+  fields: { dept: { rules: [formRules.required()] } },
+});
+
+<Form form={form} onFinish={() => { message.success("已提交"); }}>
+  <FormItem name="dept" label="部门">
+    <TreeSelect options={options} {...form.bind("dept")} />
+  </FormItem>
+</Form>`}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+        </div>
 
         <div class="space-y-4">
           <Title level={3}>基础</Title>
@@ -152,10 +237,30 @@ export default function MobileTreeSelectDoc() {
           <Title level={3}>size（xs / sm / md / lg）</Title>
           <MobileDocDemo>
             <div class="flex flex-col gap-3 p-2">
-              <TreeSelect size="xs" options={TREE_OPTIONS} class="w-full" placeholder="xs" />
-              <TreeSelect size="sm" options={TREE_OPTIONS} class="w-full" placeholder="sm" />
-              <TreeSelect size="md" options={TREE_OPTIONS} class="w-full" placeholder="md" />
-              <TreeSelect size="lg" options={TREE_OPTIONS} class="w-full" placeholder="lg" />
+              <TreeSelect
+                size="xs"
+                options={TREE_OPTIONS}
+                class="w-full"
+                placeholder="xs"
+              />
+              <TreeSelect
+                size="sm"
+                options={TREE_OPTIONS}
+                class="w-full"
+                placeholder="sm"
+              />
+              <TreeSelect
+                size="md"
+                options={TREE_OPTIONS}
+                class="w-full"
+                placeholder="md"
+              />
+              <TreeSelect
+                size="lg"
+                options={TREE_OPTIONS}
+                class="w-full"
+                placeholder="lg"
+              />
             </div>
           </MobileDocDemo>
           <CodeBlock
@@ -173,11 +278,11 @@ export default function MobileTreeSelectDoc() {
       </section>
 
       <section class="space-y-4">
-      <DocsMessagesSection
-        interfaceName="TreeSelectMessages"
-        defaultExportName="defaultTreeSelectMessages"
-        rows={MESSAGES_TREE_SELECT}
-      />
+        <DocsMessagesSection
+          interfaceName="TreeSelectMessages"
+          defaultExportName="defaultTreeSelectMessages"
+          rows={MESSAGES_TREE_SELECT}
+        />
 
         <Title level={2}>API</Title>
         <Paragraph class="text-sm text-slate-600 dark:text-slate-400">

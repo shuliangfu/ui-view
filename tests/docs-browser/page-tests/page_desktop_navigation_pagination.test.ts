@@ -690,11 +690,14 @@ describe("文档页 E2E：/desktop/navigation/pagination（Pagination 分页）"
         const label = btn.querySelector("span");
         if (!label) return false;
         const cs = getComputedStyle(label);
-        return cs.whiteSpace === "nowrap" || label.scrollWidth <= label.clientWidth + 1;
+        return cs.whiteSpace === "nowrap" ||
+          label.scrollWidth <= label.clientWidth + 1;
       });
       return {
-        ok: sizes.includes("xs") && sizes.includes("sm") && sizes.includes("md") &&
-          sizes.includes("lg") && native === 0 && listboxTriggers >= 4 && wrapsOk,
+        ok: sizes.includes("xs") && sizes.includes("sm") &&
+          sizes.includes("md") &&
+          sizes.includes("lg") && native === 0 && listboxTriggers >= 4 &&
+          wrapsOk,
         sizes,
         native,
         listboxTriggers,
@@ -751,7 +754,6 @@ describe("文档页 E2E：/desktop/navigation/pagination（Pagination 分页）"
     }) as { ok: boolean };
     expect(got.ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
-
 });
 
 /** 本文件内：分页下一页 */

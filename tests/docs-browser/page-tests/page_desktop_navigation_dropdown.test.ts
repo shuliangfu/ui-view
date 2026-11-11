@@ -487,7 +487,9 @@ describe("文档页 E2E：/desktop/navigation/dropdown（Dropdown 下拉）", ()
         "main [data-dreamer-dropdown] [aria-haspopup='true']",
       ) as HTMLElement | null;
       const expanded = trigger?.getAttribute("aria-expanded") === "true";
-      const menu = document.querySelector("[role='menu']") as HTMLElement | null;
+      const menu = document.querySelector("[role='menu']") as
+        | HTMLElement
+        | null;
       const mr = menu?.getBoundingClientRect();
       const covers = !!mr && mr.width >= innerWidth * 0.95 &&
         mr.height >= innerHeight * 0.95;
@@ -509,5 +511,4 @@ describe("文档页 E2E：/desktop/navigation/dropdown（Dropdown 下拉）", ()
     expect(got.mw).toBeGreaterThan(40);
     expect(got.covers).toBe(false);
   }, DOCS_BROWSER_CONFIG);
-
 });

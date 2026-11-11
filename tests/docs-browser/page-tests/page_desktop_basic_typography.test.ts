@@ -66,7 +66,6 @@ describe("文档页 E2E：/desktop/basic/typography（Typography 排版）", () 
     expect(ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
 
-
   /**
    * UI·排版示例文字可见。
    */
@@ -84,5 +83,4 @@ describe("文档页 E2E：/desktop/basic/typography（Typography 排版）", () 
     }) as { ok: boolean };
     expect(got.ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
-
 });

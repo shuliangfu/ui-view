@@ -5,7 +5,17 @@
  * `split` 宽屏仅全屏钮；窄屏与 `tabs` 含源码/预览切换。预览区写入 `innerHTML`；默认经 markdown sanitizeUrl＋`hardenPreviewHtml` 收紧，仍勿把完全不可信内容当生产 CMS。
  */
 
-import { createEffect, createMemo, createRef, createRenderEffect, createSignal, type JSXRenderable, onMount, type Signal,  } from "@dreamer/view";
+import {
+  createEffect,
+  createMemo,
+  createRef,
+  createRenderEffect,
+  createSignal,
+  type JSXRenderable,
+  onMount,
+  type Signal,
+  useContext,
+} from "@dreamer/view";
 import { safeIsSignal } from "../safe-signal.ts";
 import { twMerge } from "tailwind-merge";
 import { parse } from "@dreamer/markdown";
@@ -16,6 +26,7 @@ import {
   controlErrorBorder,
   controlErrorFocusRing,
 } from "./input-focus-ring.ts";
+import { FormItemControlIdContext } from "./form-item-control-id.ts";
 import {
   ensureMarkdownPreviewPrismStyles,
   highlightMarkdownPreviewCodeBlocks,
@@ -541,7 +552,7 @@ export function MarkdownEditor(props: MarkdownEditorProps): JSXRenderable {
     onKeyDown,
     onMarkdownChange,
     name,
-    id,
+    id: idProp,
     ariaLabel = m.textareaAriaLabel,
     required = false,
     maxLength,
@@ -552,11 +563,16 @@ export function MarkdownEditor(props: MarkdownEditorProps): JSXRenderable {
     onPasteImage,
   } = props;
   const size = resolveFormControlSize(props.size);
+  const fromFormItem = useContext(FormItemControlIdContext);
+  const id = idProp ?? fromFormItem;
   const mdSizeRoot: Record<SizeVariant, string> = {
-    xs: "[&_button]:p-1 [&_button]:min-w-[22px] [&_button]:min-h-[22px] [&_button]:text-xs [&_textarea]:px-2 [&_textarea]:py-1 [&_textarea]:text-xs",
-    sm: "[&_button]:p-1 [&_button]:min-w-[24px] [&_button]:min-h-[24px] [&_button]:text-xs [&_textarea]:px-2.5 [&_textarea]:py-1.5 [&_textarea]:text-sm",
+    xs:
+      "[&_button]:p-1 [&_button]:min-w-[22px] [&_button]:min-h-[22px] [&_button]:text-xs [&_textarea]:px-2 [&_textarea]:py-1 [&_textarea]:text-xs",
+    sm:
+      "[&_button]:p-1 [&_button]:min-w-[24px] [&_button]:min-h-[24px] [&_button]:text-xs [&_textarea]:px-2.5 [&_textarea]:py-1.5 [&_textarea]:text-sm",
     md: "",
-    lg: "[&_button]:p-2 [&_button]:min-w-[32px] [&_button]:min-h-[32px] [&_button]:text-base [&_textarea]:px-4 [&_textarea]:py-2.5 [&_textarea]:text-base",
+    lg:
+      "[&_button]:p-2 [&_button]:min-w-[32px] [&_button]:min-h-[32px] [&_button]:text-base [&_textarea]:px-4 [&_textarea]:py-2.5 [&_textarea]:text-base",
   };
 
   /** 全屏时用于切换 `md-editor-fullscreen` 的根容器 */
@@ -611,13 +627,11 @@ export function MarkdownEditor(props: MarkdownEditorProps): JSXRenderable {
     }
     const action = (uploadAction ?? "").trim();
     if (!action) return undefined;
-    const file = fileOrBlob instanceof File
-      ? fileOrBlob
-      : new File(
-        [fileOrBlob],
-        `paste-${Date.now()}.png`,
-        { type: fileOrBlob.type || "image/png" },
-      );
+    const file = fileOrBlob instanceof File ? fileOrBlob : new File(
+      [fileOrBlob],
+      `paste-${Date.now()}.png`,
+      { type: fileOrBlob.type || "image/png" },
+    );
     return await uploadFileViaUiViewBase(action, file);
   };
 

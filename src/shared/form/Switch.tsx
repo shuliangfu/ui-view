@@ -9,7 +9,11 @@
  */
 
 import { createSignal, type Signal } from "@dreamer/view";
-import { readSignalValue, safeIsSignal, writeSignalValue } from "../safe-signal.ts";
+import {
+  readSignalValue,
+  safeIsSignal,
+  writeSignalValue,
+} from "../safe-signal.ts";
 import type { JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import { resolveFormControlSize } from "./form-control-context.ts";
@@ -57,7 +61,6 @@ export interface SwitchProps {
   /** 为 true 时隐藏轨道在 peer 聚焦时的蓝色 ring；默认 false 显示 */
   hideFocusRing?: boolean;
 }
-
 
 const switchTrackSize: Record<SizeVariant, string> = {
   xs: "h-4 w-7",

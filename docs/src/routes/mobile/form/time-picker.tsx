@@ -4,8 +4,13 @@
  */
 
 import { TimePicker } from "@dreamer/ui-view/mobile/form/time-picker";
-import { Paragraph, Title } from "@dreamer/ui-view/mobile/basic";
+import { Form } from "@dreamer/ui-view/mobile/form/form";
+import { FormItem } from "@dreamer/ui-view/mobile/form/form-item";
+import { Button, Link, Paragraph, Title } from "@dreamer/ui-view/mobile/basic";
 import { CodeBlock } from "@dreamer/ui-view/mobile/data-display";
+import { createForm } from "@dreamer/ui-view/form/create-form";
+import { formRules } from "@dreamer/ui-view/form/form-rules";
+import { message } from "@dreamer/ui-view/feedback";
 import { createSignal } from "@dreamer/view";
 import {
   DocsApiTable,
@@ -14,6 +19,17 @@ import {
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MobileDocDemo } from "../../../components/MobileDocDemo.tsx";
 import { MESSAGES_TIME_PICKER } from "../../../data/component-messages-rows.ts";
+
+/** createForm 演示字段 */
+type TimePickerCreateFormValues = { time: string };
+
+/** 与 createForm 联用演示 store */
+const timePickerCreateForm = createForm<TimePickerCreateFormValues>({
+  initialValues: { time: "" },
+  fields: {
+    time: { rules: [formRules.required("请选择时间")] },
+  },
+});
 
 /** 与桌面 TimePicker 对齐的 API 说明（移动入口与 shared 实现一致） */
 const TIMEPICKER_API: DocsApiTableRow[] = [
@@ -83,7 +99,8 @@ const TIMEPICKER_API: DocsApiTableRow[] = [
   },
 ];
 
-const importCode = `import { TimePicker } from "@dreamer/ui-view/mobile/form/time-picker";
+const importCode =
+  `import { TimePicker } from "@dreamer/ui-view/mobile/form/time-picker";
 
 const val = createSignal("09:30");
 
@@ -106,7 +123,25 @@ export default function MobileTimePickerDoc() {
           导入与同页其它移动表单一致。<code class="text-sm">mode</code>、
           <code class="text-sm">format</code>、
           <code class="text-sm">panelAttach</code>{" "}
-          等行为见桌面 TimePicker 文档。
+          等行为见桌面 TimePicker 文档。与{" "}
+          <Link
+            href="/mobile/form/form-containers"
+            className="text-teal-600 hover:underline dark:text-teal-400"
+          >
+            Form / createForm（移动）
+          </Link>
+          、
+          <Link
+            href="/desktop/form/form-containers"
+            className="text-teal-600 hover:underline dark:text-teal-400"
+          >
+            桌面 Form 容器
+          </Link>{" "}
+          联用：展开{" "}
+          <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">
+            {"{...form.bind(name)}"}
+          </code>
+          。
         </Paragraph>
       </section>
 
@@ -123,6 +158,53 @@ export default function MobileTimePickerDoc() {
 
       <section class="space-y-8">
         <Title level={2}>示例</Title>
+
+        <div class="space-y-4">
+          <Title level={3}>与 createForm</Title>
+          <MobileDocDemo>
+            <Form
+              form={timePickerCreateForm}
+              layout="vertical"
+              class="w-full"
+              onFinish={() => {
+                message.success("已提交");
+              }}
+            >
+              <FormItem name="time" label="时间">
+                <TimePicker
+                  {...timePickerCreateForm.bind("time")}
+                  class="w-full"
+                />
+              </FormItem>
+              <Button type="submit" variant="primary" class="w-full">
+                提交
+              </Button>
+            </Form>
+          </MobileDocDemo>
+          <CodeBlock
+            title="代码示例"
+            code={`import { createForm } from "@dreamer/ui-view/form/create-form";
+import { formRules } from "@dreamer/ui-view/form/form-rules";
+import { Form } from "@dreamer/ui-view/mobile/form/form";
+import { FormItem } from "@dreamer/ui-view/mobile/form/form-item";
+import { TimePicker } from "@dreamer/ui-view/mobile/form/time-picker";
+
+const form = createForm({
+  initialValues: { time: "" },
+  fields: { time: { rules: [formRules.required()] } },
+});
+
+<Form form={form} onFinish={() => { message.success("已提交"); }}>
+  <FormItem name="time" label="时间">
+    <TimePicker {...form.bind("time")} />
+  </FormItem>
+</Form>`}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+        </div>
 
         <div class="space-y-4">
           <Title level={3}>基础（Signal）</Title>

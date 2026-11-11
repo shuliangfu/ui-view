@@ -3,13 +3,16 @@
  * 路由: /desktop/form/checkbox-group
  */
 
-import { Paragraph, Title } from "@dreamer/ui-view/basic";
+import { Button, Link, Paragraph, Title } from "@dreamer/ui-view/basic";
 
 import { CheckboxGroup } from "@dreamer/ui-view/form/checkbox-group";
+import { createForm } from "@dreamer/ui-view/form/create-form";
 import { Form } from "@dreamer/ui-view/form/form";
 import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { formRules } from "@dreamer/ui-view/form/form-rules";
 
 import { CodeBlock } from "@dreamer/ui-view/data-display";
+import { message } from "@dreamer/ui-view/feedback";
 import { createSignal } from "@dreamer/view";
 
 interface ApiRow {
@@ -88,6 +91,53 @@ const val = createSignal<string[]>([]);
   />
 </FormItem>`;
 
+/** createForm 演示字段（模块级） */
+type CheckboxGroupDemoValues = { hobbies: string[] };
+
+/** CheckboxGroup + bindValue 联用演示 store */
+const checkboxGroupDemoForm = createForm<CheckboxGroupDemoValues>({
+  initialValues: { hobbies: [] },
+  fields: {
+    hobbies: {
+      rules: [
+        formRules.custom((v) =>
+          Array.isArray(v) && v.length > 0 ? undefined : "请至少选一项"
+        ),
+      ],
+    },
+  },
+});
+
+/** 与 createForm 示例的 CodeBlock 源码 */
+const exampleCreateForm =
+  `import { createForm, formRules } from "@dreamer/ui-view/form";
+import { Form } from "@dreamer/ui-view/form/form";
+import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { CheckboxGroup } from "@dreamer/ui-view/form/checkbox-group";
+import { Button } from "@dreamer/ui-view/basic";
+import { message } from "@dreamer/ui-view/feedback";
+
+const form = createForm({
+  initialValues: { hobbies: [] as string[] },
+  fields: {
+    hobbies: {
+      rules: [formRules.custom((v) =>
+        Array.isArray(v) && v.length > 0 ? undefined : "请至少选一项"
+      )],
+    },
+  },
+});
+
+<Form form={form} onFinish={() => { message.success("已提交"); }}>
+  <FormItem name="hobbies" label="兴趣">
+    <CheckboxGroup
+      {...form.bindValue("hobbies")}
+      options={[{ value: "x", label: "X" }, { value: "y", label: "Y" }]}
+    />
+  </FormItem>
+  <Button type="submit" variant="primary">提交</Button>
+</Form>`;
+
 export default function FormCheckboxGroup() {
   const val = createSignal<string[]>([]);
   const val2 = createSignal<string[]>(["x", "y"]);
@@ -98,8 +148,19 @@ export default function FormCheckboxGroup() {
         <Title level={1}>CheckboxGroup 多选组</Title>
         <Paragraph class="mt-2">
           多选组，支持
-          options、value、onChange、direction（vertical/horizontal）、disabled、error。Tailwind
-          v4 + light/dark。
+          options、value、onChange、direction（vertical/horizontal）、disabled、error。与
+          {" "}
+          <Link
+            href="/desktop/form/form-containers"
+            className="text-teal-600 hover:underline dark:text-teal-400"
+          >
+            Form / createForm
+          </Link>{" "}
+          联用时展开{" "}
+          <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">
+            {"{...form.bindValue(name)}"}
+          </code>
+          （值为 string[]）。Tailwind v4 + light/dark。
         </Paragraph>
       </section>
 
@@ -116,6 +177,39 @@ export default function FormCheckboxGroup() {
 
       <section class="space-y-8">
         <Title level={2}>示例</Title>
+
+        <section class="space-y-4">
+          <Title level={3}>与 createForm</Title>
+          <Form
+            form={checkboxGroupDemoForm}
+            layout="vertical"
+            class="w-full max-w-md border border-dashed border-slate-200 dark:border-slate-600 rounded-lg p-4"
+            onFinish={() => {
+              message.success("已提交");
+            }}
+          >
+            <FormItem name="hobbies" label="兴趣">
+              <CheckboxGroup
+                {...checkboxGroupDemoForm.bindValue("hobbies")}
+                options={[
+                  { value: "x", label: "X" },
+                  { value: "y", label: "Y" },
+                ]}
+              />
+            </FormItem>
+            <Button type="submit" variant="primary">
+              提交
+            </Button>
+          </Form>
+          <CodeBlock
+            title="代码示例"
+            code={exampleCreateForm}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+        </section>
 
         <Form layout="vertical" class="w-full space-y-6">
           <section class="space-y-4">

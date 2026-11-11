@@ -3,13 +3,16 @@
  * 路由: /desktop/form/color-picker
  */
 
-import { Paragraph, Title } from "@dreamer/ui-view/basic";
+import { Button, Link, Paragraph, Title } from "@dreamer/ui-view/basic";
 
 import { ColorPicker } from "@dreamer/ui-view/form/color-picker";
+import { createForm } from "@dreamer/ui-view/form/create-form";
 import { Form } from "@dreamer/ui-view/form/form";
 import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { formRules } from "@dreamer/ui-view/form/form-rules";
 
 import { CodeBlock } from "@dreamer/ui-view/data-display";
+import { message } from "@dreamer/ui-view/feedback";
 import { createSignal } from "@dreamer/view";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_COLOR_PICKER } from "../../../data/component-messages-rows.ts";
@@ -92,6 +95,12 @@ const COLOR_PICKER_API: ApiRow[] = [
   { name: "name", type: "string", default: "-", description: "原生 name" },
   { name: "id", type: "string", default: "-", description: "原生 id" },
   {
+    name: "error",
+    type: "boolean",
+    default: "false",
+    description: "错误状态（红框）；可与 createForm 绑定联用",
+  },
+  {
     name: "messages",
     type: "Partial<ColorPickerMessages>",
     default: "-",
@@ -111,6 +120,36 @@ function bindColorInput(
     set((e.target as HTMLInputElement).value);
   };
 }
+
+/** createForm 演示字段（模块级） */
+type ColorPickerDemoValues = { color: string };
+
+/** ColorPicker + bind 联用演示 store */
+const colorPickerDemoForm = createForm<ColorPickerDemoValues>({
+  initialValues: { color: "#14b8a6" },
+  fields: { color: { rules: [formRules.required("请选择颜色")] } },
+});
+
+/** 与 createForm 示例的 CodeBlock 源码 */
+const exampleCreateForm =
+  `import { createForm, formRules } from "@dreamer/ui-view/form";
+import { Form } from "@dreamer/ui-view/form/form";
+import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { ColorPicker } from "@dreamer/ui-view/form/color-picker";
+import { Button } from "@dreamer/ui-view/basic";
+import { message } from "@dreamer/ui-view/feedback";
+
+const form = createForm({
+  initialValues: { color: "#14b8a6" },
+  fields: { color: { rules: [formRules.required("请选择颜色")] } },
+});
+
+<Form form={form} onFinish={() => { message.success("已提交"); }}>
+  <FormItem name="color" label="主题色">
+    <ColorPicker {...form.bind("color")} />
+  </FormItem>
+  <Button type="submit" variant="primary">提交</Button>
+</Form>`;
 
 export default function FormColorPickerDoc() {
   const defaultHex = createSignal("#3b82f6");
@@ -149,7 +188,18 @@ export default function FormColorPickerDoc() {
           <code class="text-xs">onChange</code> 时关面板后颜色被冲回。传{" "}
           <code class="text-xs">variant="swatch"</code>{" "}
           可只显示色块触发。面板顶部的取色按钮、圆环预览与说明文案由{" "}
-          <code class="text-xs">showToolbar</code> 控制，默认关闭。
+          <code class="text-xs">showToolbar</code> 控制，默认关闭。与{" "}
+          <Link
+            href="/desktop/form/form-containers"
+            className="text-teal-600 hover:underline dark:text-teal-400"
+          >
+            Form / createForm
+          </Link>{" "}
+          联用时展开{" "}
+          <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">
+            {"{...form.bind(name)}"}
+          </code>
+          。
         </Paragraph>
       </section>
 
@@ -172,6 +222,33 @@ const hex = createSignal("#3b82f6");
 
       <section class="space-y-8">
         <Title level={2}>示例</Title>
+
+        <section class="space-y-4">
+          <Title level={3}>与 createForm</Title>
+          <Form
+            form={colorPickerDemoForm}
+            layout="vertical"
+            class="w-full max-w-md border border-dashed border-slate-200 dark:border-slate-600 rounded-lg p-4"
+            onFinish={() => {
+              message.success("已提交");
+            }}
+          >
+            <FormItem name="color" label="主题色">
+              <ColorPicker {...colorPickerDemoForm.bind("color")} />
+            </FormItem>
+            <Button type="submit" variant="primary">
+              提交
+            </Button>
+          </Form>
+          <CodeBlock
+            title="代码示例"
+            code={exampleCreateForm}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+        </section>
 
         <div class="space-y-4">
           <Title level={3}>默认（色块 + HEX + 右侧图标）</Title>

@@ -89,7 +89,6 @@ describe("文档页 E2E：/mobile/feedback/action-sheet（ActionSheet 动作面�
     expect(ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
 
-
   /**
    * UI·打开浮层可见，点遮罩／取消可关。
    */
@@ -105,9 +104,7 @@ describe("文档页 E2E：/mobile/feedback/action-sheet（ActionSheet 动作面�
       const btns = Array.from(
         document.querySelectorAll("main button"),
       ) as (HTMLButtonElement & { __onclick?: (ev: Event) => void })[];
-      const openBtn = btns.find((b) =>
-        /打开/.test(b.textContent || "")
-      );
+      const openBtn = btns.find((b) => /打开/.test(b.textContent || ""));
       openBtn?.scrollIntoView({ block: "center" });
       if (openBtn && typeof openBtn.__onclick === "function") {
         openBtn.__onclick(
@@ -140,7 +137,9 @@ describe("文档页 E2E：/mobile/feedback/action-sheet（ActionSheet 动作面�
       ) as (HTMLElement & { __onclick?: (ev: Event) => void }) | null;
       const cancel = Array.from(document.querySelectorAll("button")).find((b) =>
         /取消/.test(b.textContent || "")
-      ) as (HTMLButtonElement & { __onclick?: (ev: Event) => void }) | undefined;
+      ) as
+        | (HTMLButtonElement & { __onclick?: (ev: Event) => void })
+        | undefined;
       const target = mask || cancel || null;
       if (target && typeof target.__onclick === "function") {
         target.__onclick(
@@ -163,5 +162,4 @@ describe("文档页 E2E：/mobile/feedback/action-sheet（ActionSheet 动作面�
     }) as { ok: boolean };
     expect(closed.ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
-
 });

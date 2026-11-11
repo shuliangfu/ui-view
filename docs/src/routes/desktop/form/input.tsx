@@ -3,15 +3,18 @@
  * 路由: /desktop/form/input
  */
 
-import { Link, Paragraph, Title } from "@dreamer/ui-view/basic";
+import { Button, Link, Paragraph, Title } from "@dreamer/ui-view/basic";
 
+import { createForm } from "@dreamer/ui-view/form/create-form";
 import { Form } from "@dreamer/ui-view/form/form";
 import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { formRules } from "@dreamer/ui-view/form/form-rules";
 import { Input } from "@dreamer/ui-view/form/input";
 import { Password } from "@dreamer/ui-view/form/password";
 import { Textarea } from "@dreamer/ui-view/form/textarea";
 
 import { CodeBlock } from "@dreamer/ui-view/data-display";
+import { message } from "@dreamer/ui-view/feedback";
 
 import { IconLock } from "@dreamer/ui-view/icons/Lock.tsx";
 import { IconUser } from "@dreamer/ui-view/icons/User.tsx";
@@ -45,19 +48,22 @@ const INPUT_API: ApiRow[] = [
     name: "placeholder",
     type: "string",
     default: "-",
-    description: "占位文案；与 floatingLabel 同时用时，空且未聚焦显示在框内，输入或聚焦后上到边框",
+    description:
+      "占位文案；与 floatingLabel 同时用时，空且未聚焦显示在框内，输入或聚焦后上到边框",
   },
   {
     name: "label",
     type: "string",
     default: "-",
-    description: "描边内嵌标签：字坐在边框左上缺口中，线从字两边断开；空且未聚焦时在框内，聚焦或有值后上浮",
+    description:
+      "描边内嵌标签：字坐在边框左上缺口中，线从字两边断开；空且未聚焦时在框内，聚焦或有值后上浮",
   },
   {
     name: "floatingLabel",
     type: "boolean",
     default: "false",
-    description: "为 true 且未设 label 时，用 placeholder 作为描边内嵌标签。已设 label 时无效",
+    description:
+      "为 true 且未设 label 时，用 placeholder 作为描边内嵌标签。已设 label 时无效",
   },
   {
     name: "value",
@@ -170,6 +176,17 @@ const INPUT_API: ApiRow[] = [
   },
 ];
 
+/** createForm 演示字段形状（模块级，避免文档页重跑丢失状态） */
+type InputFormValues = { username: string };
+
+/** Input + createForm 联用演示 store */
+const inputForm = createForm<InputFormValues>({
+  initialValues: { username: "" },
+  fields: {
+    username: { rules: [formRules.required()] },
+  },
+});
+
 const importCode = `import { Form } from "@dreamer/ui-view/form/form";
 import { FormItem } from "@dreamer/ui-view/form/form-item";
 import { Input } from "@dreamer/ui-view/form/input";
@@ -181,7 +198,6 @@ const val = createSignal("");
     placeholder="请输入"
   />
 </FormItem>`;
-
 
 export default function FormInput() {
   const valPlaceholder = createSignal("");
@@ -216,7 +232,18 @@ export default function FormInput() {
           单行输入框，支持
           size、placeholder、label、floatingLabel、value、type、readOnly、required、error、disabled、prefix、suffix、allowClear。宽度由
           class 控制，表单中需占满一列时传 class="w-full"。Tailwind v4 +
-          light/dark。
+          light/dark。与{" "}
+          <Link
+            href="/desktop/form/form-containers"
+            className="text-teal-600 hover:underline dark:text-teal-400"
+          >
+            Form / createForm
+          </Link>{" "}
+          联用时展开{" "}
+          <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">
+            {"{...form.bind(name)}"}
+          </code>
+          。
         </Paragraph>
       </section>
 
@@ -237,6 +264,58 @@ export default function FormInput() {
         <Title level={2}>示例</Title>
 
         <div class="space-y-6">
+          <section class="space-y-4">
+            <Title level={3}>与 createForm</Title>
+            <Form
+              form={inputForm}
+              layout="vertical"
+              class="w-full max-w-md"
+              onFinish={() => {
+                message.success("ok");
+              }}
+            >
+              <FormItem
+                name="username"
+                label="用户名"
+                rules={[formRules.required()]}
+              >
+                <Input
+                  {...inputForm.bind("username")}
+                  placeholder="必填用户名"
+                  class="w-full"
+                />
+              </FormItem>
+              <Button type="submit" variant="primary">
+                校验
+              </Button>
+            </Form>
+            <div class="w-full">
+              <CodeBlock
+                code={`const inputForm = createForm({
+  initialValues: { username: "" },
+  fields: { username: { rules: [formRules.required()] } },
+});
+
+<Form
+  form={inputForm}
+  layout="vertical"
+  class="w-full max-w-md"
+  onFinish={() => { message.success("ok"); }}
+>
+  <FormItem name="username" label="用户名" rules={[formRules.required()]}>
+    <Input {...inputForm.bind("username")} placeholder="必填用户名" />
+  </FormItem>
+  <Button type="submit" variant="primary">校验</Button>
+</Form>`}
+                language="tsx"
+                showLineNumbers
+                copyable
+                title="代码示例"
+                wrapLongLines
+              />
+            </div>
+          </section>
+
           <section class="space-y-4">
             <Title level={3}>基础</Title>
             <Form layout="vertical" class="w-full">
@@ -771,7 +850,9 @@ const password = createSignal("");
               字坐在输入框边框左上缺口里，线从字两边断开（fieldset / legend
               真缺口，不靠底色去盖线）。空且未聚焦时提示在框内；聚焦或输入后，提示上到边框。可在
               Input / Password / Textarea 上写{" "}
-              <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">label</code>
+              <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">
+                label
+              </code>
               ，或设{" "}
               <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">
                 floatingLabel

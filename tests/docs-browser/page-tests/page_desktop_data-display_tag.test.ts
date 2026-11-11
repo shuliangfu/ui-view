@@ -363,5 +363,4 @@ describe("文档页 E2E：/desktop/data-display/tag（Tag 标签）", () => {
     }) as { ok: boolean };
     expect(got.ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
-
 });

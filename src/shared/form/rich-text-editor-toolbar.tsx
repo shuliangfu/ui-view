@@ -895,7 +895,8 @@ export const editorSurface =
 /** 查找条内小型文本框底纹（不含 ring） */
 export const findBarInputSurface =
   "px-2 py-1 border border-slate-300 dark:border-slate-600 rounded text-sm bg-white dark:bg-slate-800 focus:outline-hidden";
-export const editorReadOnlyCls = "cursor-default bg-slate-50 dark:bg-slate-800/80";
+export const editorReadOnlyCls =
+  "cursor-default bg-slate-50 dark:bg-slate-800/80";
 
 /**
  * 每个 {@link RichTextEditor} 实例的 View {@link Owner} 对应一个稳定 DOM `id`。
@@ -926,12 +927,9 @@ export function resolveRteDomEditorId(
     if (existing != null) {
       return existing;
     }
-    const gen = `rte-${
-      safeRandomUUID().replace(/-/g, "").slice(0, 10)
-    }`;
+    const gen = `rte-${safeRandomUUID().replace(/-/g, "").slice(0, 10)}`;
     rteDomEditorIdByOwner.set(owner, gen);
     return gen;
   }
   return `rte-${safeRandomUUID().replace(/-/g, "").slice(0, 10)}`;
 }
-

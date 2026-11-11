@@ -6,6 +6,7 @@
 
 import { describe, expect, it } from "@dreamer/test";
 import {
+  assertStrictDocSection,
   DOCS_BROWSER_CONFIG,
   runKeywordAndShallowHere,
   sharedEnv,
@@ -18,7 +19,7 @@ describe("文档页 E2E：/desktop/form/cascader（Cascader 级联）", () => {
   it("本页关键词命中且 main 内完成浅层交互探针", async (t) => {
     if (!t?.browser?.goto) return;
     await runKeywordAndShallowHere(t, DOC_PATH, [
-      /Cascader|级联/i,
+      /createForm|Cascader|级联/i,
     ]);
   }, DOCS_BROWSER_CONFIG);
 
@@ -40,9 +41,11 @@ describe("文档页 E2E：/desktop/form/cascader（Cascader 级联）", () => {
     }) as boolean;
     expect(openOk).toBe(true);
     await sharedEnv.delay(250);
-    /** 依次点选三级，每步单独 evaluate（与浏览器桥接序列化方式无关）。 */
+    /** 在浮层面板内点选，避免命中触发条（选中后 trigger 文案也会变成「浙江」）。 */
     const step1 = await t.browser.evaluate(() => {
-      const panel = document.querySelector("main [data-ui-cascader-root]");
+      const panel = document.querySelector(
+        "main [data-ui-cascader-root] [data-ui-cascader-panel]",
+      );
       if (!panel) return false;
       const buttons = panel.querySelectorAll('button[type="button"]');
       for (let i = 0; i < buttons.length; i++) {
@@ -58,7 +61,9 @@ describe("文档页 E2E：/desktop/form/cascader（Cascader 级联）", () => {
     expect(step1).toBe(true);
     await sharedEnv.delay(180);
     const step2 = await t.browser.evaluate(() => {
-      const panel = document.querySelector("main [data-ui-cascader-root]");
+      const panel = document.querySelector(
+        "main [data-ui-cascader-root] [data-ui-cascader-panel]",
+      );
       if (!panel) return false;
       const buttons = panel.querySelectorAll('button[type="button"]');
       for (let i = 0; i < buttons.length; i++) {
@@ -74,7 +79,9 @@ describe("文档页 E2E：/desktop/form/cascader（Cascader 级联）", () => {
     expect(step2).toBe(true);
     await sharedEnv.delay(180);
     const step3 = await t.browser.evaluate(() => {
-      const panel = document.querySelector("main [data-ui-cascader-root]");
+      const panel = document.querySelector(
+        "main [data-ui-cascader-root] [data-ui-cascader-panel]",
+      );
       if (!panel) return false;
       const buttons = panel.querySelectorAll('button[type="button"]');
       for (let i = 0; i < buttons.length; i++) {
@@ -90,9 +97,6 @@ describe("文档页 E2E：/desktop/form/cascader（Cascader 级联）", () => {
     expect(step3).toBe(true);
   }, DOCS_BROWSER_CONFIG);
 
-  /**
-   * 文档小节「静态数据（多级嵌套）」：在 main 内定位对应 h3，于该示例区块内完成一次交互。
-   */
   it("严格·静态数据（多级嵌套）", async (t) => {
     if (!t?.browser?.goto) return;
     await sharedEnv.goto(t, DOC_PATH);
@@ -525,6 +529,15 @@ describe("文档页 E2E：/desktop/form/cascader（Cascader 级联）", () => {
   /**
    * UI·打开选择面板可见。
    */
+
+  /**
+   * 文档小节「与 createForm」：在 main 内定位对应 h3，于该示例区块内完成一次交互。
+   */
+  it("严格·与 createForm", async (t) => {
+    if (!t?.browser?.goto) return;
+    await assertStrictDocSection(t, DOC_PATH);
+  }, DOCS_BROWSER_CONFIG);
+
   it("UI·打开选择面板可见", async (t) => {
     if (!t?.browser?.goto) return;
     await sharedEnv.goto(t, DOC_PATH);
@@ -534,7 +547,7 @@ describe("文档页 E2E：/desktop/form/cascader（Cascader 级联）", () => {
     await sharedEnv.delay(100);
     await t.browser.evaluate(() => {
       const btn = document.querySelector(
-        'main button[aria-haspopup]',
+        "main button[aria-haspopup]",
       ) as (HTMLElement & { __onclick?: (ev: Event) => void }) | null;
       btn?.scrollIntoView({ block: "center" });
       if (btn && typeof btn.__onclick === "function") {
@@ -559,5 +572,4 @@ describe("文档页 E2E：/desktop/form/cascader（Cascader 级联）", () => {
     }) as { ok: boolean };
     expect(got.ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
-
 });

@@ -13,6 +13,7 @@ import {
 } from "../../src/desktop/data-display/data-panel-utils.ts";
 import type {
   Column,
+  FormConfig,
   FormField,
   ViewConfig,
 } from "../../src/desktop/data-display/data-panel-types.ts";
@@ -179,5 +180,53 @@ describe("DataPanel view / form / search 配置", () => {
     expect(toggleOptionValue("disabled", opts)).toBe("active");
     expect(toggleOptionValue("active", [{ value: "only" }])).toBe(undefined);
     expect(toggleOptionValue("x", undefined)).toBe(undefined);
+  });
+
+  it("form/view 可仅有 render（props 可省略）；fieldsOf 为空", () => {
+    const formOnlyRender: FormConfig = {
+      render: () => "form-body",
+    };
+    const viewOnlyRender: ViewConfig = {
+      render: () => "view-body",
+      actions: { close: true },
+    };
+    expect(fieldsOf(formOnlyRender)).toEqual([]);
+    expect(fieldsOf(viewOnlyRender)).toEqual([]);
+    expect(typeof formOnlyRender.render).toBe("function");
+    expect(typeof viewOnlyRender.render).toBe("function");
+    expect(resolveViewFields(viewOnlyRender, COLUMNS)).toEqual([]);
+    const slots = resolveViewFooterActions(
+      resolveViewActionsCfg(viewOnlyRender),
+      { id: "1" },
+      "关闭",
+    );
+    expect(slots.map((s) => s.key)).toEqual(["close"]);
+  });
+
+  it("FormField / ViewItem 可挂字段级 render", () => {
+    const form: FormField[] = [
+      {
+        prop: "email",
+        label: "邮箱",
+        render: () => "custom-field",
+      },
+    ];
+    expect(typeof form[0].render).toBe("function");
+    expect(form[0].render!({
+      field: form[0],
+      prop: "email",
+      value: { value: "a@b.c" } as never,
+      multiValue: { value: [] } as never,
+      mode: "edit",
+      row: { id: "1" },
+      disabled: false,
+    })).toBe("custom-field");
+
+    const viewItem = {
+      prop: "name",
+      label: "姓名",
+      render: (ctx: { defaultNode: unknown }) => `wrap:${ctx.defaultNode}`,
+    };
+    expect(viewItem.render({ defaultNode: "Ada" })).toBe("wrap:Ada");
   });
 });

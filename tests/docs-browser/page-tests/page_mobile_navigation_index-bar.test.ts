@@ -111,5 +111,4 @@ describe("文档页 E2E：/mobile/navigation/index-bar（IndexBar 索引栏）",
     }) as { ok: boolean };
     expect(got.ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
-
 });

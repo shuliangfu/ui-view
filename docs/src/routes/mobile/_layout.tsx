@@ -111,6 +111,11 @@ const DATA_DISPLAY_SUBMENU = [
 
 /** 表单（移动入口；Select 等与桌面默认一致，Cascader 等差异见各页） */
 const FORM_SUBMENU = [
+  {
+    path: "/mobile/form/form-containers",
+    label: "Form / createForm",
+    desc: "表单容器",
+  },
   { path: "/mobile/form/select", label: "Select", desc: "单选" },
   { path: "/mobile/form/multiselect", label: "MultiSelect", desc: "多选" },
   { path: "/mobile/form/tree-select", label: "TreeSelect", desc: "树选择" },

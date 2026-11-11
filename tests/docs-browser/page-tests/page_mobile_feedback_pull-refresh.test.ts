@@ -89,7 +89,6 @@ describe("文档页 E2E：/mobile/feedback/pull-refresh（PullRefresh 下拉刷�
     expect(ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
 
-
   /**
    * UI·下拉刷新容器可见，内容区可滚动。
    */
@@ -116,5 +115,4 @@ describe("文档页 E2E：/mobile/feedback/pull-refresh（PullRefresh 下拉刷�
     }) as { ok: boolean };
     expect(got.ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
-
 });

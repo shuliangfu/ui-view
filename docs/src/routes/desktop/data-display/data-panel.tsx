@@ -19,6 +19,7 @@ import type {
 } from "@dreamer/ui-view/data-display";
 import { Form } from "@dreamer/ui-view/form/form";
 import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { Input } from "@dreamer/ui-view/form/input";
 import { Password } from "@dreamer/ui-view/form/password";
 import { Modal, toast } from "@dreamer/ui-view/feedback";
 import { IconCheck } from "@dreamer/ui-view/icons/Check.tsx";
@@ -113,17 +114,17 @@ const DATA_PANEL_API: DocsApiTableRow[] = [
   },
   {
     name: "form",
-    type: "{ title?, props: FormField[] }",
+    type: "{ title?, props?, render?, actions? }",
     default: "—",
     description:
-      "增改弹层：title 为标题（string 或 (row)=>string；新增时 row 为 {}），props 为表单项（与列同一套字段配置）。详见 Form 表。",
+      "增改弹层：title 为标题（string 或 (row)=>string；新增时 row 为 {}）；props 为表单项（有 render 时可省）；render(ctx) 整段替换主体（含确定／取消），优先级高于 FormField.render；旁路可用 children＋自定义 action。详见 Form 表。",
   },
   {
     name: "view",
-    type: "{ title?, props: ViewItem[], actions? }",
+    type: "{ title?, props?, render?, actions? }",
     default: "columns＋form",
     description:
-      '详情弹层：title 为查看弹窗标题（string 或 (row)=>string，如 `详情 · ${row.name}`）；props 只放字段，与列同一套配置，缺省展示从同 prop 列继承；actions 与 title 平级，为底部按钮（与列操作同一套 Record；内置 close 默认靠右最后）。自定义按钮 action(row) 或 href；字段 click:"toggle" 或 click:(row)=>…。不写时回落列＋表单，底部只留关闭。不写 actions 时底部只留关闭',
+      "详情弹层：title 为查看弹窗标题（string 或 (row)=>string）；props 只放字段（有 render 时可省）；render(ctx) 替换 Descriptions 字段区，actions 底脚仍由面板渲染；字段 ViewItem.render 仅无 view.render 时生效。自定义按钮 action(row) 可开 children 内 Modal（旁路）。不写时回落列＋表单",
   },
   {
     name: "panelKey",
@@ -247,7 +248,8 @@ const DATA_PANEL_API: DocsApiTableRow[] = [
     name: "children",
     type: "unknown",
     default: "-",
-    description: "面板根节点内的额外内容",
+    description:
+      "面板根内额外内容。三级自定义第 1 级（旁路）：放自管 Modal，配合 toolbar／row／view.actions 的 action(row) 打开；保存后可 refreshDataPanel(panelKey)",
   },
 ];
 
@@ -597,6 +599,74 @@ const FORM_API: DocsApiTableRow[] = [
     default: '["true","false"]',
     description:
       "@deprecated switch 默认吃同 prop 列两档 options；仅无对应列时再写 onOff",
+  },
+  {
+    name: "render",
+    type: "(ctx: FormFieldRenderCtx) => unknown",
+    default: "-",
+    description:
+      "字段级自定义控件。有 form.render 时忽略。ctx 含 value／multiValue／mode／row／disabled／error",
+  },
+];
+
+/** FormConfig 段级（与 FormField 表分开） */
+const FORM_CONFIG_API: DocsApiTableRow[] = [
+  {
+    name: "title",
+    type: "string | (row) => string",
+    default: "`${edit|add} · ${panelTitle}`",
+    description: "弹层标题；新增时 row 为 {}",
+  },
+  {
+    name: "props",
+    type: "FormField[]",
+    default: "-",
+    description:
+      "表单项；有 render 时可省略。仍提供时内置 submit() 可按 props 校验／收集",
+  },
+  {
+    name: "render",
+    type: "(ctx: FormRenderCtx) => unknown",
+    default: "-",
+    description:
+      "整段替换增改 Modal 主体（含确定／取消）。优先级高于 FormField.render。ctx：mode／row／id／busy／errors／close／submit／reload…",
+  },
+  {
+    name: "actions",
+    type: "RowActionsConfig",
+    default: "-",
+    description: "可选底部按钮 Record（内置 formBody 仍用确定／取消）",
+  },
+];
+
+/** ViewConfig 段级 */
+const VIEW_CONFIG_API: DocsApiTableRow[] = [
+  {
+    name: "title",
+    type: "string | (row) => string",
+    default: "`${view} · ${panelTitle}`",
+    description: "详情弹层标题",
+  },
+  {
+    name: "props",
+    type: "ViewItem[]",
+    default: "-",
+    description:
+      "详情字段；有 render 时可省略。字段可写 ViewItem.render／click",
+  },
+  {
+    name: "render",
+    type: "(ctx: ViewRenderCtx) => unknown",
+    default: "-",
+    description:
+      "替换 Descriptions 字段区；actions 底脚仍渲染。有本字段时忽略 ViewItem.render。ctx：row／close／reload",
+  },
+  {
+    name: "actions",
+    type: "RowActionsConfig",
+    default: "{ close: true }",
+    description:
+      "底部按钮；内置 close 默认靠右最后。旁路可 action(row) 开 children Modal",
   },
 ];
 
@@ -2513,6 +2583,76 @@ const PWD_VALIDATE_MSG = {
   patternMismatch: "格式不正确",
 };
 
+/** form.render / view.render 示例源码 */
+const renderBodyCode =
+  `import { DataPanel } from "@dreamer/ui-view/data-display";
+import { Button } from "@dreamer/ui-view/basic";
+
+<DataPanel
+  title="自定义主体"
+  data={rows}
+  columns={columns}
+  form={{
+    title: (row) => (row.id ? \`编辑 · \${row.name}\` : "新建"),
+    render: (ctx) => (
+      <div>
+        <p>mode={ctx.mode}</p>
+        <Button type="button" onClick={() => ctx.close()}>关闭</Button>
+      </div>
+    ),
+  }}
+  view={{
+    title: (row) => \`详情 · \${row.name}\`,
+    render: (ctx) => <div>自定义：{String(ctx.row.name)}</div>,
+    actions: { close: true },
+  }}
+/>`;
+
+/** FormField.render 示例源码（自定义字段用官方 Input／Password） */
+const renderFieldCode =
+  `import { DataPanel } from "@dreamer/ui-view/data-display";
+import { Input } from "@dreamer/ui-view/form/input";
+import { Password } from "@dreamer/ui-view/form/password";
+
+<DataPanel
+  title="字段级自定义"
+  data={rows}
+  columns={columns}
+  form={{
+    props: [
+      { prop: "name", label: "姓名", required: true },
+      {
+        prop: "email",
+        label: "邮箱（自定义）",
+        render: (ctx) => (
+          <Input
+            type="email"
+            class="w-full"
+            value={ctx.value}
+            disabled={ctx.disabled}
+            placeholder="自定义 email 输入"
+          />
+        ),
+      },
+      {
+        prop: "password",
+        label: "密码",
+        type: "password",
+        render: (ctx) => (
+          <Password
+            class="w-full"
+            value={ctx.value}
+            disabled={ctx.disabled}
+            showStrength
+            newPassword
+            placeholder="请输入密码"
+          />
+        ),
+      },
+    ],
+  }}
+/>`;
+
 const viewCode = `import { createSignal } from "@dreamer/view";
 import { DataPanel, validateForm } from "@dreamer/ui-view/data-display";
 import type { FormField } from "@dreamer/ui-view/data-display";
@@ -2583,7 +2723,8 @@ function submitPwd() {
 <DataPanel
   title="用户管理"
   data={rows}
-  columns={columns}
+  columns={columnsWithViewOnly} // 操作列仅 view；勿挂 edit（本例未配 form）
+  caps={{ create: false, update: false, remove: false }}
   view={{
     title: (row) => \`详情 · \${row.name}\`,
     props: [
@@ -3717,14 +3858,24 @@ export default function DataDisplayDataPanel() {
             <code class="text-xs">href</code>。不写{" "}
             <code class="text-xs">view</code>{" "}
             时仍按列＋表单回落，底部只留关闭。不写{" "}
-            <code class="text-xs">view.actions</code> 时底部只留关闭。
+            <code class="text-xs">view.actions</code>{" "}
+            时底部只留关闭。 本示例同时演示<strong>
+              三级自定义第 1 级（旁路）
+            </strong>：
+            <code class="text-xs">actions.password</code> 打开{" "}
+            <code class="text-xs">children</code> 里的自管 Modal。
           </Paragraph>
+          {/* 本例只演示 view；操作列勿挂 edit（未配 form 会打开空增改弹窗） */}
           <div data-testid="demo-view">
             <DataPanel
               panelKey="demo-view"
               title="用户管理"
               data={makeDemoRows(8)}
-              columns={DEMO_COLUMNS}
+              columns={withRowActions({
+                view: true,
+                edit: false,
+                remove: false,
+              })}
               view={{
                 title: (row) => `详情 · ${String(row.name ?? "")}`,
                 props: [
@@ -3811,7 +3962,7 @@ export default function DataDisplayDataPanel() {
                         class="w-full"
                         value={password}
                         newPassword
-                        autoComplete={true}
+                        autoComplete
                         placeholder="请输入密码"
                       />
                     </FormItem>
@@ -3827,7 +3978,7 @@ export default function DataDisplayDataPanel() {
                         class="w-full"
                         value={confirmPassword}
                         newPassword
-                        autoComplete={true}
+                        autoComplete
                         placeholder="请再次输入密码"
                       />
                     </FormItem>
@@ -3835,6 +3986,164 @@ export default function DataDisplayDataPanel() {
                 )}
               </Modal>
             </DataPanel>
+          </div>
+        </DocsDemo>
+
+        <DocsDemo
+          title="自定义扩展：form.render / view.render"
+          code={renderBodyCode}
+        >
+          <Paragraph class="mb-3 text-sm text-slate-600 dark:text-slate-400">
+            <strong>第 2 级</strong>：
+            <code class="text-xs">form.render</code>{" "}
+            整段替换增改主体（含确定／取消）；
+            <code class="text-xs">view.render</code>{" "}
+            替换详情字段区，底脚 actions 仍由面板渲染。有 body{" "}
+            <code class="text-xs">render</code> 时字段级{" "}
+            <code class="text-xs">render</code> 无效。
+          </Paragraph>
+          <div data-testid="demo-form-view-render">
+            <DataPanel
+              panelKey="demo-form-view-render"
+              title="自定义主体"
+              data={makeDemoRows(4)}
+              columns={withRowActions({
+                view: true,
+                edit: true,
+                remove: false,
+              })}
+              form={{
+                title: (row) => row.id
+                  ? `自定义编辑 · ${String(row.name ?? "")}`
+                  : "自定义新建",
+                render: (ctx) => (
+                  <div class="space-y-3" data-testid="demo-form-render-body">
+                    <p class="m-0 text-sm text-slate-600 dark:text-slate-400">
+                      mode={ctx.mode}
+                      {ctx.row
+                        ? ` · row=${String(ctx.row.name ?? "")}`
+                        : " · 无行"}
+                    </p>
+                    <div class="flex justify-end gap-2">
+                      <Button
+                        type="button"
+                        variant="primary"
+                        data-testid="demo-form-render-close"
+                        onClick={() =>
+                          ctx.close()}
+                      >
+                        关闭
+                      </Button>
+                    </div>
+                  </div>
+                ),
+              }}
+              view={{
+                title: (row) => `自定义详情 · ${String(row.name ?? "")}`,
+                render: (ctx) => (
+                  <div
+                    class="rounded-lg border border-dashed border-slate-300 p-4 text-sm dark:border-slate-600"
+                    data-testid="demo-view-render-body"
+                  >
+                    自定义详情：{String(ctx.row.name ?? "")} /{" "}
+                    {String(ctx.row.email ?? "")}
+                  </div>
+                ),
+                actions: { close: true },
+              }}
+              caps={{
+                create: true,
+                update: true,
+                remove: false,
+                import: false,
+                export: false,
+                print: false,
+                columns: false,
+                density: false,
+                fullscreen: false,
+                copy: false,
+              }}
+            />
+          </div>
+        </DocsDemo>
+
+        <DocsDemo
+          title="自定义扩展：FormField.render"
+          code={renderFieldCode}
+        >
+          <Paragraph class="mb-3 text-sm text-slate-600 dark:text-slate-400">
+            <strong>第 3 级</strong>：无{" "}
+            <code class="text-xs">form.render</code> 时，单个字段可用{" "}
+            <code class="text-xs">FormField.render</code>{" "}
+            替换控件；其余字段仍走内置。
+          </Paragraph>
+          <div data-testid="demo-field-render">
+            <DataPanel
+              panelKey="demo-field-render"
+              title="字段级自定义"
+              data={makeDemoRows(3)}
+              columns={withRowActions({
+                view: false,
+                edit: true,
+                remove: false,
+              })}
+              form={{
+                title: "编辑 · 字段 render",
+                props: [
+                  { prop: "name", label: "姓名", required: true },
+                  {
+                    prop: "email",
+                    label: "邮箱（自定义）",
+                    render: (ctx) => (
+                      <div
+                        class="w-full"
+                        data-testid="demo-field-render-email"
+                      >
+                        <Input
+                          type="email"
+                          class="w-full"
+                          value={ctx.value}
+                          disabled={ctx.disabled}
+                          placeholder="自定义 email 输入"
+                        />
+                      </div>
+                    ),
+                  },
+                  {
+                    prop: "password",
+                    label: "密码",
+                    type: "password",
+                    render: (ctx) => (
+                      <div
+                        class="w-full"
+                        data-testid="demo-field-render-password"
+                      >
+                        <Password
+                          class="w-full"
+                          value={ctx.value}
+                          disabled={ctx.disabled}
+                          showStrength
+                          newPassword
+                          placeholder="请输入密码"
+                        />
+                      </div>
+                    ),
+                  },
+                ],
+              }}
+              caps={{
+                create: false,
+                update: true,
+                remove: false,
+                import: false,
+                export: false,
+                print: false,
+                columns: false,
+                density: false,
+                fullscreen: false,
+                copy: false,
+              }}
+            />
           </div>
         </DocsDemo>
       </section>
@@ -3951,8 +4260,25 @@ export default function DataDisplayDataPanel() {
       </section>
 
       <section class="space-y-3">
-        <Title level={2}>Form（FormField）</Title>
+        <Title level={2}>Form（FormConfig / FormField）</Title>
+        <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+          优先级：
+          <code class="text-xs">form.render</code>
+          （整页）＞
+          <code class="text-xs">FormField.render</code>
+          （字段）＞ 内置控件；旁路层用{" "}
+          <code class="text-xs">children</code>＋自定义{" "}
+          <code class="text-xs">action</code>。
+        </Paragraph>
+        <Title level={3}>FormConfig</Title>
+        <DocsApiTable rows={FORM_CONFIG_API} />
+        <Title level={3}>FormField</Title>
         <DocsApiTable rows={FORM_API} />
+      </section>
+
+      <section class="space-y-3">
+        <Title level={2}>View（ViewConfig）</Title>
+        <DocsApiTable rows={VIEW_CONFIG_API} />
       </section>
 
       <section class="space-y-3">

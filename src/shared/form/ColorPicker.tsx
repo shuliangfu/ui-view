@@ -16,12 +16,18 @@ import {
   Show,
   type Signal,
   untrack,
+  useContext,
 } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import { IconDroplet } from "../basic/icons/Droplet.tsx";
 import { IconPalette } from "../basic/icons/Palette.tsx";
 import { resolveFormControlSize } from "./form-control-context.ts";
-import { controlBlueFocusRing } from "./input-focus-ring.ts";
+import { FormItemControlIdContext } from "./form-item-control-id.ts";
+import {
+  controlBlueFocusRing,
+  controlErrorBorder,
+  controlErrorFocusRing,
+} from "./input-focus-ring.ts";
 import { Input } from "./Input.tsx";
 import type { SizeVariant } from "../types.ts";
 import {
@@ -102,6 +108,8 @@ export interface ColorPickerProps {
   onChange?: (e: Event) => void;
   /** 拖拽/输入过程中的回调 */
   onInput?: (e: Event) => void;
+  /** 触发器失焦（可用于 blur 校验） */
+  onBlur?: (e: Event) => void;
   /**
    * 额外 class（作用于最外层 `relative` 容器）。
    * 默认带 `w-full`，传入 `max-w-*`、`w-*`、`w-auto` 等可与默认合并并由后者覆盖宽度。
@@ -111,6 +119,8 @@ export interface ColorPickerProps {
   name?: string;
   /** 触发器 `id`（用于 label；隐藏域为 `${id}-value`） */
   id?: string;
+  /** 错误状态（触发器红框）；可与 FormItem / createForm bind 联用 */
+  error?: boolean;
   /** 为 true 时隐藏聚焦激活态边框；默认 false */
   hideFocusRing?: boolean;
   /** 为 false 时不显示右侧调色板图标；默认 true */
@@ -727,9 +737,11 @@ export function ColorPicker(props: ColorPickerProps): JSXRenderable {
     disabled = false,
     onChange,
     onInput,
+    onBlur,
     class: className,
     name,
-    id,
+    id: idProp,
+    error = false,
     hideFocusRing = false,
     showSuffixIcon = true,
     variant = "default",
@@ -739,6 +751,8 @@ export function ColorPicker(props: ColorPickerProps): JSXRenderable {
   } = props;
   const m = { ...defaultColorPickerMessages, ...messages };
   const size = resolveFormControlSize(sizeProp);
+  const fromFormItem = useContext(FormItemControlIdContext);
+  const id = idProp ?? fromFormItem;
 
   /**
    * 当前受控颜色（#rrggbb）。
@@ -1140,6 +1154,7 @@ export function ColorPicker(props: ColorPickerProps): JSXRenderable {
           type="button"
           id={id}
           disabled={() => disabled}
+          aria-invalid={error}
           class={() =>
             twMerge(
               swatchOnly
@@ -1155,13 +1170,16 @@ export function ColorPicker(props: ColorPickerProps): JSXRenderable {
               disabled && "cursor-not-allowed opacity-50",
               !disabled &&
                 "cursor-pointer hover:border-slate-400 dark:hover:border-slate-500",
-              controlBlueFocusRing(!hideFocusRing),
+              controlBlueFocusRing(!hideFocusRing && !error),
+              error && controlErrorBorder,
+              error && !hideFocusRing && controlErrorFocusRing(true),
             )}
           aria-expanded={() => panelOpen.value}
           aria-haspopup="dialog"
           aria-label={() =>
             swatchOnly ? m.swatchTrigger(triggerDisplayHexNow()) : undefined}
           title={() => (swatchOnly ? triggerDisplayHexNow() : "")}
+          onBlur={onBlur}
           /**
            * 打开后不在触发器上「再点即确定」：选色仅改草稿，须点面板内「确定」或点外部/Esc 关闭（与 DatePicker 等一致）。
            */
@@ -1173,7 +1191,10 @@ export function ColorPicker(props: ColorPickerProps): JSXRenderable {
           <span
             class={swatchOnly
               ? "block h-full w-full min-h-0 min-w-0 rounded border border-slate-200 dark:border-slate-600"
-              : twMerge(colorChipSize[size], "shrink-0 rounded border border-slate-200 dark:border-slate-600")}
+              : twMerge(
+                colorChipSize[size],
+                "shrink-0 rounded border border-slate-200 dark:border-slate-600",
+              )}
             style={() => ({ backgroundColor: triggerDisplayHexNow() })}
             aria-hidden
           />

@@ -3,13 +3,16 @@
  * 路由: /desktop/form/autocomplete
  */
 
-import { Paragraph, Title } from "@dreamer/ui-view/basic";
+import { Button, Link, Paragraph, Title } from "@dreamer/ui-view/basic";
 
 import { AutoComplete } from "@dreamer/ui-view/form/autocomplete";
+import { createForm } from "@dreamer/ui-view/form/create-form";
 import { Form } from "@dreamer/ui-view/form/form";
 import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { formRules } from "@dreamer/ui-view/form/form-rules";
 
 import { CodeBlock } from "@dreamer/ui-view/data-display";
+import { message } from "@dreamer/ui-view/feedback";
 import { createSignal } from "@dreamer/view";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_AUTO_COMPLETE } from "../../../data/component-messages-rows.ts";
@@ -47,6 +50,12 @@ const AUTOCOMPLETE_API: ApiRow[] = [
     type: "boolean",
     default: "false",
     description: "是否禁用",
+  },
+  {
+    name: "error",
+    type: "boolean",
+    default: "false",
+    description: "错误状态（红框）",
   },
   {
     name: "placeholder",
@@ -128,6 +137,17 @@ const AUTOCOMPLETE_API: ApiRow[] = [
 /** size 示例用的短选项列表 */
 const SIZE_DEMO_OPTIONS = ["北京", "上海", "广州"];
 
+/** createForm 演示字段形状（模块级，避免文档页重跑丢失状态） */
+type AutoCompleteFormValues = { city: string };
+
+/** AutoComplete + createForm 联用演示 store */
+const autoCompleteForm = createForm<AutoCompleteFormValues>({
+  initialValues: { city: "" },
+  fields: {
+    city: { rules: [formRules.required()] },
+  },
+});
+
 export default function FormAutoCompleteDoc() {
   const q = createSignal("");
   const qSizeXs = createSignal("");
@@ -143,7 +163,18 @@ export default function FormAutoCompleteDoc() {
           输入联想：自绘下拉 + 受控 value（可为 getter，避免 View
           下整树重跑失焦）。有输入时按子串不区分大小写过滤，空输入时展示全部建议；options
           为建议字符串列表。支持与 Input 一致的 DOM 透传（onBlur、onKeyDown
-          等）。
+          等）。与{" "}
+          <Link
+            href="/desktop/form/form-containers"
+            className="text-teal-600 hover:underline dark:text-teal-400"
+          >
+            Form / createForm
+          </Link>{" "}
+          联用时展开{" "}
+          <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">
+            {"{...form.bind(name)}"}
+          </code>
+          。
         </Paragraph>
       </section>
 
@@ -172,6 +203,59 @@ const q = createSignal("");
 
       <section class="space-y-6">
         <Title level={2}>示例</Title>
+
+        <section class="space-y-4">
+          <Title level={3}>与 createForm</Title>
+          <Form
+            form={autoCompleteForm}
+            layout="vertical"
+            class="w-full max-w-md"
+            onFinish={() => {
+              message.success("ok");
+            }}
+          >
+            <FormItem name="city" label="城市" rules={[formRules.required()]}>
+              <AutoComplete
+                {...autoCompleteForm.bind("city")}
+                options={["北京", "上海", "广州", "深圳", "杭州"]}
+                placeholder="必填，可联想"
+                class="w-full"
+              />
+            </FormItem>
+            <Button type="submit" variant="primary">
+              校验
+            </Button>
+          </Form>
+          <CodeBlock
+            title="代码示例"
+            code={`const autoCompleteForm = createForm({
+  initialValues: { city: "" },
+  fields: { city: { rules: [formRules.required()] } },
+});
+
+<Form
+  form={autoCompleteForm}
+  layout="vertical"
+  class="w-full max-w-md"
+  onFinish={() => { message.success("ok"); }}
+>
+  <FormItem name="city" label="城市" rules={[formRules.required()]}>
+    <AutoComplete
+      {...autoCompleteForm.bind("city")}
+      options={["北京", "上海", "广州", "深圳", "杭州"]}
+      placeholder="必填，可联想"
+    />
+  </FormItem>
+  <Button type="submit" variant="primary">校验</Button>
+</Form>`}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+        </section>
+
+        <Title level={3}>基础</Title>
         <Form layout="vertical" class="w-full max-w-lg space-y-4">
           <FormItem label="城市（建议）">
             <AutoComplete

@@ -285,5 +285,4 @@ describe("文档页 E2E：/desktop/message/toast（Toast 轻提示）", () => {
     }) as { ok: boolean };
     expect(got.ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
-
 });

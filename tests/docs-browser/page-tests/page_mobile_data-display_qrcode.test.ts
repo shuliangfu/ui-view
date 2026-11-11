@@ -99,11 +99,17 @@ describe("文档页 E2E：/mobile/data-display/qrcode（QRCode 二维码）", ()
     await sharedEnv.delay(150);
     const got = await t.browser.evaluate(() => {
       const els = Array.from(
-        document.querySelectorAll("main [data-dreamer-qrcode], main [role='img'][aria-label*='二维码']"),
+        document.querySelectorAll(
+          "main [data-dreamer-qrcode], main [role='img'][aria-label*='二维码']",
+        ),
       ) as HTMLElement[];
       const boxes = els.map((el) => {
         const r = el.getBoundingClientRect();
-        return { w: r.width, h: r.height, label: el.getAttribute("aria-label") };
+        return {
+          w: r.width,
+          h: r.height,
+          label: el.getAttribute("aria-label"),
+        };
       });
       return { n: boxes.length, boxes };
     }) as { n: number; boxes: { w: number; h: number }[] };
@@ -111,5 +117,4 @@ describe("文档页 E2E：/mobile/data-display/qrcode（QRCode 二维码）", ()
     const ok = got.boxes.some((b) => b.w >= 48 && b.h >= 48);
     expect(ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
-
 });

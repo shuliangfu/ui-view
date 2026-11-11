@@ -66,7 +66,6 @@ describe("文档页 E2E：/desktop/basic/spinner（Spinner 加载）", () => {
     expect(ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
 
-
   /**
    * UI·Spinner 可见有尺寸。
    */
@@ -89,5 +88,4 @@ describe("文档页 E2E：/desktop/basic/spinner（Spinner 加载）", () => {
     }) as { ok: boolean };
     expect(got.ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
-
 });

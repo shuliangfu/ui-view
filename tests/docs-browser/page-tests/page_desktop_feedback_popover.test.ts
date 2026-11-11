@@ -255,5 +255,4 @@ describe("文档页 E2E：/desktop/feedback/popover（Popover 气泡卡片）", 
     }) as { ok: boolean };
     expect(got.ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
-
 });

@@ -219,8 +219,7 @@ async function waitDocumentComplete(
   const deadline = Date.now() + timeoutMs;
   const pathCheck = expectedPath ? docsPathnameCheckSrc(expectedPath) : "";
   const probeBody = pathCheck + 'return document.readyState === "complete";';
-  const snapshotBody =
-    "return {" +
+  const snapshotBody = "return {" +
     '  readyState: String(document.readyState || ""),' +
     '  pathname: String(location.pathname || ""),' +
     '  title: String(document.title || "")' +
@@ -1272,4 +1271,107 @@ export async function runKeywordAndShallowHere(
     expect(text).toMatch(p);
   }
   await shallowInteractMainHere(t, text);
+}
+
+/**
+ * 文档「严格」小节：按 h2/h3 文案 needle 定位示例块，完成一次浅层交互（复制 / 输入 / 提交 / 开关等）。
+ * 用于 createForm 升级后各控件页的「与 createForm」等标题。
+ *
+ * @param t - 浏览器测试上下文
+ * @param path - 文档路由
+ * @param needle - 须包含在 h2/h3 文本中的片段（默认「与 createForm」）
+ */
+export async function assertStrictDocSection(
+  t: DocsBrowserTestContext,
+  path: string,
+  needle = "与 createForm",
+): Promise<void> {
+  if (!t?.browser?.goto) return;
+  await sharedEnv.goto(t, path);
+  await sharedEnv.waitDocMainReady(t);
+  /** Playwright evaluate 不带回闭包；needle 经 JSON 注入字面量 */
+  const ok = await t.browser.evaluate(
+    // deno-lint-ignore no-explicit-any
+    new Function(
+      `const needle = ${JSON.stringify(needle)};
+      const main = document.querySelector("main");
+      if (!main) return false;
+      const heads = main.querySelectorAll("h2, h3");
+      for (let i = 0; i < heads.length; i++) {
+        const h = heads[i];
+        if (!(h.textContent || "").includes(needle)) continue;
+        let root = h.parentElement;
+        for (let depth = 0; depth < 12 && root && root !== main; depth++) {
+          const copy = root.querySelector(
+            'button[type="button"][aria-label="复制"]',
+          );
+          if (copy && !copy.disabled) {
+            copy.click();
+            return true;
+          }
+          const submit = root.querySelector(
+            'button[type="submit"]:not([disabled])',
+          );
+          if (submit) {
+            submit.click();
+            return true;
+          }
+          const lb = root.querySelector(
+            'button[aria-haspopup="listbox"]:not([disabled])',
+          );
+          if (lb) {
+            lb.click();
+            return true;
+          }
+          const dg = root.querySelector(
+            'button[aria-haspopup="dialog"]:not([disabled])',
+          );
+          if (dg) {
+            dg.click();
+            return true;
+          }
+          const sw = root.querySelector('[role="switch"]');
+          if (sw && !sw.disabled) {
+            sw.click();
+            return true;
+          }
+          const cb = root.querySelector(
+            'input[type="checkbox"]:not(:disabled)',
+          );
+          if (cb) {
+            cb.click();
+            return true;
+          }
+          const rd = root.querySelector(
+            'input[type="radio"]:not(:disabled)',
+          );
+          if (rd) {
+            rd.click();
+            return true;
+          }
+          const ta = root.querySelector(
+            'textarea:not(:disabled), input:not([type=hidden]):not([type=button]):not([type=submit]):not([type=file]):not([type=checkbox]):not([type=radio]):not(:disabled)',
+          );
+          if (ta) {
+            ta.focus();
+            ta.value = "e2e-create-form";
+            ta.dispatchEvent(new Event("input", { bubbles: true }));
+            return true;
+          }
+          const btn = root.querySelector(
+            'button[type="button"]:not([disabled])',
+          );
+          if (btn) {
+            btn.click();
+            return true;
+          }
+          root = root.parentElement;
+        }
+        const box = h.parentElement;
+        return ((box && box.innerText) || "").trim().length > 8;
+      }
+      return false;`,
+    ) as () => boolean,
+  ) as boolean;
+  expect(ok).toBe(true);
 }

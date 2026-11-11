@@ -147,7 +147,9 @@ describe("文档页 E2E：/mobile/feedback/tour（Tour 漫游引导）", () => {
       ) as HTMLElement | null;
       const next = Array.from(bubble?.querySelectorAll("button") ?? []).find(
         (b) => (b.textContent || "").includes("下一步"),
-      ) as (HTMLButtonElement & { __onclick?: (ev: Event) => void }) | undefined;
+      ) as
+        | (HTMLButtonElement & { __onclick?: (ev: Event) => void })
+        | undefined;
       if (next && typeof next.__onclick === "function") {
         next.__onclick(
           new MouseEvent("click", { bubbles: true, cancelable: true }),
@@ -200,5 +202,4 @@ describe("文档页 E2E：/mobile/feedback/tour（Tour 漫游引导）", () => {
     }
     expect(stepped.ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
-
 });

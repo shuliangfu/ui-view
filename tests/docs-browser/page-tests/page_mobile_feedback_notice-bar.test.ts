@@ -141,7 +141,9 @@ describe("文档页 E2E：/mobile/feedback/notice-bar（NoticeBar 通知栏）",
       return { barCount: bars.length, closeCount: closes.length };
     }) as { barCount: number; closeCount: number };
     // 至少原先那条 closable 已隐藏（mobile 还有一条不可关闭的滚动条）
-    if (!(after.closeCount === 0 || after.barCount < 1 + (before.hasBar ? 0 : 0))) {
+    if (
+      !(after.closeCount === 0 || after.barCount < 1 + (before.hasBar ? 0 : 0))
+    ) {
       // close 按钮应全部消失；若页上另有不可关闭条，barCount 可 >0 但 closeCount 须为 0
     }
     if (after.closeCount !== 0) {

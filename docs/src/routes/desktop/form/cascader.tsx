@@ -3,14 +3,17 @@
  * 路由: /desktop/form/cascader
  */
 
-import { Paragraph, Title } from "@dreamer/ui-view/basic";
+import { Button, Link, Paragraph, Title } from "@dreamer/ui-view/basic";
 
 import { Cascader } from "@dreamer/ui-view/form/cascader";
+import { createForm } from "@dreamer/ui-view/form/create-form";
 import { Form } from "@dreamer/ui-view/form/form";
 import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { formRules } from "@dreamer/ui-view/form/form-rules";
 
 import { CodeBlock } from "@dreamer/ui-view/data-display";
 import type { CascaderOption } from "@dreamer/ui-view/form/cascader";
+import { message } from "@dreamer/ui-view/feedback";
 import { createSignal } from "@dreamer/view";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_CASCADER } from "../../../data/component-messages-rows.ts";
@@ -102,6 +105,12 @@ const CASCADER_API: ApiRow[] = [
     type: "string",
     default: "-",
     description: "根容器额外 class，常用 w-full",
+  },
+  {
+    name: "error",
+    type: "boolean",
+    default: "false",
+    description: "错误状态（红框）；可与 createForm bindValue 联用",
   },
   {
     name: "messages",
@@ -223,6 +232,50 @@ const OPTIONS_CITY_DISTRICT: CascaderOption[] = [
   },
 ];
 
+/** createForm 演示字段（模块级） */
+type CascaderDemoValues = { region: string[] };
+
+/** Cascader + bindValue 联用演示 store */
+const cascaderDemoForm = createForm<CascaderDemoValues>({
+  initialValues: { region: [] },
+  fields: {
+    region: {
+      rules: [
+        formRules.custom((v) =>
+          Array.isArray(v) && v.length > 0 ? undefined : "请选择地区"
+        ),
+      ],
+    },
+  },
+});
+
+/** 与 createForm 示例的 CodeBlock 源码 */
+const exampleCreateForm =
+  `import { createForm, formRules } from "@dreamer/ui-view/form";
+import { Form } from "@dreamer/ui-view/form/form";
+import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { Cascader } from "@dreamer/ui-view/form/cascader";
+import { Button } from "@dreamer/ui-view/basic";
+import { message } from "@dreamer/ui-view/feedback";
+
+const form = createForm({
+  initialValues: { region: [] as string[] },
+  fields: {
+    region: {
+      rules: [formRules.custom((v) =>
+        Array.isArray(v) && v.length > 0 ? undefined : "请选择地区"
+      )],
+    },
+  },
+});
+
+<Form form={form} onFinish={() => { message.success("已提交"); }}>
+  <FormItem name="region" label="地区">
+    <Cascader {...form.bindValue("region")} options={options} class="w-full" />
+  </FormItem>
+  <Button type="submit" variant="primary">提交</Button>
+</Form>`;
+
 export default function FormCascaderDoc() {
   const val = createSignal<string[]>([]);
   /** 二级静态示例（市 / 区）受控值 */
@@ -243,7 +296,18 @@ export default function FormCascaderDoc() {
           <code class="text-xs">string[]</code> 形式的各级 value。组件用<strong>
             多列浮层
           </strong>从左到右展开下一级，根列表始终来自{" "}
-          <code class="text-xs">options</code>。
+          <code class="text-xs">options</code>。与{" "}
+          <Link
+            href="/desktop/form/form-containers"
+            className="text-teal-600 hover:underline dark:text-teal-400"
+          >
+            Form / createForm
+          </Link>{" "}
+          联用时展开{" "}
+          <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">
+            {"{...form.bindValue(name)}"}
+          </code>
+          （值为 string[]）。
         </Paragraph>
         <Paragraph class="mt-3 leading-relaxed">
           <strong>与 TreeSelect 的区别：</strong>
@@ -334,6 +398,37 @@ export default function FormCascaderDoc() {
           <code class="text-xs">absolute</code>、z-index
           较高；若展开后第二列被下方内容遮挡，可稍滚动页面或先收起再查看代码。
         </Paragraph>
+
+        <section class="space-y-4">
+          <Title level={3}>与 createForm</Title>
+          <Form
+            form={cascaderDemoForm}
+            layout="vertical"
+            class="w-full max-w-md border border-dashed border-slate-200 dark:border-slate-600 rounded-lg p-4"
+            onFinish={() => {
+              message.success("已提交");
+            }}
+          >
+            <FormItem name="region" label="地区">
+              <Cascader
+                {...cascaderDemoForm.bindValue("region")}
+                options={OPTIONS}
+                class="w-full"
+              />
+            </FormItem>
+            <Button type="submit" variant="primary">
+              提交
+            </Button>
+          </Form>
+          <CodeBlock
+            title="代码示例"
+            code={exampleCreateForm}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+        </section>
 
         <section class="space-y-4">
           <Title level={3}>静态数据（多级嵌套）</Title>
@@ -549,16 +644,40 @@ export default function FormCascaderDoc() {
           <Title level={3}>size（xs / sm / md / lg）</Title>
           <Form layout="vertical" class="w-full max-w-lg space-y-3">
             <FormItem label="xs">
-              <Cascader size="xs" options={OPTIONS} value={[]} class="w-full" placeholder="xs" />
+              <Cascader
+                size="xs"
+                options={OPTIONS}
+                value={[]}
+                class="w-full"
+                placeholder="xs"
+              />
             </FormItem>
             <FormItem label="sm">
-              <Cascader size="sm" options={OPTIONS} value={[]} class="w-full" placeholder="sm" />
+              <Cascader
+                size="sm"
+                options={OPTIONS}
+                value={[]}
+                class="w-full"
+                placeholder="sm"
+              />
             </FormItem>
             <FormItem label="md（默认）">
-              <Cascader size="md" options={OPTIONS} value={[]} class="w-full" placeholder="md" />
+              <Cascader
+                size="md"
+                options={OPTIONS}
+                value={[]}
+                class="w-full"
+                placeholder="md"
+              />
             </FormItem>
             <FormItem label="lg">
-              <Cascader size="lg" options={OPTIONS} value={[]} class="w-full" placeholder="lg" />
+              <Cascader
+                size="lg"
+                options={OPTIONS}
+                value={[]}
+                class="w-full"
+                placeholder="lg"
+              />
             </FormItem>
           </Form>
           <CodeBlock

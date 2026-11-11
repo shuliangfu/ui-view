@@ -2,21 +2,29 @@
  * MultiSelect 多选：`appearance` 切换**自定义浮层**与**原生 multiple + 全选/清空**（移动友好）。
  */
 
-import { createEffect, createSignal, onCleanup } from "@dreamer/view";
+import {
+  createEffect,
+  createSignal,
+  type JSXRenderable,
+  onCleanup,
+  useContext,
+} from "@dreamer/view";
 import {
   installInlineDropdownOutsideClickClose,
   pickInlineDropdownOption,
   syncInlineDropdownPanelVisibility,
 } from "./inline-dropdown-outside-click.ts";
-import type { JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import { IconChevronDown } from "../basic/icons/ChevronDown.tsx";
 import {
   controlBlueFocusRing,
+  controlErrorBorder,
+  controlErrorFocusRing,
   nativeSelectSurface,
   pickerTriggerSurface,
 } from "./input-focus-ring.ts";
 import { resolveFormControlSize } from "./form-control-context.ts";
+import { FormItemControlIdContext } from "./form-item-control-id.ts";
 import {
   commitMaybeSignal,
   type MaybeSignal,
@@ -70,7 +78,11 @@ export interface MultiSelectProps {
   value?: MaybeSignal<string[]>;
   size?: SizeVariant;
   disabled?: boolean;
+  /** 错误状态（触发器红框）；可与 FormItem / createForm bind 联用 */
+  error?: boolean;
   onChange?: (e: Event) => void;
+  /** 触发器失焦（可用于 blur 校验） */
+  onBlur?: (e: Event) => void;
   class?: string;
   name?: string;
   id?: string;
@@ -120,7 +132,9 @@ function MultiSelectNativeBranch(props: Omit<MultiSelectProps, "appearance">) {
     value: valueProp,
     size: sizeProp,
     disabled = false,
+    error = false,
     onChange,
+    onBlur,
     class: className,
     name,
     id,
@@ -130,6 +144,8 @@ function MultiSelectNativeBranch(props: Omit<MultiSelectProps, "appearance">) {
   const m = { ...defaultMultiSelectMessages, ...messages };
   const size = resolveFormControlSize(sizeProp);
   const sizeCls = sizeClassesNative[size];
+  const fromFormItem = useContext(FormItemControlIdContext);
+  const resolvedId = id ?? fromFormItem;
   const allValues = options.map((o) => o.value);
 
   const triggerChange = (newVal: string[]) => {
@@ -167,17 +183,21 @@ function MultiSelectNativeBranch(props: Omit<MultiSelectProps, "appearance">) {
       }}
       <select
         multiple
-        id={id}
+        id={resolvedId}
         name={name}
         disabled={disabled}
+        aria-invalid={error}
         class={twMerge(
           "w-full touch-manipulation",
           nativeSelectSurface,
-          controlBlueFocusRing(!hideFocusRing),
+          controlBlueFocusRing(!hideFocusRing && !error),
+          error && controlErrorBorder,
+          error && !hideFocusRing && controlErrorFocusRing(true),
           sizeCls,
           className,
         )}
         onChange={onChange}
+        onBlur={onBlur}
       >
         {() => {
           const value = readMaybeSignal(valueProp) ?? [];
@@ -208,7 +228,9 @@ function MultiSelectDropdownBranch(
     value = [],
     size: sizeProp,
     disabled = false,
+    error = false,
     onChange,
+    onBlur,
     class: className,
     name,
     id,
@@ -218,6 +240,8 @@ function MultiSelectDropdownBranch(
   const m = { ...defaultMultiSelectMessages, ...messages };
   const placeholder = props.placeholder ?? m.placeholder;
   const size = resolveFormControlSize(sizeProp);
+  const fromFormItem = useContext(FormItemControlIdContext);
+  const resolvedId = id ?? fromFormItem;
 
   const openState = createSignal(false);
   const sizeCls = sizeClassesDropdown[size];
@@ -299,8 +323,9 @@ function MultiSelectDropdownBranch(
       }}
       <button
         type="button"
-        id={id}
+        id={resolvedId}
         disabled={disabled}
+        aria-invalid={error}
         aria-haspopup="listbox"
         aria-expanded={() => openState.value}
         aria-label={() => {
@@ -316,9 +341,12 @@ function MultiSelectDropdownBranch(
         class={twMerge(
           "w-full flex items-center justify-between gap-2 text-left min-w-0",
           pickerTriggerSurface,
-          controlBlueFocusRing(!hideFocusRing),
+          controlBlueFocusRing(!hideFocusRing && !error),
+          error && controlErrorBorder,
+          error && !hideFocusRing && controlErrorFocusRing(true),
           sizeCls,
         )}
+        onBlur={onBlur}
         onClick={() => {
           if (disabled) return;
           if (openState.value) {

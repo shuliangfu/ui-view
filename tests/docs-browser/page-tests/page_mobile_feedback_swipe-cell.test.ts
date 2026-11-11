@@ -89,7 +89,6 @@ describe("文档页 E2E：/mobile/feedback/swipe-cell（SwipeCell 滑动单元�
     expect(ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
 
-
   /**
    * UI·滑动单元格挂载且操作钮可点。
    */
@@ -120,5 +119,4 @@ describe("文档页 E2E：/mobile/feedback/swipe-cell（SwipeCell 滑动单元�
     }) as { ok: boolean };
     expect(got.ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
-
 });

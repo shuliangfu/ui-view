@@ -89,7 +89,6 @@ describe("文档页 E2E：/mobile/data-display/scroll-list（ScrollList 滚动�
     expect(ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
 
-
   /**
    * UI·滚动列表 demo 可见且可滚。
    */
@@ -102,7 +101,10 @@ describe("文档页 E2E：/mobile/data-display/scroll-list（ScrollList 滚动�
       const demo = document.querySelector(
         "main [data-ui-scrolllist-doc-demo], main [data-pull-refresh-content]",
       ) as HTMLElement | null;
-      const box = demo || document.querySelector("main .overflow-y-auto, main [class*='overflow']") as HTMLElement | null;
+      const box = demo ||
+        document.querySelector(
+          "main .overflow-y-auto, main [class*='overflow']",
+        ) as HTMLElement | null;
       if (!box) return { ok: false, reason: "no-box" };
       const r = box.getBoundingClientRect();
       return {
@@ -114,5 +116,4 @@ describe("文档页 E2E：/mobile/data-display/scroll-list（ScrollList 滚动�
     }) as { ok: boolean };
     expect(got.ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
-
 });

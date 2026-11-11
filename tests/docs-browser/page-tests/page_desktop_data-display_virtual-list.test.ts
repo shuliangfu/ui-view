@@ -137,8 +137,12 @@ describe("文档页 E2E：/desktop/data-display/virtual-list（VirtualList 虚�
       if (!list) return;
       list.scrollTop = list.scrollHeight;
       list.dispatchEvent(new Event("scroll", { bubbles: true }));
-      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-      if (Math.abs(list.scrollTop - (list.scrollHeight - list.clientHeight)) > 4) {
+      await new Promise((r) =>
+        requestAnimationFrame(() => requestAnimationFrame(r))
+      );
+      if (
+        Math.abs(list.scrollTop - (list.scrollHeight - list.clientHeight)) > 4
+      ) {
         list.scrollTop = list.scrollHeight - list.clientHeight;
         list.dispatchEvent(new Event("scroll", { bubbles: true }));
       }

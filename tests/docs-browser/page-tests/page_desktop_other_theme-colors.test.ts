@@ -1011,5 +1011,4 @@ describe("文档页 E2E：/desktop/other/theme-colors（主题色）", () => {
     }) as { ok: boolean };
     expect(got.ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
-
 });

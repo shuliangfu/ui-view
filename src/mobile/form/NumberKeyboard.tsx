@@ -55,7 +55,20 @@ export const defaultNumberKeyboardMessages: NumberKeyboardMessages = {
   delete: "删除",
 };
 
-const KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "decimal", "0", "delete"] as const;
+const KEYS = [
+  "1",
+  "2",
+  "3",
+  "4",
+  "5",
+  "6",
+  "7",
+  "8",
+  "9",
+  "decimal",
+  "0",
+  "delete",
+] as const;
 
 export function NumberKeyboard(props: NumberKeyboardProps): JSXRenderable {
   const {
@@ -114,7 +127,11 @@ export function NumberKeyboard(props: NumberKeyboardProps): JSXRenderable {
   const markup = () => {
     if (!isOpen()) return null;
     return (
-      <div class="fixed inset-0 z-300 flex flex-col justify-end" role="dialog" aria-label="数字键盘">
+      <div
+        class="fixed inset-0 z-300 flex flex-col justify-end"
+        role="dialog"
+        aria-label="数字键盘"
+      >
         <button
           type="button"
           class="absolute inset-0 bg-slate-900/35"
@@ -139,7 +156,10 @@ export function NumberKeyboard(props: NumberKeyboardProps): JSXRenderable {
                 <button
                   type="button"
                   key={k}
-                  class={twMerge("rounded-lg bg-white dark:bg-slate-800 font-medium active:bg-slate-200 dark:active:bg-slate-700", keySizeCls[size])}
+                  class={twMerge(
+                    "rounded-lg bg-white dark:bg-slate-800 font-medium active:bg-slate-200 dark:active:bg-slate-700",
+                    keySizeCls[size],
+                  )}
                   aria-label={k === "delete" ? m.delete : label}
                   onClick={() => emitKey(k)}
                 >
@@ -151,7 +171,10 @@ export function NumberKeyboard(props: NumberKeyboardProps): JSXRenderable {
           {showConfirm && (
             <button
               type="button"
-              class={twMerge("mt-2 w-full rounded-lg bg-blue-600 text-white font-medium active:bg-blue-500", confirmSizeCls[size])}
+              class={twMerge(
+                "mt-2 w-full rounded-lg bg-blue-600 text-white font-medium active:bg-blue-500",
+                confirmSizeCls[size],
+              )}
               onClick={() => {
                 onConfirm?.();
                 if (!onConfirm) onClose?.();

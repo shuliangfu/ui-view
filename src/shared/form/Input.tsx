@@ -13,8 +13,8 @@ import { twMerge } from "tailwind-merge";
 import { resolveFormControlSize } from "./form-control-context.ts";
 import { FormItemControlIdContext } from "./form-item-control-id.ts";
 import {
-  OutlinedField,
   outlinedControlClass,
+  OutlinedField,
   resolveOutlinedLabel,
 } from "./outlined-field.tsx";
 import type { SizeVariant } from "../types.ts";
@@ -150,9 +150,10 @@ const sizeTextClasses: Record<SizeVariant, string> = {
 };
 
 /** 底纹：不含 `:-webkit-autofill` 长类；autofill 见 {@link autofillVisualClass}（仅当设了 `autoComplete` 时合并） */
+/** 深色底用 slate-900，相对 Modal（slate-800）形成凹槽对比，避免控件与弹层同色发灰 */
 const inputSurfaceBase =
-  "border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 border-slate-300 dark:border-slate-600 focus:outline-hidden disabled:opacity-50 disabled:cursor-not-allowed transition-colors";
-const readOnlyCls = "bg-slate-50 dark:bg-slate-800/80 cursor-default";
+  "border bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 border-slate-300 dark:border-slate-600 focus:outline-hidden disabled:opacity-50 disabled:cursor-not-allowed transition-colors";
+const readOnlyCls = "bg-slate-50 dark:bg-slate-900/80 cursor-default";
 
 /** 左右缀：与中间输入区分隔线、略浅底，仍在同一外框内 */
 const addonBaseCls =

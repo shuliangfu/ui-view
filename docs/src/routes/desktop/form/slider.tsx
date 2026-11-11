@@ -3,13 +3,16 @@
  * 路由: /desktop/form/slider
  */
 
-import { Paragraph, Title } from "@dreamer/ui-view/basic";
+import { Button, Link, Paragraph, Title } from "@dreamer/ui-view/basic";
 
+import { createForm } from "@dreamer/ui-view/form/create-form";
 import { Form } from "@dreamer/ui-view/form/form";
 import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { formRules } from "@dreamer/ui-view/form/form-rules";
 import { Slider } from "@dreamer/ui-view/form/slider";
 
 import { CodeBlock } from "@dreamer/ui-view/data-display";
+import { message } from "@dreamer/ui-view/feedback";
 import { createSignal } from "@dreamer/view";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_SLIDER } from "../../../data/component-messages-rows.ts";
@@ -76,6 +79,12 @@ const SLIDER_API: ApiRow[] = [
   { name: "name", type: "string", default: "-", description: "原生 name" },
   { name: "id", type: "string", default: "-", description: "原生 id" },
   {
+    name: "error",
+    type: "boolean",
+    default: "false",
+    description: "错误状态（红框）；可与 createForm 绑定联用",
+  },
+  {
     name: "messages",
     type: "Partial<SliderMessages>",
     default: "-",
@@ -102,9 +111,40 @@ const committed = createSignal(50);
 const sliderValueHintCls =
   "text-sm tabular-nums text-slate-600 dark:text-slate-400";
 
+const exampleVertical =
+  `<Slider vertical value={50} style={{ height: "160px" }} />`;
 
-const exampleVertical = `<Slider vertical value={50} style={{ height: "160px" }} />`;
+/** createForm 演示字段（模块级） */
+type SliderDemoValues = { score: number };
 
+/** Slider + bind 联用演示 store */
+const sliderDemoForm = createForm<SliderDemoValues>({
+  initialValues: { score: 50 },
+  fields: {
+    score: { rules: [formRules.required("请拖动评分")] },
+  },
+});
+
+/** 与 createForm 示例的 CodeBlock 源码 */
+const exampleCreateForm =
+  `import { createForm, formRules } from "@dreamer/ui-view/form";
+import { Form } from "@dreamer/ui-view/form/form";
+import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { Slider } from "@dreamer/ui-view/form/slider";
+import { Button } from "@dreamer/ui-view/basic";
+import { message } from "@dreamer/ui-view/feedback";
+
+const form = createForm({
+  initialValues: { score: 50 },
+  fields: { score: { rules: [formRules.required("请拖动评分")] } },
+});
+
+<Form form={form} onFinish={() => { message.success("已提交"); }}>
+  <FormItem name="score" label="评分">
+    <Slider {...form.bind("score")} min={0} max={100} />
+  </FormItem>
+  <Button type="submit" variant="primary">提交</Button>
+</Form>`;
 
 export default function FormSlider() {
   /** 与 Slider 的 value 绑定同一 Signal；Slider 在 onInput 路径内会 commitMaybeSignal，首屏即有文案且拖动跟手 */
@@ -119,7 +159,18 @@ export default function FormSlider() {
         <Paragraph class="mt-2 leading-relaxed">
           滑块，支持单值或 range
           双值、min、max、step、vertical、disabled、onChange / onInput。Tailwind
-          v4 + light/dark。
+          v4 + light/dark。与{" "}
+          <Link
+            href="/desktop/form/form-containers"
+            className="text-teal-600 hover:underline dark:text-teal-400"
+          >
+            Form / createForm
+          </Link>{" "}
+          联用时展开{" "}
+          <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">
+            {"{...form.bind(name)}"}
+          </code>
+          （onChange 为 Event，值为 number Signal）。
         </Paragraph>
         <Paragraph class="mt-3 text-sm text-slate-600 dark:text-slate-400">
           <strong>受控与拖动：</strong>
@@ -174,6 +225,33 @@ export default function FormSlider() {
 
       <section class="space-y-8">
         <Title level={2}>示例</Title>
+
+        <section class="space-y-4">
+          <Title level={3}>与 createForm</Title>
+          <Form
+            form={sliderDemoForm}
+            layout="vertical"
+            class="w-full max-w-md border border-dashed border-slate-200 dark:border-slate-600 rounded-lg p-4"
+            onFinish={() => {
+              message.success("已提交");
+            }}
+          >
+            <FormItem name="score" label="评分">
+              <Slider {...sliderDemoForm.bind("score")} min={0} max={100} />
+            </FormItem>
+            <Button type="submit" variant="primary">
+              提交
+            </Button>
+          </Form>
+          <CodeBlock
+            title="代码示例"
+            code={exampleCreateForm}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+        </section>
 
         <Form layout="vertical" class="w-full space-y-6">
           <section class="space-y-4">
@@ -248,7 +326,14 @@ const range = createSignal<[number, number]>([20, 80]);
                 </span>
               </div>
             </FormItem>
-            <CodeBlock title="代码示例" code={exampleVertical} language="tsx" showLineNumbers copyable wrapLongLines />
+            <CodeBlock
+              title="代码示例"
+              code={exampleVertical}
+              language="tsx"
+              showLineNumbers
+              copyable
+              wrapLongLines
+            />
           </section>
 
           <section class="space-y-4">

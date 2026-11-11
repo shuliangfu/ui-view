@@ -7,10 +7,13 @@ import {
   createSignal,
   type JSXRenderable,
   onCleanup,
+  useContext,
 } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import type { SizeVariant } from "../../shared/types.ts";
 import { resolveFormControlSize } from "../../shared/form/form-control-context.ts";
+import { FormItemControlIdContext } from "../../shared/form/form-item-control-id.ts";
+import { controlErrorBorder } from "../../shared/form/input-focus-ring.ts";
 import { isHtmlElement } from "../../shared/dom-guards.ts";
 
 const signaturePadHeight: Record<SizeVariant, number> = {
@@ -52,6 +55,10 @@ export interface SignaturePadProps {
   onReady?: (handle: SignaturePadHandle) => void;
   class?: string;
   disabled?: boolean;
+  /** 错误状态（画布外框红边）；可与 FormItem / createForm bindValue 联用 */
+  error?: boolean;
+  /** 控件 id；未传时取 FormItemControlIdContext */
+  id?: string;
   messages?: Partial<SignaturePadMessages>;
 }
 
@@ -83,8 +90,12 @@ export function SignaturePad(props: SignaturePadProps): JSXRenderable {
     onReady,
     class: className,
     disabled = false,
+    error = false,
+    id,
   } = props;
   const m = { ...defaultSignaturePadMessages, ...(props.messages ?? {}) };
+  const fromFormItem = useContext(FormItemControlIdContext);
+  const resolvedId = id ?? fromFormItem;
 
   let canvas: HTMLCanvasElement | null = null;
   let ctx: CanvasRenderingContext2D | null = null;
@@ -182,18 +193,33 @@ export function SignaturePad(props: SignaturePadProps): JSXRenderable {
   };
 
   return (
-    <div class={twMerge("signature-pad", className)}>
-      <div class="relative overflow-hidden rounded-xl border border-slate-200 dark:border-slate-600">
+    <div
+      id={resolvedId}
+      class={twMerge("signature-pad", className)}
+      aria-invalid={error}
+    >
+      <div
+        class={twMerge(
+          "relative overflow-hidden rounded-xl border border-slate-200 dark:border-slate-600",
+          error && controlErrorBorder,
+        )}
+      >
         <canvas
           ref={setRef}
           class="block w-full touch-none"
           style={{ height: `${height}px` }}
           aria-label={m.empty}
+          aria-invalid={error}
         />
         {() =>
           empty.value
             ? (
-              <div class={twMerge("pointer-events-none absolute inset-0 flex items-center justify-center text-slate-400", signatureEmptyCls[size])}>
+              <div
+                class={twMerge(
+                  "pointer-events-none absolute inset-0 flex items-center justify-center text-slate-400",
+                  signatureEmptyCls[size],
+                )}
+              >
                 {m.empty}
               </div>
             )
@@ -202,7 +228,10 @@ export function SignaturePad(props: SignaturePadProps): JSXRenderable {
       <div class="mt-2 flex justify-end">
         <button
           type="button"
-          class={twMerge("text-slate-500 hover:text-slate-800 dark:hover:text-slate-200", signatureClearCls[size])}
+          class={twMerge(
+            "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200",
+            signatureClearCls[size],
+          )}
           disabled={disabled}
           onClick={() => clear()}
         >

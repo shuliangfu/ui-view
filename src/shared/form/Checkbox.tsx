@@ -130,7 +130,14 @@ export function Checkbox(props: CheckboxProps): JSXRenderable {
   const checkedForInput = checkedMaybe === undefined ? false : checkedMaybe;
 
   return (
-    <label class={twMerge(labelCls, checkboxLabelSize[size], error && errorCls, className)}>
+    <label
+      class={twMerge(
+        labelCls,
+        checkboxLabelSize[size],
+        error && errorCls,
+        className,
+      )}
+    >
       <input
         type="checkbox"
         id={id}

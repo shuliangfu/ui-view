@@ -109,6 +109,8 @@ import {
   type FieldRule,
   type FormConfig,
   type FormField,
+  type FormFieldRenderCtx,
+  type FormRenderCtx,
   type ImportFormat,
   isRowBuiltin,
   isToolbarBuiltin,
@@ -133,6 +135,8 @@ import {
   type ViewClick,
   type ViewConfig,
   type ViewItem,
+  type ViewItemRenderCtx,
+  type ViewRenderCtx,
   type WriteResult,
 } from "./data-panel-types.ts";
 
@@ -148,6 +152,8 @@ export type {
   FieldRule,
   FormConfig,
   FormField,
+  FormFieldRenderCtx,
+  FormRenderCtx,
   ImportFormat,
   ListResult,
   Locale,
@@ -166,6 +172,8 @@ export type {
   ViewClick,
   ViewConfig,
   ViewItem,
+  ViewItemRenderCtx,
+  ViewRenderCtx,
   WriteResult,
 };
 
@@ -208,20 +216,21 @@ export interface PanelProps {
    */
   search?: SearchConfig;
   /**
-   * 增改弹层：`{ title, props }`。`title` 为 `string` 或 `(row)=>string`
+   * 增改弹层：`{ title, props?, render?, actions? }`。`title` 为 `string` 或 `(row)=>string`
    * （新增时 `row` 为 `{}`，编辑时为当前行；缺省 `${edit|add} · ${title}`）。
-   * `props` 为表单项（与列同一套字段配置）。确定／取消仍走官方 Modal 脚。
+   * `props` 为表单项（与列同一套字段配置）；有 `render` 时可省略。
+   * 扩展优先级：`form.render`（整页替换主体，含确定／取消）＞ `FormField.render`（单字段）＞ 内置控件。
+   * 旁路：也可用 `children` + 自定义 toolbar／row `action` 自管 Modal。
    */
   form?: FormConfig;
   /**
-   * 详情弹层：`{ title, props, actions? }`。`title` 为查看弹窗标题（`string` 或 `(row)=>string`，
+   * 详情弹层：`{ title, props?, render?, actions? }`。`title` 为查看弹窗标题（`string` 或 `(row)=>string`，
    * 如 `` `详情 · ${row.name}` ``；缺省 `${view} · ${title}`）。
    * `props` 只放字段，与列同一套配置：prop／label／type／format／options／value／formatter／click。
-   * 缺省展示从同 prop 的列继承。`actions` 与 title 平级，为底部按钮（与列操作同一套 Record；
-   * 内置只有 close，默认显示、靠右最后）。自定义按钮：`action(row)` 开另一个 Modal（放在 children），
-   * 或 `href`（string 或 (row)=>string）。
-   * 字段 `click:"toggle"`（两档 options 时切换并走 setField／update，刷新当前详情行和列表）
-   * 或 `click:(row)=>…`。不写时回落 columns＋form，底部只留关闭。不写 `actions` 时底部只留关闭。
+   * 缺省展示从同 prop 的列继承。`render` 替换 Descriptions 字段区；`actions` 底脚仍由面板渲染。
+   * 字段级 `ViewItem.render` 仅在无 `view.render` 时生效。
+   * `actions` 与 title 平级（内置 close 默认靠右最后）。自定义按钮：`action(row)` 开另一个 Modal（放在 children），
+   * 或 `href`。字段 `click:"toggle"` 或 `click:(row)=>…`。不写时回落 columns＋form，底部只留关闭。
    */
   view?: ViewConfig;
   /** 本地数据（内置本地数据源）。传入则不自动请求列表；优先级低于显式 `dataSource`，高于 `baseRoute`（API） */
@@ -368,7 +377,9 @@ export function DataPanel(props: PanelProps): JSXRenderable {
   const formDefs = enrichFormFields(formFields, dataInputColumns);
   const pageSizes = props.pageSizes ?? [10, 20, 50, 100];
   const defaultPageSize = props.pageSize ?? 10;
-  const canWriteLocal = formDefs.length > 0 || !!props.onDataChange ||
+  /** 有表单字段或 form.render 时本地源可写；旁路 Modal 也可靠 onDataChange */
+  const canWriteLocal = formDefs.length > 0 || !!props.form?.render ||
+    !!props.onDataChange ||
     viewItems.some((it) => it.click === "toggle");
 
   // 拉数优先级：dataSource ＞ data（本地、不自动请求）＞ 二者皆无＋baseRoute → API
@@ -852,8 +863,9 @@ export function DataPanel(props: PanelProps): JSXRenderable {
     const values = collectValues(!!id);
     const errs = validateForm(formDefs, values, !!id, m);
     if (Object.keys(errs).length) {
+      /** 仅字段下红字；不再刷顶部「表单有误…」汇总 */
       formErrors.value = errs;
-      formTop.value = m.invalid;
+      formTop.value = "";
       return;
     }
     formBusy.value = true;
@@ -2880,6 +2892,38 @@ export function DataPanel(props: PanelProps): JSXRenderable {
   const formBody = () => {
     const id = formId.value;
     const errs = formErrors.value;
+    const mode: "create" | "edit" = id ? "edit" : "create";
+    /** 有 form.render：整段替换内置 formBody（含确定／取消） */
+    const bodyRender = props.form?.render;
+    if (bodyRender) {
+      const ctx: FormRenderCtx = {
+        mode,
+        row: formRow.value,
+        id,
+        busy: formBusy.value,
+        errors: errs,
+        topError: formTop.value,
+        close: () => {
+          formOpen.value = false;
+        },
+        submit: () => submitForm(),
+        setBusy: (v) => {
+          formBusy.value = v;
+        },
+        setErrors: (e) => {
+          formErrors.value = e;
+        },
+        setTopError: (msg) => {
+          formTop.value = msg;
+        },
+        reload: () => load(false),
+      };
+      return (
+        <div data-testid="dp-form" data-dp-form-custom="1">
+          {bodyRender(ctx)}
+        </div>
+      );
+    }
     const formGrid = useFieldGrid(formDefs);
     return (
       <form
@@ -2891,12 +2935,30 @@ export function DataPanel(props: PanelProps): JSXRenderable {
         }}
       >
         {formDefs.filter((f) => (id ? true : !f.editOnly)).map((f) => {
-          const sig = fields[fieldProp(f)];
+          const prop = fieldProp(f);
+          const sig = fields[prop];
           const ro = !!id && !!f.createOnly;
           const type = f.type ?? "text";
           const lay = fieldLayoutStyle(f);
           let control: unknown;
-          if (type === "textarea") {
+          /** 字段级 render：替换单个控件；有 form.render 时已在上方 return */
+          if (typeof f.render === "function") {
+            const fieldCtx: FormFieldRenderCtx = {
+              field: f,
+              prop,
+              value: sig,
+              multiValue: mfields[prop],
+              mode,
+              row: formRow.value,
+              disabled: ro,
+              error: errs[prop],
+            };
+            control = (
+              <div class="w-full" data-testid={`dp-fld-${prop}`}>
+                {f.render(fieldCtx)}
+              </div>
+            );
+          } else if (type === "textarea") {
             control = (
               <div class="w-full" data-testid={`dp-fld-${fieldProp(f)}`}>
                 <Textarea
@@ -3075,63 +3137,93 @@ export function DataPanel(props: PanelProps): JSXRenderable {
     if (!r) return null;
     const items: { label: string; children: unknown; span?: number }[] = [];
     const viewFields = resolveViewFields(props.view, columns);
-    if (viewFields) {
-      for (const f of viewFields) {
-        const prop = colProp(f);
-        let children: unknown = plainCell(f, r, r[prop]);
-        if (children === undefined || children === null || children === "") {
-          children = "—";
+    const viewBodyRender = props.view?.render;
+    /** 无 view.render 时按 props／回落列构建 Descriptions items */
+    if (!viewBodyRender) {
+      if (viewFields) {
+        for (const f of viewFields) {
+          const prop = colProp(f);
+          let children: unknown = plainCell(f, r, r[prop]);
+          if (children === undefined || children === null || children === "") {
+            children = "—";
+          }
+          const defaultNode = children;
+          /** 字段级 ViewItem.render */
+          if (typeof f.render === "function") {
+            children = f.render({
+              item: f,
+              prop,
+              row: r,
+              raw: r[prop],
+              defaultNode,
+            });
+          }
+          const click = f.click;
+          if (click) {
+            children = (
+              <button
+                type="button"
+                class="cursor-pointer appearance-none border-0 bg-transparent p-0 text-left text-inherit"
+                data-testid={`dp-view-click-${prop}`}
+                onClick={() => {
+                  if (click === "toggle") {
+                    const next = toggleOptionValue(r[prop], f.options);
+                    if (next !== undefined) void setField(r, prop, next);
+                  } else {
+                    click(r);
+                  }
+                }}
+              >
+                {children}
+              </button>
+            );
+          }
+          items.push({ label: f.label ?? prop, children });
         }
-        const click = f.click;
-        if (click) {
-          children = (
-            <button
-              type="button"
-              class="cursor-pointer appearance-none border-0 bg-transparent p-0 text-left text-inherit"
-              data-testid={`dp-view-click-${prop}`}
-              onClick={() => {
-                if (click === "toggle") {
-                  const next = toggleOptionValue(r[prop], f.options);
-                  if (next !== undefined) void setField(r, prop, next);
-                } else {
-                  click(r);
-                }
-              }}
-            >
-              {children}
-            </button>
-          );
+      } else {
+        const seen = new Set<string>();
+        for (const c of columns) {
+          seen.add(c.prop);
+          items.push({
+            label: c.label,
+            children: displayValue(c, r, m) || "—",
+          });
         }
-        items.push({ label: f.label ?? prop, children });
-      }
-    } else {
-      const seen = new Set<string>();
-      for (const c of columns) {
-        seen.add(c.prop);
-        items.push({
-          label: c.label,
-          children: displayValue(c, r, m) || "—",
-        });
-      }
-      for (const f of formDefs) {
-        if (seen.has(fieldProp(f)) || f.type === "password") continue;
-        const raw = r[fieldProp(f)];
-        items.push({
-          label: f.label ?? fieldProp(f),
-          children: raw === undefined || raw === null || raw === ""
-            ? "—"
-            : String(raw),
-        });
+        for (const f of formDefs) {
+          if (seen.has(fieldProp(f)) || f.type === "password") continue;
+          const raw = r[fieldProp(f)];
+          items.push({
+            label: f.label ?? fieldProp(f),
+            children: raw === undefined || raw === null || raw === ""
+              ? "—"
+              : String(raw),
+          });
+        }
       }
     }
     const slots = resolveViewFooterActions(
-      viewFields ? resolveViewActionsCfg(props.view) : undefined,
+      viewFields || viewBodyRender
+        ? resolveViewActionsCfg(props.view)
+        : undefined,
       r,
       m.close,
     );
+    const viewCtx: ViewRenderCtx = {
+      row: r,
+      close: () => {
+        viewRow.value = null;
+      },
+      reload: () => load(false),
+    };
     return (
       <div data-testid="dp-view">
-        <Descriptions bordered column={1} size="sm" items={items} />
+        {viewBodyRender
+          ? (
+            <div data-testid="dp-view-custom" data-dp-view-custom="1">
+              {viewBodyRender(viewCtx)}
+            </div>
+          )
+          : <Descriptions bordered column={1} size="sm" items={items} />}
         <div class="mt-4 flex justify-end gap-2" data-testid="dp-view-footer">
           {slots.map((s) => {
             if (s.builtinClose) {

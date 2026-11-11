@@ -104,7 +104,9 @@ describe("文档页 E2E：/desktop/data-display/cell（Cell 单元格）", () =>
       const cells = document.querySelectorAll("main [data-dreamer-cell]");
       return { n: cells.length };
     }) as { n: number };
-    if (before.n < 2) throw new Error(`Cell 示例不足: ${JSON.stringify(before)}`);
+    if (before.n < 2) {
+      throw new Error(`Cell 示例不足: ${JSON.stringify(before)}`);
+    }
 
     await t.browser.evaluate(() => {
       const cells = Array.from(
@@ -135,7 +137,8 @@ describe("文档页 E2E：/desktop/data-display/cell（Cell 单元格）", () =>
       const aria = dis.getAttribute("aria-disabled");
       const cls = dis.className || "";
       return {
-        ok: aria === "true" || /opacity|pointer-events-none|disabled/i.test(cls) ||
+        ok: aria === "true" ||
+          /opacity|pointer-events-none|disabled/i.test(cls) ||
           dis.hasAttribute("disabled"),
         aria,
         cls: cls.slice(0, 80),
@@ -161,5 +164,4 @@ describe("文档页 E2E：/desktop/data-display/cell（Cell 单元格）", () =>
     }) as { text: string };
     expect(afterSw.text.length).toBeGreaterThan(0);
   }, DOCS_BROWSER_CONFIG);
-
 });

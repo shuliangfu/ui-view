@@ -1096,7 +1096,9 @@ export function trySetDefaultParagraphSeparatorToP(): void {
  * @param editor - contenteditable 根元素
  * @returns 是否修改过 DOM
  */
-export function wrapRteLeadingRootTextInParagraph(editor: HTMLDivElement): boolean {
+export function wrapRteLeadingRootTextInParagraph(
+  editor: HTMLDivElement,
+): boolean {
   const first = editor.firstChild;
   if (!first || first.nodeType !== Node.TEXT_NODE) return false;
   const tn = first as Text;

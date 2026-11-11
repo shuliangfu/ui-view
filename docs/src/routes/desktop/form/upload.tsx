@@ -3,14 +3,17 @@
  * 路由: /desktop/form/upload
  */
 
-import { Paragraph, Title } from "@dreamer/ui-view/basic";
+import { Button, Link, Paragraph, Title } from "@dreamer/ui-view/basic";
 
 import { DEFAULT_UPLOAD_CHUNK_SIZE } from "@dreamer/ui-view/form";
+import { createForm } from "@dreamer/ui-view/form/create-form";
 import { Form } from "@dreamer/ui-view/form/form";
 import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { formRules } from "@dreamer/ui-view/form/form-rules";
 import { Upload } from "@dreamer/ui-view/form/upload";
 
 import { CodeBlock } from "@dreamer/ui-view/data-display";
+import { message } from "@dreamer/ui-view/feedback";
 import { createSignal } from "@dreamer/view";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_UPLOAD } from "../../../data/component-messages-rows.ts";
@@ -167,6 +170,12 @@ const UPLOAD_API: ApiRow[] = [
   },
   { name: "class", type: "string", default: "-", description: "容器 class" },
   {
+    name: "error",
+    type: "boolean",
+    default: "false",
+    description: "错误状态（红框）；可与 createForm 绑定联用",
+  },
+  {
     name: "messages",
     type: "Partial<UploadMessages>",
     default: "-",
@@ -182,7 +191,6 @@ import { Upload } from "@dreamer/ui-view/form/upload";
   <Upload name="avatarUrl" action="/api/upload" maxFileSize={5 * 1024 * 1024} />
 </FormItem>`;
 
-
 const exampleActionDemo = `<Upload action="/api/upload" />`;
 
 const exampleMultiNoDrag = `<Upload
@@ -194,7 +202,8 @@ const exampleMultiNoDrag = `<Upload
 </Upload>`;
 
 /** 生产挂载：与 upload.ts @example／matrix 对齐（本页演示仍用 /api/upload） */
-const exampleServerPluginMount = `import { App, type AppConfig } from "@dreamer/dweb";
+const exampleServerPluginMount =
+  `import { App, type AppConfig } from "@dreamer/dweb";
 import {
   uiViewUploadPlugin,
   DEFAULT_UI_VIEW_UPLOAD_BASE_PATH,
@@ -225,6 +234,40 @@ app.start();
 // SignaturePad：本地 toDataURL 后业务再走 Upload／同 basePath 分片协议
 `;
 
+/** createForm 演示字段（模块级） */
+type UploadDemoValues = { fileUrl: string };
+
+/** Upload + bindValue 联用演示 store */
+const uploadDemoForm = createForm<UploadDemoValues>({
+  initialValues: { fileUrl: "" },
+  fields: { fileUrl: { rules: [formRules.required("请上传文件")] } },
+});
+
+/** 与 createForm 示例的 CodeBlock 源码 */
+const exampleCreateForm =
+  `import { createForm, formRules } from "@dreamer/ui-view/form";
+import { Form } from "@dreamer/ui-view/form/form";
+import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { Upload } from "@dreamer/ui-view/form/upload";
+import { Button } from "@dreamer/ui-view/basic";
+import { message } from "@dreamer/ui-view/feedback";
+
+const form = createForm({
+  initialValues: { fileUrl: "" },
+  fields: { fileUrl: { rules: [formRules.required("请上传文件")] } },
+});
+
+<Form form={form} onFinish={() => { message.success("已提交"); }}>
+  <FormItem name="fileUrl" label="附件">
+    <Upload
+      {...form.bindValue("fileUrl")}
+      action="/api/upload"
+      maxFileSize={5 * 1024 * 1024}
+    />
+  </FormItem>
+  <Button type="submit" variant="primary">提交</Button>
+</Form>`;
+
 export default function FormUpload() {
   const hiddenPreview = createSignal("");
 
@@ -246,16 +289,29 @@ export default function FormUpload() {
           分片协议（与 @dreamer/upload/server
           一致）。需要完全自定义协议时可使用包内{" "}
           <code class="text-xs">runChunkedUpload</code> 自行接{" "}
-          <code class="text-xs">fetch</code>（不必经过本组件）。
+          <code class="text-xs">fetch</code>（不必经过本组件）。与{" "}
+          <Link
+            href="/desktop/form/form-containers"
+            className="text-teal-600 hover:underline dark:text-teal-400"
+          >
+            Form / createForm
+          </Link>{" "}
+          联用时展开{" "}
+          <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">
+            {"{...form.bindValue(name)}"}
+          </code>
+          （映射 onValueChange；值为 string）。
         </Paragraph>
 
-      <Paragraph class="mt-2 text-sm text-slate-600 dark:text-slate-300">
-        生产挂载请用 <code class="text-xs">uiViewUploadPlugin</code>（必填{" "}
-        <code class="text-xs">localDir</code>；默认前缀{" "}
-        <code class="text-xs">/ui-view-upload</code>，勿写死{" "}
-        <code class="text-xs">/upload</code>）。本页 docs 示例{" "}
-        <code class="text-xs">action="/api/upload"</code> 仅为文档站本地适配路由。
-      </Paragraph>
+        <Paragraph class="mt-2 text-sm text-slate-600 dark:text-slate-300">
+          生产挂载请用 <code class="text-xs">uiViewUploadPlugin</code>（必填
+          {" "}
+          <code class="text-xs">localDir</code>；默认前缀{" "}
+          <code class="text-xs">/ui-view-upload</code>，勿写死{" "}
+          <code class="text-xs">/upload</code>）。本页 docs 示例{" "}
+          <code class="text-xs">action="/api/upload"</code>{" "}
+          仅为文档站本地适配路由。
+        </Paragraph>
       </section>
 
       <section class="space-y-3">
@@ -263,9 +319,9 @@ export default function FormUpload() {
         <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
           从 <code class="text-xs">@dreamer/ui-view/plugin/upload</code>{" "}
           导入（亦可从 <code class="text-xs">@dreamer/ui-view/plugin</code>{" "}
-          re-export）。须把{" "}
-          <code class="text-xs">upload.uploadConfig</code> 赋给{" "}
-          <code class="text-xs">AppConfig.upload</code>，再{" "}
+          re-export）。须把 <code class="text-xs">upload.uploadConfig</code>
+          {" "}
+          赋给 <code class="text-xs">AppConfig.upload</code>，再{" "}
           <code class="text-xs">registerPlugin(upload)</code>。插件提供{" "}
           <code class="text-xs">GET ${"{"}basePath{"}"}/file?key=</code>{" "}
           下载（可用 <code class="text-xs">serveFiles:false</code> 关闭）。
@@ -298,8 +354,8 @@ export default function FormUpload() {
             <strong>SignaturePad</strong>（可选）：本地画布导出{" "}
             <code class="text-xs">toDataURL</code>／
             <code class="text-xs">onChange</code>
-            ，业务再经 Upload 或同{" "}
-            <code class="text-xs">basePath</code> 分片协议上传
+            ，业务再经 Upload 或同 <code class="text-xs">basePath</code>{" "}
+            分片协议上传
           </li>
         </ul>
       </section>
@@ -317,6 +373,37 @@ export default function FormUpload() {
 
       <section class="space-y-8">
         <Title level={2}>示例</Title>
+
+        <section class="space-y-4">
+          <Title level={3}>与 createForm</Title>
+          <Form
+            form={uploadDemoForm}
+            layout="vertical"
+            class="w-full max-w-md border border-dashed border-slate-200 dark:border-slate-600 rounded-lg p-4"
+            onFinish={() => {
+              message.success("已提交");
+            }}
+          >
+            <FormItem name="fileUrl" label="附件">
+              <Upload
+                {...uploadDemoForm.bindValue("fileUrl")}
+                action="/api/upload"
+                maxFileSize={5 * 1024 * 1024}
+              />
+            </FormItem>
+            <Button type="submit" variant="primary">
+              提交
+            </Button>
+          </Form>
+          <CodeBlock
+            title="代码示例"
+            code={exampleCreateForm}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+        </section>
 
         <Form layout="vertical" class="w-full space-y-6">
           <section class="space-y-4">
@@ -346,7 +433,14 @@ export default function FormUpload() {
                 onValueChange={(v) => hiddenPreview.value = v}
               />
             </FormItem>
-            <CodeBlock title="代码示例" code={exampleActionDemo} language="tsx" showLineNumbers copyable wrapLongLines />
+            <CodeBlock
+              title="代码示例"
+              code={exampleActionDemo}
+              language="tsx"
+              showLineNumbers
+              copyable
+              wrapLongLines
+            />
           </section>
 
           <section class="space-y-4">
@@ -417,7 +511,14 @@ export default function FormUpload() {
                 triggerLabel="上传图片"
               />
             </FormItem>
-            <CodeBlock title="代码示例" code={exampleMultiNoDrag} language="tsx" showLineNumbers copyable wrapLongLines />
+            <CodeBlock
+              title="代码示例"
+              code={exampleMultiNoDrag}
+              language="tsx"
+              showLineNumbers
+              copyable
+              wrapLongLines
+            />
           </section>
 
           <section class="space-y-4">
@@ -433,16 +534,40 @@ export default function FormUpload() {
           <section class="space-y-4">
             <Title level={3}>size（xs / sm / md / lg）</Title>
             <FormItem label="xs">
-              <Upload size="xs" action="/api/upload" name="size-xs" drag={false} triggerLabel="xs" />
+              <Upload
+                size="xs"
+                action="/api/upload"
+                name="size-xs"
+                drag={false}
+                triggerLabel="xs"
+              />
             </FormItem>
             <FormItem label="sm">
-              <Upload size="sm" action="/api/upload" name="size-sm" drag={false} triggerLabel="sm" />
+              <Upload
+                size="sm"
+                action="/api/upload"
+                name="size-sm"
+                drag={false}
+                triggerLabel="sm"
+              />
             </FormItem>
             <FormItem label="md（默认）">
-              <Upload size="md" action="/api/upload" name="size-md" drag={false} triggerLabel="md" />
+              <Upload
+                size="md"
+                action="/api/upload"
+                name="size-md"
+                drag={false}
+                triggerLabel="md"
+              />
             </FormItem>
             <FormItem label="lg">
-              <Upload size="lg" action="/api/upload" name="size-lg" drag={false} triggerLabel="lg" />
+              <Upload
+                size="lg"
+                action="/api/upload"
+                name="size-lg"
+                drag={false}
+                triggerLabel="lg"
+              />
             </FormItem>
             <CodeBlock
               title="代码示例"

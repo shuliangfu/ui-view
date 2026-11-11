@@ -89,7 +89,6 @@ describe("文档页 E2E：/mobile/navigation/tab-bar（TabBar 标签栏）", () 
     expect(ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
 
-
   /**
    * UI·切换 Tab，aria-selected 更新。
    */
@@ -116,7 +115,9 @@ describe("文档页 E2E：/mobile/navigation/tab-bar（TabBar 标签栏）", () 
       const tabs = Array.from(
         document.querySelectorAll('main [role="tab"]'),
       ) as (HTMLElement & { __onclick?: (ev: Event) => void })[];
-      const target = tabs.find((t) => t.getAttribute("aria-selected") !== "true") ||
+      const target = tabs.find((t) =>
+        t.getAttribute("aria-selected") !== "true"
+      ) ||
         tabs[1];
       target?.scrollIntoView({ block: "center" });
       if (target && typeof target.__onclick === "function") {
@@ -134,11 +135,11 @@ describe("文档页 E2E：/mobile/navigation/tab-bar（TabBar 标签栏）", () 
       const selected = tabs.filter((t) =>
         t.getAttribute("aria-selected") === "true"
       );
-      return { selected: selected.length, labels: selected.map((t) =>
-        (t.textContent || "").trim().slice(0, 20)
-      ) };
+      return {
+        selected: selected.length,
+        labels: selected.map((t) => (t.textContent || "").trim().slice(0, 20)),
+      };
     }) as { selected: number };
     expect(after.selected).toBeGreaterThanOrEqual(1);
   }, DOCS_BROWSER_CONFIG);
-
 });

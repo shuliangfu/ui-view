@@ -3,13 +3,16 @@
  * 路由: /desktop/form/rate
  */
 
-import { Paragraph, Title } from "@dreamer/ui-view/basic";
+import { Button, Link, Paragraph, Title } from "@dreamer/ui-view/basic";
 
+import { createForm } from "@dreamer/ui-view/form/create-form";
 import { Form } from "@dreamer/ui-view/form/form";
 import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { formRules } from "@dreamer/ui-view/form/form-rules";
 import { Rate } from "@dreamer/ui-view/form/rate";
 
 import { CodeBlock } from "@dreamer/ui-view/data-display";
+import { message } from "@dreamer/ui-view/feedback";
 import { createSignal } from "@dreamer/view";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_RATE } from "../../../data/component-messages-rows.ts";
@@ -58,6 +61,12 @@ const RATE_API: ApiRow[] = [
     description: "可选。`value` 为 Signal 时组件已回写；需副作用时再传",
   },
   {
+    name: "error",
+    type: "boolean",
+    default: "false",
+    description: "错误状态（红框）；可与 createForm bindValue 联用",
+  },
+  {
     name: "messages",
     type: "Partial<RateMessages>",
     default: "-",
@@ -74,6 +83,50 @@ const val = createSignal(0);
   <Rate value={val} count={5} />
 </FormItem>`;
 
+/** createForm 演示字段（模块级） */
+type RateDemoValues = { score: number };
+
+/** Rate + bindValue 联用演示 store */
+const rateDemoForm = createForm<RateDemoValues>({
+  initialValues: { score: 0 },
+  fields: {
+    score: {
+      rules: [
+        formRules.custom((v) =>
+          typeof v === "number" && v > 0 ? undefined : "请评分"
+        ),
+      ],
+    },
+  },
+});
+
+/** 与 createForm 示例的 CodeBlock 源码 */
+const exampleCreateForm =
+  `import { createForm, formRules } from "@dreamer/ui-view/form";
+import { Form } from "@dreamer/ui-view/form/form";
+import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { Rate } from "@dreamer/ui-view/form/rate";
+import { Button } from "@dreamer/ui-view/basic";
+import { message } from "@dreamer/ui-view/feedback";
+
+const form = createForm({
+  initialValues: { score: 0 },
+  fields: {
+    score: {
+      rules: [formRules.custom((v) =>
+        typeof v === "number" && v > 0 ? undefined : "请评分"
+      )],
+    },
+  },
+});
+
+<Form form={form} onFinish={() => { message.success("已提交"); }}>
+  <FormItem name="score" label="评分">
+    <Rate {...form.bindValue("score")} count={5} />
+  </FormItem>
+  <Button type="submit" variant="primary">提交</Button>
+</Form>`;
+
 export default function FormRate() {
   const val = createSignal(0);
   /** 半星示例：初始 3.5，第 4 颗星左橙右灰；也可点星左/右半边改分 */
@@ -84,8 +137,19 @@ export default function FormRate() {
       <section>
         <Title level={1}>Rate 评分</Title>
         <Paragraph class="mt-2">
-          星级评分，支持 count、value、onChange、allowHalf、disabled。Tailwind
-          v4 + light/dark。
+          星级评分，支持 count、value、onChange、allowHalf、disabled、error。与
+          {" "}
+          <Link
+            href="/desktop/form/form-containers"
+            className="text-teal-600 hover:underline dark:text-teal-400"
+          >
+            Form / createForm
+          </Link>{" "}
+          联用时展开{" "}
+          <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">
+            {"{...form.bindValue(name)}"}
+          </code>
+          （值为 number）。Tailwind v4 + light/dark。
         </Paragraph>
         <Paragraph class="mt-2 text-sm text-slate-600 dark:text-slate-400">
           <strong>半星（allowHalf）：</strong>
@@ -110,6 +174,33 @@ export default function FormRate() {
 
       <section class="space-y-8">
         <Title level={2}>示例</Title>
+
+        <section class="space-y-4">
+          <Title level={3}>与 createForm</Title>
+          <Form
+            form={rateDemoForm}
+            layout="vertical"
+            class="w-full max-w-md border border-dashed border-slate-200 dark:border-slate-600 rounded-lg p-4"
+            onFinish={() => {
+              message.success("已提交");
+            }}
+          >
+            <FormItem name="score" label="评分">
+              <Rate {...rateDemoForm.bindValue("score")} count={5} />
+            </FormItem>
+            <Button type="submit" variant="primary">
+              提交
+            </Button>
+          </Form>
+          <CodeBlock
+            title="代码示例"
+            code={exampleCreateForm}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+        </section>
 
         <Form layout="vertical" class="w-full space-y-6">
           <section class="space-y-4">

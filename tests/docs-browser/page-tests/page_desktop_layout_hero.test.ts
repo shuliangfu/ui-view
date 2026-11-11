@@ -363,5 +363,4 @@ describe("文档页 E2E：/desktop/layout/hero（Hero 首屏）", () => {
     }) as { ok: boolean };
     expect(got.ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
-
 });

@@ -3,13 +3,16 @@
  * 路由: /desktop/form/mentions
  */
 
-import { Paragraph, Title } from "@dreamer/ui-view/basic";
+import { Button, Link, Paragraph, Title } from "@dreamer/ui-view/basic";
 
+import { createForm } from "@dreamer/ui-view/form/create-form";
 import { Form } from "@dreamer/ui-view/form/form";
 import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { formRules } from "@dreamer/ui-view/form/form-rules";
 import { Mentions } from "@dreamer/ui-view/form/mentions";
 
 import { CodeBlock } from "@dreamer/ui-view/data-display";
+import { message } from "@dreamer/ui-view/feedback";
 import type { MentionOption } from "@dreamer/ui-view/form/mentions";
 import { createSignal } from "@dreamer/view";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
@@ -119,6 +122,12 @@ const MENTIONS_API: ApiRow[] = [
     description: "是否禁用",
   },
   {
+    name: "error",
+    type: "boolean",
+    default: "false",
+    description: "错误状态（红框）",
+  },
+  {
     name: "hideFocusRing",
     type: "boolean",
     default: "false",
@@ -138,6 +147,17 @@ const mentionOptions: MentionOption[] = [
   { value: "u2", label: "李四" },
   { value: "u3", label: "王五" },
 ];
+
+/** createForm 演示字段形状（模块级，避免文档页重跑丢失状态） */
+type MentionsFormValues = { note: string };
+
+/** Mentions + createForm 联用演示 store */
+const mentionsForm = createForm<MentionsFormValues>({
+  initialValues: { note: "" },
+  fields: {
+    note: { rules: [formRules.required()] },
+  },
+});
 
 const importCode = `import { Form } from "@dreamer/ui-view/form/form";
 import { FormItem } from "@dreamer/ui-view/form/form-item";
@@ -212,8 +232,18 @@ export default function FormMentions() {
           <code class="text-xs">@</code> 前缀的写法见示例{" "}
           <code class="text-xs">handleSelect</code>
           （<code class="text-xs">slice(0,atIdx)+&quot;@&quot;+label</code>
-          ）。宽度由 class 控制，表单中需占满一列时传 class="w-full"。Tailwind
-          v4 + light/dark。
+          ）。宽度由 class 控制，表单中需占满一列时传 class="w-full"。与{" "}
+          <Link
+            href="/desktop/form/form-containers"
+            className="text-teal-600 hover:underline dark:text-teal-400"
+          >
+            Form / createForm
+          </Link>{" "}
+          联用时展开{" "}
+          <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">
+            {"{...form.bind(name)}"}
+          </code>
+          。Tailwind v4 + light/dark。
         </Paragraph>
       </section>
 
@@ -230,6 +260,53 @@ export default function FormMentions() {
 
       <section class="space-y-8">
         <Title level={2}>示例</Title>
+
+        <section class="space-y-4">
+          <Title level={3}>与 createForm</Title>
+          <Form
+            form={mentionsForm}
+            layout="vertical"
+            class="w-full max-w-md"
+            onFinish={() => {
+              message.success("ok");
+            }}
+          >
+            <FormItem name="note" label="备注" rules={[formRules.required()]}>
+              <Mentions
+                {...mentionsForm.bind("note")}
+                placeholder="必填备注（可再接 @ 候选示例）"
+                rows={3}
+                class="w-full"
+              />
+            </FormItem>
+            <Button type="submit" variant="primary">
+              校验
+            </Button>
+          </Form>
+          <CodeBlock
+            title="代码示例"
+            code={`const mentionsForm = createForm({
+  initialValues: { note: "" },
+  fields: { note: { rules: [formRules.required()] } },
+});
+
+<Form
+  form={mentionsForm}
+  layout="vertical"
+  class="w-full max-w-md"
+  onFinish={() => { message.success("ok"); }}
+>
+  <FormItem name="note" label="备注" rules={[formRules.required()]}>
+    <Mentions {...mentionsForm.bind("note")} placeholder="必填备注" rows={3} />
+  </FormItem>
+  <Button type="submit" variant="primary">校验</Button>
+</Form>`}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+        </section>
 
         <Form layout="vertical" class="w-full space-y-6">
           <section class="space-y-4">

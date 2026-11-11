@@ -5,9 +5,16 @@
  * 外壳稳定；星面与 aria-valuenow 由局部 getter / effect 订阅 value，避免整段重建。
  */
 
-import { createEffect, createRef, type JSXRenderable } from "@dreamer/view";
+import {
+  createEffect,
+  createRef,
+  type JSXRenderable,
+  useContext,
+} from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import { resolveFormControlSize } from "./form-control-context.ts";
+import { FormItemControlIdContext } from "./form-item-control-id.ts";
+import { controlErrorBorder } from "./input-focus-ring.ts";
 import {
   commitMaybeSignal,
   type MaybeSignal,
@@ -42,15 +49,22 @@ export interface RateProps {
   allowHalf?: boolean;
   /** 是否禁用 */
   disabled?: boolean;
+  /** 错误状态（容器红框 + aria-invalid）；可与 FormItem / createForm bindValue 联用 */
+  error?: boolean;
   /** 变更回调，回传新分数 */
   onChange?: (value: number) => void;
   /** 额外 class（作用于容器） */
   class?: string;
+  /** 表单字段名（隐藏域同步提交） */
+  name?: string;
+  /** 控件 id（label for）；未传时取 FormItemControlIdContext */
+  id?: string;
   /** 多语言/自定义文案；未传字段走 {@link defaultRateMessages} */
   messages?: Partial<RateMessages>;
 }
 
-const starCls = "text-slate-300 dark:text-slate-500 transition-colors motion-reduce:transition-none";
+const starCls =
+  "text-slate-300 dark:text-slate-500 transition-colors motion-reduce:transition-none";
 const starSizeClasses: Record<SizeVariant, string> = {
   xs: "inline-flex size-4 items-center justify-center text-base leading-none",
   sm: "inline-flex size-5 items-center justify-center text-xl leading-none",
@@ -85,14 +99,19 @@ export function Rate(props: RateProps): JSXRenderable {
     value,
     allowHalf = false,
     disabled = false,
+    error = false,
     onChange,
     class: className,
+    name,
+    id,
     messages,
   } = props;
   const m = { ...defaultRateMessages, ...messages };
   const size = resolveFormControlSize(sizeProp);
   const starClsSized = twMerge(starCls, starSizeClasses[size]);
   const rootRef = createRef<HTMLElement>();
+  const fromFormItem = useContext(FormItemControlIdContext);
+  const resolvedId = id ?? fromFormItem;
 
   /** 与 {@link AutoComplete} 相同：aria 写回 DOM，勿把 value 绑进会重建外壳的 getter */
   createEffect(() => {
@@ -106,16 +125,29 @@ export function Rate(props: RateProps): JSXRenderable {
   return (
     <span
       ref={rootRef}
+      id={resolvedId}
       class={twMerge(
-        "inline-flex gap-0.5",
+        "inline-flex gap-0.5 rounded-md",
         disabled && "pointer-events-none opacity-70",
+        error &&
+          twMerge("ring-1 ring-red-500 dark:ring-red-500", controlErrorBorder),
         className,
       )}
       role="slider"
       aria-valuemin={0}
       aria-valuemax={count}
       aria-readonly={disabled}
+      aria-invalid={error}
     >
+      {name
+        ? (
+          <input
+            type="hidden"
+            name={name}
+            value={() => String(readMaybeSignal(value) ?? 0)}
+          />
+        )
+        : null}
       {() => {
         const v = readMaybeSignal(value) ?? 0;
         return Array.from({ length: count }, (_, i) => {
@@ -163,7 +195,9 @@ export function Rate(props: RateProps): JSXRenderable {
                 )
                 : (
                   <span
-                    class={full ? twMerge(starClsSized, starActiveCls) : starClsSized}
+                    class={full
+                      ? twMerge(starClsSized, starActiveCls)
+                      : starClsSized}
                     aria-hidden="true"
                   >
                     ★

@@ -586,5 +586,4 @@ describe("文档页 E2E：/desktop/basic/link（Link 链接）", () => {
     }) as { ok: boolean };
     expect(got.ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
-
 });

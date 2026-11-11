@@ -113,53 +113,53 @@ function removeButtonForRow(
  */
 export function FormList(props: FormListProps): JSXRenderable {
   return () => {
-  const {
-    items,
-    onAdd,
-    onRemove,
-    class: className,
-    children,
-    renderRow: renderRowProp,
-    messages,
-  } = props;
-  const m = { ...defaultFormListMessages, ...messages };
-  const addButtonText = props.addButtonText ?? m.addButton;
+    const {
+      items,
+      onAdd,
+      onRemove,
+      class: className,
+      children,
+      renderRow: renderRowProp,
+      messages,
+    } = props;
+    const m = { ...defaultFormListMessages, ...messages };
+    const addButtonText = props.addButtonText ?? m.addButton;
 
-  const list = readMaybeSignal(items) ?? items;
-  const length = typeof list === "number" ? list : list.length;
+    const list = readMaybeSignal(items) ?? items;
+    const length = typeof list === "number" ? list : list.length;
 
-  return (
-    <div class={twMerge(wrapCls, className)} role="group" aria-label={m.list}>
-      {Array.from({ length }, (_, index) => {
-        const removeButton: unknown | null = onRemove != null
-          ? removeButtonForRow(index, onRemove, m)
-          : null;
+    return (
+      <div class={twMerge(wrapCls, className)} role="group" aria-label={m.list}>
+        {Array.from({ length }, (_, index) => {
+          const removeButton: unknown | null = onRemove != null
+            ? removeButtonForRow(index, onRemove, m)
+            : null;
 
-        if (renderRowProp != null) {
+          if (renderRowProp != null) {
+            return (
+              <div key={index} class={renderRowWrapCls}>
+                {renderRowProp(index, { removeButton })}
+              </div>
+            );
+          }
+
           return (
-            <div key={index} class={renderRowWrapCls}>
-              {renderRowProp(index, { removeButton })}
+            <div key={index} class={rowCls}>
+              <div class={rowMainCls}>{children}</div>
+              {removeButton}
             </div>
           );
-        }
-
-        return (
-          <div key={index} class={rowCls}>
-            <div class={rowMainCls}>{children}</div>
-            {removeButton}
-          </div>
-        );
-      })}
-      {onAdd != null && (
-        <button
-          type="button"
-          class="text-sm text-blue-600 dark:text-blue-400 hover:underline focus:outline-hidden focus:ring-2 focus:ring-blue-500 rounded px-0"
-          onClick={onAdd}
-        >
-          {addButtonText}
-        </button>
-      )}
-    </div>
-  );
+        })}
+        {onAdd != null && (
+          <button
+            type="button"
+            class="text-sm text-blue-600 dark:text-blue-400 hover:underline focus:outline-hidden focus:ring-2 focus:ring-blue-500 rounded px-0"
+            onClick={onAdd}
+          >
+            {addButtonText}
+          </button>
+        )}
+      </div>
+    );
   };
 }

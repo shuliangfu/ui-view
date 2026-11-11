@@ -108,9 +108,10 @@ describe("文档页 E2E：/desktop/data-display/watermark（Watermark 水印）"
       });
       return { n: info.length, info };
     }) as { n: number; info: { w: number; h: number; hasBg: boolean }[] };
-    if (got.n < 1) throw new Error(`Watermark 层未出现: ${JSON.stringify(got)}`);
+    if (got.n < 1) {
+      throw new Error(`Watermark 层未出现: ${JSON.stringify(got)}`);
+    }
     const ok = got.info.some((i) => i.w >= 40 && i.h >= 40 && i.hasBg);
     expect(ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
-
 });

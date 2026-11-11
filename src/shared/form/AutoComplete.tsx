@@ -4,12 +4,22 @@
  * 建议列表为**自绘浮层**（非原生 datalist），与 light/dark、边框圆角与设计系统一致。
  */
 
-import { createEffect, createRef, createSignal } from "@dreamer/view";
-import type { JSXRenderable } from "@dreamer/view";
+import {
+  createEffect,
+  createRef,
+  createSignal,
+  type JSXRenderable,
+  useContext,
+} from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import type { SizeVariant } from "../types.ts";
 import { resolveFormControlSize } from "./form-control-context.ts";
-import { controlBlueFocusRing } from "./input-focus-ring.ts";
+import { FormItemControlIdContext } from "./form-item-control-id.ts";
+import {
+  controlBlueFocusRing,
+  controlErrorBorder,
+  controlErrorFocusRing,
+} from "./input-focus-ring.ts";
 import { commitMaybeSignal, type MaybeSignal } from "./maybe-signal.ts";
 
 /**
@@ -30,6 +40,8 @@ export interface AutoCompleteProps {
   options?: string[];
   /** 当前输入值（受控可选）；见 {@link MaybeSignal} */
   value?: MaybeSignal<string>;
+  /** 错误状态（红框 + aria-invalid）；可与 FormItem / createForm bind 联用 */
+  error?: boolean;
   /** 尺寸 */
   size?: SizeVariant;
   /** 是否禁用 */
@@ -75,7 +87,7 @@ const sizeClasses: Record<SizeVariant, string> = {
 
 /** 输入区底纹（不含 ring） */
 const inputSurface =
-  "border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 border-slate-300 dark:border-slate-600 focus:outline-hidden disabled:opacity-50 disabled:cursor-not-allowed transition-colors";
+  "border bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 border-slate-300 dark:border-slate-600 focus:outline-hidden disabled:opacity-50 disabled:cursor-not-allowed transition-colors";
 
 /** 与 Mentions / Select 浮层一致的联想列表样式 */
 const panelCls =
@@ -189,16 +201,19 @@ export function AutoComplete(props: AutoCompleteProps): JSXRenderable {
     onSelect,
     class: className,
     hideFocusRing = false,
+    error = false,
     name,
     id,
     messages,
   } = props;
   const m = { ...defaultAutoCompleteMessages, ...messages };
   const size = resolveFormControlSize(sizeProp);
+  const fromFormItem = useContext(FormItemControlIdContext);
+  const resolvedId = id ?? fromFormItem;
 
   const sizeCls = sizeClasses[size];
-  const listboxId = id
-    ? `${id}-listbox`
+  const listboxId = resolvedId
+    ? `${resolvedId}-listbox`
     : `autocomplete-listbox-${++autoCompleteListboxSeq}`;
   /** 联想层是否展开 */
   const panelOpen = createSignal(false);
@@ -316,7 +331,9 @@ export function AutoComplete(props: AutoCompleteProps): JSXRenderable {
   const inputClass = twMerge(
     "w-full",
     inputSurface,
-    controlBlueFocusRing(!hideFocusRing),
+    controlBlueFocusRing(!hideFocusRing && !error),
+    error && controlErrorBorder,
+    error && !hideFocusRing && controlErrorFocusRing(true),
     sizeCls,
   );
 
@@ -327,11 +344,12 @@ export function AutoComplete(props: AutoCompleteProps): JSXRenderable {
     return (
       <input
         type="text"
-        id={id}
+        id={resolvedId}
         name={name}
         value={value}
         placeholder={placeholder}
         disabled={disabled}
+        aria-invalid={error}
         class={twMerge(inputClass, className)}
         onChange={handleChange}
         onInput={handleInput}
@@ -367,11 +385,12 @@ export function AutoComplete(props: AutoCompleteProps): JSXRenderable {
     <div class={twMerge("relative w-full", className)}>
       <input
         type="text"
-        id={id}
+        id={resolvedId}
         name={name}
         value={value}
         placeholder={placeholder}
         disabled={disabled}
+        aria-invalid={error}
         role="combobox"
         aria-controls={listboxId}
         aria-autocomplete="list"

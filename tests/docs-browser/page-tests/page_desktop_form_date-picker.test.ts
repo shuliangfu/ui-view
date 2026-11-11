@@ -6,6 +6,7 @@
 
 import { describe, expect, it } from "@dreamer/test";
 import {
+  assertStrictDocSection,
   DOCS_BROWSER_CONFIG,
   runKeywordAndShallowHere,
   sharedEnv,
@@ -18,7 +19,7 @@ describe("文档页 E2E：/desktop/form/date-picker（DatePicker 日期）", () 
   it("本页关键词命中且 main 内完成浅层交互探针", async (t) => {
     if (!t?.browser?.goto) return;
     await runKeywordAndShallowHere(t, DOC_PATH, [
-      /DatePicker|日期/i,
+      /createForm|DatePicker|日期/i,
     ]);
   }, DOCS_BROWSER_CONFIG);
 
@@ -47,7 +48,7 @@ describe("文档页 E2E：/desktop/form/date-picker（DatePicker 日期）", () 
       const btn = (root?.querySelector(
         'button[type="button"][aria-haspopup="dialog"]:not([disabled])',
       ) || document.querySelector(
-        'main button[aria-haspopup]:not([disabled])',
+        "main button[aria-haspopup]:not([disabled])",
       )) as (HTMLButtonElement & { __onclick?: (ev: Event) => void }) | null;
       if (!btn) return { ok: false, reason: "no-trigger" };
       btn.scrollIntoView({ block: "center" });
@@ -68,11 +69,12 @@ describe("文档页 E2E：/desktop/form/date-picker（DatePicker 日期）", () 
         "button[data-ui-calendar-day]:not([disabled])",
       ) as (HTMLButtonElement & { __onclick?: (ev: Event) => void }) | null;
       if (!dayCell) {
-        dayCell = Array.from(dlg.querySelectorAll("button[type='button']")).find(
-          (b) =>
-            !(b as HTMLButtonElement).disabled &&
-            /^\d{1,2}$/.test((b.textContent || "").trim()),
-        ) as (HTMLButtonElement & { __onclick?: (ev: Event) => void }) | null;
+        dayCell = Array.from(dlg.querySelectorAll("button[type='button']"))
+          .find(
+            (b) =>
+              !(b as HTMLButtonElement).disabled &&
+              /^\d{1,2}$/.test((b.textContent || "").trim()),
+          ) as (HTMLButtonElement & { __onclick?: (ev: Event) => void }) | null;
       }
       if (!dayCell) return { ok: false, reason: "no-day" };
       clickEl(dayCell);
@@ -82,7 +84,9 @@ describe("文档页 E2E：/desktop/form/date-picker（DatePicker 日期）", () 
       ).find((b) =>
         !(b as HTMLButtonElement).disabled &&
         (b.textContent || "").trim() === "确定"
-      ) as (HTMLButtonElement & { __onclick?: (ev: Event) => void }) | undefined;
+      ) as
+        | (HTMLButtonElement & { __onclick?: (ev: Event) => void })
+        | undefined;
       if (!okBtn) return { ok: false, reason: "no-confirm" };
       clickEl(okBtn);
       return { ok: true, reason: "ok" };
@@ -742,6 +746,15 @@ describe("文档页 E2E：/desktop/form/date-picker（DatePicker 日期）", () 
   /**
    * UI·打开选择面板可见。
    */
+
+  /**
+   * 文档小节「与 createForm」：在 main 内定位对应 h3，于该示例区块内完成一次交互。
+   */
+  it("严格·与 createForm", async (t) => {
+    if (!t?.browser?.goto) return;
+    await assertStrictDocSection(t, DOC_PATH);
+  }, DOCS_BROWSER_CONFIG);
+
   it("UI·打开选择面板可见", async (t) => {
     if (!t?.browser?.goto) return;
     await sharedEnv.goto(t, DOC_PATH);
@@ -751,7 +764,7 @@ describe("文档页 E2E：/desktop/form/date-picker（DatePicker 日期）", () 
     await sharedEnv.delay(100);
     await t.browser.evaluate(() => {
       const btn = document.querySelector(
-        'main button[aria-haspopup]',
+        "main button[aria-haspopup]",
       ) as (HTMLElement & { __onclick?: (ev: Event) => void }) | null;
       btn?.scrollIntoView({ block: "center" });
       if (btn && typeof btn.__onclick === "function") {
@@ -776,5 +789,4 @@ describe("文档页 E2E：/desktop/form/date-picker（DatePicker 日期）", () 
     }) as { ok: boolean };
     expect(got.ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
-
 });

@@ -100,10 +100,12 @@ describe("文档页 E2E：/mobile/navigation/dropdown-menu（DropdownMenu 下拉
     await sharedEnv.waitDocMainReady(t);
     await sharedEnv.delay(100);
     await t.browser.evaluate(() => {
-      const menu = document.querySelector(".dropdown-menu") as HTMLElement | null;
+      const menu = document.querySelector(".dropdown-menu") as
+        | HTMLElement
+        | null;
       menu?.scrollIntoView({ block: "center" });
       const btn = menu?.querySelector(
-        'button[data-menu-key], button',
+        "button[data-menu-key], button",
       ) as (HTMLButtonElement & { __onclick?: (ev: Event) => void }) | null;
       if (btn && typeof btn.__onclick === "function") {
         btn.__onclick(
@@ -124,7 +126,9 @@ describe("文档页 E2E：/mobile/navigation/dropdown-menu（DropdownMenu 下拉
       ) || document.querySelector('button[aria-label="关闭"]')) as
         | HTMLButtonElement
         | null;
-      const menu = document.querySelector(".dropdown-menu") as HTMLElement | null;
+      const menu = document.querySelector(".dropdown-menu") as
+        | HTMLElement
+        | null;
       const openAttr = menu?.getAttribute("data-open");
       const openKey = menu?.getAttribute("data-open-key") || "";
       const open = openAttr === "true" || openKey.length > 0 ||
@@ -184,5 +188,4 @@ describe("文档页 E2E：/mobile/navigation/dropdown-menu（DropdownMenu 下拉
     }
     expect(result.ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
-
 });

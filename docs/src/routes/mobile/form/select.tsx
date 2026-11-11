@@ -3,8 +3,13 @@
  */
 
 import { Select } from "@dreamer/ui-view/mobile/form/select";
-import { Paragraph, Title } from "@dreamer/ui-view/mobile/basic";
+import { Form } from "@dreamer/ui-view/mobile/form/form";
+import { FormItem } from "@dreamer/ui-view/mobile/form/form-item";
+import { Button, Link, Paragraph, Title } from "@dreamer/ui-view/mobile/basic";
 import { CodeBlock } from "@dreamer/ui-view/mobile/data-display";
+import { createForm } from "@dreamer/ui-view/form/create-form";
+import { formRules } from "@dreamer/ui-view/form/form-rules";
+import { message } from "@dreamer/ui-view/feedback";
 import { createSignal } from "@dreamer/view";
 import {
   DocsApiTable,
@@ -13,6 +18,17 @@ import {
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MobileDocDemo } from "../../../components/MobileDocDemo.tsx";
 import { MESSAGES_SELECT } from "../../../data/component-messages-rows.ts";
+
+/** createForm 演示字段（模块级，避免文档页重跑丢失状态） */
+type SelectCreateFormValues = { city: string };
+
+/** 与 createForm 联用演示 store */
+const selectCreateForm = createForm<SelectCreateFormValues>({
+  initialValues: { city: "" },
+  fields: {
+    city: { rules: [formRules.required("请选择")] },
+  },
+});
 
 const OPTIONS = [
   { value: "a", label: "选项 A" },
@@ -86,7 +102,8 @@ const SELECT_API: DocsApiTableRow[] = [
   },
 ];
 
-const importCode = `import { Select } from "@dreamer/ui-view/mobile/form/select";
+const importCode =
+  `import { Select } from "@dreamer/ui-view/mobile/form/select";
 
 /** 须绑定 value（Signal 或字面量）；仅 onChange 无法持久化选中项，与桌面文档一致 */
 const val = createSignal("");
@@ -108,10 +125,8 @@ const mobileSelectBasicVal = createSignal("");
 /** 「受控 Signal」示例专用，勿放进页面函数体内 */
 const mobileSelectControlledVal = createSignal("a");
 
-
 const exampleControlled = `const value = createSignal("a");
 <Select value={value} options={[{ value: "a", label: "A" }, { value: "b", label: "B" }]} />`;
-
 
 export default function MobileSelectDoc() {
   return (
@@ -121,7 +136,25 @@ export default function MobileSelectDoc() {
         <Paragraph class="mt-2">
           <code class="text-sm">@dreamer/ui-view/mobile</code> 自{" "}
           <code class="text-sm">shared/form/Select</code>{" "}
-          再导出，无移动层包装，与桌面包同一组件、同一默认自绘下拉。
+          再导出，无移动层包装，与桌面包同一组件、同一默认自绘下拉。与{" "}
+          <Link
+            href="/mobile/form/form-containers"
+            className="text-teal-600 hover:underline dark:text-teal-400"
+          >
+            Form / createForm（移动）
+          </Link>
+          、
+          <Link
+            href="/desktop/form/form-containers"
+            className="text-teal-600 hover:underline dark:text-teal-400"
+          >
+            桌面 Form 容器
+          </Link>{" "}
+          联用：展开{" "}
+          <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">
+            {"{...form.bind(name)}"}
+          </code>
+          。
         </Paragraph>
       </section>
 
@@ -138,6 +171,55 @@ export default function MobileSelectDoc() {
 
       <section class="space-y-8">
         <Title level={2}>示例</Title>
+
+        <div class="space-y-4">
+          <Title level={3}>与 createForm</Title>
+          <MobileDocDemo>
+            <Form
+              form={selectCreateForm}
+              layout="vertical"
+              class="w-full"
+              onFinish={() => {
+                message.success("已提交");
+              }}
+            >
+              <FormItem name="city" label="城市">
+                <Select
+                  class="w-full"
+                  options={OPTIONS}
+                  {...selectCreateForm.bind("city")}
+                  placeholder="请选择"
+                />
+              </FormItem>
+              <Button type="submit" variant="primary" class="w-full">
+                提交
+              </Button>
+            </Form>
+          </MobileDocDemo>
+          <CodeBlock
+            title="代码示例"
+            code={`import { createForm } from "@dreamer/ui-view/form/create-form";
+import { formRules } from "@dreamer/ui-view/form/form-rules";
+import { Form } from "@dreamer/ui-view/mobile/form/form";
+import { FormItem } from "@dreamer/ui-view/mobile/form/form-item";
+import { Select } from "@dreamer/ui-view/mobile/form/select";
+
+const form = createForm({
+  initialValues: { city: "" },
+  fields: { city: { rules: [formRules.required()] } },
+});
+
+<Form form={form} onFinish={() => { message.success("已提交"); }}>
+  <FormItem name="city" label="城市">
+    <Select options={OPTIONS} {...form.bind("city")} placeholder="请选择" />
+  </FormItem>
+</Form>`}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+        </div>
 
         <div class="space-y-4">
           <Title level={3}>基础</Title>
@@ -186,17 +268,47 @@ export default function MobileSelectDoc() {
               </p>
             )}
           </MobileDocDemo>
-          <CodeBlock title="代码示例" code={exampleControlled} language="tsx" showLineNumbers copyable wrapLongLines />
-
+          <CodeBlock
+            title="代码示例"
+            code={exampleControlled}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
         </div>
         <div class="space-y-4">
           <Title level={3}>size（xs / sm / md / lg）</Title>
           <MobileDocDemo>
             <div class="flex flex-col gap-3 p-2">
-              <Select size="xs" class="w-full" options={OPTIONS} value="" placeholder="xs" />
-              <Select size="sm" class="w-full" options={OPTIONS} value="" placeholder="sm" />
-              <Select size="md" class="w-full" options={OPTIONS} value="" placeholder="md" />
-              <Select size="lg" class="w-full" options={OPTIONS} value="" placeholder="lg" />
+              <Select
+                size="xs"
+                class="w-full"
+                options={OPTIONS}
+                value=""
+                placeholder="xs"
+              />
+              <Select
+                size="sm"
+                class="w-full"
+                options={OPTIONS}
+                value=""
+                placeholder="sm"
+              />
+              <Select
+                size="md"
+                class="w-full"
+                options={OPTIONS}
+                value=""
+                placeholder="md"
+              />
+              <Select
+                size="lg"
+                class="w-full"
+                options={OPTIONS}
+                value=""
+                placeholder="lg"
+              />
             </div>
           </MobileDocDemo>
           <CodeBlock

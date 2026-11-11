@@ -283,8 +283,10 @@ export interface RichTextEditorProps {
   class?: string;
   /** 原生 name（会同步到隐藏 input 便于表单提交） */
   name?: string;
-  /** 原生 id（编辑区与隐藏 input 会使用） */
+  /** 原生 id（编辑区与隐藏 input 会使用）；未传时取 FormItemControlIdContext */
   id?: string;
+  /** 错误状态（外框红边）；可与 FormItem / createForm bindValue 联用 */
+  error?: boolean;
   /** 插入图片 URL 时由调用方提供（如弹窗输入）；若返回 string 则插入，否则不插入 */
   onInsertImage?: () => Promise<string> | string;
   /**
@@ -302,4 +304,3 @@ export interface RichTextEditorProps {
   /** 多语言/自定义文案；未传字段走 {@link defaultRichTextEditorMessages} */
   messages?: Partial<RichTextEditorMessages>;
 }
-

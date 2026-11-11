@@ -14,14 +14,18 @@ import {
   type JSXRenderable,
   Show,
   type Signal,
+  useContext,
 } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 /** 触发器右侧使用时钟图标 */
 import { IconClock } from "../basic/icons/Clock.tsx";
 import type { SizeVariant } from "../types.ts";
 import { resolveFormControlSize } from "./form-control-context.ts";
+import { FormItemControlIdContext } from "./form-item-control-id.ts";
 import {
   controlBlueFocusRing,
+  controlErrorBorder,
+  controlErrorFocusRing,
   pickerTriggerSizeClasses,
   pickerTriggerSurface,
 } from "./input-focus-ring.ts";
@@ -117,9 +121,13 @@ export interface TimePickerProps {
   size?: SizeVariant;
   disabled?: boolean;
   onChange?: (e: Event) => void;
+  /** 触发器失焦（可用于 blur 校验） */
+  onBlur?: (e: Event) => void;
   class?: string;
   name?: string;
   id?: string;
+  /** 错误状态（触发器红框）；可与 FormItem / createForm bind 联用 */
+  error?: boolean;
   /** 占位文案 */
   placeholder?: string;
   /** 为 true 时隐藏聚焦激活态边框；默认 false 显示 ring */
@@ -693,6 +701,7 @@ function TimePickerTimeStrip(props: TimePickerTimeStripProps) {
 export function TimePicker(props: TimePickerProps): JSXRenderable {
   /** 与 {@link Input} 一致：继承 Form 注入的控件尺寸 */
   const resolvedControlSize = resolveFormControlSize(props.size);
+  const fromFormItem = useContext(FormItemControlIdContext);
   const mode: TimePickerMode = props.mode ?? "single";
   const timeFormatSpec = resolveTimePickerFormatSpec(props.format, mode);
   /** 合并默认中文文案与外部传入 messages，缺省字段走默认值 */
@@ -973,7 +982,7 @@ export function TimePicker(props: TimePickerProps): JSXRenderable {
       />
       <button
         type="button"
-        id={props.id}
+        id={props.id ?? fromFormItem}
         /**
          * 触发器 DOM：点外关闭与几何同步用；须用函数 ref，勿 `ref={triggerRef}` 对象。
          */
@@ -981,6 +990,7 @@ export function TimePicker(props: TimePickerProps): JSXRenderable {
           triggerRef.current = el;
         }}
         disabled={() => props.disabled ?? false}
+        aria-invalid={() => props.error}
         aria-haspopup="dialog"
         aria-expanded={() => openState.value}
         aria-label={() => {
@@ -992,9 +1002,12 @@ export function TimePicker(props: TimePickerProps): JSXRenderable {
         class={() =>
           twMerge(
             pickerTriggerSurface,
-            controlBlueFocusRing(!props.hideFocusRing),
+            controlBlueFocusRing(!props.hideFocusRing && !props.error),
+            props.error && controlErrorBorder,
+            props.error && !props.hideFocusRing && controlErrorFocusRing(true),
             pickerTriggerSizeClasses[resolvedControlSize],
           )}
+        onBlur={props.onBlur}
         onClick={handleOpen}
       >
         <span

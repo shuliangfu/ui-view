@@ -66,7 +66,6 @@ describe("文档页 E2E：/desktop/charts/bubble（ChartBubble 气泡图）", ()
     expect(ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
 
-
   /**
    * UI·图表 canvas 可见有尺寸。
    */
@@ -88,5 +87,4 @@ describe("文档页 E2E：/desktop/charts/bubble（ChartBubble 气泡图）", ()
     }) as { ok: boolean };
     expect(got.ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
-
 });

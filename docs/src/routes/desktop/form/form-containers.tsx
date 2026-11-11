@@ -1,58 +1,47 @@
 /**
- * Form / FormItem / FormList 表单容器与表单项文档。
+ * Form / FormItem / FormList / createForm 表单容器与表单项文档。
  * 路由: /desktop/form/form-containers
  */
 
-import { Link, Paragraph, Title } from "@dreamer/ui-view/basic";
+import { Button, Link, Paragraph, Title } from "@dreamer/ui-view/basic";
 
 import type { FormListRenderRowContext } from "@dreamer/ui-view/form/form-list";
+import { createForm } from "@dreamer/ui-view/form/create-form";
 import { Form } from "@dreamer/ui-view/form/form";
 import { FormItem } from "@dreamer/ui-view/form/form-item";
 import { FormList } from "@dreamer/ui-view/form/form-list";
+import { formRules } from "@dreamer/ui-view/form/form-rules";
+import { Checkbox } from "@dreamer/ui-view/form/checkbox";
 import { Input } from "@dreamer/ui-view/form/input";
+import { Password } from "@dreamer/ui-view/form/password";
+import { RadioGroup } from "@dreamer/ui-view/form/radio-group";
+import { Select } from "@dreamer/ui-view/form/select";
+import { Switch } from "@dreamer/ui-view/form/switch";
 
 import { CodeBlock } from "@dreamer/ui-view/data-display";
+import { message } from "@dreamer/ui-view/feedback";
 import { createSignal } from "@dreamer/view";
 
-import { FORM_ITEM_API, type FormDocsApiRow } from "./form-item-api.ts";
+import {
+  CREATE_FORM_OPTIONS_API,
+  FORM_API,
+  FORM_ITEM_API,
+  FORM_RULES_API,
+  FORM_STORE_API,
+  type FormDocsApiRow,
+} from "./form-item-api.ts";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_FORM_LIST } from "../../../data/component-messages-rows.ts";
-
-/** Form 容器属性说明 */
-const FORM_API: FormDocsApiRow[] = [
-  {
-    name: "layout",
-    type: '"vertical" | "horizontal" | "inline"',
-    default: "vertical",
-    description: "垂直堆叠 / 中等屏起横向排布 / 行内尾对齐",
-  },
-  {
-    name: "onSubmit",
-    type: "(e: Event) => void",
-    default: "-",
-    description: "提交回调；组件内已 preventDefault，由调用方处理业务",
-  },
-  {
-    name: "class",
-    type: "string",
-    default: "-",
-    description: "作用于原生 form 的额外 class",
-  },
-  {
-    name: "children",
-    type: "unknown",
-    default: "-",
-    description: "FormItem、FormList 等子节点",
-  },
-];
 
 /** FormList 动态列表属性说明 */
 const FORM_LIST_API: FormDocsApiRow[] = [
   {
     name: "items",
-    type: "unknown[] | number | (() => unknown[] | number) | Signal<unknown[] | number>",
+    type:
+      "unknown[] | number | (() => unknown[] | number) | Signal<unknown[] | number>",
     default: "-",
-    description: "列表长度：数组用 length，number 仅表示行数（行索引 0..n-1）。与全库表单一致为 MaybeSignal；请传行数 signal 本身，勿写 items={count.value}（快照失步，增删无效）。",
+    description:
+      "列表长度：数组用 length，number 仅表示行数。请传行数 signal 本身，勿写 items={count.value}",
   },
   {
     name: "onAdd",
@@ -83,7 +72,7 @@ const FORM_LIST_API: FormDocsApiRow[] = [
     type: "(index, ctx) => unknown",
     default: "-",
     description:
-      "按行渲染；ctx.removeButton 在传了 onRemove 时为删除按钮，请赋给 FormItem.trailing，与输入同一水平线",
+      "按行渲染；ctx.removeButton 在传了 onRemove 时为删除按钮，请赋给 FormItem.trailing",
   },
   {
     name: "children",
@@ -95,43 +84,94 @@ const FORM_LIST_API: FormDocsApiRow[] = [
     name: "messages",
     type: "Partial<FormListMessages>",
     default: "-",
-    description:
-      "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表（addButtonText 仍优先于 messages.addButton）",
+    description: "本地化文案；addButtonText 仍优先于 messages.addButton",
   },
 ];
 
+/** createForm 演示字段形状（显式泛型，保证 bind().value 为 Signal<string>） */
+type DemoFormValues = {
+  username: string;
+  email: string;
+  password: string;
+  password2: string;
+};
+
+/**
+ * createForm 演示 store（模块级，避免文档页重跑丢失状态）。
+ */
+const demoForm = createForm<DemoFormValues>({
+  initialValues: {
+    username: "",
+    email: "",
+    password: "",
+    password2: "",
+  },
+  fields: {
+    username: {
+      rules: [
+        formRules.required("请输入用户名"),
+        formRules.min(2),
+        formRules.max(32),
+        formRules.pattern(
+          /^[A-Za-z][A-Za-z0-9_]*$/,
+          "字母开头，仅字母数字下划线",
+        ),
+      ],
+    },
+    email: {
+      rules: [formRules.required(), formRules.email()],
+    },
+    password: {
+      rules: [formRules.required(), formRules.min(6, "至少 6 位")],
+    },
+    password2: {
+      rules: [
+        formRules.required("请确认密码"),
+        formRules.equalsField("password"),
+      ],
+    },
+  },
+});
+
+const demoSubmitResult = createSignal("");
+
+/** 绑定变体演示：bind / bindChecked / bindValue */
+type BindVariantValues = {
+  city: string;
+  agree: boolean;
+  notify: boolean;
+  level: string;
+};
+
+const bindVariantForm = createForm<BindVariantValues>({
+  initialValues: {
+    city: "",
+    agree: false,
+    notify: true,
+    level: "a",
+  },
+  fields: {
+    city: { rules: [formRules.required("请选择城市")] },
+    agree: {
+      rules: [
+        formRules.custom((v) => (v === true ? undefined : "请勾选同意")),
+      ],
+    },
+    level: { rules: [formRules.required()] },
+  },
+});
+
 /**
  * FormList 动态行示例的状态。
- *
- * 须放在模块级：View 文档页在依赖（如本 signal）变化时会重新执行整页组件函数；
- * 若把 createSignal 写在组件体内，每次重跑都会新建信号并回到初始值，增删行会「无效」。
  */
 const formListRowValues = createSignal<string[]>(["", ""]);
-
-/**
- * 仅表示行数，只在增删行时更新。
- *
- * 勿用 `items={rowValues.value.length}`：在父组件 JSX 里读 `rowValues.value` 会订阅整份数组，
- * 每次按键都会触发整页重跑；@dreamer/view 对「数组子节点」会整段替换 DOM，导致 Input 失焦。
- * 也勿写 `items={formListLength.value}`：那是首轮数字快照，添加/删除行不会反映到列表。
- * 请把行数 signal 本身传给 `items`（FormList 内部订阅）。
- * 行内文案仍由 {@link formListRowValues} 驱动，Input 的 `value={() => …}` 单独细粒度订阅即可。
- */
 const formListLength = createSignal(formListRowValues.value.length);
 
-/**
- * FormList 示例：添加一行（同步长度信号与数组）。
- */
 function formListDocOnAdd(): void {
   formListRowValues.value = [...formListRowValues.value, ""];
   formListLength.value = formListRowValues.value.length;
 }
 
-/**
- * FormList 示例：删除一行（同步长度信号与数组）。
- *
- * @param index - 要删除的行索引
- */
 function formListDocOnRemove(index: number): void {
   formListRowValues.value = formListRowValues.value.filter((_, j) =>
     j !== index
@@ -139,13 +179,6 @@ function formListDocOnRemove(index: number): void {
   formListLength.value = formListRowValues.value.length;
 }
 
-/**
- * FormList 文档示例的 `renderRow`：须为**模块级稳定函数引用**。
- * 若写在页面组件内的内联箭头函数，每次父级重渲染会换函数引用，易加剧子树协调成本。
- *
- * @param index - 行索引
- * @param ctx - FormList 注入的上下文（含与输入同行的删除按钮）
- */
 function renderFormListDocRow(
   index: number,
   ctx: FormListRenderRowContext,
@@ -173,24 +206,30 @@ function renderFormListDocRow(
 }
 
 const importCode =
-  `import { Form } from "@dreamer/ui-view/form/form";
+  `import { createForm, formRules } from "@dreamer/ui-view/form";
+import { Form } from "@dreamer/ui-view/form/form";
 import { FormItem } from "@dreamer/ui-view/form/form-item";
-import { FormList } from "@dreamer/ui-view/form/form-list";
 import { Input } from "@dreamer/ui-view/form/input";
+import { Password } from "@dreamer/ui-view/form/password";
 
-const rowValues = createSignal<string[]>([""]);
+const form = createForm({
+  initialValues: { email: "", password: "" },
+  fields: {
+    email: { rules: [formRules.required(), formRules.email()] },
+    password: { rules: [formRules.required(), formRules.min(6)] },
+  },
+});
 
-<Form layout="vertical" onSubmit={(e) => { /* 处理提交 */ }}>
-  <FormItem label="名称" id="name">
-    <Input id="name" value={val} onInput={...} />
+<Form form={form} onFinish={async (values) => { /* 提交 values */ }}>
+  <FormItem name="email" label="邮箱">
+    <Input {...form.bind("email")} />
   </FormItem>
+  <FormItem name="password" label="密码">
+    <Password {...form.bind("password")} />
+  </FormItem>
+  <Button type="submit">提交</Button>
 </Form>`;
 
-/**
- * 渲染 API 表格（与其它表单文档页结构一致）。
- *
- * @param rows - 属性行
- */
 function ApiTable({ rows }: { rows: FormDocsApiRow[] }) {
   return (
     <div class="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-600">
@@ -237,7 +276,6 @@ function ApiTable({ rows }: { rows: FormDocsApiRow[] }) {
   );
 }
 
-
 const exampleFormLayout = `<Form layout="horizontal">…</Form>
 <Form layout="vertical">…</Form>
 <Form layout="inline">…</Form>`;
@@ -252,22 +290,65 @@ const exampleFormItem = `<FormItem label="用户名" required labelPosition="top
   <Input />
 </FormItem>`;
 
+const exampleCreateForm = `const form = createForm({
+  initialValues: { username: "", email: "", password: "", password2: "" },
+  fields: {
+    username: { rules: [formRules.required(), formRules.min(2)] },
+    email: { rules: [formRules.required(), formRules.email()] },
+    password: { rules: [formRules.required(), formRules.min(6)] },
+    password2: {
+      rules: [formRules.required(), formRules.equalsField("password")],
+    },
+  },
+});
+
+<Form
+  form={form}
+  onFinish={async (values) => {
+    message.success("已提交");
+    console.log(values);
+  }}
+>
+  <FormItem name="username" label="用户名">
+    <Input {...form.bind("username")} />
+  </FormItem>
+  <FormItem name="email" label="邮箱">
+    <Input {...form.bind("email")} />
+  </FormItem>
+  <FormItem name="password" label="密码">
+    <Password {...form.bind("password")} showStrength />
+  </FormItem>
+  <FormItem name="password2" label="确认密码">
+    <Password {...form.bind("password2")} />
+  </FormItem>
+  <div class="flex gap-2">
+    <Button type="submit" variant="primary">提交</Button>
+    <Button type="button" onClick={() => form.resetFields()}>重置</Button>
+  </div>
+</Form>`;
+
 export default function FormContainersDoc() {
   return (
     <div class="space-y-10 w-full">
       <section>
-        <Title level={1}>Form · FormItem · FormList</Title>
+        <Title level={1}>Form · FormItem · FormList · createForm</Title>
         <Paragraph class="mt-2">
-          表单布局容器 <strong>Form</strong>、表单项包装{" "}
-          <strong>FormItem</strong>（标签、必填星号、错误）、动态行{" "}
-          <strong>FormList</strong>（增删行）。具体输入控件见{" "}
+          表单布局容器 <strong>Form</strong>、表单项{" "}
+          <strong>FormItem</strong>、动态行{" "}
+          <strong>FormList</strong>，以及轻量 store{" "}
+          <strong>createForm</strong>（values / errors / touched、规则校验、
+          <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">
+            form.bind
+          </code>
+          ）。无 store 时 Form/FormItem 仍可纯展示；联用 store 后可少写手写
+          signal 与错误态。具体输入控件见{" "}
           <Link
             href="/desktop/form/input"
             className="text-teal-600 hover:underline dark:text-teal-400"
           >
             Input
           </Link>{" "}
-          等各组件文档。
+          等。
         </Paragraph>
       </section>
 
@@ -286,10 +367,195 @@ export default function FormContainersDoc() {
         <Title level={2}>示例</Title>
 
         <div class="space-y-4">
+          <Title level={3}>createForm：校验 · 绑定 · 提交</Title>
+          <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+            用{" "}
+            <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">
+              createForm
+            </code>{" "}
+            持有状态；FormItem 传{" "}
+            <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">
+              name
+            </code>
+            （及可选{" "}
+            <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">
+              rules
+            </code>
+            ）注册字段并展示错误；控件展开{" "}
+            <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">
+              {"{...form.bind(name)}"}
+            </code>
+            。提交用{" "}
+            <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">
+              onFinish
+            </code>
+            （推荐）或{" "}
+            <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">
+              form.submit
+            </code>
+            。交叉字段用{" "}
+            <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">
+              formRules.equalsField
+            </code>
+            。
+          </Paragraph>
+          <Form
+            form={demoForm}
+            layout="vertical"
+            class="w-full max-w-md border border-dashed border-slate-200 dark:border-slate-600 rounded-lg p-4"
+            onFinish={(values) => {
+              demoSubmitResult.value = JSON.stringify(values);
+              message.success("校验通过，已提交");
+            }}
+          >
+            <FormItem name="username" label="用户名">
+              <Input
+                {...demoForm.bind("username")}
+                placeholder="字母开头"
+              />
+            </FormItem>
+            <FormItem name="email" label="邮箱">
+              <Input
+                {...demoForm.bind("email")}
+                type="email"
+                placeholder="you@example.com"
+              />
+            </FormItem>
+            <FormItem name="password" label="密码">
+              <Password
+                {...demoForm.bind("password")}
+                showStrength
+                newPassword
+                class="w-full"
+              />
+            </FormItem>
+            <FormItem name="password2" label="确认密码">
+              <Password
+                {...demoForm.bind("password2")}
+                class="w-full"
+              />
+            </FormItem>
+            <div class="flex flex-wrap items-center gap-2 pt-1">
+              <Button type="submit" variant="primary">
+                提交
+              </Button>
+              <Button
+                type="button"
+                onClick={() => {
+                  demoForm.resetFields();
+                  demoSubmitResult.value = "";
+                }}
+              >
+                重置
+              </Button>
+              <span class="text-xs text-slate-500 dark:text-slate-400">
+                dirty: {() => String(demoForm.dirty.value)}
+                {" · "}
+                submitting: {() => String(demoForm.submitting.value)}
+              </span>
+            </div>
+            {() =>
+              demoSubmitResult.value
+                ? (
+                  <p class="mt-2 break-all text-xs text-teal-700 dark:text-teal-300">
+                    onFinish values: {demoSubmitResult.value}
+                  </p>
+                )
+                : null}
+          </Form>
+          <CodeBlock
+            title="代码示例"
+            code={exampleCreateForm}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+        </div>
+
+        <div class="space-y-4">
+          <Title level={3}>
+            bind 变体：Select · Checkbox · Switch · RadioGroup
+          </Title>
+          <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+            <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">
+              bind
+            </code>{" "}
+            用于 Event+value；
+            <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">
+              bindChecked
+            </code>{" "}
+            用于 Checkbox/Switch；
+            <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">
+              bindValue
+            </code>{" "}
+            用于 RadioGroup/Cascader/Rate/Upload 等值回调。Transfer 用{" "}
+            <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">
+              bindTargetKeys
+            </code>
+            。
+          </Paragraph>
+          <Form
+            form={bindVariantForm}
+            layout="vertical"
+            class="w-full max-w-md border border-dashed border-slate-200 dark:border-slate-600 rounded-lg p-4"
+            onFinish={() => {
+              message.success("变体表单校验通过");
+            }}
+          >
+            <FormItem name="city" label="城市">
+              <Select
+                {...bindVariantForm.bind("city")}
+                options={[
+                  { value: "sh", label: "上海" },
+                  { value: "bj", label: "北京" },
+                ]}
+                placeholder="请选择"
+              />
+            </FormItem>
+            <FormItem name="agree" label="协议">
+              <Checkbox {...bindVariantForm.bindChecked("agree")}>
+                我已阅读并同意
+              </Checkbox>
+            </FormItem>
+            <FormItem name="notify" label="通知">
+              <Switch {...bindVariantForm.bindChecked("notify")} />
+            </FormItem>
+            <FormItem name="level" label="级别">
+              <RadioGroup
+                {...bindVariantForm.bindValue("level")}
+                options={[
+                  { value: "a", label: "A" },
+                  { value: "b", label: "B" },
+                ]}
+              />
+            </FormItem>
+            <Button type="submit" variant="primary">
+              校验并提交
+            </Button>
+          </Form>
+          <CodeBlock
+            title="代码示例"
+            code={`const form = createForm({
+  initialValues: { city: "", agree: false, notify: true, level: "a" },
+});
+
+<FormItem name="city"><Select {...form.bind("city")} options={…} /></FormItem>
+<FormItem name="agree"><Checkbox {...form.bindChecked("agree")}>同意</Checkbox></FormItem>
+<FormItem name="notify"><Switch {...form.bindChecked("notify")} /></FormItem>
+<FormItem name="level"><RadioGroup {...form.bindValue("level")} options={…} /></FormItem>`}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+        </div>
+
+        <div class="space-y-4">
           <Title level={3}>Form：layout</Title>
           <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
             vertical（默认）、horizontal（md
-            及以上横向）、inline（行内尾对齐）。
+            及以上横向）、inline（行内尾对齐）。无 store 时仍可纯布局使用。
           </Paragraph>
           <div class="grid gap-6 lg:grid-cols-1">
             <div class="space-y-2">
@@ -341,7 +607,14 @@ export default function FormContainersDoc() {
               </Form>
             </div>
           </div>
-          <CodeBlock title="代码示例" code={exampleFormLayout} language="tsx" showLineNumbers copyable wrapLongLines />
+          <CodeBlock
+            title="代码示例"
+            code={exampleFormLayout}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
         </div>
 
         <div class="space-y-4">
@@ -358,18 +631,11 @@ export default function FormContainersDoc() {
             <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">
               labelPosition="outline"
             </code>{" "}
-            把标签嵌进输入框边框左上缺口；{" "}
+            把标签嵌进输入框边框左上缺口。联用 store 时也可只传{" "}
             <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">
-              hideRequiredMark
-            </code>{" "}
-            详见{" "}
-            <Link
-              href="/desktop/form/input"
-              className="text-teal-600 hover:underline dark:text-teal-400"
-            >
-              Input · FormItem：hideRequiredMark
-            </Link>
-            。
+              name
+            </code>
+            ，必填星号由 rules 推断。
           </Paragraph>
           <Form layout="vertical" class="w-full max-w-lg">
             <FormItem
@@ -394,37 +660,32 @@ export default function FormContainersDoc() {
               <Input id="fc-outline" value="" />
             </FormItem>
           </Form>
-          <CodeBlock title="代码示例" code={exampleFormItem} language="tsx" showLineNumbers copyable wrapLongLines />
+          <CodeBlock
+            title="代码示例"
+            code={exampleFormItem}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
         </div>
 
         <div class="space-y-4">
           <Title level={3}>FormList：动态增减行</Title>
           <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
-            父级持有数组状态；<code class="rounded bg-slate-100 px-1 dark:bg-slate-800">
+            父级持有数组状态；
+            <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">
               items
             </code>{" "}
-            传行数或数组长度。按行渲染请用属性{" "}
+            传行数 signal。按行渲染请用{" "}
             <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">
-              renderRow={"{"}…{"}"}
+              renderRow
             </code>
-            （例如{" "}
-            <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">
-              renderRow={"{"}(index, {"{"} removeButton {"}"}) ={">"} …{"}"}
-            </code>
-            ）：View 会把<strong>子节点</strong>编成单参挂载函数{" "}
-            <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">
-              (parent) ={">"} void
-            </code>
-            ，若把按行回调写在子节点里会被当成父节点调用，行内表单不显示。
-            <strong class="font-medium text-slate-800 dark:text-slate-200">
-              {" "}
-              勿在父级 JSX 里写{" "}
-            </strong>
+            。勿写{" "}
             <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">
               items={"{"}rowValues.value.length{"}"}
             </code>
-            ：会订阅整份数组，每次输入都整页重跑，列表 DOM
-            整块重建导致失焦；请用仅在增删时更新的 行数 signal（见下方示例）。
+            ，以免订阅整表导致失焦。
           </Paragraph>
           <Form layout="vertical" class="w-full max-w-xl">
             <FormList
@@ -436,8 +697,7 @@ export default function FormContainersDoc() {
             />
           </Form>
           <CodeBlock
-            code={`// 模块级 createSignal；行数单独 signal，避免 items={rowValues.value.length} 订阅整表、输入失焦
-const rowValues = createSignal<string[]>(["", ""]);
+            code={`const rowValues = createSignal<string[]>(["", ""]);
 const rowCount = createSignal(rowValues.value.length);
 
 function onAdd() {
@@ -451,9 +711,8 @@ function onRemove(i: number) {
 
 function renderRow(index: number, { removeButton }: { removeButton: unknown }) {
   return (
-    <FormItem label={\`条目 \${index + 1}\`} id={\`row-\${index}\`} trailing={removeButton}>
+    <FormItem label={\`条目 \${index + 1}\`} trailing={removeButton}>
       <Input
-        id={\`row-\${index}\`}
         value={() => rowValues.value[index] ?? ""}
         onInput={(e) => {
           const next = [...rowValues.value];
@@ -465,12 +724,7 @@ function renderRow(index: number, { removeButton }: { removeButton: unknown }) {
   );
 }
 
-<FormList
-  items={rowCount}
-  onAdd={onAdd}
-  onRemove={onRemove}
-  renderRow={renderRow}
-/>`}
+<FormList items={rowCount} onAdd={onAdd} onRemove={onRemove} renderRow={renderRow} />`}
             language="tsx"
             showLineNumbers
             copyable
@@ -483,7 +737,7 @@ function renderRow(index: number, { removeButton }: { removeButton: unknown }) {
       <section class="space-y-6">
         <Title level={2}>API</Title>
         <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
-          以下三表分别对应三个组件，属性均为可选（除 FormList.items 需传入）。
+          Form / FormItem 无 store 时行为与升级前兼容；createForm 为可选增强层。
         </Paragraph>
 
         <div class="space-y-2">
@@ -496,11 +750,26 @@ function renderRow(index: number, { removeButton }: { removeButton: unknown }) {
           <ApiTable rows={FORM_ITEM_API} />
         </div>
 
-      <DocsMessagesSection
-        interfaceName="FormListMessages"
-        defaultExportName="defaultFormListMessages"
-        rows={MESSAGES_FORM_LIST}
-      />
+        <div class="space-y-2">
+          <Title level={3}>createForm(options)</Title>
+          <ApiTable rows={CREATE_FORM_OPTIONS_API} />
+        </div>
+
+        <div class="space-y-2">
+          <Title level={3}>FormStore</Title>
+          <ApiTable rows={FORM_STORE_API} />
+        </div>
+
+        <div class="space-y-2">
+          <Title level={3}>formRules</Title>
+          <ApiTable rows={FORM_RULES_API} />
+        </div>
+
+        <DocsMessagesSection
+          interfaceName="FormListMessages"
+          defaultExportName="defaultFormListMessages"
+          rows={MESSAGES_FORM_LIST}
+        />
 
         <div class="space-y-2">
           <Title level={3}>FormList</Title>

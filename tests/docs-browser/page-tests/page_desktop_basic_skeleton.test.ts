@@ -66,7 +66,6 @@ describe("文档页 E2E：/desktop/basic/skeleton（Skeleton 骨架屏）", () =
     expect(ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
 
-
   /**
    * UI·骨架块可见有尺寸。
    */
@@ -80,15 +79,18 @@ describe("文档页 E2E：/desktop/basic/skeleton（Skeleton 骨架屏）", () =
       if (!main) return { ok: false };
       // skeleton 多为 animate-pulse / rounded 块
       const blocks = Array.from(
-        main.querySelectorAll('[class*="animate-pulse"], [class*="skeleton"], [aria-busy="true"]'),
+        main.querySelectorAll(
+          '[class*="animate-pulse"], [class*="skeleton"], [aria-busy="true"]',
+        ),
       ) as HTMLElement[];
       const ok = blocks.some((el) => {
         const r = el.getBoundingClientRect();
         return r.width > 20 && r.height > 8;
-      }) || ((main.innerText || "").length > 40 && main.getBoundingClientRect().height > 80);
+      }) ||
+        ((main.innerText || "").length > 40 &&
+          main.getBoundingClientRect().height > 80);
       return { ok, n: blocks.length };
     }) as { ok: boolean };
     expect(got.ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
-
 });

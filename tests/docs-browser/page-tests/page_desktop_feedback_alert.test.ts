@@ -692,5 +692,4 @@ describe("文档页 E2E：/desktop/feedback/alert（Alert 警告）", () => {
     }) as { ok: boolean };
     expect(got.ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
-
 });

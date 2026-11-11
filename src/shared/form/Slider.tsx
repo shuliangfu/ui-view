@@ -13,11 +13,17 @@
  * 父级传 `createSignal` 时，拖动中由内部 rAF 调用 `commitMaybeSignal` 更新该 Signal（**无需**再传 `onInput` 才能跟手）；`onInput` 仅用于额外回调（合成事件等）。
  */
 
-import { createEffect, createRef } from "@dreamer/view";
-import type { JSXRenderable } from "@dreamer/view";
+import {
+  createEffect,
+  createRef,
+  type JSXRenderable,
+  useContext,
+} from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import type { SizeVariant } from "../types.ts";
 import { resolveFormControlSize } from "./form-control-context.ts";
+import { FormItemControlIdContext } from "./form-item-control-id.ts";
+import { controlErrorBorder } from "./input-focus-ring.ts";
 import { commitMaybeSignal, type MaybeSignal } from "./maybe-signal.ts";
 
 /**
@@ -59,12 +65,16 @@ export interface SliderProps {
   onChange?: (e: Event) => void;
   /** 拖动过程回调（经 rAF 合并）；需要拖动时同步父级 state 时请用本回调。range 时合成事件 target.value 为 [minVal, maxVal] */
   onInput?: (e: Event) => void;
+  /** 失焦回调（可用于 blur 校验） */
+  onBlur?: (e: Event) => void;
   /** 额外 class（作用于容器） */
   class?: string;
   /** 原生 name */
   name?: string;
   /** 原生 id */
   id?: string;
+  /** 错误状态（容器/轨道红框）；可与 FormItem / createForm bind 联用 */
+  error?: boolean;
   /** 多语言/自定义文案；未传字段走 {@link defaultSliderMessages} */
   messages?: Partial<SliderMessages>;
 }
@@ -94,16 +104,24 @@ const sliderTrackH: Record<SizeVariant, string> = {
   lg: "h-2.5",
 };
 const sliderThumbWh: Record<SizeVariant, string> = {
-  xs: "[&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:w-3 [&::-moz-range-thumb]:h-3 [&::-moz-range-thumb]:w-3",
-  sm: "[&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4",
-  md: "[&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-5 [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:w-5",
-  lg: "[&::-webkit-slider-thumb]:h-6 [&::-webkit-slider-thumb]:w-6 [&::-moz-range-thumb]:h-6 [&::-moz-range-thumb]:w-6",
+  xs:
+    "[&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:w-3 [&::-moz-range-thumb]:h-3 [&::-moz-range-thumb]:w-3",
+  sm:
+    "[&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4",
+  md:
+    "[&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-5 [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:w-5",
+  lg:
+    "[&::-webkit-slider-thumb]:h-6 [&::-webkit-slider-thumb]:w-6 [&::-moz-range-thumb]:h-6 [&::-moz-range-thumb]:w-6",
 };
 const sliderThumbMt: Record<SizeVariant, string> = {
-  xs: "[&::-webkit-slider-thumb]:-mt-[4px] [&::-webkit-slider-runnable-track]:h-1 [&::-moz-range-track]:h-1",
-  sm: "[&::-webkit-slider-thumb]:-mt-[5px] [&::-webkit-slider-runnable-track]:h-1.5 [&::-moz-range-track]:h-1.5",
-  md: "[&::-webkit-slider-thumb]:-mt-[6px] [&::-webkit-slider-runnable-track]:h-2 [&::-moz-range-track]:h-2",
-  lg: "[&::-webkit-slider-thumb]:-mt-[7px] [&::-webkit-slider-runnable-track]:h-2.5 [&::-moz-range-track]:h-2.5",
+  xs:
+    "[&::-webkit-slider-thumb]:-mt-[4px] [&::-webkit-slider-runnable-track]:h-1 [&::-moz-range-track]:h-1",
+  sm:
+    "[&::-webkit-slider-thumb]:-mt-[5px] [&::-webkit-slider-runnable-track]:h-1.5 [&::-moz-range-track]:h-1.5",
+  md:
+    "[&::-webkit-slider-thumb]:-mt-[6px] [&::-webkit-slider-runnable-track]:h-2 [&::-moz-range-track]:h-2",
+  lg:
+    "[&::-webkit-slider-thumb]:-mt-[7px] [&::-webkit-slider-runnable-track]:h-2.5 [&::-moz-range-track]:h-2.5",
 };
 const sliderHitH: Record<SizeVariant, string> = {
   xs: "h-7",
@@ -175,7 +193,12 @@ function armPointerDragEnd(flag: { current: boolean }) {
 
 export function Slider(props: SliderProps): JSXRenderable {
   const size = resolveFormControlSize(props.size);
-  const sizeTrack = twMerge(sliderThumbWh[size], sliderThumbMt[size], sliderTrackH[size]);
+  const sizeTrack = twMerge(
+    sliderThumbWh[size],
+    sliderThumbMt[size],
+    sliderTrackH[size],
+  );
+  const fromFormItem = useContext(FormItemControlIdContext);
   const singleInputRef = createRef<HTMLInputElement>();
   const rangeLowRef = createRef<HTMLInputElement>();
   const rangeHighRef = createRef<HTMLInputElement>();
@@ -355,12 +378,21 @@ export function Slider(props: SliderProps): JSXRenderable {
       range = false,
       onChange,
       onInput,
+      onBlur,
       class: className,
       name,
       id,
+      error = false,
       messages,
     } = props;
     const m = { ...defaultSliderMessages, ...messages };
+    const resolvedId = id ?? fromFormItem;
+    const errorRingCls = error
+      ? twMerge(
+        "rounded-full ring-1 ring-red-500 dark:ring-red-500",
+        controlErrorBorder,
+      )
+      : "";
 
     const clamp = (v: number) => Math.min(max, Math.max(min, v));
 
@@ -454,43 +486,66 @@ export function Slider(props: SliderProps): JSXRenderable {
 
       if (!vertical) {
         return (
-          <div class={twMerge("relative w-full py-1", className)}>
+          <div
+            id={resolvedId}
+            class={twMerge("relative w-full py-1", errorRingCls, className)}
+            aria-invalid={error}
+          >
             <div class={twMerge("relative w-full", sliderHitH[size])}>
               <div
-                class={twMerge("pointer-events-none absolute left-0 right-0 top-1/2 -translate-y-1/2 rounded-full bg-slate-200 dark:bg-slate-600", sliderTrackH[size])}
+                class={twMerge(
+                  "pointer-events-none absolute left-0 right-0 top-1/2 -translate-y-1/2 rounded-full bg-slate-200 dark:bg-slate-600",
+                  sliderTrackH[size],
+                )}
                 aria-hidden="true"
               />
               <div
                 ref={rangeFillBarRef}
-                class={twMerge("pointer-events-none absolute top-1/2 -translate-y-1/2 rounded-full bg-blue-600 dark:bg-blue-500", sliderTrackH[size])}
+                class={twMerge(
+                  "pointer-events-none absolute top-1/2 -translate-y-1/2 rounded-full bg-blue-600 dark:bg-blue-500",
+                  sliderTrackH[size],
+                )}
                 style={{ left: "0%", width: "0%" }}
                 aria-hidden="true"
               />
               <input
                 ref={rangeLowRef}
                 type="range"
+                name={name}
                 aria-label={m.rangeMin}
+                aria-invalid={error}
                 min={min}
                 max={max}
                 step={step}
                 disabled={disabled}
-                class={twMerge(rangeOverlayThumbCls, sizeTrack, sliderHitH[size])}
+                class={twMerge(
+                  rangeOverlayThumbCls,
+                  sizeTrack,
+                  sliderHitH[size],
+                )}
                 onPointerDown={onRangePointerDown}
                 onInput={onLowInput}
                 onChange={onLowChange}
+                onBlur={onBlur}
               />
               <input
                 ref={rangeHighRef}
                 type="range"
                 aria-label={m.rangeMax}
+                aria-invalid={error}
                 min={min}
                 max={max}
                 step={step}
                 disabled={disabled}
-                class={twMerge(rangeOverlayThumbCls, sizeTrack, sliderHitH[size])}
+                class={twMerge(
+                  rangeOverlayThumbCls,
+                  sizeTrack,
+                  sliderHitH[size],
+                )}
                 onPointerDown={onRangePointerDown}
                 onInput={onHighInput}
                 onChange={onHighChange}
+                onBlur={onBlur}
               />
             </div>
           </div>
@@ -498,12 +553,18 @@ export function Slider(props: SliderProps): JSXRenderable {
       }
 
       return (
-        <div class={twMerge(wrapperCls, className)}>
+        <div
+          id={resolvedId}
+          class={twMerge(wrapperCls, errorRingCls, className)}
+          aria-invalid={error}
+        >
           <div class={singleWrapCls}>
             <input
               ref={rangeLowRef}
               type="range"
+              name={name}
               aria-label={m.rangeMin}
+              aria-invalid={error}
               min={min}
               max={max}
               step={step}
@@ -512,6 +573,7 @@ export function Slider(props: SliderProps): JSXRenderable {
               onPointerDown={onRangePointerDown}
               onInput={onLowInput}
               onChange={onLowChange}
+              onBlur={onBlur}
             />
           </div>
           <div class={singleWrapCls}>
@@ -519,6 +581,7 @@ export function Slider(props: SliderProps): JSXRenderable {
               ref={rangeHighRef}
               type="range"
               aria-label={m.rangeMax}
+              aria-invalid={error}
               min={min}
               max={max}
               step={step}
@@ -527,6 +590,7 @@ export function Slider(props: SliderProps): JSXRenderable {
               onPointerDown={onRangePointerDown}
               onInput={onHighInput}
               onChange={onHighChange}
+              onBlur={onBlur}
             />
           </div>
         </div>
@@ -538,7 +602,10 @@ export function Slider(props: SliderProps): JSXRenderable {
       ? twMerge(trackCls, sizeTrack, "w-40", sliderTrackH[size])
       : twMerge(trackCls, trackHorizontalCls, sizeTrack);
     const wrapperCls = vertical
-      ? twMerge("inline-flex justify-center items-center h-40 min-h-40 min-w-5 shrink-0 [&>input]:rotate-[-90deg] [&>input]:w-40", `[&>input]:${sliderTrackH[size]}`)
+      ? twMerge(
+        "inline-flex justify-center items-center h-40 min-h-40 min-w-5 shrink-0 [&>input]:rotate-[-90deg] [&>input]:w-40",
+        `[&>input]:${sliderTrackH[size]}`,
+      )
       : "";
 
     /**
@@ -567,26 +634,32 @@ export function Slider(props: SliderProps): JSXRenderable {
       <input
         ref={singleInputRef}
         type="range"
-        id={id}
+        id={resolvedId}
         name={name}
         min={min}
         max={max}
         step={step}
         disabled={disabled}
+        aria-invalid={error}
         class={twMerge(
           trackClsWithDir,
           !vertical && "w-full",
+          errorRingCls,
           !vertical && className,
         )}
         onPointerDown={onSinglePointerDown}
         onChange={handleSingleChange}
         onInput={handleSingleInput}
+        onBlur={onBlur}
       />
     );
 
     if (vertical) {
       return (
-        <div class={twMerge(wrapperCls, className)}>
+        <div
+          class={twMerge(wrapperCls, errorRingCls, className)}
+          aria-invalid={error}
+        >
           {input}
         </div>
       );

@@ -500,5 +500,4 @@ describe("文档页 E2E：/desktop/message/message（Message 全局提示）", (
     }) as { ok: boolean };
     expect(got.ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
-
 });

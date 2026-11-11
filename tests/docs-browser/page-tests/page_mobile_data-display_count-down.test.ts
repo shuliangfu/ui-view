@@ -106,5 +106,4 @@ describe("文档页 E2E：/mobile/data-display/count-down（CountDown 倒计时�
     }) as { ok: boolean };
     expect(got.ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
-
 });

@@ -236,9 +236,7 @@ describe("文档页 E2E：/desktop/navigation/menu（Menu 菜单）", () => {
         const buttons = Array.from(
           nav.querySelectorAll("button[type='button']"),
         ) as (HTMLButtonElement & { __onclick?: (ev: Event) => void })[];
-        const b = buttons.find((x) =>
-          (x.textContent || "").includes("子菜单")
-        );
+        const b = buttons.find((x) => (x.textContent || "").includes("子菜单"));
         if (!b || b.disabled) return false;
         if (typeof b.__onclick === "function") {
           b.__onclick(
@@ -430,5 +428,4 @@ describe("文档页 E2E：/desktop/navigation/menu（Menu 菜单）", () => {
     }) as { ok: boolean };
     expect(got.ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
-
 });

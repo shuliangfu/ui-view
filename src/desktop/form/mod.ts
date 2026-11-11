@@ -48,8 +48,8 @@ export type {
   UploadProps,
 } from "./Upload.tsx";
 export {
-  DEFAULT_UPLOAD_CHUNK_SIZE,
   DEFAULT_UI_VIEW_UPLOAD_BASE_PATH,
+  DEFAULT_UPLOAD_CHUNK_SIZE,
   defaultGetUploadResultUrl,
   fileMatchesAccept,
   formatUploadFileSize,
@@ -77,6 +77,28 @@ export type {
 } from "./FormItem.tsx";
 export { FormList } from "./FormList.tsx";
 export type { FormListProps, FormListRenderRowContext } from "./FormList.tsx";
+export {
+  createForm,
+  formRules,
+  FormStoreContext,
+  runFormRules,
+  useFormStore,
+} from "../../shared/form/mod.ts";
+export type {
+  CreateFormOptions,
+  FormFieldBind,
+  FormFieldBindChecked,
+  FormFieldBindTargetKeys,
+  FormFieldBindValue,
+  FormFieldMeta,
+  FormRule,
+  FormStore,
+  FormValidateFail,
+  FormValidateOk,
+  FormValidateResult,
+  FormValidateTrigger,
+  FormValues,
+} from "../../shared/form/mod.ts";
 export { RichTextEditor } from "./RichTextEditor.tsx";
 export type {
   RichTextEditorProps,

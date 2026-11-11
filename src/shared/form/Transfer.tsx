@@ -11,15 +11,19 @@
  *    `onSearch` 用 `queueMicrotask` 推迟。
  */
 
-import { createSignal, getDocument, type Signal } from "@dreamer/view";
 import {
-  readSignalValue,
-  writeSignalValue,
-} from "../safe-signal.ts";
-import type { JSXRenderable } from "@dreamer/view";
+  createSignal,
+  getDocument,
+  type JSXRenderable,
+  type Signal,
+  useContext,
+} from "@dreamer/view";
+import { readSignalValue, writeSignalValue } from "../safe-signal.ts";
 import { twMerge } from "tailwind-merge";
 import type { SizeVariant } from "../types.ts";
 import { resolveFormControlSize } from "./form-control-context.ts";
+import { FormItemControlIdContext } from "./form-item-control-id.ts";
+import { controlErrorBorder } from "./input-focus-ring.ts";
 import { commitMaybeSignal, type MaybeSignal } from "./maybe-signal.ts";
 
 export interface TransferItem {
@@ -92,6 +96,10 @@ export interface TransferProps {
   listStyle?: { width?: number; height?: number };
   /** 是否禁用 */
   disabled?: boolean;
+  /** 错误状态（外框红边）；可与 FormItem / createForm bindTargetKeys 联用 */
+  error?: boolean;
+  /** 控件 id（label for）；未传时取 FormItemControlIdContext */
+  id?: string;
   /** 额外 class */
   class?: string;
   /** 多语言/自定义文案；未传字段走 {@link defaultTransferMessages} */
@@ -195,7 +203,12 @@ function TransferColumn(props: TransferColumnProps) {
       class={twMerge(transferListShellCls, "min-w-0 shrink-0")}
       style={{ width: `${listStyle.width ?? 200}px` }}
     >
-      <div class={twMerge("border-b border-slate-200 dark:border-slate-600 font-medium text-slate-700 dark:text-slate-300", transferTitleCls[size])}>
+      <div
+        class={twMerge(
+          "border-b border-slate-200 dark:border-slate-600 font-medium text-slate-700 dark:text-slate-300",
+          transferTitleCls[size],
+        )}
+      >
         {title}
       </div>
       {showSearch && (
@@ -203,7 +216,10 @@ function TransferColumn(props: TransferColumnProps) {
           type="text"
           role="searchbox"
           autocomplete="off"
-          class={twMerge("m-2 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 w-[calc(100%-1rem)]", transferSearchCls[size])}
+          class={twMerge(
+            "m-2 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 w-[calc(100%-1rem)]",
+            transferSearchCls[size],
+          )}
           placeholder={searchPlaceholder}
           value={() => readSignalValue(searchRef) ?? ""}
           onInput={(e: Event) => {
@@ -239,7 +255,10 @@ function TransferColumn(props: TransferColumnProps) {
                       <button
                         type="button"
                         class={twMerge(
-                          twMerge("w-full text-left rounded cursor-pointer border-0 bg-transparent", transferItemCls[size]),
+                          twMerge(
+                            "w-full text-left rounded cursor-pointer border-0 bg-transparent",
+                            transferItemCls[size],
+                          ),
                           item.disabled || disabled
                             ? "opacity-60 cursor-not-allowed"
                             : "hover:bg-slate-100 dark:hover:bg-slate-700",
@@ -288,10 +307,14 @@ export function Transfer(props: TransferProps): JSXRenderable {
     render,
     listStyle = { width: 200, height: 200 },
     disabled = false,
+    error = false,
+    id,
     class: className,
     messages,
   } = props;
   const size = resolveFormControlSize(props.size);
+  const fromFormItem = useContext(FormItemControlIdContext);
+  const resolvedId = id ?? fromFormItem;
   const m = { ...defaultTransferMessages, ...messages };
   const titles: [string, string] = props.titles ??
     [m.sourceTitle, m.targetTitle];
@@ -344,11 +367,18 @@ export function Transfer(props: TransferProps): JSXRenderable {
 
     return (
       <div
+        id={resolvedId}
         class={twMerge(
-          "transfer flex items-stretch gap-4",
+          "transfer flex items-stretch gap-4 rounded-lg",
           disabled && "opacity-60 pointer-events-none",
+          error &&
+            twMerge(
+              "p-1 ring-1 ring-red-500 dark:ring-red-500",
+              controlErrorBorder,
+            ),
           className,
         )}
+        aria-invalid={error}
       >
         <TransferColumn
           title={titles[0]}
@@ -386,15 +416,13 @@ export function Transfer(props: TransferProps): JSXRenderable {
               {
                 const selected = readSignalValue(leftSelectedKeysRef) ?? [];
                 moveToRight(
-                  selected.length > 0
-                    ? selected
-                    : filterTransferItems(
-                      leftRaw,
-                      readSignalValue(leftSearchRef) ?? "",
-                      filterOption,
-                    )
-                      .filter((i) => !i.disabled)
-                      .map((i) => i.key),
+                  selected.length > 0 ? selected : filterTransferItems(
+                    leftRaw,
+                    readSignalValue(leftSearchRef) ?? "",
+                    filterOption,
+                  )
+                    .filter((i) => !i.disabled)
+                    .map((i) => i.key),
                 );
               }
             }}
@@ -410,15 +438,13 @@ export function Transfer(props: TransferProps): JSXRenderable {
               {
                 const selected = readSignalValue(rightSelectedKeysRef) ?? [];
                 moveToLeft(
-                  selected.length > 0
-                    ? selected
-                    : filterTransferItems(
-                      rightRaw,
-                      readSignalValue(rightSearchRef) ?? "",
-                      filterOption,
-                    )
-                      .filter((i) => !i.disabled)
-                      .map((i) => i.key),
+                  selected.length > 0 ? selected : filterTransferItems(
+                    rightRaw,
+                    readSignalValue(rightSearchRef) ?? "",
+                    filterOption,
+                  )
+                    .filter((i) => !i.disabled)
+                    .map((i) => i.key),
                 );
               }
             }}

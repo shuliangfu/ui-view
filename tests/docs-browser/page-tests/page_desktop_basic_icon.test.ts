@@ -66,7 +66,6 @@ describe("文档页 E2E：/desktop/basic/icon（Icon 图标）", () => {
     expect(ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
 
-
   /**
    * UI·图标／图形 svg 可见有尺寸。
    */
@@ -76,7 +75,9 @@ describe("文档页 E2E：/desktop/basic/icon（Icon 图标）", () => {
     await sharedEnv.waitDocMainReady(t);
     await sharedEnv.delay(150);
     const got = await t.browser.evaluate(() => {
-      const svgs = Array.from(document.querySelectorAll("main svg")) as SVGElement[];
+      const svgs = Array.from(
+        document.querySelectorAll("main svg"),
+      ) as SVGElement[];
       const ok = svgs.some((s) => {
         const r = s.getBoundingClientRect();
         return r.width >= 8 && r.height >= 8;
@@ -85,5 +86,4 @@ describe("文档页 E2E：/desktop/basic/icon（Icon 图标）", () => {
     }) as { ok: boolean };
     expect(got.ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
-
 });

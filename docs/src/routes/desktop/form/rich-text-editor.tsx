@@ -3,13 +3,16 @@
  * 路由: /desktop/form/rich-text-editor
  */
 
-import { Paragraph, Title } from "@dreamer/ui-view/basic";
+import { Button, Link, Paragraph, Title } from "@dreamer/ui-view/basic";
 
+import { createForm } from "@dreamer/ui-view/form/create-form";
 import { Form } from "@dreamer/ui-view/form/form";
 import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { formRules } from "@dreamer/ui-view/form/form-rules";
 import { RichTextEditor } from "@dreamer/ui-view/form/rich-text-editor";
 
 import { CodeBlock } from "@dreamer/ui-view/data-display";
+import { message } from "@dreamer/ui-view/feedback";
 import { createSignal } from "@dreamer/view";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_RICH_TEXT_EDITOR } from "../../../data/component-messages-rows.ts";
@@ -122,6 +125,12 @@ const RICH_TEXT_EDITOR_API: ApiRow[] = [
   { name: "name", type: "string", default: "-", description: "原生 name" },
   { name: "id", type: "string", default: "-", description: "原生 id" },
   {
+    name: "error",
+    type: "boolean",
+    default: "false",
+    description: "错误状态（红框）；可与 createForm 绑定联用",
+  },
+  {
     name: "messages",
     type: "Partial<RichTextEditorMessages>",
     default: "-",
@@ -129,8 +138,7 @@ const RICH_TEXT_EDITOR_API: ApiRow[] = [
   },
 ];
 
-const importCode =
-  `import { Form } from "@dreamer/ui-view/form/form";
+const importCode = `import { Form } from "@dreamer/ui-view/form/form";
 import { FormItem } from "@dreamer/ui-view/form/form-item";
 import { RichTextEditor } from "@dreamer/ui-view/form/rich-text-editor";
 import { DEFAULT_UI_VIEW_UPLOAD_BASE_PATH } from "@dreamer/ui-view/form/upload";
@@ -146,6 +154,36 @@ const html = createSignal("<p>初始</p>");
   />
 </FormItem>`;
 
+/** createForm 演示字段（模块级） */
+type RichTextDemoValues = { html: string };
+
+/** RichTextEditor + bindValue 联用演示 store */
+const richTextDemoForm = createForm<RichTextDemoValues>({
+  initialValues: { html: "" },
+  fields: { html: { rules: [formRules.required("请填写正文")] } },
+});
+
+/** 与 createForm 示例的 CodeBlock 源码 */
+const exampleCreateForm =
+  `import { createForm, formRules } from "@dreamer/ui-view/form";
+import { Form } from "@dreamer/ui-view/form/form";
+import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { RichTextEditor } from "@dreamer/ui-view/form/rich-text-editor";
+import { Button } from "@dreamer/ui-view/basic";
+import { message } from "@dreamer/ui-view/feedback";
+
+const form = createForm({
+  initialValues: { html: "" },
+  fields: { html: { rules: [formRules.required("请填写正文")] } },
+});
+
+<Form form={form} onFinish={() => { message.success("已提交"); }}>
+  <FormItem name="html" label="正文">
+    <RichTextEditor {...form.bindValue("html")} placeholder="请输入" minHeight="160px" />
+  </FormItem>
+  <Button type="submit" variant="primary">提交</Button>
+</Form>`;
+
 export default function FormRichTextEditor() {
   const val = createSignal("");
   const valSimple = createSignal("");
@@ -158,7 +196,18 @@ export default function FormRichTextEditor() {
         <Paragraph class="mt-2">
           富文本编辑器：value、onChange、toolbarPreset（default/simple/full）、toolbar、placeholder、disabled、readOnly、minHeight、maxHeight、onInsertImage、uploadAction、onUploadImage、onPasteImage。宽度由
           class 控制，表单中需占满一列时传 class="w-full"。Tailwind v4 +
-          light/dark。
+          light/dark。与{" "}
+          <Link
+            href="/desktop/form/form-containers"
+            className="text-teal-600 hover:underline dark:text-teal-400"
+          >
+            Form / createForm
+          </Link>{" "}
+          联用时展开{" "}
+          <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">
+            {"{...form.bindValue(name)}"}
+          </code>
+          。
         </Paragraph>
       </section>
 
@@ -175,6 +224,37 @@ export default function FormRichTextEditor() {
 
       <section class="space-y-8">
         <Title level={2}>示例</Title>
+
+        <section class="space-y-4">
+          <Title level={3}>与 createForm</Title>
+          <Form
+            form={richTextDemoForm}
+            layout="vertical"
+            class="w-full max-w-md border border-dashed border-slate-200 dark:border-slate-600 rounded-lg p-4"
+            onFinish={() => {
+              message.success("已提交");
+            }}
+          >
+            <FormItem name="html" label="正文">
+              <RichTextEditor
+                {...richTextDemoForm.bindValue("html")}
+                placeholder="请输入"
+                minHeight="160px"
+              />
+            </FormItem>
+            <Button type="submit" variant="primary">
+              提交
+            </Button>
+          </Form>
+          <CodeBlock
+            title="代码示例"
+            code={exampleCreateForm}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+        </section>
 
         <Form layout="vertical" class="w-full space-y-6">
           <section class="space-y-4">
@@ -277,16 +357,36 @@ export default function FormRichTextEditor() {
           <section class="space-y-4">
             <Title level={3}>size（xs / sm / md / lg）</Title>
             <FormItem label="xs">
-              <RichTextEditor size="xs" toolbarPreset="simple" placeholder="xs" minHeight="120px" />
+              <RichTextEditor
+                size="xs"
+                toolbarPreset="simple"
+                placeholder="xs"
+                minHeight="120px"
+              />
             </FormItem>
             <FormItem label="sm">
-              <RichTextEditor size="sm" toolbarPreset="simple" placeholder="sm" minHeight="120px" />
+              <RichTextEditor
+                size="sm"
+                toolbarPreset="simple"
+                placeholder="sm"
+                minHeight="120px"
+              />
             </FormItem>
             <FormItem label="md（默认）">
-              <RichTextEditor size="md" toolbarPreset="simple" placeholder="md" minHeight="120px" />
+              <RichTextEditor
+                size="md"
+                toolbarPreset="simple"
+                placeholder="md"
+                minHeight="120px"
+              />
             </FormItem>
             <FormItem label="lg">
-              <RichTextEditor size="lg" toolbarPreset="simple" placeholder="lg" minHeight="120px" />
+              <RichTextEditor
+                size="lg"
+                toolbarPreset="simple"
+                placeholder="lg"
+                minHeight="120px"
+              />
             </FormItem>
             <CodeBlock
               title="代码示例"

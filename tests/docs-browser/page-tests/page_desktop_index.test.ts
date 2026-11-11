@@ -66,7 +66,6 @@ describe("文档页 E2E：/desktop/index（DesktopIndex 桌面文档首页）", 
     expect(ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
 
-
   /**
    * UI·壳页／导航页 main 可见（非组件交互页）。
    */
@@ -91,5 +90,4 @@ describe("文档页 E2E：/desktop/index（DesktopIndex 桌面文档首页）", 
     }) as { ok: boolean };
     expect(got.ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
-
 });

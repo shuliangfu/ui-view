@@ -89,7 +89,6 @@ describe("文档页 E2E：/desktop/basic/flag-img（FlagImg 国旗）", () => {
     expect(ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
 
-
   /**
    * UI·国旗图可见有尺寸。
    */
@@ -110,5 +109,4 @@ describe("文档页 E2E：/desktop/basic/flag-img（FlagImg 国旗）", () => {
     }) as { ok: boolean };
     expect(got.ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
-
 });

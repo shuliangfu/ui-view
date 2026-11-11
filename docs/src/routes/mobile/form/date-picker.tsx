@@ -3,8 +3,13 @@
  */
 
 import { DatePicker } from "@dreamer/ui-view/mobile/form/date-picker";
-import { Paragraph, Title } from "@dreamer/ui-view/mobile/basic";
+import { Form } from "@dreamer/ui-view/mobile/form/form";
+import { FormItem } from "@dreamer/ui-view/mobile/form/form-item";
+import { Button, Link, Paragraph, Title } from "@dreamer/ui-view/mobile/basic";
 import { CodeBlock } from "@dreamer/ui-view/mobile/data-display";
+import { createForm } from "@dreamer/ui-view/form/create-form";
+import { formRules } from "@dreamer/ui-view/form/form-rules";
+import { message } from "@dreamer/ui-view/feedback";
 import { createSignal } from "@dreamer/view";
 import {
   DocsApiTable,
@@ -16,6 +21,17 @@ import {
   MESSAGES_DATE_PICKER,
   MESSAGES_PICKER_CALENDAR_NAV,
 } from "../../../data/component-messages-rows.ts";
+
+/** createForm 演示字段 */
+type DatePickerCreateFormValues = { day: string };
+
+/** 与 createForm 联用演示 store */
+const datePickerCreateForm = createForm<DatePickerCreateFormValues>({
+  initialValues: { day: "" },
+  fields: {
+    day: { rules: [formRules.required("请选择日期")] },
+  },
+});
 
 /**
  * 文档示例：当前本地日期的 YYYY-MM-DD。
@@ -107,7 +123,8 @@ const DATEPICKER_API: DocsApiTableRow[] = [
   },
 ];
 
-const importCode = `import { DatePicker } from "@dreamer/ui-view/mobile/form/date-picker";
+const importCode =
+  `import { DatePicker } from "@dreamer/ui-view/mobile/form/date-picker";
 import { createSignal } from "@dreamer/view";
 
 const val = createSignal("2026-04-09");
@@ -116,7 +133,6 @@ const val = createSignal("2026-04-09");
 
 /** 文档页受控值须模块级，与桌面 DatePicker 示例一致 */
 const mobileDatePickerVal = createSignal(localTodayYmd());
-
 
 const exampleNestedMessages = `<DatePicker
   messages={{
@@ -138,7 +154,25 @@ export default function MobileDatePickerDoc() {
             format
           </code>、
           <code class="text-sm">panelAttach</code>{" "}
-          等；细节见桌面 DatePicker 文档。
+          等；细节见桌面 DatePicker 文档。与{" "}
+          <Link
+            href="/mobile/form/form-containers"
+            className="text-teal-600 hover:underline dark:text-teal-400"
+          >
+            Form / createForm（移动）
+          </Link>
+          、
+          <Link
+            href="/desktop/form/form-containers"
+            className="text-teal-600 hover:underline dark:text-teal-400"
+          >
+            桌面 Form 容器
+          </Link>{" "}
+          联用：展开{" "}
+          <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">
+            {"{...form.bind(name)}"}
+          </code>
+          。
         </Paragraph>
       </section>
 
@@ -155,6 +189,53 @@ export default function MobileDatePickerDoc() {
 
       <section class="space-y-8">
         <Title level={2}>示例</Title>
+
+        <div class="space-y-4">
+          <Title level={3}>与 createForm</Title>
+          <MobileDocDemo>
+            <Form
+              form={datePickerCreateForm}
+              layout="vertical"
+              class="w-full"
+              onFinish={() => {
+                message.success("已提交");
+              }}
+            >
+              <FormItem name="day" label="日期">
+                <DatePicker
+                  {...datePickerCreateForm.bind("day")}
+                  class="w-full"
+                />
+              </FormItem>
+              <Button type="submit" variant="primary" class="w-full">
+                提交
+              </Button>
+            </Form>
+          </MobileDocDemo>
+          <CodeBlock
+            title="代码示例"
+            code={`import { createForm } from "@dreamer/ui-view/form/create-form";
+import { formRules } from "@dreamer/ui-view/form/form-rules";
+import { Form } from "@dreamer/ui-view/mobile/form/form";
+import { FormItem } from "@dreamer/ui-view/mobile/form/form-item";
+import { DatePicker } from "@dreamer/ui-view/mobile/form/date-picker";
+
+const form = createForm({
+  initialValues: { day: "" },
+  fields: { day: { rules: [formRules.required()] } },
+});
+
+<Form form={form} onFinish={() => { message.success("已提交"); }}>
+  <FormItem name="day" label="日期">
+    <DatePicker {...form.bind("day")} />
+  </FormItem>
+</Form>`}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+        </div>
 
         <div class="space-y-4">
           <Title level={3}>单日（Signal）</Title>
@@ -216,7 +297,14 @@ export default function MobileDatePickerDoc() {
       </section>
 
       <section class="space-y-4">
-          <CodeBlock title="代码示例" code={exampleNestedMessages} language="tsx" showLineNumbers copyable wrapLongLines />
+        <CodeBlock
+          title="代码示例"
+          code={exampleNestedMessages}
+          language="tsx"
+          showLineNumbers
+          copyable
+          wrapLongLines
+        />
 
         <Title level={2}>API</Title>
         <Paragraph class="text-sm text-slate-600 dark:text-slate-400">

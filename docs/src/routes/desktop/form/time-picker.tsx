@@ -3,13 +3,16 @@
  * 路由: /desktop/form/time-picker
  */
 
-import { Paragraph, Title } from "@dreamer/ui-view/basic";
+import { Button, Link, Paragraph, Title } from "@dreamer/ui-view/basic";
 
+import { createForm } from "@dreamer/ui-view/form/create-form";
 import { Form } from "@dreamer/ui-view/form/form";
 import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { formRules } from "@dreamer/ui-view/form/form-rules";
 import { TimePicker } from "@dreamer/ui-view/form/time-picker";
 
 import { CodeBlock } from "@dreamer/ui-view/data-display";
+import { message } from "@dreamer/ui-view/feedback";
 import { createSignal } from "@dreamer/view";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_TIME_PICKER } from "../../../data/component-messages-rows.ts";
@@ -78,6 +81,12 @@ const TIMEPICKER_API: ApiRow[] = [
   { name: "name", type: "string", default: "-", description: "原生 name" },
   { name: "id", type: "string", default: "-", description: "原生 id" },
   {
+    name: "error",
+    type: "boolean",
+    default: "false",
+    description: "错误状态（红框）；可与 createForm 绑定联用",
+  },
+  {
     name: "messages",
     type: "Partial<TimePickerMessages>",
     default: "-",
@@ -85,8 +94,7 @@ const TIMEPICKER_API: ApiRow[] = [
   },
 ];
 
-const importCode =
-  `import { Form } from "@dreamer/ui-view/form/form";
+const importCode = `import { Form } from "@dreamer/ui-view/form/form";
 import { FormItem } from "@dreamer/ui-view/form/form-item";
 import { TimePicker } from "@dreamer/ui-view/form/time-picker";
 
@@ -96,6 +104,36 @@ const val = createSignal("");
     value={val}
   />
 </FormItem>`;
+
+/** createForm 演示字段（模块级） */
+type TimePickerDemoValues = { time: string };
+
+/** TimePicker + bind 联用演示 store */
+const timePickerDemoForm = createForm<TimePickerDemoValues>({
+  initialValues: { time: "" },
+  fields: { time: { rules: [formRules.required("请选择时间")] } },
+});
+
+/** 与 createForm 示例的 CodeBlock 源码 */
+const exampleCreateForm =
+  `import { createForm, formRules } from "@dreamer/ui-view/form";
+import { Form } from "@dreamer/ui-view/form/form";
+import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { TimePicker } from "@dreamer/ui-view/form/time-picker";
+import { Button } from "@dreamer/ui-view/basic";
+import { message } from "@dreamer/ui-view/feedback";
+
+const form = createForm({
+  initialValues: { time: "" },
+  fields: { time: { rules: [formRules.required("请选择时间")] } },
+});
+
+<Form form={form} onFinish={() => { message.success("已提交"); }}>
+  <FormItem name="time" label="时间">
+    <TimePicker {...form.bind("time")} />
+  </FormItem>
+  <Button type="submit" variant="primary">提交</Button>
+</Form>`;
 
 export default function FormTimePicker() {
   const val = createSignal("");
@@ -130,7 +168,18 @@ export default function FormTimePicker() {
           等）、value、size、disabled、onChange、placeholder。区间与多选时
           onChange 的 value 为 JSON。时间区间请使用{" "}
           <code class="text-sm">mode="range"</code>
-          。Tailwind v4 + light/dark。
+          。Tailwind v4 + light/dark。与{" "}
+          <Link
+            href="/desktop/form/form-containers"
+            className="text-teal-600 hover:underline dark:text-teal-400"
+          >
+            Form / createForm
+          </Link>{" "}
+          联用时展开{" "}
+          <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">
+            {"{...form.bind(name)}"}
+          </code>
+          。
         </Paragraph>
       </section>
 
@@ -147,6 +196,33 @@ export default function FormTimePicker() {
 
       <section class="space-y-8">
         <Title level={2}>示例</Title>
+
+        <section class="space-y-4">
+          <Title level={3}>与 createForm</Title>
+          <Form
+            form={timePickerDemoForm}
+            layout="vertical"
+            class="w-full max-w-md border border-dashed border-slate-200 dark:border-slate-600 rounded-lg p-4"
+            onFinish={() => {
+              message.success("已提交");
+            }}
+          >
+            <FormItem name="time" label="时间">
+              <TimePicker {...timePickerDemoForm.bind("time")} />
+            </FormItem>
+            <Button type="submit" variant="primary">
+              提交
+            </Button>
+          </Form>
+          <CodeBlock
+            title="代码示例"
+            code={exampleCreateForm}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+        </section>
 
         <Form layout="vertical" class="w-full space-y-6">
           <section class="space-y-4">

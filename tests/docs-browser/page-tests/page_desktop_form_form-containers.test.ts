@@ -18,7 +18,7 @@ describe("文档页 E2E：/desktop/form/form-containers（Form 容器）", () =>
   it("本页关键词命中且 main 内完成浅层交互探针", async (t) => {
     if (!t?.browser?.goto) return;
     await runKeywordAndShallowHere(t, DOC_PATH, [
-      /Form|表单|容器/i,
+      /Form|表单|容器|createForm|bindChecked|bindValue/i,
     ]);
   }, DOCS_BROWSER_CONFIG);
 
@@ -53,6 +53,98 @@ describe("文档页 E2E：/desktop/form/form-containers（Form 容器）", () =>
       return (ae as HTMLInputElement).value !== "e2e-form-container";
     }) as boolean;
     expect(notSameFocused).toBe(true);
+  }, DOCS_BROWSER_CONFIG);
+
+  /**
+   * 文档小节「bind 变体」：在 main 内定位对应 h3，于该示例区块内完成一次交互。
+   */
+  it("严格·bind 变体：Select · Checkbox · Switch · RadioGroup", async (t) => {
+    if (!t?.browser?.goto) return;
+    await sharedEnv.goto(t, DOC_PATH);
+    await sharedEnv.waitDocMainReady(t);
+    const ok = await t.browser.evaluate(() => {
+      const needle = "bind 变体";
+      const main = document.querySelector("main");
+      if (!main) return false;
+      const heads = main.querySelectorAll("h2, h3");
+      for (let i = 0; i < heads.length; i++) {
+        const h = heads[i];
+        if (!(h.textContent || "").includes(needle)) continue;
+        let root: Element | null = h.parentElement;
+        for (let depth = 0; depth < 12 && root && root !== main; depth++) {
+          const btn = root.querySelector(
+            'button[type="submit"]:not([disabled]), button[type="button"]:not([disabled])',
+          ) as HTMLButtonElement | null;
+          if (btn) {
+            btn.click();
+            return true;
+          }
+          const copy = root.querySelector(
+            'button[type="button"][aria-label="复制"]',
+          ) as HTMLButtonElement | null;
+          if (copy && !copy.disabled) {
+            copy.click();
+            return true;
+          }
+          root = root.parentElement;
+        }
+        const box = h.parentElement;
+        return (box?.innerText?.trim() ?? "").length > 8;
+      }
+      return false;
+    }) as boolean;
+    expect(ok).toBe(true);
+  }, DOCS_BROWSER_CONFIG);
+
+  /**
+   * 文档小节「createForm：校验 · 绑定 · 提交」：在 main 内定位对应 h3，于该示例区块内完成一次交互。
+   */
+  it("严格·createForm：校验 · 绑定 · 提交", async (t) => {
+    if (!t?.browser?.goto) return;
+    await sharedEnv.goto(t, DOC_PATH);
+    await sharedEnv.waitDocMainReady(t);
+    const ok = await t.browser.evaluate(() => {
+      const needle = "createForm：校验";
+      const main = document.querySelector("main");
+      if (!main) return false;
+      const heads = main.querySelectorAll("h2, h3");
+      for (let i = 0; i < heads.length; i++) {
+        const h = heads[i];
+        if (!(h.textContent || "").includes(needle)) continue;
+        let root: Element | null = h.parentElement;
+        for (let depth = 0; depth < 12 && root && root !== main; depth++) {
+          const copy = root.querySelector(
+            'button[type="button"][aria-label="复制"]',
+          ) as HTMLButtonElement | null;
+          if (copy && !copy.disabled) {
+            copy.click();
+            return true;
+          }
+          const ta = root.querySelector(
+            "textarea:not(:disabled), input:not([type=hidden]):not([type=button]):not([type=submit]):not([type=file]):not([type=checkbox]):not([type=radio]):not(:disabled)",
+          ) as HTMLInputElement | null;
+          if (ta) {
+            ta.focus();
+            ta.value = "e2e-strict";
+            ta.dispatchEvent(new Event("input", { bubbles: true }));
+            return true;
+          }
+          const btn = root.querySelector(
+            'button[type="submit"]:not([disabled]), button[type="button"]:not([disabled])',
+          ) as HTMLButtonElement | null;
+          if (btn) {
+            btn.click();
+            return true;
+          }
+          root = root.parentElement;
+        }
+        const box = h.parentElement;
+        const txt = box?.innerText?.trim() ?? "";
+        return txt.length > 8;
+      }
+      return false;
+    }) as boolean;
+    expect(ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
 
   /**
@@ -725,5 +817,4 @@ describe("文档页 E2E：/desktop/form/form-containers（Form 容器）", () =>
     }) as { ok: boolean };
     expect(got.ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
-
 });

@@ -3,13 +3,16 @@
  * 路由: /desktop/form/search
  */
 
-import { Paragraph, Title } from "@dreamer/ui-view/basic";
+import { Button, Link, Paragraph, Title } from "@dreamer/ui-view/basic";
 
+import { createForm } from "@dreamer/ui-view/form/create-form";
 import { Form } from "@dreamer/ui-view/form/form";
 import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { formRules } from "@dreamer/ui-view/form/form-rules";
 import { Search } from "@dreamer/ui-view/form/search";
 
 import { CodeBlock } from "@dreamer/ui-view/data-display";
+import { message } from "@dreamer/ui-view/feedback";
 import { createSignal } from "@dreamer/view";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_SEARCH } from "../../../data/component-messages-rows.ts";
@@ -40,6 +43,12 @@ const SEARCH_API: ApiRow[] = [
     type: "boolean",
     default: "false",
     description: "是否禁用",
+  },
+  {
+    name: "error",
+    type: "boolean",
+    default: "false",
+    description: "错误状态（红框）",
   },
   {
     name: "hideFocusRing",
@@ -120,6 +129,17 @@ const SEARCH_API: ApiRow[] = [
   },
 ];
 
+/** createForm 演示字段形状（模块级，避免文档页重跑丢失状态） */
+type SearchFormValues = { keyword: string };
+
+/** Search + createForm 联用演示 store */
+const searchForm = createForm<SearchFormValues>({
+  initialValues: { keyword: "" },
+  fields: {
+    keyword: { rules: [formRules.required()] },
+  },
+});
+
 const importCode = `import { Form } from "@dreamer/ui-view/form/form";
 import { FormItem } from "@dreamer/ui-view/form/form-item";
 import { Search } from "@dreamer/ui-view/form/search";
@@ -147,7 +167,18 @@ export default function FormSearch() {
           等（与 Input 对齐的输入事件均透传）；传 onSearch
           时显示搜索与清除按钮。若不想在每次键入时调接口，可只在 onInput
           更新受控值，在 onBlur（或 onSearch 回车/按钮）里再请求。宽度由 class
-          控制，表单中需占满一列时传 class="w-full"。Tailwind v4 + light/dark。
+          控制，表单中需占满一列时传 class="w-full"。与{" "}
+          <Link
+            href="/desktop/form/form-containers"
+            className="text-teal-600 hover:underline dark:text-teal-400"
+          >
+            Form / createForm
+          </Link>{" "}
+          联用时展开{" "}
+          <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">
+            {"{...form.bind(name)}"}
+          </code>
+          。Tailwind v4 + light/dark。
         </Paragraph>
       </section>
 
@@ -164,6 +195,56 @@ export default function FormSearch() {
 
       <section class="space-y-8">
         <Title level={2}>示例</Title>
+
+        <section class="space-y-4">
+          <Title level={3}>与 createForm</Title>
+          <Form
+            form={searchForm}
+            layout="vertical"
+            class="w-full max-w-md"
+            onFinish={() => {
+              message.success("ok");
+            }}
+          >
+            <FormItem
+              name="keyword"
+              label="关键词"
+              rules={[formRules.required()]}
+            >
+              <Search
+                {...searchForm.bind("keyword")}
+                placeholder="必填后点校验"
+                class="w-full"
+              />
+            </FormItem>
+            <Button type="submit" variant="primary">
+              校验
+            </Button>
+          </Form>
+          <CodeBlock
+            title="代码示例"
+            code={`const searchForm = createForm({
+  initialValues: { keyword: "" },
+  fields: { keyword: { rules: [formRules.required()] } },
+});
+
+<Form
+  form={searchForm}
+  layout="vertical"
+  class="w-full max-w-md"
+  onFinish={() => { message.success("ok"); }}
+>
+  <FormItem name="keyword" label="关键词" rules={[formRules.required()]}>
+    <Search {...searchForm.bind("keyword")} placeholder="必填后点校验" />
+  </FormItem>
+  <Button type="submit" variant="primary">校验</Button>
+</Form>`}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+        </section>
 
         <Form layout="vertical" class="w-full space-y-6">
           <section class="space-y-4">

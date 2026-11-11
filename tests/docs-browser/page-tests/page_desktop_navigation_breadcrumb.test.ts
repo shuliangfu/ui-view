@@ -363,5 +363,4 @@ describe("文档页 E2E：/desktop/navigation/breadcrumb（Breadcrumb 面包屑�
     }) as { ok: boolean };
     expect(got.ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
-
 });

@@ -3,13 +3,16 @@
  * 路由: /desktop/form/switch
  */
 
-import { Paragraph, Title } from "@dreamer/ui-view/basic";
+import { Button, Link, Paragraph, Title } from "@dreamer/ui-view/basic";
 
+import { createForm } from "@dreamer/ui-view/form/create-form";
 import { Form } from "@dreamer/ui-view/form/form";
 import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { formRules } from "@dreamer/ui-view/form/form-rules";
 import { Switch } from "@dreamer/ui-view/form/switch";
 
 import { CodeBlock } from "@dreamer/ui-view/data-display";
+import { message } from "@dreamer/ui-view/feedback";
 import { createSignal } from "@dreamer/view";
 
 interface ApiRow {
@@ -121,6 +124,46 @@ const checked = createSignal(false);
   <Switch checked={checked} />
 </FormItem>`;
 
+/** createForm 演示字段（模块级） */
+type SwitchDemoValues = { notify: boolean };
+
+/** Switch + bindChecked 联用演示 store */
+const switchDemoForm = createForm<SwitchDemoValues>({
+  initialValues: { notify: false },
+  fields: {
+    notify: {
+      rules: [
+        formRules.custom((v) => (v === true ? undefined : "请开启通知")),
+      ],
+    },
+  },
+});
+
+/** 与 createForm 示例的 CodeBlock 源码 */
+const exampleCreateForm =
+  `import { createForm, formRules } from "@dreamer/ui-view/form";
+import { Form } from "@dreamer/ui-view/form/form";
+import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { Switch } from "@dreamer/ui-view/form/switch";
+import { Button } from "@dreamer/ui-view/basic";
+import { message } from "@dreamer/ui-view/feedback";
+
+const form = createForm({
+  initialValues: { notify: false },
+  fields: {
+    notify: {
+      rules: [formRules.custom((v) => (v === true ? undefined : "请开启通知"))],
+    },
+  },
+});
+
+<Form form={form} onFinish={() => { message.success("已提交"); }}>
+  <FormItem name="notify" label="通知">
+    <Switch {...form.bindChecked("notify")} />
+  </FormItem>
+  <Button type="submit" variant="primary">提交</Button>
+</Form>`;
+
 export default function FormSwitch() {
   const checked = createSignal(false);
 
@@ -131,7 +174,18 @@ export default function FormSwitch() {
         <Paragraph class="mt-2">
           开关组件，支持
           checked、onChange、disabled、error、checkedChildren、unCheckedChildren。
-          动态选中态请使用{" "}
+          与{" "}
+          <Link
+            href="/desktop/form/form-containers"
+            className="text-teal-600 hover:underline dark:text-teal-400"
+          >
+            Form / createForm
+          </Link>{" "}
+          联用时展开{" "}
+          <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">
+            {"{...form.bindChecked(name)}"}
+          </code>
+          。动态选中态请使用{" "}
           <code class="text-sm">checked=&#123;createSignal(...)&#125;</code>
           {" "}
           返回值，勿写{" "}
@@ -153,6 +207,33 @@ export default function FormSwitch() {
 
       <section class="space-y-8">
         <Title level={2}>示例</Title>
+
+        <section class="space-y-4">
+          <Title level={3}>与 createForm</Title>
+          <Form
+            form={switchDemoForm}
+            layout="vertical"
+            class="w-full max-w-md border border-dashed border-slate-200 dark:border-slate-600 rounded-lg p-4"
+            onFinish={() => {
+              message.success("已提交");
+            }}
+          >
+            <FormItem name="notify" label="通知">
+              <Switch {...switchDemoForm.bindChecked("notify")} />
+            </FormItem>
+            <Button type="submit" variant="primary">
+              提交
+            </Button>
+          </Form>
+          <CodeBlock
+            title="代码示例"
+            code={exampleCreateForm}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+        </section>
 
         <Form layout="vertical" class="w-full space-y-6">
           <section class="space-y-4">

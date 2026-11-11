@@ -3,13 +3,16 @@
  * 路由: /desktop/form/input-number
  */
 
-import { Paragraph, Title } from "@dreamer/ui-view/basic";
+import { Button, Link, Paragraph, Title } from "@dreamer/ui-view/basic";
 
+import { createForm } from "@dreamer/ui-view/form/create-form";
 import { Form } from "@dreamer/ui-view/form/form";
 import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { formRules } from "@dreamer/ui-view/form/form-rules";
 import { InputNumber } from "@dreamer/ui-view/form/input-number";
 
 import { CodeBlock } from "@dreamer/ui-view/data-display";
+import { message } from "@dreamer/ui-view/feedback";
 import { createSignal } from "@dreamer/view";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_INPUT_NUMBER } from "../../../data/component-messages-rows.ts";
@@ -49,6 +52,12 @@ const INPUT_NUMBER_API: ApiRow[] = [
     type: "boolean",
     default: "false",
     description: "是否禁用",
+  },
+  {
+    name: "error",
+    type: "boolean",
+    default: "false",
+    description: "错误状态（红框）",
   },
   {
     name: "hideFocusRing",
@@ -129,8 +138,18 @@ const qtySizeSm = createSignal("1");
 const qtySizeMd = createSignal("50");
 const qtySizeLg = createSignal("5");
 
-const importCode =
-  `import { Form } from "@dreamer/ui-view/form/form";
+/** createForm 演示字段形状（模块级，避免文档页重跑丢失状态） */
+type InputNumberFormValues = { qty: string };
+
+/** InputNumber + createForm 联用演示 store */
+const inputNumberForm = createForm<InputNumberFormValues>({
+  initialValues: { qty: "" },
+  fields: {
+    qty: { rules: [formRules.required()] },
+  },
+});
+
+const importCode = `import { Form } from "@dreamer/ui-view/form/form";
 import { FormItem } from "@dreamer/ui-view/form/form-item";
 import { InputNumber } from "@dreamer/ui-view/form/input-number";
 
@@ -152,9 +171,19 @@ export default function FormInputNumber() {
         <Paragraph class="mt-2">
           数字输入框，带步进按钮；支持
           value、min、max、step、placeholder、size、disabled、onChange。宽度由
-          class 控制，表单中需占满一列时传 class="w-full"。Tailwind v4 +
-          light/dark。下方示例用多个 <code class="text-sm">createSignal</code>
-          {" "}
+          class 控制，表单中需占满一列时传 class="w-full"。与{" "}
+          <Link
+            href="/desktop/form/form-containers"
+            className="text-teal-600 hover:underline dark:text-teal-400"
+          >
+            Form / createForm
+          </Link>{" "}
+          联用时展开{" "}
+          <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">
+            {"{...form.bind(name)}"}
+          </code>
+          。Tailwind v4 + light/dark。下方示例用多个{" "}
+          <code class="text-sm">createSignal</code>{" "}
           作表单字段（信号在**模块顶层**定义，{" "}
           <code class="text-sm">value={"{"}qtyStep5{"}"}</code> 或{" "}
           <code class="text-sm">{"value={() => qtyStep5()}"}</code>，再加
@@ -177,6 +206,55 @@ export default function FormInputNumber() {
 
       <section class="space-y-8">
         <Title level={2}>示例</Title>
+
+        <section class="space-y-4">
+          <Title level={3}>与 createForm</Title>
+          <Form
+            form={inputNumberForm}
+            layout="vertical"
+            class="w-full max-w-md"
+            onFinish={() => {
+              message.success("ok");
+            }}
+          >
+            <FormItem name="qty" label="数量" rules={[formRules.required()]}>
+              <InputNumber
+                {...inputNumberForm.bind("qty")}
+                min={0}
+                max={100}
+                step={1}
+                placeholder="必填"
+                class="w-full"
+              />
+            </FormItem>
+            <Button type="submit" variant="primary">
+              校验
+            </Button>
+          </Form>
+          <CodeBlock
+            title="代码示例"
+            code={`const inputNumberForm = createForm({
+  initialValues: { qty: "" },
+  fields: { qty: { rules: [formRules.required()] } },
+});
+
+<Form
+  form={inputNumberForm}
+  layout="vertical"
+  class="w-full max-w-md"
+  onFinish={() => { message.success("ok"); }}
+>
+  <FormItem name="qty" label="数量" rules={[formRules.required()]}>
+    <InputNumber {...inputNumberForm.bind("qty")} min={0} max={100} step={1} />
+  </FormItem>
+  <Button type="submit" variant="primary">校验</Button>
+</Form>`}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+        </section>
 
         <Form layout="vertical" class="w-full space-y-6">
           <section class="space-y-4">

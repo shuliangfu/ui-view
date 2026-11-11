@@ -107,7 +107,14 @@ export function Radio(props: RadioProps): JSXRenderable {
   const checkedForInput = checkedMaybe === undefined ? false : checkedMaybe;
 
   return (
-    <label class={twMerge(labelCls, radioLabelSize[size], error && errorCls, className)}>
+    <label
+      class={twMerge(
+        labelCls,
+        radioLabelSize[size],
+        error && errorCls,
+        className,
+      )}
+    >
       <input
         type="radio"
         id={id}
@@ -116,7 +123,11 @@ export function Radio(props: RadioProps): JSXRenderable {
         checked={checkedForInput}
         disabled={disabled}
         aria-invalid={error}
-        class={twMerge(radioInputSurface, radioSizeClasses[size], controlBlueFocusRing(!hideFocusRing))}
+        class={twMerge(
+          radioInputSurface,
+          radioSizeClasses[size],
+          controlBlueFocusRing(!hideFocusRing),
+        )}
         onChange={handleChange}
         onBlur={onBlur}
         onFocus={onFocus}

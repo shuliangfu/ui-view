@@ -1262,7 +1262,6 @@ describe("文档页 E2E：/desktop/feedback/modal（Modal 模态框）", () => {
     expect(ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
 
-
   /**
    * UI·示例区主内容可见且有尺寸。
    */
@@ -1280,5 +1279,4 @@ describe("文档页 E2E：/desktop/feedback/modal（Modal 模态框）", () => {
     }) as { ok: boolean };
     expect(got.ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
-
 });

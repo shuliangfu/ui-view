@@ -363,5 +363,4 @@ describe("文档页 E2E：/desktop/data-display/code-block（CodeBlock 代码块
     }) as { ok: boolean };
     expect(got.ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
-
 });

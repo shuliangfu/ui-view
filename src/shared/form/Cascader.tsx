@@ -16,16 +16,27 @@
  * 若页面里 **`Form` 下方紧挨大块兄弟（如代码预览）**，后绘制的兄弟会盖住浮层，宜调整 **DOM 顺序**（代码块在前、表单项在后）或提高表单侧层叠上下文，勿改挂 body。
  */
 
-import { batch, createEffect, createSignal, type JSXRenderable, onCleanup, type Signal,  } from "@dreamer/view";
+import {
+  batch,
+  createEffect,
+  createSignal,
+  type JSXRenderable,
+  onCleanup,
+  type Signal,
+  useContext,
+} from "@dreamer/view";
 import { safeIsSignal, writeSignalValue } from "../safe-signal.ts";
 import { twMerge } from "tailwind-merge";
 import { IconChevronDown } from "../basic/icons/ChevronDown.tsx";
 import {
   controlBlueFocusRing,
+  controlErrorBorder,
+  controlErrorFocusRing,
   nativeSelectSurface,
   pickerTriggerSurface,
 } from "./input-focus-ring.ts";
 import { resolveFormControlSize } from "./form-control-context.ts";
+import { FormItemControlIdContext } from "./form-item-control-id.ts";
 import { type MaybeSignal, readMaybeSignal } from "./maybe-signal.ts";
 import type { SizeVariant } from "../types.ts";
 import {
@@ -102,10 +113,14 @@ export interface CascaderProps {
    * `value` 为字面量或普通 `() => T` getter 时，须在此回调中更新数据源。
    */
   onChange?: (value: string[]) => void;
+  /** 触发器失焦（可用于 blur 校验） */
+  onBlur?: (e: Event) => void;
   placeholder?: string;
   class?: string;
   name?: string;
   id?: string;
+  /** 错误状态（触发器红框）；可与 FormItem / createForm bindValue 联用 */
+  error?: boolean;
   /** 为 true 时隐藏聚焦激活态边框；默认 false 显示 ring */
   hideFocusRing?: boolean;
   /**
@@ -167,9 +182,11 @@ function CascaderNativeTwoLevel(props: CascaderProps) {
     size: sizeProp,
     disabled = false,
     onChange,
+    onBlur,
     class: className,
     name,
     id,
+    error = false,
     hideFocusRing = false,
     messages,
   } = props;
@@ -178,6 +195,8 @@ function CascaderNativeTwoLevel(props: CascaderProps) {
   const value = readMaybeSignal(valueProp) ?? [];
   const size = resolveFormControlSize(sizeProp);
   const sizeCls = sizeClassesNative[size];
+  const fromFormItem = useContext(FormItemControlIdContext);
+  const resolvedId = id ?? fromFormItem;
 
   /**
    * 将新路径写回受控源：`valueProp` 为 Signal 时自动赋值；再调用可选的 `onChange`。
@@ -199,17 +218,21 @@ function CascaderNativeTwoLevel(props: CascaderProps) {
   return (
     <div class={twMerge("flex flex-wrap items-center gap-2", className)}>
       <select
-        id={id}
+        id={resolvedId}
         name={name}
         value={parentValue}
         disabled={disabled}
+        aria-invalid={error}
         class={twMerge(
           "touch-manipulation",
           nativeSelectSurface,
-          controlBlueFocusRing(!hideFocusRing),
+          controlBlueFocusRing(!hideFocusRing && !error),
+          error && controlErrorBorder,
+          error && !hideFocusRing && controlErrorFocusRing(true),
           sizeCls,
           "min-w-[120px]",
         )}
+        onBlur={onBlur}
         onChange={(e: Event) => {
           const v = (e.target as HTMLSelectElement).value;
           commitPath(v ? [v] : []);
@@ -224,13 +247,17 @@ function CascaderNativeTwoLevel(props: CascaderProps) {
         <select
           value={childValue}
           disabled={disabled}
+          aria-invalid={error}
           class={twMerge(
             "touch-manipulation",
             nativeSelectSurface,
-            controlBlueFocusRing(!hideFocusRing),
+            controlBlueFocusRing(!hideFocusRing && !error),
+            error && controlErrorBorder,
+            error && !hideFocusRing && controlErrorFocusRing(true),
             sizeCls,
             "min-w-[120px]",
           )}
+          onBlur={onBlur}
           onChange={(e: Event) => {
             const v = (e.target as HTMLSelectElement).value;
             commitPath(parentValue ? [parentValue, v] : []);
@@ -489,9 +516,11 @@ function CascaderDropdownPanel(props: CascaderProps) {
     size: sizeProp,
     disabled = false,
     onChange,
+    onBlur,
     class: className,
     name,
     id,
+    error = false,
     hideFocusRing = false,
     value,
     messages,
@@ -499,6 +528,8 @@ function CascaderDropdownPanel(props: CascaderProps) {
   const m = { ...defaultCascaderMessages, ...messages };
   const placeholder = props.placeholder ?? m.placeholder;
   const size = resolveFormControlSize(sizeProp);
+  const fromFormItem = useContext(FormItemControlIdContext);
+  const resolvedId = id ?? fromFormItem;
 
   const openState = createSignal(false);
   /** 组件根 DOM（触发条 + 内联 absolute 浮层），供「点外部」与 `elementsFromPoint` 兜底 */
@@ -869,8 +900,9 @@ function CascaderDropdownPanel(props: CascaderProps) {
       }}
       <button
         type="button"
-        id={id}
+        id={resolvedId}
         disabled={disabled}
+        aria-invalid={error}
         aria-haspopup="dialog"
         aria-expanded={() => openState.value}
         aria-label={() => {
@@ -880,9 +912,12 @@ function CascaderDropdownPanel(props: CascaderProps) {
         class={twMerge(
           "w-full min-w-0",
           pickerTriggerSurface,
-          controlBlueFocusRing(!hideFocusRing),
+          controlBlueFocusRing(!hideFocusRing && !error),
+          error && controlErrorBorder,
+          error && !hideFocusRing && controlErrorFocusRing(true),
           sizeCls,
         )}
+        onBlur={onBlur}
         onClick={() => {
           if (disabled) return;
           if (openState.value) closePanel();

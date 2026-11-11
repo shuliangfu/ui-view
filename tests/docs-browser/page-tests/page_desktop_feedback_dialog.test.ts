@@ -49,7 +49,9 @@ describe("文档页 E2E：/desktop/feedback/dialog（Dialog 对话框）", () =>
     expect(openOk).toBe(true);
     await sharedEnv.delay(300);
     const closeOk = await t.browser.evaluate(() => {
-      const dlg = document.querySelector('[role="dialog"]') as HTMLElement | null;
+      const dlg = document.querySelector('[role="dialog"]') as
+        | HTMLElement
+        | null;
       const scope = dlg || document.body;
       const btns = Array.from(
         scope.querySelectorAll("button[type='button']"),
@@ -57,7 +59,8 @@ describe("文档页 E2E：/desktop/feedback/dialog（Dialog 对话框）", () =>
       const b = btns.find((x) => {
         const tx = (x.textContent || "").trim();
         const aria = x.getAttribute("aria-label") || "";
-        return !x.disabled && (tx === "确定" || tx === "取消" || aria === "关闭");
+        return !x.disabled &&
+          (tx === "确定" || tx === "取消" || aria === "关闭");
       });
       if (!b) return false;
       if (typeof b.__onclick === "function") {
@@ -502,7 +505,6 @@ describe("文档页 E2E：/desktop/feedback/dialog（Dialog 对话框）", () =>
     expect(ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
 
-
   /**
    * UI·示例区主内容可见且有尺寸。
    */
@@ -520,5 +522,4 @@ describe("文档页 E2E：/desktop/feedback/dialog（Dialog 对话框）", () =>
     }) as { ok: boolean };
     expect(got.ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
-
 });

@@ -9,8 +9,8 @@ import { twMerge } from "tailwind-merge";
 import { resolveFormControlSize } from "./form-control-context.ts";
 import { FormItemControlIdContext } from "./form-item-control-id.ts";
 import {
-  OutlinedField,
   outlinedControlClass,
+  OutlinedField,
   resolveOutlinedLabel,
 } from "./outlined-field.tsx";
 import type { SizeVariant } from "../types.ts";
@@ -18,7 +18,11 @@ import {
   autofillVisualClass,
   passwordNativeAutoComplete,
 } from "./input-autofill-classes.ts";
-import { controlBlueFocusRing } from "./input-focus-ring.ts";
+import {
+  controlBlueFocusRing,
+  controlErrorBorder,
+  controlErrorFocusRing,
+} from "./input-focus-ring.ts";
 import { commitMaybeSignal, type MaybeSignal } from "./maybe-signal.ts";
 
 /**
@@ -67,6 +71,8 @@ export interface PasswordProps {
   floatingLabel?: boolean;
   /** 输入值（受控可选）；见 {@link MaybeSignal} */
   value?: MaybeSignal<string>;
+  /** 错误状态（红框 + aria-invalid）；可与 FormItem / createForm bind 联用 */
+  error?: boolean;
   /** 是否显示明文（由父组件控制，用于显隐切换） */
   showPassword?: boolean;
   /** 点击显隐按钮时回调，父组件切换 showPassword */
@@ -118,7 +124,7 @@ const sizeClasses: Record<SizeVariant, string> = {
  * 输入区底纹（不含 ring、不含 autofill 长类），与 {@link Input} 的 `inputSurfaceBase` 一致。
  */
 const inputSurfaceBase =
-  "border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 border-slate-300 dark:border-slate-600 focus:outline-hidden disabled:opacity-50 disabled:cursor-not-allowed transition-colors";
+  "border bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 border-slate-300 dark:border-slate-600 focus:outline-hidden disabled:opacity-50 disabled:cursor-not-allowed transition-colors";
 
 /**
  * 根据密码字符串计算强度等级与展示用 Tailwind 文本色类。
@@ -166,6 +172,7 @@ export function Password(props: PasswordProps): JSXRenderable {
     hideFocusRing = false,
     label,
     floatingLabel = false,
+    error = false,
     class: className,
     onInput,
     onChange,
@@ -231,11 +238,14 @@ export function Password(props: PasswordProps): JSXRenderable {
     value,
     placeholder: outlined?.nativePlaceholder ?? placeholder,
     disabled,
+    "aria-invalid": error,
     ...(outlined ? { "aria-label": outlined.text } : {}),
     class: twMerge(
       inputSurfaceBase,
       autofillVisualClass(autoComplete),
-      controlBlueFocusRing(!hideFocusRing && !outlined),
+      controlBlueFocusRing(!hideFocusRing && !outlined && !error),
+      error && !outlined && controlErrorBorder,
+      error && !hideFocusRing && !outlined && controlErrorFocusRing(true),
       sizeCls,
       onToggleShow || showStrength ? "pr-10" : undefined,
       outlined && outlinedControlClass,
@@ -261,6 +271,7 @@ export function Password(props: PasswordProps): JSXRenderable {
           disabled={disabled}
           hideFocusRing={hideFocusRing}
           hideInnerLabel={hideInnerLabel}
+          error={error}
           class={!onToggleShow && !showStrength ? className : undefined}
         >
           {inner}
@@ -284,57 +295,57 @@ export function Password(props: PasswordProps): JSXRenderable {
     <div class={className}>
       {wrapField(
         <div class="relative">
-      <input {...inputProps} class={twMerge("w-full", inputProps.class)} />
-      {onToggleShow && (
-        <button
-          type="button"
-          class={twMerge(
-            "absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 focus:outline-hidden",
-            controlBlueFocusRing(!hideFocusRing),
+          <input {...inputProps} class={twMerge("w-full", inputProps.class)} />
+          {onToggleShow && (
+            <button
+              type="button"
+              class={twMerge(
+                "absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 focus:outline-hidden",
+                controlBlueFocusRing(!hideFocusRing),
+              )}
+              onClick={onToggleShow}
+              aria-label={showPassword ? m.hide : m.show}
+              tabIndex={-1}
+            >
+              {showPassword
+                ? (
+                  <svg
+                    class="size-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
+                    />
+                  </svg>
+                )
+                : (
+                  <svg
+                    class="size-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                    />
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                    />
+                  </svg>
+                )}
+            </button>
           )}
-          onClick={onToggleShow}
-          aria-label={showPassword ? m.hide : m.show}
-          tabIndex={-1}
-        >
-          {showPassword
-            ? (
-              <svg
-                class="size-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
-                />
-              </svg>
-            )
-            : (
-              <svg
-                class="size-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                />
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                />
-              </svg>
-            )}
-        </button>
-      )}
         </div>,
       )}
       {

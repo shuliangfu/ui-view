@@ -3,8 +3,13 @@
  */
 
 import { MultiSelect } from "@dreamer/ui-view/mobile/form/multiselect";
-import { Paragraph, Title } from "@dreamer/ui-view/mobile/basic";
+import { Form } from "@dreamer/ui-view/mobile/form/form";
+import { FormItem } from "@dreamer/ui-view/mobile/form/form-item";
+import { Button, Link, Paragraph, Title } from "@dreamer/ui-view/mobile/basic";
 import { CodeBlock } from "@dreamer/ui-view/mobile/data-display";
+import { createForm } from "@dreamer/ui-view/form/create-form";
+import { formRules } from "@dreamer/ui-view/form/form-rules";
+import { message } from "@dreamer/ui-view/feedback";
 import { createSignal } from "@dreamer/view";
 import {
   DocsApiTable,
@@ -13,6 +18,17 @@ import {
 import { MobileDocDemo } from "../../../components/MobileDocDemo.tsx";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_MULTI_SELECT } from "../../../data/component-messages-rows.ts";
+
+/** createForm 演示字段（onChange 为 Event → bind） */
+type MultiSelectCreateFormValues = { tags: string[] };
+
+/** 与 createForm 联用演示 store */
+const multiSelectCreateForm = createForm<MultiSelectCreateFormValues>({
+  initialValues: { tags: [] },
+  fields: {
+    tags: { rules: [formRules.required("请至少选一项")] },
+  },
+});
 
 const OPTIONS = [
   { value: "x", label: "项 X" },
@@ -80,7 +96,8 @@ const MULTI_API: DocsApiTableRow[] = [
   },
 ];
 
-const importCode = `import { MultiSelect } from "@dreamer/ui-view/mobile/form/multiselect";
+const importCode =
+  `import { MultiSelect } from "@dreamer/ui-view/mobile/form/multiselect";
 
 const val = createSignal<string[]>(["x"]);
 <MultiSelect class="w-full" options={...} value={val} />`;
@@ -91,10 +108,8 @@ const val = createSignal<string[]>(["x"]);
 const mobileMultiSelectBasicVal = createSignal<string[]>(["x"]);
 const mobileMultiSelectControlledVal = createSignal<string[]>(["x"]);
 
-
 const exampleControlled = `const value = createSignal(["a"]);
 <MultiSelect value={value} options={[{ value: "a", label: "A" }, { value: "b", label: "B" }]} />`;
-
 
 export default function MobileMultiSelectDoc() {
   return (
@@ -106,7 +121,27 @@ export default function MobileMultiSelectDoc() {
           <code class="text-sm">
             appearance=&quot;dropdown&quot;
           </code>（自绘浮层多选）；需要原生多选加高触控区时传{" "}
-          <code class="text-sm">appearance=&quot;native&quot;</code>。
+          <code class="text-sm">appearance=&quot;native&quot;</code>
+          。与{" "}
+          <Link
+            href="/mobile/form/form-containers"
+            className="text-teal-600 hover:underline dark:text-teal-400"
+          >
+            Form / createForm（移动）
+          </Link>
+          、
+          <Link
+            href="/desktop/form/form-containers"
+            className="text-teal-600 hover:underline dark:text-teal-400"
+          >
+            桌面 Form 容器
+          </Link>{" "}
+          联用：
+          <code class="text-sm">onChange</code> 为 Event，展开{" "}
+          <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">
+            {"{...form.bind(name)}"}
+          </code>
+          。
         </Paragraph>
       </section>
 
@@ -123,6 +158,55 @@ export default function MobileMultiSelectDoc() {
 
       <section class="space-y-8">
         <Title level={2}>示例</Title>
+
+        <div class="space-y-4">
+          <Title level={3}>与 createForm</Title>
+          <MobileDocDemo>
+            <Form
+              form={multiSelectCreateForm}
+              layout="vertical"
+              class="w-full"
+              onFinish={() => {
+                message.success("已提交");
+              }}
+            >
+              <FormItem name="tags" label="标签">
+                <MultiSelect
+                  class="w-full"
+                  options={OPTIONS}
+                  {...multiSelectCreateForm.bind("tags")}
+                  placeholder="请选择"
+                />
+              </FormItem>
+              <Button type="submit" variant="primary" class="w-full">
+                提交
+              </Button>
+            </Form>
+          </MobileDocDemo>
+          <CodeBlock
+            title="代码示例"
+            code={`import { createForm } from "@dreamer/ui-view/form/create-form";
+import { formRules } from "@dreamer/ui-view/form/form-rules";
+import { Form } from "@dreamer/ui-view/mobile/form/form";
+import { FormItem } from "@dreamer/ui-view/mobile/form/form-item";
+import { MultiSelect } from "@dreamer/ui-view/mobile/form/multiselect";
+
+const form = createForm({
+  initialValues: { tags: [] as string[] },
+  fields: { tags: { rules: [formRules.required()] } },
+});
+
+<Form form={form} onFinish={() => { message.success("已提交"); }}>
+  <FormItem name="tags" label="标签">
+    <MultiSelect options={OPTIONS} {...form.bind("tags")} />
+  </FormItem>
+</Form>`}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+        </div>
 
         <div class="space-y-4">
           <Title level={3}>基础</Title>
@@ -157,17 +241,47 @@ export default function MobileMultiSelectDoc() {
               </p>
             )}
           </MobileDocDemo>
-          <CodeBlock title="代码示例" code={exampleControlled} language="tsx" showLineNumbers copyable wrapLongLines />
-
+          <CodeBlock
+            title="代码示例"
+            code={exampleControlled}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
         </div>
         <div class="space-y-4">
           <Title level={3}>size（xs / sm / md / lg）</Title>
           <MobileDocDemo>
             <div class="flex flex-col gap-3 p-2">
-              <MultiSelect size="xs" class="w-full" options={OPTIONS} value={[]} placeholder="xs" />
-              <MultiSelect size="sm" class="w-full" options={OPTIONS} value={[]} placeholder="sm" />
-              <MultiSelect size="md" class="w-full" options={OPTIONS} value={[]} placeholder="md" />
-              <MultiSelect size="lg" class="w-full" options={OPTIONS} value={[]} placeholder="lg" />
+              <MultiSelect
+                size="xs"
+                class="w-full"
+                options={OPTIONS}
+                value={[]}
+                placeholder="xs"
+              />
+              <MultiSelect
+                size="sm"
+                class="w-full"
+                options={OPTIONS}
+                value={[]}
+                placeholder="sm"
+              />
+              <MultiSelect
+                size="md"
+                class="w-full"
+                options={OPTIONS}
+                value={[]}
+                placeholder="md"
+              />
+              <MultiSelect
+                size="lg"
+                class="w-full"
+                options={OPTIONS}
+                value={[]}
+                placeholder="lg"
+              />
             </div>
           </MobileDocDemo>
           <CodeBlock
@@ -185,11 +299,11 @@ export default function MobileMultiSelectDoc() {
       </section>
 
       <section class="space-y-4">
-      <DocsMessagesSection
-        interfaceName="MultiSelectMessages"
-        defaultExportName="defaultMultiSelectMessages"
-        rows={MESSAGES_MULTI_SELECT}
-      />
+        <DocsMessagesSection
+          interfaceName="MultiSelectMessages"
+          defaultExportName="defaultMultiSelectMessages"
+          rows={MESSAGES_MULTI_SELECT}
+        />
 
         <Title level={2}>API</Title>
         <DocsApiTable rows={MULTI_API} />

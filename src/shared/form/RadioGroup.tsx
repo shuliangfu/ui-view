@@ -6,13 +6,15 @@
  * 外壳为稳定 VNode；各 Radio 的 `checked` 用 getter 订阅 value，避免整组重建。
  */
 
-import type { JSXRenderable } from "@dreamer/view";
+import { type JSXRenderable, useContext } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import {
   commitMaybeSignal,
   type MaybeSignal,
   readMaybeSignal,
 } from "./maybe-signal.ts";
+import { resolveFormControlSize } from "./form-control-context.ts";
+import { FormItemControlIdContext } from "./form-item-control-id.ts";
 import { Radio } from "./Radio.tsx";
 import type { SizeVariant } from "../types.ts";
 
@@ -46,6 +48,8 @@ export interface RadioGroupProps {
   class?: string;
   /** 尺寸，传给组内每个 Radio */
   size?: SizeVariant;
+  /** 控件 id（label for）；未传时取 FormItemControlIdContext */
+  id?: string;
 }
 
 export function RadioGroup(props: RadioGroupProps): JSXRenderable {
@@ -58,8 +62,12 @@ export function RadioGroup(props: RadioGroupProps): JSXRenderable {
     onChange,
     direction = "horizontal",
     class: className,
-    size,
+    size: sizeProp,
+    id,
   } = props;
+  const size = resolveFormControlSize(sizeProp);
+  const fromFormItem = useContext(FormItemControlIdContext);
+  const resolvedId = id ?? fromFormItem;
 
   const directionCls = direction === "horizontal"
     ? "flex-row flex-wrap gap-x-4 gap-y-2"
@@ -77,6 +85,7 @@ export function RadioGroup(props: RadioGroupProps): JSXRenderable {
 
   return (
     <div
+      id={resolvedId}
       class={twMerge("flex", directionCls, className)}
       role="radiogroup"
       aria-label={name}

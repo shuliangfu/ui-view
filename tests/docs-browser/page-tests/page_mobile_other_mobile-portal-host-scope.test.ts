@@ -89,7 +89,6 @@ describe("文档页 E2E：/mobile/other/mobile-portal-host-scope（MobilePortalH
     expect(ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
 
-
   /**
    * UI·Portal 宿主挂载且范围不盖整页误叠。
    */
@@ -103,13 +102,17 @@ describe("文档页 E2E：/mobile/other/mobile-portal-host-scope（MobilePortalH
         "main [data-dreamer-mobile-portal-host], main [data-dreamer-mobile-portal-scope]",
       ) as HTMLElement | null;
       // docs may describe scope wrapper
-      const scope = host || document.querySelector("main [class*='portal'], main [data-dreamer-mobile-portal]") as HTMLElement | null;
+      const scope = host ||
+        document.querySelector(
+          "main [class*='portal'], main [data-dreamer-mobile-portal]",
+        ) as HTMLElement | null;
       const textOk = /Portal|宿主|Scope/i.test(
         document.querySelector("main")?.innerText || "",
       );
       if (!scope) return { ok: textOk, reason: "text-only" };
       const r = scope.getBoundingClientRect();
-      const covers = r.width >= innerWidth * 0.98 && r.height >= innerHeight * 0.98;
+      const covers = r.width >= innerWidth * 0.98 &&
+        r.height >= innerHeight * 0.98;
       return {
         ok: r.width > 40 && r.height > 40 && !covers,
         w: r.width,
@@ -119,5 +122,4 @@ describe("文档页 E2E：/mobile/other/mobile-portal-host-scope（MobilePortalH
     }) as { ok: boolean };
     expect(got.ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
-
 });

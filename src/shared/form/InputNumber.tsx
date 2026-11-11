@@ -5,10 +5,18 @@
  */
 
 import { twMerge } from "tailwind-merge";
-import type { JSXRenderable, ViewRefObject } from "@dreamer/view";
+import {
+  type JSXRenderable,
+  useContext,
+  type ViewRefObject,
+} from "@dreamer/view";
 import type { SizeVariant } from "../types.ts";
 import { resolveFormControlSize } from "./form-control-context.ts";
-import { compositeShellFocusRingFromInput } from "./input-focus-ring.ts";
+import { FormItemControlIdContext } from "./form-item-control-id.ts";
+import {
+  compositeShellFocusRingFromInput,
+  controlErrorBorder,
+} from "./input-focus-ring.ts";
 import { commitMaybeSignal, type MaybeSignal } from "./maybe-signal.ts";
 
 /**
@@ -38,6 +46,8 @@ export interface InputNumberProps {
   placeholder?: string;
   /** 当前值（受控可选）；见 {@link MaybeSignal}（`number | string` 联合） */
   value?: MaybeSignal<number | string>;
+  /** 错误状态（外壳红框 + aria-invalid）；可与 FormItem / createForm bind 联用 */
+  error?: boolean;
   /** 步进 */
   step?: number;
   /** 最小值 */
@@ -127,7 +137,7 @@ const wrapRounded: Record<SizeVariant, string> = {
 
 /** 输入框本体：自身不画 ring；整圈高亮由外壳用 `:has(input:focus)` 控制，避免 +/- 获焦时误亮 */
 const inputBase =
-  "min-w-0 flex-1 border-0 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-hidden focus:ring-0 disabled:opacity-50 disabled:cursor-not-allowed transition-colors";
+  "min-w-0 flex-1 border-0 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-hidden focus:ring-0 disabled:opacity-50 disabled:cursor-not-allowed transition-colors";
 
 /**
  * 隐藏 `type="number"` 右侧原生上下箭头（与组件自带 +/- 重复）；Chrome/Safari 用 webkit 伪元素，Firefox 用 -moz-appearance。
@@ -254,11 +264,14 @@ export function InputNumber(props: InputNumberProps): JSXRenderable {
     name,
     id,
     inputRef,
+    error = false,
     hideFocusRing = false,
     messages,
   } = props;
   const m = { ...defaultInputNumberMessages, ...messages };
   const size = resolveFormControlSize(sizeProp);
+  const fromFormItem = useContext(FormItemControlIdContext);
+  const resolvedId = id ?? fromFormItem;
 
   const sizeCls = sizeClasses[size];
   // 禁止在组件体内读 value()：会订阅 signal，导致整树重跑、input 失焦。value 透传给 <input value={value} />。
@@ -300,13 +313,14 @@ export function InputNumber(props: InputNumberProps): JSXRenderable {
   const inputSpreadProps = {
     type: "number" as const,
     ref: inputRef,
-    id,
+    id: resolvedId,
     name,
     placeholder,
     disabled,
     step,
     min,
     max,
+    "aria-invalid": error,
     class: twMerge(
       inputBase,
       sizeCls,
@@ -330,7 +344,8 @@ export function InputNumber(props: InputNumberProps): JSXRenderable {
     <span
       class={twMerge(
         wrapShellCls,
-        compositeShellFocusRingFromInput(!hideFocusRing),
+        compositeShellFocusRingFromInput(!hideFocusRing && !error),
+        error && controlErrorBorder,
         wrapRounded[size],
         className,
       )}

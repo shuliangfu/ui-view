@@ -3,6 +3,8 @@
  * 与具体后端无关：所有数据读写通过 {@link DataSource} 注入。
  */
 
+import type { Signal } from "@dreamer/view";
+
 /** 数据行：键值对；主键字段默认为 `id`（见 `PanelProps.rowKey`）。 */
 export type Row = Record<string, unknown>;
 
@@ -133,12 +135,32 @@ export interface Column {
  */
 export type ViewClick = "toggle" | ((row: Row) => void);
 
+/**
+ * 详情字段级自定义渲染上下文（仅当未设 `view.render` 时生效）。
+ */
+export interface ViewItemRenderCtx {
+  /** 当前详情项配置 */
+  item: ViewItem;
+  /** 字段键 */
+  prop: string;
+  /** 当前行 */
+  row: Row;
+  /** 原始字段值 */
+  raw: unknown;
+  /** 内置 plainCell 结果，便于包裹或回落 */
+  defaultNode: unknown;
+}
+
 export interface ViewItem extends Column {
   /**
    * 详情字段点击：`toggle` 在两档 options 间切换并走 setField／update；
    * 或自定义 `(row)=>…`。
    */
   click?: ViewClick;
+  /**
+   * 字段级自定义展示节点。有 {@link ViewConfig.render} 时忽略本字段。
+   */
+  render?: (ctx: ViewItemRenderCtx) => unknown;
 }
 
 /** 搜索项（键统一 `prop`；旧 `name` 等同 prop，兼容保留） */
@@ -225,6 +247,28 @@ export type FormType =
   | "date"
   | "datetime";
 
+/**
+ * 增改表单字段级自定义控件上下文（仅当未设 `form.render` 时生效）。
+ */
+export interface FormFieldRenderCtx {
+  /** 当前表单项配置 */
+  field: FormField;
+  /** 字段键 */
+  prop: string;
+  /** 字符串值信号（与内置 fields 同源） */
+  value: Signal<string>;
+  /** 多选数组镜像信号（与内置 mfields 同源） */
+  multiValue: Signal<string[]>;
+  /** 新增／编辑 */
+  mode: "create" | "edit";
+  /** 编辑时为当前行；新增为 null */
+  row: Row | null;
+  /** 只读（如 createOnly 在编辑态） */
+  disabled: boolean;
+  /** 当前字段校验错误 */
+  error?: string;
+}
+
 /** 新增 / 编辑 Modal 里的表单项（键统一 `prop`；旧 `name` 等同 prop） */
 export interface FormField {
   /** 字段键（与 columns.prop 对齐）；缺省回落 `name` */
@@ -275,17 +319,80 @@ export interface FormField {
    * 仅无对应列时再写 onOff，默认 ["true","false"]。
    */
   onOff?: [string, string];
+  /**
+   * 字段级自定义控件。有 {@link FormConfig.render} 时忽略本字段。
+   */
+  render?: (ctx: FormFieldRenderCtx) => unknown;
+}
+
+/**
+ * 增改 Modal 主体自定义渲染上下文。
+ * 有 `form.render` 时整段替换内置 formBody（含确定／取消）；调用方自管底栏或调用 submit／close。
+ */
+export interface FormRenderCtx {
+  /** 新增／编辑 */
+  mode: "create" | "edit";
+  /** 编辑时为当前行；新增为 null */
+  row: Row | null;
+  /** 行主键；新增为空串 */
+  id: string;
+  /** 提交中 */
+  busy: boolean;
+  /** 字段级错误 */
+  errors: Record<string, string>;
+  /** 顶部错误文案 */
+  topError: string;
+  /** 关闭弹窗 */
+  close: () => void;
+  /**
+   * 走内置 validateForm + ds.create／update（依赖 `form.props` 字段信号）。
+   * 完全自管提交时可忽略，自行写数后 close／reload。
+   */
+  submit: () => Promise<void>;
+  /** 设置提交中状态 */
+  setBusy: (v: boolean) => void;
+  /** 设置字段错误 */
+  setErrors: (e: Record<string, string>) => void;
+  /** 设置顶部错误 */
+  setTopError: (msg: string) => void;
+  /** 重新拉取当前列表页 */
+  reload: () => Promise<void>;
+}
+
+/**
+ * 详情 Modal 字段区自定义渲染上下文。
+ * 有 `view.render` 时替换 Descriptions 字段区；底部 `view.actions` 脚仍由面板渲染。
+ */
+export interface ViewRenderCtx {
+  /** 当前详情行 */
+  row: Row;
+  /** 关闭详情弹窗 */
+  close: () => void;
+  /** 重新拉取当前列表页 */
+  reload: () => Promise<void>;
 }
 
 /**
  * form / search / view 的统一段配置：`title` 为弹层标题，`props` 为字段数组
  * （与列同一套字段配置）；底部按钮写在与 title 平级的 `actions`（不要写在 props 末项）。
+ *
+ * 扩展优先级：`form.render`（整页）＞ `FormField.render`（字段）＞ 内置控件；
+ * 旁路层仍可用 DataPanel `children` + 自定义 `action` 自管 Modal。
  */
 export interface FormConfig {
   title?: string | ((row: Row) => string);
-  props: FormField[];
-  /** 可选底部按钮（与列操作同一套 Record）。表单确定／取消仍走官方 Modal 脚。 */
+  /**
+   * 表单项数组。有 {@link FormConfig.render} 时可省略或留空。
+   * 若仍提供 props，内置 `submit()` 可按 props 校验／收集值。
+   */
+  props?: FormField[];
+  /** 可选底部按钮（与列操作同一套 Record）。表单确定／取消仍走官方 Modal 脚（内置 formBody）。 */
   actions?: RowActionsConfig;
+  /**
+   * 整段替换增改 Modal 主体（含确定／取消）。
+   * 有本字段时忽略各 {@link FormField.render}。
+   */
+  render?: (ctx: FormRenderCtx) => unknown;
 }
 
 export interface SearchConfig {
@@ -298,12 +405,21 @@ export interface SearchConfig {
 export interface ViewConfig {
   /** 详情弹层标题；支持 `(row)=>string`，如 `` `详情 · ${row.name}` `` */
   title?: string | ((row: Row) => string);
-  props: ViewItem[];
+  /**
+   * 详情字段数组。有 {@link ViewConfig.render} 时可省略或留空（字段区完全自定义）。
+   */
+  props?: ViewItem[];
   /**
    * 底部按钮（与列操作同一套 Record）。内置只有 close（默认显示、靠右最后）。
    * 自定义：`action(row)` 或 `href`。不写时底部只留关闭。
+   * 有 {@link ViewConfig.render} 时本脚仍渲染；连底栏一起自管可设 `close: false` 并在 render 内画按钮。
    */
   actions?: RowActionsConfig;
+  /**
+   * 替换详情 Descriptions 字段区；底部 actions 脚仍由面板渲染。
+   * 有本字段时忽略各 {@link ViewItem.render}。
+   */
+  render?: (ctx: ViewRenderCtx) => unknown;
 }
 
 /** 列表查询（page 从 1 起；order 对外统一 asc｜desc） */

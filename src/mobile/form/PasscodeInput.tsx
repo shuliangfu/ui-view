@@ -7,10 +7,13 @@ import {
   createMemo,
   createSignal,
   type JSXRenderable,
+  useContext,
 } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import type { SizeVariant } from "../../shared/types.ts";
 import { resolveFormControlSize } from "../../shared/form/form-control-context.ts";
+import { FormItemControlIdContext } from "../../shared/form/form-item-control-id.ts";
+import { controlErrorBorder } from "../../shared/form/input-focus-ring.ts";
 import {
   commitMaybeSignal,
   type MaybeSignal,
@@ -32,6 +35,8 @@ export interface PasscodeInputProps {
   /** 当前值 */
   value?: MaybeSignal<string>;
   onChange?: (value: string) => void;
+  /** 失焦回调（可用于 blur 校验） */
+  onBlur?: (e: Event) => void;
   /** 完成（长度达到 length） */
   onFinish?: (value: string) => void;
   /** 位数，默认 6 */
@@ -43,6 +48,12 @@ export interface PasscodeInputProps {
   /** 自动弹出系统键盘用的隐藏 input，默认 true */
   secludedInput?: boolean;
   disabled?: boolean;
+  /** 错误状态（格子红框）；可与 FormItem / createForm bindValue 联用 */
+  error?: boolean;
+  /** 表单字段名 */
+  name?: string;
+  /** 控件 id；未传时取 FormItemControlIdContext */
+  id?: string;
   class?: string;
   /** 无障碍标签；优先于 messages.label */
   "aria-label"?: string;
@@ -56,16 +67,22 @@ export function PasscodeInput(props: PasscodeInputProps): JSXRenderable {
   };
   const {
     onChange,
+    onBlur,
     onFinish,
     length = 6,
     mask = false,
     digitsOnly = true,
     secludedInput = true,
     disabled = false,
+    error = false,
+    name,
+    id,
     class: className,
     "aria-label": ariaLabelProp,
   } = props;
   const size = resolveFormControlSize(props.size);
+  const fromFormItem = useContext(FormItemControlIdContext);
+  const resolvedId = id ?? fromFormItem;
   const cellSizeCls: Record<SizeVariant, string> = {
     xs: "size-7 text-sm",
     sm: "size-8 text-base",
@@ -85,9 +102,16 @@ export function PasscodeInput(props: PasscodeInputProps): JSXRenderable {
 
   const valueNow = createMemo(() => {
     const v = readMaybeSignal(props.value) ?? "";
-    return digitsOnly ? v.replace(/\D/g, "").slice(0, length) : v.slice(0, length);
+    return digitsOnly
+      ? v.replace(/\D/g, "").slice(0, length)
+      : v.slice(0, length);
   });
 
+  /**
+   * 写回受控值并触发 onChange / onFinish。
+   *
+   * @param next - 原始输入字符串
+   */
   const setValue = (next: string) => {
     let v = digitsOnly ? next.replace(/\D/g, "") : next;
     v = v.slice(0, length);
@@ -96,6 +120,7 @@ export function PasscodeInput(props: PasscodeInputProps): JSXRenderable {
     if (v.length >= length) onFinish?.(v);
   };
 
+  /** 渲染等宽格子；错误态统一红框 */
   const cells = () => {
     const v = valueNow();
     const nodes: unknown[] = [];
@@ -109,7 +134,9 @@ export function PasscodeInput(props: PasscodeInputProps): JSXRenderable {
             "flex items-center justify-center rounded-lg border font-semibold",
             cellSizeCls[size],
             "border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900",
-            active && "border-blue-500 ring-2 ring-blue-500/30",
+            error && controlErrorBorder,
+            active && !error && "border-blue-500 ring-2 ring-blue-500/30",
+            active && error && "ring-2 ring-red-500/30",
           )}
         >
           {ch ? (mask ? "•" : ch) : ""}
@@ -121,9 +148,14 @@ export function PasscodeInput(props: PasscodeInputProps): JSXRenderable {
 
   return () => (
     <div
-      class={twMerge("passcode-input relative inline-flex", gapCls[size], className)}
+      class={twMerge(
+        "passcode-input relative inline-flex",
+        gapCls[size],
+        className,
+      )}
       role="group"
       aria-label={ariaLabel}
+      aria-invalid={error}
       onClick={() => {
         if (disabled) return;
         focused.value = true;
@@ -136,6 +168,8 @@ export function PasscodeInput(props: PasscodeInputProps): JSXRenderable {
           ref={(el: unknown) => {
             inputRef.value = el as HTMLInputElement | null;
           }}
+          id={resolvedId}
+          name={name}
           class="absolute opacity-0 w-px h-px pointer-events-none"
           inputMode={digitsOnly ? "numeric" : "text"}
           autocomplete="one-time-code"
@@ -143,11 +177,13 @@ export function PasscodeInput(props: PasscodeInputProps): JSXRenderable {
           disabled={disabled}
           value={valueNow()}
           aria-label={ariaLabel}
+          aria-invalid={error}
           onFocus={() => {
             focused.value = true;
           }}
-          onBlur={() => {
+          onBlur={(e: Event) => {
             focused.value = false;
+            onBlur?.(e);
           }}
           onInput={(e: Event) => {
             const t = e.target as HTMLInputElement;

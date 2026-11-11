@@ -89,7 +89,6 @@ describe("文档页 E2E：/desktop/navigation/sidebar（Sidebar 侧栏）", () =
     expect(ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
 
-
   /**
    * UI·侧栏导航可见且有链接／项。
    */
@@ -116,5 +115,4 @@ describe("文档页 E2E：/desktop/navigation/sidebar（Sidebar 侧栏）", () =
     }) as { ok: boolean };
     expect(got.ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
-
 });

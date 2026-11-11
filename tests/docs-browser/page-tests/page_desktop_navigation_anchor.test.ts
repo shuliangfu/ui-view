@@ -152,5 +152,4 @@ describe("文档页 E2E：/desktop/navigation/anchor（Anchor 锚点）", () => 
     }) as { ok: boolean };
     expect(got.ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
-
 });

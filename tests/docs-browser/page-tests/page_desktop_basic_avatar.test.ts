@@ -471,5 +471,4 @@ describe("文档页 E2E：/desktop/basic/avatar（Avatar 头像）", () => {
     }) as { ok: boolean };
     expect(got.ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
-
 });

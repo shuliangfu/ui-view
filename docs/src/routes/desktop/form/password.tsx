@@ -3,13 +3,16 @@
  * 路由: /desktop/form/password
  */
 
-import { Paragraph, Title } from "@dreamer/ui-view/basic";
+import { Button, Link, Paragraph, Title } from "@dreamer/ui-view/basic";
 
+import { createForm } from "@dreamer/ui-view/form/create-form";
 import { Form } from "@dreamer/ui-view/form/form";
 import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { formRules } from "@dreamer/ui-view/form/form-rules";
 import { Password } from "@dreamer/ui-view/form/password";
 
 import { CodeBlock } from "@dreamer/ui-view/data-display";
+import { message } from "@dreamer/ui-view/feedback";
 import { createSignal } from "@dreamer/view";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_PASSWORD } from "../../../data/component-messages-rows.ts";
@@ -57,13 +60,20 @@ const PASSWORD_API: ApiRow[] = [
     name: "label",
     type: "string",
     default: "-",
-    description: "描边内嵌标签，效果见 Input「描边内嵌标签」；空且未聚焦在框内，聚焦或有值后上到边框左上缺口",
+    description:
+      "描边内嵌标签，效果见 Input「描边内嵌标签」；空且未聚焦在框内，聚焦或有值后上到边框左上缺口",
   },
   {
     name: "floatingLabel",
     type: "boolean",
     default: "false",
     description: "为 true 且未设 label 时，用 placeholder 作为描边内嵌标签",
+  },
+  {
+    name: "error",
+    type: "boolean",
+    default: "false",
+    description: "错误状态（红框）",
   },
   {
     name: "showStrength",
@@ -156,6 +166,17 @@ const PASSWORD_API: ApiRow[] = [
   },
 ];
 
+/** createForm 演示字段形状（模块级，避免文档页重跑丢失状态） */
+type PasswordFormValues = { password: string };
+
+/** Password + createForm 联用演示 store */
+const passwordForm = createForm<PasswordFormValues>({
+  initialValues: { password: "" },
+  fields: {
+    password: { rules: [formRules.required()] },
+  },
+});
+
 const importCode = `import { Form } from "@dreamer/ui-view/form/form";
 import { FormItem } from "@dreamer/ui-view/form/form-item";
 import { Password } from "@dreamer/ui-view/form/password";
@@ -179,8 +200,20 @@ export default function FormPassword() {
         <Title level={1}>Password 密码输入</Title>
         <Paragraph class="mt-2">
           密码输入框，支持显隐切换、showStrength
-          强度提示、size、disabled。宽度由 class 控制，表单中需占满一列时传
-          class="w-full"。Tailwind v4 + light/dark。
+          强度提示、size、disabled、error。宽度由 class
+          控制，表单中需占满一列时传 class="w-full"。Tailwind v4 +
+          light/dark。与{" "}
+          <Link
+            href="/desktop/form/form-containers"
+            className="text-teal-600 hover:underline dark:text-teal-400"
+          >
+            Form / createForm
+          </Link>{" "}
+          联用时展开{" "}
+          <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">
+            {"{...form.bind(name)}"}
+          </code>
+          。
         </Paragraph>
       </section>
 
@@ -197,6 +230,56 @@ export default function FormPassword() {
 
       <section class="space-y-8">
         <Title level={2}>示例</Title>
+
+        <section class="space-y-4">
+          <Title level={3}>与 createForm</Title>
+          <Form
+            form={passwordForm}
+            layout="vertical"
+            class="w-full max-w-md"
+            onFinish={() => {
+              message.success("ok");
+            }}
+          >
+            <FormItem
+              name="password"
+              label="密码"
+              rules={[formRules.required()]}
+            >
+              <Password
+                {...passwordForm.bind("password")}
+                placeholder="必填密码"
+                class="w-full"
+              />
+            </FormItem>
+            <Button type="submit" variant="primary">
+              校验
+            </Button>
+          </Form>
+          <CodeBlock
+            title="代码示例"
+            code={`const passwordForm = createForm({
+  initialValues: { password: "" },
+  fields: { password: { rules: [formRules.required()] } },
+});
+
+<Form
+  form={passwordForm}
+  layout="vertical"
+  class="w-full max-w-md"
+  onFinish={() => { message.success("ok"); }}
+>
+  <FormItem name="password" label="密码" rules={[formRules.required()]}>
+    <Password {...passwordForm.bind("password")} placeholder="必填密码" />
+  </FormItem>
+  <Button type="submit" variant="primary">校验</Button>
+</Form>`}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+        </section>
 
         <Form layout="vertical" class="w-full space-y-6">
           <section class="space-y-4">

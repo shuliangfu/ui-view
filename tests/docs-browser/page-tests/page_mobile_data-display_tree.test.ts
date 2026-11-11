@@ -66,8 +66,12 @@ describe("文档页 E2E：/mobile/data-display/tree（Tree 树）", () => {
     await sharedEnv.delay(120);
 
     const before = await t.browser.evaluate(() => ({
-      child: !!document.querySelector("main [data-tree-demo='cascade'] [data-tree-select-key='1-1']"),
-      hasCheck: !!document.querySelector("main [data-tree-demo='cascade'] [data-tree-check-key='1']"),
+      child: !!document.querySelector(
+        "main [data-tree-demo='cascade'] [data-tree-select-key='1-1']",
+      ),
+      hasCheck: !!document.querySelector(
+        "main [data-tree-demo='cascade'] [data-tree-check-key='1']",
+      ),
     })) as { child: boolean; hasCheck: boolean };
     expect(before.child).toBe(true);
     expect(before.hasCheck).toBe(true);
@@ -84,7 +88,9 @@ describe("文档页 E2E：/mobile/data-display/tree（Tree 树）", () => {
     });
     await sharedEnv.delay(200);
     const collapsed = await t.browser.evaluate(() =>
-      !!document.querySelector("main [data-tree-demo='cascade'] [data-tree-select-key='1-1']")
+      !!document.querySelector(
+        "main [data-tree-demo='cascade'] [data-tree-select-key='1-1']",
+      )
     ) as boolean;
     expect(collapsed).toBe(false);
 
@@ -137,7 +143,9 @@ describe("文档页 E2E：/mobile/data-display/tree（Tree 树）", () => {
         ) as HTMLInputElement | null;
         return !!el?.checked;
       });
-      const display = document.querySelector("[data-tree-demo='cascade'] [data-tree-keys-display]")
+      const display = document.querySelector(
+        "[data-tree-demo='cascade'] [data-tree-keys-display]",
+      )
         ?.textContent ?? "";
       return { allChecked, display };
     }) as { allChecked: boolean; display: string };
@@ -154,9 +162,11 @@ describe("文档页 E2E：/mobile/data-display/tree（Tree 树）", () => {
     await sharedEnv.delay(120);
 
     await t.browser.evaluate(() => {
-      if (!document.querySelector(
-        "main [data-tree-demo='cascade'] [data-tree-check-key='1-2-1']",
-      )) {
+      if (
+        !document.querySelector(
+          "main [data-tree-demo='cascade'] [data-tree-check-key='1-2-1']",
+        )
+      ) {
         const exp = document.querySelector(
           "main [data-tree-demo='cascade'] [data-tree-expand-key='1-2']",
         ) as (HTMLButtonElement & { __onclick?: (ev: Event) => void }) | null;
@@ -204,7 +214,8 @@ describe("文档页 E2E：/mobile/data-display/tree（Tree 树）", () => {
           parentCb?.getAttribute("aria-checked") === "mixed",
         ancestorIndeterminate: !!ancestorCb?.indeterminate ||
           ancestorCb?.getAttribute("aria-checked") === "mixed",
-        parentSelected: parentRow?.getAttribute("data-tree-selected") === "true",
+        parentSelected:
+          parentRow?.getAttribute("data-tree-selected") === "true",
         display,
       };
     }) as {
@@ -223,5 +234,4 @@ describe("文档页 E2E：/mobile/data-display/tree（Tree 树）", () => {
     expect(got.parentSelected).toBe(false);
     expect(got.display).toMatch(/共\s*2/);
   }, DOCS_BROWSER_CONFIG);
-
 });

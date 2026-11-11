@@ -475,7 +475,6 @@ describe("文档页 E2E：/desktop/layout/tabs（Tabs 标签页）", () => {
     }) as { ok: boolean };
     expect(got.ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
-
 });
 
 /** 本文件内：点击第二个 tab */

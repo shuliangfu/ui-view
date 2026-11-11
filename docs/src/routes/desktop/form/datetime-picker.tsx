@@ -3,13 +3,16 @@
  * 路由: /desktop/form/datetime-picker
  */
 
-import { Paragraph, Title } from "@dreamer/ui-view/basic";
+import { Button, Link, Paragraph, Title } from "@dreamer/ui-view/basic";
 
 import { DateTimePicker } from "@dreamer/ui-view/form/datetime-picker";
+import { createForm } from "@dreamer/ui-view/form/create-form";
 import { Form } from "@dreamer/ui-view/form/form";
 import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { formRules } from "@dreamer/ui-view/form/form-rules";
 
 import { CodeBlock } from "@dreamer/ui-view/data-display";
+import { message } from "@dreamer/ui-view/feedback";
 import { createSignal } from "@dreamer/view";
 import { DocsApiTable } from "../../../components/DocsApiTable.tsx";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
@@ -139,6 +142,12 @@ const DATETIMEPICKER_API: ApiRow[] = [
   { name: "name", type: "string", default: "-", description: "原生 name" },
   { name: "id", type: "string", default: "-", description: "原生 id" },
   {
+    name: "error",
+    type: "boolean",
+    default: "false",
+    description: "错误状态（红框）；可与 createForm 绑定联用",
+  },
+  {
     name: "messages",
     type: "Partial<DateTimePickerMessages>",
     default: "-",
@@ -164,12 +173,41 @@ const val = createSignal(localNowDateTime());
   />
 </FormItem>`;
 
-
 const exampleNestedMessages = `<DateTimePicker
   messages={{
     calendarNav: { /* PickerCalendarNavMessages */ },
   }}
 />`;
+
+/** createForm 演示字段（模块级） */
+type DateTimePickerDemoValues = { when: string };
+
+/** DateTimePicker + bind 联用演示 store */
+const dateTimePickerDemoForm = createForm<DateTimePickerDemoValues>({
+  initialValues: { when: "" },
+  fields: { when: { rules: [formRules.required("请选择日期时间")] } },
+});
+
+/** 与 createForm 示例的 CodeBlock 源码 */
+const exampleCreateForm =
+  `import { createForm, formRules } from "@dreamer/ui-view/form";
+import { Form } from "@dreamer/ui-view/form/form";
+import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { DateTimePicker } from "@dreamer/ui-view/form/datetime-picker";
+import { Button } from "@dreamer/ui-view/basic";
+import { message } from "@dreamer/ui-view/feedback";
+
+const form = createForm({
+  initialValues: { when: "" },
+  fields: { when: { rules: [formRules.required("请选择日期时间")] } },
+});
+
+<Form form={form} onFinish={() => { message.success("已提交"); }}>
+  <FormItem name="when" label="日期时间">
+    <DateTimePicker {...form.bind("when")} />
+  </FormItem>
+  <Button type="submit" variant="primary">提交</Button>
+</Form>`;
 
 export default function FormDateTimePickerDoc() {
   const now = localNowDateTime();
@@ -205,7 +243,18 @@ export default function FormDateTimePickerDoc() {
           <code class="text-sm">MM</code> 区分。支持{" "}
           <code class="text-sm">mode</code>
           ：单日、区间、多日（多日共用当前所选时/分/秒，按自然日切换）。Tailwind
-          v4 + light/dark。
+          v4 + light/dark。与{" "}
+          <Link
+            href="/desktop/form/form-containers"
+            className="text-teal-600 hover:underline dark:text-teal-400"
+          >
+            Form / createForm
+          </Link>{" "}
+          联用时展开{" "}
+          <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">
+            {"{...form.bind(name)}"}
+          </code>
+          。
         </Paragraph>
       </section>
 
@@ -222,6 +271,33 @@ export default function FormDateTimePickerDoc() {
 
       <section class="space-y-8">
         <Title level={2}>示例</Title>
+
+        <section class="space-y-4">
+          <Title level={3}>与 createForm</Title>
+          <Form
+            form={dateTimePickerDemoForm}
+            layout="vertical"
+            class="w-full max-w-md border border-dashed border-slate-200 dark:border-slate-600 rounded-lg p-4"
+            onFinish={() => {
+              message.success("已提交");
+            }}
+          >
+            <FormItem name="when" label="日期时间">
+              <DateTimePicker {...dateTimePickerDemoForm.bind("when")} />
+            </FormItem>
+            <Button type="submit" variant="primary">
+              提交
+            </Button>
+          </Form>
+          <CodeBlock
+            title="代码示例"
+            code={exampleCreateForm}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+        </section>
 
         <Form layout="vertical" class="w-full space-y-6">
           <section class="space-y-4">
@@ -438,7 +514,14 @@ export default function FormDateTimePickerDoc() {
       </section>
 
       <section class="space-y-3">
-          <CodeBlock title="代码示例" code={exampleNestedMessages} language="tsx" showLineNumbers copyable wrapLongLines />
+        <CodeBlock
+          title="代码示例"
+          code={exampleNestedMessages}
+          language="tsx"
+          showLineNumbers
+          copyable
+          wrapLongLines
+        />
 
         <Title level={2}>API</Title>
         <Paragraph class="text-sm text-slate-600 dark:text-slate-400">

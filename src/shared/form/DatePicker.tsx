@@ -9,8 +9,13 @@
  * 传 `panelAttach="viewport"` 时浮层改为视口 **`fixed`** + 几何同步，用于表格等存在 `overflow-x-auto` / `overflow-hidden` 祖先、会裁切 `absolute` 浮层的场景。
  */
 
-import { batch, createSignal, Show } from "@dreamer/view";
-import type { JSXRenderable } from "@dreamer/view";
+import {
+  batch,
+  createSignal,
+  type JSXRenderable,
+  Show,
+  useContext,
+} from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 /** 触发器右侧使用日历图标，与纯下拉区分 */
 import { IconCalendar } from "../basic/icons/Calendar.tsx";
@@ -23,9 +28,12 @@ import {
 import type { SizeVariant } from "../types.ts";
 import {
   controlBlueFocusRing,
+  controlErrorBorder,
+  controlErrorFocusRing,
   pickerTriggerSizeClasses,
   pickerTriggerSurface,
 } from "./input-focus-ring.ts";
+import { FormItemControlIdContext } from "./form-item-control-id.ts";
 import {
   type PickerCalendarHeaderPanel,
   PickerCalendarNav,
@@ -107,9 +115,13 @@ export interface DatePickerProps {
   size?: SizeVariant;
   disabled?: boolean;
   onChange?: (e: Event) => void;
+  /** 触发器失焦（可用于 blur 校验） */
+  onBlur?: (e: Event) => void;
   class?: string;
   name?: string;
   id?: string;
+  /** 错误状态（触发器红框）；可与 FormItem / createForm bind 联用 */
+  error?: boolean;
   /** 占位文案 */
   placeholder?: string;
   /** 为 true 时隐藏聚焦激活态边框；默认 false 显示 ring */
@@ -306,6 +318,7 @@ function getDatePickerDerivatives(props: DatePickerProps) {
 export function DatePicker(props: DatePickerProps): JSXRenderable {
   /** 与 {@link Input} 一致：继承 Form 注入的控件尺寸 */
   const resolvedControlSize = resolveFormControlSize(props.size);
+  const fromFormItem = useContext(FormItemControlIdContext);
   const openState = createSignal(false);
 
   /** single：面板草稿日 */
@@ -600,7 +613,7 @@ export function DatePicker(props: DatePickerProps): JSXRenderable {
       />
       <button
         type="button"
-        id={props.id}
+        id={props.id ?? fromFormItem}
         /**
          * 触发器 DOM：`fixed` 贴边与几何同步用；`compileSource` 路径须用函数 ref，勿 `ref={triggerRef}` 对象。
          */
@@ -608,6 +621,7 @@ export function DatePicker(props: DatePickerProps): JSXRenderable {
           triggerRef.current = el;
         }}
         disabled={() => props.disabled ?? false}
+        aria-invalid={() => props.error}
         aria-haspopup="dialog"
         aria-expanded={() => openState.value}
         aria-label={() => {
@@ -620,9 +634,12 @@ export function DatePicker(props: DatePickerProps): JSXRenderable {
         class={() =>
           twMerge(
             pickerTriggerSurface,
-            controlBlueFocusRing(!props.hideFocusRing),
+            controlBlueFocusRing(!props.hideFocusRing && !props.error),
+            props.error && controlErrorBorder,
+            props.error && !props.hideFocusRing && controlErrorFocusRing(true),
             pickerTriggerSizeClasses[resolvedControlSize],
           )}
+        onBlur={props.onBlur}
         onClick={handleOpen}
       >
         <span

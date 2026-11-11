@@ -81,7 +81,7 @@ describe("文档页 E2E：/desktop/data-display/tree（Tree 树）", () => {
         let root: Element | null = h.parentElement;
         for (let depth = 0; depth < 12 && root && root !== main; depth++) {
           const btn = root.querySelector(
-            'button[data-tree-expand-key]:not([disabled])',
+            "button[data-tree-expand-key]:not([disabled])",
           ) as HTMLButtonElement | null;
           if (btn) {
             btn.click();
@@ -230,8 +230,10 @@ describe("文档页 E2E：/desktop/data-display/tree（Tree 树）", () => {
 
     const afterParent = await t.browser.evaluate(() => {
       const keys = ["1", "1-1", "1-2", "1-2-1"];
-      const states: Record<string, { checked: boolean; indeterminate: boolean }> =
-        {};
+      const states: Record<
+        string,
+        { checked: boolean; indeterminate: boolean }
+      > = {};
       for (const k of keys) {
         const el = document.querySelector(
           `main [data-tree-demo='cascade'] [data-tree-check-key='${k}']`,
@@ -241,7 +243,9 @@ describe("文档页 E2E：/desktop/data-display/tree（Tree 树）", () => {
           indeterminate: !!el?.indeterminate,
         };
       }
-      const display = document.querySelector("[data-tree-demo='cascade'] [data-tree-keys-display]")
+      const display = document.querySelector(
+        "[data-tree-demo='cascade'] [data-tree-keys-display]",
+      )
         ?.textContent ?? "";
       return { states, display };
     }) as {
@@ -281,7 +285,9 @@ describe("文档页 E2E：/desktop/data-display/tree（Tree 树）", () => {
       const leaf = document.querySelector(
         "main [data-tree-demo='cascade'] [data-tree-check-key='1-1']",
       ) as HTMLInputElement | null;
-      const display = document.querySelector("[data-tree-demo='cascade'] [data-tree-keys-display]")
+      const display = document.querySelector(
+        "[data-tree-demo='cascade'] [data-tree-keys-display]",
+      )
         ?.textContent ?? "";
       return {
         parentChecked: !!p?.checked,
@@ -330,9 +336,13 @@ describe("文档页 E2E：/desktop/data-display/tree（Tree 树）", () => {
     });
     await sharedEnv.delay(200);
     const collapsed = await t.browser.evaluate(() => ({
-      child: !!document.querySelector("main [data-tree-demo='cascade'] [data-tree-select-key='1-1']"),
+      child: !!document.querySelector(
+        "main [data-tree-demo='cascade'] [data-tree-select-key='1-1']",
+      ),
       aria: document
-        .querySelector("main [data-tree-demo='cascade'] [data-tree-expand-key='1']")
+        .querySelector(
+          "main [data-tree-demo='cascade'] [data-tree-expand-key='1']",
+        )
         ?.getAttribute("aria-expanded"),
     })) as { child: boolean; aria: string | null };
     expect(collapsed.child).toBe(false);
@@ -352,9 +362,13 @@ describe("文档页 E2E：/desktop/data-display/tree（Tree 树）", () => {
     });
     await sharedEnv.delay(200);
     const opened = await t.browser.evaluate(() => ({
-      child: !!document.querySelector("main [data-tree-demo='cascade'] [data-tree-select-key='1-1']"),
+      child: !!document.querySelector(
+        "main [data-tree-demo='cascade'] [data-tree-select-key='1-1']",
+      ),
       aria: document
-        .querySelector("main [data-tree-demo='cascade'] [data-tree-expand-key='1']")
+        .querySelector(
+          "main [data-tree-demo='cascade'] [data-tree-expand-key='1']",
+        )
         ?.getAttribute("aria-expanded"),
     })) as { child: boolean; aria: string | null };
     expect(opened.child).toBe(true);
@@ -428,7 +442,6 @@ describe("文档页 E2E：/desktop/data-display/tree（Tree 树）", () => {
     expect(after.parent).toBe(true);
     expect(after.child).toBe(false);
   }, DOCS_BROWSER_CONFIG);
-
 
   /**
    * UI·点叶标题：仅该叶 selected；父不 selected；checked 计数仍 0。
@@ -571,7 +584,8 @@ describe("文档页 E2E：/desktop/data-display/tree（Tree 树）", () => {
         ancestorChecked: !!ancestorCb?.checked,
         ancestorIndeterminate: !!ancestorCb?.indeterminate ||
           ancestorCb?.getAttribute("aria-checked") === "mixed",
-        parentSelected: parentRow?.getAttribute("data-tree-selected") === "true",
+        parentSelected:
+          parentRow?.getAttribute("data-tree-selected") === "true",
         leafSelected: leafRow?.getAttribute("data-tree-selected") === "true",
         display,
       };
@@ -598,5 +612,4 @@ describe("文档页 E2E：/desktop/data-display/tree（Tree 树）", () => {
     expect(got.display).toMatch(/1-2/);
     expect(got.display).toMatch(/共\s*2/);
   }, DOCS_BROWSER_CONFIG);
-
 });

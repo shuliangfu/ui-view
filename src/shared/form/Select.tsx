@@ -3,20 +3,28 @@
  * 须通过 {@link SelectProps.options} 传入选项；未传时视为空列表。
  */
 
-import { createEffect, createSignal, onCleanup } from "@dreamer/view";
+import {
+  createEffect,
+  createSignal,
+  type JSXRenderable,
+  onCleanup,
+  useContext,
+} from "@dreamer/view";
 import {
   installInlineDropdownOutsideClickClose,
   pickInlineDropdownOption,
   syncInlineDropdownPanelVisibility,
 } from "./inline-dropdown-outside-click.ts";
-import type { JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import { IconChevronDown } from "../basic/icons/ChevronDown.tsx";
 import {
   controlBlueFocusRing,
+  controlErrorBorder,
+  controlErrorFocusRing,
   pickerTriggerSurface,
 } from "./input-focus-ring.ts";
 import { resolveFormControlSize } from "./form-control-context.ts";
+import { FormItemControlIdContext } from "./form-item-control-id.ts";
 import {
   commitMaybeSignal,
   type MaybeSignal,
@@ -53,10 +61,14 @@ export interface SelectProps {
   options?: SelectOption[];
   /** 当前值；见 {@link MaybeSignal} */
   value?: MaybeSignal<string>;
+  /** 错误状态（触发器红框）；可与 FormItem / createForm bind 联用 */
+  error?: boolean;
   /** 占位选项文案（对应 value=""） */
   placeholder?: string;
   class?: string;
   onChange?: (e: Event) => void;
+  /** 触发器失焦（可用于 blur 校验） */
+  onBlur?: (e: Event) => void;
   name?: string;
   id?: string;
   /**
@@ -102,8 +114,10 @@ function SelectDropdownBranch(props: SelectProps) {
     placeholder,
     class: className,
     onChange,
+    onBlur,
     name,
     id,
+    error = false,
     children,
     hideFocusRing = false,
     messages,
@@ -121,6 +135,8 @@ function SelectDropdownBranch(props: SelectProps) {
 
   const m = { ...defaultSelectMessages, ...messages };
   const size = resolveFormControlSize(sizeProp);
+  const fromFormItem = useContext(FormItemControlIdContext);
+  const resolvedId = id ?? fromFormItem;
 
   const openState = createSignal(false);
   const sizeCls = sizeClassesDropdown[size];
@@ -202,8 +218,9 @@ function SelectDropdownBranch(props: SelectProps) {
       />
       <button
         type="button"
-        id={id}
+        id={resolvedId}
         disabled={disabled}
+        aria-invalid={error}
         aria-haspopup="listbox"
         aria-expanded={() => openState.value}
         aria-label={() => {
@@ -215,9 +232,12 @@ function SelectDropdownBranch(props: SelectProps) {
         class={twMerge(
           "w-full",
           pickerTriggerSurface,
-          controlBlueFocusRing(!hideFocusRing),
+          controlBlueFocusRing(!hideFocusRing && !error),
+          error && controlErrorBorder,
+          error && !hideFocusRing && controlErrorFocusRing(true),
           sizeCls,
         )}
+        onBlur={onBlur}
         onClick={() => {
           if (disabled) return;
           if (openState.value) {

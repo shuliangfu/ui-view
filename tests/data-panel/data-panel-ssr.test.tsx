@@ -697,4 +697,19 @@ describe("DataPanel SSR：文案与自定义", () => {
       ),
     ).toBe(2);
   });
+
+  it("form.render / view.render 配置可 SSR（关闭态不抛错）", async () => {
+    const h = await html({
+      form: {
+        render: () => <div data-testid="ssr-form-render">custom-form</div>,
+      },
+      view: {
+        render: () => <div data-testid="ssr-view-render">custom-view</div>,
+        actions: { close: true },
+      },
+      columns: withActions({ view: true, edit: true, remove: false }),
+    });
+    expect(h).toContain("用户");
+    expect(h).toContain('data-testid="panel-data-panel"');
+  });
 });

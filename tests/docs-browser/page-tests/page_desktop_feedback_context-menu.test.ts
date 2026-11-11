@@ -154,10 +154,10 @@ describe("文档页 E2E：/desktop/feedback/context-menu（ContextMenu 右键菜
     });
     await sharedEnv.delay(200);
     const status = await t.browser.evaluate(() => {
-      return document.querySelector("main [role='status']")?.textContent?.trim() ??
+      return document.querySelector("main [role='status']")?.textContent
+        ?.trim() ??
         "";
     }) as string;
     expect(status).toMatch(/复制/);
   }, DOCS_BROWSER_CONFIG);
-
 });

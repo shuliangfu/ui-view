@@ -3,16 +3,19 @@
  * 路由: /desktop/form/check
  */
 
-import { Paragraph, Title } from "@dreamer/ui-view/basic";
+import { Button, Link, Paragraph, Title } from "@dreamer/ui-view/basic";
 
 import { Checkbox } from "@dreamer/ui-view/form/checkbox";
 import { CheckboxGroup } from "@dreamer/ui-view/form/checkbox-group";
+import { createForm } from "@dreamer/ui-view/form/create-form";
 import { Form } from "@dreamer/ui-view/form/form";
 import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { formRules } from "@dreamer/ui-view/form/form-rules";
 import { RadioGroup } from "@dreamer/ui-view/form/radio-group";
 import { Switch } from "@dreamer/ui-view/form/switch";
 
 import { CodeBlock } from "@dreamer/ui-view/data-display";
+import { message } from "@dreamer/ui-view/feedback";
 import { createSignal } from "@dreamer/view";
 
 interface ApiRow {
@@ -216,8 +219,7 @@ const radioOptions = [
   { value: "r3", label: "单选 3" },
 ];
 
-const importCode =
-  `import { Checkbox } from "@dreamer/ui-view/form/checkbox";
+const importCode = `import { Checkbox } from "@dreamer/ui-view/form/checkbox";
 import { CheckboxGroup } from "@dreamer/ui-view/form/checkbox-group";
 import { Form } from "@dreamer/ui-view/form/form";
 import { FormItem } from "@dreamer/ui-view/form/form-item";
@@ -234,6 +236,63 @@ const sw = createSignal(false);
 <RadioGroup name="radio-demo" options={...} value={radioVal} />
 <Switch checked={sw} />`;
 
+/** createForm 聚合演示：bindChecked + bindValue */
+type CheckDemoValues = {
+  agree: boolean;
+  notify: boolean;
+  hobbies: string[];
+  level: string;
+};
+
+/** 勾选类控件与 createForm 联用演示 store */
+const checkDemoForm = createForm<CheckDemoValues>({
+  initialValues: {
+    agree: false,
+    notify: true,
+    hobbies: [],
+    level: "a",
+  },
+  fields: {
+    agree: {
+      rules: [
+        formRules.custom((v) => (v === true ? undefined : "请勾选同意")),
+      ],
+    },
+    hobbies: {
+      rules: [
+        formRules.custom((v) =>
+          Array.isArray(v) && v.length > 0 ? undefined : "请至少选一项"
+        ),
+      ],
+    },
+    level: { rules: [formRules.required("请选择级别")] },
+  },
+});
+
+/** 与 createForm 示例的 CodeBlock 源码 */
+const exampleCreateForm =
+  `import { createForm, formRules } from "@dreamer/ui-view/form";
+import { Form } from "@dreamer/ui-view/form/form";
+import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { Checkbox } from "@dreamer/ui-view/form/checkbox";
+import { CheckboxGroup } from "@dreamer/ui-view/form/checkbox-group";
+import { RadioGroup } from "@dreamer/ui-view/form/radio-group";
+import { Switch } from "@dreamer/ui-view/form/switch";
+import { Button } from "@dreamer/ui-view/basic";
+import { message } from "@dreamer/ui-view/feedback";
+
+const form = createForm({
+  initialValues: { agree: false, notify: true, hobbies: [] as string[], level: "a" },
+});
+
+<Form form={form} onFinish={() => { message.success("已提交"); }}>
+  <FormItem name="agree"><Checkbox {...form.bindChecked("agree")}>同意</Checkbox></FormItem>
+  <FormItem name="notify"><Switch {...form.bindChecked("notify")} /></FormItem>
+  <FormItem name="hobbies"><CheckboxGroup {...form.bindValue("hobbies")} options={…} /></FormItem>
+  <FormItem name="level"><RadioGroup {...form.bindValue("level")} options={…} /></FormItem>
+  <Button type="submit" variant="primary">提交</Button>
+</Form>`;
+
 export default function FormCheck() {
   const checkboxVal = createSignal(false);
   const checkboxGroupVal = createSignal<string[]>([]);
@@ -248,8 +307,23 @@ export default function FormCheck() {
         </Title>
         <Paragraph class="mt-2">
           Checkbox：单选框；CheckboxGroup / RadioGroup：`value` 传 Signal
-          时可不写 onChange；Switch：`checked` 传 Signal 时可不写
-          onChange。Tailwind v4 + light/dark。
+          时可不写 onChange；Switch：`checked` 传 Signal 时可不写 onChange。与
+          {" "}
+          <Link
+            href="/desktop/form/form-containers"
+            className="text-teal-600 hover:underline dark:text-teal-400"
+          >
+            Form / createForm
+          </Link>{" "}
+          联用：Checkbox / Switch 用{" "}
+          <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">
+            {"{...form.bindChecked(name)}"}
+          </code>
+          ；CheckboxGroup / RadioGroup 用{" "}
+          <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">
+            {"{...form.bindValue(name)}"}
+          </code>
+          。Tailwind v4 + light/dark。
         </Paragraph>
       </section>
 
@@ -266,6 +340,66 @@ export default function FormCheck() {
 
       <section class="space-y-8">
         <Title level={2}>示例</Title>
+
+        <section class="space-y-4">
+          <Title level={3}>与 createForm</Title>
+          <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+            Checkbox / Switch →{" "}
+            <code class="text-xs">bindChecked</code>；CheckboxGroup / RadioGroup
+            → <code class="text-xs">bindValue</code>
+            。完整说明见{" "}
+            <Link
+              href="/desktop/form/form-containers"
+              className="text-teal-600 hover:underline dark:text-teal-400"
+            >
+              Form 容器
+            </Link>
+            。
+          </Paragraph>
+          <Form
+            form={checkDemoForm}
+            layout="vertical"
+            class="w-full max-w-md border border-dashed border-slate-200 dark:border-slate-600 rounded-lg p-4"
+            onFinish={() => {
+              message.success("已提交");
+            }}
+          >
+            <FormItem name="agree" label="协议">
+              <Checkbox {...checkDemoForm.bindChecked("agree")}>
+                我已阅读并同意
+              </Checkbox>
+            </FormItem>
+            <FormItem name="notify" label="通知">
+              <Switch {...checkDemoForm.bindChecked("notify")} />
+            </FormItem>
+            <FormItem name="hobbies" label="兴趣">
+              <CheckboxGroup
+                {...checkDemoForm.bindValue("hobbies")}
+                options={checkboxOptions}
+              />
+            </FormItem>
+            <FormItem name="level" label="级别">
+              <RadioGroup
+                {...checkDemoForm.bindValue("level")}
+                options={[
+                  { value: "a", label: "A" },
+                  { value: "b", label: "B" },
+                ]}
+              />
+            </FormItem>
+            <Button type="submit" variant="primary">
+              提交
+            </Button>
+          </Form>
+          <CodeBlock
+            title="代码示例"
+            code={exampleCreateForm}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+        </section>
 
         <Form layout="vertical" class="w-full space-y-6">
           <section class="space-y-4">

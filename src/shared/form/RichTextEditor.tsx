@@ -11,10 +11,10 @@
  * 为准，避免写 `innerHTML` 重置选区。`ref` 仅用 `createRef` 持有编辑区节点。
  */
 
-
 import {
   createEffect,
   createMemo,
+  createPortal,
   createRef,
   createRenderEffect,
   createSignal,
@@ -23,20 +23,21 @@ import {
   type JSXRenderable,
   onCleanup,
   untrack,
+  useContext,
 } from "@dreamer/view";
-import { createPortal } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import { Modal } from "../../desktop/feedback/Modal.tsx";
 import { Button } from "../basic/Button.tsx";
 import { IconType } from "../basic/icons/Type.tsx";
 import { ColorPicker, type ColorPickerHandle } from "./ColorPicker.tsx";
-import { controlBlueFocusRing } from "./input-focus-ring.ts";
-import { Input } from "./Input.tsx";
 import {
-  commitMaybeSignal,
-  readMaybeSignal,
-} from "./maybe-signal.ts";
+  controlBlueFocusRing,
+  controlErrorBorder,
+} from "./input-focus-ring.ts";
+import { Input } from "./Input.tsx";
+import { commitMaybeSignal, readMaybeSignal } from "./maybe-signal.ts";
 import { resolveFormControlSize } from "./form-control-context.ts";
+import { FormItemControlIdContext } from "./form-item-control-id.ts";
 import { uploadFileViaUiViewBase } from "./upload-http.ts";
 import { getFormPortalBodyHost } from "./picker-portal-utils.ts";
 import { isDomElement, isHtmlElement } from "../dom-guards.ts";
@@ -54,12 +55,12 @@ import {
   rteApplyLinkUrl,
   rteEnsureParagraphAfterPreIfLast,
   rteHtmlLooselyEquals,
+  type RteInlineDecoKind,
   rtePrettyPrintHtmlSource,
   rteRangeCollapsedAtEndOfElement,
   shouldSkipControlledInnerHtmlSync,
   trySetDefaultParagraphSeparatorToP,
   wrapRteLeadingRootTextInParagraph,
-  type RteInlineDecoKind,
 } from "./rich-text-editor-dom.ts";
 import {
   buildRteHeaderTableHtml,
@@ -72,8 +73,8 @@ import {
   normalizeToolbarConfig,
   renderToolbarButtonContent,
   resolveRteDomEditorId,
-  RteToolbarItemTip,
   rteToolbarDropdownDisabled,
+  RteToolbarItemTip,
   rteToolbarSelectFitCls,
   toolbarBtnBase,
   toolbarButtonClassForItem,
@@ -156,7 +157,8 @@ export function RichTextEditor(props: RichTextEditorProps): JSXRenderable {
     maxHeight,
     class: className,
     name,
-    id,
+    id: idProp,
+    error = false,
     onInsertImage,
     uploadAction,
     onUploadImage,
@@ -164,11 +166,16 @@ export function RichTextEditor(props: RichTextEditorProps): JSXRenderable {
     hideFocusRing = false,
   } = props;
   const size = resolveFormControlSize(props.size);
+  const fromFormItem = useContext(FormItemControlIdContext);
+  const id = idProp ?? fromFormItem;
   const rteSizeRoot: Record<string, string> = {
-    xs: "[&_button]:p-1 [&_button]:min-w-[22px] [&_button]:min-h-[22px] [&_button]:text-xs [&_[data-rte-editor]]:px-2 [&_[data-rte-editor]]:py-1 [&_[data-rte-editor]]:text-xs [&_[data-rte-source-editor]]:px-2 [&_[data-rte-source-editor]]:py-1 [&_[data-rte-source-editor]]:text-xs",
-    sm: "[&_button]:p-1 [&_button]:min-w-[24px] [&_button]:min-h-[24px] [&_button]:text-xs [&_[data-rte-editor]]:px-2.5 [&_[data-rte-editor]]:py-1.5 [&_[data-rte-editor]]:text-sm [&_[data-rte-source-editor]]:px-2.5 [&_[data-rte-source-editor]]:py-1.5 [&_[data-rte-source-editor]]:text-sm",
+    xs:
+      "[&_button]:p-1 [&_button]:min-w-[22px] [&_button]:min-h-[22px] [&_button]:text-xs [&_[data-rte-editor]]:px-2 [&_[data-rte-editor]]:py-1 [&_[data-rte-editor]]:text-xs [&_[data-rte-source-editor]]:px-2 [&_[data-rte-source-editor]]:py-1 [&_[data-rte-source-editor]]:text-xs",
+    sm:
+      "[&_button]:p-1 [&_button]:min-w-[24px] [&_button]:min-h-[24px] [&_button]:text-xs [&_[data-rte-editor]]:px-2.5 [&_[data-rte-editor]]:py-1.5 [&_[data-rte-editor]]:text-sm [&_[data-rte-source-editor]]:px-2.5 [&_[data-rte-source-editor]]:py-1.5 [&_[data-rte-source-editor]]:text-sm",
     md: "",
-    lg: "[&_button]:p-2 [&_button]:min-w-[32px] [&_button]:min-h-[32px] [&_button]:text-base [&_[data-rte-editor]]:px-4 [&_[data-rte-editor]]:py-2.5 [&_[data-rte-editor]]:text-base [&_[data-rte-source-editor]]:px-4 [&_[data-rte-source-editor]]:py-2.5 [&_[data-rte-source-editor]]:text-base",
+    lg:
+      "[&_button]:p-2 [&_button]:min-w-[32px] [&_button]:min-h-[32px] [&_button]:text-base [&_[data-rte-editor]]:px-4 [&_[data-rte-editor]]:py-2.5 [&_[data-rte-editor]]:text-base [&_[data-rte-source-editor]]:px-4 [&_[data-rte-source-editor]]:py-2.5 [&_[data-rte-source-editor]]:text-base",
   };
 
   const toolbarGroups = customToolbar
@@ -1240,13 +1247,11 @@ export function RichTextEditor(props: RichTextEditorProps): JSXRenderable {
     }
     const action = (uploadAction ?? "").trim();
     if (action) {
-      const file = fileOrBlob instanceof File
-        ? fileOrBlob
-        : new File(
-          [fileOrBlob],
-          `paste-${Date.now()}.png`,
-          { type: fileOrBlob.type || "image/png" },
-        );
+      const file = fileOrBlob instanceof File ? fileOrBlob : new File(
+        [fileOrBlob],
+        `paste-${Date.now()}.png`,
+        { type: fileOrBlob.type || "image/png" },
+      );
       return await uploadFileViaUiViewBase(action, file);
     }
     return await new Promise<string | undefined>((resolve) => {
@@ -1974,6 +1979,7 @@ export function RichTextEditor(props: RichTextEditorProps): JSXRenderable {
   return () => (
     <div
       id={`${editorId}-root`}
+      aria-invalid={error}
       class={twMerge(
         "rounded-lg overflow-hidden border border-slate-300 dark:border-slate-600 relative",
         rteSizeRoot[size],
@@ -1981,8 +1987,9 @@ export function RichTextEditor(props: RichTextEditorProps): JSXRenderable {
         maxHeight &&
           "flex min-h-0 max-h-[var(--rte-max-body)] flex-col [&.rte-fullscreen]:max-h-none",
         /** 编辑区获焦时整格外框变蓝，与 Input 系一致；不画内层 ring，避免套在外框里一圈缝 */
-        !hideFocusRing &&
+        !hideFocusRing && !error &&
           "has-[[data-rte-editor]:focus]:border-blue-500 dark:has-[[data-rte-editor]:focus]:border-blue-400 has-[[data-rte-source-editor]:focus]:border-blue-500 dark:has-[[data-rte-source-editor]:focus]:border-blue-400",
+        error && controlErrorBorder,
         "[&.rte-fullscreen]:fixed [&.rte-fullscreen]:inset-0 [&.rte-fullscreen]:z-9999 [&.rte-fullscreen]:bg-white [&.rte-fullscreen]:dark:bg-slate-900 [&.rte-fullscreen]:flex [&.rte-fullscreen]:flex-col",
         className,
       )}

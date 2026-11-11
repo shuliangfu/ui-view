@@ -3,13 +3,16 @@
  * 路由: /desktop/form/checkbox
  */
 
-import { Paragraph, Title } from "@dreamer/ui-view/basic";
+import { Button, Link, Paragraph, Title } from "@dreamer/ui-view/basic";
 
 import { Checkbox } from "@dreamer/ui-view/form/checkbox";
+import { createForm } from "@dreamer/ui-view/form/create-form";
 import { Form } from "@dreamer/ui-view/form/form";
 import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { formRules } from "@dreamer/ui-view/form/form-rules";
 
 import { CodeBlock } from "@dreamer/ui-view/data-display";
+import { message } from "@dreamer/ui-view/feedback";
 import { createSignal } from "@dreamer/view";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_CHECKBOX } from "../../../data/component-messages-rows.ts";
@@ -104,13 +107,13 @@ const CHECKBOX_API: ApiRow[] = [
     type: "unknown",
     default: "-",
     description: "文案或子节点",
-  },  {
+  },
+  {
     name: "messages",
     type: "Partial<CheckboxMessages>",
     default: "-",
     description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
   },
-
 ];
 
 const importCode = `import { Checkbox } from "@dreamer/ui-view/form/checkbox";
@@ -121,6 +124,46 @@ const checked = createSignal(false);
 <FormItem label="勾选">
   <Checkbox checked={checked}>勾选我</Checkbox>
 </FormItem>`;
+
+/** createForm 演示字段（模块级，避免文档页重跑丢状态） */
+type CheckboxDemoValues = { agree: boolean };
+
+/** Checkbox + bindChecked 联用演示 store */
+const checkboxDemoForm = createForm<CheckboxDemoValues>({
+  initialValues: { agree: false },
+  fields: {
+    agree: {
+      rules: [
+        formRules.custom((v) => (v === true ? undefined : "请勾选同意")),
+      ],
+    },
+  },
+});
+
+/** 与 createForm 示例的 CodeBlock 源码 */
+const exampleCreateForm =
+  `import { createForm, formRules } from "@dreamer/ui-view/form";
+import { Form } from "@dreamer/ui-view/form/form";
+import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { Checkbox } from "@dreamer/ui-view/form/checkbox";
+import { Button } from "@dreamer/ui-view/basic";
+import { message } from "@dreamer/ui-view/feedback";
+
+const form = createForm({
+  initialValues: { agree: false },
+  fields: {
+    agree: {
+      rules: [formRules.custom((v) => (v === true ? undefined : "请勾选同意"))],
+    },
+  },
+});
+
+<Form form={form} onFinish={() => { message.success("已提交"); }}>
+  <FormItem name="agree" label="协议">
+    <Checkbox {...form.bindChecked("agree")}>我已阅读并同意</Checkbox>
+  </FormItem>
+  <Button type="submit" variant="primary">提交</Button>
+</Form>`;
 
 export default function FormCheckbox() {
   const checked = createSignal(false);
@@ -134,10 +177,23 @@ export default function FormCheckbox() {
           checked、disabled、error、name、value、id、onChange、children。动态选中态请传
           {" "}
           <code class="text-sm">checked=&#123;createSignal(...)&#125;</code>
-          ，勿绑 <code class="text-sm">sig.value</code>{" "}
-          快照。Tailwind v4 + light/dark。
+          ，勿绑 <code class="text-sm">sig.value</code> 快照。与{" "}
+          <Link
+            href="/desktop/form/form-containers"
+            className="text-teal-600 hover:underline dark:text-teal-400"
+          >
+            Form / createForm
+          </Link>{" "}
+          联用时展开{" "}
+          <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">
+            {"{...form.bindChecked(name)}"}
+          </code>
+          。Tailwind v4 + light/dark。
         </Paragraph>
-        <Paragraph class="mt-2 text-sm text-slate-600 dark:text-slate-400">可见标签请用 <code>children</code>。<code>messages</code> 与其它表单控件同形预留（当前仅 <code>_reserved</code>）。</Paragraph>
+        <Paragraph class="mt-2 text-sm text-slate-600 dark:text-slate-400">
+          可见标签请用 <code>children</code>。<code>messages</code>{" "}
+          与其它表单控件同形预留（当前仅 <code>_reserved</code>）。
+        </Paragraph>
       </section>
 
       <section class="space-y-3">
@@ -153,6 +209,35 @@ export default function FormCheckbox() {
 
       <section class="space-y-8">
         <Title level={2}>示例</Title>
+
+        <section class="space-y-4">
+          <Title level={3}>与 createForm</Title>
+          <Form
+            form={checkboxDemoForm}
+            layout="vertical"
+            class="w-full max-w-md border border-dashed border-slate-200 dark:border-slate-600 rounded-lg p-4"
+            onFinish={() => {
+              message.success("已提交");
+            }}
+          >
+            <FormItem name="agree" label="协议">
+              <Checkbox {...checkboxDemoForm.bindChecked("agree")}>
+                我已阅读并同意
+              </Checkbox>
+            </FormItem>
+            <Button type="submit" variant="primary">
+              提交
+            </Button>
+          </Form>
+          <CodeBlock
+            title="代码示例"
+            code={exampleCreateForm}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+        </section>
 
         <Form layout="vertical" class="w-full space-y-6">
           <section class="space-y-4">

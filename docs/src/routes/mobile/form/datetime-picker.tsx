@@ -3,8 +3,13 @@
  */
 
 import { DateTimePicker } from "@dreamer/ui-view/mobile/form/datetime-picker";
-import { Paragraph, Title } from "@dreamer/ui-view/mobile/basic";
+import { Form } from "@dreamer/ui-view/mobile/form/form";
+import { FormItem } from "@dreamer/ui-view/mobile/form/form-item";
+import { Button, Link, Paragraph, Title } from "@dreamer/ui-view/mobile/basic";
 import { CodeBlock } from "@dreamer/ui-view/mobile/data-display";
+import { createForm } from "@dreamer/ui-view/form/create-form";
+import { formRules } from "@dreamer/ui-view/form/form-rules";
+import { message } from "@dreamer/ui-view/feedback";
 import { createSignal } from "@dreamer/view";
 import {
   DocsApiTable,
@@ -16,6 +21,17 @@ import {
   MESSAGES_DATETIME_PICKER,
   MESSAGES_PICKER_CALENDAR_NAV,
 } from "../../../data/component-messages-rows.ts";
+
+/** createForm 演示字段 */
+type DateTimePickerCreateFormValues = { when: string };
+
+/** 与 createForm 联用演示 store */
+const dateTimePickerCreateForm = createForm<DateTimePickerCreateFormValues>({
+  initialValues: { when: "" },
+  fields: {
+    when: { rules: [formRules.required("请选择日期时间")] },
+  },
+});
 
 /**
  * 当前本地日期时间，默认 format 形态。
@@ -109,7 +125,8 @@ const DATETIME_API: DocsApiTableRow[] = [
   },
 ];
 
-const importCode = `import { DateTimePicker } from "@dreamer/ui-view/mobile/form/datetime-picker";
+const importCode =
+  `import { DateTimePicker } from "@dreamer/ui-view/mobile/form/datetime-picker";
 import { createSignal } from "@dreamer/view";
 
 const val = createSignal(localNowDateTime());
@@ -118,7 +135,6 @@ const val = createSignal(localNowDateTime());
 
 /** 文档页受控值须模块级 */
 const mobileDateTimePickerVal = createSignal(localNowDateTime());
-
 
 const exampleNestedMessages = `<DateTimePicker
   messages={{
@@ -135,7 +151,25 @@ export default function MobileDateTimePickerDoc() {
           日历 + 时分（及 format 允许的秒等）组合选择，与桌面共用实现；移动端从
           {" "}
           <code class="text-sm">@dreamer/ui-view/mobile</code>{" "}
-          导入即可与同页表单一致。
+          导入即可与同页表单一致。与{" "}
+          <Link
+            href="/mobile/form/form-containers"
+            className="text-teal-600 hover:underline dark:text-teal-400"
+          >
+            Form / createForm（移动）
+          </Link>
+          、
+          <Link
+            href="/desktop/form/form-containers"
+            className="text-teal-600 hover:underline dark:text-teal-400"
+          >
+            桌面 Form 容器
+          </Link>{" "}
+          联用：展开{" "}
+          <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">
+            {"{...form.bind(name)}"}
+          </code>
+          。
         </Paragraph>
       </section>
 
@@ -152,6 +186,53 @@ export default function MobileDateTimePickerDoc() {
 
       <section class="space-y-8">
         <Title level={2}>示例</Title>
+
+        <div class="space-y-4">
+          <Title level={3}>与 createForm</Title>
+          <MobileDocDemo>
+            <Form
+              form={dateTimePickerCreateForm}
+              layout="vertical"
+              class="w-full"
+              onFinish={() => {
+                message.success("已提交");
+              }}
+            >
+              <FormItem name="when" label="日期时间">
+                <DateTimePicker
+                  {...dateTimePickerCreateForm.bind("when")}
+                  class="w-full"
+                />
+              </FormItem>
+              <Button type="submit" variant="primary" class="w-full">
+                提交
+              </Button>
+            </Form>
+          </MobileDocDemo>
+          <CodeBlock
+            title="代码示例"
+            code={`import { createForm } from "@dreamer/ui-view/form/create-form";
+import { formRules } from "@dreamer/ui-view/form/form-rules";
+import { Form } from "@dreamer/ui-view/mobile/form/form";
+import { FormItem } from "@dreamer/ui-view/mobile/form/form-item";
+import { DateTimePicker } from "@dreamer/ui-view/mobile/form/datetime-picker";
+
+const form = createForm({
+  initialValues: { when: "" },
+  fields: { when: { rules: [formRules.required()] } },
+});
+
+<Form form={form} onFinish={() => { message.success("已提交"); }}>
+  <FormItem name="when" label="日期时间">
+    <DateTimePicker {...form.bind("when")} />
+  </FormItem>
+</Form>`}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+        </div>
 
         <div class="space-y-4">
           <Title level={3}>基础</Title>
@@ -213,7 +294,14 @@ export default function MobileDateTimePickerDoc() {
       </section>
 
       <section class="space-y-4">
-          <CodeBlock title="代码示例" code={exampleNestedMessages} language="tsx" showLineNumbers copyable wrapLongLines />
+        <CodeBlock
+          title="代码示例"
+          code={exampleNestedMessages}
+          language="tsx"
+          showLineNumbers
+          copyable
+          wrapLongLines
+        />
 
         <Title level={2}>API</Title>
         <Paragraph class="text-sm text-slate-600 dark:text-slate-400">

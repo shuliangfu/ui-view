@@ -3,13 +3,16 @@
  * 路由: /desktop/form/select
  */
 
-import { Paragraph, Title } from "@dreamer/ui-view/basic";
+import { Button, Link, Paragraph, Title } from "@dreamer/ui-view/basic";
 
+import { createForm } from "@dreamer/ui-view/form/create-form";
 import { Form } from "@dreamer/ui-view/form/form";
 import { FormItem } from "@dreamer/ui-view/form/form-item";
+import { formRules } from "@dreamer/ui-view/form/form-rules";
 import { Select } from "@dreamer/ui-view/form/select";
 
 import { CodeBlock } from "@dreamer/ui-view/data-display";
+import { message } from "@dreamer/ui-view/feedback";
 import { createSignal } from "@dreamer/view";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_SELECT } from "../../../data/component-messages-rows.ts";
@@ -54,6 +57,12 @@ const SELECT_API: ApiRow[] = [
     description: "是否禁用",
   },
   {
+    name: "error",
+    type: "boolean",
+    default: "false",
+    description: "错误状态（红框）",
+  },
+  {
     name: "hideFocusRing",
     type: "boolean",
     default: "false",
@@ -88,6 +97,17 @@ const options = [
 const selectDocVal = createSignal("");
 const selectDocVal2 = createSignal("b");
 
+/** createForm 演示字段形状（模块级，避免文档页重跑丢失状态） */
+type SelectFormValues = { city: string };
+
+/** Select + createForm 联用演示 store */
+const selectForm = createForm<SelectFormValues>({
+  initialValues: { city: "" },
+  fields: {
+    city: { rules: [formRules.required()] },
+  },
+});
+
 const importCode = `import { Form } from "@dreamer/ui-view/form/form";
 import { FormItem } from "@dreamer/ui-view/form/form-item";
 import { Select } from "@dreamer/ui-view/form/select";
@@ -109,8 +129,19 @@ export default function FormSelect() {
         <Title level={1}>Select 下拉选择</Title>
         <Paragraph class="mt-2">
           单选下拉框，支持
-          options、value、placeholder、onChange、size、disabled。宽度由 class
-          控制，表单中需占满一列时传 class="w-full"。Tailwind v4 + light/dark。
+          options、value、placeholder、onChange、onBlur、error、size、disabled。宽度由
+          class 控制，表单中需占满一列时传 class="w-full"。与{" "}
+          <Link
+            href="/desktop/form/form-containers"
+            className="text-teal-600 hover:underline dark:text-teal-400"
+          >
+            Form / createForm
+          </Link>{" "}
+          联用：
+          <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">
+            {"{...form.bind(name)}"}
+          </code>
+          。
         </Paragraph>
       </section>
 
@@ -127,6 +158,53 @@ export default function FormSelect() {
 
       <section class="space-y-8">
         <Title level={2}>示例</Title>
+
+        <section class="space-y-4">
+          <Title level={3}>与 createForm</Title>
+          <Form
+            form={selectForm}
+            layout="vertical"
+            class="w-full max-w-md"
+            onFinish={() => {
+              message.success("ok");
+            }}
+          >
+            <FormItem name="city" label="城市" rules={[formRules.required()]}>
+              <Select
+                {...selectForm.bind("city")}
+                options={options}
+                placeholder="请选择"
+                class="w-full"
+              />
+            </FormItem>
+            <Button type="submit" variant="primary">
+              校验
+            </Button>
+          </Form>
+          <CodeBlock
+            title="代码示例"
+            code={`const selectForm = createForm({
+  initialValues: { city: "" },
+  fields: { city: { rules: [formRules.required()] } },
+});
+
+<Form
+  form={selectForm}
+  layout="vertical"
+  class="w-full max-w-md"
+  onFinish={() => { message.success("ok"); }}
+>
+  <FormItem name="city" label="城市" rules={[formRules.required()]}>
+    <Select {...selectForm.bind("city")} options={options} placeholder="请选择" />
+  </FormItem>
+  <Button type="submit" variant="primary">校验</Button>
+</Form>`}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+        </section>
 
         <Form layout="vertical" class="w-full space-y-6">
           <section class="space-y-4">

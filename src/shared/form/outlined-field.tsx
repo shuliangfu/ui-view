@@ -3,7 +3,12 @@
  * 空且未聚焦时文字在框内；聚焦或有值后上到边框。供 Input / Password / Textarea 使用。
  */
 
-import { createContext, type Context, type JSXRenderable, useContext } from "@dreamer/view";
+import {
+  type Context,
+  createContext,
+  type JSXRenderable,
+  useContext,
+} from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import type { SizeVariant } from "../types.ts";
 import { controlErrorBorder } from "./input-focus-ring.ts";
@@ -57,7 +62,6 @@ const OUTLINED_FIELD_CSS = `.ui-outlined{min-inline-size:0}` +
   `.dark .ui-outlined:focus-within>legend{color:rgb(147 197 253)}` +
   `.ui-outlined.ui-outlined-error,.ui-outlined.ui-outlined-error:focus-within{border-color:rgb(239 68 68)}` +
   `.ui-outlined.ui-outlined-error:focus-within>legend{color:rgb(239 68 68)}` +
-
   `.ui-outlined>legend{margin-inline-start:10px;max-width:0;padding:0;opacity:0;overflow:hidden;white-space:nowrap;` +
   `transition:max-width .2s,padding .2s,opacity .2s}` +
   `.ui-outlined:focus-within>legend,` +
@@ -160,19 +164,17 @@ export interface OutlinedFieldProps {
 export function OutlinedField(props: OutlinedFieldProps): JSXRenderable {
   installOutlinedFieldCss();
   const size = props.size ?? "md";
-  const star = props.requiredMark
-    ? <span class="text-red-500"> *</span>
-    : null;
+  const star = props.requiredMark ? <span class="text-red-500">*</span> : null;
   return (
     <fieldset
       disabled={props.disabled || undefined}
       class={twMerge(
-        "ui-outlined relative m-0 w-full min-w-0 p-0 border bg-white dark:bg-slate-800 [min-inline-size:0]",
+        "ui-outlined relative m-0 w-full min-w-0 p-0 border bg-white dark:bg-slate-900 [min-inline-size:0]",
         "border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100",
         "transition-colors",
         fieldRounded[size],
         props.disabled && "opacity-50",
-        props.readOnly && "bg-slate-50 dark:bg-slate-800/80",
+        props.readOnly && "bg-slate-50 dark:bg-slate-900/80",
         props.error && twMerge(controlErrorBorder, "ui-outlined-error"),
         props.class,
       )}
@@ -188,9 +190,7 @@ export function OutlinedField(props: OutlinedFieldProps): JSXRenderable {
         <span
           class={twMerge(
             "ui-outlined-inner pointer-events-none absolute z-10 text-slate-400 dark:text-slate-500",
-            props.innerAlign === "start"
-              ? "top-2"
-              : "top-1/2 -translate-y-1/2",
+            props.innerAlign === "start" ? "top-2" : "top-1/2 -translate-y-1/2",
             innerPadX[size],
             innerText[size],
           )}
