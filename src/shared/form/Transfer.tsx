@@ -169,10 +169,10 @@ const transferBtnCls: Record<SizeVariant, string> = {
 };
 
 const defaultItemHeight: Record<SizeVariant, number> = {
-  xs: 20,
-  sm: 22,
-  md: 24,
-  lg: 28,
+  xs: 16,
+  sm: 18,
+  md: 18,
+  lg: 20,
 };
 
 const optionFontSize: Record<SizeVariant, number> = {
