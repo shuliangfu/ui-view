@@ -1565,7 +1565,7 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
   );
 
   it(
-    "移动端：表格卡上／左／右贴边；分页控件居中、条数在下居中；桌面表格区仍有间距",
+    "移动端：表格卡上／左／右贴边，表体内边距保留；分页控件居中、条数在下居中；桌面表格区仍有间距",
     async (t) => {
       if (!t?.browser?.goto) return;
       // deno-lint-ignore no-explicit-any
@@ -1654,9 +1654,10 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
       expect(mob.cardMT).toBe(0);
       expect(mob.cardML).toBe(0);
       expect(mob.cardMR).toBe(0);
-      expect(mob.wrapPT).toBe(0);
-      expect(mob.wrapPL).toBe(0);
-      expect(mob.wrapPR).toBe(0);
+      // dda7761: keep body padding on mobile (px-2.5 / py-2.5), same as desktop
+      expect(mob.wrapPT).toBeGreaterThan(0);
+      expect(mob.wrapPL).toBeGreaterThan(0);
+      expect(mob.wrapPR).toBeGreaterThan(0);
       expect(mob.wrapPB).toBeGreaterThan(0);
       expect(mob.pgPL).toBeGreaterThan(0);
       expect(mob.pgPR).toBeGreaterThan(0);
@@ -1696,7 +1697,7 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
       );
       expect(r.sameTotal).toBe(true);
       expect(r.otherNoBar).toBe(true);
-      expect(r.toolbars).toBe(31);
+      expect(r.toolbars).toBe(32);
     },
     DOCS_BROWSER_CONFIG,
   );
