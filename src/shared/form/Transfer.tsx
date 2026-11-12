@@ -169,10 +169,17 @@ const transferBtnCls: Record<SizeVariant, string> = {
 };
 
 const defaultItemHeight: Record<SizeVariant, number> = {
-  xs: 24,
-  sm: 28,
-  md: 32,
-  lg: 36,
+  xs: 20,
+  sm: 22,
+  md: 24,
+  lg: 28,
+};
+
+const optionFontSize: Record<SizeVariant, number> = {
+  xs: 12,
+  sm: 14,
+  md: 14,
+  lg: 16,
 };
 
 /** Resolve option row height in px; `listStyle.itemHeight` wins when positive. */
@@ -316,6 +323,8 @@ function TransferColumn(props: TransferColumnProps) {
             );
             const selectedKeys = readSignalValue(selectedKeysRef) ?? [];
             const itemHeight = resolveItemHeight(listStyle, size);
+            const fontSize = optionFontSize[size];
+            const pad = Math.max(0, (itemHeight - fontSize) / 2);
             return filtered.map((item) => (
               <option
                 key={item.key}
@@ -324,11 +333,11 @@ function TransferColumn(props: TransferColumnProps) {
                 selected={selectedKeys.includes(item.key)}
                 style={{
                   boxSizing: "border-box",
-                  minHeight: itemHeight,
-                  height: itemHeight,
-                  lineHeight: `${itemHeight}px`,
-                  paddingTop: 0,
-                  paddingBottom: 0,
+                  fontSize,
+                  lineHeight: `${fontSize}px`,
+                  paddingTop: pad,
+                  paddingBottom: pad,
+                  verticalAlign: "middle",
                 }}
               >
                 {transferOptionLabel(item, render)}
