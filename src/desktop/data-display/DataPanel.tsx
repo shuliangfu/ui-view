@@ -48,6 +48,14 @@ import {
   resolveInitialTabKey,
   writeTabToLocation,
 } from "./data-panel-tabs.tsx";
+import {
+  createTabListCache,
+  loadTabListResult,
+  queryAfterTabChange,
+  resolveTabQuery,
+  tabListCacheKey,
+  wrapFetchWithTabParam,
+} from "./data-panel-tab-source.ts";
 import { Descriptions } from "./Descriptions.tsx";
 import { Dropdown } from "../navigation/Dropdown.tsx";
 import { FormItem } from "../form/FormItem.tsx";
@@ -364,7 +372,10 @@ export interface PanelProps {
   /**
    * Optional tabs on the left of the toolbar, using the layout Tabs component.
    * A tab without `children` shows the default table, batch bar and pagination.
-   * Use `onTabChange` to filter the list when several tabs share that default body.
+   * When `tabs` is set, the active tab key is attached as a query param on
+   * every API request (list / refresh / search / export / import / create /
+   * update / delete / detail). A panel without tabs never sends that param.
+   * Switching tabs resets to page 1 and refetches (cached tab+query hits skip the network).
    */
   tabs?: DataChromeTab[];
   /** Controlled active tab key */
@@ -375,8 +386,10 @@ export interface PanelProps {
   /** Tab style, default `line` */
   tabType?: DataChromeTabType;
   /**
-   * Query key used to activate the current tab from the URL and to write it
-   * back on change. Default `tab`. Pass `false` to disable URL sync.
+   * Query key used to activate the current tab from the URL, write it back
+   * on change, and attach it to API requests. Default `tab`.
+   * Pass `false` to disable URL sync and to skip the tab query on requests
+   * (purely visual tabs).
    */
   tabParam?: string | false;
 }
@@ -436,6 +449,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
     panelKey: key,
     tabParam,
   }));
+  const tabReload = { run() {} };
   const handleTabChange = (next: string) => {
     if (next === tabKey.value) {
       props.onTabChange?.(next);
@@ -445,6 +459,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
     rememberTabKey(key, next);
     if (tabParam) writeTabToLocation(tabParam, next);
     props.onTabChange?.(next);
+    tabReload.run();
   };
   if (typeof globalThis.addEventListener === "function") {
     const onPop = () => {
@@ -491,6 +506,22 @@ export function DataPanel(props: PanelProps): JSXRenderable {
       onChange: props.onDataChange,
       writable: canWriteLocal,
     });
+  function withTabOnList(source: DataSource): DataSource {
+    const list = source.list.bind(source);
+    return {
+      ...source,
+      list(query: Query) {
+        if (source.sync) return list(query);
+        const tab = resolveTabQuery(props.tabs, tabParam, tabKey.value);
+        if (!tab) return list(query);
+        if (query.filters?.[tab.param] === tab.value) return list(query);
+        return list({
+          ...query,
+          filters: { ...query.filters, [tab.param]: tab.value },
+        });
+      },
+    };
+  }
   function apiSource(): DataSource {
     try {
       return createApiDataSource({
@@ -501,6 +532,10 @@ export function DataPanel(props: PanelProps): JSXRenderable {
         headers: props.apiHeaders,
         credentials: props.apiCredentials,
         pageSize: props.pageSize,
+        fetch: wrapFetchWithTabParam(
+          globalThis.fetch.bind(globalThis),
+          () => resolveTabQuery(props.tabs, tabParam, tabKey.value),
+        ),
       });
     } catch (e) {
       // SSR 没有 location.pathname 时无法把 "/api" 拼成资源根；先出空表，客户端再拉数。
@@ -509,7 +544,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
     }
   }
   const ds: DataSource = props.dataSource
-    ? props.dataSource
+    ? withTabOnList(props.dataSource)
     : props.data !== undefined
     ? createLocalDataSource({
       rows: props.data,
@@ -697,7 +732,14 @@ export function DataPanel(props: PanelProps): JSXRenderable {
   // ---- data loading
   /** 工具栏刷新最短 busy，避免本地同步 list 瞬间结束导致 loading 从未上屏 */
   const REFRESH_MIN_BUSY_MS = 320;
-  type LoadOpts = { minBusyMs?: number; notify?: boolean };
+  type LoadOpts = { minBusyMs?: number; notify?: boolean; bypassCache?: boolean };
+  const tabListCache = createTabListCache();
+  function usesTabListCache(): boolean {
+    return !!tabParam && !!props.tabs?.length && !ds.sync;
+  }
+  function invalidateCurrentTabCache(): void {
+    if (usesTabListCache()) tabListCache.invalidateTab(tabKey.value);
+  }
   async function holdBusy(started: number, minMs?: number): Promise<void> {
     if (!minMs) return;
     const left = minMs - (Date.now() - started);
@@ -708,17 +750,65 @@ export function DataPanel(props: PanelProps): JSXRenderable {
   async function load(syncUrl = true, opts?: LoadOpts): Promise<void> {
     const my = ++seq;
     const started = Date.now();
-    loading.value = true;
     const q = query.value;
+    const listQuery: Query = {
+      ...q,
+      filters: { ...q.filters, ...(props.fixed ?? {}) },
+    };
+    const useCache = usesTabListCache();
+    if (useCache && !opts?.bypassCache) {
+      const hit = tabListCache.get(
+        tabListCacheKey({ tabKey: tabKey.value, query: listQuery }),
+      );
+      if (hit) {
+        if (my !== seq) return;
+        const lastHit = Math.max(1, Math.ceil(hit.total / q.pageSize));
+        if (q.page > lastHit) {
+          query.value = { ...q, page: lastHit };
+          return load(syncUrl, opts);
+        }
+        rows.value = hit.items;
+        const openHit = viewRow.value;
+        if (openHit) {
+          const freshHit = hit.items.find((row) => idOf(row) === idOf(openHit));
+          if (freshHit) viewRow.value = freshHit;
+        }
+        total.value = hit.total;
+        totals.value = hit.totals ?? {};
+        selected.value = [];
+        if (urlSync && syncUrl && g.history && g.location) {
+          const params = listParams(q, true);
+          if (tabParam && props.tabs?.length && tabKey.value) {
+            params.set(tabParam, tabKey.value);
+          }
+          const qs = params.toString();
+          const hash = (g.location as { hash?: string }).hash || "";
+          g.history.replaceState(
+            null,
+            "",
+            g.location.pathname + (qs ? `?${qs}` : "") + hash,
+          );
+        }
+        loading.value = false;
+        return;
+      }
+    }
+    loading.value = true;
     let res: ListResult;
     try {
       // 始终再次调用数据源 list（远程 Promise 会等待；同步源也会再跑一遍过滤／分页）
-      res = await Promise.resolve(
-        ds.list({
-          ...q,
-          filters: { ...q.filters, ...(props.fixed ?? {}) },
-        }),
-      );
+      if (useCache) {
+        const loaded = await loadTabListResult({
+          cache: tabListCache,
+          tabKey: tabKey.value,
+          query: listQuery,
+          bypassCache: opts?.bypassCache,
+          list: () => Promise.resolve(ds.list(listQuery)),
+        });
+        res = loaded.result;
+      } else {
+        res = await Promise.resolve(ds.list(listQuery));
+      }
     } catch (e) {
       if (my !== seq) return;
       await holdBusy(started, opts?.minBusyMs);
@@ -773,9 +863,22 @@ export function DataPanel(props: PanelProps): JSXRenderable {
    * minBusy 只保证同步源也能看见转圈，不能替代 list 调用。
    */
   function refreshFromToolbar(): Promise<void> {
-    return load(false, { minBusyMs: REFRESH_MIN_BUSY_MS, notify: true });
+    invalidateCurrentTabCache();
+    return load(false, {
+      minBusyMs: REFRESH_MIN_BUSY_MS,
+      notify: true,
+      bypassCache: true,
+    });
   }
-  refreshers.set(key, () => load(false));
+  refreshers.set(key, () => {
+    invalidateCurrentTabCache();
+    return load(false, { bypassCache: true });
+  });
+  tabReload.run = () => {
+    if (!usesTabListCache()) return;
+    query.value = queryAfterTabChange(query.value);
+    void load();
+  };
 
   function setQuery(patch: Partial<Query>): void {
     query.value = { ...query.value, ...patch };
@@ -883,6 +986,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
     if (r) reportBulk(r, m.deleted);
     const open = viewRow.value;
     if (open && ids.includes(idOf(open))) viewRow.value = null;
+    invalidateCurrentTabCache();
     await load(false);
     props.onChanged?.();
   }
@@ -892,6 +996,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
     if (!ds.setField || !statusField) return;
     const r = await guarded(() => ds.setField!(ids, statusField, value));
     if (r) reportBulk(r, m.saved);
+    invalidateCurrentTabCache();
     await load(false);
     props.onChanged?.();
   }
@@ -931,6 +1036,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
       message.success(m.saved);
       props.onChanged?.();
     }
+    invalidateCurrentTabCache();
     await load(false);
   }
 
@@ -1021,7 +1127,8 @@ export function DataPanel(props: PanelProps): JSXRenderable {
     if (!r || r.ok) {
       formOpen.value = false;
       message.success(m.saved);
-      await load(false);
+      invalidateCurrentTabCache();
+    await load(false);
       props.onChanged?.();
       return;
     }
@@ -1141,6 +1248,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
         tr(m.importDone, { created: r.created, failed: r.failed }),
       );
     }
+    invalidateCurrentTabCache();
     await load(false);
     props.onChanged?.();
   }
@@ -3599,7 +3707,12 @@ export function DataPanel(props: PanelProps): JSXRenderable {
                   controlled,
                   props.defaultActiveTab,
                 );
-                if (synced && synced !== tabKey.value) tabKey.value = synced;
+                if (synced && synced !== tabKey.value) {
+                  tabKey.value = synced;
+                  rememberTabKey(key, synced);
+                  if (tabParam) writeTabToLocation(tabParam, synced);
+                  tabReload.run();
+                }
               }
               return (
                 <>

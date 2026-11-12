@@ -270,7 +270,7 @@ const DATA_PANEL_API: DocsApiTableRow[] = [
     type: "DataChromeTab[]",
     default: "-",
     description:
-      "工具栏左侧的标签页（复用 layout Tabs）。未写 children 的标签展示默认表格、批量条和分页；可用 onTabChange 做筛选",
+      "工具栏左侧的标签页（复用 layout Tabs）。未写 children 的标签展示默认表格。配置了 tabs 后，当前标签 key 会作为查询参数带到所有 API 请求（列表／刷新／搜索／导入／导出／增删改／详情）；没有 tabs 时不带该参数。切换标签会回到第 1 页并重新拉数，已请求过的相同查询走内存缓存；工具栏刷新只作废当前标签的缓存",
   },
   {
     name: "activeTab",
@@ -301,7 +301,7 @@ const DATA_PANEL_API: DocsApiTableRow[] = [
     type: "string | false",
     default: "tab",
     description:
-      "地址栏查询参数名，用来记住并激活当前标签（如 ?tab=admin）。false 则不同步",
+      "查询参数名，用于地址栏同步，并带到 API 请求里（默认 tab，如 ?tab=12）。false 则不同步地址栏，也不在请求里带该参数",
   },
 ];
 
@@ -4579,6 +4579,38 @@ const tab = createSignal("all");
             </Paragraph>
             <DataPanelTabsDemo />
           </DocsDemo>
+          <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+            配置了 <code>tabs</code>{" "}
+            且走 API（<code>baseRoute</code> 或远程{" "}
+            <code>dataSource</code>）时，当前标签 key
+            会自动加到所有请求的查询参数上（默认{" "}
+            <code>tab</code>）。没有{" "}
+            <code>tabs</code> 的面板不会带这个参数。
+          </Paragraph>
+          <CodeBlock
+            title="Tab 请求参数"
+            code={`<DataPanel
+  title="佩戴过的用户"
+  baseRoute="/api"
+  tabs={[
+    { key: "3", label: "最近 3 个月" },
+    { key: "6", label: "最近 6 个月" },
+    { key: "12", label: "最近 12 个月" },
+  ]}
+/>
+// 列表、刷新、搜索、导入、导出、增删改、详情都会带 ?tab=3（或当前标签）
+// tabParam="months" 可改参数名；tabParam={false} 则不带这个参数`}
+            language="tsx"
+            wrapLongLines
+          />
+          <CodeBlock
+            title="缓存与刷新"
+            code={`// 切换标签会回到第 1 页并重新请求。
+// 已经请求过的组合（标签 + page / pageSize / 排序 / 搜索）会直接用内存缓存。
+// 工具栏刷新、导入或增删改成功后，只作废当前标签的缓存并重新请求。`}
+            language="tsx"
+            wrapLongLines
+          />
         </div>
       </section>
 

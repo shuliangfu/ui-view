@@ -41,6 +41,12 @@ import {
   resolveInitialTabKey,
   writeTabToLocation,
 } from "./data-panel-tabs.tsx";
+import {
+  createTabRecordCache,
+  loadTabRecord,
+  resolveTabQuery,
+  wrapFetchWithTabParam,
+} from "./data-panel-tab-source.ts";
 import { Descriptions } from "./Descriptions.tsx";
 import { Empty } from "./Empty.tsx";
 import { Dropdown } from "../navigation/Dropdown.tsx";
@@ -239,6 +245,10 @@ export interface DataViewProps {
   /**
    * Optional tabs on the left of the toolbar, using the layout Tabs component.
    * A tab without `children` shows the default descriptions / children body.
+   * When `tabs` is set, the active tab key is attached as a query param on
+   * every API request (view / refresh / import / update / delete / detail).
+   * A view without tabs never sends that param.
+   * Switching tabs refetches the record (cached tab+id hits skip the network).
    */
   tabs?: DataChromeTab[];
   activeTab?: string;
@@ -246,8 +256,10 @@ export interface DataViewProps {
   onTabChange?: (key: string) => void;
   tabType?: DataChromeTabType;
   /**
-   * Query key used to activate the current tab from the URL and to write it
-   * back on change. Default `tab`. Pass `false` to disable URL sync.
+   * Query key used to activate the current tab from the URL, write it back
+   * on change, and attach it to API requests. Default `tab`.
+   * Pass `false` to disable URL sync and to skip the tab query on requests
+   * (purely visual tabs).
    */
   tabParam?: string | false;
 }
@@ -342,6 +354,7 @@ export function DataView(props: DataViewProps): JSXRenderable {
     panelKey: key,
     tabParam,
   }));
+  const tabReload = { run() {} };
   const handleTabChange = (next: string) => {
     if (next === tabKey.value) {
       props.onTabChange?.(next);
@@ -351,6 +364,7 @@ export function DataView(props: DataViewProps): JSXRenderable {
     rememberTabKey(key, next);
     if (tabParam) writeTabToLocation(tabParam, next);
     props.onTabChange?.(next);
+    tabReload.run();
   };
   if (typeof globalThis.addEventListener === "function") {
     const onPop = () => {
@@ -389,8 +403,24 @@ export function DataView(props: DataViewProps): JSXRenderable {
     !!props.onDataChange ||
     viewItems.some((it) => it.click === "toggle");
 
+  function withTabOnList(source: DataSource): DataSource {
+    const list = source.list.bind(source);
+    return {
+      ...source,
+      list(query) {
+        if (source.sync) return list(query);
+        const tab = resolveTabQuery(props.tabs, tabParam, tabKey.value);
+        if (!tab) return list(query);
+        if (query.filters?.[tab.param] === tab.value) return list(query);
+        return list({
+          ...query,
+          filters: { ...query.filters, [tab.param]: tab.value },
+        });
+      },
+    };
+  }
   const ds: DataSource = props.dataSource
-    ? props.dataSource
+    ? withTabOnList(props.dataSource)
     : props.data !== undefined
     ? withLocalRecordGet(
       createLocalDataSource({
@@ -415,6 +445,10 @@ export function DataView(props: DataViewProps): JSXRenderable {
           rowKey,
           headers: props.apiHeaders,
           credentials: props.apiCredentials,
+          fetch: wrapFetchWithTabParam(
+            globalThis.fetch.bind(globalThis),
+            () => resolveTabQuery(props.tabs, tabParam, tabKey.value),
+          ),
         });
       } catch (e) {
         if (onServer()) {
@@ -503,16 +537,41 @@ export function DataView(props: DataViewProps): JSXRenderable {
     }
   }
 
+  type LoadOpts = { notify?: boolean; minBusyMs?: number; bypassCache?: boolean };
+  const tabRecordCache = createTabRecordCache();
+  function usesTabRecordCache(): boolean {
+    return !!tabParam && !!props.tabs?.length && !ds.sync;
+  }
+  function invalidateCurrentTabCache(): void {
+    if (usesTabRecordCache()) tabRecordCache.invalidateTab(tabKey.value);
+  }
   async function load(
-    opts?: { notify?: boolean; minBusyMs?: number },
+    opts?: LoadOpts,
   ): Promise<void> {
     const started = Date.now();
     const id = resolveId();
     const loader = recordLoader(ds);
     if (loader && id) {
+      if (usesTabRecordCache() && !opts?.bypassCache) {
+        const hit = tabRecordCache.get(tabKey.value, id);
+        if (hit !== undefined) {
+          record.value = hit ?? props.data ?? null;
+          loading.value = false;
+          return;
+        }
+      }
       loading.value = true;
       try {
-        const row = await loader(id);
+        const loaded = usesTabRecordCache()
+          ? await loadTabRecord({
+            cache: tabRecordCache,
+            tabKey: tabKey.value,
+            id,
+            bypassCache: opts?.bypassCache,
+            load: () => Promise.resolve(loader(id)),
+          })
+          : { result: await loader(id), fromCache: false };
+        const row = loaded.result;
         if (row) record.value = row;
         else if (props.data) record.value = props.data;
         else record.value = null;
@@ -530,9 +589,17 @@ export function DataView(props: DataViewProps): JSXRenderable {
   }
 
   function refreshFromToolbar(): Promise<void> {
-    return load({ minBusyMs: REFRESH_MIN_BUSY_MS, notify: true });
+    invalidateCurrentTabCache();
+    return load({ minBusyMs: REFRESH_MIN_BUSY_MS, notify: true, bypassCache: true });
   }
-  refreshers.set(key, () => load());
+  refreshers.set(key, () => {
+    invalidateCurrentTabCache();
+    return load({ bypassCache: true });
+  });
+  tabReload.run = () => {
+    if (!usesTabRecordCache()) return;
+    void load();
+  };
 
   async function guarded<T>(fn: () => T | Promise<T>): Promise<T | undefined> {
     try {
@@ -567,6 +634,7 @@ export function DataView(props: DataViewProps): JSXRenderable {
       message.success(m.saved);
       props.onChanged?.();
     }
+    invalidateCurrentTabCache();
     await load();
   }
 
@@ -638,6 +706,7 @@ export function DataView(props: DataViewProps): JSXRenderable {
     if (!r || r.ok) {
       formOpen.value = false;
       message.success(m.saved);
+      invalidateCurrentTabCache();
       await load();
       props.onChanged?.();
       return;
@@ -744,6 +813,7 @@ export function DataView(props: DataViewProps): JSXRenderable {
         tr(m.importDone, { created: r.created, failed: r.failed }),
       );
     }
+    invalidateCurrentTabCache();
     await load();
     props.onChanged?.();
   }
@@ -1689,7 +1759,12 @@ export function DataView(props: DataViewProps): JSXRenderable {
                   controlled,
                   props.defaultActiveTab,
                 );
-                if (synced && synced !== tabKey.value) tabKey.value = synced;
+                if (synced && synced !== tabKey.value) {
+                  tabKey.value = synced;
+                  rememberTabKey(key, synced);
+                  if (tabParam) writeTabToLocation(tabParam, synced);
+                  tabReload.run();
+                }
               }
               return (
                 <>

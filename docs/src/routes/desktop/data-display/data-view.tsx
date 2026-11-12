@@ -40,7 +40,7 @@ const DATA_VIEW_API: ApiRow[] = [
     type: "DataChromeTab[]",
     default: "-",
     description:
-      "工具栏左侧的标签页（复用 layout Tabs）。未写 children 的标签展示默认明细；可给某个标签单独写 children",
+      "工具栏左侧的标签页（复用 layout Tabs）。未写 children 的标签展示默认明细。配置了 tabs 后，当前标签 key 会作为查询参数带到所有 API 请求（详情／刷新／导入／更新等）；没有 tabs 时不带该参数。切换标签会重新拉取记录，已请求过的相同标签+id 走内存缓存；工具栏刷新只作废当前标签的缓存",
   },
   {
     name: "activeTab",
@@ -71,7 +71,7 @@ const DATA_VIEW_API: ApiRow[] = [
     type: "string | false",
     default: "tab",
     description:
-      "地址栏查询参数名，用来记住并激活当前标签（如 ?tab=extra）。false 则不同步",
+      "查询参数名，用于地址栏同步，并带到 API 请求里（默认 tab，如 ?tab=extra）。false 则不同步地址栏，也不在请求里带该参数",
   },
   {
     name: "form",
@@ -255,7 +255,9 @@ export default function DataDisplayDataView() {
           换成自定义组件（<code>children</code>{" "}
           优先）。
           没有分页、搜索、新建、列设置和行高。工具栏默认保留：更新、刷新、打印、导入、导出、全屏、复制。
-          传入 <code>tabs</code> 可在工具栏下切换明细分区（复用 layout Tabs）。
+          传入 <code>tabs</code>{" "}
+          可在工具栏下切换明细分区（复用 layout Tabs）；有标签时 API
+          请求会带上当前 tab 参数。
         </Paragraph>
       </section>
 
@@ -353,7 +355,10 @@ export default function DataDisplayDataView() {
               <code>children</code>{" "}
               的「基本信息」仍显示原来的字段明细；「其他」是自定义内容。点击会写入
               {" "}
-              <code>?tab=</code>，用这个地址打开会激活对应标签。
+              <code>?tab=</code>，用这个地址打开会激活对应标签。走
+              API 时，详情／刷新／导入／更新等请求都会带上当前{" "}
+              <code>tab</code>；没有 tabs 时不带这个参数。切换标签会重新拉数，已请求过的相同标签+id
+              走缓存；刷新只作废当前标签的缓存。
             </Paragraph>
             <DataView
               panelKey="demo-data-view-tabs"
