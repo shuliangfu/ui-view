@@ -203,6 +203,7 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
         "工具栏搜索 ↔ 地址栏",
         "表格",
         "列显示函数",
+        "拼接列",
         "校验／尺寸",
         "新增 / 编辑 Modal 与删除确认",
         "批量操作",
@@ -226,7 +227,7 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
       t,
       `return document.querySelectorAll('[data-testid^="panel-demo-"]').length;`,
     );
-    expect(panels).toBe(33);
+    expect(panels).toBe(34);
   }, DOCS_BROWSER_CONFIG);
 
   it(
@@ -1697,19 +1698,19 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
       );
       expect(r.sameTotal).toBe(true);
       expect(r.otherNoBar).toBe(true);
-      expect(r.toolbars).toBe(32);
+      expect(r.toolbars).toBe(33);
     },
     DOCS_BROWSER_CONFIG,
   );
   it(
-    "33 个示例：32 个有工具栏；toolbar:false 示例无工具栏，表格／分页齐全",
+    "34 个示例：33 个有工具栏；toolbar:false 示例无工具栏，表格／分页齐全",
     async (t) => {
       if (!t?.browser?.goto) return;
       await open(t, "demo-basic");
       const r = await ev<Record<string, unknown>>(
         t,
         `
-      const keys = ["demo-basic","demo-align","demo-search","demo-sync-url","demo-table","demo-col-fn","demo-crud","demo-batch","demo-page","demo-export","demo-remote","demo-api-users-action","demo-api-orders-restful","demo-dark","demo-locale","demo-toolbar-off","demo-defaults","demo-bool","demo-tb-fn","demo-ra-fn","demo-tb-custom","demo-ra-custom","demo-key-order","demo-enabled","demo-title","demo-can","demo-custom","demo-cell","demo-schemas-full","demo-view","demo-form-view-render","demo-field-render","demo-tabs"];
+      const keys = ["demo-basic","demo-align","demo-search","demo-sync-url","demo-table","demo-col-fn","demo-join-name","demo-crud","demo-batch","demo-page","demo-export","demo-remote","demo-api-users-action","demo-api-orders-restful","demo-dark","demo-locale","demo-toolbar-off","demo-defaults","demo-bool","demo-tb-fn","demo-ra-fn","demo-tb-custom","demo-ra-custom","demo-key-order","demo-enabled","demo-title","demo-can","demo-custom","demo-cell","demo-schemas-full","demo-view","demo-form-view-render","demo-field-render","demo-tabs"];
       await D.until(() => D.total("demo-remote") > 0, 10000);
       await D.until(() => D.total("demo-api-users-action") > 0, 10000);
       await D.until(() => D.total("demo-api-orders-restful") > 0, 10000);
@@ -1731,7 +1732,7 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
       }
       return out;`,
       );
-      expect(Object.keys(r).length).toBe(33);
+      expect(Object.keys(r).length).toBe(34);
       for (const [k, v] of Object.entries(r)) {
         const o = v as Record<string, unknown>;
         const expectTb = k !== "demo-toolbar-off";
