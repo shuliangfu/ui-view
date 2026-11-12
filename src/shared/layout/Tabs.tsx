@@ -39,6 +39,14 @@ export interface TabsProps {
   tabListClass?: string;
   /** 面板容器 class */
   panelClass?: string;
+  /** Extra class for the active tab button (merged after the built-in styles). */
+  activeClass?: string;
+  /** Rendered between the tab list and the panel (for example a toolbar). */
+  extra?: unknown;
+  /** Extra class merged onto every tab button. */
+  tabClass?: string;
+  /** If true, only the tab list is rendered (panel is owned by the parent). */
+  hidePanel?: boolean;
 }
 
 export function Tabs(props: TabsProps): JSXRenderable {
@@ -51,6 +59,10 @@ export function Tabs(props: TabsProps): JSXRenderable {
     class: className,
     tabListClass,
     panelClass,
+    activeClass,
+    extra,
+    tabClass,
+    hidePanel,
   } = props;
 
   const initialKey = controlledKey ?? items[0]?.key ?? "";
@@ -78,7 +90,7 @@ export function Tabs(props: TabsProps): JSXRenderable {
    * 使用 `focus-visible` 而非 `focus:ring`，避免鼠标点击后焦点留在按钮上时一直显示粗蓝环（看起来像「激活边框」）；键盘 Tab 聚焦时仍显示环。
    */
   const tabBtnBase =
-    "px-4 py-2 text-sm font-medium transition-colors motion-reduce:transition-none rounded-md focus:outline-hidden focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 disabled:opacity-50 disabled:cursor-not-allowed";
+    "relative px-4 py-2 text-sm font-medium transition-colors motion-reduce:transition-none rounded-md focus:outline-hidden focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 disabled:opacity-50 disabled:cursor-not-allowed";
   /**
    * `line`：未激活透明边框占位；激活/悬停均为左/上/右边框、`border-b-0`，`-mb-px` 与父级底边重叠。
    * 悬停/激活用 `bg-inherit` 与根容器同色且**不透明**；暗色下勿用带透明度后缀的 hover 背景（如 slate-800/50），否则父级 `border-b` 会透出成底横线。
@@ -107,11 +119,11 @@ export function Tabs(props: TabsProps): JSXRenderable {
     return (
       <div
         class={twMerge(
-          "w-full",
+          hidePanel ? "inline-flex w-fit max-w-full shrink-0" : "w-full",
           /**
            * `line` 时给根容器默认与常见主内容区一致的底色，激活标签 `bg-inherit` 后与下方面板视觉上同色；嵌入卡片时请传 `class` 覆盖（如 `bg-white`）。
            */
-          type === "line" && "bg-slate-50 dark:bg-slate-950",
+          type === "line" && !hidePanel && "bg-slate-50 dark:bg-slate-950",
           className,
         )}
       >
@@ -138,6 +150,8 @@ export function Tabs(props: TabsProps): JSXRenderable {
                 tabBtnBase,
                 type === "line" ? tabBtnLine : tabBtnCard,
                 fullWidth && "flex-1",
+                tabClass,
+                activeKey === item.key ? activeClass : undefined,
               )}
               onClick={() => handleTabClick(item.key)}
             >
@@ -145,6 +159,8 @@ export function Tabs(props: TabsProps): JSXRenderable {
             </button>
           ))}
         </div>
+        {!hidePanel && extra}
+        {!hidePanel && (
         <div
           role="tabpanel"
           id={`tabpanel-${activeKey}`}
@@ -153,6 +169,7 @@ export function Tabs(props: TabsProps): JSXRenderable {
         >
           {items.find((i) => i.key === activeKey)?.children}
         </div>
+        )}
       </div>
     );
   };

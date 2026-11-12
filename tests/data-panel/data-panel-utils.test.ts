@@ -4,14 +4,17 @@
  */
 import { describe, expect, it } from "@dreamer/test";
 import {
+  applyFieldRule,
   buildExportFile,
   createLocalDataSource,
   displayValue,
-  normalizeColumns,
+  fieldLayoutStyle,
+  fieldSpan,
   filterRows,
   formatDateTime,
-  resolvePanelColumns,
   formatMoney,
+  itemRowId,
+  normalizeColumns,
   pageList,
   parseCsv,
   parseJsonRows,
@@ -19,11 +22,9 @@ import {
   queryFromParams,
   queryToParams,
   resolveBatchStatusColumn,
-  validateForm,
-  applyFieldRule,
+  resolvePanelColumns,
   useFieldGrid,
-  fieldLayoutStyle,
-  fieldSpan,
+  validateForm,
   validateSearchFields,
 } from "../../src/desktop/data-display/data-panel-utils.ts";
 import {
@@ -96,6 +97,15 @@ const Q: Query = {
   filters: {},
 };
 
+describe("itemRowId", () => {
+  it("reads rowKey, then id, then _id", () => {
+    expect(itemRowId({ code: "c", id: "i", _id: "_x" }, "code")).toBe("c");
+    expect(itemRowId({ id: "i", _id: "_x" })).toBe("i");
+    expect(itemRowId({ _id: "_x" })).toBe("_x");
+    expect(itemRowId({})).toBe("");
+  });
+});
+
 describe("展示值", () => {
   it("formatDateTime：Date / ISO / 空 / 非法", () => {
     expect(formatDateTime(new Date(2026, 0, 2, 3, 4, 5))).toBe(
@@ -109,7 +119,9 @@ describe("展示值", () => {
   });
 
   it("formatDateTime：自定义 format（不要秒／只要日期）", () => {
-    expect(formatDateTime(new Date(2026, 10, 10, 10, 30, 45), "YYYY-MM-DD HH:mm"))
+    expect(
+      formatDateTime(new Date(2026, 10, 10, 10, 30, 45), "YYYY-MM-DD HH:mm"),
+    )
       .toBe("2026-11-10 10:30");
     expect(formatDateTime("2026-11-10", "YYYY-MM-DD")).toBe("2026-11-10");
     expect(formatDateTime("2026-11-10", "YYYY/MM/DD")).toBe("2026/11/10");
@@ -118,7 +130,12 @@ describe("展示值", () => {
   it("displayValue：column.format 作用于 date／datetime", () => {
     const row = { id: "1", at: "2026-11-10T10:30:45" };
     expect(displayValue(
-      { prop: "at", label: "时间", type: "datetime", format: "YYYY-MM-DD HH:mm" },
+      {
+        prop: "at",
+        label: "时间",
+        type: "datetime",
+        format: "YYYY-MM-DD HH:mm",
+      },
       row,
       { yes: "是", no: "否" },
     )).toBe("2026-11-10 10:30");
@@ -149,27 +166,32 @@ describe("展示值", () => {
     expect(cols[0].prop).toBe("__select");
     expect(cols[1].prop).toBe("__index");
     expect(cols[3].prop).toBe("__actions");
-    // 无显式时兼容：selection／index 前置，actions 末尾追加
+    // 无显式时兼容：selection 前置，actions 末尾；默认不再自动补序号列
     const auto = resolvePanelColumns(
       [{ prop: "name", label: "姓名" }],
       { needSelection: true, needActions: true, selectable: undefined },
     );
     expect(auto.map((c) => c.type)).toEqual([
       "selection",
-      "index",
       undefined,
       "actions",
     ]);
-    expect(auto[1].label).toBe("#");
-    // selectable:false 去掉 selection
+    // autoIndex:true 才自动前置序号
+    const withIdx = resolvePanelColumns(
+      [{ prop: "name", label: "姓名" }],
+      { needSelection: false, needActions: false, autoIndex: true },
+    );
+    expect(withIdx.map((c) => c.type)).toEqual(["index", undefined]);
+    expect(withIdx[0].label).toBe("#");
+    // selectable:false 去掉 selection；未声明 index 则没有序号列
     const noSel = resolvePanelColumns(
       [{ prop: "name", label: "姓名" }],
       { needSelection: true, selectable: false, needActions: false },
     );
     expect(noSel.some((c) => c.type === "selection")).toBe(false);
-    expect(noSel[0].type).toBe("index");
+    expect(noSel.some((c) => c.type === "index")).toBe(false);
+    expect(noSel[0].prop).toBe("name");
   });
-
 
   it("formatMoney：千分位两位小数，非数字为空", () => {
     expect(formatMoney(1234.5)).toBe("1,234.50");
@@ -212,9 +234,8 @@ describe("展示值", () => {
   });
 });
 
-
 describe("displayValue 函数列", () => {
-it("displayValue：value／formatter／节点回落", () => {
+  it("displayValue：value／formatter／节点回落", () => {
     const row = { id: "1", flag: 1, name: "A" };
     expect(
       displayValue(
@@ -269,12 +290,16 @@ it("displayValue：value／formatter／节点回落", () => {
   });
 });
 
-
 describe("normalizeColumns", () => {
   it("normalizeColumns：edit→inline；已有 inline 不动", () => {
     const cols = normalizeColumns([
       { prop: "a", label: "A", edit: true },
-      { prop: "b", label: "B", edit: true, options: [{ value: "1", label: "开" }, { value: "0", label: "关" }] },
+      {
+        prop: "b",
+        label: "B",
+        edit: true,
+        options: [{ value: "1", label: "开" }, { value: "0", label: "关" }],
+      },
       { prop: "c", label: "C", edit: true, inline: "number" },
       { prop: "d", label: "D" },
     ]);
@@ -390,7 +415,6 @@ describe("queryToParams", () => {
       .toBe("");
   });
 });
-
 
 describe("queryFromParams（page／pageSize／搜索 ↔ URL 回填）", () => {
   const names = ["name", "role"] as const;
@@ -577,8 +601,12 @@ describe("createLocalDataSource：查询", () => {
     expect(s.list({ ...Q, sort: "name", order: "desc" }).items[0].name).toBe(
       "User23",
     );
-    expect(s.list({ ...Q, sort: "score", order: "desc" }).items[0].score).toBe(66);
-    expect(s.list({ ...Q, sort: "balance", order: "asc" }).items[0].id).toBe("1");
+    expect(s.list({ ...Q, sort: "score", order: "desc" }).items[0].score).toBe(
+      66,
+    );
+    expect(s.list({ ...Q, sort: "balance", order: "asc" }).items[0].id).toBe(
+      "1",
+    );
   });
 
   it("合计：只对 total 列，浮点误差被消除", () => {
@@ -867,9 +895,13 @@ describe("messages", () => {
   });
 });
 
-
 describe("validateForm rules／search／layout", () => {
-  const Mm = { required: "必填", min: "最小 {n}", max: "最大 {n}", patternMismatch: "格式错" };
+  const Mm = {
+    required: "必填",
+    min: "最小 {n}",
+    max: "最大 {n}",
+    patternMismatch: "格式错",
+  };
 
   it("rules：required message、email type、min/max 长度、validator", () => {
     const form = [
@@ -893,10 +925,25 @@ describe("validateForm rules／search／layout", () => {
     ];
     expect(validateForm(form, {}, false, Mm).name).toBe("姓名不能为空");
     expect(validateForm(form, { name: "A" }, false, Mm).name).toBe("长度 2–5");
-    expect(validateForm(form, { name: "AliceX" }, false, Mm).name).toBe("长度 2–5");
-    expect(validateForm(form, { name: "Al", email: "x", code: "ok" }, false, Mm).email).toBe("邮箱不对");
-    expect(validateForm(form, { name: "Al", email: "a@b.co", code: "no" }, false, Mm).code).toBe("必须 ok");
-    expect(validateForm(form, { name: "Al", email: "a@b.co", code: "ok" }, false, Mm)).toEqual({});
+    expect(validateForm(form, { name: "AliceX" }, false, Mm).name).toBe(
+      "长度 2–5",
+    );
+    expect(
+      validateForm(form, { name: "Al", email: "x", code: "ok" }, false, Mm)
+        .email,
+    ).toBe("邮箱不对");
+    expect(
+      validateForm(form, { name: "Al", email: "a@b.co", code: "no" }, false, Mm)
+        .code,
+    ).toBe("必须 ok");
+    expect(
+      validateForm(
+        form,
+        { name: "Al", email: "a@b.co", code: "ok" },
+        false,
+        Mm,
+      ),
+    ).toEqual({});
   });
 
   it("简写 message／maxlength；编辑密码留空跳过 required", () => {

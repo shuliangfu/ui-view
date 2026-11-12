@@ -37,6 +37,17 @@ import { IconSearch } from "../../shared/basic/icons/Search.tsx";
 import { IconTrash } from "../../shared/basic/icons/Trash.tsx";
 import { IconUpload } from "../../shared/basic/icons/Upload.tsx";
 import { Card } from "./Card.tsx";
+import {
+  type DataChromeTab,
+  DataChromeTabBody,
+  DataChromeTabList,
+  type DataChromeTabType,
+  DEFAULT_TAB_PARAM,
+  rememberTabKey,
+  resolveDataChromeTabKey,
+  resolveInitialTabKey,
+  writeTabToLocation,
+} from "./data-panel-tabs.tsx";
 import { Descriptions } from "./Descriptions.tsx";
 import { Dropdown } from "../navigation/Dropdown.tsx";
 import { FormItem } from "../form/FormItem.tsx";
@@ -76,6 +87,7 @@ import {
   isIndexColumn,
   isSelectionColumn,
   isSystemColumn,
+  itemRowId,
   looksLikeHtml,
   normalizeColumns,
   pageList,
@@ -343,6 +355,24 @@ export interface PanelProps {
   class?: string;
   /** 面板根节点内的额外内容（如自定义 Modal） */
   children?: unknown;
+  /**
+   * Optional tabs on the left of the toolbar, using the layout Tabs component.
+   * A tab without `children` shows the default table, batch bar and pagination.
+   * Use `onTabChange` to filter the list when several tabs share that default body.
+   */
+  tabs?: DataChromeTab[];
+  /** Controlled active tab key */
+  activeTab?: string;
+  /** Uncontrolled initial tab key */
+  defaultActiveTab?: string;
+  onTabChange?: (key: string) => void;
+  /** Tab style, default `line` */
+  tabType?: DataChromeTabType;
+  /**
+   * Query key used to activate the current tab from the URL and to write it
+   * back on change. Default `tab`. Pass `false` to disable URL sync.
+   */
+  tabParam?: string | false;
 }
 
 import {
@@ -382,14 +412,50 @@ import {
 } from "./data-panel-chrome.tsx";
 
 export { DATA_PANEL_CSS, refreshDataPanel } from "./data-panel-chrome.tsx";
+export type { DataChromeTab, DataChromeTabType } from "./data-panel-tabs.tsx";
 
 export function DataPanel(props: PanelProps): JSXRenderable {
   const m = resolveDataPanelMessages(props.locale, props.messages);
   const tr = (tpl: string, params?: Record<string, string | number>) =>
     formatMessage(tpl, params);
   const key = props.panelKey ?? "data-panel";
+  const tabParam = props.tabParam === false
+    ? ""
+    : (props.tabParam ?? DEFAULT_TAB_PARAM);
+  const tabKey = createSignal(resolveInitialTabKey({
+    tabs: props.tabs,
+    activeTab: props.activeTab,
+    defaultActiveTab: props.defaultActiveTab,
+    panelKey: key,
+    tabParam,
+  }));
+  const handleTabChange = (next: string) => {
+    if (next === tabKey.value) {
+      props.onTabChange?.(next);
+      return;
+    }
+    tabKey.value = next;
+    rememberTabKey(key, next);
+    if (tabParam) writeTabToLocation(tabParam, next);
+    props.onTabChange?.(next);
+  };
+  if (typeof globalThis.addEventListener === "function") {
+    const onPop = () => {
+      if (!tabParam || !props.tabs?.length) return;
+      const next = resolveInitialTabKey({
+        tabs: props.tabs,
+        activeTab: props.activeTab,
+        defaultActiveTab: props.defaultActiveTab,
+        panelKey: key,
+        tabParam,
+      });
+      if (next && next !== tabKey.value) handleTabChange(next);
+    };
+    globalThis.addEventListener("popstate", onPop);
+    onCleanup(() => globalThis.removeEventListener("popstate", onPop));
+  }
   const rowKey = props.rowKey ?? "id";
-  const idOf = (r: Row): string => String(r[rowKey]);
+  const idOf = (r: Row): string => itemRowId(r, rowKey);
   const inputColumns = normalizeColumns(props.columns);
   /** 数据列（不含 selection／index 系统列）——数据源／导出／合计用 */
   const dataInputColumns = inputColumns.filter(
@@ -408,6 +474,33 @@ export function DataPanel(props: PanelProps): JSXRenderable {
     viewItems.some((it) => it.click === "toggle");
 
   // 拉数优先级：dataSource ＞ data（本地、不自动请求）＞ 二者皆无＋baseRoute → API
+  const emptyLocalSource = () =>
+    createLocalDataSource({
+      rows: [],
+      columns: dataInputColumns,
+      search: searchDefs,
+      form: formDefs,
+      rowKey,
+      fixed: props.fixed,
+      onChange: props.onDataChange,
+      writable: canWriteLocal,
+    });
+  function apiSource(): DataSource {
+    try {
+      return createApiDataSource({
+        baseRoute: props.baseRoute!,
+        resource: props.resource,
+        apiMode: props.apiMode,
+        rowKey,
+        headers: props.apiHeaders,
+        credentials: props.apiCredentials,
+      });
+    } catch (e) {
+      // SSR 没有 location.pathname 时无法把 "/api" 拼成资源根；先出空表，客户端再拉数。
+      if (onServer()) return emptyLocalSource();
+      throw e;
+    }
+  }
   const ds: DataSource = props.dataSource
     ? props.dataSource
     : props.data !== undefined
@@ -422,24 +515,8 @@ export function DataPanel(props: PanelProps): JSXRenderable {
       writable: canWriteLocal,
     })
     : props.baseRoute
-    ? createApiDataSource({
-      baseRoute: props.baseRoute,
-      resource: props.resource,
-      apiMode: props.apiMode,
-      rowKey,
-      headers: props.apiHeaders,
-      credentials: props.apiCredentials,
-    })
-    : createLocalDataSource({
-      rows: [],
-      columns: dataInputColumns,
-      search: searchDefs,
-      form: formDefs,
-      rowKey,
-      fixed: props.fixed,
-      onChange: props.onDataChange,
-      writable: canWriteLocal,
-    });
+    ? apiSource()
+    : emptyLocalSource();
 
   /** 批量「设为…」：column.batch:true 且 inline:switch＋两档 options */
   const batchStatusCol = resolveBatchStatusColumn(dataInputColumns);
@@ -650,11 +727,24 @@ export function DataPanel(props: PanelProps): JSXRenderable {
     totals.value = res.totals ?? {};
     selected.value = [];
     if (urlSync && syncUrl && g.history && g.location) {
-      const qs = listParams(q, true).toString();
+      const params = listParams(q, true);
+      if (tabParam && props.tabs?.length && tabKey.value) {
+        params.set(tabParam, tabKey.value);
+      } else if (tabParam) {
+        const kept = new URLSearchParams(
+          String((g.location as { search?: string }).search || "").replace(
+            /^\?/,
+            "",
+          ),
+        ).get(tabParam);
+        if (kept) params.set(tabParam, kept);
+      }
+      const qs = params.toString();
+      const hash = (g.location as { hash?: string }).hash || "";
       g.history.replaceState(
         null,
         "",
-        g.location.pathname + (qs ? `?${qs}` : ""),
+        g.location.pathname + (qs ? `?${qs}` : "") + hash,
       );
     }
     await holdBusy(started, opts?.minBusyMs);
@@ -1694,51 +1784,56 @@ export function DataPanel(props: PanelProps): JSXRenderable {
     }
   };
 
-  const toolbar = () =>
-    toolbarHidden ? null : (
+  const toolbar = (leading?: unknown) =>
+    toolbarHidden && !leading ? null : (
       <div
-        class={TOOLBAR_BAR_CLS}
+        class={`${TOOLBAR_BAR_CLS}${
+          leading ? " !flex-nowrap !justify-start !items-end !pb-0" : ""
+        }`}
         data-testid="data-panel-toolbar"
       >
-        <div class="contents" data-dp-tools={key}>
-          <ButtonGroup attached class="dp-tool-group">
-            {toolbarSlots().map((s) => {
-              if (s.kind === "custom") {
-                const tip = actionTipText(
-                  s.key,
-                  s.title,
-                  typeof s.label === "string" ? s.label : undefined,
-                );
-                const variant = s.tone; // full ColorVariant / ActionTone
-                const btn = (
-                  <span
-                    class="inline-flex"
-                    data-testid={`dp-tb-extra-${s.key}`}
-                  >
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant={variant}
-                      class={posCls(`dp-tb-extra-${s.key}`)}
-                      disabled={s.disable}
-                      onClick={() => s.action()}
+        {leading}
+        {!toolbarHidden && (
+          <div class="ml-auto shrink-0 self-center pb-2" data-dp-tools={key}>
+            <ButtonGroup attached class="dp-tool-group">
+              {toolbarSlots().map((s) => {
+                if (s.kind === "custom") {
+                  const tip = actionTipText(
+                    s.key,
+                    s.title,
+                    typeof s.label === "string" ? s.label : undefined,
+                  );
+                  const variant = s.tone; // full ColorVariant / ActionTone
+                  const btn = (
+                    <span
+                      class="inline-flex"
+                      data-testid={`dp-tb-extra-${s.key}`}
                     >
-                      {s.icon != null ? s.icon : s.label}
-                    </Button>
-                  </span>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={variant}
+                        class={posCls(`dp-tb-extra-${s.key}`)}
+                        disabled={s.disable}
+                        onClick={() => s.action()}
+                      >
+                        {s.icon != null ? s.icon : s.label}
+                      </Button>
+                    </span>
+                  );
+                  return tipWrap(tip, btn);
+                }
+                return renderTbBuiltin(
+                  s.name,
+                  s.disable,
+                  s.action,
+                  s.title,
+                  s.label,
                 );
-                return tipWrap(tip, btn);
-              }
-              return renderTbBuiltin(
-                s.name,
-                s.disable,
-                s.action,
-                s.title,
-                s.label,
-              );
-            })}
-          </ButtonGroup>
-        </div>
+              })}
+            </ButtonGroup>
+          </div>
+        )}
       </div>
     );
 
@@ -3192,7 +3287,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
           data-testid="dp-form-submit"
           onClick={() => void submitForm()}
         >
-          {m.confirm}
+          {formId.value ? m.update : m.save}
         </Btn>
         <Btn
           type="button"
@@ -3363,12 +3458,20 @@ export function DataPanel(props: PanelProps): JSXRenderable {
               g.open?.(s.href, "_self");
               return;
             }
-            if (s.key === "edit" && !s.action) {
-              viewRow.value = null;
-              doEdit(r);
-              return;
-            }
-            s.action?.(r);
+            const run = () => {
+              if (s.key === "edit" && !s.action) {
+                doEdit(r);
+                return;
+              }
+              s.action?.(r);
+            };
+            // Close the view first so a follow-up modal does not stack backdrops.
+            viewRow.value = null;
+            const later = (globalThis as unknown as {
+              setTimeout?: (fn: () => void, ms: number) => number;
+            }).setTimeout;
+            if (later) later(run, 0);
+            else run();
           };
           return (
             <Btn
@@ -3419,11 +3522,52 @@ export function DataPanel(props: PanelProps): JSXRenderable {
             }
             bodyClass="p-0"
           >
-            {toolbar}
-            {/* 固定插槽：响应式子节点插在静态兄弟之后会落到卡片底部；批量条在表格下方，选中行不会把表格顶下去 */}
-            <div class={TABLE_WRAP_CLS}>{table}</div>
-            <div data-testid="dp-batch-slot">{batchBar}</div>
-            {pagination}
+            {() => {
+              const defaultBody = (
+                <>
+                  {/* 固定插槽：响应式子节点插在静态兄弟之后会落到卡片底部；批量条在表格下方，选中行不会把表格顶下去 */}
+                  <div class={TABLE_WRAP_CLS}>{table}</div>
+                  <div data-testid="dp-batch-slot">{batchBar}</div>
+                  {pagination}
+                </>
+              );
+              if (!props.tabs?.length) {
+                return (
+                  <>
+                    {toolbar}
+                    {defaultBody}
+                  </>
+                );
+              }
+              const controlled = props.activeTab;
+              if (controlled) {
+                const synced = resolveDataChromeTabKey(
+                  props.tabs,
+                  controlled,
+                  props.defaultActiveTab,
+                );
+                if (synced && synced !== tabKey.value) tabKey.value = synced;
+              }
+              return (
+                <>
+                  {toolbar(
+                    <DataChromeTabList
+                      tabs={props.tabs}
+                      activeTab={tabKey.value}
+                      defaultActiveTab={props.defaultActiveTab}
+                      onTabChange={handleTabChange}
+                      type={props.tabType}
+                    />,
+                  )}
+                  <DataChromeTabBody
+                    tabs={props.tabs}
+                    activeTab={tabKey.value}
+                    defaultActiveTab={props.defaultActiveTab}
+                    defaultBody={defaultBody}
+                  />
+                </>
+              );
+            }}
           </Card>
         </div>
       )}

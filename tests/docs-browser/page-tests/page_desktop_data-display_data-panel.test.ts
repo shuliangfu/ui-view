@@ -217,6 +217,7 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
         "查看详情",
         "自定义扩展：form.render / view.render",
         "自定义扩展：FormField.render",
+        "Tab",
       ]
     ) {
       expect(heads.some((h) => h.includes(need))).toBe(true);
@@ -225,7 +226,7 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
       t,
       `return document.querySelectorAll('[data-testid^="panel-demo-"]').length;`,
     );
-    expect(panels).toBe(32);
+    expect(panels).toBe(33);
   }, DOCS_BROWSER_CONFIG);
 
   it(
@@ -325,7 +326,9 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
         P("demo-basic")
       }, ".dp-card")).backgroundColor;`,
     );
-    expect(await colorsClose(t, [[lightCard, "rgba(30, 41, 59, 0.8)"]])).toBe(false);
+    expect(await colorsClose(t, [[lightCard, "rgba(30, 41, 59, 0.8)"]])).toBe(
+      false,
+    );
   }, DOCS_BROWSER_CONFIG);
 
   it("深色面板：URL page 越界时仍显示行（夹页，非整表空）", async (t) => {
@@ -1162,9 +1165,9 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
       return out;`,
       );
       expect(r.createTitle).toContain("新增");
-      // 页脚按钮顺序：「确定」在左、「取消」在右（新增 / 编辑一致）
-      expect(r.createOrder).toBe("ok:确定,取消");
-      expect(r.editOrder).toBe("ok:确定,取消");
+      // 页脚按钮顺序：提交在左、取消在右；新增为「保存」，编辑为「更新」
+      expect(r.createOrder).toBe("ok:保存,取消");
+      expect(r.editOrder).toBe("ok:更新,取消");
       expect(r.invalidTop).toBe(false);
       expect(r.stillOpen).toBe(true);
       expect(r.errorsShown).toBe(true);
@@ -1671,7 +1674,7 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
   );
 
   it(
-    "刷新按钮重新加载当前页；每个面板互不影响（同页 32 个实例）",
+    "刷新按钮重新加载当前页；每个面板互不影响（同页 33 个实例）",
     async (t) => {
       if (!t?.browser?.goto) return;
       await open(t, "demo-crud");
@@ -1698,14 +1701,14 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
     DOCS_BROWSER_CONFIG,
   );
   it(
-    "32 个示例：31 个有工具栏；toolbar:false 示例无工具栏，表格／分页齐全",
+    "33 个示例：32 个有工具栏；toolbar:false 示例无工具栏，表格／分页齐全",
     async (t) => {
       if (!t?.browser?.goto) return;
       await open(t, "demo-basic");
       const r = await ev<Record<string, unknown>>(
         t,
         `
-      const keys = ["demo-basic","demo-align","demo-search","demo-sync-url","demo-table","demo-col-fn","demo-crud","demo-batch","demo-page","demo-export","demo-remote","demo-api-users-action","demo-api-orders-restful","demo-dark","demo-locale","demo-toolbar-off","demo-defaults","demo-bool","demo-tb-fn","demo-ra-fn","demo-tb-custom","demo-ra-custom","demo-key-order","demo-enabled","demo-title","demo-can","demo-custom","demo-cell","demo-schemas-full","demo-view","demo-form-view-render","demo-field-render"];
+      const keys = ["demo-basic","demo-align","demo-search","demo-sync-url","demo-table","demo-col-fn","demo-crud","demo-batch","demo-page","demo-export","demo-remote","demo-api-users-action","demo-api-orders-restful","demo-dark","demo-locale","demo-toolbar-off","demo-defaults","demo-bool","demo-tb-fn","demo-ra-fn","demo-tb-custom","demo-ra-custom","demo-key-order","demo-enabled","demo-title","demo-can","demo-custom","demo-cell","demo-schemas-full","demo-view","demo-form-view-render","demo-field-render","demo-tabs"];
       await D.until(() => D.total("demo-remote") > 0, 10000);
       await D.until(() => D.total("demo-api-users-action") > 0, 10000);
       await D.until(() => D.total("demo-api-orders-restful") > 0, 10000);
@@ -1727,7 +1730,7 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
       }
       return out;`,
       );
-      expect(Object.keys(r).length).toBe(32);
+      expect(Object.keys(r).length).toBe(33);
       for (const [k, v] of Object.entries(r)) {
         const o = v as Record<string, unknown>;
         const expectTb = k !== "demo-toolbar-off";
@@ -3019,6 +3022,143 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
     );
     expect(r.ok).toBe(true);
     expect(r.typed).toBe("custom@example.com");
+  }, DOCS_BROWSER_CONFIG);
+
+  it("Tab：标签在工具栏左侧，点击可切换，并写入 ?tab=", async (t) => {
+    if (!t?.browser?.goto) return;
+    await open(t, "demo-tabs");
+    const start = await ev<{
+      inToolbar: boolean;
+      labels: string[];
+      selected: string[];
+      tabsLeftOfTools: boolean;
+    }>(
+      t,
+      `
+      const k = ${P("demo-tabs")};
+      const bar = D.q(k, '[data-testid="data-panel-toolbar"]');
+      const tabs = bar ? [...bar.querySelectorAll('[role="tab"]')] : [];
+      const tools = D.q(k, "[data-dp-tools]");
+      const tabLeft = tabs[0]?.getBoundingClientRect().left ?? 0;
+      const toolsLeft = tools?.getBoundingClientRect().left ?? 0;
+      return {
+        inToolbar: tabs.length === 3,
+        labels: tabs.map((el) => D.text(el)),
+        selected: tabs.filter((el) => el.getAttribute("aria-selected") === "true").map((el) => D.text(el)),
+        tabsLeftOfTools: tabLeft < toolsLeft && toolsLeft - tabLeft > 8,
+      };`,
+    );
+    expect(start.inToolbar).toBe(true);
+    expect(start.labels).toEqual(["全部", "管理员", "统计"]);
+    expect(start.selected).toEqual(["全部"]);
+    expect(start.tabsLeftOfTools).toBe(true);
+
+    const afterAdmin = await ev<{
+      switched: boolean;
+      selected: string[];
+      tab: string | null;
+      table: boolean;
+    }>(
+      t,
+      `
+      const k = ${P("demo-tabs")};
+      const clickTab = (label) => {
+        const bar = D.q(k, '[data-testid="data-panel-toolbar"]');
+        const tab = [...(bar ? bar.querySelectorAll('[role="tab"]') : [])].find((el) => D.text(el) === label);
+        if (tab) { tab.scrollIntoView({ block: "center" }); tab.click(); }
+        return tab;
+      };
+      clickTab("管理员");
+      const switched = await D.until(() => {
+        clickTab("管理员");
+        const bar = D.q(k, '[data-testid="data-panel-toolbar"]');
+        return !!(bar && [...bar.querySelectorAll('[role="tab"]')].some((el) => D.text(el) === "管理员" && el.getAttribute("aria-selected") === "true"));
+      }, 8000);
+      const bar = D.q(k, '[data-testid="data-panel-toolbar"]');
+      return {
+        switched,
+        selected: [...bar.querySelectorAll('[role="tab"]')]
+          .filter((el) => el.getAttribute("aria-selected") === "true")
+          .map((el) => D.text(el)),
+        tab: new URLSearchParams(location.search).get("tab"),
+        table: !!D.q(k, '[data-testid="dp-table"]'),
+      };`,
+    );
+    expect(afterAdmin.switched).toBe(true);
+    expect(afterAdmin.selected).toEqual(["管理员"]);
+    expect(afterAdmin.tab).toBe("admin");
+    expect(afterAdmin.table).toBe(true);
+
+    const afterStats = await ev<{
+      switched: boolean;
+      selected: string[];
+      tab: string | null;
+      statsText: string;
+      table: boolean;
+    }>(
+      t,
+      `
+      const k = ${P("demo-tabs")};
+      const clickTab = (label) => {
+        const bar = D.q(k, '[data-testid="data-panel-toolbar"]');
+        const tab = [...(bar ? bar.querySelectorAll('[role="tab"]') : [])].find((el) => D.text(el) === label);
+        if (tab) { tab.scrollIntoView({ block: "center" }); tab.click(); }
+        return tab;
+      };
+      const switched = await D.until(() => {
+        clickTab("统计");
+        const bar = D.q(k, '[data-testid="data-panel-toolbar"]');
+        return !!(bar && [...bar.querySelectorAll('[role="tab"]')].some((el) => D.text(el) === "统计" && el.getAttribute("aria-selected") === "true"));
+      }, 8000);
+      const bar = D.q(k, '[data-testid="data-panel-toolbar"]');
+      const body = D.q(k, '[data-testid="data-chrome-tabs"]');
+      return {
+        switched,
+        selected: [...bar.querySelectorAll('[role="tab"]')]
+          .filter((el) => el.getAttribute("aria-selected") === "true")
+          .map((el) => D.text(el)),
+        tab: new URLSearchParams(location.search).get("tab"),
+        statsText: D.text(body),
+        table: !!D.q(k, '[data-testid="dp-table"]'),
+      };`,
+    );
+    expect(afterStats.switched).toBe(true);
+    expect(afterStats.selected).toEqual(["统计"]);
+    expect(afterStats.tab).toBe("stats");
+    expect(afterStats.statsText).toContain("当前共");
+    expect(afterStats.statsText).toContain("管理员");
+    expect(afterStats.table).toBe(false);
+  }, DOCS_BROWSER_CONFIG);
+
+  it("Tab：用 ?tab=admin#tab 打开会激活管理员", async (t) => {
+    if (!t?.browser?.goto) return;
+    await sharedEnv.goto(t, `${DOC_PATH}?tab=admin#tab`);
+    await sharedEnv.waitDocMainReady(t);
+    const ok = await ev<boolean>(
+      t,
+      `return await D.until(() => D.q(${
+        P("demo-tabs")
+      }, '[data-testid="dp-refresh"]'), 30000);`,
+    );
+    expect(ok).toBe(true);
+    const r = await ev<
+      { selected: string[]; tab: string | null; hash: string }
+    >(
+      t,
+      `
+      const k = ${P("demo-tabs")};
+      const bar = D.q(k, '[data-testid="data-panel-toolbar"]');
+      return {
+        selected: [...bar.querySelectorAll('[role="tab"]')]
+          .filter((el) => el.getAttribute("aria-selected") === "true")
+          .map((el) => D.text(el)),
+        tab: new URLSearchParams(location.search).get("tab"),
+        hash: location.hash,
+      };`,
+    );
+    expect(r.selected).toEqual(["管理员"]);
+    expect(r.tab).toBe("admin");
+    expect(r.hash).toBe("#tab");
   }, DOCS_BROWSER_CONFIG);
 
   /**

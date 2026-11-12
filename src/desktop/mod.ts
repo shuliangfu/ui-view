@@ -890,6 +890,8 @@ export type {
   Caps,
   Column,
   DataSource,
+  DataChromeTab,
+  DataChromeTabType,
   DataViewCaps,
   DataViewProps,
   DataViewToolbarBuiltin,

@@ -4,6 +4,7 @@
  */
 
 import { Paragraph, Title } from "@dreamer/ui-view/basic";
+import { createSignal } from "@dreamer/view";
 import { CodeBlock, DataView } from "@dreamer/ui-view/data-display";
 import { DocsDemo } from "../../../components/DocsDemo.tsx";
 
@@ -33,6 +34,44 @@ const DATA_VIEW_API: ApiRow[] = [
     type: "unknown",
     default: "-",
     description: "自定义内容区，替换 Descriptions 字段区，优先于 view.render",
+  },
+  {
+    name: "tabs",
+    type: "DataChromeTab[]",
+    default: "-",
+    description:
+      "工具栏左侧的标签页（复用 layout Tabs）。未写 children 的标签展示默认明细；可给某个标签单独写 children",
+  },
+  {
+    name: "activeTab",
+    type: "string",
+    default: "-",
+    description: "受控的当前标签 key",
+  },
+  {
+    name: "defaultActiveTab",
+    type: "string",
+    default: "第一项可用 key",
+    description: "非受控时的初始标签 key",
+  },
+  {
+    name: "onTabChange",
+    type: "(key: string) => void",
+    default: "-",
+    description: "切换标签时回调",
+  },
+  {
+    name: "tabType",
+    type: "line | card",
+    default: "line",
+    description: "标签样式，与 Tabs 的 type 相同",
+  },
+  {
+    name: "tabParam",
+    type: "string | false",
+    default: "tab",
+    description:
+      "地址栏查询参数名，用来记住并激活当前标签（如 ?tab=extra）。false 则不同步",
   },
   {
     name: "form",
@@ -194,6 +233,7 @@ export default function DataDisplayDataView() {
           <code>Descriptions</code> 字段展示。也可以用 <code>view.render(ctx)</code>{" "}
           或 <code>children</code> 换成自定义组件（<code>children</code> 优先）。
           没有分页、搜索、新建、列设置和行高。工具栏默认保留：更新、刷新、打印、导入、导出、全屏、复制。
+          传入 <code>tabs</code> 可在工具栏下切换明细分区（复用 layout Tabs）。
         </Paragraph>
       </section>
 
@@ -210,6 +250,7 @@ export default function DataDisplayDataView() {
 
       <section class="flex flex-col gap-10">
         <Title level={2}>示例</Title>
+
         <DocsDemo title="基础用法（view.props）" code={basicCode}>
           <DataView
             panelKey="demo-data-view"
@@ -244,6 +285,71 @@ export default function DataDisplayDataView() {
             }}
           />
         </DocsDemo>
+
+        <div id="tab">
+        <DocsDemo
+          title="Tab"
+          code={`import { DataView } from "@dreamer/ui-view/data-display";
+
+<DataView
+  panelKey="demo-data-view-tabs"
+  title="用户详情"
+  data={user}
+  view={{ props }}
+  tabs={[
+    { key: "basic", label: "基本信息" },
+    {
+      key: "extra",
+      label: "其他",
+      children: <p>注册来源：后台录入</p>,
+    },
+  ]}
+/>`}
+        >
+          <Paragraph class="mb-3 text-sm text-slate-600 dark:text-slate-400">
+            标签放在工具栏左边的空位，和右侧按钮同一行。未写 <code>children</code>{" "}
+            的「基本信息」仍显示原来的字段明细；「其他」是自定义内容。点击会写入{" "}
+            <code>?tab=</code>，用这个地址打开会激活对应标签。
+          </Paragraph>
+          <DataView
+            panelKey="demo-data-view-tabs"
+            title="用户详情"
+            data={DEMO_USER}
+            view={{
+              props: [
+                { prop: "name", label: "姓名" },
+                { prop: "email", label: "邮箱" },
+                {
+                  prop: "status",
+                  label: "状态",
+                  type: "tag",
+                  options: [
+                    { value: "active", label: "启用", tone: "success" },
+                    { value: "disabled", label: "停用" },
+                  ],
+                },
+                {
+                  prop: "createdAt",
+                  label: "创建时间",
+                  type: "datetime",
+                },
+              ],
+            }}
+            tabs={[
+              { key: "basic", label: "基本信息" },
+              {
+                key: "extra",
+                label: "其他",
+                children: (
+                  <div class="px-3 py-4 text-sm text-slate-600 dark:text-slate-400">
+                    注册来源：后台录入。可在这里放操作记录、附件或其他自定义内容。
+                  </div>
+                ),
+              },
+            ]}
+          />
+        </DocsDemo>
+        </div>
       </section>
 
       <section class="space-y-3">

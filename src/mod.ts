@@ -738,6 +738,8 @@ export type {
   ContainerSize,
   CreateFormOptions,
   DataSource,
+  DataChromeTab,
+  DataChromeTabType,
   DataViewCaps,
   DataViewProps,
   DataViewToolbarBuiltin,

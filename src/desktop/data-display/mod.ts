@@ -137,6 +137,7 @@ export {
   type DataViewProps,
   type DataViewToolbarBuiltin,
 } from "./DataView.tsx";
+export type { DataChromeTab, DataChromeTabType } from "./data-panel-tabs.tsx";
 export {
   defaultDataPanelMessages,
   enDataPanelMessages,

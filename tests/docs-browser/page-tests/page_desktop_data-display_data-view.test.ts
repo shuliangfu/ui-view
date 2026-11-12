@@ -51,78 +51,84 @@ describe("文档页 E2E：/desktop/data-display/data-view（DataView 数据明�
     ]);
   }, DOCS_BROWSER_CONFIG);
 
-  it("基础示例：标题、IconList、Descriptions、默认工具栏、无分页", async (t) => {
-    if (!t?.browser?.goto) return;
-    await open(t);
-    const r = await t.browser!.evaluate(() => {
-      const ids = [
-        "dv-update",
-        "dv-refresh",
-        "dv-print",
-        "dv-import",
-        "dv-export",
-        "dv-fullscreen",
-        "dv-copy",
-      ];
-      const root = document.querySelector(
-        '[data-testid="panel-demo-data-view"]',
-      ) as HTMLElement | null;
-      if (!root) return { ok: false, reason: "missing panel" };
-      const title = root.querySelector('[data-testid="data-view"]');
-      const titleHtml = title?.innerHTML ?? "";
-      const body = root.querySelector('[data-testid="dv-view"]');
-      const text = (body?.textContent ?? "") + (title?.textContent ?? "");
-      const present = Object.fromEntries(
-        ids.map((id) => [id, !!root.querySelector(`[data-testid="${id}"]`)]),
-      );
-      return {
-        ok: true,
-        title: (title?.textContent ?? "").trim(),
-        hasListIcon: titleHtml.includes('d="M8 6h13M8 12h13M8 18h13"'),
-        hasEyeIcon: titleHtml.includes(
-          'd="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"',
-        ),
-        hasName: text.includes("Ada Lovelace"),
-        hasEmail: text.includes("ada@example.com"),
-        hasStatus: text.includes("启用"),
-        hasCreated: /2026/.test(text),
-        present,
-        hasPagination: !!root.querySelector('[data-testid="dp-pg"]'),
-        hasPanelToolbar: !!root.querySelector('[data-testid="data-panel-toolbar"]'),
-        hasViewToolbar: !!root.querySelector(
-          '[data-testid="data-view-toolbar"]',
-        ),
+  it(
+    "基础示例：标题、IconList、Descriptions、默认工具栏、无分页",
+    async (t) => {
+      if (!t?.browser?.goto) return;
+      await open(t);
+      const r = await t.browser!.evaluate(() => {
+        const ids = [
+          "dv-update",
+          "dv-refresh",
+          "dv-print",
+          "dv-import",
+          "dv-export",
+          "dv-fullscreen",
+          "dv-copy",
+        ];
+        const root = document.querySelector(
+          '[data-testid="panel-demo-data-view"]',
+        ) as HTMLElement | null;
+        if (!root) return { ok: false, reason: "missing panel" };
+        const title = root.querySelector('[data-testid="data-view"]');
+        const titleHtml = title?.innerHTML ?? "";
+        const body = root.querySelector('[data-testid="dv-view"]');
+        const text = (body?.textContent ?? "") + (title?.textContent ?? "");
+        const present = Object.fromEntries(
+          ids.map((id) => [id, !!root.querySelector(`[data-testid="${id}"]`)]),
+        );
+        return {
+          ok: true,
+          title: (title?.textContent ?? "").trim(),
+          hasListIcon: titleHtml.includes('d="M8 6h13M8 12h13M8 18h13"'),
+          hasEyeIcon: titleHtml.includes(
+            'd="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"',
+          ),
+          hasName: text.includes("Ada Lovelace"),
+          hasEmail: text.includes("ada@example.com"),
+          hasStatus: text.includes("启用"),
+          hasCreated: /2026/.test(text),
+          present,
+          hasPagination: !!root.querySelector('[data-testid="dp-pg"]'),
+          hasPanelToolbar: !!root.querySelector(
+            '[data-testid="data-panel-toolbar"]',
+          ),
+          hasViewToolbar: !!root.querySelector(
+            '[data-testid="data-view-toolbar"]',
+          ),
+        };
+      }) as {
+        ok: boolean;
+        reason?: string;
+        title: string;
+        hasListIcon: boolean;
+        hasEyeIcon: boolean;
+        hasName: boolean;
+        hasEmail: boolean;
+        hasStatus: boolean;
+        hasCreated: boolean;
+        present: Record<string, boolean>;
+        hasPagination: boolean;
+        hasPanelToolbar: boolean;
+        hasViewToolbar: boolean;
       };
-    }) as {
-      ok: boolean;
-      reason?: string;
-      title: string;
-      hasListIcon: boolean;
-      hasEyeIcon: boolean;
-      hasName: boolean;
-      hasEmail: boolean;
-      hasStatus: boolean;
-      hasCreated: boolean;
-      present: Record<string, boolean>;
-      hasPagination: boolean;
-      hasPanelToolbar: boolean;
-      hasViewToolbar: boolean;
-    };
-    expect(r.ok).toBe(true);
-    expect(r.title).toContain("用户详情");
-    expect(r.hasListIcon).toBe(true);
-    expect(r.hasEyeIcon).toBe(false);
-    expect(r.hasName).toBe(true);
-    expect(r.hasEmail).toBe(true);
-    expect(r.hasStatus).toBe(true);
-    expect(r.hasCreated).toBe(true);
-    expect(r.hasViewToolbar).toBe(true);
-    expect(r.hasPagination).toBe(false);
-    expect(r.hasPanelToolbar).toBe(false);
-    for (const id of TB_IDS) {
-      expect(r.present[id]).toBe(true);
-    }
-  }, DOCS_BROWSER_CONFIG);
+      expect(r.ok).toBe(true);
+      expect(r.title).toContain("用户详情");
+      expect(r.hasListIcon).toBe(true);
+      expect(r.hasEyeIcon).toBe(false);
+      expect(r.hasName).toBe(true);
+      expect(r.hasEmail).toBe(true);
+      expect(r.hasStatus).toBe(true);
+      expect(r.hasCreated).toBe(true);
+      expect(r.hasViewToolbar).toBe(true);
+      expect(r.hasPagination).toBe(false);
+      expect(r.hasPanelToolbar).toBe(false);
+      for (const id of TB_IDS) {
+        expect(r.present[id]).toBe(true);
+      }
+    },
+    DOCS_BROWSER_CONFIG,
+  );
 
   it("更新：打开编辑 Modal 并提交后回写当前记录", async (t) => {
     if (!t?.browser?.goto) return;
@@ -149,9 +155,7 @@ describe("文档页 E2E：/desktop/data-display/data-view（DataView 数据明�
       ) as HTMLButtonElement | null;
       const click = (el: Element | null) => {
         if (!el) throw new Error("missing element");
-        const inner = el.tagName === "SPAN"
-          ? el.querySelector("button")
-          : null;
+        const inner = el.tagName === "SPAN" ? el.querySelector("button") : null;
         ((inner || el) as HTMLElement).click();
       };
       if (!update || (update as HTMLButtonElement).disabled) {
@@ -161,7 +165,9 @@ describe("文档页 E2E：/desktop/data-display/data-view（DataView 数据明�
       const opened = await until(() =>
         !!document.querySelector('[role="dialog"] [data-testid="dv-form"]')
       );
-      const dlg = document.querySelector('[role="dialog"]') as HTMLElement | null;
+      const dlg = document.querySelector('[role="dialog"]') as
+        | HTMLElement
+        | null;
       const title = (dlg?.querySelector("h2")?.textContent ?? "").trim();
       const nameInput = document.querySelector(
         '[data-testid="dv-fld-name"] input',
@@ -187,7 +193,8 @@ describe("文档页 E2E：/desktop/data-display/data-view（DataView 数据明�
       ) as HTMLElement | null;
       click(submit);
       const closed = await until(
-        () => !document.querySelector('[role="dialog"] [data-testid="dv-form"]'),
+        () =>
+          !document.querySelector('[role="dialog"] [data-testid="dv-form"]'),
         8000,
       );
       await until(
@@ -196,8 +203,9 @@ describe("文档页 E2E：/desktop/data-display/data-view（DataView 数据明�
             .includes("Ada Updated"),
         4000,
       );
-      const body = (root?.querySelector('[data-testid="dv-view"]')?.textContent ??
-        "");
+      const body =
+        root?.querySelector('[data-testid="dv-view"]')?.textContent ??
+          "";
       return {
         ok: true,
         opened,
@@ -255,9 +263,7 @@ describe("文档页 E2E：/desktop/data-display/data-view（DataView 数据明�
         root.querySelector(`[data-testid="${id}"]`) as HTMLElement | null;
       const click = (el: Element | null) => {
         if (!el) throw new Error("missing element");
-        const inner = el.tagName === "SPAN"
-          ? el.querySelector("button")
-          : null;
+        const inner = el.tagName === "SPAN" ? el.querySelector("button") : null;
         ((inner || el) as HTMLElement).click();
       };
       const dismiss = async () => {
@@ -410,5 +416,137 @@ describe("文档页 E2E：/desktop/data-display/data-view（DataView 数据明�
     expect(r.fullscreen).toBe(true);
     expect(r.copyHasHeader).toBe(true);
     expect(r.copyHasRow).toBe(true);
+  }, DOCS_BROWSER_CONFIG);
+
+  it("Tab：标签在工具栏左侧，点击可切换，并写入 ?tab=", async (t) => {
+    if (!t?.browser?.goto) return;
+    await sharedEnv.goto(t, DOC_PATH);
+    await sharedEnv.waitDocMainReady(t);
+    const ready = await t.browser!.evaluate(async () => {
+      const t0 = Date.now();
+      while (Date.now() - t0 < 30000) {
+        if (
+          document.querySelector(
+            '[data-testid="panel-demo-data-view-tabs"] [data-testid="dv-refresh"]',
+          )
+        ) {
+          return true;
+        }
+        await new Promise((r) => setTimeout(r, 40));
+      }
+      return false;
+    });
+    expect(ready).toBe(true);
+
+    const start = await t.browser!.evaluate(() => {
+      const root = document.querySelector(
+        '[data-testid="panel-demo-data-view-tabs"]',
+      ) as HTMLElement | null;
+      const bar = root?.querySelector(
+        '[data-testid="data-view-toolbar"]',
+      ) as HTMLElement | null;
+      const tabs = bar ? [...bar.querySelectorAll('[role="tab"]')] : [];
+      const tools = root?.querySelector("[data-dv-tools]") as
+        | HTMLElement
+        | null;
+      const tabLeft = tabs[0]?.getBoundingClientRect().left ?? 0;
+      const toolsLeft = tools?.getBoundingClientRect().left ?? 0;
+      const text = (el: Element | null) => (el ? el.textContent!.trim() : "");
+      return {
+        inToolbar: tabs.length === 2,
+        labels: tabs.map((el) => text(el)),
+        selected: tabs
+          .filter((el) => el.getAttribute("aria-selected") === "true")
+          .map((el) => text(el)),
+        tabsLeftOfTools: tabLeft < toolsLeft && toolsLeft - tabLeft > 8,
+        basicVisible: (root?.textContent || "").includes("Ada Lovelace"),
+        extraVisible: (root?.textContent || "").includes("注册来源：后台录入"),
+      };
+    });
+    expect(start.inToolbar).toBe(true);
+    expect(start.labels).toEqual(["基本信息", "其他"]);
+    expect(start.selected).toEqual(["基本信息"]);
+    expect(start.tabsLeftOfTools).toBe(true);
+    expect(start.basicVisible).toBe(true);
+    expect(start.extraVisible).toBe(false);
+
+    const afterExtra = await t.browser!.evaluate(async () => {
+      const text = (el: Element | null) => (el ? el.textContent!.trim() : "");
+      const clickExtra = () => {
+        const root = document.querySelector(
+          '[data-testid="panel-demo-data-view-tabs"]',
+        ) as HTMLElement | null;
+        const bar = root?.querySelector(
+          '[data-testid="data-view-toolbar"]',
+        ) as HTMLElement | null;
+        const tab = [...(bar ? bar.querySelectorAll('[role="tab"]') : [])].find(
+          (el) => text(el) === "其他",
+        ) as HTMLElement | undefined;
+        if (tab) {
+          tab.scrollIntoView({ block: "center" });
+          tab.click();
+        }
+        return { root, bar, tab };
+      };
+      const t0 = Date.now();
+      let switched = false;
+      while (Date.now() - t0 < 8000) {
+        const { tab } = clickExtra();
+        if (tab?.getAttribute("aria-selected") === "true") {
+          switched = true;
+          break;
+        }
+        await new Promise((r) => setTimeout(r, 40));
+      }
+      const { root, bar } = clickExtra();
+      return {
+        switched,
+        selected: [...(bar ? bar.querySelectorAll('[role="tab"]') : [])]
+          .filter((el) => el.getAttribute("aria-selected") === "true")
+          .map((el) => text(el)),
+        tab: new URLSearchParams(location.search).get("tab"),
+        extraVisible: (root?.textContent || "").includes("注册来源：后台录入"),
+        basicVisible: (root?.textContent || "").includes("Ada Lovelace"),
+      };
+    });
+    expect(afterExtra.switched).toBe(true);
+    expect(afterExtra.selected).toEqual(["其他"]);
+    expect(afterExtra.tab).toBe("extra");
+    expect(afterExtra.extraVisible).toBe(true);
+    expect(afterExtra.basicVisible).toBe(false);
+  }, DOCS_BROWSER_CONFIG);
+
+  it("Tab：用 ?tab=extra#tab 打开会激活其他", async (t) => {
+    if (!t?.browser?.goto) return;
+    await sharedEnv.goto(t, `${DOC_PATH}?tab=extra#tab`);
+    await sharedEnv.waitDocMainReady(t);
+    const r = await t.browser!.evaluate(async () => {
+      const t0 = Date.now();
+      let root: HTMLElement | null = null;
+      while (Date.now() - t0 < 30000) {
+        root = document.querySelector(
+          '[data-testid="panel-demo-data-view-tabs"]',
+        ) as HTMLElement | null;
+        if (root?.querySelector('[data-testid="dv-refresh"]')) break;
+        await new Promise((r) => setTimeout(r, 40));
+      }
+      const bar = root?.querySelector(
+        '[data-testid="data-view-toolbar"]',
+      ) as HTMLElement | null;
+      const text = (el: Element | null) => (el ? el.textContent!.trim() : "");
+      const tabs = bar ? [...bar.querySelectorAll('[role="tab"]')] : [];
+      return {
+        selected: tabs
+          .filter((el) => el.getAttribute("aria-selected") === "true")
+          .map((el) => text(el)),
+        tab: new URLSearchParams(location.search).get("tab"),
+        hash: location.hash,
+        extraVisible: (root?.textContent || "").includes("注册来源：后台录入"),
+      };
+    });
+    expect(r.selected).toEqual(["其他"]);
+    expect(r.tab).toBe("extra");
+    expect(r.hash).toBe("#tab");
+    expect(r.extraVisible).toBe(true);
   }, DOCS_BROWSER_CONFIG);
 });

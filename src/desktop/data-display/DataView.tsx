@@ -30,6 +30,17 @@ import { IconPrinter } from "../../shared/basic/icons/Printer.tsx";
 import { IconRefresh } from "../../shared/basic/icons/Refresh.tsx";
 import { IconUpload } from "../../shared/basic/icons/Upload.tsx";
 import { Card } from "./Card.tsx";
+import {
+  DataChromeTabBody,
+  DataChromeTabList,
+  DEFAULT_TAB_PARAM,
+  rememberTabKey,
+  resolveDataChromeTabKey,
+  resolveInitialTabKey,
+  writeTabToLocation,
+  type DataChromeTab,
+  type DataChromeTabType,
+} from "./data-panel-tabs.tsx";
 import { Descriptions } from "./Descriptions.tsx";
 import { Empty } from "./Empty.tsx";
 import { Dropdown } from "../navigation/Dropdown.tsx";
@@ -60,6 +71,7 @@ import {
   fieldProp,
   fieldsOf,
   formatDateTime,
+  itemRowId,
   parseCsv,
   parseJsonRows,
   parseXmlRows,
@@ -223,6 +235,20 @@ export interface DataViewProps {
    * 与 DataPanel 的「根上额外 Modal」不同：此处即明细主体。
    */
   children?: unknown;
+  /**
+   * Optional tabs on the left of the toolbar, using the layout Tabs component.
+   * A tab without `children` shows the default descriptions / children body.
+   */
+  tabs?: DataChromeTab[];
+  activeTab?: string;
+  defaultActiveTab?: string;
+  onTabChange?: (key: string) => void;
+  tabType?: DataChromeTabType;
+  /**
+   * Query key used to activate the current tab from the URL and to write it
+   * back on change. Default `tab`. Pass `false` to disable URL sync.
+   */
+  tabParam?: string | false;
 }
 
 /** 本地源没有 view/get 时补一个按 id 查找，刷新／写回后能读到源里的当前行。 */
@@ -305,8 +331,43 @@ export function assertDataViewToolbarConfig(
 
 export function DataView(props: DataViewProps): JSXRenderable {
   const key = props.panelKey ?? "data-view";
+  const tabParam = props.tabParam === false
+    ? ""
+    : (props.tabParam ?? DEFAULT_TAB_PARAM);
+  const tabKey = createSignal(resolveInitialTabKey({
+    tabs: props.tabs,
+    activeTab: props.activeTab,
+    defaultActiveTab: props.defaultActiveTab,
+    panelKey: key,
+    tabParam,
+  }));
+  const handleTabChange = (next: string) => {
+    if (next === tabKey.value) {
+      props.onTabChange?.(next);
+      return;
+    }
+    tabKey.value = next;
+    rememberTabKey(key, next);
+    if (tabParam) writeTabToLocation(tabParam, next);
+    props.onTabChange?.(next);
+  };
+  if (typeof globalThis.addEventListener === "function") {
+    const onPop = () => {
+      if (!tabParam || !props.tabs?.length) return;
+      const next = resolveInitialTabKey({
+        tabs: props.tabs,
+        activeTab: props.activeTab,
+        defaultActiveTab: props.defaultActiveTab,
+        panelKey: key,
+        tabParam,
+      });
+      if (next && next !== tabKey.value) handleTabChange(next);
+    };
+    globalThis.addEventListener("popstate", onPop);
+    onCleanup(() => globalThis.removeEventListener("popstate", onPop));
+  }
   const rowKey = props.rowKey ?? "id";
-  const idOf = (r: Row): string => String(r[rowKey] ?? "");
+  const idOf = (r: Row): string => itemRowId(r, rowKey);
   const locale = props.locale ?? "zh-CN";
   const copyEmptyDefault = locale === "en-US"
     ? "No record to copy"
@@ -344,14 +405,35 @@ export function DataView(props: DataViewProps): JSXRenderable {
       rowKey,
     )
     : props.baseRoute
-    ? createApiDataSource({
-      baseRoute: props.baseRoute,
-      resource: props.resource,
-      apiMode: props.apiMode,
-      rowKey,
-      headers: props.apiHeaders,
-      credentials: props.apiCredentials,
-    })
+    ? (() => {
+      try {
+        return createApiDataSource({
+          baseRoute: props.baseRoute,
+          resource: props.resource,
+          apiMode: props.apiMode,
+          rowKey,
+          headers: props.apiHeaders,
+          credentials: props.apiCredentials,
+        });
+      } catch (e) {
+        if (onServer()) {
+          return withLocalRecordGet(
+            createLocalDataSource({
+              rows: [],
+              columns: viewItems,
+              form: formDefs,
+              rowKey,
+              onChange: (rows) => {
+                props.onDataChange?.(rows[0] ?? null);
+              },
+              writable: canWriteLocal,
+            }),
+            rowKey,
+          );
+        }
+        throw e;
+      }
+    })()
     : withLocalRecordGet(
       createLocalDataSource({
         rows: [],
@@ -1172,13 +1254,17 @@ export function DataView(props: DataViewProps): JSXRenderable {
     }
   };
 
-  const toolbar = () =>
-    toolbarHidden ? null : (
+  const toolbar = (leading?: unknown) =>
+    toolbarHidden && !leading ? null : (
       <div
-        class={TOOLBAR_BAR_CLS}
+        class={`${TOOLBAR_BAR_CLS}${
+          leading ? " !flex-nowrap !justify-start !items-end !pb-0" : ""
+        }`}
         data-testid="data-view-toolbar"
       >
-        <div class="contents" data-dv-tools={key}>
+        {leading}
+        {!toolbarHidden && (
+        <div class="ml-auto shrink-0 self-center pb-2" data-dv-tools={key}>
           <ButtonGroup attached class="dp-tool-group">
             {toolbarSlots().map((s) => {
               if (s.kind === "custom") {
@@ -1215,6 +1301,7 @@ export function DataView(props: DataViewProps): JSXRenderable {
             })}
           </ButtonGroup>
         </div>
+        )}
       </div>
     );
 
@@ -1444,7 +1531,7 @@ export function DataView(props: DataViewProps): JSXRenderable {
           data-testid="dv-form-submit"
           onClick={() => void submitForm()}
         >
-          {m.confirm}
+          {formRow.value ? m.update : m.save}
         </Btn>
         <Btn
           type="button"
@@ -1582,10 +1669,49 @@ export function DataView(props: DataViewProps): JSXRenderable {
             title={cardTitle()}
             bodyClass="p-0"
           >
-            {toolbar}
-            <div class={TABLE_WRAP_CLS} data-testid="dv-body">
-              {viewBody}
-            </div>
+            {() => {
+              const defaultBody = (
+                <div class={TABLE_WRAP_CLS} data-testid="dv-body">
+                  {viewBody}
+                </div>
+              );
+              if (!props.tabs?.length) {
+                return (
+                  <>
+                    {toolbar}
+                    {defaultBody}
+                  </>
+                );
+              }
+              const controlled = props.activeTab;
+              if (controlled) {
+                const synced = resolveDataChromeTabKey(
+                  props.tabs,
+                  controlled,
+                  props.defaultActiveTab,
+                );
+                if (synced && synced !== tabKey.value) tabKey.value = synced;
+              }
+              return (
+                <>
+                  {toolbar(
+                    <DataChromeTabList
+                      tabs={props.tabs}
+                      activeTab={tabKey.value}
+                      defaultActiveTab={props.defaultActiveTab}
+                      onTabChange={handleTabChange}
+                      type={props.tabType}
+                    />,
+                  )}
+                  <DataChromeTabBody
+                    tabs={props.tabs}
+                    activeTab={tabKey.value}
+                    defaultActiveTab={props.defaultActiveTab}
+                    defaultBody={defaultBody}
+                  />
+                </>
+              );
+            }}
           </Card>
         </div>
       )}

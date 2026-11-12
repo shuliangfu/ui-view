@@ -34,6 +34,13 @@ import {
 
 const p2 = (n: number) => String(n).padStart(2, "0");
 
+/** 从行数据取主键：优先 rowKey，否则 id，再否则 _id。 */
+export function itemRowId(row: Row, rowKey = "id"): string {
+  const rec = row as Record<string, unknown>;
+  const raw = rec[rowKey] ?? rec.id ?? rec._id;
+  return raw == null || raw === "" ? "" : String(raw);
+}
+
 /**
  * 按格式输出日期时间（运行环境本地时区）。
  * @param format 令牌 `YYYY` `MM` `DD` `HH` `mm` `ss`；缺省 `YYYY-MM-DD HH:mm:ss`

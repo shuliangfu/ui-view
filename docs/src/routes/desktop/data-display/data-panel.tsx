@@ -265,6 +265,44 @@ const DATA_PANEL_API: DocsApiTableRow[] = [
     description:
       "面板根内额外内容。三级自定义第 1 级（旁路）：放自管 Modal，配合 toolbar／row／view.actions 的 action(row) 打开；保存后可 refreshDataPanel(panelKey)",
   },
+  {
+    name: "tabs",
+    type: "DataChromeTab[]",
+    default: "-",
+    description:
+      "工具栏左侧的标签页（复用 layout Tabs）。未写 children 的标签展示默认表格、批量条和分页；可用 onTabChange 做筛选",
+  },
+  {
+    name: "activeTab",
+    type: "string",
+    default: "-",
+    description: "受控的当前标签 key",
+  },
+  {
+    name: "defaultActiveTab",
+    type: "string",
+    default: "第一项可用 key",
+    description: "非受控时的初始标签 key",
+  },
+  {
+    name: "onTabChange",
+    type: "(key: string) => void",
+    default: "-",
+    description: "切换标签时回调",
+  },
+  {
+    name: "tabType",
+    type: "line | card",
+    default: "line",
+    description: "标签样式，与 Tabs 的 type 相同",
+  },
+  {
+    name: "tabParam",
+    type: "string | false",
+    default: "tab",
+    description:
+      "地址栏查询参数名，用来记住并激活当前标签（如 ?tab=admin）。false 则不同步",
+  },
 ];
 
 /** Columns 字段全表（Column） */
@@ -790,7 +828,7 @@ const API_SOURCE_API: DocsApiTableRow[] = [
     type: '"action" | "restful"',
     default: '"action"',
     description:
-      "action：GET 根；POST 根/create｜update｜remove；GET 根/view/:id；importRows→POST 根/create 且 body { rows }。restful：GET/POST 根；PUT/DELETE 根/:id；GET 根/:id；importRows→POST 根/import",
+      "action：GET 根；POST 根/create；POST 根/update?id=；POST 根/remove?id=；GET 根/view?id=；importRows→POST 根/create 且 body { rows }。restful：GET/POST 根；PUT/DELETE 根/:id；GET 根/:id；importRows→POST 根/import",
   },
   {
     name: "opts.rowKey",
@@ -809,7 +847,7 @@ const API_SOURCE_API: DocsApiTableRow[] = [
     type: "Promise<Row | null>",
     default: "-",
     description:
-      "ApiDataSource 扩展。action→GET …/view/:id；restful→GET …/:id。面板暂不自动调用",
+      "ApiDataSource 扩展。action→GET …/view?id=；restful→GET …/:id。面板暂不自动调用",
   },
   {
     name: "root / apiMode",
@@ -3016,6 +3054,56 @@ const form = {
   }}
 />`;
 
+
+function readDemoTab() {
+  try {
+    const k = new URLSearchParams(globalThis.location?.search ?? "").get("tab");
+    return k === "admin" || k === "stats" || k === "all" ? k : "all";
+  } catch {
+    return "all";
+  }
+}
+
+function DataPanelTabsDemo() {
+  const tab = createSignal(readDemoTab());
+  const rows = makeDemoRows(8);
+  const adminCount = rows.filter((r) => r.role === "admin").length;
+  return () => {
+    const key = tab.value;
+    const data = key === "admin"
+      ? rows.filter((r) => r.role === "admin")
+      : rows;
+    return (
+      <DataPanel
+        panelKey="demo-tabs"
+        title="用户管理"
+        data={data}
+        columns={DEMO_COLUMNS}
+        search={{ props: DEMO_SEARCH }}
+        form={{ props: DEMO_FORM }}
+        exportName="users"
+        activeTab={key}
+        onTabChange={(k) => {
+          tab.value = k;
+        }}
+        tabs={[
+          { key: "all", label: "全部" },
+          { key: "admin", label: "管理员" },
+          {
+            key: "stats",
+            label: "统计",
+            children: (
+              <div class="px-3 py-4 text-sm text-slate-600 dark:text-slate-400">
+                当前共 {rows.length} 人，其中管理员 {adminCount} 人。
+              </div>
+            ),
+          },
+        ]}
+      />
+    );
+  };
+}
+
 /** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
 export const metadata = {
   title: "DataPanel 数据面板 · ui-view",
@@ -3106,6 +3194,7 @@ export default function DataDisplayDataPanel() {
 
       <section class="flex flex-col gap-10">
         <Title level={2}>示例</Title>
+
 
         <DocsDemo title="基础用法（全部功能）" code={basicCode}>
           <DataPanel
@@ -4366,6 +4455,48 @@ ${ALIGN_DEMO_COLUMNS_CODE}
         </DocsDemo>
       </section>
 
+      <section class="flex flex-col gap-10">
+        <div id="tab">
+        <DocsDemo
+          title="Tab"
+          code={`import { createSignal } from "@dreamer/view";
+import { DataPanel } from "@dreamer/ui-view/data-display";
+
+const tab = createSignal("all");
+
+{() => (
+  <DataPanel
+    panelKey="demo-tabs"
+    title="用户管理"
+    data={tab.value === "admin" ? admins : rows}
+    columns={columns}
+    search={{ props: search }}
+    form={{ props: form }}
+    exportName="users"
+    activeTab={tab.value}
+    onTabChange={(key) => (tab.value = key)}
+    tabs={[
+      { key: "all", label: "全部" },
+      { key: "admin", label: "管理员" },
+      {
+        key: "stats",
+        label: "统计",
+        children: <p>当前共 {rows.length} 人</p>,
+      },
+    ]}
+  />
+)}`}
+        >
+          <Paragraph class="mb-3 text-sm text-slate-600 dark:text-slate-400">
+            标签放在工具栏左边的空位，和右侧按钮同一行。未写 <code>children</code>{" "}
+            的标签显示原来的表格；「统计」是自定义内容。点击会写入{" "}
+            <code>?tab=</code>，用这个地址打开会激活对应标签。
+          </Paragraph>
+          <DataPanelTabsDemo />
+        </DocsDemo>
+        </div>
+      </section>
+
       <section class="space-y-3">
         <Title level={2}>API</Title>
         <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
@@ -4443,7 +4574,7 @@ ${ALIGN_DEMO_COLUMNS_CODE}
           <code class="text-xs">…/remove</code>（
           <code class="text-xs">{"{ ids }"}</code>
           ）；
-          <code class="text-xs">GET …/view/:id</code>。
+          <code class="text-xs">GET …/view?id=</code>。
           <code class="text-xs">importRows</code>
           无单独 import 端点，走 <code class="text-xs">POST …/create</code>
           ，body <code class="text-xs">{"{ rows }"}</code>
