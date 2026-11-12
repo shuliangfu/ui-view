@@ -135,7 +135,7 @@ describe("createApiDataSource action", () => {
         if (c.method === "GET" && c.url.startsWith("/api/users?")) {
           return { json: { items: [{ id: "1" }], total: 1 } };
         }
-        if (c.url === "/api/users/view/1") {
+        if (c.url === "/api/users/view?id=1") {
           return { json: { id: "1", name: "A" } };
         }
         if (c.url === "/api/users/create") {
@@ -148,8 +148,8 @@ describe("createApiDataSource action", () => {
             },
           };
         }
-        if (c.url === "/api/users/update") return { json: { ok: true } };
-        if (c.url === "/api/users/remove") {
+        if (c.url.split("?")[0] === "/api/users/update") return { json: { ok: true } };
+        if (c.url.split("?")[0] === "/api/users/remove") {
           return { json: { removed: 1, failed: [] } };
         }
         return { status: 404, json: { error: "no" } };
@@ -166,13 +166,13 @@ describe("createApiDataSource action", () => {
       created: 2,
       failed: 0,
     });
-    const paths = calls.map((c) => `${c.method} ${c.url.split("?")[0]}`);
+    const paths = calls.map((c) => `${c.method} ${c.url}`);
     expect(paths).toEqual([
-      "GET /api/users",
-      "GET /api/users/view/1",
+      "GET /api/users?page=1&pageSize=10&sort=name&order=asc&role=admin",
+      "GET /api/users/view?id=1",
       "POST /api/users/create",
-      "POST /api/users/update",
-      "POST /api/users/remove",
+      "POST /api/users/update?id=1",
+      "POST /api/users/remove?id=1",
       "POST /api/users/create",
     ]);
     const importBody = calls[5].body as { rows: unknown[] };

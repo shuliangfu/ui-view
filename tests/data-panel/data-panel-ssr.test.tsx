@@ -65,15 +65,15 @@ async function html(props: Partial<PanelProps> = {}): Promise<string> {
 }
 
 describe("DataPanel SSR：首帧内容", () => {
-  it("标题、总数、第一页 10 行、序号与范围文案", async () => {
+  it("标题、总数、第一页 20 行、序号与范围文案", async () => {
     const h = await html();
     expect(h).toContain("用户");
     expect(h).toContain("共 25 条记录");
-    expect(h).toContain("第 1-10 条，共 25 条");
-    expect((h.match(/data-testid="dp-row-/g) ?? []).length).toBe(10);
+    expect(h).toContain("第 1-20 条，共 25 条");
+    expect((h.match(/data-testid="dp-row-/g) ?? []).length).toBe(20);
     expect(h).toContain("User 1");
-    expect(h).toContain("User 10");
-    expect(h).not.toContain("User 11");
+    expect(h).toContain("User 20");
+    expect(h).not.toContain("User 21");
   });
 
   it("tag 列显示选项文案，money 列格式化，合计行汇总全部匹配行", async () => {
@@ -97,12 +97,12 @@ describe("DataPanel SSR：首帧内容", () => {
     // 每页条数是 ui-view Select（自绘下拉）：无原生 <select>，触发按钮显示当前项
     expect(h).not.toMatch(/<select/);
     const ps = h.slice(h.indexOf('data-testid="dp-pagesize"'));
-    expect(ps).toMatch(/aria-label="10 条\/页"/);
-    expect(ps).toContain("20 条/页");
+    expect(ps).toMatch(/aria-label="20 条\/页"/);
+    expect(ps).toContain("10 条/页");
     expect(h).toMatch(/data-testid="dp-prev"/);
     expect(h).toContain('data-testid="dp-page-1"');
-    expect(h).toContain('data-testid="dp-page-3"');
-    expect(h).not.toContain('data-testid="dp-page-4"');
+    expect(h).toContain('data-testid="dp-page-2"');
+    expect(h).not.toContain('data-testid="dp-page-3"');
   });
 
   it("pageSize / defaultSort / initialQuery 影响首帧", async () => {
@@ -113,7 +113,7 @@ describe("DataPanel SSR：首帧内容", () => {
     });
     expect((h.match(/data-testid="dp-row-/g) ?? []).length).toBe(5);
     expect(h.indexOf("User 25")).toBeLessThan(h.indexOf("User 24"));
-    const h2 = await html({ initialQuery: { page: 2 } });
+    const h2 = await html({ initialQuery: { page: 2, pageSize: 10 } });
     expect(h2).toContain("第 11-20 条，共 25 条");
     expect(h2).toContain("User 11");
   });
@@ -300,8 +300,8 @@ describe("DataPanel SSR：文案与自定义", () => {
   it("en-US 文案；messages 覆盖", async () => {
     const h = await html({ locale: "en-US", messages: { total: "Sum" } });
     expect(h).toContain("25 records");
-    expect(h).toContain("1-10 of 25");
-    expect(h).toContain("10 / page");
+    expect(h).toContain("1-20 of 25");
+    expect(h).toContain("20 / page");
     expect(h).toContain("Sum");
     expect(h).toContain(">Actions</th>");
   });
@@ -714,6 +714,21 @@ describe("DataPanel SSR：文案与自定义", () => {
       },
       columns: withActions({ view: true, edit: true, remove: false }),
     });
+    expect(h).toContain("用户");
+    expect(h).toContain('data-testid="panel-data-panel"');
+  });
+
+  it("SSR 时 baseRoute 只有 /api、没有页面路由也不抛错", async () => {
+    const h = String(
+      await renderToString(() => (
+        <DataPanel
+          title="用户"
+          columns={COLUMNS}
+          baseRoute="/api"
+          apiMode="action"
+        />
+      )),
+    );
     expect(h).toContain("用户");
     expect(h).toContain('data-testid="panel-data-panel"');
   });

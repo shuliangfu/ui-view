@@ -9,8 +9,8 @@
  *   不要把 `index` 拼进路径（`/user` 或 `/user/index` 都得到 `/api/user`，不会写成 `/api/user-index`）。
  *
  * - `apiMode: "action"`（默认）：list GET 资源根；create POST …/create；
- *   update POST …/update（body 含 id）；remove POST …/remove（body `{ ids }`）；
- *   view GET …/view/:id；importRows → 同一 create 端点，body `{ rows }`（与单条对象区分）。
+ *   update POST …/update?id=；remove POST …/remove?id=（body 亦含 id / ids）；
+ *   view GET …/view?id=；importRows → 同一 create 端点，body `{ rows }`（与单条对象区分）。
  * - `apiMode: "restful"`：list GET 根；create POST 根；update PUT 根/:id；
  *   remove 对每个 id DELETE 根/:id；view GET 根/:id；importRows POST 根/import。
  *
@@ -76,7 +76,7 @@ export interface ApiDataSource extends DataSource {
   readonly pageSize: number;
   /**
    * 拉取单条明细。
-   * - action：`GET ${root}/view/:id`
+   * - action：`GET ${root}/view?id=`
    * - restful：`GET ${root}/:id`
    * DataSource 接口暂无 view 钩子；面板详情仍走当前行数据。调用方可自行预取。
    */
@@ -377,6 +377,16 @@ export function createApiDataSource(
     return { ok: res.ok, status: res.status, body: parsed };
   }
 
+  function withItemIds(url: string, ids: string[]): string {
+    const q = new URLSearchParams();
+    for (const id of ids) {
+      const v = String(id ?? "").trim();
+      if (v) q.append("id", v);
+    }
+    const s = q.toString();
+    return s ? `${url}?${s}` : url;
+  }
+
   const src: ApiDataSource = {
     root,
     apiMode: mode,
@@ -394,7 +404,7 @@ export function createApiDataSource(
     },
     async view(id: string) {
       const url = mode === "action"
-        ? joinApiPath(root, "view", id)
+        ? withItemIds(joinApiPath(root, "view"), [id])
         : joinApiPath(root, id);
       const r = await request("GET", url);
       if (!r.ok) return null;
@@ -421,11 +431,15 @@ export function createApiDataSource(
 
   src.update = async (id, values) => {
     if (mode === "action") {
-      const r = await request("POST", joinApiPath(root, "update"), {
-        [rowKey]: id,
-        id,
-        ...values,
-      });
+      const r = await request(
+        "POST",
+        withItemIds(joinApiPath(root, "update"), [id]),
+        {
+          [rowKey]: id,
+          id,
+          ...values,
+        },
+      );
       return writeFromResponse(r.ok, r.body);
     }
     const r = await request("PUT", joinApiPath(root, id), values);
@@ -434,7 +448,11 @@ export function createApiDataSource(
 
   src.remove = async (ids) => {
     if (mode === "action") {
-      const r = await request("POST", joinApiPath(root, "remove"), { ids });
+      const r = await request(
+        "POST",
+        withItemIds(joinApiPath(root, "remove"), ids),
+        { ids, id: ids[0] },
+      );
       return bulkFromBody(r.body, ids, r.ok);
     }
     // restful：逐条 DELETE；汇总 removed／failed

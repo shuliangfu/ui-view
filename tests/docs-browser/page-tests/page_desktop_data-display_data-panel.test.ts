@@ -1481,7 +1481,7 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
       expect(en.count).toBe("6 records");
       expect(en.range).toBe("1-6 of 6");
       expect(en.actions).toBe(true);
-      expect(en.perPage).toBe("10 / page");
+      expect(en.perPage).toBe("20 / page");
 
       await open(t, "demo-custom");
       const c = await ev<Record<string, unknown>>(
