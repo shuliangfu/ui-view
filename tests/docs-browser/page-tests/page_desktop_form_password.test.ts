@@ -19,7 +19,7 @@ describe("文档页 E2E：/desktop/form/password（Password 密码）", () => {
   it("本页关键词命中且 main 内完成浅层交互探针", async (t) => {
     if (!t?.browser?.goto) return;
     await runKeywordAndShallowHere(t, DOC_PATH, [
-      /createForm|Password|密码/i,
+      /createForm|Password|密码|prefix/i,
     ]);
   }, DOCS_BROWSER_CONFIG);
 
@@ -282,6 +282,14 @@ describe("文档页 E2E：/desktop/form/password（Password 密码）", () => {
   it("严格·与 createForm", async (t) => {
     if (!t?.browser?.goto) return;
     await assertStrictDocSection(t, DOC_PATH);
+  }, DOCS_BROWSER_CONFIG);
+
+  /**
+   * 文档小节「prefix 前缀」：在 main 内定位对应 h3，于该示例区块内完成一次交互。
+   */
+  it("严格·prefix 前缀", async (t) => {
+    if (!t?.browser?.goto) return;
+    await assertStrictDocSection(t, DOC_PATH, "prefix 前缀");
   }, DOCS_BROWSER_CONFIG);
 
   it("UI·输入框可输入", async (t) => {

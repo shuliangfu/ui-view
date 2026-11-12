@@ -10,6 +10,7 @@ import { Form } from "@dreamer/ui-view/form/form";
 import { FormItem } from "@dreamer/ui-view/form/form-item";
 import { formRules } from "@dreamer/ui-view/form/form-rules";
 import { Password } from "@dreamer/ui-view/form/password";
+import { IconLock } from "@dreamer/ui-view/icons/Lock.tsx";
 
 import { CodeBlock } from "@dreamer/ui-view/data-display";
 import { message } from "@dreamer/ui-view/feedback";
@@ -55,6 +56,13 @@ const PASSWORD_API: ApiRow[] = [
     type: "string",
     default: "-",
     description: "占位文案",
+  },
+  {
+    name: "prefix",
+    type: "unknown",
+    default: "-",
+    description:
+      "前缀节点，位于输入框左侧、与框体同一外边框；可与显隐按钮同时使用",
   },
   {
     name: "label",
@@ -198,16 +206,17 @@ export const metadata = {
 export default function FormPassword() {
   const val = createSignal("");
   const valNoStrength = createSignal("");
+  const prefixVal = createSignal("");
+  const prefixShow = createSignal(false);
 
   return (
     <div class="space-y-10">
       <section>
         <Title level={1}>Password 密码输入</Title>
         <Paragraph class="mt-2">
-          密码输入框，支持显隐切换、showStrength
-          强度提示、size、disabled、error。宽度由 class
-          控制，表单中需占满一列时传 class="w-full"。Tailwind v4 +
-          light/dark。与{" "}
+          密码输入框，支持显隐切换、showStrength 强度提示、prefix
+          前缀、size、disabled、error。宽度由 class 控制，表单中需占满一列时传
+          class="w-full"。Tailwind v4 + light/dark。与{" "}
           <Link
             href="/desktop/form/form-containers"
             className="text-teal-600 hover:underline dark:text-teal-400"
@@ -324,6 +333,49 @@ export default function FormPassword() {
               code={`<Password
   value={valNoStrength}
   placeholder="仅显隐切换"
+/>`}
+              language="tsx"
+              showLineNumbers
+              copyable
+              wrapLongLines
+            />
+          </section>
+
+          <section class="space-y-4">
+            <Title level={3}>prefix 前缀</Title>
+            <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+              与 Input 相同：prefix
+              渲染在输入框左侧，和框体共用同一外边框；可与右侧显隐按钮同时使用。
+            </Paragraph>
+            <FormItem label="带图标前缀" id="password-prefix">
+              <Password
+                id="password-prefix"
+                value={prefixVal}
+                showPassword={prefixShow.value}
+                onToggleShow={() => {
+                  prefixShow.value = !prefixShow.value;
+                }}
+                prefix={
+                  <IconLock
+                    size="sm"
+                    class="text-slate-500 dark:text-slate-400"
+                  />
+                }
+                placeholder="请输入密码"
+              />
+            </FormItem>
+            <CodeBlock
+              title="代码示例"
+              code={`import { IconLock } from "@dreamer/ui-view/icons/Lock.tsx";
+
+<Password
+  value={val}
+  showPassword={show}
+  onToggleShow={() => { show.value = !show.value; }}
+  prefix={
+    <IconLock size="sm" class="text-slate-500 dark:text-slate-400" />
+  }
+  placeholder="请输入密码"
 />`}
               language="tsx"
               showLineNumbers

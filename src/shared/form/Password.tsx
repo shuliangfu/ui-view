@@ -1,6 +1,7 @@
 /**
  * Password 密码输入（View）。
  * 对齐 Input：value 可为 getter、主体不在同步体内读 value()；显隐按钮与强度提示在包裹层内用独立 `insert` 槽读 `value()`，避免整段重插导致失焦。
+ * prefix 与 Input 相同：在输入框左侧、与框体相连（同一外边框）。
  * light/dark 主题。
  */
 
@@ -19,6 +20,7 @@ import {
   passwordNativeAutoComplete,
 } from "./input-autofill-classes.ts";
 import {
+  compositeShellFocusRingFromInput,
   controlBlueFocusRing,
   controlErrorBorder,
   controlErrorFocusRing,
@@ -99,6 +101,8 @@ export interface PasswordProps {
   name?: string;
   /** 原生 id */
   id?: string;
+  /** 前缀：在输入框左侧、与框体相连（同一外边框） */
+  prefix?: unknown;
   /**
    * 自动完成与暗色 autofill 长 class：`true` 时合并，并写 `current-password` 或（`newPassword` 时）`new-password`；`string` 时原样；`false`/不传则不加。
    */
@@ -119,6 +123,34 @@ const sizeClasses: Record<SizeVariant, string> = {
   md: "px-3 py-2 pr-10 text-sm rounded-lg",
   lg: "px-4 py-2.5 pr-11 text-base rounded-lg",
 };
+
+/** 组合框圆角（与 {@link Input} 一致） */
+const sizeRoundedClasses: Record<SizeVariant, string> = {
+  xs: "rounded-md",
+  sm: "rounded-md",
+  md: "rounded-lg",
+  lg: "rounded-lg",
+};
+
+/** 组合框中间 input 的纵向与字号（与 {@link Input} 一致） */
+const sizePadYClasses: Record<SizeVariant, string> = {
+  xs: "py-1 text-xs",
+  sm: "py-1.5 text-sm",
+  md: "py-2 text-sm",
+  lg: "py-2.5 text-base",
+};
+
+const sizeTextClasses: Record<SizeVariant, string> = {
+  xs: "text-xs",
+  sm: "text-sm",
+  md: "text-sm",
+  lg: "text-base",
+};
+
+/** 左缀：与中间输入区分隔线、略浅底，仍在同一外框内 */
+const addonBaseCls =
+  "shrink-0 flex items-center border-slate-300 bg-slate-100 shadow-inner dark:shadow-[inset_0_2px_5px_rgb(0_0_0_/_0.55),inset_0_-1px_0_rgb(255_255_255_/_0.06)] dark:bg-slate-900/70 text-slate-500 dark:border-slate-600 dark:text-slate-400";
+const addonPrefixCls = twMerge(addonBaseCls, "border-r px-3");
 
 /**
  * 输入区底纹（不含 ring、不含 autofill 长类），与 {@link Input} 的 `inputSurfaceBase` 一致。
@@ -187,6 +219,7 @@ export function Password(props: PasswordProps): JSXRenderable {
     autoComplete,
     newPassword = false,
     messages,
+    prefix,
   } = props;
   const m = { ...defaultPasswordMessages, ...messages };
   const size = resolveFormControlSize(sizeProp);
@@ -223,11 +256,13 @@ export function Password(props: PasswordProps): JSXRenderable {
     onChange?.(e);
   };
 
+  const hasPrefix = prefix != null && prefix !== false;
+
   const outlined = resolveOutlinedLabel({
     label,
     floatingLabel,
     placeholder,
-    useInnerLabel: true,
+    useInnerLabel: !hasPrefix,
   });
 
   const inputProps = {
@@ -241,15 +276,26 @@ export function Password(props: PasswordProps): JSXRenderable {
     "aria-invalid": error,
     ...(outlined ? { "aria-label": outlined.text } : {}),
     class: twMerge(
-      inputSurfaceBase,
-      autofillVisualClass(autoComplete),
-      controlBlueFocusRing(!hideFocusRing && !outlined && !error),
-      error && !outlined && controlErrorBorder,
-      error && !hideFocusRing && !outlined && controlErrorFocusRing(true),
-      sizeCls,
+      hasPrefix
+        ? [
+          "min-w-0 w-full flex-1 border-0 bg-transparent shadow-none outline-hidden focus:ring-0",
+          "text-inherit placeholder:text-slate-400 dark:placeholder:text-slate-500",
+          "disabled:cursor-not-allowed",
+          autofillVisualClass(autoComplete),
+          sizePadYClasses[size],
+          "px-3",
+        ]
+        : [
+          inputSurfaceBase,
+          autofillVisualClass(autoComplete),
+          controlBlueFocusRing(!hideFocusRing && !outlined && !error),
+          error && !outlined && controlErrorBorder,
+          error && !hideFocusRing && !outlined && controlErrorFocusRing(true),
+          sizeCls,
+          outlined && outlinedControlClass,
+          !onToggleShow && !showStrength && !outlined ? className : undefined,
+        ],
       onToggleShow || showStrength ? "pr-10" : undefined,
-      outlined && outlinedControlClass,
-      !onToggleShow && !showStrength && !outlined ? className : undefined,
     ),
     onInput: handleInput,
     onChange: handleChange,
@@ -279,6 +325,108 @@ export function Password(props: PasswordProps): JSXRenderable {
       )
       : inner;
 
+  const toggleButton = onToggleShow
+    ? (
+      <button
+        type="button"
+        class={twMerge(
+          "absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 focus:outline-hidden",
+          controlBlueFocusRing(!hideFocusRing),
+        )}
+        onClick={onToggleShow}
+        aria-label={showPassword ? m.hide : m.show}
+        tabIndex={-1}
+      >
+        {showPassword
+          ? (
+            <svg
+              class="size-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
+              />
+            </svg>
+          )
+          : (
+            <svg
+              class="size-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+              />
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+              />
+            </svg>
+          )}
+      </button>
+    )
+    : null;
+
+  if (hasPrefix) {
+    const shellCls = twMerge(
+      "relative flex w-full min-w-0 items-stretch overflow-hidden",
+      inputSurfaceBase,
+      sizeRoundedClasses[size],
+      sizeTextClasses[size],
+      !outlined && !hideFocusRing &&
+        (error
+          ? "has-[input:focus]:ring-2 has-[input:focus]:ring-red-500 dark:has-[input:focus]:ring-red-500 has-[input:focus]:border-transparent dark:has-[input:focus]:border-transparent"
+          : compositeShellFocusRingFromInput(true)),
+      error && !outlined && controlErrorBorder,
+      disabled && !outlined && "opacity-50",
+      outlined && outlinedControlClass,
+      !onToggleShow && !showStrength && !outlined ? className : undefined,
+    );
+    const shell = (
+      <div class={shellCls}>
+        <div class={twMerge(addonPrefixCls, sizeTextClasses[size])}>
+          {prefix}
+        </div>
+        <div class="relative min-w-0 flex-1">
+          <input {...inputProps} class={twMerge("w-full", inputProps.class)} />
+          {toggleButton}
+        </div>
+      </div>
+    );
+    if (!onToggleShow && !showStrength) return wrapField(shell);
+    return (
+      <div class={className}>
+        {wrapField(shell)}
+        {showStrength
+          ? () => {
+            const s = typeof value === "function" ? value() : (value ?? "");
+            if (s.length === 0) return null;
+            const { level, cls } = passwordStrengthMeta(s, m);
+            return (
+              <span
+                class={twMerge("block mt-1 text-xs", cls)}
+                aria-live="polite"
+              >
+                {m.strengthText(level)}
+              </span>
+            );
+          }
+          : null}
+      </div>
+    );
+  }
+
   if (!onToggleShow && !showStrength) {
     /**
      * 与 {@link Input} 无 addon 分支一致：勿 `() => <input />`，避免与受控 value 的
@@ -296,56 +444,7 @@ export function Password(props: PasswordProps): JSXRenderable {
       {wrapField(
         <div class="relative">
           <input {...inputProps} class={twMerge("w-full", inputProps.class)} />
-          {onToggleShow && (
-            <button
-              type="button"
-              class={twMerge(
-                "absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 focus:outline-hidden",
-                controlBlueFocusRing(!hideFocusRing),
-              )}
-              onClick={onToggleShow}
-              aria-label={showPassword ? m.hide : m.show}
-              tabIndex={-1}
-            >
-              {showPassword
-                ? (
-                  <svg
-                    class="size-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
-                    />
-                  </svg>
-                )
-                : (
-                  <svg
-                    class="size-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                    />
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                    />
-                  </svg>
-                )}
-            </button>
-          )}
+          {toggleButton}
         </div>,
       )}
       {
