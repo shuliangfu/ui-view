@@ -420,8 +420,8 @@ export function Table<
                 "table-wrapper overflow-x-auto",
                 className,
               )}
-              tabIndex={rowSelection && rowSelection.type !== "radio"
-                ? -1
+              tabindex={rowSelection && rowSelection.type !== "radio"
+                ? "-1"
                 : undefined}
               data-select-all-host={rowSelection &&
                   rowSelection.type !== "radio"

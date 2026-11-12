@@ -228,7 +228,9 @@ export default function Page() {
           cascade：勾叶则父半选／全选， 不写 selectedKeys）；
           <strong>标题／行</strong>＝仅选中本节点（selectedKeys，行高亮），
           <em>不会</em>改勾选计数、也绝不把父节点标成 selected。
-          键盘：ArrowLeft／Right 展开，Enter 选中，Space 勾选。
+          键盘：ArrowLeft／Right 展开，Enter 选中，Space
+          勾选；可勾选或可多选时，Ctrl／Command+A
+          全选可用节点（已全选再按一次清空）。
           <code class="mx-1">checkStrictly</code>{" "}
           关闭父子联动。 keys 请传 Signal／getter，勿传 .value 快照。
         </Paragraph>

@@ -182,7 +182,7 @@ function MultiSelectNativeBranch(props: Omit<MultiSelectProps, "appearance">) {
         });
       }}
       class="block"
-      tabIndex={-1}
+      tabindex="-1"
       data-select-all-host=""
       onMouseDown={focusSelectAllHost}
       onKeyDown={selectAllOptions}
@@ -350,7 +350,7 @@ function MultiSelectDropdownBranch(
         });
       }}
       class={twMerge("relative block w-full min-w-0", className)}
-      tabIndex={-1}
+      tabindex="-1"
       data-select-all-host=""
       onMouseDown={focusSelectAllHost}
       onKeyDown={selectAllOptions}

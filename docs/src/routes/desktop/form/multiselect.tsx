@@ -162,7 +162,8 @@ export default function FormMultiSelect() {
         <Paragraph class="mt-2">
           与单选 Select
           相同：默认收起，点击触发条展开浮层，浮层内有全选、清空、完成（收起；点选即写入
-          value）与勾选列表；未选时触发条显示
+          value）与勾选列表。触发条或浮层聚焦时，Ctrl / Command+A
+          全选未禁用项（已全选再按一次清空）。未选时触发条显示
           placeholder（默认「请选择」），已选时展示已选项标签（顿号分隔）。宽度由
           class 控制，表单中需占满一列时传 class="w-full"。Tailwind v4 +
           light/dark。与{" "}
@@ -228,10 +229,12 @@ export default function FormMultiSelect() {
           <section class="space-y-4">
             <Title level={3}>全选 / 清空</Title>
             <FormItem label="多选（点击展开，浮层内全选/清空）">
-              <MultiSelect
-                options={options}
-                value={val}
-              />
+              <div data-multiselect-demo="select-all">
+                <MultiSelect
+                  options={options}
+                  value={val}
+                />
+              </div>
             </FormItem>
             <CodeBlock
               title="代码示例"

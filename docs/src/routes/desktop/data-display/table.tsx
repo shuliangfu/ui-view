@@ -635,7 +635,9 @@ export default function DataDisplayTable() {
         <Title level={1}>Table 表格</Title>
         <Paragraph class="mt-2">
           表格：columns、dataSource、rowKey、bordered、size、striped、loading、onRow、expandable、summary、locale、renderEmpty、title、extra、pagination、onSelectChange、rowClassName、headerClass、固定列、列级
-          headerAlign fixed、列级可编辑 editable 与 onCellChange。使用 Tailwind
+          headerAlign fixed、列级可编辑 editable 与 onCellChange。传入
+          onSelectChange 时为多选行选择：焦点在表格上时，Ctrl / Command+A
+          全选或取消全选当前页（selectionType 为 radio 时除外）。使用 Tailwind
           v4，支持 light/dark 主题。
         </Paragraph>
       </section>
@@ -708,12 +710,14 @@ export default function DataDisplayTable() {
 
         <div class="space-y-4">
           <Title level={3}>行选择 onSelectChange</Title>
-          <Table<Row>
-            columns={DOC_TABLE_BASIC_COLUMNS}
-            dataSource={DOC_TABLE_DEMO_ROWS}
-            stateKey="table-doc-row-selection"
-            onSelectChange={(rows) => selectedRows.value = rows}
-          />
+          <div data-table-demo="row-selection">
+            <Table<Row>
+              columns={DOC_TABLE_BASIC_COLUMNS}
+              dataSource={DOC_TABLE_DEMO_ROWS}
+              stateKey="table-doc-row-selection"
+              onSelectChange={(rows) => selectedRows.value = rows}
+            />
+          </div>
           {() => (
             <p class="text-sm text-slate-500">
               已选行: {selectedRows.value.length

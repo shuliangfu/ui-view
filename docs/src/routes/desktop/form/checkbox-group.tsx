@@ -153,8 +153,8 @@ export default function FormCheckboxGroup() {
         <Title level={1}>CheckboxGroup 多选组</Title>
         <Paragraph class="mt-2">
           多选组，支持
-          options、value、onChange、direction（vertical/horizontal）、disabled、error。与
-          {" "}
+          options、value、onChange、direction（vertical/horizontal）、disabled、error。焦点在组上时，Ctrl
+          / Command+A 全选未禁用项（已全选再按一次清空）。与{" "}
           <Link
             href="/desktop/form/form-containers"
             className="text-teal-600 hover:underline dark:text-teal-400"
@@ -220,10 +220,12 @@ export default function FormCheckboxGroup() {
           <section class="space-y-4">
             <Title level={3}>基础</Title>
             <FormItem label="多选组">
-              <CheckboxGroup
-                options={options}
-                value={val}
-              />
+              <div data-checkbox-group-demo="basic">
+                <CheckboxGroup
+                  options={options}
+                  value={val}
+                />
+              </div>
             </FormItem>
             <CodeBlock
               title="代码示例"

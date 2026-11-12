@@ -68,18 +68,20 @@ export function isFocusableControl(target: EventTarget | null): boolean {
 }
 
 /**
- * Focus the widget host after a click so the hotkey has a target.
- * Leaves text fields and interactive children alone. Callers should use tabIndex={-1}.
+ * Focus the widget host after a click so Command+A has a target.
+ * Leaves text fields alone. For buttons and checkboxes, prevent the default
+ * mousedown focus change (Safari often leaves focus on the page otherwise).
+ * Callers should use tabIndex={-1}.
  */
 export function focusSelectAllHost(event: MouseEvent): void {
   const host = event.currentTarget as HTMLElement | null;
   if (!host || typeof host.focus !== "function") return;
-  let el: HTMLElement | null = event.target instanceof HTMLElement
-    ? event.target
-    : null;
-  while (el && el !== host) {
-    if (isTextEditTarget(el) || isFocusableControl(el)) return;
-    el = el.parentElement;
+  if (isTextEditTarget(event.target ?? null)) return;
+  if (event.type === "mousedown" && event.target !== host) {
+    event.preventDefault();
+  }
+  if (!host.hasAttribute("tabindex")) {
+    host.setAttribute("tabindex", "-1");
   }
   host.focus({ preventScroll: true });
 }

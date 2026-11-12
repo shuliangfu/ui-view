@@ -33,15 +33,20 @@ describe("文档页 E2E：/desktop/form/transfer（Transfer 穿梭框）", () =>
     const pickApple = await t.browser.evaluate(() => {
       const main = document.querySelector("main");
       if (!main) return false;
-      const btns = main.querySelectorAll('button[type="button"]');
-      for (let i = 0; i < btns.length; i++) {
-        const b = btns[i] as HTMLButtonElement;
-        if (b.disabled) continue;
-        const tx = (b.textContent || "").trim();
-        if (tx === "苹果") {
-          b.click();
-          return true;
-        }
+      const selects = main.querySelectorAll("select[multiple]");
+      for (let i = 0; i < selects.length; i++) {
+        const sel = selects[i] as HTMLSelectElement;
+        if (sel.disabled) continue;
+        const opt = [...sel.options].find((o) =>
+          (o.textContent || "").trim() === "苹果"
+        );
+        if (!opt || opt.disabled) continue;
+        sel.focus();
+        [...sel.options].forEach((o) => {
+          o.selected = o === opt;
+        });
+        sel.dispatchEvent(new Event("change", { bubbles: true }));
+        return true;
       }
       return false;
     }) as boolean;
