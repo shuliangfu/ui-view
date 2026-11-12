@@ -1807,7 +1807,10 @@ export function DataPanel(props: PanelProps): JSXRenderable {
       >
         {leading}
         {!toolbarHidden && (
-          <div class="ml-auto shrink-0 self-center pb-2" data-dp-tools={key}>
+          <div
+            class={`ml-auto shrink-0 self-center${leading ? " pb-2" : ""}`}
+            data-dp-tools={key}
+          >
             <ButtonGroup attached class="dp-tool-group">
               {toolbarSlots().map((s) => {
                 if (s.kind === "custom") {

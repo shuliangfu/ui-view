@@ -31,15 +31,15 @@ import { IconRefresh } from "../../shared/basic/icons/Refresh.tsx";
 import { IconUpload } from "../../shared/basic/icons/Upload.tsx";
 import { Card } from "./Card.tsx";
 import {
+  type DataChromeTab,
   DataChromeTabBody,
   DataChromeTabList,
+  type DataChromeTabType,
   DEFAULT_TAB_PARAM,
   rememberTabKey,
   resolveDataChromeTabKey,
   resolveInitialTabKey,
   writeTabToLocation,
-  type DataChromeTab,
-  type DataChromeTabType,
 } from "./data-panel-tabs.tsx";
 import { Descriptions } from "./Descriptions.tsx";
 import { Empty } from "./Empty.tsx";
@@ -110,8 +110,8 @@ import {
   FS_CLS,
   g,
   HEADER_BAR_CLS,
-  printHtml,
   onServer,
+  printHtml,
   readDataPanelPrefs,
   refreshers,
   TABLE_WRAP_CLS,
@@ -1260,43 +1260,46 @@ export function DataView(props: DataViewProps): JSXRenderable {
       >
         {leading}
         {!toolbarHidden && (
-        <div class="ml-auto shrink-0 self-center pb-2" data-dv-tools={key}>
-          <ButtonGroup attached class="dp-tool-group">
-            {toolbarSlots().map((s) => {
-              if (s.kind === "custom") {
-                const tip = actionTipText(
-                  s.key,
+          <div
+            class={`ml-auto shrink-0 self-center${leading ? " pb-2" : ""}`}
+            data-dv-tools={key}
+          >
+            <ButtonGroup attached class="dp-tool-group">
+              {toolbarSlots().map((s) => {
+                if (s.kind === "custom") {
+                  const tip = actionTipText(
+                    s.key,
+                    s.title,
+                    typeof s.label === "string" ? s.label : undefined,
+                  );
+                  return tipWrap(
+                    tip,
+                    <Button
+                      type="button"
+                      size="sm"
+                      class={posCls(`dv-tb-extra-${s.key}`)}
+                      disabled={s.disable}
+                      data-testid={`dv-tb-extra-${s.key}`}
+                      aria-label={tip}
+                      variant={s.tone && s.tone !== "default"
+                        ? s.tone
+                        : "default"}
+                      onClick={s.action}
+                    >
+                      {s.icon ?? s.label ?? s.key}
+                    </Button>,
+                  );
+                }
+                return renderTbBuiltin(
+                  s.name,
+                  s.disable,
+                  s.action,
                   s.title,
-                  typeof s.label === "string" ? s.label : undefined,
+                  s.label,
                 );
-                return tipWrap(
-                  tip,
-                  <Button
-                    type="button"
-                    size="sm"
-                    class={posCls(`dv-tb-extra-${s.key}`)}
-                    disabled={s.disable}
-                    data-testid={`dv-tb-extra-${s.key}`}
-                    aria-label={tip}
-                    variant={s.tone && s.tone !== "default"
-                      ? s.tone
-                      : "default"}
-                    onClick={s.action}
-                  >
-                    {s.icon ?? s.label ?? s.key}
-                  </Button>,
-                );
-              }
-              return renderTbBuiltin(
-                s.name,
-                s.disable,
-                s.action,
-                s.title,
-                s.label,
-              );
-            })}
-          </ButtonGroup>
-        </div>
+              })}
+            </ButtonGroup>
+          </div>
         )}
       </div>
     );
