@@ -453,8 +453,9 @@ export type ResolvePanelColumnsOptions = {
   /** 是否需要多选（如 caps.remove／batchStatus）——无显式 selection 列时兼容前置 */
   needSelection?: boolean;
   /**
-   * 无显式 index 列时是否自动前置默认序号列（本仓旧默认）。
-   * 默认 true；传 false 则完全由 columns 决定。
+   * 无显式 index 列时是否自动前置默认序号列。
+   * 默认 false：序号列只在 columns 里声明 `{ type:"index" }` 时出现。
+   * 传 true 则恢复旧的自动前置行为。
    */
   autoIndex?: boolean;
   /**
@@ -469,7 +470,7 @@ export type ResolvePanelColumnsOptions = {
  * - `{ type:"selection" }`：prop／label 可省（默认 `__select`／`""`）；`selectable:false` 时剔除
  * - `{ type:"index" }`：prop／label 可省（默认 `__index`／`"#"`）；位置随 columns 写入序
  * - `{ type:"actions" }`：prop／label 可省（默认 `__actions`／`""`，表头回落 messages.actions）
- * - 未声明 index 且 autoIndex≠false：前置默认序号列（旧行为）
+ * - 未声明 index 且 autoIndex===true：前置默认序号列（旧行为，需显式打开）
  * - 未声明 selection 且 needSelection 且 selectable≠false：前置多选列（旧 selectable 行为）
  * - 未声明 actions 且 needActions：末尾追加操作列（兼容旧「有钮即出列」）
  */
@@ -477,7 +478,7 @@ export function resolvePanelColumns(
   columns: readonly Column[],
   opts: ResolvePanelColumnsOptions = {},
 ): ResolvedColumn[] {
-  const autoIndex = opts.autoIndex !== false;
+  const autoIndex = opts.autoIndex === true;
   const mapped: ResolvedColumn[] = normalizeColumns(columns).map((c) => {
     if (c.type === "selection" || c.prop === PANEL_COL_SELECT) {
       return {
