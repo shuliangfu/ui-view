@@ -25,6 +25,10 @@ import { resolveFormControlSize } from "./form-control-context.ts";
 import { FormItemControlIdContext } from "./form-item-control-id.ts";
 import { controlErrorBorder } from "./input-focus-ring.ts";
 import { commitMaybeSignal, type MaybeSignal } from "./maybe-signal.ts";
+import {
+  type TransferListBoxStyle,
+  resolveListBoxStyle,
+} from "./transfer-list-style.ts";
 
 export interface TransferItem {
   /** 唯一 key */
@@ -206,55 +210,6 @@ function resolveItemHeight(
   return defaultItemHeight[size];
 }
 
-/** Numbers become px; CSS strings are used as-is. */
-function resolveCssSize(value: number | string | undefined): string | undefined {
-  if (typeof value === "number" && Number.isFinite(value) && value > 0) {
-    return `${value}px`;
-  }
-  if (typeof value === "string" && value.trim()) return value.trim();
-  return undefined;
-}
-
-type ListBoxStyle = {
-  height: string;
-  minHeight?: string;
-  maxHeight?: string;
-};
-
-/** Resolve list viewport height / min / max. Numeric top-level props win over listStyle. */
-function resolvePxNumber(value: number | undefined): string | undefined {
-  if (typeof value === "number" && Number.isFinite(value) && value > 0) {
-    return `${value}px`;
-  }
-  return undefined;
-}
-
-function resolveListBoxStyle(
-  listStyle: {
-    height?: number | string;
-    minHeight?: number | string;
-    maxHeight?: number | string;
-  },
-  overrides: {
-    height?: number;
-    minHeight?: number;
-    maxHeight?: number;
-  },
-): ListBoxStyle {
-  const style: ListBoxStyle = {
-    height: resolvePxNumber(overrides.height) ??
-      resolveCssSize(listStyle.height) ??
-      "200px",
-  };
-  const minHeight = resolvePxNumber(overrides.minHeight) ??
-    resolveCssSize(listStyle.minHeight);
-  const maxHeight = resolvePxNumber(overrides.maxHeight) ??
-    resolveCssSize(listStyle.maxHeight);
-  if (minHeight) style.minHeight = minHeight;
-  if (maxHeight) style.maxHeight = maxHeight;
-  return style;
-}
-
 /** 穿梭列参数 */
 type TransferColumnProps = {
   title: string;
@@ -275,7 +230,7 @@ type TransferColumnProps = {
     maxHeight?: number | string;
     itemHeight?: number;
   };
-  listBoxStyle: ListBoxStyle;
+  listBoxStyle: TransferListBoxStyle;
   onTransfer: (keys: string[]) => void;
   disabled?: boolean;
   /** 列底部「N 项」格式化函数 */
@@ -369,7 +324,7 @@ function TransferColumn(props: TransferColumnProps) {
           disabled={disabled}
           aria-label={title}
           class={twMerge(
-            "w-full flex-1 min-h-0 m-0 border-0 bg-transparent text-slate-800 dark:text-slate-100 outline-none cursor-default dark:[color-scheme:dark] focus:ring-1 focus:ring-inset focus:ring-sky-300/45 dark:focus:ring-sky-400/30",
+            "w-full shrink-0 m-0 border-0 bg-transparent text-slate-800 dark:text-slate-100 outline-none cursor-default dark:[color-scheme:dark] focus:ring-1 focus:ring-inset focus:ring-sky-300/45 dark:focus:ring-sky-400/30",
             transferItemCls[size],
           )}
           style={listBoxStyle}
