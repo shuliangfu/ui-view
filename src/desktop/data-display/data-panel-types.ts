@@ -77,7 +77,8 @@ export interface Column {
    */
   headerAlign?: "left" | "center" | "right";
   /**
-   * 列宽。传数字为像素；传 `"auto"` 时按表头和单元格内容撑开，不均分剩余宽度。
+   * 列宽。默认 `"auto"`，按表头和单元格内容撑开，不均分剩余宽度。
+   * 传数字为像素。
    */
   width?: number | "auto";
   /**
