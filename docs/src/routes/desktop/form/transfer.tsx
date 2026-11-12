@@ -101,25 +101,25 @@ const TRANSFER_API: ApiRow[] = [
     type: "{ width?: number; height?: number | string; minHeight?: number | string; maxHeight?: number | string; itemHeight?: number }",
     default: "-",
     description:
-      "列表样式：width 为列宽基准（窄容器内可收缩），height / minHeight / maxHeight 为列表整高（像素数字或 CSS 值，如 \"70vh\"、\"calc(100vh - 340px)\"；与顶层同名数字参数同时存在时顶层优先；height 默认 200），itemHeight 为每一项行高（像素）；不传 itemHeight 时按 size 默认为 xs 16 / sm 18 / md 18 / lg 20",
+      "列表样式：width 为列宽基准（窄容器内可收缩），height / minHeight / maxHeight 为整列高度，含标题、搜索和计数（像素数字或 CSS 值，如 \"70vh\"、\"calc(100vh - 340px)\"；与顶层同名数字参数同时存在时顶层优先；height 默认 200），itemHeight 为每一项行高（像素）；不传 itemHeight 时按 size 默认为 xs 16 / sm 18 / md 18 / lg 20",
   },
   {
     name: "height",
     type: "number",
     default: "200",
-    description: "列表整高（像素数字）；优先于 listStyle.height。CSS 值请写在 listStyle.height",
+    description: "整列高度（含标题、搜索和计数；像素数字）；优先于 listStyle.height。CSS 值请写在 listStyle.height",
   },
   {
     name: "minHeight",
     type: "number",
     default: "-",
-    description: "列表最小高度（像素数字）；优先于 listStyle.minHeight。CSS 值请写在 listStyle.minHeight",
+    description: "整列最小高度（像素数字）；优先于 listStyle.minHeight。CSS 值请写在 listStyle.minHeight",
   },
   {
     name: "maxHeight",
     type: "number",
     default: "-",
-    description: "列表最大高度（像素数字）；优先于 listStyle.maxHeight。CSS 值请写在 listStyle.maxHeight",
+    description: "整列最大高度（像素数字）；优先于 listStyle.maxHeight。CSS 值请写在 listStyle.maxHeight",
   },
   {
     name: "disabled",

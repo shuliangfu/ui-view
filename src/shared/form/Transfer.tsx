@@ -99,7 +99,7 @@ export interface TransferProps {
   /**
    * 列表样式。
    * `width` 为列宽基准（窄容器内可收缩），
-   * `height` / `minHeight` / `maxHeight` 为列表整高（像素数字或 CSS 值），
+   * `height` / `minHeight` / `maxHeight` 为整列高度（含标题、搜索和计数；像素数字或 CSS 值），
    * 与顶层同名参数同时存在时，顶层优先；`height` 默认 200，
    * `itemHeight` 为每一项的行高（像素）；不传时按 `size` 使用默认行高。
    */
@@ -110,11 +110,11 @@ export interface TransferProps {
     maxHeight?: number | string;
     itemHeight?: number;
   };
-  /** 列表整高（像素数字）；优先于 listStyle.height，默认 200。CSS 值请写在 listStyle.height */
+  /** 整列高度（含标题、搜索和计数；像素数字）；优先于 listStyle.height，默认 200。CSS 值请写在 listStyle.height */
   height?: number;
-  /** 列表最小高度（像素数字）；优先于 listStyle.minHeight。CSS 值请写在 listStyle.minHeight */
+  /** 整列最小高度（像素数字）；优先于 listStyle.minHeight。CSS 值请写在 listStyle.minHeight */
   minHeight?: number;
-  /** 列表最大高度（像素数字）；优先于 listStyle.maxHeight。CSS 值请写在 listStyle.maxHeight */
+  /** 整列最大高度（像素数字）；优先于 listStyle.maxHeight。CSS 值请写在 listStyle.maxHeight */
   maxHeight?: number;
   /** 是否禁用 */
   disabled?: boolean;
@@ -286,6 +286,7 @@ function TransferColumn(props: TransferColumnProps) {
         flex: `1 1 ${listStyle.width ?? 200}px`,
         width: "auto",
         minWidth: 0,
+        ...listBoxStyle,
       }}
       data-transfer-disabled={disabled ? "true" : undefined}
     >
@@ -318,16 +319,16 @@ function TransferColumn(props: TransferColumnProps) {
           }}
         />
       )}
-      <div class="flex flex-col flex-1 min-h-0">
+      <div class="flex min-h-0 flex-1 flex-col overflow-hidden">
         <select
           multiple
           disabled={disabled}
           aria-label={title}
           class={twMerge(
-            "w-full shrink-0 m-0 border-0 bg-transparent text-slate-800 dark:text-slate-100 outline-none cursor-default dark:[color-scheme:dark] focus:ring-1 focus:ring-inset focus:ring-sky-300/45 dark:focus:ring-sky-400/30",
+            "h-full min-h-0 w-full flex-1 m-0 border-0 bg-transparent text-slate-800 dark:text-slate-100 outline-none cursor-default dark:[color-scheme:dark] focus:ring-1 focus:ring-inset focus:ring-sky-300/45 dark:focus:ring-sky-400/30",
             transferItemCls[size],
           )}
-          style={listBoxStyle}
+          style={{ height: "100%", minHeight: 0, boxSizing: "border-box" }}
           onChange={(event: Event) => {
             applySelectChange(event.currentTarget as HTMLSelectElement);
           }}

@@ -51,8 +51,7 @@ describe("resolveListBoxStyle", () => {
     expect(style.height).toBe("200px");
     expect(style.minHeight).toBeUndefined();
     expect(style.maxHeight).toBeUndefined();
-    expect(style.flexGrow).toBe("0");
-    expect(style.flexShrink).toBe("0");
+    expect(style.boxSizing).toBe("border-box");
   });
 
   it("uses listStyle pixel numbers and CSS values", () => {

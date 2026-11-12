@@ -1,6 +1,7 @@
 /**
- * Transfer 列表整高：顶层 height / minHeight / maxHeight 只接受像素数字，
+ * Transfer 整列高度：顶层 height / minHeight / maxHeight 只接受像素数字，
  * CSS 值写在 listStyle 同名字段。数字转 px，CSS 字符串原样使用。
+ * 这些尺寸作用在整列面板（标题、搜索、列表、计数），不是内部 select。
  */
 
 export const DEFAULT_TRANSFER_LIST_HEIGHT = "200px";
@@ -11,9 +12,6 @@ export type TransferListBoxStyle = {
   height: string;
   minHeight?: string;
   maxHeight?: string;
-  flexGrow: "0";
-  flexShrink: "0";
-  flexBasis: "auto";
   boxSizing: "border-box";
 };
 
@@ -36,16 +34,6 @@ export function resolvePxNumber(value: number | undefined): string | undefined {
   return undefined;
 }
 
-const rigidListBox: Pick<
-  TransferListBoxStyle,
-  "flexGrow" | "flexShrink" | "flexBasis" | "boxSizing"
-> = {
-  flexGrow: "0",
-  flexShrink: "0",
-  flexBasis: "auto",
-  boxSizing: "border-box",
-};
-
 /** Numeric top-level props win over listStyle; unset height defaults to 200px. */
 export function resolveListBoxStyle(
   listStyle: {
@@ -63,7 +51,7 @@ export function resolveListBoxStyle(
     height: resolvePxNumber(overrides.height) ??
       resolveCssSize(listStyle.height) ??
       DEFAULT_TRANSFER_LIST_HEIGHT,
-    ...rigidListBox,
+    boxSizing: "border-box",
   };
   const minHeight = resolvePxNumber(overrides.minHeight) ??
     resolveCssSize(listStyle.minHeight);
