@@ -92,3 +92,69 @@ export function toggleSelectAllKeys(
   const complete = all.every((key) => have.has(key));
   return complete ? [] : [...all];
 }
+
+type SelectAllHost = {
+  el: HTMLElement;
+  onSelectAll: () => void;
+};
+
+const selectAllHosts = new Set<SelectAllHost>();
+const HOST_KEY = "__dreamerSelectAllHost";
+let documentListenerBound = false;
+
+function pruneSelectAllHosts(): void {
+  for (const host of [...selectAllHosts]) {
+    if (!host.el.isConnected) {
+      selectAllHosts.delete(host);
+      try {
+        delete (host.el as unknown as Record<string, unknown>)[HOST_KEY];
+      } catch {
+        /* ignore */
+      }
+    }
+  }
+}
+
+function onDocumentSelectAllKeydown(event: KeyboardEvent): void {
+  pruneSelectAllHosts();
+  if (!isSelectAllHotkey(event)) return;
+  const target = event.target;
+  const active = event.currentTarget instanceof Document
+    ? event.currentTarget.activeElement
+    : document.activeElement;
+  const inside = (el: HTMLElement, node: EventTarget | null) =>
+    !!node && node instanceof Node && (el === node || el.contains(node));
+  for (const host of selectAllHosts) {
+    if (inside(host.el, target) || inside(host.el, active)) {
+      preventSelectAllDefault(event);
+      host.onSelectAll();
+      return;
+    }
+  }
+}
+
+/**
+ * Register a widget host so Ctrl+A / Command+A is handled in the capture phase
+ * whenever focus or the event target is inside it. Safe to call again on the
+ * same element to update the callback. Disconnected hosts are pruned automatically.
+ */
+export function setSelectAllHost(
+  el: HTMLElement | null,
+  onSelectAll: () => void,
+): void {
+  if (!el || typeof document === "undefined") return;
+  const bag = el as unknown as Record<string, SelectAllHost | undefined>;
+  const existing = bag[HOST_KEY];
+  if (existing) {
+    existing.onSelectAll = onSelectAll;
+    selectAllHosts.add(existing);
+  } else {
+    const host: SelectAllHost = { el, onSelectAll };
+    bag[HOST_KEY] = host;
+    selectAllHosts.add(host);
+  }
+  if (!documentListenerBound) {
+    document.addEventListener("keydown", onDocumentSelectAllKeydown, true);
+    documentListenerBound = true;
+  }
+}

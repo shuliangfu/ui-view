@@ -21,6 +21,7 @@ import {
   focusSelectAllHost,
   isSelectAllHotkey,
   preventSelectAllDefault,
+  setSelectAllHost,
   toggleSelectAllKeys,
 } from "../select-all-hotkey.ts";
 
@@ -101,6 +102,16 @@ export function CheckboxGroup(props: CheckboxGroupProps): JSXRenderable {
 
   return (
     <div
+      ref={(el: HTMLElement | null) => {
+        if (!el || disabled) return;
+        setSelectAllHost(el, () => {
+          const all = options
+            .filter((opt) => !opt.disabled)
+            .map((opt) => opt.value);
+          const current = readMaybeSignal(valueProp) ?? [];
+          commitValue(toggleSelectAllKeys(current, all));
+        });
+      }}
       id={resolvedId}
       class={twMerge("flex", directionCls, className)}
       role="group"

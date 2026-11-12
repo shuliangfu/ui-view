@@ -34,6 +34,7 @@ import {
   focusSelectAllHost,
   isSelectAllHotkey,
   preventSelectAllDefault,
+  setSelectAllHost,
   toggleSelectAllKeys,
 } from "../select-all-hotkey.ts";
 import type { SizeVariant } from "../types.ts";
@@ -170,6 +171,16 @@ function MultiSelectNativeBranch(props: Omit<MultiSelectProps, "appearance">) {
 
   return (
     <span
+      ref={(el: HTMLElement | null) => {
+        if (!el || disabled) return;
+        setSelectAllHost(el, () => {
+          const all = options.filter((opt) => !opt.disabled).map((opt) =>
+            opt.value
+          );
+          const current = readMaybeSignal(valueProp) ?? [];
+          triggerChange(toggleSelectAllKeys(current, all));
+        });
+      }}
       class="block"
       tabIndex={-1}
       onMouseDown={focusSelectAllHost}
@@ -331,6 +342,11 @@ function MultiSelectDropdownBranch(
     <span
       ref={(el: HTMLElement | null) => {
         rootEl = el;
+        if (!el || disabled) return;
+        setSelectAllHost(el, () => {
+          const current = readMaybeSignal(value) ?? [];
+          triggerChange(toggleSelectAllKeys(current, selectableValues));
+        });
       }}
       class={twMerge("relative block w-full min-w-0", className)}
       tabIndex={-1}

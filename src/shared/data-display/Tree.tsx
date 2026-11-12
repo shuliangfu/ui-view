@@ -22,6 +22,7 @@ import {
   focusSelectAllHost,
   isSelectAllHotkey,
   preventSelectAllDefault,
+  setSelectAllHost,
   toggleSelectAllKeys,
 } from "../select-all-hotkey.ts";
 import { IconChevronRight } from "../basic/icons/ChevronRight.tsx";
@@ -575,7 +576,25 @@ export function Tree(props: TreeProps): JSXRenderable {
   return (
     <div
       ref={(el: unknown) => {
-        rootElRef.set((el as HTMLElement | null) ?? null);
+        const root = (el as HTMLElement | null) ?? null;
+        rootElRef.set(root);
+        if (root && (checkable || multiple)) {
+          setSelectAllHost(root, () => {
+            if (checkable) {
+              const all = collectSelectableTreeKeys(treeData, "check");
+              commitChecked(toggleSelectAllKeys(readChecked(), all));
+              return;
+            }
+            const all = collectSelectableTreeKeys(treeData, "select");
+            const next = toggleSelectAllKeys(readSelected(), all);
+            const infoNode = treeData[0];
+            if (!infoNode) return;
+            commitSelected(next, {
+              node: infoNode,
+              selected: next.length > 0,
+            });
+          });
+        }
       }}
       class={twMerge(
         "tree text-sm",

@@ -1,6 +1,6 @@
 /**
  * Transfer 穿梭框（View，归类为表单组件）。
- * 双列选择；支持搜索、自定义渲染、禁用项、方向。列表项可选中（高亮）后通过中间按钮穿梭。
+ * 双列选择；支持搜索、自定义渲染、禁用项、方向。单击只选一项；Ctrl／Command+单击切换多选；Ctrl／Command+A 全选当前列（再按一次清空）。选中后通过中间按钮穿梭。
  *
  * **避免整块重挂载：**
  * 1. 外层 `return ()` **不读取** `leftSearchRef` / `rightSearchRef`，也**不读取** `selectedKeysRef.value`，
@@ -29,6 +29,7 @@ import {
   focusSelectAllHost,
   isSelectAllHotkey,
   preventSelectAllDefault,
+  setSelectAllHost,
   toggleSelectAllKeys,
 } from "../select-all-hotkey.ts";
 
@@ -218,9 +219,25 @@ function TransferColumn(props: TransferColumnProps) {
 
   return (
     <div
+      ref={(el: HTMLElement | null) => {
+        if (!el) return;
+        setSelectAllHost(el, () => {
+          if (el.getAttribute("data-transfer-disabled") === "true") return;
+          const keys = [...el.querySelectorAll<HTMLElement>("[data-key]")]
+            .filter((node) => !(node as HTMLButtonElement).disabled)
+            .map((node) => node.getAttribute("data-key") ?? "")
+            .filter(Boolean);
+          const current = readSignalValue(selectedKeysRef) ?? [];
+          writeSignalValue(
+            selectedKeysRef,
+            toggleSelectAllKeys(current, keys),
+          );
+        });
+      }}
       class={twMerge(transferListShellCls, "min-w-0 shrink-0")}
       style={{ width: `${listStyle.width ?? 200}px` }}
       tabIndex={-1}
+      data-transfer-disabled={disabled ? "true" : undefined}
       onMouseDown={focusSelectAllHost}
       onKeyDown={selectAllInColumn}
     >
@@ -288,9 +305,14 @@ function TransferColumn(props: TransferColumnProps) {
                         )}
                         data-key={item.key}
                         disabled={item.disabled || disabled}
-                        onClick={() => {
+                        onClick={(event: Event) => {
                           if (item.disabled || disabled) return;
-                          onToggleSelect(item.key);
+                          const ev = event as MouseEvent;
+                          if (ev.ctrlKey || ev.metaKey) {
+                            onToggleSelect(item.key);
+                            return;
+                          }
+                          writeSignalValue(selectedKeysRef, [item.key]);
                         }}
                         onDoubleClick={() => {
                           if (item.disabled || disabled) return;

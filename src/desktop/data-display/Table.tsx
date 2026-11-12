@@ -23,6 +23,7 @@ import {
   focusSelectAllHost,
   isSelectAllHotkey,
   preventSelectAllDefault,
+  setSelectAllHost,
 } from "../../shared/select-all-hotkey.ts";
 import {
   defaultTableMessages,
@@ -404,6 +405,16 @@ export function Table<
             <div
               ref={(el: HTMLElement | null) => {
                 tableEditRootRef.current = el;
+                if (!el || !rowSelection || rowSelection.type === "radio") {
+                  return;
+                }
+                setSelectAllHost(el, () => {
+                  handleSelectAll(
+                    !allSelected,
+                    displayData,
+                    (currentPage - 1) * pageSize,
+                  );
+                });
               }}
               class={twMerge(
                 "table-wrapper overflow-x-auto",
