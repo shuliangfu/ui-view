@@ -301,7 +301,7 @@ function TransferColumn(props: TransferColumnProps) {
             "w-full flex-1 min-h-0 m-0 border-0 bg-transparent text-slate-800 dark:text-slate-100 outline-none cursor-default dark:[color-scheme:dark] focus:ring-1 focus:ring-inset focus:ring-sky-300/45 dark:focus:ring-sky-400/30",
             transferItemCls[size],
           )}
-          style={{ height: `${listStyle.height ?? 200}px` }}
+          style={{ height: `${listStyle.height ?? 360}px` }}
           onChange={(event: Event) => {
             applySelectChange(event.currentTarget as HTMLSelectElement);
           }}
@@ -376,7 +376,7 @@ export function Transfer(props: TransferProps): JSXRenderable {
     onSearch,
     filterOption,
     render,
-    listStyle = { width: 200, height: 200 },
+    listStyle = { width: 200, height: 360 },
     disabled = false,
     error = false,
     id,
@@ -469,7 +469,7 @@ export function Transfer(props: TransferProps): JSXRenderable {
           countFormatter={m.count}
           selectedSuffixFormatter={m.selectedSuffix}
         />
-        <div class="flex shrink-0 flex-col justify-center gap-2">
+        <div class="flex shrink-0 flex-col justify-center gap-1 md:gap-2">
           <button
             type="button"
             class={btnCls}
