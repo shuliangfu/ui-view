@@ -882,6 +882,8 @@ export function DataPanel(props: PanelProps): JSXRenderable {
 
   /** 当前打开删除气泡确认的行 id（单行） */
   const popRow = createSignal<string | null>(null);
+  /** 自定义行操作气泡：`row:{id}:{key}` */
+  const popAct = createSignal<string | null>(null);
   /** 批量删除气泡是否打开 */
   const popBatch = createSignal(false);
   /** 批量「设为…」气泡：打开中的 status value；null 关闭 */
@@ -2469,6 +2471,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
       icon?: unknown;
       title?: string;
       tone?: ActionTone;
+      confirm?: string;
       action: (row: Row) => void;
     };
 
@@ -2505,6 +2508,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
         icon: res.icon,
         title: res.title,
         tone: res.tone,
+        confirm: res.confirm,
         action: res.action!,
       });
     }
@@ -2716,6 +2720,8 @@ export function DataPanel(props: PanelProps): JSXRenderable {
                                 const aria = typeof s.label === "string"
                                   ? s.label
                                   : s.key;
+                                const ask = s.confirm;
+                                const tok = `row:${idOf(r)}:${s.key}`;
                                 const btn = (
                                   <Btn
                                     type="button"
@@ -2727,12 +2733,45 @@ export function DataPanel(props: PanelProps): JSXRenderable {
                                     data-testid={`dp-row-extra-${s.key}-${
                                       idOf(r)
                                     }`}
-                                    onClick={() => s.action(r)}
+                                    onClick={() =>
+                                      ask ? (popAct.value = tok) : s.action(r)}
                                   >
                                     {s.icon != null ? s.icon : s.label}
                                   </Btn>
                                 );
-                                return tipWrap(tip, btn);
+                                const node = ask
+                                  ? (
+                                    <Popconfirm
+                                      open={() => popAct.value === tok}
+                                      placement="auto"
+                                      danger={s.tone === "danger"}
+                                      warning={s.tone === "warning"}
+                                      title={ask}
+                                      okText={typeof s.label === "string"
+                                        ? s.label
+                                        : m.confirm}
+                                      cancelText={m.cancel}
+                                      overlayClass={POP_OVERLAY_CLS}
+                                      onOpenChange={(o: boolean) => {
+                                        if (!o && popAct.value === tok) {
+                                          popAct.value = null;
+                                        }
+                                      }}
+                                      onConfirm={() => s.action(r)}
+                                    >
+                                      {btn}
+                                    </Popconfirm>
+                                  )
+                                  : btn;
+                                return tipWrap(
+                                  tip,
+                                  node,
+                                  ask
+                                    ? {
+                                      disabled: () => popAct.value === tok,
+                                    }
+                                    : undefined,
+                                );
                               }
                               if (s.name === "view") {
                                 const run =

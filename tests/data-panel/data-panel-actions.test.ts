@@ -3,18 +3,18 @@
  */
 import { describe, expect, it } from "@dreamer/test";
 import {
+  actionDisplayText,
+  actionTipText,
   assertRowActionsConfig,
   assertToolbarConfig,
   isRowBuiltin,
   isToolbarBuiltin,
-  actionTipText,
-  actionDisplayText,
+  type PanelToolbarConfig,
   resolveActionCtrl,
   resolveRowActionCtrl,
   ROW_BUILTINS,
-  TOOLBAR_BUILTINS,
   type RowActionsConfig,
-  type PanelToolbarConfig,
+  TOOLBAR_BUILTINS,
 } from "../../src/desktop/data-display/data-panel-types.ts";
 
 describe("DataPanel ActionCtrl unified Record", () => {
@@ -149,7 +149,9 @@ describe("DataPanel ActionCtrl unified Record", () => {
     expect(() => assertToolbarConfig({ my: true })).toThrow(/my.*action/i);
     expect(() => assertToolbarConfig({ my: { label: "L" } })).toThrow(/my/);
     expect(() =>
-      assertToolbarConfig({ my: { label: "L", action: () => {}, disable: true } })
+      assertToolbarConfig({
+        my: { label: "L", action: () => {}, disable: true },
+      })
     ).not.toThrow();
   });
 
@@ -227,7 +229,6 @@ describe("DataPanel ActionCtrl unified Record", () => {
     expect(r.title).toBe("编辑 Ada");
   });
 
-
   it("actionTipText: title ?? label ?? builtin ?? key", () => {
     // 内置：无 title／label → messages
     expect(actionTipText("create", undefined, undefined, "新建")).toBe("新建");
@@ -239,7 +240,9 @@ describe("DataPanel ActionCtrl unified Record", () => {
     expect(actionTipText("assign")).toBe("assign");
     expect(actionTipText("freeze")).toBe("freeze");
     // title 覆盖 label／builtin
-    expect(actionTipText("create", "Add item", "分配", "新建")).toBe("Add item");
+    expect(actionTipText("create", "Add item", "分配", "新建")).toBe(
+      "Add item",
+    );
     expect(actionTipText("assign", "分配管理员", "分配")).toBe("分配管理员");
     // 空串视为 omit
     expect(actionTipText("create", "", undefined, "新建")).toBe("新建");
@@ -271,29 +274,44 @@ describe("DataPanel ActionCtrl unified Record", () => {
     expect(actionTipText("assign", bare.title, bare.label)).toBe("assign");
     expect(actionDisplayText("assign", bare.label, bare.title)).toBe("assign");
     // 仅 title：tip 与显示都用 title
-    const tOnly = resolveActionCtrl({ title: "开一个", action: () => {} }, true);
+    const tOnly = resolveActionCtrl(
+      { title: "开一个", action: () => {} },
+      true,
+    );
     expect(tOnly.title).toBe("开一个");
     expect(tOnly.label).toBe(undefined);
-    expect(actionTipText("assign", tOnly.title, tOnly.label, "新建")).toBe("开一个");
-    expect(actionDisplayText("assign", tOnly.label, tOnly.title)).toBe("开一个");
+    expect(actionTipText("assign", tOnly.title, tOnly.label, "新建")).toBe(
+      "开一个",
+    );
+    expect(actionDisplayText("assign", tOnly.label, tOnly.title)).toBe(
+      "开一个",
+    );
     // title + label：tip 用 title，显示用 label
-    const d = resolveActionCtrl({ title: "开一个", label: "分配", action: () => {} }, true);
+    const d = resolveActionCtrl({
+      title: "开一个",
+      label: "分配",
+      action: () => {},
+    }, true);
     expect(d.title).toBe("开一个");
     expect(actionTipText("assign", d.title, d.label)).toBe("开一个");
     expect(actionDisplayText("assign", d.label, d.title)).toBe("分配");
   });
 
   it("resolveActionCtrl: tone full Button ColorVariant set (no confirm field)", () => {
-    for (const tone of [
-      "default",
-      "primary",
-      "secondary",
-      "success",
-      "warning",
-      "danger",
-      "ghost",
-    ] as const) {
-      expect(resolveActionCtrl({ tone, action: () => {} }, true).tone).toBe(tone);
+    for (
+      const tone of [
+        "default",
+        "primary",
+        "secondary",
+        "success",
+        "warning",
+        "danger",
+        "ghost",
+      ] as const
+    ) {
+      expect(resolveActionCtrl({ tone, action: () => {} }, true).tone).toBe(
+        tone,
+      );
     }
     expect(resolveActionCtrl({ action: () => {} }, true).tone).toBe(undefined);
     // confirm is not part of ActionCtrl — callers manage confirmation inside action
@@ -320,6 +338,29 @@ describe("DataPanel ActionCtrl unified Record", () => {
     expect("confirm" in (r as object)).toBe(false);
   });
 
+  it("resolveRowActionCtrl: confirm(item) resolved; empty omitted", () => {
+    const item = { id: "9", name: "Ada", serial: "S1" };
+    expect(
+      resolveRowActionCtrl({ confirm: "作废？", action: () => {} }, item, true)
+        .confirm,
+    ).toBe("作废？");
+    expect(
+      resolveRowActionCtrl(
+        { confirm: (x) => `恢复 ${x.serial}`, action: () => {} },
+        item,
+        true,
+      ).confirm,
+    ).toBe("恢复 S1");
+    expect(
+      "confirm" in
+        (resolveRowActionCtrl(
+          { confirm: "", action: () => {} },
+          item,
+          true,
+        ) as object),
+    ).toBe(false);
+  });
+
   it("batchStatus 已挪出 TOOLBAR_BUILTINS（改 caps.batchStatus＋column.batch）", () => {
     expect(isToolbarBuiltin("batchStatus")).toBe(false);
     expect([...TOOLBAR_BUILTINS]).not.toContain("batchStatus");
@@ -336,5 +377,4 @@ describe("DataPanel ActionCtrl unified Record", () => {
       action: undefined,
     });
   });
-
 });

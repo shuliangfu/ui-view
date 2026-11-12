@@ -613,9 +613,13 @@ export type RowActionCtrl =
      * Optional Tooltip text (may be (item)=>…). Empty string treated as omit.
      * Final tip = title ?? label ?? builtinMessages ?? key.
      * Also used as display text when `label` is omitted.
-     * Confirm UX belongs in `action` (caller-managed) — no confirm field.
      */
     title?: string | ((item: Row) => string);
+    /**
+     * Optional confirm bubble. Non-empty string or `(item)=>string` wraps the
+     * row button in Popconfirm; omit / empty → click runs `action` immediately.
+     */
+    confirm?: string | ((item: Row) => string);
     /** Visual tone (Button ColorVariant). Default "default"; builtin remove uses danger. */
     tone?: ActionTone;
     /** Builtin: omit → default handler. Custom key: required unless `href` is set. */
@@ -808,10 +812,12 @@ export function resolveRowActionCtrl(
   tone?: ActionTone;
   action?: (item: Row) => void;
   href?: string;
+  confirm?: string;
 } {
   if (ctrl === undefined) return { show: fallbackShow, disable: false };
   if (typeof ctrl === "boolean") return { show: ctrl, disable: false };
   const href = ctrl.href;
+  const confirm = evalRowTitle(ctrl.confirm, item);
   return {
     show: evalRowFlag(ctrl.show, item, true),
     disable: evalRowFlag(ctrl.disable, item, false),
@@ -821,6 +827,7 @@ export function resolveRowActionCtrl(
     tone: ctrl.tone,
     action: ctrl.action,
     href: typeof href === "function" ? href(item) : href,
+    ...(confirm !== undefined ? { confirm } : {}),
   };
 }
 
