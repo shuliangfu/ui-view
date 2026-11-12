@@ -920,7 +920,7 @@ const form = {
   columns={columns}
   search={search}
   form={form}
-  pageSize={10}
+  pageSize={20}
 />
 `;
 
@@ -978,7 +978,7 @@ const form = {
   columns={columns}
   search={search}
   form={form}
-  pageSize={10}
+  pageSize={20}
 />
 `;
 
@@ -3569,7 +3569,7 @@ ${ALIGN_DEMO_COLUMNS_CODE}
             columns={DEMO_COLUMNS}
             search={{ props: DEMO_SEARCH }}
             form={{ props: DEMO_FORM }}
-            pageSize={10}
+            pageSize={20}
           />
         </DocsDemo>
 
@@ -3601,7 +3601,7 @@ ${ALIGN_DEMO_COLUMNS_CODE}
             columns={DEMO_COLUMNS}
             search={{ props: DEMO_SEARCH }}
             form={{ props: DEMO_FORM }}
-            pageSize={10}
+            pageSize={20}
           />
         </DocsDemo>
 

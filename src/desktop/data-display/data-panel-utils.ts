@@ -258,6 +258,9 @@ export function pageList(cur: number, last: number): (number | "…")[] {
   return out;
 }
 
+/** DataPanel 默认每页条数（列表请求与底栏选择器共用） */
+export const DEFAULT_DATA_PANEL_PAGE_SIZE = 20;
+
 /** 查询 → URLSearchParams（`forUrl` 时省略默认值，用于地址栏同步） */
 export function queryToParams(
   q: Query,
@@ -270,7 +273,7 @@ export function queryToParams(
 ): URLSearchParams {
   const p = new URLSearchParams();
   if (q.page > 1) p.set("page", String(q.page));
-  if (!opts.forUrl || q.pageSize !== (opts.defaultPageSize ?? 10)) {
+  if (!opts.forUrl || q.pageSize !== (opts.defaultPageSize ?? DEFAULT_DATA_PANEL_PAGE_SIZE)) {
     p.set("pageSize", String(q.pageSize));
   }
   const ds = opts.defaultSort;

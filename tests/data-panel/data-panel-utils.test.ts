@@ -439,7 +439,7 @@ describe("queryToParams", () => {
   });
   it("地址栏：省略默认值与固定过滤", () => {
     const p = queryToParams(
-      { ...base, page: 3, sort: "name", order: "desc" },
+      { ...base, page: 3, pageSize: 20, sort: "name", order: "desc" },
       {
         forUrl: true,
         fixed: { kind: "a" },

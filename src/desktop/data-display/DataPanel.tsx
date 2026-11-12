@@ -95,6 +95,7 @@ import {
   parseCsv,
   parseJsonRows,
   parseXmlRows,
+  DEFAULT_DATA_PANEL_PAGE_SIZE,
   queryFromParams,
   queryToParams,
   resolveBatchStatusColumn,
@@ -291,7 +292,7 @@ export interface PanelProps {
   initialQuery?: Partial<Query>;
   /** 主键字段，默认 id */
   rowKey?: string;
-  /** 每页条数，默认 10 */
+  /** 每页条数，默认 20 */
   pageSize?: number;
   /** 每页条数下拉选项，默认 [10, 20, 50, 100] */
   pageSizes?: number[];
@@ -469,7 +470,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
   const searchDefs = enrichSearchFields(searchFields, dataInputColumns);
   const formDefs = enrichFormFields(formFields, dataInputColumns);
   const pageSizes = props.pageSizes ?? [10, 20, 50, 100];
-  const defaultPageSize = props.pageSize ?? 10;
+  const defaultPageSize = props.pageSize ?? DEFAULT_DATA_PANEL_PAGE_SIZE;
   /** 有表单字段或 form.render 时本地源可写；旁路 Modal 也可靠 onDataChange */
   const canWriteLocal = formDefs.length > 0 || !!props.form?.render ||
     !!props.onDataChange ||
@@ -628,7 +629,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
   let first: ListResult | undefined = props.initial;
   if (!first && ds.sync) first = ds.list(initialQuery) as ListResult;
   if (first) {
-    const ps = Math.max(1, initialQuery.pageSize || 10);
+    const ps = Math.max(1, initialQuery.pageSize || defaultPageSize);
     const last = Math.max(1, Math.ceil(first.total / ps));
     if (initialQuery.page > last) {
       initialQuery = { ...initialQuery, page: last };
