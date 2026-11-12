@@ -231,9 +231,9 @@ export const ACTS_CLS =
 export const CARD_STYLE =
   "max-sm:!mx-0 max-sm:!mt-0 bg-slate-50 dark:!bg-[var(--dp-panel-body-bg,rgb(30_41_59/0.8))] dark:!text-[var(--dp-panel-fg,#e2e8f0)] dark:[&_th]:!text-[var(--dp-panel-fg,#f1f5f9)] dark:[&_td]:!text-[var(--dp-panel-fg,#e2e8f0)] dark:[&_.dp-cell-edit]:!text-[var(--dp-panel-fg,#e2e8f0)] dark:[&_[data-testid=dp-total-count]]:!text-[var(--dp-panel-muted,#cbd5e1)]";
 
-/** 表格外包（原 `.dp-table-wrap`；移动端顶／左右 padding 清零） */
+/** 表格外包（原 `.dp-table-wrap`）。内边距始终保留，含移动端。 */
 export const TABLE_WRAP_CLS =
-  "dp-table-wrap bg-white px-2.5 py-2.5 dark:bg-transparent max-sm:!px-0 max-sm:!pt-0";
+  "dp-table-wrap bg-white !px-2.5 !py-2.5 dark:bg-transparent";
 
 /**
  * DataPanel／DataView 工具栏底色：比标题浅、比原先工具栏深的中间值。

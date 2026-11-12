@@ -183,17 +183,16 @@ describe("DataPanel SSR：布尔属性与转义", () => {
     expect(DATA_PANEL_CSS).toBe("");
   });
 
-  it("移动端断点：表格卡上／左／右贴边；分页居中且条数在下（Tailwind max-sm）", async () => {
+  it("移动端断点：卡片贴边但表格内边距始终保留；分页居中且条数在下（Tailwind max-sm）", async () => {
     const h = await html();
-    // 卡片／表格外包：max-sm 清上／左右 margin／padding
+    // 卡片外边距可在移动端清掉；体内边距始终保留
     expect(h).toContain("max-sm:!mx-0");
     expect(h).toContain("max-sm:!mt-0");
     expect(h).toContain("dp-table-wrap");
-    expect(h).toContain("max-sm:!px-0");
-    expect(h).toContain("max-sm:!pt-0");
-    // 底边不在移动规则里清零（保留 py-2.5）
-    expect(h).toContain("py-2.5");
-    expect(h).not.toMatch(/dp-table-wrap[^"]*max-sm:!pb-0/);
+    expect(h).toContain("!px-2.5");
+    expect(h).toContain("!py-2.5");
+    expect(h).not.toContain("max-sm:!px-0");
+    expect(h).not.toContain("max-sm:!pt-0");
     // 分页：列布局、控件 order1、条数 order2 居中
     expect(h).toContain("dp-pg-ctrls");
     expect(h).toContain("dp-range");
