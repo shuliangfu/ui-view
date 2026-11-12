@@ -242,11 +242,12 @@ export const TABLE_WRAP_CLS =
  * （约 rgb(24,33,53)）的中间色 rgb(19,28,49)。
  */
 export const TOOLBAR_BAR_CLS =
-  "flex w-full flex-wrap items-center justify-end gap-2 border-y border-slate-200 bg-[rgb(240_243_248)] px-3 py-2 dark:border-slate-600/40 dark:bg-[rgb(19_28_49)]";
+  "flex w-full flex-wrap items-center justify-end gap-2 border-y border-slate-300 bg-[rgb(240_243_248)] px-3 py-2 dark:border-slate-600/40 dark:bg-[rgb(19_28_49)]";
 
 /**
  * DataPanel／DataView 标题栏：取消 Card 自带底边，改由工具栏用相同的
- * `border-y` 画出上下两条同样淡的分隔线（浅色 slate-200，深色 slate-600/40）。
+ * `border-y` 画出上下两条同样淡的分隔线（浅色 slate-300，深色 slate-600/40）。
+ * 浅色不用 slate-200：它和标题 rgb(230,235,243)、工具栏 rgb(240,243,248) 太近，几乎看不见。
  */
 export const HEADER_BAR_CLS = "!border-b-0 bg-slate-200/80 dark:bg-slate-900";
 

@@ -122,7 +122,7 @@ describe("DataView", () => {
     expect(h).toContain("dark:bg-slate-900");
     expect(h).toContain("!border-b-0");
     expect(h).toContain("border-y");
-    expect(h).toContain("border-slate-200");
+    expect(h).toContain("border-slate-300");
     expect(h).toContain("dark:border-slate-600/40");
     expect(h).not.toContain('data-testid="dp-pg"');
     expect(h).not.toContain("data-panel-toolbar");

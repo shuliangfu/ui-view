@@ -525,7 +525,7 @@ describe("DataPanel SSR：文案与自定义", () => {
     expect(on).toContain("dark:bg-[rgb(19_28_49)]");
     expect(on).toContain("!border-b-0");
     expect(on).toContain("border-y");
-    expect(on).toContain("border-slate-200");
+    expect(on).toContain("border-slate-300");
     expect(on).toContain("dark:border-slate-600/40");
     const rec = await html({ toolbar: { refresh: true, print: false } });
     expect(rec).toContain('data-testid="data-panel-toolbar"');
