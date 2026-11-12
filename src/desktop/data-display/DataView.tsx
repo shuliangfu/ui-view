@@ -1259,6 +1259,8 @@ export function DataView(props: DataViewProps): JSXRenderable {
       <form
         class={formGrid ? "grid grid-cols-12 gap-3" : "grid gap-3"}
         data-testid="dv-form"
+        method="dialog"
+        action="#"
         onSubmit={(e: Event) => {
           e.preventDefault();
           void submitForm();

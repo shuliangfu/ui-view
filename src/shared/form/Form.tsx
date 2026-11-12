@@ -95,6 +95,8 @@ export function Form(props: FormProps): JSXRenderable {
       <FormControlSizeContext.Provider value={size}>
         <form
           class={twMerge(layoutCls, className)}
+          method="dialog"
+          action="#"
           onSubmit={handleSubmit}
           noValidate
         >

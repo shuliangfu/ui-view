@@ -1781,6 +1781,8 @@ export function DataPanel(props: PanelProps): JSXRenderable {
         ? "grid grid-cols-12 gap-3"
         : "grid gap-3"}
       data-testid="dp-search"
+      method="dialog"
+      action="#"
       onSubmit={(e: Event) => {
         e.preventDefault();
         applySearch();
@@ -2996,6 +2998,8 @@ export function DataPanel(props: PanelProps): JSXRenderable {
       <form
         class={formGrid ? "grid grid-cols-12 gap-3" : "grid gap-3"}
         data-testid="dp-form"
+        method="dialog"
+        action="#"
         onSubmit={(e: Event) => {
           e.preventDefault();
           void submitForm();
