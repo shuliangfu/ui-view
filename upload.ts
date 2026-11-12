@@ -21,6 +21,7 @@ import type { Plugin } from "@dreamer/plugin";
 import type { ServiceContainer } from "@dreamer/service";
 import { createLocalCloudStorageAdapter } from "@dreamer/upload/adapters";
 import type { CloudStorageAdapter } from "@dreamer/upload/adapters";
+import { createMultipartUploadHandler } from "@dreamer/upload/server";
 
 /** 与 dweb UploadAppConfig／MultipartUploadHandler 对齐的松散鉴权上下文 */
 export type UiViewUploadAuthContext = {
@@ -178,6 +179,18 @@ export interface UiViewUploadPluginOptions {
   verifyContentAfterComplete?: boolean;
   sessionTtlMs?: number;
   onEvent?: (event: unknown) => void;
+  /**
+   * Plugin registry name. Default `"ui-view-upload"`.
+   * Must be unique when more than one upload plugin is registered on the same app.
+   */
+  name?: string;
+  /**
+   * When true, this plugin creates and serves its own MultipartUploadHandler at
+   * `basePath` (upload + file) and does not wrap `AppConfig.upload`'s handler.
+   * Use this for additional mounts with their own size / MIME limits.
+   * Default false.
+   */
+  standalone?: boolean;
 }
 
 export interface UiViewUploadPlugin extends Plugin {
@@ -509,26 +522,62 @@ export function uiViewUploadPlugin(
 
   const serveFiles = options.serveFiles !== false;
   const pathPrefix = (options.pathPrefix ?? "").replace(/^\/+|\/+$/g, "");
+  const pluginName = String(options.name ?? "ui-view-upload").trim() ||
+    "ui-view-upload";
+  const standalone = options.standalone === true;
+
+  type UploadHandler = {
+    handle: (
+      request: Request,
+      basePath?: string,
+    ) => Promise<Response | null> | Response | null;
+  };
+  let standaloneHandler: UploadHandler | undefined;
+  if (standalone) {
+    standaloneHandler = createMultipartUploadHandler({
+      storage,
+      requireAuth: options.requireAuth ?? true,
+      authenticate: options.authenticate,
+      authorizeUpload: options.authorizeUpload,
+      maxFileSize: options.maxFileSize,
+      maxPartSize: options.maxPartSize,
+      allowedMimeTypes: options.allowedMimeTypes,
+      pathPrefix: options.pathPrefix,
+      onEvent: options.onEvent,
+      verifyContentAfterComplete: options.verifyContentAfterComplete,
+      sessionTtlMs: options.sessionTtlMs,
+      virusScan: options.virusScan === false ? undefined : options.virusScan,
+    } as Parameters<typeof createMultipartUploadHandler>[0]);
+    wrapUploadCompletePipeline(standaloneHandler, {
+      storage,
+      basePath,
+      image: options.image,
+      afterComplete: options.afterComplete,
+    });
+  }
+
+  const pathOnMount = (path: string): boolean =>
+    path === basePath ||
+    path.startsWith(`${basePath}/`) ||
+    path.endsWith(basePath) ||
+    path.includes(`${basePath}/`);
 
   return {
-    name: "ui-view-upload",
+    name: pluginName,
     version: "0.1.0",
     uploadConfig,
     storage,
 
     async onStart(container: ServiceContainer): Promise<void> {
+      // Additional mounts serve their own handler; do not wrap AppConfig.upload.
+      if (standalone) return;
       if (!container.has("uploadHandler")) {
         console.warn(
           "[ui-view-upload] uploadHandler missing; skip complete pipeline (set AppConfig.upload = plugin.uploadConfig)",
         );
         return;
       }
-      const handler = container.get("uploadHandler") as {
-        handle: (
-          request: Request,
-          basePath?: string,
-        ) => Promise<Response | null> | Response | null;
-      };
+      const handler = container.get("uploadHandler") as UploadHandler;
       wrapUploadCompletePipeline(handler, {
         storage,
         basePath,
@@ -542,10 +591,11 @@ export function uiViewUploadPlugin(
      * 顺序无关：complete（含 virusScan）→ dual 由 Handler／onStart 管；本钩子只做下载。
      */
     async onRequest(ctx, _container) {
-      if (!serveFiles) return;
       const filePath = `${basePath}/file`;
-      if (ctx.method !== "GET" && ctx.method !== "HEAD") return;
-      if (ctx.path !== filePath && !ctx.path.endsWith(filePath)) return;
+      const isFileReq =
+        (ctx.method === "GET" || ctx.method === "HEAD") &&
+        (ctx.path === filePath || ctx.path.endsWith(filePath));
+      if (serveFiles && isFileReq) {
 
       const key = (ctx.url.searchParams.get("key") ?? "").trim();
       if (!key || key.includes("..")) {
@@ -599,6 +649,12 @@ export function uiViewUploadPlugin(
       } catch (e) {
         console.error("[ui-view-upload] file serve", e);
         return new Response("Error", { status: 500 });
+      }
+      }
+
+      if (standalone && standaloneHandler && pathOnMount(ctx.path)) {
+        const result = await standaloneHandler.handle(ctx.request, basePath);
+        if (result) return result;
       }
     },
   };
