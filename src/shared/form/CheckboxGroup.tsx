@@ -118,6 +118,7 @@ export function CheckboxGroup(props: CheckboxGroupProps): JSXRenderable {
       aria-label={name}
       aria-invalid={error}
       tabIndex={-1}
+      data-select-all-host=""
       onMouseDown={focusSelectAllHost}
       onKeyDown={selectAllInGroup}
     >

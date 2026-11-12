@@ -193,6 +193,7 @@ const form = createForm({
   <FormItem name="keys" label="穿梭">
     <Transfer
       {...form.bindTargetKeys("keys")}
+      class="w-full"
       dataSource={data}
       titles={["待选", "已选"]}
     />
@@ -261,6 +262,7 @@ export default function FormTransfer() {
             <FormItem name="keys" label="穿梭">
               <Transfer
                 {...transferDemoForm.bindTargetKeys("keys")}
+                class="w-full"
                 dataSource={data}
                 titles={["待选", "已选"]}
               />

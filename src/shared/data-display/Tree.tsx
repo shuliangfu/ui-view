@@ -608,6 +608,7 @@ export function Tree(props: TreeProps): JSXRenderable {
       data-tree-show-line={showLine ? "true" : undefined}
       data-tree-block-node={blockNode ? "true" : undefined}
       tabIndex={checkable || multiple ? -1 : undefined}
+      data-select-all-host={checkable || multiple ? "" : undefined}
       onMouseDown={checkable || multiple ? focusSelectAllHost : undefined}
       onKeyDown={checkable || multiple ? selectAllInTree : undefined}
     >

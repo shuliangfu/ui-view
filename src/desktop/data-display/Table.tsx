@@ -423,6 +423,10 @@ export function Table<
               tabIndex={rowSelection && rowSelection.type !== "radio"
                 ? -1
                 : undefined}
+              data-select-all-host={rowSelection &&
+                  rowSelection.type !== "radio"
+                ? ""
+                : undefined}
               onMouseDown={rowSelection && rowSelection.type !== "radio"
                 ? focusSelectAllHost
                 : undefined}

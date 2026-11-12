@@ -38,7 +38,9 @@ export function isSelectAllHotkey(event: SelectAllKeyEvent): boolean {
   if (!(event.ctrlKey || event.metaKey) || event.altKey || event.shiftKey) {
     return false;
   }
-  if (event.key.toLowerCase() !== "a") return false;
+  const key = (event.key ?? "").toLowerCase();
+  const code = "code" in event ? String((event as { code?: string }).code) : "";
+  if (key !== "a" && code !== "KeyA") return false;
   if (isTextEditTarget(event.target ?? null)) return false;
   return true;
 }
@@ -93,6 +95,9 @@ export function toggleSelectAllKeys(
   return complete ? [] : [...all];
 }
 
+/** Mark a widget host so the capture-phase listener can find it. */
+export const SELECT_ALL_HOST_ATTR = "data-select-all-host";
+
 type SelectAllHost = {
   el: HTMLElement;
   onSelectAll: () => void;
@@ -100,7 +105,7 @@ type SelectAllHost = {
 
 const selectAllHosts = new Set<SelectAllHost>();
 const HOST_KEY = "__dreamerSelectAllHost";
-let documentListenerBound = false;
+let selectAllCaptureBound = false;
 
 function pruneSelectAllHosts(): void {
   for (const host of [...selectAllHosts]) {
@@ -115,23 +120,69 @@ function pruneSelectAllHosts(): void {
   }
 }
 
-function onDocumentSelectAllKeydown(event: KeyboardEvent): void {
-  pruneSelectAllHosts();
-  if (!isSelectAllHotkey(event)) return;
-  const target = event.target;
-  const active = event.currentTarget instanceof Document
-    ? event.currentTarget.activeElement
-    : document.activeElement;
-  const inside = (el: HTMLElement, node: EventTarget | null) =>
-    !!node && node instanceof Node && (el === node || el.contains(node));
-  for (const host of selectAllHosts) {
-    if (inside(host.el, target) || inside(host.el, active)) {
-      preventSelectAllDefault(event);
-      host.onSelectAll();
-      return;
+function findSelectAllHost(event: KeyboardEvent): HTMLElement | null {
+  const doc = event.target instanceof Node
+    ? event.target.ownerDocument
+    : typeof document !== "undefined"
+    ? document
+    : null;
+  const candidates: EventTarget[] = [];
+  if (event.target) candidates.push(event.target);
+  if (doc?.activeElement) candidates.push(doc.activeElement);
+  for (const node of candidates) {
+    if (node instanceof Element) {
+      const host = node.closest(`[${SELECT_ALL_HOST_ATTR}]`);
+      if (host instanceof HTMLElement) return host;
     }
   }
+  return null;
 }
+
+function invokeSelectAll(host: HTMLElement): void {
+  const bag = host as unknown as Record<string, SelectAllHost | undefined>;
+  const registered = bag[HOST_KEY];
+  if (registered) {
+    registered.onSelectAll();
+    return;
+  }
+  const delegated = (host as unknown as Record<string, unknown>)["__onkeydown"];
+  if (typeof delegated === "function") {
+    // The real event is already defaultPrevented; synthesize a fresh one
+    // so existing onKeyDown handlers still pass isSelectAllHotkey.
+    (delegated as (event: KeyboardEvent) => void).call(
+      host,
+      new KeyboardEvent("keydown", {
+        key: "a",
+        metaKey: true,
+        ctrlKey: true,
+        bubbles: true,
+      }),
+    );
+  }
+}
+
+function onSelectAllCapture(event: KeyboardEvent): void {
+  pruneSelectAllHosts();
+  if (!isSelectAllHotkey(event)) return;
+  const host = findSelectAllHost(event);
+  if (!host) return;
+  preventSelectAllDefault(event);
+  event.stopImmediatePropagation();
+  invokeSelectAll(host);
+}
+
+/** Bind once on window capture so Command+A is caught before the page selects. */
+export function ensureSelectAllCapture(): void {
+  if (selectAllCaptureBound) return;
+  const root = globalThis as {
+    addEventListener?: typeof addEventListener;
+  };
+  if (typeof root.addEventListener !== "function") return;
+  root.addEventListener("keydown", onSelectAllCapture, true);
+  selectAllCaptureBound = true;
+}
+
+ensureSelectAllCapture();
 
 /**
  * Register a widget host so Ctrl+A / Command+A is handled in the capture phase
@@ -142,19 +193,17 @@ export function setSelectAllHost(
   el: HTMLElement | null,
   onSelectAll: () => void,
 ): void {
-  if (!el || typeof document === "undefined") return;
+  if (!el) return;
+  el.setAttribute(SELECT_ALL_HOST_ATTR, "");
+  ensureSelectAllCapture();
   const bag = el as unknown as Record<string, SelectAllHost | undefined>;
   const existing = bag[HOST_KEY];
   if (existing) {
     existing.onSelectAll = onSelectAll;
     selectAllHosts.add(existing);
-  } else {
-    const host: SelectAllHost = { el, onSelectAll };
-    bag[HOST_KEY] = host;
-    selectAllHosts.add(host);
+    return;
   }
-  if (!documentListenerBound) {
-    document.addEventListener("keydown", onDocumentSelectAllKeydown, true);
-    documentListenerBound = true;
-  }
+  const host: SelectAllHost = { el, onSelectAll };
+  bag[HOST_KEY] = host;
+  selectAllHosts.add(host);
 }

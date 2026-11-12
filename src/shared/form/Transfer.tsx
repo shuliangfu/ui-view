@@ -234,9 +234,14 @@ function TransferColumn(props: TransferColumnProps) {
           );
         });
       }}
-      class={twMerge(transferListShellCls, "min-w-0 shrink-0")}
-      style={{ width: `${listStyle.width ?? 200}px` }}
+      class={twMerge(transferListShellCls, "min-w-0 flex-1")}
+      style={{
+        flex: `1 1 ${listStyle.width ?? 200}px`,
+        width: "auto",
+        minWidth: 0,
+      }}
       tabIndex={-1}
+      data-select-all-host=""
       data-transfer-disabled={disabled ? "true" : undefined}
       onMouseDown={focusSelectAllHost}
       onKeyDown={selectAllInColumn}
@@ -412,7 +417,7 @@ export function Transfer(props: TransferProps): JSXRenderable {
       <div
         id={resolvedId}
         class={twMerge(
-          "transfer flex items-stretch gap-4 rounded-lg",
+          "transfer flex w-full max-w-full min-w-0 items-stretch gap-4 rounded-lg",
           disabled && "opacity-60 pointer-events-none",
           error &&
             twMerge(
