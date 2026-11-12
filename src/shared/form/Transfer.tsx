@@ -94,10 +94,24 @@ export interface TransferProps {
   render?: (item: TransferItem) => unknown;
   /**
    * 列表样式。
-   * `width` 为列宽基准（窄容器内可收缩），`height` 为列表高度，
+   * `width` 为列宽基准（窄容器内可收缩），
+   * `height` / `minHeight` / `maxHeight` 为列表整高（可传像素数字或 CSS 值），
+   * 与顶层同名参数同时存在时，顶层优先；`height` 默认 200，
    * `itemHeight` 为每一项的行高（像素）；不传时按 `size` 使用默认行高。
    */
-  listStyle?: { width?: number; height?: number; itemHeight?: number };
+  listStyle?: {
+    width?: number;
+    height?: number | string;
+    minHeight?: number | string;
+    maxHeight?: number | string;
+    itemHeight?: number;
+  };
+  /** 列表整高，可传像素数字或 CSS 值（如 `"70vh"`、`"calc(100vh - 340px)"`）；优先于 listStyle.height，默认 200 */
+  height?: number | string;
+  /** 列表最小高度，可传像素数字或 CSS 值；优先于 listStyle.minHeight */
+  minHeight?: number | string;
+  /** 列表最大高度，可传像素数字或 CSS 值；优先于 listStyle.maxHeight */
+  maxHeight?: number | string;
   /** 是否禁用 */
   disabled?: boolean;
   /** 错误状态（外框红边）；可与 FormItem / createForm bindTargetKeys 联用 */
@@ -192,6 +206,44 @@ function resolveItemHeight(
   return defaultItemHeight[size];
 }
 
+/** Numbers become px; CSS strings are used as-is. */
+function resolveCssSize(value: number | string | undefined): string | undefined {
+  if (typeof value === "number" && Number.isFinite(value) && value > 0) {
+    return `${value}px`;
+  }
+  if (typeof value === "string" && value.trim()) return value.trim();
+  return undefined;
+}
+
+type ListBoxStyle = {
+  height: string;
+  minHeight?: string;
+  maxHeight?: string;
+};
+
+/** Resolve list viewport height / min / max. Top-level props win over listStyle. */
+function resolveListBoxStyle(
+  listStyle: {
+    height?: number | string;
+    minHeight?: number | string;
+    maxHeight?: number | string;
+  },
+  overrides: {
+    height?: number | string;
+    minHeight?: number | string;
+    maxHeight?: number | string;
+  },
+): ListBoxStyle {
+  const style: ListBoxStyle = {
+    height: resolveCssSize(overrides.height ?? listStyle.height) ?? "200px",
+  };
+  const minHeight = resolveCssSize(overrides.minHeight ?? listStyle.minHeight);
+  const maxHeight = resolveCssSize(overrides.maxHeight ?? listStyle.maxHeight);
+  if (minHeight) style.minHeight = minHeight;
+  if (maxHeight) style.maxHeight = maxHeight;
+  return style;
+}
+
 /** 穿梭列参数 */
 type TransferColumnProps = {
   title: string;
@@ -205,7 +257,14 @@ type TransferColumnProps = {
   filterOption?: (inputValue: string, item: TransferItem) => boolean;
   onSearch?: (value: string) => void;
   render?: (item: TransferItem) => unknown;
-  listStyle: { width?: number; height?: number; itemHeight?: number };
+  listStyle: {
+    width?: number;
+    height?: number | string;
+    minHeight?: number | string;
+    maxHeight?: number | string;
+    itemHeight?: number;
+  };
+  listBoxStyle: ListBoxStyle;
   onTransfer: (keys: string[]) => void;
   disabled?: boolean;
   /** 列底部「N 项」格式化函数 */
@@ -231,6 +290,7 @@ function TransferColumn(props: TransferColumnProps) {
     onSearch,
     render,
     listStyle,
+    listBoxStyle,
     onTransfer,
     disabled = false,
     countFormatter,
@@ -301,7 +361,7 @@ function TransferColumn(props: TransferColumnProps) {
             "w-full flex-1 min-h-0 m-0 border-0 bg-transparent text-slate-800 dark:text-slate-100 outline-none cursor-default dark:[color-scheme:dark] focus:ring-1 focus:ring-inset focus:ring-sky-300/45 dark:focus:ring-sky-400/30",
             transferItemCls[size],
           )}
-          style={{ height: `${listStyle.height ?? 360}px` }}
+          style={listBoxStyle}
           onChange={(event: Event) => {
             applySelectChange(event.currentTarget as HTMLSelectElement);
           }}
@@ -376,7 +436,10 @@ export function Transfer(props: TransferProps): JSXRenderable {
     onSearch,
     filterOption,
     render,
-    listStyle = { width: 200, height: 360 },
+    listStyle = { width: 200, height: 200 },
+    height,
+    minHeight,
+    maxHeight,
     disabled = false,
     error = false,
     id,
@@ -384,6 +447,11 @@ export function Transfer(props: TransferProps): JSXRenderable {
     messages,
   } = props;
   const size = resolveFormControlSize(props.size);
+  const listBoxStyle = resolveListBoxStyle(listStyle, {
+    height,
+    minHeight,
+    maxHeight,
+  });
   const fromFormItem = useContext(FormItemControlIdContext);
   const resolvedId = id ?? fromFormItem;
   const m = { ...defaultTransferMessages, ...messages };
@@ -463,6 +531,7 @@ export function Transfer(props: TransferProps): JSXRenderable {
           onSearch={(v) => onSearch?.("left", v)}
           render={render}
           listStyle={listStyle}
+          listBoxStyle={listBoxStyle}
           size={size}
           onTransfer={(keys) => moveToRight(keys)}
           disabled={disabled}
@@ -527,6 +596,7 @@ export function Transfer(props: TransferProps): JSXRenderable {
           onSearch={(v) => onSearch?.("right", v)}
           render={render}
           listStyle={listStyle}
+          listBoxStyle={listBoxStyle}
           size={size}
           onTransfer={(keys) => moveToLeft(keys)}
           disabled={disabled}
