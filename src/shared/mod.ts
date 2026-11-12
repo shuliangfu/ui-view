@@ -552,6 +552,7 @@ export {
   createForm,
   DatePicker,
   DateTimePicker,
+  DEFAULT_UI_VIEW_UPLOAD_BASE_PATH,
   DEFAULT_UPLOAD_CHUNK_SIZE,
   defaultCheckboxMessages,
   defaultGetUploadResultUrl,
@@ -584,6 +585,7 @@ export {
   uploadActionWithPhase,
   uploadFilePhasedChunks,
   uploadFileSimple,
+  uploadFileViaUiViewBase,
   useFormStore,
 } from "./form/mod.ts";
 export type {
