@@ -449,6 +449,10 @@ export function DataPanel(props: PanelProps): JSXRenderable {
     panelKey: key,
     tabParam,
   }));
+  /** 只在父级 `activeTab` 真正变化时回写，避免点击后用过期的受控值把 tabKey 打回去 */
+  const lastControlledTab: { value: string | undefined } = {
+    value: props.activeTab,
+  };
   const tabReload = { run() {} };
   const handleTabChange = (next: string) => {
     if (next === tabKey.value) {
@@ -3701,7 +3705,11 @@ export function DataPanel(props: PanelProps): JSXRenderable {
                 );
               }
               const controlled = props.activeTab;
-              if (controlled) {
+              if (
+                controlled &&
+                controlled !== lastControlledTab.value
+              ) {
+                lastControlledTab.value = controlled;
                 const synced = resolveDataChromeTabKey(
                   props.tabs,
                   controlled,

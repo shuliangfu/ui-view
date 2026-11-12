@@ -1410,7 +1410,7 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
       // 翻页会出现 loading 遮罩
       D.click(D.q(k, '[data-testid="dp-next"]'));
       out.sawLoading = await D.until(() => D.q(k, '[data-testid="dp-loading"]'), 2000);
-      await D.until(() => D.text(D.q(k, '[data-testid="dp-range"]')).startsWith("第 11-20"), 5000);
+      await D.until(() => D.text(D.q(k, '[data-testid="dp-range"]')).startsWith("第 21-40"), 5000);
       out.page2 = D.text(D.q(k, '[data-testid="dp-range"]'));
       await D.until(() => !D.q(k, '[data-testid="dp-loading"]'));
       // 搜索
@@ -1439,9 +1439,9 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
       return out;`,
       );
       expect(r.total).toBe(60);
-      expect(r.rows).toBe(10);
+      expect(r.rows).toBe(20);
       expect(r.sawLoading).toBeTruthy();
-      expect(r.page2).toBe("第 11-20 条，共 60 条");
+      expect(r.page2).toBe("第 21-40 条，共 60 条");
       expect((r.searched as number) < 60 && (r.searched as number) >= 1).toBe(
         true,
       );
@@ -1468,7 +1468,7 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
         count: D.text(D.q(k, '[data-testid="dp-total-count"]')),
         range: D.text(D.q(k, '[data-testid="dp-range"]')),
         actions: D.q(k, "thead").textContent.includes("Actions"),
-        perPage: D.q(k, '[data-testid="dp-pagesize"]').querySelector('[role="option"]').textContent.trim(),
+        perPage: D.q(k, '[data-testid="dp-pagesize"] button').getAttribute("aria-label"),
       };`,
       );
       expect(en.labels).toEqual([
