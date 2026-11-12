@@ -775,6 +775,8 @@ export function DataPanel(props: PanelProps): JSXRenderable {
     if (!ds.remove) return;
     const r = await guarded(() => ds.remove!(ids));
     if (r) reportBulk(r, m.deleted);
+    const open = viewRow.value;
+    if (open && ids.includes(idOf(open))) viewRow.value = null;
     await load(false);
     props.onChanged?.();
   }
@@ -3319,6 +3321,36 @@ export function DataPanel(props: PanelProps): JSXRenderable {
               >
                 {s.label}
               </Btn>
+            );
+          }
+          if (s.key === "remove" && !s.action) {
+            const id = idOf(r);
+            return (
+              <Popconfirm
+                open={() => popRow.value === id}
+                placement="auto"
+                danger
+                title={tr(m.deleteAsk, { name: rowName(r) })}
+                okText={m.delete}
+                cancelText={m.cancel}
+                overlayClass={POP_OVERLAY_CLS}
+                onOpenChange={(o: boolean) => {
+                  if (!o && popRow.value === id) popRow.value = null;
+                }}
+                onConfirm={() => void doRemove([id])}
+              >
+                <Btn
+                  type="button"
+                  variant={s.tone ?? "danger"}
+                  disabled={s.disable}
+                  data-testid={`dp-view-action-${s.key}`}
+                  onClick={() => {
+                    if (!s.disable) popRow.value = id;
+                  }}
+                >
+                  {s.label}
+                </Btn>
+              </Popconfirm>
             );
           }
           const onAct = () => {
