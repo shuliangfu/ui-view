@@ -719,7 +719,7 @@ const SOURCE_API: DocsApiTableRow[] = [
     type: "ListResult | Promise<…>",
     default: "-",
     description:
-      "返回当前页 { rows, total, totals? }；query = { page, pageSize, sort, order: asc|desc, filters }",
+      "返回当前页 { items, total, totals? }；query = { page, pageSize, sort, order: asc|desc, filters }",
   },
   {
     name: "sync",
@@ -1961,8 +1961,8 @@ const source: DataSource = {
     const r = await fetch("/api/users?" + params.toString());
     if (!r.ok) throw new Error(await r.text() || r.statusText);
     const data = await r.json();
-    // 约定返回 { rows, total }；若后台是 { list, count } 等，在此映射即可
-    return { rows: data.rows, total: data.total };
+    // 约定返回 { items, total }；若后台是 { list, count } 等，在此映射即可
+    return { items: data.items, total: data.total };
   },
   // 写操作按需提供；没有的能力面板会隐藏对应按钮
   async create(values) {
@@ -2042,7 +2042,7 @@ const form = {
 />`;
 
 const themeCode =
-  `// 浅色 / 深色：跟随根节点 .dark；深色面板主体用 CSS 变量 --dp-panel-body-bg（默认 #18212f）
+  `// 浅色 / 深色：跟随根节点 .dark；深色面板主体用 CSS 变量 --dp-panel-body-bg（默认与 CodeBlock 相同的 slate-800/80）
 // 工具栏按钮组：浅色灰白、深色 slate，相邻按钮只有一条淡分割线
 const rows = [
   { id: "1", name: "Alice", email: "alice@example.com", role: "admin", status: "active", balance: 120 },
@@ -3365,7 +3365,7 @@ ${ALIGN_DEMO_COLUMNS_CODE}
           <Paragraph class="mb-2 text-sm text-slate-600 dark:text-slate-400">
             前端：<code class="text-xs">list</code>+
             <code class="text-xs">fetch</code> 拼 query，返回{" "}
-            <code class="text-xs">{"{ rows, total }"}</code>，
+            <code class="text-xs">{"{ items, total }"}</code>，
             <code class="text-xs">sync: false</code>。 下方面板为内存异步模拟。
           </Paragraph>
           <DataPanel

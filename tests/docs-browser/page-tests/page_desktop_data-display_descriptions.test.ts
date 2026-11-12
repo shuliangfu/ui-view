@@ -562,6 +562,83 @@ describe("文档页 E2E：/desktop/data-display/descriptions（Descriptions 描�
     expect(ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
 
+  it("整行斑马：标签与内容同底，奇偶行交替，非左右分色", async (t) => {
+    if (!t?.browser?.goto) return;
+    await sharedEnv.goto(t, DOC_PATH);
+    await sharedEnv.waitDocMainReady(t);
+    const r = await t.browser.evaluate(() => {
+      const needle = "标签一列、内容一列（每行一组 → column=1）";
+      const main = document.querySelector("main");
+      if (!main) return { ok: false, reason: "no main" };
+      const heads = main.querySelectorAll("h2, h3");
+      let desc: Element | null = null;
+      for (let i = 0; i < heads.length; i++) {
+        const h = heads[i];
+        if (!(h.textContent || "").includes(needle)) continue;
+        let root: Element | null = h.parentElement;
+        for (let depth = 0; depth < 12 && root && root !== main; depth++) {
+          const found = root.querySelector(".descriptions");
+          if (found) {
+            desc = found;
+            break;
+          }
+          root = root.parentElement;
+        }
+        if (desc) break;
+      }
+      if (!desc) return { ok: false, reason: "missing descriptions" };
+      const grid = [...desc.children].find((el) =>
+        (el as HTMLElement).className.includes("grid")
+      ) as HTMLElement | undefined;
+      if (!grid) return { ok: false, reason: "missing grid" };
+      const rows = [...grid.children] as HTMLElement[];
+      if (rows.length < 2) {
+        return { ok: false, reason: "need two rows", count: rows.length };
+      }
+      const cls = rows.map((row) => row.className);
+      const even = cls.filter((_, i) => i % 2 === 0);
+      const odd = cls.filter((_, i) => i % 2 === 1);
+      const sameBg = (el: HTMLElement) => {
+        const kids = [...el.children] as HTMLElement[];
+        if (kids.length < 2) return false;
+        const a = getComputedStyle(kids[0]).backgroundColor;
+        const b = getComputedStyle(kids[1]).backgroundColor;
+        return a === b;
+      };
+      return {
+        ok: true,
+        count: rows.length,
+        evenHasWhite: even.every((c) =>
+          c.includes("bg-white") && c.includes("dark:bg-slate-900/70")
+        ),
+        oddHasSlate: odd.every((c) =>
+          c.includes("bg-slate-50") && c.includes("dark:bg-slate-900/40")
+        ),
+        noOldLabelBg: cls.every((c) => !c.includes("dark:bg-slate-800/50")) &&
+          rows.every((row) =>
+            ![...row.children].some((k) =>
+              (k as HTMLElement).className.includes("dark:bg-slate-800/50")
+            )
+          ),
+        labelValueSame: rows.every(sameBg),
+      };
+    }) as {
+      ok: boolean;
+      reason?: string;
+      count?: number;
+      evenHasWhite?: boolean;
+      oddHasSlate?: boolean;
+      noOldLabelBg?: boolean;
+      labelValueSame?: boolean;
+    };
+    expect(r.ok).toBe(true);
+    expect((r.count ?? 0) >= 2).toBe(true);
+    expect(r.evenHasWhite).toBe(true);
+    expect(r.oddHasSlate).toBe(true);
+    expect(r.noOldLabelBg).toBe(true);
+    expect(r.labelValueSame).toBe(true);
+  }, DOCS_BROWSER_CONFIG);
+
   /**
    * UI·示例区主内容可见且有尺寸。
    */

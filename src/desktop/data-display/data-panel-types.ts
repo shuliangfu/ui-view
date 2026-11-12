@@ -454,7 +454,7 @@ export interface Query {
 
 /** `list()` 返回 */
 export interface ListResult {
-  rows: Row[];
+  items: Row[];
   total: number;
   /** 合计行数据：列 prop → 数值 */
   totals?: Record<string, number>;

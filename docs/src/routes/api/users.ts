@@ -105,7 +105,7 @@ function list(req: Request) {
   const balance = rows.reduce((s, r) => s + (Number(r.balance) || 0), 0);
   const start = (page - 1) * pageSize;
   return json({
-    rows: rows.slice(start, start + pageSize),
+    items: rows.slice(start, start + pageSize),
     total,
     totals: { balance: Math.round(balance * 100) / 100 },
   });

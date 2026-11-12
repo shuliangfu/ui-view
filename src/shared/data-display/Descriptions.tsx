@@ -217,12 +217,17 @@ export function Descriptions(props: DescriptionsProps): JSXRenderable {
    * 各行竖线、冒号位置一致；过长标签仍可在格内换行（可配合更大 `labelMinWidth` 减少换行）。
    */
   const labelCls = twMerge(
-    "text-slate-500 dark:text-slate-400 font-medium bg-slate-50 dark:bg-slate-800/50",
+    "text-slate-500 dark:text-slate-400 font-medium",
     cellCls,
     layout === "horizontal" && "text-right min-w-0 break-words",
     labelClass,
   );
   const contentCls = twMerge(cellCls, contentClass);
+  /** 整行斑马（标签与内容同底）；对齐 DataPanel 表体：偶行白／slate-900/70，奇行 slate-50／slate-900/40 */
+  const rowZebraCls = (row: number): string =>
+    row % 2
+      ? "bg-slate-50 dark:bg-slate-900/40"
+      : "bg-white dark:bg-slate-900/70";
 
   return (
     <div class={twMerge("descriptions", className)}>
@@ -256,6 +261,7 @@ export function Descriptions(props: DescriptionsProps): JSXRenderable {
               key={index}
               class={twMerge(
                 "min-w-0",
+                rowZebraCls(placement.row),
                 layout === "horizontal" && "grid w-full gap-0",
                 layout === "vertical" && "flex flex-col",
                 bordered &&

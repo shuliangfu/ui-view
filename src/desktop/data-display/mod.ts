@@ -128,6 +128,16 @@ export {
   type WriteResult,
 } from "./DataPanel.tsx";
 export {
+  assertDataViewToolbarConfig,
+  DATA_VIEW_TOOLBAR_BUILTINS,
+  DataView,
+  isDataViewToolbarBuiltin,
+  normalizeDataViewToolbar,
+  type DataViewCaps,
+  type DataViewProps,
+  type DataViewToolbarBuiltin,
+} from "./DataView.tsx";
+export {
   defaultDataPanelMessages,
   enDataPanelMessages,
 } from "./data-panel-messages.ts";

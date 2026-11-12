@@ -566,19 +566,19 @@ describe("createLocalDataSource：查询", () => {
     expect(s.sync).toBe(true);
     const p1 = s.list(Q);
     expect(p1.total).toBe(23);
-    expect(p1.rows.length).toBe(10);
-    expect(s.list({ ...Q, page: 3 }).rows.length).toBe(3);
-    expect(s.list({ ...Q, page: 9 }).rows.length).toBe(0);
-    expect(s.list({ ...Q, pageSize: 50 }).rows.length).toBe(23);
+    expect(p1.items.length).toBe(10);
+    expect(s.list({ ...Q, page: 3 }).items.length).toBe(3);
+    expect(s.list({ ...Q, page: 9 }).items.length).toBe(0);
+    expect(s.list({ ...Q, pageSize: 50 }).items.length).toBe(23);
   });
 
   it("排序：升序 / 降序 / 数字 / 字符串", () => {
     const s = src();
-    expect(s.list({ ...Q, sort: "name", order: "desc" }).rows[0].name).toBe(
+    expect(s.list({ ...Q, sort: "name", order: "desc" }).items[0].name).toBe(
       "User23",
     );
-    expect(s.list({ ...Q, sort: "score", order: "desc" }).rows[0].score).toBe(66);
-    expect(s.list({ ...Q, sort: "balance", order: "asc" }).rows[0].id).toBe("1");
+    expect(s.list({ ...Q, sort: "score", order: "desc" }).items[0].score).toBe(66);
+    expect(s.list({ ...Q, sort: "balance", order: "asc" }).items[0].id).toBe("1");
   });
 
   it("合计：只对 total 列，浮点误差被消除", () => {
@@ -606,8 +606,8 @@ describe("createLocalDataSource：查询", () => {
 
   it("返回的是副本，改动不会污染内部数据", () => {
     const s = src();
-    s.list(Q).rows[0].name = "HACKED";
-    expect(s.list(Q).rows[0].name).toBe("User01");
+    s.list(Q).items[0].name = "HACKED";
+    expect(s.list(Q).items[0].name).toBe("User01");
   });
 });
 
@@ -621,7 +621,7 @@ describe("createLocalDataSource：写操作", () => {
       onChange: () => changed++,
     });
     s.create!({ name: "New", balance: "12.5" });
-    const first = s.list(Q).rows[0];
+    const first = s.list(Q).items[0];
     expect(first.id).toBe("4");
     expect(first.name).toBe("New");
     expect(first.balance).toBe(12.5);
@@ -665,7 +665,7 @@ describe("createLocalDataSource：写操作", () => {
       failed: 0,
     });
     expect(s.getRows().length).toBe(6);
-    expect(s.list(Q).rows[0].name).toBe("I2");
+    expect(s.list(Q).items[0].name).toBe("I2");
   });
 
   it("setRows 整体替换；writable=false 时没有写方法", () => {

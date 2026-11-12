@@ -298,7 +298,7 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
     );
     expect(
       await colorsClose(t, [
-        [light.bg, "rgb(241, 245, 249)"],
+        [light.bg, "rgb(255, 255, 255)"],
         [light.bd, "rgb(226, 232, 240)"],
         [light.fg, "rgb(51, 65, 85)"],
       ]),
@@ -315,7 +315,7 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
       await colorsClose(t, [
         [dark.bg, "rgb(15, 23, 42)"],
         [dark.bd, "rgb(30, 41, 59)"],
-        [dark.card, "rgb(24, 33, 47)"],
+        [dark.card, "rgba(30, 41, 59, 0.8)"],
       ]),
     ).toBe(true);
     // 浅色面板的卡片不会被染成深色
@@ -325,7 +325,7 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
         P("demo-basic")
       }, ".dp-card")).backgroundColor;`,
     );
-    expect(await colorsClose(t, [[lightCard, "rgb(24, 33, 47)"]])).toBe(false);
+    expect(await colorsClose(t, [[lightCard, "rgba(30, 41, 59, 0.8)"]])).toBe(false);
   }, DOCS_BROWSER_CONFIG);
 
   it("深色面板：URL page 越界时仍显示行（夹页，非整表空）", async (t) => {
@@ -457,12 +457,12 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
           0.05,
         ),
       ).toBe(true);
-      // 浅色面板悬停不受影响（仍为浅色 slate-50）
+      // 浅色面板悬停不受影响（仍为浅色 slate-100）
       const light = '[data-testid="panel-demo-basic"] [data-testid^="dp-row-"]';
       await page.hover(light);
       await ev(t, `await D.sleep(250);`);
       expect(
-        await colorsClose(t, [[(await probe(light)).bg, "rgb(248, 250, 252)"]]),
+        await colorsClose(t, [[(await probe(light)).bg, "rgb(241, 245, 249)"]]),
       ).toBe(true);
     },
     DOCS_BROWSER_CONFIG,
@@ -1778,19 +1778,19 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
       };
       const light = await state();
       expect(light.dark).toBe(false);
-      expect(await colorsClose(t, [[light.tb, "rgb(241, 245, 249)"]])).toBe(
+      expect(await colorsClose(t, [[light.tb, "rgb(255, 255, 255)"]])).toBe(
         true,
       );
-      // slate-50 row hover — accept rgb or oklch serialization
+      // slate-100 row hover — accept rgb or oklch serialization
       expect(
-        await colorsClose(t, [[await hoverBg(), "rgb(248, 250, 252)"]]),
+        await colorsClose(t, [[await hoverBg(), "rgb(241, 245, 249)"]]),
       ).toBe(true);
       await clickToggle();
       const dark = await state();
       expect(dark.dark).toBe(true);
       expect(
         await colorsClose(t, [
-          [dark.card, "rgb(24, 33, 47)"],
+          [dark.card, "rgba(30, 41, 59, 0.8)"],
           [dark.tb, "rgb(15, 23, 42)"],
         ]),
       ).toBe(true);
@@ -1810,11 +1810,11 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
       const back = await state();
       expect(back.dark).toBe(false);
       expect(await colorsClose(t, [[back.card, light.card]])).toBe(true);
-      expect(await colorsClose(t, [[back.tb, "rgb(241, 245, 249)"]])).toBe(
+      expect(await colorsClose(t, [[back.tb, "rgb(255, 255, 255)"]])).toBe(
         true,
       );
       expect(
-        await colorsClose(t, [[await hoverBg(), "rgb(248, 250, 252)"]]),
+        await colorsClose(t, [[await hoverBg(), "rgb(241, 245, 249)"]]),
       ).toBe(true);
     },
     DOCS_BROWSER_CONFIG,

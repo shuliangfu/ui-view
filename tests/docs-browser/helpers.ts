@@ -273,6 +273,70 @@ async function waitDocumentComplete(
 }
 
 /**
+ * dweb 客户端在路由 chunk 动态 import 失败时会渲染错误页（「出错了」+
+ * `Failed to fetch dynamically imported module` +「重新加载」）。
+ * 正文长度足以通过 main 出字等待，但不是目标文档。Windows Node CI 上
+ * `/desktop/charts/bubble` 首次导航偶发此页，同文件后续 `goto` 可恢复。
+ */
+const DOCS_DYNAMIC_IMPORT_ERROR_RE =
+  /Failed to fetch dynamically imported module/i;
+
+const DOCS_DYNAMIC_IMPORT_ERROR_PREFIX = "文档动态导入失败";
+
+/** 动态 import 失败后，重新导航的最多额外次数 */
+const DOCS_DYNAMIC_IMPORT_RETRIES = 2;
+
+function isDocsDynamicImportErrorText(text: string): boolean {
+  return DOCS_DYNAMIC_IMPORT_ERROR_RE.test(text);
+}
+
+function isDocsDynamicImportError(err: unknown): boolean {
+  return err instanceof Error &&
+    err.message.startsWith(DOCS_DYNAMIC_IMPORT_ERROR_PREFIX);
+}
+
+async function readDocsVisibleText(
+  t: DocsBrowserTestContext,
+): Promise<string> {
+  if (!t?.browser) return "";
+  return ((await t.browser.evaluate(() => {
+    const main = document.querySelector("main");
+    return (main?.innerText ?? document.body?.innerText ?? "").trim();
+  })) as string) ?? "";
+}
+
+async function throwIfDocsDynamicImportError(
+  t: DocsBrowserTestContext,
+): Promise<void> {
+  const text = await readDocsVisibleText(t);
+  if (!isDocsDynamicImportErrorText(text)) return;
+  throw new Error(
+    `${DOCS_DYNAMIC_IMPORT_ERROR_PREFIX}，将重新导航：${text.slice(0, 240)}`,
+  );
+}
+
+async function runWithDocsDynamicImportRetry(
+  run: () => Promise<void>,
+): Promise<void> {
+  let lastErr: unknown;
+  for (let i = 0; i <= DOCS_DYNAMIC_IMPORT_RETRIES; i++) {
+    try {
+      await run();
+      return;
+    } catch (err) {
+      lastErr = err;
+      if (
+        !isDocsDynamicImportError(err) ||
+        i === DOCS_DYNAMIC_IMPORT_RETRIES
+      ) {
+        throw err;
+      }
+    }
+  }
+  throw lastErr;
+}
+
+/**
  * 导航后的统一就绪链，共用一段超时预算，避免 complete + main + 句柄串行叠满 60s 测试超时。
  * 顺序：资源加载完成 → 目标路由 main 出字 → Dreamer 事件句柄。
  *
@@ -297,6 +361,8 @@ async function waitAfterDocsNavigate(
   };
   await waitDocumentComplete(t, need("资源加载完成"), expectedPath);
   await waitMainChars(t, GOTO_MAIN_MIN_CHARS, need("main 出字"), expectedPath);
+  // 动态 import 失败页也会出字；先识别再等句柄，避免在错误页上耗尽预算
+  await throwIfDocsDynamicImportError(t);
   await waitDreamerHandlers(t, Math.min(need("Dreamer 事件句柄"), 18_000));
 }
 
@@ -1065,15 +1131,18 @@ async function recoverAndRevisit(
 ): Promise<void> {
   await recoverDocsBrowserPage(t, opts);
   if (!_lastGoto) return;
-  const path = _lastGoto.path;
+  const lastGoto = _lastGoto;
+  const path = lastGoto.path;
   const docsPath = path.startsWith("/") ? path : "/" + path;
   const url = _singletonBaseUrl + docsPath;
-  await navigateDocsPage(t, url, _lastGoto.options);
-  await waitAfterDocsNavigate(
-    t,
-    _lastGoto.options?.waitMainTimeoutMs ?? 25_000,
-    docsPath,
-  );
+  await runWithDocsDynamicImportRetry(async () => {
+    await navigateDocsPage(t, url, lastGoto.options);
+    await waitAfterDocsNavigate(
+      t,
+      lastGoto.options?.waitMainTimeoutMs ?? 25_000,
+      docsPath,
+    );
+  });
 }
 
 export const sharedEnv = {
@@ -1131,14 +1200,14 @@ export const sharedEnv = {
       await waitAfterDocsNavigate(t, waitMainMs, docsPath);
     };
     try {
-      await run();
+      await runWithDocsDynamicImportRetry(run);
     } catch (err) {
       // CI：冷启断开、超时后 page 被置空，或 macOS 长跑末段 WouldBlock／os35
       if (!isRecoverableBrowserError(err)) throw err;
       await recoverDocsBrowserPage(t, {
         resourceExhausted: isResourceExhaustedSpawnError(err),
       });
-      await run();
+      await runWithDocsDynamicImportRetry(run);
     }
   },
 
@@ -1174,13 +1243,17 @@ export const sharedEnv = {
       };
       await waitDocumentComplete(t, need("资源加载完成"), expectedPath);
       await waitMainChars(t, minChars, need("main 出字"), expectedPath);
+      await throwIfDocsDynamicImportError(t);
       // 正文出水后再等 Dreamer 事件句柄，覆盖 reload 后的 hydration 窗口（CI 更慢）
       await waitDreamerHandlers(t, Math.min(need("Dreamer 事件句柄"), 18_000));
     };
     try {
       await once();
     } catch (err) {
-      if (!isRecoverableBrowserError(err)) throw err;
+      if (
+        !isDocsDynamicImportError(err) &&
+        !isRecoverableBrowserError(err)
+      ) throw err;
       await recoverAndRevisit(t, {
         resourceExhausted: isResourceExhaustedSpawnError(err),
       });

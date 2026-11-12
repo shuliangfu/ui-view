@@ -548,7 +548,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
     }
   }
 
-  const rows = createSignal<Row[]>(first?.rows ?? []);
+  const rows = createSignal<Row[]>(first?.items ?? []);
   const total = createSignal(first?.total ?? 0);
   const totals = createSignal<Record<string, number>>(first?.totals ?? {});
   const query = createSignal<Query>(initialQuery);
@@ -630,10 +630,10 @@ export function DataPanel(props: PanelProps): JSXRenderable {
       query.value = { ...q, page: last };
       return load(syncUrl, opts);
     }
-    rows.value = res.rows;
+    rows.value = res.items;
     const open = viewRow.value;
     if (open) {
-      const fresh = res.rows.find((row) => idOf(row) === idOf(open));
+      const fresh = res.items.find((row) => idOf(row) === idOf(open));
       if (fresh) viewRow.value = fresh;
     }
     total.value = res.total;
@@ -928,12 +928,12 @@ export function DataPanel(props: PanelProps): JSXRenderable {
     let totalsAll: Record<string, number> | undefined;
     for (let page = 1; page <= 200; page++) {
       const r = await ds.list({ ...base, page, pageSize: size });
-      all.push(...r.rows);
+      all.push(...r.items);
       totalAll = r.total;
       totalsAll = r.totals;
-      if (all.length >= r.total || r.rows.length === 0) break;
+      if (all.length >= r.total || r.items.length === 0) break;
     }
-    return { rows: all, total: totalAll, totals: totalsAll };
+    return { items: all, total: totalAll, totals: totalsAll };
   }
 
   function downloadFile(
@@ -970,7 +970,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
         title: props.title,
         basename: props.exportName ?? props.title,
         columns: cols,
-        rows: all.rows,
+        rows: all.items,
         messages: m,
         totals: cols.some((c) => c.total) ? all.totals : undefined,
       }));
@@ -1685,7 +1685,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
   const toolbar = () =>
     toolbarHidden ? null : (
       <div
-        class="flex w-full flex-wrap items-center justify-end gap-2 border-b border-slate-200 px-3 py-2 dark:border-slate-700"
+        class="flex w-full flex-wrap items-center justify-end gap-2 border-b border-slate-200 bg-slate-100/80 px-3 py-2 dark:border-slate-700 dark:bg-transparent"
         data-testid="data-panel-toolbar"
       >
         <div class="contents" data-dp-tools={key}>
@@ -1851,7 +1851,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
     const bs = { show: batchStatusOn, disable: false };
     return (
       <div
-        class="flex flex-wrap items-center gap-2 border-t border-slate-200 bg-sky-50 px-4 py-2 text-sm dark:border-slate-700 dark:bg-slate-800"
+        class="flex flex-wrap items-center gap-2 border-t border-slate-200 bg-sky-50 px-4 py-2 text-sm dark:border-slate-700 dark:bg-slate-800/80"
         data-testid="dp-batch-bar"
       >
         <span data-testid="dp-selected-count">
@@ -2458,7 +2458,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
         )}
         <table class="w-full border-collapse text-sm" data-testid="dp-table">
           <thead>
-            <tr class="bg-slate-50 text-left dark:bg-slate-800">
+            <tr class="bg-slate-100/80 text-left dark:bg-slate-800/80">
               {displayCols.map((c) => {
                 if (isSelectionColumn(c)) {
                   return (
@@ -2537,8 +2537,8 @@ export function DataPanel(props: PanelProps): JSXRenderable {
                 <tr
                   class={`${ROW_CLS} ${
                     i % 2
-                      ? "bg-slate-50/50 dark:bg-slate-900/40"
-                      : "bg-white dark:bg-slate-900"
+                      ? "bg-slate-50 dark:bg-slate-900/40"
+                      : "bg-white dark:bg-slate-900/70"
                   }`}
                   data-testid={`dp-row-${idOf(r)}`}
                 >
@@ -2748,7 +2748,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
           {hasTotals && (
             <tfoot>
               <tr
-                class="bg-slate-50 font-semibold dark:bg-slate-800"
+                class="bg-slate-100/80 font-semibold dark:bg-slate-800/80"
                 data-testid="dp-totals"
               >
                 {displayCols.map((c, ci) => {
@@ -3308,6 +3308,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
             class={`dp-card${
               props.class ? ` ${props.class}` : ""
             } ${CARD_STYLE}`}
+            headerClass="bg-slate-200/80 dark:bg-slate-900"
             title={
               <span
                 class="inline-flex min-w-0 items-center gap-2"

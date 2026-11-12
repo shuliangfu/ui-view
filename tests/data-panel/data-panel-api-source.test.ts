@@ -81,15 +81,20 @@ describe("joinApiPath / apiQueryParams / normalizeListPayload", () => {
   });
 
   it("normalizeListPayload 常见壳", () => {
-    expect(normalizeListPayload({ rows: [{ id: "1" }], total: 1 })).toEqual({
-      rows: [{ id: "1" }],
+    expect(normalizeListPayload({ items: [{ id: "1" }], total: 1 })).toEqual({
+      items: [{ id: "1" }],
       total: 1,
     });
     expect(
       normalizeListPayload({
-        data: { rows: [{ id: "2" }], total: 3, totals: { a: 1 } },
+        data: { items: [{ id: "2" }], total: 3, totals: { a: 1 } },
       }),
-    ).toEqual({ rows: [{ id: "2" }], total: 3, totals: { a: 1 } });
+    ).toEqual({ items: [{ id: "2" }], total: 3, totals: { a: 1 } });
+    // 兼容：没有 items 时仍接受 rows
+    expect(normalizeListPayload({ rows: [{ id: "3" }], total: 1 })).toEqual({
+      items: [{ id: "3" }],
+      total: 1,
+    });
   });
 });
 
@@ -128,7 +133,7 @@ describe("createApiDataSource action", () => {
       resource: "users",
       fetch: mockFetch(calls, (c) => {
         if (c.method === "GET" && c.url.startsWith("/api/users?")) {
-          return { json: { rows: [{ id: "1" }], total: 1 } };
+          return { json: { items: [{ id: "1" }], total: 1 } };
         }
         if (c.url === "/api/users/view/1") {
           return { json: { id: "1", name: "A" } };
@@ -152,7 +157,7 @@ describe("createApiDataSource action", () => {
     });
     expect(ds.root).toBe("/api/users");
     expect(ds.apiMode).toBe("action");
-    expect(await ds.list(Q)).toEqual({ rows: [{ id: "1" }], total: 1 });
+    expect(await ds.list(Q)).toEqual({ items: [{ id: "1" }], total: 1 });
     expect(await ds.view("1")).toEqual({ id: "1", name: "A" });
     expect(await ds.create!({ name: "A" })).toEqual({ ok: true });
     expect(await ds.update!("1", { name: "B" })).toEqual({ ok: true });
@@ -227,7 +232,7 @@ describe("createApiDataSource restful", () => {
       apiMode: "restful",
       fetch: mockFetch(calls, (c) => {
         if (c.method === "GET" && c.url.startsWith("/api/users?")) {
-          return { json: { rows: [], total: 0 } };
+          return { json: { items: [], total: 0 } };
         }
         if (c.method === "GET" && c.url === "/api/users/9") {
           return { json: { data: { id: "9" } } };

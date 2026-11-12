@@ -182,25 +182,28 @@ function isRecord(v: unknown): v is Record<string, unknown> {
 
 /** 从常见响应壳里取出 list 载荷 */
 export function normalizeListPayload(body: unknown): ListResult {
-  if (!isRecord(body)) return { rows: [], total: 0 };
+  if (!isRecord(body)) return { items: [], total: 0 };
   const inner = isRecord(body.data) &&
-      (Array.isArray(body.data.rows) || typeof body.data.total === "number")
+      (Array.isArray(body.data.items) || Array.isArray(body.data.rows) ||
+        typeof body.data.total === "number")
     ? body.data
     : body;
-  const rowsRaw = inner.rows ?? (Array.isArray(body.data) ? body.data : []);
-  const rows = Array.isArray(rowsRaw) ? rowsRaw as Row[] : [];
+  // 列表字段以 items 为准；没有 items 时再回退 rows
+  const itemsRaw = inner.items ?? inner.rows ??
+    (Array.isArray(body.data) ? body.data : []);
+  const items = Array.isArray(itemsRaw) ? itemsRaw as Row[] : [];
   const totalRaw = inner.total;
   const total = typeof totalRaw === "number" && Number.isFinite(totalRaw)
     ? totalRaw
-    : rows.length;
+    : items.length;
   const totals = isRecord(inner.totals)
     ? Object.fromEntries(
       Object.entries(inner.totals).filter(([, v]) => typeof v === "number"),
     ) as Record<string, number>
     : undefined;
   return totals && Object.keys(totals).length
-    ? { rows, total, totals }
-    : { rows, total };
+    ? { items, total, totals }
+    : { items, total };
 }
 
 /**
@@ -366,7 +369,7 @@ export function createApiDataSource(
       const qs = apiQueryParams(query).toString();
       const url = qs ? `${root}?${qs}` : root;
       const r = await request("GET", url);
-      if (!r.ok) return { rows: [], total: 0 };
+      if (!r.ok) return { items: [], total: 0 };
       return normalizeListPayload(r.body);
     },
     async view(id: string) {
@@ -380,7 +383,9 @@ export function createApiDataSource(
         if (isRecord(body.data)) return body.data as Row;
         if (isRecord(body.row)) return body.row as Row;
         // 整包当行（排除明显的列表壳）
-        if (!Array.isArray(body.rows)) return body as Row;
+        if (!Array.isArray(body.items) && !Array.isArray(body.rows)) {
+          return body as Row;
+        }
       }
       return null;
     },

@@ -260,7 +260,7 @@ describe("DataPanel SSR：能力开关", () => {
     const ds: DataSource = {
       list() {
         calls++;
-        return Promise.resolve({ rows: data(3), total: 3 });
+        return Promise.resolve({ items: data(3), total: 3 });
       },
     };
     const h = await html({ data: undefined, dataSource: ds, form: undefined });
@@ -273,13 +273,13 @@ describe("DataPanel SSR：能力开关", () => {
     const ds: DataSource = {
       list() {
         calls++;
-        return Promise.resolve({ rows: [], total: 0 });
+        return Promise.resolve({ items: [], total: 0 });
       },
     };
     const h = await html({
       data: undefined,
       dataSource: ds,
-      initial: { rows: data(2), total: 2 },
+      initial: { items: data(2), total: 2 },
       form: undefined,
     });
     expect(calls).toBe(0);
@@ -290,7 +290,7 @@ describe("DataPanel SSR：能力开关", () => {
   it("同步数据源（sync: true）首帧直出", async () => {
     const ds: DataSource = {
       sync: true,
-      list: () => ({ rows: data(4), total: 4 }),
+      list: () => ({ items: data(4), total: 4 }),
     };
     const h = await html({ data: undefined, dataSource: ds, form: undefined });
     expect(h).toContain("共 4 条记录");
@@ -489,7 +489,7 @@ describe("DataPanel SSR：文案与自定义", () => {
       dataSource: {
         sync: true,
         list: () => ({
-          rows: [{ id: "1", name: "A", status: "active" }],
+          items: [{ id: "1", name: "A", status: "active" }],
           total: 1,
         }),
         setField: async () => ({ removed: 0, failed: [] }),
@@ -546,7 +546,7 @@ describe("DataPanel SSR：文案与自定义", () => {
       dataSource: {
         sync: true,
         list: () => ({
-          rows: [{ id: "1", name: "A", status: "active" }],
+          items: [{ id: "1", name: "A", status: "active" }],
           total: 1,
         }),
         setField: async () => ({ removed: 0, failed: [] }),

@@ -181,6 +181,11 @@ const DATA_DISPLAY_SUBMENU = [
     label: "DataPanel",
     desc: "数据面板",
   },
+  {
+    path: "/desktop/data-display/data-view",
+    label: "DataView",
+    desc: "数据明细",
+  },
   { path: "/desktop/data-display/list", label: "List", desc: "列表" },
   { path: "/desktop/data-display/card", label: "Card", desc: "卡片" },
   { path: "/desktop/data-display/tag", label: "Tag", desc: "标签" },

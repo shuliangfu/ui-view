@@ -651,6 +651,8 @@ export interface LocalDataSource extends DataSource {
   importRows?(rows: Record<string, string>[]): ImportResult;
 
   list(query: Query): ListResult;
+  /** 按主键取单条（副本）；没有则 null */
+  view(id: string): Row | null;
   /** 当前全部行（副本） */
   getRows(): Row[];
   /** 整体替换数据 */
@@ -1031,10 +1033,14 @@ export function createLocalDataSource(
       }
       const start = (q.page - 1) * q.pageSize;
       return {
-        rows: rows.slice(start, start + q.pageSize).map((r) => ({ ...r })),
+        items: rows.slice(start, start + q.pageSize).map((r) => ({ ...r })),
         total: rows.length,
         totals: Object.keys(totals).length ? totals : undefined,
       };
+    },
+    view(id) {
+      const row = store.find((r) => idOf(r) === id);
+      return row ? { ...row } : null;
     },
     getRows: () => store.map((r) => ({ ...r })),
     setRows(rows) {

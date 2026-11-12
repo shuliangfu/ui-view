@@ -189,14 +189,14 @@ export const ACT_TONE_HOVER: Record<string, string> = {
  */
 /** 工具栏按钮 Tailwind 壳（不含位置标记类） */
 export const TB_STYLE =
-  "box-border !h-[2.125rem] !w-[2.625rem] !p-0 leading-none !rounded-none !bg-slate-100 !border-slate-200 !text-slate-700 hover:enabled:!bg-slate-200 hover:enabled:!text-slate-900 dark:!bg-slate-900 dark:!border-slate-800 dark:!text-slate-200 dark:hover:enabled:!bg-slate-800 dark:hover:enabled:!text-white [&_[role=img]]:!h-4 [&_[role=img]]:!w-4";
+  "box-border !h-[2.125rem] !w-[2.625rem] !p-0 leading-none !rounded-none !bg-white !border-slate-200 !text-slate-700 hover:enabled:!bg-slate-200 hover:enabled:!text-slate-900 dark:!bg-slate-900 dark:!border-slate-800 dark:!text-slate-200 dark:hover:enabled:!bg-slate-800 dark:hover:enabled:!text-white [&_[role=img]]:!h-4 [&_[role=img]]:!w-4";
 export const TB_FIRST_STYLE = "!rounded-l-[5px]";
 export const TB_LAST_STYLE = "!rounded-r-[5px]";
 export const TB_NF_STYLE = "!border-l-0";
 export const TB_NL_STYLE = "!border-r !shadow-none";
 
-/** 行悬停：压浅色 `hover:bg-slate-50`（原 `.dark .dp-row:hover` slate-800@60%） */
-export const ROW_CLS = "dp-row hover:bg-slate-50 dark:hover:!bg-slate-800/60";
+/** 行悬停：浅色 `hover:bg-slate-100`（原 `.dark .dp-row:hover` slate-800@60%） */
+export const ROW_CLS = "dp-row hover:bg-slate-100 dark:hover:!bg-slate-800/60";
 
 /** 就地编辑可点区（原 `.dp-cell-edit`） */
 export const CELL_EDIT_CLS =
@@ -229,15 +229,15 @@ export const ACTS_CLS =
  * 移动端 max-sm 上／左／右贴边（原 @media）。
  */
 export const CARD_STYLE =
-  "max-sm:!mx-0 max-sm:!mt-0 dark:!bg-[var(--dp-panel-body-bg,#18212f)] dark:!text-[var(--dp-panel-fg,#e2e8f0)] dark:[&_th]:!text-[var(--dp-panel-fg,#f1f5f9)] dark:[&_td]:!text-[var(--dp-panel-fg,#e2e8f0)] dark:[&_.dp-cell-edit]:!text-[var(--dp-panel-fg,#e2e8f0)] dark:[&_[data-testid=dp-total-count]]:!text-[var(--dp-panel-muted,#cbd5e1)]";
+  "max-sm:!mx-0 max-sm:!mt-0 bg-slate-50 dark:!bg-[var(--dp-panel-body-bg,rgb(30_41_59/0.8))] dark:!text-[var(--dp-panel-fg,#e2e8f0)] dark:[&_th]:!text-[var(--dp-panel-fg,#f1f5f9)] dark:[&_td]:!text-[var(--dp-panel-fg,#e2e8f0)] dark:[&_.dp-cell-edit]:!text-[var(--dp-panel-fg,#e2e8f0)] dark:[&_[data-testid=dp-total-count]]:!text-[var(--dp-panel-muted,#cbd5e1)]";
 
 /** 表格外包（原 `.dp-table-wrap`；移动端顶／左右 padding 清零） */
 export const TABLE_WRAP_CLS =
-  "dp-table-wrap px-2.5 py-2.5 max-sm:!px-0 max-sm:!pt-0";
+  "dp-table-wrap bg-white px-2.5 py-2.5 dark:bg-transparent max-sm:!px-0 max-sm:!pt-0";
 
 /** 分页条（原 `.dp-pg`；移动端列布局居中） */
 export const PG_CLS =
-  "dp-pg flex flex-wrap items-center justify-between gap-3 px-3 py-3 text-sm max-sm:!flex-col max-sm:!items-center max-sm:!justify-center max-sm:!text-center";
+  "dp-pg flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 bg-slate-100/80 px-3 py-3 text-sm dark:border-slate-700 dark:bg-transparent max-sm:!flex-col max-sm:!items-center max-sm:!justify-center max-sm:!text-center";
 
 /** 分页控件组（原 `.dp-pg-ctrls`） */
 export const PG_CTRLS_CLS =
