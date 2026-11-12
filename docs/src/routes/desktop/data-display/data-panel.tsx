@@ -1258,6 +1258,43 @@ const columns: Column[] = [
   }}
   caps={{ create: false, remove: false }} />`;
 
+const joinNameRows = [
+  { id: "1", lastName: "张", firstName: "棋" },
+  { id: "2", lastName: "舒", firstName: "良府" },
+  { id: "3", lastName: "李", firstName: "明" },
+];
+const joinNameColumns: Column[] = [
+  { type: "index" },
+  { prop: "lastName", label: "姓", sortable: true },
+  { prop: "firstName", label: "名", sortable: true },
+  {
+    label: "姓名",
+    sortable: true,
+    sortProp: "lastName",
+    formatter: (row: Row) =>
+      `${row.lastName ?? ""}${row.firstName ?? ""}` || "—",
+  },
+];
+const joinNameCode = `const rows = [
+  { id: "1", lastName: "张", firstName: "棋" },
+  { id: "2", lastName: "舒", firstName: "良府" },
+  { id: "3", lastName: "李", firstName: "明" },
+];
+const columns: Column[] = [
+  { type: "index" },
+  { prop: "lastName", label: "姓", sortable: true },
+  { prop: "firstName", label: "名", sortable: true },
+  {
+    label: "姓名",
+    sortable: true,
+    sortProp: "lastName",
+    formatter: (row) =>
+      \`\${row.lastName ?? ""}\${row.firstName ?? ""}\` || "—",
+  },
+];
+<DataPanel title="拼接列" data={rows} columns={columns} />
+`;
+
 const basicCode = `const rows = [
   { id: "1", name: "Alice", email: "alice@example.com", role: "admin", status: "active", balance: 120 },
   { id: "2", name: "Bob", email: "bob@example.com", role: "editor", status: "disabled", balance: 80 },
@@ -3372,6 +3409,34 @@ ${ALIGN_DEMO_COLUMNS_CODE}
           />
         </DocsDemo>
 
+        <DocsDemo title="拼接列" code={joinNameCode}>
+          <Paragraph class="mb-3 text-sm text-slate-600 dark:text-slate-400">
+            可不写 <code class="text-xs">prop</code>
+            ，用 <code class="text-xs">formatter</code>{" "}
+            把多个字段拼成一列。排序写 <code class="text-xs">sortProp</code>
+            ，这里姓名按前面的姓排。
+          </Paragraph>
+          <DataPanel
+            panelKey="demo-join-name"
+            title="拼接列"
+            data={joinNameRows}
+            columns={joinNameColumns}
+            caps={{
+              create: false,
+              update: false,
+              view: false,
+              remove: false,
+              import: false,
+              export: false,
+              print: false,
+              columns: false,
+              density: false,
+              fullscreen: false,
+              copy: false,
+            }}
+          />
+        </DocsDemo>
+
         <DocsDemo title="单元格编辑" code={cellCode}>
           <p class="mb-2 text-sm text-slate-600 dark:text-slate-300">
             <code>
@@ -3757,7 +3822,8 @@ ${ALIGN_DEMO_COLUMNS_CODE}
             caps={{ create: false, update: false, remove: false, view: false }}
           />
           <p class="mt-2 text-xs text-slate-500" data-testid="demo-ra-fn-hint">
-            {() => actionHint.value ||
+            {() =>
+              actionHint.value ||
               "locked 行「分配」仍可见但 disabled；点击看 item.id"}
           </p>
         </DocsDemo>

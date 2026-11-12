@@ -212,6 +212,24 @@ const basicCode = `<DataView
   }}
 />`;
 
+const JOIN_VIEW_CODE =
+  `const user = { id: "1", lastName: "舒", firstName: "良府" };
+<DataView
+  title="用户详情"
+  data={user}
+  view={{
+    props: [
+      { prop: "lastName", label: "姓" },
+      { prop: "firstName", label: "名" },
+      {
+        label: "姓名",
+        formatter: (row) =>
+          \`\${row.lastName ?? ""}\${row.firstName ?? ""}\` || "—",
+      },
+    ],
+  }}
+/>`;
+
 const DEMO_USER = {
   id: "1",
   name: "Ada Lovelace",
@@ -285,6 +303,26 @@ export default function DataDisplayDataView() {
               props: [
                 { prop: "name", label: "姓名", required: true },
                 { prop: "email", label: "邮箱" },
+              ],
+            }}
+          />
+        </DocsDemo>
+
+        <DocsDemo title="拼接字段" code={JOIN_VIEW_CODE}>
+          <DataView
+            panelKey="demo-data-view-join-name"
+            title="用户详情"
+            data={{ id: "1", lastName: "舒", firstName: "良府" }}
+            toolbar={false}
+            view={{
+              props: [
+                { prop: "lastName", label: "姓" },
+                { prop: "firstName", label: "名" },
+                {
+                  label: "姓名",
+                  formatter: (row) =>
+                    `${row.lastName ?? ""}${row.firstName ?? ""}` || "—",
+                },
               ],
             }}
           />
