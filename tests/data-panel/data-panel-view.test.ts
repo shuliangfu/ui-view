@@ -263,6 +263,12 @@ describe("DataPanel view / form / search 配置", () => {
   it("Column.width / minWidth / maxWidth 拼 style", () => {
     expect(columnWidthStyle({})).toBeUndefined();
     expect(columnWidthStyle({ width: 120 })).toBe("width:120px");
+    expect(columnWidthStyle({ width: "auto" })).toBe(
+      "width:max-content;white-space:nowrap",
+    );
+    expect(columnWidthStyle({ width: "auto", minWidth: 80 })).toBe(
+      "width:max-content;white-space:nowrap;min-width:80px",
+    );
     expect(columnWidthStyle({ minWidth: 80, maxWidth: 240 })).toBe(
       "min-width:80px;max-width:240px",
     );

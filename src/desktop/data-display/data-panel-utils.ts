@@ -373,8 +373,9 @@ export function resolveColumnHeaderAlign(
 }
 
 /**
- * 将列宽相关字段拼成内联 style 字符串（`width`／`min-width`／`max-width`，单位 px）。
- * 无任何宽度字段时返回 `undefined`。
+ * 将列宽相关字段拼成内联 style 字符串。
+ * `width` 为数字时写成 `px`；为 `"auto"` 时用 `max-content` 并禁止换行，按内容自适应。
+ * `minWidth`／`maxWidth` 仍为像素。无任何宽度字段时返回 `undefined`。
  *
  * @param c - 含宽度字段的列定义
  * @returns CSS 声明串，或无宽度时 `undefined`
@@ -383,7 +384,11 @@ export function columnWidthStyle(
   c: Pick<Column, "width" | "minWidth" | "maxWidth">,
 ): string | undefined {
   const parts: string[] = [];
-  if (c.width != null) parts.push(`width:${c.width}px`);
+  if (c.width === "auto") {
+    parts.push("width:max-content", "white-space:nowrap");
+  } else if (c.width != null) {
+    parts.push(`width:${c.width}px`);
+  }
   if (c.minWidth != null) parts.push(`min-width:${c.minWidth}px`);
   if (c.maxWidth != null) parts.push(`max-width:${c.maxWidth}px`);
   return parts.length > 0 ? parts.join(";") : undefined;

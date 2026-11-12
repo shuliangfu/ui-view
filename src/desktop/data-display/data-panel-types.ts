@@ -76,8 +76,10 @@ export interface Column {
    * 用于「表头居中、单元格仍左／右」等；系统列忽略本字段。
    */
   headerAlign?: "left" | "center" | "right";
-  /** 列宽（px） */
-  width?: number;
+  /**
+   * 列宽。传数字为像素；传 `"auto"` 时按表头和单元格内容撑开，不均分剩余宽度。
+   */
+  width?: number | "auto";
   /**
    * 列最小宽度（px）。
    * 与 `width`／`maxWidth` 一并写到表头与单元格 style。
