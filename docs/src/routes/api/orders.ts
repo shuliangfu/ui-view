@@ -74,7 +74,7 @@ function list(req: Request) {
   const page = Math.max(1, Number(u.searchParams.get("page") || 1) || 1);
   const pageSize = Math.max(
     1,
-    Number(u.searchParams.get("pageSize") || 10) || 10,
+    Number(u.searchParams.get("pageSize") || 20) || 20,
   );
   const sort = u.searchParams.get("sort") || "";
   const order = u.searchParams.get("order") === "desc" ? "desc" : "asc";

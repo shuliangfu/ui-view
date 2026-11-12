@@ -151,7 +151,7 @@ const DATA_PANEL_API: DocsApiTableRow[] = [
   {
     name: "pageSize / pageSizes",
     type: "number / number[]",
-    default: "10 / [10,20,50,100]",
+    default: "20 / [10,20,50,100]",
     description: "默认每页条数与可选项",
   },
   {
