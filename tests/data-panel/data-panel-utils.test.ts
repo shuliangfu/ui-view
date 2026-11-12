@@ -22,6 +22,8 @@ import {
   parseCsv,
   parseJsonRows,
   parseXmlRows,
+  filtersAfterSearchApply,
+  filtersAfterSearchReset,
   queryFromParams,
   queryToParams,
   resolveBatchStatusColumn,
@@ -1063,5 +1065,79 @@ describe("validateForm rules／search／layout", () => {
     expect(useFieldGrid([{}])).toBe(false);
     expect(useFieldGrid([{ span: 6 }])).toBe(true);
     expect(useFieldGrid([{ width: "50%" }])).toBe(true);
+  });
+});
+
+describe("filtersAfterSearchReset / filtersAfterSearchApply", () => {
+  it("reset only clears search form fields and keeps tab", () => {
+    expect(
+      filtersAfterSearchReset(
+        { q: "张三", tab: "12", status: "on" },
+        ["q"],
+      ),
+    ).toEqual({ tab: "12", status: "on" });
+  });
+
+  it("reset keeps fixed fields even if they share a search name", () => {
+    expect(
+      filtersAfterSearchReset(
+        { q: "张三", scope: "mine" },
+        ["q", "scope"],
+        { scope: "mine" },
+      ),
+    ).toEqual({ scope: "mine" });
+  });
+
+  it("apply updates search fields only and keeps tab", () => {
+    expect(
+      filtersAfterSearchApply(
+        { q: "张三", tab: "6" },
+        { q: "李四" },
+        ["q"],
+      ),
+    ).toEqual({ q: "李四", tab: "6" });
+    expect(
+      filtersAfterSearchApply(
+        { q: "张三", tab: "6" },
+        {},
+        ["q"],
+      ),
+    ).toEqual({ tab: "6" });
+  });
+
+  it("apply then reset only drops search fields and keeps tab", () => {
+    const afterApply = filtersAfterSearchApply(
+      { tab: "12", status: "on" },
+      { q: "王五", role: "admin" },
+      ["q", "role"],
+    );
+    expect(afterApply).toEqual({
+      tab: "12",
+      status: "on",
+      q: "王五",
+      role: "admin",
+    });
+    expect(filtersAfterSearchReset(afterApply, ["q", "role"])).toEqual({
+      tab: "12",
+      status: "on",
+    });
+  });
+
+  it("reset on empty filters stays empty, or keeps only fixed", () => {
+    expect(filtersAfterSearchReset(undefined, ["q"])).toEqual({});
+    expect(filtersAfterSearchReset({}, ["q"], { scope: "mine" })).toEqual({
+      scope: "mine",
+    });
+  });
+
+  it("apply does not overwrite a fixed field", () => {
+    expect(
+      filtersAfterSearchApply(
+        { q: "张三", scope: "mine", tab: "3" },
+        { q: "李四", scope: "all" },
+        ["q", "scope"],
+        { scope: "mine" },
+      ),
+    ).toEqual({ q: "李四", scope: "mine", tab: "3" });
   });
 });

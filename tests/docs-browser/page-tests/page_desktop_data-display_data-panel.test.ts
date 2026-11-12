@@ -3163,6 +3163,110 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
     expect(r.hash).toBe("#tab");
   }, DOCS_BROWSER_CONFIG);
 
+  it("Tab：刚进入地址栏没有 tab 时选中第一个标签", async (t) => {
+    if (!t?.browser?.goto) return;
+    await open(t, "demo-tabs");
+    const r = await ev<{ selected: string[]; tab: string | null }>(
+      t,
+      `
+      const k = ${P("demo-tabs")};
+      const bar = D.q(k, '[data-testid="data-panel-toolbar"]');
+      return {
+        selected: [...bar.querySelectorAll('[role="tab"]')]
+          .filter((el) => el.getAttribute("aria-selected") === "true")
+          .map((el) => D.text(el)),
+        tab: new URLSearchParams(location.search).get("tab"),
+      };`,
+    );
+    expect(r.selected).toEqual(["全部"]);
+    expect(r.tab).toBeNull();
+  }, DOCS_BROWSER_CONFIG);
+
+  it("Tab：搜索重置只清表单字段，保留 ?tab=", async (t) => {
+    if (!t?.browser?.goto) return;
+    await open(t, "demo-tabs");
+    const afterTab = await ev<{
+      switched: boolean;
+      tab: string | null;
+    }>(
+      t,
+      `
+      const k = ${P("demo-tabs")};
+      const clickTab = (label) => {
+        const bar = D.q(k, '[data-testid="data-panel-toolbar"]');
+        const tab = [...(bar ? bar.querySelectorAll('[role="tab"]') : [])].find((el) => D.text(el) === label);
+        if (tab) { tab.scrollIntoView({ block: "center" }); tab.click(); }
+        return tab;
+      };
+      const switched = await D.until(() => {
+        clickTab("管理员");
+        const bar = D.q(k, '[data-testid="data-panel-toolbar"]');
+        return !!(bar && [...bar.querySelectorAll('[role="tab"]')].some((el) => D.text(el) === "管理员" && el.getAttribute("aria-selected") === "true"));
+      }, 8000);
+      return {
+        switched,
+        tab: new URLSearchParams(location.search).get("tab"),
+      };`,
+    );
+    expect(afterTab.switched).toBe(true);
+    expect(afterTab.tab).toBe("admin");
+
+    const afterSearch = await ev<{
+      submitted: boolean;
+      tab: string | null;
+      name: string | null;
+    }>(
+      t,
+      `
+      const k = ${P("demo-tabs")};
+      D.click(D.q(k, '[data-testid="dp-search-toggle"]'));
+      await D.until(() => document.querySelector('[role="dialog"] [data-testid="dp-search"]'));
+      D.fill(document.querySelector('[data-testid="dp-f-name"] input'), "张三");
+      D.click(D.g('[data-testid="dp-search-submit"]'));
+      const submitted = await D.until(() => !document.querySelector('[data-testid="dp-search"]'));
+      return {
+        submitted,
+        tab: new URLSearchParams(location.search).get("tab"),
+        name: new URLSearchParams(location.search).get("name"),
+      };`,
+    );
+    expect(afterSearch.submitted).toBe(true);
+    expect(afterSearch.tab).toBe("admin");
+    expect(afterSearch.name).toBe("张三");
+
+    const afterReset = await ev<{
+      reset: boolean;
+      tab: string | null;
+      name: string | null;
+      selected: string[];
+      input: string;
+    }>(
+      t,
+      `
+      const k = ${P("demo-tabs")};
+      D.click(D.q(k, '[data-testid="dp-search-toggle"]'));
+      await D.until(() => document.querySelector('[role="dialog"] [data-testid="dp-search"]'));
+      D.click(D.g('[data-testid="dp-search-reset"]'));
+      const reset = await D.until(() => new URLSearchParams(location.search).get("name") == null, 8000);
+      const bar = D.q(k, '[data-testid="data-panel-toolbar"]');
+      const input = document.querySelector('[data-testid="dp-f-name"] input');
+      return {
+        reset,
+        tab: new URLSearchParams(location.search).get("tab"),
+        name: new URLSearchParams(location.search).get("name"),
+        selected: [...bar.querySelectorAll('[role="tab"]')]
+          .filter((el) => el.getAttribute("aria-selected") === "true")
+          .map((el) => D.text(el)),
+        input: input ? input.value : "",
+      };`,
+    );
+    expect(afterReset.reset).toBe(true);
+    expect(afterReset.tab).toBe("admin");
+    expect(afterReset.name).toBeNull();
+    expect(afterReset.selected).toEqual(["管理员"]);
+    expect(afterReset.input).toBe("");
+  }, DOCS_BROWSER_CONFIG);
+
   /**
    * UI·示例区主内容可见且有尺寸。
    */

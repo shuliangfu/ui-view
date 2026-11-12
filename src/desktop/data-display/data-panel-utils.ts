@@ -334,6 +334,43 @@ export function queryFromParams(
 }
 
 /**
+ * 搜索重置：只去掉搜索表单里的字段，其它过滤条件一律保留。
+ * `tab` 不是搜索字段，不会被清掉（即便它曾被写进 filters）。
+ */
+export function filtersAfterSearchReset(
+  filters: Record<string, string> | undefined,
+  searchNames: readonly string[],
+  fixed?: Record<string, string>,
+): Record<string, string> {
+  const next = { ...(filters ?? {}) };
+  const locked = fixed ?? {};
+  for (const name of searchNames) {
+    if (!(name in locked)) delete next[name];
+  }
+  return { ...next, ...locked };
+}
+
+/**
+ * 搜索提交：只更新搜索表单字段（空值则删除该键），其它过滤条件保留。
+ */
+export function filtersAfterSearchApply(
+  filters: Record<string, string> | undefined,
+  searchValues: Record<string, string>,
+  searchNames: readonly string[],
+  fixed?: Record<string, string>,
+): Record<string, string> {
+  const next = { ...(filters ?? {}) };
+  const locked = fixed ?? {};
+  for (const name of searchNames) {
+    if (name in locked) continue;
+    const v = searchValues[name];
+    if (v) next[name] = v;
+    else delete next[name];
+  }
+  return { ...next, ...locked };
+}
+
+/**
  * 列规范化：旧 `edit:true` → 补 `inline`（两档 options→switch，否则 text）。
  * 已写 `inline` 时不动。
  */

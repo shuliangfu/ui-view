@@ -5,23 +5,29 @@
  * API requests (default key `tab`). A panel without tabs never sends the
  * param. Results are cached per tab + list query for the panel instance.
  */
-import type { DataChromeTab } from "./data-panel-tabs.tsx";
+import {
+  type DataChromeTab,
+  resolveDataChromeTabKey,
+} from "./data-panel-tabs.tsx";
 import type { ListResult, Query, Row } from "./data-panel-types.ts";
 
 /** Resolved tab query to attach, or `undefined` when it must not be sent. */
 export type TabQuery = { param: string; value: string };
 
 /**
- * Attach the tab query only when the panel has tabs, `tabParam` is enabled,
- * and the active key is non-empty. Never returns an empty value.
+ * Attach the tab query only when the panel has tabs and `tabParam` is enabled.
+ * If the active key is empty (first visit, address bar has no tab yet),
+ * use the first enabled tab, otherwise `tabs[0]`. Never returns an empty value.
  */
 export function resolveTabQuery(
   tabs: DataChromeTab[] | undefined,
   tabParam: string,
   tabKey: string,
 ): TabQuery | undefined {
-  if (!tabs?.length || !tabParam || !tabKey) return undefined;
-  return { param: tabParam, value: tabKey };
+  if (!tabs?.length || !tabParam) return undefined;
+  const value = tabKey || resolveDataChromeTabKey(tabs);
+  if (!value) return undefined;
+  return { param: tabParam, value };
 }
 
 /** Reset pagination when the active tab changes. Search / sort / filters stay. */

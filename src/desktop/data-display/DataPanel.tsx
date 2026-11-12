@@ -89,6 +89,8 @@ import {
   enrichFormFields,
   enrichSearchFields,
   fieldLayoutStyle,
+  filtersAfterSearchApply,
+  filtersAfterSearchReset,
   fieldProp,
   fieldsOf,
   formatDateTime,
@@ -1989,14 +1991,30 @@ export function DataPanel(props: PanelProps): JSXRenderable {
     }
     searchErrors.value = {};
     searchOpen.value = false;
-    setQuery({ filters: { ...filters, ...(props.fixed ?? {}) }, page: 1 });
+    setQuery({
+      filters: filtersAfterSearchApply(
+        query.value.filters,
+        filters,
+        searchDefs.map((s) => fieldProp(s)),
+        props.fixed,
+      ),
+      page: 1,
+    });
   }
   function resetSearch(): void {
     for (const sdef of searchDefs) {
       sfields[fieldProp(sdef)].value = "";
     }
     searchErrors.value = {};
-    setQuery({ filters: { ...(props.fixed ?? {}) }, page: 1 });
+    // 只清搜索表单字段，保留 tab 等非搜索条件
+    setQuery({
+      filters: filtersAfterSearchReset(
+        query.value.filters,
+        searchDefs.map((s) => fieldProp(s)),
+        props.fixed,
+      ),
+      page: 1,
+    });
   }
   const searchBody = () => (
     <form

@@ -14,6 +14,7 @@ import {
   tabListCacheKey,
   wrapFetchWithTabParam,
 } from "../../src/desktop/data-display/data-panel-tab-source.ts";
+import { filtersAfterSearchReset } from "../../src/desktop/data-display/data-panel-utils.ts";
 import type { Query } from "../../src/desktop/data-display/data-panel-types.ts";
 
 const TABS = [
@@ -65,8 +66,29 @@ describe("resolveTabQuery", () => {
     expect(resolveTabQuery([], "tab", "12")).toBeUndefined();
   });
 
-  it("does not attach an empty tab value", () => {
-    expect(resolveTabQuery(TABS, "tab", "")).toBeUndefined();
+  it("falls back to tabs[0] when the active key is empty", () => {
+    expect(resolveTabQuery(TABS, "tab", "")).toEqual({
+      param: "tab",
+      value: "3",
+    });
+    expect(resolveTabQuery(TABS, "tab", undefined as unknown as string)).toEqual({
+      param: "tab",
+      value: "3",
+    });
+  });
+
+  it("skips a disabled first tab and uses the first enabled one", () => {
+    expect(
+      resolveTabQuery(
+        [
+          { key: "3", label: "最近 3 个月", disabled: true },
+          { key: "6", label: "最近 6 个月" },
+          { key: "12", label: "最近 12 个月" },
+        ],
+        "tab",
+        "",
+      ),
+    ).toEqual({ param: "tab", value: "6" });
   });
 });
 
@@ -153,6 +175,79 @@ describe("wrapFetchWithTabParam", () => {
     expect(list.searchParams.get("months")).toBe("6");
     expect(list.searchParams.get("tab")).toBeNull();
     expect(create.searchParams.get("months")).toBe("6");
+  });
+
+  it("sends tabs[0] on the first list when the address bar has no tab yet", async () => {
+    const urls: string[] = [];
+    const ds = createApiDataSource({
+      baseRoute: "/api/users/worn",
+      fetch: wrapFetchWithTabParam(((input: RequestInfo | URL) => {
+        urls.push(String(input));
+        return jsonOk({ items: [{ id: "1", name: "张三" }], total: 1, ok: true });
+      }) as typeof fetch, () => resolveTabQuery(TABS, "tab", "")),
+    });
+    await ds.list(q());
+    expect(new URL(urls[0]!, "http://ui-view.test").searchParams.get("tab"))
+      .toBe("3");
+  });
+
+  it("sends tabs[0] on refresh and view when the address bar has no tab yet", async () => {
+    const urls: string[] = [];
+    const ds = createApiDataSource({
+      baseRoute: "/api/users/worn",
+      fetch: wrapFetchWithTabParam(((input: RequestInfo | URL) => {
+        urls.push(String(input));
+        return jsonOk({ items: [{ id: "1", name: "张三" }], total: 1, ok: true });
+      }) as typeof fetch, () => resolveTabQuery(TABS, "tab", "")),
+    });
+    await ds.list(q());
+    await ds.list(q());
+    await ds.view?.("1");
+    expect(urls.length).toBe(3);
+    for (const url of urls) {
+      expect(new URL(url, "http://ui-view.test").searchParams.get("tab"))
+        .toBe("3");
+    }
+  });
+
+  it("sends the first enabled tab on the first list when tabs[0] is disabled", async () => {
+    const urls: string[] = [];
+    const tabs = [
+      { key: "3", label: "最近 3 个月", disabled: true },
+      { key: "6", label: "最近 6 个月" },
+      { key: "12", label: "最近 12 个月" },
+    ];
+    const ds = createApiDataSource({
+      baseRoute: "/api/users/worn",
+      fetch: wrapFetchWithTabParam(((input: RequestInfo | URL) => {
+        urls.push(String(input));
+        return jsonOk({ items: [{ id: "1", name: "张三" }], total: 1, ok: true });
+      }) as typeof fetch, () => resolveTabQuery(tabs, "tab", "")),
+    });
+    await ds.list(q());
+    expect(new URL(urls[0]!, "http://ui-view.test").searchParams.get("tab"))
+      .toBe("6");
+  });
+
+  it("keeps tab on the next list after a search reset", async () => {
+    const urls: string[] = [];
+    let filters: Record<string, string> = { q: "张三", tab: "12" };
+    const ds = createApiDataSource({
+      baseRoute: "/api/users/worn",
+      fetch: wrapFetchWithTabParam(((input: RequestInfo | URL) => {
+        urls.push(String(input));
+        return jsonOk({ items: [{ id: "1", name: "张三" }], total: 1, ok: true });
+      }) as typeof fetch, () => resolveTabQuery(TABS, "tab", filters.tab ?? "")),
+    });
+    await ds.list(q({ filters }));
+    filters = filtersAfterSearchReset(filters, ["q"]);
+    await ds.list(q({ filters }));
+    const first = new URL(urls[0]!, "http://ui-view.test").searchParams;
+    const second = new URL(urls[1]!, "http://ui-view.test").searchParams;
+    expect(first.get("tab")).toBe("12");
+    expect(first.get("q")).toBe("张三");
+    expect(second.get("tab")).toBe("12");
+    expect(second.get("q")).toBeNull();
   });
 
   it("does not send tab when tabParam is disabled", async () => {
