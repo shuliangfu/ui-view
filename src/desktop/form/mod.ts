@@ -49,11 +49,17 @@ export type {
 } from "./Upload.tsx";
 export {
   DEFAULT_UI_VIEW_UPLOAD_BASE_PATH,
+  DEFAULT_UI_VIEW_UPLOAD_OBJECT_PATH,
   DEFAULT_UPLOAD_CHUNK_SIZE,
   defaultGetUploadResultUrl,
   fileMatchesAccept,
   formatUploadFileSize,
+  getConfiguredUiViewUploadBasePath,
+  injectUiViewUploadBasePathHtml,
+  resolveUiViewUploadAction,
+  resolveUiViewUploadPluginBase,
   runChunkedUpload,
+  setConfiguredUiViewUploadBasePath,
   uploadActionWithPhase,
   uploadFilePhasedChunks,
   uploadFileSimple,

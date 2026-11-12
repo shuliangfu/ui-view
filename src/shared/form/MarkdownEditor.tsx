@@ -36,7 +36,11 @@ import {
 import type { SizeVariant } from "../types.ts";
 import { resolveFormControlSize } from "./form-control-context.ts";
 import { commitMaybeSignal, type MaybeSignal } from "./maybe-signal.ts";
-import { uploadFileViaUiViewBase } from "./upload-http.ts";
+import {
+  DEFAULT_UI_VIEW_UPLOAD_OBJECT_PATH,
+  resolveUiViewUploadAction,
+  uploadFileViaUiViewBase,
+} from "./upload-http.ts";
 import { isDomElement, isHtmlElementOf } from "../dom-guards.ts";
 
 /** 预览展示方式 */
@@ -479,7 +483,8 @@ const textareaBase =
 const MD_SPLIT_SCROLL_HIDE =
   "md:overflow-y-auto md:[scrollbar-width:none] md:[-ms-overflow-style:none] md:[&::-webkit-scrollbar]:w-0 md:[&::-webkit-scrollbar]:h-0";
 
-const readOnlyTextareaCls = "bg-slate-50 shadow-inner dark:shadow-[inset_0_2px_5px_rgb(0_0_0_/_0.55),inset_0_-1px_0_rgb(255_255_255_/_0.06)] dark:bg-slate-800/80 cursor-default";
+const readOnlyTextareaCls =
+  "bg-slate-50 shadow-inner dark:shadow-[inset_0_2px_5px_rgb(0_0_0_/_0.55),inset_0_-1px_0_rgb(255_255_255_/_0.06)] dark:bg-slate-800/80 cursor-default";
 
 /**
  * 将 Markdown 转为 HTML；失败时返回带说明的段落；空串时显示占位提示。
@@ -587,7 +592,7 @@ export function MarkdownEditor(props: MarkdownEditorProps): JSXRenderable {
   const textareaRef = createRef<HTMLTextAreaElement>(null);
   const mdUploadInputId = `${editorRootDomId}-upload`;
   const canUploadImage = Boolean(
-    (uploadAction && uploadAction.trim()) || onUploadImage || onPasteImage,
+    resolveUiViewUploadAction(uploadAction) || onUploadImage || onPasteImage,
   );
 
   const insertMarkdownImage = (url: string) => {
@@ -625,14 +630,17 @@ export function MarkdownEditor(props: MarkdownEditorProps): JSXRenderable {
       const url = await onPasteImage(fileOrBlob);
       return url || undefined;
     }
-    const action = (uploadAction ?? "").trim();
+    const action = resolveUiViewUploadAction(uploadAction);
     if (!action) return undefined;
     const file = fileOrBlob instanceof File ? fileOrBlob : new File(
       [fileOrBlob],
       `paste-${Date.now()}.png`,
       { type: fileOrBlob.type || "image/png" },
     );
-    return await uploadFileViaUiViewBase(action, file);
+    return await uploadFileViaUiViewBase(action, file, {
+      path: DEFAULT_UI_VIEW_UPLOAD_OBJECT_PATH,
+      withCredentials: true,
+    });
   };
 
   const handleMdUploadChange = (e: Event) => {

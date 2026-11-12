@@ -7,12 +7,21 @@ import {
   DEFAULT_UPLOAD_CHUNK_SIZE,
   runChunkedUpload,
 } from "./chunked-upload.ts";
+import { DEFAULT_UI_VIEW_UPLOAD_BASE_PATH } from "./upload-base-path.ts";
 
-/**
- * 与 {@link uiViewUploadPlugin} 默认 `basePath` 对齐的上传路由前缀。
- * RichText／Markdown／Upload 示例请用此常量，**勿**写死 `/upload`。
- */
-export const DEFAULT_UI_VIEW_UPLOAD_BASE_PATH = "/ui-view-upload";
+export {
+  DEFAULT_UI_VIEW_UPLOAD_BASE_PATH,
+  DEFAULT_UI_VIEW_UPLOAD_OBJECT_PATH,
+  getConfiguredUiViewUploadBasePath,
+  injectUiViewUploadBasePathHtml,
+  isSafeUiViewUploadBasePath,
+  normalizeUiViewUploadBasePath,
+  resolveUiViewUploadAction,
+  resolveUiViewUploadPluginBase,
+  setConfiguredUiViewUploadBasePath,
+  UI_VIEW_UPLOAD_BASE_PATH_GLOBAL,
+  UI_VIEW_UPLOAD_BASE_PATH_META,
+} from "./upload-base-path.ts";
 
 /**
  * 在 `action` URL 上设置查询参数 `phase`（保留已有 query）。

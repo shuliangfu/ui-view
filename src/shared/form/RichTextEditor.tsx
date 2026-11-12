@@ -4,7 +4,7 @@
  * 正文块尽量用 `p`：聚焦时设置 `defaultParagraphSeparator` 为 `p`，并在输入时把根级裸文本包进首段 `p`（浏览器默认常用 `div` 与无包裹首段）。
  * 前景/背景色使用 {@link ColorPicker} 隐藏触发器 + 命令式 `openFromPointerEvent`；打开前克隆选区，
  * 确定时再恢复，避免操作取色面板导致选区丢失而无法正确 `execCommand`。
- * 支持粘贴图片到内容区（剪贴板图片转 data URL 或经 onPasteImage 上传后插入）。
+ * 支持粘贴图片到内容区：已挂载上传插件或传了 uploadAction／onPasteImage 则走上传，否则 data URL。
  * 工具栏可配置为 simple（简单，含全屏）、default（默认）、full（全部），或完全自定义；文字颜色与背景色在三档预设中均提供。
  * 各预设工具栏首位为「编辑源码」：在 HTML 源码与可视化编辑之间切换；进入源码时会对 `innerHTML` 做缩进排版（类 Elements 结构）便于编辑。
  * 受控 HTML 仅在**编辑区未获焦**且非链接弹层打开时由 {@link createEffect} 同步到 DOM；获焦时以浏览器 DOM
@@ -38,7 +38,11 @@ import { Input } from "./Input.tsx";
 import { commitMaybeSignal, readMaybeSignal } from "./maybe-signal.ts";
 import { resolveFormControlSize } from "./form-control-context.ts";
 import { FormItemControlIdContext } from "./form-item-control-id.ts";
-import { uploadFileViaUiViewBase } from "./upload-http.ts";
+import {
+  DEFAULT_UI_VIEW_UPLOAD_OBJECT_PATH,
+  resolveUiViewUploadAction,
+  uploadFileViaUiViewBase,
+} from "./upload-http.ts";
 import { getFormPortalBodyHost } from "./picker-portal-utils.ts";
 import { isDomElement, isHtmlElement } from "../dom-guards.ts";
 import {
@@ -1245,14 +1249,17 @@ export function RichTextEditor(props: RichTextEditorProps): JSXRenderable {
       const url = await onPasteImage(fileOrBlob);
       return url || undefined;
     }
-    const action = (uploadAction ?? "").trim();
+    const action = resolveUiViewUploadAction(uploadAction);
     if (action) {
       const file = fileOrBlob instanceof File ? fileOrBlob : new File(
         [fileOrBlob],
         `paste-${Date.now()}.png`,
         { type: fileOrBlob.type || "image/png" },
       );
-      return await uploadFileViaUiViewBase(action, file);
+      return await uploadFileViaUiViewBase(action, file, {
+        path: DEFAULT_UI_VIEW_UPLOAD_OBJECT_PATH,
+        withCredentials: true,
+      });
     }
     return await new Promise<string | undefined>((resolve) => {
       const reader = new FileReader();

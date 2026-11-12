@@ -12,6 +12,7 @@
  * - 杀毒：透传 {@link UiViewUploadPluginOptions.virusScan} 到 upload Handler（默认关）；
  *   `afterComplete` 留给 dual 以外的业务钩子，**勿**再外包强制 ClamAV。
  * - 文件下载：插件 `onRequest` 挂 `${basePath}/file?key=`（可关 `serveFiles:false`）。
+- 非 standalone 插件会把 `basePath` 注入 HTML，前端 Upload／富文本插图可省略 `action`／`uploadAction`。
  *
  * @see {@link uiViewUploadPlugin}
  * @see {@link uiViewTailwindPlugin}
@@ -22,6 +23,10 @@ import type { ServiceContainer } from "@dreamer/service";
 import { createLocalCloudStorageAdapter } from "@dreamer/upload/adapters";
 import type { CloudStorageAdapter } from "@dreamer/upload/adapters";
 import { createMultipartUploadHandler } from "@dreamer/upload/server";
+import {
+  injectUiViewUploadBasePathHtml,
+  setConfiguredUiViewUploadBasePath,
+} from "./src/shared/form/upload-base-path.ts";
 
 /** 与 dweb UploadAppConfig／MultipartUploadHandler 对齐的松散鉴权上下文 */
 export type UiViewUploadAuthContext = {
@@ -81,7 +86,11 @@ export interface UiViewUploadCompleteBody {
 /** 插件用到的最小存储面 */
 export interface UiViewUploadStorage {
   download: (key: string) => Promise<Uint8Array>;
-  upload: (key: string, content: Uint8Array, options?: { contentType?: string }) => Promise<void>;
+  upload: (
+    key: string,
+    content: Uint8Array,
+    options?: { contentType?: string },
+  ) => Promise<void>;
   delete: (key: string) => Promise<void>;
   exists?: (key: string) => Promise<boolean>;
   getPresignedUrl: (
@@ -103,7 +112,6 @@ export interface UiViewUploadImageOptions {
   /** AVIF 质量 0–100，默认 75 */
   quality?: number;
 }
-
 
 /** 与 `@dreamer/upload` VirusScanOptions 对齐（松散，避免强依赖 scanner 类型） */
 export interface UiViewUploadVirusScanOptions {
@@ -223,8 +231,6 @@ function sniffMimeFromKey(key: string): string {
   return "application/octet-stream";
 }
 
-
-
 function sniffImageMime(bytes: Uint8Array): string | undefined {
   if (bytes.length < 12) return undefined;
   if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
@@ -257,7 +263,9 @@ function sniffImageMime(bytes: Uint8Array): string | undefined {
     bytes[7] === 0x70
   ) {
     const brand = new TextDecoder().decode(bytes.subarray(8, 12));
-    if (brand.startsWith("avif") || brand.startsWith("avis") || brand === "mif1") {
+    if (
+      brand.startsWith("avif") || brand.startsWith("avis") || brand === "mif1"
+    ) {
       return "image/avif";
     }
   }
@@ -312,23 +320,26 @@ export function wrapUploadCompletePipeline(
   },
 ): void {
   const orig = handler.handle.bind(handler);
-  const basePath = opts.basePath.replace(/\/$/, "") || DEFAULT_UI_VIEW_UPLOAD_BASE_PATH;
+  const basePath = opts.basePath.replace(/\/$/, "") ||
+    DEFAULT_UI_VIEW_UPLOAD_BASE_PATH;
   const dual = opts.image?.dual === true;
   const thumbSize = opts.image?.thumbSize ?? DEFAULT_THUMB_SIZE;
   const quality = opts.image?.quality ?? DEFAULT_AVIF_QUALITY;
 
   handler.handle = async (request: Request, bp = basePath) => {
     const url = new URL(request.url);
-    const pathBase = (bp || basePath).replace(/\/$/, "") || DEFAULT_UI_VIEW_UPLOAD_BASE_PATH;
-    const isComplete =
-      request.method === "POST" &&
+    const pathBase = (bp || basePath).replace(/\/$/, "") ||
+      DEFAULT_UI_VIEW_UPLOAD_BASE_PATH;
+    const isComplete = request.method === "POST" &&
       url.pathname === `${pathBase}/complete`;
     const result = await orig(request, bp);
     if (!isComplete || !result || !result.ok) return result;
 
     let body: UiViewUploadCompleteBody;
     try {
-      body = JSON.parse(await result.clone().text()) as UiViewUploadCompleteBody;
+      body = JSON.parse(
+        await result.clone().text(),
+      ) as UiViewUploadCompleteBody;
     } catch {
       return result;
     }
@@ -487,7 +498,8 @@ export function uiViewUploadPlugin(
       "[ui-view-upload] localDir is required (no implicit default upload directory)",
     );
   }
-  const basePath = (options.basePath ?? DEFAULT_UI_VIEW_UPLOAD_BASE_PATH).replace(/\/$/, "") ||
+  const basePath =
+    (options.basePath ?? DEFAULT_UI_VIEW_UPLOAD_BASE_PATH).replace(/\/$/, "") ||
     DEFAULT_UI_VIEW_UPLOAD_BASE_PATH;
   const publicFileBasePath = options.publicFileBasePath ?? `${basePath}/file`;
 
@@ -534,20 +546,22 @@ export function uiViewUploadPlugin(
   };
   let standaloneHandler: UploadHandler | undefined;
   if (standalone) {
-    standaloneHandler = createMultipartUploadHandler({
-      storage,
-      requireAuth: options.requireAuth ?? true,
-      authenticate: options.authenticate,
-      authorizeUpload: options.authorizeUpload,
-      maxFileSize: options.maxFileSize,
-      maxPartSize: options.maxPartSize,
-      allowedMimeTypes: options.allowedMimeTypes,
-      pathPrefix: options.pathPrefix,
-      onEvent: options.onEvent,
-      verifyContentAfterComplete: options.verifyContentAfterComplete,
-      sessionTtlMs: options.sessionTtlMs,
-      virusScan: options.virusScan === false ? undefined : options.virusScan,
-    } as Parameters<typeof createMultipartUploadHandler>[0]);
+    standaloneHandler = createMultipartUploadHandler(
+      {
+        storage,
+        requireAuth: options.requireAuth ?? true,
+        authenticate: options.authenticate,
+        authorizeUpload: options.authorizeUpload,
+        maxFileSize: options.maxFileSize,
+        maxPartSize: options.maxPartSize,
+        allowedMimeTypes: options.allowedMimeTypes,
+        pathPrefix: options.pathPrefix,
+        onEvent: options.onEvent,
+        verifyContentAfterComplete: options.verifyContentAfterComplete,
+        sessionTtlMs: options.sessionTtlMs,
+        virusScan: options.virusScan === false ? undefined : options.virusScan,
+      } as Parameters<typeof createMultipartUploadHandler>[0],
+    );
     wrapUploadCompletePipeline(standaloneHandler, {
       storage,
       basePath,
@@ -571,6 +585,7 @@ export function uiViewUploadPlugin(
     async onStart(container: ServiceContainer): Promise<void> {
       // Additional mounts serve their own handler; do not wrap AppConfig.upload.
       if (standalone) return;
+      setConfiguredUiViewUploadBasePath(basePath);
       if (!container.has("uploadHandler")) {
         console.warn(
           "[ui-view-upload] uploadHandler missing; skip complete pipeline (set AppConfig.upload = plugin.uploadConfig)",
@@ -592,70 +607,97 @@ export function uiViewUploadPlugin(
      */
     async onRequest(ctx, _container) {
       const filePath = `${basePath}/file`;
-      const isFileReq =
-        (ctx.method === "GET" || ctx.method === "HEAD") &&
+      const isFileReq = (ctx.method === "GET" || ctx.method === "HEAD") &&
         (ctx.path === filePath || ctx.path.endsWith(filePath));
       if (serveFiles && isFileReq) {
+        const key = (ctx.url.searchParams.get("key") ?? "").trim();
+        if (!key || key.includes("..")) {
+          return new Response("Bad key", { status: 400 });
+        }
+        // pathPrefix 只约束新写入的键；有 authorizeFile 时由它决定可读范围（含历史子目录）。
+        if (
+          !options.authorizeFile &&
+          pathPrefix &&
+          !key.startsWith(`${pathPrefix}/`)
+        ) {
+          return new Response("Bad key", { status: 400 });
+        }
 
-      const key = (ctx.url.searchParams.get("key") ?? "").trim();
-      if (!key || key.includes("..")) {
-        return new Response("Bad key", { status: 400 });
-      }
-      if (pathPrefix && !key.startsWith(`${pathPrefix}/`)) {
-        return new Response("Bad key", { status: 400 });
-      }
-
-      let auth: UiViewUploadAuthContext | undefined;
-      if (options.authenticate) {
-        const a = await options.authenticate(ctx.request);
-        if (a instanceof Response) return a;
-        if (a == null) {
+        let auth: UiViewUploadAuthContext | undefined;
+        if (options.authenticate) {
+          const a = await options.authenticate(ctx.request);
+          if (a instanceof Response) return a;
+          if (a == null) {
+            return new Response(
+              JSON.stringify({ error: "Unauthorized", code: "UNAUTHORIZED" }),
+              { status: 401, headers: { "content-type": "application/json" } },
+            );
+          }
+          auth = a;
+        } else if (options.requireAuth !== false) {
           return new Response(
             JSON.stringify({ error: "Unauthorized", code: "UNAUTHORIZED" }),
             { status: 401, headers: { "content-type": "application/json" } },
           );
         }
-        auth = a;
-      } else if (options.requireAuth !== false) {
-        return new Response(
-          JSON.stringify({ error: "Unauthorized", code: "UNAUTHORIZED" }),
-          { status: 401, headers: { "content-type": "application/json" } },
-        );
-      }
 
-      if (options.authorizeFile) {
-        const allowed = await options.authorizeFile(auth, key, ctx.request);
-        if (allowed instanceof Response) return allowed;
-        if (allowed === false) {
-          return new Response("Forbidden", { status: 403 });
+        if (options.authorizeFile) {
+          const allowed = await options.authorizeFile(auth, key, ctx.request);
+          if (allowed instanceof Response) return allowed;
+          if (allowed === false) {
+            return new Response("Forbidden", { status: 403 });
+          }
         }
-      }
 
-      try {
-        if (storage.exists) {
-          const ok = await storage.exists(key);
-          if (!ok) return new Response("Not found", { status: 404 });
+        try {
+          if (storage.exists) {
+            const ok = await storage.exists(key);
+            if (!ok) return new Response("Not found", { status: 404 });
+          }
+          const bytes = await storage.download(key);
+          const mime = sniffMimeFromKey(key);
+          return new Response(new Uint8Array(bytes), {
+            status: 200,
+            headers: {
+              "content-type": mime,
+              "cache-control": "private, max-age=3600",
+              "x-content-type-options": "nosniff",
+            },
+          });
+        } catch (e) {
+          console.error("[ui-view-upload] file serve", e);
+          return new Response("Error", { status: 500 });
         }
-        const bytes = await storage.download(key);
-        const mime = sniffMimeFromKey(key);
-        return new Response(new Uint8Array(bytes), {
-          status: 200,
-          headers: {
-            "content-type": mime,
-            "cache-control": "private, max-age=3600",
-            "x-content-type-options": "nosniff",
-          },
-        });
-      } catch (e) {
-        console.error("[ui-view-upload] file serve", e);
-        return new Response("Error", { status: 500 });
-      }
       }
 
       if (standalone && standaloneHandler && pathOnMount(ctx.path)) {
         const result = await standaloneHandler.handle(ctx.request, basePath);
         if (result) return result;
       }
+    },
+
+    /**
+     * 向 HTML 注入主插件 basePath，让 Upload／富文本不必再写 action／uploadAction。
+     * standalone 插件不覆盖默认路径。
+     */
+    async onResponse(ctx) {
+      if (standalone) return;
+      const res = ctx.response;
+      if (!res) return;
+      const ct = res.headers.get("content-type") ?? "";
+      if (!ct.includes("text/html")) return;
+      if (res.headers.get("content-encoding")) return;
+      const status = res.status;
+      if (status < 200 || status >= 300) return;
+      const html = await res.text();
+      const next = injectUiViewUploadBasePathHtml(html, basePath);
+      const headers = new Headers(res.headers);
+      headers.delete("content-length");
+      ctx.response = new Response(next, {
+        status,
+        statusText: res.statusText,
+        headers,
+      });
     },
   };
 }

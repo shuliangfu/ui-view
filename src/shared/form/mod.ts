@@ -117,8 +117,14 @@ export type {
 } from "./chunked-upload.ts";
 export {
   DEFAULT_UI_VIEW_UPLOAD_BASE_PATH,
+  DEFAULT_UI_VIEW_UPLOAD_OBJECT_PATH,
   defaultGetUploadResultUrl,
   fileMatchesAccept,
+  getConfiguredUiViewUploadBasePath,
+  injectUiViewUploadBasePathHtml,
+  resolveUiViewUploadAction,
+  resolveUiViewUploadPluginBase,
+  setConfiguredUiViewUploadBasePath,
   uploadActionWithPhase,
   uploadFilePhasedChunks,
   uploadFileSimple,

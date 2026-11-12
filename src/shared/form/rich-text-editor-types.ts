@@ -293,11 +293,12 @@ export interface RichTextEditorProps {
    * 插图上传路由前缀（与 `uiViewUploadPlugin.basePath` 对齐）。
    * 推荐默认 `DEFAULT_UI_VIEW_UPLOAD_BASE_PATH`（`/ui-view-upload`）；**勿**写死 `/upload`。
    * 有值且未传 `onUploadImage`／`onPasteImage` 时，走路径协议 `${uploadAction}/init|chunk|complete`。
+   * 省略时若已挂载 uiViewUploadPlugin，自动用主插件 `basePath`（对象键前缀 `files/`）。
    */
   uploadAction?: string;
-  /** 上传图片：选择文件后调用，返回图片 URL 后插入；优先于 `uploadAction`；皆无则 data URL */
+  /** 上传图片：选择文件后调用，返回图片 URL 后插入；优先于 `uploadAction`；皆无且未挂插件则 data URL */
   onUploadImage?: (file: File) => Promise<string> | string;
-  /** 粘贴图片时：优先于 `uploadAction`；皆无则 data URL */
+  /** 粘贴图片时：优先于 `uploadAction`；皆无且未挂插件则 data URL */
   onPasteImage?: (blob: Blob) => Promise<string> | string;
   /** 为 true 时隐藏编辑区、工具栏与查找条控件的聚焦激活态边框；默认 false 显示 */
   hideFocusRing?: boolean;

@@ -281,9 +281,11 @@ export default function FormUpload() {
       <section>
         <Title level={1}>Upload 文件上传</Title>
         <Paragraph class="mt-2">
-          必须提供 <code class="text-xs">action</code> 或{" "}
+          未挂上传插件时须提供 <code class="text-xs">action</code> 或{" "}
           <code class="text-xs">requestUpload</code>
-          ：选文件后自动校验并上传；触发区使用内置{" "}
+          ；在 <code class="text-xs">backend/main.ts</code> 挂上{" "}
+          <code class="text-xs">uiViewUploadPlugin</code>{" "}
+          后可省略，组件会自动走插件路径协议。触发区使用内置{" "}
           <code class="text-xs">IconUpload</code>
           （可用 <code class="text-xs">{"showTriggerIcon={false}"}</code>{" "}
           关闭），结果写入{" "}
@@ -311,7 +313,9 @@ export default function FormUpload() {
         <Paragraph class="mt-2 text-sm text-slate-600 dark:text-slate-300">
           生产挂载请用 <code class="text-xs">uiViewUploadPlugin</code>（必填
           {" "}
-          <code class="text-xs">localDir</code>；默认前缀{" "}
+          <code class="text-xs">localDir</code>，应用根目录常用{" "}
+          <code class="text-xs">./uploads</code>
+          ，再按业务分子目录；默认前缀{" "}
           <code class="text-xs">/ui-view-upload</code>，勿写死{" "}
           <code class="text-xs">/upload</code>）。本页 docs 示例{" "}
           <code class="text-xs">action="/api/upload"</code>{" "}

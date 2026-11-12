@@ -1,7 +1,8 @@
 /**
  * Upload 文件上传（View）。
- * 必须提供 `action` 或 `requestUpload`：选文件后自动校验并上传（整文件 multipart 或同 URL 的 `phase` 分片），
- * 结果写入隐藏域 `name`；可见 `type="file"` 不带 `name`。分片约定见 `upload-http.ts`。
+ * 未传 `action`／`requestUpload` 时，若已挂载 {@link uiViewUploadPlugin}（页面注入了 basePath），
+ * 则自动走插件路径协议（`/init|chunk|complete`，对象键前缀 `files/`）。
+ * 显式 `action` 仍可对接自定义 `?phase=` 或整文件接口。结果写入隐藏域 `name`。
  */
 
 import {
@@ -17,9 +18,12 @@ import { twMerge } from "tailwind-merge";
 import { IconUpload } from "../basic/icons/Upload.tsx";
 import { DEFAULT_UPLOAD_CHUNK_SIZE } from "./chunked-upload.ts";
 import {
+  DEFAULT_UI_VIEW_UPLOAD_OBJECT_PATH,
   fileMatchesAccept,
+  resolveUiViewUploadPluginBase,
   uploadFilePhasedChunks,
   uploadFileSimple,
+  uploadFileViaUiViewBase,
 } from "./upload-http.ts";
 export {
   DEFAULT_UI_VIEW_UPLOAD_BASE_PATH,
@@ -185,21 +189,13 @@ export const defaultUploadMessages: UploadMessages = {
 };
 
 /**
- * 上传端点：`action` 与 `requestUpload` 至少其一。
- * 若同时传入，`requestUpload` 优先（`action` 仍可作文档/埋点用途）。
+ * 上传端点：`action`、`requestUpload`，或已挂载的 ui-view 上传插件（自动走路径协议）。
+ * 若同时传入 `action` 与 `requestUpload`，`requestUpload` 优先。
  */
-export type UploadProps =
-  & UploadCoreProps
-  & (
-    | {
-      action: string;
-      requestUpload?: (file: File, signal: AbortSignal) => Promise<string>;
-    }
-    | {
-      action?: string;
-      requestUpload: (file: File, signal: AbortSignal) => Promise<string>;
-    }
-  );
+export type UploadProps = UploadCoreProps & {
+  action?: string;
+  requestUpload?: (file: File, signal: AbortSignal) => Promise<string>;
+};
 
 /** 覆盖全区域的透明 file input（拖拽区或自定义触发条内） */
 const fileInputOverlayCls =
@@ -462,36 +458,55 @@ export function Upload(props: UploadProps): JSXRenderable {
         let url: string;
         if (requestUpload) {
           url = await requestUpload(file, ac.signal);
-        } else if (action) {
-          const useChunk = chunked === true ||
-            (chunked === "auto" && file.size > chunkThreshold);
-          const gv = getValueFromResponse;
-          if (useChunk) {
-            url = await uploadFilePhasedChunks(action, file, {
+        } else {
+          const pluginBase = resolveUiViewUploadPluginBase(action);
+          if (pluginBase) {
+            url = await uploadFileViaUiViewBase(pluginBase, file, {
               method,
               headers,
               withCredentials,
               chunkSize,
               signal: ac.signal,
+              path: DEFAULT_UI_VIEW_UPLOAD_OBJECT_PATH,
               onProgress: (loaded, total) => {
                 const pct = total > 0 ? (loaded / total) * 100 : 0;
                 updateItem({ progress: pct });
               },
-              getValueFromResponse: gv,
+              getValueFromResponse,
             });
+          } else if (action) {
+            const useChunk = chunked === true ||
+              (chunked === "auto" && file.size > chunkThreshold);
+            const gv = getValueFromResponse;
+            if (useChunk) {
+              url = await uploadFilePhasedChunks(action, file, {
+                method,
+                headers,
+                withCredentials,
+                chunkSize,
+                signal: ac.signal,
+                onProgress: (loaded, total) => {
+                  const pct = total > 0 ? (loaded / total) * 100 : 0;
+                  updateItem({ progress: pct });
+                },
+                getValueFromResponse: gv,
+              });
+            } else {
+              url = await uploadFileSimple(action, file, {
+                method,
+                headers,
+                withCredentials,
+                fileFieldName,
+                signal: ac.signal,
+                getValueFromResponse: gv,
+              });
+              updateItem({ progress: 100 });
+            }
           } else {
-            url = await uploadFileSimple(action, file, {
-              method,
-              headers,
-              withCredentials,
-              fileFieldName,
-              signal: ac.signal,
-              getValueFromResponse: gv,
-            });
-            updateItem({ progress: 100 });
+            throw new Error(
+              "Upload 需要 action、requestUpload，或先在应用中挂载 uiViewUploadPlugin",
+            );
           }
-        } else {
-          throw new Error("Upload 需要 action 或 requestUpload");
         }
         const cur = items.value;
         const hasRow = cur.some((it) => it.uid === uid);
