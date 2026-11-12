@@ -80,13 +80,39 @@ jobs:
             tests/docs-sidebar-reconcile.test.ts \
             tests/docs-browser/*.test.ts
 
-      - name: Test (Deno — page-tests desktop)
+      # Desktop page-tests are ~110 files. One shard on Deno macOS/Windows ran
+      # 58–105 min and then flaked (stuck on document.complete / Playwright
+      # disconnect). Split so the process table can reset between batches.
+      - name: Test (Deno — page-tests desktop data-display)
         shell: bash
         run: |
           if [ "${{ runner.os }}" = "macOS" ]; then ulimit -n 10240 || true; ulimit -u 2048 || true; fi
           deno test -A --minimum-dependency-age=0 \
             tests/docs-sidebar-reconcile.test.ts \
-            tests/docs-browser/page-tests/page_desktop*.test.ts
+            tests/docs-browser/page-tests/page_desktop_data-display*.test.ts
+
+      - name: Test (Deno — page-tests desktop form)
+        shell: bash
+        run: |
+          if [ "${{ runner.os }}" = "macOS" ]; then ulimit -n 10240 || true; ulimit -u 2048 || true; fi
+          deno test -A --minimum-dependency-age=0 \
+            tests/docs-sidebar-reconcile.test.ts \
+            tests/docs-browser/page-tests/page_desktop_form*.test.ts
+
+      - name: Test (Deno — page-tests desktop other)
+        shell: bash
+        run: |
+          if [ "${{ runner.os }}" = "macOS" ]; then ulimit -n 10240 || true; ulimit -u 2048 || true; fi
+          rest=()
+          for f in tests/docs-browser/page-tests/page_desktop*.test.ts; do
+            case "$(basename "$f")" in
+              page_desktop_data-display*.test.ts|page_desktop_form*.test.ts) ;;
+              *) rest+=("$f") ;;
+            esac
+          done
+          deno test -A --minimum-dependency-age=0 \
+            tests/docs-sidebar-reconcile.test.ts \
+            "${rest[@]}"
 
       - name: Test (Deno — page-tests mobile)
         shell: bash

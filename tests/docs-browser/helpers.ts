@@ -198,15 +198,17 @@ function docsPathnameCheckSrc(expectedPath: string): string {
 }
 
 /**
- * 等当前文档资源加载完成：`document.readyState === "complete"`
- * （对应 window `load`：HTML + CSS/JS/图片等子资源）。
+ * 等当前文档至少到达 `interactive`（DOM 已解析）或 `complete`。
+ * 不要求 window `load`（`complete`）：图片等子资源若一直不结束，页面会永远停在
+ * `interactive`。Deno macOS/Windows CI 上 Image / ImageViewer / ChartBar 曾因此
+ * 每条用例空等 25s～60s，桌面页测 shard 跑到 1～2 小时后 Playwright 断连。
  * 不把 Playwright `goto` 的 `waitUntil` 改成 `load` / `domcontentloaded`：
  * 那两项在 macOS CI 长跑末段曾让导航本身拖满 60s 测试超时。
- * `waitUntil: commit` 之后旧文档可能已经是 complete，必须同时等到目标路由。
+ * `waitUntil: commit` 之后旧文档可能已经是 interactive/complete，必须同时等到目标路由。
  *
  * @param t 浏览器上下文
  * @param timeoutMs 超时毫秒；超时抛出含 readyState / pathname 的明确错误
- * @param expectedPath 可选：目标路由（可带 query / hash；比对时只取 pathname），避免把旧页的 complete 当成新页已加载
+ * @param expectedPath 可选：目标路由（可带 query / hash；比对时只取 pathname），避免把旧页的就绪当成新页已加载
  */
 async function waitDocumentComplete(
   t: DocsBrowserTestContext,
@@ -218,7 +220,8 @@ async function waitDocumentComplete(
   }
   const deadline = Date.now() + timeoutMs;
   const pathCheck = expectedPath ? docsPathnameCheckSrc(expectedPath) : "";
-  const probeBody = pathCheck + 'return document.readyState === "complete";';
+  const probeBody = pathCheck +
+    'const s = document.readyState; return s === "interactive" || s === "complete";';
   const snapshotBody = "return {" +
     '  readyState: String(document.readyState || ""),' +
     '  pathname: String(location.pathname || ""),' +
@@ -266,7 +269,7 @@ async function waitDocumentComplete(
   }
   const want = expectedPath ? `，期望路由 ${expectedPath}` : "";
   throw new Error(
-    `文档资源未在 ${timeoutMs}ms 内加载完成（document.readyState === "complete"）` +
+    `文档未在 ${timeoutMs}ms 内进入 interactive 或 complete` +
       `${want}；当前 readyState=${snap.readyState} pathname=${snap.pathname}` +
       (snap.title ? ` title=${snap.title}` : ""),
   );
@@ -337,8 +340,8 @@ async function runWithDocsDynamicImportRetry(
 }
 
 /**
- * 导航后的统一就绪链，共用一段超时预算，避免 complete + main + 句柄串行叠满 60s 测试超时。
- * 顺序：资源加载完成 → 目标路由 main 出字 → Dreamer 事件句柄。
+ * 导航后的统一就绪链，共用一段超时预算，避免就绪 + main + 句柄串行叠满 60s 测试超时。
+ * 顺序：文档 interactive/complete → 目标路由 main 出字 → Dreamer 事件句柄。
  *
  * @param t 浏览器上下文
  * @param timeoutMs 整段等待上限
@@ -359,7 +362,7 @@ async function waitAfterDocsNavigate(
     }
     return ms;
   };
-  await waitDocumentComplete(t, need("资源加载完成"), expectedPath);
+  await waitDocumentComplete(t, need("文档 interactive/complete"), expectedPath);
   await waitMainChars(t, GOTO_MAIN_MIN_CHARS, need("main 出字"), expectedPath);
   // 动态 import 失败页也会出字；先识别再等句柄，避免在错误页上耗尽预算
   await throwIfDocsDynamicImportError(t);
@@ -1169,8 +1172,8 @@ export const sharedEnv = {
   /**
    * 导航到 docs 路径。首次调用自动启动 dev server。
    * 默认 `waitUntil: commit`（避免 macOS CI `domcontentloaded` / `load` 拖满 60s），
-   * 随后等 `document.readyState === "complete"`（资源加载完），再等目标路由
-   * `main` 出字与 Dreamer 事件句柄，避免未加载完就点击或断言。
+   * 随后等文档到达 `interactive` 或 `complete`（不空等 window `load`，以免图片等
+   * 子资源挂起），再等目标路由 `main` 出字与 Dreamer 事件句柄。
    *
    * @param options.navigationTimeoutMs 传给 Playwright `page.goto`；默认 60s，重型页请用 {@link HEAVY_DOC_GOTO_OPTIONS}
    */
@@ -1195,7 +1198,7 @@ export const sharedEnv = {
         });
       }
       await navigateDocsPage(t, url, options);
-      // commit 后：资源加载完 → 目标路由 main 出字 → Dreamer 句柄。
+      // commit 后：interactive/complete → 目标路由 main 出字 → Dreamer 句柄。
       // 句柄未挂时 `.click()` 不走委托（Modal 点得开「打开」却找不到「确定」）。
       await waitAfterDocsNavigate(t, waitMainMs, docsPath);
     };
@@ -1241,7 +1244,7 @@ export const sharedEnv = {
         }
         return ms;
       };
-      await waitDocumentComplete(t, need("资源加载完成"), expectedPath);
+      await waitDocumentComplete(t, need("文档 interactive/complete"), expectedPath);
       await waitMainChars(t, minChars, need("main 出字"), expectedPath);
       await throwIfDocsDynamicImportError(t);
       // 正文出水后再等 Dreamer 事件句柄，覆盖 reload 后的 hydration 窗口（CI 更慢）
