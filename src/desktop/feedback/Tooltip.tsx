@@ -17,11 +17,11 @@ import {
 import { twMerge } from "tailwind-merge";
 import { getBrowserBodyPortalHost } from "../../shared/feedback/portal-host.ts";
 import {
-  computeArrowAnchorStyle,
-  resolveAutoPopPlacement,
   type AutoPopPlacement,
+  computeArrowAnchorStyle,
   type FullPopStylePlacement,
   type PopSize,
+  resolveAutoPopPlacement,
 } from "./popFixedStyle.ts";
 
 /** 含 `auto`：优选上方并在贴边时翻转；写死方位不翻转 */
@@ -72,7 +72,6 @@ const EMPTY_DOM_RECT = {
   x: 0,
   y: 0,
 } as unknown as DOMRect;
-
 
 /** 解析 {@link TooltipProps.disabled}（字面量或零参 getter）。 */
 function readTooltipDisabled(
@@ -236,14 +235,22 @@ export function Tooltip(props: TooltipProps): JSXRenderable {
 
   const tooltipId = `tooltip-${Math.random().toString(36).slice(2, 11)}`;
   const preferred: AutoPopPlacement = placement;
-  const initialResolved: FullPopStylePlacement = preferred === "auto" ? "top" : preferred;
-  const resolvedPlacement = createSignal<FullPopStylePlacement>(initialResolved);
+  const initialResolved: FullPopStylePlacement = preferred === "auto"
+    ? "top"
+    : preferred;
+  const resolvedPlacement = createSignal<FullPopStylePlacement>(
+    initialResolved,
+  );
   const popupSize = createSignal<PopSize>({ width: 0, height: 0 });
   const wrapRef = createRef<HTMLSpanElement>(null);
   let tooltipPanelEl: HTMLElement | null = null;
   const visible = createSignal(false);
   const floatStyle = createSignal(
-    getTooltipFixedStyle(initialResolved, EMPTY_DOM_RECT, TOOLTIP_VIEWPORT_GAP_PX),
+    getTooltipFixedStyle(
+      initialResolved,
+      EMPTY_DOM_RECT,
+      TOOLTIP_VIEWPORT_GAP_PX,
+    ),
   );
   const arrowStyle = createSignal<Record<string, string>>({});
   const posCls = placementClasses[initialResolved];
@@ -266,14 +273,19 @@ export function Tooltip(props: TooltipProps): JSXRenderable {
       autoPrefers: "top",
       gap: TOOLTIP_VIEWPORT_GAP_PX,
     });
-    if (resolvedPlacement.value !== resolved) resolvedPlacement.value = resolved;
+    if (resolvedPlacement.value !== resolved) {
+      resolvedPlacement.value = resolved;
+    }
     const next = getTooltipFixedStyle(
       resolved,
       el.getBoundingClientRect(),
       TOOLTIP_VIEWPORT_GAP_PX,
     );
     const prev = floatStyle.value;
-    if (prev.left !== next.left || prev.top !== next.top || prev.transform !== next.transform) {
+    if (
+      prev.left !== next.left || prev.top !== next.top ||
+      prev.transform !== next.transform
+    ) {
       floatStyle.value = next;
     }
     if (tooltipPanelEl) {
@@ -298,16 +310,25 @@ export function Tooltip(props: TooltipProps): JSXRenderable {
     }
   };
 
+  /**
+   * 点击后先压住悬停，直到鼠标真正离开触发器。
+   * 否则 pointerdown 收起后，打开弹窗时触发器可能被重挂并再次 mouseenter，
+   * 气泡 z-index 又高于 Modal，会飘在弹窗上面。
+   */
+  let suppressUntilLeave = false;
   const onEnter = () => {
+    if (suppressUntilLeave) return;
     if (readTooltipDisabled(props.disabled)) return;
     syncFloatGeometry();
     visible.value = true;
   };
   const onLeave = () => {
+    suppressUntilLeave = false;
     visible.value = false;
   };
-  /** 点击／按下触发器时收起（避免同锚点 Popconfirm 打开后 tip 仍挡确认钮） */
+  /** 点击／按下触发器时收起，并抑制下一次进入，直到 mouseleave。 */
   const onPointerDown = () => {
+    suppressUntilLeave = true;
     visible.value = false;
   };
 
