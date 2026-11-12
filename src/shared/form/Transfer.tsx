@@ -137,7 +137,7 @@ function transferOptionLabel(
 }
 
 const transferListShellCls =
-  "border border-slate-200 dark:border-slate-600 rounded-lg overflow-hidden flex flex-col bg-slate-100 shadow-inner dark:shadow-[inset_0_2px_5px_rgb(0_0_0_/_0.55),inset_0_-1px_0_rgb(255_255_255_/_0.06)] dark:bg-slate-900/70 focus-within:border-blue-500 dark:focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-500/70";
+  "border border-slate-200 dark:border-slate-600 rounded-lg overflow-hidden flex flex-col bg-slate-100 shadow-inner dark:shadow-[inset_0_2px_5px_rgb(0_0_0_/_0.55),inset_0_-1px_0_rgb(255_255_255_/_0.06)] dark:bg-slate-900/70";
 
 const transferTitleCls: Record<SizeVariant, string> = {
   xs: "px-2 py-1 text-xs",
@@ -270,7 +270,7 @@ function TransferColumn(props: TransferColumnProps) {
           disabled={disabled}
           aria-label={title}
           class={twMerge(
-            "w-full flex-1 min-h-0 m-0 border-0 bg-transparent text-slate-800 dark:text-slate-100 outline-none cursor-default dark:[color-scheme:dark]",
+            "w-full flex-1 min-h-0 m-0 border-0 bg-transparent text-slate-800 dark:text-slate-100 outline-none cursor-default dark:[color-scheme:dark] focus:ring-1 focus:ring-inset focus:ring-sky-300/45 dark:focus:ring-sky-400/30",
             transferItemCls[size],
           )}
           style={{ height: listStyle.height ?? 200 }}
