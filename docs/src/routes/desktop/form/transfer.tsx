@@ -101,7 +101,7 @@ const TRANSFER_API: ApiRow[] = [
     type: "{ width?: number; height?: number; itemHeight?: number }",
     default: "-",
     description:
-      "列表样式：width 为列宽基准（窄容器内可收缩），height 为列表高度，itemHeight 为每一项行高（像素）；不传 itemHeight 时按 size 默认为 xs 22 / sm 24 / md 24 / lg 26",
+      "列表样式：width 为列宽基准（窄容器内可收缩），height 为列表高度，itemHeight 为每一项行高（像素）；不传 itemHeight 时按 size 默认为 xs 16 / sm 18 / md 18 / lg 20",
   },
   {
     name: "disabled",

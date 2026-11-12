@@ -169,10 +169,10 @@ const transferBtnCls: Record<SizeVariant, string> = {
 };
 
 const defaultItemHeight: Record<SizeVariant, number> = {
-  xs: 22,
-  sm: 24,
-  md: 24,
-  lg: 26,
+  xs: 16,
+  sm: 18,
+  md: 18,
+  lg: 20,
 };
 
 const optionFontSize: Record<SizeVariant, number> = {
@@ -301,7 +301,7 @@ function TransferColumn(props: TransferColumnProps) {
             "w-full flex-1 min-h-0 m-0 border-0 bg-transparent text-slate-800 dark:text-slate-100 outline-none cursor-default dark:[color-scheme:dark] focus:ring-1 focus:ring-inset focus:ring-sky-300/45 dark:focus:ring-sky-400/30",
             transferItemCls[size],
           )}
-          style={{ height: listStyle.height ?? 200 }}
+          style={{ height: `${listStyle.height ?? 200}px` }}
           onChange={(event: Event) => {
             applySelectChange(event.currentTarget as HTMLSelectElement);
           }}
