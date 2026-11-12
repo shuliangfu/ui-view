@@ -98,10 +98,10 @@ const TRANSFER_API: ApiRow[] = [
   },
   {
     name: "listStyle",
-    type: "CSSProperties",
+    type: "{ width?: number; height?: number; itemHeight?: number }",
     default: "-",
     description:
-      "列表样式：width 为列宽基准（窄容器内可收缩），height 为列表高度",
+      "列表样式：width 为列宽基准（窄容器内可收缩），height 为列表高度，itemHeight 为每一项行高（像素）；不传 itemHeight 时按 size 默认为 xs 24 / sm 28 / md 32 / lg 36",
   },
   {
     name: "disabled",
@@ -221,7 +221,9 @@ export default function FormTransfer() {
         <Paragraph class="mt-2">
           左右列表使用原生多选 select：单击只选一项，Ctrl /
           Command+单击多选，点中列表后 Ctrl / Command+A
-          全选当前列（不会选中整页）。列宽可随容器收缩，聚焦时只在列表内侧显示淡色细线。render
+          全选当前列（不会选中整页）。列宽可随容器收缩，聚焦时只在列表内侧显示淡色细线。可用
+          listStyle.itemHeight 控制每一项行高（像素），不传则按 size
+          使用默认行高。render
           若返回非文本则回退为标题。dataSource、targetKeys、onChange、titles、showSearch、searchPlaceholder、可选
           searchValue（仅初始文案）、onSearch（输入通知）、filterOption、render、listStyle、disabled。宽度由
           class 控制，表单中需占满一列时传 class="w-full"。Tailwind v4 +

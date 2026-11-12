@@ -92,8 +92,12 @@ export interface TransferProps {
   filterOption?: (inputValue: string, item: TransferItem) => boolean;
   /** 自定义列表项渲染 */
   render?: (item: TransferItem) => unknown;
-  /** 列表样式（宽、高） */
-  listStyle?: { width?: number; height?: number };
+  /**
+   * 列表样式。
+   * `width` 为列宽基准（窄容器内可收缩），`height` 为列表高度，
+   * `itemHeight` 为每一项的行高（像素）；不传时按 `size` 使用默认行高。
+   */
+  listStyle?: { width?: number; height?: number; itemHeight?: number };
   /** 是否禁用 */
   disabled?: boolean;
   /** 错误状态（外框红边）；可与 FormItem / createForm bindTargetKeys 联用 */
@@ -164,6 +168,23 @@ const transferBtnCls: Record<SizeVariant, string> = {
   lg: "px-2.5 py-1.5 text-base",
 };
 
+const defaultItemHeight: Record<SizeVariant, number> = {
+  xs: 24,
+  sm: 28,
+  md: 32,
+  lg: 36,
+};
+
+/** Resolve option row height in px; `listStyle.itemHeight` wins when positive. */
+function resolveItemHeight(
+  listStyle: { itemHeight?: number },
+  size: SizeVariant,
+): number {
+  const n = listStyle.itemHeight;
+  if (typeof n === "number" && Number.isFinite(n) && n > 0) return n;
+  return defaultItemHeight[size];
+}
+
 /** 穿梭列参数 */
 type TransferColumnProps = {
   title: string;
@@ -177,7 +198,7 @@ type TransferColumnProps = {
   filterOption?: (inputValue: string, item: TransferItem) => boolean;
   onSearch?: (value: string) => void;
   render?: (item: TransferItem) => unknown;
-  listStyle: { width?: number; height?: number };
+  listStyle: { width?: number; height?: number; itemHeight?: number };
   onTransfer: (keys: string[]) => void;
   disabled?: boolean;
   /** 列底部「N 项」格式化函数 */
@@ -294,12 +315,21 @@ function TransferColumn(props: TransferColumnProps) {
               filterOption,
             );
             const selectedKeys = readSignalValue(selectedKeysRef) ?? [];
+            const itemHeight = resolveItemHeight(listStyle, size);
             return filtered.map((item) => (
               <option
                 key={item.key}
                 value={item.key}
                 disabled={item.disabled || disabled}
                 selected={selectedKeys.includes(item.key)}
+                style={{
+                  boxSizing: "border-box",
+                  minHeight: itemHeight,
+                  height: itemHeight,
+                  lineHeight: `${itemHeight}px`,
+                  paddingTop: 0,
+                  paddingBottom: 0,
+                }}
               >
                 {transferOptionLabel(item, render)}
               </option>
