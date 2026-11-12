@@ -3,6 +3,8 @@
  * 桌面居中弹层：遮罩、标题、内容、底部按钮；支持关闭、点击遮罩关闭、Esc、自定义宽度与 footer。
  * 支持拖动标题栏、全屏切换；全屏与关闭按钮并排于标题栏右侧。
  * 拖动默认 `keepInView`（可视区内，不可拖出窗口）；可显式 `false` 关闭。
+ * 非全屏弹层限制在视口宽内（减去两侧边距），正文直接子项 `max-width: 100%`，
+ * 避免业务里写死的表单宽度撑出横向滚动条。
  *
  * **客户端**：`open === true` 且存在真实 `globalThis.document.body` 时，用 {@link createPortal} 挂到 `body`；
  * Portal 路径下父级槽位返回**隐藏占位 `span`**（勿返回 `null`），避免 Hybrid 水合 `replaceSlot` 与仅 `null` 时更新链异常。
@@ -187,6 +189,35 @@ export interface ModalProps {
 }
 
 const defaultWidth = "520px";
+
+/** 非全屏弹层在窄屏上不超过视口（左右各留 1rem，并计入安全区）。 */
+export const MODAL_VIEWPORT_MAX_WIDTH =
+  "min(100%, calc(100vw - 2rem - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)))";
+
+/**
+ * 弹层盒子尺寸：给出 width 的同时用 maxWidth 卡住视口，并用 minWidth:0
+ * 避免作为 flex 子项时被内部固定宽表单撑破。
+ */
+export function modalShellSizeStyle(opts: {
+  fullscreen: boolean;
+  width: string;
+  placement?: string;
+}): Record<string, string> {
+  if (opts.fullscreen) {
+    return {
+      width: "100%",
+      height: "100%",
+      maxWidth: "100vw",
+      maxHeight: "100vh",
+    };
+  }
+  return {
+    width: opts.width,
+    maxWidth: opts.placement === "bottom" ? "100%" : MODAL_VIEWPORT_MAX_WIDTH,
+    minWidth: "0",
+    boxSizing: "border-box",
+  };
+}
 
 /** 预设宽度：xs/sm/md/lg/xl 对应 400/520/640/800/960px */
 const WIDTH_PRESETS: Record<string, string> = {
@@ -415,7 +446,6 @@ function useDrag(
   };
 }
 
-
 /** 弹层内可聚焦选择器（与常见 a11y 实践对齐） */
 const MODAL_FOCUSABLE_SELECTOR =
   'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -424,11 +454,15 @@ const MODAL_FOCUSABLE_SELECTOR =
  * 收集容器内可见可聚焦元素。
  */
 function listModalFocusable(root: HTMLElement): HTMLElement[] {
-  return Array.from(root.querySelectorAll<HTMLElement>(MODAL_FOCUSABLE_SELECTOR))
+  return Array.from(
+    root.querySelectorAll<HTMLElement>(MODAL_FOCUSABLE_SELECTOR),
+  )
     .filter((el) => {
       if (el.getAttribute("aria-hidden") === "true") return false;
       const style = globalThis.getComputedStyle?.(el);
-      if (style && (style.visibility === "hidden" || style.display === "none")) {
+      if (
+        style && (style.visibility === "hidden" || style.display === "none")
+      ) {
         return false;
       }
       return true;
@@ -463,7 +497,9 @@ export function Modal(props: ModalProps): JSXRenderable {
    * 打开态才执行，会破坏 View 与同类框架的 **hook 调用顺序一致**，表现为点击后无更新、事件异常等。
    */
   const fullscreen = createSignal(false);
-  const position = createSignal(readModalDefaultPosition(props.defaultPosition));
+  const position = createSignal(
+    readModalDefaultPosition(props.defaultPosition),
+  );
   /** Dialog box DOM — drag writes transform here; must not feed Portal rebuild. */
   let modalBoxEl: HTMLElement | null = null;
 
@@ -505,10 +541,7 @@ export function Modal(props: ModalProps): JSXRenderable {
   );
 
   /** 底栏须随 `props.footer` patch 更新；零参 getter 与 `children` 一样在 memo 内解开，避免 loading 等卡在首帧。 */
-  const resolvedFooter = createMemo(() =>
-    readModalChildrenInput(props.footer)
-  );
-
+  const resolvedFooter = createMemo(() => readModalChildrenInput(props.footer));
 
   /**
    * `fullscreen` prop：每次打开时同步初始全屏态，关闭时清零，避免下次打开仍停留在上一档全屏。
@@ -638,25 +671,22 @@ export function Modal(props: ModalProps): JSXRenderable {
     const hasOffset = pos.x !== 0 || pos.y !== 0;
     const placement = props.placement;
     /** 写入 `CSSStyleDeclaration` 的扁平对象（勿用整段 cssText 字符串作 style={…}） */
-    const modalBoxStyle: Record<string, string> = isFullscreen
-      ? {
-        width: "100%",
-        height: "100%",
-        maxWidth: "100vw",
-        maxHeight: "100vh",
-      }
-      : {
+    const modalBoxStyle: Record<string, string> = {
+      ...modalShellSizeStyle({
+        fullscreen: isFullscreen,
         width: widthStyle,
-        ...(draggable
-          ? {
-            transform: `translate(${pos.x}px,${pos.y}px)`,
-            ...(hasOffset ? { willChange: "transform" } : {}),
-          }
-          : {}),
-      };
+        placement,
+      }),
+      ...(!isFullscreen && draggable
+        ? {
+          transform: `translate(${pos.x}px,${pos.y}px)`,
+          ...(hasOffset ? { willChange: "transform" } : {}),
+        }
+        : {}),
+    };
     const modalClass = isFullscreen
       ? "rounded-none"
-      : "rounded-xl max-h-[90vh]";
+      : "rounded-xl max-h-[90vh] min-w-0";
     const showHeaderActions = fullscreenable || closable;
     const wrapZ = isFullscreen ? 9999 : 300;
 
@@ -729,10 +759,12 @@ export function Modal(props: ModalProps): JSXRenderable {
                   e: Event,
                 ) => void}
               >
-                {/*
+                {
+                  /*
                   标题＋静态状态挂点：宿主／WebChat 只 DOM patch
                   [data-modal-title-status]，勿用 title signal 驱动（防 Portal 重插）。
-                */}
+                */
+                }
                 <div
                   class={twMerge(
                     "flex min-w-0 items-center gap-2",
@@ -834,7 +866,7 @@ export function Modal(props: ModalProps): JSXRenderable {
             : null}
           <div
             class={twMerge(
-              "flex-1 overflow-auto px-6 py-4 min-h-0",
+              "flex-1 min-w-0 overflow-x-hidden overflow-y-auto px-6 py-4 min-h-0 [&>*]:box-border [&>*]:max-w-full [&>*]:min-w-0",
               !(title != null && title !== "") && showHeaderActions &&
                 "pt-12 pr-12",
               bodyClass,
@@ -845,7 +877,7 @@ export function Modal(props: ModalProps): JSXRenderable {
           {footer != null && (
             <div
               class={twMerge(
-                "shrink-0 flex items-center justify-end gap-2 px-6 py-4 border-t border-slate-200 dark:border-slate-600",
+                "shrink-0 flex min-w-0 flex-wrap items-center justify-end gap-2 px-6 py-4 border-t border-slate-200 dark:border-slate-600",
                 !isFullscreen && "rounded-b-xl",
                 footerClass,
               )}
