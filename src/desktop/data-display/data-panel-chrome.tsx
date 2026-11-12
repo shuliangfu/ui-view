@@ -235,6 +235,15 @@ export const CARD_STYLE =
 export const TABLE_WRAP_CLS =
   "dp-table-wrap bg-white px-2.5 py-2.5 dark:bg-transparent max-sm:!px-0 max-sm:!pt-0";
 
+/**
+ * DataPanel／DataView 工具栏底色：比标题浅、比原先工具栏深的中间值。
+ * 浅色：标题 `bg-slate-200/80` 与原工具栏 `bg-slate-100/80` 的中间色；
+ * 深色：标题 `bg-slate-900`（约 rgb(14,22,44)）与原透明底透出的面板色
+ * （约 rgb(24,33,53)）的中间色 rgb(19,28,49)。
+ */
+export const TOOLBAR_BAR_CLS =
+  "flex w-full flex-wrap items-center justify-end gap-2 border-b border-slate-200 bg-[rgb(240_243_248)] px-3 py-2 dark:border-slate-700 dark:bg-[rgb(19_28_49)]";
+
 /** 分页条（原 `.dp-pg`；移动端列布局居中） */
 export const PG_CLS =
   "dp-pg flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 bg-slate-100/80 px-3 py-3 text-sm dark:border-slate-700 dark:bg-transparent max-sm:!flex-col max-sm:!items-center max-sm:!justify-center max-sm:!text-center";

@@ -5,10 +5,10 @@
 import { describe, expect, it } from "@dreamer/test";
 import { renderToString } from "@dreamer/view/ssr";
 import {
+  assertDataViewToolbarConfig,
   DATA_VIEW_TOOLBAR_BUILTINS,
   DataView,
   type DataViewProps,
-  assertDataViewToolbarConfig,
   normalizeDataViewToolbar,
 } from "../../src/desktop/data-display/DataView.tsx";
 import type { DataSource } from "../../src/desktop/data-display/data-panel-types.ts";
@@ -38,8 +38,7 @@ const VIEW = {
 };
 
 const ICON_LIST_PATH = 'd="M8 6h13M8 12h13M8 18h13"';
-const ICON_EYE_PATH =
-  'd="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"';
+const ICON_EYE_PATH = 'd="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"';
 
 const TB_IDS = [
   "dv-update",
@@ -111,6 +110,8 @@ describe("DataView", () => {
     expect(h).toContain(ICON_LIST_PATH);
     expect(h).not.toContain(ICON_EYE_PATH);
     expect(h).toContain('data-testid="data-view-toolbar"');
+    expect(h).toContain("bg-[rgb(240_243_248)]");
+    expect(h).toContain("dark:bg-[rgb(19_28_49)]");
     expect(h).toContain('data-testid="dv-view"');
     expect(h).toContain("姓名");
     expect(h).toContain("Ada");

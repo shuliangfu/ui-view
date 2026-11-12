@@ -106,6 +106,7 @@ import {
   TB_NF_STYLE,
   TB_NL_STYLE,
   TB_STYLE,
+  TOOLBAR_BAR_CLS,
   writeDataPanelPrefs,
 } from "./data-panel-chrome.tsx";
 import { buildViewDescriptionItems } from "./data-view-cell.tsx";
@@ -418,7 +419,9 @@ export function DataView(props: DataViewProps): JSXRenderable {
     }
   }
 
-  async function load(opts?: { notify?: boolean; minBusyMs?: number }): Promise<void> {
+  async function load(
+    opts?: { notify?: boolean; minBusyMs?: number },
+  ): Promise<void> {
     const started = Date.now();
     const id = resolveId();
     const loader = recordLoader(ds);
@@ -602,7 +605,10 @@ export function DataView(props: DataViewProps): JSXRenderable {
         basename: props.exportName ?? props.title,
         columns: cols.length
           ? cols
-          : Object.keys(all.items[0] ?? {}).map((prop) => ({ prop, label: prop })),
+          : Object.keys(all.items[0] ?? {}).map((prop) => ({
+            prop,
+            label: prop,
+          })),
         rows: all.items,
         messages: m,
       }));
@@ -1168,7 +1174,7 @@ export function DataView(props: DataViewProps): JSXRenderable {
   const toolbar = () =>
     toolbarHidden ? null : (
       <div
-        class="flex w-full flex-wrap items-center justify-end gap-2 border-b border-slate-200 bg-slate-100/80 px-3 py-2 dark:border-slate-700 dark:bg-transparent"
+        class={TOOLBAR_BAR_CLS}
         data-testid="data-view-toolbar"
       >
         <div class="contents" data-dv-tools={key}>
@@ -1287,9 +1293,10 @@ export function DataView(props: DataViewProps): JSXRenderable {
                   value={sig}
                   maxLength={f.maxlength}
                   placeholder={f.placeholder}
-                  onInput={(e: Event) =>
-                    (sig.value =
-                      (e.target as unknown as { value: string }).value)}
+                  onInput={(
+                    e: Event,
+                  ) => (sig.value =
+                    (e.target as unknown as { value: string }).value)}
                 />
               </div>
             );
@@ -1496,9 +1503,7 @@ export function DataView(props: DataViewProps): JSXRenderable {
           }
         },
       );
-      fieldArea = (
-        <Descriptions bordered column={1} size="sm" items={items} />
-      );
+      fieldArea = <Descriptions bordered column={1} size="sm" items={items} />;
     }
 
     return (
@@ -1506,7 +1511,10 @@ export function DataView(props: DataViewProps): JSXRenderable {
         {fieldArea}
         {footerSlots.length
           ? (
-            <div class="mt-4 flex justify-end gap-2" data-testid="dv-view-footer">
+            <div
+              class="mt-4 flex justify-end gap-2"
+              data-testid="dv-view-footer"
+            >
               {footerSlots.map((s) => {
                 const onAct = () => {
                   if (s.disable || !r) return;
