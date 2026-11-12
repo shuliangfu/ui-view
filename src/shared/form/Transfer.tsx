@@ -1,6 +1,6 @@
 /**
  * Transfer 穿梭框（View，归类为表单组件）。
- * 双列选择；支持搜索、自定义渲染、禁用项、方向。单击只选一项；Ctrl／Command+单击切换多选；Ctrl／Command+A 全选当前列（再按一次清空）。选中后通过中间按钮穿梭。
+ * 双列选择；支持搜索、禁用项、方向。左右列表用原生 `select multiple`：单击只选一项，Ctrl／Command+单击多选，Ctrl／Command+A 全选当前列。选中后通过中间按钮穿梭。自定义 `render` 若返回非文本，则回退为标题。
  *
  * **避免整块重挂载：**
  * 1. 外层 `return ()` **不读取** `leftSearchRef` / `rightSearchRef`，也**不读取** `selectedKeysRef.value`，
@@ -25,13 +25,6 @@ import { resolveFormControlSize } from "./form-control-context.ts";
 import { FormItemControlIdContext } from "./form-item-control-id.ts";
 import { controlErrorBorder } from "./input-focus-ring.ts";
 import { commitMaybeSignal, type MaybeSignal } from "./maybe-signal.ts";
-import {
-  focusSelectAllHost,
-  isSelectAllHotkey,
-  preventSelectAllDefault,
-  setSelectAllHost,
-  toggleSelectAllKeys,
-} from "../select-all-hotkey.ts";
 
 export interface TransferItem {
   /** 唯一 key */
@@ -128,8 +121,23 @@ function filterTransferItems(
   return items.filter((i) => fn(q, i));
 }
 
+/** Option label for the native select: prefer a string `render` result, else title. */
+function transferOptionLabel(
+  item: TransferItem,
+  render?: (item: TransferItem) => unknown,
+): string {
+  if (render) {
+    const out = render(item);
+    if (typeof out === "string" || typeof out === "number") return String(out);
+  }
+  if (typeof item.title === "string" || typeof item.title === "number") {
+    return String(item.title);
+  }
+  return String(item.key);
+}
+
 const transferListShellCls =
-  "border border-slate-200 dark:border-slate-600 rounded-lg overflow-hidden flex flex-col bg-slate-100 shadow-inner dark:shadow-[inset_0_2px_5px_rgb(0_0_0_/_0.55),inset_0_-1px_0_rgb(255_255_255_/_0.06)] dark:bg-slate-900/70";
+  "border border-slate-200 dark:border-slate-600 rounded-lg overflow-hidden flex flex-col bg-slate-100 shadow-inner dark:shadow-[inset_0_2px_5px_rgb(0_0_0_/_0.55),inset_0_-1px_0_rgb(255_255_255_/_0.06)] dark:bg-slate-900/70 focus-within:border-blue-500 dark:focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-500/70";
 
 const transferTitleCls: Record<SizeVariant, string> = {
   xs: "px-2 py-1 text-xs",
@@ -170,7 +178,6 @@ type TransferColumnProps = {
   onSearch?: (value: string) => void;
   render?: (item: TransferItem) => unknown;
   listStyle: { width?: number; height?: number };
-  onToggleSelect: (key: string) => void;
   onTransfer: (keys: string[]) => void;
   disabled?: boolean;
   /** 列底部「N 项」格式化函数 */
@@ -196,7 +203,6 @@ function TransferColumn(props: TransferColumnProps) {
     onSearch,
     render,
     listStyle,
-    onToggleSelect,
     onTransfer,
     disabled = false,
     countFormatter,
@@ -205,46 +211,29 @@ function TransferColumn(props: TransferColumnProps) {
   } = props;
 
   // 搜索框绑定上层 searchRef（非列内 createSignal），父级 getter 重跑时仍为同一信号，避免输入框重挂载失焦。
-  const selectAllInColumn = (event: KeyboardEvent) => {
-    if (disabled || !isSelectAllHotkey(event)) return;
-    preventSelectAllDefault(event);
-    const filtered = filterTransferItems(
-      items,
-      readSignalValue(searchRef) ?? "",
-      filterOption,
-    ).filter((item) => !item.disabled).map((item) => item.key);
-    const current = readSignalValue(selectedKeysRef) ?? [];
-    writeSignalValue(selectedKeysRef, toggleSelectAllKeys(current, filtered));
+  const applySelectChange = (select: HTMLSelectElement) => {
+    const visible = new Set(
+      filterTransferItems(
+        items,
+        readSignalValue(searchRef) ?? "",
+        filterOption,
+      ).map((item) => item.key),
+    );
+    const hiddenSelected = (readSignalValue(selectedKeysRef) ?? [])
+      .filter((key) => !visible.has(key));
+    const fromSelect = [...select.selectedOptions].map((opt) => opt.value);
+    writeSignalValue(selectedKeysRef, [...hiddenSelected, ...fromSelect]);
   };
 
   return (
     <div
-      ref={(el: HTMLElement | null) => {
-        if (!el) return;
-        setSelectAllHost(el, () => {
-          if (el.getAttribute("data-transfer-disabled") === "true") return;
-          const keys = [...el.querySelectorAll<HTMLElement>("[data-key]")]
-            .filter((node) => !(node as HTMLButtonElement).disabled)
-            .map((node) => node.getAttribute("data-key") ?? "")
-            .filter(Boolean);
-          const current = readSignalValue(selectedKeysRef) ?? [];
-          writeSignalValue(
-            selectedKeysRef,
-            toggleSelectAllKeys(current, keys),
-          );
-        });
-      }}
       class={twMerge(transferListShellCls, "min-w-0 flex-1")}
       style={{
         flex: `1 1 ${listStyle.width ?? 200}px`,
         width: "auto",
         minWidth: 0,
       }}
-      tabIndex={-1}
-      data-select-all-host=""
       data-transfer-disabled={disabled ? "true" : undefined}
-      onMouseDown={focusSelectAllHost}
-      onKeyDown={selectAllInColumn}
     >
       <div
         class={twMerge(
@@ -276,6 +265,47 @@ function TransferColumn(props: TransferColumnProps) {
         />
       )}
       <div class="flex flex-col flex-1 min-h-0">
+        <select
+          multiple
+          disabled={disabled}
+          aria-label={title}
+          class={twMerge(
+            "w-full flex-1 min-h-0 m-0 border-0 bg-transparent text-slate-800 dark:text-slate-100 outline-none cursor-default dark:[color-scheme:dark]",
+            transferItemCls[size],
+          )}
+          style={{ height: listStyle.height ?? 200 }}
+          onChange={(event: Event) => {
+            applySelectChange(event.currentTarget as HTMLSelectElement);
+          }}
+          onDblClick={(event: Event) => {
+            if (disabled) return;
+            const select = event.currentTarget as HTMLSelectElement;
+            const keys = [...select.selectedOptions]
+              .filter((opt) => !opt.disabled)
+              .map((opt) => opt.value);
+            if (keys.length > 0) onTransfer(keys);
+          }}
+        >
+          {() => {
+            readSignalValue(listVersion);
+            const filtered = filterTransferItems(
+              items,
+              readSignalValue(searchRef) ?? "",
+              filterOption,
+            );
+            const selectedKeys = readSignalValue(selectedKeysRef) ?? [];
+            return filtered.map((item) => (
+              <option
+                key={item.key}
+                value={item.key}
+                disabled={item.disabled || disabled}
+                selected={selectedKeys.includes(item.key)}
+              >
+                {transferOptionLabel(item, render)}
+              </option>
+            ));
+          }}
+        </select>
         {() => {
           readSignalValue(listVersion);
           const filtered = filterTransferItems(
@@ -284,57 +314,11 @@ function TransferColumn(props: TransferColumnProps) {
             filterOption,
           );
           const selectedKeys = readSignalValue(selectedKeysRef) ?? [];
-          const listHeight = listStyle.height ?? 200;
           return (
-            <div class="contents">
-              <ul
-                class="overflow-auto flex-1 min-h-0 list-none m-0 p-1"
-                style={{ height: listHeight }}
-              >
-                {filtered.map((item) => {
-                  const selected = selectedKeys.includes(item.key);
-                  return (
-                    <li key={item.key} class="list-none m-0 p-0">
-                      <button
-                        type="button"
-                        class={twMerge(
-                          twMerge(
-                            "w-full text-left rounded cursor-pointer border-0 bg-transparent",
-                            transferItemCls[size],
-                          ),
-                          item.disabled || disabled
-                            ? "opacity-60 cursor-not-allowed"
-                            : "hover:bg-slate-200/80 dark:hover:bg-slate-700/80",
-                          selected &&
-                            "bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-200",
-                        )}
-                        data-key={item.key}
-                        disabled={item.disabled || disabled}
-                        onClick={(event: Event) => {
-                          if (item.disabled || disabled) return;
-                          const ev = event as MouseEvent;
-                          if (ev.ctrlKey || ev.metaKey) {
-                            onToggleSelect(item.key);
-                            return;
-                          }
-                          writeSignalValue(selectedKeysRef, [item.key]);
-                        }}
-                        onDoubleClick={() => {
-                          if (item.disabled || disabled) return;
-                          onTransfer([item.key]);
-                        }}
-                      >
-                        {render ? render(item) : item.title}
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-              <div class="px-2 py-1 text-xs text-slate-500 dark:text-slate-400">
-                {countFormatter(filtered.length)}
-                {selectedKeys.length > 0 &&
-                  selectedSuffixFormatter(selectedKeys.length)}
-              </div>
+            <div class="px-2 py-1 text-xs text-slate-500 dark:text-slate-400">
+              {countFormatter(filtered.length)}
+              {selectedKeys.length > 0 &&
+                selectedSuffixFormatter(selectedKeys.length)}
             </div>
           );
         }}
@@ -441,14 +425,6 @@ export function Transfer(props: TransferProps): JSXRenderable {
           render={render}
           listStyle={listStyle}
           size={size}
-          onToggleSelect={(key) => {
-            leftSelectedKeysRef((prev: string[] | undefined) => {
-              const cur = prev ?? [];
-              return cur.includes(key)
-                ? cur.filter((k: string) => k !== key)
-                : [...cur, key];
-            });
-          }}
           onTransfer={(keys) => moveToRight(keys)}
           disabled={disabled}
           countFormatter={m.count}
@@ -513,14 +489,6 @@ export function Transfer(props: TransferProps): JSXRenderable {
           render={render}
           listStyle={listStyle}
           size={size}
-          onToggleSelect={(key) => {
-            rightSelectedKeysRef((prev: string[] | undefined) => {
-              const cur = prev ?? [];
-              return cur.includes(key)
-                ? cur.filter((k: string) => k !== key)
-                : [...cur, key];
-            });
-          }}
           onTransfer={(keys) => moveToLeft(keys)}
           disabled={disabled}
           countFormatter={m.count}
