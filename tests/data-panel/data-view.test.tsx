@@ -105,7 +105,7 @@ describe("DataView", () => {
 
   it("view.props 可用 formatter 拼接未写 prop 的自定义字段", async () => {
     const h = await html({
-      data: { id: "1", lastName: "舒", firstName: "良府" },
+      data: { id: "1", lastName: "张", firstName: "三" },
       view: {
         props: [
           { prop: "lastName", label: "姓" },
@@ -119,7 +119,7 @@ describe("DataView", () => {
       },
     });
     expect(h).toContain("姓名");
-    expect(h).toContain("舒良府");
+    expect(h).toContain("张三");
   });
 
   it("首帧渲染标题、IconList、view.props 字段，且无分页", async () => {

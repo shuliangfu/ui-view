@@ -213,7 +213,7 @@ const basicCode = `<DataView
 />`;
 
 const JOIN_VIEW_CODE =
-  `const user = { id: "1", lastName: "舒", firstName: "良府" };
+  `const user = { id: "1", lastName: "张", firstName: "三" };
 <DataView
   title="用户详情"
   data={user}
@@ -312,7 +312,7 @@ export default function DataDisplayDataView() {
           <DataView
             panelKey="demo-data-view-join-name"
             title="用户详情"
-            data={{ id: "1", lastName: "舒", firstName: "良府" }}
+            data={{ id: "1", lastName: "张", firstName: "三" }}
             toolbar={false}
             view={{
               props: [

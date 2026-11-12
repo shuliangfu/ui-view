@@ -1259,9 +1259,9 @@ const columns: Column[] = [
   caps={{ create: false, remove: false }} />`;
 
 const joinNameRows = [
-  { id: "1", lastName: "张", firstName: "棋" },
-  { id: "2", lastName: "舒", firstName: "良府" },
-  { id: "3", lastName: "李", firstName: "明" },
+  { id: "1", lastName: "张", firstName: "三" },
+  { id: "2", lastName: "李", firstName: "四" },
+  { id: "3", lastName: "王", firstName: "五" },
 ];
 const joinNameColumns: Column[] = [
   { type: "index" },
@@ -1276,9 +1276,9 @@ const joinNameColumns: Column[] = [
   },
 ];
 const joinNameCode = `const rows = [
-  { id: "1", lastName: "张", firstName: "棋" },
-  { id: "2", lastName: "舒", firstName: "良府" },
-  { id: "3", lastName: "李", firstName: "明" },
+  { id: "1", lastName: "张", firstName: "三" },
+  { id: "2", lastName: "李", firstName: "四" },
+  { id: "3", lastName: "王", firstName: "五" },
 ];
 const columns: Column[] = [
   { type: "index" },

@@ -226,8 +226,8 @@ describe("展示值", () => {
     expect(columnSortKey(cols[3])).toBe("");
     expect(columnSortKey({ prop: "email" })).toBe("email");
     const name = cols[2];
-    expect(displayValue(name, { lastName: "舒", firstName: "良府" }, M)).toBe(
-      "舒良府",
+    expect(displayValue(name, { lastName: "张", firstName: "三" }, M)).toBe(
+      "张三",
     );
     expect(displayValue(name, { lastName: "", firstName: "" }, M)).toBe("—");
   });
@@ -651,9 +651,9 @@ describe("createLocalDataSource：查询", () => {
   it("拼接列按 sortProp（姓）排序", () => {
     const s = createLocalDataSource({
       rows: [
-        { id: "1", lastName: "张", firstName: "棋" },
-        { id: "2", lastName: "舒", firstName: "良府" },
-        { id: "3", lastName: "李", firstName: "明" },
+        { id: "1", lastName: "张", firstName: "三" },
+        { id: "2", lastName: "李", firstName: "四" },
+        { id: "3", lastName: "王", firstName: "五" },
       ],
       columns: [
         {
@@ -667,7 +667,7 @@ describe("createLocalDataSource：查询", () => {
     });
     const byName = (a: string, b: string) =>
       a.localeCompare(b, undefined, { numeric: true });
-    const names = ["张", "舒", "李"];
+    const names = ["张", "李", "王"];
     const asc = s.list({ ...Q, sort: "lastName", order: "asc" }).items;
     expect(asc.map((r) => r.lastName)).toEqual([...names].sort(byName));
     const desc = s.list({ ...Q, sort: "lastName", order: "desc" }).items;

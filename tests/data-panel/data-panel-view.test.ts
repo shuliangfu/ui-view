@@ -141,9 +141,9 @@ describe("DataPanel view / form / search 配置", () => {
     expect(fields[1].prop).toBe("__custom:姓名");
     expect(typeof fields[1].formatter).toBe("function");
     expect(
-      fields[1].formatter!({ lastName: "舒", firstName: "良府" }, undefined),
+      fields[1].formatter!({ lastName: "张", firstName: "三" }, undefined),
     )
-      .toBe("舒良府");
+      .toBe("张三");
   });
 
   it("不写 view 时回落列＋表单字段（跳过已出现的列与 password）", () => {
