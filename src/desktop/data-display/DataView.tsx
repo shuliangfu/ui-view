@@ -1009,7 +1009,7 @@ export function DataView(props: DataViewProps): JSXRenderable {
   ) =>
     content
       ? (
-        <Tooltip content={content} placement="top">
+        <Tooltip content={content} placement="auto">
           {node}
         </Tooltip>
       )
@@ -1037,7 +1037,7 @@ export function DataView(props: DataViewProps): JSXRenderable {
   ) => (
     <Tooltip
       content={actionTipText(id, title, ctrlLabel, messageLabel)}
-      placement="top"
+      placement="auto"
     >
       <Button
         type="button"
@@ -1127,7 +1127,7 @@ export function DataView(props: DataViewProps): JSXRenderable {
         return (
           <Tooltip
             content={actionTipText("refresh", title, label, m.refresh)}
-            placement="top"
+            placement="auto"
           >
             <Button
               type="button"
@@ -1219,7 +1219,7 @@ export function DataView(props: DataViewProps): JSXRenderable {
               label,
               panelFs.value ? m.exitFullscreen : m.enterFullscreen,
             )}
-            placement="top"
+            placement="auto"
           >
             <Button
               type="button"

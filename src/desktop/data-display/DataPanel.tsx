@@ -1309,13 +1309,13 @@ export function DataPanel(props: PanelProps): JSXRenderable {
   /**
    * Always wrap with Tooltip when content is non-empty.
    * Callers resolve content via actionTipText: title ?? label ?? builtin ?? key.
-   * 工具栏／操作列 tip 默认 placement=top；Popconfirm 打开时用 `disabled` 压掉同锚点 tip（不挡确认钮）。
+   * 工具栏／操作列 tip 默认 placement=auto（优选上方，贴边则翻转）；Popconfirm 打开时用 `disabled` 压掉同锚点 tip（不挡确认钮）。
    */
   const tipWrap = (
     content: string | undefined,
     node: unknown,
     opts?: {
-      placement?: "top" | "bottom";
+      placement?: "top" | "bottom" | "auto";
       disabled?: boolean | (() => boolean);
     },
   ) =>
@@ -1323,7 +1323,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
       ? (
         <Tooltip
           content={content}
-          placement={opts?.placement ?? "top"}
+          placement={opts?.placement ?? "auto"}
           disabled={opts?.disabled}
         >
           {node}
@@ -1468,7 +1468,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
   ) => (
     <Tooltip
       content={actionTipText(id, title, ctrlLabel, messageLabel)}
-      placement="top"
+      placement="auto"
     >
       <Button
         type="button"
@@ -1609,7 +1609,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
         return (
           <Tooltip
             content={actionTipText("refresh", title, label, m.refresh)}
-            placement="top"
+            placement="auto"
           >
             <Button
               type="button"
@@ -1749,7 +1749,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
               label,
               panelFs.value ? m.exitFullscreen : m.enterFullscreen,
             )}
-            placement="top"
+            placement="auto"
           >
             <Button
               type="button"
