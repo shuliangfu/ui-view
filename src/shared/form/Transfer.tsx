@@ -475,7 +475,7 @@ export function Transfer(props: TransferProps): JSXRenderable {
       <div
         id={resolvedId}
         class={twMerge(
-          "transfer flex w-full max-w-full min-w-0 items-stretch gap-4 rounded-lg",
+          "transfer flex w-full max-w-full min-w-0 items-stretch gap-2 md:gap-4 rounded-lg",
           disabled && "opacity-60 pointer-events-none",
           error &&
             twMerge(
