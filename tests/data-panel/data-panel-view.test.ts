@@ -176,6 +176,18 @@ describe("DataPanel view / form / search 配置", () => {
     expect(fallback[0].builtinClose).toBe(true);
   });
 
+  it("edit: true 会出现在关闭按钮前面，并用传入的编辑文案", () => {
+    const slots = resolveViewFooterActions(
+      { edit: true, close: true },
+      { id: "1" },
+      "关闭",
+      { edit: "编辑" },
+    );
+    expect(slots.map((s) => s.key)).toEqual(["edit", "close"]);
+    expect(slots[0].label).toBe("编辑");
+    expect(slots[1].builtinClose).toBe(true);
+  });
+
   it("click toggle 在两档 options 间切换", () => {
     const opts = [
       { value: "active", label: "启用" },

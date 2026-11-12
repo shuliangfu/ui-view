@@ -1310,12 +1310,23 @@ export function resolveViewFooterActions(
   cfg: RowActionsConfig | undefined,
   row: Row,
   closeLabel: string,
+  labels?: { edit?: string },
 ): ViewFooterSlot[] {
   const actions = cfg ?? {};
   const slots: ViewFooterSlot[] = [];
   for (const key of Object.keys(actions)) {
     if (key === "close") continue;
     const raw = actions[key];
+    if (raw === true) {
+      slots.push({
+        key,
+        label: (key === "edit" && labels?.edit)
+          ? labels.edit
+          : actionDisplayText(key),
+        disable: false,
+      });
+      continue;
+    }
     if (typeof raw !== "object" || raw === null) continue;
     const res = resolveRowActionCtrl(raw, row, true);
     if (!res.show) continue;

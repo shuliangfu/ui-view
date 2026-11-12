@@ -320,6 +320,13 @@ export interface PanelProps {
    * 缺省时回落 `!!row.locked` 以兼容旧数据。
    */
   isRowDisabled?: (row: Row) => boolean;
+  /**
+   * 为 false 时不因 caps.view／update／remove 自动补操作列。
+   * 仍可用 columns 声明 `type:"actions"`。默认 true（兼容旧行为）。
+   */
+  autoActions?: boolean;
+  /** 点击行（避开勾选、按钮、链接）时回调；未传且 caps.view 时打开详情。 */
+  onRowClick?: (row: Row) => void;
   /** 接管导入：收到解析后的行（xlsx／csv／json／xml；缺省时走 dataSource.importRows） */
   onImportRows?: (rows: Record<string, string>[]) => void;
   /** 接管导出：缺省时面板自行拉取全部行并生成文件下载 */
@@ -488,12 +495,13 @@ export function DataPanel(props: PanelProps): JSXRenderable {
   /** 批量「设为…」：仅 caps.batchStatus（已挪出 toolbar）；UI 仍在选中批量条 */
   const batchStatusOn = caps.batchStatus;
   const needSelection = caps.remove || batchStatusOn;
-  const needActions = !!(
+  const needActions = props.autoActions !== false && !!(
     rowMayShow("view", caps.view) ||
     rowMayShow("edit", caps.update) ||
     rowMayShow("remove", caps.remove) ||
     hasCustomRowAction
   );
+  const rowOpensView = caps.view || !!props.onRowClick;
   /** 含 selection／index／actions 的完整列（显式 columns 优先；缺省兼容自动补） */
   const panelColumns = resolvePanelColumns(inputColumns, {
     selectable: props.selectable,
@@ -2549,8 +2557,23 @@ export function DataPanel(props: PanelProps): JSXRenderable {
                     i % 2
                       ? "bg-slate-50 dark:bg-slate-900/40"
                       : "bg-white dark:bg-slate-900/70"
-                  }`}
+                  }${rowOpensView ? " cursor-pointer" : ""}`}
                   data-testid={`dp-row-${idOf(r)}`}
+                  onClick={(e: Event) => {
+                    const target = e.target as HTMLElement | null;
+                    if (
+                      target?.closest(
+                        "input,button,a,label,select,textarea,[role='button']",
+                      )
+                    ) {
+                      return;
+                    }
+                    if (props.onRowClick) {
+                      props.onRowClick(r);
+                      return;
+                    }
+                    if (caps.view) doView(r);
+                  }}
                 >
                   {displayCols.map((c) => {
                     if (isSelectionColumn(c)) {
@@ -3275,6 +3298,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
         : undefined,
       r,
       m.close,
+      { edit: m.edit },
     );
     return (
       <div
@@ -3301,6 +3325,11 @@ export function DataPanel(props: PanelProps): JSXRenderable {
             if (s.disable) return;
             if (s.href) {
               g.open?.(s.href, "_self");
+              return;
+            }
+            if (s.key === "edit" && !s.action) {
+              viewRow.value = null;
+              doEdit(r);
               return;
             }
             s.action?.(r);
