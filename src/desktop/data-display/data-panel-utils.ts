@@ -481,6 +481,56 @@ export type ResolvePanelColumnsOptions = {
  * - 未声明 selection 且 needSelection 且 selectable≠false：前置多选列（旧 selectable 行为）
  * - 未声明 actions 且 needActions：末尾追加操作列（兼容旧「有钮即出列」）
  */
+
+/** 未写 prop 的自定义列使用的稳定键前缀 */
+export const CUSTOM_COL_PREFIX = "__custom:";
+
+/** 是否为面板分配的自定义列键（不是行上的真实字段） */
+export function isSyntheticColumnProp(prop: string): boolean {
+  return prop.startsWith(CUSTOM_COL_PREFIX);
+}
+
+/**
+ * 该列排序时写入 `query.sort` 的字段：`sortProp` 优先，否则用真实 `prop`。
+ * 合成键不能作为排序字段。
+ */
+export function columnSortKey(c: Pick<Column, "prop" | "sortProp">): string {
+  const sortProp = (c.sortProp ?? "").trim();
+  if (sortProp) return sortProp;
+  const prop = (c.prop ?? "").trim();
+  if (prop && !isSyntheticColumnProp(prop)) return prop;
+  return "";
+}
+
+/**
+ * 为未写 `prop` 的数据列分配稳定且不重复的键（`__custom:标签` 或 `__custom:下标`）。
+ * 系统列与已有 prop 保持不变。
+ */
+export function assignColumnProps<T extends Column>(
+  columns: readonly T[],
+): T[] {
+  const used = new Set(
+    columns.map((c) => (c.prop ?? "").trim()).filter(Boolean),
+  );
+  return columns.map((c, i) => {
+    if (isSystemColumn(c)) return c;
+    const prop = (c.prop ?? "").trim();
+    if (prop) return prop === c.prop ? c : { ...c, prop };
+    const lab = (c.label ?? "").trim();
+    const base = lab
+      ? `${CUSTOM_COL_PREFIX}${lab}`
+      : `${CUSTOM_COL_PREFIX}${i}`;
+    let key = base;
+    let n = 2;
+    while (used.has(key)) {
+      key = `${base}:${n}`;
+      n += 1;
+    }
+    used.add(key);
+    return { ...c, prop: key };
+  });
+}
+
 export function resolvePanelColumns(
   columns: readonly Column[],
   opts: ResolvePanelColumnsOptions = {},
@@ -518,10 +568,11 @@ export function resolvePanelColumns(
       label: (c.label && String(c.label).trim()) ? c.label : prop,
     };
   });
+  const mappedAssigned = assignColumnProps(mapped);
 
-  const hasSel = mapped.some(isSelectionColumn);
-  const hasIdx = mapped.some(isIndexColumn);
-  const hasAct = mapped.some(isActionsColumn);
+  const hasSel = mappedAssigned.some(isSelectionColumn);
+  const hasIdx = mappedAssigned.some(isIndexColumn);
+  const hasAct = mappedAssigned.some(isActionsColumn);
   const prepend: ResolvedColumn[] = [];
   if (!hasSel && opts.selectable !== false && opts.needSelection) {
     prepend.push({
@@ -533,7 +584,7 @@ export function resolvePanelColumns(
   if (!hasIdx && autoIndex) {
     prepend.push({ type: "index", prop: PANEL_COL_INDEX, label: "#" });
   }
-  let out: ResolvedColumn[] = [...prepend, ...mapped];
+  let out: ResolvedColumn[] = [...prepend, ...mappedAssigned];
   if (!hasAct && opts.needActions) {
     out = [...out, {
       type: "actions",
@@ -1262,7 +1313,9 @@ export function resolveViewFields(
   columns: readonly Column[],
 ): ViewItem[] | undefined {
   if (!view) return undefined;
-  return fieldsOf(view).map((it) => enrichViewField(it, columns));
+  return assignColumnProps(
+    fieldsOf(view).map((it) => enrichViewField(it, columns)),
+  );
 }
 
 /** `view.actions` 按钮 Record；没有则 undefined（底部只留默认 close）。 */
@@ -1287,15 +1340,19 @@ export function toggleOptionValue(
 export function fallbackViewItems(
   columns: readonly Column[],
   form: readonly FormField[] = [],
-): { prop: string; label: string }[] {
-  const items: { prop: string; label: string }[] = [];
+): ViewItem[] {
+  const items: ViewItem[] = [];
   const seen = new Set<string>();
-  for (const c of columns) {
+  for (const c of assignColumnProps(columns)) {
     if (isSystemColumn(c)) continue;
     const prop = colProp(c);
     if (!prop) continue;
     seen.add(prop);
-    items.push({ prop, label: c.label ?? prop });
+    items.push({
+      ...c,
+      prop,
+      label: c.label ?? prop,
+    });
   }
   for (const f of form) {
     const prop = fieldProp(f);

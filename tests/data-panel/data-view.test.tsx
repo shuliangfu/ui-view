@@ -103,6 +103,25 @@ describe("DataView", () => {
     );
   });
 
+  it("view.props 可用 formatter 拼接未写 prop 的自定义字段", async () => {
+    const h = await html({
+      data: { id: "1", lastName: "舒", firstName: "良府" },
+      view: {
+        props: [
+          { prop: "lastName", label: "姓" },
+          { prop: "firstName", label: "名" },
+          {
+            label: "姓名",
+            formatter: (row) =>
+              `${row.lastName ?? ""}${row.firstName ?? ""}` || "—",
+          },
+        ],
+      },
+    });
+    expect(h).toContain("姓名");
+    expect(h).toContain("舒良府");
+  });
+
   it("首帧渲染标题、IconList、view.props 字段，且无分页", async () => {
     const h = await html();
     expect(h).toContain("用户详情");

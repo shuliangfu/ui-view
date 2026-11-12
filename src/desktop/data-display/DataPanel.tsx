@@ -73,6 +73,7 @@ import {
   colProp,
   columnAlignFlexJustify,
   columnAlignTextClass,
+  columnSortKey,
   columnWidthStyle,
   createLocalDataSource,
   displayValue,
@@ -2621,7 +2622,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
                     }`}
                     style={columnWidthStyle(c)}
                   >
-                    {c.sortable
+                    {c.sortable && columnSortKey(c)
                       ? (
                         <button
                           type="button"
@@ -2629,10 +2630,10 @@ export function DataPanel(props: PanelProps): JSXRenderable {
                             columnAlignFlexJustify(headAlign)
                           }`}
                           data-testid={`dp-sort-${c.prop}`}
-                          onClick={() => toggleSort(c.prop!)}
+                          onClick={() => toggleSort(columnSortKey(c))}
                         >
                           {c.label}
-                          {sortIcon(c.prop!)}
+                          {sortIcon(columnSortKey(c))}
                         </button>
                       )
                       : c.label}

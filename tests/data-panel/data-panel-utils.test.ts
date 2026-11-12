@@ -5,8 +5,11 @@
 import { describe, expect, it } from "@dreamer/test";
 import {
   applyFieldRule,
+  assignColumnProps,
   buildExportFile,
+  columnSortKey,
   createLocalDataSource,
+  CUSTOM_COL_PREFIX,
   displayValue,
   fieldLayoutStyle,
   fieldSpan,
@@ -191,6 +194,42 @@ describe("展示值", () => {
     expect(noSel.some((c) => c.type === "selection")).toBe(false);
     expect(noSel.some((c) => c.type === "index")).toBe(false);
     expect(noSel[0].prop).toBe("name");
+  });
+
+  it("未写 prop 的自定义列会分配稳定键；sortProp 作为排序字段", () => {
+    const cols = resolvePanelColumns(
+      [
+        { prop: "lastName", label: "姓", sortable: true },
+        { prop: "firstName", label: "名", sortable: true },
+        {
+          prop: "",
+          label: "姓名",
+          sortable: true,
+          sortProp: "lastName",
+          formatter: (row) =>
+            `${row.lastName ?? ""}${row.firstName ?? ""}` || "—",
+        },
+        {
+          label: "姓名",
+          formatter: (row) => String(row.id ?? ""),
+        },
+      ],
+      { needSelection: false, needActions: false },
+    );
+    expect(cols.map((c) => c.prop)).toEqual([
+      "lastName",
+      "firstName",
+      `${CUSTOM_COL_PREFIX}姓名`,
+      `${CUSTOM_COL_PREFIX}姓名:2`,
+    ]);
+    expect(columnSortKey(cols[2])).toBe("lastName");
+    expect(columnSortKey(cols[3])).toBe("");
+    expect(columnSortKey({ prop: "email" })).toBe("email");
+    const name = cols[2];
+    expect(displayValue(name, { lastName: "舒", firstName: "良府" }, M)).toBe(
+      "舒良府",
+    );
+    expect(displayValue(name, { lastName: "", firstName: "" }, M)).toBe("—");
   });
 
   it("formatMoney：千分位两位小数，非数字为空", () => {
@@ -606,6 +645,34 @@ describe("createLocalDataSource：查询", () => {
     );
     expect(s.list({ ...Q, sort: "balance", order: "asc" }).items[0].id).toBe(
       "1",
+    );
+  });
+
+  it("拼接列按 sortProp（姓）排序", () => {
+    const s = createLocalDataSource({
+      rows: [
+        { id: "1", lastName: "张", firstName: "棋" },
+        { id: "2", lastName: "舒", firstName: "良府" },
+        { id: "3", lastName: "李", firstName: "明" },
+      ],
+      columns: [
+        {
+          label: "姓名",
+          sortable: true,
+          sortProp: "lastName",
+          formatter: (row) =>
+            `${row.lastName ?? ""}${row.firstName ?? ""}` || "—",
+        },
+      ],
+    });
+    const byName = (a: string, b: string) =>
+      a.localeCompare(b, undefined, { numeric: true });
+    const names = ["张", "舒", "李"];
+    const asc = s.list({ ...Q, sort: "lastName", order: "asc" }).items;
+    expect(asc.map((r) => r.lastName)).toEqual([...names].sort(byName));
+    const desc = s.list({ ...Q, sort: "lastName", order: "desc" }).items;
+    expect(desc.map((r) => r.lastName)).toEqual(
+      [...names].sort(byName).reverse(),
     );
   });
 

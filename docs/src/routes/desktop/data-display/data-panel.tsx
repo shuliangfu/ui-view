@@ -312,7 +312,7 @@ const COLUMNS_API: DocsApiTableRow[] = [
     type: "string",
     default: "系统列可省",
     description:
-      "行字段名。数据列必填；系统列可省（默认 `__select`／`__index`／`__actions`）。",
+      "行字段名。系统列可省（默认 `__select`／`__index`／`__actions`）。用 formatter／value 做的自定义列也可省（或写一个不在行数据上的键，如 `fullName`）。",
   },
   {
     name: "label",
@@ -348,6 +348,13 @@ const COLUMNS_API: DocsApiTableRow[] = [
     type: "boolean",
     default: "false",
     description: "表头可点排序（走 list(query).sort／order）",
+  },
+  {
+    name: "sortProp",
+    type: "string",
+    default: "用 prop",
+    description:
+      '该列排序时发给 list(query).sort 的字段。拼接列请指向源字段（姓名把姓放前面则 sortProp: "lastName"）。未写 prop 的自定义列必须指定才能排序。',
   },
   {
     name: "align",
@@ -3054,7 +3061,6 @@ const form = {
   }}
 />`;
 
-
 function readDemoTab() {
   try {
     const k = new URLSearchParams(globalThis.location?.search ?? "").get("tab");
@@ -3195,7 +3201,6 @@ export default function DataDisplayDataPanel() {
       <section class="flex flex-col gap-10">
         <Title level={2}>示例</Title>
 
-
         <DocsDemo title="基础用法（全部功能）" code={basicCode}>
           <DataPanel
             panelKey="demo-basic"
@@ -3307,7 +3312,14 @@ ${ALIGN_DEMO_COLUMNS_CODE}
             <code class="text-xs">formatter(row, raw)</code>
             。返回值可为 string、JSX／span、Icon 组件，或以{" "}
             <code class="text-xs">&lt;</code>{" "}
-            开头的可信 HTML 字符串。 另：<code class="text-xs">form</code>／
+            开头的可信 HTML 字符串。 拼接列可不写{" "}
+            <code class="text-xs">prop</code>
+            ，用 <code class="text-xs">formatter</code> 组合字段；要排序时加
+            {" "}
+            <code class="text-xs">sortProp</code>
+            （如姓在前则{" "}
+            <code class="text-xs">sortProp: &quot;lastName&quot;</code>
+            ）。 另：<code class="text-xs">form</code>／
             <code class="text-xs">search</code>／
             <code class="text-xs">view</code> 一律写成{" "}
             <code class="text-xs">{"{ title, props }"}</code>
@@ -3745,8 +3757,7 @@ ${ALIGN_DEMO_COLUMNS_CODE}
             caps={{ create: false, update: false, remove: false, view: false }}
           />
           <p class="mt-2 text-xs text-slate-500" data-testid="demo-ra-fn-hint">
-            {() =>
-              actionHint.value ||
+            {() => actionHint.value ||
               "locked 行「分配」仍可见但 disabled；点击看 item.id"}
           </p>
         </DocsDemo>
@@ -4457,9 +4468,9 @@ ${ALIGN_DEMO_COLUMNS_CODE}
 
       <section class="flex flex-col gap-10">
         <div id="tab">
-        <DocsDemo
-          title="Tab"
-          code={`import { createSignal } from "@dreamer/view";
+          <DocsDemo
+            title="Tab"
+            code={`import { createSignal } from "@dreamer/view";
 import { DataPanel } from "@dreamer/ui-view/data-display";
 
 const tab = createSignal("all");
@@ -4486,14 +4497,15 @@ const tab = createSignal("all");
     ]}
   />
 )}`}
-        >
-          <Paragraph class="mb-3 text-sm text-slate-600 dark:text-slate-400">
-            标签放在工具栏左边的空位，和右侧按钮同一行。未写 <code>children</code>{" "}
-            的标签显示原来的表格；「统计」是自定义内容。点击会写入{" "}
-            <code>?tab=</code>，用这个地址打开会激活对应标签。
-          </Paragraph>
-          <DataPanelTabsDemo />
-        </DocsDemo>
+          >
+            <Paragraph class="mb-3 text-sm text-slate-600 dark:text-slate-400">
+              标签放在工具栏左边的空位，和右侧按钮同一行。未写{" "}
+              <code>children</code>{" "}
+              的标签显示原来的表格；「统计」是自定义内容。点击会写入{" "}
+              <code>?tab=</code>，用这个地址打开会激活对应标签。
+            </Paragraph>
+            <DataPanelTabsDemo />
+          </DocsDemo>
         </div>
       </section>
 

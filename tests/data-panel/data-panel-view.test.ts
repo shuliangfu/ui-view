@@ -124,6 +124,28 @@ describe("DataPanel view / form / search 配置", () => {
     expect(resolveViewFields(undefined, COLUMNS)).toBe(undefined);
   });
 
+  it("view.props 未写 prop 的拼接字段会显示，并保留 formatter", () => {
+    const fields = resolveViewFields(
+      {
+        props: [
+          { prop: "lastName", label: "姓" },
+          {
+            label: "姓名",
+            formatter: (row) =>
+              `${row.lastName ?? ""}${row.firstName ?? ""}` || "—",
+          },
+        ],
+      },
+      [],
+    )!;
+    expect(fields[1].prop).toBe("__custom:姓名");
+    expect(typeof fields[1].formatter).toBe("function");
+    expect(
+      fields[1].formatter!({ lastName: "舒", firstName: "良府" }, undefined),
+    )
+      .toBe("舒良府");
+  });
+
   it("不写 view 时回落列＋表单字段（跳过已出现的列与 password）", () => {
     const form: FormField[] = [
       { prop: "name", label: "姓名" },

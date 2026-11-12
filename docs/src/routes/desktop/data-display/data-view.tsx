@@ -27,7 +27,7 @@ const DATA_VIEW_API: ApiRow[] = [
     type: "ViewConfig",
     default: "-",
     description:
-      "明细配置。props 用 Descriptions 展示字段（写法同 DataPanel view）；render(ctx) 替换字段区。字段级 ViewItem.render 仅在无 view.render 且无 children 时生效",
+      "明细配置。props 用 Descriptions 展示字段（写法同 DataPanel view）；render(ctx) 替换字段区。字段级 ViewItem.render 仅在无 view.render 且无 children 时生效。props 也可不写 prop，用 formatter／value 拼接字段，写法与 DataPanel 自定义列相同。",
   },
   {
     name: "children",
@@ -83,7 +83,8 @@ const DATA_VIEW_API: ApiRow[] = [
     name: "data",
     type: "Row",
     default: "-",
-    description: "当前记录。传入则首屏直接渲染；优先序低于 dataSource，高于 baseRoute",
+    description:
+      "当前记录。传入则首屏直接渲染；优先序低于 dataSource，高于 baseRoute",
   },
   {
     name: "id",
@@ -95,7 +96,8 @@ const DATA_VIEW_API: ApiRow[] = [
     name: "dataSource",
     type: "DataSource",
     default: "-",
-    description: "自定义数据源（优先于 data／baseRoute）。刷新走源上的 view(id)／get(id)",
+    description:
+      "自定义数据源（优先于 data／baseRoute）。刷新走源上的 view(id)／get(id)",
   },
   {
     name: "baseRoute",
@@ -228,10 +230,12 @@ export default function DataDisplayDataView() {
       <section>
         <Title level={1}>DataView 数据明细</Title>
         <Paragraph class="mt-2">
-          用于展示<b>单条记录</b>的明细面板：外壳与 DataPanel 同一套卡片、标题栏和工具栏主题，
-          内容区默认是 DataPanel <code>view</code> 的{" "}
-          <code>Descriptions</code> 字段展示。也可以用 <code>view.render(ctx)</code>{" "}
-          或 <code>children</code> 换成自定义组件（<code>children</code> 优先）。
+          用于展示<b>单条记录</b>的明细面板：外壳与 DataPanel
+          同一套卡片、标题栏和工具栏主题， 内容区默认是 DataPanel{" "}
+          <code>view</code> 的 <code>Descriptions</code> 字段展示。也可以用{" "}
+          <code>view.render(ctx)</code> 或 <code>children</code>{" "}
+          换成自定义组件（<code>children</code>{" "}
+          优先）。
           没有分页、搜索、新建、列设置和行高。工具栏默认保留：更新、刷新、打印、导入、导出、全屏、复制。
           传入 <code>tabs</code> 可在工具栏下切换明细分区（复用 layout Tabs）。
         </Paragraph>
@@ -287,9 +291,9 @@ export default function DataDisplayDataView() {
         </DocsDemo>
 
         <div id="tab">
-        <DocsDemo
-          title="Tab"
-          code={`import { DataView } from "@dreamer/ui-view/data-display";
+          <DocsDemo
+            title="Tab"
+            code={`import { DataView } from "@dreamer/ui-view/data-display";
 
 <DataView
   panelKey="demo-data-view-tabs"
@@ -305,50 +309,52 @@ export default function DataDisplayDataView() {
     },
   ]}
 />`}
-        >
-          <Paragraph class="mb-3 text-sm text-slate-600 dark:text-slate-400">
-            标签放在工具栏左边的空位，和右侧按钮同一行。未写 <code>children</code>{" "}
-            的「基本信息」仍显示原来的字段明细；「其他」是自定义内容。点击会写入{" "}
-            <code>?tab=</code>，用这个地址打开会激活对应标签。
-          </Paragraph>
-          <DataView
-            panelKey="demo-data-view-tabs"
-            title="用户详情"
-            data={DEMO_USER}
-            view={{
-              props: [
-                { prop: "name", label: "姓名" },
-                { prop: "email", label: "邮箱" },
+          >
+            <Paragraph class="mb-3 text-sm text-slate-600 dark:text-slate-400">
+              标签放在工具栏左边的空位，和右侧按钮同一行。未写{" "}
+              <code>children</code>{" "}
+              的「基本信息」仍显示原来的字段明细；「其他」是自定义内容。点击会写入
+              {" "}
+              <code>?tab=</code>，用这个地址打开会激活对应标签。
+            </Paragraph>
+            <DataView
+              panelKey="demo-data-view-tabs"
+              title="用户详情"
+              data={DEMO_USER}
+              view={{
+                props: [
+                  { prop: "name", label: "姓名" },
+                  { prop: "email", label: "邮箱" },
+                  {
+                    prop: "status",
+                    label: "状态",
+                    type: "tag",
+                    options: [
+                      { value: "active", label: "启用", tone: "success" },
+                      { value: "disabled", label: "停用" },
+                    ],
+                  },
+                  {
+                    prop: "createdAt",
+                    label: "创建时间",
+                    type: "datetime",
+                  },
+                ],
+              }}
+              tabs={[
+                { key: "basic", label: "基本信息" },
                 {
-                  prop: "status",
-                  label: "状态",
-                  type: "tag",
-                  options: [
-                    { value: "active", label: "启用", tone: "success" },
-                    { value: "disabled", label: "停用" },
-                  ],
+                  key: "extra",
+                  label: "其他",
+                  children: (
+                    <div class="px-3 py-4 text-sm text-slate-600 dark:text-slate-400">
+                      注册来源：后台录入。可在这里放操作记录、附件或其他自定义内容。
+                    </div>
+                  ),
                 },
-                {
-                  prop: "createdAt",
-                  label: "创建时间",
-                  type: "datetime",
-                },
-              ],
-            }}
-            tabs={[
-              { key: "basic", label: "基本信息" },
-              {
-                key: "extra",
-                label: "其他",
-                children: (
-                  <div class="px-3 py-4 text-sm text-slate-600 dark:text-slate-400">
-                    注册来源：后台录入。可在这里放操作记录、附件或其他自定义内容。
-                  </div>
-                ),
-              },
-            ]}
-          />
-        </DocsDemo>
+              ]}
+            />
+          </DocsDemo>
         </div>
       </section>
 
@@ -356,7 +362,8 @@ export default function DataDisplayDataView() {
         <Title level={2}>API</Title>
         <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
           组件接收以下属性。类型 <code>ViewConfig</code>／
-          <code>FormConfig</code>／<code>PanelToolbarConfig</code> 与 DataPanel 共用。
+          <code>FormConfig</code>／<code>PanelToolbarConfig</code>{" "}
+          与 DataPanel 共用。
         </Paragraph>
         <div class="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-600">
           <table class="w-full min-w-lg text-sm">

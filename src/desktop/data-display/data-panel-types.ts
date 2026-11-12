@@ -44,8 +44,8 @@ export interface Option {
 /** 列定义 */
 export interface Column {
   /**
-   * 行字段名（数据列必填）。
-   * 系统列可省：`selection`→`__select`，`index`→`__index`，`actions`→`__actions`（仍可显式覆盖）。
+   * 行字段名。系统列可省：`selection`→`__select`，`index`→`__index`，`actions`→`__actions`（仍可显式覆盖）。
+   * 自定义列（用 `formatter`／`value` 拼接或计算）也可省；面板会分配稳定键。也可自己写一个不在行数据上的键（如 `fullName`）。
    */
   prop?: string;
   /**
@@ -66,6 +66,12 @@ export interface Column {
   format?: string;
   /** 是否可点击表头排序（服务端 / 本地数据源均走 `list(query)`） */
   sortable?: boolean;
+  /**
+   * 点击该列排序时发给 `list(query).sort` 的字段。
+   * 自定义拼接列请指向用于排序的源字段（如姓名列把姓放在前，则 `sortProp: "lastName"`）。
+   * 缺省用 `prop`；合成键（未写 prop 的自定义列）必须指定本字段才能排序。
+   */
+  sortProp?: string;
   /**
    * 单元格文本对齐（数据列）。默认 `center`。
    * 系统列 `selection`／`index`／`actions` 固定居中，忽略本字段。

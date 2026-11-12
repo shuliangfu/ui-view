@@ -131,11 +131,11 @@ export {
   assertDataViewToolbarConfig,
   DATA_VIEW_TOOLBAR_BUILTINS,
   DataView,
-  isDataViewToolbarBuiltin,
-  normalizeDataViewToolbar,
   type DataViewCaps,
   type DataViewProps,
   type DataViewToolbarBuiltin,
+  isDataViewToolbarBuiltin,
+  normalizeDataViewToolbar,
 } from "./DataView.tsx";
 export type { DataChromeTab, DataChromeTabType } from "./data-panel-tabs.tsx";
 export {
@@ -143,9 +143,12 @@ export {
   enDataPanelMessages,
 } from "./data-panel-messages.ts";
 export {
+  assignColumnProps,
   buildExportFile,
+  columnSortKey,
   columnWidthStyle,
   createLocalDataSource,
+  CUSTOM_COL_PREFIX,
   type ExportFile,
   formatDateTime,
   isActionsColumn,
