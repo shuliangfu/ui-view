@@ -844,6 +844,13 @@ const API_SOURCE_API: DocsApiTableRow[] = [
     description: "主键字段（action update body／restful URL :id）",
   },
   {
+    name: "opts.pageSize",
+    type: "number",
+    default: "20",
+    description:
+      "列表请求默认每页条数。list 在 query.pageSize 缺失时用此值；DataPanel 未传 pageSize 时也用它",
+  },
+  {
     name: "opts.fetch / headers / credentials / writable",
     type: "typeof fetch / HeadersInit｜fn / RequestCredentials / boolean",
     default: "global fetch / - / - / true",

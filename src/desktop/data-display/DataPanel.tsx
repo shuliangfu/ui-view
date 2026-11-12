@@ -76,6 +76,7 @@ import {
   columnSortKey,
   columnWidthStyle,
   createLocalDataSource,
+  DEFAULT_DATA_PANEL_PAGE_SIZE,
   displayValue,
   enrichFormFields,
   enrichSearchFields,
@@ -95,7 +96,6 @@ import {
   parseCsv,
   parseJsonRows,
   parseXmlRows,
-  DEFAULT_DATA_PANEL_PAGE_SIZE,
   queryFromParams,
   queryToParams,
   resolveBatchStatusColumn,
@@ -111,7 +111,11 @@ import {
   validateForm,
   validateSearchFields,
 } from "./data-panel-utils.ts";
-import { type ApiMode, createApiDataSource } from "./data-panel-api-source.ts";
+import {
+  type ApiDataSource,
+  type ApiMode,
+  createApiDataSource,
+} from "./data-panel-api-source.ts";
 import {
   type ActionCtrl,
   actionDisplayText,
@@ -292,7 +296,7 @@ export interface PanelProps {
   initialQuery?: Partial<Query>;
   /** 主键字段，默认 id */
   rowKey?: string;
-  /** 每页条数，默认 20 */
+  /** 每页条数，默认 20。也可在 createApiDataSource({ pageSize }) 上配置 */
   pageSize?: number;
   /** 每页条数下拉选项，默认 [10, 20, 50, 100] */
   pageSizes?: number[];
@@ -392,12 +396,12 @@ import {
   ICON_BTN,
   JUMP_CLS,
   onServer,
-  printHtml,
   PG_CLS,
   PG_CTRLS_CLS,
   PGSIZE_SELECT_CLS,
   PGSIZE_WRAP_CLS,
   POP_OVERLAY_CLS,
+  printHtml,
   RANGE_CLS,
   readDataPanelPrefs,
   refreshers,
@@ -470,7 +474,6 @@ export function DataPanel(props: PanelProps): JSXRenderable {
   const searchDefs = enrichSearchFields(searchFields, dataInputColumns);
   const formDefs = enrichFormFields(formFields, dataInputColumns);
   const pageSizes = props.pageSizes ?? [10, 20, 50, 100];
-  const defaultPageSize = props.pageSize ?? DEFAULT_DATA_PANEL_PAGE_SIZE;
   /** 有表单字段或 form.render 时本地源可写；旁路 Modal 也可靠 onDataChange */
   const canWriteLocal = formDefs.length > 0 || !!props.form?.render ||
     !!props.onDataChange ||
@@ -497,6 +500,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
         rowKey,
         headers: props.apiHeaders,
         credentials: props.apiCredentials,
+        pageSize: props.pageSize,
       });
     } catch (e) {
       // SSR 没有 location.pathname 时无法把 "/api" 拼成资源根；先出空表，客户端再拉数。
@@ -520,6 +524,15 @@ export function DataPanel(props: PanelProps): JSXRenderable {
     : props.baseRoute
     ? apiSource()
     : emptyLocalSource();
+
+  const sourcePageSize = (() => {
+    const n = (ds as ApiDataSource).pageSize;
+    return typeof n === "number" && Number.isFinite(n) && n >= 1
+      ? n
+      : undefined;
+  })();
+  const defaultPageSize = props.pageSize ?? sourcePageSize ??
+    DEFAULT_DATA_PANEL_PAGE_SIZE;
 
   /** 批量「设为…」：column.batch:true 且 inline:switch＋两档 options */
   const batchStatusCol = resolveBatchStatusColumn(dataInputColumns);

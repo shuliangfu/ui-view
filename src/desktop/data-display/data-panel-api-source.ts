@@ -25,6 +25,7 @@ import type {
   Row,
   WriteResult,
 } from "./data-panel-types.ts";
+import { DEFAULT_DATA_PANEL_PAGE_SIZE } from "./data-panel-utils.ts";
 
 /** API 风格：action＝命名动作路径；restful＝HTTP 动词＋资源路径 */
 export type ApiMode = "action" | "restful";
@@ -58,6 +59,11 @@ export interface ApiDataSourceOptions {
    * 默认 true。
    */
   writable?: boolean;
+  /**
+   * 列表请求默认每页条数，默认 20。
+   * `list` 在 query.pageSize 缺失或非法时用此值；DataPanel 未传 `pageSize` 时也读这个默认。
+   */
+  pageSize?: number;
 }
 
 /** HTTP 数据源：异步；额外暴露 `view`／`root`／`apiMode`（面板暂不自动调 view） */
@@ -66,6 +72,8 @@ export interface ApiDataSource extends DataSource {
   /** 资源根，如 `/api/users` */
   readonly root: string;
   readonly apiMode: ApiMode;
+  /** 列表默认每页条数 */
+  readonly pageSize: number;
   /**
    * 拉取单条明细。
    * - action：`GET ${root}/view/:id`
@@ -329,6 +337,13 @@ export function createApiDataSource(
   const root = resolveApiRoot(opts.baseRoute, opts.resource);
   const doFetch = opts.fetch ?? globalThis.fetch.bind(globalThis);
   const writable = opts.writable !== false;
+  const pageSizeDefault = (() => {
+    const n = opts.pageSize;
+    if (typeof n === "number" && Number.isFinite(n) && n >= 1) {
+      return Math.floor(n);
+    }
+    return DEFAULT_DATA_PANEL_PAGE_SIZE;
+  })();
 
   async function headers(): Promise<Headers> {
     const h = new Headers({ Accept: "application/json" });
@@ -365,8 +380,13 @@ export function createApiDataSource(
   const src: ApiDataSource = {
     root,
     apiMode: mode,
+    pageSize: pageSizeDefault,
     async list(query) {
-      const qs = apiQueryParams(query).toString();
+      const size = typeof query.pageSize === "number" &&
+          Number.isFinite(query.pageSize) && query.pageSize >= 1
+        ? Math.floor(query.pageSize)
+        : pageSizeDefault;
+      const qs = apiQueryParams({ ...query, pageSize: size }).toString();
       const url = qs ? `${root}?${qs}` : root;
       const r = await request("GET", url);
       if (!r.ok) return { items: [], total: 0 };
