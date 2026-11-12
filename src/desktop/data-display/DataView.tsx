@@ -110,6 +110,7 @@ import {
   FS_CLS,
   g,
   HEADER_BAR_CLS,
+  printHtml,
   onServer,
   readDataPanelPrefs,
   refreshers,
@@ -717,18 +718,13 @@ export function DataView(props: DataViewProps): JSXRenderable {
         esc(displayValue(c, row, m))
       }</td></tr>`
     ).join("");
-    const w = g.open?.("", "_blank");
-    if (!w) return;
-    w.document.write(
+    printHtml(
       `<!doctype html><title>${
         esc(props.title)
       }</title><style>body{font:13px sans-serif}table{border-collapse:collapse;width:100%}td,th{border:1px solid #999;padding:4px 8px}th{text-align:right;width:30%;background:#f8fafc}</style><h3>${
         esc(props.title)
       }</h3><table>${body}</table>`,
     );
-    w.document.close();
-    w.focus();
-    w.print();
   }
 
   async function applyImportedRows(

@@ -391,6 +391,7 @@ import {
   ICON_BTN,
   JUMP_CLS,
   onServer,
+  printHtml,
   PG_CLS,
   PG_CTRLS_CLS,
   PGSIZE_SELECT_CLS,
@@ -1100,18 +1101,13 @@ export function DataPanel(props: PanelProps): JSXRenderable {
         }</tr>`
       )
       .join("");
-    const w = g.open?.("", "_blank");
-    if (!w) return;
-    w.document.write(
+    printHtml(
       `<!doctype html><title>${
         esc(props.title)
       }</title><style>body{font:13px sans-serif}table{border-collapse:collapse;width:100%}td,th{border:1px solid #999;padding:4px 8px;text-align:center}</style><h3>${
         esc(props.title)
       }</h3><table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`,
     );
-    w.document.close();
-    w.focus();
-    w.print();
   }
 
   /** 把解析后的行写入（表头可为列文案或字段名） */

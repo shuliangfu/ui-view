@@ -34,6 +34,48 @@ export const g = globalThis as unknown as {
   URL?: typeof URL;
 };
 
+/**
+ * Print an HTML document. Uses `window.open` when it returns a *different*
+ * document, so existing tests can stub `open`. If `open` is blocked or returns
+ * the current window (seen in some CI browsers), fall back to a hidden iframe.
+ * Never `document.write` into the current page — that would destroy it.
+ */
+export function printHtml(html: string): void {
+  const currentDoc = g.document;
+  const w = g.open?.("", "_blank");
+  const other = w?.document;
+  if (w && other && other !== currentDoc) {
+    other.write(html);
+    other.close();
+    w.focus();
+    w.print();
+    return;
+  }
+  if (!currentDoc?.createElement || !currentDoc.body) return;
+  const iframe = currentDoc.createElement("iframe") as HTMLIFrameElement;
+  iframe.setAttribute("aria-hidden", "true");
+  iframe.setAttribute("data-testid", "print-frame");
+  iframe.style.cssText =
+    "position:fixed;width:0;height:0;border:0;right:0;bottom:0;visibility:hidden";
+  currentDoc.body.appendChild(iframe);
+  const iw = iframe.contentWindow;
+  const idoc = iframe.contentDocument ?? iw?.document;
+  if (!iw || !idoc) {
+    iframe.remove();
+    return;
+  }
+  idoc.open();
+  idoc.write(html);
+  idoc.close();
+  iw.focus();
+  iw.print();
+  const later = (globalThis as unknown as {
+    setTimeout?: (fn: () => void, ms: number) => number;
+  }).setTimeout;
+  if (later) later(() => iframe.remove(), 1000);
+  else iframe.remove();
+}
+
 /** 是否在服务端运行（Deno / Node）；浏览器里没有这两者 */
 export function onServer(): boolean {
   const gg = globalThis as unknown as {

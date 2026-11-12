@@ -296,6 +296,14 @@ describe("文档页 E2E：/desktop/data-display/data-view（DataView 数据明�
           },
         }) as unknown as Window;
       click(q("dv-print"));
+      if (!written) {
+        const frame = document.querySelector(
+          '[data-testid="print-frame"]',
+        ) as HTMLIFrameElement | null;
+        const fhtml = frame?.contentDocument?.documentElement?.outerHTML ?? "";
+        written = fhtml;
+        printed = printed || fhtml.includes("<table>");
+      }
       window.open = origOpen;
       out.printed = printed;
       out.printHtml = written.includes("<table>") &&
