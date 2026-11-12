@@ -244,6 +244,12 @@ export const TABLE_WRAP_CLS =
 export const TOOLBAR_BAR_CLS =
   "flex w-full flex-wrap items-center justify-end gap-2 border-b border-slate-200 bg-[rgb(240_243_248)] px-3 py-2 dark:border-slate-700 dark:bg-[rgb(19_28_49)]";
 
+/**
+ * DataPanel／DataView 标题栏：底部分隔线比 Card 默认的 slate-200／slate-600 更淡。
+ */
+export const HEADER_BAR_CLS =
+  "!border-slate-200/60 bg-slate-200/80 dark:!border-slate-600/40 dark:bg-slate-900";
+
 /** 分页条（原 `.dp-pg`；移动端列布局居中） */
 export const PG_CLS =
   "dp-pg flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 bg-slate-100/80 px-3 py-3 text-sm dark:border-slate-700 dark:bg-transparent max-sm:!flex-col max-sm:!items-center max-sm:!justify-center max-sm:!text-center";

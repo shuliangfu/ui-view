@@ -118,7 +118,10 @@ describe("DataView", () => {
     expect(h).toContain("邮箱");
     expect(h).toContain("ada@example.com");
     expect(h).toContain("启用");
-    expect(h).toContain("bg-slate-200/80 dark:bg-slate-900");
+    expect(h).toContain("bg-slate-200/80");
+    expect(h).toContain("dark:bg-slate-900");
+    expect(h).toContain("!border-slate-200/60");
+    expect(h).toContain("dark:!border-slate-600/40");
     expect(h).not.toContain('data-testid="dp-pg"');
     expect(h).not.toContain("data-panel-toolbar");
     expect(h).not.toContain('data-testid="dp-create"');

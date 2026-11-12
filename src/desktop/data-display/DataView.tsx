@@ -97,6 +97,7 @@ import {
   CARD_STYLE,
   FS_CLS,
   g,
+  HEADER_BAR_CLS,
   onServer,
   readDataPanelPrefs,
   refreshers,
@@ -1575,7 +1576,7 @@ export function DataView(props: DataViewProps): JSXRenderable {
             class={`dp-card${
               props.class ? ` ${props.class}` : ""
             } ${CARD_STYLE}`}
-            headerClass="bg-slate-200/80 dark:bg-slate-900"
+            headerClass={HEADER_BAR_CLS}
             title={cardTitle()}
             bodyClass="p-0"
           >

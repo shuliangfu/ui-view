@@ -349,6 +349,7 @@ import {
   ED_WRAP_CLS,
   FS_CLS,
   g,
+  HEADER_BAR_CLS,
   ICON_BTN,
   JUMP_CLS,
   onServer,
@@ -3335,7 +3336,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
             class={`dp-card${
               props.class ? ` ${props.class}` : ""
             } ${CARD_STYLE}`}
-            headerClass="bg-slate-200/80 dark:bg-slate-900"
+            headerClass={HEADER_BAR_CLS}
             title={
               <span
                 class="inline-flex min-w-0 items-center gap-2"
