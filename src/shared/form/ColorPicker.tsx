@@ -1159,11 +1159,11 @@ export function ColorPicker(props: ColorPickerProps): JSXRenderable {
             twMerge(
               swatchOnly
                 ? twMerge(
-                  "box-border flex w-10 shrink-0 items-center justify-center border border-slate-300 bg-white text-left dark:border-slate-600 dark:bg-slate-800",
+                  "box-border flex w-10 shrink-0 items-center justify-center border border-slate-300 bg-slate-100 shadow-inner dark:shadow-[inset_0_2px_5px_rgb(0_0_0_/_0.55),inset_0_-1px_0_rgb(255_255_255_/_0.06)] text-left dark:border-slate-600 dark:bg-slate-900/70",
                   colorSwatchTriggerSize[size],
                 )
                 : twMerge(
-                  "flex w-full min-w-[80px] items-center gap-2 border border-slate-300 bg-white text-left text-slate-900 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100",
+                  "flex w-full min-w-[80px] items-center gap-2 border border-slate-300 bg-slate-100 shadow-inner dark:shadow-[inset_0_2px_5px_rgb(0_0_0_/_0.55),inset_0_-1px_0_rgb(255_255_255_/_0.06)] text-left text-slate-900 dark:border-slate-600 dark:bg-slate-900/70 dark:text-slate-100",
                   colorTriggerSize[size],
                 ),
               !swatchOnly && showSuffixIcon && "pr-9",

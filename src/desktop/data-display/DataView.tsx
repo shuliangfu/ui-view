@@ -1419,24 +1419,31 @@ export function DataView(props: DataViewProps): JSXRenderable {
             {formTop.value}
           </p>
         )}
-        <div class="mt-2 flex justify-end gap-2">
-          <Btn
-            type="submit"
-            variant="primary"
-            loading={formBusy.value}
-            data-testid="dv-form-submit"
-          >
-            {m.confirm}
-          </Btn>
-          <Btn
-            type="button"
-            onClick={() => (formOpen.value = false)}
-            data-testid="dv-form-cancel"
-          >
-            {m.cancel}
-          </Btn>
-        </div>
       </form>
+    );
+  };
+
+  const formFooter = () => {
+    if (props.form?.render) return null;
+    return (
+      <>
+        <Btn
+          type="button"
+          variant="primary"
+          loading={formBusy.value}
+          data-testid="dv-form-submit"
+          onClick={() => void submitForm()}
+        >
+          {m.confirm}
+        </Btn>
+        <Btn
+          type="button"
+          onClick={() => (formOpen.value = false)}
+          data-testid="dv-form-cancel"
+        >
+          {m.cancel}
+        </Btn>
+      </>
     );
   };
 
@@ -1587,6 +1594,7 @@ export function DataView(props: DataViewProps): JSXRenderable {
         onClose={() => (formOpen.value = false)}
         // deno-lint-ignore jsx-no-children-prop
         children={formBody}
+        footer={formFooter}
       />
     </div>
   );

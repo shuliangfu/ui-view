@@ -122,7 +122,7 @@ function filterTransferItems(
 }
 
 const transferListShellCls =
-  "border border-slate-200 dark:border-slate-600 rounded-lg overflow-hidden flex flex-col";
+  "border border-slate-200 dark:border-slate-600 rounded-lg overflow-hidden flex flex-col bg-slate-100 shadow-inner dark:shadow-[inset_0_2px_5px_rgb(0_0_0_/_0.55),inset_0_-1px_0_rgb(255_255_255_/_0.06)] dark:bg-slate-900/70";
 
 const transferTitleCls: Record<SizeVariant, string> = {
   xs: "px-2 py-1 text-xs",
@@ -217,7 +217,7 @@ function TransferColumn(props: TransferColumnProps) {
           role="searchbox"
           autocomplete="off"
           class={twMerge(
-            "m-2 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 w-[calc(100%-1rem)]",
+            "m-2 border border-slate-300 dark:border-slate-600 rounded bg-slate-100 shadow-inner dark:shadow-[inset_0_2px_5px_rgb(0_0_0_/_0.55),inset_0_-1px_0_rgb(255_255_255_/_0.06)] dark:bg-slate-900/70 w-[calc(100%-1rem)]",
             transferSearchCls[size],
           )}
           placeholder={searchPlaceholder}
@@ -261,7 +261,7 @@ function TransferColumn(props: TransferColumnProps) {
                           ),
                           item.disabled || disabled
                             ? "opacity-60 cursor-not-allowed"
-                            : "hover:bg-slate-100 dark:hover:bg-slate-700",
+                            : "hover:bg-slate-200/80 dark:hover:bg-slate-700/80",
                           selected &&
                             "bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-200",
                         )}

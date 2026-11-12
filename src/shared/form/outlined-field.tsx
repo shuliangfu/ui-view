@@ -169,12 +169,12 @@ export function OutlinedField(props: OutlinedFieldProps): JSXRenderable {
     <fieldset
       disabled={props.disabled || undefined}
       class={twMerge(
-        "ui-outlined relative m-0 w-full min-w-0 p-0 border bg-white dark:bg-slate-900 [min-inline-size:0]",
+        "ui-outlined relative m-0 w-full min-w-0 p-0 border bg-slate-100 shadow-inner dark:shadow-[inset_0_2px_5px_rgb(0_0_0_/_0.55),inset_0_-1px_0_rgb(255_255_255_/_0.06)] dark:bg-slate-900/70 [min-inline-size:0]",
         "border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100",
         "transition-colors",
         fieldRounded[size],
         props.disabled && "opacity-50",
-        props.readOnly && "bg-slate-50 dark:bg-slate-900/80",
+        props.readOnly && "bg-slate-50 shadow-inner dark:shadow-[inset_0_2px_5px_rgb(0_0_0_/_0.55),inset_0_-1px_0_rgb(255_255_255_/_0.06)] dark:bg-slate-900/80",
         props.error && twMerge(controlErrorBorder, "ui-outlined-error"),
         props.class,
       )}

@@ -471,7 +471,7 @@ function mdToolbarToggleClass(active: boolean, showFocusRing: boolean): string {
 }
 
 const textareaBase =
-  "w-full min-h-[200px] border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 border-slate-300 dark:border-slate-600 focus:outline-hidden disabled:opacity-50 disabled:cursor-not-allowed transition-colors px-3 py-2 text-sm rounded-lg resize-y font-mono tab-size-2 leading-relaxed";
+  "w-full min-h-[200px] border bg-slate-100 shadow-inner dark:shadow-[inset_0_2px_5px_rgb(0_0_0_/_0.55),inset_0_-1px_0_rgb(255_255_255_/_0.06)] dark:bg-slate-900/70 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 border-slate-300 dark:border-slate-600 focus:outline-hidden disabled:opacity-50 disabled:cursor-not-allowed transition-colors px-3 py-2 text-sm rounded-lg resize-y font-mono tab-size-2 leading-relaxed";
 
 /**
  * 宽屏分栏时：在元素内纵向滚动，并隐藏滚动条（仍可滚轮 / 触摸板滚动）。
@@ -479,7 +479,7 @@ const textareaBase =
 const MD_SPLIT_SCROLL_HIDE =
   "md:overflow-y-auto md:[scrollbar-width:none] md:[-ms-overflow-style:none] md:[&::-webkit-scrollbar]:w-0 md:[&::-webkit-scrollbar]:h-0";
 
-const readOnlyTextareaCls = "bg-slate-50 dark:bg-slate-800/80 cursor-default";
+const readOnlyTextareaCls = "bg-slate-50 shadow-inner dark:shadow-[inset_0_2px_5px_rgb(0_0_0_/_0.55),inset_0_-1px_0_rgb(255_255_255_/_0.06)] dark:bg-slate-800/80 cursor-default";
 
 /**
  * 将 Markdown 转为 HTML；失败时返回带说明的段落；空串时显示占位提示。

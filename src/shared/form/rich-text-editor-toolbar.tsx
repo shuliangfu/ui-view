@@ -890,13 +890,13 @@ export function isHistoryToolbarDisabled(
  * 内层不设 `focus:border-transparent`：`border-0` 下边色类无视觉效果，且 `hideFocusRing` 仅作用于根与工具栏控件的 ring，不依赖此处类名。
  */
 export const editorSurface =
-  "w-full min-h-[120px] px-3 py-2 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 border-0 focus:outline-hidden overflow-auto [&_p]:mb-2 [&_p]:mt-0 [&_p:last-child]:mb-0 [&_h2]:text-xl [&_h2]:font-bold [&_h3]:text-lg [&_h3]:font-semibold [&_h4]:text-base [&_h4]:font-semibold [&_blockquote]:border-l-4 [&_blockquote]:border-slate-300 [&_blockquote]:pl-3 [&_blockquote]:italic [&_pre]:bg-slate-100 [&_pre]:dark:bg-slate-700 [&_pre]:p-2 [&_pre]:rounded [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6 [&_table]:border-collapse [&_table]:w-full [&_th]:border [&_th]:border-slate-300 [&_th]:bg-slate-100 [&_th]:dark:bg-slate-700 [&_th]:p-2 [&_td]:border [&_td]:border-slate-300 [&_td]:p-2";
+  "w-full min-h-[120px] px-3 py-2 text-sm text-slate-900 dark:text-slate-100 bg-slate-100 shadow-inner dark:shadow-[inset_0_2px_5px_rgb(0_0_0_/_0.55),inset_0_-1px_0_rgb(255_255_255_/_0.06)] dark:bg-slate-900/70 border-0 focus:outline-hidden overflow-auto [&_p]:mb-2 [&_p]:mt-0 [&_p:last-child]:mb-0 [&_h2]:text-xl [&_h2]:font-bold [&_h3]:text-lg [&_h3]:font-semibold [&_h4]:text-base [&_h4]:font-semibold [&_blockquote]:border-l-4 [&_blockquote]:border-slate-300 [&_blockquote]:pl-3 [&_blockquote]:italic [&_pre]:bg-slate-100 [&_pre]:dark:bg-slate-700 [&_pre]:p-2 [&_pre]:rounded [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6 [&_table]:border-collapse [&_table]:w-full [&_th]:border [&_th]:border-slate-300 [&_th]:bg-slate-100 [&_th]:dark:bg-slate-700 [&_th]:p-2 [&_td]:border [&_td]:border-slate-300 [&_td]:p-2";
 
 /** 查找条内小型文本框底纹（不含 ring） */
 export const findBarInputSurface =
-  "px-2 py-1 border border-slate-300 dark:border-slate-600 rounded text-sm bg-white dark:bg-slate-800 focus:outline-hidden";
+  "px-2 py-1 border border-slate-300 dark:border-slate-600 rounded text-sm bg-slate-100 shadow-inner dark:shadow-[inset_0_2px_5px_rgb(0_0_0_/_0.55),inset_0_-1px_0_rgb(255_255_255_/_0.06)] dark:bg-slate-900/70 focus:outline-hidden";
 export const editorReadOnlyCls =
-  "cursor-default bg-slate-50 dark:bg-slate-800/80";
+  "cursor-default bg-slate-50 shadow-inner dark:shadow-[inset_0_2px_5px_rgb(0_0_0_/_0.55),inset_0_-1px_0_rgb(255_255_255_/_0.06)] dark:bg-slate-800/80";
 
 /**
  * 每个 {@link RichTextEditor} 实例的 View {@link Owner} 对应一个稳定 DOM `id`。

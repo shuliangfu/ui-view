@@ -82,7 +82,7 @@ const editableHeightCls: Record<SizeVariant, string> = {
 };
 
 export const editableInputCls =
-  "box-border w-full min-w-0 max-w-full rounded border border-slate-200 bg-white px-2 text-left text-slate-800 outline-hidden focus:ring-2 focus:ring-blue-500/30 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100";
+  "box-border w-full min-w-0 max-w-full rounded border border-slate-200 bg-slate-100 shadow-inner dark:shadow-[inset_0_2px_5px_rgb(0_0_0_/_0.55),inset_0_-1px_0_rgb(255_255_255_/_0.06)] dark:bg-slate-900/70 px-2 text-left text-slate-800 outline-hidden focus:ring-2 focus:ring-blue-500/30 dark:border-slate-600 dark:text-slate-100";
 
 export function isEditableConfig<T>(
   e: false | TableColumnEditable<T> | undefined,

@@ -137,7 +137,7 @@ const wrapRounded: Record<SizeVariant, string> = {
 
 /** 输入框本体：自身不画 ring；整圈高亮由外壳用 `:has(input:focus)` 控制，避免 +/- 获焦时误亮 */
 const inputBase =
-  "min-w-0 flex-1 border-0 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-hidden focus:ring-0 disabled:opacity-50 disabled:cursor-not-allowed transition-colors";
+  "min-w-0 flex-1 border-0 bg-slate-100 shadow-inner dark:shadow-[inset_0_2px_5px_rgb(0_0_0_/_0.55),inset_0_-1px_0_rgb(255_255_255_/_0.06)] dark:bg-slate-900/70 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-hidden focus:ring-0 disabled:opacity-50 disabled:cursor-not-allowed transition-colors";
 
 /**
  * 隐藏 `type="number"` 右侧原生上下箭头（与组件自带 +/- 重复）；Chrome/Safari 用 webkit 伪元素，Firefox 用 -moz-appearance。

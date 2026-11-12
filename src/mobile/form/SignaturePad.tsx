@@ -40,11 +40,11 @@ export interface SignaturePadProps {
   size?: SizeVariant;
   /** 画布高度；未传时按 size 取默认（md 为 180） */
   height?: number;
-  /** 笔触颜色 */
+  /** 笔触颜色；未传时浅色为 slate-900，深色为 slate-200，避免透底后看不见 */
   penColor?: string;
   /** 线宽 */
   penWidth?: number;
-  /** 背景色 */
+  /** 画布填充色；默认透明，露出控件凹槽底纹；需要白底导出时再传入 */
   backgroundColor?: string;
   /** 笔画结束／清空时回调 dataURL（image/png）；空板为 `null` */
   onChange?: (dataUrl: string | null) => void;
@@ -83,9 +83,9 @@ export function SignaturePad(props: SignaturePadProps): JSXRenderable {
   const size = resolveFormControlSize(props.size);
   const {
     height = signaturePadHeight[size],
-    penColor = "#0f172a",
+    penColor,
     penWidth = 2.5,
-    backgroundColor = "#ffffff",
+    backgroundColor = "transparent",
     onChange,
     onReady,
     class: className,
@@ -106,8 +106,13 @@ export function SignaturePad(props: SignaturePadProps): JSXRenderable {
     if (!canvas || !ctx) return;
     ctx.save();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.fillStyle = backgroundColor;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    const transparent = backgroundColor === "transparent" || backgroundColor === "";
+    if (transparent) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    } else {
+      ctx.fillStyle = backgroundColor;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
     ctx.restore();
   };
 
@@ -168,7 +173,8 @@ export function SignaturePad(props: SignaturePadProps): JSXRenderable {
     const onMove = (e: PointerEvent) => {
       if (!drawing.value || !ctx) return;
       const p = pos(e);
-      ctx.strokeStyle = penColor;
+      ctx.strokeStyle = penColor ??
+        (document.documentElement.classList.contains("dark") ? "#e2e8f0" : "#0f172a");
       ctx.lineWidth = penWidth;
       ctx.lineTo(p.x, p.y);
       ctx.stroke();
@@ -200,7 +206,7 @@ export function SignaturePad(props: SignaturePadProps): JSXRenderable {
     >
       <div
         class={twMerge(
-          "relative overflow-hidden rounded-xl border border-slate-200 dark:border-slate-600",
+          "relative overflow-hidden rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-100 shadow-inner dark:shadow-[inset_0_2px_5px_rgb(0_0_0_/_0.55),inset_0_-1px_0_rgb(255_255_255_/_0.06)] dark:bg-slate-900/70",
           error && controlErrorBorder,
         )}
       >

@@ -133,7 +133,7 @@ export function PasscodeInput(props: PasscodeInputProps): JSXRenderable {
           class={twMerge(
             "flex items-center justify-center rounded-lg border font-semibold",
             cellSizeCls[size],
-            "border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900",
+            "border-slate-300 dark:border-slate-600 bg-slate-100 shadow-inner dark:shadow-[inset_0_2px_5px_rgb(0_0_0_/_0.55),inset_0_-1px_0_rgb(255_255_255_/_0.06)] dark:bg-slate-900/70",
             error && controlErrorBorder,
             active && !error && "border-blue-500 ring-2 ring-blue-500/30",
             active && error && "ring-2 ring-red-500/30",

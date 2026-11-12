@@ -206,7 +206,7 @@ const fileInputOverlayCls =
   "absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0 disabled:cursor-not-allowed";
 
 const dropZoneCls =
-  "border-2 border-dashed border-slate-300 dark:border-slate-600 text-center text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50 transition-colors motion-reduce:transition-none";
+  "border-2 border-dashed border-slate-300 dark:border-slate-600 text-center text-slate-500 dark:text-slate-400 bg-slate-100 shadow-inner dark:shadow-[inset_0_2px_5px_rgb(0_0_0_/_0.55),inset_0_-1px_0_rgb(255_255_255_/_0.06)] dark:bg-slate-900/70 transition-colors motion-reduce:transition-none";
 const dropZoneActiveCls = "border-blue-500 bg-blue-50/50 dark:bg-blue-900/20";
 const uploadTriggerSize: Record<SizeVariant, string> = {
   xs: "min-h-7 rounded-md",
@@ -682,7 +682,7 @@ export function Upload(props: UploadProps): JSXRenderable {
   const triggerBar = (
     <div
       class={twMerge(
-        "relative flex w-full max-w-full items-stretch overflow-hidden border border-slate-300 bg-white dark:border-slate-600 dark:bg-slate-800",
+        "relative flex w-full max-w-full items-stretch overflow-hidden border border-slate-300 bg-slate-100 shadow-inner dark:shadow-[inset_0_2px_5px_rgb(0_0_0_/_0.55),inset_0_-1px_0_rgb(255_255_255_/_0.06)] dark:border-slate-600 dark:bg-slate-900/70",
         uploadTriggerSize[size],
         error && controlErrorBorder,
         !hideFocusRing && !error &&

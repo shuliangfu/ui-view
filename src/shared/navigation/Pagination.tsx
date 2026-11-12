@@ -129,13 +129,13 @@ const sizeEllipsisCls: Record<PaginationSize, string> = {
 
 const sizeJumpInputCls: Record<PaginationSize, string> = {
   xs:
-    "w-9 h-6 px-1 text-center rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-xs",
+    "w-9 h-6 px-1 text-center rounded border border-slate-300 dark:border-slate-600 bg-slate-100 shadow-inner dark:shadow-[inset_0_2px_5px_rgb(0_0_0_/_0.55),inset_0_-1px_0_rgb(255_255_255_/_0.06)] dark:bg-slate-900/70 text-xs",
   sm:
-    "w-10 h-7 px-1 text-center rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-xs",
+    "w-10 h-7 px-1 text-center rounded border border-slate-300 dark:border-slate-600 bg-slate-100 shadow-inner dark:shadow-[inset_0_2px_5px_rgb(0_0_0_/_0.55),inset_0_-1px_0_rgb(255_255_255_/_0.06)] dark:bg-slate-900/70 text-xs",
   md:
-    "w-12 h-8 px-1 text-center rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm",
+    "w-12 h-8 px-1 text-center rounded border border-slate-300 dark:border-slate-600 bg-slate-100 shadow-inner dark:shadow-[inset_0_2px_5px_rgb(0_0_0_/_0.55),inset_0_-1px_0_rgb(255_255_255_/_0.06)] dark:bg-slate-900/70 text-sm",
   lg:
-    "w-14 h-10 px-1 text-center rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-base",
+    "w-14 h-10 px-1 text-center rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-100 shadow-inner dark:shadow-[inset_0_2px_5px_rgb(0_0_0_/_0.55),inset_0_-1px_0_rgb(255_255_255_/_0.06)] dark:bg-slate-900/70 text-base",
 };
 
 /**

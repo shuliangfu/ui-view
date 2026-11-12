@@ -120,7 +120,7 @@ export interface ModalProps {
   titleAlign?: ModalTitleAlign;
   /** 弹层内容；可传 `() => VNode` 零参 getter 与宽度同步更新 */
   children?: unknown;
-  /** 底部区域：传 VNode 或 null 不显示；不传时默认无 footer。自定义「确定／取消」脚时请 **确定在左、取消在右**（与 Dialog／Popconfirm 一致）。 */
+  /** 底部区域：传 VNode 或 null 不显示；不传时默认无 footer。可传 `() => VNode` 零参 getter（与 children 相同，随 signal 更新）。自定义「确定／取消」脚时请 **确定在左、取消在右**（与 Dialog／Popconfirm 一致）。 */
   footer?: unknown;
   /** 是否显示右上角关闭按钮，默认 true */
   closable?: boolean;
@@ -504,8 +504,10 @@ export function Modal(props: ModalProps): JSXRenderable {
     readModalChildrenInput(props.children)
   );
 
-  /** 底栏须随 `props.footer` patch 更新；勿用首帧解构闭包（与 `resolvedChildren` 同类问题）。 */
-  const resolvedFooter = createMemo(() => props.footer);
+  /** 底栏须随 `props.footer` patch 更新；零参 getter 与 `children` 一样在 memo 内解开，避免 loading 等卡在首帧。 */
+  const resolvedFooter = createMemo(() =>
+    readModalChildrenInput(props.footer)
+  );
 
 
   /**
@@ -716,7 +718,8 @@ export function Modal(props: ModalProps): JSXRenderable {
             ? (
               <div
                 class={twMerge(
-                  "shrink-0 px-6 py-4 border-b border-slate-200 dark:border-slate-600",
+                  "shrink-0 px-6 py-4 border-b border-slate-200 dark:border-slate-600 bg-slate-200/80 dark:bg-slate-900/70",
+                  !isFullscreen && "rounded-t-xl",
                   titleAlign === "center"
                     ? "relative flex min-h-14 items-center justify-center"
                     : "flex items-center justify-between gap-2",
@@ -843,6 +846,7 @@ export function Modal(props: ModalProps): JSXRenderable {
             <div
               class={twMerge(
                 "shrink-0 flex items-center justify-end gap-2 px-6 py-4 border-t border-slate-200 dark:border-slate-600",
+                !isFullscreen && "rounded-b-xl",
                 footerClass,
               )}
             >

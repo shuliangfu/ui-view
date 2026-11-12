@@ -1832,15 +1832,23 @@ export function DataPanel(props: PanelProps): JSXRenderable {
           </div>
         );
       })}
-      <div class="mt-2 flex justify-end gap-2">
-        <Btn type="submit" variant="primary" data-testid="dp-search-submit">
-          {m.searchSubmit}
-        </Btn>
-        <Btn type="button" data-testid="dp-search-reset" onClick={resetSearch}>
-          {m.reset}
-        </Btn>
-      </div>
     </form>
+  );
+
+  const searchFooter = () => (
+    <>
+      <Btn
+        type="button"
+        variant="primary"
+        data-testid="dp-search-submit"
+        onClick={applySearch}
+      >
+        {m.searchSubmit}
+      </Btn>
+      <Btn type="button" data-testid="dp-search-reset" onClick={resetSearch}>
+        {m.reset}
+      </Btn>
+    </>
   );
 
   // ---- 批量条（显隐跟 caps.batchStatus；数据来自 column.batch:true）
@@ -3138,24 +3146,31 @@ export function DataPanel(props: PanelProps): JSXRenderable {
             {formTop.value}
           </p>
         )}
-        <div class="mt-2 flex justify-end gap-2">
-          <Btn
-            type="submit"
-            variant="primary"
-            loading={formBusy.value}
-            data-testid="dp-form-submit"
-          >
-            {m.confirm}
-          </Btn>
-          <Btn
-            type="button"
-            onClick={() => (formOpen.value = false)}
-            data-testid="dp-form-cancel"
-          >
-            {m.cancel}
-          </Btn>
-        </div>
       </form>
+    );
+  };
+
+  const formFooter = () => {
+    if (props.form?.render) return null;
+    return (
+      <>
+        <Btn
+          type="button"
+          variant="primary"
+          loading={formBusy.value}
+          data-testid="dp-form-submit"
+          onClick={() => void submitForm()}
+        >
+          {m.confirm}
+        </Btn>
+        <Btn
+          type="button"
+          onClick={() => (formOpen.value = false)}
+          data-testid="dp-form-cancel"
+        >
+          {m.cancel}
+        </Btn>
+      </>
     );
   };
 
@@ -3228,13 +3243,6 @@ export function DataPanel(props: PanelProps): JSXRenderable {
         }
       }
     }
-    const slots = resolveViewFooterActions(
-      viewFields || viewBodyRender
-        ? resolveViewActionsCfg(props.view)
-        : undefined,
-      r,
-      m.close,
-    );
     const viewCtx: ViewRenderCtx = {
       row: r,
       close: () => {
@@ -3251,44 +3259,59 @@ export function DataPanel(props: PanelProps): JSXRenderable {
             </div>
           )
           : <Descriptions bordered column={1} size="sm" items={items} />}
-        <div class="mt-4 flex justify-end gap-2" data-testid="dp-view-footer">
-          {slots.map((s) => {
-            if (s.builtinClose) {
-              return (
-                <Btn
-                  type="button"
-                  disabled={s.disable}
-                  data-testid="dp-view-close"
-                  onClick={() => {
-                    s.action?.(r);
-                    viewRow.value = null;
-                  }}
-                >
-                  {s.label}
-                </Btn>
-              );
-            }
-            const onAct = () => {
-              if (s.disable) return;
-              if (s.href) {
-                g.open?.(s.href, "_self");
-                return;
-              }
-              s.action?.(r);
-            };
+      </div>
+    );
+  };
+
+  const viewFooter = () => {
+    const r = viewRow.value;
+    if (!r) return null;
+    const viewFields = resolveViewFields(props.view, columns);
+    const slots = resolveViewFooterActions(
+      viewFields || props.view?.render
+        ? resolveViewActionsCfg(props.view)
+        : undefined,
+      r,
+      m.close,
+    );
+    return (
+      <div data-testid="dp-view-footer" class="flex w-full items-center justify-end gap-2">
+        {slots.map((s) => {
+          if (s.builtinClose) {
             return (
               <Btn
                 type="button"
-                variant={s.tone ?? "default"}
                 disabled={s.disable}
-                data-testid={`dp-view-action-${s.key}`}
-                onClick={onAct}
+                data-testid="dp-view-close"
+                onClick={() => {
+                  s.action?.(r);
+                  viewRow.value = null;
+                }}
               >
                 {s.label}
               </Btn>
             );
-          })}
-        </div>
+          }
+          const onAct = () => {
+            if (s.disable) return;
+            if (s.href) {
+              g.open?.(s.href, "_self");
+              return;
+            }
+            s.action?.(r);
+          };
+          return (
+            <Btn
+              type="button"
+              variant={s.tone ?? "default"}
+              disabled={s.disable}
+              data-testid={`dp-view-action-${s.key}`}
+              onClick={onAct}
+            >
+              {s.label}
+            </Btn>
+          );
+        })}
       </div>
     );
   };
@@ -3353,6 +3376,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
         onClose={() => (formOpen.value = false)}
         // deno-lint-ignore jsx-no-children-prop
         children={formBody}
+        footer={formFooter}
       />
       <Modal
         open={searchOpen}
@@ -3368,6 +3392,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
         onClose={() => (searchOpen.value = false)}
         // deno-lint-ignore jsx-no-children-prop
         children={searchBody}
+        footer={searchFooter}
       />
       <Modal
         open={() => viewRow.value !== null}
@@ -3386,6 +3411,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
         onClose={() => (viewRow.value = null)}
         // deno-lint-ignore jsx-no-children-prop
         children={viewBody}
+        footer={viewFooter}
       />
     </div>
   );

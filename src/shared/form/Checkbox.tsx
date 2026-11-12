@@ -66,7 +66,7 @@ export interface CheckboxProps {
 
 /** 勾选框本体底纹（不含 ring） */
 const checkboxInputSurface =
-  "rounded border-slate-300 dark:border-slate-600 text-blue-600 focus:outline-hidden dark:bg-slate-800 dark:checked:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer";
+  "rounded border-slate-300 dark:border-slate-600 text-blue-600 focus:outline-hidden bg-slate-100 shadow-inner dark:shadow-[inset_0_2px_5px_rgb(0_0_0_/_0.55),inset_0_-1px_0_rgb(255_255_255_/_0.06)] dark:bg-slate-900/70 dark:checked:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer";
 const labelCls =
   "inline-flex items-center cursor-pointer text-slate-700 dark:text-slate-300";
 
