@@ -945,6 +945,10 @@ export interface Messages {
   delete: string;
   actions: string;
   confirm: string;
+  /** 新建表单提交按钮（无行数据） */
+  save: string;
+  /** 编辑表单提交按钮（有行数据） */
+  update: string;
   cancel: string;
   /** 查看详情弹窗页脚的「关闭」按钮 */
   close: string;
