@@ -95,7 +95,7 @@ export interface TransferProps {
   /**
    * 列表样式。
    * `width` 为列宽基准（窄容器内可收缩），
-   * `height` / `minHeight` / `maxHeight` 为列表整高（可传像素数字或 CSS 值），
+   * `height` / `minHeight` / `maxHeight` 为列表整高（像素数字或 CSS 值），
    * 与顶层同名参数同时存在时，顶层优先；`height` 默认 200，
    * `itemHeight` 为每一项的行高（像素）；不传时按 `size` 使用默认行高。
    */
@@ -106,12 +106,12 @@ export interface TransferProps {
     maxHeight?: number | string;
     itemHeight?: number;
   };
-  /** 列表整高，可传像素数字或 CSS 值（如 `"70vh"`、`"calc(100vh - 340px)"`）；优先于 listStyle.height，默认 200 */
-  height?: number | string;
-  /** 列表最小高度，可传像素数字或 CSS 值；优先于 listStyle.minHeight */
-  minHeight?: number | string;
-  /** 列表最大高度，可传像素数字或 CSS 值；优先于 listStyle.maxHeight */
-  maxHeight?: number | string;
+  /** 列表整高（像素数字）；优先于 listStyle.height，默认 200。CSS 值请写在 listStyle.height */
+  height?: number;
+  /** 列表最小高度（像素数字）；优先于 listStyle.minHeight。CSS 值请写在 listStyle.minHeight */
+  minHeight?: number;
+  /** 列表最大高度（像素数字）；优先于 listStyle.maxHeight。CSS 值请写在 listStyle.maxHeight */
+  maxHeight?: number;
   /** 是否禁用 */
   disabled?: boolean;
   /** 错误状态（外框红边）；可与 FormItem / createForm bindTargetKeys 联用 */
@@ -221,7 +221,14 @@ type ListBoxStyle = {
   maxHeight?: string;
 };
 
-/** Resolve list viewport height / min / max. Top-level props win over listStyle. */
+/** Resolve list viewport height / min / max. Numeric top-level props win over listStyle. */
+function resolvePxNumber(value: number | undefined): string | undefined {
+  if (typeof value === "number" && Number.isFinite(value) && value > 0) {
+    return `${value}px`;
+  }
+  return undefined;
+}
+
 function resolveListBoxStyle(
   listStyle: {
     height?: number | string;
@@ -229,16 +236,20 @@ function resolveListBoxStyle(
     maxHeight?: number | string;
   },
   overrides: {
-    height?: number | string;
-    minHeight?: number | string;
-    maxHeight?: number | string;
+    height?: number;
+    minHeight?: number;
+    maxHeight?: number;
   },
 ): ListBoxStyle {
   const style: ListBoxStyle = {
-    height: resolveCssSize(overrides.height ?? listStyle.height) ?? "200px",
+    height: resolvePxNumber(overrides.height) ??
+      resolveCssSize(listStyle.height) ??
+      "200px",
   };
-  const minHeight = resolveCssSize(overrides.minHeight ?? listStyle.minHeight);
-  const maxHeight = resolveCssSize(overrides.maxHeight ?? listStyle.maxHeight);
+  const minHeight = resolvePxNumber(overrides.minHeight) ??
+    resolveCssSize(listStyle.minHeight);
+  const maxHeight = resolvePxNumber(overrides.maxHeight) ??
+    resolveCssSize(listStyle.maxHeight);
   if (minHeight) style.minHeight = minHeight;
   if (maxHeight) style.maxHeight = maxHeight;
   return style;

@@ -101,26 +101,25 @@ const TRANSFER_API: ApiRow[] = [
     type: "{ width?: number; height?: number | string; minHeight?: number | string; maxHeight?: number | string; itemHeight?: number }",
     default: "-",
     description:
-      "列表样式：width 为列宽基准（窄容器内可收缩），height / minHeight / maxHeight 为列表整高（像素数字或 CSS 值；与顶层同名参数同时存在时顶层优先；height 默认 200），itemHeight 为每一项行高（像素）；不传 itemHeight 时按 size 默认为 xs 16 / sm 18 / md 18 / lg 20",
+      "列表样式：width 为列宽基准（窄容器内可收缩），height / minHeight / maxHeight 为列表整高（像素数字或 CSS 值，如 \"70vh\"、\"calc(100vh - 340px)\"；与顶层同名数字参数同时存在时顶层优先；height 默认 200），itemHeight 为每一项行高（像素）；不传 itemHeight 时按 size 默认为 xs 16 / sm 18 / md 18 / lg 20",
   },
   {
     name: "height",
-    type: "number | string",
+    type: "number",
     default: "200",
-    description:
-      "列表整高，可传像素数字或 CSS 值（如 360、\"70vh\"、\"calc(100vh - 340px)\"）；优先于 listStyle.height",
+    description: "列表整高（像素数字）；优先于 listStyle.height。CSS 值请写在 listStyle.height",
   },
   {
     name: "minHeight",
-    type: "number | string",
+    type: "number",
     default: "-",
-    description: "列表最小高度，可传像素数字或 CSS 值；优先于 listStyle.minHeight",
+    description: "列表最小高度（像素数字）；优先于 listStyle.minHeight。CSS 值请写在 listStyle.minHeight",
   },
   {
     name: "maxHeight",
-    type: "number | string",
+    type: "number",
     default: "-",
-    description: "列表最大高度，可传像素数字或 CSS 值；优先于 listStyle.maxHeight",
+    description: "列表最大高度（像素数字）；优先于 listStyle.maxHeight。CSS 值请写在 listStyle.maxHeight",
   },
   {
     name: "disabled",
@@ -241,8 +240,9 @@ export default function FormTransfer() {
           左右列表使用原生多选 select：单击只选一项，Ctrl /
           Command+单击多选，点中列表后 Ctrl / Command+A
           全选当前列（不会选中整页）。列宽可随容器收缩，聚焦时只在列表内侧显示淡色细线。可用
-          height、minHeight、maxHeight 控制列表整高（像素数字或 CSS
-          值，也可写在 listStyle 里），height 默认 200。可用
+          height、minHeight、maxHeight
+          只接受像素数字；要写 CSS 值请放在 listStyle 的同名字段里，height
+          默认 200。可用
           listStyle.itemHeight 控制每一项行高（像素），不传则按 size
           使用默认行高。render
           若返回非文本则回退为标题。dataSource、targetKeys、onChange、titles、showSearch、searchPlaceholder、可选
