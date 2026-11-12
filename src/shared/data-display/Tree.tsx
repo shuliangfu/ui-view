@@ -14,10 +14,16 @@
 import {
   createEffect,
   createSignal,
-  untrack,
   type JSXRenderable,
+  untrack,
 } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
+import {
+  focusSelectAllHost,
+  isSelectAllHotkey,
+  preventSelectAllDefault,
+  toggleSelectAllKeys,
+} from "../select-all-hotkey.ts";
 import { IconChevronRight } from "../basic/icons/ChevronRight.tsx";
 import {
   readSignalValue,
@@ -41,7 +47,6 @@ export interface TreeNode {
   /** 子节点 */
   children?: TreeNode[];
 }
-
 
 export interface TreeMessages {
   /** 展开按钮 aria-label */
@@ -114,6 +119,22 @@ function collectDescendantKeys(node: TreeNode): string[] {
     }
   };
   walk(node);
+  return out;
+}
+
+function collectSelectableTreeKeys(
+  nodes: TreeNode[],
+  mode: "check" | "select",
+): string[] {
+  const out: string[] = [];
+  const walk = (node: TreeNode) => {
+    const allowed = mode === "check"
+      ? !node.disabled && node.checkable !== false
+      : !node.disabled;
+    if (allowed) out.push(node.key);
+    node.children?.forEach(walk);
+  };
+  nodes.forEach(walk);
   return out;
 }
 
@@ -282,7 +303,9 @@ function renderNode(
                 isLeaf && "invisible pointer-events-none",
               )}
               aria-expanded={hasChildren ? isExpanded : undefined}
-              aria-label={isExpanded ? ctx.messages.collapse : ctx.messages.expand}
+              aria-label={isExpanded
+                ? ctx.messages.collapse
+                : ctx.messages.expand}
               disabled={disabled || isLeaf}
               onClick={(e: Event) => {
                 e.preventDefault();
@@ -304,9 +327,9 @@ function renderNode(
                 class="shrink-0 w-4 h-4 rounded border-slate-300 dark:border-slate-600 cursor-pointer"
                 checked={vcheck === "checked"}
                 disabled={disabled}
-                aria-checked={
-                  vcheck === "indeterminate" ? "mixed" : vcheck === "checked"
-                }
+                aria-checked={vcheck === "indeterminate"
+                  ? "mixed"
+                  : vcheck === "checked"}
                 onClick={(e: Event) => {
                   // 拦冒泡，避免行 onClick 写入 selected；同步触发勾选（兼容仅绑定 click 的运行时）
                   e.preventDefault();
@@ -410,8 +433,8 @@ export function Tree(props: TreeProps): JSXRenderable {
   const innerSelected = createSignal<string[]>([]);
   const innerChecked = createSignal<string[]>([]);
 
-  const hasControlledExpanded =
-    controlledExpanded !== undefined && controlledExpanded !== null;
+  const hasControlledExpanded = controlledExpanded !== undefined &&
+    controlledExpanded !== null;
   const hasControlledSelected = props.selectedKeys !== undefined;
   const hasControlledChecked = props.checkedKeys !== undefined;
 
@@ -482,8 +505,7 @@ export function Tree(props: TreeProps): JSXRenderable {
       else cur.add(key);
     } else {
       const desc = collectDescendantKeys(node);
-      const fullyOn =
-        cur.has(key) && desc.every((k) => cur.has(k));
+      const fullyOn = cur.has(key) && desc.every((k) => cur.has(k));
       if (fullyOn || visualCheckState(node, cur, false) === "checked") {
         cur.delete(key);
         for (const k of desc) cur.delete(k);
@@ -529,6 +551,27 @@ export function Tree(props: TreeProps): JSXRenderable {
       });
   });
 
+  const selectAllInTree = (event: KeyboardEvent) => {
+    if (!isSelectAllHotkey(event)) return;
+    if (checkable) {
+      preventSelectAllDefault(event);
+      const all = collectSelectableTreeKeys(treeData, "check");
+      commitChecked(toggleSelectAllKeys(readChecked(), all));
+      return;
+    }
+    if (multiple) {
+      preventSelectAllDefault(event);
+      const all = collectSelectableTreeKeys(treeData, "select");
+      const next = toggleSelectAllKeys(readSelected(), all);
+      const infoNode = treeData[0];
+      if (!infoNode) return;
+      commitSelected(next, {
+        node: infoNode,
+        selected: next.length > 0,
+      });
+    }
+  };
+
   return (
     <div
       ref={(el: unknown) => {
@@ -545,6 +588,9 @@ export function Tree(props: TreeProps): JSXRenderable {
       data-tree-check-strictly={checkStrictly ? "true" : "false"}
       data-tree-show-line={showLine ? "true" : undefined}
       data-tree-block-node={blockNode ? "true" : undefined}
+      tabIndex={checkable || multiple ? -1 : undefined}
+      onMouseDown={checkable || multiple ? focusSelectAllHost : undefined}
+      onKeyDown={checkable || multiple ? selectAllInTree : undefined}
     >
       {treeData.map((node) => renderNode(node, 0, ctx))}
     </div>

@@ -30,6 +30,12 @@ import {
   type MaybeSignal,
   readMaybeSignal,
 } from "./maybe-signal.ts";
+import {
+  focusSelectAllHost,
+  isSelectAllHotkey,
+  preventSelectAllDefault,
+  toggleSelectAllKeys,
+} from "../select-all-hotkey.ts";
 import type { SizeVariant } from "../types.ts";
 
 /** 与 Select 共用 Esc 关闭注册键，需配合文档站 initDropdownEsc */
@@ -154,8 +160,21 @@ function MultiSelectNativeBranch(props: Omit<MultiSelectProps, "appearance">) {
     onChange?.(synthetic);
   };
 
+  const selectAllOptions = (event: KeyboardEvent) => {
+    if (disabled || !isSelectAllHotkey(event)) return;
+    preventSelectAllDefault(event);
+    const all = options.filter((opt) => !opt.disabled).map((opt) => opt.value);
+    const current = readMaybeSignal(valueProp) ?? [];
+    triggerChange(toggleSelectAllKeys(current, all));
+  };
+
   return (
-    <span class="block">
+    <span
+      class="block"
+      tabIndex={-1}
+      onMouseDown={focusSelectAllHost}
+      onKeyDown={selectAllOptions}
+    >
       {() => {
         const value = readMaybeSignal(valueProp) ?? [];
         const allSelected = allValues.length > 0 &&
@@ -301,12 +320,22 @@ function MultiSelectDropdownBranch(
     .filter((o) => !o.disabled)
     .map((o) => o.value);
 
+  const selectAllOptions = (event: KeyboardEvent) => {
+    if (disabled || !isSelectAllHotkey(event)) return;
+    preventSelectAllDefault(event);
+    const current = readMaybeSignal(value) ?? [];
+    triggerChange(toggleSelectAllKeys(current, selectableValues));
+  };
+
   return (
     <span
       ref={(el: HTMLElement | null) => {
         rootEl = el;
       }}
       class={twMerge("relative block w-full min-w-0", className)}
+      tabIndex={-1}
+      onMouseDown={focusSelectAllHost}
+      onKeyDown={selectAllOptions}
     >
       {() => {
         const nm = name;

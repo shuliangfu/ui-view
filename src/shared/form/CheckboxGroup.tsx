@@ -17,6 +17,12 @@ import { resolveFormControlSize } from "./form-control-context.ts";
 import { FormItemControlIdContext } from "./form-item-control-id.ts";
 import { Checkbox } from "./Checkbox.tsx";
 import type { SizeVariant } from "../types.ts";
+import {
+  focusSelectAllHost,
+  isSelectAllHotkey,
+  preventSelectAllDefault,
+  toggleSelectAllKeys,
+} from "../select-all-hotkey.ts";
 
 export interface CheckboxGroupOption {
   value: string;
@@ -83,6 +89,16 @@ export function CheckboxGroup(props: CheckboxGroupProps): JSXRenderable {
     onChange?.(next);
   };
 
+  const selectAllInGroup = (event: KeyboardEvent) => {
+    if (disabled || !isSelectAllHotkey(event)) return;
+    preventSelectAllDefault(event);
+    const all = options
+      .filter((opt) => !opt.disabled)
+      .map((opt) => opt.value);
+    const current = readMaybeSignal(valueProp) ?? [];
+    commitValue(toggleSelectAllKeys(current, all));
+  };
+
   return (
     <div
       id={resolvedId}
@@ -90,6 +106,9 @@ export function CheckboxGroup(props: CheckboxGroupProps): JSXRenderable {
       role="group"
       aria-label={name}
       aria-invalid={error}
+      tabIndex={-1}
+      onMouseDown={focusSelectAllHost}
+      onKeyDown={selectAllInGroup}
     >
       {options.map((opt) => (
         <span key={opt.value}>

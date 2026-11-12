@@ -25,6 +25,12 @@ import { resolveFormControlSize } from "./form-control-context.ts";
 import { FormItemControlIdContext } from "./form-item-control-id.ts";
 import { controlErrorBorder } from "./input-focus-ring.ts";
 import { commitMaybeSignal, type MaybeSignal } from "./maybe-signal.ts";
+import {
+  focusSelectAllHost,
+  isSelectAllHotkey,
+  preventSelectAllDefault,
+  toggleSelectAllKeys,
+} from "../select-all-hotkey.ts";
 
 export interface TransferItem {
   /** 唯一 key */
@@ -198,10 +204,25 @@ function TransferColumn(props: TransferColumnProps) {
   } = props;
 
   // 搜索框绑定上层 searchRef（非列内 createSignal），父级 getter 重跑时仍为同一信号，避免输入框重挂载失焦。
+  const selectAllInColumn = (event: KeyboardEvent) => {
+    if (disabled || !isSelectAllHotkey(event)) return;
+    preventSelectAllDefault(event);
+    const filtered = filterTransferItems(
+      items,
+      readSignalValue(searchRef) ?? "",
+      filterOption,
+    ).filter((item) => !item.disabled).map((item) => item.key);
+    const current = readSignalValue(selectedKeysRef) ?? [];
+    writeSignalValue(selectedKeysRef, toggleSelectAllKeys(current, filtered));
+  };
+
   return (
     <div
       class={twMerge(transferListShellCls, "min-w-0 shrink-0")}
       style={{ width: `${listStyle.width ?? 200}px` }}
+      tabIndex={-1}
+      onMouseDown={focusSelectAllHost}
+      onKeyDown={selectAllInColumn}
     >
       <div
         class={twMerge(

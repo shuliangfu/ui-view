@@ -20,6 +20,11 @@ import { IconChevronRight } from "../../shared/basic/icons/ChevronRight.tsx";
 import { IconChevronUp } from "../../shared/basic/icons/ChevronUp.tsx";
 import { getPaginationState } from "../../shared/navigation/pagination-utils.ts";
 import {
+  focusSelectAllHost,
+  isSelectAllHotkey,
+  preventSelectAllDefault,
+} from "../../shared/select-all-hotkey.ts";
+import {
   defaultTableMessages,
   type SortOrder,
   TABLE_PAGINATION_ACTIVE_CLS,
@@ -404,6 +409,22 @@ export function Table<
                 "table-wrapper overflow-x-auto",
                 className,
               )}
+              tabIndex={rowSelection && rowSelection.type !== "radio"
+                ? -1
+                : undefined}
+              onMouseDown={rowSelection && rowSelection.type !== "radio"
+                ? focusSelectAllHost
+                : undefined}
+              onKeyDown={(event: KeyboardEvent) => {
+                if (!rowSelection || rowSelection.type === "radio") return;
+                if (!isSelectAllHotkey(event)) return;
+                preventSelectAllDefault(event);
+                handleSelectAll(
+                  !allSelected,
+                  displayData,
+                  (currentPage - 1) * pageSize,
+                );
+              }}
             >
               <table
                 class={twMerge(
