@@ -28,6 +28,7 @@ import {
   queryToParams,
   resolveBatchStatusColumn,
   resolveModalWidth,
+  isSelectionColumn,
   resolvePanelColumns,
   useFieldGrid,
   validateForm,
@@ -172,16 +173,16 @@ describe("展示值", () => {
     expect(cols[0].prop).toBe("__select");
     expect(cols[1].prop).toBe("__index");
     expect(cols[3].prop).toBe("__actions");
-    // 无显式时兼容：selection 前置，actions 末尾；默认不再自动补序号列
+    // 无显式 selection 时不自动前置（needSelection 已忽略）；actions 仍可末尾兼容补
     const auto = resolvePanelColumns(
       [{ prop: "name", label: "姓名" }],
-      { needSelection: true, needActions: true, selectable: undefined },
+      { needSelection: true, needActions: true, selectable: true },
     );
     expect(auto.map((c) => c.type)).toEqual([
-      "selection",
       undefined,
       "actions",
     ]);
+    expect(auto.some(isSelectionColumn)).toBe(false);
     // autoIndex:true 才自动前置序号
     const withIdx = resolvePanelColumns(
       [{ prop: "name", label: "姓名" }],
@@ -189,14 +190,50 @@ describe("展示值", () => {
     );
     expect(withIdx.map((c) => c.type)).toEqual(["index", undefined]);
     expect(withIdx[0].label).toBe("#");
-    // selectable:false 去掉 selection；未声明 index 则没有序号列
+    // selectable:false 去掉显式 selection；未声明 index 则没有序号列
     const noSel = resolvePanelColumns(
-      [{ prop: "name", label: "姓名" }],
+      [{ type: "selection" }, { prop: "name", label: "姓名" }],
       { needSelection: true, selectable: false, needActions: false },
     );
-    expect(noSel.some((c) => c.type === "selection")).toBe(false);
+    expect(noSel.some(isSelectionColumn)).toBe(false);
     expect(noSel.some((c) => c.type === "index")).toBe(false);
     expect(noSel[0].prop).toBe("name");
+  });
+
+  it("resolvePanelColumns：勾选列只由 columns 的 type:selection 决定", () => {
+    const absent = resolvePanelColumns(
+      [{ prop: "name", label: "姓名" }],
+      { needSelection: true, selectable: true, needActions: false },
+    );
+    expect(absent.some(isSelectionColumn)).toBe(false);
+
+    const present = resolvePanelColumns(
+      [{ type: "selection" }, { prop: "name", label: "姓名" }],
+      { needSelection: false, needActions: false },
+    );
+    expect(present[0].type).toBe("selection");
+    expect(present[0].prop).toBe("__select");
+    expect(present.some(isSelectionColumn)).toBe(true);
+  });
+
+  it("resolvePanelColumns：actions 列保留 width／minWidth／maxWidth", () => {
+    const cols = resolvePanelColumns(
+      [
+        { prop: "name", label: "姓名", width: 200 },
+        {
+          type: "actions",
+          width: 150,
+          minWidth: 120,
+          maxWidth: 200,
+          actions: { view: true },
+        },
+      ],
+      { needSelection: false, autoIndex: false, needActions: false },
+    );
+    const act = cols.find((c) => c.type === "actions");
+    expect(act?.width).toBe(150);
+    expect(act?.minWidth).toBe(120);
+    expect(act?.maxWidth).toBe(200);
   });
 
   it("未写 prop 的自定义列会分配稳定键；sortProp 作为排序字段", () => {

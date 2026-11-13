@@ -28,7 +28,7 @@ export type ColumnType =
   | "bool"
   | "image"
   | "link"
-  /** 多选勾选列（columns 驱动；对齐旧顶层 selectable／dreamer-vue type:selection） */
+  /** 多选勾选列（只由 columns 声明驱动；旧顶层 selectable／caps 不再单独打开） */
   | "selection"
   /** 行号／序号列（columns 驱动；label 可省，默认 "#"） */
   | "index"

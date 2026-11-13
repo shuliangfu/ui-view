@@ -252,8 +252,72 @@ export const POP_OVERLAY_CLS =
 export const JUMP_CLS =
   "dp-jump w-14 shrink-0 [&_input]:rounded [&_input]:px-2 [&_input]:py-1 [&_input]:text-center [&_input]:text-sm [&_input]:leading-5 [&_input]:[appearance:textfield] [&_input::-webkit-inner-spin-button]:appearance-none [&_input::-webkit-outer-spin-button]:appearance-none";
 
-/** 就地编辑器外层最小宽（原 `.dp-ed-wrap`） */
-export const ED_WRAP_CLS = "dp-ed-wrap min-w-[9.5rem]";
+/**
+ * 就地编辑输入区按草稿估算的内容宽度（ch，不含左右 padding / 步进钮）。
+ * 数字至少 3 位，避免 2 位排序值把数字或 +/- 裁切；并设上限以免异常长值撑破表格。
+ *
+ * @param draft - 当前草稿字符串（数字、日期等已格式化后的文本）
+ * @param kind - `column.inline` 类型：number / date / datetime / textarea / 其它文本或选择
+ */
+export function inlineEditorContentCh(draft: string, kind: string): number {
+  const len = Array.from(draft ?? "").length;
+  if (kind === "number") return Math.min(12, Math.max(3, len));
+  if (kind === "date") return Math.min(12, Math.max(10, len));
+  if (kind === "datetime") return Math.min(20, Math.max(16, len));
+  if (kind === "textarea") return Math.min(32, Math.max(12, len));
+  return Math.min(24, Math.max(6, len));
+}
+
+/**
+ * 就地编辑内层 `<input>` / `<textarea>` 的 CSS 宽度。
+ * `calc(Nch + 1.5rem)`：N 为内容 ch，1.5rem 对应 sm 控件 `px-3` 水平内边距
+ * （Tailwind preflight 为 `box-sizing: border-box`）。
+ *
+ * @param draft - 当前草稿字符串
+ * @param kind - 同 {@link inlineEditorContentCh}
+ */
+export function inlineEditorInputCssWidth(draft: string, kind: string): string {
+  return `calc(${inlineEditorContentCh(draft, kind)}ch + 1.5rem)`;
+}
+
+/**
+ * 挂到编辑器根节点的样式：用 CSS 变量驱动内层 input 宽度，并随草稿 signal 更新。
+ *
+ * @param draft - 当前草稿字符串
+ * @param kind - 同 {@link inlineEditorContentCh}
+ */
+export function inlineEditorInputWidthStyle(
+  draft: string,
+  kind: string,
+): Record<string, string> {
+  return { "--dp-ed-input-w": inlineEditorInputCssWidth(draft, kind) };
+}
+
+/**
+ * 就地编辑器外层：宽度随控件 / 内容收缩（不再使用固定 `min-width: 9.5rem`，
+ * 避免「排序」等 2～3 位数字步进框比列宽一截）。
+ * 输入框宽度由 `--dp-ed-input-w`（{@link inlineEditorInputCssWidth}）驱动；
+ * 支持 `field-sizing: content` 的浏览器改由内容精确撑开，变量仍作最小宽，
+ * 避免空值过窄、数字被裁切或步进钮被挤没。
+ */
+export const ED_WRAP_CLS =
+  "dp-ed-wrap inline-block w-fit " +
+  "[&_input:not([type=hidden])]:box-border " +
+  "[&_input:not([type=hidden])]:[field-sizing:content] " +
+  "[&_input:not([type=hidden])]:!w-[length:var(--dp-ed-input-w,calc(3ch+1.5rem))] " +
+  "[&_input:not([type=hidden])]:!min-w-[length:var(--dp-ed-input-w,calc(3ch+1.5rem))] " +
+  "[&_input:not([type=hidden])]:!flex-none " +
+  "[&_input:not([type=hidden])]:!shrink-0 " +
+  "supports-[field-sizing:content]:[&_input:not([type=hidden])]:!w-auto " +
+  "[&_textarea]:box-border [&_textarea]:[field-sizing:content] " +
+  "[&_textarea]:!w-[length:var(--dp-ed-input-w,calc(12ch+1.5rem))] " +
+  "[&_textarea]:!min-w-[length:var(--dp-ed-input-w,calc(12ch+1.5rem))] " +
+  "supports-[field-sizing:content]:[&_textarea]:!w-auto " +
+  "[&>span]:!inline-flex [&>span]:!w-fit [&>span]:!max-w-none " +
+  "[&>div]:!w-fit [&>div]:!max-w-none " +
+  "[&_span.relative]:!inline-flex [&_span.relative]:!w-fit [&_span.relative]:!min-w-0 " +
+  "[&_button[aria-haspopup]]:!box-border [&_button[aria-haspopup]]:!w-auto " +
+  "[&_button[aria-haspopup]]:!whitespace-nowrap";
 
 /** 底栏 pageSize Select 壳（原 `.dp-pgsize`） */
 export const PGSIZE_WRAP_CLS = "dp-pgsize w-fit min-w-0 max-w-none shrink-0";

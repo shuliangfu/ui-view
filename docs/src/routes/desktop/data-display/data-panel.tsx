@@ -257,7 +257,7 @@ const DATA_PANEL_API: DocsApiTableRow[] = [
     type: "boolean",
     default: "（按需）",
     description:
-      '@deprecated 顶层开关。优先在 columns 写 `{ type:"selection", prop:"__select", label:"" }` 控制多选列位置／有无。false＝强制去掉 selection；省略时若 needSelection（caps.remove／batchStatus）且 columns 未声明 selection，仍自动前置多选列。',
+      '@deprecated 顶层开关。多选勾选列只由 columns 里的 `{ type:"selection" }` 决定（prop／label 可省）。false＝仍强制去掉 selection（兼容）；省略／true 以及 caps.remove／batchStatus 都不会再自动前置勾选列。',
   },
   {
     name: "onChanged",

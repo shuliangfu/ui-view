@@ -340,9 +340,9 @@ export interface PanelProps {
   /** 任一写操作成功后回调 */
   onChanged?: () => void;
   /**
-   * @deprecated 改由 columns 驱动：写入 `{ type:"selection" }`。
+   * @deprecated 改由 columns 驱动：写入 `{ type:"selection" }` 才显示多选勾选列。
    * - `false`：仍强制去掉 selection 列（兼容）
-   * - 省略／`true`：若 columns 未声明 selection，且 caps.remove／batchStatus 需要多选时自动前置（旧行为）
+   * - 省略／`true`：不再自动前置勾选列；caps.remove／batchStatus 不足够单独打开
    */
   selectable?: boolean;
   /**
@@ -407,6 +407,7 @@ import {
   CELL_EDIT_CLS,
   densityTableCls,
   ED_WRAP_CLS,
+  inlineEditorInputWidthStyle,
   FS_CLS,
   g,
   HEADER_BAR_CLS,
@@ -630,7 +631,6 @@ export function DataPanel(props: PanelProps): JSXRenderable {
   const hasCustomRowAction = Object.keys(raCfg).some((k) => !isRowBuiltin(k));
   /** 批量「设为…」：仅 caps.batchStatus（已挪出 toolbar）；UI 仍在选中批量条 */
   const batchStatusOn = caps.batchStatus;
-  const needSelection = caps.remove || batchStatusOn;
   const needActions = props.autoActions !== false && !!(
     rowMayShow("view", caps.view) ||
     rowMayShow("edit", caps.update) ||
@@ -638,10 +638,9 @@ export function DataPanel(props: PanelProps): JSXRenderable {
     hasCustomRowAction
   );
   const rowOpensView = caps.view || !!props.onRowClick;
-  /** 含 selection／index／actions 的完整列（显式 columns 优先；缺省兼容自动补） */
+  /** 含 selection／index／actions 的完整列（selection 只在 columns 声明时出现；actions 缺省可兼容自动补） */
   const panelColumns = resolvePanelColumns(inputColumns, {
     selectable: props.selectable,
-    needSelection,
     needActions,
   });
   /** 数据列（解析后，不含系统列） */
@@ -2474,6 +2473,13 @@ export function DataPanel(props: PanelProps): JSXRenderable {
         ref={setup}
         data-testid={testid}
         data-editor={kind}
+        style={() =>
+          inlineEditorInputWidthStyle(
+            kind === "multiselect"
+              ? mv.value.join(",")
+              : String(sv.value ?? ""),
+            kind,
+          )}
       >
         {control}
       </div>
@@ -2775,7 +2781,11 @@ export function DataPanel(props: PanelProps): JSXRenderable {
                 }
                 if (isActionsColumn(c)) {
                   return (
-                    <th class="border border-slate-200 px-3 py-2 text-center font-medium dark:border-slate-700">
+                    <th
+                      class="border border-slate-200 px-3 py-2 text-center font-medium dark:border-slate-700"
+                      style={columnWidthStyle(c)}
+                      data-testid="dp-colhead-actions"
+                    >
                       {actionsColLabel()}
                     </th>
                   );
@@ -2874,7 +2884,10 @@ export function DataPanel(props: PanelProps): JSXRenderable {
                     }
                     if (isActionsColumn(c)) {
                       return (
-                        <td class="whitespace-nowrap border border-slate-200 px-2 py-1.5 text-center dark:border-slate-700">
+                        <td
+                          class="whitespace-nowrap border border-slate-200 px-2 py-1.5 text-center dark:border-slate-700"
+                          style={columnWidthStyle(c)}
+                        >
                           <span class={ACTS_CLS}>
                             {rowSlots(r).map((s) => {
                               if (s.kind === "custom") {
@@ -3105,7 +3118,10 @@ export function DataPanel(props: PanelProps): JSXRenderable {
                   }
                   if (isActionsColumn(c)) {
                     return (
-                      <td class="border border-slate-200 dark:border-slate-700" />
+                      <td
+                        class="border border-slate-200 dark:border-slate-700"
+                        style={columnWidthStyle(c)}
+                      />
                     );
                   }
                   const dataIdx = displayCols

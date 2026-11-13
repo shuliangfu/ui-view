@@ -37,6 +37,11 @@ function withActions(actions: RowActionsConfig): Column[] {
   return [...COLUMNS, { type: "actions", actions }];
 }
 
+/** 前置多选勾选列（columns 声明才显示） */
+function withSelection(columns: Column[] = COLUMNS): Column[] {
+  return [{ type: "selection" }, ...columns];
+}
+
 function data(n: number) {
   return Array.from({ length: n }, (_, i) => ({
     id: String(i + 1),
@@ -151,7 +156,7 @@ describe("DataPanel SSR：布尔属性与转义", () => {
   });
 
   it("locked 行：复选框与删除按钮禁用", async () => {
-    const h = await html();
+    const h = await html({ columns: withSelection() });
     const row1 = h.slice(
       h.indexOf('data-testid="dp-row-1"'),
       h.indexOf('data-testid="dp-row-2"'),
@@ -213,7 +218,7 @@ describe("DataPanel SSR：布尔属性与转义", () => {
 
 describe("DataPanel SSR：能力开关", () => {
   it("有 form 的 data 模式：添加 / 编辑 / 删除 / 选择列都在", async () => {
-    const h = await html();
+    const h = await html({ columns: withSelection() });
     expect(h).toContain('data-testid="dp-select-all"');
     expect(h).toContain('data-testid="dp-edit-2"');
     expect(h).toContain('data-testid="dp-delete-2"');
@@ -241,7 +246,10 @@ describe("DataPanel SSR：能力开关", () => {
   });
 
   it("selectable=false 去掉选择列", async () => {
-    expect(await html({ selectable: false })).not.toContain(
+    expect(await html({
+      columns: withSelection(),
+      selectable: false,
+    })).not.toContain(
       'data-testid="dp-select-all"',
     );
   });
@@ -461,12 +469,12 @@ describe("DataPanel SSR：文案与自定义", () => {
 
   it("title／label 互落 tip；batchStatus 不在工具栏（caps＋column.batch）", async () => {
     const h = await html({
-      columns: withActions({
+      columns: withSelection(withActions({
         view: false,
         edit: false,
         remove: false,
         assign: { label: "分配", action: () => {} },
-      }),
+      })),
 
       caps: {
         batchStatus: true,
@@ -505,7 +513,7 @@ describe("DataPanel SSR：文案与自定义", () => {
     // batchStatus 不在 toolbar builtins；UI 仅在选中批量条
     expect(h).not.toContain('data-testid="dp-batch-status"');
     expect(h).not.toContain('data-testid="dp-batch-status-');
-    // 选择列因 remove|caps.batchStatus 出现；批量条仅选中后出现（SSR 无选中 → 无 batch-bar 内容）
+    // 选择列因 columns 声明 type:selection 出现；批量条仅选中后出现（SSR 无选中 → 无 batch-bar 内容）
     expect(h).toContain('data-testid="dp-select-1"');
   });
 
@@ -531,13 +539,13 @@ describe("DataPanel SSR：文案与自定义", () => {
     expect(rec).toContain('data-testid="dp-refresh"');
   });
 
-  it("caps.batchStatus:false 隐藏选择列（无 remove 时）", async () => {
+  it("未声明 selection 列时即使 caps.remove／batchStatus 为 true 也不出现勾选列", async () => {
     const h = await html({
       columns: withActions({ view: false, edit: false, remove: false }),
 
       caps: {
-        batchStatus: false,
-        remove: false,
+        batchStatus: true,
+        remove: true,
         create: false,
         print: false,
         import: false,
@@ -555,8 +563,10 @@ describe("DataPanel SSR：文案与自定义", () => {
           total: 1,
         }),
         setField: async () => ({ removed: 0, failed: [] }),
+        remove: async () => ({ removed: 0, failed: [] }),
       },
     });
+    expect(h).not.toContain('data-testid="dp-select-all"');
     expect(h).not.toContain('data-testid="dp-select-1"');
     expect(h).not.toContain('data-testid="dp-batch-bar"');
   });
@@ -759,5 +769,77 @@ describe("DataPanel SSR：文案与自定义", () => {
     // destroyOnClose 且 viewRow 初始为 null，关闭态不渲染详情主体（避免与 dp-view-1 按钮误匹配）
     expect(h).not.toContain('data-testid="dp-view">');
     expect(h).not.toContain("minmax(7rem, 28%)");
+  });
+});
+
+describe("DataPanel SSR：actions 列宽度", () => {
+  it("type:actions 的 width／minWidth／maxWidth 写到表头、单元格与合计行 style", async () => {
+    const h = await html({
+      columns: [
+        { prop: "name", label: "姓名", width: 200 },
+        { prop: "balance", label: "余额", type: "money", total: true },
+        {
+          type: "actions",
+          width: 150,
+          minWidth: 120,
+          maxWidth: 200,
+          actions: { view: true, edit: true, remove: true },
+        },
+      ],
+      data: data(1),
+      form: undefined,
+    });
+    const headStart = h.indexOf('data-testid="dp-colhead-actions"');
+    expect(headStart).toBeGreaterThanOrEqual(0);
+    const thOpen = h.lastIndexOf("<th", headStart);
+    const thClose = h.indexOf("</th>", headStart);
+    expect(thOpen).toBeGreaterThanOrEqual(0);
+    expect(thClose).toBeGreaterThan(thOpen);
+    const head = h.slice(thOpen, thClose);
+    expect(head).toContain("width:150px");
+    expect(head).toContain("min-width:120px");
+    expect(head).toContain("max-width:200px");
+
+    const viewBtn = h.indexOf('data-testid="dp-view-1"');
+    expect(viewBtn).toBeGreaterThanOrEqual(0);
+    const cell = h.slice(Math.max(0, viewBtn - 500), viewBtn);
+    const tdOpen = cell.lastIndexOf("<td");
+    expect(tdOpen).toBeGreaterThanOrEqual(0);
+    const tdTag = cell.slice(tdOpen, cell.indexOf(">", tdOpen) + 1);
+    expect(tdTag).toContain("width:150px");
+    expect(tdTag).toContain("min-width:120px");
+    expect(tdTag).toContain("max-width:200px");
+
+    const totalsStart = h.indexOf('data-testid="dp-totals"');
+    expect(totalsStart).toBeGreaterThanOrEqual(0);
+    const totals = h.slice(totalsStart, totalsStart + 1200);
+    expect(totals).toContain("width:150px");
+    expect(totals).toContain("min-width:120px");
+    expect(totals).toContain("max-width:200px");
+  });
+});
+
+describe("DataPanel SSR：勾选列只由 columns 的 type:selection 决定", () => {
+  it("columns 未声明 selection 时不出现表头或行勾选框", async () => {
+    const h = await html();
+    expect(h).not.toContain('data-testid="dp-select-all"');
+    expect(h).not.toContain('data-testid="dp-select-1"');
+    expect(h).not.toContain('data-testid="dp-select-2"');
+  });
+
+  it("columns 声明 { type:\"selection\" } 时出现勾选列", async () => {
+    const h = await html({ columns: withSelection() });
+    expect(h).toContain('data-testid="dp-select-all"');
+    expect(h).toContain('data-testid="dp-select-1"');
+    expect(h).toContain('data-testid="dp-select-2"');
+  });
+
+  it("声明了 selection 后即使 caps.remove／batchStatus 为 false 仍显示勾选列", async () => {
+    const h = await html({
+      columns: withSelection(),
+      caps: { remove: false, batchStatus: false },
+    });
+    expect(h).toContain('data-testid="dp-select-all"');
+    expect(h).toContain('data-testid="dp-select-2"');
   });
 });

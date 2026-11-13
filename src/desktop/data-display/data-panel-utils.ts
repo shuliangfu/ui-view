@@ -496,9 +496,12 @@ export function isSystemColumn(c: Column): boolean {
 }
 
 export type ResolvePanelColumnsOptions = {
-  /** @deprecated 顶层 selectable：false 强制去掉 selection 列 */
+  /** @deprecated 顶层 selectable：false 强制去掉 selection 列；true／省略不会再自动补勾选列 */
   selectable?: boolean;
-  /** 是否需要多选（如 caps.remove／batchStatus）——无显式 selection 列时兼容前置 */
+  /**
+   * @deprecated 已忽略。勾选列只由 columns 里的 `{ type:"selection" }` 决定，
+   * caps.remove／batchStatus 不再自动前置多选列。
+   */
   needSelection?: boolean;
   /**
    * 无显式 index 列时是否自动前置默认序号列。
@@ -515,11 +518,11 @@ export type ResolvePanelColumnsOptions = {
 
 /**
  * 解析面板列：规范化 selection／index／actions，并按需兼容补系统列。
- * - `{ type:"selection" }`：prop／label 可省（默认 `__select`／`""`）；`selectable:false` 时剔除
+ * - `{ type:"selection" }`：prop／label 可省（默认 `__select`／`""`）；有则显示勾选列。`selectable:false` 时仍剔除（兼容）
  * - `{ type:"index" }`：prop／label 可省（默认 `__index`／`"#"`）；位置随 columns 写入序
  * - `{ type:"actions" }`：prop／label 可省（默认 `__actions`／`""`，表头回落 messages.actions）
  * - 未声明 index 且 autoIndex===true：前置默认序号列（旧行为，需显式打开）
- * - 未声明 selection 且 needSelection 且 selectable≠false：前置多选列（旧 selectable 行为）
+ * - 未声明 selection：不自动补勾选列（needSelection／selectable:true 均不足够）
  * - 未声明 actions 且 needActions：末尾追加操作列（兼容旧「有钮即出列」）
  */
 
@@ -611,17 +614,9 @@ export function resolvePanelColumns(
   });
   const mappedAssigned = assignColumnProps(mapped);
 
-  const hasSel = mappedAssigned.some(isSelectionColumn);
   const hasIdx = mappedAssigned.some(isIndexColumn);
   const hasAct = mappedAssigned.some(isActionsColumn);
   const prepend: ResolvedColumn[] = [];
-  if (!hasSel && opts.selectable !== false && opts.needSelection) {
-    prepend.push({
-      type: "selection",
-      prop: PANEL_COL_SELECT,
-      label: "",
-    });
-  }
   if (!hasIdx && autoIndex) {
     prepend.push({ type: "index", prop: PANEL_COL_INDEX, label: "#" });
   }
