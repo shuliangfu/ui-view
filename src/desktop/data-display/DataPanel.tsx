@@ -779,10 +779,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
         }
         rows.value = hit.items;
         const openHit = viewRow.value;
-        if (openHit) {
-          const freshHit = hit.items.find((row) => idOf(row) === idOf(openHit));
-          if (freshHit) viewRow.value = freshHit;
-        }
+        if (openHit) refreshOpenView(idOf(openHit));
         total.value = hit.total;
         totals.value = hit.totals ?? {};
         selected.value = [];
@@ -835,10 +832,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
     }
     rows.value = res.items;
     const open = viewRow.value;
-    if (open) {
-      const fresh = res.items.find((row) => idOf(row) === idOf(open));
-      if (fresh) viewRow.value = fresh;
-    }
+    if (open) refreshOpenView(idOf(open));
     total.value = res.total;
     totals.value = res.totals ?? {};
     selected.value = [];
@@ -1152,10 +1146,8 @@ export function DataPanel(props: PanelProps): JSXRenderable {
   const doCreate = () => openForm();
   const doEdit = (r: Row) => openForm(r);
   let viewSeq = 0;
-  const doView = (r: Row) => {
-    const id = idOf(r);
-    const my = ++viewSeq;
-    viewRow.value = r;
+  /** 重新请求当前打开的详情；失败或返回空则保留现有 viewRow，不用列表行覆盖。 */
+  function refreshOpenView(id: string): void {
     const src = ds as {
       view?: (id: string) => Row | null | Promise<Row | null>;
       get?: (id: string) => Row | null | Promise<Row | null>;
@@ -1166,6 +1158,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
       ? src.get.bind(src)
       : null;
     if (!id || !fetchView) return;
+    const my = ++viewSeq;
     void Promise.resolve(fetchView(id)).then((fresh) => {
       if (my !== viewSeq) return;
       if (!viewRow.value || idOf(viewRow.value) !== id) return;
@@ -1174,6 +1167,10 @@ export function DataPanel(props: PanelProps): JSXRenderable {
       if (my !== viewSeq) return;
       message.error((e as Error)?.message || m.networkError);
     });
+  }
+  const doView = (r: Row) => {
+    viewRow.value = r;
+    refreshOpenView(idOf(r));
   };
 
   // ---- 导出 / 打印 / 导入

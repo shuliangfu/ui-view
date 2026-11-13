@@ -184,6 +184,18 @@ export function apiQueryParams(query: Query): URLSearchParams {
   return p;
 }
 
+/**
+ * 把 list 查询参数同步写入请求头，键名与 query 一致（page、pageSize、sort、order 以及 filters）。
+ * 仅列表请求使用，方便服务端渲染按 Header 读取分页等信息。
+ */
+export function apiListQueryHeaders(query: Query): Headers {
+  const h = new Headers();
+  apiQueryParams(query).forEach((value, key) => {
+    if (value !== "") h.set(key, value);
+  });
+  return h;
+}
+
 function isRecord(v: unknown): v is Record<string, unknown> {
   return v !== null && typeof v === "object" && !Array.isArray(v);
 }
@@ -361,8 +373,12 @@ export function createApiDataSource(
     method: string,
     url: string,
     body?: unknown,
+    extraHeaders?: HeadersInit,
   ): Promise<{ ok: boolean; status: number; body: unknown }> {
     const h = await headers();
+    if (extraHeaders) {
+      new Headers(extraHeaders).forEach((v, k) => h.set(k, v));
+    }
     const init: RequestInit = {
       method,
       headers: h,
@@ -396,9 +412,10 @@ export function createApiDataSource(
           Number.isFinite(query.pageSize) && query.pageSize >= 1
         ? Math.floor(query.pageSize)
         : pageSizeDefault;
-      const qs = apiQueryParams({ ...query, pageSize: size }).toString();
+      const listQuery = { ...query, pageSize: size };
+      const qs = apiQueryParams(listQuery).toString();
       const url = qs ? `${root}?${qs}` : root;
-      const r = await request("GET", url);
+      const r = await request("GET", url, undefined, apiListQueryHeaders(listQuery));
       if (!r.ok) return { items: [], total: 0 };
       return normalizeListPayload(r.body);
     },

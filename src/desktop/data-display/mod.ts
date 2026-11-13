@@ -172,6 +172,7 @@ export {
   type ApiDataSourceOptions,
   type ApiMode,
   apiQueryParams,
+  apiListQueryHeaders,
   createApiDataSource,
   currentPageRoute,
   joinApiPath,

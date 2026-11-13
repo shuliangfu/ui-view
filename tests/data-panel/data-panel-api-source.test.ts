@@ -4,6 +4,7 @@
  */
 import { describe, expect, it } from "@dreamer/test";
 import {
+  apiListQueryHeaders,
   apiQueryParams,
   createApiDataSource,
   joinApiPath,
@@ -80,6 +81,15 @@ describe("joinApiPath / apiQueryParams / normalizeListPayload", () => {
     expect(p.get("role")).toBe("admin");
   });
 
+  it("apiListQueryHeaders 与 query 键名一致", () => {
+    const h = apiListQueryHeaders(Q);
+    expect(h.get("page")).toBe("1");
+    expect(h.get("pageSize")).toBe("10");
+    expect(h.get("sort")).toBe("name");
+    expect(h.get("order")).toBe("asc");
+    expect(h.get("role")).toBe("admin");
+  });
+
   it("normalizeListPayload 常见壳", () => {
     expect(normalizeListPayload({ items: [{ id: "1" }], total: 1 })).toEqual({
       items: [{ id: "1" }],
@@ -98,7 +108,7 @@ describe("joinApiPath / apiQueryParams / normalizeListPayload", () => {
   });
 });
 
-type Call = { method: string; url: string; body?: unknown };
+type Call = { method: string; url: string; body?: unknown; headers?: Headers };
 
 function mockFetch(
   calls: Call[],
@@ -115,7 +125,7 @@ function mockFetch(
         body = init.body;
       }
     }
-    const c: Call = { method, url, body };
+    const c: Call = { method, url, body, headers: new Headers(init?.headers) };
     calls.push(c);
     const r = handler(c);
     return new Response(JSON.stringify(r.json), {
@@ -181,6 +191,36 @@ describe("createApiDataSource action", () => {
     const createBody = calls[2].body as Record<string, unknown>;
     expect(createBody.name).toBe("A");
     expect(createBody.rows).toBeUndefined();
+  });
+
+  it("list 把 page、pageSize 等参数写入 Headers，其他请求不带", async () => {
+    const calls: Call[] = [];
+    const ds = createApiDataSource({
+      baseRoute: "/api/users",
+      headers: { "X-Test": "1" },
+      fetch: mockFetch(calls, (c) => {
+        if (c.method === "GET" && c.url.startsWith("/api/users?")) {
+          return { json: { items: [], total: 0 } };
+        }
+        if (c.url === "/api/users/view?id=1") {
+          return { json: { id: "1" } };
+        }
+        return { json: { ok: true } };
+      }),
+    });
+    await ds.list(Q);
+    await ds.view("1");
+    await ds.create!({ name: "A" });
+    const listHeaders = calls[0].headers!;
+    expect(listHeaders.get("page")).toBe("1");
+    expect(listHeaders.get("pageSize")).toBe("10");
+    expect(listHeaders.get("sort")).toBe("name");
+    expect(listHeaders.get("order")).toBe("asc");
+    expect(listHeaders.get("role")).toBe("admin");
+    expect(listHeaders.get("X-Test")).toBe("1");
+    expect(calls[1].headers!.get("page")).toBeNull();
+    expect(calls[1].headers!.get("X-Test")).toBe("1");
+    expect(calls[2].headers!.get("page")).toBeNull();
   });
 
   it("createApiDataSource：只传 /api 才拼当前路由；传入 /api/admins 则不再取", () => {
