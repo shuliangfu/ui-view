@@ -164,9 +164,11 @@ export {
   parseCsv,
   parseJsonRows,
   parseXmlRows,
+  resolveModalWidth,
   resolvePanelColumns,
   validateForm,
 } from "./data-panel-utils.ts";
+export type { ModalShellWidth } from "./data-panel-types.ts";
 export {
   type ApiDataSource,
   type ApiDataSourceOptions,

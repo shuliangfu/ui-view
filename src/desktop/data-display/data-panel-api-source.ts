@@ -191,7 +191,9 @@ export function apiQueryParams(query: Query): URLSearchParams {
 export function apiListQueryHeaders(query: Query): Headers {
   const h = new Headers();
   apiQueryParams(query).forEach((value, key) => {
-    if (value !== "") h.set(key, value);
+    if (value === "") return;
+    // Headers 只接受 ByteString，中文等值先按 URI 分量编码。
+    h.set(key, encodeURIComponent(value));
   });
   return h;
 }

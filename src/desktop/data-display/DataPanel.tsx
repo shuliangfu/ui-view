@@ -113,6 +113,7 @@ import {
   resolveColumnFn,
   resolveColumnHeaderAlign,
   resolvePanelColumns,
+  resolveModalWidth,
   resolveViewActionsCfg,
   resolveViewFields,
   resolveViewFooterActions,
@@ -3798,7 +3799,8 @@ export function DataPanel(props: PanelProps): JSXRenderable {
           if (typeof ft === "string") return ft;
           return `${formId.value ? m.edit : m.add} · ${props.title}`;
         }}
-        width="md"
+        width={() => resolveModalWidth(props.form?.width)}
+        fullscreenable={props.form?.fullscreenable}
         keyboard
         destroyOnClose
         onClose={() => (formOpen.value = false)}
@@ -3814,7 +3816,8 @@ export function DataPanel(props: PanelProps): JSXRenderable {
           if (typeof st === "string") return st;
           return `${m.search} · ${props.title}`;
         }}
-        width="md"
+        width={() => resolveModalWidth(props.search?.width)}
+        fullscreenable={props.search?.fullscreenable}
         keyboard
         destroyOnClose
         onClose={() => (searchOpen.value = false)}
@@ -3833,7 +3836,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
           if (typeof vt === "string") return vt;
           return `${m.view} · ${props.title}`;
         }}
-        width={props.view?.width ?? "md"}
+        width={() => resolveModalWidth(props.view?.width)}
         fullscreenable={props.view?.fullscreenable}
         keyboard
         destroyOnClose

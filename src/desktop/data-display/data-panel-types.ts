@@ -402,6 +402,14 @@ export interface ViewRenderCtx {
 }
 
 /**
+ * 弹层宽度：预设名 xs/sm/md/lg/xl，或 CSS 长度 / 数字像素；也可零参 getter。缺省 md。
+ */
+export type ModalShellWidth =
+  | string
+  | number
+  | (() => string | number | undefined);
+
+/**
  * form / search / view 的统一段配置：`title` 为弹层标题，`props` 为字段数组
  * （与列同一套字段配置）；底部按钮写在与 title 平级的 `actions`（不要写在 props 末项）。
  *
@@ -422,6 +430,10 @@ export interface FormConfig {
    * 有本字段时忽略各 {@link FormField.render}。
    */
   render?: (ctx: FormRenderCtx) => unknown;
+  /** 增改弹层宽度，传给 Modal；缺省 md */
+  width?: ModalShellWidth;
+  /** 增改弹层是否显示全屏切换，传给 Modal */
+  fullscreenable?: boolean;
 }
 
 export interface SearchConfig {
@@ -429,6 +441,10 @@ export interface SearchConfig {
   props: SearchField[];
   /** 可选底部按钮（与列操作同一套 Record）。搜索确定／取消仍走官方 Modal 脚。 */
   actions?: RowActionsConfig;
+  /** 搜索弹层宽度，传给 Modal；缺省 md */
+  width?: ModalShellWidth;
+  /** 搜索弹层是否显示全屏切换，传给 Modal */
+  fullscreenable?: boolean;
 }
 
 export interface ViewConfig {
@@ -450,7 +466,7 @@ export interface ViewConfig {
    */
   render?: (ctx: ViewRenderCtx) => unknown;
   /** 详情弹层宽度，传给 Modal；缺省 md */
-  width?: string | number | (() => string | number | undefined);
+  width?: ModalShellWidth;
   /** 详情弹层是否显示全屏切换，传给 Modal */
   fullscreenable?: boolean;
 }

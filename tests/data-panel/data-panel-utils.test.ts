@@ -27,6 +27,7 @@ import {
   queryFromParams,
   queryToParams,
   resolveBatchStatusColumn,
+  resolveModalWidth,
   resolvePanelColumns,
   useFieldGrid,
   validateForm,
@@ -1139,5 +1140,15 @@ describe("filtersAfterSearchReset / filtersAfterSearchApply", () => {
         { scope: "mine" },
       ),
     ).toEqual({ q: "李四", scope: "mine", tab: "3" });
+  });
+});
+
+describe("resolveModalWidth", () => {
+  it("falls back to md and unwraps getters", () => {
+    expect(resolveModalWidth(undefined)).toBe("md");
+    expect(resolveModalWidth("92vw")).toBe("92vw");
+    expect(resolveModalWidth(960)).toBe(960);
+    expect(resolveModalWidth(() => "xl")).toBe("xl");
+    expect(resolveModalWidth(() => undefined, "lg")).toBe("lg");
   });
 });

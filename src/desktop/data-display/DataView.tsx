@@ -81,6 +81,7 @@ import {
   parseCsv,
   parseJsonRows,
   parseXmlRows,
+  resolveModalWidth,
   resolveViewActionsCfg,
   resolveViewFields,
   resolveViewFooterActions,
@@ -1815,7 +1816,8 @@ export function DataView(props: DataViewProps): JSXRenderable {
           if (typeof ft === "string") return ft;
           return `${m.edit} · ${props.title}`;
         }}
-        width="md"
+        width={() => resolveModalWidth(props.form?.width)}
+        fullscreenable={props.form?.fullscreenable}
         keyboard
         destroyOnClose
         onClose={() => (formOpen.value = false)}

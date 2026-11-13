@@ -14,6 +14,7 @@ import type {
   ImportResult,
   ListResult,
   Messages,
+  ModalShellWidth,
   Query,
   Row,
   RowActionsConfig,
@@ -1463,4 +1464,19 @@ export function resolveViewFooterActions(
     });
   }
   return slots;
+}
+
+
+/**
+ * 解析 form / search / view 的弹层宽度；未配置时用 fallback（默认 md）。
+ */
+export function resolveModalWidth(
+  width: ModalShellWidth | undefined,
+  fallback: string | number = "md",
+): string | number {
+  if (typeof width === "function") {
+    const v = width();
+    return v === undefined ? fallback : v;
+  }
+  return width ?? fallback;
 }

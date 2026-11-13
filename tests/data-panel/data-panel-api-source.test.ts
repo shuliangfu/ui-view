@@ -90,6 +90,19 @@ describe("joinApiPath / apiQueryParams / normalizeListPayload", () => {
     expect(h.get("role")).toBe("admin");
   });
 
+  it("apiListQueryHeaders 对非 ASCII 值做 URI 编码，避免 Headers 抛错", () => {
+    const h = apiListQueryHeaders({
+      page: 1,
+      pageSize: 20,
+      sort: "",
+      order: "asc",
+      filters: { q: "张三", tab: "12" },
+    });
+    expect(h.get("q")).toBe(encodeURIComponent("张三"));
+    expect(h.get("tab")).toBe("12");
+    expect(h.get("page")).toBe("1");
+  });
+
   it("normalizeListPayload 常见壳", () => {
     expect(normalizeListPayload({ items: [{ id: "1" }], total: 1 })).toEqual({
       items: [{ id: "1" }],
