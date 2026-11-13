@@ -121,24 +121,24 @@ const DATA_PANEL_API: DocsApiTableRow[] = [
   },
   {
     name: "search",
-    type: "{ title?, props: SearchField[] }",
+    type: "SearchConfig",
     default: "—",
     description:
-      "搜索弹层：title 为标题（string 或 ()=>string），props 与列同一套字段配置。非空则工具栏搜索＋URL 同步。详见 Search 表。",
+      "搜索弹层：title、props、actions，以及 width／fullscreenable（弹层宽度与全屏切换，缺省 md／false）。非空则工具栏搜索＋URL 同步。详见 Search 表。",
   },
   {
     name: "form",
-    type: "{ title?, props?, render?, actions? }",
+    type: "FormConfig",
     default: "—",
     description:
-      "增改弹层：title 为标题（string 或 (row)=>string；新增时 row 为 {}）；props 为表单项（有 render 时可省）；render(ctx) 整段替换主体（含确定／取消），优先级高于 FormField.render；旁路可用 children＋自定义 action。详见 Form 表。",
+      "增改弹层：title、props、render、actions，以及 width／fullscreenable（弹层宽度与全屏切换，缺省 md／false）。详见 Form 表。",
   },
   {
     name: "view",
-    type: "{ title?, props?, render?, actions? }",
+    type: "ViewConfig",
     default: "columns＋form",
     description:
-      "详情弹层：title 为查看弹窗标题（string 或 (row)=>string）；props 只放字段（有 render 时可省）；render(ctx) 替换 Descriptions 字段区，actions 底脚仍由面板渲染；字段 ViewItem.render 仅无 view.render 时生效。自定义按钮 action(row) 可开 children 内 Modal（旁路）。不写时回落列＋表单",
+      "详情弹层：title、props、render、actions，以及 width／fullscreenable（弹层宽度与全屏切换，缺省 md／false）、labelColPercent／labelMinWidth（标签与内容比例）。不写时回落列＋表单。详见 View 表。",
   },
   {
     name: "panelKey",
@@ -239,6 +239,20 @@ const DATA_PANEL_API: DocsApiTableRow[] = [
     description: "行是否禁用选择／删除／行内编辑；缺省回落 row.locked",
   },
   {
+    name: "autoActions",
+    type: "boolean",
+    default: "true",
+    description:
+      '为 false 时不因 caps.view／update／remove 自动补操作列；仍可用 columns 声明 { type:"actions" }',
+  },
+  {
+    name: "onRowClick",
+    type: "(row) => void",
+    default: "-",
+    description:
+      "点击行（避开勾选、按钮、链接）时回调；未传且 caps.view 时打开详情",
+  },
+  {
     name: "selectable",
     type: "boolean",
     default: "（按需）",
@@ -250,6 +264,13 @@ const DATA_PANEL_API: DocsApiTableRow[] = [
     type: "() => void",
     default: "-",
     description: "任一写操作成功后回调",
+  },
+  {
+    name: "syncUrl",
+    type: "boolean",
+    default: "-",
+    description:
+      "@deprecated 已无开关：分页、排序默认与地址栏双向同步；配置了 search 时搜索字段一并同步。保留此字段仅为兼容，传值会被忽略",
   },
   {
     name: "class",
@@ -463,6 +484,41 @@ const COLUMNS_API: DocsApiTableRow[] = [
 ];
 
 /** Search 字段全表（SearchField） */
+/** SearchConfig 段级 */
+const SEARCH_CONFIG_API: DocsApiTableRow[] = [
+  {
+    name: "title",
+    type: "string | () => string",
+    default: "-",
+    description: "搜索弹层标题",
+  },
+  {
+    name: "props",
+    type: "SearchField[]",
+    default: "-",
+    description: "搜索字段；与列同一套字段配置",
+  },
+  {
+    name: "actions",
+    type: "RowActionsConfig",
+    default: "-",
+    description: "可选底部按钮 Record（搜索确定／取消仍走官方 Modal 脚）",
+  },
+  {
+    name: "width",
+    type: "ModalShellWidth",
+    default: '"md"',
+    description:
+      "弹层宽度，传给 Modal。预设名 xs／sm／md／lg／xl，或 CSS 长度／数字像素，也可零参 getter",
+  },
+  {
+    name: "fullscreenable",
+    type: "boolean",
+    default: "false",
+    description: "是否在弹层标题栏显示全屏切换，传给 Modal",
+  },
+];
+
 const SEARCH_API: DocsApiTableRow[] = [
   {
     name: "prop",
@@ -725,6 +781,19 @@ const FORM_CONFIG_API: DocsApiTableRow[] = [
     default: "-",
     description: "可选底部按钮 Record（内置 formBody 仍用确定／取消）",
   },
+  {
+    name: "width",
+    type: "ModalShellWidth",
+    default: '"md"',
+    description:
+      "弹层宽度，传给 Modal。预设名 xs／sm／md／lg／xl，或 CSS 长度／数字像素，也可零参 getter",
+  },
+  {
+    name: "fullscreenable",
+    type: "boolean",
+    default: "false",
+    description: "是否在弹层标题栏显示全屏切换，传给 Modal",
+  },
 ];
 
 /** ViewConfig 段级 */
@@ -740,7 +809,7 @@ const VIEW_CONFIG_API: DocsApiTableRow[] = [
     type: "ViewItem[]",
     default: "-",
     description:
-      "详情字段；有 render 时可省略。字段可写 ViewItem.render／click",
+      "详情字段；有 render 时可省略。字段可写 ViewItem.render／click／labelAlign（标签对齐，透传 Descriptions）",
   },
   {
     name: "render",
@@ -755,6 +824,70 @@ const VIEW_CONFIG_API: DocsApiTableRow[] = [
     default: "{ close: true }",
     description:
       "底部按钮；内置 close 默认靠右最后。旁路可 action(row) 开 children Modal",
+  },
+  {
+    name: "width",
+    type: "ModalShellWidth",
+    default: '"md"',
+    description:
+      "弹层宽度，传给 Modal。预设名 xs／sm／md／lg／xl，或 CSS 长度／数字像素，也可零参 getter",
+  },
+  {
+    name: "fullscreenable",
+    type: "boolean",
+    default: "false",
+    description: "是否在弹层标题栏显示全屏切换，传给 Modal",
+  },
+  {
+    name: "labelColPercent",
+    type: "number",
+    default: "38",
+    description:
+      "详情 Descriptions 标签列占单列槽位宽度的百分比（12～85），与 labelMinWidth 一起决定左侧标签与右侧内容的比例",
+  },
+  {
+    name: "labelMinWidth",
+    type: "string | number",
+    default: '"13.5rem"',
+    description:
+      "详情 Descriptions 标签列最小宽度（CSS 长度或像素数字）；适当减小可让内容区更宽",
+  },
+];
+
+/** ViewItem 字段级（其余写法同 Column） */
+const VIEW_ITEM_API: DocsApiTableRow[] = [
+  {
+    name: "prop",
+    type: "string",
+    default: "-",
+    description:
+      "字段键；也可不写 prop，用 formatter／value 拼接，写法同自定义列",
+  },
+  {
+    name: "label",
+    type: "string",
+    default: "-",
+    description: "标签文案",
+  },
+  {
+    name: "render",
+    type: "(ctx: ViewItemRenderCtx) => unknown",
+    default: "-",
+    description:
+      "字段级自定义展示。有 view.render 时忽略。ctx：item／prop／row／raw／defaultNode",
+  },
+  {
+    name: "click",
+    type: '"toggle" | (row) => void',
+    default: "-",
+    description: "字段点击：toggle 在两档 options 间切换；或自定义回调",
+  },
+  {
+    name: "labelAlign",
+    type: "DescriptionsLabelAlign",
+    default: '{ vertical: "top", horizontal: "right" }',
+    description:
+      "该行标签对齐，透传 Descriptions。vertical：top 上对齐、center 垂直居中、bottom 下对齐；horizontal：left 左、center 中、right 右",
   },
 ];
 
@@ -2916,6 +3049,8 @@ function submitPwd() {
   caps={{ create: false, update: false, remove: false }}
   view={{
     title: (row) => \`详情 · \${row.name}\`,
+    labelColPercent: 28,
+    labelMinWidth: "7rem",
     props: [
       { prop: "name", label: "姓名" },
       { prop: "email", label: "邮箱" },
@@ -4151,8 +4286,13 @@ ${ALIGN_DEMO_COLUMNS_CODE}
             <code class="text-xs">view</code> 与{" "}
             <code class="text-xs">form</code>／
             <code class="text-xs">search</code> 一样写成{" "}
-            <code class="text-xs">{"{ title, props, actions? }"}</code>
-            。<code class="text-xs">title</code> 是查看弹窗标题（
+            <code class="text-xs">
+              {"{ title, props, actions?, width?, fullscreenable?, labelColPercent?, labelMinWidth? }"}
+            </code>
+            。标签与内容比例用 <code class="text-xs">labelColPercent</code>
+            （12～85，缺省 38）和 <code class="text-xs">labelMinWidth</code>
+            （缺省 13.5rem）设置。<code class="text-xs">title</code>{" "}
+            是查看弹窗标题（
             <code class="text-xs">string</code> 或{" "}
             <code class="text-xs">(row)=&gt;string</code>，如{" "}
             <code class="text-xs">{"详情 · ${row.name}"}</code>
@@ -4190,6 +4330,8 @@ ${ALIGN_DEMO_COLUMNS_CODE}
               })}
               view={{
                 title: (row) => `详情 · ${String(row.name ?? "")}`,
+                labelColPercent: 28,
+                labelMinWidth: "7rem",
                 props: [
                   { prop: "name", label: "姓名" },
                   { prop: "email", label: "邮箱" },
@@ -4641,7 +4783,16 @@ const tab = createSignal("all");
       </section>
 
       <section class="space-y-3">
-        <Title level={2}>Search（SearchField）</Title>
+        <Title level={2}>Search（SearchConfig / SearchField）</Title>
+        <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+          搜索弹层可用 <code class="text-xs">width</code>
+          （ModalShellWidth，缺省 md）和{" "}
+          <code class="text-xs">fullscreenable</code>
+          （是否显示全屏切换，缺省 false）。
+        </Paragraph>
+        <Title level={3}>SearchConfig</Title>
+        <DocsApiTable rows={SEARCH_CONFIG_API} />
+        <Title level={3}>SearchField</Title>
         <DocsApiTable rows={SEARCH_API} />
       </section>
 
@@ -4654,7 +4805,11 @@ const tab = createSignal("all");
           <code class="text-xs">FormField.render</code>
           （字段）＞ 内置控件；旁路层用{" "}
           <code class="text-xs">children</code>＋自定义{" "}
-          <code class="text-xs">action</code>。
+          <code class="text-xs">action</code>
+          。弹层可用 <code class="text-xs">width</code>
+          （ModalShellWidth，缺省 md）和{" "}
+          <code class="text-xs">fullscreenable</code>
+          （是否显示全屏切换，缺省 false）。
         </Paragraph>
         <Title level={3}>FormConfig</Title>
         <DocsApiTable rows={FORM_CONFIG_API} />
@@ -4663,8 +4818,24 @@ const tab = createSignal("all");
       </section>
 
       <section class="space-y-3">
-        <Title level={2}>View（ViewConfig）</Title>
+        <Title level={2}>View（ViewConfig / ViewItem）</Title>
+        <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+          详情字段区用 Descriptions 展示。单项可写{" "}
+          <code class="text-xs">labelAlign</code>
+          ，垂直方向 top／center／bottom，水平方向
+          left／center／right；未写则标签上对齐、右对齐。弹层可用{" "}
+          <code class="text-xs">width</code>
+          （ModalShellWidth，缺省 md）和{" "}
+          <code class="text-xs">fullscreenable</code>
+          （是否显示全屏切换，缺省 false）。标签与内容的宽度比例用{" "}
+          <code class="text-xs">labelColPercent</code>
+          （12～85，缺省 38）和 <code class="text-xs">labelMinWidth</code>
+          （缺省 13.5rem）控制。
+        </Paragraph>
+        <Title level={3}>ViewConfig</Title>
         <DocsApiTable rows={VIEW_CONFIG_API} />
+        <Title level={3}>ViewItem</Title>
+        <DocsApiTable rows={VIEW_ITEM_API} />
       </section>
 
       <section class="space-y-3">

@@ -27,7 +27,7 @@ const DATA_VIEW_API: ApiRow[] = [
     type: "ViewConfig",
     default: "-",
     description:
-      "明细配置。props 用 Descriptions 展示字段（写法同 DataPanel view）；render(ctx) 替换字段区。字段级 ViewItem.render 仅在无 view.render 且无 children 时生效。props 也可不写 prop，用 formatter／value 拼接字段，写法与 DataPanel 自定义列相同。",
+      "明细配置，写法同 DataPanel view（含 width／fullscreenable，以及 labelColPercent／labelMinWidth 控制标签与内容比例）。props 用 Descriptions 展示字段；render(ctx) 替换字段区。字段级 ViewItem.render 仅在无 view.render 且无 children 时生效。props 也可不写 prop，用 formatter／value 拼接字段。ViewItem.labelAlign 控制该行标签对齐（vertical：top／center／bottom，horizontal：left／center／right），透传 Descriptions。",
   },
   {
     name: "children",
@@ -77,7 +77,8 @@ const DATA_VIEW_API: ApiRow[] = [
     name: "form",
     type: "FormConfig",
     default: "-",
-    description: "工具栏「更新」打开的编辑 Modal，写法同 DataPanel form",
+    description:
+      "工具栏「更新」打开的编辑 Modal，写法同 DataPanel form（含 width／fullscreenable，缺省 md／false）",
   },
   {
     name: "data",
@@ -104,6 +105,31 @@ const DATA_VIEW_API: ApiRow[] = [
     type: "string",
     default: "-",
     description: "未传 data 且未传 dataSource 时创建 API 数据源，同 DataPanel",
+  },
+  {
+    name: "resource",
+    type: "string",
+    default: "-",
+    description: "仅当 baseRoute 只有 1 段时生效，同 DataPanel",
+  },
+  {
+    name: "apiMode",
+    type: '"action" | "restful"',
+    default: '"action"',
+    description: "自动建源时的接口风格，同 DataPanel",
+  },
+  {
+    name: "apiHeaders",
+    type: "HeadersInit | () => HeadersInit | Promise<HeadersInit>",
+    default: "-",
+    description:
+      "传给 createApiDataSource 的请求头（固定或函数），仅自动建源时生效",
+  },
+  {
+    name: "apiCredentials",
+    type: "RequestCredentials",
+    default: "-",
+    description: "传给 fetch 的 credentials，仅自动建源时生效",
   },
   {
     name: "toolbar",
@@ -143,6 +169,24 @@ const DATA_VIEW_API: ApiRow[] = [
     description: "覆盖 DataPanel 文案（更新按钮默认「更新」／Update）",
   },
   {
+    name: "exportName",
+    type: "string",
+    default: "title",
+    description: "导出文件名（不含扩展名），默认取 title",
+  },
+  {
+    name: "onImportRows",
+    type: "(rows) => void",
+    default: "-",
+    description: "接管导入；缺省走 dataSource.importRows",
+  },
+  {
+    name: "onExport",
+    type: "(format, ctx) => void",
+    default: "-",
+    description: "接管导出；缺省时导出当前记录",
+  },
+  {
     name: "onChanged",
     type: "() => void",
     default: "-",
@@ -168,6 +212,8 @@ const importCode = `import { DataView } from "@dreamer/ui-view/data-display";
   title="用户详情"
   data={user}
   view={{
+    labelColPercent: 28,
+    labelMinWidth: "7rem",
     props: [
       { prop: "name", label: "姓名" },
       { prop: "email", label: "邮箱" },
@@ -188,6 +234,8 @@ const basicCode = `<DataView
     createdAt: "2026-11-10 10:30:00",
   }}
   view={{
+    labelColPercent: 28,
+    labelMinWidth: "7rem",
     props: [
       { prop: "name", label: "姓名" },
       { prop: "email", label: "邮箱" },
@@ -281,6 +329,8 @@ export default function DataDisplayDataView() {
             title="用户详情"
             data={DEMO_USER}
             view={{
+              labelColPercent: 28,
+              labelMinWidth: "7rem",
               props: [
                 { prop: "name", label: "姓名" },
                 { prop: "email", label: "邮箱" },

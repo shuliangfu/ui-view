@@ -19,6 +19,9 @@ export {
 export {
   Descriptions,
   type DescriptionsItem,
+  type DescriptionsLabelAlign,
+  type DescriptionsLabelHorizontalAlign,
+  type DescriptionsLabelVerticalAlign,
   type DescriptionsProps,
 } from "./Descriptions.tsx";
 export { Card, type CardProps } from "./Card.tsx";
@@ -172,9 +175,9 @@ export type { ModalShellWidth } from "./data-panel-types.ts";
 export {
   type ApiDataSource,
   type ApiDataSourceOptions,
+  apiListQueryHeaders,
   type ApiMode,
   apiQueryParams,
-  apiListQueryHeaders,
   createApiDataSource,
   currentPageRoute,
   joinApiPath,

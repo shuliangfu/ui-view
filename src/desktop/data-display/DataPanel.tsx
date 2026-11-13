@@ -57,6 +57,7 @@ import {
   wrapFetchWithTabParam,
 } from "./data-panel-tab-source.ts";
 import { Descriptions } from "./Descriptions.tsx";
+import type { DescriptionsLabelAlign } from "./Descriptions.tsx";
 import { Dropdown } from "../navigation/Dropdown.tsx";
 import { FormItem } from "../form/FormItem.tsx";
 import { Input } from "../form/Input.tsx";
@@ -112,8 +113,8 @@ import {
   resolveColumnAlign,
   resolveColumnFn,
   resolveColumnHeaderAlign,
-  resolvePanelColumns,
   resolveModalWidth,
+  resolvePanelColumns,
   resolveViewActionsCfg,
   resolveViewFields,
   resolveViewFooterActions,
@@ -3509,7 +3510,12 @@ export function DataPanel(props: PanelProps): JSXRenderable {
   const viewBody = () => {
     const r = viewRow.value;
     if (!r) return null;
-    const items: { label: string; children: unknown; span?: number }[] = [];
+    const items: {
+      label: string;
+      children: unknown;
+      span?: number;
+      labelAlign?: DescriptionsLabelAlign;
+    }[] = [];
     const viewFields = resolveViewFields(props.view, columns);
     const viewBodyRender = props.view?.render;
     /** 无 view.render 时按 props／回落列构建 Descriptions items */
@@ -3552,7 +3558,11 @@ export function DataPanel(props: PanelProps): JSXRenderable {
               </button>
             );
           }
-          items.push({ label: f.label ?? prop, children });
+          items.push({
+            label: f.label ?? prop,
+            children,
+            labelAlign: f.labelAlign,
+          });
         }
       } else {
         const seen = new Set<string>();
@@ -3590,7 +3600,16 @@ export function DataPanel(props: PanelProps): JSXRenderable {
               {viewBodyRender(viewCtx)}
             </div>
           )
-          : <Descriptions bordered column={1} size="sm" items={items} />}
+          : (
+            <Descriptions
+              bordered
+              column={1}
+              size="sm"
+              items={items}
+              labelColPercent={props.view?.labelColPercent}
+              labelMinWidth={props.view?.labelMinWidth}
+            />
+          )}
       </div>
     );
   };

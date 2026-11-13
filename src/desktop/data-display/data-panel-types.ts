@@ -4,6 +4,7 @@
  */
 
 import type { Signal } from "@dreamer/view";
+import type { DescriptionsLabelAlign } from "./Descriptions.tsx";
 
 /** 数据行：键值对；主键字段默认为 `id`（见 `PanelProps.rowKey`）。 */
 export type Row = Record<string, unknown>;
@@ -190,6 +191,13 @@ export interface ViewItem extends Column {
    * 字段级自定义展示节点。有 {@link ViewConfig.render} 时忽略本字段。
    */
   render?: (ctx: ViewItemRenderCtx) => unknown;
+  /**
+   * 该行标签对齐，传给 Descriptions。
+   * vertical：top 上对齐／center 垂直居中／bottom 下对齐；
+   * horizontal：left 左／center 中／right 右。
+   * 未写时沿用 Descriptions 默认（上对齐、右对齐）。
+   */
+  labelAlign?: DescriptionsLabelAlign;
 }
 
 /** 搜索项（键统一 `prop`；旧 `name` 等同 prop，兼容保留） */
@@ -469,6 +477,15 @@ export interface ViewConfig {
   width?: ModalShellWidth;
   /** 详情弹层是否显示全屏切换，传给 Modal */
   fullscreenable?: boolean;
+  /**
+   * 详情 Descriptions 标签列占「单列槽位」宽度的百分比（12～85），缺省 38。
+   * 与 {@link ViewConfig.labelMinWidth} 组成标签／内容比例。
+   */
+  labelColPercent?: number;
+  /**
+   * 详情 Descriptions 标签列最小宽度（CSS 长度或像素数字），缺省 `"13.5rem"`。
+   */
+  labelMinWidth?: string | number;
 }
 
 /** 列表查询（page 从 1 起；order 对外统一 asc｜desc） */

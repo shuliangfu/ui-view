@@ -300,4 +300,58 @@ describe("DataPanel view / form / search 配置", () => {
       "width:100px;min-width:60px;max-width:200px",
     );
   });
+
+  it("enrichViewField 保留 ViewItem.labelAlign，不丢字段", () => {
+    const inherited = enrichViewField(
+      {
+        prop: "name",
+        labelAlign: { vertical: "center", horizontal: "left" },
+      },
+      COLUMNS,
+    );
+    expect(inherited.label).toBe("姓名");
+    expect(inherited.labelAlign).toEqual({
+      vertical: "center",
+      horizontal: "left",
+    });
+
+    const override = enrichViewField(
+      {
+        prop: "name",
+        label: "用户名",
+        labelAlign: { vertical: "bottom", horizontal: "center" },
+      },
+      COLUMNS,
+    );
+    expect(override.label).toBe("用户名");
+    expect(override.labelAlign).toEqual({
+      vertical: "bottom",
+      horizontal: "center",
+    });
+  });
+
+  it("resolveViewFields 保留各字段 labelAlign", () => {
+    const fields = resolveViewFields(
+      {
+        labelColPercent: 28,
+        labelMinWidth: "7rem",
+        props: [
+          {
+            prop: "name",
+            label: "姓名",
+            labelAlign: { vertical: "center", horizontal: "left" },
+          },
+          { prop: "email", label: "邮箱" },
+        ],
+      },
+      COLUMNS,
+    )!;
+    expect(fields[0].labelAlign).toEqual({
+      vertical: "center",
+      horizontal: "left",
+    });
+    expect(fields[1].labelAlign).toBe(undefined);
+    expect(fields[0].label).toBe("姓名");
+    expect(fields[1].label).toBe("邮箱");
+  });
 });

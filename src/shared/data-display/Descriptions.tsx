@@ -7,6 +7,23 @@ import { twMerge } from "tailwind-merge";
 import type { JSXRenderable } from "@dreamer/view";
 import type { SizeVariant } from "../types.ts";
 
+/** 标签垂直对齐：上、中、下。 */
+export type DescriptionsLabelVerticalAlign = "top" | "center" | "bottom";
+
+/** 标签水平对齐：左、中、右。 */
+export type DescriptionsLabelHorizontalAlign = "left" | "center" | "right";
+
+/**
+ * 标签对齐。默认垂直 `top`、水平 `right`（与现有右对齐标签一致）。
+ * 可设在 {@link DescriptionsProps.labelAlign} 作为默认，再在单项覆盖。
+ */
+export interface DescriptionsLabelAlign {
+  /** 垂直方向：`top` 上对齐，`center` 居中，`bottom` 下对齐。默认 `top`。 */
+  vertical?: DescriptionsLabelVerticalAlign;
+  /** 水平方向：`left` 左对齐，`center` 居中，`right` 右对齐。默认 `right`。 */
+  horizontal?: DescriptionsLabelHorizontalAlign;
+}
+
 export interface DescriptionsItem {
   /** 标签（键） */
   label: string | unknown;
@@ -17,6 +34,62 @@ export interface DescriptionsItem {
    * 若某行各 `span` 之和小于 `column` 仍剩空列，该行**最靠右**的项会自动加大 `span` 铺满该行，避免出现单独空白格。
    */
   span?: number;
+  /**
+   * 该行标签对齐，覆盖外层 {@link DescriptionsProps.labelAlign}。
+   * 垂直对齐在 `layout="horizontal"` 时相对内容列高度。
+   */
+  labelAlign?: DescriptionsLabelAlign;
+}
+
+const LABEL_VERTICAL_CLASS: Record<DescriptionsLabelVerticalAlign, string> = {
+  top: "items-start",
+  center: "items-center",
+  bottom: "items-end",
+};
+
+const LABEL_HORIZONTAL_JUSTIFY: Record<
+  DescriptionsLabelHorizontalAlign,
+  string
+> = {
+  left: "justify-start",
+  center: "justify-center",
+  right: "justify-end",
+};
+
+const LABEL_HORIZONTAL_TEXT: Record<DescriptionsLabelHorizontalAlign, string> =
+  {
+    left: "text-left",
+    center: "text-center",
+    right: "text-right",
+  };
+
+/** 逐层合并标签对齐；未识别的取值忽略，默认上对齐、右对齐。 */
+function resolveLabelAlign(
+  ...layers: Array<DescriptionsLabelAlign | undefined>
+): {
+  vertical: DescriptionsLabelVerticalAlign;
+  horizontal: DescriptionsLabelHorizontalAlign;
+} {
+  let vertical: DescriptionsLabelVerticalAlign = "top";
+  let horizontal: DescriptionsLabelHorizontalAlign = "right";
+  for (const layer of layers) {
+    if (!layer) continue;
+    if (
+      layer.vertical === "top" ||
+      layer.vertical === "center" ||
+      layer.vertical === "bottom"
+    ) {
+      vertical = layer.vertical;
+    }
+    if (
+      layer.horizontal === "left" ||
+      layer.horizontal === "center" ||
+      layer.horizontal === "right"
+    ) {
+      horizontal = layer.horizontal;
+    }
+  }
+  return { vertical, horizontal };
 }
 
 export interface DescriptionsProps {
@@ -54,6 +127,11 @@ export interface DescriptionsProps {
    * 默认 `13.5rem`。
    */
   labelMinWidth?: string | number;
+  /**
+   * 各行标签的默认对齐。单项可用 {@link DescriptionsItem.labelAlign} 覆盖。
+   * 默认垂直上对齐、水平右对齐。
+   */
+  labelAlign?: DescriptionsLabelAlign;
 }
 
 const sizeClasses: Record<SizeVariant, string> = {
@@ -192,6 +270,7 @@ export function Descriptions(props: DescriptionsProps): JSXRenderable {
     contentClass,
     labelColPercent: labelColPercentProp,
     labelMinWidth: labelMinWidthProp,
+    labelAlign: labelAlignProp,
   } = props;
 
   const labelColPercent = descriptionsLabelColPercentClamped(
@@ -219,7 +298,7 @@ export function Descriptions(props: DescriptionsProps): JSXRenderable {
   const labelCls = twMerge(
     "text-slate-500 dark:text-slate-400 font-medium",
     cellCls,
-    layout === "horizontal" && "text-right min-w-0 break-words",
+    "min-w-0 break-words",
     labelClass,
   );
   const contentCls = twMerge(cellCls, contentClass);
@@ -256,6 +335,7 @@ export function Descriptions(props: DescriptionsProps): JSXRenderable {
           );
           const touchesRightEdge =
             placement.startCol + effectiveSpan >= columnCount;
+          const labelAlign = resolveLabelAlign(labelAlignProp, item.labelAlign);
           return (
             <div
               key={index}
@@ -284,7 +364,15 @@ export function Descriptions(props: DescriptionsProps): JSXRenderable {
                   : {}),
               }}
             >
-              <div class={labelCls}>
+              <div
+                class={twMerge(
+                  labelCls,
+                  "flex",
+                  LABEL_VERTICAL_CLASS[labelAlign.vertical],
+                  LABEL_HORIZONTAL_JUSTIFY[labelAlign.horizontal],
+                  LABEL_HORIZONTAL_TEXT[labelAlign.horizontal],
+                )}
+              >
                 {item.label}
                 {colon ? "：" : null}
               </div>

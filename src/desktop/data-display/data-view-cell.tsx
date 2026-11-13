@@ -1,15 +1,11 @@
 /**
  * DataView / DataPanel 详情字段展示：与 DataPanel `plainCell` 同一套渲染
- *（tag／image／link／money／formatter／可信 HTML）。供 DataView 复用，不改 DataPanel。
+ * （tag／image／link／money／formatter／可信 HTML）。供 DataView 复用，不改 DataPanel。
  */
 import type { JSXRenderable } from "@dreamer/view";
 import { TONE } from "./data-panel-chrome.tsx";
-import type {
-  Column,
-  Messages,
-  Row,
-  ViewItem,
-} from "./data-panel-types.ts";
+import type { DescriptionsLabelAlign } from "./Descriptions.tsx";
+import type { Column, Messages, Row, ViewItem } from "./data-panel-types.ts";
 import {
   colProp,
   displayValue,
@@ -152,6 +148,8 @@ export function plainCell(
 export interface ViewDescriptionItem {
   label: string;
   children: unknown;
+  /** 该行标签对齐，透传 DescriptionsItem.labelAlign */
+  labelAlign?: DescriptionsLabelAlign;
 }
 
 /** 按 DataPanel view 字段区规则构建 Descriptions items（含字段级 render 与 click）。 */
@@ -192,7 +190,7 @@ export function buildViewDescriptionItems(
         </button>
       );
     }
-    items.push({ label: f.label ?? prop, children });
+    items.push({ label: f.label ?? prop, children, labelAlign: f.labelAlign });
   }
   return items;
 }

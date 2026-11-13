@@ -16,6 +16,9 @@ export {
 export {
   Descriptions,
   type DescriptionsItem,
+  type DescriptionsLabelAlign,
+  type DescriptionsLabelHorizontalAlign,
+  type DescriptionsLabelVerticalAlign,
   type DescriptionsProps,
 } from "./Descriptions.tsx";
 export { Card, type CardProps } from "./Card.tsx";
@@ -44,8 +47,8 @@ export {
 } from "./Collapse.tsx";
 export { Carousel, type CarouselProps } from "./Carousel.tsx";
 export {
-  Tree,
   defaultTreeMessages,
+  Tree,
   type TreeMessages,
   type TreeNode,
   type TreeProps,
@@ -69,7 +72,16 @@ export {
 } from "./ScrollList.tsx";
 
 export { Watermark, type WatermarkProps } from "./Watermark.tsx";
-export { CountDown, type CountDownProps, type CountDownTimeParts } from "./CountDown.tsx";
-export { QRCode, type QRCodeProps, defaultQRCodeMessages } from "./QRCode.tsx";
+export {
+  CountDown,
+  type CountDownProps,
+  type CountDownTimeParts,
+} from "./CountDown.tsx";
+export { defaultQRCodeMessages, QRCode, type QRCodeProps } from "./QRCode.tsx";
 export { VirtualList, type VirtualListProps } from "./VirtualList.tsx";
-export { Cell, CellGroup, type CellGroupProps, type CellProps } from "./Cell.tsx";
+export {
+  Cell,
+  CellGroup,
+  type CellGroupProps,
+  type CellProps,
+} from "./Cell.tsx";

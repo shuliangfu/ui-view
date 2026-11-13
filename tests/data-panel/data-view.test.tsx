@@ -12,6 +12,7 @@ import {
   normalizeDataViewToolbar,
 } from "../../src/desktop/data-display/DataView.tsx";
 import type { DataSource } from "../../src/desktop/data-display/data-panel-types.ts";
+import { buildViewDescriptionItems } from "../../src/desktop/data-display/data-view-cell.tsx";
 import { Descriptions } from "../../src/desktop/data-display/Descriptions.tsx";
 
 const USER = {
@@ -266,6 +267,64 @@ describe("DataView", () => {
     expect(seeded).toContain("Ada");
     expect(seeded).not.toContain("FromView");
     expect(seeded).not.toContain("FromGet");
+  });
+
+  it("view.labelColPercent / labelMinWidth 出现在详情 Descriptions", async () => {
+    const h = await html({
+      data: {
+        id: "1",
+        name: "张三",
+        email: "zhangsan@example.com",
+        status: "active",
+      },
+      view: {
+        labelColPercent: 28,
+        labelMinWidth: "7rem",
+        props: [
+          {
+            prop: "name",
+            label: "姓名",
+            labelAlign: { vertical: "center", horizontal: "left" },
+          },
+          { prop: "email", label: "邮箱" },
+        ],
+      },
+    });
+    expect(h).toContain("minmax(7rem, 28%)");
+    expect(h).toContain("张三");
+    expect(h).toContain("items-center");
+    expect(h).toContain("justify-start");
+    expect(h).toContain("text-left");
+    expect(h).toContain("items-start");
+    expect(h).toContain("justify-end");
+    expect(h).toContain("text-right");
+  });
+});
+
+describe("buildViewDescriptionItems", () => {
+  it("把 ViewItem.labelAlign 写进 Descriptions items", () => {
+    const items = buildViewDescriptionItems(
+      [
+        {
+          prop: "name",
+          label: "姓名",
+          labelAlign: { vertical: "center", horizontal: "left" },
+        },
+        { prop: "email", label: "邮箱" },
+      ],
+      { name: "张三", email: "zhangsan@example.com" },
+      { yes: "是", no: "否" },
+    );
+    expect(items.length).toBe(2);
+    expect(items[0].label).toBe("姓名");
+    expect(items[0].children).toBe("张三");
+    expect(items[0].labelAlign).toEqual({
+      vertical: "center",
+      horizontal: "left",
+    });
+    expect(items[1].label).toBe("邮箱");
+    expect(items[1].children).toBe("zhangsan@example.com");
+    expect(items[1].labelAlign).toBe(undefined);
   });
 });
 

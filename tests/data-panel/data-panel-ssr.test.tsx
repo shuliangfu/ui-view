@@ -732,4 +732,32 @@ describe("DataPanel SSR：文案与自定义", () => {
     expect(h).toContain("用户");
     expect(h).toContain('data-testid="panel-data-panel"');
   });
+
+  it("详情弹层首帧关闭：view 标签配置不会出现在 HTML，查看按钮仍在", async () => {
+    const h = await html({
+      data: [{
+        id: "1",
+        name: "张三",
+        status: "on",
+        balance: 100,
+        secret: "x",
+      }],
+      view: {
+        labelColPercent: 28,
+        labelMinWidth: "7rem",
+        props: [
+          {
+            prop: "name",
+            label: "姓名",
+            labelAlign: { vertical: "center", horizontal: "left" },
+          },
+        ],
+      },
+    });
+    expect(h).toContain("张三");
+    expect(h).toContain('data-testid="dp-view-1"');
+    // destroyOnClose 且 viewRow 初始为 null，关闭态不渲染详情主体（避免与 dp-view-1 按钮误匹配）
+    expect(h).not.toContain('data-testid="dp-view">');
+    expect(h).not.toContain("minmax(7rem, 28%)");
+  });
 });

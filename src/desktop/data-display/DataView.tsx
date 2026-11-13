@@ -1675,7 +1675,16 @@ export function DataView(props: DataViewProps): JSXRenderable {
           }
         },
       );
-      fieldArea = <Descriptions bordered column={1} size="sm" items={items} />;
+      fieldArea = (
+        <Descriptions
+          bordered
+          column={1}
+          size="sm"
+          items={items}
+          labelColPercent={props.view?.labelColPercent}
+          labelMinWidth={props.view?.labelMinWidth}
+        />
+      );
     }
 
     return (

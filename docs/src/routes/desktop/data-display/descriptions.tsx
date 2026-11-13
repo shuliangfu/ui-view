@@ -3,7 +3,7 @@
  * 路由: /desktop/data-display/descriptions
  */
 
-import { Paragraph, Title } from "@dreamer/ui-view/basic";
+import { Avatar, Paragraph, Title } from "@dreamer/ui-view/basic";
 
 import { CodeBlock, Descriptions } from "@dreamer/ui-view/data-display";
 /** API 属性行类型 */
@@ -20,7 +20,7 @@ const DESCRIPTIONS_API: ApiRow[] = [
     type: "DescriptionsItem[]",
     default: "-",
     description:
-      "描述项（label、children、span）；`span` 为跨列数，若本行末尾仍剩空列会自动并入该行最右项铺满，不留空白格",
+      "描述项（label、children、span、labelAlign）；`span` 为跨列数，若本行末尾仍剩空列会自动并入该行最右项铺满，不留空白格",
   },
   {
     name: "title",
@@ -69,6 +69,13 @@ const DESCRIPTIONS_API: ApiRow[] = [
       "仅横向：标签列最小宽度（CSS 长度或像素数字）；适当增大可减少长标签换行",
   },
   {
+    name: "labelAlign",
+    type: "DescriptionsLabelAlign",
+    default: '{ vertical: "top", horizontal: "right" }',
+    description:
+      "各行标签的默认对齐。vertical：top 上对齐、center 垂直居中、bottom 下对齐；horizontal：left 左对齐、center 居中、right 右对齐。单项可用 items[].labelAlign 覆盖",
+  },
+  {
     name: "labelClass",
     type: "string",
     default: "-",
@@ -82,6 +89,81 @@ const DESCRIPTIONS_API: ApiRow[] = [
   },
   { name: "class", type: "string", default: "-", description: "容器 class" },
 ];
+
+const DESCRIPTIONS_ITEM_API: ApiRow[] = [
+  {
+    name: "label",
+    type: "string | unknown",
+    default: "-",
+    description: "标签（键）",
+  },
+  {
+    name: "children",
+    type: "unknown",
+    default: "-",
+    description: "内容（值）；可为文本或头像等自定义节点",
+  },
+  {
+    name: "span",
+    type: "number",
+    default: "1",
+    description:
+      "跨列数；若本行末尾仍剩空列会自动并入该行最右项铺满，不留空白格",
+  },
+  {
+    name: "labelAlign",
+    type: "DescriptionsLabelAlign",
+    default: "继承外层 labelAlign",
+    description:
+      "该行标签对齐，覆盖 Descriptions.labelAlign。vertical：top／center／bottom；horizontal：left／center／right。未写的轴向沿用外层默认",
+  },
+];
+
+function ApiTable(props: { rows: ApiRow[] }) {
+  return (
+    <div class="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-600">
+      <table class="w-full min-w-lg text-sm">
+        <thead>
+          <tr class="border-b border-slate-200 bg-slate-50 dark:border-slate-600 dark:bg-slate-800/80">
+            <th class="px-4 py-3 text-left font-medium text-slate-900 dark:text-slate-100">
+              属性
+            </th>
+            <th class="px-4 py-3 text-left font-medium text-slate-900 dark:text-slate-100">
+              类型
+            </th>
+            <th class="px-4 py-3 text-left font-medium text-slate-900 dark:text-slate-100">
+              默认值
+            </th>
+            <th class="px-4 py-3 text-left font-medium text-slate-900 dark:text-slate-100">
+              说明
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {props.rows.map((row) => (
+            <tr
+              key={row.name}
+              class="border-b border-slate-100 dark:border-slate-700 last:border-b-0"
+            >
+              <td class="px-4 py-2.5 font-mono text-slate-700 dark:text-slate-300">
+                {row.name}
+              </td>
+              <td class="px-4 py-2.5 text-slate-600 dark:text-slate-400">
+                {row.type}
+              </td>
+              <td class="px-4 py-2.5 text-slate-600 dark:text-slate-400">
+                {row.default}
+              </td>
+              <td class="px-4 py-2.5 text-slate-600 dark:text-slate-400">
+                {row.description}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
 
 const importCode =
   `import { Descriptions } from "@dreamer/ui-view/data-display";
@@ -165,6 +247,71 @@ const exampleSizeColon = `<Descriptions
   title="无冒号"
 />`;
 
+/** 标签对齐：垂直上／中／下，水平左／中／右；单项可覆盖外层默认 */
+const exampleLabelAlign =
+  `import { Avatar, Descriptions } from "@dreamer/ui-view";
+
+const avatar = <Avatar size="lg">张</Avatar>;
+
+<Descriptions
+  title="标签对齐"
+  column={1}
+  bordered
+  labelAlign={{ vertical: "top", horizontal: "right" }}
+  items={[
+    { label: "上对齐 · 右", children: avatar },
+    {
+      label: "垂直居中 · 右",
+      labelAlign: { vertical: "center" },
+      children: avatar,
+    },
+    {
+      label: "下对齐 · 右",
+      labelAlign: { vertical: "bottom" },
+      children: avatar,
+    },
+    {
+      label: "垂直居中 · 左",
+      labelAlign: { vertical: "center", horizontal: "left" },
+      children: avatar,
+    },
+    {
+      label: "垂直居中 · 中",
+      labelAlign: { vertical: "center", horizontal: "center" },
+      children: avatar,
+    },
+  ]}
+/>`;
+
+/** 标签与内容的宽度比例：labelColPercent + labelMinWidth */
+const exampleLabelRatio = `// 标签列约占 28%，最小 6rem（内容区更宽）
+<Descriptions
+  title="用户信息"
+  column={1}
+  bordered
+  labelColPercent={28}
+  labelMinWidth="6rem"
+  items={[
+    { label: "用户名", children: "zhangsan" },
+    { label: "姓名", children: "张三" },
+    { label: "自动锁屏时间", children: "10 分钟" },
+  ]}
+/>
+
+// 标签列约占 50%，最小 10rem（标签区更宽）
+<Descriptions
+  title="用户信息"
+  column={1}
+  bordered
+  labelColPercent={50}
+  labelMinWidth="10rem"
+  items={[
+    { label: "用户名", children: "lisi" },
+    { label: "姓名", children: "李四" },
+    { label: "自动锁屏时间", children: "10 分钟" },
+  ]}
+/>`;
+
 /** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
 export const metadata = {
   title: "Descriptions 描述列表 · ui-view",
@@ -232,11 +379,13 @@ export default function DataDisplayDescriptions() {
       <section>
         <Title level={1}>Descriptions 描述列表</Title>
         <Paragraph class="mt-2">
-          描述列表：items、title、column、bordered、size、layout、colon、labelColPercent、labelMinWidth、labelClass、contentClass。
+          描述列表：items、title、column、bordered、size、layout、colon、labelColPercent、labelMinWidth、labelAlign、labelClass、contentClass。
           使用 Tailwind v4，支持 light/dark 主题。`column` 表示<strong>
             每行排几个描述项
           </strong>，不是「标签列数 + 内容列数」：要整行只展示一组 label +
-          数据请用 `column={1}`。
+          数据请用 `column={1}`。标签对齐用 `labelAlign`：垂直方向
+          top／center／bottom，水平方向
+          left／center／right；可写在组件上作为默认，也可在单项上覆盖。
         </Paragraph>
       </section>
 
@@ -262,10 +411,10 @@ export default function DataDisplayDescriptions() {
             </strong>键值（而不是一行里并排多组），请传
             `column={1}`。横向时左侧标签列由 `labelColPercent`（相对<strong>
               单列槽位
-            </strong>宽度的占比）与 `labelMinWidth`（最小宽度）共同决定，
-            <strong>
-              右对齐
-            </strong>，各行竖线齐、冒号易对齐；可适当加大最小宽度减少长标签换行，右侧内容左对齐并支持长文案。
+            </strong>宽度的占比）与 `labelMinWidth`（最小宽度）共同决定。
+            标签默认<strong>上对齐、右对齐</strong>（冒号易齐），可用
+            `labelAlign`
+            改成垂直上／中／下、水平左／中／右；可适当加大最小宽度减少长标签换行，右侧内容左对齐并支持长文案。
           </Paragraph>
           <Descriptions
             title="用户信息"
@@ -338,6 +487,100 @@ export default function DataDisplayDescriptions() {
         </div>
 
         <div class="space-y-4">
+          <Title level={3}>标签与内容比例（labelColPercent）</Title>
+          <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+            横向布局时，左侧标签与右侧内容的比例由
+            `labelColPercent`（占单列槽位宽度的百分比，12～85，缺省 38）和
+            `labelMinWidth`（标签列最小宽度，缺省 13.5rem）共同决定。
+            数据面板、DataView 的详情把这两项写在 `view` 上即可，例如{" "}
+            <code class="text-xs">
+              {'view={{ labelColPercent: 28, labelMinWidth: "7rem", props }}'}
+            </code>
+            。
+          </Paragraph>
+          <Descriptions
+            title="较窄标签列（28% · 6rem）"
+            column={1}
+            bordered
+            labelColPercent={28}
+            labelMinWidth="6rem"
+            items={[
+              { label: "用户名", children: "zhangsan" },
+              { label: "姓名", children: "张三" },
+              { label: "自动锁屏时间", children: "10 分钟" },
+            ]}
+          />
+          <Descriptions
+            title="较宽标签列（50% · 10rem）"
+            column={1}
+            bordered
+            labelColPercent={50}
+            labelMinWidth="10rem"
+            items={[
+              { label: "用户名", children: "lisi" },
+              { label: "姓名", children: "李四" },
+              { label: "自动锁屏时间", children: "10 分钟" },
+            ]}
+          />
+          <CodeBlock
+            title="代码示例"
+            code={exampleLabelRatio}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+        </div>
+
+        <div class="space-y-4">
+          <Title level={3}>标签对齐（labelAlign）</Title>
+          <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+            内容比标签高时（例如头像），用 `labelAlign`
+            控制标签在单元格里的位置。 垂直：`top` 上对齐、`center`
+            垂直居中、`bottom` 下对齐；水平：`left` 左、`center` 中、`right`
+            右。 写在 `Descriptions` 上是默认值，写在 `items[]`
+            上只覆盖该行；未写的轴向沿用默认（垂直 top、水平 right）。
+          </Paragraph>
+          <Descriptions
+            title="标签对齐"
+            column={1}
+            bordered
+            labelAlign={{ vertical: "top", horizontal: "right" }}
+            items={[
+              { label: "上对齐 · 右", children: <Avatar size="lg">张</Avatar> },
+              {
+                label: "垂直居中 · 右",
+                labelAlign: { vertical: "center" },
+                children: <Avatar size="lg">张</Avatar>,
+              },
+              {
+                label: "下对齐 · 右",
+                labelAlign: { vertical: "bottom" },
+                children: <Avatar size="lg">张</Avatar>,
+              },
+              {
+                label: "垂直居中 · 左",
+                labelAlign: { vertical: "center", horizontal: "left" },
+                children: <Avatar size="lg">张</Avatar>,
+              },
+              {
+                label: "垂直居中 · 中",
+                labelAlign: { vertical: "center", horizontal: "center" },
+                children: <Avatar size="lg">张</Avatar>,
+              },
+            ]}
+          />
+          <CodeBlock
+            title="代码示例"
+            code={exampleLabelAlign}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+        </div>
+
+        <div class="space-y-4">
           <Title level={3}>size=sm / colon=false</Title>
           <Descriptions items={items.slice(0, 3)} size="sm" title="小尺寸" />
           <Descriptions
@@ -359,49 +602,14 @@ export default function DataDisplayDescriptions() {
       <section class="space-y-3">
         <Title level={2}>API</Title>
         <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
-          DescriptionsItem：label、children、span。Descriptions 属性如下。
+          DescriptionsItem：label、children、span、labelAlign。Descriptions
+          另可写整表默认
+          `labelAlign`（vertical：top／center／bottom，horizontal：left／center／right）。
         </Paragraph>
-        <div class="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-600">
-          <table class="w-full min-w-lg text-sm">
-            <thead>
-              <tr class="border-b border-slate-200 bg-slate-50 dark:border-slate-600 dark:bg-slate-800/80">
-                <th class="px-4 py-3 text-left font-medium text-slate-900 dark:text-slate-100">
-                  属性
-                </th>
-                <th class="px-4 py-3 text-left font-medium text-slate-900 dark:text-slate-100">
-                  类型
-                </th>
-                <th class="px-4 py-3 text-left font-medium text-slate-900 dark:text-slate-100">
-                  默认值
-                </th>
-                <th class="px-4 py-3 text-left font-medium text-slate-900 dark:text-slate-100">
-                  说明
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {DESCRIPTIONS_API.map((row) => (
-                <tr
-                  key={row.name}
-                  class="border-b border-slate-100 dark:border-slate-700 last:border-b-0"
-                >
-                  <td class="px-4 py-2.5 font-mono text-slate-700 dark:text-slate-300">
-                    {row.name}
-                  </td>
-                  <td class="px-4 py-2.5 text-slate-600 dark:text-slate-400">
-                    {row.type}
-                  </td>
-                  <td class="px-4 py-2.5 text-slate-600 dark:text-slate-400">
-                    {row.default}
-                  </td>
-                  <td class="px-4 py-2.5 text-slate-600 dark:text-slate-400">
-                    {row.description}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <Title level={3}>Descriptions</Title>
+        <ApiTable rows={DESCRIPTIONS_API} />
+        <Title level={3}>DescriptionsItem</Title>
+        <ApiTable rows={DESCRIPTIONS_ITEM_API} />
       </section>
     </div>
   );
