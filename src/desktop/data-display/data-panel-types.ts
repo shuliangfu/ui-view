@@ -449,6 +449,10 @@ export interface ViewConfig {
    * 有本字段时忽略各 {@link ViewItem.render}。
    */
   render?: (ctx: ViewRenderCtx) => unknown;
+  /** 详情弹层宽度，传给 Modal；缺省 md */
+  width?: string | number | (() => string | number | undefined);
+  /** 详情弹层是否显示全屏切换，传给 Modal */
+  fullscreenable?: boolean;
 }
 
 /** 列表查询（page 从 1 起；order 对外统一 asc｜desc） */

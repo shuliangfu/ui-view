@@ -861,7 +861,7 @@ const API_SOURCE_API: DocsApiTableRow[] = [
     type: "Promise<Row | null>",
     default: "-",
     description:
-      "ApiDataSource 扩展。action→GET …/view?id=；restful→GET …/:id。面板暂不自动调用",
+      "ApiDataSource 扩展。action→GET …/view?id=；restful→GET …/:id。点击查看时自动请求，失败或返回空则回落当前行",
   },
   {
     name: "root / apiMode",
@@ -4580,11 +4580,10 @@ const tab = createSignal("all");
             <DataPanelTabsDemo />
           </DocsDemo>
           <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
-            配置了 <code>tabs</code>{" "}
-            且走 API（<code>baseRoute</code> 或远程{" "}
+            配置了 <code>tabs</code> 且走 API（<code>baseRoute</code> 或远程
+            {" "}
             <code>dataSource</code>）时，当前标签 key
-            会自动加到所有请求的查询参数上（默认{" "}
-            <code>tab</code>）。没有{" "}
+            会自动加到所有请求的查询参数上（默认 <code>tab</code>）。没有{" "}
             <code>tabs</code> 的面板不会带这个参数。
           </Paragraph>
           <CodeBlock

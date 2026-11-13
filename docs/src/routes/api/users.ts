@@ -3,6 +3,7 @@
  *
  * action 约定（createApiDataSource apiMode:"action"）：
  * - GET  /api/users
+ * - GET  /api/users/view?id=
  * - POST /api/users/create（单条对象；importRows 为 `{ rows }`）
  * - POST /api/users/update（body 含 id）
  * - POST /api/users/remove（body `{ ids }`）
@@ -126,10 +127,17 @@ function createOne(values: Record<string, unknown>): User {
   return row;
 }
 
-/** GET /api/users */
+/** GET /api/users 或 GET /api/users/view?id= */
 export function GET(request: Request): Response {
   const path = pathOf(request);
   if (path === "/api/users") return list(request);
+  if (path === "/api/users/view" || lastSeg(path) === "view") {
+    const id = new URL(request.url).searchParams.get("id")?.trim() ?? "";
+    if (!id) return json({ error: "missing_id" }, 400);
+    const row = store.find((r) => r.id === id);
+    if (!row) return json({ error: "not_found", id }, 404);
+    return json(row);
+  }
   return json({ error: "not_found" }, 404);
 }
 

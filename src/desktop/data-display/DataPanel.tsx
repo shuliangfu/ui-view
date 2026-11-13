@@ -89,10 +89,10 @@ import {
   enrichFormFields,
   enrichSearchFields,
   fieldLayoutStyle,
-  filtersAfterSearchApply,
-  filtersAfterSearchReset,
   fieldProp,
   fieldsOf,
+  filtersAfterSearchApply,
+  filtersAfterSearchReset,
   formatDateTime,
   formatMoney,
   isActionsColumn,
@@ -738,7 +738,11 @@ export function DataPanel(props: PanelProps): JSXRenderable {
   // ---- data loading
   /** 工具栏刷新最短 busy，避免本地同步 list 瞬间结束导致 loading 从未上屏 */
   const REFRESH_MIN_BUSY_MS = 320;
-  type LoadOpts = { minBusyMs?: number; notify?: boolean; bypassCache?: boolean };
+  type LoadOpts = {
+    minBusyMs?: number;
+    notify?: boolean;
+    bypassCache?: boolean;
+  };
   const tabListCache = createTabListCache();
   function usesTabListCache(): boolean {
     return !!tabParam && !!props.tabs?.length && !ds.sync;
@@ -1134,7 +1138,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
       formOpen.value = false;
       message.success(m.saved);
       invalidateCurrentTabCache();
-    await load(false);
+      await load(false);
       props.onChanged?.();
       return;
     }
@@ -1147,8 +1151,29 @@ export function DataPanel(props: PanelProps): JSXRenderable {
   // ---- 查看 Modal
   const doCreate = () => openForm();
   const doEdit = (r: Row) => openForm(r);
+  let viewSeq = 0;
   const doView = (r: Row) => {
+    const id = idOf(r);
+    const my = ++viewSeq;
     viewRow.value = r;
+    const src = ds as {
+      view?: (id: string) => Row | null | Promise<Row | null>;
+      get?: (id: string) => Row | null | Promise<Row | null>;
+    };
+    const fetchView = typeof src.view === "function"
+      ? src.view.bind(src)
+      : typeof src.get === "function"
+      ? src.get.bind(src)
+      : null;
+    if (!id || !fetchView) return;
+    void Promise.resolve(fetchView(id)).then((fresh) => {
+      if (my !== viewSeq) return;
+      if (!viewRow.value || idOf(viewRow.value) !== id) return;
+      if (fresh) viewRow.value = fresh;
+    }).catch((e) => {
+      if (my !== viewSeq) return;
+      message.error((e as Error)?.message || m.networkError);
+    });
   };
 
   // ---- 导出 / 打印 / 导入
@@ -3811,7 +3836,8 @@ export function DataPanel(props: PanelProps): JSXRenderable {
           if (typeof vt === "string") return vt;
           return `${m.view} · ${props.title}`;
         }}
-        width="md"
+        width={props.view?.width ?? "md"}
+        fullscreenable={props.view?.fullscreenable}
         keyboard
         destroyOnClose
         onClose={() => (viewRow.value = null)}

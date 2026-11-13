@@ -66,7 +66,7 @@ export interface ApiDataSourceOptions {
   pageSize?: number;
 }
 
-/** HTTP 数据源：异步；额外暴露 `view`／`root`／`apiMode`（面板暂不自动调 view） */
+/** HTTP 数据源：异步；额外暴露 `view`／`root`／`apiMode`（点击查看时会调 view） */
 export interface ApiDataSource extends DataSource {
   sync?: false;
   /** 资源根，如 `/api/users` */
@@ -78,7 +78,7 @@ export interface ApiDataSource extends DataSource {
    * 拉取单条明细。
    * - action：`GET ${root}/view?id=`
    * - restful：`GET ${root}/:id`
-   * DataSource 接口暂无 view 钩子；面板详情仍走当前行数据。调用方可自行预取。
+   * 点击查看时 DataPanel 会调用此方法；失败或返回空则回落当前行。
    */
   view(id: string): Promise<Row | null>;
 }

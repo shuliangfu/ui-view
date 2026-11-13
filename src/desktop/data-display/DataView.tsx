@@ -11,7 +11,7 @@
  *
  * 数据：`data` 单行，或 `dataSource` / `baseRoute`（优先序同 DataPanel：
  * 显式 dataSource ＞ data 本地源 ＞ baseRoute API）。
- * 刷新走数据源 `view(id)` / `get(id)`（若有），否则回落当前 `data`。
+ * 首次进入与刷新都走数据源 `view(id)` / `get(id)`（若有）；失败或返回空则回落当前 `data`。
  */
 import {
   createSignal,
@@ -200,7 +200,7 @@ export interface DataViewProps {
   dataSource?: DataSource;
   /**
    * 路由前缀或完整资源根。仅当未传 `data` 且未传 `dataSource` 时
-   * {@link createApiDataSource}。刷新走源上的 `view(id)`／`get(id)`。
+   * {@link createApiDataSource}。首次进入与刷新都走源上的 `view(id)`／`get(id)`；失败或返回空则回落 `data`。
    */
   baseRoute?: string;
   /** 仅当 `baseRoute` 只有 1 段时生效，同 DataPanel */
@@ -541,7 +541,11 @@ export function DataView(props: DataViewProps): JSXRenderable {
     }
   }
 
-  type LoadOpts = { notify?: boolean; minBusyMs?: number; bypassCache?: boolean };
+  type LoadOpts = {
+    notify?: boolean;
+    minBusyMs?: number;
+    bypassCache?: boolean;
+  };
   const tabRecordCache = createTabRecordCache();
   function usesTabRecordCache(): boolean {
     return !!tabParam && !!props.tabs?.length && !ds.sync;
@@ -594,7 +598,11 @@ export function DataView(props: DataViewProps): JSXRenderable {
 
   function refreshFromToolbar(): Promise<void> {
     invalidateCurrentTabCache();
-    return load({ minBusyMs: REFRESH_MIN_BUSY_MS, notify: true, bypassCache: true });
+    return load({
+      minBusyMs: REFRESH_MIN_BUSY_MS,
+      notify: true,
+      bypassCache: true,
+    });
   }
   refreshers.set(key, () => {
     invalidateCurrentTabCache();
@@ -1050,7 +1058,7 @@ export function DataView(props: DataViewProps): JSXRenderable {
     if (onServer()) return;
     const id = resolveId();
     const loader = recordLoader(ds);
-    if (loader && id && props.data === undefined) void load();
+    if (loader && id) void load();
     void readDataPanelPrefs(key).then((prefs) => {
       if (prefs.fullscreen) applyFullscreenChrome(true);
     });

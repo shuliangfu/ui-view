@@ -84,7 +84,7 @@ const DATA_VIEW_API: ApiRow[] = [
     type: "Row",
     default: "-",
     description:
-      "当前记录。传入则首屏直接渲染；优先序低于 dataSource，高于 baseRoute",
+      "当前记录。传入则首屏先渲染，随后若有 view(id)／get(id) 仍会再请求并更新；优先序低于 dataSource，高于 baseRoute",
   },
   {
     name: "id",
@@ -97,7 +97,7 @@ const DATA_VIEW_API: ApiRow[] = [
     type: "DataSource",
     default: "-",
     description:
-      "自定义数据源（优先于 data／baseRoute）。刷新走源上的 view(id)／get(id)",
+      "自定义数据源（优先于 data／baseRoute）。首次进入与刷新都走源上的 view(id)／get(id)，失败或返回空则回落 data",
   },
   {
     name: "baseRoute",
@@ -355,9 +355,10 @@ export default function DataDisplayDataView() {
               <code>children</code>{" "}
               的「基本信息」仍显示原来的字段明细；「其他」是自定义内容。点击会写入
               {" "}
-              <code>?tab=</code>，用这个地址打开会激活对应标签。走
-              API 时，详情／刷新／导入／更新等请求都会带上当前{" "}
-              <code>tab</code>；没有 tabs 时不带这个参数。切换标签会重新拉数，已请求过的相同标签+id
+              <code>?tab=</code>，用这个地址打开会激活对应标签。走 API
+              时，详情／刷新／导入／更新等请求都会带上当前{" "}
+              <code>tab</code>；没有 tabs
+              时不带这个参数。切换标签会重新拉数，已请求过的相同标签+id
               走缓存；刷新只作废当前标签的缓存。
             </Paragraph>
             <DataView
