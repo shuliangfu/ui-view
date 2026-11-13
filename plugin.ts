@@ -9,6 +9,7 @@
  * - 输出文件路径由 **`outputPath`** 指定；业务在 `tailwind.css` 中 `@import` 该文件即可让 Tailwind 扫描实际用到的组件源路径。
  * - **`scanPath`** 可为单个目录或目录数组（相对 cwd），按需只扫 `frontend`、`common` 等子树，避免扫 backend/mobile。
  * - `@source` 路径相对于生成文件所在目录书写，避免把本机绝对路径写入仓库。
+ * - **写入时机**：`--dev`（`RUNTIME_ENV=dev`）与 `--build`（`RUNTIME_ENV=build`）在 `onInit` 中生成并写入该清单，供 Tailwind 扫描 / 打包；`--start`（`RUNTIME_ENV=start`）为生产启动，**不写回源码树**，只消费构建阶段已编译进产物目录的 CSS。
  * - 插件入口：**{@link uiViewTailwindPlugin}**（返回 `Plugin`，含 `onInit`）。
  * - 上传插件：**{@link uiViewUploadPlugin}**（**必填** `localDir`；默认前缀 `/ui-view-upload`；可选 `virusScan`／`image.dual`／`afterComplete`／file；见 `upload.ts`）。
  *
@@ -1488,10 +1489,27 @@ function createUiViewTailwindPluginLog(
 }
 
 /**
+ * `--dev` / `--build` 时是否应在 onInit 中生成并写入 `ui-view-sources.css`。
+ *
+ * `--start`（`RUNTIME_ENV=start`）是生产启动：Tailwind 已在 `--build` 时把 `@import` 该清单编译进 `dist/` 等产物，
+ * 启动进程只应消费已构建 CSS，不得再把 `@source` 清单写回 `src/**`。
+ * 未设置 `RUNTIME_ENV` 时保持历史行为（写入），以免在非 dweb 宿主中误伤。
+ *
+ * @param runtimeEnv - 默认读取进程 `RUNTIME_ENV`
+ * @returns 仅当 `runtimeEnv === "start"` 时为 `false`
+ */
+export function shouldWriteUiViewSourcesCss(
+  runtimeEnv: string | undefined = getEnv("RUNTIME_ENV"),
+): boolean {
+  return runtimeEnv !== "start";
+}
+
+/**
  * 创建 ui-view Tailwind 按需 content 插件
  *
  * 参数：outputPath（生成文件路径）、scanPath（单个或数组扫描目录）、packageRoot（可选）。
  * 在 onInit 时即扫描导入的 ui-view 组件，生成只含 @source 的 CSS，Tailwind 扫描该文件即可收集 class。
+ * `RUNTIME_ENV=start` 时跳过扫描与写入，见 {@link shouldWriteUiViewSourcesCss}。
  */
 export function uiViewTailwindPlugin(
   options: UiViewTailwindContentPluginOptions,
@@ -1558,6 +1576,13 @@ export function uiViewTailwindPlugin(
     async onInit(container: ServiceContainer): Promise<void> {
       const dreamer = tryGetDreamerLoggerFromContainer(container);
       const log = createUiViewTailwindPluginLog(container);
+
+      if (!shouldWriteUiViewSourcesCss()) {
+        log.debug(
+          "RUNTIME_ENV=start，跳过写入 ui-view-sources.css（生产启动只消费构建产物）",
+        );
+        return;
+      }
 
       /**
        * 输出 onInit 失败：优先 `@dreamer/logger.error`；否则宿主注入的 `error`；再无则 `console.error`。

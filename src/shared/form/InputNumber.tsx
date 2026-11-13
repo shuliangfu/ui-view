@@ -89,7 +89,7 @@ export interface InputNumberProps {
  * @param step - 步进值，如 0.1、0.25、1
  * @returns 小数位数，整数 step 返回 0
  */
-function decimalPlacesFromStep(step: number): number {
+export function decimalPlacesFromStep(step: number): number {
   if (!Number.isFinite(step) || step === 0) return 0;
   const s = step.toString().toLowerCase();
   if (s.includes("e")) {
@@ -112,11 +112,50 @@ function decimalPlacesFromStep(step: number): number {
  * @param num - 原始数值
  * @param step - 与 {@link InputNumberProps.step} 一致
  */
-function roundByStepPrecision(num: number, step: number): number {
+export function roundByStepPrecision(num: number, step: number): number {
   if (!Number.isFinite(num)) return num;
   const d = decimalPlacesFromStep(step);
   const factor = 10 ** d;
   return Math.round(num * factor) / factor;
+}
+
+/**
+ * 输入过程中可接受的数字草稿：空、正负号、小数点、完整或部分数字。
+ * 用于 text input 过滤，替代 `type="number"` 对非数字的限制。
+ */
+export function isPartialNumber(s: string): boolean {
+  return /^[+-]?(?:\d+\.?\d*|\.\d*)?$/.test(s);
+}
+
+/**
+ * 按 step 计算加减后的下一个值（与自定义 +/- 按钮、方向键共用）。
+ * 当前为空或无法解析时：减少落到 `min ?? 0`，增加落到 `step`。
+ *
+ * @param current - 当前字符串或数字
+ * @param direction - 1 增加，-1 减少
+ * @param step - 步进
+ * @param min - 最小值（可选）
+ * @param max - 最大值（可选）
+ */
+export function stepInputNumberValue(
+  current: number | string | undefined,
+  direction: 1 | -1,
+  step: number,
+  min?: number,
+  max?: number,
+): number {
+  const val = current === undefined || current === "" ? "" : String(current);
+  const num = val === "" ? NaN : Number(val);
+  if (Number.isNaN(num)) {
+    return direction < 0
+      ? roundByStepPrecision(min ?? 0, step)
+      : roundByStepPrecision(step, step);
+  }
+  const snapped = roundByStepPrecision(num, step);
+  const raw = direction < 0
+    ? Math.max(min ?? -Infinity, snapped - step)
+    : Math.min(max ?? Infinity, snapped + step);
+  return roundByStepPrecision(raw, step);
 }
 
 /** 内层 input 仅 padding / 字号；圆角由外壳 {@link wrapRounded} 统一 */
@@ -138,12 +177,6 @@ const wrapRounded: Record<SizeVariant, string> = {
 /** 输入框本体：自身不画 ring；整圈高亮由外壳用 `:has(input:focus)` 控制，避免 +/- 获焦时误亮 */
 const inputBase =
   "min-w-0 flex-1 border-0 bg-slate-100 shadow-inner dark:shadow-[inset_0_2px_5px_rgb(0_0_0_/_0.55),inset_0_-1px_0_rgb(255_255_255_/_0.06)] dark:bg-slate-900/70 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-hidden focus:ring-0 disabled:opacity-50 disabled:cursor-not-allowed transition-colors";
-
-/**
- * 隐藏 `type="number"` 右侧原生上下箭头（与组件自带 +/- 重复）；Chrome/Safari 用 webkit 伪元素，Firefox 用 -moz-appearance。
- */
-const hideNativeNumberSpinner =
-  "[&::-webkit-inner-spin-button]:appearance-none [&::-webkit-inner-spin-button]:[-webkit-appearance:none] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-outer-spin-button]:[-webkit-appearance:none] [-moz-appearance:textfield]";
 
 /** 外壳底纹；ring 由 {@link compositeShellFocusRingFromInput}(`!hideFocusRing`) 拼接 */
 const wrapShellCls =
@@ -190,16 +223,10 @@ function InputNumberButtons(props: {
     const num = val === "" ? NaN : Number(val);
     /** 与显示/步进同一精度，避免边界比较受浮点噪声影响 */
     const snapped = Number.isNaN(num) ? num : roundByStepPrecision(num, step);
-    const nextDown = Number.isNaN(snapped)
-      ? NaN
-      : roundByStepPrecision(snapped - step, step);
-    const nextUp = Number.isNaN(snapped)
-      ? NaN
-      : roundByStepPrecision(snapped + step, step);
     const canDecrease = !disabled &&
-      (min == null || Number.isNaN(nextDown) || nextDown >= min);
+      (Number.isNaN(snapped) || min == null || snapped > min);
     const canIncrease = !disabled &&
-      (max == null || Number.isNaN(nextUp) || nextUp <= max);
+      (Number.isNaN(snapped) || max == null || snapped < max);
 
     return (
       <span class="flex flex-row items-stretch min-w-10 w-10 shrink-0 border-l border-slate-300 dark:border-slate-600">
@@ -212,12 +239,7 @@ function InputNumberButtons(props: {
           disabled={!canDecrease}
           aria-label={decreaseLabel}
           onClick={() => {
-            if (Number.isNaN(num)) {
-              onTriggerChange(roundByStepPrecision(min ?? 0, step));
-              return;
-            }
-            const raw = Math.max(min ?? -Infinity, snapped - step);
-            onTriggerChange(roundByStepPrecision(raw, step));
+            onTriggerChange(stepInputNumberValue(val, -1, step, min, max));
           }}
         >
           −
@@ -228,12 +250,7 @@ function InputNumberButtons(props: {
           disabled={!canIncrease}
           aria-label={increaseLabel}
           onClick={() => {
-            if (Number.isNaN(num)) {
-              onTriggerChange(roundByStepPrecision(step, step));
-              return;
-            }
-            const raw = Math.min(max ?? Infinity, snapped + step);
-            onTriggerChange(roundByStepPrecision(raw, step));
+            onTriggerChange(stepInputNumberValue(val, 1, step, min, max));
           }}
         >
           +
@@ -287,13 +304,29 @@ export function InputNumber(props: InputNumberProps): JSXRenderable {
   };
 
   /**
+   * 非数字草稿一律回退，避免 text input 写入字母；合法草稿再写回受控 `value` 并转调外部回调。
+   *
+   * @param e - 原生 input / change 事件
+   * @param notify - 外部 `onInput` 或 `onChange`
+   */
+  const commitTypedValue = (e: Event, notify?: (e: Event) => void) => {
+    const el = e.target as HTMLInputElement;
+    if (!isPartialNumber(el.value)) {
+      const raw = typeof value === "function" ? value() : value;
+      el.value = raw === undefined || raw === "" ? "" : String(raw);
+      return;
+    }
+    commitMaybeSignal(value, el.value);
+    notify?.(e);
+  };
+
+  /**
    * 受控 `value` 为 Signal 时由组件写回，再调用外部 `onInput`。
    *
    * @param e - 原生 input 事件
    */
   const handleInput = (e: Event) => {
-    commitMaybeSignal(value, (e.target as HTMLInputElement).value);
-    onInput?.(e);
+    commitTypedValue(e, onInput);
   };
 
   /**
@@ -302,8 +335,31 @@ export function InputNumber(props: InputNumberProps): JSXRenderable {
    * @param e - 原生 change 事件
    */
   const handleChange = (e: Event) => {
-    commitMaybeSignal(value, (e.target as HTMLInputElement).value);
-    onChange?.(e);
+    commitTypedValue(e, onChange);
+  };
+
+  /**
+   * 方向键步进（替代 `type="number"` 的原生上下键）。外部 `onKeyDown` 先执行；
+   * 若已 `preventDefault` 则不再步进。
+   *
+   * @param e - 原生键盘事件
+   */
+  const handleKeyDown = (e: Event) => {
+    onKeyDown?.(e);
+    const ke = e as KeyboardEvent;
+    if (ke.defaultPrevented || disabled) return;
+    if (ke.key !== "ArrowUp" && ke.key !== "ArrowDown") return;
+    ke.preventDefault();
+    const el = e.target as HTMLInputElement;
+    onTriggerChange(
+      stepInputNumberValue(
+        el.value,
+        ke.key === "ArrowUp" ? 1 : -1,
+        step,
+        min,
+        max,
+      ),
+    );
   };
 
   /**
@@ -311,26 +367,23 @@ export function InputNumber(props: InputNumberProps): JSXRenderable {
    * 该函数会跳过函数类型属性，受控 value 永远不会绑定；须单独写 `value={value}` 让编译器生成 `createEffect` 同步 `el.value`。
    */
   const inputSpreadProps = {
-    type: "number" as const,
+    type: "text" as const,
+    inputMode: "decimal" as const,
     ref: inputRef,
     id: resolvedId,
     name,
     placeholder,
     disabled,
-    step,
-    min,
-    max,
     "aria-invalid": error,
     class: twMerge(
       inputBase,
       sizeCls,
-      hideNativeNumberSpinner,
     ),
     onChange: handleChange,
     onInput: handleInput,
     onBlur,
     onFocus,
-    onKeyDown,
+    onKeyDown: handleKeyDown,
     onKeyUp,
     onClick,
     onPaste,
