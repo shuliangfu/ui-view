@@ -2240,7 +2240,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
     toolbarHidden && !leading ? null : (
       <div
         class={`${TOOLBAR_BAR_CLS}${
-          leading ? " !flex-nowrap !justify-start !items-end !pb-0" : ""
+          leading ? " flex-nowrap! justify-start! items-end! pb-0!" : ""
         }`}
         data-testid="data-panel-toolbar"
       >
