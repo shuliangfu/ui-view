@@ -15,7 +15,17 @@
  * **换图动画**：由 {@link ImageViewerProps.transition} 指定，见 {@link ImageViewerTransition}；双缓冲预载后播放，系统「减少动态效果」时一律瞬时切层。
  */
 
-import { createEffect, createMemo, createRef, createSignal, type JSXRenderable, onCleanup, Show, type Signal, untrack,  } from "@dreamer/view";
+import {
+  createEffect,
+  createMemo,
+  createRef,
+  createSignal,
+  type JSXRenderable,
+  onCleanup,
+  Show,
+  type Signal,
+  untrack,
+} from "@dreamer/view";
 import { safeIsSignal } from "../safe-signal.ts";
 import { twMerge } from "tailwind-merge";
 /** 按需：单文件图标，避免经 icons/mod 拉入全表 */

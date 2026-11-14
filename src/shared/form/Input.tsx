@@ -153,7 +153,8 @@ const sizeTextClasses: Record<SizeVariant, string> = {
 /** 深色底用 slate-900，相对 Modal（slate-800）形成凹槽对比，避免控件与弹层同色发灰 */
 const inputSurfaceBase =
   "border bg-slate-100 shadow-inner dark:shadow-[inset_0_2px_5px_rgb(0_0_0_/_0.55),inset_0_-1px_0_rgb(255_255_255_/_0.06)] dark:bg-slate-900/70 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 border-slate-300 dark:border-slate-600 focus:outline-hidden disabled:opacity-50 disabled:cursor-not-allowed transition-colors";
-const readOnlyCls = "bg-slate-50 shadow-inner dark:shadow-[inset_0_2px_5px_rgb(0_0_0_/_0.55),inset_0_-1px_0_rgb(255_255_255_/_0.06)] dark:bg-slate-900/80 cursor-default";
+const readOnlyCls =
+  "bg-slate-50 shadow-inner dark:shadow-[inset_0_2px_5px_rgb(0_0_0_/_0.55),inset_0_-1px_0_rgb(255_255_255_/_0.06)] dark:bg-slate-900/80 cursor-default";
 
 /** 左右缀：与中间输入区分隔线、略浅底，仍在同一外框内 */
 const addonBaseCls =

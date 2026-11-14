@@ -35,8 +35,7 @@ describe("文档页 E2E：/desktop/navigation/pagination（Pagination 分页）"
     await sharedEnv.goto(t, DOC_PATH);
     await sharedEnv.waitDocMainReady(t);
     const result = await t.browser.evaluate(async () => {
-      const needle =
-        'preset="full"（全部能力）';
+      const needle = 'preset="full"（全部能力）';
       const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
       const findNav = () => {
         const heads = Array.from(
@@ -113,8 +112,7 @@ describe("文档页 E2E：/desktop/navigation/pagination（Pagination 分页）"
       await sharedEnv.goto(t, DOC_PATH);
       await sharedEnv.waitDocMainReady(t);
       const ok = await t.browser.evaluate(() => {
-        const needle =
-          'preset="full"（全部能力）';
+        const needle = 'preset="full"（全部能力）';
         const main = document.querySelector("main");
         if (!main) return false;
         const heads = main.querySelectorAll("h2, h3");
@@ -755,126 +753,146 @@ describe("文档页 E2E：/desktop/navigation/pagination（Pagination 分页）"
     expect(got.ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
 
-  it('preset="full"：第一页禁用，点最后一页后末页禁用，再点第一页回到第 1 页', async (t) => {
-    if (!t?.browser?.goto) return;
-    await sharedEnv.goto(t, DOC_PATH);
-    await sharedEnv.waitDocMainReady(t);
-    const result = await t.browser.evaluate(async () => {
-      const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-      const getNav = () => {
-        const root = document.querySelector(
-          '[data-testid="demo-pagination-preset-full"]',
-        );
-        return root?.querySelector(
-          'nav[role="navigation"]',
-        ) as HTMLElement | null;
-      };
-      const btn = (id: string) =>
-        getNav()?.querySelector(
-          `[data-testid="${id}"]`,
-        ) as HTMLButtonElement | null;
-      const currentPage = () =>
-        (
+  it(
+    'preset="full"：第一页禁用，点最后一页后末页禁用，再点第一页回到第 1 页',
+    async (t) => {
+      if (!t?.browser?.goto) return;
+      await sharedEnv.goto(t, DOC_PATH);
+      await sharedEnv.waitDocMainReady(t);
+      const result = await t.browser.evaluate(async () => {
+        const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+        const getNav = () => {
+          const root = document.querySelector(
+            '[data-testid="demo-pagination-preset-full"]',
+          );
+          return root?.querySelector(
+            'nav[role="navigation"]',
+          ) as HTMLElement | null;
+        };
+        const btn = (id: string) =>
           getNav()?.querySelector(
-            'button[aria-current="page"]',
-          ) as HTMLButtonElement | null
-        )?.textContent?.trim() ?? "";
-      if (!getNav()) return { ok: false, reason: "no-nav" };
-      const first0 = btn("pagination-first");
-      const last0 = btn("pagination-last");
-      const prev0 = btn("pagination-prev");
-      const next0 = btn("pagination-next");
-      if (!first0 || !last0 || !prev0 || !next0) {
-        return { ok: false, reason: "missing-btns" };
-      }
-      if (!first0.disabled || !prev0.disabled) {
-        return { ok: false, reason: "start-not-disabled" };
-      }
-      if (last0.disabled || next0.disabled) {
-        return { ok: false, reason: "end-disabled-at-start" };
-      }
-      last0.click();
-      for (let i = 0; i < 20; i++) {
-        await sleep(50);
-        const last = btn("pagination-last");
-        const next = btn("pagination-next");
-        const first = btn("pagination-first");
-        if (
-          last?.disabled &&
-          next?.disabled &&
-          first &&
-          !first.disabled &&
-          currentPage() === "12"
-        ) {
-          first.click();
-          for (let j = 0; j < 20; j++) {
-            await sleep(50);
-            const first2 = btn("pagination-first");
-            const prev2 = btn("pagination-prev");
-            if (
-              first2?.disabled &&
-              prev2?.disabled &&
-              currentPage() === "1"
-            ) {
-              return { ok: true, reason: "ok" };
-            }
-          }
-          return { ok: false, reason: "first-click-no-page-1", page: currentPage() };
+            `[data-testid="${id}"]`,
+          ) as HTMLButtonElement | null;
+        const currentPage = () =>
+          (
+            getNav()?.querySelector(
+              'button[aria-current="page"]',
+            ) as HTMLButtonElement | null
+          )?.textContent?.trim() ?? "";
+        if (!getNav()) return { ok: false, reason: "no-nav" };
+        const first0 = btn("pagination-first");
+        const last0 = btn("pagination-last");
+        const prev0 = btn("pagination-prev");
+        const next0 = btn("pagination-next");
+        if (!first0 || !last0 || !prev0 || !next0) {
+          return { ok: false, reason: "missing-btns" };
         }
+        if (!first0.disabled || !prev0.disabled) {
+          return { ok: false, reason: "start-not-disabled" };
+        }
+        if (last0.disabled || next0.disabled) {
+          return { ok: false, reason: "end-disabled-at-start" };
+        }
+        last0.click();
+        for (let i = 0; i < 20; i++) {
+          await sleep(50);
+          const last = btn("pagination-last");
+          const next = btn("pagination-next");
+          const first = btn("pagination-first");
+          if (
+            last?.disabled &&
+            next?.disabled &&
+            first &&
+            !first.disabled &&
+            currentPage() === "12"
+          ) {
+            first.click();
+            for (let j = 0; j < 20; j++) {
+              await sleep(50);
+              const first2 = btn("pagination-first");
+              const prev2 = btn("pagination-prev");
+              if (
+                first2?.disabled &&
+                prev2?.disabled &&
+                currentPage() === "1"
+              ) {
+                return { ok: true, reason: "ok" };
+              }
+            }
+            return {
+              ok: false,
+              reason: "first-click-no-page-1",
+              page: currentPage(),
+            };
+          }
+        }
+        return {
+          ok: false,
+          reason: "last-click-timeout",
+          page: currentPage(),
+          lastDisabled: btn("pagination-last")?.disabled ?? null,
+        };
+      });
+      if (!result.ok) {
+        throw new Error(`Pagination first/last: ${JSON.stringify(result)}`);
       }
-      return {
-        ok: false,
-        reason: "last-click-timeout",
-        page: currentPage(),
-        lastDisabled: btn("pagination-last")?.disabled ?? null,
-      };
-    });
-    if (!result.ok) {
-      throw new Error(`Pagination first/last: ${JSON.stringify(result)}`);
-    }
-    expect(result.ok).toBe(true);
-  }, DOCS_BROWSER_CONFIG);
+      expect(result.ok).toBe(true);
+    },
+    DOCS_BROWSER_CONFIG,
+  );
 
-  it('preset="default" 无第一页／最后一页／跳转；preset="simple" 显示第 n / m 页', async (t) => {
-    if (!t?.browser?.goto) return;
-    await sharedEnv.goto(t, DOC_PATH);
-    await sharedEnv.waitDocMainReady(t);
-    const result = await t.browser.evaluate(() => {
-      const def = document.querySelector(
-        '[data-testid="demo-pagination-preset-default"] nav',
-      );
-      const sim = document.querySelector(
-        '[data-testid="demo-pagination-preset-simple"] nav',
-      );
-      if (!def || !sim) return { ok: false, reason: "no-demo" };
-      const defHasFirst = !!def.querySelector('[data-testid="pagination-first"]');
-      const defHasJump = !!def.querySelector('[data-testid="pagination-jump"]');
-      const defHasPage = !!def.querySelector('[data-testid="pagination-page-1"]');
-      const simCurrent = (
-        sim.querySelector('[data-testid="pagination-simple-current"]')
-          ?.textContent || ""
-      ).trim();
-      const simHasPage = !!sim.querySelector('[data-testid="pagination-page-1"]');
-      const simHasFirst = !!sim.querySelector('[data-testid="pagination-first"]');
-      return {
-        ok:
-          !defHasFirst &&
-          !defHasJump &&
-          defHasPage &&
-          simCurrent.includes("第 1 /") &&
-          !simHasPage &&
-          !simHasFirst,
-        defHasFirst,
-        defHasJump,
-        defHasPage,
-        simCurrent,
-        simHasPage,
-        simHasFirst,
-      };
-    });
-    expect(result.ok).toBe(true);
-  }, DOCS_BROWSER_CONFIG);
-
+  it(
+    'preset="default" 无第一页／最后一页／跳转；preset="simple" 显示第 n / m 页',
+    async (t) => {
+      if (!t?.browser?.goto) return;
+      await sharedEnv.goto(t, DOC_PATH);
+      await sharedEnv.waitDocMainReady(t);
+      const result = await t.browser.evaluate(() => {
+        const def = document.querySelector(
+          '[data-testid="demo-pagination-preset-default"] nav',
+        );
+        const sim = document.querySelector(
+          '[data-testid="demo-pagination-preset-simple"] nav',
+        );
+        if (!def || !sim) return { ok: false, reason: "no-demo" };
+        const defHasFirst = !!def.querySelector(
+          '[data-testid="pagination-first"]',
+        );
+        const defHasJump = !!def.querySelector(
+          '[data-testid="pagination-jump"]',
+        );
+        const defHasPage = !!def.querySelector(
+          '[data-testid="pagination-page-1"]',
+        );
+        const simCurrent = (
+          sim.querySelector('[data-testid="pagination-simple-current"]')
+            ?.textContent || ""
+        ).trim();
+        const simHasPage = !!sim.querySelector(
+          '[data-testid="pagination-page-1"]',
+        );
+        const simHasFirst = !!sim.querySelector(
+          '[data-testid="pagination-first"]',
+        );
+        return {
+          ok: !defHasFirst &&
+            !defHasJump &&
+            defHasPage &&
+            simCurrent.includes("第 1 /") &&
+            !simHasPage &&
+            !simHasFirst,
+          defHasFirst,
+          defHasJump,
+          defHasPage,
+          simCurrent,
+          simHasPage,
+          simHasFirst,
+        };
+      });
+      expect(result.ok).toBe(true);
+    },
+    DOCS_BROWSER_CONFIG,
+  );
 });
 
 /** 本文件内：分页下一页 */

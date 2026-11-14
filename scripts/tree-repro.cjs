@@ -1,4 +1,6 @@
-const { chromium } = require("/Users/shuliangfu/worker/deno/dreamer-jsr/ui-view/node_modules/.deno/playwright@1.59.1/node_modules/playwright");
+const { chromium } = require(
+  "/Users/shuliangfu/worker/deno/dreamer-jsr/ui-view/node_modules/.deno/playwright@1.59.1/node_modules/playwright",
+);
 const fs = require("fs");
 const outDir = "/tmp/tree-repro";
 fs.mkdirSync(outDir, { recursive: true });
@@ -8,15 +10,20 @@ async function dump(page, label) {
   return page.evaluate((label) => {
     const root = document.querySelector("[data-tree-demo='cascade']");
     if (!root) return { label, error: "no cascade" };
-    const rows = [...root.querySelectorAll("[data-tree-node-key]")].map((el) => ({
+    const rows = [...root.querySelectorAll("[data-tree-node-key]")].map((
+      el,
+    ) => ({
       key: el.getAttribute("data-tree-node-key"),
       selected: el.getAttribute("data-tree-selected"),
       aria: el.getAttribute("aria-selected"),
       checkVisual: el.getAttribute("data-tree-check-visual"),
       bg: getComputedStyle(el).backgroundColor,
     }));
-    const display = root.querySelector("[data-tree-keys-display]")?.textContent ?? "";
-    const checks = [...root.querySelectorAll("[data-tree-check-key]")].map((el) => ({
+    const display =
+      root.querySelector("[data-tree-keys-display]")?.textContent ?? "";
+    const checks = [...root.querySelectorAll("[data-tree-check-key]")].map((
+      el,
+    ) => ({
       key: el.getAttribute("data-tree-check-key"),
       checked: el.checked,
       indeterminate: el.indeterminate,
@@ -33,7 +40,11 @@ async function click(page, sel) {
 }
 
 async function ensureLeafVisible(page) {
-  if ((await page.locator("[data-tree-demo='cascade'] [data-tree-select-key='1-2-1']").count()) === 0) {
+  if (
+    (await page.locator(
+      "[data-tree-demo='cascade'] [data-tree-select-key='1-2-1']",
+    ).count()) === 0
+  ) {
     await click(page, "[data-tree-expand-key='1-2']");
     await page.waitForTimeout(300);
   }
@@ -41,11 +52,18 @@ async function ensureLeafVisible(page) {
 
 (async () => {
   const browser = await chromium.launch({ headless: true });
-  const page = await browser.newPage({ viewport: { width: 1100, height: 900 } });
+  const page = await browser.newPage({
+    viewport: { width: 1100, height: 900 },
+  });
   const results = { ok: [], fail: [] };
 
-  await page.goto(`${BASE}/desktop/data-display/tree`, { waitUntil: "networkidle", timeout: 120000 });
-  await page.waitForSelector("[data-tree-demo='cascade'] [data-dreamer-tree]", { timeout: 60000 });
+  await page.goto(`${BASE}/desktop/data-display/tree`, {
+    waitUntil: "networkidle",
+    timeout: 120000,
+  });
+  await page.waitForSelector("[data-tree-demo='cascade'] [data-dreamer-tree]", {
+    timeout: 60000,
+  });
   await page.waitForTimeout(600);
   await page.screenshot({ path: `${outDir}/A0-initial.png` });
 
@@ -57,7 +75,10 @@ async function ensureLeafVisible(page) {
   await page.screenshot({ path: `${outDir}/A1-title-121.png` });
   const leafSel = d.rows.find((r) => r.key === "1-2-1");
   const parentSel = d.rows.find((r) => r.key === "1-2");
-  if (leafSel?.selected === "true" && parentSel?.selected == null && /共\s*0/.test(d.display)) {
+  if (
+    leafSel?.selected === "true" && parentSel?.selected == null &&
+    /共\s*0/.test(d.display)
+  ) {
     results.ok.push("title-121: leaf selected, parent not, count 0");
   } else {
     results.fail.push({ step: "title-121", d });
@@ -115,4 +136,7 @@ async function ensureLeafVisible(page) {
   console.log(JSON.stringify(results, null, 2));
   await browser.close();
   if (results.fail.length) process.exit(2);
-})().catch((e) => { console.error(e); process.exit(1); });
+})().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});

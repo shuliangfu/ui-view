@@ -494,7 +494,10 @@ describe("batchBar Record", () => {
 describe("assertFooterActionsConfig", () => {
   it("内置键无需 action；自定义键必须提供", () => {
     expect(() =>
-      assertFooterActionsConfig({ submit: true, cancel: true }, ["submit", "cancel"], "form")
+      assertFooterActionsConfig({ submit: true, cancel: true }, [
+        "submit",
+        "cancel",
+      ], "form")
     ).not.toThrow();
     expect(() =>
       assertFooterActionsConfig(
@@ -512,4 +515,3 @@ describe("assertFooterActionsConfig", () => {
     ).not.toThrow();
   });
 });
-

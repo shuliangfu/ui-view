@@ -7,7 +7,6 @@ import { CodeBlock } from "@dreamer/ui-view/data-display";
 import { Link, Paragraph, Title } from "@dreamer/ui-view/basic";
 import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../components/DocsDemo.tsx";
 
-
 /** 跳转到常用分类的快速链接 */
 const QUICK = [
   { href: "/desktop/basic/button", label: "基础 · Button" },
@@ -89,7 +88,7 @@ export default function DesktopIndex() {
 import { Button } from "@dreamer/ui-view/basic";
 import { IconHome } from "@dreamer/ui-view/icons/Home.tsx";
 import { IconFlagCN } from "@dreamer/ui-view/icons/flags/standalone/IconFlagCN.tsx";`}
-maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
         />
 
         <Title level={2} class="text-xl sm:text-2xl">
@@ -116,7 +115,7 @@ app.registerPlugin(uiViewTailwindContentPlugin({
   scanPath: "src",
 }));
 app.registerPlugin(tailwindPlugin({ /* ... */ }));`}
-maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
         />
         <Paragraph class="text-sm text-slate-500 dark:text-slate-400">
           本站{" "}

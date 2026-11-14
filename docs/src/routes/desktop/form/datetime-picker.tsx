@@ -22,7 +22,6 @@ import {
 } from "../../../data/component-messages-rows.ts";
 import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
 
-
 /**
  * 文档示例：当前本地日期时间，格式 `YYYY-MM-DD HH:mm`（与默认 format 一致）。
  */

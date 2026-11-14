@@ -34,7 +34,6 @@ import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx
 import { MESSAGES_FORM_LIST } from "../../../data/component-messages-rows.ts";
 import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
 
-
 /** FormList 动态列表属性说明 */
 const FORM_LIST_API: FormDocsApiRow[] = [
   {

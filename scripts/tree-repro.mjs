@@ -7,7 +7,9 @@ async function dumpSelected(page, label) {
   return page.evaluate((label) => {
     const root = document.querySelector('[data-tree-demo="cascade"]');
     if (!root) return { label, error: "no cascade" };
-    const rows = [...root.querySelectorAll("[data-tree-node-key]")].map((el) => ({
+    const rows = [...root.querySelectorAll("[data-tree-node-key]")].map((
+      el,
+    ) => ({
       key: el.getAttribute("data-tree-node-key"),
       selected: el.getAttribute("data-tree-selected"),
       aria: el.getAttribute("aria-selected"),
@@ -15,8 +17,11 @@ async function dumpSelected(page, label) {
       bg: getComputedStyle(el).backgroundColor,
       cls: el.className.slice(0, 120),
     }));
-    const display = root.querySelector("[data-tree-keys-display]")?.textContent ?? "";
-    const checks = [...root.querySelectorAll("[data-tree-check-key]")].map((el) => ({
+    const display =
+      root.querySelector("[data-tree-keys-display]")?.textContent ?? "";
+    const checks = [...root.querySelectorAll("[data-tree-check-key]")].map((
+      el,
+    ) => ({
       key: el.getAttribute("data-tree-check-key"),
       checked: el.checked,
       indeterminate: el.indeterminate,
@@ -32,7 +37,9 @@ async function clickSel(page, sel) {
 }
 
 async function ensureExpanded(page) {
-  const leaf = page.locator('[data-tree-demo="cascade"] [data-tree-select-key="1-2-1"]');
+  const leaf = page.locator(
+    '[data-tree-demo="cascade"] [data-tree-select-key="1-2-1"]',
+  );
   if (await leaf.count() === 0) {
     await clickSel(page, '[data-tree-expand-key="1-2"]');
     await page.waitForTimeout(300);
@@ -41,8 +48,13 @@ async function ensureExpanded(page) {
 
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport: { width: 1100, height: 900 } });
-await page.goto(`${BASE}/desktop/data-display/tree`, { waitUntil: "networkidle", timeout: 120000 });
-await page.waitForSelector('[data-tree-demo="cascade"] [data-dreamer-tree]', { timeout: 60000 });
+await page.goto(`${BASE}/desktop/data-display/tree`, {
+  waitUntil: "networkidle",
+  timeout: 120000,
+});
+await page.waitForSelector('[data-tree-demo="cascade"] [data-dreamer-tree]', {
+  timeout: 60000,
+});
 await page.waitForTimeout(500);
 await page.screenshot({ path: `${outDir}/00-initial.png`, fullPage: false });
 

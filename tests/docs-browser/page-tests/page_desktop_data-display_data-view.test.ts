@@ -267,23 +267,47 @@ describe("文档页 E2E：/desktop/data-display/data-view（DataView 数据明�
         '[data-testid="dv-update"]',
       ) as HTMLButtonElement | null;
       if (!update || update.disabled) {
-        return { ok: false, reason: "no update", remounted: false, lostAt: -1, value: "" };
+        return {
+          ok: false,
+          reason: "no update",
+          remounted: false,
+          lostAt: -1,
+          value: "",
+        };
       }
       click(update);
       const opened = await until(() =>
         !!document.querySelector('[role="dialog"] [data-testid="dv-form"]')
       );
       if (!opened) {
-        return { ok: false, reason: "form not opened", remounted: false, lostAt: -1, value: "" };
+        return {
+          ok: false,
+          reason: "form not opened",
+          remounted: false,
+          lostAt: -1,
+          value: "",
+        };
       }
       const sel = '[role="dialog"] [data-testid="dv-fld-name"] input';
       const first = document.querySelector(sel) as HTMLInputElement | null;
       if (!first) {
-        return { ok: false, reason: "missing name input", remounted: false, lostAt: -1, value: "" };
+        return {
+          ok: false,
+          reason: "missing name input",
+          remounted: false,
+          lostAt: -1,
+          value: "",
+        };
       }
       first.focus();
       if (document.activeElement !== first) {
-        return { ok: false, reason: "no initial focus", remounted: false, lostAt: -1, value: first.value };
+        return {
+          ok: false,
+          reason: "no initial focus",
+          remounted: false,
+          lostAt: -1,
+          value: first.value,
+        };
       }
       const typed = "HelloFocus";
       let remounted = false;
@@ -292,7 +316,13 @@ describe("文档页 E2E：/desktop/data-display/data-view（DataView 数据明�
       for (let i = 0; i < typed.length; i++) {
         const el = document.querySelector(sel) as HTMLInputElement | null;
         if (!el) {
-          return { ok: false, reason: "input gone", remounted, lostAt: i, value: prev.value };
+          return {
+            ok: false,
+            reason: "input gone",
+            remounted,
+            lostAt: i,
+            value: prev.value,
+          };
         }
         if (el !== prev) remounted = true;
         if (document.activeElement !== el) {
@@ -303,12 +333,18 @@ describe("文档页 E2E：/desktop/data-display/data-view（DataView 数据明�
             remounted,
             lostAt,
             value: el.value,
-            activeTag: document.activeElement ? (document.activeElement as HTMLElement).tagName : "",
+            activeTag: document.activeElement
+              ? (document.activeElement as HTMLElement).tagName
+              : "",
           };
         }
         el.value = typed.slice(0, i + 1);
         el.dispatchEvent(
-          new InputEvent("input", { bubbles: true, data: typed[i], inputType: "insertText" }),
+          new InputEvent("input", {
+            bubbles: true,
+            data: typed[i],
+            inputType: "insertText",
+          }),
         );
         await sleep(20);
         prev = el;
@@ -321,7 +357,9 @@ describe("文档页 E2E：/desktop/data-display/data-view（DataView 数据明�
         remounted,
         lostAt,
         value: last?.value ?? "",
-        activeTag: document.activeElement ? (document.activeElement as HTMLElement).tagName : "",
+        activeTag: document.activeElement
+          ? (document.activeElement as HTMLElement).tagName
+          : "",
       };
     }) as {
       ok: boolean;

@@ -17,7 +17,10 @@ import {
   setDataPanelQuery,
   viewHandles,
 } from "../../src/desktop/data-display/data-panel-chrome.tsx";
-import type { Query, Row } from "../../src/desktop/data-display/data-panel-types.ts";
+import type {
+  Query,
+  Row,
+} from "../../src/desktop/data-display/data-panel-types.ts";
 
 const Q: Query = {
   page: 1,

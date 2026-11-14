@@ -36,7 +36,9 @@ export const PRISM_LANG_ALLOW = new Set([
  *
  * @returns 可用于 `Prism.languages[id]` 的 id，或 `null`（不在白名单）
  */
-export function normalizePrismLang(language: string | undefined | null): string | null {
+export function normalizePrismLang(
+  language: string | undefined | null,
+): string | null {
   let lang = (language ?? "plaintext").toLowerCase();
   if (!PRISM_LANG_ALLOW.has(lang)) return null;
   if (lang === "html") lang = "markup";

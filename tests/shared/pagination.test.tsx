@@ -21,7 +21,6 @@ async function html(
   );
 }
 
-
 function buttonTag(html: string, testId: string): string {
   const i = html.indexOf(`data-testid="${testId}"`);
   if (i < 0) return "";

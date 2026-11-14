@@ -50,7 +50,7 @@ export default function MobileIndex() {
 import { TabBar, NavBar } from "@dreamer/ui-view/mobile/navigation";
 import { Button } from "@dreamer/ui-view/mobile/basic";
  // shared 也可从此入口`}
- maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
         />
       </section>
 

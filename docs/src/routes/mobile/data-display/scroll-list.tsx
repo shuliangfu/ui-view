@@ -15,7 +15,6 @@ import { MOBILE_DOC_DEMO_SHELL_BASE } from "../../../components/MobileDocDemo.ts
 import { MESSAGES_SCROLL_LIST } from "../../../data/component-messages-rows.ts";
 import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
 
-
 const SCROLL_LIST_API: DocsApiTableRow[] = [
   {
     name:

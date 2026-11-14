@@ -227,7 +227,9 @@ function watchTheme(
   userOptions: Record<string, unknown> | undefined,
 ): void {
   disconnectThemeWatch(ext);
-  if (typeof document === "undefined" || typeof MutationObserver === "undefined") {
+  if (
+    typeof document === "undefined" || typeof MutationObserver === "undefined"
+  ) {
     return;
   }
   const refresh = () => applyThemeToChart(ext, userOptions);

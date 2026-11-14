@@ -172,8 +172,7 @@ const config: AppConfig = {
    */
   securityHeaders: {
     enabled: true,
-    contentSecurityPolicy:
-      "default-src 'self'; " +
+    contentSecurityPolicy: "default-src 'self'; " +
       "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
       "style-src 'self' 'unsafe-inline'; " +
       "img-src 'self' data: blob: https:; " +

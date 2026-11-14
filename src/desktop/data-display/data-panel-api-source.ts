@@ -583,7 +583,9 @@ export function createApiDataSource(
   src.importRows = async (rows) => {
     if (mode === "action") {
       // 无单独 import：走 create，body 用 { rows } 与单条对象区分
-      const r = await request("POST", joinApiPath(apiRoot(), "create"), { rows });
+      const r = await request("POST", joinApiPath(apiRoot(), "create"), {
+        rows,
+      });
       return importFromBody(r.body, rows.length, r.ok);
     }
     const r = await request("POST", joinApiPath(apiRoot(), "import"), { rows });

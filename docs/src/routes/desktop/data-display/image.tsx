@@ -9,7 +9,6 @@ import { CodeBlock, Image } from "@dreamer/ui-view/data-display";
 import { createMemo } from "@dreamer/view";
 import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
 
-
 /** API 属性行类型 */
 interface ApiRow {
   name: string;

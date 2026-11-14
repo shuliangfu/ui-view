@@ -19,7 +19,7 @@ export default {
   server: {
     /**
      * HMR 脚本会把 WebSocket 指到此 host。若用浏览器打开 localhost 而此处为 127.0.0.1
-     *（或相反），Origin≠Host 会被 runtime-adapter 拒绝。docs 通过
+     * （或相反），Origin≠Host 会被 runtime-adapter 拒绝。docs 通过
      * `src/dev/runtime-adapter-hmr-origin.ts` import map 放行本机双名 Origin。
      */
     host: "127.0.0.1",

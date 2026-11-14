@@ -171,7 +171,6 @@ export function BottomSheet(props: BottomSheetProps): JSXRenderable {
 
   const maskClosable = () => props.maskClosable !== false;
 
-
   /**
    * 构建遮罩 + 面板（Portal 与 SSR 内联共用）
    */

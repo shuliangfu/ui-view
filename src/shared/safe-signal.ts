@@ -29,7 +29,9 @@ export function safeIsSignal(v: unknown): v is Signal<unknown> {
 /**
  * 读取 Signal 当前值（调用形式；避免 Proxy 上误读 `.value` 字段）。
  */
-export function readSignalValue<T>(v: Signal<T> | ((...args: never[]) => T)): T {
+export function readSignalValue<T>(
+  v: Signal<T> | ((...args: never[]) => T),
+): T {
   return (v as () => T)();
 }
 

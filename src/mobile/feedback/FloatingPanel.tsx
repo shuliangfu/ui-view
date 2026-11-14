@@ -85,7 +85,8 @@ export function FloatingPanel(props: FloatingPanelProps): JSXRenderable {
     });
   });
 
-  const heightNow = () => dragH.value ?? anchors[idx.value] ?? anchors[0] ?? 320;
+  const heightNow = () =>
+    dragH.value ?? anchors[idx.value] ?? anchors[0] ?? 320;
 
   const onHandleDown = (e: PointerEvent) => {
     const startY = e.clientY;
@@ -118,7 +119,11 @@ export function FloatingPanel(props: FloatingPanelProps): JSXRenderable {
   const markup = () => {
     if (!isOpen()) return null;
     return (
-      <div class="fixed inset-0 z-300 flex flex-col justify-end" role="dialog" aria-modal="true">
+      <div
+        class="fixed inset-0 z-300 flex flex-col justify-end"
+        role="dialog"
+        aria-modal="true"
+      >
         <button
           type="button"
           class="absolute inset-0 bg-slate-900/35"

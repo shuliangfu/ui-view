@@ -364,8 +364,12 @@
 }
 
 @keyframes notice-bar-marquee {
-  0% { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
 }
 
 /* 正文选中色与主色呼应 */

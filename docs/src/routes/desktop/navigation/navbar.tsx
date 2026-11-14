@@ -16,7 +16,6 @@ import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx
 import { MESSAGES_DESKTOP_NAV_BAR } from "../../../data/component-messages-rows.ts";
 import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
 
-
 /** 桌面 NavBar API 表行 */
 const DESKTOP_NAV_BAR_API: DocsApiTableRow[] = [
   {

@@ -12,7 +12,6 @@ import {
 } from "../../../components/DocsApiTable.tsx";
 import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
 
-
 const API: DocsApiTableRow[] = [
   { name: "title", type: "unknown", default: "-", description: "主标题" },
   { name: "description", type: "unknown", default: "-", description: "描述" },
@@ -115,7 +114,11 @@ export default function Page() {
       </div>
       <section class="space-y-3">
         <Title level={2}>引入</Title>
-        <CodeBlock code={importCode} language="tsx" maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT} />
+        <CodeBlock
+          code={importCode}
+          language="tsx"
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
+        />
       </section>
       <section class="space-y-6">
         <Title level={2}>示例</Title>

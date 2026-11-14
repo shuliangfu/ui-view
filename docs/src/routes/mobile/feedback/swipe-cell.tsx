@@ -12,7 +12,6 @@ import {
 import { MobileDocDemo } from "../../../components/MobileDocDemo.tsx";
 import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
 
-
 const SWIPE_CELL_API: DocsApiTableRow[] = [
   {
     name: "leftActions",

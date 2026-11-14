@@ -198,7 +198,10 @@ export function BackTop(props: BackTopProps): JSXRenderable {
         right: `${right}px`,
         bottom: `${bottom}px`,
         zIndex: 100,
-        transition: globalThis.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ? "none" : "opacity 0.2s, visibility 0.2s",
+        transition:
+          globalThis.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches
+            ? "none"
+            : "opacity 0.2s, visibility 0.2s",
       }}
     >
       <button

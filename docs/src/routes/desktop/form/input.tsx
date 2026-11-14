@@ -24,7 +24,6 @@ import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx
 import { MESSAGES_INPUT } from "../../../data/component-messages-rows.ts";
 import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
 
-
 /** 本页 API 表行（与其它表单文档页结构一致） */
 interface ApiRow {
   name: string;

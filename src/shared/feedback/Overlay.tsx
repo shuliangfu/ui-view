@@ -118,9 +118,12 @@ export function Overlay(props: OverlayProps): JSXRenderable {
 
   const markup = () => {
     if (!isOpen() && destroyOnClose) return null;
-    const posCls = position === "absolute" ? "absolute inset-0" : "fixed inset-0";
-    const style: Record<string, string> | undefined =
-      zIndex != null ? { zIndex: String(zIndex) } : undefined;
+    const posCls = position === "absolute"
+      ? "absolute inset-0"
+      : "fixed inset-0";
+    const style: Record<string, string> | undefined = zIndex != null
+      ? { zIndex: String(zIndex) }
+      : undefined;
     const cls = twMerge(
       posCls,
       "bg-slate-900/35 transition-opacity motion-reduce:transition-none",

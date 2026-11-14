@@ -29,7 +29,8 @@ const sizeClasses: Record<SizeVariant, string> = {
   lg: "h-8",
 };
 
-const base = "animate-pulse motion-reduce:animate-none rounded-md bg-gray-200 dark:bg-gray-700";
+const base =
+  "animate-pulse motion-reduce:animate-none rounded-md bg-gray-200 dark:bg-gray-700";
 
 export function Skeleton(props: SkeletonProps): JSXRenderable {
   const { size = "md", class: className } = props;

@@ -71,10 +71,11 @@ describe("resolveTabQuery", () => {
       param: "tab",
       value: "3",
     });
-    expect(resolveTabQuery(TABS, "tab", undefined as unknown as string)).toEqual({
-      param: "tab",
-      value: "3",
-    });
+    expect(resolveTabQuery(TABS, "tab", undefined as unknown as string))
+      .toEqual({
+        param: "tab",
+        value: "3",
+      });
   });
 
   it("skips a disabled first tab and uses the first enabled one", () => {
@@ -134,8 +135,10 @@ describe("wrapFetchWithTabParam", () => {
     }) as typeof fetch;
     const ds = createApiDataSource({
       baseRoute: "/api/users/worn",
-      fetch: wrapFetchWithTabParam(fetchImpl, () =>
-        resolveTabQuery(TABS, "tab", current)),
+      fetch: wrapFetchWithTabParam(
+        fetchImpl,
+        () => resolveTabQuery(TABS, "tab", current),
+      ),
     });
 
     await ds.list(q());
@@ -163,10 +166,13 @@ describe("wrapFetchWithTabParam", () => {
     const urls: string[] = [];
     const ds = createApiDataSource({
       baseRoute: "/api/users/worn",
-      fetch: wrapFetchWithTabParam(((input: RequestInfo | URL) => {
-        urls.push(String(input));
-        return jsonOk();
-      }) as typeof fetch, () => resolveTabQuery(TABS, "months", "6")),
+      fetch: wrapFetchWithTabParam(
+        ((input: RequestInfo | URL) => {
+          urls.push(String(input));
+          return jsonOk();
+        }) as typeof fetch,
+        () => resolveTabQuery(TABS, "months", "6"),
+      ),
     });
     await ds.list(q());
     await ds.create?.({ name: "张三" });
@@ -181,10 +187,17 @@ describe("wrapFetchWithTabParam", () => {
     const urls: string[] = [];
     const ds = createApiDataSource({
       baseRoute: "/api/users/worn",
-      fetch: wrapFetchWithTabParam(((input: RequestInfo | URL) => {
-        urls.push(String(input));
-        return jsonOk({ rows: [{ id: "1", name: "张三" }], total: 1, ok: true });
-      }) as typeof fetch, () => resolveTabQuery(TABS, "tab", "")),
+      fetch: wrapFetchWithTabParam(
+        ((input: RequestInfo | URL) => {
+          urls.push(String(input));
+          return jsonOk({
+            rows: [{ id: "1", name: "张三" }],
+            total: 1,
+            ok: true,
+          });
+        }) as typeof fetch,
+        () => resolveTabQuery(TABS, "tab", ""),
+      ),
     });
     await ds.list(q());
     expect(new URL(urls[0]!, "http://ui-view.test").searchParams.get("tab"))
@@ -195,10 +208,17 @@ describe("wrapFetchWithTabParam", () => {
     const urls: string[] = [];
     const ds = createApiDataSource({
       baseRoute: "/api/users/worn",
-      fetch: wrapFetchWithTabParam(((input: RequestInfo | URL) => {
-        urls.push(String(input));
-        return jsonOk({ rows: [{ id: "1", name: "张三" }], total: 1, ok: true });
-      }) as typeof fetch, () => resolveTabQuery(TABS, "tab", "")),
+      fetch: wrapFetchWithTabParam(
+        ((input: RequestInfo | URL) => {
+          urls.push(String(input));
+          return jsonOk({
+            rows: [{ id: "1", name: "张三" }],
+            total: 1,
+            ok: true,
+          });
+        }) as typeof fetch,
+        () => resolveTabQuery(TABS, "tab", ""),
+      ),
     });
     await ds.list(q());
     await ds.list(q());
@@ -219,10 +239,17 @@ describe("wrapFetchWithTabParam", () => {
     ];
     const ds = createApiDataSource({
       baseRoute: "/api/users/worn",
-      fetch: wrapFetchWithTabParam(((input: RequestInfo | URL) => {
-        urls.push(String(input));
-        return jsonOk({ rows: [{ id: "1", name: "张三" }], total: 1, ok: true });
-      }) as typeof fetch, () => resolveTabQuery(tabs, "tab", "")),
+      fetch: wrapFetchWithTabParam(
+        ((input: RequestInfo | URL) => {
+          urls.push(String(input));
+          return jsonOk({
+            rows: [{ id: "1", name: "张三" }],
+            total: 1,
+            ok: true,
+          });
+        }) as typeof fetch,
+        () => resolveTabQuery(tabs, "tab", ""),
+      ),
     });
     await ds.list(q());
     expect(new URL(urls[0]!, "http://ui-view.test").searchParams.get("tab"))
@@ -234,10 +261,17 @@ describe("wrapFetchWithTabParam", () => {
     let filters: Record<string, string> = { q: "张三", tab: "12" };
     const ds = createApiDataSource({
       baseRoute: "/api/users/worn",
-      fetch: wrapFetchWithTabParam(((input: RequestInfo | URL) => {
-        urls.push(String(input));
-        return jsonOk({ rows: [{ id: "1", name: "张三" }], total: 1, ok: true });
-      }) as typeof fetch, () => resolveTabQuery(TABS, "tab", filters.tab ?? "")),
+      fetch: wrapFetchWithTabParam(
+        ((input: RequestInfo | URL) => {
+          urls.push(String(input));
+          return jsonOk({
+            rows: [{ id: "1", name: "张三" }],
+            total: 1,
+            ok: true,
+          });
+        }) as typeof fetch,
+        () => resolveTabQuery(TABS, "tab", filters.tab ?? ""),
+      ),
     });
     await ds.list(q({ filters }));
     filters = filtersAfterSearchReset(filters, ["q"]);
@@ -254,10 +288,13 @@ describe("wrapFetchWithTabParam", () => {
     const urls: string[] = [];
     const ds = createApiDataSource({
       baseRoute: "/api/users/worn",
-      fetch: wrapFetchWithTabParam(((input: RequestInfo | URL) => {
-        urls.push(String(input));
-        return jsonOk();
-      }) as typeof fetch, () => resolveTabQuery(TABS, "", "12")),
+      fetch: wrapFetchWithTabParam(
+        ((input: RequestInfo | URL) => {
+          urls.push(String(input));
+          return jsonOk();
+        }) as typeof fetch,
+        () => resolveTabQuery(TABS, "", "12"),
+      ),
     });
     await ds.list(q());
     await ds.importRows?.([{ name: "张三" }]);
@@ -270,10 +307,13 @@ describe("wrapFetchWithTabParam", () => {
 
   it("does not send tab on list / import / refresh when the panel has no tabs", async () => {
     const urls: string[] = [];
-    const fetchImpl = wrapFetchWithTabParam(((input: RequestInfo | URL) => {
-      urls.push(String(input));
-      return jsonOk();
-    }) as typeof fetch, () => resolveTabQuery(undefined, "tab", "12"));
+    const fetchImpl = wrapFetchWithTabParam(
+      ((input: RequestInfo | URL) => {
+        urls.push(String(input));
+        return jsonOk();
+      }) as typeof fetch,
+      () => resolveTabQuery(undefined, "tab", "12"),
+    );
     const ds = createApiDataSource({
       baseRoute: "/api/users",
       fetch: fetchImpl,
@@ -298,10 +338,13 @@ describe("wrapFetchWithTabParam", () => {
     const urls: string[] = [];
     const ds = createApiDataSource({
       baseRoute: "/api/users/worn",
-      fetch: wrapFetchWithTabParam(((input: RequestInfo | URL) => {
-        urls.push(String(input));
-        return jsonOk({ rows: [{ id: "1", name: "张三" }], total: 1 });
-      }) as typeof fetch, () => initial),
+      fetch: wrapFetchWithTabParam(
+        ((input: RequestInfo | URL) => {
+          urls.push(String(input));
+          return jsonOk({ rows: [{ id: "1", name: "张三" }], total: 1 });
+        }) as typeof fetch,
+        () => initial,
+      ),
     });
     await ds.list(q());
     expect(new URL(urls[0]!, "http://ui-view.test").searchParams.get("tab"))
@@ -411,10 +454,13 @@ describe("DataView API requests carry the current tab", () => {
     ];
     const ds = createApiDataSource({
       baseRoute: "/api/users",
-      fetch: wrapFetchWithTabParam(((input: RequestInfo | URL) => {
-        urls.push(String(input));
-        return jsonOk({ id: "1", name: "张三", ok: true });
-      }) as typeof fetch, () => resolveTabQuery(tabs, "tab", current)),
+      fetch: wrapFetchWithTabParam(
+        ((input: RequestInfo | URL) => {
+          urls.push(String(input));
+          return jsonOk({ id: "1", name: "张三", ok: true });
+        }) as typeof fetch,
+        () => resolveTabQuery(tabs, "tab", current),
+      ),
     });
     await ds.view("1");
     await ds.view("1"); // refresh
@@ -436,10 +482,13 @@ describe("DataView API requests carry the current tab", () => {
     const urls: string[] = [];
     const ds = createApiDataSource({
       baseRoute: "/api/users",
-      fetch: wrapFetchWithTabParam(((input: RequestInfo | URL) => {
-        urls.push(String(input));
-        return jsonOk({ id: "1", name: "张三", ok: true });
-      }) as typeof fetch, () => resolveTabQuery(undefined, "tab", "basic")),
+      fetch: wrapFetchWithTabParam(
+        ((input: RequestInfo | URL) => {
+          urls.push(String(input));
+          return jsonOk({ id: "1", name: "张三", ok: true });
+        }) as typeof fetch,
+        () => resolveTabQuery(undefined, "tab", "basic"),
+      ),
     });
     await ds.view("1");
     await ds.importRows?.([{ name: "李四" }]);

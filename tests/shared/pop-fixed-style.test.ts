@@ -12,7 +12,12 @@ import {
   resolvePointFixedPosition,
 } from "../../src/shared/feedback/popFixedStyle.ts";
 
-function rect(left: number, top: number, width: number, height: number): DOMRect {
+function rect(
+  left: number,
+  top: number,
+  width: number,
+  height: number,
+): DOMRect {
   return {
     left,
     top,
@@ -163,12 +168,22 @@ describe("flipPlacementToFit", () => {
 
 describe("resolvePointFixedPosition", () => {
   it("opens to the right and down when there is room", () => {
-    const got = resolvePointFixedPosition(100, 100, { width: 160, height: 120 }, viewport);
+    const got = resolvePointFixedPosition(
+      100,
+      100,
+      { width: 160, height: 120 },
+      viewport,
+    );
     expect(got).toEqual({ x: 100, y: 100, flippedX: false, flippedY: false });
   });
 
   it("flips left when the right edge would clip", () => {
-    const got = resolvePointFixedPosition(920, 200, { width: 160, height: 120 }, viewport);
+    const got = resolvePointFixedPosition(
+      920,
+      200,
+      { width: 160, height: 120 },
+      viewport,
+    );
     expect(got.flippedX).toBe(true);
     expect(got.flippedY).toBe(false);
     expect(got.x).toBe(920 - 160);
@@ -176,13 +191,23 @@ describe("resolvePointFixedPosition", () => {
   });
 
   it("flips up when the bottom edge would clip", () => {
-    const got = resolvePointFixedPosition(100, 740, { width: 160, height: 120 }, viewport);
+    const got = resolvePointFixedPosition(
+      100,
+      740,
+      { width: 160, height: 120 },
+      viewport,
+    );
     expect(got.flippedY).toBe(true);
     expect(got.y).toBe(740 - 120);
   });
 
   it("flips both ways in the bottom-right corner", () => {
-    const got = resolvePointFixedPosition(920, 740, { width: 160, height: 120 }, viewport);
+    const got = resolvePointFixedPosition(
+      920,
+      740,
+      { width: 160, height: 120 },
+      viewport,
+    );
     expect(got.flippedX).toBe(true);
     expect(got.flippedY).toBe(true);
     expect(got.x).toBe(920 - 160);
@@ -190,7 +215,12 @@ describe("resolvePointFixedPosition", () => {
   });
 
   it("does not flip when size is unknown", () => {
-    const got = resolvePointFixedPosition(920, 740, { width: 0, height: 0 }, viewport);
+    const got = resolvePointFixedPosition(
+      920,
+      740,
+      { width: 0, height: 0 },
+      viewport,
+    );
     expect(got).toEqual({ x: 920, y: 740, flippedX: false, flippedY: false });
   });
 });

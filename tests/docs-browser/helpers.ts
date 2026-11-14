@@ -362,7 +362,11 @@ async function waitAfterDocsNavigate(
     }
     return ms;
   };
-  await waitDocumentComplete(t, need("文档 interactive/complete"), expectedPath);
+  await waitDocumentComplete(
+    t,
+    need("文档 interactive/complete"),
+    expectedPath,
+  );
   await waitMainChars(t, GOTO_MAIN_MIN_CHARS, need("main 出字"), expectedPath);
   // 动态 import 失败页也会出字；先识别再等句柄，避免在错误页上耗尽预算
   await throwIfDocsDynamicImportError(t);
@@ -1244,7 +1248,11 @@ export const sharedEnv = {
         }
         return ms;
       };
-      await waitDocumentComplete(t, need("文档 interactive/complete"), expectedPath);
+      await waitDocumentComplete(
+        t,
+        need("文档 interactive/complete"),
+        expectedPath,
+      );
       await waitMainChars(t, minChars, need("main 出字"), expectedPath);
       await throwIfDocsDynamicImportError(t);
       // 正文出水后再等 Dreamer 事件句柄，覆盖 reload 后的 hydration 窗口（CI 更慢）

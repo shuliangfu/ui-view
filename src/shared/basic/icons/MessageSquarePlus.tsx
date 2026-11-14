@@ -22,6 +22,8 @@ const svg = (
   </svg>
 );
 
-export function IconMessageSquarePlus(props?: IconComponentProps): JSXRenderable {
+export function IconMessageSquarePlus(
+  props?: IconComponentProps,
+): JSXRenderable {
   return <Icon size={props?.size} class={props?.class}>{svg}</Icon>;
 }

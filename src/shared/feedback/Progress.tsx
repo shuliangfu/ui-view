@@ -50,7 +50,8 @@ export interface ProgressProps {
 const statusSuccessCls = "bg-green-500 dark:bg-green-400";
 const statusExceptionCls = "bg-red-500 dark:bg-red-400";
 const statusNormalCls = "bg-blue-500 dark:bg-blue-400";
-const statusActiveCls = "bg-blue-500 dark:bg-blue-400 animate-pulse motion-reduce:animate-none";
+const statusActiveCls =
+  "bg-blue-500 dark:bg-blue-400 animate-pulse motion-reduce:animate-none";
 
 function percentCls(status: ProgressStatus): string {
   if (status === "success") return statusSuccessCls;

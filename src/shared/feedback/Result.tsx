@@ -101,7 +101,9 @@ export function Result(props: ResultProps): JSXRenderable {
     "403": m.forbidden,
     "404": m.notFound,
   };
-  const displayTitle = title != null && title !== "" ? title : statusTitle[status];
+  const displayTitle = title != null && title !== ""
+    ? title
+    : statusTitle[status];
 
   const IconComponent = statusIconMap[status];
   const iconCls = statusIconClasses[status];

@@ -436,12 +436,10 @@ export const PG_CLS =
   "dp-pg flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 bg-slate-100/80 px-3 py-3 text-sm dark:border-slate-700 dark:bg-transparent";
 
 /** 分页控件组（原 `.dp-pg-ctrls`） */
-export const PG_CTRLS_CLS =
-  "dp-pg-ctrls flex flex-wrap items-center gap-2";
+export const PG_CTRLS_CLS = "dp-pg-ctrls flex flex-wrap items-center gap-2";
 
 /** 条数文案（原 `.dp-range`） */
-export const RANGE_CLS =
-  "dp-range dark:!text-[var(--dp-panel-muted,#cbd5e1)]";
+export const RANGE_CLS = "dp-range dark:!text-[var(--dp-panel-muted,#cbd5e1)]";
 
 /** 全屏壳（原 `.dp-fs`） */
 export const FS_CLS =

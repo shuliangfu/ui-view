@@ -134,7 +134,6 @@ export function ActionSheet(props: ActionSheetProps): JSXRenderable {
    */
   const isOpen = createMemo(() => readControlledOpenInput(props.open));
 
-
   /**
    * 构建遮罩 + 面板（Portal 与 SSR 内联共用）
    */

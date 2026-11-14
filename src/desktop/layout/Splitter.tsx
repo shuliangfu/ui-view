@@ -3,15 +3,12 @@
  * 桌面左右／上下可拖拽分隔；受控 `sizes`（百分比数组）。
  */
 
-import {
-  createSignal,
-  type JSXRenderable,
-} from "@dreamer/view";
+import { createSignal, type JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import {
+  commitMaybeSignal,
   type MaybeSignal,
   readMaybeSignal,
-  commitMaybeSignal,
 } from "../../shared/form/maybe-signal.ts";
 
 export interface SplitterProps {
@@ -28,9 +25,15 @@ export interface SplitterProps {
   class?: string;
 }
 
-function normalizeSizes(raw: number[] | undefined, count: number, min: number): number[] {
+function normalizeSizes(
+  raw: number[] | undefined,
+  count: number,
+  min: number,
+): number[] {
   if (count <= 0) return [];
-  let s = (raw && raw.length === count) ? [...raw] : Array.from({ length: count }, () => 100 / count);
+  let s = (raw && raw.length === count)
+    ? [...raw]
+    : Array.from({ length: count }, () => 100 / count);
   const sum = s.reduce((a, b) => a + b, 0) || 1;
   s = s.map((x) => (x / sum) * 100);
   s = s.map((x) => Math.max(min, x));

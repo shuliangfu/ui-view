@@ -20,7 +20,6 @@ import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx
 import { MESSAGES_CASCADER } from "../../../data/component-messages-rows.ts";
 import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
 
-
 /** createForm 演示字段（onChange(value) → bindValue） */
 type CascaderCreateFormValues = { region: string[] };
 

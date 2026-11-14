@@ -1,6 +1,8 @@
 import { describe, expect, it } from "@dreamer/test";
-import { isUsableContainerWidthPx,
-  normalizeContainerWidthPx } from "../../src/shared/container-width.ts";
+import {
+  isUsableContainerWidthPx,
+  normalizeContainerWidthPx,
+} from "../../src/shared/container-width.ts";
 
 describe("normalizeContainerWidthPx", () => {
   it("把亚像素宽度四舍五入到百分之一，避免边框盒与 contentRect 来回跳", () => {

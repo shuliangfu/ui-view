@@ -47,7 +47,8 @@ export interface NoticeBarProps {
 }
 
 const toneCls: Record<NoticeBarTone, string> = {
-  info: "bg-sky-50 text-sky-800 dark:bg-sky-950/50 dark:text-sky-200 border-sky-200/80 dark:border-sky-800",
+  info:
+    "bg-sky-50 text-sky-800 dark:bg-sky-950/50 dark:text-sky-200 border-sky-200/80 dark:border-sky-800",
   success:
     "bg-emerald-50 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200 border-emerald-200/80 dark:border-emerald-800",
   warning:
@@ -89,9 +90,7 @@ export function NoticeBar(props: NoticeBarProps): JSXRenderable {
             data-dreamer-notice-bar=""
             onClick={() => onClick?.()}
           >
-            {icon != null && (
-              <span class="shrink-0 inline-flex">{icon}</span>
-            )}
+            {icon != null && <span class="shrink-0 inline-flex">{icon}</span>}
             <div
               class={twMerge(
                 "min-w-0 flex-1",

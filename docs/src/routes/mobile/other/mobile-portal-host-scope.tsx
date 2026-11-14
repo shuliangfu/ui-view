@@ -14,7 +14,6 @@ import {
 import { MobileDocDemo } from "../../../components/MobileDocDemo.tsx";
 import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
 
-
 const SCOPE_API: DocsApiTableRow[] = [
   {
     name: "children",

@@ -28,8 +28,8 @@ import {
 } from "../form/maybe-signal.ts";
 import {
   flipPlacementToFit,
-  popBoxForPlacement,
   type FullPopStylePlacement,
+  popBoxForPlacement,
   type PopSize,
 } from "./popFixedStyle.ts";
 
@@ -132,13 +132,28 @@ function computeBubbleStyle(
   const popup = { width: bw, height: bh };
   const preferred = tourPreferredPlacement(placement);
   const resolved = placement === "auto"
-    ? flipPlacementToFit(preferred, rect, popup, viewport, gap, TOUR_VIEW_PADDING)
+    ? flipPlacementToFit(
+      preferred,
+      rect,
+      popup,
+      viewport,
+      gap,
+      TOUR_VIEW_PADDING,
+    )
     : preferred;
   const box = popBoxForPlacement(rect, resolved, popup, gap);
   let top = box.top;
   let left = box.left;
-  top = clamp(top, TOUR_VIEW_PADDING, Math.max(TOUR_VIEW_PADDING, vh - bh - TOUR_VIEW_PADDING));
-  left = clamp(left, TOUR_VIEW_PADDING, Math.max(TOUR_VIEW_PADDING, vw - bw - TOUR_VIEW_PADDING));
+  top = clamp(
+    top,
+    TOUR_VIEW_PADDING,
+    Math.max(TOUR_VIEW_PADDING, vh - bh - TOUR_VIEW_PADDING),
+  );
+  left = clamp(
+    left,
+    TOUR_VIEW_PADDING,
+    Math.max(TOUR_VIEW_PADDING, vw - bw - TOUR_VIEW_PADDING),
+  );
   return {
     style: {
       top: `${top}px`,
@@ -244,7 +259,7 @@ export function Tour(props: TourProps): JSXRenderable {
 
     const focusPanel = () => {
       const panel = panelRef.value;
-      const btn = panel?.querySelector?.<HTMLElement>("button");
+      const btn = panel?.querySelector("button");
       btn?.focus?.({ preventScroll: true });
     };
     const raf = globalThis.requestAnimationFrame?.(focusPanel);
@@ -284,14 +299,12 @@ export function Tour(props: TourProps): JSXRenderable {
     const computed = rect
       ? computeBubbleStyle(rect, step.placement, bubbleSize.value)
       : null;
-    const bubbleStyle = computed
-      ? computed.style
-      : {
-        top: "30%",
-        left: "50%",
-        transform: "translateX(-50%)",
-        width: "min(100% - 24px, 20rem)",
-      };
+    const bubbleStyle = computed ? computed.style : {
+      top: "30%",
+      left: "50%",
+      transform: "translateX(-50%)",
+      width: "min(100% - 24px, 20rem)",
+    };
     const isLast = idx >= steps.length - 1;
     const titleId = "ui-tour-title";
     const descId = "ui-tour-desc";

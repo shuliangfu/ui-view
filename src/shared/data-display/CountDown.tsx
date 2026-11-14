@@ -10,10 +10,7 @@ import {
   onCleanup,
 } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
-import {
-  type MaybeSignal,
-  readMaybeSignal,
-} from "../form/maybe-signal.ts";
+import { type MaybeSignal, readMaybeSignal } from "../form/maybe-signal.ts";
 
 export interface CountDownTimeParts {
   totalMs: number;

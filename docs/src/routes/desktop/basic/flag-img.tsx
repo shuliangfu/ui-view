@@ -15,7 +15,6 @@ import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx
 import { MESSAGES_FLAG_IMG } from "../../../data/component-messages-rows.ts";
 import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
 
-
 /** 文档示例用极简矩形 SVG（非真实国旗，仅演示 data URL 路径） */
 const DEMO_FLAG_SVG =
   `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 5 3"><rect width="5" height="3" fill="#dc2626"/></svg>`;

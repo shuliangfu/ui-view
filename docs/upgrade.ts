@@ -465,7 +465,9 @@ function parseUpgradeService(
   const staticScript = command.match(/scripts\/serve-[\w-]+\.ts/);
 
   let kind: UpgradeServiceKind | null = null;
-  if (labelKind === "web" || labelKind === "console" || labelKind === "static") {
+  if (
+    labelKind === "web" || labelKind === "console" || labelKind === "static"
+  ) {
     kind = labelKind;
   } else if (distMatch) {
     kind = "web";

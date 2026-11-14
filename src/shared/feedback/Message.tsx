@@ -149,7 +149,9 @@ function renderMessageOverlay(
 /**
  * Message 容器：有 `body` 时 Portal 挂 `body`；无 `body` 时回退根内 getter。
  */
-export function MessageContainer(props: MessageContainerProps = {}): JSXRenderable {
+export function MessageContainer(
+  props: MessageContainerProps = {},
+): JSXRenderable {
   const m: MessageMessages = {
     ...defaultMessageMessages,
     ...(props.messages ?? {}),

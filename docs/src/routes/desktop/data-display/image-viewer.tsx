@@ -14,7 +14,6 @@ import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx
 import { MESSAGES_IMAGE_VIEWER } from "../../../data/component-messages-rows.ts";
 import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
 
-
 const DEMO_IMAGES = [
   "https://picsum.photos/id/1/800/600",
   "https://picsum.photos/id/10/800/600",

@@ -22,7 +22,6 @@ import {
 } from "../../../data/component-messages-rows.ts";
 import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
 
-
 /**
  * 文档示例用：当前本地日期的 YYYY-MM-DD（与 DatePicker 的 value 格式一致）。
  *

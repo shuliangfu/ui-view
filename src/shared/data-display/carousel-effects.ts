@@ -5,9 +5,9 @@
 
 import { twMerge } from "tailwind-merge";
 import {
-  carouselSlidesInfo,
   type CarouselConcreteTransitionEffect,
   type CarouselProps,
+  carouselSlidesInfo,
   type CarouselTransitionEffect,
 } from "./carousel-types.ts";
 
@@ -60,14 +60,15 @@ export type CarouselStackedKind = "fade" | "zoom" | "flip" | "mosaic";
  * 层叠模式下每一页必须叠在同一矩形内；若仍为 `relative` 块级流式排列，多页会纵向堆高，
  * 在 `overflow:hidden` 的轨道里只能看到错误一截（空白、压住指示点、上下错位等）。
  */
-export const carouselStackedSlideLayoutStyle: Record<string, string | number> = {
-  position: "absolute",
-  top: 0,
-  left: 0,
-  width: "100%",
-  height: "100%",
-  boxSizing: "border-box",
-};
+export const carouselStackedSlideLayoutStyle: Record<string, string | number> =
+  {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    width: "100%",
+    height: "100%",
+    boxSizing: "border-box",
+  };
 
 /**
  * 是否为层叠切换（绝对定位叠放、不移动整条轨道）。
@@ -344,4 +345,3 @@ export function carouselStackedSlideStyle(
   }
   return out;
 }
-

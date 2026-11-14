@@ -16,9 +16,9 @@ import { IconChevronsLeft } from "../basic/icons/ChevronsLeft.tsx";
 import { IconChevronsRight } from "../basic/icons/ChevronsRight.tsx";
 import { Select } from "../form/Select.tsx";
 import {
+  getPaginationState,
   type PaginationPreset,
   resolvePaginationPreset,
-  getPaginationState,
 } from "./pagination-utils.ts";
 
 export type { PaginationPreset } from "./pagination-utils.ts";

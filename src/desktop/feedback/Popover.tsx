@@ -10,11 +10,11 @@ import { createEffect, createSignal, Portal, Show } from "@dreamer/view";
 import type { JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import {
+  type AutoPopPlacement,
   computeArrowAnchorStyle,
   computeAutoPopFixedStyle,
-  popArrowSide,
-  type AutoPopPlacement,
   type FullPopStylePlacement,
+  popArrowSide,
   type PopSize,
 } from "./popFixedStyle.ts";
 
@@ -78,7 +78,10 @@ export function Popover(props: PopoverProps): JSXRenderable {
   } = props;
 
   /** 本组件实例的悬停延迟，避免多 Popover 共用导致互相取消计时器 */
-  const hoverTimers: { open: ReturnType<typeof globalThis.setTimeout> | 0; close: ReturnType<typeof globalThis.setTimeout> | 0 } = { open: 0, close: 0 };
+  const hoverTimers: {
+    open: ReturnType<typeof globalThis.setTimeout> | 0;
+    close: ReturnType<typeof globalThis.setTimeout> | 0;
+  } = { open: 0, close: 0 };
   const clearHoverOpenCloseTimers = () => {
     if (hoverTimers.open) {
       globalThis.clearTimeout(hoverTimers.open);
@@ -95,8 +98,12 @@ export function Popover(props: PopoverProps): JSXRenderable {
   /** 挂到 body 的 `fixed` 外层的内联位置（`computeAutoPopFixedStyle` 结果） */
   const portalFixedStyle = createSignal<Record<string, string>>({});
   const preferred: AutoPopPlacement = placement;
-  const initialResolved: FullPopStylePlacement = preferred === "auto" ? "top" : preferred;
-  const resolvedPlacement = createSignal<FullPopStylePlacement>(initialResolved);
+  const initialResolved: FullPopStylePlacement = preferred === "auto"
+    ? "top"
+    : preferred;
+  const resolvedPlacement = createSignal<FullPopStylePlacement>(
+    initialResolved,
+  );
   const popupSize = createSignal<PopSize>({ width: 0, height: 0 });
   const arrowStyle = createSignal<Record<string, string>>({});
   let triggerEl: HTMLElement | null = null;
@@ -126,9 +133,14 @@ export function Popover(props: PopoverProps): JSXRenderable {
           }
         }
       }
-      const computed = computeAutoPopFixedStyle(tr, preferred, popupSize.value, {
-        autoPrefers: "top",
-      });
+      const computed = computeAutoPopFixedStyle(
+        tr,
+        preferred,
+        popupSize.value,
+        {
+          autoPrefers: "top",
+        },
+      );
       portalFixedStyle.value = computed.style;
       if (resolvedPlacement.value !== computed.placement) {
         resolvedPlacement.value = computed.placement;
@@ -136,7 +148,11 @@ export function Popover(props: PopoverProps): JSXRenderable {
       if (overlayEl) {
         const panel = overlayEl.getBoundingClientRect();
         if (panel.width > 0 && panel.height > 0) {
-          arrowStyle.value = computeArrowAnchorStyle(computed.placement, tr, panel);
+          arrowStyle.value = computeArrowAnchorStyle(
+            computed.placement,
+            tr,
+            panel,
+          );
         }
       }
     };

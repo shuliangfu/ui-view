@@ -12,7 +12,9 @@ function uuidFromGetRandomValues(cryptoObj: Crypto): string {
   // variant 10
   bytes[8] = (bytes[8]! & 0x3f) | 0x80;
   const hex = [...bytes].map((b) => b.toString(16).padStart(2, "0")).join("");
-  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${
+    hex.slice(16, 20)
+  }-${hex.slice(20)}`;
 }
 
 /**
@@ -27,5 +29,7 @@ export function safeRandomUUID(): string {
     return uuidFromGetRandomValues(c);
   }
   // Extremely old / non-crypto environments — not cryptographically strong.
-  return `fallback-${Date.now().toString(16)}-${Math.random().toString(16).slice(2, 10)}-${Math.random().toString(16).slice(2, 10)}`;
+  return `fallback-${Date.now().toString(16)}-${
+    Math.random().toString(16).slice(2, 10)
+  }-${Math.random().toString(16).slice(2, 10)}`;
 }

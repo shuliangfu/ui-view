@@ -9,16 +9,13 @@
 import {
   createEffect,
   createSignal,
-  Portal,
-  Show,
   type JSXRenderable,
   onCleanup,
+  Portal,
+  Show,
 } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
-import {
-  resolvePointFixedPosition,
-  type PopSize,
-} from "./popFixedStyle.ts";
+import { type PopSize, resolvePointFixedPosition } from "./popFixedStyle.ts";
 
 /** 高于文档站 sticky 顶栏／main `z-10`、与 Dropdown 浮层同级 */
 const CONTEXT_MENU_Z_INDEX = "99999";
@@ -76,7 +73,10 @@ export function ContextMenu(props: ContextMenuProps): JSXRenderable {
       clickPoint.x,
       clickPoint.y,
       size,
-      { width: globalThis.window.innerWidth, height: globalThis.window.innerHeight },
+      {
+        width: globalThis.window.innerWidth,
+        height: globalThis.window.innerHeight,
+      },
     );
     pos.value = { x: next.x, y: next.y };
   };
@@ -97,7 +97,10 @@ export function ContextMenu(props: ContextMenuProps): JSXRenderable {
     const close = (e?: Event) => {
       if (e) {
         const t = e.target as Element | null;
-        if (t && typeof t.closest === "function" && t.closest("[data-dreamer-context-menu]")) {
+        if (
+          t && typeof t.closest === "function" &&
+          t.closest("[data-dreamer-context-menu]")
+        ) {
           return;
         }
       }
@@ -113,7 +116,11 @@ export function ContextMenu(props: ContextMenuProps): JSXRenderable {
     globalThis.addEventListener?.("keydown", onKey);
     onCleanup(() => {
       if (t != null) globalThis.clearTimeout?.(t);
-      globalThis.removeEventListener?.("mousedown", close as EventListener, true);
+      globalThis.removeEventListener?.(
+        "mousedown",
+        close as EventListener,
+        true,
+      );
       globalThis.removeEventListener?.("keydown", onKey);
     });
   });
@@ -151,18 +158,24 @@ export function ContextMenu(props: ContextMenuProps): JSXRenderable {
         zIndex: CONTEXT_MENU_Z_INDEX,
       })}
       role="menu"
-        aria-label={m.menu}
+      aria-label={m.menu}
       data-dreamer-context-menu=""
       data-dreamer-placement={() => {
         const s = menuSize.value;
-        if (!(s.width > 0 && s.height > 0) || typeof globalThis.window === "undefined") {
+        if (
+          !(s.width > 0 && s.height > 0) ||
+          typeof globalThis.window === "undefined"
+        ) {
           return "bottomLeft";
         }
         const resolved = resolvePointFixedPosition(
           clickPoint.x,
           clickPoint.y,
           s,
-          { width: globalThis.window.innerWidth, height: globalThis.window.innerHeight },
+          {
+            width: globalThis.window.innerWidth,
+            height: globalThis.window.innerHeight,
+          },
         );
         const y = resolved.flippedY ? "top" : "bottom";
         // 相对点击点：未翻转时向右下展开，左上角对齐点击坐标
@@ -219,9 +232,7 @@ export function ContextMenu(props: ContextMenuProps): JSXRenderable {
     >
       {children}
       <Show when={() => open.value}>
-        {body
-          ? <Portal mount={body}>{menu}</Portal>
-          : menu}
+        {body ? <Portal mount={body}>{menu}</Portal> : menu}
       </Show>
     </div>
   );

@@ -6,7 +6,7 @@
  * 否则手写 JSX 只快照首帧，onChange 更新后步骤条不重渲。
  */
 
-import { onCleanup, type JSXRenderable, type Signal } from "@dreamer/view";
+import { type JSXRenderable, onCleanup, type Signal } from "@dreamer/view";
 import { readSignalValue, safeIsSignal } from "../safe-signal.ts";
 import { readContainerWidthPx } from "../container-width.ts";
 import { isHtmlElement } from "../dom-guards.ts";

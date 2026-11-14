@@ -39,8 +39,8 @@ import { IMAGE_BUILTIN_FALLBACK_SRC } from "./Image.tsx";
 
 import type {
   CarouselConcreteTransitionEffect,
-  CarouselProps,
   CarouselMessages,
+  CarouselProps,
 } from "./carousel-types.ts";
 import {
   carouselSlidesInfo,

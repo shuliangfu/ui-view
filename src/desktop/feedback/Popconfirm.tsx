@@ -15,16 +15,29 @@
  * 运行时只做一次性 `mountVNodeTree`，`open` 的 Signal 变化不会重挂子树，表现为点击打不开。
  */
 
-import { createEffect, createMemo, createRenderEffect, createSignal, type JSXRenderable, onCleanup, Portal, type Signal } from "@dreamer/view";
-import { readSignalValue, safeIsSignal, writeSignalValue } from "../../shared/safe-signal.ts";
+import {
+  createEffect,
+  createMemo,
+  createRenderEffect,
+  createSignal,
+  type JSXRenderable,
+  onCleanup,
+  Portal,
+  type Signal,
+} from "@dreamer/view";
+import {
+  readSignalValue,
+  safeIsSignal,
+  writeSignalValue,
+} from "../../shared/safe-signal.ts";
 import { twMerge } from "tailwind-merge";
 import { Button } from "../../shared/basic/Button.tsx";
 import {
+  type AutoPopPlacement,
   computeArrowAnchorStyle,
   computeAutoPopFixedStyle,
-  popArrowSide,
-  type AutoPopPlacement,
   type FullPopStylePlacement,
+  popArrowSide,
   type PopSize,
 } from "./popFixedStyle.ts";
 /** 按需：单文件图标，避免经 icons/mod 拉入全表 */
@@ -173,7 +186,8 @@ function buildPopconfirmTree(
     overlayClass,
   } = props;
 
-  const arrowCls = () => arrow ? popconfirmArrowClass(getResolvedPlacement()) : "";
+  const arrowCls = () =>
+    arrow ? popconfirmArrowClass(getResolvedPlacement()) : "";
 
   return (
     <span
@@ -226,7 +240,14 @@ function buildPopconfirmTree(
                   </div>
                 </div>
               </div>
-              {arrow && <span class={arrowCls} style={getArrowStyle} aria-hidden="true" data-dreamer-arrow="" />}
+              {arrow && (
+                <span
+                  class={arrowCls}
+                  style={getArrowStyle}
+                  aria-hidden="true"
+                  data-dreamer-arrow=""
+                />
+              )}
             </span>
           </div>
         </Portal>
@@ -311,9 +332,14 @@ export function Popconfirm(props: PopconfirmProps): JSXRenderable {
           }
         }
       }
-      const computed = computeAutoPopFixedStyle(tr, preferred, popupSize.value, {
-        autoPrefers: "top",
-      });
+      const computed = computeAutoPopFixedStyle(
+        tr,
+        preferred,
+        popupSize.value,
+        {
+          autoPrefers: "top",
+        },
+      );
       portalFixedStyle.value = computed.style;
       if (resolvedPlacement.value !== computed.placement) {
         resolvedPlacement.value = computed.placement;
@@ -321,7 +347,11 @@ export function Popconfirm(props: PopconfirmProps): JSXRenderable {
       if (floatingEl) {
         const panel = floatingEl.getBoundingClientRect();
         if (panel.width > 0 && panel.height > 0) {
-          arrowStyle.value = computeArrowAnchorStyle(computed.placement, tr, panel);
+          arrowStyle.value = computeArrowAnchorStyle(
+            computed.placement,
+            tr,
+            panel,
+          );
         }
       }
     };

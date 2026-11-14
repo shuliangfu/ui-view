@@ -109,7 +109,6 @@ function horizontalSide(p: FullPopStylePlacement): "left" | "right" | null {
   return null;
 }
 
-
 function verticalAlignments(
   p: FullPopStylePlacement,
 ): FullPopStylePlacement[] {
@@ -150,31 +149,96 @@ export function popBoxForPlacement(
   const cy = tr.top + tr.height / 2;
   switch (placement) {
     case "top":
-      return { top: tr.top - gap - h, left: cx - w / 2, right: cx + w / 2, bottom: tr.top - gap };
+      return {
+        top: tr.top - gap - h,
+        left: cx - w / 2,
+        right: cx + w / 2,
+        bottom: tr.top - gap,
+      };
     case "topLeft":
-      return { top: tr.top - gap - h, left: tr.left, right: tr.left + w, bottom: tr.top - gap };
+      return {
+        top: tr.top - gap - h,
+        left: tr.left,
+        right: tr.left + w,
+        bottom: tr.top - gap,
+      };
     case "topRight":
-      return { top: tr.top - gap - h, left: tr.right - w, right: tr.right, bottom: tr.top - gap };
+      return {
+        top: tr.top - gap - h,
+        left: tr.right - w,
+        right: tr.right,
+        bottom: tr.top - gap,
+      };
     case "bottom":
-      return { top: tr.bottom + gap, left: cx - w / 2, right: cx + w / 2, bottom: tr.bottom + gap + h };
+      return {
+        top: tr.bottom + gap,
+        left: cx - w / 2,
+        right: cx + w / 2,
+        bottom: tr.bottom + gap + h,
+      };
     case "bottomLeft":
-      return { top: tr.bottom + gap, left: tr.left, right: tr.left + w, bottom: tr.bottom + gap + h };
+      return {
+        top: tr.bottom + gap,
+        left: tr.left,
+        right: tr.left + w,
+        bottom: tr.bottom + gap + h,
+      };
     case "bottomRight":
-      return { top: tr.bottom + gap, left: tr.right - w, right: tr.right, bottom: tr.bottom + gap + h };
+      return {
+        top: tr.bottom + gap,
+        left: tr.right - w,
+        right: tr.right,
+        bottom: tr.bottom + gap + h,
+      };
     case "left":
-      return { top: cy - h / 2, left: tr.left - gap - w, right: tr.left - gap, bottom: cy + h / 2 };
+      return {
+        top: cy - h / 2,
+        left: tr.left - gap - w,
+        right: tr.left - gap,
+        bottom: cy + h / 2,
+      };
     case "leftTop":
-      return { top: tr.top, left: tr.left - gap - w, right: tr.left - gap, bottom: tr.top + h };
+      return {
+        top: tr.top,
+        left: tr.left - gap - w,
+        right: tr.left - gap,
+        bottom: tr.top + h,
+      };
     case "leftBottom":
-      return { top: tr.bottom - h, left: tr.left - gap - w, right: tr.left - gap, bottom: tr.bottom };
+      return {
+        top: tr.bottom - h,
+        left: tr.left - gap - w,
+        right: tr.left - gap,
+        bottom: tr.bottom,
+      };
     case "right":
-      return { top: cy - h / 2, left: tr.right + gap, right: tr.right + gap + w, bottom: cy + h / 2 };
+      return {
+        top: cy - h / 2,
+        left: tr.right + gap,
+        right: tr.right + gap + w,
+        bottom: cy + h / 2,
+      };
     case "rightTop":
-      return { top: tr.top, left: tr.right + gap, right: tr.right + gap + w, bottom: tr.top + h };
+      return {
+        top: tr.top,
+        left: tr.right + gap,
+        right: tr.right + gap + w,
+        bottom: tr.top + h,
+      };
     case "rightBottom":
-      return { top: tr.bottom - h, left: tr.right + gap, right: tr.right + gap + w, bottom: tr.bottom };
+      return {
+        top: tr.bottom - h,
+        left: tr.right + gap,
+        right: tr.right + gap + w,
+        bottom: tr.bottom,
+      };
     default:
-      return { top: tr.top - gap - h, left: cx - w / 2, right: cx + w / 2, bottom: tr.top - gap };
+      return {
+        top: tr.top - gap - h,
+        left: cx - w / 2,
+        right: cx + w / 2,
+        bottom: tr.top - gap,
+      };
   }
 }
 
@@ -213,7 +277,11 @@ function pickLeastOverflow(
   let best = preferred;
   let bestScore = Number.POSITIVE_INFINITY;
   for (const c of candidates) {
-    const ov = overflowOf(popBoxForPlacement(trigger, c, popup, gap), viewport, padding);
+    const ov = overflowOf(
+      popBoxForPlacement(trigger, c, popup, gap),
+      viewport,
+      padding,
+    );
     const score = axis === "vertical"
       ? ov.top + ov.bottom
       : axis === "horizontal"
@@ -275,8 +343,16 @@ export function flipPlacementToFit(
   let next = preferred;
   if (isVerticalPlacement(preferred)) {
     const opp = oppositePopPlacement(preferred);
-    const prefOv = overflowOf(popBoxForPlacement(trigger, preferred, popup, gap), viewport, padding);
-    const oppOv = overflowOf(popBoxForPlacement(trigger, opp, popup, gap), viewport, padding);
+    const prefOv = overflowOf(
+      popBoxForPlacement(trigger, preferred, popup, gap),
+      viewport,
+      padding,
+    );
+    const oppOv = overflowOf(
+      popBoxForPlacement(trigger, opp, popup, gap),
+      viewport,
+      padding,
+    );
     const prefMain = prefOv.top + prefOv.bottom;
     const oppMain = oppOv.top + oppOv.bottom;
     if (oppMain < prefMain) next = opp;
@@ -292,8 +368,16 @@ export function flipPlacementToFit(
     );
   } else {
     const opp = oppositePopPlacement(preferred);
-    const prefOv = overflowOf(popBoxForPlacement(trigger, preferred, popup, gap), viewport, padding);
-    const oppOv = overflowOf(popBoxForPlacement(trigger, opp, popup, gap), viewport, padding);
+    const prefOv = overflowOf(
+      popBoxForPlacement(trigger, preferred, popup, gap),
+      viewport,
+      padding,
+    );
+    const oppOv = overflowOf(
+      popBoxForPlacement(trigger, opp, popup, gap),
+      viewport,
+      padding,
+    );
     const prefMain = prefOv.left + prefOv.right;
     const oppMain = oppOv.left + oppOv.right;
     if (oppMain < prefMain) next = opp;
@@ -413,7 +497,10 @@ export function computeAutoPopFixedStyle(
   tr: DOMRect,
   preferred: AutoPopPlacement,
   popup: PopSize,
-  options?: Pick<ResolveAutoPopPlacementOptions, "autoPrefers" | "gap" | "viewport" | "padding">,
+  options?: Pick<
+    ResolveAutoPopPlacementOptions,
+    "autoPrefers" | "gap" | "viewport" | "padding"
+  >,
 ): { style: Record<string, string>; placement: FullPopStylePlacement } {
   const placement = resolveAutoPopPlacement({
     trigger: tr,

@@ -20,7 +20,6 @@ import { MobileDocDemo } from "../../../components/MobileDocDemo.tsx";
 import { MESSAGES_SELECT } from "../../../data/component-messages-rows.ts";
 import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
 
-
 /** createForm 演示字段（模块级，避免文档页重跑丢失状态） */
 type SelectCreateFormValues = { city: string };
 

@@ -5,12 +5,18 @@
  * 浮层容器使用 **`p-1`**（四边等距）；展开时经 {@link Portal} 挂到 `document.body`，`fixed` 按视口定位，避免祖先 `overflow` 裁剪。
  */
 
-import { createEffect, createMemo, createSignal, Portal, Show } from "@dreamer/view";
+import {
+  createEffect,
+  createMemo,
+  createSignal,
+  Portal,
+  Show,
+} from "@dreamer/view";
 import type { JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import {
-  readControlledOpenInput,
   type ControlledOpenInput,
+  readControlledOpenInput,
 } from "../../shared/feedback/controlled-open.ts";
 
 export type DropdownPlacement =
@@ -262,7 +268,10 @@ function getDropdownArrowProps(
 }
 
 /** hover 时用的定时器（闭包共享，避免闪动） */
-const hoverTimers: { open: ReturnType<typeof globalThis.setTimeout> | 0; close: ReturnType<typeof globalThis.setTimeout> | 0 } = { open: 0, close: 0 };
+const hoverTimers: {
+  open: ReturnType<typeof globalThis.setTimeout> | 0;
+  close: ReturnType<typeof globalThis.setTimeout> | 0;
+} = { open: 0, close: 0 };
 
 export function Dropdown(props: DropdownProps): JSXRenderable {
   const {
@@ -286,9 +295,7 @@ export function Dropdown(props: DropdownProps): JSXRenderable {
   const isControlled = () => props.open !== undefined;
   /** 当前是否展开（受控读 `props.open`，否则读内部 signal） */
   const isOpen = createMemo(() =>
-    isControlled()
-      ? readControlledOpenInput(props.open)
-      : openState.value
+    isControlled() ? readControlledOpenInput(props.open) : openState.value
   );
   /** bottomAuto 时根据视口空间计算出的实际位置 */
   const autoPlacement = createSignal<

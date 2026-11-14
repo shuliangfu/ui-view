@@ -5,10 +5,7 @@
 import { describe, expect, it } from "@dreamer/test";
 import { renderToString } from "@dreamer/view/ssr";
 import { createSignal } from "@dreamer/view";
-import {
-  tabListScrollDelta,
-  Tabs,
-} from "../../src/shared/layout/Tabs.tsx";
+import { tabListScrollDelta, Tabs } from "../../src/shared/layout/Tabs.tsx";
 
 describe("tabListScrollDelta", () => {
   it("右侧被裁切时返回正位移，已完全可见则为 0", () => {
@@ -45,9 +42,9 @@ describe("Tabs SSR", () => {
         />
       )),
     );
-    expect(html).toContain("role=\"tablist\"");
-    expect(html).toContain("data-tab-key=\"profile\"");
-    expect(html).toContain("data-tab-key=\"logins\"");
+    expect(html).toContain('role="tablist"');
+    expect(html).toContain('data-tab-key="profile"');
+    expect(html).toContain('data-tab-key="logins"');
     expect(html).toContain("资料");
     expect(html).toContain("登录记录");
   });

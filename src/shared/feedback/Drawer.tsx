@@ -7,7 +7,15 @@
  * 左/右拉出；支持标题（字符串或自定义 TSX）、`titleAlign`、底部、遮罩、Esc、宽度；客户端有真实 `document.body` 时走 Portal，SSR/无 body 时内联快照。
  */
 
-import { createEffect, createMemo, createPortal, createRenderEffect, type JSXRenderable, onCleanup, type Signal } from "@dreamer/view";
+import {
+  createEffect,
+  createMemo,
+  createPortal,
+  createRenderEffect,
+  type JSXRenderable,
+  onCleanup,
+  type Signal,
+} from "@dreamer/view";
 import { readSignalValue, safeIsSignal } from "../safe-signal.ts";
 import { twMerge } from "tailwind-merge";
 /** 按需：单文件图标，避免经 icons/mod 拉入全表 */
@@ -175,7 +183,6 @@ function getBrowserBodyPortalHost(): HTMLElement | null {
   }
 }
 
-
 /** 抽屉内可聚焦选择器（与 Modal 对齐） */
 const DRAWER_FOCUSABLE_SELECTOR =
   'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -184,11 +191,15 @@ const DRAWER_FOCUSABLE_SELECTOR =
  * 收集容器内可见可聚焦元素。
  */
 function listDrawerFocusable(root: HTMLElement): HTMLElement[] {
-  return Array.from(root.querySelectorAll<HTMLElement>(DRAWER_FOCUSABLE_SELECTOR))
+  return Array.from(
+    root.querySelectorAll<HTMLElement>(DRAWER_FOCUSABLE_SELECTOR),
+  )
     .filter((el) => {
       if (el.getAttribute("aria-hidden") === "true") return false;
       const style = globalThis.getComputedStyle?.(el);
-      if (style && (style.visibility === "hidden" || style.display === "none")) {
+      if (
+        style && (style.visibility === "hidden" || style.display === "none")
+      ) {
         return false;
       }
       return true;
@@ -310,7 +321,9 @@ export function Drawer(props: DrawerProps): JSXRenderable {
     const elWithFlag = el as HTMLElement & { _drawerAnimated?: boolean };
     if (elWithFlag._drawerAnimated) return;
     elWithFlag._drawerAnimated = true;
-    const reduceMotion = globalThis.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+    const reduceMotion = globalThis.matchMedia?.(
+      "(prefers-reduced-motion: reduce)",
+    )?.matches;
     st.transition = reduceMotion ? "none" : "transform 0.2s ease-out";
     st.transform = isLeft ? "translateX(-100%)" : "translateX(100%)";
     const raf = (globalThis as unknown as {

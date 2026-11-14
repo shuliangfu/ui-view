@@ -37,7 +37,9 @@ describe("inlineEditorContentCh", () => {
 
 describe("inlineEditorInputCssWidth", () => {
   it("adds sm px-3 padding (1.5rem) on top of the content ch", () => {
-    expect(inlineEditorInputCssWidth("90", "number")).toBe("calc(3ch + 1.5rem)");
+    expect(inlineEditorInputCssWidth("90", "number")).toBe(
+      "calc(3ch + 1.5rem)",
+    );
     expect(inlineEditorInputCssWidth("12345", "number")).toBe(
       "calc(5ch + 1.5rem)",
     );

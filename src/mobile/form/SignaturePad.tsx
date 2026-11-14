@@ -106,7 +106,8 @@ export function SignaturePad(props: SignaturePadProps): JSXRenderable {
     if (!canvas || !ctx) return;
     ctx.save();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    const transparent = backgroundColor === "transparent" || backgroundColor === "";
+    const transparent = backgroundColor === "transparent" ||
+      backgroundColor === "";
     if (transparent) {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
     } else {
@@ -174,7 +175,9 @@ export function SignaturePad(props: SignaturePadProps): JSXRenderable {
       if (!drawing.value || !ctx) return;
       const p = pos(e);
       ctx.strokeStyle = penColor ??
-        (document.documentElement.classList.contains("dark") ? "#e2e8f0" : "#0f172a");
+        (document.documentElement.classList.contains("dark")
+          ? "#e2e8f0"
+          : "#0f172a");
       ctx.lineWidth = penWidth;
       ctx.lineTo(p.x, p.y);
       ctx.stroke();

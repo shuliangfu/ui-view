@@ -14,7 +14,6 @@ import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx
 import { MESSAGES_TREE } from "../../../data/component-messages-rows.ts";
 import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
 
-
 const API: DocsApiTableRow[] = [
   { name: "treeData", type: "TreeNode[]", default: "-", description: "树数据" },
   {
@@ -241,7 +240,11 @@ export default function Page() {
 
       <section class="space-y-3">
         <Title level={2}>引入</Title>
-        <CodeBlock code={importCode} language="tsx" maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT} />
+        <CodeBlock
+          code={importCode}
+          language="tsx"
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
+        />
       </section>
 
       <section class="space-y-6">
@@ -277,7 +280,11 @@ export default function Page() {
               />
             )}
           </div>
-          <CodeBlock code={exampleCascade} language="tsx" maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT} />
+          <CodeBlock
+            code={exampleCascade}
+            language="tsx"
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
+          />
         </div>
 
         <div class="space-y-3">
@@ -306,7 +313,11 @@ export default function Page() {
               />
             )}
           </div>
-          <CodeBlock code={exampleStrict} language="tsx" maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT} />
+          <CodeBlock
+            code={exampleStrict}
+            language="tsx"
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
+          />
         </div>
 
         <div class="space-y-3">
@@ -328,7 +339,11 @@ export default function Page() {
               onSelect={(keys) => (lineSelected.value = keys)}
             />
           </div>
-          <CodeBlock code={exampleShowLine} language="tsx" maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT} />
+          <CodeBlock
+            code={exampleShowLine}
+            language="tsx"
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
+          />
         </div>
 
         <div class="space-y-3">
@@ -354,7 +369,11 @@ export default function Page() {
               <KeysDisplay getChecked={() => blockChecked.value} label="块级" />
             )}
           </div>
-          <CodeBlock code={exampleBlock} language="tsx" maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT} />
+          <CodeBlock
+            code={exampleBlock}
+            language="tsx"
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
+          />
         </div>
       </section>
 

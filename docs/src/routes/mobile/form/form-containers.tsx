@@ -15,7 +15,6 @@ import { CodeBlock } from "@dreamer/ui-view/data-display";
 import { message } from "@dreamer/ui-view/feedback";
 import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
 
-
 type MobileDemoValues = {
   account: string;
   password: string;

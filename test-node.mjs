@@ -4,7 +4,7 @@
  *
  * 【Why 不用 `node --test`】Node 22 的 `--test` 会按文件 fork 子进程，并把子进程
  * stdout 当 TAP/IPC；被测代码写 stdout 会污染父进程解析。故每文件以 entry 方式跑
- *（`node --import <tsx> <file>`，无 `--test`），由 `node:test` 在进程内自动执行。
+ * （`node --import <tsx> <file>`，无 `--test`），由 `node:test` 在进程内自动执行。
  *
  * 【共享 docs server】每文件 `--test-force-exit` 常跳过 afterAll，子进程留下的 Deno
  * docs 会占满 3000+ 端口（Node mac「50 次无法 bind」）。由本父进程先起一台 docs，
@@ -87,17 +87,22 @@ function waitHttpOk(url, deadlineMs) {
       }
       await new Promise((r) => setTimeout(r, 300));
     }
-    throw new Error(`test-node: docs server not ready within ${deadlineMs}ms: ${url}`);
+    throw new Error(
+      `test-node: docs server not ready within ${deadlineMs}ms: ${url}`,
+    );
   })();
 }
-
 
 /** Node <20 lacks --test-force-exit; omit so older local PATH nodes still run. */
 function supportsTestForceExit() {
   try {
-    const r = spawnSync(process.execPath, ["--test-force-exit", "--eval", "0"], {
-      encoding: "utf8",
-    });
+    const r = spawnSync(
+      process.execPath,
+      ["--test-force-exit", "--eval", "0"],
+      {
+        encoding: "utf8",
+      },
+    );
     // Unknown option → non-zero + stderr mentions the flag; supported → eval runs.
     const err = `${r.stderr || ""}${r.stdout || ""}`;
     if (/bad option|unknown option|unrecognized/i.test(err)) return false;
@@ -110,7 +115,11 @@ const TEST_FORCE_EXIT = supportsTestForceExit();
 
 const tsxImport = resolveTsxImport();
 console.log(`tsx loader: ${tsxImport}`);
-console.log(`--test-force-exit: ${TEST_FORCE_EXIT ? "on" : "off (unsupported by this Node)"}`);
+console.log(
+  `--test-force-exit: ${
+    TEST_FORCE_EXIT ? "on" : "off (unsupported by this Node)"
+  }`,
+);
 
 const unitFiles = ["tests/docs-sidebar-reconcile.test.ts"];
 const browserFiles = collectTestFiles(resolve("tests/docs-browser"))
@@ -118,7 +127,10 @@ const browserFiles = collectTestFiles(resolve("tests/docs-browser"))
   .sort();
 const testFiles = [...unitFiles, ...browserFiles];
 
-const startMs = Number.parseInt(process.env.UI_VIEW_DOCS_DEV_START_MS || "180000", 10);
+const startMs = Number.parseInt(
+  process.env.UI_VIEW_DOCS_DEV_START_MS || "180000",
+  10,
+);
 const port = await findPort(3000);
 const baseUrl = `http://127.0.0.1:${port}`;
 console.log(`▶ shared docs server on ${baseUrl}`);
@@ -166,7 +178,9 @@ const childEnv = {
   CI: "true",
   UI_VIEW_DOCS_E2E_BASE_URL: baseUrl,
   UI_VIEW_DOCS_E2E_PORT: String(port),
-  UI_VIEW_DOCS_DEV_START_MS: String(Number.isFinite(startMs) ? startMs : 180000),
+  UI_VIEW_DOCS_DEV_START_MS: String(
+    Number.isFinite(startMs) ? startMs : 180000,
+  ),
 };
 
 let failed = 0;

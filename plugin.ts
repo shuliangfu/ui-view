@@ -290,9 +290,12 @@ function resolveLocalImportFile(
   packageRoot: string,
 ): string | null {
   const base = join(dirname(fromFile), spec);
-  const candidates = /\.(?:ts|tsx|js|jsx)$/.test(spec)
-    ? [base]
-    : [base + ".tsx", base + ".ts", join(base, "index.tsx"), join(base, "index.ts")];
+  const candidates = /\.(?:ts|tsx|js|jsx)$/.test(spec) ? [base] : [
+    base + ".tsx",
+    base + ".ts",
+    join(base, "index.tsx"),
+    join(base, "index.ts"),
+  ];
   const root = packageRoot.replace(/\/+$/, "");
   for (const c of candidates) {
     if (!existsSync(c)) continue;
@@ -1363,8 +1366,7 @@ const COMPONENT_PATHS: Record<string, string[]> = {
   "Watermark": [
     "src/shared/data-display/Watermark.tsx",
   ],
-}
-;
+};
 
 /**
  * 匹配具名导入：主包、子路径（如 @dreamer/ui-view/mobile、/form）、jsr: spec。
@@ -1813,8 +1815,8 @@ export type {
   UiViewUploadAuthContext,
   UiViewUploadCompleteBody,
   UiViewUploadImageOptions,
-  UiViewUploadVirusScanOptions,
   UiViewUploadPlugin,
   UiViewUploadPluginOptions,
   UiViewUploadStorage,
+  UiViewUploadVirusScanOptions,
 } from "./upload.ts";

@@ -6,12 +6,90 @@
 
 // 纠错等级 M: 每块纠错码字数、块数, 下标 = 版本号。
 const ECC_PER_BLOCK = [
-  -1, 10, 16, 26, 18, 24, 16, 18, 22, 22, 26, 30, 22, 22, 24, 24, 28, 28, 26, 26, 26,
-  26, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28,
+  -1,
+  10,
+  16,
+  26,
+  18,
+  24,
+  16,
+  18,
+  22,
+  22,
+  26,
+  30,
+  22,
+  22,
+  24,
+  24,
+  28,
+  28,
+  26,
+  26,
+  26,
+  26,
+  28,
+  28,
+  28,
+  28,
+  28,
+  28,
+  28,
+  28,
+  28,
+  28,
+  28,
+  28,
+  28,
+  28,
+  28,
+  28,
+  28,
+  28,
+  28,
 ];
 const NUM_BLOCKS = [
-  -1, 1, 1, 1, 2, 2, 4, 4, 4, 5, 5, 5, 8, 9, 9, 10, 10, 11, 13, 14, 16,
-  17, 17, 18, 20, 21, 23, 25, 26, 28, 29, 31, 33, 35, 37, 38, 40, 43, 45, 47, 49,
+  -1,
+  1,
+  1,
+  1,
+  2,
+  2,
+  4,
+  4,
+  4,
+  5,
+  5,
+  5,
+  8,
+  9,
+  9,
+  10,
+  10,
+  11,
+  13,
+  14,
+  16,
+  17,
+  17,
+  18,
+  20,
+  21,
+  23,
+  25,
+  26,
+  28,
+  29,
+  31,
+  33,
+  35,
+  37,
+  38,
+  40,
+  43,
+  45,
+  47,
+  49,
 ];
 const FORMAT_BITS_M = 0;
 
@@ -121,8 +199,14 @@ export function qrMatrix(text: string): boolean[][] {
 
   // 4. 画功能图形
   const size = ver * 4 + 17;
-  const mod: boolean[][] = Array.from({ length: size }, () => new Array(size).fill(false));
-  const fn: boolean[][] = Array.from({ length: size }, () => new Array(size).fill(false));
+  const mod: boolean[][] = Array.from(
+    { length: size },
+    () => new Array(size).fill(false),
+  );
+  const fn: boolean[][] = Array.from(
+    { length: size },
+    () => new Array(size).fill(false),
+  );
   const setFn = (x: number, y: number, dark: boolean) => {
     mod[y][x] = dark;
     fn[y][x] = true;
@@ -136,7 +220,9 @@ export function qrMatrix(text: string): boolean[][] {
       for (let dx = -4; dx <= 4; dx++) {
         const d = Math.max(Math.abs(dx), Math.abs(dy));
         const x = cx + dx, y = cy + dy;
-        if (x >= 0 && x < size && y >= 0 && y < size) setFn(x, y, d !== 2 && d !== 4);
+        if (x >= 0 && x < size && y >= 0 && y < size) {
+          setFn(x, y, d !== 2 && d !== 4);
+        }
       }
     }
   }
@@ -145,15 +231,24 @@ export function qrMatrix(text: string): boolean[][] {
     const n = Math.floor(ver / 7) + 2;
     const step = ver === 32 ? 26 : Math.ceil((ver * 4 + 4) / (n * 2 - 2)) * 2;
     align.push(6);
-    for (let pos = size - 7; align.length < n; pos -= step) align.splice(1, 0, pos);
+    for (let pos = size - 7; align.length < n; pos -= step) {
+      align.splice(1, 0, pos);
+    }
   }
   for (let i = 0; i < align.length; i++) {
     for (let j = 0; j < align.length; j++) {
       const last = align.length - 1;
-      if ((i === 0 && j === 0) || (i === 0 && j === last) || (i === last && j === 0)) continue;
+      if (
+        (i === 0 && j === 0) || (i === 0 && j === last) ||
+        (i === last && j === 0)
+      ) continue;
       for (let dy = -2; dy <= 2; dy++) {
         for (let dx = -2; dx <= 2; dx++) {
-          setFn(align[i] + dx, align[j] + dy, Math.max(Math.abs(dx), Math.abs(dy)) !== 1);
+          setFn(
+            align[i] + dx,
+            align[j] + dy,
+            Math.max(Math.abs(dx), Math.abs(dy)) !== 1,
+          );
         }
       }
     }
@@ -204,14 +299,22 @@ export function qrMatrix(text: string): boolean[][] {
   // 6. 8 种掩码挑扣分最少的(提高扫码成功率)
   const maskHit = (m: number, x: number, y: number): boolean => {
     switch (m) {
-      case 0: return (x + y) % 2 === 0;
-      case 1: return y % 2 === 0;
-      case 2: return x % 3 === 0;
-      case 3: return (x + y) % 3 === 0;
-      case 4: return (Math.floor(x / 3) + Math.floor(y / 2)) % 2 === 0;
-      case 5: return (x * y) % 2 + (x * y) % 3 === 0;
-      case 6: return ((x * y) % 2 + (x * y) % 3) % 2 === 0;
-      default: return ((x + y) % 2 + (x * y) % 3) % 2 === 0;
+      case 0:
+        return (x + y) % 2 === 0;
+      case 1:
+        return y % 2 === 0;
+      case 2:
+        return x % 3 === 0;
+      case 3:
+        return (x + y) % 3 === 0;
+      case 4:
+        return (Math.floor(x / 3) + Math.floor(y / 2)) % 2 === 0;
+      case 5:
+        return (x * y) % 2 + (x * y) % 3 === 0;
+      case 6:
+        return ((x * y) % 2 + (x * y) % 3) % 2 === 0;
+      default:
+        return ((x + y) % 2 + (x * y) % 3) % 2 === 0;
     }
   };
   const applyMask = (m: number) => {
@@ -248,13 +351,19 @@ function penalty(m: boolean[][]): number {
       if (!p.every((v, k) => line[i + k] === v)) continue;
       const before = line.slice(Math.max(0, i - 4), i);
       const after = line.slice(i + 7, i + 11);
-      if ((i < 4 || before.every((v) => !v)) || (i + 11 > line.length || after.every((v) => !v))) s += 40;
+      if (
+        (i < 4 || before.every((v) => !v)) ||
+        (i + 11 > line.length || after.every((v) => !v))
+      ) s += 40;
     }
     return s;
   };
   for (let pass = 0; pass < 2; pass++) {
     for (let a = 0; a < size; a++) {
-      const line = Array.from({ length: size }, (_, b) => pass === 0 ? m[a][b] : m[b][a]);
+      const line = Array.from(
+        { length: size },
+        (_, b) => pass === 0 ? m[a][b] : m[b][a],
+      );
       let run = 1;
       for (let b = 1; b <= size; b++) {
         if (b < size && line[b] === line[b - 1]) run++;
@@ -272,7 +381,9 @@ function penalty(m: boolean[][]): number {
       if (m[y][x]) dark++;
       if (x < size - 1 && y < size - 1) {
         const c = m[y][x];
-        if (c === m[y][x + 1] && c === m[y + 1][x] && c === m[y + 1][x + 1]) score += 3;
+        if (c === m[y][x + 1] && c === m[y + 1][x] && c === m[y + 1][x + 1]) {
+          score += 3;
+        }
       }
     }
   }
@@ -286,9 +397,11 @@ export function qrSvg(text: string, px = 220): string {
   const m = qrMatrix(text);
   const n = m.length + 8;
   let d = "";
-  m.forEach((row, y) => row.forEach((on, x) => {
-    if (on) d += `M${x + 4} ${y + 4}h1v1h-1z`;
-  }));
+  m.forEach((row, y) =>
+    row.forEach((on, x) => {
+      if (on) d += `M${x + 4} ${y + 4}h1v1h-1z`;
+    })
+  );
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${n} ${n}" width="${px}" height="${px}" shape-rendering="crispEdges"><rect width="${n}" height="${n}" fill="#fff"/><path d="${d}" fill="#000"/></svg>`;
 }
 
@@ -296,7 +409,6 @@ export function qrSvg(text: string, px = 220): string {
 export function qrDataUrl(text: string, px = 220): string {
   return `data:image/svg+xml;base64,${btoa(qrSvg(text, px))}`;
 }
-
 
 /** 终端可扫的 ASCII 二维码。四周留 4 格白边；半块字(▀▄█)压成约 1/4 面积仍可扫。 */
 export function qrAscii(text: string): string {

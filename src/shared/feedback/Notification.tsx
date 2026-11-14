@@ -64,7 +64,6 @@ function handleNotificationWrapClick(e: Event) {
   if (id) closeNotification(id);
 }
 
-
 export interface NotificationMessages {
   /** 关闭按钮默认 aria-label（单项 closeAriaLabel 优先） */
   close: string;

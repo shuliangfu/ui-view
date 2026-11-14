@@ -165,7 +165,10 @@ export function FloatButton(props: FloatButtonProps): JSXRenderable {
             <button
               type="button"
               key={it.key}
-              class={twMerge(btnBase, "h-10 w-10 min-h-10 min-w-10 size-10 bg-slate-700 hover:bg-slate-600")}
+              class={twMerge(
+                btnBase,
+                "h-10 w-10 min-h-10 min-w-10 size-10 bg-slate-700 hover:bg-slate-600",
+              )}
               aria-label={it["aria-label"] ?? it.key}
               onClick={() => {
                 it.onClick?.();

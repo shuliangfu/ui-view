@@ -16,7 +16,6 @@ import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx
 import { MESSAGES_SIDEBAR } from "../../../data/component-messages-rows.ts";
 import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
 
-
 /** 文档演示用菜单项（路径指向真实文档路由，便于高亮示意） */
 const SIDEBAR_DEMO_ITEMS = [
   {

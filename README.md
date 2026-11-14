@@ -37,38 +37,38 @@ npx jsr add @dreamer/ui-view
 
 ## 📂 Entry points
 
-| Entry | Description |
-| ----- | ----------- |
-| `@dreamer/ui-view` | Desktop aggregate (default). Prefer **named** imports; avoid `import *`. |
-| `@dreamer/ui-view/basic` | Button, Link, Icon, Typography, Badge, Avatar, … |
-| `@dreamer/ui-view/form` | Form controls (Input, Select, Upload, …) |
-| `@dreamer/ui-view/data-display` | Table, DataPanel, CodeBlock, Tree, … |
-| `@dreamer/ui-view/feedback` | Modal, Drawer, Toast/Message helpers, … |
-| `@dreamer/ui-view/layout` | Container, Grid, Tabs, Accordion, … |
-| `@dreamer/ui-view/navigation` | Menu, Pagination, Dropdown, Anchor, … |
-| `@dreamer/ui-view/charts` | Chart.js wrappers |
-| `@dreamer/ui-view/config-provider` | Theme / ConfigProvider |
-| `@dreamer/ui-view/mobile` / `…/mobile/*` | Mobile aggregate and category entries |
-| `@dreamer/ui-view/icons` | Built-in icon barrel (no country-flag `export *`) |
-| `@dreamer/ui-view/icons/flags` | Country-flag catalog barrel |
+| Entry                                                                     | Description                                                                             |
+| ------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `@dreamer/ui-view`                                                        | Desktop aggregate (default). Prefer **named** imports; avoid `import *`.                |
+| `@dreamer/ui-view/basic`                                                  | Button, Link, Icon, Typography, Badge, Avatar, …                                        |
+| `@dreamer/ui-view/form`                                                   | Form controls (Input, Select, Upload, …)                                                |
+| `@dreamer/ui-view/data-display`                                           | Table, DataPanel, CodeBlock, Tree, …                                                    |
+| `@dreamer/ui-view/feedback`                                               | Modal, Drawer, Toast/Message helpers, …                                                 |
+| `@dreamer/ui-view/layout`                                                 | Container, Grid, Tabs, Accordion, …                                                     |
+| `@dreamer/ui-view/navigation`                                             | Menu, Pagination, Dropdown, Anchor, …                                                   |
+| `@dreamer/ui-view/charts`                                                 | Chart.js wrappers                                                                       |
+| `@dreamer/ui-view/config-provider`                                        | Theme / ConfigProvider                                                                  |
+| `@dreamer/ui-view/mobile` / `…/mobile/*`                                  | Mobile aggregate and category entries                                                   |
+| `@dreamer/ui-view/icons`                                                  | Built-in icon barrel (no country-flag `export *`)                                       |
+| `@dreamer/ui-view/icons/flags`                                            | Country-flag catalog barrel                                                             |
 | `@dreamer/ui-view/icons/…` (Node/Bun via `package.json` `./icons/*` only) | **Single icon/flag file** deep path — **not** in `deno.json` (Deno forbids `*` exports) |
-| `@dreamer/ui-view/plugin` | Tailwind v4 on-demand `@source` plugin |
-| `@dreamer/ui-view/plugin/upload` | Server upload plugin (`localDir` required; default `/ui-view-upload`) |
+| `@dreamer/ui-view/plugin`                                                 | Tailwind v4 on-demand `@source` plugin                                                  |
+| `@dreamer/ui-view/plugin/upload`                                          | Server upload plugin (`localDir` required; default `/ui-view-upload`)                   |
 
 ### Tree-shaking / minimal bundle
 
 Three layers (prefer top → bottom only when needed):
 
-| Style | Example | When |
-| ----- | ------- | ---- |
-| **Category subpath** | `import { DataPanel } from "@dreamer/ui-view/data-display"` | Everyday components — published via `deno.json` / `package.json` `exports` (`./basic`, `./form`, `./data-display`, …) |
-| **Per-file icon/flag** | `import { IconHome } from "@dreamer/ui-view/icons/Home.tsx"` | **npm/Node/Bun only** (`package.json` `./icons/*`). Deno/JSR: use `@dreamer/ui-view/icons` or `/icons/flags`, or vendor the file — do **not** rely on `*` in `deno.json` |
-| **Icon / flag barrel** | `import { IconHome } from "@dreamer/ui-view/icons"` or `…/icons/flags` | Icon **catalog** pages only; pulls many icons/flags |
+| Style                  | Example                                                                | When                                                                                                                                                                     |
+| ---------------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Category subpath**   | `import { DataPanel } from "@dreamer/ui-view/data-display"`            | Everyday components — published via `deno.json` / `package.json` `exports` (`./basic`, `./form`, `./data-display`, …)                                                    |
+| **Per-file icon/flag** | `import { IconHome } from "@dreamer/ui-view/icons/Home.tsx"`           | **npm/Node/Bun only** (`package.json` `./icons/*`). Deno/JSR: use `@dreamer/ui-view/icons` or `/icons/flags`, or vendor the file — do **not** rely on `*` in `deno.json` |
+| **Icon / flag barrel** | `import { IconHome } from "@dreamer/ui-view/icons"` or `…/icons/flags` | Icon **catalog** pages only; pulls many icons/flags                                                                                                                      |
 
 ```ts
 // ✅ Category subpath (recommended for components)
-import { DataPanel, CodeBlock } from "@dreamer/ui-view/data-display";
-import { Paragraph, Title, Button } from "@dreamer/ui-view/basic";
+import { CodeBlock, DataPanel } from "@dreamer/ui-view/data-display";
+import { Button, Paragraph, Title } from "@dreamer/ui-view/basic";
 
 // ✅ Single icon / single flag (smallest) — npm/Node/Bun (`package.json` `./icons/*`)
 import { IconHome } from "@dreamer/ui-view/icons/Home.tsx";
@@ -86,9 +86,16 @@ import { IconFlagCN } from "@dreamer/ui-view/icons/flags";
 //    Deno/JSR: prefer `@dreamer/ui-view/icons` / `/icons/flags` — no `*` export in deno.json.
 ```
 
-> **Form deep paths:** Prefer `@dreamer/ui-view/form/select` (etc.) over the `./form` barrel when you want a single widget. `MobilePortalHostScope` is `@dreamer/ui-view/mobile/portal` (not the fat `./mobile` aggregate).
+> **Form deep paths:** Prefer `@dreamer/ui-view/form/select` (etc.) over the
+> `./form` barrel when you want a single widget. `MobilePortalHostScope` is
+> `@dreamer/ui-view/mobile/portal` (not the fat `./mobile` aggregate).
 
-> **Publish note:** Category entries (`./data-display`, …) and `./icons` / `./icons/flags` are in both `deno.json` and `package.json`. Per-file `./icons/*` lives **only** in `package.json` (Node/Bun/npm). Deno rejects `*` in `deno.json` exports — do not add it back. For Deno/JSR consumers: import from `@dreamer/ui-view/icons`, `@dreamer/ui-view/icons/flags`, or a category subpath; do not depend on wildcard deep paths.
+> **Publish note:** Category entries (`./data-display`, …) and `./icons` /
+> `./icons/flags` are in both `deno.json` and `package.json`. Per-file
+> `./icons/*` lives **only** in `package.json` (Node/Bun/npm). Deno rejects `*`
+> in `deno.json` exports — do not add it back. For Deno/JSR consumers: import
+> from `@dreamer/ui-view/icons`, `@dreamer/ui-view/icons/flags`, or a category
+> subpath; do not depend on wildcard deep paths.
 
 ## 🎨 Using with Tailwind
 
@@ -160,15 +167,16 @@ backed by `@dreamer/upload` (local-cloud storage). Prefer the dedicated entry
 `@dreamer/ui-view/plugin/upload`; the same symbols are also re-exported from
 `@dreamer/ui-view/plugin`.
 
-| Option | Required | Default / notes |
-| ------ | -------- | --------------- |
-| `localDir` | **yes** | Absolute or cwd-relative directory. Missing / empty → mount throws (no implicit default). |
-| `basePath` | no | `/ui-view-upload` — do **not** hard-code `/upload` |
-| `virusScan` | no | Off by default; pass `{ enable: true, … }` to forward to the upload Handler |
-| File download | — | Plugin `onRequest` serves `GET ${basePath}/file?key=` (disable with `serveFiles: false`) |
+| Option        | Required | Default / notes                                                                           |
+| ------------- | -------- | ----------------------------------------------------------------------------------------- |
+| `localDir`    | **yes**  | Absolute or cwd-relative directory. Missing / empty → mount throws (no implicit default). |
+| `basePath`    | no       | `/ui-view-upload` — do **not** hard-code `/upload`                                        |
+| `virusScan`   | no       | Off by default; pass `{ enable: true, … }` to forward to the upload Handler               |
+| File download | —        | Plugin `onRequest` serves `GET ${basePath}/file?key=` (disable with `serveFiles: false`)  |
 
-Wire **`upload.uploadConfig` into `AppConfig.upload`**, then **`registerPlugin(upload)`**
-so complete hooks (afterComplete / optional image.dual) and the file route attach.
+Wire **`upload.uploadConfig` into `AppConfig.upload`**, then
+**`registerPlugin(upload)`** so complete hooks (afterComplete / optional
+image.dual) and the file route attach.
 
 ```ts
 import { App, type AppConfig } from "@dreamer/dweb";
@@ -177,9 +185,9 @@ import { uiViewUploadPlugin } from "@dreamer/ui-view/plugin/upload";
 
 const upload = uiViewUploadPlugin({
   localDir: "./runtime/uploads", // required
-  basePath: "/ui-view-upload",   // default; do not use "/upload"
+  basePath: "/ui-view-upload", // default; do not use "/upload"
   image: { dual: true },
-  virusScan: { enable: true },   // optional
+  virusScan: { enable: true }, // optional
   // authenticate: async (req) => { … },
 });
 
@@ -199,8 +207,8 @@ config (still defaults to `/ui-view-upload` if omitted):
 ```ts
 const upload = uiViewUploadPlugin({
   localDir: "./runtime/uploads", // required
-  basePath: "/ui-view-upload",   // default; do not use "/upload"
-  virusScan: { enable: true },   // optional
+  basePath: "/ui-view-upload", // default; do not use "/upload"
+  virusScan: { enable: true }, // optional
 });
 ```
 
@@ -210,11 +218,11 @@ Align every client route with the same plugin `basePath` (default
 `/ui-view-upload` = `DEFAULT_UI_VIEW_UPLOAD_BASE_PATH`). **Do not** hard-code
 `/upload`.
 
-| Component | How it uploads | Align to `basePath` |
-| --------- | -------------- | ------------------- |
-| **Upload** (primary) | `action` → `init`／`chunk`／`complete` on that URL | `<Upload action="/ui-view-upload" />` |
-| **RichTextEditor** / **MarkdownEditor** | Optional `uploadAction` (else `onUploadImage`／`onPasteImage`, else dataURL) | `uploadAction={DEFAULT_UI_VIEW_UPLOAD_BASE_PATH}` or `"/ui-view-upload"` |
-| **SignaturePad** (optional) | Local canvas only; export `toDataURL`／`onChange` then **your** code uploads | Convert dataURL → `File`／`Blob` and POST via `<Upload requestUpload={…} />` or the same chunked protocol against `basePath` |
+| Component                               | How it uploads                                                               | Align to `basePath`                                                                                                          |
+| --------------------------------------- | ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| **Upload** (primary)                    | `action` → `init`／`chunk`／`complete` on that URL                           | `<Upload action="/ui-view-upload" />`                                                                                        |
+| **RichTextEditor** / **MarkdownEditor** | Optional `uploadAction` (else `onUploadImage`／`onPasteImage`, else dataURL) | `uploadAction={DEFAULT_UI_VIEW_UPLOAD_BASE_PATH}` or `"/ui-view-upload"`                                                     |
+| **SignaturePad** (optional)             | Local canvas only; export `toDataURL`／`onChange` then **your** code uploads | Convert dataURL → `File`／`Blob` and POST via `<Upload requestUpload={…} />` or the same chunked protocol against `basePath` |
 
 ```tsx
 import { Upload } from "@dreamer/ui-view/form/upload";
@@ -227,8 +235,8 @@ import { DEFAULT_UI_VIEW_UPLOAD_BASE_PATH } from "@dreamer/ui-view/form/upload";
 {/* MarkdownEditor: same uploadAction prop */}
 ```
 
-See `docs/component-backend-matrix.md` and `upload.ts` (`@example`) for the
-full matrix.
+See `docs/component-backend-matrix.md` and `upload.ts` (`@example`) for the full
+matrix.
 
 ---
 
@@ -332,7 +340,8 @@ DateTimePicker, TimePicker
 - **Progress** progress bar
 - **Result** result page
 
-**Desktop only:** Modal (`keepInView` default true), Dialog, Tooltip, Popover, Popconfirm
+**Desktop only:** Modal (`keepInView` default true), Dialog, Tooltip, Popover,
+Popconfirm
 
 **Mobile only:** BottomSheet, ActionSheet, PullRefresh, SwipeCell
 
@@ -390,7 +399,8 @@ Built on Chart.js: ChartLine, ChartBar, ChartPie, ChartDoughnut, ChartRadar,
 ChartPolarArea, ChartBubble, ChartScatter.
 
 Import from `@dreamer/ui-view/charts` or `@dreamer/ui-view/mobile/charts` only —
-not from the root / `mobile` barrels (keeps Chart.js out of apps that do not use charts).
+not from the root / `mobile` barrels (keeps Chart.js out of apps that do not use
+charts).
 
 ### ⚙️ Other
 

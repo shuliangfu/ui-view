@@ -17,7 +17,6 @@ import { Container, Grid, GridItem, Hero } from "@dreamer/ui-view/layout";
 import SiteFooter from "../components/SiteFooter.tsx";
 import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../components/DocsDemo.tsx";
 
-
 /** Hero 背景：渐变 + 细网格，提升层次且不抢眼 */
 function HeroBackground() {
   return (

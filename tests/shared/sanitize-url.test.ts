@@ -3,10 +3,7 @@
  */
 
 import { describe, expect, it } from "@dreamer/test";
-import {
-  isDangerousUrl,
-  sanitizeUrl,
-} from "../../src/shared/sanitize-url.ts";
+import { isDangerousUrl, sanitizeUrl } from "../../src/shared/sanitize-url.ts";
 
 describe("sanitize-url", () => {
   it("isDangerousUrl 拒 javascript / vbscript / data:text/html", () => {

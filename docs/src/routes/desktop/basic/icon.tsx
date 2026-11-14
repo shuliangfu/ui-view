@@ -515,7 +515,6 @@ import type { IconComponentProps } from "@dreamer/ui-view/basic";
 import type { JSXRenderable } from "@dreamer/view";
 import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
 
-
 /** 图标组件类型：与内置图标签名一致（与 ui-view 图标返回类型一致） */
 type IconComponentType = (props?: IconComponentProps) => JSXRenderable;
 
@@ -640,7 +639,6 @@ const exampleThemeIcons = `{/* 浅色 / 自动 / 深色 主题图标 */}
 <IconLightTheme size="md" />
 <IconAutoTheme size="md" />
 <IconDarkTheme size="md" />`;
-
 
 /** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
 export const metadata = {
@@ -1437,7 +1435,6 @@ import { IconFlagCN } from "@dreamer/ui-view/icons/flags/standalone/IconFlagCN.t
             maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
-
       </section>
 
       <section class="space-y-3">

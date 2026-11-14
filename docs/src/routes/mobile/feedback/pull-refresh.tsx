@@ -15,7 +15,6 @@ import { MobileDocDemo } from "../../../components/MobileDocDemo.tsx";
 import { MESSAGES_PULL_REFRESH } from "../../../data/component-messages-rows.ts";
 import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
 
-
 const PULL_REFRESH_API: DocsApiTableRow[] = [
   {
     name: "loading",

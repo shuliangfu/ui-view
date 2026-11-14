@@ -21,7 +21,6 @@ export type CarouselConcreteTransitionEffect = Exclude<
   "random"
 >;
 
-
 export interface CarouselProps {
   /** 图片地址列表；传此项时轮播内部渲染 img，无需传 children */
   images?: string[];

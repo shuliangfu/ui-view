@@ -15,7 +15,6 @@ import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx
 import { MESSAGES_TABLE } from "../../../data/component-messages-rows.ts";
 import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
 
-
 type Row = { key: string; name: string; age: number; address: string };
 
 /** API 属性行类型（extends Record 以满足 Table 泛型约束） */

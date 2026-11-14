@@ -37,38 +37,38 @@ npx jsr add @dreamer/ui-view
 
 ## 📂 入口
 
-| 入口 | 说明 |
-| ---- | ---- |
-| `@dreamer/ui-view` | 桌面端聚合（默认）。请用**命名导入**；避免 `import *` |
-| `@dreamer/ui-view/basic` | 按钮、链接、图标、排版、徽标、头像等 |
-| `@dreamer/ui-view/form` | 表单控件 |
-| `@dreamer/ui-view/data-display` | Table、DataPanel、CodeBlock、Tree 等 |
-| `@dreamer/ui-view/feedback` | Modal、Drawer、Toast/Message 等 |
-| `@dreamer/ui-view/layout` | 布局：容器、栅格、Tabs、Accordion 等 |
-| `@dreamer/ui-view/navigation` | 菜单、分页、下拉、锚点等 |
-| `@dreamer/ui-view/charts` | Chart.js 封装 |
-| `@dreamer/ui-view/config-provider` | 主题 / ConfigProvider |
-| `@dreamer/ui-view/mobile` / `…/mobile/*` | 移动端聚合与分类入口 |
-| `@dreamer/ui-view/icons` | 内置图标 barrel（不含国旗全量 `export *`） |
-| `@dreamer/ui-view/icons/flags` | 国旗图鉴 barrel |
+| 入口                                                                     | 说明                                                                       |
+| ------------------------------------------------------------------------ | -------------------------------------------------------------------------- |
+| `@dreamer/ui-view`                                                       | 桌面端聚合（默认）。请用**命名导入**；避免 `import *`                      |
+| `@dreamer/ui-view/basic`                                                 | 按钮、链接、图标、排版、徽标、头像等                                       |
+| `@dreamer/ui-view/form`                                                  | 表单控件                                                                   |
+| `@dreamer/ui-view/data-display`                                          | Table、DataPanel、CodeBlock、Tree 等                                       |
+| `@dreamer/ui-view/feedback`                                              | Modal、Drawer、Toast/Message 等                                            |
+| `@dreamer/ui-view/layout`                                                | 布局：容器、栅格、Tabs、Accordion 等                                       |
+| `@dreamer/ui-view/navigation`                                            | 菜单、分页、下拉、锚点等                                                   |
+| `@dreamer/ui-view/charts`                                                | Chart.js 封装                                                              |
+| `@dreamer/ui-view/config-provider`                                       | 主题 / ConfigProvider                                                      |
+| `@dreamer/ui-view/mobile` / `…/mobile/*`                                 | 移动端聚合与分类入口                                                       |
+| `@dreamer/ui-view/icons`                                                 | 内置图标 barrel（不含国旗全量 `export *`）                                 |
+| `@dreamer/ui-view/icons/flags`                                           | 国旗图鉴 barrel                                                            |
 | `@dreamer/ui-view/icons/…`（仅 Node/Bun，`package.json` 的 `./icons/*`） | **单图标／国旗文件**深路径 — **不在** `deno.json`（Deno 禁止 `*` exports） |
-| `@dreamer/ui-view/plugin` | Tailwind v4 按需 `@source` 插件 |
-| `@dreamer/ui-view/plugin/upload` | 服务端上传插件（**必填** `localDir`；默认 `/ui-view-upload`） |
+| `@dreamer/ui-view/plugin`                                                | Tailwind v4 按需 `@source` 插件                                            |
+| `@dreamer/ui-view/plugin/upload`                                         | 服务端上传插件（**必填** `localDir`；默认 `/ui-view-upload`）              |
 
 ### 按需导入／打包最小
 
 三层用法（能上层就别下层）：
 
-| 写法 | 示例 | 场景 |
-| ---- | ---- | ---- |
-| **分类子入口** | `import { DataPanel } from "@dreamer/ui-view/data-display"` | 日常组件；`deno.json`／`package.json` 的 `./basic`、`./form`、`./data-display` 等 |
-| **单图标／国旗文件** | `import { IconHome } from "@dreamer/ui-view/icons/Home.tsx"` | **仅 npm/Node/Bun**（`package.json` 的 `./icons/*`）。Deno／JSR：用 `@dreamer/ui-view/icons` 或 `/icons/flags`，勿依赖 `deno.json` 里的 `*` |
-| **icons／flags barrel** | `from "@dreamer/ui-view/icons"` 或 `…/icons/flags` | 仅图鉴页；会带入大量图标／国旗 |
+| 写法                    | 示例                                                         | 场景                                                                                                                                        |
+| ----------------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| **分类子入口**          | `import { DataPanel } from "@dreamer/ui-view/data-display"`  | 日常组件；`deno.json`／`package.json` 的 `./basic`、`./form`、`./data-display` 等                                                           |
+| **单图标／国旗文件**    | `import { IconHome } from "@dreamer/ui-view/icons/Home.tsx"` | **仅 npm/Node/Bun**（`package.json` 的 `./icons/*`）。Deno／JSR：用 `@dreamer/ui-view/icons` 或 `/icons/flags`，勿依赖 `deno.json` 里的 `*` |
+| **icons／flags barrel** | `from "@dreamer/ui-view/icons"` 或 `…/icons/flags`           | 仅图鉴页；会带入大量图标／国旗                                                                                                              |
 
 ```ts
 // ✅ 组件走分类子 path
-import { DataPanel, CodeBlock } from "@dreamer/ui-view/data-display";
-import { Paragraph, Title, Button } from "@dreamer/ui-view/basic";
+import { CodeBlock, DataPanel } from "@dreamer/ui-view/data-display";
+import { Button, Paragraph, Title } from "@dreamer/ui-view/basic";
 
 // ✅ 单个图标／国旗深路径 — 仅 npm/Node/Bun（package.json `./icons/*`）
 import { IconHome } from "@dreamer/ui-view/icons/Home.tsx";
@@ -82,9 +82,16 @@ import { IconFlagCN } from "@dreamer/ui-view/icons/flags";
 // ❌ Deno／JSR 勿依赖 `./icons/*` 通配；npm 侧才有该导出
 ```
 
-> **表单深路径：** 单控件请优先 `@dreamer/ui-view/form/select` 等；`MobilePortalHostScope` 用 `@dreamer/ui-view/mobile/portal`（勿走胖 `./mobile` 聚合）。
+> **表单深路径：** 单控件请优先 `@dreamer/ui-view/form/select`
+> 等；`MobilePortalHostScope` 用 `@dreamer/ui-view/mobile/portal`（勿走胖
+> `./mobile` 聚合）。
 
-> **发布说明：** 分类子入口与 `./icons`、`./icons/flags` 已写入 `deno.json` 与 `package.json`。逐文件 `./icons/*` **只**写在 `package.json`（Node／Bun／npm）。Deno 不允许 `deno.json` exports 含 `*`，请勿再加回。Deno／JSR 消费者：从 `@dreamer/ui-view/icons`、`@dreamer/ui-view/icons/flags` 或分类子入口导入，勿依赖通配深路径。
+> **发布说明：** 分类子入口与 `./icons`、`./icons/flags` 已写入 `deno.json` 与
+> `package.json`。逐文件 `./icons/*` **只**写在
+> `package.json`（Node／Bun／npm）。Deno 不允许 `deno.json` exports 含
+> `*`，请勿再加回。Deno／JSR 消费者：从
+> `@dreamer/ui-view/icons`、`@dreamer/ui-view/icons/flags`
+> 或分类子入口导入，勿依赖通配深路径。
 
 ## 与 Tailwind 配合使用
 
@@ -152,12 +159,12 @@ CSS；Tailwind 编译时只会扫描这些路径，最终 CSS 只包含用到的
 **`uiViewUploadPlugin`**。推荐从 `@dreamer/ui-view/plugin/upload` 导入；也可从
 `@dreamer/ui-view/plugin` 拿到同一套导出。
 
-| 选项 | 必填 | 默认／说明 |
-| ---- | ---- | ---------- |
-| `localDir` | **是** | 绝对路径或相对 cwd；缺／空字符串 → 挂载抛错（无隐式默认目录） |
-| `basePath` | 否 | `/ui-view-upload` — **勿**写死 `/upload` |
-| `virusScan` | 否 | 默认关；传 `{ enable: true, … }` 透传到 upload Handler |
-| 文件下载 | — | 插件 `onRequest` 提供 `GET ${basePath}/file?key=`（`serveFiles: false` 可关） |
+| 选项        | 必填   | 默认／说明                                                                    |
+| ----------- | ------ | ----------------------------------------------------------------------------- |
+| `localDir`  | **是** | 绝对路径或相对 cwd；缺／空字符串 → 挂载抛错（无隐式默认目录）                 |
+| `basePath`  | 否     | `/ui-view-upload` — **勿**写死 `/upload`                                      |
+| `virusScan` | 否     | 默认关；传 `{ enable: true, … }` 透传到 upload Handler                        |
+| 文件下载    | —      | 插件 `onRequest` 提供 `GET ${basePath}/file?key=`（`serveFiles: false` 可关） |
 
 把 **`upload.uploadConfig` 赋给 `AppConfig.upload`**，再
 **`registerPlugin(upload)`**，complete 钩子（afterComplete／可选 image.dual）与
@@ -170,9 +177,9 @@ import { uiViewUploadPlugin } from "@dreamer/ui-view/plugin/upload";
 
 const upload = uiViewUploadPlugin({
   localDir: "./runtime/uploads", // 必填
-  basePath: "/ui-view-upload",   // 默认；勿用 "/upload"
+  basePath: "/ui-view-upload", // 默认；勿用 "/upload"
   image: { dual: true },
-  virusScan: { enable: true },   // 可选
+  virusScan: { enable: true }, // 可选
   // authenticate: async (req) => { … },
 });
 
@@ -191,8 +198,8 @@ app.start();
 ```ts
 const upload = uiViewUploadPlugin({
   localDir: "./runtime/uploads", // 必填
-  basePath: "/ui-view-upload",   // 默认；勿用 "/upload"
-  virusScan: { enable: true },   // 可选
+  basePath: "/ui-view-upload", // 默认；勿用 "/upload"
+  virusScan: { enable: true }, // 可选
 });
 ```
 
@@ -201,11 +208,11 @@ const upload = uiViewUploadPlugin({
 所有前端路由须与插件 **`basePath`**（默认 `/ui-view-upload`＝
 `DEFAULT_UI_VIEW_UPLOAD_BASE_PATH`）一致；**勿**写死 `/upload`。
 
-| 组件 | 如何上传 | 如何对齐 `basePath` |
-| ---- | -------- | ------------------- |
-| **Upload**（主） | `action` → 同 URL 的 `init`／`chunk`／`complete` | `<Upload action="/ui-view-upload" />` |
-| **RichTextEditor**／**MarkdownEditor** | 可选 `uploadAction`（否则 `onUploadImage`／`onPasteImage`，皆无则 dataURL） | `uploadAction={DEFAULT_UI_VIEW_UPLOAD_BASE_PATH}` 或 `"/ui-view-upload"` |
-| **SignaturePad**（可选） | 仅本地画布；`toDataURL`／`onChange` 导出后由**业务**上传 | 把 dataURL 转成 `File`／`Blob`，再用 `<Upload requestUpload={…} />` 或同一分片协议打到 `basePath` |
+| 组件                                   | 如何上传                                                                    | 如何对齐 `basePath`                                                                               |
+| -------------------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| **Upload**（主）                       | `action` → 同 URL 的 `init`／`chunk`／`complete`                            | `<Upload action="/ui-view-upload" />`                                                             |
+| **RichTextEditor**／**MarkdownEditor** | 可选 `uploadAction`（否则 `onUploadImage`／`onPasteImage`，皆无则 dataURL） | `uploadAction={DEFAULT_UI_VIEW_UPLOAD_BASE_PATH}` 或 `"/ui-view-upload"`                          |
+| **SignaturePad**（可选）               | 仅本地画布；`toDataURL`／`onChange` 导出后由**业务**上传                    | 把 dataURL 转成 `File`／`Blob`，再用 `<Upload requestUpload={…} />` 或同一分片协议打到 `basePath` |
 
 ```tsx
 import { Upload } from "@dreamer/ui-view/form/upload";
@@ -372,9 +379,12 @@ Select、MultiSelect、Cascader、TreeSelect、DatePicker、DateTimePicker、Tim
 
 ### 📈 图表
 
-基于 Chart.js：ChartLine、ChartBar、ChartPie、ChartDoughnut、ChartRadar、ChartPolarArea、ChartBubble、ChartScatter。
+基于
+Chart.js：ChartLine、ChartBar、ChartPie、ChartDoughnut、ChartRadar、ChartPolarArea、ChartBubble、ChartScatter。
 
-请从 `@dreamer/ui-view/charts` 或 `@dreamer/ui-view/mobile/charts` 导入，不要从根入口 / `mobile` 聚合 barrel 导入（避免未用图表的应用打进 Chart.js）。
+请从 `@dreamer/ui-view/charts` 或 `@dreamer/ui-view/mobile/charts`
+导入，不要从根入口 / `mobile` 聚合 barrel 导入（避免未用图表的应用打进
+Chart.js）。
 
 ### ⚙️ 其它
 

@@ -306,7 +306,6 @@ export const DEMO_FORM_RICH: FormField[] = [
   },
 ];
 
-
 /** 文档示例展示用源码，与上方运行时定义同步（读者能在示例里看到变量怎么写）。 */
 export const MAKE_DEMO_ROWS_CODE = `const NAMES = [
   "Alice",
@@ -422,7 +421,8 @@ export const DEMO_HIDE_CHROME_CODE = `const hideChrome = {
 } as const;
 `;
 
-export const WITH_ROW_ACTIONS_CODE = `function withRowActions(actions: RowActionsConfig): Column[] {
+export const WITH_ROW_ACTIONS_CODE =
+  `function withRowActions(actions: RowActionsConfig): Column[] {
   return columns.map((c) => c.type === "actions" ? { ...c, actions } : c);
 }
 `;

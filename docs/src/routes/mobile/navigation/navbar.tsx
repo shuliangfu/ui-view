@@ -14,7 +14,6 @@ import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx
 import { MESSAGES_MOBILE_NAV_BAR } from "../../../data/component-messages-rows.ts";
 import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
 
-
 const NAV_BAR_API: DocsApiTableRow[] = [
   {
     name: "title",

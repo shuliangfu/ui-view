@@ -5,10 +5,7 @@
 
 import { createMemo, type JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
-import {
-  type MaybeSignal,
-  readMaybeSignal,
-} from "../form/maybe-signal.ts";
+import { type MaybeSignal, readMaybeSignal } from "../form/maybe-signal.ts";
 import { qrMatrix } from "./qrcode-matrix.ts";
 
 export interface QRCodeMessages {
@@ -107,7 +104,7 @@ export function QRCode(props: QRCodeProps): JSXRenderable {
         height={size}
         viewBox={`0 0 ${size} ${size}`}
         data-dreamer-qrcode=""
-          role="img"
+        role="img"
         aria-label={ariaLabel}
       >
         <rect width={size} height={size} fill={bgColor} />

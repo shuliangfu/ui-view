@@ -102,7 +102,8 @@ const textareaSizeClasses: Record<SizeVariant, string> = {
   md: "px-3 py-2 text-sm rounded-lg min-h-[80px]",
   lg: "px-4 py-2.5 text-base rounded-lg min-h-[96px]",
 };
-const readOnlyCls = "bg-slate-50 shadow-inner dark:shadow-[inset_0_2px_5px_rgb(0_0_0_/_0.55),inset_0_-1px_0_rgb(255_255_255_/_0.06)] dark:bg-slate-900/80 cursor-default";
+const readOnlyCls =
+  "bg-slate-50 shadow-inner dark:shadow-[inset_0_2px_5px_rgb(0_0_0_/_0.55),inset_0_-1px_0_rgb(255_255_255_/_0.06)] dark:bg-slate-900/80 cursor-default";
 
 /**
  * 仅此子组件读 value() 展示字数，避免 Textarea 主体订阅 signal 导致整块重渲染、textarea 失焦。

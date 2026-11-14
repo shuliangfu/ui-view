@@ -13,9 +13,9 @@ import {
   createPortal,
   createRenderEffect,
   createSignal,
+  type JSXRenderable,
   onCleanup,
   useContext,
-  type JSXRenderable,
 } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import { MobilePortalHostContext } from "../MobilePortalHostScope.tsx";
@@ -110,8 +110,7 @@ export function DropdownMenu(props: DropdownMenuProps): JSXRenderable {
       style={() =>
         openKey.value != null && getScopedHost != null
           ? { zIndex: "130" }
-          : undefined
-      }
+          : undefined}
     >
       <div class="relative z-20 flex border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
         {() =>

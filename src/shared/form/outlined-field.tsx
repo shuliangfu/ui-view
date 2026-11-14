@@ -174,7 +174,8 @@ export function OutlinedField(props: OutlinedFieldProps): JSXRenderable {
         "transition-colors",
         fieldRounded[size],
         props.disabled && "opacity-50",
-        props.readOnly && "bg-slate-50 shadow-inner dark:shadow-[inset_0_2px_5px_rgb(0_0_0_/_0.55),inset_0_-1px_0_rgb(255_255_255_/_0.06)] dark:bg-slate-900/80",
+        props.readOnly &&
+          "bg-slate-50 shadow-inner dark:shadow-[inset_0_2px_5px_rgb(0_0_0_/_0.55),inset_0_-1px_0_rgb(255_255_255_/_0.06)] dark:bg-slate-900/80",
         props.error && twMerge(controlErrorBorder, "ui-outlined-error"),
         props.class,
       )}
