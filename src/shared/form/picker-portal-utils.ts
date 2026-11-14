@@ -21,7 +21,7 @@ export const pickerPortalZClass = "z-1070";
 export const pickerOverlayZIndexInline = "100000";
 
 /**
- * 根据触发器视口矩形计算 `position:fixed` 的 `top`/`left`/`zIndex`（弹层在触发器下方，左右夹紧视口）。
+ * 根据触发器视口矩形计算 `position:fixed` 的 `top`/`left`/`zIndex`（默认贴在触发器下方，左右夹紧视口；下方溢出时翻到上方并夹紧）。
  *
  * @param trigger - 一般为触发按钮；为 null 时退化为左上角留白
  * @param options - 下边距、视口内边距、用于右边界推算的最小宽度（与 `min-w-[288px]` 对齐）
@@ -77,13 +77,16 @@ export function findFixedContainingBlock(
  * 用于 Modal 等写了 `transform` 的容器：直接用 `getBoundingClientRect` 会把浮层甩出视口。
  */
 export function computePickerPortalOffset(
-  trigger: Pick<DOMRect, "left" | "bottom">,
+  trigger: Pick<DOMRect, "left" | "bottom"> & { top?: number },
   viewportWidth: number,
   origin: Pick<{ left: number; top: number }, "left" | "top">,
   options?: {
     marginBelow?: number;
     viewportInset?: number;
     panelMinWidth?: number;
+    /** 浮层高度；有值且会超出视口下沿时，翻到触发器上方并夹紧视口 */
+    panelHeight?: number;
+    viewportHeight?: number;
   },
 ): { top: number; left: number } {
   const margin = options?.marginBelow ?? 4;
@@ -94,8 +97,37 @@ export function computePickerPortalOffset(
   const maxLeft = viewportWidth - inset - minW - origin.left;
   if (left > maxLeft) left = Math.max(minLeft, maxLeft);
   if (left < minLeft) left = minLeft;
+
+  let top = trigger.bottom + margin - origin.top;
+  const panelH = options?.panelHeight;
+  const vh = options?.viewportHeight;
+  const triggerTop = trigger.top;
+  if (
+    panelH != null && panelH > 0 &&
+    vh != null && vh > 0 &&
+    triggerTop != null
+  ) {
+    const belowBottom = trigger.bottom + margin + panelH;
+    if (belowBottom > vh - inset) {
+      const aboveTop = triggerTop - margin - panelH;
+      const overflowBelow = belowBottom - (vh - inset);
+      const overflowAbove = Math.max(0, inset - aboveTop);
+      if (aboveTop >= inset || overflowAbove < overflowBelow) {
+        top = aboveTop - origin.top;
+      }
+    }
+    const minTop = inset - origin.top;
+    const maxTop = vh - inset - panelH - origin.top;
+    if (maxTop >= minTop) {
+      if (top < minTop) top = minTop;
+      if (top > maxTop) top = maxTop;
+    } else {
+      top = minTop;
+    }
+  }
+
   return {
-    top: trigger.bottom + margin - origin.top,
+    top,
     left,
   };
 }
@@ -116,6 +148,10 @@ export function computePickerPortalStyle(
       typeof globalThis.innerWidth === "number"
     ? globalThis.innerWidth
     : 1024;
+  const vh = typeof globalThis !== "undefined" &&
+      typeof globalThis.innerHeight === "number"
+    ? globalThis.innerHeight
+    : 768;
   if (trigger == null) {
     return {
       top: `${inset}px`,
@@ -131,7 +167,14 @@ export function computePickerPortalStyle(
       return { left: c.left, top: c.top };
     })()
     : { left: 0, top: 0 };
-  const pos = computePickerPortalOffset(r, vw, origin, options);
+  const panelH = panel
+    ? (panel.getBoundingClientRect().height || panel.offsetHeight)
+    : 0;
+  const pos = computePickerPortalOffset(r, vw, origin, {
+    ...options,
+    panelHeight: panelH > 0 ? panelH : undefined,
+    viewportHeight: vh,
+  });
   return {
     top: `${Math.round(pos.top)}px`,
     left: `${Math.round(pos.left)}px`,
@@ -1060,10 +1103,26 @@ export function registerPickerFixedOverlayPositionAndOutsideClick(
       );
     };
     sync();
-    anchorScrollSlot.dispose = subscribePickerAnchorScrollAndResize(
+    /** 首帧高度可能仍为 0，下一帧再同步一次才能按实高翻到触发器上方 */
+    let layoutRaf = 0;
+    if (typeof raf === "function") {
+      layoutRaf = raf.call(globalThis, () => {
+        layoutRaf = 0;
+        if (!panel.isConnected) return;
+        sync();
+      });
+    }
+    const unsubAnchor = subscribePickerAnchorScrollAndResize(
       triggerRef.current,
       sync,
     );
+    anchorScrollSlot.dispose = () => {
+      if (layoutRaf !== 0 && typeof caf === "function") {
+        caf.call(globalThis, layoutRaf);
+        layoutRaf = 0;
+      }
+      unsubAnchor();
+    };
   } else {
     /** 避免上次 fixed 会话残留的 inline 覆盖 CSS 锚定 */
     panel.style.removeProperty("top");
