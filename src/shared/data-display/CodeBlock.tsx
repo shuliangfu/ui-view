@@ -240,8 +240,10 @@ export function CodeBlock(props: CodeBlockProps): JSXRenderable {
           </div>
         )
         : null}
-      {/* 代码区域：复制按钮放在右上角，不占标题栏 */}
-      <div class="relative flex overflow-hidden">
+      {/* 代码区域：复制按钮放在右上角，不占标题栏。
+        有 maxHeight 时，行号与代码共用同一个 overflow-auto 容器，竖向滚动必然同步；
+        行号 sticky 在左侧，横向滚动时长行移动、行号不跟着跑。复制按钮在滚动层外。 */}
+      <div class="relative overflow-hidden">
         {copyable && (
           <button
             type="button"
@@ -253,10 +255,18 @@ export function CodeBlock(props: CodeBlockProps): JSXRenderable {
             <IconCopy class="w-4 h-4" />
           </button>
         )}
+        <div
+          class={twMerge(
+            "min-w-0",
+            maxHeight != null ? "overflow-auto" : "overflow-hidden",
+          )}
+          style={maxHeightStyle}
+        >
+        <div class="flex min-w-0 items-start">
         {showLineNumbers && lineCount > 0
           ? (
             <div
-              class="shrink-0 min-w-10 select-none py-3 px-2 font-mono text-xs text-slate-400 dark:text-slate-500 border-r border-slate-200 dark:border-slate-600 bg-slate-100/50 dark:bg-slate-800/50"
+              class="sticky left-0 z-1 shrink-0 self-start min-w-10 select-none py-3 px-2 font-mono text-xs text-slate-400 dark:text-slate-500 border-r border-slate-200 dark:border-slate-600 bg-slate-100/50 dark:bg-slate-800/50"
               aria-hidden
             >
               {/** 行号列：每格 min-h 与正文 text-xs×leading-relaxed 对齐（1.421875rem） */}
@@ -273,14 +283,14 @@ export function CodeBlock(props: CodeBlockProps): JSXRenderable {
           : null}
         <pre
           class={twMerge(
-            "m-0 flex-1 min-w-0 overflow-auto p-3 font-mono leading-relaxed",
+            "m-0 min-w-0 flex-1 self-start p-3 font-mono leading-relaxed",
+            maxHeight != null ? "overflow-visible" : "overflow-auto",
             showLineNumbers && "pl-4",
             copyable && "pr-12",
             wrapLongLines && "whitespace-pre-wrap wrap-break-word",
             !wrapLongLines && "whitespace-pre",
             preClass,
           )}
-          style={maxHeightStyle}
         >
           <code
             ref={setCodeRef}
@@ -293,6 +303,8 @@ export function CodeBlock(props: CodeBlockProps): JSXRenderable {
           >
           </code>
         </pre>
+        </div>
+        </div>
       </div>
     </div>
   );

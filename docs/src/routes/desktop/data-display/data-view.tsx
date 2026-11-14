@@ -18,7 +18,10 @@ import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx
 import { DocsTypeApiSections } from "../../../components/DocsTypeApiSections.tsx";
 import { MESSAGES_DATA_PANEL } from "../../../data/component-messages-rows.ts";
 import { DATA_VIEW_TYPE_IDS } from "../../../data/data-display-api-types.ts";
-import { DocsDemo } from "../../../components/DocsDemo.tsx";
+import {
+  DOCS_DEMO_CODE_MAX_HEIGHT,
+  DocsDemo,
+} from "../../../components/DocsDemo.tsx";
 
 const DATA_VIEW_API: DocsApiTableRow[] = [
   {
@@ -522,6 +525,7 @@ export default function DataDisplayDataView() {
           language="tsx"
           showLineNumbers
           wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
         />
       </section>
 

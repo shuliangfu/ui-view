@@ -49,7 +49,10 @@ import {
 } from "../../../data/data-display-api-types.ts";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_DATA_PANEL } from "../../../data/component-messages-rows.ts";
-import { DocsDemo } from "../../../components/DocsDemo.tsx";
+import {
+  DOCS_DEMO_CODE_MAX_HEIGHT,
+  DocsDemo,
+} from "../../../components/DocsDemo.tsx";
 import {
   ALIGN_DEMO_COLUMNS,
   ALIGN_DEMO_COLUMNS_CODE,
@@ -2492,6 +2495,7 @@ export default function DataDisplayDataPanel() {
           language="tsx"
           showLineNumbers
           wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
         />
         <CodeBlock
           title="列定义"
@@ -2499,6 +2503,7 @@ export default function DataDisplayDataPanel() {
           language="tsx"
           showLineNumbers
           wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
         />
       </section>
 
@@ -3086,7 +3091,8 @@ const rows = makeDemoRows(8);
             data-testid="demo-toolbar-off-hint"
           >
             toolbar=false
-            时整栏工具栏不出现；表格／分页仍渲染。移动端（≤639.98px）表格卡上／左／右贴边；底栏分页各端均为左右一行（左侧条数、右侧控件）；底栏分页预设与尺寸随断点：电脑端（≥1280px）full／md，平板（640px–1279.98px）default／sm，移动端（≤639.98px）simple／xs，也可用 paginationPreset 覆盖。
+            时整栏工具栏不出现；表格／分页仍渲染。移动端（≤639.98px）表格卡上／左／右贴边；底栏分页各端均为左右一行（左侧条数、右侧控件）；底栏分页预设与尺寸随断点：电脑端（≥1280px）full／md，平板（640px–1279.98px）default／sm，移动端（≤639.98px）simple／xs，也可用
+            paginationPreset 覆盖。
           </p>
         </DocsDemo>
 
@@ -3903,6 +3909,7 @@ const rows = makeDemoRows(8);
           showLineNumbers
           copyable
           wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
         />
       </section>
 
@@ -3936,6 +3943,7 @@ const rows = makeDemoRows(8);
           language="tsx"
           showLineNumbers
           wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
         />
         <DocsDemo
           title="校验／尺寸／标题（rules · hint · span · form.title）"
@@ -4063,6 +4071,7 @@ function DataPanelTabsDemo() {
 // tabParam="months" 可改参数名；tabParam={false} 则不带这个参数`}
             language="tsx"
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
           <CodeBlock
             title="缓存与刷新"
@@ -4071,6 +4080,7 @@ function DataPanelTabsDemo() {
 // 工具栏刷新、导入或增删改成功后，只作废当前标签的缓存并重新请求。`}
             language="tsx"
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
       </section>

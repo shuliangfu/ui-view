@@ -5,6 +5,9 @@
 import { Title } from "@dreamer/ui-view/basic";
 import { CodeBlock } from "@dreamer/ui-view/data-display";
 
+/** 数据面板／数据详情文档代码示例的默认最大高度，超出滚动 */
+export const DOCS_DEMO_CODE_MAX_HEIGHT = "24rem";
+
 export interface DocsDemoProps {
   /** 示例小标题 */
   title: string;
@@ -12,6 +15,8 @@ export interface DocsDemoProps {
   code: string;
   /** 实时预览 */
   children?: unknown;
+  /** 代码块最大高度，默认 {@link DOCS_DEMO_CODE_MAX_HEIGHT} */
+  maxHeight?: string | number;
 }
 
 /** 统一：上预览、下代码，`gap-6` 分隔 */
@@ -27,6 +32,7 @@ export function DocsDemo(props: DocsDemoProps) {
         showLineNumbers
         copyable
         wrapLongLines
+        maxHeight={props.maxHeight ?? DOCS_DEMO_CODE_MAX_HEIGHT}
       />
     </div>
   );
