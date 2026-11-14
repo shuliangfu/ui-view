@@ -96,7 +96,7 @@ describe("DataPanel SSR：首帧内容", () => {
   });
 
   it("本地 data 分页后合计仍是过滤结果全集，不是当前页", async () => {
-    const h = await html({ pageSize: 5 });
+    const h = await html({ pagination: { pageSize: 5 } });
     // 当前页 1..5 → 1500；全集仍是 32,500.00
     expect(h).toMatch(/dp-total-balance[^>]*>\s*32,500\.00/);
     expect(h).not.toMatch(/dp-total-balance[^>]*>\s*1,500\.00/);
@@ -201,8 +201,7 @@ describe("DataPanel SSR：首帧内容", () => {
 
   it("pageSize / defaultSort / initialQuery 影响首帧", async () => {
     const h = await html({
-      pageSize: 5,
-      pageSizes: [5, 10],
+      pagination: { pageSize: 5, pageSizeOptions: [5, 10] },
       defaultSort: { prop: "balance", order: "desc" },
     });
     expect((h.match(/data-testid="dp-row-/g) ?? []).length).toBe(5);
@@ -602,7 +601,6 @@ describe("DataPanel SSR：能力开关", () => {
         baseRoute: "/api/users",
         initial: { rows: [], total: 128 },
         syncUrl: false,
-        pageSize: 20,
       });
       expect(h).toContain("张三");
       expect(h).toContain("李四");
@@ -644,7 +642,6 @@ describe("DataPanel SSR：能力开关", () => {
         data: [{ id: "1", name: "王五", status: "on", balance: 10 }],
         baseRoute: "/api/users",
         syncUrl: false,
-        pageSize: 20,
       });
       expect(calls).toEqual([]);
       expect(Boolean(handle)).toBe(true);
@@ -1111,8 +1108,10 @@ describe("DataPanel SSR：文案与自定义", () => {
         secret: "x",
       }],
       view: {
-        labelColPercent: 28,
-        labelMinWidth: "7rem",
+        descriptions: {
+          labelColPercent: 28,
+          labelMinWidth: "7rem",
+        },
         props: [
           {
             prop: "name",

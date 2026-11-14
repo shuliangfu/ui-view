@@ -499,10 +499,11 @@ export default function DataDisplayDescriptions() {
           <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
             横向布局时，左侧标签与右侧内容的比例由
             `labelColPercent`（占单列槽位宽度的百分比，12～85，缺省 38）和
-            `labelMinWidth`（标签列最小宽度，电脑端缺省 13.5rem，移动端容器缺省 7rem）共同决定。
-            数据面板、DataView 的详情把这两项写在 `view` 上即可，例如{" "}
+            `labelMinWidth`（标签列最小宽度，电脑端缺省 13.5rem，移动端容器缺省
+            7rem）共同决定。 数据面板、DataView 的详情把这两项写在
+            `view.descriptions` 上即可，例如{" "}
             <code class="text-xs">
-              {'view={{ labelColPercent: 28, labelMinWidth: "7rem", props }}'}
+              {'view={{ descriptions: { labelColPercent: 28, labelMinWidth: "7rem" }, props }}'}
             </code>
             。
           </Paragraph>

@@ -5,17 +5,18 @@ import { describe, expect, it } from "@dreamer/test";
 import {
   columnAlignFlexJustify,
   columnAlignTextClass,
+  columnTableClass,
   columnWidthStyle,
   enrichViewField,
   fallbackViewItems,
   fieldsOf,
-  resolveColumnAlign,
-  resolveColumnHeaderAlign,
-  resolveViewActionsCfg,
-  resolveViewFields,
   pickPanelPaginationProps,
   pickViewDescriptionsProps,
+  resolveColumnAlign,
+  resolveColumnHeaderAlign,
   resolvePanelPagination,
+  resolveViewActionsCfg,
+  resolveViewFields,
   resolveViewFooterActions,
   toggleOptionValue,
 } from "../../src/desktop/data-display/data-panel-utils.ts";
@@ -332,6 +333,11 @@ describe("DataPanel view / form / search 配置", () => {
     expect(columnWidthStyle({ width: 100, minWidth: 60, maxWidth: 200 })).toBe(
       "width:100px;min-width:60px;max-width:200px",
     );
+    expect(columnTableClass({})).toBe("");
+    expect(columnTableClass({ table: { ellipsis: true } })).toContain(
+      "text-ellipsis",
+    );
+    expect(columnTableClass({ table: { fixed: "left" } })).toContain("sticky");
   });
 
   it("enrichViewField 保留 ViewItem.labelAlign，不丢字段", () => {
@@ -366,8 +372,10 @@ describe("DataPanel view / form / search 配置", () => {
   it("resolveViewFields 保留各字段 labelAlign", () => {
     const fields = resolveViewFields(
       {
-        labelColPercent: 28,
-        labelMinWidth: "7rem",
+        descriptions: {
+          labelColPercent: 28,
+          labelMinWidth: "7rem",
+        },
         props: [
           {
             prop: "name",
@@ -393,17 +401,19 @@ describe("pickViewDescriptionsProps", () => {
   it("只抽出已写的 Descriptions 参数，不带上弹层 title", () => {
     const picked = pickViewDescriptionsProps({
       title: "详情 · 张三",
-      column: 3,
-      size: "md",
-      bordered: false,
-      layout: "vertical",
-      colon: false,
-      class: "view-desc",
-      labelClass: "lbl",
-      contentClass: "cnt",
-      labelColPercent: 28,
-      labelMinWidth: "7rem",
-      labelAlign: { vertical: "center", horizontal: "left" },
+      descriptions: {
+        column: 3,
+        size: "md",
+        bordered: false,
+        layout: "vertical",
+        colon: false,
+        class: "view-desc",
+        labelClass: "lbl",
+        contentClass: "cnt",
+        labelColPercent: 28,
+        labelMinWidth: "7rem",
+        labelAlign: { vertical: "center", horizontal: "left" },
+      },
       props: [{ prop: "name", label: "姓名" }],
     });
     expect(picked).toEqual({
@@ -425,35 +435,42 @@ describe("pickViewDescriptionsProps", () => {
   it("未写的键不出现，空 view 返回空对象", () => {
     expect(pickViewDescriptionsProps()).toEqual({});
     expect(pickViewDescriptionsProps({ title: "详情" })).toEqual({});
-    expect(pickViewDescriptionsProps({ column: 2 })).toEqual({ column: 2 });
+    expect(pickViewDescriptionsProps({ descriptions: { column: 2 } })).toEqual({
+      column: 2,
+    });
   });
 });
 
 describe("resolvePanelPagination", () => {
   const auto = { preset: "full" as const, size: "md" as const };
 
-  it("未写配置时走断点缺省", () => {
-    const r = resolvePanelPagination(undefined, undefined, auto);
+  it("未写配置时走断点缺省，pageSize／选项用组件默认", () => {
+    const r = resolvePanelPagination(undefined, auto);
     expect(r.preset).toBe("full");
     expect(r.size).toBe("md");
+    expect(r.pageSize).toBe(20);
+    expect(r.pageSizeOptions).toEqual([10, 20, 50, 100]);
     expect(r.rest).toEqual({});
   });
 
-  it("pagination.preset 优先于 paginationPreset，未写 size 仍走断点", () => {
+  it("pagination.preset 覆盖断点，未写 size 仍走断点；pageSize 不进入 rest", () => {
     const r = resolvePanelPagination(
-      { preset: "simple", showFirstLast: true },
-      "default",
+      { preset: "simple", showFirstLast: true, pageSize: 5 },
       auto,
     );
     expect(r.preset).toBe("simple");
     expect(r.size).toBe("md");
+    expect(r.pageSize).toBe(5);
     expect(r.rest).toEqual({ showFirstLast: true });
   });
 
-  it("只写 paginationPreset 时用它作 preset", () => {
-    const r = resolvePanelPagination(undefined, "default", auto);
-    expect(r.preset).toBe("default");
-    expect(r.size).toBe("md");
+  it("pagination.pageSizeOptions 覆盖默认选项", () => {
+    const r = resolvePanelPagination(
+      { pageSizeOptions: [5, 10, 20] },
+      auto,
+    );
+    expect(r.pageSizeOptions).toEqual([5, 10, 20]);
+    expect(r.preset).toBe("full");
   });
 
   it("pickPanelPaginationProps 丢掉未写的键", () => {

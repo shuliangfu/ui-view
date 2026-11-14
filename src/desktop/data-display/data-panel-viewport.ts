@@ -63,7 +63,7 @@ export function resolveModalStartFullscreen(
   return false;
 }
 
-/** 视口档对应的默认分页 preset 与 size；`paginationPreset` 只覆盖 preset。 */
+/** 视口档对应的默认分页 preset 与 size；`pagination.preset`／`pagination.size` 可覆盖。 */
 export function dataPanelPaginationForTier(
   tier: DataPanelViewportTier,
 ): { preset: PaginationPreset; size: PaginationSize } {

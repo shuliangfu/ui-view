@@ -26,6 +26,80 @@ export const pickerOverlayZIndexInline = "100000";
  * @param trigger - 一般为触发按钮；为 null 时退化为左上角留白
  * @param options - 下边距、视口内边距、用于右边界推算的最小宽度（与 `min-w-[288px]` 对齐）
  */
+/**
+ * 祖先是否会成为 `position:fixed` 的包含块（transform／filter／perspective 等）。
+ * `translate(0,0)` 也算，不能只看位移是否为零。
+ */
+export function elementCreatesFixedContainingBlock(el: HTMLElement): boolean {
+  if (typeof globalThis.getComputedStyle !== "function") return false;
+  const style = globalThis.getComputedStyle(el);
+  const transform = style.transform;
+  const filter = style.filter;
+  const perspective = style.perspective;
+  const willChange = style.willChange;
+  if (transform && transform !== "none") return true;
+  if (filter && filter !== "none") return true;
+  if (perspective && perspective !== "none") return true;
+  if (/\b(?:transform|filter|perspective|contain)\b/.test(willChange)) {
+    return true;
+  }
+  const contain = style.contain;
+  if (
+    contain === "strict" || contain === "content" ||
+    (typeof contain === "string" && contain.includes("paint"))
+  ) {
+    return true;
+  }
+  const backdrop = style.backdropFilter ||
+    style.getPropertyValue("backdrop-filter");
+  if (backdrop && backdrop !== "none") return true;
+  return false;
+}
+
+/**
+ * 从浮层向上找 `position:fixed` 的包含块；没有则相对视口（原点 0,0）。
+ */
+export function findFixedContainingBlock(
+  el: HTMLElement | null,
+): HTMLElement | null {
+  if (el == null) return null;
+  const root = globalThis.document?.documentElement ?? null;
+  let node = el.parentElement;
+  while (node && node !== root) {
+    if (elementCreatesFixedContainingBlock(node)) return node;
+    node = node.parentElement;
+  }
+  return null;
+}
+
+/**
+ * 把触发器的视口矩形换成相对 fixed 包含块的 left／top。
+ * 用于 Modal 等写了 `transform` 的容器：直接用 `getBoundingClientRect` 会把浮层甩出视口。
+ */
+export function computePickerPortalOffset(
+  trigger: Pick<DOMRect, "left" | "bottom">,
+  viewportWidth: number,
+  origin: Pick<{ left: number; top: number }, "left" | "top">,
+  options?: {
+    marginBelow?: number;
+    viewportInset?: number;
+    panelMinWidth?: number;
+  },
+): { top: number; left: number } {
+  const margin = options?.marginBelow ?? 4;
+  const inset = options?.viewportInset ?? 8;
+  const minW = options?.panelMinWidth ?? 288;
+  let left = trigger.left - origin.left;
+  const minLeft = inset - origin.left;
+  const maxLeft = viewportWidth - inset - minW - origin.left;
+  if (left > maxLeft) left = Math.max(minLeft, maxLeft);
+  if (left < minLeft) left = minLeft;
+  return {
+    top: trigger.bottom + margin - origin.top,
+    left,
+  };
+}
+
 export function computePickerPortalStyle(
   trigger: HTMLElement | null,
   options?: {
@@ -33,10 +107,9 @@ export function computePickerPortalStyle(
     viewportInset?: number;
     panelMinWidth?: number;
   },
+  panel?: HTMLElement | null,
 ): Record<string, string> {
-  const margin = options?.marginBelow ?? 4;
   const inset = options?.viewportInset ?? 8;
-  const minW = options?.panelMinWidth ?? 288;
   /** 与 {@link pickerOverlayZIndexInline} 同步，保证打开首帧也有合法层叠 */
   const z = pickerOverlayZIndexInline;
   const vw = typeof globalThis !== "undefined" &&
@@ -51,13 +124,17 @@ export function computePickerPortalStyle(
     };
   }
   const r = trigger.getBoundingClientRect();
-  let left = r.left;
-  const maxLeft = vw - inset - minW;
-  if (left > maxLeft) left = Math.max(inset, maxLeft);
-  if (left < inset) left = inset;
+  const block = panel ? findFixedContainingBlock(panel) : null;
+  const origin = block
+    ? (() => {
+      const c = block.getBoundingClientRect();
+      return { left: c.left, top: c.top };
+    })()
+    : { left: 0, top: 0 };
+  const pos = computePickerPortalOffset(r, vw, origin, options);
   return {
-    top: `${Math.round(r.bottom + margin)}px`,
-    left: `${Math.round(left)}px`,
+    top: `${Math.round(pos.top)}px`,
+    left: `${Math.round(pos.left)}px`,
     zIndex: z,
   };
 }
@@ -979,7 +1056,7 @@ export function registerPickerFixedOverlayPositionAndOutsideClick(
     const sync = (): void => {
       applyPickerPortalGeometryToElement(
         panel,
-        computePickerPortalStyle(triggerRef.current, portalOpts),
+        computePickerPortalStyle(triggerRef.current, portalOpts, panel),
       );
     };
     sync();

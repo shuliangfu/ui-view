@@ -68,10 +68,7 @@ import {
 import { Descriptions } from "./Descriptions.tsx";
 import type { DescriptionsLabelAlign } from "./Descriptions.tsx";
 import { Dropdown } from "../navigation/Dropdown.tsx";
-import {
-  Pagination,
-  type PaginationPreset,
-} from "../navigation/Pagination.tsx";
+import { Pagination } from "../navigation/Pagination.tsx";
 import { checkboxInputSurface } from "../form/Checkbox.tsx";
 import { FormItem } from "../form/FormItem.tsx";
 import { Input } from "../form/Input.tsx";
@@ -97,9 +94,11 @@ import {
   columnAlignFlexJustify,
   columnAlignTextClass,
   columnSortKey,
+  columnTableClass,
   columnWidthStyle,
   createLocalDataSource,
   DEFAULT_DATA_PANEL_PAGE_SIZE,
+  DEFAULT_DATA_PANEL_PAGE_SIZES,
   displayValue,
   enrichFormFields,
   enrichSearchFields,
@@ -122,13 +121,13 @@ import {
   parseCsv,
   parseJsonRows,
   parseXmlRows,
+  pickViewDescriptionsProps,
   queryFromParams,
   queryToParams,
   resolveColumnAlign,
   resolveColumnFn,
   resolveColumnHeaderAlign,
   resolveFooterActions,
-  pickViewDescriptionsProps,
   resolveModalWidth,
   resolvePanelColumns,
   resolvePanelPagination,
@@ -170,6 +169,8 @@ import {
   type BulkResult,
   type Caps,
   type Column,
+  type ColumnTableConfig,
+  type DataChromeModalConfig,
   type DataSource,
   type Density,
   evalColumnDisable,
@@ -194,6 +195,7 @@ import {
   type Messages,
   type Option,
   type PanelActionContext,
+  type PanelPaginationConfig,
   type PanelToolbarConfig,
   type Query,
   resolveActionCtrl,
@@ -216,7 +218,6 @@ import {
   type Tone,
   TOOLBAR_BUILTINS,
   type ToolbarBuiltin,
-  type PanelPaginationConfig,
   type ViewActionContext,
   type ViewClick,
   type ViewConfig,
@@ -239,6 +240,8 @@ export type {
   BulkResult,
   Caps,
   Column,
+  ColumnTableConfig,
+  DataChromeModalConfig,
   DataSource,
   Density,
   ExportFormat,
@@ -256,6 +259,7 @@ export type {
   Messages,
   Option,
   PanelActionContext,
+  PanelPaginationConfig,
   PanelToolbarConfig,
   Query,
   Row,
@@ -268,7 +272,6 @@ export type {
   SearchFieldConditionCtx,
   SearchFieldRenderCtx,
   SearchRenderCtx,
-  PanelPaginationConfig,
   SearchType,
   SyncUrl,
   Tone,
@@ -345,13 +348,13 @@ export interface PanelProps {
    */
   form?: FormConfig;
   /**
-   * 详情弹层：`{ title, props?, render?, actions? }`。`title` 为查看弹窗标题（`string` 或 `(row)=>string`，
+   * 详情弹层：`{ title, props?, render?, actions?, modal?, descriptions? }`。
+   * `title` 为查看弹窗标题（`string` 或 `(row)=>string`，
    * 如 `` `详情 · ${row.name}` ``；缺省 `${view} · ${title}`）。
    * `props` 只放字段，与列同一套配置：prop／label／type／format／options／value／formatter／click。
    * 缺省展示从同 prop 的列继承。`render` 替换 Descriptions 字段区；`actions` 底脚仍由面板渲染。
-   * Descriptions 的参数（除 `items`、`title`）可直接写在本对象上，与 title／props／actions 混在一起，
-   * 例如 `column`、`size`、`bordered`、`layout`、`colon`、`labelAlign`、`labelColPercent`。
-   * `title` 仍是弹层标题，不会传给 Descriptions。有 `render` 时这些参数不再生效。
+   * Modal 参数写在 `modal`；Descriptions 参数写在 `descriptions`（除 `items`、`title`）。
+   * `title` 仍是弹层标题，不会传给 Descriptions。有 `render` 时 descriptions 不再生效。
    * 字段级 `ViewItem.render` 仅在无 `view.render` 时生效。
    * `actions` 与 title 平级（内置 close 默认靠右最后）。自定义按钮：`action(row)` 开另一个 Modal（放在 children），
    * 或 `href`。字段 `click:"toggle"` 或 `click:(row)=>…`。不写时回落 columns＋form，底部只留关闭。
@@ -408,28 +411,16 @@ export interface PanelProps {
   initialQuery?: Partial<Query>;
   /** 主键字段，默认 id */
   rowKey?: string;
-  /** 每页条数，默认 20。也可在 createApiDataSource({ pageSize }) 上配置 */
-  pageSize?: number;
-  /** 每页条数下拉选项，默认 [10, 20, 50, 100] */
-  pageSizes?: number[];
-  /**
-   * 底栏分页能力档，与 {@link Pagination} 的 `preset` 相同：
-   * `"full"` 全部能力（第一页／上一页／页码／下一页／最后一页、每页条数、跳转）、
-   * `"default"` 一般能力（上一页／下一页＋页码＋每页条数，无第一页／最后一页／跳转）、
-   * `"simple"` 极简（上一页／下一页＋「第 n / m 页」，无页码／跳转／每页条数）。
-   * 不传时按现有断点自动选择，并带上对应 `size`：
-   * 电脑端（`min-width: 1280px`，Tailwind `xl`）为 `preset="full"`、`size="md"`，
-   * 平板（`640px`–`1279.98px`，`sm` 至 `xl` 以下）为 `preset="default"`、`size="sm"`，
-   * 移动端（`max-width: 639.98px`，`max-sm`）为 `preset="simple"`、`size="xs"`。
-   * 也可写在 {@link PanelProps.pagination}.preset；两者同时写时 `pagination.preset` 优先。
-   */
-  paginationPreset?: PaginationPreset;
   /**
    * 底栏分页配置。可把 {@link Pagination} 的参数直接写在这里（与 alert 一样透传），
-   * 例如 `preset`、`size`、`showFirstLast`、`showQuickJumper`、`showTotal`、`disabled`、`class`、`messages`。
-   * 页码、每页条数、总数和 `onChange` 由面板托管，不必也不应在此写。
-   * 地址栏同步用根上的 `syncUrl`，每页条数选项用根上的 `pageSizes`。
-   * 未写的键走断点缺省（或 `paginationPreset`）。内置仍默认关掉 Pagination 自带的总条数和跳转
+   * 例如 `preset`、`size`、`pageSize`、`pageSizeOptions`、`showFirstLast`、
+   * `showQuickJumper`、`showTotal`、`disabled`、`class`、`messages`。
+   * 运行时的页码、当前每页条数、总数和 `onChange` 由面板托管，不必也不应写
+   * `current`／`total`／`onChange`。初始每页条数写 `pageSize`（默认 20），
+   * 下拉选项写 `pageSizeOptions`（默认 [10, 20, 50, 100]）；未写的 `preset`／`size`
+   * 按断点缺省：电脑端（`min-width: 1280px`）`full`／`md`，平板（`640px`–`1279.98px`）
+   * `default`／`sm`，移动端（`max-width: 639.98px`）`simple`／`xs`。
+   * 地址栏同步仍用根上的 `syncUrl`。内置仍默认关掉 Pagination 自带的总条数和跳转
    * （左侧条数文案和 `full` 档右侧跳转由面板自己渲染）；显式传入时按传入值透传。
    * 若显式 `showQuickJumper: true`，使用 Pagination 自带跳转，不再另画面板跳转框。
    */
@@ -671,7 +662,8 @@ export function DataPanel(props: PanelProps): JSXRenderable {
   const viewItems = fieldsOf(props.view);
   const searchDefs = enrichSearchFields(searchFields, dataInputColumns);
   const formDefs = enrichFormFields(formFields, dataInputColumns);
-  const pageSizes = props.pageSizes ?? [10, 20, 50, 100];
+  const pageSizes = props.pagination?.pageSizeOptions ??
+    DEFAULT_DATA_PANEL_PAGE_SIZES;
   /** 有表单字段或 form.render 时本地源可写；旁路 Modal 也可靠 onDataChange */
   const canWriteLocal = formDefs.length > 0 || !!props.form?.render ||
     !!props.onDataChange ||
@@ -714,7 +706,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
         rowKey,
         headers: props.apiHeaders,
         credentials: props.apiCredentials,
-        pageSize: props.pageSize,
+        pageSize: props.pagination?.pageSize,
         fetch: wrapFetchWithTabParam(
           globalThis.fetch.bind(globalThis),
           () => resolveTabQuery(props.tabs, tabParam, tabKey.value),
@@ -751,7 +743,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
       ? n
       : undefined;
   })();
-  const defaultPageSize = props.pageSize ?? sourcePageSize ??
+  const defaultPageSize = props.pagination?.pageSize ?? sourcePageSize ??
     DEFAULT_DATA_PANEL_PAGE_SIZE;
 
   const caps: Caps = {
@@ -3389,7 +3381,9 @@ export function DataPanel(props: PanelProps): JSXRenderable {
                 if (isActionsColumn(c)) {
                   return (
                     <th
-                      class="border border-slate-200 px-3 py-2 text-center font-medium dark:border-slate-700"
+                      class={`${
+                        columnTableClass(c)
+                      } border border-slate-200 px-3 py-2 text-center font-medium dark:border-slate-700`}
                       style={columnWidthStyle(c)}
                       data-testid="dp-colhead-actions"
                     >
@@ -3401,7 +3395,9 @@ export function DataPanel(props: PanelProps): JSXRenderable {
                 const headAlign = resolveColumnHeaderAlign(c);
                 return (
                   <th
-                    class={`whitespace-nowrap border border-slate-200 px-3 py-2 font-medium dark:border-slate-700 ${
+                    class={`${
+                      columnTableClass(c)
+                    } whitespace-nowrap border border-slate-200 px-3 py-2 font-medium dark:border-slate-700 ${
                       columnAlignTextClass(headAlign)
                     }`}
                     style={columnWidthStyle(c)}
@@ -3496,7 +3492,9 @@ export function DataPanel(props: PanelProps): JSXRenderable {
                     if (isActionsColumn(c)) {
                       return (
                         <td
-                          class="whitespace-nowrap border border-slate-200 px-2 py-1.5 text-center dark:border-slate-700"
+                          class={`${
+                            columnTableClass(c)
+                          } whitespace-nowrap border border-slate-200 px-2 py-1.5 text-center dark:border-slate-700`}
                           style={columnWidthStyle(c)}
                         >
                           <span class={ACTS_CLS}>
@@ -3696,7 +3694,9 @@ export function DataPanel(props: PanelProps): JSXRenderable {
                     }
                     return (
                       <td
-                        class={`border border-slate-200 px-3 py-1.5 dark:border-slate-700 ${
+                        class={`${
+                          columnTableClass(c)
+                        } border border-slate-200 px-3 py-1.5 dark:border-slate-700 ${
                           columnAlignTextClass(resolveColumnAlign(c))
                         }`}
                         style={columnWidthStyle(c)}
@@ -3730,7 +3730,9 @@ export function DataPanel(props: PanelProps): JSXRenderable {
                   if (isActionsColumn(c)) {
                     return (
                       <td
-                        class="border border-slate-200 dark:border-slate-700"
+                        class={`${
+                          columnTableClass(c)
+                        } border border-slate-200 dark:border-slate-700`}
                         style={columnWidthStyle(c)}
                       />
                     );
@@ -3745,7 +3747,9 @@ export function DataPanel(props: PanelProps): JSXRenderable {
                     : "";
                   return (
                     <td
-                      class={`border border-slate-200 px-3 py-2 dark:border-slate-700 ${
+                      class={`${
+                        columnTableClass(c)
+                      } border border-slate-200 px-3 py-2 dark:border-slate-700 ${
                         columnAlignTextClass(resolveColumnAlign(c))
                       }`}
                       style={columnWidthStyle(c)}
@@ -3794,7 +3798,6 @@ export function DataPanel(props: PanelProps): JSXRenderable {
       rest: pgRest,
     } = resolvePanelPagination(
       props.pagination,
-      props.paginationPreset,
       autoPg,
     );
     const showPageSize = preset !== "simple";
@@ -3848,15 +3851,9 @@ export function DataPanel(props: PanelProps): JSXRenderable {
             showTotal={false}
             showQuickJumper={false}
             messages={{
-              first: m.firstPage,
-              prev: m.prevPage,
-              next: m.nextPage,
-              last: m.lastPage,
               jumpTo: m.jump,
               pageUnit: m.page,
               pageSizeUnit: (sz) => tr(m.perPage, { n: sz }),
-              simpleCurrent: (page, totalPages) =>
-                tr(m.simpleCurrent, { page, totalPages }),
               ...pgMessages,
             }}
             onChange={go}
@@ -4522,6 +4519,9 @@ export function DataPanel(props: PanelProps): JSXRenderable {
       {props.children}
 
       <Modal
+        keyboard
+        destroyOnClose
+        {...props.form?.modal}
         open={formOpen}
         title={() => {
           const ft = props.form?.title;
@@ -4531,18 +4531,17 @@ export function DataPanel(props: PanelProps): JSXRenderable {
           if (typeof ft === "string") return ft;
           return `${formId.value ? m.edit : m.add} · ${props.title}`;
         }}
-        width={() => resolveModalWidth(props.form?.width)}
-        maxHeight={() => props.form?.maxHeight}
+        width={() => resolveModalWidth(props.form?.modal?.width)}
         fullscreen={() => resolveModalStartFullscreen(props.form)}
-        fullscreenable={props.form?.fullscreenable}
-        keyboard
-        destroyOnClose
         onClose={() => (formOpen.value = false)}
         // deno-lint-ignore jsx-no-children-prop
         children={formBody}
         footer={formFooter}
       />
       <Modal
+        keyboard
+        destroyOnClose
+        {...props.search?.modal}
         open={searchOpen}
         title={() => {
           const st = props.search?.title;
@@ -4550,18 +4549,17 @@ export function DataPanel(props: PanelProps): JSXRenderable {
           if (typeof st === "string") return st;
           return `${m.search} · ${props.title}`;
         }}
-        width={() => resolveModalWidth(props.search?.width)}
-        maxHeight={() => props.search?.maxHeight}
+        width={() => resolveModalWidth(props.search?.modal?.width)}
         fullscreen={() => resolveModalStartFullscreen(props.search)}
-        fullscreenable={props.search?.fullscreenable}
-        keyboard
-        destroyOnClose
         onClose={() => (searchOpen.value = false)}
         // deno-lint-ignore jsx-no-children-prop
         children={searchBody}
         footer={searchFooter}
       />
       <Modal
+        keyboard
+        destroyOnClose
+        {...props.view?.modal}
         open={() => viewRow.value !== null}
         title={() => {
           const vt = props.view?.title;
@@ -4572,12 +4570,8 @@ export function DataPanel(props: PanelProps): JSXRenderable {
           if (typeof vt === "string") return vt;
           return `${m.view} · ${props.title}`;
         }}
-        width={() => resolveModalWidth(props.view?.width)}
-        maxHeight={() => props.view?.maxHeight}
+        width={() => resolveModalWidth(props.view?.modal?.width)}
         fullscreen={() => resolveModalStartFullscreen(props.view)}
-        fullscreenable={props.view?.fullscreenable}
-        keyboard
-        destroyOnClose
         onClose={() => (viewRow.value = null)}
         // deno-lint-ignore jsx-no-children-prop
         children={viewBody}

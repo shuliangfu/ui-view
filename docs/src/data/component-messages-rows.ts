@@ -460,6 +460,12 @@ export const MESSAGES_MODAL: DocsApiTableRow[] = [
     default: `"退出全屏"`,
     description: "退出全屏 aria-label",
   },
+  {
+    name: "mask",
+    type: "string",
+    default: `"遮罩"`,
+    description: "遮罩 aria-label",
+  },
 ];
 
 export const MESSAGES_DIALOG: DocsApiTableRow[] = [
@@ -1342,13 +1348,13 @@ export const MESSAGES_DATA_PANEL: DocsApiTableRow[] = [
     name: "enterFullscreen",
     type: "string",
     default: `"全屏"`,
-    description: "进入全屏",
+    description: "工具栏进入全屏（面板本身，不是弹层）",
   },
   {
     name: "exitFullscreen",
     type: "string",
     default: `"退出全屏"`,
-    description: "退出全屏",
+    description: "工具栏退出全屏（面板本身，不是弹层）",
   },
   {
     name: "copy",
@@ -1445,36 +1451,6 @@ export const MESSAGES_DATA_PANEL: DocsApiTableRow[] = [
     type: "string",
     default: `"页"`,
     description: "页（跳页后缀）",
-  },
-  {
-    name: "firstPage",
-    type: "string",
-    default: `"第一页"`,
-    description: "第一页按钮 aria-label",
-  },
-  {
-    name: "prevPage",
-    type: "string",
-    default: `"上一页"`,
-    description: "上一页按钮 aria-label",
-  },
-  {
-    name: "nextPage",
-    type: "string",
-    default: `"下一页"`,
-    description: "下一页按钮 aria-label",
-  },
-  {
-    name: "lastPage",
-    type: "string",
-    default: `"最后一页"`,
-    description: "最后一页按钮 aria-label",
-  },
-  {
-    name: "simpleCurrent",
-    type: "string",
-    default: `"第 {page} / {totalPages} 页"`,
-    description: "极简分页当前页；占位 {page}/{totalPages}",
   },
   {
     name: "selected",
@@ -1588,7 +1564,8 @@ export const MESSAGES_DATA_PANEL: DocsApiTableRow[] = [
     name: "close",
     type: "string",
     default: `"关闭"`,
-    description: "查看详情弹窗页脚的「关闭」按钮",
+    description:
+      "详情页脚「关闭」按钮文案（弹层右上角关闭 aria-label 请写在 modal.messages.close）",
   },
   {
     name: "saved",
@@ -1706,121 +1683,281 @@ export const MESSAGES_TOUR: DocsApiTableRow[] = [
   { name: "prev", type: "string", default: `"上一步"`, description: "上一步" },
   { name: "finish", type: "string", default: `"完成"`, description: "完成" },
   { name: "skip", type: "string", default: `"跳过"`, description: "跳过" },
-  { name: "guide", type: "string", default: `"功能引导"`, description: "无 step.title 时浮层 aria-label" },
+  {
+    name: "guide",
+    type: "string",
+    default: `"功能引导"`,
+    description: "无 step.title 时浮层 aria-label",
+  },
 ];
 
 /** NoticeBarMessages */
 export const MESSAGES_NOTICE_BAR: DocsApiTableRow[] = [
-  { name: "close", type: "string", default: `"关闭"`, description: "关闭按钮 aria-label" },
+  {
+    name: "close",
+    type: "string",
+    default: `"关闭"`,
+    description: "关闭按钮 aria-label",
+  },
 ];
 
 /** ShareSheetMessages */
 export const MESSAGES_SHARE_SHEET: DocsApiTableRow[] = [
-  { name: "cancel", type: "string", default: `"取消"`, description: "底部取消文案" },
-  { name: "dialog", type: "string", default: `"分享"`, description: "面板 aria-label／对话名" },
-  { name: "close", type: "string", default: `"关闭"`, description: "关闭 aria-label" },
+  {
+    name: "cancel",
+    type: "string",
+    default: `"取消"`,
+    description: "底部取消文案",
+  },
+  {
+    name: "dialog",
+    type: "string",
+    default: `"分享"`,
+    description: "面板 aria-label／对话名",
+  },
+  {
+    name: "close",
+    type: "string",
+    default: `"关闭"`,
+    description: "关闭 aria-label",
+  },
 ];
 
 /** SignaturePadMessages */
 export const MESSAGES_SIGNATURE_PAD: DocsApiTableRow[] = [
   { name: "clear", type: "string", default: `"清空"`, description: "清空按钮" },
-  { name: "empty", type: "string", default: `"请在此签名"`, description: "空板提示" },
+  {
+    name: "empty",
+    type: "string",
+    default: `"请在此签名"`,
+    description: "空板提示",
+  },
 ];
 
 /** NumberKeyboardMessages */
 export const MESSAGES_NUMBER_KEYBOARD: DocsApiTableRow[] = [
-  { name: "confirm", type: "string", default: `"完成"`, description: "完成／确认键" },
-  { name: "close", type: "string", default: `"关闭"`, description: "关闭 aria-label" },
-  { name: "delete", type: "string", default: `"删除"`, description: "删除键 aria-label" },
+  {
+    name: "confirm",
+    type: "string",
+    default: `"完成"`,
+    description: "完成／确认键",
+  },
+  {
+    name: "close",
+    type: "string",
+    default: `"关闭"`,
+    description: "关闭 aria-label",
+  },
+  {
+    name: "delete",
+    type: "string",
+    default: `"删除"`,
+    description: "删除键 aria-label",
+  },
 ];
 
 /** SpinnerMessages */
 export const MESSAGES_SPINNER: DocsApiTableRow[] = [
-  { name: "loading", type: "string", default: `"Loading"`, description: "role=status aria-label" },
+  {
+    name: "loading",
+    type: "string",
+    default: `"Loading"`,
+    description: "role=status aria-label",
+  },
 ];
 
 /** SkeletonMessages */
 export const MESSAGES_SKELETON: DocsApiTableRow[] = [
-  { name: "loading", type: "string", default: `"Loading"`, description: "role=status aria-label" },
+  {
+    name: "loading",
+    type: "string",
+    default: `"Loading"`,
+    description: "role=status aria-label",
+  },
 ];
 
 /** TreeMessages */
 export const MESSAGES_TREE: DocsApiTableRow[] = [
-  { name: "expand", type: "string", default: `"展开"`, description: "展开按钮 aria-label" },
-  { name: "collapse", type: "string", default: `"收起"`, description: "收起按钮 aria-label" },
+  {
+    name: "expand",
+    type: "string",
+    default: `"展开"`,
+    description: "展开按钮 aria-label",
+  },
+  {
+    name: "collapse",
+    type: "string",
+    default: `"收起"`,
+    description: "收起按钮 aria-label",
+  },
 ];
 
 /** NotificationMessages（命令式 open 的 closeAriaLabel 优先于默认 close） */
 export const MESSAGES_NOTIFICATION: DocsApiTableRow[] = [
-  { name: "close", type: "string", default: `"关闭"`, description: "关闭按钮默认 aria-label" },
+  {
+    name: "close",
+    type: "string",
+    default: `"关闭"`,
+    description: "关闭按钮默认 aria-label",
+  },
 ];
 
 /** FloatingPanelMessages */
 export const MESSAGES_FLOATING_PANEL: DocsApiTableRow[] = [
-  { name: "close", type: "string", default: `"关闭"`, description: "遮罩关闭 aria-label" },
+  {
+    name: "close",
+    type: "string",
+    default: `"关闭"`,
+    description: "遮罩关闭 aria-label",
+  },
 ];
 
 /** IndexBarMessages */
 export const MESSAGES_INDEX_BAR: DocsApiTableRow[] = [
-  { name: "nav", type: "string", default: `"索引"`, description: "索引条 aria-label" },
+  {
+    name: "nav",
+    type: "string",
+    default: `"索引"`,
+    description: "索引条 aria-label",
+  },
 ];
 
 /** DropdownMenuMessages */
 export const MESSAGES_DROPDOWN_MENU: DocsApiTableRow[] = [
-  { name: "close", type: "string", default: `"关闭"`, description: "遮罩关闭 aria-label" },
+  {
+    name: "close",
+    type: "string",
+    default: `"关闭"`,
+    description: "遮罩关闭 aria-label",
+  },
 ];
 
 /** ResultMessages（未传 title 时按 status 回落） */
 export const MESSAGES_RESULT: DocsApiTableRow[] = [
-  { name: "success", type: "string", default: `"成功"`, description: "status=success 默认主标题" },
-  { name: "error", type: "string", default: `"失败"`, description: "status=error 默认主标题" },
-  { name: "info", type: "string", default: `"提示"`, description: "status=info 默认主标题" },
-  { name: "warning", type: "string", default: `"警告"`, description: "status=warning 默认主标题" },
-  { name: "forbidden", type: "string", default: `"403"`, description: "status=403 默认主标题" },
-  { name: "notFound", type: "string", default: `"404"`, description: "status=404 默认主标题" },
+  {
+    name: "success",
+    type: "string",
+    default: `"成功"`,
+    description: "status=success 默认主标题",
+  },
+  {
+    name: "error",
+    type: "string",
+    default: `"失败"`,
+    description: "status=error 默认主标题",
+  },
+  {
+    name: "info",
+    type: "string",
+    default: `"提示"`,
+    description: "status=info 默认主标题",
+  },
+  {
+    name: "warning",
+    type: "string",
+    default: `"警告"`,
+    description: "status=warning 默认主标题",
+  },
+  {
+    name: "forbidden",
+    type: "string",
+    default: `"403"`,
+    description: "status=403 默认主标题",
+  },
+  {
+    name: "notFound",
+    type: "string",
+    default: `"404"`,
+    description: "status=404 默认主标题",
+  },
 ];
 
 /** MessageMessages（正文走 message.success/error/… 的 content） */
 export const MESSAGES_MESSAGE: DocsApiTableRow[] = [
-  { name: "liveRegion", type: "string", default: `"消息提示"`, description: "容器 aria-live 区域 aria-label" },
+  {
+    name: "liveRegion",
+    type: "string",
+    default: `"消息提示"`,
+    description: "容器 aria-live 区域 aria-label",
+  },
 ];
 
 /** ToastMessages（正文走 toast.success/error/… 的 content） */
 export const MESSAGES_TOAST: DocsApiTableRow[] = [
-  { name: "liveRegion", type: "string", default: `"轻提示"`, description: "容器 aria-live 区域 aria-label" },
+  {
+    name: "liveRegion",
+    type: "string",
+    default: `"轻提示"`,
+    description: "容器 aria-live 区域 aria-label",
+  },
 ];
 
 /** ContextMenuMessages（项文案走 items[].label） */
 export const MESSAGES_CONTEXT_MENU: DocsApiTableRow[] = [
-  { name: "menu", type: "string", default: `"上下文菜单"`, description: "菜单面板 aria-label" },
+  {
+    name: "menu",
+    type: "string",
+    default: `"上下文菜单"`,
+    description: "菜单面板 aria-label",
+  },
 ];
 
 /** TooltipMessages（可见正文走 props.content；messages 预留同形） */
 export const MESSAGES_TOOLTIP: DocsApiTableRow[] = [
-  { name: "_reserved", type: "string", default: "-", description: "预留扩展键；气泡正文请用 content" },
+  {
+    name: "_reserved",
+    type: "string",
+    default: "-",
+    description: "预留扩展键；气泡正文请用 content",
+  },
 ];
 
 /** CheckboxMessages（标签走 children；messages 预留同形） */
 export const MESSAGES_CHECKBOX: DocsApiTableRow[] = [
-  { name: "_reserved", type: "string", default: "-", description: "预留扩展键；可见标签请用 children" },
+  {
+    name: "_reserved",
+    type: "string",
+    default: "-",
+    description: "预留扩展键；可见标签请用 children",
+  },
 ];
 
 /** PasscodeInputMessages */
 export const MESSAGES_PASSCODE_INPUT: DocsApiTableRow[] = [
-  { name: "label", type: "string", default: `"验证码"`, description: "无障碍标签；显式 aria-label 优先" },
+  {
+    name: "label",
+    type: "string",
+    default: `"验证码"`,
+    description: "无障碍标签；显式 aria-label 优先",
+  },
 ];
 
 /** FloatButtonMessages */
 export const MESSAGES_FLOAT_BUTTON: DocsApiTableRow[] = [
-  { name: "label", type: "string", default: `"悬浮按钮"`, description: "主按钮 aria-label；显式 aria-label 优先" },
+  {
+    name: "label",
+    type: "string",
+    default: `"悬浮按钮"`,
+    description: "主按钮 aria-label；显式 aria-label 优先",
+  },
 ];
 
 /** OverlayMessages */
 export const MESSAGES_OVERLAY: DocsApiTableRow[] = [
-  { name: "label", type: "string", default: `"遮罩"`, description: "遮罩 aria-label；显式 aria-label 优先" },
+  {
+    name: "label",
+    type: "string",
+    default: `"遮罩"`,
+    description: "遮罩 aria-label；显式 aria-label 优先",
+  },
 ];
 
 /** QRCodeMessages */
 export const MESSAGES_QR_CODE: DocsApiTableRow[] = [
-  { name: "label", type: "string", default: `"二维码"`, description: "无障碍说明；显式 aria-label 优先" },
+  {
+    name: "label",
+    type: "string",
+    default: `"二维码"`,
+    description: "无障碍说明；显式 aria-label 优先",
+  },
 ];

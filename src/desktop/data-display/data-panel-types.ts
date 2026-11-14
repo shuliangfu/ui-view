@@ -9,29 +9,37 @@ import type {
   DescriptionsProps,
 } from "./Descriptions.tsx";
 import type { PaginationProps } from "../navigation/Pagination.tsx";
+import type { ModalProps } from "../feedback/Modal.tsx";
+import type { TableColumn } from "./table-types.ts";
 
 /**
- * 可写在 {@link ViewConfig} 上的 Descriptions 参数。
- * 不含 `items`（由 view.props 生成）和 `title`（那是弹层标题，不会传给 Descriptions）。
+ * 可写在 {@link ViewConfig.descriptions} 上的 Descriptions 参数。
+ * 不含 `items`（由 view.props 生成）和 `title`（那是弹层／页面标题，不会传给 Descriptions）。
  */
 export type ViewDescriptionsProps = Omit<DescriptionsProps, "items" | "title">;
 
 /**
  * 可写在 DataPanel `pagination` 上的 Pagination 参数。
- * 不含由面板托管的页码／条数／总数／onChange，以及与根上 `syncUrl`／`pageSizes` 重复的 `syncUrl`／`pageSizeOptions`。
+ * 运行时的页码、当前每页条数、总数和 onChange 由面板托管，不必也不应在此写
+ * current／total／onChange／syncUrl。初始每页条数写 `pageSize`（默认 20），
+ * 下拉选项写 `pageSizeOptions`（默认 [10, 20, 50, 100]）。地址栏同步仍用根上的 `syncUrl`。
  */
-export type PanelPaginationConfig = Omit<
-  PaginationProps,
-  | "current"
-  | "defaultCurrent"
-  | "pageSize"
-  | "defaultPageSize"
-  | "total"
-  | "totalPages"
-  | "onChange"
-  | "syncUrl"
-  | "pageSizeOptions"
->;
+export type PanelPaginationConfig =
+  & Omit<
+    PaginationProps,
+    | "current"
+    | "defaultCurrent"
+    | "defaultPageSize"
+    | "total"
+    | "totalPages"
+    | "onChange"
+    | "syncUrl"
+    | "pageSize"
+  >
+  & {
+    /** 初始每页条数，默认 20。运行时当前条数由面板托管，不要写成 getter。 */
+    pageSize?: number;
+  };
 
 /** 数据行：键值对；主键字段默认为 `id`（见 `PanelProps.rowKey`）。 */
 export type Row = Record<string, unknown>;
@@ -190,6 +198,11 @@ export interface Column {
    * 覆盖默认展示与 `value`；导出／打印／详情只取可转文本的结果，节点／HTML 回落字段原文。
    */
   formatter?: (row: Row, raw: unknown) => unknown;
+  /**
+   * 透传给表格列的参数（如 `fixed`、`ellipsis`）。
+   * `title`／`width`／`align`／`headerAlign`／`sortable` 仍写在 Column 上。
+   */
+  table?: ColumnTableConfig;
 }
 
 /**
@@ -536,6 +549,34 @@ export type ModalShellWidth =
  * `footer: false` 可显式关掉官方脚。
  * 旁路层仍可用 DataPanel `children` + 自定义 `action` 自管 Modal。
  */
+/**
+ * form／search／view 的 `modal`：透传给 Modal 的全部参数。
+ * `open`／`onClose`／`title`／`children`／`footer`／`fullscreen` 由面板接管，写入无效。
+ * 打开是否全屏由 form／search／view 上的 `autoFullscreen`／`mobileAutoFullscreen` 决定。
+ * 未写 `width` 时面板缺省 `md`。
+ */
+export type DataChromeModalConfig = Omit<
+  ModalProps,
+  "open" | "onClose" | "title" | "children" | "footer" | "fullscreen"
+>;
+
+/**
+ * 列上的 `table`：透传给表格列、且未在 Column 上单独声明的参数。
+ * `title`／`width`／`align`／`headerAlign`／`sortable` 仍写在 Column 上，不要重复写进本对象。
+ */
+export type ColumnTableConfig = Omit<
+  TableColumn,
+  | "key"
+  | "title"
+  | "dataIndex"
+  | "width"
+  | "align"
+  | "headerAlign"
+  | "sorter"
+  | "render"
+  | "editable"
+>;
+
 export interface FormConfig {
   title?: string | ((row: Row) => string);
   /**
@@ -558,16 +599,12 @@ export interface FormConfig {
    * 有本字段时忽略各 {@link FormField.render}。
    */
   render?: (ctx: FormRenderCtx) => unknown;
-  /** 增改弹层宽度，传给 Modal；缺省 md */
-  width?: ModalShellWidth;
   /**
-   * 增改弹层最大高度，传给 Modal；数字为 px，字符串为 CSS（如 `80vh`）。
-   * 未传时沿用 Modal 默认 `90vh`；全屏时忽略。
+   * 透传给增改 Modal 的参数（width、maxHeight、fullscreenable、centered、draggable…）。
+   * 未写 width 时面板缺省 md。open／onClose／title／children／footer／fullscreen 由面板接管。
    */
-  maxHeight?: string | number;
-  /** 增改弹层是否显示全屏切换，传给 Modal */
-  fullscreenable?: boolean;
-  /** 打开增改弹层时所有端自动全屏，传给 Modal 的 fullscreen；默认 false */
+  modal?: DataChromeModalConfig;
+  /** 打开增改弹层时所有端自动全屏；默认 false。与 mobileAutoFullscreen 同时为 true 时以本项为准 */
   autoFullscreen?: boolean;
   /** 打开增改弹层时仅移动端（视口 ≤639.98px）自动全屏；默认 false */
   mobileAutoFullscreen?: boolean;
@@ -591,28 +628,24 @@ export interface SearchConfig {
    * 有本字段时忽略各 {@link SearchField.render}。
    */
   render?: (ctx: SearchRenderCtx) => unknown;
-  /** 搜索弹层宽度，传给 Modal；缺省 md */
-  width?: ModalShellWidth;
   /**
-   * 搜索弹层最大高度，传给 Modal；数字为 px，字符串为 CSS（如 `80vh`）。
-   * 未传时沿用 Modal 默认 `90vh`；全屏时忽略。
+   * 透传给搜索 Modal 的参数（width、maxHeight、fullscreenable、centered、draggable…）。
+   * 未写 width 时面板缺省 md。open／onClose／title／children／footer／fullscreen 由面板接管。
    */
-  maxHeight?: string | number;
-  /** 搜索弹层是否显示全屏切换，传给 Modal */
-  fullscreenable?: boolean;
-  /** 打开搜索弹层时所有端自动全屏，传给 Modal 的 fullscreen；默认 false */
+  modal?: DataChromeModalConfig;
+  /** 打开搜索弹层时所有端自动全屏；默认 false。与 mobileAutoFullscreen 同时为 true 时以本项为准 */
   autoFullscreen?: boolean;
   /** 打开搜索弹层时仅移动端（视口 ≤639.98px）自动全屏；默认 false */
   mobileAutoFullscreen?: boolean;
 }
 
 /**
- * 详情弹层配置。内置字段区用 Descriptions 时，可把 Descriptions 的参数
- *（除 `items`、`title`）直接写在本对象上，与 title／props／actions 混在一起，
- * 例如 `column`、`size`、`bordered`、`layout`、`colon`、`labelAlign`、`labelColPercent`。
- * `title` 仍是弹层标题，不会传给 Descriptions。有 `render` 时这些参数不再生效。
+ * 详情配置（DataPanel 弹层与 DataView 正文共用）。
+ * Modal 参数写在 {@link ViewConfig.modal}；Descriptions 参数写在 {@link ViewConfig.descriptions}。
+ * `title` 仍是弹层／页面标题，不会传给 Descriptions。有 `render` 时 descriptions 不再生效。
+ * `modal` 与自动全屏只在 DataPanel 详情弹层上生效；DataView 的 view 是页面本身，不是弹层。
  */
-export interface ViewConfig extends ViewDescriptionsProps {
+export interface ViewConfig {
   /** 详情弹层标题；支持 `(row)=>string`，如 `` `详情 · ${row.name}` `` */
   title?: string | ((row: Row) => string);
   /**
@@ -630,18 +663,21 @@ export interface ViewConfig extends ViewDescriptionsProps {
    * 有本字段时忽略各 {@link ViewItem.render}。
    */
   render?: (ctx: ViewRenderCtx) => unknown;
-  /** 详情弹层宽度，传给 Modal；缺省 md */
-  width?: ModalShellWidth;
   /**
-   * 详情弹层最大高度，传给 Modal；数字为 px，字符串为 CSS（如 `80vh`）。
-   * 未传时沿用 Modal 默认 `90vh`；全屏时忽略。
+   * 透传给详情 Modal 的参数（width、maxHeight、fullscreenable、centered、draggable…）。
+   * 未写 width 时面板缺省 md。open／onClose／title／children／footer／fullscreen 由面板接管。
+   * 仅 DataPanel 详情弹层生效；DataView 的 view 是页面本身，不是弹层。
    */
-  maxHeight?: string | number;
-  /** 详情弹层是否显示全屏切换，传给 Modal */
-  fullscreenable?: boolean;
-  /** 打开详情弹层时所有端自动全屏，传给 Modal 的 fullscreen；默认 false */
+  modal?: DataChromeModalConfig;
+  /**
+   * 透传给内置详情 Descriptions 的参数（column、size、bordered、layout、colon、labelAlign、labelColPercent、labelMinWidth…）。
+   * items／title 由面板接管：items 由 view.props 生成，title 是弹层／页面标题，不会传给 Descriptions。
+   * 本插槽缺省 column=1、size=sm、bordered=true。有 render 或 DataView children 时不生效。
+   */
+  descriptions?: ViewDescriptionsProps;
+  /** 打开详情弹层时所有端自动全屏；默认 false。与 mobileAutoFullscreen 同时为 true 时以本项为准。仅 DataPanel 详情弹层生效 */
   autoFullscreen?: boolean;
-  /** 打开详情弹层时仅移动端（视口 ≤639.98px）自动全屏；默认 false */
+  /** 打开详情弹层时仅移动端（视口 ≤639.98px）自动全屏；默认 false。仅 DataPanel 详情弹层生效 */
   mobileAutoFullscreen?: boolean;
 }
 
@@ -1369,16 +1405,6 @@ export interface Messages {
   perPage: string;
   jump: string;
   page: string;
-  /** 第一页按钮 aria-label */
-  firstPage: string;
-  /** 上一页按钮 aria-label */
-  prevPage: string;
-  /** 下一页按钮 aria-label */
-  nextPage: string;
-  /** 最后一页按钮 aria-label */
-  lastPage: string;
-  /** 极简分页当前页文案，占位 {page}/{totalPages} */
-  simpleCurrent: string;
   selected: string;
   batchDelete: string;
   clearSelection: string;

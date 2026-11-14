@@ -12,7 +12,6 @@ import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx
 import { MESSAGES_PAGINATION } from "../../../data/component-messages-rows.ts";
 import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
 
-
 /** API 属性行类型 */
 interface ApiRow {
   name: string;
@@ -76,7 +75,8 @@ const PAGINATION_API: ApiRow[] = [
     name: "onChange",
     type: "(page: number, pageSize?: number) => void",
     default: "-",
-    description: "页码/条数变化回调；切换每页条数时第二个参数为新的 pageSize，并回到第 1 页",
+    description:
+      "页码/条数变化回调；切换每页条数时第二个参数为新的 pageSize，并回到第 1 页",
   },
   {
     name: "showFirstLast",
@@ -137,7 +137,7 @@ const PAGINATION_API: ApiRow[] = [
     type: "string",
     default: '"pagination"',
     description:
-      "测试 id 前缀。会输出 {prefix}-first、{prefix}-prev、{prefix}-page-N、{prefix}-next、{prefix}-last、{prefix}-jump、{prefix}-pagesize、{prefix}-simple-current。数据面板传入 \"dp\"",
+      '测试 id 前缀。会输出 {prefix}-first、{prefix}-prev、{prefix}-page-N、{prefix}-next、{prefix}-last、{prefix}-jump、{prefix}-pagesize、{prefix}-simple-current。数据面板传入 "dp"',
   },
   { name: "class", type: "string", default: "-", description: "额外 class" },
   {
@@ -262,16 +262,20 @@ export default function NavigationPagination() {
         <Paragraph class="mt-2">
           分页：preset（"full"｜"default"｜"simple"）、current、total、totalPages、pageSize、pageSizeOptions、onChange、showFirstLast、showPrevNext、showPageNumbers、showQuickJumper、showTotal、disabled、syncUrl、size、testIdPrefix、class、messages。
           <code class="text-xs">preset="full"</code>{" "}
-          为全部能力，含第一页／最后一页（现成图标 IconChevronsLeft／IconChevronsRight 双箭头，上一页／下一页为 IconChevronLeft／IconChevronRight）。
+          为全部能力，含第一页／最后一页（现成图标
+          IconChevronsLeft／IconChevronsRight 双箭头，上一页／下一页为
+          IconChevronLeft／IconChevronRight）。
           <code class="text-xs">preset="default"</code>{" "}
           为一般能力（上一页／页码／下一页）。
           <code class="text-xs">preset="simple"</code>{" "}
-          为极简（上一页、「第 n / m 页」、下一页）。显式 show* 可覆盖该档默认值。
-          每页条数切换使用库内 Select（自绘下拉），不渲染原生{" "}
+          为极简（上一页、「第 n / m 页」、下一页）。显式 show*
+          可覆盖该档默认值。 每页条数切换使用库内 Select（自绘下拉），不渲染原生
+          {" "}
           {"<select>"}。尺寸 size 为 xs｜sm｜md｜lg，默认
           md；条数触发器随文案＋箭头贴紧、单行不换行。 使用 Tailwind v4，支持
-          light/dark 主题。数据面板默认按断点选用：电脑端（≥1280px）full，平板（640px–1279.98px）default，移动端（≤639.98px）simple，也可用
-          paginationPreset 指定。
+          light/dark
+          主题。数据面板默认按断点选用：电脑端（≥1280px）full，平板（640px–1279.98px）default，移动端（≤639.98px）simple，也可用
+          pagination.preset 指定。
         </Paragraph>
       </section>
 
@@ -346,7 +350,8 @@ export default function NavigationPagination() {
             preset=&quot;simple&quot;（极简）
           </Title>
           <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
-            上一页、「第 n / m 页」、下一页。无数字页码、无第一页／最后一页、无跳转。
+            上一页、「第 n / m
+            页」、下一页。无数字页码、无第一页／最后一页、无跳转。
           </Paragraph>
           <Pagination
             preset="simple"

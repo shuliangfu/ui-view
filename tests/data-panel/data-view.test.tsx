@@ -273,7 +273,7 @@ describe("DataView", () => {
     expect(seeded).not.toContain("FromGet");
   });
 
-  it("view.labelColPercent / labelMinWidth 出现在详情 Descriptions", async () => {
+  it("view.descriptions.labelColPercent / labelMinWidth 出现在详情 Descriptions", async () => {
     const h = await html({
       data: {
         id: "1",
@@ -282,8 +282,10 @@ describe("DataView", () => {
         status: "active",
       },
       view: {
-        labelColPercent: 28,
-        labelMinWidth: "7rem",
+        descriptions: {
+          labelColPercent: 28,
+          labelMinWidth: "7rem",
+        },
         props: [
           {
             prop: "name",
@@ -327,7 +329,7 @@ describe("DataView", () => {
     expect(h).toContain("：");
   });
 
-  it("view 上的 Descriptions 参数会透传到内置详情", async () => {
+  it("view.descriptions 的参数会透传到内置详情", async () => {
     const h = await html({
       data: {
         id: "1",
@@ -336,15 +338,17 @@ describe("DataView", () => {
       },
       view: {
         title: "详情 · 张三",
-        column: 3,
-        size: "lg",
-        bordered: false,
-        layout: "vertical",
-        colon: false,
-        class: "view-desc-extra",
-        labelClass: "view-desc-label",
-        contentClass: "view-desc-content",
-        labelAlign: { vertical: "center", horizontal: "left" },
+        descriptions: {
+          column: 3,
+          size: "lg",
+          bordered: false,
+          layout: "vertical",
+          colon: false,
+          class: "view-desc-extra",
+          labelClass: "view-desc-label",
+          contentClass: "view-desc-content",
+          labelAlign: { vertical: "center", horizontal: "left" },
+        },
         props: [
           { prop: "name", label: "姓名" },
           { prop: "email", label: "邮箱" },
@@ -366,7 +370,7 @@ describe("DataView", () => {
     expect(h).toContain("justify-start");
     expect(h).toContain("text-left");
     // title 是详情标题，不应作为 Descriptions 标题再渲染一遍
-    expect(h).not.toContain('详情 · 张三</div>');
+    expect(h).not.toContain("详情 · 张三</div>");
   });
 });
 
@@ -457,4 +461,3 @@ describe("DataView：删除与表单增强", () => {
     expect(hasDisabledAttr(disabled.slice(start, i + 40))).toBe(true);
   });
 });
-

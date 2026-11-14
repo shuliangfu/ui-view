@@ -11,13 +11,15 @@ import { DocsApiTable, type DocsApiTableRow } from "./DocsApiTable.tsx";
  * @param props.interfaceName - TS 接口名，便于读者在源码中跳转
  * @param props.defaultExportName - 包内默认文案导出名，如 defaultDatePickerMessages
  * @param props.rows - messages 各字段一行（字段路径可用 `a.b` 表示嵌套）
+ * @param props.lead - 可选补充说明，显示在默认段落后、表格前
  */
 export function DocsMessagesSection(props: {
   interfaceName: string;
   defaultExportName: string;
   rows: readonly DocsApiTableRow[];
+  lead?: string;
 }) {
-  const { interfaceName, defaultExportName, rows } = props;
+  const { interfaceName, defaultExportName, rows, lead } = props;
   return (
     <section class="space-y-3">
       <Title level={2}>文案（messages）</Title>
@@ -40,6 +42,13 @@ export function DocsMessagesSection(props: {
           仅描述文案字段
         </strong>，与 API 中的运行时 props 表分开。
       </Paragraph>
+      {lead
+        ? (
+          <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+            {lead}
+          </Paragraph>
+        )
+        : null}
       <DocsApiTable rows={rows} nameColumnHeader="字段" />
     </section>
   );

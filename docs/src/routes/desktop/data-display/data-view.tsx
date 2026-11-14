@@ -36,7 +36,7 @@ const DATA_VIEW_API: DocsApiTableRow[] = [
     type: "ViewConfig",
     default: "-",
     description:
-      "明细配置，写法同 DataPanel view。DataView 的 view 是页面本身而不是弹层，width／fullscreenable／autoFullscreen／mobileAutoFullscreen 只在 DataPanel 详情弹层上生效。Descriptions 的参数（除 items、title）可直接写在 view 上，例如 column（本插槽缺省 1）、size（缺省 sm）、bordered（缺省 true）、layout、colon、labelAlign、labelColPercent、labelMinWidth。title 仍是标题。有 render 或 children 时这些参数不生效。props 用 Descriptions 展示字段；render(ctx) 替换字段区。字段级 ViewItem.render 仅在无 view.render 且无 children 时生效。props 也可不写 prop，用 formatter／value 拼接字段。ViewItem.labelAlign 控制该行标签对齐（vertical：top／center／bottom，horizontal：left／center／right），透传 Descriptions。",
+      "明细配置，写法同 DataPanel view。view 透传两块：modal 给弹层，descriptions 给描述列表。DataView 的 view 是页面本身而不是弹层，modal／autoFullscreen／mobileAutoFullscreen 只在 DataPanel 详情弹层上生效。descriptions 透传 Descriptions 参数（除 items、title；本插槽缺省 column=1、size=sm、bordered=true）。title 仍是标题，不会传给 Descriptions。有 render 或 children 时 descriptions 不生效。props 用 Descriptions 展示字段；render(ctx) 替换字段区。字段级 ViewItem.render 仅在无 view.render 且无 children 时生效。props 也可不写 prop，用 formatter／value 拼接字段。ViewItem.labelAlign 控制该行标签对齐（vertical：top／center／bottom，horizontal：left／center／right），透传 Descriptions。",
   },
   {
     name: "children",
@@ -88,7 +88,7 @@ const DATA_VIEW_API: DocsApiTableRow[] = [
     type: "FormConfig",
     default: "-",
     description:
-      "工具栏「更新」打开的编辑 Modal，写法同 DataPanel form（含 width、fullscreenable 全屏按钮、autoFullscreen 所有端打开即全屏、mobileAutoFullscreen 仅移动端打开即全屏，以及 form.actions 官方底栏、字段 show／disabled／options 函数）",
+      "工具栏「更新」打开的编辑 Modal，写法同 DataPanel form（含 modal 透传 Modal 参数、autoFullscreen 所有端打开即全屏、mobileAutoFullscreen 仅移动端打开即全屏，以及 form.actions 官方底栏、字段 show／disabled／options 函数）",
   },
   {
     name: "data",
@@ -270,8 +270,10 @@ const user = {
   title="用户详情"
   data={user}
   view={{
-    labelColPercent: 28,
-    labelMinWidth: "7rem",
+    descriptions: {
+      labelColPercent: 28,
+      labelMinWidth: "7rem",
+    },
     props: [
       { prop: "name", label: "姓名" },
       { prop: "email", label: "邮箱" },
@@ -312,8 +314,10 @@ const user = {
   title="用户详情"
   data={user}
   view={{
-    labelColPercent: 28,
-    labelMinWidth: "7rem",
+    descriptions: {
+      labelColPercent: 28,
+      labelMinWidth: "7rem",
+    },
     props: [
       { prop: "name", label: "姓名" },
       { prop: "email", label: "邮箱" },
@@ -448,8 +452,10 @@ const source = createLocalDataSource({
   data={user}
   dataSource={source}
   view={{
-    labelColPercent: 28,
-    labelMinWidth: "7rem",
+    descriptions: {
+      labelColPercent: 28,
+      labelMinWidth: "7rem",
+    },
     props: [
       { prop: "name", label: "姓名" },
       { prop: "email", label: "邮箱" },
@@ -542,8 +548,10 @@ export default function DataDisplayDataView() {
             title="用户详情"
             data={DEMO_USER}
             view={{
-              labelColPercent: 28,
-              labelMinWidth: "7rem",
+              descriptions: {
+                labelColPercent: 28,
+                labelMinWidth: "7rem",
+              },
               props: [
                 { prop: "name", label: "姓名" },
                 { prop: "email", label: "邮箱" },
@@ -646,8 +654,10 @@ export default function DataDisplayDataView() {
             data={DEMO_USER}
             dataSource={removeDemoSource}
             view={{
-              labelColPercent: 28,
-              labelMinWidth: "7rem",
+              descriptions: {
+                labelColPercent: 28,
+                labelMinWidth: "7rem",
+              },
               props: [
                 { prop: "name", label: "姓名" },
                 { prop: "email", label: "邮箱" },
@@ -810,6 +820,7 @@ const user = {
         interfaceName="Messages"
         defaultExportName="defaultDataPanelMessages"
         rows={MESSAGES_DATA_PANEL}
+        lead="弹层右上角关闭、全屏和遮罩写在 form.modal 的 messages，见 ModalMessages。下表是详情页自己的文案：工具栏全屏、页脚关闭等。分页相关字段（jump／page／perPage）与数据面板共用同一套 Messages；分页导航文案请写在数据面板的 pagination.messages。"
       />
     </div>
   );

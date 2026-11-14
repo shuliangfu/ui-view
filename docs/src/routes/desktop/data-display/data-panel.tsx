@@ -158,21 +158,21 @@ const DATA_PANEL_API: DocsApiTableRow[] = [
     type: "SearchConfig",
     default: "—",
     description:
-      "搜索弹层：title、props、actions，以及 width（弹层宽度，缺省 md）、fullscreenable（标题栏全屏按钮，缺省 false）、autoFullscreen（所有端打开即全屏，缺省 false）、mobileAutoFullscreen（仅移动端打开即全屏，缺省 false）。非空则工具栏搜索＋URL 同步。详见 Search 表。",
+      "搜索弹层：title、props、actions、modal（透传 Modal 参数，width 缺省 md）、autoFullscreen（所有端打开即全屏，缺省 false）、mobileAutoFullscreen（仅移动端打开即全屏，缺省 false）。非空则工具栏搜索＋URL 同步。详见 Search 表。",
   },
   {
     name: "form",
     type: "FormConfig",
     default: "—",
     description:
-      "增改弹层：title、props、render、actions，以及 width（弹层宽度，缺省 md）、fullscreenable（标题栏全屏按钮，缺省 false）、autoFullscreen（所有端打开即全屏，缺省 false）、mobileAutoFullscreen（仅移动端打开即全屏，缺省 false）。详见 Form 表。",
+      "增改弹层：title、props、render、actions、modal（透传 Modal 参数，width 缺省 md）、autoFullscreen（所有端打开即全屏，缺省 false）、mobileAutoFullscreen（仅移动端打开即全屏，缺省 false）。详见 Form 表。",
   },
   {
     name: "view",
     type: "ViewConfig",
     default: "columns＋form",
     description:
-      "详情弹层：title、props、render、actions，以及 width（弹层宽度，缺省 md）、fullscreenable（标题栏全屏按钮，缺省 false）、autoFullscreen（所有端打开即全屏，缺省 false）、mobileAutoFullscreen（仅移动端打开即全屏，缺省 false）。Descriptions 的参数（除 items、title）可直接写在 view 上，与这些字段混在一起，例如 column（本插槽缺省 1）、size（缺省 sm）、bordered（缺省 true）、layout、colon、labelAlign、labelColPercent、labelMinWidth。title 仍是弹层标题。有 render 时这些参数不生效。不写时回落列＋表单。详见 View 表。",
+      "详情弹层：title、props、render、actions、modal（透传 Modal 参数，width 缺省 md）、descriptions（透传 Descriptions 参数，本插槽缺省 column=1、size=sm、bordered=true）、autoFullscreen（所有端打开即全屏，缺省 false）、mobileAutoFullscreen（仅移动端打开即全屏，缺省 false）。title 仍是弹层标题，不会传给 Descriptions。有 render 时 descriptions 不生效。不写时回落列＋表单。详见 View 表。",
   },
   {
     name: "panelKey",
@@ -183,24 +183,11 @@ const DATA_PANEL_API: DocsApiTableRow[] = [
   },
   { name: "rowKey", type: "string", default: '"id"', description: "主键字段" },
   {
-    name: "pageSize / pageSizes",
-    type: "number / number[]",
-    default: "20 / [10,20,50,100]",
-    description: "默认每页条数与可选项",
-  },
-  {
-    name: "paginationPreset",
-    type: '"full" | "default" | "simple"',
-    default: "随断点",
-    description:
-      "底栏分页能力档的简写，等价于 pagination.preset。与 pagination.preset 同时写时以 pagination.preset 为准。不传时按断点自动选择并带上对应 size：电脑端（min-width: 1280px）full／md，平板（640px–1279.98px）default／sm，移动端（max-width: 639.98px）simple／xs。",
-  },
-  {
     name: "pagination",
     type: "PanelPaginationConfig",
     default: "随断点",
     description:
-      "底栏分页配置，透传 Pagination 的展示参数（preset、size、showFirstLast、showPrevNext、showPageNumbers、showQuickJumper、showTotal、disabled、class、testIdPrefix、messages）。页码、每页条数、总数和 onChange 由面板托管；地址栏同步用 syncUrl，每页条数选项用 pageSizes。未写的键走断点缺省（或 paginationPreset）。本插槽默认关掉 Pagination 自带总条数和跳转（左侧条数文案和 full 档右侧跳转由面板渲染）；显式 showQuickJumper: true 时改用 Pagination 自带跳转。详见 PanelPaginationConfig 表。",
+      "底栏分页配置，透传 Pagination 的展示参数（preset、size、pageSize、pageSizeOptions、showFirstLast、showPrevNext、showPageNumbers、showQuickJumper、showTotal、disabled、class、testIdPrefix、messages）。运行时的页码、当前每页条数、总数和 onChange 由面板托管，不必写 current／total／onChange。初始每页条数写 pageSize（默认 20），下拉选项写 pageSizeOptions（默认 [10, 20, 50, 100]）；未写的 preset／size 按断点缺省：电脑端（min-width: 1280px）full／md，平板（640px–1279.98px）default／sm，移动端（max-width: 639.98px）simple／xs。地址栏同步仍用根上的 syncUrl。本插槽默认关掉 Pagination 自带总条数和跳转（左侧条数文案和 full 档右侧跳转由面板渲染）；显式 showQuickJumper: true 时改用 Pagination 自带跳转。详见 PanelPaginationConfig 表。",
   },
   {
     name: "defaultSort",
@@ -354,7 +341,7 @@ const DATA_PANEL_API: DocsApiTableRow[] = [
     type: "string",
     default: "-",
     description:
-      "额外 class（加在卡片上）。移动端（max-width: 639.98px）自带：卡片 margin-top/left/right=0，.dp-table-wrap padding-top/left/right=0（表格贴边）；底栏分页各端均为左右一行（左侧条数文案，右侧分页控件）；底栏分页预设与尺寸随断点：电脑端（≥1280px）full／md，平板（640px–1279.98px）default／sm，移动端（≤639.98px）simple／xs；可用 pagination 或 paginationPreset 覆盖",
+      "额外 class（加在卡片上）。移动端（max-width: 639.98px）自带：卡片 margin-top/left/right=0，.dp-table-wrap padding-top/left/right=0（表格贴边）；底栏分页各端均为左右一行（左侧条数文案，右侧分页控件）；底栏分页预设与尺寸随断点：电脑端（≥1280px）full／md，平板（640px–1279.98px）default／sm，移动端（≤639.98px）simple／xs；可用 pagination.preset／pagination.size 覆盖",
   },
   {
     name: "children",
@@ -465,7 +452,6 @@ ${DEMO_FORM_CODE}
   columns={columns}
   search={{ props: search }}
   form={{ props: form }}
-  pageSize={20}
 />
 `;
 
@@ -489,7 +475,6 @@ ${DEMO_FORM_CODE}
   columns={columns}
   search={{ props: search }}
   form={{ props: form }}
-  pageSize={20}
 />
 `;
 const dataBaseRouteCode =
@@ -542,7 +527,6 @@ const rows: Row[] = [
   columns={columns}
   search={{ props: search }}
   form={{ props: form }}
-  pageSize={20}
 />
 `;
 
@@ -900,8 +884,7 @@ const rows = makeDemoRows(40);
   title="分页"
   data={rows}
   columns={columns}
-  pageSize={5}
-  pageSizes={[5, 10, 20]}
+  pagination={{ pageSize: 5, pageSizeOptions: [5, 10, 20] }}
   caps={{ create: false }}
 />
 `;
@@ -1169,7 +1152,7 @@ const rows = makeDemoRows(5);
   data-testid="demo-toolbar-off-hint"
 >
   toolbar=false
-  时整栏工具栏不出现；表格／分页仍渲染。移动端（≤639.98px）表格卡上／左／右贴边；底栏分页各端均为左右一行（左侧条数、右侧控件）；底栏分页预设与尺寸随断点：电脑端（≥1280px）full／md，平板（640px–1279.98px）default／sm，移动端（≤639.98px）simple／xs，也可用 pagination 或 paginationPreset 覆盖。
+  时整栏工具栏不出现；表格／分页仍渲染。移动端（≤639.98px）表格卡上／左／右贴边；底栏分页各端均为左右一行（左侧条数、右侧控件）；底栏分页预设与尺寸随断点：电脑端（≥1280px）full／md，平板（640px–1279.98px）default／sm，移动端（≤639.98px）simple／xs，也可用 pagination.preset／pagination.size 覆盖。
 </p>
 `;
 
@@ -1945,8 +1928,10 @@ const submitPwd = () => {
     })}
     view={{
       title: (row) => \`详情 · \${String(row.name ?? "")}\`,
-      labelColPercent: 28,
-      labelMinWidth: "7rem",
+      descriptions: {
+        labelColPercent: 28,
+        labelMinWidth: "7rem",
+      },
       props: [
         { prop: "name", label: "姓名" },
         { prop: "email", label: "邮箱" },
@@ -2866,8 +2851,7 @@ const rows = makeDemoRows(8);
             title="分页"
             data={makeDemoRows(40)}
             columns={DEMO_COLUMNS}
-            pageSize={5}
-            pageSizes={[5, 10, 20]}
+            pagination={{ pageSize: 5, pageSizeOptions: [5, 10, 20] }}
             caps={{ create: false }}
           />
         </DocsDemo>
@@ -2933,7 +2917,6 @@ const rows = makeDemoRows(8);
             columns={DEMO_COLUMNS}
             search={{ props: DEMO_SEARCH }}
             form={{ props: DEMO_FORM }}
-            pageSize={20}
           />
         </DocsDemo>
 
@@ -2971,7 +2954,6 @@ const rows = makeDemoRows(8);
             columns={DEMO_COLUMNS}
             search={{ props: DEMO_SEARCH }}
             form={{ props: DEMO_FORM }}
-            pageSize={20}
           />
         </DocsDemo>
 
@@ -3030,7 +3012,6 @@ const rows = makeDemoRows(8);
             columns={DEMO_COLUMNS}
             search={{ props: DEMO_SEARCH }}
             form={{ props: DEMO_FORM }}
-            pageSize={20}
           />
         </DocsDemo>
 
@@ -3121,7 +3102,7 @@ const rows = makeDemoRows(8);
           >
             toolbar=false
             时整栏工具栏不出现；表格／分页仍渲染。移动端（≤639.98px）表格卡上／左／右贴边；底栏分页各端均为左右一行（左侧条数、右侧控件）；底栏分页预设与尺寸随断点：电脑端（≥1280px）full／md，平板（640px–1279.98px）default／sm，移动端（≤639.98px）simple／xs，也可用
-            pagination 或 paginationPreset 覆盖。
+            pagination.preset／pagination.size 覆盖。
           </p>
         </DocsDemo>
 
@@ -3588,16 +3569,21 @@ const rows = makeDemoRows(8);
             <code class="text-xs">form</code>／
             <code class="text-xs">search</code> 一样写成{" "}
             <code class="text-xs">
-              {"{ title, props, actions?, width?, fullscreenable?, autoFullscreen?, mobileAutoFullscreen?, column?, size?, bordered?, ... }"}
+              {"{ title, props, actions?, modal?, descriptions?, autoFullscreen?, mobileAutoFullscreen? }"}
             </code>
-            。Descriptions 的参数（除 items、title）可直接写在 view 上，例如{" "}
-            <code class="text-xs">column</code>（本插槽缺省 1）、
-            <code class="text-xs">size</code>（缺省 sm）、
-            <code class="text-xs">bordered</code>（缺省 true）。标签与内容比例用{" "}
+            。view 透传两块：
+            <code class="text-xs">modal</code> 给弹层，
+            <code class="text-xs">descriptions</code>{" "}
+            给描述列表（除 items、title；本插槽缺省{" "}
+            <code class="text-xs">column</code> 1、
+            <code class="text-xs">size</code> sm、
+            <code class="text-xs">bordered</code> true）。标签与内容比例写在
+            {" "}
+            <code class="text-xs">descriptions</code> 里，用{" "}
             <code class="text-xs">labelColPercent</code>
             （12～85，缺省 38）和 <code class="text-xs">labelMinWidth</code>
-            （电脑端缺省 13.5rem，移动端容器缺省 7rem）设置。<code class="text-xs">title</code>{" "}
-            是查看弹窗标题（
+            （电脑端缺省 13.5rem，移动端容器缺省
+            7rem）设置。<code class="text-xs">title</code> 是查看弹窗标题（
             <code class="text-xs">string</code> 或{" "}
             <code class="text-xs">(row)=&gt;string</code>，如{" "}
             <code class="text-xs">{"详情 · ${row.name}"}</code>
@@ -3638,8 +3624,10 @@ const rows = makeDemoRows(8);
               })}
               view={{
                 title: (row) => `详情 · ${String(row.name ?? "")}`,
-                labelColPercent: 28,
-                labelMinWidth: "7rem",
+                descriptions: {
+                  labelColPercent: 28,
+                  labelMinWidth: "7rem",
+                },
                 props: [
                   { prop: "name", label: "姓名" },
                   { prop: "email", label: "邮箱" },
@@ -4400,15 +4388,15 @@ function DataPanelTabsDemo() {
           Search（SearchConfig / SearchField）
         </Title>
         <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
-          搜索弹层可用 <code class="text-xs">width</code>
-          （xs／sm／md／lg／xl 或 CSS 长度／像素／getter，缺省 md）和{" "}
-          <code class="text-xs">fullscreenable</code>
-          （是否显示全屏切换，缺省 false）、
+          搜索弹层的 Modal 参数写在 <code class="text-xs">modal</code>
+          上（width 缺省 md、maxHeight、fullscreenable
+          全屏按钮、centered、draggable 等）。{" "}
           <code class="text-xs">autoFullscreen</code>
           （打开即全屏，所有端，缺省 false）和{" "}
           <code class="text-xs">mobileAutoFullscreen</code>
-          （仅移动端打开即全屏，缺省 false）。字段类型对齐表单：date／datetime
-          用选择器，number 为普通文本输入，并支持多选。<code class="text-xs">
+          （仅移动端打开即全屏，缺省 false）写在 search
+          上。字段类型对齐表单：date／datetime 用选择器，number
+          为普通文本输入，并支持多选。<code class="text-xs">
             search.actions
           </code>{" "}
           与 <code class="text-xs">search.render</code>{" "}
@@ -4432,14 +4420,13 @@ function DataPanelTabsDemo() {
           （字段）＞ 内置控件；旁路层用{" "}
           <code class="text-xs">children</code>＋自定义{" "}
           <code class="text-xs">action</code>
-          。弹层可用 <code class="text-xs">width</code>
-          （xs／sm／md／lg／xl 或 CSS 长度／像素／getter，缺省 md）和{" "}
-          <code class="text-xs">fullscreenable</code>
-          （是否显示全屏切换，缺省 false）、
+          。弹层的 Modal 参数写在 <code class="text-xs">form.modal</code>
+          上（width 缺省 md、maxHeight、fullscreenable
+          全屏按钮、centered、draggable 等）。{" "}
           <code class="text-xs">autoFullscreen</code>
           （打开即全屏，所有端，缺省 false）和{" "}
           <code class="text-xs">mobileAutoFullscreen</code>
-          （仅移动端打开即全屏，缺省 false）。
+          （仅移动端打开即全屏，缺省 false）写在 form 上。
         </Paragraph>
         <Title level={3} id="api-type-FormConfig">FormConfig</Title>
         <DocsApiTable rows={FORM_CONFIG_API} />
@@ -4452,29 +4439,26 @@ function DataPanelTabsDemo() {
           View（ViewConfig / ViewItem）
         </Title>
         <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
-          详情字段区用 Descriptions 展示。Descriptions 的参数（除 items、title）可直接写在{" "}
-          <code class="text-xs">view</code> 上，与 title／props／actions 混在一起，例如{" "}
-          <code class="text-xs">column</code>（本插槽缺省 1）、
-          <code class="text-xs">size</code>（缺省 sm）、
-          <code class="text-xs">bordered</code>（缺省 true）、
-          <code class="text-xs">layout</code>、
-          <code class="text-xs">colon</code>、
-          <code class="text-xs">labelAlign</code>。
-          <code class="text-xs">title</code> 仍是弹层标题，不会传给 Descriptions；有{" "}
-          <code class="text-xs">render</code> 时这些参数不生效。单项可写{" "}
+          详情字段区用 Descriptions 展示。view 透传两块：
+          <code class="text-xs">modal</code>{" "}
+          给弹层（width 缺省 md、maxHeight、fullscreenable 等），
+          <code class="text-xs">descriptions</code>{" "}
+          给描述列表（除 items、title；本插槽缺省{" "}
+          <code class="text-xs">column</code> 1、
+          <code class="text-xs">size</code> sm、
+          <code class="text-xs">bordered</code> true）。
+          <code class="text-xs">title</code>{" "}
+          仍是弹层标题，不会传给 Descriptions；有{" "}
+          <code class="text-xs">render</code> 时 descriptions 不生效。单项可写
+          {" "}
           <code class="text-xs">labelAlign</code>
           ，垂直方向 top／center／bottom，水平方向
-          left／center／right；未写则标签上对齐、右对齐。弹层可用{" "}
-          <code class="text-xs">width</code>
-          （xs／sm／md／lg／xl 或 CSS 长度／像素／getter，缺省 md）、
-          <code class="text-xs">maxHeight</code>
-          （最大高度，数字为像素或 CSS，缺省 90vh）和{" "}
-          <code class="text-xs">fullscreenable</code>
-          （是否显示全屏切换，缺省 false）、
+          left／center／right；未写则标签上对齐、右对齐。{" "}
           <code class="text-xs">autoFullscreen</code>
-          （打开即全屏，所有端，缺省 false）和{" "}
-          <code class="text-xs">mobileAutoFullscreen</code>
-          （仅移动端打开即全屏，缺省 false）。标签与内容的宽度比例用{" "}
+          和 <code class="text-xs">mobileAutoFullscreen</code>
+          写在 view 上，不是 Modal 参数，只在 DataPanel
+          详情弹层生效。标签与内容的宽度比例写在{" "}
+          <code class="text-xs">descriptions</code> 里，用{" "}
           <code class="text-xs">labelColPercent</code>
           （12～85，缺省 38）和 <code class="text-xs">labelMinWidth</code>
           （电脑端缺省 13.5rem，移动端容器缺省 7rem）控制。
@@ -4546,6 +4530,7 @@ function DataPanelTabsDemo() {
         interfaceName="Messages"
         defaultExportName="defaultDataPanelMessages"
         rows={MESSAGES_DATA_PANEL}
+        lead="分页的第一页、上一页、下一页、最后一页和极简当前页写在 pagination.messages，见 PaginationMessages。弹层右上角关闭、全屏和遮罩写在 form.modal／search.modal／view.modal 的 messages，见 ModalMessages。下表是面板自己的文案：工具栏全屏、详情页脚关闭，以及分页回落用的 jump／page／perPage。"
       />
     </div>
   );

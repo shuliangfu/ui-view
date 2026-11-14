@@ -4,7 +4,10 @@
  * 其余类型由 DocsTypeApiSections 追加；数据详情页复用同一份表。
  */
 import type { DocsApiTableRow } from "../components/DocsApiTable.tsx";
-import { MESSAGES_PAGINATION } from "./component-messages-rows.ts";
+import {
+  MESSAGES_MODAL,
+  MESSAGES_PAGINATION,
+} from "./component-messages-rows.ts";
 
 export const COLUMNS_API: DocsApiTableRow[] = [
   {
@@ -161,10 +164,42 @@ export const COLUMNS_API: DocsApiTableRow[] = [
     description:
       "统一格式化，覆盖默认展示与 value。导出／打印／详情只取可转文本结果；节点／HTML 回落字段原文。比 format 字段更自由，复杂节点用本字段。",
   },
+  {
+    name: "table",
+    type: "ColumnTableConfig",
+    default: "-",
+    description:
+      "透传给表格列、且未在 Column 上单独声明的参数（如 fixed、ellipsis）。title／width／align／headerAlign／sortable 仍写在 Column 上。类型定义见 ColumnTableConfig 表。",
+  },
 ];
 
 /** Search 字段全表（SearchField） */
 /** SearchConfig 段级 */
+/** form／search／view 共用的弹层透传 + 自动全屏字段 */
+export const CONFIG_MODAL_AND_AUTO_ROWS: DocsApiTableRow[] = [
+  {
+    name: "modal",
+    type: "DataChromeModalConfig",
+    default: "-",
+    description:
+      "透传给 Modal 的参数（width、maxHeight、fullscreenable、centered、draggable、keyboard…）。未写 width 时面板缺省 md。open／onClose／title／children／footer／fullscreen 由面板接管，写入无效。打开是否全屏由下面的 autoFullscreen／mobileAutoFullscreen 决定。类型定义见 DataChromeModalConfig 表。",
+  },
+  {
+    name: "autoFullscreen",
+    type: "boolean",
+    default: "false",
+    description:
+      "打开弹层时所有端自动全屏；关闭后重置。与 fullscreenable（写在 modal 上）独立。与 mobileAutoFullscreen 同时为 true 时以本项为准",
+  },
+  {
+    name: "mobileAutoFullscreen",
+    type: "boolean",
+    default: "false",
+    description:
+      "打开弹层时仅移动端（视口 ≤639.98px / max-sm）自动全屏；电脑和平板仍为普通弹层。autoFullscreen 为 true 时所有端都全屏，本项不必再写",
+  },
+];
+
 export const SEARCH_CONFIG_API: DocsApiTableRow[] = [
   {
     name: "title",
@@ -198,39 +233,7 @@ export const SEARCH_CONFIG_API: DocsApiTableRow[] = [
     default: "-",
     description: "传 false 时不渲染官方底栏（自管底栏时用）",
   },
-  {
-    name: "width",
-    type:
-      '"xs" | "sm" | "md" | "lg" | "xl" | string | number | (() => string | number | undefined)',
-    default: '"md"',
-    description:
-      "弹层宽度，传给 Modal。预设名 xs／sm／md／lg／xl，或 CSS 长度／数字像素，也可零参 getter",
-  },
-  {
-    name: "maxHeight",
-    type: "string | number | (() => string | number | undefined)",
-    default: "90vh",
-    description:
-      "弹层最大高度，传给 Modal。数字为像素，字符串为 CSS（如 80vh／600px），也可零参 getter。全屏时忽略，仍为 100vh",
-  },
-  {
-    name: "fullscreenable",
-    type: "boolean",
-    default: "false",
-    description: "是否在弹层标题栏显示全屏切换，传给 Modal；与自动全屏无关",
-  },
-  {
-    name: "autoFullscreen",
-    type: "boolean",
-    default: "false",
-    description: "打开弹层时所有端自动全屏，传给 Modal 的 fullscreen；关闭后重置。与 fullscreenable 独立",
-  },
-  {
-    name: "mobileAutoFullscreen",
-    type: "boolean",
-    default: "false",
-    description: "打开弹层时仅移动端（视口 ≤639.98px / max-sm）自动全屏；电脑和平板仍为普通弹层。autoFullscreen 为 true 时所有端都全屏，本项不必再写",
-  },
+  ...CONFIG_MODAL_AND_AUTO_ROWS,
 ];
 
 export const SEARCH_API: DocsApiTableRow[] = [
@@ -541,39 +544,7 @@ export const FORM_CONFIG_API: DocsApiTableRow[] = [
     default: "-",
     description: "传 false 时不渲染官方底栏",
   },
-  {
-    name: "width",
-    type:
-      '"xs" | "sm" | "md" | "lg" | "xl" | string | number | (() => string | number | undefined)',
-    default: '"md"',
-    description:
-      "弹层宽度，传给 Modal。预设名 xs／sm／md／lg／xl，或 CSS 长度／数字像素，也可零参 getter",
-  },
-  {
-    name: "maxHeight",
-    type: "string | number | (() => string | number | undefined)",
-    default: "90vh",
-    description:
-      "弹层最大高度，传给 Modal。数字为像素，字符串为 CSS（如 80vh／600px），也可零参 getter。全屏时忽略，仍为 100vh",
-  },
-  {
-    name: "fullscreenable",
-    type: "boolean",
-    default: "false",
-    description: "是否在弹层标题栏显示全屏切换，传给 Modal；与自动全屏无关",
-  },
-  {
-    name: "autoFullscreen",
-    type: "boolean",
-    default: "false",
-    description: "打开弹层时所有端自动全屏，传给 Modal 的 fullscreen；关闭后重置。与 fullscreenable 独立",
-  },
-  {
-    name: "mobileAutoFullscreen",
-    type: "boolean",
-    default: "false",
-    description: "打开弹层时仅移动端（视口 ≤639.98px / max-sm）自动全屏；电脑和平板仍为普通弹层。autoFullscreen 为 true 时所有端都全屏，本项不必再写",
-  },
+  ...CONFIG_MODAL_AND_AUTO_ROWS,
 ];
 
 /** ViewConfig 段级 */
@@ -605,45 +576,24 @@ export const VIEW_CONFIG_API: DocsApiTableRow[] = [
     description:
       "底部按钮；内置 close 默认靠右最后。旁路可 action(row) 开 children Modal",
   },
+  ...CONFIG_MODAL_AND_AUTO_ROWS,
   {
-    name: "width",
-    type:
-      '"xs" | "sm" | "md" | "lg" | "xl" | string | number | (() => string | number | undefined)',
-    default: '"md"',
+    name: "descriptions",
+    type: "ViewDescriptionsProps",
+    default: "-",
     description:
-      "弹层宽度，传给 Modal。预设名 xs／sm／md／lg／xl，或 CSS 长度／数字像素，也可零参 getter",
+      "透传给内置详情 Descriptions 的参数（column、size、bordered、layout、colon、labelAlign、labelColPercent、labelMinWidth…）。items／title 由面板接管：items 由 view.props 生成，title 是弹层／页面标题。本插槽缺省 column=1、size=sm、bordered=true。有 render 或 DataView children 时不生效。详见 ViewDescriptionsProps 表",
   },
-  {
-    name: "maxHeight",
-    type: "string | number | (() => string | number | undefined)",
-    default: "90vh",
-    description:
-      "弹层最大高度，传给 Modal。数字为像素，字符串为 CSS（如 80vh／600px），也可零参 getter。全屏时忽略，仍为 100vh",
-  },
-  {
-    name: "fullscreenable",
-    type: "boolean",
-    default: "false",
-    description: "是否在弹层标题栏显示全屏切换，传给 Modal；与自动全屏无关",
-  },
-  {
-    name: "autoFullscreen",
-    type: "boolean",
-    default: "false",
-    description: "打开弹层时所有端自动全屏，传给 Modal 的 fullscreen；关闭后重置。与 fullscreenable 独立",
-  },
-  {
-    name: "mobileAutoFullscreen",
-    type: "boolean",
-    default: "false",
-    description: "打开弹层时仅移动端（视口 ≤639.98px / max-sm）自动全屏；电脑和平板仍为普通弹层。autoFullscreen 为 true 时所有端都全屏，本项不必再写",
-  },
+];
+
+/** view.descriptions 透传（不含 items／title） */
+export const VIEW_DESCRIPTIONS_PROPS_API: DocsApiTableRow[] = [
   {
     name: "column",
     type: "number",
     default: "1（本插槽）",
     description:
-      "内置详情 Descriptions 的栅格列数上限，直接写在 view 上。本插槽缺省 1（整行一组标签+内容）；单独使用 Descriptions 时缺省 3。实际列数仍按容器宽度收敛：移动端 1 列，平板最多 2 列，电脑端用本值。有 render 时不生效",
+      "内置详情 Descriptions 的栅格列数上限。本插槽缺省 1（整行一组标签+内容）；单独使用 Descriptions 时缺省 3。实际列数仍按容器宽度收敛：移动端 1 列，平板最多 2 列，电脑端用本值。有 render 时不生效",
   },
   {
     name: "bordered",
@@ -673,7 +623,8 @@ export const VIEW_CONFIG_API: DocsApiTableRow[] = [
     name: "class",
     type: "string",
     default: "-",
-    description: "加在内置详情 Descriptions 根节点上的额外 class。有 render 时不生效",
+    description:
+      "加在内置详情 Descriptions 根节点上的额外 class。有 render 时不生效",
   },
   {
     name: "labelClass",
@@ -699,14 +650,14 @@ export const VIEW_CONFIG_API: DocsApiTableRow[] = [
     type: "number",
     default: "38",
     description:
-      "详情 Descriptions 标签列占单列槽位宽度的百分比（12～85），与 labelMinWidth 一起决定左侧标签与右侧内容的比例。可直接写在 view 上。有 render 时不生效",
+      "详情 Descriptions 标签列占单列槽位宽度的百分比（12～85），与 labelMinWidth 一起决定左侧标签与右侧内容的比例。有 render 时不生效",
   },
   {
     name: "labelMinWidth",
     type: "string | number",
     default: '"13.5rem"',
     description:
-      "详情 Descriptions 标签列最小宽度（CSS 长度或像素数字）；适当减小可让内容区更宽。未指定时，容器宽度 ≤639.98px 自动改为 7rem。可直接写在 view 上。有 render 时不生效",
+      "详情 Descriptions 标签列最小宽度（CSS 长度或像素数字）；适当减小可让内容区更宽。未指定时，容器宽度 ≤639.98px 自动改为 7rem。有 render 时不生效",
   },
 ];
 
@@ -852,7 +803,7 @@ export const API_SOURCE_API: DocsApiTableRow[] = [
     type: "number",
     default: "20",
     description:
-      "列表请求默认每页条数。list 在 query.pageSize 缺失时用此值；DataPanel 未传 pageSize 时也用它",
+      "列表请求默认每页条数。list 在 query.pageSize 缺失时用此值；DataPanel 未写 pagination.pageSize 时也用它",
   },
   {
     name: "opts.fetch / headers / credentials / writable",
@@ -2081,14 +2032,26 @@ export const PANEL_PAGINATION_CONFIG_API: DocsApiTableRow[] = [
     type: '"full" | "default" | "simple"',
     default: "随断点",
     description:
-      "能力档，与 Pagination.preset 相同。不写时走 paginationPreset，再回落断点：电脑端 full，平板 default，移动端 simple。与 paginationPreset 同时写时以本值为准",
+      "能力档，与 Pagination.preset 相同。不写时按断点缺省：电脑端 full，平板 default，移动端 simple",
   },
   {
     name: "size",
     type: '"xs" | "sm" | "md" | "lg"',
     default: "随断点",
+    description: "分页尺寸。不写时随断点：电脑端 md，平板 sm，移动端 xs",
+  },
+  {
+    name: "pageSize",
+    type: "number",
+    default: "20",
     description:
-      "分页尺寸。不写时随断点：电脑端 md，平板 sm，移动端 xs",
+      "初始每页条数。运行时当前条数由面板托管，不要把 Pagination 的 current／onChange 写在这里。也可由 createApiDataSource({ pageSize }) 或 initialQuery.pageSize 给出",
+  },
+  {
+    name: "pageSizeOptions",
+    type: "number[]",
+    default: "[10, 20, 50, 100]",
+    description: "每页条数下拉选项",
   },
   {
     name: "showFirstLast",
@@ -2106,7 +2069,8 @@ export const PANEL_PAGINATION_CONFIG_API: DocsApiTableRow[] = [
     name: "showPageNumbers",
     type: "boolean",
     default: "随 preset",
-    description: "是否显示页码。不传时跟随 preset：simple 为 false，其余为 true",
+    description:
+      "是否显示页码。不传时跟随 preset：simple 为 false，其余为 true",
   },
   {
     name: "showQuickJumper",
@@ -2143,8 +2107,168 @@ export const PANEL_PAGINATION_CONFIG_API: DocsApiTableRow[] = [
   {
     name: "messages",
     type: "Partial<PaginationMessages>",
-    default: "面板文案",
-    description: "覆盖分页文案；未写的字段仍走面板 messages",
+    default: "-",
+    description:
+      "覆盖分页文案。first／prev／next／last／simpleCurrent 等未写时走 Pagination 默认；jumpTo／pageUnit／pageSizeUnit 未写时回落到面板 messages 的 jump／page／perPage。详见 PaginationMessages 表",
+  },
+];
+
+/** form／search／view.modal 可写的 Modal 参数（面板接管的字段除外） */
+export const DATA_CHROME_MODAL_CONFIG_API: DocsApiTableRow[] = [
+  {
+    name: "titleAlign",
+    type: '"left" | "center"',
+    default: "center",
+    description:
+      "标题对齐：center 相对弹层居中（关闭等仍贴右）；left 与操作区两端排布",
+  },
+  {
+    name: "closable",
+    type: "boolean",
+    default: "true",
+    description: "是否显示右上角关闭按钮",
+  },
+  {
+    name: "maskClosable",
+    type: "boolean",
+    default: "true",
+    description: "点击遮罩是否关闭",
+  },
+  {
+    name: "mask",
+    type: "boolean",
+    default: "true",
+    description: "是否显示半透明遮罩；false 时不渲染遮罩，maskClosable 无效",
+  },
+  {
+    name: "width",
+    type:
+      '"xs" | "sm" | "md" | "lg" | "xl" | string | number | (() => string | number | undefined)',
+    default: '"md"',
+    description:
+      "弹层宽度。预设名 xs／sm／md／lg／xl，或 CSS 长度／数字像素，也可零参 getter。未写时面板缺省 md",
+  },
+  {
+    name: "maxHeight",
+    type: "string | number | (() => string | number | undefined)",
+    default: "90vh",
+    description:
+      "弹层最大高度。数字为像素，字符串为 CSS（如 80vh／600px），也可零参 getter。全屏时忽略，仍为 100vh",
+  },
+  {
+    name: "centered",
+    type: "boolean",
+    default: "true",
+    description: "是否垂直居中。与 placement 同传时以 placement 为准",
+  },
+  {
+    name: "placement",
+    type: '"bottom"',
+    default: "-",
+    description: "在遮罩中的垂直落位。传 bottom 时自底部对齐（如底部 Sheet）",
+  },
+  {
+    name: "destroyOnClose",
+    type: "boolean",
+    default: "true（本插槽）",
+    description: "关闭后是否销毁子节点。面板缺省 true；可在 modal 里改",
+  },
+  {
+    name: "keyboard",
+    type: "boolean",
+    default: "true（本插槽）",
+    description: "是否支持按 Esc 关闭。面板缺省 true；可在 modal 里改",
+  },
+  {
+    name: "keepInView",
+    type: "boolean",
+    default: "true",
+    description: "拖动时限制在浏览器可视区内；仅 draggable 时生效",
+  },
+  {
+    name: "draggable",
+    type: "boolean",
+    default: "false",
+    description: "传 true 时标题栏可拖动",
+  },
+  {
+    name: "defaultPosition",
+    type: "{ x: number; y: number } | (() => 同上)",
+    default: "-",
+    description: "拖动位移初始值（相对默认落点的 translate，单位 px）",
+  },
+  {
+    name: "onPositionChange",
+    type: "(pos: { x: number; y: number }) => void",
+    default: "-",
+    description: "拖动过程／结束时的位移回调",
+  },
+  {
+    name: "fullscreenable",
+    type: "boolean",
+    default: "false",
+    description:
+      "是否在标题栏显示全屏切换按钮；打开是否全屏由 form／search／view 上的 autoFullscreen／mobileAutoFullscreen 决定",
+  },
+  {
+    name: "maskClass",
+    type: "string",
+    default: "-",
+    description: "遮罩 class；仅 mask 为 true（默认）时生效",
+  },
+  {
+    name: "wrapClass",
+    type: "string",
+    default: "-",
+    description: "弹层容器 class",
+  },
+  {
+    name: "bodyClass",
+    type: "string",
+    default: "-",
+    description: "内容区 class",
+  },
+  {
+    name: "footerClass",
+    type: "string",
+    default: "-",
+    description: "底部栏外层 flex 容器的 class",
+  },
+  {
+    name: "class",
+    type: "string",
+    default: "-",
+    description: "弹层盒子 class",
+  },
+  {
+    name: "messages",
+    type: "Partial<ModalMessages>",
+    default: "-",
+    description:
+      "弹层文案，透传 Modal.messages（close、enterFullscreen、exitFullscreen、mask）。只覆盖要改的字段，其余走 Modal 默认。详见 ModalMessages 表",
+  },
+];
+
+/** Column.table 可写的表格列透传参数 */
+export const COLUMN_TABLE_CONFIG_API: DocsApiTableRow[] = [
+  {
+    name: "fixed",
+    type: '"left"',
+    default: "-",
+    description: "将列固定在表格左侧，横向滚动时保持可见",
+  },
+  {
+    name: "ellipsis",
+    type: "boolean",
+    default: "false",
+    description:
+      "单元格超出宽度时截断并显示省略号；宜同时给出 width 或 maxWidth",
+  },
+  {
+    name: "defaultSortOrder",
+    type: '"ascend" | "descend"',
+    default: "-",
+    description: "该列的默认排序方向，透传 TableColumn",
   },
 ];
 
@@ -2153,13 +2277,22 @@ export const DATA_DISPLAY_TYPE_SECTIONS: DataDisplayTypeSection[] = [
     id: "Column",
     title: "Column",
     rows: COLUMNS_API,
-    lead: '列定义。系统列写 type:"selection"／"index"／"actions" 即可。',
+    lead:
+      '列定义。系统列写 type:"selection"／"index"／"actions" 即可。表格列透传参数写在 table 上，见 ColumnTableConfig。',
+  },
+  {
+    id: "ColumnTableConfig",
+    title: "ColumnTableConfig",
+    rows: COLUMN_TABLE_CONFIG_API,
+    lead:
+      "Column.table 的表格列透传参数。title／width／align／headerAlign／sortable 仍写在 Column 上。",
   },
   {
     id: "SearchConfig",
     title: "SearchConfig",
     rows: SEARCH_CONFIG_API,
-    lead: "搜索弹层配置。fullscreenable 只控制标题栏全屏按钮；autoFullscreen 为打开即全屏（所有端）；mobileAutoFullscreen 为仅移动端打开即全屏。三者均缺省 false。",
+    lead:
+      "搜索弹层配置。Modal 参数写在 modal 上（width 缺省 md、maxHeight、fullscreenable 全屏按钮等）。autoFullscreen 为打开即全屏（所有端）；mobileAutoFullscreen 为仅移动端打开即全屏；这两项写在 SearchConfig 上，缺省 false。",
   },
   {
     id: "SearchField",
@@ -2171,7 +2304,8 @@ export const DATA_DISPLAY_TYPE_SECTIONS: DataDisplayTypeSection[] = [
     id: "FormConfig",
     title: "FormConfig",
     rows: FORM_CONFIG_API,
-    lead: "新增／编辑弹层配置。fullscreenable 只控制标题栏全屏按钮；autoFullscreen 为打开即全屏（所有端）；mobileAutoFullscreen 为仅移动端打开即全屏。三者均缺省 false。",
+    lead:
+      "新增／编辑弹层配置。Modal 参数写在 modal 上（width 缺省 md、maxHeight、fullscreenable 全屏按钮等）。autoFullscreen 为打开即全屏（所有端）；mobileAutoFullscreen 为仅移动端打开即全屏；这两项写在 FormConfig 上，缺省 false。",
   },
   {
     id: "FormField",
@@ -2184,7 +2318,28 @@ export const DATA_DISPLAY_TYPE_SECTIONS: DataDisplayTypeSection[] = [
     title: "ViewConfig",
     rows: VIEW_CONFIG_API,
     lead:
-      "详情配置（DataPanel 弹层与 DataView 正文共用）。Descriptions 的参数（除 items、title）可直接写在本对象上，与 title／props／actions 混在一起；title 仍是弹层标题。有 render 时这些参数不生效。fullscreenable／autoFullscreen／mobileAutoFullscreen 只在 DataPanel 详情弹层上生效（全屏按钮、所有端打开即全屏、仅移动端打开即全屏，均缺省 false）；DataView 正文不是弹层，这三项在 DataView 上不生效。",
+      "详情配置（DataPanel 弹层与 DataView 正文共用）。view 透传两块：modal 给弹层，descriptions 给描述列表。autoFullscreen／mobileAutoFullscreen 写在 ViewConfig 上，不是 Modal 参数。modal 与自动全屏只在 DataPanel 详情弹层上生效；DataView 的 view 是页面本身，modal 与自动全屏不生效。title 仍是弹层／页面标题，不会传给 Descriptions。有 render 时 descriptions 不生效。",
+  },
+  {
+    id: "ViewDescriptionsProps",
+    title: "ViewDescriptionsProps",
+    rows: VIEW_DESCRIPTIONS_PROPS_API,
+    lead:
+      "view.descriptions 的透传对象：Descriptions 的全部参数，但 items／title 由面板接管。items 由 view.props 生成，title 是弹层／页面标题。本插槽缺省 column=1、size=sm、bordered=true。有 view.render 或 DataView children 时不生效。",
+  },
+  {
+    id: "DataChromeModalConfig",
+    title: "DataChromeModalConfig",
+    rows: DATA_CHROME_MODAL_CONFIG_API,
+    lead:
+      "form.modal／search.modal／view.modal 的透传对象：Modal 的全部参数，但 open／onClose／title／children／footer／fullscreen 由面板接管。打开是否全屏由 form／search／view 上的 autoFullscreen／mobileAutoFullscreen 决定。未写 width 时面板缺省 md。面板缺省开启 keyboard 与 destroyOnClose，可在本对象里改。弹层文案写在 messages，见 ModalMessages。",
+  },
+  {
+    id: "ModalMessages",
+    title: "ModalMessages",
+    rows: MESSAGES_MODAL,
+    lead:
+      "form.modal／search.modal／view.modal 的 messages：弹层右上角关闭、全屏切换和遮罩的 aria-label。只覆盖要改的字段，其余走 Modal 默认。面板工具栏全屏和详情页脚「关闭」仍用根上的 messages。",
   },
   {
     id: "ViewItem",
@@ -2366,14 +2521,14 @@ export const DATA_DISPLAY_TYPE_SECTIONS: DataDisplayTypeSection[] = [
     title: "PanelPaginationConfig",
     rows: PANEL_PAGINATION_CONFIG_API,
     lead:
-      "DataPanel 的 pagination 对象配置：透传 Pagination 的展示参数。页码、每页条数、总数和 onChange 由面板托管；地址栏同步用根上的 syncUrl，每页条数选项用根上的 pageSizes。messages 的字段见 PaginationMessages 表。",
+      "DataPanel 的 pagination 对象配置：透传 Pagination 的展示参数。运行时的页码、当前每页条数、总数和 onChange 由面板托管；初始 pageSize 默认 20，pageSizeOptions 默认 [10, 20, 50, 100]；未写的 preset／size 走断点。地址栏同步仍用根上的 syncUrl。messages 的字段见 PaginationMessages 表。",
   },
   {
     id: "PaginationMessages",
     title: "PaginationMessages",
     rows: MESSAGES_PAGINATION,
     lead:
-      "分页文案。写在 pagination.messages 上，只覆盖要改的字段；未写的仍走面板 messages。",
+      "分页文案。写在 pagination.messages 上，只覆盖要改的字段。first／prev／next／last／simpleCurrent 等未写时走 Pagination 默认；jumpTo／pageUnit／pageSizeUnit 未写时回落到面板 messages 的 jump／page／perPage。",
   },
   {
     id: "DataChromeTab",
@@ -2483,6 +2638,10 @@ export const DATA_PANEL_EXTRA_TYPE_IDS: string[] = [
   "DataPanelHandle",
   "DataViewHandle",
   "DescriptionsLabelAlign",
+  "DataChromeModalConfig",
+  "ModalMessages",
+  "ViewDescriptionsProps",
+  "ColumnTableConfig",
   "SearchFieldConditionCtx",
   "SearchFieldRenderCtx",
   "SearchRenderCtx",
@@ -2522,6 +2681,10 @@ export const DATA_VIEW_TYPE_IDS: string[] = [
   "DataChromeTab",
   "DataViewHandle",
   "DescriptionsLabelAlign",
+  "DataChromeModalConfig",
+  "ModalMessages",
+  "ViewDescriptionsProps",
+  "ColumnTableConfig",
   "FormFieldConditionCtx",
   "FormFieldRenderCtx",
   "FormRenderCtx",

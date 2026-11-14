@@ -20,11 +20,11 @@ import type {
   ListResult,
   Messages,
   ModalShellWidth,
+  PanelPaginationConfig,
   Query,
   Row,
   RowActionsConfig,
   SearchField,
-  PanelPaginationConfig,
   ViewConfig,
   ViewDescriptionsProps,
   ViewItem,
@@ -274,6 +274,9 @@ export function pageList(cur: number, last: number): (number | "…")[] {
 /** DataPanel 默认每页条数（列表请求与底栏选择器共用） */
 export const DEFAULT_DATA_PANEL_PAGE_SIZE = 20;
 
+/** 每页条数下拉缺省选项 */
+export const DEFAULT_DATA_PANEL_PAGE_SIZES = [10, 20, 50, 100];
+
 /** 查询 → URLSearchParams（`forUrl` 时省略默认值，用于地址栏同步） */
 /** 给查询参数加可选前缀（`p1` → `p1_page`）。空／未传则原名。 */
 export function queryParamKey(name: string, prefix?: string): string {
@@ -467,6 +470,20 @@ export function columnWidthStyle(
   if (c.minWidth != null) parts.push(`min-width:${c.minWidth}px`);
   if (c.maxWidth != null) parts.push(`max-width:${c.maxWidth}px`);
   return parts.join(";");
+}
+
+/**
+ * 列上 `table` 透传：ellipsis 截断，fixed:"left" 左侧粘滞。
+ */
+export function columnTableClass(c: Pick<Column, "table">): string {
+  const parts: string[] = [];
+  if (c.table?.ellipsis) {
+    parts.push("overflow-hidden text-ellipsis whitespace-nowrap");
+  }
+  if (c.table?.fixed === "left") {
+    parts.push("sticky left-0 z-[2] bg-white dark:bg-slate-900");
+  }
+  return parts.join(" ");
 }
 
 /**
@@ -1411,7 +1428,7 @@ export function resolveViewActionsCfg(
   return view?.actions;
 }
 
-/** 从 view 上挑出可透传给 Descriptions 的参数（不含弹层 title／props／actions／render／width）。 */
+/** 从 view.descriptions 上挑出可透传给 Descriptions 的参数（不含 items／title）。 */
 const VIEW_DESCRIPTIONS_KEYS = [
   "column",
   "bordered",
@@ -1427,15 +1444,16 @@ const VIEW_DESCRIPTIONS_KEYS = [
 ] as const;
 
 /**
- * 抽出写在 {@link ViewConfig} 上的 Descriptions 参数。未写的键不出现，便于调用方保留内置缺省。
+ * 抽出写在 {@link ViewConfig.descriptions} 上的 Descriptions 参数。未写的键不出现，便于调用方保留内置缺省。
  */
 export function pickViewDescriptionsProps(
   view?: ViewConfig,
 ): ViewDescriptionsProps {
-  if (!view) return {};
+  const src = view?.descriptions;
+  if (!src) return {};
   const out: ViewDescriptionsProps = {};
   for (const key of VIEW_DESCRIPTIONS_KEYS) {
-    const value = view[key];
+    const value = src[key];
     if (value !== undefined) {
       (out as Record<string, unknown>)[key] = value;
     }
@@ -1446,6 +1464,8 @@ export function pickViewDescriptionsProps(
 const PANEL_PAGINATION_KEYS = [
   "preset",
   "size",
+  "pageSize",
+  "pageSizeOptions",
   "showFirstLast",
   "showPrevNext",
   "showPageNumbers",
@@ -1475,23 +1495,37 @@ export function pickPanelPaginationProps(
 }
 
 /**
- * 合并 `pagination`、`paginationPreset` 与断点缺省。
- * `pagination.preset` 优先于 `paginationPreset`，再回落断点；`size` 未写时走断点。
+ * 合并 `pagination` 与断点缺省。
+ * `preset`／`size` 未写时走断点；`pageSize` 默认 20，`pageSizeOptions` 默认 [10, 20, 50, 100]。
+ * preset／size／pageSize／pageSizeOptions 从 rest 里拿掉，避免再传给 Pagination（运行时页码和条数由面板托管）。
  */
 export function resolvePanelPagination(
   cfg: PanelPaginationConfig | undefined,
-  paginationPreset: PaginationPreset | undefined,
   auto: { preset: PaginationPreset; size: PaginationSize },
 ): {
   preset: PaginationPreset;
   size: PaginationSize;
-  rest: Omit<PanelPaginationConfig, "preset" | "size">;
+  pageSize: number;
+  pageSizeOptions: number[];
+  rest: Omit<
+    PanelPaginationConfig,
+    "preset" | "size" | "pageSize" | "pageSizeOptions"
+  >;
 } {
   const picked = pickPanelPaginationProps(cfg);
-  const preset = picked.preset ?? paginationPreset ?? auto.preset;
+  const preset = picked.preset ?? auto.preset;
   const size = picked.size ?? auto.size;
-  const { preset: _preset, size: _size, ...rest } = picked;
-  return { preset, size, rest };
+  const pageSize = picked.pageSize ?? DEFAULT_DATA_PANEL_PAGE_SIZE;
+  const pageSizeOptions = picked.pageSizeOptions ??
+    DEFAULT_DATA_PANEL_PAGE_SIZES;
+  const {
+    preset: _preset,
+    size: _size,
+    pageSize: _pageSize,
+    pageSizeOptions: _pageSizeOptions,
+    ...rest
+  } = picked;
+  return { preset, size, pageSize, pageSizeOptions, rest };
 }
 
 /** click:"toggle"：在恰好两档 options 之间切换；否则返回 undefined。 */

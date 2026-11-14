@@ -565,13 +565,15 @@ export function Modal(props: ModalProps): JSXRenderable {
     isFullscreen: boolean,
   ): void {
     if (!el) return;
-    if (isFullscreen) {
+    if (isFullscreen || (pos.x === 0 && pos.y === 0)) {
+      // translate(0,0) still creates a containing block for position:fixed
+      // descendants (e.g. DatePicker viewport panels), so clear it when idle.
       el.style.transform = "";
       el.style.willChange = "";
       return;
     }
     el.style.transform = `translate(${pos.x}px,${pos.y}px)`;
-    el.style.willChange = pos.x !== 0 || pos.y !== 0 ? "transform" : "";
+    el.style.willChange = "transform";
   }
 
   // Drag／open：只改 style，不触发 Portal insert 重跑
@@ -737,16 +739,14 @@ export function Modal(props: ModalProps): JSXRenderable {
         placement,
         maxHeight: resolvedMaxHeight(),
       }),
-      ...(!isFullscreen && draggable
+      ...(!isFullscreen && draggable && hasOffset
         ? {
           transform: `translate(${pos.x}px,${pos.y}px)`,
-          ...(hasOffset ? { willChange: "transform" } : {}),
+          willChange: "transform",
         }
         : {}),
     };
-    const modalClass = isFullscreen
-      ? "rounded-none"
-      : "rounded-xl min-w-0";
+    const modalClass = isFullscreen ? "rounded-none" : "rounded-xl min-w-0";
     const showHeaderActions = fullscreenable || closable;
     const wrapZ = isFullscreen ? 9999 : 300;
 

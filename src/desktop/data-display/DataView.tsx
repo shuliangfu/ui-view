@@ -93,8 +93,8 @@ import {
   parseCsv,
   parseJsonRows,
   parseXmlRows,
-  resolveFooterActions,
   pickViewDescriptionsProps,
+  resolveFooterActions,
   resolveModalWidth,
   resolveViewActionsCfg,
   resolveViewFields,
@@ -213,9 +213,9 @@ export interface DataViewProps {
   /** 卡片标题 */
   title: string;
   /**
-   * 明细配置：`props` 用 Descriptions 展示（同 DataPanel view）；
-   * Descriptions 的参数（除 `items`、`title`）可直接写在本对象上，与 title／props／actions 混在一起。
-   * `title` 仍是标题，不会传给 Descriptions。有 `render` 或 `children` 时这些参数不再生效。
+   * 明细配置：`props` 用 Descriptions 展示（同 DataPanel view）。
+   * Descriptions 的参数写在 `view.descriptions`（除 `items`、`title`）；DataView 的 view 不是弹层，`modal` 不生效。
+   * `title` 仍是标题，不会传给 Descriptions。有 `render` 或 `children` 时 descriptions 不再生效。
    * `render` 是推荐扩展点，替换字段区。字段级 `ViewItem.render` 仅在无 `view.render` 且无 `children` 时生效。
    */
   view?: ViewConfig;
@@ -2072,6 +2072,9 @@ export function DataView(props: DataViewProps): JSXRenderable {
       )}
 
       <Modal
+        keyboard
+        destroyOnClose
+        {...props.form?.modal}
         open={formOpen}
         title={() => {
           const ft = props.form?.title;
@@ -2080,12 +2083,8 @@ export function DataView(props: DataViewProps): JSXRenderable {
           if (typeof ft === "string") return ft;
           return `${m.edit} · ${props.title}`;
         }}
-        width={() => resolveModalWidth(props.form?.width)}
-        maxHeight={() => props.form?.maxHeight}
+        width={() => resolveModalWidth(props.form?.modal?.width)}
         fullscreen={() => resolveModalStartFullscreen(props.form)}
-        fullscreenable={props.form?.fullscreenable}
-        keyboard
-        destroyOnClose
         onClose={() => (formOpen.value = false)}
         // deno-lint-ignore jsx-no-children-prop
         children={formBody}
