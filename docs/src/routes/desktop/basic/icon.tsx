@@ -1206,12 +1206,12 @@ export default function BasicIcon() {
   ];
 
   const 客服支持 = [
-    { Component: IconHeadsetFace, name: "头戴耳麦" },
-    { Component: IconHeadset, name: "耳麦" },
-    { Component: IconCustomerService, name: "人物耳麦" },
-    { Component: IconHeadsetCircle, name: "圆形耳麦" },
-    { Component: IconHeadsetMessage, name: "在线客服" },
-    { Component: IconHeadsetHelp, name: "客服帮助" },
+    { Component: IconHeadsetFace, name: "HeadsetFace" },
+    { Component: IconHeadset, name: "Headset" },
+    { Component: IconCustomerService, name: "CustomerService" },
+    { Component: IconHeadsetCircle, name: "HeadsetCircle" },
+    { Component: IconHeadsetMessage, name: "HeadsetMessage" },
+    { Component: IconHeadsetHelp, name: "HeadsetHelp" },
   ];
 
   const 设置账户 = [
