@@ -61,7 +61,10 @@ function initServiceI18n(messages: Record<string, TranslationData> = {}): void {
 }
 
 /** Set locale for service error messages. Initializes i18n if not yet called. */
-export function setServiceLocale(locale: Locale, messages: Record<string, TranslationData> = {}): void {
+export function setServiceLocale(
+  locale: Locale,
+  messages: Record<string, TranslationData> = {},
+): void {
   if (!serviceI18n) initServiceI18n(messages);
   serviceI18n!.setLocale(locale);
 }

@@ -135,7 +135,7 @@ function mockFetch(
   calls: Call[],
   handler: (c: Call) => { status?: number; json: unknown },
 ) {
-  return (async (input: RequestInfo | URL, init?: RequestInit) => {
+  return ((input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
     const method = (init?.method ?? "GET").toUpperCase();
     let body: unknown;
@@ -149,10 +149,12 @@ function mockFetch(
     const c: Call = { method, url, body, headers: new Headers(init?.headers) };
     calls.push(c);
     const r = handler(c);
-    return new Response(JSON.stringify(r.json), {
-      status: r.status ?? 200,
-      headers: { "Content-Type": "application/json" },
-    });
+    return Promise.resolve(
+      new Response(JSON.stringify(r.json), {
+        status: r.status ?? 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
   }) as typeof fetch;
 }
 
@@ -300,7 +302,8 @@ describe("createApiDataSource action", () => {
     expect(() => bare.root).toThrow();
     const ds = createApiDataSource({
       baseRoute: "/api/users",
-      fetch: (async () => new Response("{}", { status: 200 })) as typeof fetch,
+      fetch: (() =>
+        Promise.resolve(new Response("{}", { status: 200 }))) as typeof fetch,
     });
     expect(ds.root).toBe("/api/users");
   });
@@ -313,11 +316,13 @@ describe("createApiDataSource action", () => {
       const calls: { url: string }[] = [];
       const ds = createApiDataSource({
         baseRoute: "/api",
-        fetch: (async (input: RequestInfo | URL) => {
+        fetch: ((input: RequestInfo | URL) => {
           calls.push({ url: String(input) });
-          return new Response(JSON.stringify({ rows: [], total: 0 }), {
-            status: 200,
-          });
+          return Promise.resolve(
+            new Response(JSON.stringify({ rows: [], total: 0 }), {
+              status: 200,
+            }),
+          );
         }) as typeof fetch,
       });
       expect(() => ds.root).toThrow();

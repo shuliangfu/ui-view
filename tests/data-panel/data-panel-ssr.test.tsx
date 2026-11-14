@@ -14,8 +14,6 @@ import {
 } from "../../src/desktop/data-display/DataPanel.tsx";
 import {
   panelHandles,
-  refreshDataPanel,
-  setDataPanelQuery,
 } from "../../src/desktop/data-display/data-panel-chrome.tsx";
 
 const COLUMNS: Column[] = [
@@ -855,8 +853,8 @@ describe("DataPanel SSR：文案与自定义", () => {
           rows: [{ id: "1", name: "A", status: "active" }],
           total: 1,
         }),
-        setField: async () => ({ removed: 0, failed: [] }),
-        remove: async () => ({ removed: 0, failed: [] }),
+        setField: () => Promise.resolve({ removed: 0, failed: [] }),
+        remove: () => Promise.resolve({ removed: 0, failed: [] }),
       },
     });
     // 自定义有 label → aria／可见文案用 label（tip 规则同）
@@ -917,8 +915,8 @@ describe("DataPanel SSR：文案与自定义", () => {
           rows: [{ id: "1", name: "A", status: "active" }],
           total: 1,
         }),
-        setField: async () => ({ removed: 0, failed: [] }),
-        remove: async () => ({ removed: 0, failed: [] }),
+        setField: () => Promise.resolve({ removed: 0, failed: [] }),
+        remove: () => Promise.resolve({ removed: 0, failed: [] }),
       },
     });
     expect(h).not.toContain('data-testid="dp-select-all"');

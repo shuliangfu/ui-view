@@ -419,8 +419,8 @@ describe("文档页 E2E：/desktop/data-display/data-view（DataView 数据明�
 
       let written = "";
       let printed = false;
-      const origOpen = window.open;
-      window.open = () =>
+      const origOpen = globalThis.open;
+      globalThis.open = () =>
         ({
           document: {
             write: (s: string) => {
@@ -442,7 +442,7 @@ describe("文档页 E2E：/desktop/data-display/data-view（DataView 数据明�
         written = fhtml;
         printed = printed || fhtml.includes("<table>");
       }
-      window.open = origOpen;
+      globalThis.open = origOpen;
       out.printed = printed;
       out.printHtml = written.includes("<table>") &&
         (written.includes("Ada Lovelace") || written.includes("Ada Updated"));
@@ -525,8 +525,9 @@ describe("文档页 E2E：/desktop/data-display/data-view（DataView 数据明�
 
       let copied = "";
       const stub = {
-        writeText: async (s: string) => {
+        writeText: (s: string) => {
           copied = s;
+          return Promise.resolve();
         },
       };
       try {

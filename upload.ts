@@ -582,15 +582,15 @@ export function uiViewUploadPlugin(
     uploadConfig,
     storage,
 
-    async onStart(container: ServiceContainer): Promise<void> {
+    onStart(container: ServiceContainer): Promise<void> {
       // Additional mounts serve their own handler; do not wrap AppConfig.upload.
-      if (standalone) return;
+      if (standalone) return Promise.resolve();
       setConfiguredUiViewUploadBasePath(basePath);
       if (!container.has("uploadHandler")) {
         console.warn(
           "[ui-view-upload] uploadHandler missing; skip complete pipeline (set AppConfig.upload = plugin.uploadConfig)",
         );
-        return;
+        return Promise.resolve();
       }
       const handler = container.get("uploadHandler") as UploadHandler;
       wrapUploadCompletePipeline(handler, {
@@ -599,6 +599,7 @@ export function uiViewUploadPlugin(
         image: options.image,
         afterComplete: options.afterComplete,
       });
+      return Promise.resolve();
     },
 
     /**
