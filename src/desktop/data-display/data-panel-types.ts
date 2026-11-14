@@ -562,6 +562,10 @@ export interface FormConfig {
   width?: ModalShellWidth;
   /** 增改弹层是否显示全屏切换，传给 Modal */
   fullscreenable?: boolean;
+  /** 打开增改弹层时所有端自动全屏，传给 Modal 的 fullscreen；默认 false */
+  autoFullscreen?: boolean;
+  /** 打开增改弹层时仅移动端（视口 ≤639.98px）自动全屏；默认 false */
+  mobileAutoFullscreen?: boolean;
 }
 
 export interface SearchConfig {
@@ -586,6 +590,10 @@ export interface SearchConfig {
   width?: ModalShellWidth;
   /** 搜索弹层是否显示全屏切换，传给 Modal */
   fullscreenable?: boolean;
+  /** 打开搜索弹层时所有端自动全屏，传给 Modal 的 fullscreen；默认 false */
+  autoFullscreen?: boolean;
+  /** 打开搜索弹层时仅移动端（视口 ≤639.98px）自动全屏；默认 false */
+  mobileAutoFullscreen?: boolean;
 }
 
 /**
@@ -616,6 +624,10 @@ export interface ViewConfig extends ViewDescriptionsProps {
   width?: ModalShellWidth;
   /** 详情弹层是否显示全屏切换，传给 Modal */
   fullscreenable?: boolean;
+  /** 打开详情弹层时所有端自动全屏，传给 Modal 的 fullscreen；默认 false */
+  autoFullscreen?: boolean;
+  /** 打开详情弹层时仅移动端（视口 ≤639.98px）自动全屏；默认 false */
+  mobileAutoFullscreen?: boolean;
 }
 
 /** 列表查询（page 从 1 起；order 对外统一 asc｜desc） */

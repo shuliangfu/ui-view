@@ -158,21 +158,21 @@ const DATA_PANEL_API: DocsApiTableRow[] = [
     type: "SearchConfig",
     default: "—",
     description:
-      "搜索弹层：title、props、actions，以及 width／fullscreenable（弹层宽度与全屏切换，缺省 md／false）。非空则工具栏搜索＋URL 同步。详见 Search 表。",
+      "搜索弹层：title、props、actions，以及 width（弹层宽度，缺省 md）、fullscreenable（标题栏全屏按钮，缺省 false）、autoFullscreen（所有端打开即全屏，缺省 false）、mobileAutoFullscreen（仅移动端打开即全屏，缺省 false）。非空则工具栏搜索＋URL 同步。详见 Search 表。",
   },
   {
     name: "form",
     type: "FormConfig",
     default: "—",
     description:
-      "增改弹层：title、props、render、actions，以及 width／fullscreenable（弹层宽度与全屏切换，缺省 md／false）。详见 Form 表。",
+      "增改弹层：title、props、render、actions，以及 width（弹层宽度，缺省 md）、fullscreenable（标题栏全屏按钮，缺省 false）、autoFullscreen（所有端打开即全屏，缺省 false）、mobileAutoFullscreen（仅移动端打开即全屏，缺省 false）。详见 Form 表。",
   },
   {
     name: "view",
     type: "ViewConfig",
     default: "columns＋form",
     description:
-      "详情弹层：title、props、render、actions，以及 width／fullscreenable（弹层宽度与全屏切换，缺省 md／false）。Descriptions 的参数（除 items、title）可直接写在 view 上，与这些字段混在一起，例如 column（本插槽缺省 1）、size（缺省 sm）、bordered（缺省 true）、layout、colon、labelAlign、labelColPercent、labelMinWidth。title 仍是弹层标题。有 render 时这些参数不生效。不写时回落列＋表单。详见 View 表。",
+      "详情弹层：title、props、render、actions，以及 width（弹层宽度，缺省 md）、fullscreenable（标题栏全屏按钮，缺省 false）、autoFullscreen（所有端打开即全屏，缺省 false）、mobileAutoFullscreen（仅移动端打开即全屏，缺省 false）。Descriptions 的参数（除 items、title）可直接写在 view 上，与这些字段混在一起，例如 column（本插槽缺省 1）、size（缺省 sm）、bordered（缺省 true）、layout、colon、labelAlign、labelColPercent、labelMinWidth。title 仍是弹层标题。有 render 时这些参数不生效。不写时回落列＋表单。详见 View 表。",
   },
   {
     name: "panelKey",
@@ -3588,7 +3588,7 @@ const rows = makeDemoRows(8);
             <code class="text-xs">form</code>／
             <code class="text-xs">search</code> 一样写成{" "}
             <code class="text-xs">
-              {"{ title, props, actions?, width?, fullscreenable?, column?, size?, bordered?, ... }"}
+              {"{ title, props, actions?, width?, fullscreenable?, autoFullscreen?, mobileAutoFullscreen?, column?, size?, bordered?, ... }"}
             </code>
             。Descriptions 的参数（除 items、title）可直接写在 view 上，例如{" "}
             <code class="text-xs">column</code>（本插槽缺省 1）、
@@ -4403,7 +4403,11 @@ function DataPanelTabsDemo() {
           搜索弹层可用 <code class="text-xs">width</code>
           （xs／sm／md／lg／xl 或 CSS 长度／像素／getter，缺省 md）和{" "}
           <code class="text-xs">fullscreenable</code>
-          （是否显示全屏切换，缺省 false）。字段类型对齐表单：date／datetime
+          （是否显示全屏切换，缺省 false）、
+          <code class="text-xs">autoFullscreen</code>
+          （打开即全屏，所有端，缺省 false）和{" "}
+          <code class="text-xs">mobileAutoFullscreen</code>
+          （仅移动端打开即全屏，缺省 false）。字段类型对齐表单：date／datetime
           用选择器，number 为普通文本输入，并支持多选。<code class="text-xs">
             search.actions
           </code>{" "}
@@ -4431,7 +4435,11 @@ function DataPanelTabsDemo() {
           。弹层可用 <code class="text-xs">width</code>
           （xs／sm／md／lg／xl 或 CSS 长度／像素／getter，缺省 md）和{" "}
           <code class="text-xs">fullscreenable</code>
-          （是否显示全屏切换，缺省 false）。
+          （是否显示全屏切换，缺省 false）、
+          <code class="text-xs">autoFullscreen</code>
+          （打开即全屏，所有端，缺省 false）和{" "}
+          <code class="text-xs">mobileAutoFullscreen</code>
+          （仅移动端打开即全屏，缺省 false）。
         </Paragraph>
         <Title level={3} id="api-type-FormConfig">FormConfig</Title>
         <DocsApiTable rows={FORM_CONFIG_API} />
@@ -4460,7 +4468,11 @@ function DataPanelTabsDemo() {
           <code class="text-xs">width</code>
           （xs／sm／md／lg／xl 或 CSS 长度／像素／getter，缺省 md）和{" "}
           <code class="text-xs">fullscreenable</code>
-          （是否显示全屏切换，缺省 false）。标签与内容的宽度比例用{" "}
+          （是否显示全屏切换，缺省 false）、
+          <code class="text-xs">autoFullscreen</code>
+          （打开即全屏，所有端，缺省 false）和{" "}
+          <code class="text-xs">mobileAutoFullscreen</code>
+          （仅移动端打开即全屏，缺省 false）。标签与内容的宽度比例用{" "}
           <code class="text-xs">labelColPercent</code>
           （12～85，缺省 38）和 <code class="text-xs">labelMinWidth</code>
           （缺省 13.5rem）控制。

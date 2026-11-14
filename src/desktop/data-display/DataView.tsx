@@ -77,6 +77,7 @@ import {
   resolveDataPanelMessages,
 } from "./data-panel-messages.ts";
 import { parseXlsx } from "./data-panel-xlsx.ts";
+import { resolveModalStartFullscreen } from "./data-panel-viewport.ts";
 import {
   buildExportFile,
   colProp,
@@ -2071,6 +2072,7 @@ export function DataView(props: DataViewProps): JSXRenderable {
           return `${m.edit} · ${props.title}`;
         }}
         width={() => resolveModalWidth(props.form?.width)}
+        fullscreen={() => resolveModalStartFullscreen(props.form)}
         fullscreenable={props.form?.fullscreenable}
         keyboard
         destroyOnClose

@@ -45,6 +45,24 @@ export function viewportTierFromMedia(
   return "desktop";
 }
 
+/** 当前视口是否为移动端（≤639.98px）。无 matchMedia／SSR 视为否（电脑端）。 */
+export function isMobileViewport(): boolean {
+  return !!globalThis.matchMedia?.(DATA_PANEL_MOBILE_MQ)?.matches;
+}
+
+/**
+ * 弹层打开时是否进入全屏：`autoFullscreen` 所有端生效；
+ * `mobileAutoFullscreen` 仅移动端生效。前者优先。
+ */
+export function resolveModalStartFullscreen(
+  cfg?: { autoFullscreen?: boolean; mobileAutoFullscreen?: boolean },
+  isMobile: boolean = isMobileViewport(),
+): boolean {
+  if (cfg?.autoFullscreen) return true;
+  if (cfg?.mobileAutoFullscreen && isMobile) return true;
+  return false;
+}
+
 /** 视口档对应的默认分页 preset 与 size；`paginationPreset` 只覆盖 preset。 */
 export function dataPanelPaginationForTier(
   tier: DataPanelViewportTier,

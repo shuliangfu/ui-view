@@ -144,6 +144,7 @@ import {
   DATA_PANEL_MOBILE_MQ,
   DATA_PANEL_TABLET_MQ,
   dataPanelPaginationForTier,
+  resolveModalStartFullscreen,
   viewportTierFromMedia,
 } from "./data-panel-viewport.ts";
 import { bindContainerWidth } from "../../shared/container-width.ts";
@@ -4514,6 +4515,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
           return `${formId.value ? m.edit : m.add} · ${props.title}`;
         }}
         width={() => resolveModalWidth(props.form?.width)}
+        fullscreen={() => resolveModalStartFullscreen(props.form)}
         fullscreenable={props.form?.fullscreenable}
         keyboard
         destroyOnClose
@@ -4531,6 +4533,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
           return `${m.search} · ${props.title}`;
         }}
         width={() => resolveModalWidth(props.search?.width)}
+        fullscreen={() => resolveModalStartFullscreen(props.search)}
         fullscreenable={props.search?.fullscreenable}
         keyboard
         destroyOnClose
@@ -4551,6 +4554,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
           return `${m.view} · ${props.title}`;
         }}
         width={() => resolveModalWidth(props.view?.width)}
+        fullscreen={() => resolveModalStartFullscreen(props.view)}
         fullscreenable={props.view?.fullscreenable}
         keyboard
         destroyOnClose

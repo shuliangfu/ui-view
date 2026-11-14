@@ -4,6 +4,7 @@
  * 其余类型由 DocsTypeApiSections 追加；数据详情页复用同一份表。
  */
 import type { DocsApiTableRow } from "../components/DocsApiTable.tsx";
+import { MESSAGES_PAGINATION } from "./component-messages-rows.ts";
 
 export const COLUMNS_API: DocsApiTableRow[] = [
   {
@@ -209,7 +210,19 @@ export const SEARCH_CONFIG_API: DocsApiTableRow[] = [
     name: "fullscreenable",
     type: "boolean",
     default: "false",
-    description: "是否在弹层标题栏显示全屏切换，传给 Modal",
+    description: "是否在弹层标题栏显示全屏切换，传给 Modal；与自动全屏无关",
+  },
+  {
+    name: "autoFullscreen",
+    type: "boolean",
+    default: "false",
+    description: "打开弹层时所有端自动全屏，传给 Modal 的 fullscreen；关闭后重置。与 fullscreenable 独立",
+  },
+  {
+    name: "mobileAutoFullscreen",
+    type: "boolean",
+    default: "false",
+    description: "打开弹层时仅移动端（视口 ≤639.98px / max-sm）自动全屏；电脑和平板仍为普通弹层。autoFullscreen 为 true 时所有端都全屏，本项不必再写",
   },
 ];
 
@@ -533,7 +546,19 @@ export const FORM_CONFIG_API: DocsApiTableRow[] = [
     name: "fullscreenable",
     type: "boolean",
     default: "false",
-    description: "是否在弹层标题栏显示全屏切换，传给 Modal",
+    description: "是否在弹层标题栏显示全屏切换，传给 Modal；与自动全屏无关",
+  },
+  {
+    name: "autoFullscreen",
+    type: "boolean",
+    default: "false",
+    description: "打开弹层时所有端自动全屏，传给 Modal 的 fullscreen；关闭后重置。与 fullscreenable 独立",
+  },
+  {
+    name: "mobileAutoFullscreen",
+    type: "boolean",
+    default: "false",
+    description: "打开弹层时仅移动端（视口 ≤639.98px / max-sm）自动全屏；电脑和平板仍为普通弹层。autoFullscreen 为 true 时所有端都全屏，本项不必再写",
   },
 ];
 
@@ -578,7 +603,19 @@ export const VIEW_CONFIG_API: DocsApiTableRow[] = [
     name: "fullscreenable",
     type: "boolean",
     default: "false",
-    description: "是否在弹层标题栏显示全屏切换，传给 Modal",
+    description: "是否在弹层标题栏显示全屏切换，传给 Modal；与自动全屏无关",
+  },
+  {
+    name: "autoFullscreen",
+    type: "boolean",
+    default: "false",
+    description: "打开弹层时所有端自动全屏，传给 Modal 的 fullscreen；关闭后重置。与 fullscreenable 独立",
+  },
+  {
+    name: "mobileAutoFullscreen",
+    type: "boolean",
+    default: "false",
+    description: "打开弹层时仅移动端（视口 ≤639.98px / max-sm）自动全屏；电脑和平板仍为普通弹层。autoFullscreen 为 true 时所有端都全屏，本项不必再写",
   },
   {
     name: "column",
@@ -2101,7 +2138,7 @@ export const DATA_DISPLAY_TYPE_SECTIONS: DataDisplayTypeSection[] = [
     id: "SearchConfig",
     title: "SearchConfig",
     rows: SEARCH_CONFIG_API,
-    lead: "搜索弹层配置。",
+    lead: "搜索弹层配置。fullscreenable 只控制标题栏全屏按钮；autoFullscreen 为打开即全屏（所有端）；mobileAutoFullscreen 为仅移动端打开即全屏。三者均缺省 false。",
   },
   {
     id: "SearchField",
@@ -2113,7 +2150,7 @@ export const DATA_DISPLAY_TYPE_SECTIONS: DataDisplayTypeSection[] = [
     id: "FormConfig",
     title: "FormConfig",
     rows: FORM_CONFIG_API,
-    lead: "新增／编辑弹层配置。",
+    lead: "新增／编辑弹层配置。fullscreenable 只控制标题栏全屏按钮；autoFullscreen 为打开即全屏（所有端）；mobileAutoFullscreen 为仅移动端打开即全屏。三者均缺省 false。",
   },
   {
     id: "FormField",
@@ -2126,7 +2163,7 @@ export const DATA_DISPLAY_TYPE_SECTIONS: DataDisplayTypeSection[] = [
     title: "ViewConfig",
     rows: VIEW_CONFIG_API,
     lead:
-      "详情配置（DataPanel 弹层与 DataView 正文共用）。Descriptions 的参数（除 items、title）可直接写在本对象上，与 title／props／actions 混在一起；title 仍是弹层标题。有 render 时这些参数不生效。",
+      "详情配置（DataPanel 弹层与 DataView 正文共用）。Descriptions 的参数（除 items、title）可直接写在本对象上，与 title／props／actions 混在一起；title 仍是弹层标题。有 render 时这些参数不生效。fullscreenable／autoFullscreen／mobileAutoFullscreen 只在 DataPanel 详情弹层上生效（全屏按钮、所有端打开即全屏、仅移动端打开即全屏，均缺省 false）；DataView 正文不是弹层，这三项在 DataView 上不生效。",
   },
   {
     id: "ViewItem",
@@ -2308,7 +2345,14 @@ export const DATA_DISPLAY_TYPE_SECTIONS: DataDisplayTypeSection[] = [
     title: "PanelPaginationConfig",
     rows: PANEL_PAGINATION_CONFIG_API,
     lead:
-      "DataPanel 的 pagination 对象配置：透传 Pagination 的展示参数。页码、每页条数、总数和 onChange 由面板托管；地址栏同步用根上的 syncUrl，每页条数选项用根上的 pageSizes。",
+      "DataPanel 的 pagination 对象配置：透传 Pagination 的展示参数。页码、每页条数、总数和 onChange 由面板托管；地址栏同步用根上的 syncUrl，每页条数选项用根上的 pageSizes。messages 的字段见 PaginationMessages 表。",
+  },
+  {
+    id: "PaginationMessages",
+    title: "PaginationMessages",
+    rows: MESSAGES_PAGINATION,
+    lead:
+      "分页文案。写在 pagination.messages 上，只覆盖要改的字段；未写的仍走面板 messages。",
   },
   {
     id: "DataChromeTab",
@@ -2413,6 +2457,7 @@ export const DATA_PANEL_EXTRA_TYPE_IDS: string[] = [
   "SyncUrl",
   "DataAlertConfig",
   "PanelPaginationConfig",
+  "PaginationMessages",
   "DataChromeTab",
   "DataPanelHandle",
   "DataViewHandle",

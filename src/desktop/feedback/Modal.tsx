@@ -168,8 +168,9 @@ export interface ModalProps {
   /**
    * 每次打开弹层时是否初始为全屏布局；关闭后重置为窗口态。
    * 与 `fullscreenable` 独立；二者可同时使用（打开即全屏且保留切换按钮）。
+   * 可传零参 getter，在每次打开时再求值（例如按当前视口决定）。
    */
-  fullscreen?: boolean;
+  fullscreen?: boolean | (() => boolean | undefined);
   /** 是否显示全屏切换按钮（与关闭按钮并排），默认 false；传 true 时显示 */
   fullscreenable?: boolean;
   /** 遮罩 class（仅 `mask !== false` 时生效） */
@@ -234,6 +235,13 @@ const WIDTH_PRESETS: Record<string, string> = {
  * @param v - `ModalProps.width`
  * @returns 用于样式计算的宽度原始值
  */
+function readModalFullscreenInput(
+  v: boolean | (() => boolean | undefined) | undefined,
+): boolean {
+  if (typeof v === "function") return !!v();
+  return !!v;
+}
+
 function readModalWidthInput(
   v: ModalWidthInput | undefined,
 ): ModalWidthPrimitive {
@@ -480,7 +488,6 @@ export function Modal(props: ModalProps): JSXRenderable {
     keyboard = false,
     draggable = false,
     keepInView,
-    fullscreen: startInFullscreen = false,
     fullscreenable = false,
     titleAlign = "center",
     maskClass,
@@ -548,7 +555,7 @@ export function Modal(props: ModalProps): JSXRenderable {
    */
   createEffect(() => {
     if (isOpen()) {
-      fullscreen.value = !!startInFullscreen;
+      fullscreen.value = readModalFullscreenInput(props.fullscreen);
       // Re-apply host defaultPosition on each open (e.g. restored from localStorage).
       position.value = readModalDefaultPosition(props.defaultPosition);
     } else {
