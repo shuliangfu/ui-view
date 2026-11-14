@@ -54,7 +54,7 @@ const ALERT_API: ApiRow[] = [
     type: "() => void",
     default: "-",
     description:
-      "关闭回调；Alert 不内置隐藏状态，须在回调里改 state/signal 并不再渲染本组件",
+      "关闭回调。点击后 Alert 会自行隐藏并调用本回调。若还要用父级 signal 再次显示，请把 signal 放在模块作用域，并在 {() => ...} 里读取",
   },
   {
     name: "banner",
@@ -133,10 +133,10 @@ const exampleDescription = `<Alert
 
 const exampleClosable = `import { createSignal } from "@dreamer/view";
 
-/** 若页面函数会因 data-view-dynamic 等重跑，勿在函数体内每次 new Signal；见文档页实现（模块级 visible）。 */
+/** 显隐 signal 放模块级；读取必须包在 {() => ...} 里，否则组件 setup 在 untrack 中，关闭后界面不更新。 */
 const visible = createSignal(true);
 
-{visible.value && (
+{() => visible.value && (
   <Alert
     type="warning"
     message="可关闭的提示"
@@ -239,42 +239,51 @@ export default function FeedbackAlert() {
         <div class="space-y-4">
           <Title level={3}>可关闭</Title>
           <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
-            点击关闭仅触发{" "}
+            点击关闭后 Alert 会自行隐藏，并触发{" "}
             <code class="rounded bg-slate-200/80 px-1 font-mono text-xs dark:bg-slate-600/80">
               onClose
             </code>
-            ，须由父级（如{" "}
+            。若还要用父级{" "}
             <code class="rounded bg-slate-200/80 px-1 font-mono text-xs dark:bg-slate-600/80">
               createSignal
-            </code>
-            ）控制是否继续渲染。父级若会整页重跑，请把该 signal 放在
+            </code>{" "}
+            控制再次显示，请把 signal 放在
             <strong class="font-medium">模块作用域</strong>
-            （勿在页面函数内每次新建），否则关闭只更新旧实例，界面不消失。
+            ，并在{" "}
+            <code class="rounded bg-slate-200/80 px-1 font-mono text-xs dark:bg-slate-600/80">
+              {"{() => ...}"}
+            </code>{" "}
+            里读取（勿在页面函数内每次新建，也勿在组件顶层直接读
+            .value），否则关闭后界面不更新。
           </Paragraph>
           {/* 容器 w-full，与 Alert 默认 w-full 一致，占满文档内容区 */}
-          <div class="flex w-full flex-wrap items-stretch gap-2">
-            {closableAlertDemoVisible.value
-              ? (
-                <Alert
-                  type="warning"
-                  message="可关闭的提示"
-                  closable
-                  onClose={() => {
-                    closableAlertDemoVisible.value = false;
-                  }}
-                />
-              )
-              : (
-                <Button
-                  type="button"
-                  variant="default"
-                  onClick={() => {
-                    closableAlertDemoVisible.value = true;
-                  }}
-                >
-                  重新显示提示
-                </Button>
-              )}
+          <div
+            class="flex w-full flex-wrap items-stretch gap-2"
+            data-testid="alert-closable-demo"
+          >
+            {() =>
+              closableAlertDemoVisible.value
+                ? (
+                  <Alert
+                    type="warning"
+                    message="可关闭的提示"
+                    closable
+                    onClose={() => {
+                      closableAlertDemoVisible.value = false;
+                    }}
+                  />
+                )
+                : (
+                  <Button
+                    type="button"
+                    variant="default"
+                    onClick={() => {
+                      closableAlertDemoVisible.value = true;
+                    }}
+                  >
+                    重新显示提示
+                  </Button>
+                )}
           </div>
           <CodeBlock
             title="代码示例"

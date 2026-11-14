@@ -64,9 +64,12 @@ export interface CheckboxProps {
   messages?: Partial<CheckboxMessages>;
 }
 
-/** 勾选框本体底纹（不含 ring） */
-const checkboxInputSurface =
-  "rounded border-slate-300 dark:border-slate-600 text-blue-600 focus:outline-hidden bg-slate-100 shadow-inner dark:shadow-[inset_0_2px_5px_rgb(0_0_0_/_0.55),inset_0_-1px_0_rgb(255_255_255_/_0.06)] dark:bg-slate-900/70 dark:checked:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer";
+/** 勾选框本体底纹（不含 ring）。
+ * `appearance-none` 让禁用态的灰色底真正画到原生 input 上；
+ * 禁用只比启用加深一档灰，浅色用 slate-300，深色用 slate-600，不用全黑，也不画斜线。
+ */
+export const checkboxInputSurface =
+  "appearance-none rounded border border-slate-300 dark:border-slate-500 text-blue-600 focus:outline-hidden bg-white bg-no-repeat bg-center bg-[length:70%_70%] shadow-inner dark:shadow-[inset_0_2px_5px_rgb(0_0_0_/_0.55),inset_0_-1px_0_rgb(255_255_255_/_0.06)] dark:bg-slate-800 cursor-pointer checked:bg-blue-600 checked:border-blue-600 dark:checked:bg-blue-500 dark:checked:border-blue-500 checked:bg-[url('data:image/svg+xml,%3Csvg%20xmlns=%27http://www.w3.org/2000/svg%27%20viewBox=%270%200%2016%2016%27%20fill=%27none%27%3E%3Cpath%20stroke=%27%23fff%27%20stroke-width=%272.2%27%20stroke-linecap=%27round%27%20stroke-linejoin=%27round%27%20d=%27M3.5%208.5%206.5%2011.5%2012.5%204.5%27/%3E%3C/svg%3E')] disabled:cursor-not-allowed disabled:shadow-none disabled:opacity-100 disabled:bg-slate-300 disabled:border-slate-300 dark:disabled:bg-slate-600 dark:disabled:border-slate-500 dark:disabled:checked:bg-slate-600";
 const labelCls =
   "inline-flex items-center cursor-pointer text-slate-700 dark:text-slate-300";
 

@@ -2,6 +2,9 @@
  * Pagination 分页组件的纯逻辑，便于单测与复用。
  */
 
+/** 能力档：与富文本 `toolbarPreset` 相同的三档用词，分页无工具栏故参数名为 `preset`。 */
+export type PaginationPreset = "full" | "default" | "simple";
+
 export interface PaginationState {
   /** 总页数 */
   totalPages: number;
@@ -11,12 +14,102 @@ export interface PaginationState {
   from: number;
   /** 当前页在总条数中的结束序号（1-based），仅 total 存在时有意义 */
   to: number;
-  /** 是否可上一页 */
+  /** 是否可上一页（亦为是否可到第一页） */
   canPrev: boolean;
-  /** 是否可下一页 */
+  /** 是否可下一页（亦为是否可到最后一页） */
   canNext: boolean;
+  /** 是否可跳到第一页，与 canPrev 相同 */
+  canFirst: boolean;
+  /** 是否可跳到最后一页，与 canNext 相同 */
+  canLast: boolean;
   /** 要展示的页码数组，负数表示省略号（-1 前省略，-2 后省略） */
   pages: number[];
+}
+
+/**
+ * 各 `preset` 对应的默认能力开关。显式传入的 show* 会覆盖这里的值。
+ *
+ * - `full`：全部能力（第一页／上一页／页码／下一页／最后一页，以及快速跳转；总条数在传入 `total` 时显示）
+ * - `default`：一般能力（上一页／下一页＋页码，无第一页／最后一页／跳转）
+ * - `simple`：极简（上一页／下一页＋「第 n / m 页」，无页码、无第一页／最后一页／跳转）
+ */
+export interface PaginationPresetFlags {
+  showFirstLast: boolean;
+  showPrevNext: boolean;
+  showPageNumbers: boolean;
+  showQuickJumper: boolean;
+  /** 仅 `simple`：在上一页／下一页之间显示「第 n / m 页」 */
+  showSimpleCurrent: boolean;
+  /** `true` 表示默认开启总条数（仍须传入 `total` 才会渲染） */
+  showTotal: boolean;
+}
+
+export const PAGINATION_PRESET_FLAGS: Record<
+  PaginationPreset,
+  PaginationPresetFlags
+> = {
+  full: {
+    showFirstLast: true,
+    showPrevNext: true,
+    showPageNumbers: true,
+    showQuickJumper: true,
+    showSimpleCurrent: false,
+    showTotal: true,
+  },
+  default: {
+    showFirstLast: false,
+    showPrevNext: true,
+    showPageNumbers: true,
+    showQuickJumper: false,
+    showSimpleCurrent: false,
+    showTotal: false,
+  },
+  simple: {
+    showFirstLast: false,
+    showPrevNext: true,
+    showPageNumbers: false,
+    showQuickJumper: false,
+    showSimpleCurrent: true,
+    showTotal: false,
+  },
+};
+
+export interface PaginationPresetOverrides {
+  showFirstLast?: boolean;
+  showPrevNext?: boolean;
+  showPageNumbers?: boolean;
+  showQuickJumper?: boolean;
+  showTotal?: boolean | ((total: number, range: [number, number]) => unknown);
+}
+
+export interface ResolvedPaginationFlags {
+  showFirstLast: boolean;
+  showPrevNext: boolean;
+  showPageNumbers: boolean;
+  showQuickJumper: boolean;
+  showSimpleCurrent: boolean;
+  showTotal: boolean | ((total: number, range: [number, number]) => unknown);
+}
+
+/**
+ * 按 `preset`（缺省 `default`）解析能力开关，显式传入的 show* 优先。
+ */
+export function resolvePaginationPreset(
+  preset: PaginationPreset | undefined,
+  overrides: PaginationPresetOverrides = {},
+): ResolvedPaginationFlags {
+  const base = PAGINATION_PRESET_FLAGS[preset ?? "default"];
+  const showPageNumbers = overrides.showPageNumbers ?? base.showPageNumbers;
+  return {
+    showFirstLast: overrides.showFirstLast ?? base.showFirstLast,
+    showPrevNext: overrides.showPrevNext ?? base.showPrevNext,
+    showPageNumbers,
+    showQuickJumper: overrides.showQuickJumper ?? base.showQuickJumper,
+    showSimpleCurrent: base.showSimpleCurrent && !showPageNumbers,
+    showTotal: overrides.showTotal !== undefined
+      ? overrides.showTotal
+      : base.showTotal,
+  };
 }
 
 /**
@@ -65,6 +158,8 @@ export function getPaginationState(
     to,
     canPrev,
     canNext,
+    canFirst: canPrev,
+    canLast: canNext,
     pages,
   };
 }

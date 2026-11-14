@@ -104,20 +104,28 @@ describe("joinApiPath / apiQueryParams / normalizeListPayload", () => {
   });
 
   it("normalizeListPayload 常见壳", () => {
-    expect(normalizeListPayload({ items: [{ id: "1" }], total: 1 })).toEqual({
-      items: [{ id: "1" }],
+    expect(normalizeListPayload({ rows: [{ id: "1" }], total: 1 })).toEqual({
+      rows: [{ id: "1" }],
       total: 1,
     });
     expect(
       normalizeListPayload({
-        data: { items: [{ id: "2" }], total: 3, totals: { a: 1 } },
+        data: { rows: [{ id: "2" }], total: 3, totals: { a: 1 } },
       }),
-    ).toEqual({ items: [{ id: "2" }], total: 3, totals: { a: 1 } });
-    // 兼容：没有 items 时仍接受 rows
-    expect(normalizeListPayload({ rows: [{ id: "3" }], total: 1 })).toEqual({
-      items: [{ id: "3" }],
+    ).toEqual({ rows: [{ id: "2" }], total: 3, totals: { a: 1 } });
+    // 兼容：没有 rows 时仍接受 items（输出仍为 rows）
+    expect(normalizeListPayload({ items: [{ id: "3" }], total: 1 })).toEqual({
+      rows: [{ id: "3" }],
       total: 1,
     });
+    // 同时有 rows 与 items 时以 rows 为准
+    expect(
+      normalizeListPayload({
+        rows: [{ id: "r" }],
+        items: [{ id: "i" }],
+        total: 1,
+      }),
+    ).toEqual({ rows: [{ id: "r" }], total: 1 });
   });
 });
 
@@ -156,7 +164,7 @@ describe("createApiDataSource action", () => {
       resource: "users",
       fetch: mockFetch(calls, (c) => {
         if (c.method === "GET" && c.url.startsWith("/api/users?")) {
-          return { json: { items: [{ id: "1" }], total: 1 } };
+          return { json: { rows: [{ id: "1" }], total: 1 } };
         }
         if (c.url === "/api/users/view?id=1") {
           return { json: { id: "1", name: "A" } };
@@ -171,7 +179,12 @@ describe("createApiDataSource action", () => {
             },
           };
         }
-        if (c.url.split("?")[0] === "/api/users/update") return { json: { ok: true } };
+        if (c.url.split("?")[0] === "/api/users/update") {
+          return { json: { ok: true } };
+        }
+        if (c.url.split("?")[0] === "/api/users/setField") {
+          return { json: { removed: 2, failed: [] } };
+        }
         if (c.url.split("?")[0] === "/api/users/remove") {
           return { json: { removed: 1, failed: [] } };
         }
@@ -180,10 +193,15 @@ describe("createApiDataSource action", () => {
     });
     expect(ds.root).toBe("/api/users");
     expect(ds.apiMode).toBe("action");
-    expect(await ds.list(Q)).toEqual({ items: [{ id: "1" }], total: 1 });
+    expect(await ds.list(Q)).toEqual({ rows: [{ id: "1" }], total: 1 });
     expect(await ds.view("1")).toEqual({ id: "1", name: "A" });
+    expect(await ds.get!("1")).toEqual({ id: "1", name: "A" });
     expect(await ds.create!({ name: "A" })).toEqual({ ok: true });
     expect(await ds.update!("1", { name: "B" })).toEqual({ ok: true });
+    expect(await ds.setField!(["1", "2"], "status", "on")).toEqual({
+      removed: 2,
+      failed: [],
+    });
     expect(await ds.remove!(["1"])).toEqual({ removed: 1, failed: [] });
     expect(await ds.importRows!([{ name: "x" }, { name: "y" }])).toEqual({
       created: 2,
@@ -193,15 +211,24 @@ describe("createApiDataSource action", () => {
     expect(paths).toEqual([
       "GET /api/users?page=1&pageSize=10&sort=name&order=asc&role=admin",
       "GET /api/users/view?id=1",
+      "GET /api/users/view?id=1",
       "POST /api/users/create",
       "POST /api/users/update?id=1",
+      "POST /api/users/setField?id=1&id=2",
       "POST /api/users/remove?id=1",
       "POST /api/users/create",
     ]);
-    const importBody = calls[5].body as { rows: unknown[] };
+    const setBody = calls[5].body as Record<string, unknown>;
+    expect(setBody).toEqual({
+      ids: ["1", "2"],
+      id: "1",
+      field: "status",
+      value: "on",
+    });
+    const importBody = calls[7].body as { rows: unknown[] };
     expect(Array.isArray(importBody.rows)).toBe(true);
     expect(importBody.rows.length).toBe(2);
-    const createBody = calls[2].body as Record<string, unknown>;
+    const createBody = calls[3].body as Record<string, unknown>;
     expect(createBody.name).toBe("A");
     expect(createBody.rows).toBeUndefined();
   });
@@ -213,7 +240,7 @@ describe("createApiDataSource action", () => {
       headers: { "X-Test": "1" },
       fetch: mockFetch(calls, (c) => {
         if (c.method === "GET" && c.url.startsWith("/api/users?")) {
-          return { json: { items: [], total: 0 } };
+          return { json: { rows: [], total: 0 } };
         }
         if (c.url === "/api/users/view?id=1") {
           return { json: { id: "1" } };
@@ -285,7 +312,7 @@ describe("createApiDataSource restful", () => {
       apiMode: "restful",
       fetch: mockFetch(calls, (c) => {
         if (c.method === "GET" && c.url.startsWith("/api/users?")) {
-          return { json: { items: [], total: 0 } };
+          return { json: { rows: [], total: 0 } };
         }
         if (c.method === "GET" && c.url === "/api/users/9") {
           return { json: { data: { id: "9" } } };
@@ -299,8 +326,16 @@ describe("createApiDataSource restful", () => {
         if (c.method === "DELETE" && c.url === "/api/users/9") {
           return { json: {} };
         }
-        if (c.method === "DELETE" && c.url === "/api/users/8") {
-          return { status: 500, json: { message: "boom" } };
+        if (
+          c.method === "POST" &&
+          c.url.split("?")[0] === "/api/users/remote-batch"
+        ) {
+          return {
+            json: { removed: 1, failed: [{ id: "8", error: "boom" }] },
+          };
+        }
+        if (c.url === "/api/users/setField") {
+          return { json: { removed: 1, failed: [] } };
         }
         if (c.url === "/api/users/import") {
           return { json: { created: 1, failed: 0 } };
@@ -312,6 +347,11 @@ describe("createApiDataSource restful", () => {
     expect(await ds.view("9")).toEqual({ id: "9" });
     await ds.create!({ name: "n" });
     await ds.update!("9", { name: "m" });
+    expect(await ds.setField!(["9"], "status", "on")).toEqual({
+      removed: 1,
+      failed: [],
+    });
+    expect(await ds.remove!(["9"])).toEqual({ removed: 1, failed: [] });
     expect(await ds.remove!(["9", "8"])).toEqual({
       removed: 1,
       failed: [{ id: "8", error: "boom" }],
@@ -322,9 +362,103 @@ describe("createApiDataSource restful", () => {
       "GET /api/users/9",
       "POST /api/users",
       "PUT /api/users/9",
+      "POST /api/users/setField",
       "DELETE /api/users/9",
-      "DELETE /api/users/8",
+      "POST /api/users/remote-batch",
       "POST /api/users/import",
     ]);
+    expect(calls[4].body).toEqual({ ids: ["9"], field: "status", value: "on" });
+  });
+});
+
+describe("createApiDataSource setField 能力", () => {
+  it("writable:false 不挂 setField，仍有 view／get", () => {
+    const ds = createApiDataSource({
+      baseRoute: "/api/users",
+      writable: false,
+      fetch: (() =>
+        Promise.resolve(new Response("{}", { status: 200 }))) as typeof fetch,
+    });
+    expect(ds.setField).toBe(undefined);
+    expect(ds.create).toBe(undefined);
+    expect(typeof ds.view).toBe("function");
+    expect(typeof ds.get).toBe("function");
+  });
+});
+
+describe("createApiDataSource 删除路径默认与覆盖", () => {
+  it("action：单条 POST …/remove，批量 POST …/remote-batch；removeBatch 即使一条也走 remote-batch", async () => {
+    const calls: Call[] = [];
+    const ds = createApiDataSource({
+      baseRoute: "/api/users",
+      fetch: mockFetch(calls, (c) => {
+        const path = c.url.split("?")[0];
+        if (path === "/api/users/remove") {
+          return { json: { removed: 1, failed: [] } };
+        }
+        if (path === "/api/users/remote-batch") {
+          const ids = (c.body as { ids?: string[] })?.ids ?? [];
+          return { json: { removed: ids.length, failed: [] } };
+        }
+        return { status: 404, json: { error: "no" } };
+      }),
+    });
+    expect(await ds.remove!(["1"])).toEqual({ removed: 1, failed: [] });
+    expect(await ds.remove!(["1", "2"])).toEqual({ removed: 2, failed: [] });
+    expect(await ds.removeBatch!(["3"])).toEqual({ removed: 1, failed: [] });
+    expect(calls.map((c) => `${c.method} ${c.url}`)).toEqual([
+      "POST /api/users/remove?id=1",
+      "POST /api/users/remote-batch?id=1&id=2",
+      "POST /api/users/remote-batch?id=3",
+    ]);
+    expect(calls[1].body).toEqual({ ids: ["1", "2"], id: "1" });
+    expect(calls[2].body).toEqual({ ids: ["3"], id: "3" });
+  });
+
+  it("可用 removeAction／batchRemoveAction 覆盖路径（相对段或绝对路径）", async () => {
+    const calls: Call[] = [];
+    const ds = createApiDataSource({
+      baseRoute: "/api/users",
+      removeAction: "delete-one",
+      batchRemoveAction: "/custom/batch-del",
+      fetch: mockFetch(calls, (c) => {
+        const path = c.url.split("?")[0];
+        if (path === "/api/users/delete-one" || path === "/custom/batch-del") {
+          return { json: { removed: 1, failed: [] } };
+        }
+        return { status: 404, json: { error: "no" } };
+      }),
+    });
+    await ds.remove!(["1"]);
+    await ds.removeBatch!(["1", "2"]);
+    expect(calls.map((c) => `${c.method} ${c.url}`)).toEqual([
+      "POST /api/users/delete-one?id=1",
+      "POST /custom/batch-del?id=1&id=2",
+    ]);
+  });
+
+  it("restful：单条默认 DELETE 根/:id；显式 removeAction 后改为 POST", async () => {
+    const calls: Call[] = [];
+    const ds = createApiDataSource({
+      baseRoute: "/api/users",
+      apiMode: "restful",
+      removeAction: "remove",
+      fetch: mockFetch(calls, () => ({ json: { removed: 1, failed: [] } })),
+    });
+    await ds.remove!(["9"]);
+    expect(calls.map((c) => `${c.method} ${c.url}`)).toEqual([
+      "POST /api/users/remove?id=9",
+    ]);
+  });
+
+  it("writable:false 不挂 remove／removeBatch", () => {
+    const ds = createApiDataSource({
+      baseRoute: "/api/users",
+      writable: false,
+      fetch: (() =>
+        Promise.resolve(new Response("{}", { status: 200 }))) as typeof fetch,
+    });
+    expect(ds.remove).toBe(undefined);
+    expect(ds.removeBatch).toBe(undefined);
   });
 });

@@ -6,7 +6,7 @@
 import { Paragraph, Title } from "@dreamer/ui-view/basic";
 
 import { CodeBlock } from "@dreamer/ui-view/data-display";
-import { FlagImg } from "@internal/ui-view-flag-img";
+import { FlagImg } from "@dreamer/ui-view/icons";
 import {
   DocsApiTable,
   type DocsApiTableRow,
@@ -52,8 +52,8 @@ const FLAG_IMG_API: DocsApiTableRow[] = [
   },
 ];
 
-const importCode =
-  `import { FlagImg } from "@internal/ui-view-flag-img"; // 文档站别名；库内请走 icons 导出链
+/** 引入示例：与包正式导出路径一致 */
+const importCode = `import { FlagImg } from "@dreamer/ui-view/icons";
 
 const svg = \`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 5 3"><rect width="5" height="3" fill="#dc2626"/></svg>\`;
 
@@ -90,9 +90,8 @@ export default function BasicFlagImgDoc() {
       <section class="space-y-3">
         <Title level={2}>引入</Title>
         <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
-          包根聚合未列出 FlagImg 时，可从与源码一致的 internal 路径或 icons
-          子模块导入；本站示例使用文档专用别名{" "}
-          <code class="text-sm">@internal/ui-view-flag-img</code>。
+          从 icons 子路径导入：{" "}
+          <code class="text-sm">@dreamer/ui-view/icons</code>。
         </Paragraph>
         <CodeBlock
           title="代码示例"

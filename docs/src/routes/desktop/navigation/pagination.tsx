@@ -21,6 +21,13 @@ interface ApiRow {
 
 const PAGINATION_API: ApiRow[] = [
   {
+    name: "preset",
+    type: '"full" | "default" | "simple"',
+    default: '"default"',
+    description:
+      '能力档，与富文本 toolbarPreset 相同的三档用词（分页无工具栏，故名为 preset）。"full" 全部能力：第一页（IconChevronsLeft 双箭头）、上一页、页码、下一页、最后一页（IconChevronsRight）；默认开启快速跳转；传入 total 时显示总条数；传入 pageSizeOptions 时显示每页条数。"default" 一般能力（默认）：上一页、页码、下一页；无第一页／最后一页／跳转。"simple" 极简：上一页、「第 n / m 页」、下一页；无页码、无第一页／最后一页／跳转。显式传入的 showFirstLast、showPrevNext、showPageNumbers、showQuickJumper、showTotal 会覆盖该档默认值。',
+  },
+  {
     name: "current",
     type: "number | (() => number)",
     default: "-",
@@ -61,50 +68,60 @@ const PAGINATION_API: ApiRow[] = [
     type: "number[]",
     default: "-",
     description:
-      "每页条数选项（如 [10, 20, 50]）；渲染库内 Select 自绘下拉，无原生 <select>",
+      "每页条数选项（如 [10, 20, 50]）；渲染库内 Select 自绘下拉，无原生 <select>。任意档在传入此数组且同时有 total 时都会显示条数切换器",
   },
   {
     name: "onChange",
-    type: "(page, pageSize?) => void",
+    type: "(page: number, pageSize?: number) => void",
     default: "-",
-    description: "页码/条数变化回调",
+    description: "页码/条数变化回调；切换每页条数时第二个参数为新的 pageSize，并回到第 1 页",
+  },
+  {
+    name: "showFirstLast",
+    type: "boolean",
+    default: "跟随 preset",
+    description:
+      "是否显示第一页／最后一页（双箭头）。不传时跟随 preset：full 为 true，default / simple 为 false。在第一页时第一页与上一页禁用，在最后一页时最后一页与下一页禁用",
   },
   {
     name: "showPrevNext",
     type: "boolean",
-    default: "true",
-    description: "是否显示上一页/下一页",
+    default: "跟随 preset（三档均为 true）",
+    description: "是否显示上一页/下一页；不传时跟随 preset",
   },
   {
     name: "showPageNumbers",
     type: "boolean",
-    default: "true",
-    description: "是否显示页码",
+    default: "跟随 preset",
+    description:
+      "是否显示页码；不传时跟随 preset（full / default 为 true，simple 为 false）",
   },
   {
     name: "showQuickJumper",
     type: "boolean",
-    default: "false",
-    description: "是否显示快速跳转",
+    default: "跟随 preset",
+    description:
+      "是否显示快速跳转（输入框）；不传时跟随 preset（仅 full 为 true）。输入越界页码会夹到 1..总页数",
   },
   {
     name: "showTotal",
-    type: "boolean | ((total, range) => unknown)",
-    default: "-",
-    description: "是否显示总条数/范围",
+    type: "boolean | ((total: number, range: [number, number]) => unknown)",
+    default: "跟随 preset",
+    description:
+      "是否显示总条数/范围。true 时显示「共 total 条」，也可传函数 (total, [from, to]) => 节点。不传时跟随 preset（仅 full 默认 true，且须有 total 才渲染）",
   },
   {
     name: "disabled",
     type: "boolean",
     default: "false",
-    description: "是否禁用",
+    description: "是否禁用全部页码、跳转与条数切换",
   },
   {
     name: "syncUrl",
     type: "boolean",
     default: "false",
     description:
-      "为 true 时，页码/每页条数变化会写入 URL（?page=1&pageSize=10），不刷新页面",
+      "为 true 时，页码/每页条数变化会写入 URL（?page=1&pageSize=10），不刷新页面。初始值需由调用方从 URL 读取后传入 current / pageSize 或 defaultCurrent / defaultPageSize",
   },
   {
     name: "size",
@@ -113,79 +130,88 @@ const PAGINATION_API: ApiRow[] = [
     description:
       "尺寸：同步作用于页码按钮、每页条数 Select、快速跳转；四档 xs｜sm｜md｜lg，默认 md 与改造前视觉一致；条数触发器宽度随文案＋箭头自适应、单行不换行",
   },
+  {
+    name: "testIdPrefix",
+    type: "string",
+    default: '"pagination"',
+    description:
+      "测试 id 前缀。会输出 {prefix}-first、{prefix}-prev、{prefix}-page-N、{prefix}-next、{prefix}-last、{prefix}-jump、{prefix}-pagesize、{prefix}-simple-current。数据面板传入 \"dp\"",
+  },
   { name: "class", type: "string", default: "-", description: "额外 class" },
   {
     name: "messages",
     type: "Partial<PaginationMessages>",
     default: "-",
-    description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
+    description:
+      "本地化文案；字段见上文「文案（messages）」表（含 first / last / simpleCurrent），勿将键摊入本表",
   },
 ];
 
 const importCode = `import { Pagination } from "@dreamer/ui-view/navigation";
 
 <Pagination
+  preset="full"
   defaultCurrent={1}
   defaultPageSize={10}
   total={120}
+  pageSizeOptions={[10, 20, 50]}
   onChange={() => {}}
-  showPrevNext
-  showTotal
 />`;
 
 const exampleFull = `<Pagination
+  preset="full"
   defaultCurrent={1}
   defaultPageSize={10}
   total={120}
   pageSizeOptions={[10, 20, 50]}
   onChange={handleChange}
-  showPrevNext
-  showTotal
-  showQuickJumper
+/>`;
+
+const exampleDefault = `<Pagination
+  preset="default"
+  defaultCurrent={1}
+  defaultPageSize={10}
+  total={120}
+  onChange={handleChange}
+/>`;
+
+const exampleSimple = `<Pagination
+  preset="simple"
+  defaultCurrent={1}
+  defaultPageSize={10}
+  total={120}
+  onChange={handleChange}
 />`;
 
 const exampleTotalPages = `<Pagination
   defaultCurrent={1}
   totalPages={5}
   onChange={() => {}}
-  showPrevNext
-/>`;
-
-const exampleMinimal = `<Pagination
-  defaultCurrent={1}
-  total={120}
-  defaultPageSize={10}
-  onChange={() => {}}
-  showPrevNext
-  showPageNumbers={false}
-  showTotal
 />`;
 
 const exampleDisabled = `<Pagination
-  defaultCurrent={2}
+  current={2}
   total={50}
-  defaultPageSize={10}
+  pageSize={10}
   onChange={() => {}}
   disabled
 />`;
 
 const exampleSyncUrl = `<Pagination
+  preset="full"
   defaultCurrent={initial.page}
   defaultPageSize={initial.pageSize}
   total={120}
   pageSizeOptions={[10, 20, 50]}
   onChange={handleChange}
-  showPrevNext
-  showTotal
-  showQuickJumper
   syncUrl
 />`;
 
 const exampleSizes = `<>
-  <Pagination size="xs" defaultCurrent={1} total={80} pageSizeOptions={[10, 20]} onChange={() => {}} showPrevNext showTotal />
-  <Pagination size="sm" defaultCurrent={1} total={80} pageSizeOptions={[10, 20]} onChange={() => {}} showPrevNext showTotal />
-  <Pagination size="md" defaultCurrent={1} total={80} pageSizeOptions={[10, 20]} onChange={() => {}} showPrevNext showTotal />
-  <Pagination size="lg" defaultCurrent={1} total={80} pageSizeOptions={[10, 20]} onChange={() => {}} showPrevNext showTotal />
+  <Pagination size="xs" defaultCurrent={1} defaultPageSize={10} total={80} pageSizeOptions={[10, 20, 50]} onChange={handleChange} showTotal />
+  <Pagination size="sm" defaultCurrent={1} defaultPageSize={10} total={80} pageSizeOptions={[10, 20, 50]} onChange={handleChange} showTotal />
+  <Pagination size="md" defaultCurrent={1} defaultPageSize={10} total={80} pageSizeOptions={[10, 20, 50]} onChange={handleChange} showTotal />
+  <Pagination size="lg" defaultCurrent={1} defaultPageSize={10} total={80} pageSizeOptions={[10, 20, 50]} onChange={handleChange} showTotal />
 </>`;
 
 const examplePageSizeSelect = `<Pagination
@@ -194,7 +220,6 @@ const examplePageSizeSelect = `<Pagination
   total={120}
   pageSizeOptions={[10, 20, 50]}
   onChange={handleChange}
-  showPrevNext
   showTotal
 />
 {/* pageSizeOptions 使用库内 Select，无原生 <select> */}`;
@@ -233,11 +258,18 @@ export default function NavigationPagination() {
       <section>
         <Title level={1}>Pagination 分页</Title>
         <Paragraph class="mt-2">
-          分页：current、total、totalPages、pageSize、pageSizeOptions、onChange、showPrevNext、showPageNumbers、showQuickJumper、showTotal、disabled、syncUrl、size、class。
+          分页：preset（"full"｜"default"｜"simple"）、current、total、totalPages、pageSize、pageSizeOptions、onChange、showFirstLast、showPrevNext、showPageNumbers、showQuickJumper、showTotal、disabled、syncUrl、size、testIdPrefix、class、messages。
+          <code class="text-xs">preset="full"</code>{" "}
+          为全部能力，含第一页／最后一页（现成图标 IconChevronsLeft／IconChevronsRight 双箭头，上一页／下一页为 IconChevronLeft／IconChevronRight）。
+          <code class="text-xs">preset="default"</code>{" "}
+          为一般能力（上一页／页码／下一页）。
+          <code class="text-xs">preset="simple"</code>{" "}
+          为极简（上一页、「第 n / m 页」、下一页）。显式 show* 可覆盖该档默认值。
           每页条数切换使用库内 Select（自绘下拉），不渲染原生{" "}
           {"<select>"}。尺寸 size 为 xs｜sm｜md｜lg，默认
           md；条数触发器随文案＋箭头贴紧、单行不换行。 使用 Tailwind v4，支持
-          light/dark 主题。
+          light/dark 主题。数据面板默认按断点选用：电脑端（≥1280px）full，平板（640px–1279.98px）default，移动端（≤639.98px）simple，也可用
+          paginationPreset 指定。
         </Paragraph>
       </section>
 
@@ -255,23 +287,72 @@ export default function NavigationPagination() {
       <section class="space-y-8">
         <Title level={2}>示例</Title>
 
-        <div class="space-y-4">
+        <div class="space-y-4" data-testid="demo-pagination-preset-full">
           <Title level={3}>
-            完整（total + pageSizeOptions + showTotal + showQuickJumper）
+            preset=&quot;full&quot;（全部能力）
           </Title>
+          <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+            第一页、上一页、页码、下一页、最后一页，以及总条数、每页条数和快速跳转。在第一页时第一页／上一页禁用，在最后一页时最后一页／下一页禁用。
+          </Paragraph>
           <Pagination
+            preset="full"
             defaultCurrent={1}
             defaultPageSize={10}
             total={120}
             pageSizeOptions={[10, 20, 50]}
             onChange={handleChange}
-            showPrevNext
-            showTotal
-            showQuickJumper
           />
           <CodeBlock
             title="代码示例"
             code={exampleFull}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+        </div>
+
+        <div class="space-y-4" data-testid="demo-pagination-preset-default">
+          <Title level={3}>
+            preset=&quot;default&quot;（一般能力）
+          </Title>
+          <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+            上一页、页码、下一页。无第一页／最后一页，也无快速跳转。
+          </Paragraph>
+          <Pagination
+            preset="default"
+            defaultCurrent={1}
+            defaultPageSize={10}
+            total={120}
+            onChange={handleChange}
+          />
+          <CodeBlock
+            title="代码示例"
+            code={exampleDefault}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+          />
+        </div>
+
+        <div class="space-y-4" data-testid="demo-pagination-preset-simple">
+          <Title level={3}>
+            preset=&quot;simple&quot;（极简）
+          </Title>
+          <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+            上一页、「第 n / m 页」、下一页。无数字页码、无第一页／最后一页、无跳转。
+          </Paragraph>
+          <Pagination
+            preset="simple"
+            defaultCurrent={1}
+            defaultPageSize={10}
+            total={120}
+            onChange={handleChange}
+          />
+          <CodeBlock
+            title="代码示例"
+            code={exampleSimple}
             language="tsx"
             showLineNumbers
             copyable
@@ -285,32 +366,10 @@ export default function NavigationPagination() {
             defaultCurrent={1}
             totalPages={5}
             onChange={() => {}}
-            showPrevNext
           />
           <CodeBlock
             title="代码示例"
             code={exampleTotalPages}
-            language="tsx"
-            showLineNumbers
-            copyable
-            wrapLongLines
-          />
-        </div>
-
-        <div class="space-y-4">
-          <Title level={3}>极简模式（showPageNumbers=false）</Title>
-          <Pagination
-            defaultCurrent={1}
-            total={120}
-            defaultPageSize={10}
-            onChange={() => {}}
-            showPrevNext
-            showPageNumbers={false}
-            showTotal
-          />
-          <CodeBlock
-            title="代码示例"
-            code={exampleMinimal}
             language="tsx"
             showLineNumbers
             copyable
@@ -340,14 +399,12 @@ export default function NavigationPagination() {
         <div class="space-y-4">
           <Title level={3}>syncUrl（与 URL ?page=1&pageSize=10 同步）</Title>
           <Pagination
+            preset="full"
             defaultCurrent={initial.page}
             defaultPageSize={initial.pageSize}
             total={120}
             pageSizeOptions={[10, 20, 50]}
             onChange={handleChange}
-            showPrevNext
-            showTotal
-            showQuickJumper
             syncUrl
           />
           <CodeBlock
@@ -376,7 +433,6 @@ export default function NavigationPagination() {
                 total={80}
                 pageSizeOptions={[10, 20, 50]}
                 onChange={handleChange}
-                showPrevNext
                 showTotal
               />
             </div>
@@ -389,7 +445,6 @@ export default function NavigationPagination() {
                 total={80}
                 pageSizeOptions={[10, 20, 50]}
                 onChange={handleChange}
-                showPrevNext
                 showTotal
               />
             </div>
@@ -402,7 +457,6 @@ export default function NavigationPagination() {
                 total={80}
                 pageSizeOptions={[10, 20, 50]}
                 onChange={handleChange}
-                showPrevNext
                 showTotal
               />
             </div>
@@ -415,7 +469,6 @@ export default function NavigationPagination() {
                 total={80}
                 pageSizeOptions={[10, 20, 50]}
                 onChange={handleChange}
-                showPrevNext
                 showTotal
               />
             </div>
@@ -441,7 +494,6 @@ export default function NavigationPagination() {
             total={120}
             pageSizeOptions={[10, 20, 50]}
             onChange={handleChange}
-            showPrevNext
             showTotal
           />
           <CodeBlock

@@ -1,6 +1,8 @@
 /**
  * Pagination 分页（View）。
- * 桌面/移动通用，移动可简化；支持当前页、总条数、每页条数、跳转、上一页/下一页。
+ * 桌面/移动通用；用 {@link PaginationPreset}（`full` / `default` / `simple`）选择能力档。
+ * `full` 含第一页／最后一页（双箭头《》）、页码、每页条数、跳转、总条数；
+ * `default` 为上一页／下一页＋页码；`simple` 为上一页／下一页＋「第 n / m 页」。
  * pageSize 选择器用库内 {@link Select}（自绘下拉），不渲染原生 `<select>`。
  */
 
@@ -10,8 +12,20 @@ import { twMerge } from "tailwind-merge";
 /** 按需：单文件图标，避免经 icons/mod 拉入全表 */
 import { IconChevronLeft } from "../basic/icons/ChevronLeft.tsx";
 import { IconChevronRight } from "../basic/icons/ChevronRight.tsx";
+import { IconChevronsLeft } from "../basic/icons/ChevronsLeft.tsx";
+import { IconChevronsRight } from "../basic/icons/ChevronsRight.tsx";
 import { Select } from "../form/Select.tsx";
-import { getPaginationState } from "./pagination-utils.ts";
+import {
+  type PaginationPreset,
+  resolvePaginationPreset,
+  getPaginationState,
+} from "./pagination-utils.ts";
+
+export type { PaginationPreset } from "./pagination-utils.ts";
+export {
+  PAGINATION_PRESET_FLAGS,
+  resolvePaginationPreset,
+} from "./pagination-utils.ts";
 
 /**
  * Pagination 内置文案。函数式项接收上下文（如页码、总数）并返回最终文本，便于多语言/复数处理。
@@ -19,10 +33,14 @@ import { getPaginationState } from "./pagination-utils.ts";
 export interface PaginationMessages {
   /** 根 `<nav>` 的 `aria-label` */
   nav: string;
+  /** 第一页按钮 `aria-label` */
+  first: string;
   /** 上一页按钮 `aria-label` */
   prev: string;
   /** 下一页按钮 `aria-label` */
   next: string;
+  /** 最后一页按钮 `aria-label` */
+  last: string;
   /** 单个页码按钮 `aria-label`，参数为该页码 */
   pageLabel: (page: number) => string;
   /** 每页条数选择器 `aria-label` / Select 兜底文案 */
@@ -35,25 +53,39 @@ export interface PaginationMessages {
   pageUnit: string;
   /** showTotal=true 时的「共 N 条」默认渲染 */
   totalText: (total: number) => string;
+  /** `preset="simple"` 时上一页／下一页之间的当前页文案 */
+  simpleCurrent: (page: number, totalPages: number) => string;
 }
 
 /** 默认中文文案 */
 export const defaultPaginationMessages: PaginationMessages = {
   nav: "分页",
+  first: "第一页",
   prev: "上一页",
   next: "下一页",
+  last: "最后一页",
   pageLabel: (p) => `第 ${p} 页`,
   pageSize: "每页条数",
   pageSizeUnit: (n) => `${n} 条/页`,
   jumpTo: "跳至",
   pageUnit: "页",
   totalText: (total) => `共 ${total} 条`,
+  simpleCurrent: (page, totalPages) => `第 ${page} / ${totalPages} 页`,
 };
 
 /** 分页尺寸：影响页码按钮、条数 Select、跳转输入框；默认 md（现视觉） */
 export type PaginationSize = "xs" | "sm" | "md" | "lg";
 
 export interface PaginationProps {
+  /**
+   * 能力档，与富文本 `toolbarPreset` 相同的三档用词（分页无工具栏，故名为 `preset`）：
+   * - `"full"` 全部能力：第一页、上一页、页码、下一页、最后一页；默认开启快速跳转，传入 `total` 时显示总条数，传入 `pageSizeOptions` 时显示每页条数
+   * - `"default"` 一般能力（默认）：上一页、页码、下一页；无第一页／最后一页／跳转
+   * - `"simple"` 极简：上一页、「第 n / m 页」、下一页；无页码、无第一页／最后一页／跳转
+   *
+   * 显式传入的 `showFirstLast` / `showPrevNext` / `showPageNumbers` / `showQuickJumper` / `showTotal` 会覆盖该档默认值。
+   */
+  preset?: PaginationPreset;
   /** 当前页码（受控）；不传则内部 `Signal`（`createSignal`）；可为 getter / `() => ref.value` */
   current?: number | (() => number);
   /** 非受控时的默认当前页，默认 1 */
@@ -70,13 +102,17 @@ export interface PaginationProps {
   pageSizeOptions?: number[];
   /** 页码/条数变化回调；当有 pageSizeOptions 时可能收到 (page, pageSize) */
   onChange: (page: number, pageSize?: number) => void;
-  /** 是否显示上一页/下一页，默认 true */
+  /**
+   * 是否显示第一页／最后一页（双箭头）。不传时跟随 `preset`：`full` 为 true，其余为 false。
+   */
+  showFirstLast?: boolean;
+  /** 是否显示上一页/下一页；不传时跟随 `preset`（三档均为 true） */
   showPrevNext?: boolean;
-  /** 是否显示页码（false 时仅显示上一页/下一页 + 可选 total，极简模式），默认 true */
+  /** 是否显示页码；不传时跟随 `preset`（`simple` 为 false，其余为 true） */
   showPageNumbers?: boolean;
-  /** 是否显示快速跳转（输入框），默认 false */
+  /** 是否显示快速跳转（输入框）；不传时跟随 `preset`（仅 `full` 为 true）。越界页码会夹到 1..总页数。 */
   showQuickJumper?: boolean;
-  /** 是否显示总条数/范围；true 时显示「共 total 条」，也可传函数 (total, [from, to]) => 节点 */
+  /** 是否显示总条数/范围；true 时显示「共 total 条」，也可传函数 (total, [from, to]) => 节点。不传时跟随 `preset`（仅 `full` 默认 true，且须有 `total` 才渲染） */
   showTotal?: boolean | ((total: number, range: [number, number]) => unknown);
   /** 是否禁用 */
   disabled?: boolean;
@@ -92,6 +128,12 @@ export interface PaginationProps {
   size?: PaginationSize;
   /** 额外 class */
   class?: string;
+  /**
+   * 测试 id 前缀。按钮／跳转／条数选择器会输出 `{prefix}-first`、`{prefix}-prev`、`{prefix}-page-N`、
+   * `{prefix}-next`、`{prefix}-last`、`{prefix}-jump`、`{prefix}-pagesize`、`{prefix}-simple-current`。
+   * 默认 `"pagination"`。数据面板传入 `"dp"`。
+   */
+  testIdPrefix?: string;
   /** 多语言/自定义文案；未传字段走 {@link defaultPaginationMessages} */
   messages?: Partial<PaginationMessages>;
 }
@@ -161,6 +203,10 @@ const sizeIconCls: Record<PaginationSize, string> = {
   sm: "w-3.5 h-3.5",
   md: "w-4 h-4",
   lg: "w-5 h-5",
+};
+
+function testId(prefix: string, name: string): string {
+  return `${prefix}-${name}`;
 }
 
 export function Pagination(props: PaginationProps): JSXRenderable {
@@ -170,15 +216,12 @@ export function Pagination(props: PaginationProps): JSXRenderable {
     defaultPageSize = 10,
     pageSizeOptions,
     onChange: onChangeProp,
-    showPrevNext = true,
-    showPageNumbers = true,
-    showQuickJumper = false,
-    showTotal = false,
     disabled = false,
     syncUrl = false,
     size = "md",
     class: className,
     messages,
+    testIdPrefix = "pagination",
   } = props;
   const m = { ...defaultPaginationMessages, ...messages };
   const btnCls = sizeBtnCls[size];
@@ -216,6 +259,13 @@ export function Pagination(props: PaginationProps): JSXRenderable {
     onChangeProp(page, pageSize);
   };
 
+  const jumpTo = (raw: string, totalPages: number) => {
+    const v = parseInt(raw, 10);
+    if (Number.isNaN(v)) return;
+    const page = Math.min(totalPages, Math.max(1, v));
+    onChange(page);
+  };
+
   /**
    * 根节点固定为 `<nav>`，**勿**再包一层 `return () => …` 作为组件返回值：
    * 否则在父级 `insert` 展平 thunk 时，外层 effect 会订阅 `internalCurrentRef`，
@@ -227,10 +277,18 @@ export function Pagination(props: PaginationProps): JSXRenderable {
       role="navigation"
       aria-label={m.nav}
       data-pagination-size={size}
+      data-pagination-preset={props.preset ?? "default"}
       class={twMerge("flex items-center gap-1 flex-wrap", className)}
     >
       {() => {
         const { total, totalPages: totalPagesProp } = props;
+        const flags = resolvePaginationPreset(props.preset, {
+          showFirstLast: props.showFirstLast,
+          showPrevNext: props.showPrevNext,
+          showPageNumbers: props.showPageNumbers,
+          showQuickJumper: props.showQuickJumper,
+          showTotal: props.showTotal,
+        });
         const currentVal = props.current !== undefined
           ? (typeof props.current === "function"
             ? props.current()
@@ -249,6 +307,8 @@ export function Pagination(props: PaginationProps): JSXRenderable {
           to,
           canPrev,
           canNext,
+          canFirst,
+          canLast,
           pages,
         } = getPaginationState(
           currentVal,
@@ -259,30 +319,54 @@ export function Pagination(props: PaginationProps): JSXRenderable {
 
         return (
           <>
-            {showTotal && total != null && (
+            {flags.showTotal && total != null && (
               <span
                 class={twMerge(
                   "mr-2 text-slate-600 dark:text-slate-400 shrink-0",
                   textCls,
                 )}
               >
-                {typeof showTotal === "function"
-                  ? showTotal(total, [from, to])
+                {typeof flags.showTotal === "function"
+                  ? flags.showTotal(total, [from, to])
                   : m.totalText(total)}
               </span>
             )}
-            {showPrevNext && (
+            {flags.showFirstLast && (
+              <button
+                type="button"
+                class={twMerge(btnCls, "shrink-0")}
+                disabled={disabled || !canFirst}
+                aria-label={m.first}
+                data-testid={testId(testIdPrefix, "first")}
+                onClick={() => onChange(1)}
+              >
+                <IconChevronsLeft class={iconCls} />
+              </button>
+            )}
+            {flags.showPrevNext && (
               <button
                 type="button"
                 class={twMerge(btnCls, "shrink-0")}
                 disabled={disabled || !canPrev}
                 aria-label={m.prev}
+                data-testid={testId(testIdPrefix, "prev")}
                 onClick={() => onChange(safeCurrent - 1)}
               >
                 <IconChevronLeft class={iconCls} />
               </button>
             )}
-            {showPageNumbers &&
+            {flags.showSimpleCurrent && (
+              <span
+                class={twMerge(
+                  "px-1 shrink-0 tabular-nums text-slate-600 dark:text-slate-400",
+                  textCls,
+                )}
+                data-testid={testId(testIdPrefix, "simple-current")}
+              >
+                {m.simpleCurrent(safeCurrent, totalPages)}
+              </span>
+            )}
+            {flags.showPageNumbers &&
               pages.map((p, i) =>
                 p < 0
                   ? (
@@ -301,21 +385,35 @@ export function Pagination(props: PaginationProps): JSXRenderable {
                       disabled={disabled}
                       aria-label={m.pageLabel(p)}
                       aria-current={safeCurrent === p ? "page" : undefined}
+                      data-testid={testId(testIdPrefix, `page-${p}`)}
                       onClick={() => onChange(p)}
                     >
                       {p}
                     </button>
                   )
               )}
-            {showPrevNext && (
+            {flags.showPrevNext && (
               <button
                 type="button"
                 class={twMerge(btnCls, "shrink-0")}
                 disabled={disabled || !canNext}
                 aria-label={m.next}
+                data-testid={testId(testIdPrefix, "next")}
                 onClick={() => onChange(safeCurrent + 1)}
               >
                 <IconChevronRight class={iconCls} />
+              </button>
+            )}
+            {flags.showFirstLast && (
+              <button
+                type="button"
+                class={twMerge(btnCls, "shrink-0")}
+                disabled={disabled || !canLast}
+                aria-label={m.last}
+                data-testid={testId(testIdPrefix, "last")}
+                onClick={() => onChange(totalPages)}
+              >
+                <IconChevronsRight class={iconCls} />
               </button>
             )}
             {pageSizeOptions != null && pageSizeOptions.length > 0 &&
@@ -326,7 +424,7 @@ export function Pagination(props: PaginationProps): JSXRenderable {
                     "ml-2 inline-flex items-center gap-1 text-slate-600 dark:text-slate-400 shrink-0 whitespace-nowrap",
                     textCls,
                   )}
-                  data-testid="pagination-pagesize"
+                  data-testid={testId(testIdPrefix, "pagesize")}
                 >
                   <Select
                     size={size}
@@ -352,12 +450,13 @@ export function Pagination(props: PaginationProps): JSXRenderable {
                   />
                 </span>
               )}
-            {showQuickJumper && (
+            {flags.showQuickJumper && (
               <span
                 class={twMerge(
                   "ml-2 inline-flex items-center gap-1 text-slate-600 dark:text-slate-400",
                   textCls,
                 )}
+                data-testid={testId(testIdPrefix, "jump")}
               >
                 {m.jumpTo}
                 <input
@@ -366,23 +465,11 @@ export function Pagination(props: PaginationProps): JSXRenderable {
                   max={totalPages}
                   class={jumpInputCls}
                   onBlur={(e: Event) => {
-                    const v = parseInt(
-                      (e.target as HTMLInputElement).value,
-                      10,
-                    );
-                    if (!Number.isNaN(v) && v >= 1 && v <= totalPages) {
-                      onChange(v);
-                    }
+                    jumpTo((e.target as HTMLInputElement).value, totalPages);
                   }}
                   onKeyDown={(e: KeyboardEvent) => {
                     if (e.key === "Enter") {
-                      const v = parseInt(
-                        (e.target as HTMLInputElement).value,
-                        10,
-                      );
-                      if (!Number.isNaN(v) && v >= 1 && v <= totalPages) {
-                        onChange(v);
-                      }
+                      jumpTo((e.target as HTMLInputElement).value, totalPages);
                     }
                   }}
                 />

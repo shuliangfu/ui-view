@@ -4,18 +4,23 @@
  */
 
 import { Paragraph, Title } from "@dreamer/ui-view/basic";
-import { createSignal } from "@dreamer/view";
-import { CodeBlock, DataView } from "@dreamer/ui-view/data-display";
+import {
+  CodeBlock,
+  createLocalDataSource,
+  DataView,
+} from "@dreamer/ui-view/data-display";
+import { toast } from "@dreamer/ui-view/feedback";
+import {
+  DocsApiTable,
+  type DocsApiTableRow,
+} from "../../../components/DocsApiTable.tsx";
+import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
+import { DocsTypeApiSections } from "../../../components/DocsTypeApiSections.tsx";
+import { MESSAGES_DATA_PANEL } from "../../../data/component-messages-rows.ts";
+import { DATA_VIEW_TYPE_IDS } from "../../../data/data-display-api-types.ts";
 import { DocsDemo } from "../../../components/DocsDemo.tsx";
 
-interface ApiRow {
-  name: string;
-  type: string;
-  default: string;
-  description: string;
-}
-
-const DATA_VIEW_API: ApiRow[] = [
+const DATA_VIEW_API: DocsApiTableRow[] = [
   {
     name: "title",
     type: "string",
@@ -33,7 +38,8 @@ const DATA_VIEW_API: ApiRow[] = [
     name: "children",
     type: "unknown",
     default: "-",
-    description: "自定义内容区，替换 Descriptions 字段区，优先于 view.render",
+    description:
+      "替换明细正文（Descriptions 字段区），优先于 view.render。与 DataPanel 的 children（根上额外 Modal，不替换表格）不同；扩展明细主体请优先用 view.render",
   },
   {
     name: "tabs",
@@ -62,8 +68,8 @@ const DATA_VIEW_API: ApiRow[] = [
   },
   {
     name: "tabType",
-    type: "line | card",
-    default: "line",
+    type: '"line" | "card"',
+    default: '"line"',
     description: "标签样式，与 Tabs 的 type 相同",
   },
   {
@@ -78,7 +84,7 @@ const DATA_VIEW_API: ApiRow[] = [
     type: "FormConfig",
     default: "-",
     description:
-      "工具栏「更新」打开的编辑 Modal，写法同 DataPanel form（含 width／fullscreenable，缺省 md／false）",
+      "工具栏「更新」打开的编辑 Modal，写法同 DataPanel form（含 width／fullscreenable，以及 form.actions 官方底栏、字段 show／disabled／options 函数）",
   },
   {
     name: "data",
@@ -132,23 +138,33 @@ const DATA_VIEW_API: ApiRow[] = [
     description: "传给 fetch 的 credentials，仅自动建源时生效",
   },
   {
-    name: "toolbar",
-    type: "false | PanelToolbarConfig",
+    name: "alert",
+    type:
+      "string | DataAlertConfig | false | null | (() => string | DataAlertConfig | false | null | undefined)",
     default: "-",
     description:
-      "false 隐藏整栏。默认键与顺序：update、refresh、print、import、export、fullscreen、copy。update 可用 edit 别名。省略键回落 caps；自定义键必须提供 action",
+      '页面提示条，位于工具栏（含工具栏左侧标签）下方、详情正文上方。字符串简写为 info 提示（如 alert="请先完成实名认证"）。对象为完整 DataAlertConfig：透传 Alert 的 type／message／description／showIcon／closable／onClose／banner／action／class／children／messages，另加 show／key。false／null／省略／show: false 不显示；函数在渲染时求值。本插槽 closable、banner 默认 true。点击关闭会隐藏提示并调用 onClose；更换文案或先置空再传入会重新显示。详见下方 DataAlertConfig 表。',
+  },
+  {
+    name: "toolbar",
+    type: "false | ViewToolbarConfig (Record)",
+    default: "-",
+    description:
+      "false 隐藏整栏。默认键与顺序：update、remove、refresh、print、import、export、fullscreen、copy。update 可用 edit 别名。省略键回落 caps；自定义键必须提供 action。show／disable／action 接收 { record }（零参函数仍可用）",
   },
   {
     name: "caps",
     type: "Partial<DataViewCaps>",
     default: "-",
-    description: "能力开关；缺省按数据源方法推断（update／import 等）",
+    description:
+      "能力开关；缺省按数据源方法推断。remove 默认＝存在 dataSource.remove（确认后删除当前记录）。update／import 等同样按源推断",
   },
   {
     name: "panelKey",
     type: "string",
     default: '"data-view"',
-    description: "全屏偏好与 refreshDataPanel(key) 的标识；同页多实例须唯一",
+    description:
+      "全屏偏好、refreshDataPanel(key)，以及 getDataView／getDataViewRecord／openDataViewForm 的标识；同页多实例须唯一",
   },
   {
     name: "rowKey",
@@ -182,7 +198,7 @@ const DATA_VIEW_API: ApiRow[] = [
   },
   {
     name: "onExport",
-    type: "(format, ctx) => void",
+    type: '(format: "xlsx" | "csv" | "json" | "xml" | "html", ctx) => void',
     default: "-",
     description: "接管导出；缺省时导出当前记录",
   },
@@ -206,33 +222,49 @@ const DATA_VIEW_API: ApiRow[] = [
   },
 ];
 
+/** 按 panelKey 注册的命令式句柄（与 refreshDataPanel 同一套键） */
+const VIEW_HANDLE_API: DocsApiTableRow[] = [
+  {
+    name: "refreshDataPanel(key)",
+    type: "() => Promise<void>",
+    default: "-",
+    description:
+      "重新拉取已挂载的详情（或同 key 的数据面板）；无句柄时回落旧 refreshers",
+  },
+  {
+    name: "getDataView(key)",
+    type: "DataViewHandle | undefined",
+    default: "-",
+    description: "句柄：reload／getRecord／openForm(row?)",
+  },
+  {
+    name: "getDataViewRecord(key)",
+    type: "Row | null | undefined",
+    default: "-",
+    description: "当前详情记录；未挂载时为 undefined",
+  },
+  {
+    name: "openDataViewForm(key, row?)",
+    type: "(key: string, row?: Row) => void",
+    default: "-",
+    description: "打开编辑表单；无 row 则用当前记录",
+  },
+];
+
 const importCode = `import { DataView } from "@dreamer/ui-view/data-display";
 
-<DataView
-  title="用户详情"
-  data={user}
-  view={{
-    labelColPercent: 28,
-    labelMinWidth: "7rem",
-    props: [
-      { prop: "name", label: "姓名" },
-      { prop: "email", label: "邮箱" },
-      { prop: "status", label: "状态", type: "tag", options: STATUS },
-    ],
-  }}
-  form={{ props: [{ prop: "name", label: "姓名" }] }}
-/>`;
+const user = {
+  id: "1",
+  name: "Ada Lovelace",
+  email: "ada@example.com",
+  status: "active",
+  createdAt: "2026-11-10 10:30:00",
+};
 
-const basicCode = `<DataView
+<DataView
   panelKey="demo-data-view"
   title="用户详情"
-  data={{
-    id: "1",
-    name: "Ada Lovelace",
-    email: "ada@example.com",
-    status: "active",
-    createdAt: "2026-11-10 10:30:00",
-  }}
+  data={user}
   view={{
     labelColPercent: 28,
     labelMinWidth: "7rem",
@@ -258,13 +290,96 @@ const basicCode = `<DataView
       { prop: "email", label: "邮箱" },
     ],
   }}
-/>`;
+/>
+`;
+
+const basicCode = `import { DataView } from "@dreamer/ui-view/data-display";
+
+const user = {
+  id: "1",
+  name: "Ada Lovelace",
+  email: "ada@example.com",
+  status: "active",
+  createdAt: "2026-11-10 10:30:00",
+};
+
+<DataView
+  panelKey="demo-data-view"
+  title="用户详情"
+  data={user}
+  view={{
+    labelColPercent: 28,
+    labelMinWidth: "7rem",
+    props: [
+      { prop: "name", label: "姓名" },
+      { prop: "email", label: "邮箱" },
+      {
+        prop: "status",
+        label: "状态",
+        type: "tag",
+        options: [
+          { value: "active", label: "启用", tone: "success" },
+          { value: "disabled", label: "停用" },
+        ],
+      },
+      { prop: "createdAt", label: "创建时间", type: "datetime" },
+    ],
+  }}
+  form={{
+    title: (row) => \`编辑 · \${row.name ?? ""}\`,
+    props: [
+      { prop: "name", label: "姓名", required: true },
+      { prop: "email", label: "邮箱" },
+    ],
+  }}
+/>
+`;
+
+const alertCode = `import { DataView } from "@dreamer/ui-view/data-display";
+import { toast } from "@dreamer/ui-view/feedback";
+
+const user = {
+  id: "1",
+  name: "张三",
+  email: "zhangsan@example.com",
+};
+
+<DataView
+  panelKey="demo-data-view-alert"
+  title="用户详情"
+  data={user}
+  view={{
+    props: [
+      { prop: "name", label: "姓名" },
+      { prop: "email", label: "邮箱" },
+    ],
+  }}
+  alert={{
+    type: "warning",
+    message: "请先完成实名认证",
+    description: "未认证账号部分功能暂不可用。",
+    onClose: () => toast.info("已关闭提示"),
+  }}
+  toolbar={{
+    update: false,
+    remove: false,
+    print: false,
+    import: false,
+    export: false,
+    fullscreen: false,
+    copy: false,
+  }}
+/>
+`;
 
 const JOIN_VIEW_CODE =
   `const user = { id: "1", lastName: "张", firstName: "三" };
+
 <DataView
+  panelKey="demo-data-view-join-name"
   title="用户详情"
   data={user}
+  toolbar={false}
   view={{
     props: [
       { prop: "lastName", label: "姓" },
@@ -276,7 +391,8 @@ const JOIN_VIEW_CODE =
       },
     ],
   }}
-/>`;
+/>
+`;
 
 const DEMO_USER = {
   id: "1",
@@ -285,6 +401,90 @@ const DEMO_USER = {
   status: "active",
   createdAt: "2026-11-10 10:30:00",
 };
+
+const removeDemoSource = createLocalDataSource({
+  rows: [{ ...DEMO_USER }],
+  columns: [
+    { prop: "name", label: "姓名" },
+    { prop: "email", label: "邮箱" },
+    { prop: "status", label: "状态" },
+    { prop: "createdAt", label: "创建时间", type: "datetime" },
+  ],
+  writable: true,
+});
+
+const removeDemoCode =
+  `import { createLocalDataSource, DataView } from "@dreamer/ui-view/data-display";
+import { toast } from "@dreamer/ui-view/feedback";
+
+const user = {
+  id: "1",
+  name: "Ada Lovelace",
+  email: "ada@example.com",
+  status: "active",
+  createdAt: "2026-11-10 10:30:00",
+};
+
+const source = createLocalDataSource({
+  rows: [{ ...user }],
+  columns: [
+    { prop: "name", label: "姓名" },
+    { prop: "email", label: "邮箱" },
+    { prop: "status", label: "状态" },
+    { prop: "createdAt", label: "创建时间", type: "datetime" },
+  ],
+  writable: true,
+});
+
+<DataView
+  panelKey="demo-data-view-remove"
+  title="用户详情"
+  id="1"
+  data={user}
+  dataSource={source}
+  view={{
+    labelColPercent: 28,
+    labelMinWidth: "7rem",
+    props: [
+      { prop: "name", label: "姓名" },
+      { prop: "email", label: "邮箱" },
+      {
+        prop: "status",
+        label: "状态",
+        type: "tag",
+        options: [
+          { value: "active", label: "启用", tone: "success" },
+          { value: "disabled", label: "停用" },
+        ],
+      },
+      { prop: "createdAt", label: "创建时间", type: "datetime" },
+    ],
+  }}
+  form={{
+    title: (row) => \`编辑 · \${row.name ?? ""}\`,
+    props: [
+      { prop: "name", label: "姓名", required: true },
+      { prop: "email", label: "邮箱" },
+    ],
+  }}
+  toolbar={{
+    sayName: {
+      label: "读当前记录",
+      action: ({ record }) => {
+        toast.info(record?.name ? \`当前：\${record.name}\` : "暂无记录");
+      },
+    },
+    update: true,
+    remove: true,
+    refresh: true,
+    print: false,
+    import: false,
+    export: false,
+    fullscreen: false,
+    copy: false,
+  }}
+/>
+`;
 
 export const metadata = {
   title: "DataView 数据明细 · ui-view",
@@ -300,10 +500,15 @@ export default function DataDisplayDataView() {
           同一套卡片、标题栏和工具栏主题， 内容区默认是 DataPanel{" "}
           <code>view</code> 的 <code>Descriptions</code> 字段展示。也可以用{" "}
           <code>view.render(ctx)</code> 或 <code>children</code>{" "}
-          换成自定义组件（<code>children</code>{" "}
-          优先）。
-          没有分页、搜索、新建、列设置和行高。工具栏默认保留：更新、刷新、打印、导入、导出、全屏、复制。
-          传入 <code>tabs</code>{" "}
+          换成自定义组件（<code>children</code> 优先于{" "}
+          <code>view.render</code>；这与 DataPanel 的 <code>children</code>
+          （根上额外内容，不替换表格）不同）。
+          没有分页、搜索、新建、列设置和行高。可用 <code>alert</code>{" "}
+          在工具栏下方、详情正文上方放一条页面提示（支持关闭与
+          onClose）。工具栏默认保留：更新、删除、刷新、打印、导入、导出、全屏、复制（有
+          {" "}
+          <code>dataSource.remove</code> 时显示删除，可用{" "}
+          <code>caps.remove:false</code> 关掉）。 传入 <code>tabs</code>{" "}
           可在工具栏下切换明细分区（复用 layout Tabs）；有标签时 API
           请求会带上当前 tab 参数。
         </Paragraph>
@@ -360,6 +565,43 @@ export default function DataDisplayDataView() {
           />
         </DocsDemo>
 
+        <DocsDemo title="页面提示条" code={alertCode}>
+          <Paragraph class="mb-3 text-sm text-slate-600 dark:text-slate-400">
+            提示条在工具栏下方、详情正文上方。对象配置可写 Alert
+            的全部参数；默认可关闭，点关闭会隐藏并触发 <code>onClose</code>。
+          </Paragraph>
+          <DataView
+            panelKey="demo-data-view-alert"
+            title="用户详情"
+            data={{
+              id: "1",
+              name: "张三",
+              email: "zhangsan@example.com",
+            }}
+            view={{
+              props: [
+                { prop: "name", label: "姓名" },
+                { prop: "email", label: "邮箱" },
+              ],
+            }}
+            alert={{
+              type: "warning",
+              message: "请先完成实名认证",
+              description: "未认证账号部分功能暂不可用。",
+              onClose: () => toast.info("已关闭提示"),
+            }}
+            toolbar={{
+              update: false,
+              remove: false,
+              print: false,
+              import: false,
+              export: false,
+              fullscreen: false,
+              copy: false,
+            }}
+          />
+        </DocsDemo>
+
         <DocsDemo title="拼接字段" code={JOIN_VIEW_CODE}>
           <DataView
             panelKey="demo-data-view-join-name"
@@ -380,22 +622,110 @@ export default function DataDisplayDataView() {
           />
         </DocsDemo>
 
+        <DocsDemo title="删除与工具栏上下文" code={removeDemoCode}>
+          <Paragraph class="mb-3 text-sm text-slate-600 dark:text-slate-400">
+            数据源提供 <code class="text-xs">remove</code>{" "}
+            时，工具栏默认出现删除（确认后删当前记录）。自定义按钮的{" "}
+            <code class="text-xs">show</code>／
+            <code class="text-xs">disable</code>／
+            <code class="text-xs">action</code> 会收到{" "}
+            <code class="text-xs">&#123; record &#125;</code>。
+          </Paragraph>
+          <DataView
+            panelKey="demo-data-view-remove"
+            title="用户详情"
+            id="1"
+            data={DEMO_USER}
+            dataSource={removeDemoSource}
+            view={{
+              labelColPercent: 28,
+              labelMinWidth: "7rem",
+              props: [
+                { prop: "name", label: "姓名" },
+                { prop: "email", label: "邮箱" },
+                {
+                  prop: "status",
+                  label: "状态",
+                  type: "tag",
+                  options: [
+                    { value: "active", label: "启用", tone: "success" },
+                    { value: "disabled", label: "停用" },
+                  ],
+                },
+                { prop: "createdAt", label: "创建时间", type: "datetime" },
+              ],
+            }}
+            form={{
+              title: (row) => `编辑 · ${row.name ?? ""}`,
+              props: [
+                { prop: "name", label: "姓名", required: true },
+                { prop: "email", label: "邮箱" },
+              ],
+            }}
+            toolbar={{
+              sayName: {
+                label: "读当前记录",
+                action: ({ record }) => {
+                  toast.info(
+                    record?.name ? `当前：${String(record.name)}` : "暂无记录",
+                  );
+                },
+              },
+              update: true,
+              remove: true,
+              refresh: true,
+              print: false,
+              import: false,
+              export: false,
+              fullscreen: false,
+              copy: false,
+            }}
+          />
+        </DocsDemo>
+
         <div id="tab">
           <DocsDemo
             title="Tab"
             code={`import { DataView } from "@dreamer/ui-view/data-display";
 
+const user = {
+  id: "1",
+  name: "Ada Lovelace",
+  email: "ada@example.com",
+  status: "active",
+  createdAt: "2026-11-10 10:30:00",
+};
+
 <DataView
   panelKey="demo-data-view-tabs"
   title="用户详情"
   data={user}
-  view={{ props }}
+  view={{
+    props: [
+      { prop: "name", label: "姓名" },
+      { prop: "email", label: "邮箱" },
+      {
+        prop: "status",
+        label: "状态",
+        type: "tag",
+        options: [
+          { value: "active", label: "启用", tone: "success" },
+          { value: "disabled", label: "停用" },
+        ],
+      },
+      { prop: "createdAt", label: "创建时间", type: "datetime" },
+    ],
+  }}
   tabs={[
     { key: "basic", label: "基本信息" },
     {
       key: "extra",
       label: "其他",
-      children: <p>注册来源：后台录入</p>,
+      children: (
+        <div class="px-3 py-4 text-sm text-slate-600 dark:text-slate-400">
+          注册来源：后台录入。可在这里放操作记录、附件或其他自定义内容。
+        </div>
+      ),
     },
   ]}
 />`}
@@ -455,52 +785,22 @@ export default function DataDisplayDataView() {
       <section class="space-y-3">
         <Title level={2}>API</Title>
         <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
-          组件接收以下属性。类型 <code>ViewConfig</code>／
-          <code>FormConfig</code>／<code>PanelToolbarConfig</code>{" "}
-          与 DataPanel 共用。
+          组件接收以下属性。下面把用到的具名类型（如{" "}
+          <code>ViewConfig</code>／<code>FormConfig</code>／
+          <code>ViewToolbarConfig</code>／<code>ActionCtrl</code>
+          ）的字段也全部写出。
         </Paragraph>
-        <div class="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-600">
-          <table class="w-full min-w-lg text-sm">
-            <thead>
-              <tr class="border-b border-slate-200 bg-slate-50 dark:border-slate-600 dark:bg-slate-800/80">
-                <th class="px-4 py-3 text-left font-medium text-slate-900 dark:text-slate-100">
-                  属性
-                </th>
-                <th class="px-4 py-3 text-left font-medium text-slate-900 dark:text-slate-100">
-                  类型
-                </th>
-                <th class="px-4 py-3 text-left font-medium text-slate-900 dark:text-slate-100">
-                  默认值
-                </th>
-                <th class="px-4 py-3 text-left font-medium text-slate-900 dark:text-slate-100">
-                  说明
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {DATA_VIEW_API.map((row) => (
-                <tr
-                  key={row.name}
-                  class="border-b border-slate-100 dark:border-slate-700 last:border-b-0"
-                >
-                  <td class="px-4 py-2.5 font-mono text-slate-700 dark:text-slate-300">
-                    {row.name}
-                  </td>
-                  <td class="px-4 py-2.5 text-slate-600 dark:text-slate-400">
-                    {row.type}
-                  </td>
-                  <td class="px-4 py-2.5 text-slate-600 dark:text-slate-400">
-                    {row.default}
-                  </td>
-                  <td class="px-4 py-2.5 text-slate-600 dark:text-slate-400">
-                    {row.description}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <DocsApiTable rows={DATA_VIEW_API} />
+        <Title level={3}>命令式 API（panelKey）</Title>
+        <DocsApiTable rows={VIEW_HANDLE_API} nameColumnHeader="方法" />
+        <DocsTypeApiSections ids={DATA_VIEW_TYPE_IDS} />
       </section>
+
+      <DocsMessagesSection
+        interfaceName="Messages"
+        defaultExportName="defaultDataPanelMessages"
+        rows={MESSAGES_DATA_PANEL}
+      />
     </div>
   );
 }

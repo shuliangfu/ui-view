@@ -4,14 +4,82 @@
  */
 
 import { Button } from "../../shared/basic/Button.tsx";
-import type { Tone } from "./data-panel-types.ts";
+import type { Query, Row, Tone } from "./data-panel-types.ts";
 import { BrowserStorage, LocalStorageAdapter } from "@dreamer/storage/client";
 
-// ---------------------------------------------------------------- refresh registry
+// ---------------------------------------------------------------- refresh / imperative registry
 export const refreshers = new Map<string, () => Promise<void>>();
-/** 重新拉取某个面板当前页（页面自己的 Modal 保存后可调用） */
+
+/** DataPanel 命令式句柄（按 `panelKey` 注册；与 {@link refreshDataPanel} 同一套键）。 */
+export interface DataPanelHandle {
+  /** 重新拉取当前页（不写地址栏；等价 refreshDataPanel） */
+  reload: () => Promise<void>;
+  getQuery: () => Query;
+  /** 合并查询并重新拉数（会按 syncUrl 配置写地址栏） */
+  setQuery: (patch: Partial<Query>) => void;
+  /** 当前页已选中的行对象 */
+  getSelected: () => Row[];
+  /** 打开新增（无参）或编辑表单 */
+  openForm: (row?: Row) => void;
+  /** 打开详情；可传行对象或主键 */
+  openView: (row: Row | string) => void;
+}
+
+/** DataView 命令式句柄（按 `panelKey` 注册）。 */
+export interface DataViewHandle {
+  reload: () => Promise<void>;
+  getRecord: () => Row | null;
+  /** 打开编辑表单；无参则用当前记录 */
+  openForm: (row?: Row) => void;
+}
+
+export const panelHandles = new Map<string, DataPanelHandle>();
+export const viewHandles = new Map<string, DataViewHandle>();
+
+/** 重新拉取某个面板或详情当前数据（页面自己的 Modal 保存后可调用） */
 export function refreshDataPanel(key: string): Promise<void> {
-  return refreshers.get(key)?.() ?? Promise.resolve();
+  return panelHandles.get(key)?.reload() ??
+    viewHandles.get(key)?.reload() ??
+    refreshers.get(key)?.() ??
+    Promise.resolve();
+}
+
+/** 取已挂载 DataPanel 的命令式句柄；未挂载或不存在则 undefined。 */
+export function getDataPanel(key: string): DataPanelHandle | undefined {
+  return panelHandles.get(key);
+}
+
+/** 取已挂载 DataView 的命令式句柄；未挂载或不存在则 undefined。 */
+export function getDataView(key: string): DataViewHandle | undefined {
+  return viewHandles.get(key);
+}
+
+export function getDataPanelQuery(key: string): Query | undefined {
+  return panelHandles.get(key)?.getQuery();
+}
+
+export function setDataPanelQuery(key: string, patch: Partial<Query>): void {
+  panelHandles.get(key)?.setQuery(patch);
+}
+
+export function getDataPanelSelected(key: string): Row[] {
+  return panelHandles.get(key)?.getSelected() ?? [];
+}
+
+export function openDataPanelForm(key: string, row?: Row): void {
+  panelHandles.get(key)?.openForm(row);
+}
+
+export function openDataPanelView(key: string, row: Row | string): void {
+  panelHandles.get(key)?.openView(row);
+}
+
+export function getDataViewRecord(key: string): Row | null | undefined {
+  return viewHandles.get(key)?.getRecord();
+}
+
+export function openDataViewForm(key: string, row?: Row): void {
+  viewHandles.get(key)?.openForm(row);
 }
 
 // ---------------------------------------------------------------- helpers
@@ -300,8 +368,7 @@ export function inlineEditorInputWidthStyle(
  * 支持 `field-sizing: content` 的浏览器改由内容精确撑开，变量仍作最小宽，
  * 避免空值过窄、数字被裁切或步进钮被挤没。
  */
-export const ED_WRAP_CLS =
-  "dp-ed-wrap inline-block w-fit " +
+export const ED_WRAP_CLS = "dp-ed-wrap inline-block w-fit " +
   "[&_input:not([type=hidden])]:box-border " +
   "[&_input:not([type=hidden])]:[field-sizing:content] " +
   "[&_input:not([type=hidden])]:!w-[length:var(--dp-ed-input-w,calc(3ch+1.5rem))] " +
@@ -337,9 +404,16 @@ export const ACTS_CLS =
 export const CARD_STYLE =
   "max-sm:!mx-0 max-sm:!mt-0 bg-slate-50 dark:!bg-[var(--dp-panel-body-bg,rgb(30_41_59/0.8))] dark:!text-[var(--dp-panel-fg,#e2e8f0)] dark:[&_th]:!text-[var(--dp-panel-fg,#f1f5f9)] dark:[&_td]:!text-[var(--dp-panel-fg,#e2e8f0)] dark:[&_.dp-cell-edit]:!text-[var(--dp-panel-fg,#e2e8f0)] dark:[&_[data-testid=dp-total-count]]:!text-[var(--dp-panel-muted,#cbd5e1)]";
 
+/** 页面提示条外包：左右与上下内边距与表格外包一致（!px-2.5 !py-2.5）。 */
+export const ALERT_WRAP_CLS = "dp-alert-wrap !px-2.5 !py-2.5";
+
 /** 表格外包（原 `.dp-table-wrap`）。内边距始终保留，含移动端。 */
 export const TABLE_WRAP_CLS =
   "dp-table-wrap bg-white !px-2.5 !py-2.5 dark:bg-transparent";
+
+/** 提示条可见时去掉表格外包上内边距，避免与提示条下内边距叠成双倍间距。 */
+export const TABLE_WRAP_BELOW_ALERT_CLS =
+  "dp-table-wrap bg-white !px-2.5 !pb-2.5 !pt-0 dark:bg-transparent";
 
 /**
  * DataPanel／DataView 工具栏底色：比标题浅、比原先工具栏深的中间值。
@@ -357,17 +431,17 @@ export const TOOLBAR_BAR_CLS =
  */
 export const HEADER_BAR_CLS = "!border-b-0 bg-slate-200/80 dark:bg-slate-900";
 
-/** 分页条（原 `.dp-pg`；移动端列布局居中） */
+/** 分页条（原 `.dp-pg`；条数在左、控件在右，各端同一行） */
 export const PG_CLS =
-  "dp-pg flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 bg-slate-100/80 px-3 py-3 text-sm dark:border-slate-700 dark:bg-transparent max-sm:!flex-col max-sm:!items-center max-sm:!justify-center max-sm:!text-center";
+  "dp-pg flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 bg-slate-100/80 px-3 py-3 text-sm dark:border-slate-700 dark:bg-transparent";
 
 /** 分页控件组（原 `.dp-pg-ctrls`） */
 export const PG_CTRLS_CLS =
-  "dp-pg-ctrls flex flex-wrap items-center gap-2 max-sm:!order-1 max-sm:!justify-center";
+  "dp-pg-ctrls flex flex-wrap items-center gap-2";
 
 /** 条数文案（原 `.dp-range`） */
 export const RANGE_CLS =
-  "dp-range max-sm:!order-2 max-sm:!w-full max-sm:!text-center dark:!text-[var(--dp-panel-muted,#cbd5e1)]";
+  "dp-range dark:!text-[var(--dp-panel-muted,#cbd5e1)]";
 
 /** 全屏壳（原 `.dp-fs`） */
 export const FS_CLS =

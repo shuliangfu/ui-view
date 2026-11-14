@@ -43,6 +43,7 @@ const ICON_EYE_PATH = 'd="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"';
 
 const TB_IDS = [
   "dv-update",
+  "dv-remove",
   "dv-refresh",
   "dv-print",
   "dv-import",
@@ -70,9 +71,10 @@ async function html(props: Partial<DataViewProps> = {}): Promise<string> {
 }
 
 describe("DataView", () => {
-  it("默认工具栏键序：更新、刷新、打印、导入、导出、全屏、复制", () => {
+  it("默认工具栏键序：更新、删除、刷新、打印、导入、导出、全屏、复制", () => {
     expect([...DATA_VIEW_TOOLBAR_BUILTINS]).toEqual([
       "update",
+      "remove",
       "refresh",
       "print",
       "import",
@@ -167,6 +169,7 @@ describe("DataView", () => {
     const hidden = await html({
       caps: {
         update: false,
+        remove: false,
         import: false,
         export: false,
         print: false,
@@ -176,6 +179,7 @@ describe("DataView", () => {
     });
     expect(hidden).toContain('data-testid="dv-refresh"');
     expect(hidden).not.toContain('data-testid="dv-update"');
+    expect(hidden).not.toContain('data-testid="dv-remove"');
     expect(hidden).not.toContain('data-testid="dv-print"');
     expect(hidden).not.toContain('data-testid="dv-import"');
     expect(hidden).not.toContain('data-testid="dv-export"');
@@ -235,7 +239,7 @@ describe("DataView", () => {
 
   it("dataSource + id 且无 data 时首帧为空，有 data 时仍首屏渲染 data", async () => {
     const ds = {
-      list: () => ({ items: [{ id: "1", name: "FromList" }], total: 1 }),
+      list: () => ({ rows: [{ id: "1", name: "FromList" }], total: 1 }),
       view: () => ({
         id: "1",
         name: "FromView",
@@ -348,3 +352,44 @@ describe("Descriptions 整行斑马", () => {
     expect(h).not.toContain("dark:bg-slate-800/50");
   });
 });
+
+describe("DataView：删除与表单增强", () => {
+  it("可写数据源默认渲染删除钮；caps.remove:false 隐藏", async () => {
+    const h = await html();
+    expect(h).toContain('data-testid="dv-remove"');
+    const hidden = await html({ caps: { remove: false } });
+    expect(hidden).not.toContain('data-testid="dv-remove"');
+  });
+
+  it("工具栏 show／disable 接收当前 record；零参函数仍可用", async () => {
+    const hidden = await html({
+      toolbar: { print: { show: () => false } },
+    });
+    expect(hidden).not.toContain('data-testid="dv-print"');
+
+    const byRecord = await html({
+      toolbar: {
+        print: { show: (ctx) => ctx.record?.name === "Ada" },
+      },
+    });
+    expect(byRecord).toContain('data-testid="dv-print"');
+
+    const miss = await html({
+      toolbar: {
+        print: { show: (ctx) => ctx.record?.name === "nobody" },
+      },
+    });
+    expect(miss).not.toContain('data-testid="dv-print"');
+
+    const disabled = await html({
+      toolbar: {
+        copy: { disable: (ctx) => ctx.record?.id === "1" },
+      },
+    });
+    const i = disabled.indexOf('data-testid="dv-copy"');
+    expect(i).toBeGreaterThan(-1);
+    const start = disabled.lastIndexOf("<button", i);
+    expect(hasDisabledAttr(disabled.slice(start, i + 40))).toBe(true);
+  });
+});
+

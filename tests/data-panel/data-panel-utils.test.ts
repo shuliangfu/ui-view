@@ -14,22 +14,24 @@ import {
   fieldLayoutStyle,
   fieldSpan,
   filterRows,
+  filtersAfterSearchApply,
+  filtersAfterSearchReset,
   formatDateTime,
   formatMoney,
+  isSelectionColumn,
   itemRowId,
   normalizeColumns,
   pageList,
   parseCsv,
   parseJsonRows,
   parseXmlRows,
-  filtersAfterSearchApply,
-  filtersAfterSearchReset,
   queryFromParams,
+  queryParamKey,
   queryToParams,
-  resolveBatchStatusColumn,
+  resolveFooterActions,
   resolveModalWidth,
-  isSelectionColumn,
   resolvePanelColumns,
+  sumColumnTotals,
   useFieldGrid,
   validateForm,
   validateSearchFields,
@@ -40,6 +42,12 @@ import {
   formatMessage,
   resolveDataPanelMessages,
 } from "../../src/desktop/data-display/data-panel-messages.ts";
+import {
+  type FormFieldConditionCtx,
+  isFormFieldVisible,
+  isSearchFieldVisible,
+  resolveOptions,
+} from "../../src/desktop/data-display/data-panel-types.ts";
 import type {
   Column,
   FormField,
@@ -556,77 +564,42 @@ describe("queryFromParams（page／pageSize／搜索 ↔ URL 回填）", () => {
   });
 });
 
-describe("resolveBatchStatusColumn（批量设为 ← column.batch:true）", () => {
-  it("须 batch:true＋inline:switch＋两档 options；映射 field／values", () => {
-    const got = resolveBatchStatusColumn([
-      { prop: "name", label: "姓名" },
+describe("queryToParams／queryFromParams 前缀", () => {
+  it("queryParamKey 空前缀保持原名", () => {
+    expect(queryParamKey("page")).toBe("page");
+    expect(queryParamKey("page", "")).toBe("page");
+    expect(queryParamKey("page", "  ")).toBe("page");
+    expect(queryParamKey("page", "p1")).toBe("p1_page");
+  });
+  it("写出／读回带前缀，不污染无前缀参数", () => {
+    const written = queryToParams(
       {
-        prop: "status",
-        label: "状态",
-        type: "tag",
-        inline: "switch",
-        batch: true,
-        options: [
-          { value: "active", label: "启用", tone: "success" },
-          { value: "disabled", label: "停用", tone: "warning" },
-        ],
+        page: 2,
+        pageSize: 50,
+        sort: "name",
+        order: "desc",
+        filters: { name: "张三" },
       },
-    ]);
-    expect(got).toEqual({
-      field: "status",
-      values: [
-        { value: "active", label: "启用" },
-        { value: "disabled", label: "停用" },
-      ],
+      { forUrl: true, prefix: "p1", defaultPageSize: 20 },
+    );
+    expect(written.get("p1_page")).toBe("2");
+    expect(written.get("p1_pageSize")).toBe("50");
+    expect(written.get("p1_sort")).toBe("name");
+    expect(written.get("p1_order")).toBe("desc");
+    expect(written.get("p1_name")).toBe("张三");
+    expect(written.get("page")).toBeNull();
+    const back = queryFromParams(written, {
+      searchNames: ["name"],
+      prefix: "p1",
     });
-  });
-  it("仅 switch 无 batch → null；batch 但非两档 → null", () => {
-    expect(resolveBatchStatusColumn([
-      {
-        prop: "status",
-        label: "状态",
-        inline: "switch",
-        options: [
-          { value: "on", label: "开" },
-          { value: "off", label: "关" },
-        ],
-      },
-    ])).toBeNull();
-    expect(resolveBatchStatusColumn([
-      {
-        prop: "status",
-        label: "状态",
-        inline: "switch",
-        batch: true,
-        options: [{ value: "on", label: "开" }],
-      },
-    ])).toBeNull();
-    expect(resolveBatchStatusColumn([])).toBeNull();
-  });
-  it("多个 batch:true 取第一个", () => {
-    const got = resolveBatchStatusColumn([
-      {
-        prop: "locked",
-        label: "锁定",
-        inline: "switch",
-        batch: true,
-        options: [
-          { value: "1", label: "是" },
-          { value: "0", label: "否" },
-        ],
-      },
-      {
-        prop: "status",
-        label: "状态",
-        inline: "switch",
-        batch: true,
-        options: [
-          { value: "active", label: "启用" },
-          { value: "disabled", label: "停用" },
-        ],
-      },
-    ]);
-    expect(got?.field).toBe("locked");
+    expect(back.page).toBe(2);
+    expect(back.pageSize).toBe(50);
+    expect(back.sort).toBe("name");
+    expect(back.order).toBe("desc");
+    expect(back.filters).toEqual({ name: "张三" });
+    const ignored = queryFromParams(written, { searchNames: ["name"] });
+    expect(ignored.page).toBeUndefined();
+    expect(ignored.filters).toBeUndefined();
   });
 });
 
@@ -669,21 +642,21 @@ describe("createLocalDataSource：查询", () => {
     expect(s.sync).toBe(true);
     const p1 = s.list(Q);
     expect(p1.total).toBe(23);
-    expect(p1.items.length).toBe(10);
-    expect(s.list({ ...Q, page: 3 }).items.length).toBe(3);
-    expect(s.list({ ...Q, page: 9 }).items.length).toBe(0);
-    expect(s.list({ ...Q, pageSize: 50 }).items.length).toBe(23);
+    expect(p1.rows.length).toBe(10);
+    expect(s.list({ ...Q, page: 3 }).rows.length).toBe(3);
+    expect(s.list({ ...Q, page: 9 }).rows.length).toBe(0);
+    expect(s.list({ ...Q, pageSize: 50 }).rows.length).toBe(23);
   });
 
   it("排序：升序 / 降序 / 数字 / 字符串", () => {
     const s = src();
-    expect(s.list({ ...Q, sort: "name", order: "desc" }).items[0].name).toBe(
+    expect(s.list({ ...Q, sort: "name", order: "desc" }).rows[0].name).toBe(
       "User23",
     );
-    expect(s.list({ ...Q, sort: "score", order: "desc" }).items[0].score).toBe(
+    expect(s.list({ ...Q, sort: "score", order: "desc" }).rows[0].score).toBe(
       66,
     );
-    expect(s.list({ ...Q, sort: "balance", order: "asc" }).items[0].id).toBe(
+    expect(s.list({ ...Q, sort: "balance", order: "asc" }).rows[0].id).toBe(
       "1",
     );
   });
@@ -708,9 +681,9 @@ describe("createLocalDataSource：查询", () => {
     const byName = (a: string, b: string) =>
       a.localeCompare(b, undefined, { numeric: true });
     const names = ["张", "李", "王"];
-    const asc = s.list({ ...Q, sort: "lastName", order: "asc" }).items;
+    const asc = s.list({ ...Q, sort: "lastName", order: "asc" }).rows;
     expect(asc.map((r) => r.lastName)).toEqual([...names].sort(byName));
-    const desc = s.list({ ...Q, sort: "lastName", order: "desc" }).items;
+    const desc = s.list({ ...Q, sort: "lastName", order: "desc" }).rows;
     expect(desc.map((r) => r.lastName)).toEqual(
       [...names].sort(byName).reverse(),
     );
@@ -741,8 +714,8 @@ describe("createLocalDataSource：查询", () => {
 
   it("返回的是副本，改动不会污染内部数据", () => {
     const s = src();
-    s.list(Q).items[0].name = "HACKED";
-    expect(s.list(Q).items[0].name).toBe("User01");
+    s.list(Q).rows[0].name = "HACKED";
+    expect(s.list(Q).rows[0].name).toBe("User01");
   });
 });
 
@@ -756,7 +729,7 @@ describe("createLocalDataSource：写操作", () => {
       onChange: () => changed++,
     });
     s.create!({ name: "New", balance: "12.5" });
-    const first = s.list(Q).items[0];
+    const first = s.list(Q).rows[0];
     expect(first.id).toBe("4");
     expect(first.name).toBe("New");
     expect(first.balance).toBe(12.5);
@@ -800,7 +773,7 @@ describe("createLocalDataSource：写操作", () => {
       failed: 0,
     });
     expect(s.getRows().length).toBe(6);
-    expect(s.list(Q).items[0].name).toBe("I2");
+    expect(s.list(Q).rows[0].name).toBe("I2");
   });
 
   it("setRows 整体替换；writable=false 时没有写方法", () => {
@@ -815,6 +788,9 @@ describe("createLocalDataSource：写操作", () => {
     expect(ro.create).toBe(undefined);
     expect(ro.remove).toBe(undefined);
     expect(ro.setField).toBe(undefined);
+    expect(ro.view("1")?.id).toBe("1");
+    expect(ro.get("1")).toEqual(ro.view("1"));
+    expect(ro.get("missing")).toBe(null);
   });
 
   it("自定义 rowKey", () => {
@@ -1187,5 +1163,126 @@ describe("resolveModalWidth", () => {
     expect(resolveModalWidth(960)).toBe(960);
     expect(resolveModalWidth(() => "xl")).toBe("xl");
     expect(resolveModalWidth(() => undefined, "lg")).toBe("lg");
+  });
+});
+
+describe("表单／搜索字段条件与底部按钮", () => {
+  const ctx: FormFieldConditionCtx = {
+    values: { type: "vip", city: "sh" },
+    mode: "edit",
+    row: { id: "1", type: "vip" },
+  };
+
+  it("isFormFieldVisible 叠加 createOnly／editOnly 与 show", () => {
+    expect(isFormFieldVisible({ prop: "a" }, ctx)).toBe(true);
+    expect(isFormFieldVisible({ prop: "a", createOnly: true }, ctx)).toBe(
+      false,
+    );
+    expect(
+      isFormFieldVisible({ prop: "a", editOnly: true }, {
+        ...ctx,
+        mode: "create",
+        row: null,
+      }),
+    ).toBe(false);
+    expect(isFormFieldVisible({ prop: "a", show: false }, ctx)).toBe(false);
+    expect(isFormFieldVisible({
+      prop: "level",
+      show: (c) => c.values.type === "vip",
+    }, ctx)).toBe(true);
+    expect(isFormFieldVisible({
+      prop: "level",
+      show: (c) => c.values.type === "normal",
+    }, ctx)).toBe(false);
+  });
+
+  it("isSearchFieldVisible 与 resolveOptions 函数", () => {
+    expect(isSearchFieldVisible({ prop: "q" }, { values: {} })).toBe(true);
+    expect(isSearchFieldVisible({
+      prop: "city",
+      show: (c) => c.values.region === "east",
+    }, { values: { region: "west" } })).toBe(false);
+    const opts = resolveOptions(
+      (c: FormFieldConditionCtx) =>
+        c.values.city === "sh" ? [{ value: "pd", label: "浦东" }] : [],
+      ctx,
+    );
+    expect(opts).toEqual([{ value: "pd", label: "浦东" }]);
+    expect(resolveOptions([{ value: "a", label: "A" }], ctx)).toEqual([
+      { value: "a", label: "A" },
+    ]);
+  });
+
+  it("resolveFooterActions：自定义键按写入序，cancel／reset 靠右最后", () => {
+    const slots = resolveFooterActions(
+      {
+        saveMore: { label: "保存并继续", action: () => {} },
+        submit: true,
+        cancel: true,
+      },
+      { busy: false },
+      [
+        { key: "submit", label: "保存", fallbackShow: true },
+        { key: "cancel", label: "取消", fallbackShow: true },
+      ],
+      "cancel",
+    );
+    expect(slots.map((s) => s.key)).toEqual(["saveMore", "submit", "cancel"]);
+    expect(slots[0].label).toBe("保存并继续");
+    expect(slots[1].label).toBe("保存");
+    expect(slots[2].label).toBe("取消");
+  });
+});
+
+describe("filterRows 新搜索类型", () => {
+  const data = [
+    { id: "1", age: 18, tags: "a,b", at: "2026-01-02 10:00:00" },
+    { id: "2", age: 30, tags: "b,c", at: "2026-03-01 08:00:00" },
+  ];
+  it("number 默认按数值相等；datetime 按前缀相等；multiselect 要求全包含", () => {
+    expect(
+      filterRows(data, { age: "18" }, [{ prop: "age", type: "number" }]).map((
+        r,
+      ) => r.id),
+    ).toEqual(["1"]);
+    expect(
+      filterRows(data, { at: "2026-03-01" }, [{ prop: "at", type: "datetime" }])
+        .map((r) => r.id),
+    ).toEqual(["2"]);
+    expect(
+      filterRows(data, { tags: "b,c" }, [{ prop: "tags", type: "multiselect" }])
+        .map((r) => r.id),
+    ).toEqual(["2"]);
+    expect(
+      filterRows(data, { tags: "b" }, [{ prop: "tags", type: "multiselect" }])
+        .map((r) => r.id),
+    ).toEqual(["1", "2"]);
+  });
+});
+
+describe("sumColumnTotals：面板页脚合计", () => {
+  it("只对 total: true 的列求和，并消除浮点误差", () => {
+    expect(sumColumnTotals(
+      [{ id: "1", balance: 0.1, score: 1 }, {
+        id: "2",
+        balance: 0.2,
+        score: 2,
+      }],
+      [
+        { prop: "balance", label: "余额", total: true },
+        { prop: "score", label: "分数" },
+      ],
+    )).toEqual({ balance: 0.3 });
+  });
+
+  it("非数值计为 0；空行得到 0", () => {
+    expect(sumColumnTotals(
+      [{ id: "1", balance: "x" }, { id: "2" }, { id: "3", balance: 4 }],
+      [{ prop: "balance", label: "余额", total: true }],
+    )).toEqual({ balance: 4 });
+    expect(sumColumnTotals(
+      [],
+      [{ prop: "balance", label: "余额", total: true }],
+    )).toEqual({ balance: 0 });
   });
 });

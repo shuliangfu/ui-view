@@ -5,13 +5,19 @@ import { describe, expect, it } from "@dreamer/test";
 import {
   actionDisplayText,
   actionTipText,
+  assertBatchBarConfig,
+  assertFooterActionsConfig,
   assertRowActionsConfig,
   assertToolbarConfig,
+  BATCH_BUILTINS,
   evalColumnDisable,
+  isBatchBuiltin,
   isRowBuiltin,
   isToolbarBuiltin,
+  type PanelActionContext,
   type PanelToolbarConfig,
   resolveActionCtrl,
+  resolveBatchActionCtrl,
   resolveRowActionCtrl,
   ROW_BUILTINS,
   type RowActionsConfig,
@@ -362,7 +368,7 @@ describe("DataPanel ActionCtrl unified Record", () => {
     ).toBe(false);
   });
 
-  it("batchStatus 已挪出 TOOLBAR_BUILTINS（改 caps.batchStatus＋column.batch）", () => {
+  it("batchStatus 不是工具栏或批量条内置键", () => {
     expect(isToolbarBuiltin("batchStatus")).toBe(false);
     expect([...TOOLBAR_BUILTINS]).not.toContain("batchStatus");
     // undeclared → caps; declared false hides
@@ -391,3 +397,119 @@ describe("evalColumnDisable", () => {
     expect(evalColumnDisable((r) => r.status === "on", row)).toBe(false);
   });
 });
+
+describe("ActionCtrl 上下文（零参兼容）", () => {
+  const ctx: PanelActionContext = {
+    selected: [{ id: "1", name: "张三" }],
+    rows: [{ id: "1", name: "张三" }, { id: "2", name: "李四" }],
+    query: { page: 2, pageSize: 10, sort: "name", order: "asc", filters: {} },
+  };
+
+  it("show／disable／action／title 接收 ctx；零参函数忽略 ctx 仍可用", () => {
+    const seen: unknown[] = [];
+    const r = resolveActionCtrl(
+      {
+        show: (c) => {
+          seen.push(["show", c.selected.length, c.query.page]);
+          return c.selected.length > 0;
+        },
+        disable: (c) => c.rows.length < 2,
+        title: (c) => `p${c.query.page}`,
+        action: (c) => {
+          seen.push(["action", c.selected[0]?.name]);
+        },
+      },
+      false,
+      ctx,
+    );
+    expect(r.show).toBe(true);
+    expect(r.disable).toBe(false);
+    expect(r.title).toBe("p2");
+    r.action?.(ctx);
+    expect(seen).toEqual([
+      ["show", 1, 2],
+      ["action", "张三"],
+    ]);
+
+    let zero = 0;
+    const z = resolveActionCtrl(
+      {
+        show: () => {
+          zero++;
+          return true;
+        },
+        disable: () => false,
+        action: () => {
+          zero += 10;
+        },
+      },
+      false,
+      ctx,
+    );
+    expect(z.show).toBe(true);
+    expect(z.disable).toBe(false);
+    z.action?.(ctx);
+    expect(zero).toBe(11);
+  });
+});
+
+describe("batchBar Record", () => {
+  it("isBatchBuiltin／默认序；自定义键必须提供 action", () => {
+    expect(isBatchBuiltin("batchStatus")).toBe(false);
+    expect(isBatchBuiltin("remove")).toBe(true);
+    expect(isBatchBuiltin("clear")).toBe(true);
+    expect(isBatchBuiltin("export")).toBe(false);
+    expect([...BATCH_BUILTINS]).toEqual(["remove", "clear"]);
+    expect(() => assertBatchBarConfig({ remove: true })).not.toThrow();
+    expect(() => assertBatchBarConfig({ mine: true })).toThrow(/mine.*action/i);
+    expect(() =>
+      assertBatchBarConfig({
+        archive: { label: "归档", action: () => {}, confirm: "确定？" },
+      })
+    ).not.toThrow();
+  });
+
+  it("resolveBatchActionCtrl 可写 confirm，并按选中行 disable", () => {
+    const ctx: PanelActionContext = {
+      selected: [{ id: "1", locked: true }],
+      rows: [{ id: "1", locked: true }],
+      query: { page: 1, pageSize: 20, sort: "", order: "asc", filters: {} },
+    };
+    const r = resolveBatchActionCtrl(
+      {
+        label: "归档",
+        confirm: (c) => `归档 ${c.selected.length} 条`,
+        disable: (c) => c.selected.some((row) => !!row.locked),
+        action: () => {},
+      },
+      true,
+      ctx,
+    );
+    expect(r.show).toBe(true);
+    expect(r.disable).toBe(true);
+    expect(r.confirm).toBe("归档 1 条");
+  });
+});
+
+describe("assertFooterActionsConfig", () => {
+  it("内置键无需 action；自定义键必须提供", () => {
+    expect(() =>
+      assertFooterActionsConfig({ submit: true, cancel: true }, ["submit", "cancel"], "form")
+    ).not.toThrow();
+    expect(() =>
+      assertFooterActionsConfig(
+        { saveMore: { label: "保存并继续" } },
+        ["submit", "cancel"],
+        "form.actions",
+      )
+    ).toThrow(/saveMore.*action/i);
+    expect(() =>
+      assertFooterActionsConfig(
+        { saveMore: { label: "保存并继续", action: () => {} } },
+        ["submit", "cancel"],
+        "form.actions",
+      )
+    ).not.toThrow();
+  });
+});
+

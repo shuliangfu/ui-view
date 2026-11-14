@@ -111,7 +111,7 @@ export function tabListCacheKey(opts: {
 
 function cloneListResult(value: ListResult): ListResult {
   return {
-    items: value.items.map((row) => ({ ...row }) as Row),
+    rows: value.rows.map((row) => ({ ...row }) as Row),
     total: value.total,
     totals: value.totals ? { ...value.totals } : undefined,
   };

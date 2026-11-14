@@ -9,10 +9,16 @@
  *   不要把 `index` 拼进路径（`/user` 或 `/user/index` 都得到 `/api/user`，不会写成 `/api/user-index`）。
  *
  * - `apiMode: "action"`（默认）：list GET 资源根；create POST …/create；
- *   update POST …/update?id=；remove POST …/remove?id=（body 亦含 id / ids）；
- *   view GET …/view?id=；importRows → 同一 create 端点，body `{ rows }`（与单条对象区分）。
+ *   update POST …/update?id=；单条删除 POST …/remove?id=（body 亦含 id / ids）；
+ *   批量删除 POST …/remote-batch?id=（body 亦含 id / ids）；
+ *   view GET …/view?id=；setField POST …/setField?id=（body 含 ids／id／field／value）；
+ *   importRows → 同一 create 端点，body `{ rows }`（与单条对象区分）。
  * - `apiMode: "restful"`：list GET 根；create POST 根；update PUT 根/:id；
- *   remove 对每个 id DELETE 根/:id；view GET 根/:id；importRows POST 根/import。
+ *   单条删除 DELETE 根/:id；批量删除 POST 根/remote-batch（body `{ ids }`）；
+ *   view GET 根/:id；
+ *   setField POST 根/setField（body `{ ids, field, value }`）；importRows POST 根/import。
+ * 路径可用 {@link ApiDataSourceOptions.removeAction}／
+ * {@link ApiDataSourceOptions.batchRemoveAction} 覆盖。
  *
  * 仍可用手写 {@link DataSource} 或面板 `onImportRows` 作逃生口。
  */
@@ -55,7 +61,7 @@ export interface ApiDataSourceOptions {
   /** 传给 fetch 的 credentials */
   credentials?: RequestCredentials;
   /**
-   * 为 false 时不挂 create／update／remove／importRows（只读 list＋view）。
+   * 为 false 时不挂 create／update／remove／removeBatch／importRows／setField（只读 list＋view）。
    * 默认 true。
    */
   writable?: boolean;
@@ -64,6 +70,19 @@ export interface ApiDataSourceOptions {
    * `list` 在 query.pageSize 缺失或非法时用此值；DataPanel 未传 `pageSize` 时也读这个默认。
    */
   pageSize?: number;
+  /**
+   * 单条删除路径段或绝对路径，默认 `"remove"`。
+   * action 模式：POST 此路径（query 带 id，body 含 id／ids）。
+   * restful 模式：缺省仍是 DELETE 根/:id；显式传入本项后改为 POST 该路径。
+   * 以 `/` 开头视为绝对路径，否则拼在资源根后。
+   */
+  removeAction?: string;
+  /**
+   * 批量删除路径段或绝对路径，默认 `"remote-batch"`。
+   * action 与 restful 的批量删除都是 POST 此路径（query 可带 id，body 含 ids）。
+   * 以 `/` 开头视为绝对路径，否则拼在资源根后。
+   */
+  batchRemoveAction?: string;
 }
 
 /** HTTP 数据源：异步；额外暴露 `view`／`root`／`apiMode`（点击查看时会调 view） */
@@ -79,6 +98,7 @@ export interface ApiDataSource extends DataSource {
    * - action：`GET ${root}/view?id=`
    * - restful：`GET ${root}/:id`
    * 点击查看时 DataPanel 会调用此方法；失败或返回空则回落当前行。
+   * {@link DataSource.get} 与本方法指向同一实现。
    */
   view(id: string): Promise<Row | null>;
 }
@@ -204,28 +224,31 @@ function isRecord(v: unknown): v is Record<string, unknown> {
 
 /** 从常见响应壳里取出 list 载荷 */
 export function normalizeListPayload(body: unknown): ListResult {
-  if (!isRecord(body)) return { items: [], total: 0 };
+  if (!isRecord(body)) return { rows: [], total: 0 };
   const inner = isRecord(body.data) &&
-      (Array.isArray(body.data.items) || Array.isArray(body.data.rows) ||
+      (Array.isArray(body.data.rows) || Array.isArray(body.data.items) ||
         typeof body.data.total === "number")
     ? body.data
     : body;
-  // 列表字段以 items 为准；没有 items 时再回退 rows
-  const itemsRaw = inner.items ?? inner.rows ??
-    (Array.isArray(body.data) ? body.data : []);
-  const items = Array.isArray(itemsRaw) ? itemsRaw as Row[] : [];
+  // 官方键为 rows；没有 rows 时再接受 items（已部署接口过渡兼容）
+  const rowsRaw = Array.isArray(inner.rows)
+    ? inner.rows
+    : Array.isArray(inner.items)
+    ? inner.items
+    : (Array.isArray(body.data) ? body.data : []);
+  const rows = rowsRaw as Row[];
   const totalRaw = inner.total;
   const total = typeof totalRaw === "number" && Number.isFinite(totalRaw)
     ? totalRaw
-    : items.length;
+    : rows.length;
   const totals = isRecord(inner.totals)
     ? Object.fromEntries(
       Object.entries(inner.totals).filter(([, v]) => typeof v === "number"),
     ) as Record<string, number>
     : undefined;
   return totals && Object.keys(totals).length
-    ? { items, total, totals }
-    : { items, total };
+    ? { rows, total, totals }
+    : { rows, total };
 }
 
 /**
@@ -340,8 +363,9 @@ async function readBody(res: Response): Promise<unknown> {
  * });
  * ```
  *
- * 面板亦可透传 `baseRoute`／`resource`／`apiMode`：**仅当未传 `data` 且未传 `dataSource`**
- * 时内部生成并拉 list（优先级：`dataSource` ＞ `data` ＞ API）。`onImportRows` 仍可接管导入。
+ * 面板亦可透传 `baseRoute`／`resource`／`apiMode`：未传 `dataSource` 时内部生成 API 源
+ * （优先级：`dataSource` ＞ `baseRoute` ＞ 只传 `data`）。同时传 `data` 和 `baseRoute` 时
+ * 首屏用 `data`、挂载不拉 list，刷新／翻页再请求。`onImportRows` 仍可接管导入。
  */
 export function createApiDataSource(
   opts: ApiDataSourceOptions,
@@ -417,8 +441,13 @@ export function createApiDataSource(
       const listQuery = { ...query, pageSize: size };
       const qs = apiQueryParams(listQuery).toString();
       const url = qs ? `${root}?${qs}` : root;
-      const r = await request("GET", url, undefined, apiListQueryHeaders(listQuery));
-      if (!r.ok) return { items: [], total: 0 };
+      const r = await request(
+        "GET",
+        url,
+        undefined,
+        apiListQueryHeaders(listQuery),
+      );
+      if (!r.ok) return { rows: [], total: 0 };
       return normalizeListPayload(r.body);
     },
     async view(id: string) {
@@ -439,6 +468,8 @@ export function createApiDataSource(
       return null;
     },
   };
+
+  src.get = (id) => src.view(id);
 
   if (!writable) return src;
 
@@ -465,16 +496,21 @@ export function createApiDataSource(
     return writeFromResponse(r.ok, r.body);
   };
 
-  src.remove = async (ids) => {
-    if (mode === "action") {
-      const r = await request(
-        "POST",
-        withItemIds(joinApiPath(root, "remove"), ids),
-        { ids, id: ids[0] },
-      );
-      return bulkFromBody(r.body, ids, r.ok);
-    }
-    // restful：逐条 DELETE；汇总 removed／failed
+  const removeActionPath = (raw: string | undefined, fallback: string) => {
+    const seg = (raw ?? "").trim() || fallback;
+    return seg.startsWith("/") ? seg : joinApiPath(root, seg);
+  };
+
+  const postRemove = async (path: string, ids: string[]) => {
+    const r = await request(
+      "POST",
+      withItemIds(path, ids),
+      { ids, id: ids[0] },
+    );
+    return bulkFromBody(r.body, ids, r.ok);
+  };
+
+  const deleteOneRestful = async (ids: string[]) => {
     const failed: { id: string; error: string }[] = [];
     let removed = 0;
     for (const id of ids) {
@@ -495,6 +531,39 @@ export function createApiDataSource(
       }
     }
     return { removed, failed };
+  };
+
+  /** 单条删除：action 默认 POST …/remove；restful 默认 DELETE 根/:id。多 id 回落批量。 */
+  src.remove = (ids) => {
+    if (ids.length > 1) return src.removeBatch!(ids);
+    if (mode === "action") {
+      return postRemove(removeActionPath(opts.removeAction, "remove"), ids);
+    }
+    if ((opts.removeAction ?? "").trim()) {
+      return postRemove(removeActionPath(opts.removeAction, "remove"), ids);
+    }
+    return deleteOneRestful(ids);
+  };
+
+  /** 批量删除：默认 POST …/remote-batch（可用 batchRemoveAction 覆盖）。 */
+  src.removeBatch = (ids) =>
+    postRemove(
+      removeActionPath(opts.batchRemoveAction, "remote-batch"),
+      ids,
+    );
+
+  src.setField = async (ids, field, value) => {
+    const url = joinApiPath(root, "setField");
+    if (mode === "action") {
+      const r = await request(
+        "POST",
+        withItemIds(url, ids),
+        { ids, id: ids[0], field, value },
+      );
+      return bulkFromBody(r.body, ids, r.ok);
+    }
+    const r = await request("POST", url, { ids, field, value });
+    return bulkFromBody(r.body, ids, r.ok);
   };
 
   src.importRows = async (rows) => {

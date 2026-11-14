@@ -2,11 +2,14 @@
  * DataView 数据明细（桌面 · 数据展示）。
  *
  * 与 DataPanel 同一套卡片外壳与主题类，内容区默认是 DataPanel `view` 的 Descriptions
- * 字段展示；也可用 `view.render` 或 `children` 自定义内容（`children` 优先于 `view.render`）。
+ * 字段展示；也可用 `view.render` 自定义字段区（推荐扩展点）。
+ * `children` 在 DataView 中是明细主体（优先于 `view.render`），与 DataPanel 的「根上额外 Modal」不同。
  * 无分页、搜索、新建、列设置、行高与批量条。
  *
- * 工具栏默认顺序：更新 / 刷新 / 打印 / 导入 / 导出 / 全屏 / 复制。
- * `toolbar={false}` 隐藏整栏；`PanelToolbarConfig` 覆写规则与 DataPanel 相同。
+ * 工具栏默认顺序：更新 / 删除 / 刷新 / 打印 / 导入 / 导出 / 全屏 / 复制。
+ * 删除为可选内置（默认在数据源提供 `remove` 时显示），需确认后调用 `ds.remove`（官方 API 源默认单条接口 `remove`）。
+ * `toolbar={false}` 隐藏整栏；`ViewToolbarConfig` 覆写规则与 DataPanel 相同，
+ * `show`／`disable`／`action` 接收 `{ record }`（零参函数仍可用）。
  * `update` 为编辑入口（可用 `edit` 别名声明）；打开与 DataPanel 编辑相同的 form Modal。
  *
  * 数据：`data` 单行，或 `dataSource` / `baseRoute`（优先序同 DataPanel：
@@ -23,6 +26,7 @@ import { Button, ButtonGroup } from "../basic/Button.tsx";
 import { IconCopy } from "../../shared/basic/icons/Copy.tsx";
 import { IconDownload } from "../../shared/basic/icons/Download.tsx";
 import { IconEdit } from "../../shared/basic/icons/Edit.tsx";
+import { IconTrash } from "../../shared/basic/icons/Trash.tsx";
 import { IconExitFullscreen } from "../../shared/basic/icons/ExitFullscreen.tsx";
 import { IconList } from "../../shared/basic/icons/List.tsx";
 import { IconMaximize2 } from "../../shared/basic/icons/Maximize2.tsx";
@@ -42,6 +46,11 @@ import {
   writeTabToLocation,
 } from "./data-panel-tabs.tsx";
 import {
+  createDataAlertState,
+  type DataAlertProp,
+  DataChromeAlert,
+} from "./data-panel-alert.tsx";
+import {
   createTabRecordCache,
   loadTabRecord,
   resolveTabQuery,
@@ -60,6 +69,7 @@ import { DateTimePicker } from "../form/DateTimePicker.tsx";
 import { Switch } from "../form/Switch.tsx";
 import { Textarea } from "../form/Textarea.tsx";
 import { Modal } from "../feedback/Modal.tsx";
+import { Popconfirm } from "../feedback/Popconfirm.tsx";
 import { Tooltip } from "../feedback/Tooltip.tsx";
 import { message } from "../feedback/message-store.ts";
 import {
@@ -81,6 +91,7 @@ import {
   parseCsv,
   parseJsonRows,
   parseXmlRows,
+  resolveFooterActions,
   resolveModalWidth,
   resolveViewActionsCfg,
   resolveViewFields,
@@ -94,21 +105,29 @@ import {
   actionDisplayText,
   actionTipText,
   type ActionTone,
+  assertFooterActionsConfig,
   type Column,
   type DataSource,
+  evalFlag,
   type ExportFormat,
+  type FormActionContext,
   type FormConfig,
+  type FormField,
+  type FormFieldConditionCtx,
   type FormFieldRenderCtx,
   type FormRenderCtx,
   type ImportFormat,
+  isFormFieldVisible,
   type ListResult,
   type Locale,
   type Messages,
-  type PanelToolbarConfig,
   resolveActionCtrl,
+  resolveOptions,
   type Row,
+  type ViewActionContext,
   type ViewConfig,
   type ViewItem,
+  type ViewToolbarConfig,
   type WriteResult,
 } from "./data-panel-types.ts";
 import {
@@ -118,9 +137,11 @@ import {
   g,
   HEADER_BAR_CLS,
   onServer,
+  POP_OVERLAY_CLS,
   printHtml,
   readDataPanelPrefs,
   refreshers,
+  TABLE_WRAP_BELOW_ALERT_CLS,
   TABLE_WRAP_CLS,
   TB_FIRST_STYLE,
   TB_LAST_STYLE,
@@ -128,6 +149,7 @@ import {
   TB_NL_STYLE,
   TB_STYLE,
   TOOLBAR_BAR_CLS,
+  viewHandles,
   writeDataPanelPrefs,
 } from "./data-panel-chrome.tsx";
 import { buildViewDescriptionItems } from "./data-view-cell.tsx";
@@ -137,6 +159,7 @@ const REFRESH_MIN_BUSY_MS = 320;
 /** DataView 工具栏内置键（不含 DataPanel 的 create／search／columns／density）。 */
 export type DataViewToolbarBuiltin =
   | "update"
+  | "remove"
   | "refresh"
   | "print"
   | "import"
@@ -147,6 +170,7 @@ export type DataViewToolbarBuiltin =
 /** 缺省工具栏显示序；未声明的内置键按此序追加。 */
 export const DATA_VIEW_TOOLBAR_BUILTINS: readonly DataViewToolbarBuiltin[] = [
   "update",
+  "remove",
   "refresh",
   "print",
   "import",
@@ -168,6 +192,8 @@ export function isDataViewToolbarBuiltin(
 /** 能力开关（缺省按数据源方法推断；refresh 始终可用，不在此列）。 */
 export interface DataViewCaps {
   update: boolean;
+  /** 工具栏删除；默认在数据源提供 `remove` 时为 true。 */
+  remove: boolean;
   import: boolean;
   export: boolean;
   print: boolean;
@@ -185,7 +211,7 @@ export interface DataViewProps {
   title: string;
   /**
    * 明细配置：`props` 用 Descriptions 展示（同 DataPanel view）；
-   * `render` 替换字段区。字段级 `ViewItem.render` 仅在无 `view.render` 且无 `children` 时生效。
+   * `render` 是推荐扩展点，替换字段区。字段级 `ViewItem.render` 仅在无 `view.render` 且无 `children` 时生效。
    */
   view?: ViewConfig;
   /**
@@ -219,8 +245,18 @@ export interface DataViewProps {
    * 工具栏，或 `false` 隐藏整栏。
    * 省略键 → 内置回落 caps；声明键请写明确 true｜false｜object。
    * `update` 可用 `edit` 别名声明。自定义键必须提供 `action`。
+   * `show`／`disable`／`action` 接收 `{ record }`；零参函数仍可用。
    */
-  toolbar?: false | PanelToolbarConfig;
+  toolbar?: false | ViewToolbarConfig;
+
+  /**
+   * 页面提示条，渲染在工具栏（含工具栏左侧标签）下方、详情正文上方。
+   * 字符串简写为 info 提示；对象为完整 {@link DataAlertConfig}（透传 Alert 全部参数，另加 show／key）。
+   * `false`／`null`／省略／`show: false` 不显示。函数在渲染时求值。
+   * 本插槽默认可关闭（`closable` 默认 true）、通栏样式（`banner` 默认 true）。
+   * 点击关闭会先隐藏提示，再调用 `onClose`；换一条提示（或先关掉再传入）会重新显示。
+   */
+  alert?: DataAlertProp;
   locale?: Locale;
   messages?: Partial<Messages>;
   /** 导出文件名（不含扩展名），默认取 title */
@@ -265,6 +301,8 @@ export interface DataViewProps {
   tabParam?: string | false;
 }
 
+export type { DataAlertConfig, DataAlertProp } from "./data-panel-alert.tsx";
+
 /** 本地源没有 view/get 时补一个按 id 查找，刷新／写回后能读到源里的当前行。 */
 function withLocalRecordGet(ds: DataSource, rowKey: string): DataSource {
   const src = ds as DataSource & {
@@ -282,7 +320,7 @@ function withLocalRecordGet(ds: DataSource, rowKey: string): DataSource {
       order: "asc",
       filters: {},
     });
-    return res.items.find((r) => String(r[rowKey] ?? "") === String(id)) ??
+    return res.rows.find((r) => String(r[rowKey] ?? "") === String(id)) ??
       null;
   };
   return ds;
@@ -303,10 +341,10 @@ function recordLoader(
 
 /** 将 toolbar 里的 `edit` 别名归一成 `update`（已声明 `update` 时丢弃 `edit`）。 */
 export function normalizeDataViewToolbar(
-  cfg: PanelToolbarConfig,
-): PanelToolbarConfig {
+  cfg: ViewToolbarConfig,
+): ViewToolbarConfig {
   const hasUpdate = Object.prototype.hasOwnProperty.call(cfg, "update");
-  const out: PanelToolbarConfig = {};
+  const out: ViewToolbarConfig = {};
   for (const [key, val] of Object.entries(cfg)) {
     if (key === "edit") {
       if (!hasUpdate) out.update = val;
@@ -319,7 +357,7 @@ export function normalizeDataViewToolbar(
 
 /** 自定义工具栏键必须提供 `action`；`update`／`edit` 视为内置。 */
 export function assertDataViewToolbarConfig(
-  cfg: PanelToolbarConfig | false | undefined,
+  cfg: ViewToolbarConfig | false | undefined,
 ): void {
   if (!cfg) return;
   for (const [key, val] of Object.entries(cfg)) {
@@ -491,6 +529,7 @@ export function DataView(props: DataViewProps): JSXRenderable {
   const caps: DataViewCaps = {
     update: !!ds.update &&
       (formDefs.length > 0 || !!props.form?.render),
+    remove: !!ds.remove,
     import: !!ds.importRows || !!props.onImportRows,
     export: true,
     print: true,
@@ -500,16 +539,20 @@ export function DataView(props: DataViewProps): JSXRenderable {
   };
 
   const toolbarHidden = props.toolbar === false;
-  const tbCfg: PanelToolbarConfig = normalizeDataViewToolbar(
+  const tbCfg: ViewToolbarConfig = normalizeDataViewToolbar(
     props.toolbar && typeof props.toolbar === "object" ? props.toolbar : {},
   );
   assertDataViewToolbarConfig(tbCfg);
-  const tbResolved = (name: DataViewToolbarBuiltin, fallback: boolean) =>
-    resolveActionCtrl(tbCfg[name], fallback);
+  assertFooterActionsConfig(
+    props.form?.actions,
+    ["submit", "cancel"],
+    "DataView form.actions",
+  );
 
   const record = createSignal<Row | null>(props.data ?? null);
   const loading = createSignal(false);
   const panelFs = createSignal(false);
+  const alertState = createDataAlertState();
   const formOpen = createSignal(false);
   const formBusy = createSignal(false);
   const formErrors = createSignal<Record<string, string>>({});
@@ -519,6 +562,10 @@ export function DataView(props: DataViewProps): JSXRenderable {
   for (const f of formDefs) fields[fieldProp(f)] = createSignal("");
   const mfields: Record<string, ReturnType<typeof createSignal<string[]>>> = {};
   for (const f of formDefs) mfields[fieldProp(f)] = createSignal<string[]>([]);
+  const popRemove = createSignal(false);
+  const viewActionCtx = (): ViewActionContext => ({ record: record.value });
+  const tbResolved = (name: DataViewToolbarBuiltin, fallback: boolean) =>
+    resolveActionCtrl(tbCfg[name], fallback, viewActionCtx());
 
   const resolveId = (): string => {
     if (props.id != null && String(props.id) !== "") return String(props.id);
@@ -609,6 +656,17 @@ export function DataView(props: DataViewProps): JSXRenderable {
     invalidateCurrentTabCache();
     return load({ bypassCache: true });
   });
+  viewHandles.set(key, {
+    reload: () => {
+      invalidateCurrentTabCache();
+      return load({ bypassCache: true });
+    },
+    getRecord: () => record.value,
+    openForm: (row) => {
+      const target = row ?? record.value;
+      if (target) openForm(target);
+    },
+  });
   tabReload.run = () => {
     if (!usesTabRecordCache()) return;
     void load();
@@ -673,21 +731,52 @@ export function DataView(props: DataViewProps): JSXRenderable {
     formOpen.value = true;
   }
 
-  function collectValues(): Record<string, unknown> {
+  function readFormFieldValue(
+    f: FormField,
+  ): { skip: boolean; value: unknown } {
+    const v = fields[fieldProp(f)].value;
+    if (f.type === "password" && v === "") return { skip: true, value: v };
+    if (f.type === "multiselect") {
+      return { skip: false, value: v.split(",").filter(Boolean) };
+    }
+    if (f.type === "number") {
+      return { skip: false, value: v === "" ? "" : Number(v) };
+    }
+    if (f.type === "datetime") {
+      return { skip: false, value: v.replace(" ", "T") };
+    }
+    if (f.type === "switch" && !f.onOff) {
+      return { skip: false, value: v === "true" };
+    }
+    return { skip: false, value: v };
+  }
+
+  function rawFormValues(): Record<string, unknown> {
     const body: Record<string, unknown> = {};
     for (const f of formDefs) {
-      if (f.createOnly) continue;
-      const v = fields[fieldProp(f)].value;
-      if (f.type === "multiselect") {
-        body[fieldProp(f)] = v.split(",").filter(Boolean);
-      } else if (f.type === "number") {
-        body[fieldProp(f)] = v === "" ? "" : Number(v);
-      } else if (f.type === "datetime") {
-        body[fieldProp(f)] = v.replace(" ", "T");
-      } else if (f.type === "switch" && !f.onOff) {
-        body[fieldProp(f)] = v === "true";
-      } else if (f.type === "password" && v === "") continue;
-      else body[fieldProp(f)] = v;
+      const got = readFormFieldValue(f);
+      if (got.skip) continue;
+      body[fieldProp(f)] = got.value;
+    }
+    return body;
+  }
+
+  function formConditionCtx(): FormFieldConditionCtx {
+    return {
+      values: rawFormValues(),
+      mode: "edit",
+      row: formRow.value,
+    };
+  }
+
+  function collectValues(): Record<string, unknown> {
+    const ctx = formConditionCtx();
+    const body: Record<string, unknown> = {};
+    for (const f of formDefs) {
+      if (!isFormFieldVisible(f, ctx)) continue;
+      const got = readFormFieldValue(f);
+      if (got.skip) continue;
+      body[fieldProp(f)] = got.value;
     }
     return body;
   }
@@ -698,7 +787,10 @@ export function DataView(props: DataViewProps): JSXRenderable {
     const id = row ? idOf(row) : resolveId();
     if (!id) return;
     const values = collectValues();
-    const errs = validateForm(formDefs, values, true, m);
+    const visible = formDefs.filter((f) =>
+      isFormFieldVisible(f, formConditionCtx())
+    );
+    const errs = validateForm(visible, values, true, m);
     if (Object.keys(errs).length) {
       formErrors.value = errs;
       formTop.value = "";
@@ -754,7 +846,7 @@ export function DataView(props: DataViewProps): JSXRenderable {
 
   function fetchAll(): Promise<ListResult> {
     const row = record.value;
-    return Promise.resolve({ items: row ? [row] : [], total: row ? 1 : 0 });
+    return Promise.resolve({ rows: row ? [row] : [], total: row ? 1 : 0 });
   }
 
   async function exportAs(fmt: ExportFormat): Promise<void> {
@@ -771,11 +863,11 @@ export function DataView(props: DataViewProps): JSXRenderable {
         basename: props.exportName ?? props.title,
         columns: cols.length
           ? cols
-          : Object.keys(all.items[0] ?? {}).map((prop) => ({
+          : Object.keys(all.rows[0] ?? {}).map((prop) => ({
             prop,
             label: prop,
           })),
-        rows: all.items,
+        rows: all.rows,
         messages: m,
       }));
     } catch (e) {
@@ -933,6 +1025,7 @@ export function DataView(props: DataViewProps): JSXRenderable {
 
   const TB_FALLBACK: Record<DataViewToolbarBuiltin, boolean> = {
     update: caps.update,
+    remove: caps.remove,
     refresh: true,
     print: caps.print,
     import: caps.import,
@@ -963,12 +1056,15 @@ export function DataView(props: DataViewProps): JSXRenderable {
     };
 
   const toolbarSlots = (): TbSlot[] => {
+    const ctx = viewActionCtx();
+    const wrap = (fn?: (c: ViewActionContext) => void) =>
+      fn ? () => fn(viewActionCtx()) : undefined;
     const slots: TbSlot[] = [];
     const declared = new Set<string>();
     for (const key of Object.keys(tbCfg)) {
       declared.add(key);
       if (isDataViewToolbarBuiltin(key)) {
-        const r = resolveActionCtrl(tbCfg[key], TB_FALLBACK[key]);
+        const r = resolveActionCtrl(tbCfg[key], TB_FALLBACK[key], ctx);
         if (!r.show) continue;
         slots.push({
           kind: "builtin",
@@ -977,13 +1073,13 @@ export function DataView(props: DataViewProps): JSXRenderable {
           title: r.title,
           label: r.label,
           tone: r.tone,
-          action: r.action,
+          action: wrap(r.action),
         });
         continue;
       }
       const raw = tbCfg[key];
       if (typeof raw !== "object" || raw === null) continue;
-      const r = resolveActionCtrl(raw, true);
+      const r = resolveActionCtrl(raw, true, ctx);
       if (!r.show) continue;
       slots.push({
         kind: "custom",
@@ -993,7 +1089,7 @@ export function DataView(props: DataViewProps): JSXRenderable {
         icon: raw.icon,
         title: r.title,
         tone: r.tone,
-        action: r.action!,
+        action: wrap(r.action)!,
       });
     }
     for (const name of DATA_VIEW_TOOLBAR_BUILTINS) {
@@ -1014,6 +1110,7 @@ export function DataView(props: DataViewProps): JSXRenderable {
 
   const TB_IDS: Record<DataViewToolbarBuiltin, string> = {
     update: "dv-update",
+    remove: "dv-remove",
     refresh: "dv-refresh",
     print: "dv-print",
     import: "dv-import",
@@ -1030,6 +1127,7 @@ export function DataView(props: DataViewProps): JSXRenderable {
       }
       const labels: Record<DataViewToolbarBuiltin, string> = {
         update: updateTipDefault,
+        remove: m.delete,
         refresh: m.refresh,
         print: m.print,
         import: m.import,
@@ -1077,6 +1175,7 @@ export function DataView(props: DataViewProps): JSXRenderable {
   });
   onCleanup(() => {
     refreshers.delete(key);
+    viewHandles.delete(key);
     try {
       if (g.document?.body) g.document.body.style.overflow = "";
     } catch { /* ignore */ }
@@ -1184,6 +1283,33 @@ export function DataView(props: DataViewProps): JSXRenderable {
     if (row) openForm(row);
   };
 
+  function rowTitle(r: Row): string {
+    return String(r.name ?? r.title ?? r.username ?? idOf(r));
+  }
+
+  async function doRemove(): Promise<void> {
+    const row = record.value;
+    if (!row || !ds.remove) return;
+    const id = idOf(row);
+    const r = await guarded(() => ds.remove!([id]));
+    if (!r) return;
+    const failed = r.failed ?? [];
+    if (failed.length) {
+      message.error(failed[0]?.error || m.networkError);
+    } else {
+      message.success(m.deleted);
+    }
+    formOpen.value = false;
+    invalidateCurrentTabCache();
+    if (props.data && idOf(props.data) === id) {
+      record.value = null;
+      props.onDataChange?.(null);
+    } else {
+      await load();
+    }
+    props.onChanged?.();
+  }
+
   const renderTbBuiltin = (
     name: DataViewToolbarBuiltin,
     disable: boolean,
@@ -1202,6 +1328,50 @@ export function DataView(props: DataViewProps): JSXRenderable {
           title,
           label,
         );
+      case "remove": {
+        const row = record.value;
+        const tip = actionTipText("remove", title, label, m.delete);
+        const locked = disable || !row;
+        const btn = (
+          <Button
+            type="button"
+            size="sm"
+            class={posCls("dv-remove")}
+            disabled={locked}
+            data-testid="dv-remove"
+            aria-label={tip}
+            onClick={() => {
+              if (locked) return;
+              if (action) action();
+              else popRemove.value = true;
+            }}
+          >
+            <IconTrash size="sm" />
+          </Button>
+        );
+        if (action) {
+          return tipWrap(tip, btn);
+        }
+        return (
+          <Popconfirm
+            open={() => popRemove.value}
+            placement="auto"
+            danger
+            title={row
+              ? formatMessage(m.deleteAsk, { name: rowTitle(row) })
+              : m.delete}
+            okText={m.delete}
+            cancelText={m.cancel}
+            overlayClass={POP_OVERLAY_CLS}
+            onOpenChange={(o: boolean) => {
+              if (!o) popRemove.value = false;
+            }}
+            onConfirm={() => void doRemove()}
+          >
+            {tipWrap(tip, btn)}
+          </Popconfirm>
+        );
+      }
       case "refresh":
         return (
           <Tooltip
@@ -1423,7 +1593,9 @@ export function DataView(props: DataViewProps): JSXRenderable {
         </div>
       );
     }
-    const formGrid = useFieldGrid(formDefs);
+    const cond = formConditionCtx();
+    const visibleForm = formDefs.filter((f) => isFormFieldVisible(f, cond));
+    const formGrid = useFieldGrid(visibleForm);
     return (
       <form
         class={formGrid ? "grid grid-cols-12 gap-3" : "grid gap-3"}
@@ -1435,11 +1607,13 @@ export function DataView(props: DataViewProps): JSXRenderable {
           void submitForm();
         }}
       >
-        {formDefs.filter((f) => !f.createOnly).map((f) => {
+        {visibleForm.map((f) => {
           const prop = fieldProp(f);
           const sig = fields[prop];
           const type = f.type ?? "text";
           const lay = fieldLayoutStyle(f);
+          const disabled = evalFlag(f.disabled, false, cond);
+          const opts = resolveOptions(f.options, cond);
           let control: unknown;
           if (typeof f.render === "function") {
             const fieldCtx: FormFieldRenderCtx = {
@@ -1449,7 +1623,7 @@ export function DataView(props: DataViewProps): JSXRenderable {
               multiValue: mfields[prop],
               mode: "edit",
               row: formRow.value,
-              disabled: false,
+              disabled,
               error: errs[prop],
             };
             control = (
@@ -1463,6 +1637,7 @@ export function DataView(props: DataViewProps): JSXRenderable {
                 <Textarea
                   rows={f.rows ?? 4}
                   value={sig}
+                  disabled={disabled}
                   maxLength={f.maxlength}
                   placeholder={f.placeholder}
                   onInput={(
@@ -1478,11 +1653,12 @@ export function DataView(props: DataViewProps): JSXRenderable {
                 <Select
                   size="sm"
                   value={sig}
+                  disabled={disabled}
                   placeholder={!f.required &&
-                      !(f.options ?? []).some((o) => o.value === "")
+                      !opts.some((o) => o.value === "")
                     ? "—"
                     : undefined}
-                  options={(f.options ?? []).map((o) => ({
+                  options={opts.map((o) => ({
                     value: o.value,
                     label: o.label,
                   }))}
@@ -1495,7 +1671,8 @@ export function DataView(props: DataViewProps): JSXRenderable {
                 <MultiSelect
                   size="sm"
                   value={mfields[prop]}
-                  options={(f.options ?? []).map((o) => ({
+                  disabled={disabled}
+                  options={opts.map((o) => ({
                     value: o.value,
                     label: o.label,
                   }))}
@@ -1513,6 +1690,7 @@ export function DataView(props: DataViewProps): JSXRenderable {
               <span data-testid={`dv-fld-${prop}`}>
                 <Switch
                   checked={() => sig.value === on}
+                  disabled={disabled}
                   onChange={(e: Event) => {
                     sig.value =
                       (e.target as unknown as { checked: boolean }).checked
@@ -1528,6 +1706,7 @@ export function DataView(props: DataViewProps): JSXRenderable {
                 <InputNumber
                   size="sm"
                   value={sig}
+                  disabled={disabled}
                   placeholder={f.placeholder}
                 />
               </div>
@@ -1538,6 +1717,7 @@ export function DataView(props: DataViewProps): JSXRenderable {
                 <DatePicker
                   size="sm"
                   value={sig}
+                  disabled={disabled}
                   placeholder={f.placeholder}
                 />
               </div>
@@ -1549,6 +1729,7 @@ export function DataView(props: DataViewProps): JSXRenderable {
                   size="sm"
                   value={sig}
                   format="YYYY-MM-DD HH:mm"
+                  disabled={disabled}
                   placeholder={f.placeholder}
                 />
               </div>
@@ -1559,6 +1740,7 @@ export function DataView(props: DataViewProps): JSXRenderable {
                 <Input
                   type={type === "password" ? "password" : "text"}
                   value={sig}
+                  disabled={disabled}
                   autoComplete={type === "password" ? "new-password" : "off"}
                   placeholder={f.placeholder}
                   onInput={(e: Event) => {
@@ -1603,25 +1785,65 @@ export function DataView(props: DataViewProps): JSXRenderable {
   };
 
   const formFooter = () => {
-    if (props.form?.render) return null;
+    if (props.form?.footer === false) return null;
+    if (props.form?.render && !props.form?.actions) return null;
+    const ctx: FormActionContext = {
+      values: collectValues(),
+      mode: "edit",
+      row: formRow.value,
+      busy: formBusy.value,
+      submit: submitForm,
+      close: () => {
+        formOpen.value = false;
+      },
+    };
+    const slots = resolveFooterActions(
+      props.form?.actions,
+      ctx,
+      [
+        {
+          key: "submit",
+          label: formRow.value ? m.update : m.save,
+          fallbackShow: true,
+        },
+        { key: "cancel", label: m.cancel, fallbackShow: true },
+      ],
+      "cancel",
+    );
     return (
       <>
-        <Btn
-          type="button"
-          variant="primary"
-          loading={formBusy.value}
-          data-testid="dv-form-submit"
-          onClick={() => void submitForm()}
-        >
-          {formRow.value ? m.update : m.save}
-        </Btn>
-        <Btn
-          type="button"
-          onClick={() => (formOpen.value = false)}
-          data-testid="dv-form-cancel"
-        >
-          {m.cancel}
-        </Btn>
+        {slots.map((s) => {
+          const isSubmit = s.key === "submit";
+          const isCancel = s.key === "cancel";
+          const testid = isSubmit
+            ? "dv-form-submit"
+            : isCancel
+            ? "dv-form-cancel"
+            : `dv-form-action-${s.key}`;
+          return (
+            <Btn
+              type="button"
+              variant={s.tone ?? (isSubmit ? "primary" : "default")}
+              loading={isSubmit && !s.action ? formBusy.value : undefined}
+              disabled={s.disable || (isSubmit && formBusy.value)}
+              data-testid={testid}
+              onClick={() => {
+                if (s.disable) return;
+                if (isSubmit && !s.action) {
+                  void submitForm();
+                  return;
+                }
+                if (isCancel && !s.action) {
+                  formOpen.value = false;
+                  return;
+                }
+                s.action?.(ctx);
+              }}
+            >
+              {s.label}
+            </Btn>
+          );
+        })}
       </>
     );
   };
@@ -1762,14 +1984,28 @@ export function DataView(props: DataViewProps): JSXRenderable {
           >
             {() => {
               const defaultBody = (
-                <div class={TABLE_WRAP_CLS} data-testid="dv-body">
+                <div
+                  class={() =>
+                    alertState.visible(props.alert)
+                      ? TABLE_WRAP_BELOW_ALERT_CLS
+                      : TABLE_WRAP_CLS}
+                  data-testid="dv-body"
+                >
                   {viewBody}
                 </div>
+              );
+              const pageAlert = (
+                <DataChromeAlert
+                  alert={props.alert}
+                  testId="dv-alert"
+                  state={alertState}
+                />
               );
               if (!props.tabs?.length) {
                 return (
                   <>
                     {toolbar}
+                    {pageAlert}
                     {defaultBody}
                   </>
                 );
@@ -1803,6 +2039,7 @@ export function DataView(props: DataViewProps): JSXRenderable {
                       type={props.tabType}
                     />,
                   )}
+                  {pageAlert}
                   <DataChromeTabBody
                     tabs={props.tabs}
                     activeTab={tabKey.value}

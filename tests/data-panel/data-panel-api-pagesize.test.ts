@@ -24,7 +24,7 @@ describe("createApiDataSource pageSize", () => {
       fetch: ((input: RequestInfo | URL) => {
         urls.push(String(input));
         return Promise.resolve(
-          new Response(JSON.stringify({ items: [], total: 0 }), {
+          new Response(JSON.stringify({ rows: [], total: 0 }), {
             headers: { "Content-Type": "application/json" },
           }),
         );
@@ -44,7 +44,7 @@ describe("createApiDataSource pageSize", () => {
       fetch: ((input: RequestInfo | URL) => {
         urls.push(String(input));
         return Promise.resolve(
-          new Response(JSON.stringify({ items: [], total: 0 }), {
+          new Response(JSON.stringify({ rows: [], total: 0 }), {
             headers: { "Content-Type": "application/json" },
           }),
         );

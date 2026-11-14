@@ -6,7 +6,9 @@
  * - GET  /api/users/view?id=
  * - POST /api/users/create（单条对象；importRows 为 `{ rows }`）
  * - POST /api/users/update（body 含 id）
- * - POST /api/users/remove（body `{ ids }`）
+ * - POST /api/users/setField（query id=；body `{ ids, id, field, value }`）
+ * - POST /api/users/remove（单条删除，body `{ ids }`）
+ * - POST /api/users/remote-batch（批量删除，body `{ ids }`）
  */
 import { json } from "@dreamer/router";
 
@@ -106,7 +108,7 @@ function list(req: Request) {
   const balance = rows.reduce((s, r) => s + (Number(r.balance) || 0), 0);
   const start = (page - 1) * pageSize;
   return json({
-    items: rows.slice(start, start + pageSize),
+    rows: rows.slice(start, start + pageSize),
     total,
     totals: { balance: Math.round(balance * 100) / 100 },
   });
@@ -141,7 +143,7 @@ export function GET(request: Request): Response {
   return json({ error: "not_found" }, 404);
 }
 
-/** POST /api/users/create|update|remove（同文件 :method） */
+/** POST /api/users/create|update|remove|remote-batch（同文件 :method） */
 export async function POST(request: Request): Promise<Response> {
   const action = lastSeg(pathOf(request));
   const body = await request.json().catch(() => ({})) as Record<
@@ -196,7 +198,41 @@ export async function POST(request: Request): Promise<Response> {
     store = [...store.slice(0, i), next, ...store.slice(i + 1)];
     return json({ ok: true, row: next });
   }
-  if (action === "remove" || action === "delete") {
+  if (action === "setField") {
+    const ids = Array.isArray(body.ids)
+      ? body.ids.map(String)
+      : new URL(request.url).searchParams.getAll("id").filter(Boolean);
+    const field = String(body.field ?? "").trim();
+    const allowed = new Set(["name", "email", "role", "status", "balance"]);
+    if (!ids.length || !allowed.has(field)) {
+      return json({
+        removed: 0,
+        failed: ids.map((id) => ({
+          id,
+          error: !ids.length ? "缺少 id" : "unknown field",
+        })),
+      }, 400);
+    }
+    const failed: { id: string; error: string }[] = [];
+    let removed = 0;
+    for (const id of ids) {
+      const i = store.findIndex((r) => r.id === id);
+      if (i < 0) {
+        failed.push({ id, error: "not found" });
+        continue;
+      }
+      const prev = store[i]!;
+      const next: User = { ...prev };
+      if (field === "balance") next.balance = Number(body.value) || 0;
+      else {(next as unknown as Record<string, unknown>)[field] = String(
+          body.value ?? "",
+        );}
+      store = [...store.slice(0, i), next, ...store.slice(i + 1)];
+      removed++;
+    }
+    return json({ removed, failed });
+  }
+  if (action === "remove" || action === "delete" || action === "remote-batch") {
     const ids = Array.isArray(body.ids) ? body.ids.map(String) : [];
     if (!ids.length) return json({ removed: 0, failed: [] }, 400);
     const set = new Set(ids);

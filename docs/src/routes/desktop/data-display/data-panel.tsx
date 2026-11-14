@@ -9,6 +9,12 @@ import { createSignal } from "@dreamer/view";
 import {
   CodeBlock,
   DataPanel,
+  getDataPanelQuery,
+  getDataPanelSelected,
+  openDataPanelForm,
+  openDataPanelView,
+  refreshDataPanel,
+  setDataPanelQuery,
   validateForm,
 } from "@dreamer/ui-view/data-display";
 import type {
@@ -28,6 +34,19 @@ import {
   DocsApiTable,
   type DocsApiTableRow,
 } from "../../../components/DocsApiTable.tsx";
+import { DocsTypeApiSections } from "../../../components/DocsTypeApiSections.tsx";
+import {
+  API_SOURCE_API,
+  COLUMNS_API,
+  DATA_PANEL_EXTRA_TYPE_IDS,
+  FORM_API,
+  FORM_CONFIG_API,
+  SEARCH_API,
+  SEARCH_CONFIG_API,
+  SOURCE_API,
+  VIEW_CONFIG_API,
+  VIEW_ITEM_API,
+} from "../../../data/data-display-api-types.ts";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_DATA_PANEL } from "../../../data/component-messages-rows.ts";
 import { DocsDemo } from "../../../components/DocsDemo.tsx";
@@ -40,14 +59,22 @@ import {
   createCellDemoSource,
   createRemoteDemoSource,
   DEMO_COLUMNS,
+  DEMO_COLUMNS_CODE,
+  DEMO_COMMON_SETUP_CODE,
   DEMO_FORM,
+  DEMO_FORM_CODE,
   DEMO_FORM_RICH,
+  DEMO_FORM_RICH_CODE,
   DEMO_HIDE_CHROME,
+  DEMO_HIDE_CHROME_CODE,
   DEMO_SEARCH,
+  DEMO_SEARCH_CODE,
   demoCan,
   demoCapGate,
   type DemoPerms,
+  MAKE_DEMO_ROWS_CODE,
   makeDemoRows,
+  WITH_ROW_ACTIONS_CODE,
   withRowActions,
 } from "../../../data/data-panel-demo.ts";
 
@@ -70,7 +97,7 @@ const DATA_PANEL_API: DocsApiTableRow[] = [
     type: "Row[]",
     default: "-",
     description:
-      "本地行数据；传入则不自动请求列表。优先级：dataSource ＞ data ＞ baseRoute（API）",
+      "行数据。只传 data 时用本地源、不请求接口。与 baseRoute 同时传入时：首屏用这份数据渲染（挂载不请求 list），刷新／翻页／搜索／排序／切 Tab 再走 API。优先级低于 dataSource",
   },
   {
     name: "dataSource",
@@ -84,21 +111,21 @@ const DATA_PANEL_API: DocsApiTableRow[] = [
     type: "string",
     default: "-",
     description:
-      '路由前缀或完整资源根（如 "/api" 或 "/api/users"）。去首尾 / 分段：≥2 段直接作根；仅 1 段再拼 resource，未传则自动取当前页面路由（打开 /rbac/admins 且 baseRoute="/api" → /api/rbac/admins）。不要把 index 拼进路径。仅无 data／无 dataSource 时 createApiDataSource 并拉 list',
+      '路由前缀或完整资源根（如 "/api" 或 "/api/users"）。去首尾 / 分段：≥2 段直接作根；仅 1 段再拼 resource，未传则自动取当前页面路由（打开 /rbac/admins 且 baseRoute="/api" → /api/rbac/admins）。不要把 index 拼进路径。未传 dataSource 时 createApiDataSource。只传 baseRoute 时挂载后拉 list；与 data 同时传入时首屏不请求，后续刷新／翻页再请求',
   },
   {
     name: "resource",
     type: "string",
     default: "-",
     description:
-      '资源名／当前资源路由段（如 "users" 或 "rbac/admins"）。仅 baseRoute 为 1 段时生效；≥2 段忽略。不传则自动使用当前页面路由。仅无 data／无 dataSource 时生效',
+      '资源名／当前资源路由段（如 "users" 或 "rbac/admins"）。仅 baseRoute 为 1 段时生效；≥2 段忽略。不传则自动使用当前页面路由。未传 dataSource、由 baseRoute 建源时生效（可与 data 同时传入）',
   },
   {
     name: "apiMode",
     type: '"action" | "restful"',
     default: '"action"',
     description:
-      "仅无 data／无 dataSource 且由 baseRoute 生成时生效。action：GET 根／POST …/create｜update｜remove、importRows→create 且 body { rows }；restful：GET/POST 根、PUT/DELETE 根/:id、importRows→POST …/import",
+      "未传 dataSource、由 baseRoute 生成数据源时生效（可与 data 同时传入）。action：GET 根／POST …/create｜update｜remove（单条删除）｜remote-batch（批量删除）、importRows→create 且 body { rows }；restful：GET/POST 根、PUT／单条 DELETE 根/:id、批量删除 POST …/remote-batch、importRows→POST …/import",
   },
   {
     name: "apiHeaders",
@@ -145,7 +172,7 @@ const DATA_PANEL_API: DocsApiTableRow[] = [
     type: "string",
     default: '"data-panel"',
     description:
-      "面板标识：@dreamer/storage/client 持久化键（列显隐／行高／全屏）、refreshDataPanel(key)；同页多面板须唯一",
+      "面板标识：持久化键、refreshDataPanel(key)，以及 getDataPanel／getDataPanelQuery／setDataPanelQuery／getDataPanelSelected／openDataPanelForm／openDataPanelView。同页多面板须唯一",
   },
   { name: "rowKey", type: "string", default: '"id"', description: "主键字段" },
   {
@@ -153,6 +180,13 @@ const DATA_PANEL_API: DocsApiTableRow[] = [
     type: "number / number[]",
     default: "20 / [10,20,50,100]",
     description: "默认每页条数与可选项",
+  },
+  {
+    name: "paginationPreset",
+    type: '"full" | "default" | "simple"',
+    default: "随断点",
+    description:
+      "底栏分页能力档，与 Pagination 的 preset 相同：full 全部能力（第一页／上一页／页码／下一页／最后一页、每页条数、跳转）；default 一般能力（上一页／下一页＋页码＋每页条数，无第一页／最后一页／跳转）；simple 极简（上一页／下一页＋「第 n / m 页」，无页码／跳转／每页条数）。不传时按现有断点自动选择并带上对应 size：电脑端（min-width: 1280px，Tailwind xl）为 preset=full、size=md；平板（640px–1279.98px，sm 至 xl 以下）为 preset=default、size=sm；移动端（max-width: 639.98px，max-sm）为 preset=simple、size=xs。",
   },
   {
     name: "defaultSort",
@@ -170,14 +204,15 @@ const DATA_PANEL_API: DocsApiTableRow[] = [
     name: "initial / initialQuery",
     type: "ListResult / Partial<Query>",
     default: "-",
-    description: "服务端预取首屏 / 初始查询（有 initial 时挂载后不再请求）",
+    description:
+      "服务端预取首屏（ListResult）／初始查询。只配远程源时有 initial 则挂载后不再请求。与 data + baseRoute 同时用时：行仍用 data；initial.total 作为首屏条数。只传当前页 data 时请给出真实 total，否则用 data.length，不会臆造更大的总数。initial.totals 仅为兼容字段，页脚合计由面板按行数据自算，不读取它。data 应与当前页码／查询一致",
   },
   {
     name: "caps",
     type: "Partial<Caps>",
     default: "按数据源推断",
     description:
-      "能力开关：create／update／view／remove／batchStatus／import／…。batchStatus 不在 toolbar；默认＝存在 column.batch:true（switch＋两档 options）且有 setField。toolbar／column.actions 声明键请写明确 true｜false｜object",
+      "能力开关：create／update／view／remove／import／…。toolbar／column.actions 声明键请写明确 true｜false｜object",
   },
   {
     name: "locale",
@@ -206,7 +241,7 @@ const DATA_PANEL_API: DocsApiTableRow[] = [
   },
   {
     name: "onExport",
-    type: "(format, ctx) => void",
+    type: '(format: "xlsx" | "csv" | "json" | "xml" | "html", ctx) => void',
     default: "-",
     description:
       "接管导出（如调用服务端接口）；缺省时面板分页拉取全部行并在浏览器生成文件",
@@ -229,9 +264,30 @@ const DATA_PANEL_API: DocsApiTableRow[] = [
     type: "false | PanelToolbarConfig (Record)",
     default: "{}",
     description:
-      "`false`＝整栏不渲染；省略／{}／Record＝统合 Record（废止 extra／order）。声明项写明确 true｜false｜object（省略键才回落 caps）；对象可 show／disable／icon／label／title／tone／action；写入序＝显示序。批量「设为…」不在 toolbar，见 caps.batchStatus＋column.batch",
+      "`false`＝整栏不渲染；省略／{}／Record＝统合 Record。声明项写明确 true｜false｜object（省略键才回落 caps）；对象可 show／disable／icon／label／title／tone／action。show／disable／action 接收 { selected, rows, query }（零参函数仍可用）。写入序＝显示序",
   },
 
+  {
+    name: "alert",
+    type:
+      "string | DataAlertConfig | false | null | (() => string | DataAlertConfig | false | null | undefined)",
+    default: "-",
+    description:
+      '页面提示条，位于工具栏（含工具栏左侧标签）下方、表格上方。字符串简写为 info 提示（如 alert="请先完成实名认证"）。对象为完整 DataAlertConfig：透传 Alert 的 type／message／description／showIcon／closable／onClose／banner／action／class／children／messages，另加 show／key。false／null／省略／show: false 不显示；函数在渲染时求值。本插槽 closable、banner 默认 true。点击关闭会隐藏提示并调用 onClose；更换文案或先置空再传入会重新显示。详见下方 DataAlertConfig 表。',
+  },
+  {
+    name: "batchBar",
+    type: "false | BatchBarConfig (Record)",
+    default: "{}",
+    description:
+      "勾选后出现的批量条。默认只显示批量删除和取消勾选，不必把这两项写进配置。写法同 toolbar：内置键 remove／clear；若要别的批量操作，用自定义键自行编写 action。show／disable／action 接收 { selected, rows, query }，可写 confirm。false＝不渲染批量条",
+  },
+  {
+    name: "onSelectionChange",
+    type: "(selected: Row[]) => void",
+    default: "-",
+    description: "勾选变化时回调当前选中行（行对象，非仅 id）",
+  },
   {
     name: "isRowDisabled",
     type: "(row) => boolean",
@@ -250,14 +306,21 @@ const DATA_PANEL_API: DocsApiTableRow[] = [
     type: "(row) => void",
     default: "-",
     description:
-      "点击行（避开勾选、按钮、链接）时回调；未传且 caps.view 时打开详情",
+      "点击行（避开勾选、按钮、链接）时回调。传入则只走此回调，不再打开详情。默认点击行不会打开详情",
+  },
+  {
+    name: "openViewOnRowClick",
+    type: "boolean",
+    default: "false",
+    description:
+      "点击行是否打开详情。默认 false，只能通过操作列眼睛打开。为 true 且 caps.view 时，点击行（避开勾选、按钮、链接）打开详情。若同时传了 onRowClick，只走回调",
   },
   {
     name: "selectable",
     type: "boolean",
     default: "（按需）",
     description:
-      '@deprecated 顶层开关。多选勾选列只由 columns 里的 `{ type:"selection" }` 决定（prop／label 可省）。false＝仍强制去掉 selection（兼容）；省略／true 以及 caps.remove／batchStatus 都不会再自动前置勾选列。',
+      '@deprecated 顶层开关。多选勾选列只由 columns 里的 `{ type:"selection" }` 决定（prop／label 可省）。false＝仍强制去掉 selection（兼容）；省略／true 以及 caps.remove 都不会再自动前置勾选列。',
   },
   {
     name: "onChanged",
@@ -267,24 +330,24 @@ const DATA_PANEL_API: DocsApiTableRow[] = [
   },
   {
     name: "syncUrl",
-    type: "boolean",
-    default: "-",
+    type: "boolean | { prefix?: string }",
+    default: "true",
     description:
-      "@deprecated 已无开关：分页、排序默认与地址栏双向同步；配置了 search 时搜索字段一并同步。保留此字段仅为兼容，传值会被忽略",
+      '分页、排序默认与地址栏双向同步；配置了 search 时搜索字段一并同步。传 false 关闭（抽屉／同页多面板互不抢参数）。传 { prefix: "p1" } 把 page／pageSize／sort／order／搜索字段写成 p1_page 等',
   },
   {
     name: "class",
     type: "string",
     default: "-",
     description:
-      "额外 class（加在卡片上）。移动端（max-width: 639.98px）自带：卡片 margin-top/left/right=0，.dp-table-wrap padding-top/left/right=0（表格贴边）；分页控件居中、条数文案在分页下方并居中（.dp-pg 列布局）；底栏分页尺寸移动 xs／桌面 md；桌面仍左右分布",
+      "额外 class（加在卡片上）。移动端（max-width: 639.98px）自带：卡片 margin-top/left/right=0，.dp-table-wrap padding-top/left/right=0（表格贴边）；底栏分页各端均为左右一行（左侧条数文案，右侧分页控件）；底栏分页预设与尺寸随断点：电脑端（≥1280px）full／md，平板（640px–1279.98px）default／sm，移动端（≤639.98px）simple／xs；可用 paginationPreset 覆盖",
   },
   {
     name: "children",
     type: "unknown",
     default: "-",
     description:
-      "面板根内额外内容。三级自定义第 1 级（旁路）：放自管 Modal，配合 toolbar／row／view.actions 的 action(row) 打开；保存后可 refreshDataPanel(panelKey)",
+      "面板根内额外内容（旁路自管 Modal 等），不替换表格。与 DataView 的 children（替换明细正文）不同；明细主体请优先用 view.render",
   },
   {
     name: "tabs",
@@ -313,8 +376,8 @@ const DATA_PANEL_API: DocsApiTableRow[] = [
   },
   {
     name: "tabType",
-    type: "line | card",
-    default: "line",
+    type: '"line" | "card"',
+    default: '"line"',
     description: "标签样式，与 Tabs 的 type 相同",
   },
   {
@@ -326,796 +389,83 @@ const DATA_PANEL_API: DocsApiTableRow[] = [
   },
 ];
 
+/** 按 panelKey 注册的命令式句柄（与 refreshDataPanel 同一套键） */
+const PANEL_HANDLE_API: DocsApiTableRow[] = [
+  {
+    name: "refreshDataPanel(key)",
+    type: "() => Promise<void>",
+    default: "-",
+    description: "重新拉取已挂载面板或详情；无句柄时回落旧 refreshers",
+  },
+  {
+    name: "getDataPanel(key)",
+    type: "DataPanelHandle | undefined",
+    default: "-",
+    description:
+      "句柄：reload／getQuery／setQuery(patch)／getSelected／openForm(row?)／openView(row|id)",
+  },
+  {
+    name: "getDataPanelQuery / setDataPanelQuery",
+    type: "Query | undefined / (key, patch) => void",
+    default: "-",
+    description: "读／合并写当前查询（setQuery 会按 syncUrl 配置写地址栏）",
+  },
+  {
+    name: "getDataPanelSelected(key)",
+    type: "Row[]",
+    default: "[]",
+    description: "当前页已选中的行对象；未挂载时为空数组",
+  },
+  {
+    name: "openDataPanelForm / openDataPanelView",
+    type: "(key, row?) => void / (key, row|id) => void",
+    default: "-",
+    description: "打开新增（无 row）或编辑表单；打开详情（行对象或主键）",
+  },
+  {
+    name: "getDataView / getDataViewRecord / openDataViewForm",
+    type: "DataViewHandle / Row | null | undefined / (key, row?) => void",
+    default: "-",
+    description:
+      "DataView 句柄：reload／getRecord／openForm。refreshDataPanel 对同一 panelKey 同样生效",
+  },
+];
+
 /** Columns 字段全表（Column） */
-const COLUMNS_API: DocsApiTableRow[] = [
-  {
-    name: "prop",
-    type: "string",
-    default: "系统列可省",
-    description:
-      "行字段名。系统列可省（默认 `__select`／`__index`／`__actions`）。用 formatter／value 做的自定义列也可省（或写一个不在行数据上的键，如 `fullName`）。",
-  },
-  {
-    name: "label",
-    type: "string",
-    default: "系统列可省",
-    description:
-      "表头文案。数据列建议必填；系统列可省（selection 空／列设置文案；index 默认 `#`；actions 回落 messages.actions）。",
-  },
-  {
-    name: "type",
-    type:
-      '"text"|"number"|"money"|"date"|"datetime"|"tag"|"bool"|"image"|"link"|"selection"|"index"|"actions"',
-    default: '"text"',
-    description:
-      '展示类型。系统列写 `{ type:"selection" }`／`{ type:"index" }`／`{ type:"actions" }` 即可（prop／label 可省）。操作按钮写在列的 `actions` Record；未声明时兼容自动补。',
-  },
-  {
-    name: "actions",
-    type: "RowActionsConfig",
-    default: "-",
-    description:
-      '仅 type:"actions"。行操作 Record（写在本列，勿再顶层配置）：内置 view／edit／remove＋自定义；写入序＝显示序；自定义必须 action(item)；省略键回落 caps。',
-  },
-  {
-    name: "format",
-    type: "string",
-    default: 'date→"YYYY-MM-DD"；datetime→"YYYY-MM-DD HH:mm:ss"',
-    description:
-      '日期／时间展示格式，仅 `type:"date"`／`"datetime"`。令牌：`YYYY` `MM` `DD` `HH` `mm` `ss`。例：`"YYYY-MM-DD HH:mm"` → `2026-11-10 10:30`（不要秒）。不覆盖 `formatter`／`value`／`renderCell`。',
-  },
-  {
-    name: "sortable",
-    type: "boolean",
-    default: "false",
-    description: "表头可点排序（走 list(query).sort／order）",
-  },
-  {
-    name: "sortProp",
-    type: "string",
-    default: "用 prop",
-    description:
-      '该列排序时发给 list(query).sort 的字段。拼接列请指向源字段（姓名把姓放前面则 sortProp: "lastName"）。未写 prop 的自定义列必须指定才能排序。',
-  },
-  {
-    name: "align",
-    type: '"left"|"center"|"right"',
-    default: '"center"',
-    description:
-      "单元格文本对齐。默认居中。系统列 selection／index／actions 固定居中，忽略本字段。",
-  },
-  {
-    name: "headerAlign",
-    type: '"left"|"center"|"right"',
-    default: "同 align；皆未设则为 center",
-    description:
-      '表头标题对齐。不传时与 align 一致；二者皆未设则居中。系统列忽略。例：金额单元格右对齐可写 align:"right"；表头单独居中可再写 headerAlign:"center"。',
-  },
-  {
-    name: "width",
-    type: "number",
-    default: "-",
-    description:
-      "列宽（px）。与 minWidth／maxWidth 一并写到表头与单元格 style。",
-  },
-  {
-    name: "minWidth",
-    type: "number",
-    default: "-",
-    description:
-      "列最小宽度（px）。与 width／maxWidth 一并写到表头与单元格 style。",
-  },
-  {
-    name: "maxWidth",
-    type: "number",
-    default: "-",
-    description:
-      "列最大宽度（px）。与 width／minWidth 一并写到表头与单元格 style。",
-  },
-  {
-    name: "options",
-    type: "Option[]",
-    default: "-",
-    description:
-      "声明式选项：`{ value, label, tone? }`。tag 色／文案；inline switch／select／multiselect 也用。",
-  },
-  {
-    name: "inline",
-    type:
-      '"switch"|"select"|"multiselect"|"text"|"number"|"textarea"|"date"|"datetime"',
-    default: "-",
-    description:
-      "列内就地编辑（≠ form Modal）。switch 点即存；其余双击进入，失焦／Enter 存、Esc 取消。",
-  },
-  {
-    name: "edit",
-    type: "boolean",
-    default: "-",
-    description:
-      "@deprecated：true 且未写 inline 时 → 两档 options 用 switch，否则 text。请直接写 inline。",
-  },
-  {
-    name: "total",
-    type: "boolean",
-    default: "-",
-    description: "页脚合计：显示 list() 返回的 totals[prop]",
-  },
-  {
-    name: "hidden",
-    type: "boolean",
-    default: "-",
-    description:
-      '默认隐藏，可在「列设置」打开；例 `{ prop:"createdAt", type:"datetime", format:"YYYY-MM-DD HH:mm", hidden:true }`',
-  },
-  {
-    name: "noExport",
-    type: "boolean",
-    default: "-",
-    description: "不参与导出／打印列",
-  },
-  {
-    name: "batch",
-    type: "boolean",
-    default: "-",
-    description:
-      '批量「设为…」目标列；须 `inline:"switch"`＋恰好两档 options。caps.batchStatus 默认据此推断。',
-  },
-  {
-    name: "disable",
-    type: "boolean | ((row) => boolean)",
-    default: "false",
-    description:
-      '按行禁用，函数接收当前行数据。写在 type:"selection" 上时该行不可勾选（表头全选会跳过），也不能进入批量处理；写在 type:"actions" 上时该行操作按钮全部禁用（可与各 action.disable 叠加）；写在数据列上时禁用该行列内编辑。与面板 isRowDisabled／row.locked 叠加。',
-  },
-  {
-    name: "value",
-    type: "(row) => unknown",
-    default: "-",
-    description:
-      "按行文案／节点。可返回 string／number／JSX／Icon／可信 HTML。与 formatter 并存以 formatter 为准；renderCell[prop] 最优先。",
-  },
-  {
-    name: "color",
-    type: "(row) => Tone",
-    default: "-",
-    description:
-      "按行色调。仅当 value／formatter 结果为原始文本时包成 dp-tag。",
-  },
-  {
-    name: "formatter",
-    type: "(row, raw) => unknown",
-    default: "-",
-    description:
-      "统一格式化，覆盖默认展示与 value。导出／打印／详情只取可转文本结果；节点／HTML 回落字段原文。比 format 字段更自由，复杂节点用本字段。",
-  },
-];
-
-/** Search 字段全表（SearchField） */
-/** SearchConfig 段级 */
-const SEARCH_CONFIG_API: DocsApiTableRow[] = [
-  {
-    name: "title",
-    type: "string | () => string",
-    default: "-",
-    description: "搜索弹层标题",
-  },
-  {
-    name: "props",
-    type: "SearchField[]",
-    default: "-",
-    description: "搜索字段；与列同一套字段配置",
-  },
-  {
-    name: "actions",
-    type: "RowActionsConfig",
-    default: "-",
-    description: "可选底部按钮 Record（搜索确定／取消仍走官方 Modal 脚）",
-  },
-  {
-    name: "width",
-    type: "ModalShellWidth",
-    default: '"md"',
-    description:
-      "弹层宽度，传给 Modal。预设名 xs／sm／md／lg／xl，或 CSS 长度／数字像素，也可零参 getter",
-  },
-  {
-    name: "fullscreenable",
-    type: "boolean",
-    default: "false",
-    description: "是否在弹层标题栏显示全屏切换，传给 Modal",
-  },
-];
-
-const SEARCH_API: DocsApiTableRow[] = [
-  {
-    name: "prop",
-    type: "string",
-    default: "-",
-    description: "字段键（与 columns.prop／URL query key 对齐）；缺省回落 name",
-  },
-  {
-    name: "name",
-    type: "string",
-    default: "-",
-    description: "@deprecated 用 prop；二者都写以 prop 为准",
-  },
-  {
-    name: "label",
-    type: "string",
-    default: "同 prop 的 column.label",
-    description: "标签；缺省从同 prop 列继承",
-  },
-  {
-    name: "type",
-    type: '"text"|"select"|"date"',
-    default: '"text"',
-    description: "控件类型",
-  },
-  {
-    name: "options",
-    type: "Option[]",
-    default: "同 prop 的 column.options",
-    description: "select 选项；缺省从列继承",
-  },
-  {
-    name: "match",
-    type: '"contains"|"eq"|"from"|"to"|"num"',
-    default: "text→contains；select→eq",
-    description: "本地数据源匹配方式",
-  },
-  {
-    name: "field",
-    type: "string",
-    default: "prop／name",
-    description: "行字段名（过滤读行时用）",
-  },
-  {
-    name: "placeholder",
-    type: "string",
-    default: "-",
-    description: "输入占位",
-  },
-  {
-    name: "hint",
-    type: "string",
-    default: "-",
-    description: "下方提示；有校验错误时隐藏",
-  },
-  {
-    name: "rules",
-    type: "FieldRule[]",
-    default: "-",
-    description:
-      "校验规则：required／min／max／pattern／type(string|number|email|url)／validator／message／trigger",
-  },
-  {
-    name: "message",
-    type: "string",
-    default: "-",
-    description: "无 rules 时简写 required／pattern 失败文案",
-  },
-  {
-    name: "required",
-    type: "boolean",
-    default: "-",
-    description: "搜索必填（无 rules 简写）",
-  },
-  {
-    name: "pattern",
-    type: "string",
-    default: "-",
-    description: "搜索正则简写",
-  },
-  {
-    name: "span / cols",
-    type: "number",
-    default: "12",
-    description: "栅格跨列 1–12；同写以 span 为准",
-  },
-  {
-    name: "width",
-    type: "string | number",
-    default: "-",
-    description: "控件宽度（CSS 长度或 px 数字）",
-  },
-  {
-    name: "maxlength",
-    type: "number",
-    default: "-",
-    description: "输入最大字符数",
-  },
-];
-
-/** Form 字段全表（FormField） */
-const FORM_API: DocsApiTableRow[] = [
-  {
-    name: "prop",
-    type: "string",
-    default: "-",
-    description: "字段键（与 columns.prop 对齐）；缺省回落 name",
-  },
-  {
-    name: "name",
-    type: "string",
-    default: "-",
-    description: "@deprecated 用 prop；二者都写以 prop 为准",
-  },
-  {
-    name: "label",
-    type: "string",
-    default: "同 prop 的 column.label",
-    description: "标签；缺省从列继承",
-  },
-  {
-    name: "type",
-    type:
-      '"text"|"textarea"|"number"|"select"|"multiselect"|"switch"|"password"|"date"|"datetime"',
-    default: '"text"',
-    description: "控件类型",
-  },
-  {
-    name: "options",
-    type: "Option[]",
-    default: "同 prop 的 column.options",
-    description: "select／switch／multiselect 选项；缺省从列继承",
-  },
-  {
-    name: "required",
-    type: "boolean",
-    default: "-",
-    description: "必填简写（亦可用 rules）",
-  },
-  {
-    name: "min / max",
-    type: "number",
-    default: "-",
-    description: "number→数值界；否则字符串长度界（简写）",
-  },
-  {
-    name: "pattern",
-    type: "string",
-    default: "-",
-    description: "正则简写；复杂用 rules",
-  },
-  {
-    name: "placeholder",
-    type: "string",
-    default: "-",
-    description: "输入占位",
-  },
-  {
-    name: "hint",
-    type: "string",
-    default: "-",
-    description: "下方提示；有校验错误时隐藏",
-  },
-  {
-    name: "rules",
-    type: "FieldRule[]",
-    default: "-",
-    description:
-      "校验规则数组：required／min／max／pattern／type／validator／message／trigger；有 rules 优先",
-  },
-  {
-    name: "message",
-    type: "string",
-    default: "-",
-    description: "简写校验失败默认文案",
-  },
-  {
-    name: "initial",
-    type: "string | number | boolean",
-    default: "-",
-    description: "新建时初始值",
-  },
-  {
-    name: "createOnly",
-    type: "boolean",
-    default: "-",
-    description: "仅新建时显示；编辑时不渲染、不校验、不提交（如密码）",
-  },
-  {
-    name: "editOnly",
-    type: "boolean",
-    default: "-",
-    description: "仅编辑时显示；新建时不渲染",
-  },
-  {
-    name: "span / cols",
-    type: "number",
-    default: "12",
-    description: "栅格跨列 1–12；任一字段写 span／cols／width 时容器切 12 列",
-  },
-  {
-    name: "width",
-    type: "string | number",
-    default: "-",
-    description: "项宽度（CSS 长度或 px）",
-  },
-  {
-    name: "maxlength",
-    type: "number",
-    default: "-",
-    description: "输入最大字符数（text／textarea／password）",
-  },
-  {
-    name: "rows",
-    type: "number",
-    default: "4",
-    description: "textarea 行数",
-  },
-  {
-    name: "onOff",
-    type: "[string, string]",
-    default: '["true","false"]',
-    description:
-      "@deprecated switch 默认吃同 prop 列两档 options；仅无对应列时再写 onOff",
-  },
-  {
-    name: "render",
-    type: "(ctx: FormFieldRenderCtx) => unknown",
-    default: "-",
-    description:
-      "字段级自定义控件。有 form.render 时忽略。ctx 含 value／multiValue／mode／row／disabled／error",
-  },
-];
-
-/** FormConfig 段级（与 FormField 表分开） */
-const FORM_CONFIG_API: DocsApiTableRow[] = [
-  {
-    name: "title",
-    type: "string | (row) => string",
-    default: "`${edit|add} · ${panelTitle}`",
-    description: "弹层标题；新增时 row 为 {}",
-  },
-  {
-    name: "props",
-    type: "FormField[]",
-    default: "-",
-    description:
-      "表单项；有 render 时可省略。仍提供时内置 submit() 可按 props 校验／收集",
-  },
-  {
-    name: "render",
-    type: "(ctx: FormRenderCtx) => unknown",
-    default: "-",
-    description:
-      "整段替换增改 Modal 主体（含确定／取消）。优先级高于 FormField.render。ctx：mode／row／id／busy／errors／close／submit／reload…",
-  },
-  {
-    name: "actions",
-    type: "RowActionsConfig",
-    default: "-",
-    description: "可选底部按钮 Record（内置 formBody 仍用确定／取消）",
-  },
-  {
-    name: "width",
-    type: "ModalShellWidth",
-    default: '"md"',
-    description:
-      "弹层宽度，传给 Modal。预设名 xs／sm／md／lg／xl，或 CSS 长度／数字像素，也可零参 getter",
-  },
-  {
-    name: "fullscreenable",
-    type: "boolean",
-    default: "false",
-    description: "是否在弹层标题栏显示全屏切换，传给 Modal",
-  },
-];
-
-/** ViewConfig 段级 */
-const VIEW_CONFIG_API: DocsApiTableRow[] = [
-  {
-    name: "title",
-    type: "string | (row) => string",
-    default: "`${view} · ${panelTitle}`",
-    description: "详情弹层标题",
-  },
-  {
-    name: "props",
-    type: "ViewItem[]",
-    default: "-",
-    description:
-      "详情字段；有 render 时可省略。字段可写 ViewItem.render／click／labelAlign（标签对齐，透传 Descriptions）",
-  },
-  {
-    name: "render",
-    type: "(ctx: ViewRenderCtx) => unknown",
-    default: "-",
-    description:
-      "替换 Descriptions 字段区；actions 底脚仍渲染。有本字段时忽略 ViewItem.render。ctx：row／close／reload",
-  },
-  {
-    name: "actions",
-    type: "RowActionsConfig",
-    default: "{ close: true }",
-    description:
-      "底部按钮；内置 close 默认靠右最后。旁路可 action(row) 开 children Modal",
-  },
-  {
-    name: "width",
-    type: "ModalShellWidth",
-    default: '"md"',
-    description:
-      "弹层宽度，传给 Modal。预设名 xs／sm／md／lg／xl，或 CSS 长度／数字像素，也可零参 getter",
-  },
-  {
-    name: "fullscreenable",
-    type: "boolean",
-    default: "false",
-    description: "是否在弹层标题栏显示全屏切换，传给 Modal",
-  },
-  {
-    name: "labelColPercent",
-    type: "number",
-    default: "38",
-    description:
-      "详情 Descriptions 标签列占单列槽位宽度的百分比（12～85），与 labelMinWidth 一起决定左侧标签与右侧内容的比例",
-  },
-  {
-    name: "labelMinWidth",
-    type: "string | number",
-    default: '"13.5rem"',
-    description:
-      "详情 Descriptions 标签列最小宽度（CSS 长度或像素数字）；适当减小可让内容区更宽",
-  },
-];
-
-/** ViewItem 字段级（其余写法同 Column） */
-const VIEW_ITEM_API: DocsApiTableRow[] = [
-  {
-    name: "prop",
-    type: "string",
-    default: "-",
-    description:
-      "字段键；也可不写 prop，用 formatter／value 拼接，写法同自定义列",
-  },
-  {
-    name: "label",
-    type: "string",
-    default: "-",
-    description: "标签文案",
-  },
-  {
-    name: "render",
-    type: "(ctx: ViewItemRenderCtx) => unknown",
-    default: "-",
-    description:
-      "字段级自定义展示。有 view.render 时忽略。ctx：item／prop／row／raw／defaultNode",
-  },
-  {
-    name: "click",
-    type: '"toggle" | (row) => void',
-    default: "-",
-    description: "字段点击：toggle 在两档 options 间切换；或自定义回调",
-  },
-  {
-    name: "labelAlign",
-    type: "DescriptionsLabelAlign",
-    default: '{ vertical: "top", horizontal: "right" }',
-    description:
-      "该行标签对齐，透传 Descriptions。vertical：top 上对齐、center 垂直居中、bottom 下对齐；horizontal：left 左、center 中、right 右",
-  },
-];
-
-const SOURCE_API: DocsApiTableRow[] = [
-  {
-    name: "list(query)",
-    type: "ListResult | Promise<…>",
-    default: "-",
-    description:
-      "返回当前页 { items, total, totals? }；query = { page, pageSize, sort, order: asc|desc, filters }",
-  },
-  {
-    name: "sync",
-    type: "boolean",
-    default: "false",
-    description:
-      "默认 false（异步 list／fetch）。仅当 list 同步返回时可置 true，便于首帧（含 SSR）直接渲染",
-  },
-  {
-    name: "create(values)",
-    type: "WriteResult",
-    default: "-",
-    description:
-      "返回 void / { ok:true } 表示成功；{ ok:false, message?, fields?, messages? } 把错误回填到表单；抛错也会提示",
-  },
-  {
-    name: "update(id, values)",
-    type: "WriteResult",
-    default: "-",
-    description: "编辑保存；行内编辑在没有 setField 时也走它",
-  },
-  {
-    name: "remove(ids)",
-    type: "{ removed, failed[] }",
-    default: "-",
-    description:
-      "删除；面板保证只在用户确认后才会调用（行内／批量删除均为按钮上方的小气泡 Popconfirm）",
-  },
-  {
-    name: "setField(ids, field, value)",
-    type: "{ removed, failed[] }",
-    default: "-",
-    description: "批量状态 / 行内编辑",
-  },
-  {
-    name: "importRows(rows)",
-    type: "{ created, failed }",
-    default: "-",
-    description: "导入 CSV / JSON 解析后的行",
-  },
-];
-
-/** createApiDataSource／ApiDataSource 补充 */
-const API_SOURCE_API: DocsApiTableRow[] = [
-  {
-    name: "createApiDataSource(opts)",
-    type: "(opts) => ApiDataSource",
-    default: "-",
-    description:
-      '工厂。必填 baseRoute；推荐只传 "/api"，未传 resource 时自动拼当前页面路由。返回异步 DataSource（list／create／update／remove／importRows／view）',
-  },
-  {
-    name: "opts.baseRoute",
-    type: "string",
-    default: "-",
-    description:
-      '如 "/api" 或 "/api/users"。去首尾 / 分段：≥2 段直接作资源根；仅 1 段再拼 resource，未传则拼当前页面路由',
-  },
-  {
-    name: "opts.resource",
-    type: "string",
-    default: "-",
-    description:
-      '资源名（如 "users" 或 "rbac/admins"）。仅 baseRoute 1 段时生效；≥2 段忽略。不传则自动使用当前页面路由',
-  },
-  {
-    name: "opts.apiMode",
-    type: '"action" | "restful"',
-    default: '"action"',
-    description:
-      "action：GET 根；POST 根/create；POST 根/update?id=；POST 根/remove?id=；GET 根/view?id=；importRows→POST 根/create 且 body { rows }。restful：GET/POST 根；PUT/DELETE 根/:id；GET 根/:id；importRows→POST 根/import",
-  },
-  {
-    name: "opts.rowKey",
-    type: "string",
-    default: '"id"',
-    description: "主键字段（action update body／restful URL :id）",
-  },
-  {
-    name: "opts.pageSize",
-    type: "number",
-    default: "20",
-    description:
-      "列表请求默认每页条数。list 在 query.pageSize 缺失时用此值；DataPanel 未传 pageSize 时也用它",
-  },
-  {
-    name: "opts.fetch / headers / credentials / writable",
-    type: "typeof fetch / HeadersInit｜fn / RequestCredentials / boolean",
-    default: "global fetch / - / - / true",
-    description: "可注入 fetch；writable:false 时只读（仅 list＋view）",
-  },
-  {
-    name: "view(id)",
-    type: "Promise<Row | null>",
-    default: "-",
-    description:
-      "ApiDataSource 扩展。action→GET …/view?id=；restful→GET …/:id。点击查看时自动请求，失败或返回空则回落当前行",
-  },
-  {
-    name: "root / apiMode",
-    type: "string / ApiMode",
-    default: "-",
-    description: "只读：资源根（如 /api/users）与当前模式",
-  },
-];
-
 const apiActionCode =
   `import { DataPanel } from "@dreamer/ui-view/data-display";
-import type { Column, FormField, SearchField } from "@dreamer/ui-view/data-display";
+import type { Column, FormField, Row, SearchField } from "@dreamer/ui-view/data-display";
 
-// 推荐：baseRoute 只传 "/api"，自动拼当前页面路由（打开 /rbac/admins → /api/rbac/admins）
-// 也可把完整根写在 baseRoute（≥2 段直接作根，不拼 resource／当前路由）
-// 默认 apiMode:"action"：GET 根 · POST …/create｜update｜remove
-// importRows → POST …/create，body { rows }（单条 create 仍传对象）
+${DEMO_COLUMNS_CODE}
 
-const columns: Column[] = [
-  { type: "selection" },
-  { type: "index" },
-  { prop: "name", label: "姓名", sortable: true, inline: "text" },
-  { prop: "email", label: "邮箱", sortable: true },
-  { prop: "role", label: "角色", type: "tag", align: "center", options: [
-    { value: "admin", label: "管理员", tone: "danger" },
-    { value: "editor", label: "编辑", tone: "info" },
-    { value: "viewer", label: "访客", tone: "default" },
-  ] },
-  { prop: "status", label: "状态", type: "tag", inline: "switch", batch: true, align: "center", options: [
-    { value: "active", label: "启用", tone: "success" },
-    { value: "disabled", label: "停用", tone: "warning" },
-  ] },
-  { prop: "balance", label: "余额", type: "money", sortable: true, total: true, align: "right" },
-  { prop: "createdAt", label: "创建时间", type: "datetime", format: "YYYY-MM-DD HH:mm", hidden: true },
-  { type: "actions", actions: {
-    view: true,
-    edit: true,
-    remove: false,
-  } },
-];
-const search = {
-  props: [
-  { prop: "name" },
-  { prop: "role", type: "select" },
-  { prop: "status", type: "select" },
-  ],
-};
-const form = {
-  props: [
-  { prop: "name", required: true },
-  { prop: "email", required: true, pattern: "^[^@\\s]+@[^@\\s]+$" },
-  { prop: "role", type: "select", required: true, initial: "viewer" },
-  { prop: "balance", type: "number", min: 0, initial: 0 },
-  { prop: "status", type: "switch", initial: "active" },
-  ],
-};
+${DEMO_SEARCH_CODE}
+
+${DEMO_FORM_CODE}
+
+// 不传 data、不传 dataSource；baseRoute 作为资源根。默认 apiMode:"action"。
 
 <DataPanel
   title="用户（action）"
   panelKey="demo-api-users-action"
   baseRoute="/api/users"
-  // apiMode 默认 "action"
   columns={columns}
-  search={search}
-  form={form}
+  search={{ props: search }}
+  form={{ props: form }}
   pageSize={20}
 />
 `;
 
 const apiRestfulCode =
   `import { DataPanel } from "@dreamer/ui-view/data-display";
-import type { Column, FormField, SearchField } from "@dreamer/ui-view/data-display";
+import type { Column, FormField, Row, SearchField } from "@dreamer/ui-view/data-display";
 
-// 不传 data、不传 dataSource；baseRoute ≥2 段直接作资源根
-// apiMode:"restful"：GET/POST /api/orders · PUT/DELETE /api/orders/:id · import → POST …/import
+${DEMO_COLUMNS_CODE}
 
-const columns: Column[] = [
-  { type: "selection" },
-  { type: "index" },
-  { prop: "name", label: "姓名", sortable: true, inline: "text" },
-  { prop: "email", label: "邮箱", sortable: true },
-  { prop: "role", label: "角色", type: "tag", align: "center", options: [
-    { value: "admin", label: "管理员", tone: "danger" },
-    { value: "editor", label: "编辑", tone: "info" },
-    { value: "viewer", label: "访客", tone: "default" },
-  ] },
-  { prop: "status", label: "状态", type: "tag", inline: "switch", batch: true, align: "center", options: [
-    { value: "active", label: "启用", tone: "success" },
-    { value: "disabled", label: "停用", tone: "warning" },
-  ] },
-  { prop: "balance", label: "余额", type: "money", sortable: true, total: true, align: "right" },
-  { prop: "createdAt", label: "创建时间", type: "datetime", format: "YYYY-MM-DD HH:mm", hidden: true },
-  { type: "actions", actions: {
-    view: true,
-    edit: true,
-    remove: false,
-  } },
-];
-const search = {
-  props: [
-  { prop: "name" },
-  { prop: "role", type: "select" },
-  { prop: "status", type: "select" },
-  ],
-};
-const form = {
-  props: [
-  { prop: "name", required: true },
-  { prop: "email", required: true, pattern: "^[^@\\s]+@[^@\\s]+$" },
-  { prop: "role", type: "select", required: true, initial: "viewer" },
-  { prop: "balance", type: "number", min: 0, initial: 0 },
-  { prop: "status", type: "switch", initial: "active" },
-  ],
-};
+${DEMO_SEARCH_CODE}
+
+${DEMO_FORM_CODE}
+
+// 不传 data、不传 dataSource；baseRoute ≥2 段直接作资源根。apiMode:"restful"。
 
 <DataPanel
   title="订单（restful）"
@@ -1123,179 +473,90 @@ const form = {
   baseRoute="/api/orders"
   apiMode="restful"
   columns={columns}
-  search={search}
-  form={form}
+  search={{ props: search }}
+  form={{ props: form }}
+  pageSize={20}
+/>
+`;
+const dataBaseRouteCode =
+  `import { DataPanel } from "@dreamer/ui-view/data-display";
+import type { Column, FormField, Row, SearchField } from "@dreamer/ui-view/data-display";
+
+${DEMO_COMMON_SETUP_CODE}
+
+// 首屏用这 3 行（刷新浏览器也不会先出空表）。
+// 总数 3；若 data 只是当前页、真实总数更大，请再传 initial={{ total: 128 }}。
+const rows: Row[] = [
+  {
+    id: "1",
+    name: "张三",
+    email: "zhangsan@example.com",
+    role: "admin",
+    status: "active",
+    balance: 120,
+    score: 80,
+    createdAt: "2026-11-01T01:00:00.000Z",
+  },
+  {
+    id: "2",
+    name: "李四",
+    email: "lisi@example.com",
+    role: "editor",
+    status: "active",
+    balance: 80,
+    score: 60,
+    createdAt: "2026-11-02T02:00:00.000Z",
+  },
+  {
+    id: "3",
+    name: "王五",
+    email: "wangwu@example.com",
+    role: "viewer",
+    status: "disabled",
+    balance: 40,
+    score: 30,
+    createdAt: "2026-11-03T03:00:00.000Z",
+  },
+];
+
+<DataPanel
+  panelKey="demo-data-base-route"
+  title="首屏 data + baseRoute"
+  syncUrl={false}
+  data={rows}
+  baseRoute="/api/users"
+  columns={columns}
+  search={{ props: search }}
+  form={{ props: form }}
   pageSize={20}
 />
 `;
 
 const importCode = `import { DataPanel } from "@dreamer/ui-view/data-display";
+import type { Column, FormField, Row, SearchField } from "@dreamer/ui-view/data-display";
 
-const rows = [
-  { id: "1", name: "Alice", email: "alice@example.com", role: "admin", status: "active", balance: 120 },
-  { id: "2", name: "Bob", email: "bob@example.com", role: "editor", status: "disabled", balance: 80 },
-];
-const columns: Column[] = [
-  { type: "selection" },
-  { type: "index" },
-  { prop: "name", label: "姓名", sortable: true, inline: "text" },
-  { prop: "email", label: "邮箱", sortable: true },
-  {
-    prop: "role",
-    label: "角色",
-    type: "tag",
-    align: "center",
-    options: [
-      { value: "admin", label: "管理员", tone: "danger" },
-      { value: "editor", label: "编辑", tone: "info" },
-      { value: "viewer", label: "访客", tone: "default" },
-    ],
-  },
-  {
-    prop: "status",
-    label: "状态",
-    type: "tag",
-    inline: "switch",
-    batch: true,
-    align: "center",
-    options: [
-      { value: "active", label: "启用", tone: "success" },
-      { value: "disabled", label: "停用", tone: "warning" },
-    ],
-  },
-  {
-    prop: "balance",
-    label: "余额",
-    type: "money",
-    sortable: true,
-    total: true,
-    align: "right",
-  },
-  {
-    prop: "score",
-    label: "积分",
-    type: "number",
-    sortable: true,
-    inline: "number",
-    align: "right",
-  },
-  {
-    prop: "createdAt",
-    label: "创建时间",
-    type: "datetime",
-    format: "YYYY-MM-DD HH:mm",
-    sortable: true,
-    hidden: true,
-  },
-  { type: "actions", actions: {
-    view: true,
-    edit: true,
-    remove: false,
-  } },
-];
-const search = {
-  props: [
-  { prop: "name" },
-  { prop: "role", type: "select" },
-  { prop: "status", type: "select" },
-  ],
-};
-const form = {
-  props: [
-  { prop: "name", required: true },
-  { prop: "email", required: true, pattern: "^[^@\\s]+@[^@\\s]+$" },
-  { prop: "role", type: "select", required: true, initial: "viewer" },
-  { prop: "balance", type: "number", min: 0, initial: 0 },
-  { prop: "status", type: "switch", initial: "active" },
-  ],
-};
+${DEMO_COMMON_SETUP_CODE}
+
+const rows = makeDemoRows(25);
 
 <DataPanel
+  panelKey="demo-basic"
   title="用户管理"
-  panelKey="users"
   data={rows}
   columns={columns}
-  search={search}
-  form={form}
-/>`;
+  search={{ props: search }}
+  form={{ props: form }}
+  exportName="users"
+/>
+`;
 
-const columnsCode = `const rows = [
-  { id: "1", name: "Alice", role: "admin", status: "active", balance: 120, createdAt: "2026-01-01T00:00:00.000Z" },
-  { id: "2", name: "Bob", role: "editor", status: "disabled", balance: 80, createdAt: "2026-01-02T00:00:00.000Z" },
-];
-const columns: Column[] = [
-  { type: "selection" },
-  { type: "index" },
-  { prop: "name", label: "姓名", sortable: true, inline: "text" },
-  { prop: "email", label: "邮箱", sortable: true },
-  {
-    prop: "role",
-    label: "角色",
-    type: "tag",
-    align: "center",
-    options: [
-      { value: "admin", label: "管理员", tone: "danger" },
-      { value: "editor", label: "编辑", tone: "info" },
-      { value: "viewer", label: "访客", tone: "default" },
-    ],
-  },
-  {
-    prop: "status",
-    label: "状态",
-    type: "tag",
-    inline: "switch",
-    batch: true,
-    align: "center",
-    options: [
-      { value: "active", label: "启用", tone: "success" },
-      { value: "disabled", label: "停用", tone: "warning" },
-    ],
-  },
-  {
-    prop: "balance",
-    label: "余额",
-    type: "money",
-    sortable: true,
-    total: true,
-    align: "right",
-  },
-  {
-    prop: "score",
-    label: "积分",
-    type: "number",
-    sortable: true,
-    inline: "number",
-    align: "right",
-  },
-  {
-    prop: "createdAt",
-    label: "创建时间",
-    type: "datetime",
-    format: "YYYY-MM-DD HH:mm",
-    sortable: true,
-    hidden: true,
-  },
-  { type: "actions", actions: {
-    view: true,
-    edit: true,
-    remove: false,
-  } },
-];
-// search／form 键用 prop；label／options／switch 开闭从同 prop 列继承
-const search = {
-  props: [
-  { prop: "name" }, { prop: "role", type: "select" }, { prop: "status", type: "select" },
-  ],
-};
-const form = {
-  props: [
-  { prop: "name", required: true },
-  { prop: "role", type: "select", required: true },
-  { prop: "status", type: "switch", initial: "active" },
-  ],
-};
-// 函数式列显示见「列显示函数」示例（value／color／formatter）
-<DataPanel title="列定义" data={rows} columns={columns} search={search} form={form} />
+const columnsCode =
+  `import type { Column, FormField, Row, SearchField } from "@dreamer/ui-view/data-display";
+
+${DEMO_COMMON_SETUP_CODE}
+
+// 与下方各示例使用同一份定义。makeDemoRows(n) 按可复现规则生成 n 行。
+const rows = makeDemoRows(25);
 `;
 
 const colFnRows = [
@@ -1350,41 +611,67 @@ const colFnColumns: Column[] = [
     },
   },
 ];
-const colFnCode = `const rows = [
-  { id: "1", name: "Alice", flag: 1, level: 1 },
-  { id: "2", name: "Bob", flag: 0, level: 0 },
+const colFnCode = `import { DataPanel } from "@dreamer/ui-view/data-display";
+import type { Column, Row } from "@dreamer/ui-view/data-display";
+import { IconCheck } from "@dreamer/ui-view/icons/Check.tsx";
+import { IconBan } from "@dreamer/ui-view/icons/Ban.tsx";
+
+const rows = [
+  { id: "1", name: "Alice", flag: 1, level: 0 },
+  { id: "2", name: "Bob", flag: 0, level: 1 },
+  { id: "3", name: "Carol", flag: 1, level: 1 },
 ];
 const columns: Column[] = [
-  { type: "selection" },
   { type: "index" },
   { prop: "name", label: "姓名" },
   {
-    prop: "flag", label: "标记", type: "tag",
-    value: (row) => row.flag === 1 ? "开启" : "关闭",
-    color: (row) => row.flag === 1 ? "success" : "danger",
+    prop: "flag",
+    label: "标记（value+color）",
+    type: "tag",
+    value: (row: Row) => (row.flag === 1 ? "开启" : "关闭"),
+    color: (row: Row) => (row.flag === 1 ? "success" : "danger"),
   },
   {
-    prop: "level", label: "级别",
-    value: (row) => row.level === 1
-      ? <span class="inline-flex items-center gap-1 text-emerald-600"><IconCheck /> 高级</span>
-      : <span class="inline-flex items-center gap-1 text-slate-400"><IconBan /> 普通</span>,
+    prop: "level",
+    label: "级别（Icon／span）",
+    value: (row: Row) =>
+      row.level === 1
+        ? (
+          <span class="inline-flex items-center gap-1 text-emerald-600">
+            <IconCheck class="h-3.5 w-3.5" />
+            高级
+          </span>
+        )
+        : (
+          <span class="inline-flex items-center gap-1 text-slate-400">
+            <IconBan class="h-3.5 w-3.5" />
+            普通
+          </span>
+        ),
   },
   {
-    prop: "flag", label: "HTML",
-    formatter: (_row, raw) => raw === 1
-      ? '<b style="color:#059669">ON</b>'
-      : '<span style="color:#94a3b8">OFF</span>',
+    prop: "flag",
+    label: "HTML（formatter）",
+    formatter: (_row: Row, raw: unknown) =>
+      raw === 1
+        ? '<b style="color:#059669">ON</b>'
+        : '<span style="color:#94a3b8">OFF</span>',
   },
-  { type: "actions", actions: {
-    view: true,
-    edit: true,
-    remove: false,
-  } },
+  {
+    type: "actions",
+    actions: { view: true, edit: true, remove: false },
+  },
 ];
-<DataPanel title="列函数显示" data={rows} columns={columns}
+
+<DataPanel
+  panelKey="demo-col-fn"
+  title="列函数显示"
+  data={rows}
+  columns={columns}
   search={{ title: "筛选用户", props: [{ prop: "name" }] }}
   form={{
-    title: (row) => row.id ? \`修改 · \${row.name}\` : "添加用户",
+    title: (row) =>
+      row.id ? \`修改 · \${String(row.name ?? "")}\` : "添加用户",
     props: [
       { prop: "name", required: true },
       { prop: "flag", type: "number", initial: 0 },
@@ -1392,7 +679,7 @@ const columns: Column[] = [
     ],
   }}
   view={{
-    title: (row) => \`详情 · \${row.name}\`,
+    title: (row) => \`详情 · \${String(row.name ?? "")}\`,
     props: [
       { prop: "name", label: "姓名" },
       {
@@ -1403,7 +690,21 @@ const columns: Column[] = [
       { prop: "level", label: "级别" },
     ],
   }}
-  caps={{ create: false, remove: false }} />`;
+  caps={{
+    create: true,
+    update: true,
+    view: true,
+    remove: false,
+    import: false,
+    export: false,
+    print: false,
+    columns: false,
+    density: false,
+    fullscreen: false,
+    copy: false,
+  }}
+/>
+`;
 
 const joinNameRows = [
   { id: "1", lastName: "张", firstName: "三" },
@@ -1422,7 +723,10 @@ const joinNameColumns: Column[] = [
       `${row.lastName ?? ""}${row.firstName ?? ""}` || "—",
   },
 ];
-const joinNameCode = `const rows = [
+const joinNameCode = `import { DataPanel } from "@dreamer/ui-view/data-display";
+import type { Column, Row } from "@dreamer/ui-view/data-display";
+
+const rows = [
   { id: "1", lastName: "张", firstName: "三" },
   { id: "2", lastName: "李", firstName: "四" },
   { id: "3", lastName: "王", firstName: "五" },
@@ -1435,706 +739,184 @@ const columns: Column[] = [
     label: "姓名",
     sortable: true,
     sortProp: "lastName",
-    formatter: (row) =>
+    formatter: (row: Row) =>
       \`\${row.lastName ?? ""}\${row.firstName ?? ""}\` || "—",
   },
 ];
-<DataPanel title="拼接列" data={rows} columns={columns} />
+
+<DataPanel
+  panelKey="demo-join-name"
+  title="拼接列"
+  data={rows}
+  columns={columns}
+  caps={{
+    create: false,
+    update: false,
+    view: false,
+    remove: false,
+    import: false,
+    export: false,
+    print: false,
+    columns: false,
+    density: false,
+    fullscreen: false,
+    copy: false,
+  }}
+/>
 `;
 
-const basicCode = `const rows = [
-  { id: "1", name: "Alice", email: "alice@example.com", role: "admin", status: "active", balance: 120 },
-  { id: "2", name: "Bob", email: "bob@example.com", role: "editor", status: "disabled", balance: 80 },
-  { id: "4", name: "David", email: "david@example.com", role: "admin", status: "disabled", balance: 70 },
-  { id: "5", name: "Eve", email: "eve@example.com", role: "editor", status: "active", balance: 60 },
-];
-const columns: Column[] = [
-  { type: "selection", disable: (row) => row.id === "4" || row.id === "5" },
-  { type: "index" },
-  { prop: "name", label: "姓名", sortable: true, inline: "text" },
-  { prop: "email", label: "邮箱", sortable: true },
-  {
-    prop: "role",
-    label: "角色",
-    type: "tag",
-    align: "center",
-    options: [
-      { value: "admin", label: "管理员", tone: "danger" },
-      { value: "editor", label: "编辑", tone: "info" },
-      { value: "viewer", label: "访客", tone: "default" },
-    ],
-  },
-  {
-    prop: "status",
-    label: "状态",
-    type: "tag",
-    inline: "switch",
-    batch: true,
-    align: "center",
-    options: [
-      { value: "active", label: "启用", tone: "success" },
-      { value: "disabled", label: "停用", tone: "warning" },
-    ],
-  },
-  {
-    prop: "balance",
-    label: "余额",
-    type: "money",
-    sortable: true,
-    total: true,
-    align: "right",
-  },
-  {
-    prop: "score",
-    label: "积分",
-    type: "number",
-    sortable: true,
-    inline: "number",
-    align: "right",
-  },
-  {
-    prop: "createdAt",
-    label: "创建时间",
-    type: "datetime",
-    format: "YYYY-MM-DD HH:mm",
-    sortable: true,
-    hidden: true,
-  },
-  { type: "actions", actions: {
-    view: true,
-    edit: true,
-    remove: false,
-  } },
-];
-const search = {
-  props: [
-  { prop: "name" },
-  { prop: "role", type: "select" },
-  { prop: "status", type: "select" },
-  ],
-};
-const form = {
-  props: [
-  { prop: "name", required: true },
-  { prop: "email", required: true, pattern: "^[^@\\s]+@[^@\\s]+$" },
-  { prop: "role", type: "select", required: true, initial: "viewer" },
-  { prop: "balance", type: "number", min: 0, initial: 0 },
-  { prop: "status", type: "switch", initial: "active" },
-  ],
-};
+const basicCode = `import { DataPanel } from "@dreamer/ui-view/data-display";
+import type { Column, FormField, Row, SearchField } from "@dreamer/ui-view/data-display";
+
+${DEMO_COMMON_SETUP_CODE}
+
+const rows = makeDemoRows(25);
 
 <DataPanel
   panelKey="demo-basic"
   title="用户管理"
   data={rows}
   columns={columns}
-  search={search}
-  form={form}
-/>`;
+  search={{ props: search }}
+  form={{ props: form }}
+  exportName="users"
+/>
+`;
 
-const searchCode = `const rows = [
-  { id: "1", name: "Alice", email: "alice@example.com", role: "admin", status: "active", balance: 120 },
-  { id: "2", name: "Bob", email: "bob@example.com", role: "editor", status: "disabled", balance: 80 },
-];
-const columns: Column[] = [
-  { type: "selection" },
-  { type: "index" },
-  { prop: "name", label: "姓名", sortable: true, inline: "text" },
-  { prop: "email", label: "邮箱", sortable: true },
-  {
-    prop: "role",
-    label: "角色",
-    type: "tag",
-    align: "center",
-    options: [
-      { value: "admin", label: "管理员", tone: "danger" },
-      { value: "editor", label: "编辑", tone: "info" },
-      { value: "viewer", label: "访客", tone: "default" },
-    ],
-  },
-  {
-    prop: "status",
-    label: "状态",
-    type: "tag",
-    inline: "switch",
-    batch: true,
-    align: "center",
-    options: [
-      { value: "active", label: "启用", tone: "success" },
-      { value: "disabled", label: "停用", tone: "warning" },
-    ],
-  },
-  {
-    prop: "balance",
-    label: "余额",
-    type: "money",
-    sortable: true,
-    total: true,
-    align: "right",
-  },
-  {
-    prop: "score",
-    label: "积分",
-    type: "number",
-    sortable: true,
-    inline: "number",
-    align: "right",
-  },
-  {
-    prop: "createdAt",
-    label: "创建时间",
-    type: "datetime",
-    format: "YYYY-MM-DD HH:mm",
-    sortable: true,
-    hidden: true,
-  },
-  { type: "actions", actions: {
-    view: true,
-    edit: true,
-    remove: false,
-  } },
-];
-const search = {
-  title: "筛选条件",
-  props: [
-  { prop: "name" },
-  { prop: "role", type: "select" },
-  { prop: "status", type: "select" },
-  ],
-};
-const form = {
-  props: [
-  { prop: "name", required: true },
-  { prop: "email", required: true, pattern: "^[^@\\s]+@[^@\\s]+$" },
-  { prop: "role", type: "select", required: true, initial: "viewer" },
-  { prop: "balance", type: "number", min: 0, initial: 0 },
-  { prop: "status", type: "switch", initial: "active" },
-  ],
-};
+const searchCode = `import { DataPanel } from "@dreamer/ui-view/data-display";
+import type { Column, FormField, Row, SearchField } from "@dreamer/ui-view/data-display";
 
-// 分页／排序默认写地址栏；配置 search → 工具栏搜索字段一并同步（无开关）
-<DataPanel title="用户" data={rows} columns={columns} search={search}
-  initialQuery={{ filters: { role: "admin" } }} />`;
+${DEMO_COMMON_SETUP_CODE}
 
-const syncUrlCode =
-  `// 地址栏同步：page／pageSize／sort 默认写；配置 search 后搜索字段一并同步（无开关）
-const rows = [
-  { id: "1", name: "Alice", email: "alice@example.com", role: "admin", status: "active", balance: 120 },
-  { id: "2", name: "Bob", email: "bob@example.com", role: "editor", status: "disabled", balance: 80 },
-];
-const columns: Column[] = [
-  { type: "selection" },
-  { type: "index" },
-  { prop: "name", label: "姓名", sortable: true, inline: "text" },
-  { prop: "email", label: "邮箱", sortable: true },
-  {
-    prop: "role",
-    label: "角色",
-    type: "tag",
-    align: "center",
-    options: [
-      { value: "admin", label: "管理员", tone: "danger" },
-      { value: "editor", label: "编辑", tone: "info" },
-      { value: "viewer", label: "访客", tone: "default" },
-    ],
-  },
-  {
-    prop: "status",
-    label: "状态",
-    type: "tag",
-    inline: "switch",
-    batch: true,
-    align: "center",
-    options: [
-      { value: "active", label: "启用", tone: "success" },
-      { value: "disabled", label: "停用", tone: "warning" },
-    ],
-  },
-  {
-    prop: "balance",
-    label: "余额",
-    type: "money",
-    sortable: true,
-    total: true,
-    align: "right",
-  },
-  {
-    prop: "score",
-    label: "积分",
-    type: "number",
-    sortable: true,
-    inline: "number",
-    align: "right",
-  },
-  {
-    prop: "createdAt",
-    label: "创建时间",
-    type: "datetime",
-    format: "YYYY-MM-DD HH:mm",
-    sortable: true,
-    hidden: true,
-  },
-  { type: "actions", actions: {
-    view: true,
-    edit: true,
-    remove: false,
-  } },
-];
-const search = {
-  props: [
-  { prop: "name" },
-  { prop: "role", type: "select" },
-  { prop: "status", type: "select" },
-  ],
-};
-const form = {
-  props: [
-  { prop: "name", required: true },
-  { prop: "email", required: true, pattern: "^[^@\\s]+@[^@\\s]+$" },
-  { prop: "role", type: "select", required: true, initial: "viewer" },
-  { prop: "balance", type: "number", min: 0, initial: 0 },
-  { prop: "status", type: "switch", initial: "active" },
-  ],
-};
+const rows = makeDemoRows(25);
+const columnsWithoutInlineStatus = columns.map((c) =>
+  c.prop === "status" ? { ...c, inline: undefined } : c
+);
+
+<DataPanel
+  panelKey="demo-search"
+  title="搜索表单"
+  data={rows}
+  columns={columnsWithoutInlineStatus}
+  search={{ title: "筛选条件", props: search }}
+  initialQuery={{ filters: { role: "admin" } }}
+  caps={{ create: false }}
+/>
+`;
+
+const syncUrlCode = `import { DataPanel } from "@dreamer/ui-view/data-display";
+import type { Column, FormField, Row, SearchField } from "@dreamer/ui-view/data-display";
+
+${DEMO_COMMON_SETUP_CODE}
+
+const rows = makeDemoRows(25);
+
+// 分页、排序默认与地址栏双向同步；配置了 search 后搜索字段一并写入。
+// 同页多面板或抽屉里不抢地址栏时设 syncUrl={false}。
 
 <DataPanel
   panelKey="demo-sync-url"
   title="用户管理"
   data={rows}
   columns={columns}
-  search={search}
-/>`;
+  search={{ props: search }}
+  form={{ props: form }}
+/>
+`;
 
-const tableCode =
-  `// 排序／合计／行内编辑／隐藏列；按行禁用用列上的 disable(row)，整行仍可用 isRowDisabled（兼容 row.locked）
-const rows = [
-  { id: "1", name: "Alice", email: "alice@example.com", role: "admin", status: "active", balance: 120, locked: true },
-  { id: "2", name: "Bob", email: "bob@example.com", role: "editor", status: "disabled", balance: 80 },
-];
-const columns: Column[] = [
-  { type: "selection", disable: (row) => row.status === "disabled" },
-  { type: "index" },
-  { prop: "name", label: "姓名", sortable: true, inline: "text" },
-  { prop: "email", label: "邮箱", sortable: true },
-  {
-    prop: "role",
-    label: "角色",
-    type: "tag",
-    align: "center",
-    options: [
-      { value: "admin", label: "管理员", tone: "danger" },
-      { value: "editor", label: "编辑", tone: "info" },
-      { value: "viewer", label: "访客", tone: "default" },
-    ],
-  },
-  {
-    prop: "status",
-    label: "状态",
-    type: "tag",
-    inline: "switch",
-    batch: true,
-    align: "center",
-    options: [
-      { value: "active", label: "启用", tone: "success" },
-      { value: "disabled", label: "停用", tone: "warning" },
-    ],
-  },
-  {
-    prop: "balance",
-    label: "余额",
-    type: "money",
-    sortable: true,
-    total: true,
-    align: "right",
-  },
-  {
-    prop: "score",
-    label: "积分",
-    type: "number",
-    sortable: true,
-    inline: "number",
-    align: "right",
-  },
-  {
-    prop: "createdAt",
-    label: "创建时间",
-    type: "datetime",
-    format: "YYYY-MM-DD HH:mm",
-    sortable: true,
-    hidden: true,
-  },
-  { type: "actions", disable: (row) => row.status === "disabled", actions: {
-    view: true,
-    edit: true,
-    remove: false,
-  } },
-];
-const search = {
-  props: [
-  { prop: "name" },
-  { prop: "role", type: "select" },
-  { prop: "status", type: "select" },
-  ],
-};
-const form = {
-  props: [
-  { prop: "name", required: true },
-  { prop: "email", required: true, pattern: "^[^@\s]+@[^@\s]+$" },
-  { prop: "role", type: "select", required: true, initial: "viewer" },
-  { prop: "balance", type: "number", min: 0, initial: 0 },
-  { prop: "status", type: "switch", initial: "active" },
-  ],
-};
+const tableCode = `import { DataPanel } from "@dreamer/ui-view/data-display";
+import type { Column, FormField, Row, SearchField } from "@dreamer/ui-view/data-display";
 
-<DataPanel title="表格" data={rows} columns={columns} form={form}
+${DEMO_COMMON_SETUP_CODE}
+
+const rows = makeDemoRows(8);
+
+<DataPanel
+  panelKey="demo-table"
+  title="表格功能"
+  data={rows}
+  columns={columns}
   defaultSort={{ prop: "balance", order: "desc" }}
-  isRowDisabled={(row) => !!row.locked} />`;
+  form={{ props: form }}
+  caps={{ create: false, remove: false }}
+/>
+`;
 
-const crudCode = `const rows = [
-  { id: "1", name: "Alice", email: "alice@example.com", role: "admin", status: "active", balance: 120 },
-  { id: "2", name: "Bob", email: "bob@example.com", role: "editor", status: "disabled", balance: 80 },
-];
-const columns: Column[] = [
-  { type: "selection" },
-  { type: "index" },
-  { prop: "name", label: "姓名", sortable: true, inline: "text" },
-  { prop: "email", label: "邮箱", sortable: true },
-  {
-    prop: "role",
-    label: "角色",
-    type: "tag",
-    align: "center",
-    options: [
-      { value: "admin", label: "管理员", tone: "danger" },
-      { value: "editor", label: "编辑", tone: "info" },
-      { value: "viewer", label: "访客", tone: "default" },
-    ],
-  },
-  {
-    prop: "status",
-    label: "状态",
-    type: "tag",
-    inline: "switch",
-    batch: true,
-    align: "center",
-    options: [
-      { value: "active", label: "启用", tone: "success" },
-      { value: "disabled", label: "停用", tone: "warning" },
-    ],
-  },
-  {
-    prop: "balance",
-    label: "余额",
-    type: "money",
-    sortable: true,
-    total: true,
-    align: "right",
-  },
-  {
-    prop: "score",
-    label: "积分",
-    type: "number",
-    sortable: true,
-    inline: "number",
-    align: "right",
-  },
-  {
-    prop: "createdAt",
-    label: "创建时间",
-    type: "datetime",
-    format: "YYYY-MM-DD HH:mm",
-    sortable: true,
-    hidden: true,
-  },
-  { type: "actions", actions: {
-    view: true,
-    edit: true,
-    remove: false,
-  } },
-];
-const search = {
-  props: [
-  { prop: "name" },
-  { prop: "role", type: "select" },
-  { prop: "status", type: "select" },
-  ],
-};
-const form = {
-  props: [
-  { prop: "name", required: true },
-  { prop: "email", required: true, pattern: "^[^@\\s]+@[^@\\s]+$" },
-  { prop: "role", type: "select", required: true, initial: "viewer" },
-  { prop: "balance", type: "number", min: 0, initial: 0 },
-  { prop: "status", type: "switch", initial: "active" },
-  ],
-};
+const crudCode = `import { DataPanel } from "@dreamer/ui-view/data-display";
+import type { Column, FormField, Row, SearchField } from "@dreamer/ui-view/data-display";
 
-// 新增／编辑／查看 Modal；删除／批量设为走 Popconfirm
-<DataPanel title="CRUD" data={rows} columns={columns} form={form}
-  onDataChange={(next) => console.log(next)} />`;
+${DEMO_COMMON_SETUP_CODE}
 
-const batchCode =
-  `// 勾选 → 批量条。设为… 来自 column.batch:true（非首个 switch 隐式推导）
-// selection.disable：David、Eve 禁止勾选（全选跳过，不能进批量栏）
-const rows = [
-  { id: "1", name: "Alice", email: "alice@example.com", role: "admin", status: "active", balance: 120 },
-  { id: "2", name: "Bob", email: "bob@example.com", role: "editor", status: "disabled", balance: 80 },
-  { id: "4", name: "David", email: "david@example.com", role: "admin", status: "disabled", balance: 70 },
-  { id: "5", name: "Eve", email: "eve@example.com", role: "editor", status: "active", balance: 60 },
-];
-const columns: Column[] = [
-  { type: "selection", disable: (row) => row.id === "4" || row.id === "5" },
-  { type: "index" },
-  { prop: "name", label: "姓名", sortable: true, inline: "text" },
-  { prop: "email", label: "邮箱", sortable: true },
-  {
-    prop: "role",
-    label: "角色",
-    type: "tag",
-    align: "center",
-    options: [
-      { value: "admin", label: "管理员", tone: "danger" },
-      { value: "editor", label: "编辑", tone: "info" },
-      { value: "viewer", label: "访客", tone: "default" },
-    ],
-  },
-  {
-    prop: "status",
-    label: "状态",
-    type: "tag",
-    inline: "switch",
-    batch: true,
-    align: "center",
-    options: [
-      { value: "active", label: "启用", tone: "success" },
-      { value: "disabled", label: "停用", tone: "warning" },
-    ],
-  },
-  {
-    prop: "balance",
-    label: "余额",
-    type: "money",
-    sortable: true,
-    total: true,
-    align: "right",
-  },
-  {
-    prop: "score",
-    label: "积分",
-    type: "number",
-    sortable: true,
-    inline: "number",
-    align: "right",
-  },
-  {
-    prop: "createdAt",
-    label: "创建时间",
-    type: "datetime",
-    format: "YYYY-MM-DD HH:mm",
-    sortable: true,
-    hidden: true,
-  },
-  { type: "actions", actions: {
-    view: true,
-    edit: true,
-    remove: false,
-  } },
-];
-const search = {
-  props: [
-  { prop: "name" },
-  { prop: "role", type: "select" },
-  { prop: "status", type: "select" },
-  ],
-};
-const form = {
-  props: [
-  { prop: "name", required: true },
-  { prop: "email", required: true, pattern: "^[^@\\s]+@[^@\\s]+$" },
-  { prop: "role", type: "select", required: true, initial: "viewer" },
-  { prop: "balance", type: "number", min: 0, initial: 0 },
-  { prop: "status", type: "switch", initial: "active" },
-  ],
-};
+const rows = makeDemoRows(8);
 
-<DataPanel title="批量" data={rows} columns={columns} form={form} />`;
+<DataPanel
+  panelKey="demo-crud"
+  title="CRUD"
+  data={rows}
+  columns={columns}
+  form={{ props: form }}
+/>
+`;
 
-const pageCode = `const rows = [
-  { id: "1", name: "Alice", email: "alice@example.com", role: "admin", status: "active", balance: 120 },
-  { id: "2", name: "Bob", email: "bob@example.com", role: "editor", status: "disabled", balance: 80 },
-];
-const columns: Column[] = [
-  { type: "selection" },
-  { type: "index" },
-  { prop: "name", label: "姓名", sortable: true, inline: "text" },
-  { prop: "email", label: "邮箱", sortable: true },
-  {
-    prop: "role",
-    label: "角色",
-    type: "tag",
-    align: "center",
-    options: [
-      { value: "admin", label: "管理员", tone: "danger" },
-      { value: "editor", label: "编辑", tone: "info" },
-      { value: "viewer", label: "访客", tone: "default" },
-    ],
-  },
-  {
-    prop: "status",
-    label: "状态",
-    type: "tag",
-    inline: "switch",
-    batch: true,
-    align: "center",
-    options: [
-      { value: "active", label: "启用", tone: "success" },
-      { value: "disabled", label: "停用", tone: "warning" },
-    ],
-  },
-  {
-    prop: "balance",
-    label: "余额",
-    type: "money",
-    sortable: true,
-    total: true,
-    align: "right",
-  },
-  {
-    prop: "score",
-    label: "积分",
-    type: "number",
-    sortable: true,
-    inline: "number",
-    align: "right",
-  },
-  {
-    prop: "createdAt",
-    label: "创建时间",
-    type: "datetime",
-    format: "YYYY-MM-DD HH:mm",
-    sortable: true,
-    hidden: true,
-  },
-  { type: "actions", actions: {
-    view: true,
-    edit: true,
-    remove: false,
-  } },
-];
-const search = {
-  props: [
-  { prop: "name" },
-  { prop: "role", type: "select" },
-  { prop: "status", type: "select" },
-  ],
-};
-const form = {
-  props: [
-  { prop: "name", required: true },
-  { prop: "email", required: true, pattern: "^[^@\\s]+@[^@\\s]+$" },
-  { prop: "role", type: "select", required: true, initial: "viewer" },
-  { prop: "balance", type: "number", min: 0, initial: 0 },
-  { prop: "status", type: "switch", initial: "active" },
-  ],
-};
+const batchCode = `import { DataPanel } from "@dreamer/ui-view/data-display";
+import type { Column, FormField, Row, SearchField } from "@dreamer/ui-view/data-display";
 
-<DataPanel title="分页" data={rows} columns={columns} pageSize={5} pageSizes={[5, 10, 20]} />
-// 翻页／改条数自动写 ?page=／?pageSize=（无 search 也同步；page=1 与默认 pageSize 省略）`;
+${DEMO_COMMON_SETUP_CODE}
 
-const exportCode = `const rows = [
-  { id: "1", name: "Alice", email: "alice@example.com", role: "admin", status: "active", balance: 120 },
-  { id: "2", name: "Bob", email: "bob@example.com", role: "editor", status: "disabled", balance: 80 },
-];
-const columns: Column[] = [
-  { type: "selection" },
-  { type: "index" },
-  { prop: "name", label: "姓名", sortable: true, inline: "text" },
-  { prop: "email", label: "邮箱", sortable: true },
-  {
-    prop: "role",
-    label: "角色",
-    type: "tag",
-    align: "center",
-    options: [
-      { value: "admin", label: "管理员", tone: "danger" },
-      { value: "editor", label: "编辑", tone: "info" },
-      { value: "viewer", label: "访客", tone: "default" },
-    ],
-  },
-  {
-    prop: "status",
-    label: "状态",
-    type: "tag",
-    inline: "switch",
-    batch: true,
-    align: "center",
-    options: [
-      { value: "active", label: "启用", tone: "success" },
-      { value: "disabled", label: "停用", tone: "warning" },
-    ],
-  },
-  {
-    prop: "balance",
-    label: "余额",
-    type: "money",
-    sortable: true,
-    total: true,
-    align: "right",
-  },
-  {
-    prop: "score",
-    label: "积分",
-    type: "number",
-    sortable: true,
-    inline: "number",
-    align: "right",
-  },
-  {
-    prop: "createdAt",
-    label: "创建时间",
-    type: "datetime",
-    format: "YYYY-MM-DD HH:mm",
-    sortable: true,
-    hidden: true,
-  },
-  { type: "actions", actions: {
-    view: true,
-    edit: true,
-    remove: false,
-  } },
-];
-const search = {
-  props: [
-  { prop: "name" },
-  { prop: "role", type: "select" },
-  { prop: "status", type: "select" },
-  ],
-};
-const form = {
-  props: [
-  { prop: "name", required: true },
-  { prop: "email", required: true, pattern: "^[^@\s]+@[^@\s]+$" },
-  { prop: "role", type: "select", required: true, initial: "viewer" },
-  { prop: "balance", type: "number", min: 0, initial: 0 },
-  { prop: "status", type: "switch", initial: "active" },
-  ],
-};
+const rows = makeDemoRows(10);
 
-// 工具栏导出 xlsx／csv／json／xml／html；导入下拉 xlsx／csv／json／xml（无 html）再选文件
-<DataPanel title="导出导入" data={rows} columns={columns} exportName="users" />
+<DataPanel
+  panelKey="demo-batch"
+  title="批量操作"
+  data={rows}
+  columns={columns}
+  form={{ props: form }}
+/>
+`;
 
-// 也可只用导出函数
-import { buildExportFile } from "@dreamer/ui-view/data-display";
-const messages = {}; // 可传 DataPanel messages；空对象＝内置 zh-CN 文案
-const file = buildExportFile({ format: "xlsx", title: "用户", basename: "users", columns, rows, messages });
-// file = { filename, mime, data: Uint8Array | string }`;
+const pageCode = `import { DataPanel } from "@dreamer/ui-view/data-display";
+import type { Column, FormField, Row, SearchField } from "@dreamer/ui-view/data-display";
 
-const cellCode = `// 单元格编辑（inline）
-// inline＝列内就地编辑（双击单元格进入编辑器），区别于工具栏／行操作打开的 form Modal。
-// column.inline 指定编辑器类型：
-//   text / number / textarea / date / datetime / select（单选，需 options）/ multiselect（多选，需 options）
-//   switch：点击即切换；失焦或 Enter 保存并回到展示态；Esc 取消并恢复原值
-//   保存失败（dataSource.setField / update 返回失败）：弹出错误提示并保持原值
+${DEMO_COMMON_SETUP_CODE}
+
+const rows = makeDemoRows(40);
+
+<DataPanel
+  panelKey="demo-page"
+  title="分页"
+  data={rows}
+  columns={columns}
+  pageSize={5}
+  pageSizes={[5, 10, 20]}
+  caps={{ create: false }}
+/>
+`;
+
+const exportCode = `import { DataPanel } from "@dreamer/ui-view/data-display";
+import type { Column, FormField, Row, SearchField } from "@dreamer/ui-view/data-display";
+
+${DEMO_COMMON_SETUP_CODE}
+
+const rows = makeDemoRows(15);
+
+<DataPanel
+  panelKey="demo-export"
+  title="导出导入"
+  data={rows}
+  columns={columns}
+  form={{ props: form }}
+  exportName="users"
+/>
+`;
+
+const cellCode =
+  `import { DataPanel, createLocalDataSource } from "@dreamer/ui-view/data-display";
+import type { Column, DataSource, FormField, Row } from "@dreamer/ui-view/data-display";
+
+${MAKE_DEMO_ROWS_CODE}
+
+const cellDemoState = { fail: false };
+
 const roleOptions = [
   { value: "admin", label: "管理员", tone: "danger" },
   { value: "editor", label: "编辑", tone: "info" },
@@ -2146,423 +928,299 @@ const tagOptions = [
   { value: "beta", label: "内测", tone: "info" },
   { value: "staff", label: "员工", tone: "default" },
 ];
-const statusOptions = [
-  { value: "active", label: "启用", tone: "success" },
-  { value: "disabled", label: "停用", tone: "warning" },
-];
-const rows = [
-  { id: "1", name: "Alice", score: 10, role: "admin", tags: ["vip"], status: "active",
-    birthday: "1990-01-10", loginAt: "2026-01-01T09:30:00.000Z", remark: "第 1 位用户的备注" },
-  { id: "2", name: "Bob", score: 25, role: "editor", tags: ["new", "beta"], status: "disabled",
-    birthday: "1991-02-11", loginAt: "2026-01-02T10:30:00.000Z", remark: "第 2 位用户的备注" },
-];
+
+function makeCellRows(n = 5): Row[] {
+  return Array.from({ length: n }, (_, i) => ({
+    id: String(i + 1),
+    name: NAMES[i % NAMES.length],
+    score: 10 + i * 15,
+    role: ["admin", "editor", "viewer"][i % 3],
+    tags: [["vip"], ["new", "beta"], [], ["staff"], ["vip", "staff"]][i % 5],
+    status: i % 2 === 0 ? "active" : "disabled",
+    birthday: \`199\${i}-0\${i + 1}-1\${i}\`,
+    loginAt: new Date(2026, 0, 1 + i, 9 + i, 30).toISOString(),
+    remark: \`第 \${i + 1} 位用户的备注\`,
+  }));
+}
+
 const columns: Column[] = [
   { type: "selection" },
   { type: "index" },
-  { prop: "name", label: "姓名", inline: "text" },
-  { prop: "score", label: "积分", type: "number", inline: "number", align: "right" },
-  { prop: "role", label: "角色", type: "tag", inline: "select", options: roleOptions },
-  { prop: "tags", label: "标签", type: "tag", inline: "multiselect", options: tagOptions },
-  { prop: "status", label: "状态", type: "tag", inline: "switch", options: statusOptions },
-  { prop: "birthday", label: "生日", type: "date", inline: "date" },
-  { prop: "loginAt", label: "最近登录", type: "datetime", inline: "datetime" },
-  { prop: "remark", label: "备注", inline: "textarea" },
-  { type: "actions", actions: {
-    view: true,
-    edit: true,
-    remove: false,
-  } },
+  { prop: "name", label: "姓名（text）", inline: "text" },
+  { prop: "score", label: "积分（number）", type: "number", inline: "number" },
+  {
+    prop: "role",
+    label: "角色（select）",
+    type: "tag",
+    inline: "select",
+    options: roleOptions,
+  },
+  {
+    prop: "tags",
+    label: "标签（multiselect）",
+    type: "tag",
+    inline: "multiselect",
+    options: tagOptions,
+  },
+  {
+    prop: "status",
+    label: "状态（switch）",
+    type: "tag",
+    inline: "switch",
+    options: [
+      { value: "active", label: "启用", tone: "success" },
+      { value: "disabled", label: "停用", tone: "warning" },
+    ],
+  },
+  { prop: "birthday", label: "生日（date）", type: "date", inline: "date" },
+  {
+    prop: "loginAt",
+    label: "最近登录（datetime）",
+    type: "datetime",
+    inline: "datetime",
+  },
+  { prop: "remark", label: "备注（textarea）", inline: "textarea" },
+  { type: "actions", actions: { view: true, edit: true, remove: false } },
 ];
-// 本地：data={rows}；若要拦截保存失败等，可改 dataSource（如 createLocalDataSource）
-<DataPanel title="单元格编辑" data={rows} columns={columns} />`;
 
-const remoteCode = `// 前端 list＋fetch（不实现服务端；路径／字段按接口改）
-const source: DataSource = {
-  sync: false, // 异步 fetch：省略或 false；仅当 list 同步返回时才写 sync: true
-  async list(q) {
-    const params = new URLSearchParams({
-      page: String(q.page),
-      pageSize: String(q.pageSize),
-    });
-    if (q.sort) {
-      params.set("sort", q.sort);
-      params.set("order", q.order); // "asc" | "desc"
-    }
-    // 搜索条件：filters 的 key＝search[].prop，值已是字符串
-    for (const [k, v] of Object.entries(q.filters)) {
-      if (v !== "") params.set(k, v);
-    }
-    const r = await fetch("/api/users?" + params.toString());
-    if (!r.ok) throw new Error(await r.text() || r.statusText);
-    const data = await r.json();
-    // 约定返回 { items, total }；若后台是 { list, count } 等，在此映射即可
-    return { items: data.items, total: data.total };
-  },
-  // 写操作按需提供；没有的能力面板会隐藏对应按钮
-  async create(values) {
-    const r = await fetch("/api/users", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(values),
-    });
-    if (!r.ok) throw new Error(await r.text() || r.statusText);
-  },
-  async update(id, values) {
-    const r = await fetch("/api/users/" + encodeURIComponent(id), {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(values),
-    });
-    if (!r.ok) throw new Error(await r.text() || r.statusText);
-  },
-  async remove(ids) {
-    const r = await fetch("/api/users/remove", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ids }),
-    });
-    if (!r.ok) throw new Error(await r.text() || r.statusText);
-    return await r.json(); // { removed, failed[] }
-  },
-};
-
-// columns／search／form 与「基础用法」一致（操作列仅 view＋edit）
-const columns: Column[] = [
-  { type: "selection" },
-  { type: "index" },
-  { prop: "name", label: "姓名", sortable: true, inline: "text" },
-  { prop: "email", label: "邮箱", sortable: true },
-  { prop: "role", label: "角色", type: "tag", align: "center", options: [
-    { value: "admin", label: "管理员", tone: "danger" },
-    { value: "editor", label: "编辑", tone: "info" },
-    { value: "viewer", label: "访客", tone: "default" },
-  ] },
-  { prop: "status", label: "状态", type: "tag", inline: "switch", batch: true, align: "center", options: [
-    { value: "active", label: "启用", tone: "success" },
-    { value: "disabled", label: "停用", tone: "warning" },
-  ] },
-  { prop: "balance", label: "余额", type: "money", sortable: true, total: true, align: "right" },
-  { prop: "score", label: "积分", type: "number", sortable: true, inline: "number", align: "right" },
-  { prop: "createdAt", label: "创建时间", type: "datetime", format: "YYYY-MM-DD HH:mm", sortable: true, hidden: true },
-  { type: "actions", actions: {
-    view: true,
-    edit: true,
-    remove: false,
-  } },
+const form: FormField[] = [
+  { prop: "name", label: "姓名（text）", required: true },
+  { prop: "score", label: "积分（number）", type: "number", min: 0, initial: 0 },
+  { prop: "role", label: "角色（select）", type: "select", required: true, initial: "viewer" },
+  { prop: "tags", label: "标签（multiselect）", type: "multiselect" },
+  { prop: "status", label: "状态（switch）", type: "switch", initial: "active" },
+  { prop: "birthday", label: "生日（date）", type: "date" },
+  { prop: "loginAt", label: "最近登录（datetime）", type: "datetime" },
+  { prop: "remark", label: "备注（textarea）", type: "textarea" },
 ];
-const search = {
-  props: [
-  { prop: "name" },
-  { prop: "role", type: "select" },
-  { prop: "status", type: "select" },
-  ],
-};
-const form = {
-  props: [
-  { prop: "name", required: true },
-  { prop: "email", required: true },
-  { prop: "role", type: "select", required: true, initial: "viewer" },
-  { prop: "balance", type: "number", min: 0, initial: 0 },
-  { prop: "status", type: "switch", initial: "active" },
-  ],
-};
+
+function createCellDemoSource(): DataSource {
+  const inner = createLocalDataSource({
+    rows: makeCellRows(5),
+    columns,
+    form,
+    writable: true,
+  });
+  return {
+    ...inner,
+    setField: (ids, field, value) => {
+      if (cellDemoState.fail) {
+        return {
+          removed: 0,
+          failed: ids.map((id) => ({
+            id,
+            error: "保存失败（演示：服务端拒绝）",
+          })),
+        };
+      }
+      return inner.setField!(ids, field, value);
+    },
+  } as DataSource;
+}
+
+const cellSource = createCellDemoSource();
+
+<label class="mb-2 flex items-center gap-2 text-sm">
+  <input
+    type="checkbox"
+    onChange={(e) => {
+      cellDemoState.fail = e.target.checked;
+    }}
+  />
+  模拟保存失败（勾选后再编辑：提示错误并保持原值）
+</label>
+<DataPanel
+  panelKey="demo-cell"
+  title="单元格编辑"
+  dataSource={cellSource}
+  columns={columns}
+  form={{ props: form }}
+  caps={{
+    create: false,
+    remove: false,
+    import: false,
+    export: false,
+    print: false,
+    columns: false,
+  }}
+/>
+`;
+
+const remoteCode =
+  `import { DataPanel, createLocalDataSource } from "@dreamer/ui-view/data-display";
+import type { Column, DataSource, FormField, Row, SearchField } from "@dreamer/ui-view/data-display";
+
+${DEMO_COMMON_SETUP_CODE}
+
+function createRemoteDemoSource(latency = 400): DataSource {
+  const inner = createLocalDataSource({
+    rows: makeDemoRows(60),
+    columns,
+    search,
+    form,
+  });
+  const wait = (v) => new Promise((r) => setTimeout(() => r(v), latency));
+  return {
+    list: (q) => wait(inner.list(q)),
+    create: (v) => wait(inner.create(v)),
+    update: (id, v) => wait(inner.update(id, v)),
+    remove: (ids) => wait(inner.remove(ids)),
+    setField: (ids, f, v) => wait(inner.setField(ids, f, v)),
+    importRows: (rows) => wait(inner.importRows(rows)),
+  };
+}
+
+// 本页演示为内存异步源（60 行 + 延迟 300ms），与面板同一份。
+const remote = createRemoteDemoSource(300);
 
 <DataPanel
+  panelKey="demo-remote"
   title="远程数据"
-  dataSource={source}
+  dataSource={remote}
   columns={columns}
-  search={search}
-  form={form}
-/>`;
+  search={{ props: search }}
+  form={{ props: form }}
+/>
+`;
 
-const themeCode =
-  `// 浅色 / 深色：跟随根节点 .dark；深色面板主体用 CSS 变量 --dp-panel-body-bg（默认与 CodeBlock 相同的 slate-800/80）
-// 工具栏按钮组：浅色灰白、深色 slate，相邻按钮只有一条淡分割线
-const rows = [
-  { id: "1", name: "Alice", email: "alice@example.com", role: "admin", status: "active", balance: 120 },
-  { id: "2", name: "Bob", email: "bob@example.com", role: "editor", status: "disabled", balance: 80 },
-];
-const columns: Column[] = [
-  { type: "selection" },
-  { type: "index" },
-  { prop: "name", label: "姓名", sortable: true, inline: "text" },
-  { prop: "email", label: "邮箱", sortable: true },
-  {
-    prop: "role",
-    label: "角色",
-    type: "tag",
-    align: "center",
-    options: [
-      { value: "admin", label: "管理员", tone: "danger" },
-      { value: "editor", label: "编辑", tone: "info" },
-      { value: "viewer", label: "访客", tone: "default" },
-    ],
-  },
-  {
-    prop: "status",
-    label: "状态",
-    type: "tag",
-    inline: "switch",
-    batch: true,
-    align: "center",
-    options: [
-      { value: "active", label: "启用", tone: "success" },
-      { value: "disabled", label: "停用", tone: "warning" },
-    ],
-  },
-  {
-    prop: "balance",
-    label: "余额",
-    type: "money",
-    sortable: true,
-    total: true,
-    align: "right",
-  },
-  {
-    prop: "score",
-    label: "积分",
-    type: "number",
-    sortable: true,
-    inline: "number",
-    align: "right",
-  },
-  {
-    prop: "createdAt",
-    label: "创建时间",
-    type: "datetime",
-    format: "YYYY-MM-DD HH:mm",
-    sortable: true,
-    hidden: true,
-  },
-  { type: "actions", actions: {
-    view: true,
-    edit: true,
-    remove: false,
-  } },
-];
-const search = {
-  props: [
-  { prop: "name" },
-  { prop: "role", type: "select" },
-  { prop: "status", type: "select" },
-  ],
-};
-const form = {
-  props: [
-  { prop: "name", required: true },
-  { prop: "email", required: true, pattern: "^[^@\s]+@[^@\s]+$" },
-  { prop: "role", type: "select", required: true, initial: "viewer" },
-  { prop: "balance", type: "number", min: 0, initial: 0 },
-  { prop: "status", type: "switch", initial: "active" },
-  ],
-};
+const themeCode = `import { DataPanel } from "@dreamer/ui-view/data-display";
+import type { Column, FormField, Row, SearchField } from "@dreamer/ui-view/data-display";
 
-<div class="dark">
-  <DataPanel title="用户管理" data={rows} columns={columns} search={search} form={form} />
-</div>`;
+${DEMO_COMMON_SETUP_CODE}
 
-const localeCode = `const rows = [
-  { id: "1", name: "Alice", email: "alice@example.com", role: "admin", status: "active", balance: 120 },
-  { id: "2", name: "Bob", email: "bob@example.com", role: "editor", status: "disabled", balance: 80 },
-];
-const columns: Column[] = [
-  { type: "selection" },
-  { type: "index" },
-  { prop: "name", label: "姓名", sortable: true, inline: "text" },
-  { prop: "email", label: "邮箱", sortable: true },
-  {
-    prop: "role",
-    label: "角色",
-    type: "tag",
-    align: "center",
-    options: [
-      { value: "admin", label: "管理员", tone: "danger" },
-      { value: "editor", label: "编辑", tone: "info" },
-      { value: "viewer", label: "访客", tone: "default" },
-    ],
-  },
-  {
-    prop: "status",
-    label: "状态",
-    type: "tag",
-    inline: "switch",
-    batch: true,
-    align: "center",
-    options: [
-      { value: "active", label: "启用", tone: "success" },
-      { value: "disabled", label: "停用", tone: "warning" },
-    ],
-  },
-  {
-    prop: "balance",
-    label: "余额",
-    type: "money",
-    sortable: true,
-    total: true,
-    align: "right",
-  },
-  {
-    prop: "score",
-    label: "积分",
-    type: "number",
-    sortable: true,
-    inline: "number",
-    align: "right",
-  },
-  {
-    prop: "createdAt",
-    label: "创建时间",
-    type: "datetime",
-    format: "YYYY-MM-DD HH:mm",
-    sortable: true,
-    hidden: true,
-  },
-  { type: "actions", actions: {
-    view: true,
-    edit: true,
-    remove: false,
-  } },
-];
-const search = {
-  props: [
-  { prop: "name" },
-  { prop: "role", type: "select" },
-  { prop: "status", type: "select" },
-  ],
-};
-const form = {
-  props: [
-  { prop: "name", required: true },
-  { prop: "email", required: true, pattern: "^[^@\s]+@[^@\s]+$" },
-  { prop: "role", type: "select", required: true, initial: "viewer" },
-  { prop: "balance", type: "number", min: 0, initial: 0 },
-  { prop: "status", type: "switch", initial: "active" },
-  ],
-};
+const rows = makeDemoRows(6);
 
-<DataPanel locale="en-US" title="Users" data={rows} columns={columns} search={search} form={form} />
-// 覆盖部分文案（可叠在同一面板上）
+// 浅色 / 深色：跟随根节点 .dark。
+<div class="dark rounded-lg bg-slate-900 p-3">
+  <DataPanel
+    panelKey="demo-dark"
+    title="深色面板"
+    data={rows}
+    columns={columns}
+    search={{ props: search }}
+    form={{ props: form }}
+  />
+</div>
+`;
+
+const localeCode = `import { DataPanel } from "@dreamer/ui-view/data-display";
+import type { Column, FormField, Row, SearchField } from "@dreamer/ui-view/data-display";
+
+${DEMO_COMMON_SETUP_CODE}
+
+const rows = makeDemoRows(6).map((r) => ({ ...r }));
+const enColumns = columns.map((c) => ({
+  ...c,
+  label: ({
+    name: "Name",
+    email: "Email",
+    role: "Role",
+    status: "Status",
+    balance: "Balance",
+    score: "Score",
+    createdAt: "Created",
+  } as Record<string, string>)[c.prop!] ?? c.label,
+}));
+
 <DataPanel
-  locale="zh-CN"
-  title="用户"
+  panelKey="demo-locale"
+  locale="en-US"
+  title="Users"
   data={rows}
-  columns={columns}
-  search={search}
-  form={form}
-  messages={{ create: "新建", deleteTitle: "删除确认" }}
-/>`;
+  columns={enColumns}
+  search={{ props: [{ name: "name", label: "Name" }] }}
+  form={{ props: form.map((f) => ({ ...f })) }}
+  messages={{ create: "New" }}
+/>
+`;
 
 const toolbarOffCode =
-  `// toolbar: false → 整栏工具栏不渲染（省略／Record 行为不变）
-const rows = [
-  { id: "1", name: "Alice", email: "alice@example.com", role: "admin", status: "active", balance: 120 },
-  { id: "2", name: "Bob", email: "bob@example.com", role: "editor", status: "disabled", balance: 80 },
-];
-const columns: Column[] = [
-  { type: "selection" },
-  { type: "index" },
-  { prop: "name", label: "姓名", sortable: true, inline: "text" },
-  { prop: "email", label: "邮箱", sortable: true },
-  {
-    prop: "role",
-    label: "角色",
-    type: "tag",
-    align: "center",
-    options: [
-      { value: "admin", label: "管理员", tone: "danger" },
-      { value: "editor", label: "编辑", tone: "info" },
-      { value: "viewer", label: "访客", tone: "default" },
-    ],
-  },
-  {
-    prop: "status",
-    label: "状态",
-    type: "tag",
-    inline: "switch",
-    batch: true,
-    align: "center",
-    options: [
-      { value: "active", label: "启用", tone: "success" },
-      { value: "disabled", label: "停用", tone: "warning" },
-    ],
-  },
-  {
-    prop: "balance",
-    label: "余额",
-    type: "money",
-    sortable: true,
-    total: true,
-    align: "right",
-  },
-  {
-    prop: "score",
-    label: "积分",
-    type: "number",
-    sortable: true,
-    inline: "number",
-    align: "right",
-  },
-  {
-    prop: "createdAt",
-    label: "创建时间",
-    type: "datetime",
-    format: "YYYY-MM-DD HH:mm",
-    sortable: true,
-    hidden: true,
-  },
-  { type: "actions", actions: {
-    view: true,
-    edit: true,
-    remove: false,
-  } },
-];
-const search = {
-  props: [
-  { prop: "name" },
-  { prop: "role", type: "select" },
-  { prop: "status", type: "select" },
-  ],
-};
-const form = {
-  props: [
-  { prop: "name", required: true },
-  { prop: "email", required: true, pattern: "^[^@\s]+@[^@\s]+$" },
-  { prop: "role", type: "select", required: true, initial: "viewer" },
-  { prop: "balance", type: "number", min: 0, initial: 0 },
-  { prop: "status", type: "switch", initial: "active" },
-  ],
-};
+  `import { DataPanel } from "@dreamer/ui-view/data-display";
+import type { Column, FormField, Row, SearchField } from "@dreamer/ui-view/data-display";
+
+${DEMO_COMMON_SETUP_CODE}
+
+const rows = makeDemoRows(5);
 
 <DataPanel
-  toolbar={false}
+  panelKey="demo-toolbar-off"
   title="无工具栏"
   data={rows}
   columns={columns}
-/>`;
+  form={{ props: form }}
+  toolbar={false}
+/>
+<p
+  class="mt-2 text-xs text-slate-500"
+  data-testid="demo-toolbar-off-hint"
+>
+  toolbar=false
+  时整栏工具栏不出现；表格／分页仍渲染。移动端（≤639.98px）表格卡上／左／右贴边；底栏分页各端均为左右一行（左侧条数、右侧控件）；底栏分页预设与尺寸随断点：电脑端（≥1280px）full／md，平板（640px–1279.98px）default／sm，移动端（≤639.98px）simple／xs，也可用 paginationPreset 覆盖。
+</p>
+`;
 
-const defaultsCode =
-  `// 默认：省略 show→true、省略 disable→false；声明项不被 caps 藏
-// caps.create=false，但声明 create:{} / { disable:true } 仍显示
-// 节选：rows／columns 同「基础用法」
+const defaultsCode = `import { DataPanel } from "@dreamer/ui-view/data-display";
+import type { Column, FormField, Row, SearchField } from "@dreamer/ui-view/data-display";
+
+${DEMO_COMMON_SETUP_CODE}
+
+const rows = makeDemoRows(5);
+
+${WITH_ROW_ACTIONS_CODE}
+
 <DataPanel
-  caps={{ create: false, update: false }}
-  toolbar={{
-    create: {},                 // 声明且未写 show → 显示（无视 caps.create=false）
-    refresh: { disable: true }, // 显示但禁用
-    // search 未声明 → 若无 search 项则 caps/回落不出现
+  panelKey="demo-defaults"
+  title="声明默认 vs caps"
+  data={rows}
+  columns={withRowActions({
+    edit: { disable: true },
+  })}
+  form={{ props: form }}
+  caps={{
+    create: false,
+    update: false,
+    print: false,
+    import: false,
+    export: false,
+    columns: false,
+    density: false,
+    fullscreen: false,
+    copy: false,
   }}
-  columns={[
-    ...DEMO_COLUMNS.filter((c) => c.type !== "actions"),
-    { type: "actions", actions: {
-    edit: { disable: true },    // 声明 → 显示且禁用（无视 caps.update=false）
-    // view／remove 未声明 → 按 caps
-  } },
-  ]}
-/>`;
+  toolbar={{
+    create: {},
+    refresh: { disable: true },
+  }}
+/>
+<p
+  class="mt-2 text-xs text-slate-500"
+  data-testid="demo-defaults-hint"
+>
+  caps 关 create／update，但声明项 create 空对象、edit 仅 disable
+  仍显示；refresh 禁用仍可见；未声明 view／remove 按 caps。
+</p>
+`;
 
-const boolCode = `// ① true / false 简写控显隐（内置键）；未写的键仍按 caps 回落
-// 节选：rows／columns 同「基础用法」
+const boolCode = `import { DataPanel } from "@dreamer/ui-view/data-display";
+import type { Column, FormField, Row, SearchField } from "@dreamer/ui-view/data-display";
+
+${DEMO_COMMON_SETUP_CODE}
+
+const rows = makeDemoRows(5);
+
+${WITH_ROW_ACTIONS_CODE}
+
 <DataPanel
+  panelKey="demo-bool"
+  title="true／false 简写"
+  data={rows}
+  columns={withRowActions({
+    view: true,
+    edit: true,
+    remove: false,
+  })}
+  search={{ props: search }}
+  form={{ props: form }}
   toolbar={{
     create: true,
     search: true,
@@ -2571,279 +1229,412 @@ const boolCode = `// ① true / false 简写控显隐（内置键）；未写的
     import: false,
     export: false,
   }}
-  columns={[
-    ...DEMO_COLUMNS.filter((c) => c.type !== "actions"),
-    { type: "actions", actions: {
-    view: true,
-    edit: true,
-    remove: false, // 强制隐藏
-  } },
-  ]}
-/>`;
+/>
+`;
 
-const tbFnCode = `// ② toolbar：show / disable 无参函数（常接页面变量）
-const rows = [
-  { id: "1", name: "Alice", email: "alice@example.com", role: "admin", status: "active", balance: 120 },
-  { id: "2", name: "Bob", email: "bob@example.com", role: "editor", status: "disabled", balance: 80 },
-];
-const columns: Column[] = [
-  { type: "selection" },
-  { type: "index" },
-  { prop: "name", label: "姓名", sortable: true, inline: "text" },
-  { prop: "email", label: "邮箱", sortable: true },
-  {
-    prop: "role",
-    label: "角色",
-    type: "tag",
-    align: "center",
-    options: [
-      { value: "admin", label: "管理员", tone: "danger" },
-      { value: "editor", label: "编辑", tone: "info" },
-      { value: "viewer", label: "访客", tone: "default" },
-    ],
-  },
-  {
-    prop: "status",
-    label: "状态",
-    type: "tag",
-    inline: "switch",
-    batch: true,
-    align: "center",
-    options: [
-      { value: "active", label: "启用", tone: "success" },
-      { value: "disabled", label: "停用", tone: "warning" },
-    ],
-  },
-  {
-    prop: "balance",
-    label: "余额",
-    type: "money",
-    sortable: true,
-    total: true,
-    align: "right",
-  },
-  {
-    prop: "score",
-    label: "积分",
-    type: "number",
-    sortable: true,
-    inline: "number",
-    align: "right",
-  },
-  {
-    prop: "createdAt",
-    label: "创建时间",
-    type: "datetime",
-    format: "YYYY-MM-DD HH:mm",
-    sortable: true,
-    hidden: true,
-  },
-  { type: "actions", actions: {
-    view: true,
-    edit: true,
-    remove: false,
-  } },
-];
-const search = {
-  props: [
-  { prop: "name" },
-  { prop: "role", type: "select" },
-  { prop: "status", type: "select" },
-  ],
-};
-const form = {
-  props: [
-  { prop: "name", required: true },
-  { prop: "email", required: true, pattern: "^[^@\s]+@[^@\s]+$" },
-  { prop: "role", type: "select", required: true, initial: "viewer" },
-  { prop: "balance", type: "number", min: 0, initial: 0 },
-  { prop: "status", type: "switch", initial: "active" },
-  ],
-};
+const tbFnCode = `import { createSignal } from "@dreamer/view";
+import { Button } from "@dreamer/ui-view/basic";
+import { DataPanel } from "@dreamer/ui-view/data-display";
+import type { Column, FormField, Row, SearchField } from "@dreamer/ui-view/data-display";
 
-const pageFlags = { audit: true };
-const pageAllowAudit = () => pageFlags.audit;
-const hideChrome = {
-  print: false, import: false, export: false,
-  columns: false, density: false, fullscreen: false, copy: false,
-};
+${DEMO_COMMON_SETUP_CODE}
+
+${DEMO_HIDE_CHROME_CODE}
+
+const rows = makeDemoRows(5);
+const actionHint = createSignal("");
+const pageAllowAudit = createSignal(true);
+
+<div class="mb-2 flex flex-wrap items-center gap-2">
+  <Button
+    type="button"
+    size="sm"
+    data-testid="demo-tb-fn-toggle"
+    onClick={() => {
+      pageAllowAudit.value = !pageAllowAudit.value;
+    }}
+  >
+    {() => pageAllowAudit.value
+      ? "关闭权限（审计变禁用）"
+      : "打开权限（审计可点）"}
+  </Button>
+  <span class="text-xs text-slate-500" data-testid="demo-tb-fn-flag">
+    {() => \`pageAllowAudit=\${String(pageAllowAudit.value)}\`}
+  </span>
+</div>
 <DataPanel
-  title="工具栏函数"
+  panelKey="demo-tb-fn"
+  title="toolbar 函数 show"
   data={rows}
   columns={columns}
+  form={{ props: form }}
   toolbar={{
     create: true,
     audit: {
       label: "审计",
-      show: () => pageAllowAudit(),       // false＝隐藏
-      disable: () => !pageAllowAudit(),  // true＝可见但禁用
-      action: () => console.log("audit"),
+      show: () => true,
+      disable: () => !pageAllowAudit.value,
+      action: ({ selected }) => {
+        actionHint.value = \`toolbar:audit selected=\${selected.length}\`;
+      },
     },
     refresh: true,
     ...hideChrome,
   }}
-/>`;
+/>
+<p class="mt-2 text-xs text-slate-500" data-testid="demo-tb-fn-hint">
+  {() => actionHint.value ||
+    "pageAllowAudit=false 时审计仍可见但 disabled"}
+</p>
+`;
 
-const raFnCode = `// ③ 操作列：show / disable / action 收当前行 item
-// 节选：rows／columns 同「基础用法」
+const raFnCode = `import { createSignal } from "@dreamer/view";
+import { DataPanel } from "@dreamer/ui-view/data-display";
+import type { Column, FormField, Row, SearchField } from "@dreamer/ui-view/data-display";
+
+${DEMO_COMMON_SETUP_CODE}
+
+${WITH_ROW_ACTIONS_CODE}
+
+const rows = makeDemoRows(5);
+const actionHint = createSignal("");
+
 <DataPanel
-  columns={[
-    ...DEMO_COLUMNS.filter((c) => c.type !== "actions"),
-    { type: "actions", actions: {
+  panelKey="demo-ra-fn"
+  title="操作列函数"
+  data={rows}
+  columns={withRowActions({
     view: false,
     edit: false,
     remove: false,
     assign: {
       label: "分配",
-      show: (item) => true,                 // 始终可见
-      disable: (item) => !!item.locked,     // locked 行禁用
-      action: (item) => console.log("assign", item.id),
+      show: () => true,
+      disable: (item) => !!item.locked,
+      action: (item) => {
+        actionHint.value = \`row:assign:\${String(item.id)}\`;
+      },
     },
-  } },
-  ]}
-/>`;
+  })}
+  caps={{ create: false, update: false, remove: false, view: false }}
+/>
+<p class="mt-2 text-xs text-slate-500" data-testid="demo-ra-fn-hint">
+  {() =>
+    actionHint.value ||
+    "locked 行「分配」仍可见但 disabled；点击看 item.id"}
+</p>
+`;
 
-const tbCustomCode = `// ④a 自定义工具钮：未知 key 必须有 action（缺则校验抛错）
-// 节选：rows／columns 同「基础用法」
+const tbCustomCode = `import { createSignal } from "@dreamer/view";
+import { DataPanel } from "@dreamer/ui-view/data-display";
+import type { Column, FormField, Row, SearchField } from "@dreamer/ui-view/data-display";
+
+${DEMO_COMMON_SETUP_CODE}
+
+${DEMO_HIDE_CHROME_CODE}
+
+const rows = makeDemoRows(5);
+const actionHint = createSignal("");
+
 <DataPanel
+  panelKey="demo-tb-custom"
+  title="自定义工具钮"
+  data={rows}
+  columns={columns}
+  form={{ props: form }}
   toolbar={{
     create: true,
     invite: {
       label: "邀请",
-      action: () => console.log("invite"),
+      action: () => {
+        actionHint.value = "toolbar:invite";
+      },
     },
     refresh: true,
+    ...hideChrome,
   }}
-/>`;
+/>
+<p
+  class="mt-2 text-xs text-slate-500"
+  data-testid="demo-tb-custom-hint"
+>
+  {() => actionHint.value || "点击「邀请」"}
+</p>
+`;
 
-const raCustomCode = `// ④b 自定义操作列：未知 key 必须有 action(item)
-// 节选：rows／columns 同「基础用法」
+const raCustomCode = `import { createSignal } from "@dreamer/view";
+import { DataPanel } from "@dreamer/ui-view/data-display";
+import type { Column, FormField, Row, SearchField } from "@dreamer/ui-view/data-display";
+
+${DEMO_COMMON_SETUP_CODE}
+
+${WITH_ROW_ACTIONS_CODE}
+
+const rows = makeDemoRows(5);
+const actionHint = createSignal("");
+
 <DataPanel
-  columns={[
-    ...DEMO_COLUMNS.filter((c) => c.type !== "actions"),
-    { type: "actions", actions: {
+  panelKey="demo-ra-custom"
+  title="自定义操作列"
+  data={rows}
+  columns={withRowActions({
     view: true,
     clone: {
       label: "克隆",
-      action: (item) => console.log("clone", item.id),
+      action: (item) => {
+        actionHint.value = \`row:clone:\${String(item.id)}\`;
+      },
     },
     edit: true,
     remove: false,
-  } },
-  ]}
-/>`;
+  })}
+  form={{ props: form }}
+/>
+<p
+  class="mt-2 text-xs text-slate-500"
+  data-testid="demo-ra-custom-hint"
+>
+  {() =>
+    actionHint.value || "写入序：view → clone → edit（无 remove）"}
+</p>
+`;
 
-const keyOrderCode =
-  `// ⑤ 对象字面量写入序 = 显示序（create → audit → refresh → export）
-// 节选：rows／columns 同「基础用法」
+const keyOrderCode = `import { createSignal } from "@dreamer/view";
+import { DataPanel } from "@dreamer/ui-view/data-display";
+import type { Column, FormField, Row, SearchField } from "@dreamer/ui-view/data-display";
+
+${DEMO_COMMON_SETUP_CODE}
+
+const rows = makeDemoRows(5);
+const actionHint = createSignal("");
+
 <DataPanel
+  panelKey="demo-key-order"
+  title="写入序＝显示序"
+  data={rows}
+  columns={columns}
+  form={{ props: form }}
   toolbar={{
     create: true,
-    audit: { label: "审计", action: () => {} },
+    audit: {
+      label: "审计",
+      action: () => {
+        actionHint.value = "order:audit";
+      },
+    },
     refresh: true,
     export: true,
-    // 其余 chrome 关掉，方便看序
-    print: false, import: false, columns: false,
-    density: false, fullscreen: false, copy: false,
+    print: false,
+    import: false,
+    columns: false,
+    density: false,
+    fullscreen: false,
+    copy: false,
   }}
-/>`;
+/>
+<p
+  class="mt-2 text-xs text-slate-500"
+  data-testid="demo-key-order-hint"
+>
+  工具栏从左到右：添加 → 审计 → 刷新 → 导出（与对象键顺序一致）
+</p>
+`;
 
-const enabledCode =
-  `// disable：默认 false；true／函数 true＝禁用仍可见（≠ show:false）
-// 节选：rows／columns 同「基础用法」
+const enabledCode = `import { createSignal } from "@dreamer/view";
+import { DataPanel } from "@dreamer/ui-view/data-display";
+import type { Column, FormField, Row, SearchField } from "@dreamer/ui-view/data-display";
+
+${DEMO_COMMON_SETUP_CODE}
+
+${WITH_ROW_ACTIONS_CODE}
+
+const rows = makeDemoRows(5);
+const actionHint = createSignal("");
+
 <DataPanel
+  panelKey="demo-enabled"
+  title="disable 演示"
+  data={rows}
+  columns={withRowActions({
+    view: true,
+    edit: { disable: true },
+    remove: false,
+    assign: {
+      label: "分配",
+      disable: (item) => !!item.locked,
+      action: (item) => {
+        actionHint.value = \`disable:assign:\${String(item.id)}\`;
+      },
+    },
+  })}
+  form={{ props: form }}
   toolbar={{
-    create: { disable: true },          // 可见不可点
+    create: { disable: true },
     freeze: {
       label: "冻结",
-      disable: () => true,              // 无参函数
-      action: () => {},
+      disable: () => true,
+      action: () => {
+        actionHint.value = "should-not-fire";
+      },
     },
     refresh: true,
+    print: false,
+    import: false,
+    export: false,
+    columns: false,
+    density: false,
+    fullscreen: false,
+    copy: false,
   }}
-  columns={[
-    ...DEMO_COLUMNS.filter((c) => c.type !== "actions"),
-    { type: "actions", actions: {
+/>
+<p
+  class="mt-2 text-xs text-slate-500"
+  data-testid="demo-enabled-hint"
+>
+  添加／冻结／编辑为 disabled 仍可见；locked
+  行「分配」禁用。show:false 才会隐藏。
+</p>
+`;
+
+const titleCode = `import { createSignal } from "@dreamer/view";
+import { DataPanel } from "@dreamer/ui-view/data-display";
+import type { Column, FormField, Row, SearchField } from "@dreamer/ui-view/data-display";
+
+${DEMO_COMMON_SETUP_CODE}
+
+${WITH_ROW_ACTIONS_CODE}
+
+const rows = makeDemoRows(5);
+const actionHint = createSignal("");
+
+<DataPanel
+  panelKey="demo-title"
+  title="title Tooltip"
+  data={rows}
+  columns={withRowActions({
     view: true,
-    edit: { disable: true },            // 内置：可见禁用
+    edit: { title: "改资料" },
     remove: false,
     assign: {
       label: "分配",
-      disable: (item) => !!item.locked, // locked 行禁用
-      action: (item) => console.log(item.id),
+      action: (item) => {
+        actionHint.value = \`title:assign:\${String(item.id)}\`;
+      },
     },
-  } },
-  ]}
-/>`;
-
-const titleCode =
-  `// title／label 互落：tip=title??label??messages??key；显示=label??title??key
-// 节选：rows／columns 同「基础用法」
-<DataPanel
+  })}
+  form={{ props: form }}
   toolbar={{
-    create: true,                       // 无 title → Tooltip「新建」等 messages
-    refresh: { title: "立刻刷新" },     // 显式覆盖内置默认
+    create: true,
+    refresh: { title: "立刻刷新" },
     freeze: {
       label: "冻结",
-      // 无 title → Tooltip 用 key「freeze」
-      action: () => {},
+      action: () => {
+        actionHint.value = "title:freeze";
+      },
     },
+    print: false,
+    import: false,
+    export: false,
+    columns: false,
+    density: false,
+    fullscreen: false,
+    copy: false,
   }}
-  columns={[
-    ...DEMO_COLUMNS.filter((c) => c.type !== "actions"),
-    { type: "actions", actions: {
-    view: true,                         // 无 title → messages.view
-    edit: { title: "改资料" },          // 覆盖
-    remove: false,
-    assign: {
-      label: "分配",
-      // 无 title → Tooltip「assign」
-      action: (item) => console.log(item.id),
-    },
-  } },
-  ]}
-/>`;
+/>
+<p class="mt-2 text-xs text-slate-500" data-testid="demo-title-hint">
+  不传 title：内置悬停用 messages／label，自定义悬停用 key（如
+  freeze／assign）；传了则覆盖（立刻刷新／改资料）。
+</p>
+`;
 
-const canCode =
-  `// ⑥ 对齐 admin：can()＋显式 true｜false（勿 undefined 绕 caps）
-// capGate(allow): allow→undefined（回落 caps）；!allow→false
-// 节选：rows／search／form 同「基础用法」
-const perms = { "demo.view": true, "demo.write": false };
-const pageExport = true;
+const canCode = `import { createSignal } from "@dreamer/view";
+import { Button } from "@dreamer/ui-view/basic";
+import { DataPanel } from "@dreamer/ui-view/data-display";
+import type { Column, FormField, Row, SearchField } from "@dreamer/ui-view/data-display";
 
-function can(code: "demo.view" | "demo.write") {
+${DEMO_COMMON_SETUP_CODE}
+
+${WITH_ROW_ACTIONS_CODE}
+
+type DemoPerms = { "demo.view": boolean; "demo.write": boolean };
+
+function demoCan(perms: DemoPerms, code: keyof DemoPerms): boolean {
   return !!perms[code];
 }
-function capGate(allow: boolean): false | undefined {
-  return allow ? undefined : false;
+
+function demoCapGate(allow: boolean): boolean {
+  return allow;
 }
 
+const rows = makeDemoRows(5);
+const actionHint = createSignal("");
+const perms = createSignal<DemoPerms>({
+  "demo.view": true,
+  "demo.write": false,
+});
+const pageExport = createSignal(true);
+const can = (code: keyof DemoPerms) => demoCan(perms.value, code);
+
+<div class="mb-2 flex flex-wrap items-center gap-2">
+  <Button
+    type="button"
+    size="sm"
+    data-testid="demo-can-toggle-write"
+    onClick={() => {
+      perms.value = {
+        ...perms.value,
+        "demo.write": !perms.value["demo.write"],
+      };
+    }}
+  >
+    {() =>
+      perms.value["demo.write"]
+        ? "关闭 demo.write"
+        : "打开 demo.write"}
+  </Button>
+  <Button
+    type="button"
+    size="sm"
+    data-testid="demo-can-toggle-export"
+    onClick={() => {
+      pageExport.value = !pageExport.value;
+    }}
+  >
+    {() => pageExport.value ? "关闭 pageExport" : "打开 pageExport"}
+  </Button>
+  <span class="text-xs text-slate-500" data-testid="demo-can-flags">
+    {() =>
+      \`write=\${String(perms.value["demo.write"])} view=\${
+        String(perms.value["demo.view"])
+      } pageExport=\${String(pageExport.value)}\`}
+  </span>
+</div>
 <DataPanel
+  panelKey="demo-can"
   title="can()／页面变量"
   data={rows}
-  search={search}
-  form={form}
-  columns={[
-    ...DEMO_COLUMNS.filter((c) => c.type !== "actions"),
-    { type: "actions", actions: {
-      view: capGate(can("demo.view") || can("demo.write")),
-      edit: capGate(can("demo.write")),
-      remove: capGate(can("demo.write")),
-      assign: {
-        label: "分配",
-        show: () => can("demo.write"),
-        action: (item) => console.log(item.id),
+  columns={withRowActions({
+    view: demoCapGate(can("demo.view") || can("demo.write")),
+    edit: demoCapGate(can("demo.write")),
+    remove: demoCapGate(can("demo.write")),
+    assign: {
+      label: "分配",
+      show: () => can("demo.write"),
+      action: (item) => {
+        actionHint.value = \`can:assign:\${String(item.id)}\`;
       },
-    } },
-  ]}
+    },
+  })}
+  form={{ props: form }}
+  search={{ props: search }}
   toolbar={{
-    create: capGate(can("demo.write")),
+    create: demoCapGate(can("demo.write")),
     search: true,
     refresh: true,
-    import: capGate(can("demo.write")),
+    import: demoCapGate(can("demo.write")),
     export: {
       show: () => can("demo.view"),
-      disable: () => !pageExport,
+      disable: () => !pageExport.value,
     },
     print: false,
     columns: false,
@@ -2851,36 +1642,69 @@ function capGate(allow: boolean): false | undefined {
     fullscreen: false,
     copy: false,
   }}
-/>`;
+/>
+<p class="mt-2 text-xs text-slate-500" data-testid="demo-can-hint">
+  {() => actionHint.value ||
+    "默认 write=false：无创建／导入／编辑／删除／分配；export 受 pageExport＆view 控制"}
+</p>
+`;
 
-const customCode =
-  `// tone 全档(Button) / tip=label??key；确认写在 action 自管；前导 chrome 放面板外
-// 节选：rows 同「基础用法」；本示例关掉内置操作，只留自定义「冻结」
-<div>
-  <span className="text-sm text-slate-500">面板外提示</span>
+const customCode = `import { createSignal } from "@dreamer/view";
+import { DataPanel } from "@dreamer/ui-view/data-display";
+import type { Column, FormField, Row, SearchField } from "@dreamer/ui-view/data-display";
+
+${DEMO_COMMON_SETUP_CODE}
+
+${WITH_ROW_ACTIONS_CODE}
+
+const rows = makeDemoRows(5);
+const actionHint = createSignal("");
+
+<div class="flex flex-col gap-2">
+  <span
+    class="text-sm text-slate-500"
+    data-testid="demo-custom-leading"
+  >
+    面板外提示（原 toolbarExtra 迁此）
+  </span>
   <DataPanel
+    panelKey="demo-custom"
     title="自定义"
     data={rows}
-    caps={{ create: false }}
-    renderCell={{ name: (row) => <b>{String(row.name)}</b> }}
-    toolbar={{
-      notify: { label: "通知", tone: "primary", action: () => {} },
-    }}
-    columns={[
-      ...DEMO_COLUMNS.filter((c) => c.type !== "actions"),
-      { type: "actions", actions: {
-        view: false,
-        edit: false,
-        remove: false,
-        freeze: {
-          label: "冻结",
-          tone: "danger",
-          action: (row) => console.log(row.id), // 需确认则在 action 内自开 Popconfirm
+    columns={withRowActions({
+      view: false,
+      edit: false,
+      remove: false,
+      freeze: {
+        label: "冻结",
+        tone: "danger",
+        action: (row) => {
+          actionHint.value = \`freeze:\${String(row.id)}\`;
         },
-      } },
-    ]}
+      },
+    })}
+    caps={{ create: false }}
+    renderCell={{
+      name: (row) => (
+        <b data-testid="demo-custom-name">{String(row.name)}</b>
+      ),
+    }}
+    toolbar={{
+      notify: {
+        label: "通知",
+        tone: "primary",
+        action: () => {
+          actionHint.value = "tb:notify";
+        },
+      },
+    }}
   />
-</div>`;
+  <p class="text-xs text-slate-500" data-testid="demo-custom-hint">
+    {() => actionHint.value ||
+      "点「通知」／「冻结」直接跑 action（确认请在 action 自管）"}
+  </p>
+</div>
+`;
 
 /** 单个示例块 */
 
@@ -2920,9 +1744,15 @@ const PWD_VALIDATE_MSG = {
 /** form.render / view.render 示例源码 */
 const renderBodyCode =
   `import { DataPanel } from "@dreamer/ui-view/data-display";
+import type { Column, FormField, Row, SearchField } from "@dreamer/ui-view/data-display";
 import { Button } from "@dreamer/ui-view/basic";
 
+${DEMO_COMMON_SETUP_CODE}
+
+const rows = makeDemoRows(4);
+
 <DataPanel
+  panelKey="demo-form-view-render"
   title="自定义主体"
   data={rows}
   columns={columns}
@@ -2940,15 +1770,22 @@ import { Button } from "@dreamer/ui-view/basic";
     render: (ctx) => <div>自定义：{String(ctx.row.name)}</div>,
     actions: { close: true },
   }}
-/>`;
+/>
+`;
 
 /** FormField.render 示例源码（自定义字段用官方 Input／Password） */
 const renderFieldCode =
   `import { DataPanel } from "@dreamer/ui-view/data-display";
+import type { Column, FormField, Row, SearchField } from "@dreamer/ui-view/data-display";
 import { Input } from "@dreamer/ui-view/form/input";
 import { Password } from "@dreamer/ui-view/form/password";
 
+${DEMO_COMMON_SETUP_CODE}
+
+const rows = makeDemoRows(3);
+
 <DataPanel
+  panelKey="demo-field-render"
   title="字段级自定义"
   data={rows}
   columns={columns}
@@ -2985,23 +1822,25 @@ import { Password } from "@dreamer/ui-view/form/password";
       },
     ],
   }}
-/>`;
+/>
+`;
 
 const viewCode = `import { createSignal } from "@dreamer/view";
+import { Button } from "@dreamer/ui-view/basic";
 import { DataPanel, validateForm } from "@dreamer/ui-view/data-display";
-import type { FormField } from "@dreamer/ui-view/data-display";
+import type { Column, FormField, Row, SearchField } from "@dreamer/ui-view/data-display";
 import { Form } from "@dreamer/ui-view/form/form";
 import { FormItem } from "@dreamer/ui-view/form/form-item";
 import { Password } from "@dreamer/ui-view/form/password";
-import { Button } from "@dreamer/ui-view/basic";
 import { Modal, toast } from "@dreamer/ui-view/feedback";
 
-const pwd = createSignal(null);
-const password = createSignal("");
-const confirmPassword = createSignal("");
-const pwdErrors = createSignal({});
+${DEMO_COMMON_SETUP_CODE}
 
-const pwdForm: FormField[] = [
+${WITH_ROW_ACTIONS_CODE}
+
+const rows = makeDemoRows(8);
+
+const PWD_FORM: FormField[] = [
   {
     prop: "password",
     type: "password",
@@ -3024,27 +1863,35 @@ const pwdForm: FormField[] = [
     ],
   },
 ];
+const PWD_VALIDATE_MSG = {
+  required: "此项必填",
+  min: "不能小于 {n}",
+  max: "不能大于 {n}",
+  patternMismatch: "格式不正确",
+};
 
-function openPwd(row) {
+const pwd = createSignal<Row | null>(null);
+const password = createSignal("");
+const confirmPassword = createSignal("");
+const pwdErrors = createSignal<Record<string, string>>({});
+const openPwd = (row: Row) => {
   pwd.value = row;
   password.value = "";
   confirmPassword.value = "";
   pwdErrors.value = {};
-}
-
-function closePwd() {
+};
+const closePwd = () => {
   pwd.value = null;
   password.value = "";
   confirmPassword.value = "";
   pwdErrors.value = {};
-}
-
-function submitPwd() {
+};
+const submitPwd = () => {
   const errs = validateForm(
-    pwdForm,
+    PWD_FORM,
     { password: password.value, confirmPassword: confirmPassword.value },
     false,
-    { required: "此项必填", min: "不能小于 {n}", max: "不能大于 {n}", patternMismatch: "格式不正确" },
+    PWD_VALIDATE_MSG,
   );
   if (Object.keys(errs).length) {
     pwdErrors.value = errs;
@@ -3052,63 +1899,168 @@ function submitPwd() {
   }
   closePwd();
   toast.success("密码已修改");
-}
+};
+
+<div data-testid="demo-view">
+  <DataPanel
+    panelKey="demo-view"
+    title="用户管理"
+    data={rows}
+    columns={withRowActions({
+      view: true,
+      edit: false,
+      remove: false,
+    })}
+    view={{
+      title: (row) => \`详情 · \${String(row.name ?? "")}\`,
+      labelColPercent: 28,
+      labelMinWidth: "7rem",
+      props: [
+        { prop: "name", label: "姓名" },
+        { prop: "email", label: "邮箱" },
+        {
+          prop: "status",
+          label: "状态",
+          type: "tag",
+          options: [
+            { value: "active", label: "启用", tone: "success" },
+            { value: "disabled", label: "停用" },
+          ],
+          click: "toggle",
+        },
+        {
+          prop: "createdAt",
+          label: "创建时间",
+          type: "datetime",
+          format: "YYYY-MM-DD HH:mm",
+        },
+      ],
+      actions: {
+        password: {
+          label: "密码",
+          action: (row) => openPwd(row),
+        },
+        site: { label: "主页", href: (row) => \`/u/\${row.id}\` },
+        close: true,
+      },
+    }}
+    caps={{
+      create: false,
+      update: false,
+      remove: false,
+      import: false,
+      export: false,
+      print: false,
+      columns: false,
+      density: false,
+      fullscreen: false,
+      copy: false,
+    }}
+  >
+    <Modal
+      open={() => pwd.value !== null}
+      title="修改密码"
+      width="xs"
+      keyboard
+      destroyOnClose
+      onClose={closePwd}
+      footer={
+        <>
+          <Button
+            type="button"
+            variant="primary"
+            data-testid="demo-view-pwd-submit"
+            onClick={submitPwd}
+          >
+            确定
+          </Button>
+          <Button
+            type="button"
+            variant="default"
+            data-testid="demo-view-pwd-cancel"
+            onClick={closePwd}
+          >
+            取消
+          </Button>
+        </>
+      }
+    >
+      {() => (
+        <Form class="w-full" onSubmit={submitPwd}>
+          <FormItem
+            class="w-full"
+            label="密码"
+            required
+            id="demo-view-pwd"
+            error={pwdErrors.value.password}
+          >
+            <Password
+              id="demo-view-pwd"
+              class="w-full"
+              value={password}
+              newPassword
+              autoComplete
+              placeholder="请输入密码"
+            />
+          </FormItem>
+          <FormItem
+            class="w-full"
+            label="确认密码"
+            required
+            id="demo-view-pwd-confirm"
+            error={pwdErrors.value.confirmPassword}
+          >
+            <Password
+              id="demo-view-pwd-confirm"
+              class="w-full"
+              value={confirmPassword}
+              newPassword
+              autoComplete
+              placeholder="请再次输入密码"
+            />
+          </FormItem>
+        </Form>
+      )}
+    </Modal>
+  </DataPanel>
+</div>
+`;
+
+const rowClickViewCode =
+  `import { DataPanel } from "@dreamer/ui-view/data-display";
+import type { Column, FormField, Row, SearchField } from "@dreamer/ui-view/data-display";
+
+${DEMO_COMMON_SETUP_CODE}
+
+${WITH_ROW_ACTIONS_CODE}
+
+const rows = makeDemoRows(8);
 
 <DataPanel
-  title="用户管理"
+  panelKey="demo-row-click-view"
+  title="点击行打开详情"
+  syncUrl={false}
   data={rows}
-  columns={columnsWithViewOnly} // 操作列仅 view；勿挂 edit（本例未配 form）
-  caps={{ create: false, update: false, remove: false }}
-  view={{
-    title: (row) => \`详情 · \${row.name}\`,
-    labelColPercent: 28,
-    labelMinWidth: "7rem",
-    props: [
-      { prop: "name", label: "姓名" },
-      { prop: "email", label: "邮箱" },
-      {
-        prop: "status",
-        label: "状态",
-        type: "tag",
-        options: [
-          { value: "active", label: "启用", tone: "success" },
-          { value: "disabled", label: "停用" },
-        ],
-        click: "toggle",
-      },
-      { prop: "createdAt", label: "创建时间", type: "datetime", format: "YYYY-MM-DD HH:mm" },
-    ],
-    actions: {
-      password: { label: "密码", action: (row) => openPwd(row) },
-      site: { label: "主页", href: (row) => \`/u/\${row.id}\` },
-      close: true,
-    },
+  columns={withRowActions({
+    view: true,
+    edit: false,
+    remove: false,
+  })}
+  openViewOnRowClick
+  caps={{
+    create: false,
+    update: false,
+    remove: false,
+    import: false,
+    export: false,
+    print: false,
+    columns: false,
+    density: false,
+    fullscreen: false,
+    copy: false,
   }}
->
-  <Modal
-    open={() => pwd.value !== null}
-    title="修改密码"
-    width="xs"
-    keyboard
-    destroyOnClose
-    onClose={closePwd}
-    footer={
-      <>
-        <Button type="button" variant="primary" onClick={submitPwd}>确定</Button>
-        <Button type="button" variant="default" onClick={closePwd}>取消</Button>
-      </>
-    }
-  >
-    <Form class="w-full" onSubmit={submitPwd}>
-      <FormItem class="w-full" label="密码" required error={pwdErrors.value.password}>
-        <Password class="w-full" value={password} newPassword autoComplete={true} placeholder="请输入密码" />
-      </FormItem>
-      <FormItem class="w-full" label="确认密码" required error={pwdErrors.value.confirmPassword}>
-        <Password class="w-full" value={confirmPassword} newPassword autoComplete={true} placeholder="请再次输入密码" />
-      </FormItem>
-    </Form>
-  </Modal>
-</DataPanel>`;
+/>
+`;
 
 const exampleDemo = `import { DataPanel } from "@dreamer/ui-view/data-display";
 
@@ -3125,7 +2077,7 @@ const columns: Column[] = [
     { value: "editor", label: "编辑", tone: "info" },
     { value: "viewer", label: "访客" },
   ] },
-  { prop: "status", label: "状态", type: "tag", inline: "switch", batch: true, align: "center", options: [
+  { prop: "status", label: "状态", type: "tag", inline: "switch", align: "center", options: [
     { value: "active", label: "启用", tone: "success" },
     { value: "disabled", label: "停用", tone: "warning" },
   ] },
@@ -3163,94 +2115,49 @@ const form = {
 />`;
 
 const schemasFullCode =
-  `// —— 本地完整定义（含 rows）；服务端可省 data／用 dataSource + initial ——
-const rows = [
-  { id: "1", name: "Alice", email: "a@ex.com", role: "admin", status: "active", balance: 120, flag: 1, level: 1 },
-  { id: "2", name: "Bob", email: "b@ex.com", role: "editor", status: "disabled", balance: 80, flag: 0, level: 0 },
-];
+  `import { DataPanel } from "@dreamer/ui-view/data-display";
+import type { Column, FormField, Row, SearchField } from "@dreamer/ui-view/data-display";
 
-const columns: Column[] = [
-  { type: "selection" }, // 多选列（写入 columns）
-  { type: "index" },     // 序号列
-  { prop: "name", label: "姓名", sortable: true },
-  // 声明式 options 仍可用
-  { prop: "role", label: "角色", type: "tag", align: "center", options: [
-    { value: "admin", label: "管理员", tone: "danger" },
-    { value: "editor", label: "编辑", tone: "info" },
-  ]},
-  // 日期／时间 format（不要秒）；hidden 默认藏，列设置可开
-  { prop: "createdAt", label: "创建时间", type: "datetime", format: "YYYY-MM-DD HH:mm", hidden: true },
-  // 函数式：value／color／formatter → string｜Icon｜span｜JSX｜可信 HTML
-  {
-    prop: "flag", label: "标记", type: "tag",
-    value: (row) => row.flag === 1 ? "开启" : "关闭",
-    color: (row) => row.flag === 1 ? "success" : "danger",
-  },
-  {
-    prop: "level", label: "级别",
-    value: (row) => row.level === 1
-      ? <span class="text-emerald-600"><IconCheck /> 高级</span>
-      : <span class="text-slate-400">普通</span>,
-  },
-  {
-    prop: "flag", label: "HTML",
-    formatter: (_row, raw) => raw === 1
-      ? '<b style="color:#059669">ON</b>'
-      : '<span style="color:#94a3b8">OFF</span>',
-  },
-  { type: "actions", actions: {
-    view: true,
-    edit: true,
-    remove: false,
-  } },
-];
+${MAKE_DEMO_ROWS_CODE}
 
-const search = {
-  title: "筛选用户",
-  props: [
-    { prop: "name", placeholder: "姓名关键字", hint: "模糊匹配", maxlength: 40, span: 6 },
-    { prop: "role", type: "select", span: 6 },
-  ],
-};
+${DEMO_COLUMNS_CODE}
 
-const form = {
-  title: (row) => row.id ? \`修改 · \${row.name}\` : "添加用户",
-  props: [
-  {
-    prop: "name", span: 6, maxlength: 20, placeholder: "请输入姓名", hint: "2–20 字",
-    rules: [
-      { required: true, message: "姓名不能为空" },
-      { min: 2, max: 20, message: "长度 2–20" },
-    ],
-  },
-  {
-    prop: "email", span: 6, placeholder: "name@example.com",
-    rules: [
-      { required: true, message: "邮箱不能为空" },
-      { type: "email", message: "邮箱格式不正确" },
-    ],
-  },
-  { prop: "balance", type: "number", min: 0, max: 99999, span: 6, width: "100%" },
-  { prop: "status", type: "switch", initial: "active", span: 6 },
-  { prop: "note", type: "textarea", rows: 3, maxlength: 200, span: 12, cols: 12,
-    placeholder: "备注", hint: "选填" },
-  ],
-};
+${DEMO_SEARCH_CODE}
+
+${DEMO_FORM_RICH_CODE}
+
+const rows = makeDemoRows(8);
 
 <DataPanel
+  panelKey="demo-schemas-full"
   title="用户管理"
-  data={rows}                 // 本地：写全 rows；远程可改 dataSource + initial
+  data={rows}
   columns={columns}
-  search={search}
-  form={form}
+  search={{ title: "筛选用户", props: search }}
+  form={{
+    title: (row) =>
+      row.id ? \`修改 · \${String(row.name ?? "")}\` : "添加用户",
+    props: form,
+  }}
   view={{
-    title: (row) => \`详情 · \${row.name}\`,
+    title: (row) => \`详情 · \${String(row.name ?? "")}\`,
     props: [
       { prop: "name", label: "姓名" },
       { prop: "email", label: "邮箱" },
+      { prop: "balance", label: "余额" },
     ],
   }}
-/>`;
+  caps={{
+    import: false,
+    export: false,
+    print: false,
+    columns: false,
+    density: false,
+    fullscreen: false,
+    copy: false,
+  }}
+/>
+`;
 
 function readDemoTab() {
   try {
@@ -3302,14 +2209,219 @@ function DataPanelTabsDemo() {
 }
 
 /** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+const alertCode = `import { DataPanel } from "@dreamer/ui-view/data-display";
+import type { Column, Row } from "@dreamer/ui-view/data-display";
+import { toast } from "@dreamer/ui-view/feedback";
+
+const rows: Row[] = [
+  { id: "1", name: "张三" },
+  { id: "2", name: "李四" },
+  { id: "3", name: "王五" },
+];
+
+const columns: Column[] = [
+  { prop: "name", label: "姓名" },
+];
+
+<DataPanel
+  panelKey="demo-alert"
+  title="用户管理"
+  data={rows}
+  columns={columns}
+  alert={{
+    type: "warning",
+    message: "请先完成实名认证",
+    description: "未认证账号部分功能暂不可用。",
+    onClose: () => toast.info("已关闭提示"),
+  }}
+  toolbar={{
+    create: false,
+    search: false,
+    print: false,
+    import: false,
+    export: false,
+    columns: false,
+    density: false,
+    fullscreen: false,
+    copy: false,
+  }}
+/>
+`;
+
 export const metadata = {
   title: "DataPanel 数据面板 · ui-view",
 };
+
+const batchBarCode = `import { DataPanel } from "@dreamer/ui-view/data-display";
+import type { Column, FormField, Row, SearchField } from "@dreamer/ui-view/data-display";
+import { toast } from "@dreamer/ui-view/feedback";
+
+${DEMO_COMMON_SETUP_CODE}
+
+const rows = makeDemoRows(10);
+
+<DataPanel
+  panelKey="demo-batch-bar"
+  title="可配批量条"
+  syncUrl={false}
+  data={rows}
+  columns={columns}
+  form={{ props: form }}
+  batchBar={{
+    exportSelected: {
+      label: "导出选中",
+      disable: ({ selected }) => selected.length === 0,
+      action: ({ selected }) => {
+        toast.info(\`导出 \${selected.length} 条\`);
+      },
+    },
+  }}
+  toolbar={{
+    export: {
+      disable: ({ selected }) => selected.length === 0,
+      action: ({ selected, query }) => {
+        toast.info(\`导出选中 \${selected.length} 条，当前页 \${query.page}\`);
+      },
+    },
+  }}
+/>
+`;
+
+const searchAdvCode =
+  `import { DataPanel } from "@dreamer/ui-view/data-display";
+import type { Column, FormField, Row, SearchField } from "@dreamer/ui-view/data-display";
+import { Input } from "@dreamer/ui-view/form/input";
+
+${DEMO_COMMON_SETUP_CODE}
+
+const rows = makeDemoRows(25);
+const advancedSearch = {
+  title: "高级筛选",
+  props: [
+    { prop: "name", placeholder: "姓名关键字" },
+    { prop: "role", type: "multiselect" },
+    { prop: "status", type: "select" },
+    { prop: "score", type: "number", label: "积分", match: "num" },
+    { prop: "createdAt", type: "datetime", label: "创建时间", match: "from" },
+    {
+      prop: "memo",
+      label: "备注",
+      render: (ctx) => (
+        <Input class="w-full" value={ctx.value} placeholder="自定义备注" />
+      ),
+    },
+  ],
+  actions: {
+    submit: true,
+    reset: true,
+  },
+};
+
+<DataPanel
+  panelKey="demo-search-adv"
+  title="高级搜索"
+  syncUrl={false}
+  data={rows}
+  columns={columns}
+  search={advancedSearch}
+/>
+`;
+
+const formCondCode =
+  `import { DataPanel, openDataPanelForm } from "@dreamer/ui-view/data-display";
+import type { Column, FormField, Row, SearchField } from "@dreamer/ui-view/data-display";
+
+${MAKE_DEMO_ROWS_CODE}
+
+${DEMO_COLUMNS_CODE}
+
+const rows = makeDemoRows(8);
+const form = {
+  props: [
+    { prop: "name", required: true, placeholder: "请输入姓名" },
+    {
+      prop: "role",
+      type: "select",
+      required: true,
+      initial: "viewer",
+    },
+    {
+      prop: "email",
+      required: true,
+      pattern: "^[^@\\\\s]+@[^@\\\\s]+$",
+      disabled: ({ values }) => values.role === "viewer",
+      hint: "访客账号不可改邮箱",
+    },
+    {
+      prop: "score",
+      type: "number",
+      show: ({ values }) => values.role === "admin",
+      hint: "仅管理员显示积分",
+    },
+    { prop: "balance", type: "number", min: 0, initial: 0 },
+    { prop: "status", type: "switch", initial: "active" },
+  ],
+  actions: {
+    saveMore: {
+      label: "保存并继续",
+      action: async (ctx) => {
+        await ctx.submit();
+        openDataPanelForm("demo-form-cond");
+      },
+    },
+    submit: true,
+    cancel: true,
+  },
+};
+
+<DataPanel
+  panelKey="demo-form-cond"
+  title="表单条件"
+  syncUrl={false}
+  data={rows}
+  columns={columns}
+  form={form}
+/>
+`;
+
+const handlesCode = `import {
+  DataPanel,
+  getDataPanelQuery,
+  getDataPanelSelected,
+  openDataPanelForm,
+  openDataPanelView,
+  refreshDataPanel,
+  setDataPanelQuery,
+} from "@dreamer/ui-view/data-display";
+import type { Column, FormField, Row, SearchField } from "@dreamer/ui-view/data-display";
+
+${DEMO_COMMON_SETUP_CODE}
+
+const rows = makeDemoRows(8);
+
+<DataPanel
+  panelKey="demo-handles"
+  title="命令式 API"
+  syncUrl={false}
+  data={rows}
+  columns={columns}
+  search={{ props: search }}
+  form={{ props: form }}
+/>
+
+setDataPanelQuery("demo-handles", { filters: { role: "admin" }, page: 1 });
+openDataPanelForm("demo-handles");
+openDataPanelView("demo-handles", "1");
+refreshDataPanel("demo-handles");
+getDataPanelQuery("demo-handles");
+getDataPanelSelected("demo-handles");
+`;
 
 export default function DataDisplayDataPanel() {
   const remote: DataSource = createRemoteDemoSource(300);
   const cellSource: DataSource = createCellDemoSource();
   const actionHint = createSignal("");
+  const handleHint = createSignal("");
   const pwd = createSignal<Row | null>(null);
   const password = createSignal("");
   const confirmPassword = createSignal("");
@@ -3357,8 +2469,9 @@ export default function DataDisplayDataPanel() {
           / 导出 / 列设置 / 行高 / 全屏 / 复制，
           相邻按钮之间只有一条淡分割线）、搜索
           Modal（工具栏按钮打开）、表格下方的批量操作条、表格（排序、多选、行内编辑、合计、操作列）、
-          分页，以及用 Modal 的新增 / 编辑 / 查看。<strong>
-            任何删除与批量「设为…」都必须先确认：行内／批量删除／批量设为均弹出小气泡
+          分页，以及用 Modal 的新增 / 编辑 / 查看。可用 <code>alert</code>{" "}
+          在工具栏下方、表格上方放一条页面提示（支持关闭与 onClose）。<strong>
+            任何删除都必须先确认：行内／批量删除均弹出小气泡
             Popconfirm（确定在左、取消在右；点外部也会关闭），不用 Modal
             确认对话框
           </strong>。 支持原生 xlsx 导出／导入（零依赖），支持浅色 / 深色主题与
@@ -3404,18 +2517,65 @@ export default function DataDisplayDataPanel() {
           />
         </DocsDemo>
 
+        <DocsDemo title="页面提示条" code={alertCode}>
+          <Paragraph class="mb-3 text-sm text-slate-600 dark:text-slate-400">
+            提示条在工具栏下方、表格上方。对象配置可写 Alert
+            的全部参数；默认可关闭，点关闭会隐藏并触发 <code>onClose</code>。
+          </Paragraph>
+          <DataPanel
+            panelKey="demo-alert"
+            title="用户管理"
+            data={[
+              { id: "1", name: "张三" },
+              { id: "2", name: "李四" },
+              { id: "3", name: "王五" },
+            ]}
+            columns={[{ prop: "name", label: "姓名" }]}
+            alert={{
+              type: "warning",
+              message: "请先完成实名认证",
+              description: "未认证账号部分功能暂不可用。",
+              onClose: () => toast.info("已关闭提示"),
+            }}
+            toolbar={{
+              create: false,
+              search: false,
+              print: false,
+              import: false,
+              export: false,
+              columns: false,
+              density: false,
+              fullscreen: false,
+              copy: false,
+            }}
+          />
+        </DocsDemo>
+
         <DocsDemo
           title="列对齐（align / headerAlign）"
           code={`import { DataPanel } from "@dreamer/ui-view/data-display";
-import type { Column } from "@dreamer/ui-view/data-display";
+import type { Column, Row } from "@dreamer/ui-view/data-display";
+
+${MAKE_DEMO_ROWS_CODE}
 
 ${ALIGN_DEMO_COLUMNS_CODE}
+
+${DEMO_HIDE_CHROME_CODE}
+
+const rows = makeDemoRows(8);
 
 <DataPanel
   panelKey="demo-align"
   title="列对齐"
   data={rows}
   columns={columns}
+  caps={{ create: false }}
+  toolbar={{
+    create: false,
+    search: false,
+    refresh: false,
+    ...hideChrome,
+  }}
 />`}
         >
           <Paragraph class="mb-3 text-sm text-slate-600 dark:text-slate-400">
@@ -3463,6 +2623,14 @@ ${ALIGN_DEMO_COLUMNS_CODE}
             <code class="text-xs">replaceState</code> 为{" "}
             <code class="text-xs">?name=…&amp;role=…&amp;page=…</code>
             ；硬刷或打开带 query 的链接会回填。空值删 key；fixed 永不进 URL。
+            同页多面板或抽屉里不想抢地址栏时设{" "}
+            <code class="text-xs">syncUrl=&#123;false&#125;</code>
+            ；需要隔离参数时用{" "}
+            <code class="text-xs">
+              syncUrl=&#123;&#123; prefix: "u" &#125;&#125;
+            </code>
+            ，查询键变成 <code class="text-xs">u_page</code>、
+            <code class="text-xs">u_name</code> 等。
           </Paragraph>
           <div data-testid="demo-sync-url">
             <DataPanel
@@ -3638,6 +2806,12 @@ ${ALIGN_DEMO_COLUMNS_CODE}
         </DocsDemo>
 
         <DocsDemo title="批量操作" code={batchCode}>
+          <Paragraph class="mb-3 text-sm text-slate-600 dark:text-slate-400">
+            勾选后默认只出现批量删除和取消勾选，不必把这两项写进{" "}
+            <code class="text-xs">batchBar</code>
+            。若要别的批量操作，用自定义键自行编写{" "}
+            <code class="text-xs">action</code>。
+          </Paragraph>
           <DataPanel
             panelKey="demo-batch"
             title="批量操作"
@@ -3685,7 +2859,7 @@ ${ALIGN_DEMO_COLUMNS_CODE}
           <Paragraph class="mb-2 text-sm text-slate-600 dark:text-slate-400">
             前端：<code class="text-xs">list</code>+
             <code class="text-xs">fetch</code> 拼 query，返回{" "}
-            <code class="text-xs">{"{ items, total }"}</code>，
+            <code class="text-xs">{"{ rows, total }"}</code>，
             <code class="text-xs">sync: false</code>。 下方面板为内存异步模拟。
           </Paragraph>
           <DataPanel
@@ -3713,7 +2887,9 @@ ${ALIGN_DEMO_COLUMNS_CODE}
             <code class="text-xs">docs/src/routes/api/users.ts</code>
             （
             <code class="text-xs">GET</code> 根／
-            <code class="text-xs">POST …/create｜update｜remove</code>
+            <code class="text-xs">
+              POST …/create｜update｜remove｜remote-batch
+            </code>
             ）。
           </Paragraph>
           <DataPanel
@@ -3744,14 +2920,79 @@ ${ALIGN_DEMO_COLUMNS_CODE}
             <code class="text-xs">GET/POST</code> 根／
             <code class="text-xs">PUT/DELETE</code>{" "}
             <code class="text-xs">/:id</code>／
+            <code class="text-xs">POST …/remote-batch</code>／
             <code class="text-xs">POST …/import</code>
-            ）。
+            ）。余额列配置了 <code class="text-xs">total: true</code>
+            ，页脚合计由面板对<strong>
+              当前页已加载的行
+            </strong>自动求和，不会使用接口返回的{" "}
+            <code class="text-xs">totals</code>
+            。
           </Paragraph>
           <DataPanel
             panelKey="demo-api-orders-restful"
             title="订单（restful）"
             baseRoute="/api/orders"
             apiMode="restful"
+            columns={DEMO_COLUMNS}
+            search={{ props: DEMO_SEARCH }}
+            form={{ props: DEMO_FORM }}
+            pageSize={20}
+          />
+        </DocsDemo>
+
+        <DocsDemo
+          title="首屏 data + baseRoute（刷新再请求）"
+          code={dataBaseRouteCode}
+        >
+          <Paragraph class="mb-3 text-sm text-slate-600 dark:text-slate-400">
+            同时传 <code class="text-xs">data</code>
+            {" 和 "}
+            <code class="text-xs">baseRoute</code>
+            时，首屏用传入的张三、李四、王五渲染，挂载时不请求接口，刷新浏览器也不会先闪空表。工具栏刷新、翻页、搜索、排序再走
+            {" "}
+            <code class="text-xs">/api/users</code>
+            。总数优先用 <code class="text-xs">initial.total</code>
+            ，未传则用 <code class="text-xs">data.length</code>
+            ；只传当前页数据时请给出真实总数，不要让面板去猜。
+          </Paragraph>
+          <DataPanel
+            panelKey="demo-data-base-route"
+            title="首屏 data + baseRoute"
+            syncUrl={false}
+            data={[
+              {
+                id: "1",
+                name: "张三",
+                email: "zhangsan@example.com",
+                role: "admin",
+                status: "active",
+                balance: 120,
+                score: 80,
+                createdAt: "2026-11-01T01:00:00.000Z",
+              },
+              {
+                id: "2",
+                name: "李四",
+                email: "lisi@example.com",
+                role: "editor",
+                status: "active",
+                balance: 80,
+                score: 60,
+                createdAt: "2026-11-02T02:00:00.000Z",
+              },
+              {
+                id: "3",
+                name: "王五",
+                email: "wangwu@example.com",
+                role: "viewer",
+                status: "disabled",
+                balance: 40,
+                score: 30,
+                createdAt: "2026-11-03T03:00:00.000Z",
+              },
+            ]}
+            baseRoute="/api/users"
             columns={DEMO_COLUMNS}
             search={{ props: DEMO_SEARCH }}
             form={{ props: DEMO_FORM }}
@@ -3827,8 +3068,7 @@ ${ALIGN_DEMO_COLUMNS_CODE}
             <code>toolbar.extra</code>／<code>order</code>／<code>
               toolbarExtra
             </code>／<code>rowExtra</code>／旧顶层行操作配置 （前导 chrome
-            请放面板外）。批量「设为…」由 <code>caps.batchStatus</code>＋列{" "}
-            <code>batch:true</code> 控制，不在 toolbar。
+            请放面板外）。
           </Paragraph>
         </div>
 
@@ -3846,8 +3086,7 @@ ${ALIGN_DEMO_COLUMNS_CODE}
             data-testid="demo-toolbar-off-hint"
           >
             toolbar=false
-            时整栏工具栏不出现；表格／分页仍渲染。移动端（≤639.98px）表格卡上／左／右贴边；分页控件居中，条数文案在分页下方并居中；底栏分页尺寸移动
-            xs／桌面 md；桌面仍左右分布。
+            时整栏工具栏不出现；表格／分页仍渲染。移动端（≤639.98px）表格卡上／左／右贴边；底栏分页各端均为左右一行（左侧条数、右侧控件）；底栏分页预设与尺寸随断点：电脑端（≥1280px）full／md，平板（640px–1279.98px）default／sm，移动端（≤639.98px）simple／xs，也可用 paginationPreset 覆盖。
           </p>
         </DocsDemo>
 
@@ -3911,7 +3150,10 @@ ${ALIGN_DEMO_COLUMNS_CODE}
           />
         </DocsDemo>
 
-        <DocsDemo title="② toolbar：show／disable 无参函数" code={tbFnCode}>
+        <DocsDemo
+          title="② toolbar：show／disable 函数（含上下文）"
+          code={tbFnCode}
+        >
           <div class="mb-2 flex flex-wrap items-center gap-2">
             <Button
               type="button"
@@ -3941,8 +3183,9 @@ ${ALIGN_DEMO_COLUMNS_CODE}
                 label: "审计",
                 show: () => true,
                 disable: () => !pageAllowAudit.value,
-                action: () => {
-                  actionHint.value = "toolbar:audit";
+                action: ({ selected }) => {
+                  actionHint.value =
+                    `toolbar:audit selected=${selected.length}`;
                 },
               },
               refresh: true,
@@ -3976,8 +3219,7 @@ ${ALIGN_DEMO_COLUMNS_CODE}
             caps={{ create: false, update: false, remove: false, view: false }}
           />
           <p class="mt-2 text-xs text-slate-500" data-testid="demo-ra-fn-hint">
-            {() =>
-              actionHint.value ||
+            {() => actionHint.value ||
               "locked 行「分配」仍可见但 disabled；点击看 item.id"}
           </p>
         </DocsDemo>
@@ -4327,7 +3569,10 @@ ${ALIGN_DEMO_COLUMNS_CODE}
               三级自定义第 1 级（旁路）
             </strong>：
             <code class="text-xs">actions.password</code> 打开{" "}
-            <code class="text-xs">children</code> 里的自管 Modal。
+            <code class="text-xs">children</code>{" "}
+            里的自管 Modal。
+            默认点击行不会打开详情，只能点操作列的眼睛；需要点击行打开时设{" "}
+            <code class="text-xs">openViewOnRowClick</code>。
           </Paragraph>
           {/* 本例只演示 view；操作列勿挂 edit（未配 form 会打开空增改弹窗） */}
           <div data-testid="demo-view">
@@ -4453,6 +3698,41 @@ ${ALIGN_DEMO_COLUMNS_CODE}
               </Modal>
             </DataPanel>
           </div>
+        </DocsDemo>
+
+        <DocsDemo
+          title="点击行打开详情（openViewOnRowClick）"
+          code={rowClickViewCode}
+        >
+          <Paragraph class="mb-3 text-sm text-slate-600 dark:text-slate-400">
+            默认关闭：点击行不会打开详情，只能点操作列的眼睛。设{" "}
+            <code class="text-xs">openViewOnRowClick</code>{" "}
+            后，点击行（避开勾选、按钮、链接）也会打开详情；行内编辑、排序和链接不受影响。
+          </Paragraph>
+          <DataPanel
+            panelKey="demo-row-click-view"
+            title="点击行打开详情"
+            syncUrl={false}
+            data={makeDemoRows(8)}
+            columns={withRowActions({
+              view: true,
+              edit: false,
+              remove: false,
+            })}
+            openViewOnRowClick
+            caps={{
+              create: false,
+              update: false,
+              remove: false,
+              import: false,
+              export: false,
+              print: false,
+              columns: false,
+              density: false,
+              fullscreen: false,
+              copy: false,
+            }}
+          />
         </DocsDemo>
 
         <DocsDemo
@@ -4699,31 +3979,59 @@ ${ALIGN_DEMO_COLUMNS_CODE}
             title="Tab"
             code={`import { createSignal } from "@dreamer/view";
 import { DataPanel } from "@dreamer/ui-view/data-display";
+import type { Column, FormField, Row, SearchField } from "@dreamer/ui-view/data-display";
 
-const tab = createSignal("all");
+${DEMO_COMMON_SETUP_CODE}
 
-{() => (
-  <DataPanel
-    panelKey="demo-tabs"
-    title="用户管理"
-    data={tab.value === "admin" ? admins : rows}
-    columns={columns}
-    search={{ props: search }}
-    form={{ props: form }}
-    exportName="users"
-    activeTab={tab.value}
-    onTabChange={(key) => (tab.value = key)}
-    tabs={[
-      { key: "all", label: "全部" },
-      { key: "admin", label: "管理员" },
-      {
-        key: "stats",
-        label: "统计",
-        children: <p>当前共 {rows.length} 人</p>,
-      },
-    ]}
-  />
-)}`}
+function readDemoTab() {
+  try {
+    const k = new URLSearchParams(globalThis.location?.search ?? "").get("tab");
+    return k === "admin" || k === "stats" || k === "all" ? k : "all";
+  } catch {
+    return "all";
+  }
+}
+
+function DataPanelTabsDemo() {
+  const tab = createSignal(readDemoTab());
+  const rows = makeDemoRows(8);
+  const adminCount = rows.filter((r) => r.role === "admin").length;
+  return () => {
+    const key = tab.value;
+    const data = key === "admin"
+      ? rows.filter((r) => r.role === "admin")
+      : rows;
+    return (
+      <DataPanel
+        panelKey="demo-tabs"
+        title="用户管理"
+        data={data}
+        columns={columns}
+        search={{ props: search }}
+        form={{ props: form }}
+        exportName="users"
+        activeTab={key}
+        onTabChange={(k) => {
+          tab.value = k;
+        }}
+        tabs={[
+          { key: "all", label: "全部" },
+          { key: "admin", label: "管理员" },
+          {
+            key: "stats",
+            label: "统计",
+            children: (
+              <div class="px-3 py-4 text-sm text-slate-600 dark:text-slate-400">
+                当前共 {rows.length} 人，其中管理员 {adminCount} 人。
+              </div>
+            ),
+          },
+        ]}
+      />
+    );
+  };
+}
+`}
           >
             <Paragraph class="mb-3 text-sm text-slate-600 dark:text-slate-400">
               标签放在工具栏左边的空位，和右侧按钮同一行。未写{" "}
@@ -4767,6 +4075,236 @@ const tab = createSignal("all");
         </div>
       </section>
 
+      <section class="flex flex-col gap-10">
+        <Title level={2}>进阶配置</Title>
+
+        <DocsDemo title="可配批量条（上下文）" code={batchBarCode}>
+          <Paragraph class="mb-3 text-sm text-slate-600 dark:text-slate-400">
+            批量条与工具栏一样可配。
+            <code class="text-xs">show</code>／
+            <code class="text-xs">disable</code>／
+            <code class="text-xs">action</code> 会收到{" "}
+            <code class="text-xs">&#123; selected, rows, query &#125;</code>
+            。下面只加了一个「导出选中」，没选中时禁用；批量删除和取消勾选是默认操作，不必再写。
+            若要别的批量操作，同样用自定义键编写{" "}
+            <code class="text-xs">action</code>。
+            本示例关闭了地址栏同步，避免同页多面板抢参数。
+          </Paragraph>
+          <DataPanel
+            panelKey="demo-batch-bar"
+            title="可配批量条"
+            syncUrl={false}
+            data={makeDemoRows(10)}
+            columns={DEMO_COLUMNS}
+            form={{ props: DEMO_FORM }}
+            batchBar={{
+              exportSelected: {
+                label: "导出选中",
+                disable: ({ selected }) => selected.length === 0,
+                action: ({ selected }) => {
+                  toast.info(`导出 ${selected.length} 条`);
+                },
+              },
+            }}
+            toolbar={{
+              export: {
+                disable: ({ selected }) => selected.length === 0,
+              },
+            }}
+          />
+        </DocsDemo>
+
+        <DocsDemo title="搜索字段类型与自定义底栏" code={searchAdvCode}>
+          <Paragraph class="mb-3 text-sm text-slate-600 dark:text-slate-400">
+            搜索已对齐表单：数字、日期时间、多选，以及字段{" "}
+            <code class="text-xs">render</code>。
+            <code class="text-xs">search.actions</code>{" "}
+            接到官方底栏，可在「搜索／重置」旁加自定义按钮。
+          </Paragraph>
+          <DataPanel
+            panelKey="demo-search-adv"
+            title="高级搜索"
+            syncUrl={false}
+            data={makeDemoRows(25)}
+            columns={DEMO_COLUMNS.map((c) =>
+              c.prop === "status" ? { ...c, inline: undefined } : c
+            )}
+            caps={{ create: false }}
+            search={{
+              title: "高级筛选",
+              props: [
+                { prop: "name", placeholder: "姓名关键字" },
+                { prop: "role", type: "multiselect" },
+                { prop: "status", type: "select" },
+                {
+                  prop: "score",
+                  type: "number",
+                  label: "积分",
+                  match: "num",
+                },
+                {
+                  prop: "createdAt",
+                  type: "datetime",
+                  label: "创建时间",
+                  match: "from",
+                },
+                {
+                  prop: "memo",
+                  label: "备注",
+                  render: (ctx) => (
+                    <Input value={ctx.value} placeholder="字段 render" />
+                  ),
+                },
+              ],
+              actions: {
+                onlyActive: {
+                  label: "只看启用",
+                  action: (ctx) => {
+                    setDataPanelQuery("demo-search-adv", {
+                      filters: { status: "active" },
+                      page: 1,
+                    });
+                    ctx.close();
+                  },
+                },
+                submit: true,
+                reset: true,
+              },
+            }}
+          />
+        </DocsDemo>
+
+        <DocsDemo title="表单底栏与字段条件" code={formCondCode}>
+          <Paragraph class="mb-3 text-sm text-slate-600 dark:text-slate-400">
+            <code class="text-xs">form.actions</code>{" "}
+            接到官方底栏（如「保存并继续」）。字段的{" "}
+            <code class="text-xs">show</code>／
+            <code class="text-xs">disabled</code>／
+            <code class="text-xs">options</code>{" "}
+            可按当前表单值计算：访客禁用邮箱，管理员才显示积分。
+          </Paragraph>
+          <DataPanel
+            panelKey="demo-form-cond"
+            title="表单条件"
+            syncUrl={false}
+            data={makeDemoRows(8)}
+            columns={DEMO_COLUMNS}
+            form={{
+              props: [
+                { prop: "name", required: true, placeholder: "请输入姓名" },
+                {
+                  prop: "role",
+                  type: "select",
+                  required: true,
+                  initial: "viewer",
+                },
+                {
+                  prop: "email",
+                  required: true,
+                  pattern: "^[^@\\s]+@[^@\\s]+$",
+                  disabled: ({ values }) => values.role === "viewer",
+                  hint: "访客账号不可改邮箱",
+                },
+                {
+                  prop: "score",
+                  type: "number",
+                  show: ({ values }) => values.role === "admin",
+                  hint: "仅管理员显示积分",
+                },
+                { prop: "balance", type: "number", min: 0, initial: 0 },
+                { prop: "status", type: "switch", initial: "active" },
+              ],
+              actions: {
+                saveMore: {
+                  label: "保存并继续",
+                  action: async (ctx) => {
+                    await ctx.submit();
+                    openDataPanelForm("demo-form-cond");
+                  },
+                },
+                submit: true,
+                cancel: true,
+              },
+            }}
+          />
+        </DocsDemo>
+
+        <DocsDemo title="命令式 API 与 syncUrl" code={handlesCode}>
+          <Paragraph class="mb-3 text-sm text-slate-600 dark:text-slate-400">
+            用 <code class="text-xs">panelKey</code>{" "}
+            取／改查询、取选中、打开表单或详情、刷新。 本面板{" "}
+            <code class="text-xs">syncUrl=&#123;false&#125;</code>
+            ，不会写入地址栏。
+          </Paragraph>
+          <div class="mb-2 flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              size="sm"
+              data-testid="demo-handles-filter"
+              onClick={() => {
+                setDataPanelQuery("demo-handles", {
+                  filters: { role: "admin" },
+                  page: 1,
+                });
+                handleHint.value = "已筛选管理员";
+              }}
+            >
+              筛管理员
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              data-testid="demo-handles-open-form"
+              onClick={() => {
+                openDataPanelForm("demo-handles");
+                handleHint.value = "打开新增";
+              }}
+            >
+              打开新增
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              data-testid="demo-handles-open-view"
+              onClick={() => {
+                openDataPanelView("demo-handles", "1");
+                handleHint.value = "打开详情";
+              }}
+            >
+              打开详情
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              data-testid="demo-handles-reload"
+              onClick={() => {
+                refreshDataPanel("demo-handles");
+                const q = getDataPanelQuery("demo-handles");
+                const n = getDataPanelSelected("demo-handles").length;
+                handleHint.value = `刷新 · page=${q?.page ?? "-"} · 已选 ${n}`;
+              }}
+            >
+              刷新并读状态
+            </Button>
+            <span
+              class="text-xs text-slate-500"
+              data-testid="demo-handles-hint"
+            >
+              {() => handleHint.value || "点上方按钮调用命令式 API"}
+            </span>
+          </div>
+          <DataPanel
+            panelKey="demo-handles"
+            title="命令式 API"
+            syncUrl={false}
+            data={makeDemoRows(8)}
+            columns={DEMO_COLUMNS}
+            search={{ props: DEMO_SEARCH }}
+            form={{ props: DEMO_FORM }}
+          />
+        </DocsDemo>
+      </section>
+
       <section class="space-y-3">
         <Title level={2}>API</Title>
         <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
@@ -4780,10 +4318,18 @@ const tab = createSignal("all");
           ）；<code class="text-xs">props</code> 为字段数组。
         </Paragraph>
         <DocsApiTable rows={DATA_PANEL_API} />
+        <Title level={3}>命令式 API（panelKey）</Title>
+        <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+          与 <code class="text-xs">refreshDataPanel</code>{" "}
+          同一套键。页面自管 Modal
+          保存后、或同页多面板读写查询时用这些方法，不必再包一层{" "}
+          <code class="text-xs">list()</code>。
+        </Paragraph>
+        <DocsApiTable rows={PANEL_HANDLE_API} nameColumnHeader="方法" />
       </section>
 
       <section class="space-y-3">
-        <Title level={2}>Columns（Column）</Title>
+        <Title level={2} id="api-type-Column">Columns（Column）</Title>
         <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
           序号／多选／操作：
           <code class="text-xs">type:"index"|"selection"|"actions"</code>
@@ -4795,21 +4341,30 @@ const tab = createSignal("all");
       </section>
 
       <section class="space-y-3">
-        <Title level={2}>Search（SearchConfig / SearchField）</Title>
+        <Title level={2} id="api-type-SearchConfig-SearchField">
+          Search（SearchConfig / SearchField）
+        </Title>
         <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
           搜索弹层可用 <code class="text-xs">width</code>
-          （ModalShellWidth，缺省 md）和{" "}
+          （xs／sm／md／lg／xl 或 CSS 长度／像素／getter，缺省 md）和{" "}
           <code class="text-xs">fullscreenable</code>
-          （是否显示全屏切换，缺省 false）。
+          （是否显示全屏切换，缺省 false）。字段类型对齐表单：date／datetime
+          用选择器，number 为普通文本输入，并支持多选。<code class="text-xs">
+            search.actions
+          </code>{" "}
+          与 <code class="text-xs">search.render</code>{" "}
+          走官方底栏（搜索／重置＋自定义键）。
         </Paragraph>
-        <Title level={3}>SearchConfig</Title>
+        <Title level={3} id="api-type-SearchConfig">SearchConfig</Title>
         <DocsApiTable rows={SEARCH_CONFIG_API} />
-        <Title level={3}>SearchField</Title>
+        <Title level={3} id="api-type-SearchField">SearchField</Title>
         <DocsApiTable rows={SEARCH_API} />
       </section>
 
       <section class="space-y-3">
-        <Title level={2}>Form（FormConfig / FormField）</Title>
+        <Title level={2} id="api-type-FormConfig-FormField">
+          Form（FormConfig / FormField）
+        </Title>
         <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
           优先级：
           <code class="text-xs">form.render</code>
@@ -4819,50 +4374,59 @@ const tab = createSignal("all");
           <code class="text-xs">children</code>＋自定义{" "}
           <code class="text-xs">action</code>
           。弹层可用 <code class="text-xs">width</code>
-          （ModalShellWidth，缺省 md）和{" "}
+          （xs／sm／md／lg／xl 或 CSS 长度／像素／getter，缺省 md）和{" "}
           <code class="text-xs">fullscreenable</code>
           （是否显示全屏切换，缺省 false）。
         </Paragraph>
-        <Title level={3}>FormConfig</Title>
+        <Title level={3} id="api-type-FormConfig">FormConfig</Title>
         <DocsApiTable rows={FORM_CONFIG_API} />
-        <Title level={3}>FormField</Title>
+        <Title level={3} id="api-type-FormField">FormField</Title>
         <DocsApiTable rows={FORM_API} />
       </section>
 
       <section class="space-y-3">
-        <Title level={2}>View（ViewConfig / ViewItem）</Title>
+        <Title level={2} id="api-type-ViewConfig-ViewItem">
+          View（ViewConfig / ViewItem）
+        </Title>
         <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
           详情字段区用 Descriptions 展示。单项可写{" "}
           <code class="text-xs">labelAlign</code>
           ，垂直方向 top／center／bottom，水平方向
           left／center／right；未写则标签上对齐、右对齐。弹层可用{" "}
           <code class="text-xs">width</code>
-          （ModalShellWidth，缺省 md）和{" "}
+          （xs／sm／md／lg／xl 或 CSS 长度／像素／getter，缺省 md）和{" "}
           <code class="text-xs">fullscreenable</code>
           （是否显示全屏切换，缺省 false）。标签与内容的宽度比例用{" "}
           <code class="text-xs">labelColPercent</code>
           （12～85，缺省 38）和 <code class="text-xs">labelMinWidth</code>
           （缺省 13.5rem）控制。
         </Paragraph>
-        <Title level={3}>ViewConfig</Title>
+        <Title level={3} id="api-type-ViewConfig">ViewConfig</Title>
         <DocsApiTable rows={VIEW_CONFIG_API} />
-        <Title level={3}>ViewItem</Title>
+        <Title level={3} id="api-type-ViewItem">ViewItem</Title>
         <DocsApiTable rows={VIEW_ITEM_API} />
       </section>
 
       <section class="space-y-3">
-        <Title level={2}>数据源（DataSource）</Title>
+        <Title level={2} id="api-type-DataSource">数据源（DataSource）</Title>
         <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
           拉数优先级：显式 <code class="text-xs">dataSource</code>
-          {" ＞ 传入 "}
-          <code class="text-xs">data</code>
-          （本地源、不自动请求）＞ 二者皆无且给了{" "}
+          {" ＞ "}
           <code class="text-xs">baseRoute</code>
-          时才 <code class="text-xs">createApiDataSource</code>
-          拉 list（
+          （API 源）＞ 只传 <code class="text-xs">data</code>
+          （本地源、不请求接口）。同时传 <code class="text-xs">data</code>
+          {" 和 "}
+          <code class="text-xs">baseRoute</code>
+          时，首屏（含 SSR／刷新浏览器）用传入的{" "}
+          <code class="text-xs">data</code>
+          渲染，挂载时不请求
+          list，避免空表闪动；工具栏刷新、翻页、搜索、排序、切 Tab 再走
+          API。总数优先用 <code class="text-xs">initial.total</code>
+          ，未传则用 <code class="text-xs">data.length</code>
+          ，不会臆造更大的总数（只传当前页数据时请给出真实 total）。
           <code class="text-xs">baseRoute</code>
           ≥2 段直接作根；仅 1 段再拼 <code class="text-xs">resource</code>
-          ）。导入仍可用 <code class="text-xs">onImportRows</code>
+          。导入仍可用 <code class="text-xs">onImportRows</code>
           逃生。
         </Paragraph>
         <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
@@ -4870,7 +4434,10 @@ const tab = createSignal("all");
           <code class="text-xs">GET</code>；
           <code class="text-xs">POST …/create</code>（单条对象）／
           <code class="text-xs">…/update</code>（body 含 id）／
-          <code class="text-xs">…/remove</code>（
+          <code class="text-xs">…/remove</code>（单条删除，
+          <code class="text-xs">{"{ ids }"}</code>
+          ）／
+          <code class="text-xs">…/remote-batch</code>（批量删除，
           <code class="text-xs">{"{ ids }"}</code>
           ）；
           <code class="text-xs">GET …/view?id=</code>。
@@ -4883,14 +4450,18 @@ const tab = createSignal("all");
           <strong>restful</strong>：
           <code class="text-xs">GET/POST</code> 资源根；
           <code class="text-xs">PUT/DELETE</code>{" "}
-          <code class="text-xs">根/:id</code>（批量 remove 逐条 DELETE）；
+          <code class="text-xs">根/:id</code>（单条删除 DELETE）；批量删除{" "}
+          <code class="text-xs">POST 根/remote-batch</code>；
           <code class="text-xs">GET 根/:id</code> 明细；
           <code class="text-xs">importRows</code>→
           <code class="text-xs">POST 根/import</code>。
         </Paragraph>
         <DocsApiTable rows={SOURCE_API} nameColumnHeader="方法" />
-        <Title level={3}>createApiDataSource</Title>
+        <Title level={3} id="api-type-createApiDataSource">
+          createApiDataSource
+        </Title>
         <DocsApiTable rows={API_SOURCE_API} nameColumnHeader="项" />
+        <DocsTypeApiSections ids={DATA_PANEL_EXTRA_TYPE_IDS} />
       </section>
 
       <DocsMessagesSection

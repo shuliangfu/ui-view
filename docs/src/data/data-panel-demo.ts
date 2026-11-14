@@ -86,7 +86,6 @@ export const DEMO_COLUMNS: Column[] = [
     label: "状态",
     type: "tag",
     inline: "switch",
-    batch: true,
     align: "center",
     options: [
       { value: "active", label: "启用", tone: "success" },
@@ -206,7 +205,6 @@ export const DEMO_COLUMNS_CODE = `const columns: Column[] = [
     label: "状态",
     type: "tag",
     inline: "switch",
-    batch: true,
     align: "center",
     options: [
       { value: "active", label: "启用", tone: "success" },
@@ -308,6 +306,135 @@ export const DEMO_FORM_RICH: FormField[] = [
   },
 ];
 
+
+/** 文档示例展示用源码，与上方运行时定义同步（读者能在示例里看到变量怎么写）。 */
+export const MAKE_DEMO_ROWS_CODE = `const NAMES = [
+  "Alice",
+  "Bob",
+  "Carol",
+  "David",
+  "Eve",
+  "Frank",
+  "Grace",
+  "Heidi",
+  "Ivan",
+  "Judy",
+  "Mallory",
+  "Niaj",
+  "Olivia",
+  "Peggy",
+  "Rupert",
+  "Sybil",
+  "Trent",
+  "Victor",
+  "Walter",
+  "Zoe",
+  "Liang",
+  "Wei",
+  "Mei",
+  "Chen",
+  "Hao",
+];
+
+/** 生成演示用户（可复现） */
+function makeDemoRows(n = 25): Row[] {
+  return Array.from({ length: n }, (_, i) => ({
+    id: String(i + 1),
+    name: NAMES[i % NAMES.length] + (i >= NAMES.length ? \` \${i}\` : ""),
+    email: \`\${NAMES[i % NAMES.length].toLowerCase()}\${i + 1}@example.com\`,
+    role: ["admin", "editor", "viewer"][i % 3],
+    status: i % 4 === 3 ? "disabled" : "active",
+    balance: 100 + ((i * 137) % 900) + (i % 7) / 10,
+    score: (i * 7) % 100,
+    createdAt: new Date(2026, 0, 1 + i, 9, (i * 7) % 60).toISOString(),
+    locked: i === 0,
+  }));
+}
+`;
+
+export const DEMO_SEARCH_CODE = `const search: SearchField[] = [
+  {
+    prop: "name",
+    placeholder: "姓名关键字",
+    hint: "支持模糊匹配",
+    maxlength: 40,
+  },
+  { prop: "role", type: "select" },
+  { prop: "status", type: "select" },
+];
+`;
+
+export const DEMO_FORM_CODE = `const form: FormField[] = [
+  { prop: "name", required: true, placeholder: "请输入姓名" },
+  {
+    prop: "email",
+    required: true,
+    pattern: "^[^@\\\\s]+@[^@\\\\s]+$",
+  },
+  { prop: "role", type: "select", required: true, initial: "viewer" },
+  { prop: "balance", type: "number", min: 0, initial: 0 },
+  // switch 开／关值从同 prop 列两档 options 继承，无需 onOff
+  { prop: "status", type: "switch", initial: "active" },
+];
+`;
+
+export const DEMO_FORM_RICH_CODE = `const form: FormField[] = [
+  {
+    prop: "name",
+    placeholder: "请输入姓名",
+    hint: "2–20 个字符",
+    maxlength: 20,
+    span: 6,
+    rules: [
+      { required: true, message: "姓名不能为空" },
+      { min: 2, max: 20, message: "姓名长度 2–20" },
+    ],
+  },
+  {
+    prop: "email",
+    placeholder: "name@example.com",
+    span: 6,
+    rules: [
+      { required: true, message: "邮箱不能为空" },
+      { type: "email", message: "邮箱格式不正确" },
+    ],
+  },
+  { prop: "role", type: "select", required: true, initial: "viewer", span: 6 },
+  { prop: "balance", type: "number", min: 0, initial: 0, span: 6 },
+  {
+    prop: "status",
+    type: "switch",
+    initial: "active",
+    span: 12,
+    hint: "行内亦可切换",
+  },
+];
+`;
+
+export const DEMO_HIDE_CHROME_CODE = `const hideChrome = {
+  print: false,
+  import: false,
+  export: false,
+  columns: false,
+  density: false,
+  fullscreen: false,
+  copy: false,
+} as const;
+`;
+
+export const WITH_ROW_ACTIONS_CODE = `function withRowActions(actions: RowActionsConfig): Column[] {
+  return columns.map((c) => c.type === "actions" ? { ...c, actions } : c);
+}
+`;
+
+/** makeDemoRows + columns + search + form，供多数 DataPanel 示例内联展示。 */
+export const DEMO_COMMON_SETUP_CODE = [
+  MAKE_DEMO_ROWS_CODE,
+  DEMO_COLUMNS_CODE,
+  DEMO_SEARCH_CODE,
+  DEMO_FORM_CODE,
+].join("\n\n");
+
 /** 模拟远程接口：异步 + 延迟，内部复用本地引擎做过滤 / 排序 / 分页 */
 export function createRemoteDemoSource(latency = 400): DataSource {
   const inner = createLocalDataSource({
@@ -385,7 +512,6 @@ export const CELL_COLUMNS: Column[] = [
     label: "状态（switch）",
     type: "tag",
     inline: "switch",
-    batch: true,
     options: [
       { value: "active", label: "启用", tone: "success" },
       { value: "disabled", label: "停用", tone: "warning" },

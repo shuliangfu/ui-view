@@ -121,17 +121,15 @@ export interface Column {
    * （两档 options → `switch`，否则 `text`）。新代码请直接写 `inline`。
    */
   edit?: boolean;
-  /** 页脚合计行：显示 `list()` 返回 `totals[prop]` */
+  /**
+   * 页脚合计行：由面板根据行数据自动求和，不使用 `list()`／接口返回的 `totals`。
+   * 只传 `data`（本地源）时对当前过滤结果全集求和；分页接口／自定义源只对当前已加载的行求和。
+   */
   total?: boolean;
   /** 默认隐藏，可在「列设置」里打开 */
   hidden?: boolean;
   /** 不参与导出 */
   noExport?: boolean;
-  /**
-   * 显式标记为批量「设为…」目标列（须配合 `inline:"switch"` 与恰好两档 `options`）。
-   * 不再用「首个 switch 列」隐式推导。
-   */
-  batch?: boolean;
   /**
    * 按行禁用。可写 `true`，或 `(row) => boolean`（传入当前行数据）。
    * - `type:"selection"`：该行不可勾选（表头全选会跳过），也不能进入批量处理；
@@ -242,6 +240,50 @@ export interface FieldRule {
   trigger?: "blur" | "change" | "submit";
 }
 
+/** 搜索控件类型（向 FormType 看齐：日期用 DatePicker，数字用文本输入而非 native number） */
+export type SearchType =
+  | "text"
+  | "select"
+  | "date"
+  | "datetime"
+  | "number"
+  | "multiselect";
+
+/** 搜索字段 show／disabled／options 的上下文（当前筛选值） */
+export interface SearchFieldConditionCtx {
+  /** 当前搜索表单值（字段 → 字符串；多选为逗号串） */
+  values: Record<string, unknown>;
+}
+
+/**
+ * 搜索字段级自定义控件上下文（仅当未设 `search.render` 时生效）。
+ */
+export interface SearchFieldRenderCtx {
+  field: SearchField;
+  prop: string;
+  value: Signal<string>;
+  multiValue: Signal<string[]>;
+  values: Record<string, unknown>;
+  disabled: boolean;
+  error?: string;
+}
+
+/**
+ * 搜索 Modal 主体自定义渲染上下文。
+ * 有 `search.render` 时替换内置字段区；底部 `search.actions` 仍由官方脚渲染。
+ */
+export interface SearchRenderCtx {
+  /** 当前搜索表单值 */
+  values: Record<string, unknown>;
+  errors: Record<string, string>;
+  /** 关闭弹窗 */
+  close: () => void;
+  /** 走内置校验＋提交筛选 */
+  submit: () => void;
+  /** 清空搜索字段并重置筛选 */
+  reset: () => void;
+}
+
 export interface SearchField {
   /** 字段键（与 columns.prop／URL query key 对齐）；缺省回落 `name` */
   prop?: string;
@@ -249,9 +291,20 @@ export interface SearchField {
   name?: string;
   /** 缺省时从同 prop 的 column.label 继承 */
   label?: string;
-  type?: "text" | "select" | "date";
-  /** 缺省时从同 prop 的 column.options 继承 */
-  options?: Option[];
+  type?: SearchType;
+  /** 缺省时从同 prop 的 column.options 继承；也可 `(ctx)=>…` 做级联 */
+  options?: Option[] | ((ctx: SearchFieldConditionCtx) => Option[]);
+  /**
+   * 是否显示。`false`／fn→false 时不渲染、不校验、不提交。
+   * 也可 `(ctx)=>boolean`。
+   */
+  show?: boolean | ((ctx: SearchFieldConditionCtx) => boolean);
+  /** 是否禁用。`true`／fn→true 时控件不可改，仍显示。 */
+  disabled?: boolean | ((ctx: SearchFieldConditionCtx) => boolean);
+  /**
+   * 字段级自定义控件。有 {@link SearchConfig.render} 时忽略本字段。
+   */
+  render?: (ctx: SearchFieldRenderCtx) => unknown;
   /** 本地数据源匹配方式：contains（text 默认）/ eq（select 默认）/ from / to / num */
   match?: "contains" | "eq" | "from" | "to" | "num";
   /** 行字段名，缺省与 prop／name 相同 */
@@ -314,6 +367,16 @@ export interface FormFieldRenderCtx {
   error?: string;
 }
 
+/** 表单字段 show／disabled／options 的上下文 */
+export interface FormFieldConditionCtx {
+  /** 当前表单值（可见与隐藏字段均包含） */
+  values: Record<string, unknown>;
+  /** 新增／编辑 */
+  mode: "create" | "edit";
+  /** 编辑时为当前行；新增为 null */
+  row: Row | null;
+}
+
 /** 新增 / 编辑 Modal 里的表单项（键统一 `prop`；旧 `name` 等同 prop） */
 export interface FormField {
   /** 字段键（与 columns.prop 对齐）；缺省回落 `name` */
@@ -323,8 +386,15 @@ export interface FormField {
   /** 缺省时从同 prop 的 column.label 继承 */
   label?: string;
   type?: FormType;
-  /** 缺省时从同 prop 的 column.options 继承（select／switch 等） */
-  options?: Option[];
+  /** 缺省时从同 prop 的 column.options 继承（select／switch 等）；也可 `(ctx)=>…` 做级联 */
+  options?: Option[] | ((ctx: FormFieldConditionCtx) => Option[]);
+  /**
+   * 是否显示。`false`／fn→false 时不渲染、不校验、不提交。
+   * ctx 为 `{ values, mode, row }`。仍受 createOnly／editOnly 约束。
+   */
+  show?: boolean | ((ctx: FormFieldConditionCtx) => boolean);
+  /** 是否禁用。`true`／fn→true 时控件不可改，仍显示。 */
+  disabled?: boolean | ((ctx: FormFieldConditionCtx) => boolean);
   required?: boolean;
   min?: number;
   max?: number;
@@ -429,7 +499,11 @@ export type ModalShellWidth =
  * form / search / view 的统一段配置：`title` 为弹层标题，`props` 为字段数组
  * （与列同一套字段配置）；底部按钮写在与 title 平级的 `actions`（不要写在 props 末项）。
  *
- * 扩展优先级：`form.render`（整页）＞ `FormField.render`（字段）＞ 内置控件；
+ * 扩展优先级：`form.render`（整页字段区）＞ `FormField.render`（字段）＞ 内置控件；
+ * 底部由官方脚渲染 `form.actions`（内置 submit／cancel 可覆写、可追加自定义键）。
+ * 仅有 `form.render` 且未声明 `actions` 时不渲染官方脚（兼容旧的整页自管）。
+ * 要在自定义主体上仍用官方脚（例如「保存并继续」），声明 `form.actions` 即可。
+ * `footer: false` 可显式关掉官方脚。
  * 旁路层仍可用 DataPanel `children` + 自定义 `action` 自管 Modal。
  */
 export interface FormConfig {
@@ -439,10 +513,18 @@ export interface FormConfig {
    * 若仍提供 props，内置 `submit()` 可按 props 校验／收集值。
    */
   props?: FormField[];
-  /** 可选底部按钮（与列操作同一套 Record）。表单确定／取消仍走官方 Modal 脚（内置 formBody）。 */
-  actions?: RowActionsConfig;
   /**
-   * 整段替换增改 Modal 主体（含确定／取消）。
+   * 底部按钮 Record。内置键：`submit`（保存／更新）、`cancel`（取消，默认靠右最后）。
+   * 自定义键须提供 `action(ctx)`；ctx 含 `values`／`mode`／`row`／`submit`／`close`／`busy`。
+   * 有本字段时，即便同时写了 `form.render` 也会渲染官方脚。
+   */
+  actions?: FooterActionsConfig<FormActionContext>;
+  /**
+   * 为 false 时不渲染官方底部（无论是否有 render／actions）。
+   */
+  footer?: false;
+  /**
+   * 替换增改 Modal 字段区。有本字段且未声明 `actions` 时不渲染官方确定／取消（调用方可在 render 内自管）。
    * 有本字段时忽略各 {@link FormField.render}。
    */
   render?: (ctx: FormRenderCtx) => unknown;
@@ -455,8 +537,21 @@ export interface FormConfig {
 export interface SearchConfig {
   title?: string | (() => string);
   props: SearchField[];
-  /** 可选底部按钮（与列操作同一套 Record）。搜索确定／取消仍走官方 Modal 脚。 */
-  actions?: RowActionsConfig;
+  /**
+   * 底部按钮 Record。内置键：`submit`（搜索）、`reset`（重置，默认靠右最后）。
+   * 自定义键须提供 `action(ctx)`；ctx 含当前筛选值与 `submit`／`reset`／`close`。
+   * 内置搜索／重置始终可由官方脚渲染，自定义键挨着它们。
+   */
+  actions?: FooterActionsConfig<SearchActionContext>;
+  /**
+   * 为 false 时不渲染官方底部。
+   */
+  footer?: false;
+  /**
+   * 替换搜索 Modal 字段区；底部 `actions` 脚仍由面板渲染。
+   * 有本字段时忽略各 {@link SearchField.render}。
+   */
+  render?: (ctx: SearchRenderCtx) => unknown;
   /** 搜索弹层宽度，传给 Modal；缺省 md */
   width?: ModalShellWidth;
   /** 搜索弹层是否显示全屏切换，传给 Modal */
@@ -506,11 +601,17 @@ export interface Query {
   filters: Record<string, string>;
 }
 
-/** `list()` 返回 */
+/**
+ * `list()` 返回。官方列表字段为 `rows`。
+ * 解析接口响应时，若无 `rows` 但有 `items`，仍接受 `items`（过渡兼容）；类型与写出只用 `rows`。
+ */
 export interface ListResult {
-  items: Row[];
+  rows: Row[];
   total: number;
-  /** 合计行数据：列 prop → 数值 */
+  /**
+   * 合计行数据（兼容字段，列 prop → 数值）。
+   * 面板对 `total: true` 的列会自行按行求和，页脚不读取此字段。
+   */
   totals?: Record<string, number>;
 }
 
@@ -556,9 +657,18 @@ export interface DataSource {
     id: string,
     values: Record<string, unknown>,
   ): MaybePromise<WriteResult>;
-  /** 删除；面板保证只在用户确认对话后才会调用 */
+  /**
+   * 单条删除（行内按钮／详情工具栏）。面板保证只在用户确认后才会调用。
+   * 官方 API 源默认 POST …/remove（action）或 DELETE 根/:id（restful）。
+   * 若直接传入多个 id，官方 API 源会改走 {@link DataSource.removeBatch}。
+   */
   remove?(ids: string[]): MaybePromise<BulkResult>;
-  /** 给多行设置同一字段（批量状态 / 行内编辑） */
+  /**
+   * 批量删除（批量条）。缺省时面板回落 {@link DataSource.remove}。
+   * 官方 API 源默认 POST …/remote-batch。
+   */
+  removeBatch?(ids: string[]): MaybePromise<BulkResult>;
+  /** 给多行设置同一字段（行内编辑；自定义批量操作也可调用） */
   setField?(
     ids: string[],
     field: string,
@@ -568,6 +678,15 @@ export interface DataSource {
   importRows?(
     rows: Record<string, string>[],
   ): MaybePromise<ImportResult>;
+  /**
+   * 拉取单条明细。打开详情或 DataView 刷新时调用；失败或返回空则回落当前行。
+   * 与 {@link DataSource.get} 二选一即可（优先 view）。
+   */
+  view?(id: string): MaybePromise<Row | null>;
+  /**
+   * 拉取单条明细（`view` 的别名）。自定义源可只提供其一。
+   */
+  get?(id: string): MaybePromise<Row | null>;
 }
 
 /** 能力开关（缺省按数据源方法是否存在推断） */
@@ -576,12 +695,6 @@ export interface Caps {
   update: boolean;
   view: boolean;
   remove: boolean;
-  /**
-   * Batch「设为…」唯一能力开关（不在 toolbar 冒充）。
-   * UI 在选中批量条 `dp-batch-bar`；默认：存在 `column.batch:true`（且 switch＋两档 options）
-   * 且 dataSource.setField 时为 true。调用方可显式 true｜false 覆盖。
-   */
-  batchStatus: boolean;
   import: boolean;
   export: boolean;
   print: boolean;
@@ -595,17 +708,55 @@ export interface Caps {
 }
 
 /**
- * Unified toolbar entry (no row).
+ * DataPanel 工具栏／批量条按钮上下文。
+ * `selected` 为当前页已选中的行对象（不是 id）。
+ */
+export interface PanelActionContext {
+  selected: Row[];
+  rows: Row[];
+  query: Query;
+}
+
+/** DataView 工具栏按钮上下文。 */
+export interface ViewActionContext {
+  /** 当前详情记录；尚未加载时为 null */
+  record: Row | null;
+}
+
+/**
+ * 表单底部按钮上下文。
+ */
+export interface FormActionContext {
+  values: Record<string, unknown>;
+  mode: "create" | "edit";
+  row: Row | null;
+  busy: boolean;
+  submit: () => Promise<void>;
+  close: () => void;
+}
+
+/**
+ * 搜索底部按钮上下文。
+ */
+export interface SearchActionContext {
+  values: Record<string, unknown>;
+  submit: () => void;
+  reset: () => void;
+  close: () => void;
+}
+
+/**
+ * Unified toolbar／batch-bar entry (no row).
  * - `true` / `false` = show only (`disable` defaults false → clickable)
  * - object may override show / disable / icon / label / action
  * - omit `show` → true; omit `disable` → false (both optional)
- * - show / disable may be zero-arg functions (evaluated when building slots)
+ * - show / disable / action / title 可接收上下文（DataPanel：`{ selected, rows, query }`；
+ *   DataView：`{ record }`）。零参函数仍然有效（调用时传入 ctx，不使用即可）。
  * - `disable: true` (or fn→true) = still visible, button disabled — NOT the same as show:false
  * - 未声明的内置键 → 回落 caps（一层真相）；声明则须明确 true｜false｜object（勿用 undefined 绕）
  * - unknown keys are custom; custom keys MUST provide `action` (asserted at mount)
  * - object literal key order = display order; undeclared builtins append after, in default order
- * - no `confirm` field: callers who need confirmation open Popconfirm/dialog inside `action`
- * - 批量「设为…」不在 toolbar：见 caps.batchStatus ＋ column.batch
+ * - toolbar 无 `confirm` 字段：需要确认时在 `action` 内打开 Popconfirm／对话框
  */
 /**
  * Action button tone — full Button ColorVariant set.
@@ -621,12 +772,12 @@ export type ActionTone =
   | "danger"
   | "ghost";
 
-export type ActionCtrl =
+export type ActionCtrl<Ctx = unknown> =
   | boolean
   | {
-    show?: boolean | (() => boolean);
+    show?: boolean | ((ctx: Ctx) => boolean);
     /** Default false. true / fn→true = disabled but still visible. */
-    disable?: boolean | (() => boolean);
+    disable?: boolean | ((ctx: Ctx) => boolean);
     icon?: unknown;
     /**
      * Visible text when no icon (toolbar custom) / aria. Omit → fall back to `title` then key.
@@ -637,12 +788,18 @@ export type ActionCtrl =
      * Final tip = title ?? label ?? builtinMessages ?? key.
      * Also used as display text when `label` is omitted.
      */
-    title?: string | (() => string);
+    title?: string | ((ctx: Ctx) => string);
     /** Visual tone (Button ColorVariant). Default "default". Toolbar → variant; row icons → hover color. */
     tone?: ActionTone;
     /** Builtin: omit → default handler. Custom key: required (assert throws if missing). */
-    action?: () => void;
+    action?: (ctx: Ctx) => void;
   };
+
+/** 表单／搜索底部按钮 Record（与工具栏同一套 ActionCtrl，上下文不同）。 */
+export type FooterActionsConfig<Ctx = unknown> = Record<
+  string,
+  ActionCtrl<Ctx>
+>;
 
 /**
  * Row-action entry; show / disable / action / title may be per-item functions
@@ -693,6 +850,9 @@ export type ToolbarBuiltin =
 
 export type RowBuiltin = "view" | "edit" | "remove";
 
+/** 批量条内置键（remove／clear 为默认，不必写入配置）。 */
+export type BatchBuiltin = "remove" | "clear";
+
 /** Default toolbar display order for undeclared builtins. */
 export const TOOLBAR_BUILTINS: readonly ToolbarBuiltin[] = [
   "create",
@@ -714,8 +874,15 @@ export const ROW_BUILTINS: readonly RowBuiltin[] = [
   "remove",
 ] as const;
 
+/** 批量条内置显示序；未声明时默认追加 remove 与 clear（clear 靠右最后）。 */
+export const BATCH_BUILTINS: readonly BatchBuiltin[] = [
+  "remove",
+  "clear",
+] as const;
+
 const TOOLBAR_BUILTIN_SET = new Set<string>(TOOLBAR_BUILTINS);
 const ROW_BUILTIN_SET = new Set<string>(ROW_BUILTINS);
+const BATCH_BUILTIN_SET = new Set<string>(BATCH_BUILTINS);
 
 export function isToolbarBuiltin(key: string): key is ToolbarBuiltin {
   return TOOLBAR_BUILTIN_SET.has(key);
@@ -723,6 +890,10 @@ export function isToolbarBuiltin(key: string): key is ToolbarBuiltin {
 
 export function isRowBuiltin(key: string): key is RowBuiltin {
   return ROW_BUILTIN_SET.has(key);
+}
+
+export function isBatchBuiltin(key: string): key is BatchBuiltin {
+  return BATCH_BUILTIN_SET.has(key);
 }
 
 /**
@@ -735,7 +906,26 @@ export function isRowBuiltin(key: string): key is RowBuiltin {
  * 省略键 → 内置回落 caps；声明键请写明确 true｜false｜object（勿传 undefined 绕 caps）。
  * Abolished: `extra` arrays and `order` mix fields.
  */
-export type PanelToolbarConfig = Record<string, ActionCtrl>;
+export type PanelToolbarConfig = Record<string, ActionCtrl<PanelActionContext>>;
+
+/** DataView 工具栏 Record（上下文为当前记录）。 */
+export type ViewToolbarConfig = Record<string, ActionCtrl<ViewActionContext>>;
+
+/**
+ * 批量条单项。与工具栏同形，另可写 `confirm`（字符串或 `(ctx)=>string`）以使用官方 Popconfirm。
+ */
+export type BatchActionCtrl =
+  | boolean
+  | (Exclude<ActionCtrl<PanelActionContext>, boolean> & {
+    confirm?: string | ((ctx: PanelActionContext) => string);
+  });
+
+/**
+ * 批量条 Record。默认只显示 `remove`（批量删除，回落 caps.remove）和
+ * `clear`（取消勾选，靠右最后），不必把这两项写进配置。
+ * 自定义键必须提供 `action`；可按选中行 disable／confirm。
+ */
+export type BatchBarConfig = Record<string, BatchActionCtrl>;
 
 /**
  * 操作列按钮 Record（写在 `Column.actions`，`type:"actions"`）。
@@ -744,13 +934,45 @@ export type PanelToolbarConfig = Record<string, ActionCtrl>;
  */
 export type RowActionsConfig = Record<string, RowActionCtrl>;
 
-/** Evaluate boolean | (() => boolean); undefined → fallback. */
-function evalFlag(
-  val: boolean | (() => boolean) | undefined,
+/** Evaluate boolean | ((ctx) => boolean); undefined → fallback. 零参函数仍可用。 */
+export function evalFlag<Ctx = unknown>(
+  val: boolean | ((ctx: Ctx) => boolean) | undefined,
   fallback: boolean,
+  ctx?: Ctx,
 ): boolean {
   if (val === undefined) return fallback;
-  return typeof val === "function" ? val() : val;
+  return typeof val === "function"
+    ? !!(val as (ctx?: Ctx) => boolean)(ctx)
+    : val;
+}
+
+/** Evaluate field／搜索 options：数组或 `(ctx)=>数组`。 */
+export function resolveOptions<Ctx>(
+  options: Option[] | ((ctx: Ctx) => Option[]) | undefined,
+  ctx: Ctx,
+): Option[] {
+  if (options == null) return [];
+  return typeof options === "function" ? (options(ctx) ?? []) : options;
+}
+
+/**
+ * 表单字段是否渲染：叠加 createOnly／editOnly 与 `show`。
+ */
+export function isFormFieldVisible(
+  field: FormField,
+  ctx: FormFieldConditionCtx,
+): boolean {
+  if (ctx.mode === "edit" && field.createOnly) return false;
+  if (ctx.mode === "create" && field.editOnly) return false;
+  return evalFlag(field.show, true, ctx);
+}
+
+/** 搜索字段是否渲染。 */
+export function isSearchFieldVisible(
+  field: SearchField,
+  ctx: SearchFieldConditionCtx,
+): boolean {
+  return evalFlag(field.show, true, ctx);
 }
 
 /**
@@ -775,12 +997,15 @@ function evalRowFlag(
   return typeof val === "function" ? val(item) : val;
 }
 
-/** Evaluate title; omit / empty → undefined (no Tooltip). */
-function evalTitle(
-  val: string | (() => string) | undefined,
+/** Evaluate title; omit / empty → undefined (no Tooltip). 零参函数仍可用。 */
+function evalTitle<Ctx = unknown>(
+  val: string | ((ctx: Ctx) => string) | undefined,
+  ctx?: Ctx,
 ): string | undefined {
   if (val === undefined) return undefined;
-  const s = typeof val === "function" ? val() : val;
+  const s = typeof val === "function"
+    ? (val as (ctx?: Ctx) => string)(ctx)
+    : val;
   return s === "" ? undefined : s;
 }
 
@@ -826,15 +1051,16 @@ export function actionDisplayText(
 }
 
 /**
- * Resolve toolbar ActionCtrl → { show, disable, action? }.
+ * Resolve toolbar／batch／footer ActionCtrl → { show, disable, action? }.
  * - 未声明（调用方传入 undefined／省略）→ show = fallbackShow（caps）；disable = false
  * - boolean → show = that value; disable = false
  * - object → omit show defaults **true**；omit disable defaults false（声明即 caller 真相，不回落 caps）
- * Functions for show/disable are invoked with no args.
+ * show／disable／title 函数接收可选 ctx；零参函数仍然有效。
  */
-export function resolveActionCtrl(
-  ctrl: ActionCtrl | undefined,
+export function resolveActionCtrl<Ctx = unknown>(
+  ctrl: ActionCtrl<Ctx> | undefined,
   fallbackShow: boolean,
+  ctx?: Ctx,
 ): {
   show: boolean;
   disable: boolean;
@@ -842,19 +1068,47 @@ export function resolveActionCtrl(
   tone?: ActionTone;
   label?: string;
   icon?: unknown;
-  action?: () => void;
+  action?: (ctx: Ctx) => void;
 } {
   if (ctrl === undefined) return { show: fallbackShow, disable: false };
   if (typeof ctrl === "boolean") return { show: ctrl, disable: false };
   return {
-    show: evalFlag(ctrl.show, true),
-    disable: evalFlag(ctrl.disable, false),
-    title: evalTitle(ctrl.title),
+    show: evalFlag(ctrl.show, true, ctx),
+    disable: evalFlag(ctrl.disable, false, ctx),
+    title: evalTitle(ctrl.title, ctx),
     tone: ctrl.tone,
     label: ctrl.label,
     icon: ctrl.icon,
     action: typeof ctrl.action === "function" ? ctrl.action : undefined,
   };
+}
+
+/** Resolve a batch-bar entry; also evaluates optional `confirm`. */
+export function resolveBatchActionCtrl(
+  ctrl: BatchActionCtrl | undefined,
+  fallbackShow: boolean,
+  ctx: PanelActionContext,
+): {
+  show: boolean;
+  disable: boolean;
+  title?: string;
+  tone?: ActionTone;
+  label?: string;
+  icon?: unknown;
+  action?: (ctx: PanelActionContext) => void;
+  confirm?: string;
+} {
+  const base = resolveActionCtrl(ctrl, fallbackShow, ctx);
+  if (ctrl === undefined || typeof ctrl === "boolean") return base;
+  const raw = ctrl.confirm;
+  let confirm: string | undefined;
+  if (typeof raw === "function") {
+    const s = raw(ctx);
+    confirm = s === "" ? undefined : s;
+  } else if (typeof raw === "string" && raw !== "") {
+    confirm = raw;
+  }
+  return confirm !== undefined ? { ...base, confirm } : base;
 }
 
 /**
@@ -920,6 +1174,61 @@ export function assertToolbarConfig(
   }
 }
 
+/** Throw if any custom batch-bar key lacks `action`. */
+export function assertBatchBarConfig(
+  cfg: BatchBarConfig | false | undefined,
+): void {
+  if (!cfg) return;
+  for (const [key, val] of Object.entries(cfg)) {
+    if (isBatchBuiltin(key)) continue;
+    if (
+      typeof val === "object" && val !== null &&
+      typeof val.action === "function"
+    ) {
+      continue;
+    }
+    throw new Error(
+      `DataPanel batchBar custom key "${key}" requires action(); ` +
+        `got ${
+          val === null
+            ? "null"
+            : typeof val === "object"
+            ? typeof (val as { action?: unknown }).action
+            : typeof val
+        }`,
+    );
+  }
+}
+
+/** Throw if any custom form／search footer key lacks `action`. */
+export function assertFooterActionsConfig<Ctx = unknown>(
+  cfg: FooterActionsConfig<Ctx> | undefined,
+  builtinKeys: readonly string[],
+  label: string,
+): void {
+  if (!cfg) return;
+  const set = new Set(builtinKeys);
+  for (const [key, val] of Object.entries(cfg)) {
+    if (set.has(key)) continue;
+    if (
+      typeof val === "object" && val !== null &&
+      typeof val.action === "function"
+    ) {
+      continue;
+    }
+    throw new Error(
+      `${label} custom key "${key}" requires action(); ` +
+        `got ${
+          val === null
+            ? "null"
+            : typeof val === "object"
+            ? typeof (val as { action?: unknown }).action
+            : typeof val
+        }`,
+    );
+  }
+}
+
 /** Throw if any custom `Column.actions` key lacks `action`. Call at mount / before render. */
 export function assertRowActionsConfig(
   cfg: RowActionsConfig | undefined,
@@ -948,6 +1257,13 @@ export function assertRowActionsConfig(
 
 /** 表格行高密度 */
 export type Density = "compact" | "comfortable" | "loose";
+
+/**
+ * 地址栏同步。默认（省略或 `true`）把分页／排序／搜索写入 URL。
+ * `false` 关闭，避免同页多面板或抽屉抢参数。
+ * `{ prefix }` 给参数加前缀（如 `"p1"` → `p1_page`、`p1_name`）。
+ */
+export type SyncUrl = boolean | { prefix?: string };
 
 /** 导出格式 */
 export type ExportFormat = "xlsx" | "csv" | "json" | "xml" | "html";
@@ -999,15 +1315,23 @@ export interface Messages {
   perPage: string;
   jump: string;
   page: string;
+  /** 第一页按钮 aria-label */
+  firstPage: string;
+  /** 上一页按钮 aria-label */
+  prevPage: string;
+  /** 下一页按钮 aria-label */
+  nextPage: string;
+  /** 最后一页按钮 aria-label */
+  lastPage: string;
+  /** 极简分页当前页文案，占位 {page}/{totalPages} */
+  simpleCurrent: string;
   selected: string;
-  batchSet: string;
   batchDelete: string;
   clearSelection: string;
   deleteTitle: string;
   deleteAsk: string;
   deleteMany: string;
   batchConfirmTitle: string;
-  batchStatusAsk: string;
   partial: string;
   importDone: string;
   importBad: string;

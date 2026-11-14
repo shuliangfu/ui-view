@@ -346,6 +346,71 @@ describe("文档页 E2E：/desktop/feedback/alert（Alert 警告）", () => {
     expect(ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
 
+  it(
+    "可关闭示例：点击关闭后提示消失，并可重新显示",
+    async (t) => {
+      if (!t?.browser?.goto) return;
+      await sharedEnv.goto(t, DOC_PATH);
+      await sharedEnv.waitDocMainReady(t);
+      const start = await t.browser!.evaluate(() => {
+        const root = document.querySelector(
+          '[data-testid="alert-closable-demo"]',
+        ) as HTMLElement | null;
+        if (!root) return { ok: false, reason: "missing demo" };
+        const alert = root.querySelector('[role="alert"]');
+        const close = root.querySelector(
+          'button[aria-label="关闭"]',
+        ) as HTMLButtonElement | null;
+        return {
+          ok: true,
+          hasAlert: !!alert,
+          text: alert?.textContent ?? "",
+          hasClose: !!close,
+        };
+      });
+      expect(start.ok).toBe(true);
+      expect(start.hasAlert).toBe(true);
+      expect(String(start.text).includes("可关闭的提示")).toBe(true);
+      expect(start.hasClose).toBe(true);
+
+      const afterClose = await t.browser!.evaluate(async () => {
+        const root = document.querySelector(
+          '[data-testid="alert-closable-demo"]',
+        ) as HTMLElement | null;
+        const close = root?.querySelector(
+          'button[aria-label="关闭"]',
+        ) as HTMLButtonElement | null;
+        close?.click();
+        await new Promise((r) => setTimeout(r, 80));
+        return {
+          hidden: !root?.querySelector('[role="alert"]'),
+          restore: (root?.textContent ?? "").includes("重新显示提示"),
+        };
+      });
+      expect(afterClose.hidden).toBe(true);
+      expect(afterClose.restore).toBe(true);
+
+      const afterRestore = await t.browser!.evaluate(async () => {
+        const root = document.querySelector(
+          '[data-testid="alert-closable-demo"]',
+        ) as HTMLElement | null;
+        const btn = [...(root?.querySelectorAll("button") ?? [])].find((b) =>
+          (b.textContent ?? "").includes("重新显示提示")
+        ) as HTMLButtonElement | undefined;
+        btn?.click();
+        await new Promise((r) => setTimeout(r, 80));
+        const alert = root?.querySelector('[role="alert"]');
+        return {
+          hasAlert: !!alert,
+          text: alert?.textContent ?? "",
+        };
+      });
+      expect(afterRestore.hasAlert).toBe(true);
+      expect(String(afterRestore.text).includes("可关闭的提示")).toBe(true);
+    },
+    DOCS_BROWSER_CONFIG,
+  );
+
   /**
    * 文档小节「自定义操作」：在 main 内定位对应 h3，于该示例区块内完成一次交互。
    */

@@ -3,15 +3,18 @@
  *
  * 一块完整的「列表管理」面板：卡片标题栏 + 工具栏按钮组（添加 / 搜索 / 刷新 / 打印 / 导入 / 导出 / 列设置 / 行高 / 全屏 / 复制，
  * 相邻按钮之间只有一条淡分割线）+ 搜索 Modal（工具栏按钮打开，提交即搜索、重置即清空） + 批量操作条 + 表格（排序、多选、行内编辑、合计行、
- * 操作列）+ 分页（每页条数、页码、跳页）。新增 / 编辑 / 查看使用 Modal；**任何删除与批量「设为…」都必须先确认（行内删除／批量删除／批量设为均为按钮上方的小气泡 Popconfirm）**，
+ * 操作列）+ 分页（电脑端 full：第一页／最后一页、页码、每页条数、跳页；平板 default；移动端 simple）。新增 / 编辑 / 查看使用 Modal；**任何删除都必须先确认（行内删除／批量删除均为按钮上方的小气泡 Popconfirm）**，
  * 绝不走 Modal 确认对话框，也绝不直接执行。导出支持 xlsx（原生 OOXML）/ csv / json / xml / html，支持浅色与深色主题（`.dark`）。
  *
  * 数据通过 props 注入，与任何后端无关：
- * - `data`：本地数组，面板内置本地数据源（过滤 / 排序 / 分页 / 合计 / 增删改全部在内存完成）；
+ * - `data`：本地数组。只传 `data` 时用内置本地数据源（过滤 / 排序 / 分页 / 增删改全部在内存完成）。
  * - `dataSource`：自定义 {@link DataSource}，`list(query)` 返回当前页，其余写操作按需提供。
- * - 拉数优先级：显式 `dataSource` ＞ 传入 `data`（本地源、不自动请求）＞ 二者皆无且给了 `baseRoute`（1 段时拼显式 `resource`，未传则自动取当前页面路由；≥2 段直接作根）时才 {@link createApiDataSource} 拉列表。
+ * - `baseRoute`：未传 `dataSource` 时 {@link createApiDataSource} 作为远程源（1 段时拼显式 `resource`，未传则自动取当前页面路由；≥2 段直接作根）。
+ * - 拉数优先级：显式 `dataSource` ＞ `baseRoute`（API）＞ 只传 `data`（本地源）。
+ * - 同时传 `data` 和 `baseRoute`：首屏（含 SSR／水合）用传入的 `data` 渲染，挂载时不请求 list；工具栏刷新、翻页、搜索、排序、切 Tab 再走 API。总数优先用 `initial.total`，未传则用 `data.length`（不会臆造更大的总数）。
+ * - 列 `{ total: true }` 的页脚合计由面板根据行数据自动求和，不使用 `list()`／接口返回的 `totals`。只传 `data`（本地源，含 `getRows`）时对当前过滤结果全集求和；分页接口／自定义源只对当前已加载的行求和，不会为合计偷偷拉全量。
  *
- * **SSR / 水合**：布尔属性只在为 true 时输出；`sync` 数据源（含 `data` 模式）首帧同步渲染，水合前后 DOM 一致。
+ * **SSR / 水合**：布尔属性只在为 true 时输出；`sync` 数据源（含只传 `data`）以及 `data`+`baseRoute` 的首屏数据都同步渲染，水合前后 DOM 一致。
  */
 import {
   createSignal,
@@ -49,6 +52,11 @@ import {
   writeTabToLocation,
 } from "./data-panel-tabs.tsx";
 import {
+  createDataAlertState,
+  type DataAlertProp,
+  DataChromeAlert,
+} from "./data-panel-alert.tsx";
+import {
   createTabListCache,
   loadTabListResult,
   queryAfterTabChange,
@@ -59,6 +67,11 @@ import {
 import { Descriptions } from "./Descriptions.tsx";
 import type { DescriptionsLabelAlign } from "./Descriptions.tsx";
 import { Dropdown } from "../navigation/Dropdown.tsx";
+import {
+  Pagination,
+  type PaginationPreset,
+} from "../navigation/Pagination.tsx";
+import { checkboxInputSurface } from "../form/Checkbox.tsx";
 import { FormItem } from "../form/FormItem.tsx";
 import { Input } from "../form/Input.tsx";
 import { Select } from "../form/Select.tsx";
@@ -92,6 +105,7 @@ import {
   fieldLayoutStyle,
   fieldProp,
   fieldsOf,
+  filterRows,
   filtersAfterSearchApply,
   filtersAfterSearchReset,
   formatDateTime,
@@ -101,28 +115,35 @@ import {
   isSelectionColumn,
   isSystemColumn,
   itemRowId,
+  type LocalDataSource,
   looksLikeHtml,
   normalizeColumns,
-  pageList,
   parseCsv,
   parseJsonRows,
   parseXmlRows,
   queryFromParams,
   queryToParams,
-  resolveBatchStatusColumn,
   resolveColumnAlign,
   resolveColumnFn,
   resolveColumnHeaderAlign,
+  resolveFooterActions,
   resolveModalWidth,
   resolvePanelColumns,
   resolveViewActionsCfg,
   resolveViewFields,
   resolveViewFooterActions,
+  sumColumnTotals,
   toggleOptionValue,
   useFieldGrid,
   validateForm,
   validateSearchFields,
 } from "./data-panel-utils.ts";
+import {
+  DATA_PANEL_MOBILE_MQ,
+  DATA_PANEL_TABLET_MQ,
+  dataPanelPaginationForTier,
+  viewportTierFromMedia,
+} from "./data-panel-viewport.ts";
 import {
   type ApiDataSource,
   type ApiMode,
@@ -133,52 +154,81 @@ import {
   actionDisplayText,
   actionTipText,
   type ActionTone,
+  assertBatchBarConfig,
+  assertFooterActionsConfig,
   assertRowActionsConfig,
   assertToolbarConfig,
+  BATCH_BUILTINS,
+  type BatchActionCtrl,
+  type BatchBarConfig,
+  type BatchBuiltin,
   type BulkResult,
   type Caps,
   type Column,
   type DataSource,
   type Density,
   evalColumnDisable,
+  evalFlag,
   type ExportFormat,
   type FieldRule,
+  type FooterActionsConfig,
+  type FormActionContext,
   type FormConfig,
   type FormField,
+  type FormFieldConditionCtx,
   type FormFieldRenderCtx,
   type FormRenderCtx,
   type ImportFormat,
+  isBatchBuiltin,
+  isFormFieldVisible,
   isRowBuiltin,
+  isSearchFieldVisible,
   isToolbarBuiltin,
   type ListResult,
   type Locale,
   type Messages,
   type Option,
+  type PanelActionContext,
   type PanelToolbarConfig,
   type Query,
   resolveActionCtrl,
+  resolveBatchActionCtrl,
+  resolveOptions,
   resolveRowActionCtrl,
   type Row,
   ROW_BUILTINS,
   type RowActionCtrl,
   type RowActionsConfig,
   type RowBuiltin,
+  type SearchActionContext,
   type SearchConfig,
   type SearchField,
+  type SearchFieldConditionCtx,
+  type SearchFieldRenderCtx,
+  type SearchRenderCtx,
+  type SearchType,
+  type SyncUrl,
   type Tone,
   TOOLBAR_BUILTINS,
   type ToolbarBuiltin,
+  type ViewActionContext,
   type ViewClick,
   type ViewConfig,
   type ViewItem,
   type ViewItemRenderCtx,
   type ViewRenderCtx,
+  type ViewToolbarConfig,
   type WriteResult,
 } from "./data-panel-types.ts";
+
+export type { DataAlertConfig, DataAlertProp } from "./data-panel-alert.tsx";
 
 export type {
   ActionCtrl,
   ActionTone,
+  BatchActionCtrl,
+  BatchBarConfig,
+  BatchBuiltin,
   BulkResult,
   Caps,
   Column,
@@ -186,8 +236,11 @@ export type {
   Density,
   ExportFormat,
   FieldRule,
+  FooterActionsConfig,
+  FormActionContext,
   FormConfig,
   FormField,
+  FormFieldConditionCtx,
   FormFieldRenderCtx,
   FormRenderCtx,
   ImportFormat,
@@ -195,33 +248,51 @@ export type {
   Locale,
   Messages,
   Option,
+  PanelActionContext,
   PanelToolbarConfig,
   Query,
   Row,
   RowActionCtrl,
   RowActionsConfig,
   RowBuiltin,
+  SearchActionContext,
   SearchConfig,
   SearchField,
+  SearchFieldConditionCtx,
+  SearchFieldRenderCtx,
+  SearchRenderCtx,
+  SearchType,
+  SyncUrl,
   Tone,
   ToolbarBuiltin,
+  ViewActionContext,
   ViewClick,
   ViewConfig,
   ViewItem,
   ViewItemRenderCtx,
   ViewRenderCtx,
+  ViewToolbarConfig,
   WriteResult,
 };
 
 export {
   actionDisplayText,
   actionTipText,
+  assertBatchBarConfig,
+  assertFooterActionsConfig,
   assertRowActionsConfig,
   assertToolbarConfig,
+  BATCH_BUILTINS,
   evalColumnDisable,
+  evalFlag,
+  isBatchBuiltin,
+  isFormFieldVisible,
   isRowBuiltin,
+  isSearchFieldVisible,
   isToolbarBuiltin,
   resolveActionCtrl,
+  resolveBatchActionCtrl,
+  resolveOptions,
   resolveRowActionCtrl,
   ROW_BUILTINS,
   TOOLBAR_BUILTINS,
@@ -248,16 +319,20 @@ export interface PanelProps {
   /** 列定义 */
   columns: Column[];
   /**
-   * 搜索弹层：`{ title, props }`。`props` 与列同一套字段配置（键用 prop）；
-   * 非空时工具栏搜索＋地址栏双向同步。options／label 可从 columns 继承。
+   * 搜索弹层：`{ title, props, render?, actions? }`。`props` 与列同一套字段配置（键用 prop）；
+   * 非空时工具栏搜索＋地址栏双向同步（可用 `syncUrl` 关闭或加前缀）。
+   * 字段类型向表单看齐（DatePicker／日期时间／数字文本／多选），可写 `render` 与 `actions`。
+   * options／label 可从 columns 继承。
    */
   search?: SearchConfig;
   /**
    * 增改弹层：`{ title, props?, render?, actions? }`。`title` 为 `string` 或 `(row)=>string`
    * （新增时 `row` 为 `{}`，编辑时为当前行；缺省 `${edit|add} · ${title}`）。
    * `props` 为表单项（与列同一套字段配置）；有 `render` 时可省略。
-   * 扩展优先级：`form.render`（整页替换主体，含确定／取消）＞ `FormField.render`（单字段）＞ 内置控件。
+   * 扩展优先级：`form.render`（替换字段区）＞ `FormField.render`（单字段）＞ 内置控件。
+   * 底部官方脚渲染 `form.actions`（内置 submit／cancel 可覆写）。仅有 `form.render` 且未声明 actions 时不渲染官方脚。
    * 旁路：也可用 `children` + 自定义 toolbar／row `action` 自管 Modal。
+   * `children` 是根上额外内容（如自定义 Modal），与 DataView 的「children 即明细主体」不同；扩展详情字段区请优先用 `view.render`。
    */
   form?: FormConfig;
   /**
@@ -270,13 +345,18 @@ export interface PanelProps {
    * 或 `href`。字段 `click:"toggle"` 或 `click:(row)=>…`。不写时回落 columns＋form，底部只留关闭。
    */
   view?: ViewConfig;
-  /** 本地数据（内置本地数据源）。传入则不自动请求列表；优先级低于显式 `dataSource`，高于 `baseRoute`（API） */
+  /**
+   * 行数据。只传 `data` 时用内置本地数据源，不请求接口。
+   * 与 `baseRoute` 同时传入时：首屏用这份数据渲染（挂载不请求 list），
+   * 刷新／翻页／搜索／排序／切 Tab 再走 API。优先级低于显式 `dataSource`。
+   */
   data?: Row[];
   /** 自定义数据源；若传入则走它，勿再自造拉数（优先于 `data`／`baseRoute`） */
   dataSource?: DataSource;
   /**
    * 路由前缀或完整资源根（如 `"/api"` 或 `"/api/users"`）。
-   * **仅当未传 `data` 且未传 `dataSource`** 时调用 {@link createApiDataSource} 并拉 list。
+   * 未传 `dataSource` 时调用 {@link createApiDataSource}。
+   * 只传 `baseRoute` 时首屏后会拉 list；与 `data` 同时传入时首屏不请求，后续刷新／翻页再请求。
    * 去首尾 `/` 分段：≥2 段直接作根；仅 1 段再拼 {@link PanelProps.resource}，
    * 未传 `resource` 时自动取当前页面路由（如打开 `/rbac/admins` 且 `baseRoute="/api"` → `/api/rbac/admins`）。
    * 不要把 `index` 拼进路径。
@@ -285,11 +365,11 @@ export interface PanelProps {
   /**
    * 资源名／当前资源路由段（如 `"users"` 或 `"rbac/admins"`）。
    * **仅当 `baseRoute` 只有 1 段时生效**；≥2 段时忽略。不传则自动使用当前页面路由。
-   * 仅在无 `data`／无 `dataSource` 时生效。
+   * 未传 `dataSource`、由 `baseRoute` 建源时生效（可与 `data` 同时传入）。
    */
   resource?: string;
   /**
-   * API 风格，默认 `"action"`。仅在无 `data`／无 `dataSource` 且由 `baseRoute` 生成数据源时生效。
+   * API 风格，默认 `"action"`。未传 `dataSource`、由 `baseRoute` 生成数据源时生效（可与 `data` 同时传入）。
    * @see createApiDataSource
    */
   apiMode?: ApiMode;
@@ -304,7 +384,13 @@ export interface PanelProps {
   apiCredentials?: RequestCredentials;
   /** `data` 模式下数据变化时回调（新增 / 编辑 / 删除 / 批量 / 导入） */
   onDataChange?: (rows: Row[]) => void;
-  /** 首屏数据（服务端预取）；提供后挂载时不再请求 */
+  /**
+   * 首屏预取（`ListResult`）。只配远程源时提供后挂载不再请求 list。
+   * 与 `data` + `baseRoute` 同时使用时：行仍用 `data`，`initial.total` 作为首屏条数
+   * （只传一页 `data` 时务必给出真实 `total`，否则用 `data.length`，不会臆造）。
+   * `initial.totals` 仅为兼容字段，页脚合计由面板按行数据自算，不读取它。
+   * 传入的 `data` 应与当前 `initialQuery`／地址栏页码一致（与只传 `initial` 相同约定）。
+   */
   initial?: ListResult;
   /** 初始查询（page / pageSize / sort / order / filters） */
   initialQuery?: Partial<Query>;
@@ -314,6 +400,17 @@ export interface PanelProps {
   pageSize?: number;
   /** 每页条数下拉选项，默认 [10, 20, 50, 100] */
   pageSizes?: number[];
+  /**
+   * 底栏分页能力档，与 {@link Pagination} 的 `preset` 相同：
+   * `"full"` 全部能力（第一页／上一页／页码／下一页／最后一页、每页条数、跳转）、
+   * `"default"` 一般能力（上一页／下一页＋页码＋每页条数，无第一页／最后一页／跳转）、
+   * `"simple"` 极简（上一页／下一页＋「第 n / m 页」，无页码／跳转／每页条数）。
+   * 不传时按现有断点自动选择，并带上对应 `size`：
+   * 电脑端（`min-width: 1280px`，Tailwind `xl`）为 `preset="full"`、`size="md"`，
+   * 平板（`640px`–`1279.98px`，`sm` 至 `xl` 以下）为 `preset="default"`、`size="sm"`，
+   * 移动端（`max-width: 639.98px`，`max-sm`）为 `preset="simple"`、`size="xs"`。
+   */
+  paginationPreset?: PaginationPreset;
   /** 默认排序 */
   defaultSort?: { prop: string; order: "asc" | "desc" };
   /** 固定过滤（并入每次查询，不出现在 URL） */
@@ -326,9 +423,29 @@ export interface PanelProps {
    * - omit / `{}` / Record → Unified toolbar Record (existing behavior)
    * Declared keys: omit show→true, omit disable→false (caller truth).
    * 省略键 → 内置回落 caps；声明键请写明确 true｜false｜object。Undeclared builtins → caps, after declared.
-   * Object key write order = display order. Custom keys require `action`. No `extra` / `order`.
+   * Object key write order = display order. Custom keys require `action`.
+   * `show`／`disable`／`action` 接收 `{ selected, rows, query }`；零参函数仍可用。
+   * No `extra` / `order`.
    */
   toolbar?: false | PanelToolbarConfig;
+  /**
+   * 批量条配置，或 `false` 隐藏整条（有选中时也不出现）。
+   * 默认只显示 `remove`（批量删除，回落 caps.remove）和 `clear`（取消勾选，靠右最后）。
+   * 自定义键须提供 `action(ctx)`，可写 `confirm`。
+   * 省略／`{}` 时即上述默认两项，不必再把默认按钮写进配置。
+   */
+  batchBar?: false | BatchBarConfig;
+
+  /**
+   * 页面提示条，渲染在工具栏（含工具栏左侧标签）下方、表格上方。
+   * 字符串简写为 info 提示；对象为完整 {@link DataAlertConfig}（透传 Alert 全部参数，另加 show／key）。
+   * `false`／`null`／省略／`show: false` 不显示。函数在渲染时求值。
+   * 本插槽默认可关闭（`closable` 默认 true）、通栏样式（`banner` 默认 true）。
+   * 点击关闭会先隐藏提示，再调用 `onClose`；换一条提示（或先关掉再传入）会重新显示。
+   */
+  alert?: DataAlertProp;
+  /** 选中行变化时回调（含清空）。参数为当前页已选中的行对象。 */
+  onSelectionChange?: (selected: Row[]) => void;
   /** 界面语言（内置 zh-CN / en-US），默认 zh-CN */
   locale?: Locale;
   /** 覆盖文案 */
@@ -344,7 +461,7 @@ export interface PanelProps {
   /**
    * @deprecated 改由 columns 驱动：写入 `{ type:"selection" }` 才显示多选勾选列。
    * - `false`：仍强制去掉 selection 列（兼容）
-   * - 省略／`true`：不再自动前置勾选列；caps.remove／batchStatus 不足够单独打开
+   * - 省略／`true`：不再自动前置勾选列；caps.remove 不足够单独打开
    */
   selectable?: boolean;
   /**
@@ -357,8 +474,17 @@ export interface PanelProps {
    * 仍可用 columns 声明 `type:"actions"`。默认 true（兼容旧行为）。
    */
   autoActions?: boolean;
-  /** 点击行（避开勾选、按钮、链接）时回调；未传且 caps.view 时打开详情。 */
+  /**
+   * 点击行（避开勾选、按钮、链接）时回调。传入则只走此回调，不再打开详情。
+   * 默认点击行不会打开详情；需要点击行打开时请设 {@link openViewOnRowClick}。
+   */
   onRowClick?: (row: Row) => void;
+  /**
+   * 点击行是否打开详情。默认 `false`，只能通过操作列眼睛打开。
+   * 为 `true` 且 `caps.view` 时，点击行（避开勾选、按钮、链接）打开详情。
+   * 若同时传了 `onRowClick`，只走回调，不自动打开详情。
+   */
+  openViewOnRowClick?: boolean;
   /** 接管导入：收到解析后的行（xlsx／csv／json／xml；缺省时走 dataSource.importRows） */
   onImportRows?: (rows: Record<string, string>[]) => void;
   /** 接管导出：缺省时面板自行拉取全部行并生成文件下载 */
@@ -367,13 +493,17 @@ export interface PanelProps {
     ctx: ExportContext,
   ) => void | Promise<void>;
   /**
-   * @deprecated 已移除开关：分页（page／pageSize）与排序默认与地址栏双向同步；配置了
-   * {@link PanelProps.search} 时搜索字段一并同步。无需再传；保留字段仅为兼容旧调用，传值会被忽略。
+   * 分页／排序／搜索是否与地址栏双向同步。默认 `true`（与旧行为一致）。
+   * `false` 关闭，避免同页多面板或抽屉抢参数。
+   * `{ prefix: "p1" }` 把参数写成 `p1_page`、`p1_sort`、`p1_name` 等。
    */
-  syncUrl?: boolean;
+  syncUrl?: SyncUrl;
   /** 额外 class（加在卡片上） */
   class?: string;
-  /** 面板根节点内的额外内容（如自定义 Modal） */
+  /**
+   * 面板根节点内的额外内容（如自定义 Modal）。
+   * 与 DataView 不同：此处不替换列表／详情主体；扩展详情字段请用 `view.render`。
+   */
   children?: unknown;
   /**
    * Optional tabs on the left of the toolbar, using the layout Tabs component.
@@ -416,6 +546,7 @@ import {
   inlineEditorInputWidthStyle,
   JUMP_CLS,
   onServer,
+  panelHandles,
   PG_CLS,
   PG_CTRLS_CLS,
   PGSIZE_SELECT_CLS,
@@ -427,6 +558,7 @@ import {
   refreshers,
   ROW_CLS,
   SWITCH_ANIM_MS,
+  TABLE_WRAP_BELOW_ALERT_CLS,
   TABLE_WRAP_CLS,
   TB_FIRST_STYLE,
   TB_LAST_STYLE,
@@ -438,7 +570,24 @@ import {
   writeDataPanelPrefs,
 } from "./data-panel-chrome.tsx";
 
-export { DATA_PANEL_CSS, refreshDataPanel } from "./data-panel-chrome.tsx";
+/** 选择列勾选：官方 Checkbox 底纹 + 更明显的禁用灰底（深浅色） */
+const SELECT_CB_CLS = `dp-select-cb h-4 w-4 ${checkboxInputSurface}`;
+
+export {
+  DATA_PANEL_CSS,
+  type DataPanelHandle,
+  type DataViewHandle,
+  getDataPanel,
+  getDataPanelQuery,
+  getDataPanelSelected,
+  getDataView,
+  getDataViewRecord,
+  openDataPanelForm,
+  openDataPanelView,
+  openDataViewForm,
+  refreshDataPanel,
+  setDataPanelQuery,
+} from "./data-panel-chrome.tsx";
 export type { DataChromeTab, DataChromeTabType } from "./data-panel-tabs.tsx";
 
 export function DataPanel(props: PanelProps): JSXRenderable {
@@ -505,7 +654,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
     !!props.onDataChange ||
     viewItems.some((it) => it.click === "toggle");
 
-  // 拉数优先级：dataSource ＞ data（本地、不自动请求）＞ 二者皆无＋baseRoute → API
+  // 拉数优先级：dataSource ＞ baseRoute（API）＞ 只传 data（本地）。data+baseRoute 时源仍是 API，首屏用 data。
   const emptyLocalSource = () =>
     createLocalDataSource({
       rows: [],
@@ -554,8 +703,12 @@ export function DataPanel(props: PanelProps): JSXRenderable {
       throw e;
     }
   }
+  const seedDataWithApi = props.data !== undefined && !!props.baseRoute &&
+    !props.dataSource;
   const ds: DataSource = props.dataSource
     ? withTabOnList(props.dataSource)
+    : props.baseRoute
+    ? apiSource()
     : props.data !== undefined
     ? createLocalDataSource({
       rows: props.data,
@@ -567,8 +720,6 @@ export function DataPanel(props: PanelProps): JSXRenderable {
       onChange: props.onDataChange,
       writable: canWriteLocal,
     })
-    : props.baseRoute
-    ? apiSource()
     : emptyLocalSource();
 
   const sourcePageSize = (() => {
@@ -580,17 +731,11 @@ export function DataPanel(props: PanelProps): JSXRenderable {
   const defaultPageSize = props.pageSize ?? sourcePageSize ??
     DEFAULT_DATA_PANEL_PAGE_SIZE;
 
-  /** 批量「设为…」：column.batch:true 且 inline:switch＋两档 options */
-  const batchStatusCol = resolveBatchStatusColumn(dataInputColumns);
-  const statusField = batchStatusCol?.field;
-  const statusValues = batchStatusCol?.values ?? [];
-
   const caps: Caps = {
     create: !!ds.create,
     update: !!ds.update,
     view: true,
-    remove: !!ds.remove,
-    batchStatus: !!ds.setField && !!batchStatusCol,
+    remove: !!(ds.remove || ds.removeBatch),
     import: !!ds.importRows,
     export: true,
     print: true,
@@ -610,10 +755,24 @@ export function DataPanel(props: PanelProps): JSXRenderable {
   );
   const raCfg: RowActionsConfig = actionsColIn?.actions ?? {};
   assertToolbarConfig(tbCfg);
+  const batchBarHidden = props.batchBar === false;
+  const bbCfg: BatchBarConfig =
+    props.batchBar && typeof props.batchBar === "object" ? props.batchBar : {};
+  assertBatchBarConfig(props.batchBar);
   assertRowActionsConfig(raCfg);
   assertRowActionsConfig(resolveViewActionsCfg(props.view));
+  assertFooterActionsConfig(
+    props.form?.actions,
+    ["submit", "cancel"],
+    "DataPanel form.actions",
+  );
+  assertFooterActionsConfig(
+    props.search?.actions,
+    ["submit", "reset"],
+    "DataPanel search.actions",
+  );
   const tbResolved = (name: ToolbarBuiltin, fallback: boolean) =>
-    resolveActionCtrl(tbCfg[name], fallback);
+    resolveActionCtrl(tbCfg[name], fallback, panelActionCtx());
   const rowResolved = (
     name: RowBuiltin,
     row: Row,
@@ -631,15 +790,14 @@ export function DataPanel(props: PanelProps): JSXRenderable {
     return resolveRowActionCtrl(raw, {}, fallback).show;
   };
   const hasCustomRowAction = Object.keys(raCfg).some((k) => !isRowBuiltin(k));
-  /** 批量「设为…」：仅 caps.batchStatus（已挪出 toolbar）；UI 仍在选中批量条 */
-  const batchStatusOn = caps.batchStatus;
   const needActions = props.autoActions !== false && !!(
     rowMayShow("view", caps.view) ||
     rowMayShow("edit", caps.update) ||
     rowMayShow("remove", caps.remove) ||
     hasCustomRowAction
   );
-  const rowOpensView = caps.view || !!props.onRowClick;
+  const rowOpensView = !!props.onRowClick ||
+    (!!props.openViewOnRowClick && caps.view);
   /** 含 selection／index／actions 的完整列（selection 只在 columns 声明时出现；actions 缺省可兼容自动补） */
   const panelColumns = resolvePanelColumns(inputColumns, {
     selectable: props.selectable,
@@ -662,17 +820,22 @@ export function DataPanel(props: PanelProps): JSXRenderable {
     isLocked(r) || evalColumnDisable(c.disable, r);
 
   /**
-   * 分页（page／pageSize）与排序默认与地址栏双向同步——无开关（对齐工具栏搜索）。
+   * 分页（page／pageSize）与排序默认与地址栏双向同步。
+   * `syncUrl={false}` 关闭；`syncUrl={{ prefix: "p1" }}` 给参数加前缀，避免同页多面板抢参数。
    * 配置了 search 时，搜索字段一并写入／回填。首帧从 location.search 读入
    * （与 queryToParams 约定对称）；无 location 时（SSR）跳过。
    */
-  const urlSync = true;
+  const urlSync = props.syncUrl !== false;
+  const urlPrefix = typeof props.syncUrl === "object"
+    ? props.syncUrl.prefix
+    : undefined;
   const urlPartial: Partial<Query> = urlSync && g.location?.search
     ? queryFromParams(
       new URLSearchParams(g.location.search.replace(/^\?/, "")),
       {
         searchNames: searchDefs.map((s) => fieldProp(s)),
         fixed: props.fixed,
+        prefix: urlPrefix,
       },
     )
     : {};
@@ -691,10 +854,17 @@ export function DataPanel(props: PanelProps): JSXRenderable {
     },
   };
 
-  // 首帧数据：显式 initial，或同步数据源直接计算。
+  // 首帧数据：data+baseRoute 用传入的 data；否则显式 initial，或同步数据源直接计算。
   // 同页多面板共用 URL page 时，小数据集易出现 page 越界 → rows=[] 且 total>0
   // （「暂无数据」+「第 11-6 条」）。load() 内已夹页，但有 first 时 onMount 不调 load，须在此夹。
-  let first: ListResult | undefined = props.initial;
+  let first: ListResult | undefined = seedDataWithApi
+    ? {
+      rows: props.data ?? [],
+      total: typeof props.initial?.total === "number"
+        ? props.initial.total
+        : (props.data ?? []).length,
+    }
+    : props.initial;
   if (!first && ds.sync) first = ds.list(initialQuery) as ListResult;
   if (first) {
     const ps = Math.max(1, initialQuery.pageSize || defaultPageSize);
@@ -706,9 +876,8 @@ export function DataPanel(props: PanelProps): JSXRenderable {
     }
   }
 
-  const rows = createSignal<Row[]>(first?.items ?? []);
+  const rows = createSignal<Row[]>(first?.rows ?? []);
   const total = createSignal(first?.total ?? 0);
-  const totals = createSignal<Record<string, number>>(first?.totals ?? {});
   const query = createSignal<Query>(initialQuery);
   const loading = createSignal(false);
   const density = createSignal<Density>(
@@ -717,6 +886,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
   /** 密度菜单受控开闭：选后写 false，避免仅靠 __lastDropdownClose／冒泡关不掉 */
   const densityOpen = createSignal(false);
   const panelFs = createSignal(false);
+  const alertState = createDataAlertState();
   const selected = createSignal<string[]>([]);
   const viewRow = createSignal<Row | null>(null);
   const hidden = createSignal<Record<string, boolean>>(
@@ -733,12 +903,49 @@ export function DataPanel(props: PanelProps): JSXRenderable {
       initialQuery.filters[fieldProp(sdef)] ?? "",
     );
   }
+  const smfields: Record<string, ReturnType<typeof createSignal<string[]>>> =
+    {};
+  for (const sdef of searchDefs) {
+    const v = sfields[fieldProp(sdef)].value;
+    smfields[fieldProp(sdef)] = createSignal<string[]>(
+      v.split(",").filter(Boolean),
+    );
+  }
+
+  function selectedRows(): Row[] {
+    const set = new Set(selected.value);
+    return rows.value.filter((r) => set.has(idOf(r)));
+  }
+
+  function setSelected(ids: string[]): void {
+    const prev = selected.value;
+    selected.value = ids;
+    if (
+      prev.length === ids.length &&
+      prev.every((id, i) => id === ids[i])
+    ) {
+      return;
+    }
+    props.onSelectionChange?.(selectedRows());
+  }
+
+  function panelActionCtx(): PanelActionContext {
+    return {
+      selected: selectedRows(),
+      rows: rows.value,
+      query: query.value,
+    };
+  }
+
   const fieldRequired = (
     f: { required?: boolean; rules?: { required?: boolean }[] },
   ) => !!f.required || !!(f.rules && f.rules.some((r) => r.required));
   const jump = createSignal("");
-  /** 移动断点（≤639.98px）：底栏分页 Select／按钮用 xs；桌面 md */
-  const isNarrow = createSignal(false);
+  /**
+   * 视口档：移动（≤639.98px / max-sm）、平板（640px–1279.98px）、电脑（≥1280px / xl）。
+   * SSR／无 matchMedia 时视为电脑端，底栏用 `full`。
+   */
+  const viewportTier = createSignal<"mobile" | "tablet" | "desktop">("desktop");
   let seq = 0;
 
   const listParams = (q: Query, forUrl: boolean) =>
@@ -747,6 +954,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
       defaultPageSize,
       defaultSort: props.defaultSort,
       fixed: props.fixed,
+      prefix: urlPrefix,
     });
 
   // ---- data loading
@@ -791,12 +999,11 @@ export function DataPanel(props: PanelProps): JSXRenderable {
           query.value = { ...q, page: lastHit };
           return load(syncUrl, opts);
         }
-        rows.value = hit.items;
+        rows.value = hit.rows;
         const openHit = viewRow.value;
         if (openHit) refreshOpenView(idOf(openHit));
         total.value = hit.total;
-        totals.value = hit.totals ?? {};
-        selected.value = [];
+        setSelected([]);
         if (urlSync && syncUrl && g.history && g.location) {
           const params = listParams(q, true);
           if (tabParam && props.tabs?.length && tabKey.value) {
@@ -844,12 +1051,11 @@ export function DataPanel(props: PanelProps): JSXRenderable {
       query.value = { ...q, page: last };
       return load(syncUrl, opts);
     }
-    rows.value = res.items;
+    rows.value = res.rows;
     const open = viewRow.value;
     if (open) refreshOpenView(idOf(open));
     total.value = res.total;
-    totals.value = res.totals ?? {};
-    selected.value = [];
+    setSelected([]);
     if (urlSync && syncUrl && g.history && g.location) {
       const params = listParams(q, true);
       if (tabParam && props.tabs?.length && tabKey.value) {
@@ -948,14 +1154,22 @@ export function DataPanel(props: PanelProps): JSXRenderable {
         void writeDataPanelPrefs(key, { fullscreen: false });
       }
     };
-    const mq = globalThis.matchMedia?.("(max-width: 639.98px)");
-    if (mq) {
-      const syncNarrow = () => {
-        isNarrow.value = mq.matches;
+    const mqMobile = globalThis.matchMedia?.(DATA_PANEL_MOBILE_MQ);
+    const mqTablet = globalThis.matchMedia?.(DATA_PANEL_TABLET_MQ);
+    if (mqMobile || mqTablet) {
+      const syncViewport = () => {
+        viewportTier.value = viewportTierFromMedia(
+          mqMobile?.matches,
+          mqTablet?.matches,
+        );
       };
-      syncNarrow();
-      mq.addEventListener("change", syncNarrow);
-      onCleanup(() => mq.removeEventListener("change", syncNarrow));
+      syncViewport();
+      mqMobile?.addEventListener("change", syncViewport);
+      mqTablet?.addEventListener("change", syncViewport);
+      onCleanup(() => {
+        mqMobile?.removeEventListener("change", syncViewport);
+        mqTablet?.removeEventListener("change", syncViewport);
+      });
     }
     g.document?.addEventListener?.("keydown", onKey);
     onCleanup(() => {
@@ -968,7 +1182,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
     void writeDataPanelPrefs(key, { hidden: next });
   }
 
-  // ---- 确认一律小气泡 Popconfirm（行内删除／批量删除／批量设为）；不走 Modal 确认对话框
+  // ---- 确认一律小气泡 Popconfirm（行内删除／批量删除）；不走 Modal 确认对话框
   const rowName = (r: Row): string => {
     const c = columns[0];
     return String(r[c?.prop ?? rowKey] ?? r.name ?? r.username ?? idOf(r));
@@ -997,23 +1211,17 @@ export function DataPanel(props: PanelProps): JSXRenderable {
     }
   }
 
-  /** 真正执行删除（行内／批量气泡确认共用） */
-  async function doRemove(ids: string[]): Promise<void> {
-    if (!ds.remove) return;
-    const r = await guarded(() => ds.remove!(ids));
+  /** 真正执行删除。via:"batch" 走 removeBatch（缺省回落 remove）。 */
+  async function doRemove(
+    ids: string[],
+    via: "row" | "batch" = "row",
+  ): Promise<void> {
+    const fn = via === "batch" ? (ds.removeBatch ?? ds.remove) : ds.remove;
+    if (!fn) return;
+    const r = await guarded(() => fn(ids));
     if (r) reportBulk(r, m.deleted);
     const open = viewRow.value;
     if (open && ids.includes(idOf(open))) viewRow.value = null;
-    invalidateCurrentTabCache();
-    await load(false);
-    props.onChanged?.();
-  }
-
-  /** 真正执行批量设为（气泡确认后） */
-  async function doSetStatus(ids: string[], value: string): Promise<void> {
-    if (!ds.setField || !statusField) return;
-    const r = await guarded(() => ds.setField!(ids, statusField, value));
-    if (r) reportBulk(r, m.saved);
     invalidateCurrentTabCache();
     await load(false);
     props.onChanged?.();
@@ -1025,8 +1233,6 @@ export function DataPanel(props: PanelProps): JSXRenderable {
   const popAct = createSignal<string | null>(null);
   /** 批量删除气泡是否打开 */
   const popBatch = createSignal(false);
-  /** 批量「设为…」气泡：打开中的 status value；null 关闭 */
-  const popStatus = createSignal<string | null>(null);
 
   // ---- 行内编辑
   const editing = createSignal<{ id: string; prop: string } | null>(null);
@@ -1099,22 +1305,56 @@ export function DataPanel(props: PanelProps): JSXRenderable {
     formOpen.value = true;
   }
 
-  function collectValues(isEdit: boolean): Record<string, unknown> {
+  function readFormFieldValue(
+    f: FormField,
+    isEdit: boolean,
+  ): { skip: boolean; value: unknown } {
+    const v = fields[fieldProp(f)].value;
+    if (f.type === "password" && isEdit && v === "") {
+      return { skip: true, value: v };
+    }
+    if (f.type === "multiselect") {
+      return { skip: false, value: v.split(",").filter(Boolean) };
+    }
+    if (f.type === "number") {
+      return { skip: false, value: v === "" ? "" : Number(v) };
+    }
+    if (f.type === "datetime") {
+      return { skip: false, value: v.replace(" ", "T") };
+    }
+    if (f.type === "switch" && !f.onOff) {
+      return { skip: false, value: v === "true" };
+    }
+    return { skip: false, value: v };
+  }
+
+  function rawFormValues(isEdit: boolean): Record<string, unknown> {
     const body: Record<string, unknown> = {};
     for (const f of formDefs) {
-      if (f.createOnly && isEdit) continue;
-      if (f.editOnly && !isEdit) continue;
-      const v = fields[fieldProp(f)].value;
-      if (f.type === "multiselect") {
-        body[fieldProp(f)] = v.split(",").filter(Boolean);
-      } else if (f.type === "number") {
-        body[fieldProp(f)] = v === "" ? "" : Number(v);
-      } else if (f.type === "datetime") {
-        body[fieldProp(f)] = v.replace(" ", "T");
-      } else if (f.type === "switch" && !f.onOff) {
-        body[fieldProp(f)] = v === "true";
-      } else if (f.type === "password" && isEdit && v === "") continue;
-      else body[fieldProp(f)] = v;
+      const got = readFormFieldValue(f, isEdit);
+      if (got.skip) continue;
+      body[fieldProp(f)] = got.value;
+    }
+    return body;
+  }
+
+  function formConditionCtx(): FormFieldConditionCtx {
+    const isEdit = !!formId.value;
+    return {
+      values: rawFormValues(isEdit),
+      mode: isEdit ? "edit" : "create",
+      row: formRow.value,
+    };
+  }
+
+  function collectValues(isEdit: boolean): Record<string, unknown> {
+    const ctx = formConditionCtx();
+    const body: Record<string, unknown> = {};
+    for (const f of formDefs) {
+      if (!isFormFieldVisible(f, ctx)) continue;
+      const got = readFormFieldValue(f, isEdit);
+      if (got.skip) continue;
+      body[fieldProp(f)] = got.value;
     }
     return body;
   }
@@ -1123,7 +1363,10 @@ export function DataPanel(props: PanelProps): JSXRenderable {
     if (formBusy.value) return;
     const id = formId.value;
     const values = collectValues(!!id);
-    const errs = validateForm(formDefs, values, !!id, m);
+    const visible = formDefs.filter((f) =>
+      isFormFieldVisible(f, formConditionCtx())
+    );
+    const errs = validateForm(visible, values, !!id, m);
     if (Object.keys(errs).length) {
       /** 仅字段下红字；不再刷顶部「表单有误…」汇总 */
       formErrors.value = errs;
@@ -1187,6 +1430,33 @@ export function DataPanel(props: PanelProps): JSXRenderable {
     refreshOpenView(idOf(r));
   };
 
+  panelHandles.set(key, {
+    reload: () => {
+      invalidateCurrentTabCache();
+      return load(false, { bypassCache: true });
+    },
+    getQuery: () => query.value,
+    setQuery,
+    getSelected: () => selectedRows(),
+    openForm,
+    openView: (row) => {
+      if (typeof row === "string") {
+        const hit = rows.value.find((r) => idOf(r) === row);
+        if (hit) doView(hit);
+        else {
+          viewRow.value = { [rowKey]: row };
+          refreshOpenView(row);
+        }
+        return;
+      }
+      doView(row);
+    },
+  });
+  onCleanup(() => {
+    panelHandles.delete(key);
+    refreshers.delete(key);
+  });
+
   // ---- 导出 / 打印 / 导入
   async function fetchAll(): Promise<ListResult> {
     const q = query.value;
@@ -1194,15 +1464,13 @@ export function DataPanel(props: PanelProps): JSXRenderable {
     const size = 500;
     const all: Row[] = [];
     let totalAll = 0;
-    let totalsAll: Record<string, number> | undefined;
     for (let page = 1; page <= 200; page++) {
       const r = await ds.list({ ...base, page, pageSize: size });
-      all.push(...r.items);
+      all.push(...r.rows);
       totalAll = r.total;
-      totalsAll = r.totals;
-      if (all.length >= r.total || r.items.length === 0) break;
+      if (all.length >= r.total || r.rows.length === 0) break;
     }
-    return { items: all, total: totalAll, totals: totalsAll };
+    return { rows: all, total: totalAll };
   }
 
   function downloadFile(
@@ -1239,9 +1507,11 @@ export function DataPanel(props: PanelProps): JSXRenderable {
         title: props.title,
         basename: props.exportName ?? props.title,
         columns: cols,
-        rows: all.items,
+        rows: all.rows,
         messages: m,
-        totals: cols.some((c) => c.total) ? all.totals : undefined,
+        totals: cols.some((c) => c.total)
+          ? sumColumnTotals(all.rows, cols)
+          : undefined,
       }));
     } catch (e) {
       message.error((e as Error)?.message || m.exportFailed);
@@ -1503,6 +1773,9 @@ export function DataPanel(props: PanelProps): JSXRenderable {
   };
 
   const toolbarSlots = (): TbSlot[] => {
+    const ctx = panelActionCtx();
+    const wrap = (fn?: (c: PanelActionContext) => void) =>
+      fn ? () => fn(panelActionCtx()) : undefined;
     const slots: TbSlot[] = [];
     const declared = new Set<string>();
     for (const key of Object.keys(tbCfg)) {
@@ -1512,6 +1785,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
         const r = resolveActionCtrl(
           tbCfg[key],
           isToolbarBuiltin(key) ? TB_FALLBACK[key] : true,
+          ctx,
         );
         if (!r.show) continue;
         slots.push({
@@ -1521,14 +1795,14 @@ export function DataPanel(props: PanelProps): JSXRenderable {
           title: r.title,
           label: r.label,
           tone: r.tone,
-          action: r.action,
+          action: wrap(r.action),
         });
         continue;
       }
       const raw = tbCfg[key];
       // assertToolbarConfig already ensured action exists for custom keys
       if (typeof raw !== "object" || raw === null) continue;
-      const r = resolveActionCtrl(raw, true);
+      const r = resolveActionCtrl(raw, true, ctx);
       if (!r.show) continue;
       slots.push({
         kind: "custom",
@@ -1538,7 +1812,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
         icon: raw.icon,
         title: r.title,
         tone: r.tone,
-        action: r.action!,
+        action: wrap(r.action)!,
       });
     }
     for (const name of TOOLBAR_BUILTINS) {
@@ -2004,23 +2278,52 @@ export function DataPanel(props: PanelProps): JSXRenderable {
     );
 
   // ---- 搜索表单（Modal）：提交即搜索，重置即清空
+  function currentSearchValues(): Record<string, unknown> {
+    const values: Record<string, unknown> = {};
+    for (const sdef of searchDefs) {
+      values[fieldProp(sdef)] = sfields[fieldProp(sdef)].value;
+    }
+    return values;
+  }
+  function searchFieldCtx(): SearchFieldConditionCtx {
+    return { values: currentSearchValues() };
+  }
+  function closeSearch(): void {
+    searchOpen.value = false;
+  }
+  function searchActionCtx(): SearchActionContext {
+    return {
+      values: currentSearchValues(),
+      submit: applySearch,
+      reset: resetSearch,
+      close: closeSearch,
+    };
+  }
+  function visibleSearchDefs(): SearchField[] {
+    const ctx = searchFieldCtx();
+    return searchDefs.filter((s) => isSearchFieldVisible(s, ctx));
+  }
   function openSearch(): void {
     for (const sdef of searchDefs) {
-      sfields[fieldProp(sdef)].value = query.value.filters[fieldProp(sdef)] ??
-        "";
+      const v = query.value.filters[fieldProp(sdef)] ?? "";
+      sfields[fieldProp(sdef)].value = v;
+      smfields[fieldProp(sdef)].value = v.split(",").filter(Boolean);
     }
     searchErrors.value = {};
     searchOpen.value = true;
   }
   function applySearch(): void {
+    const visible = visibleSearchDefs();
     const values: Record<string, unknown> = {};
     const filters: Record<string, string> = {};
+    const ctx = searchFieldCtx();
     for (const sdef of searchDefs) {
+      if (!isSearchFieldVisible(sdef, ctx)) continue;
       const v = sfields[fieldProp(sdef)].value.trim();
       values[fieldProp(sdef)] = v;
       if (v) filters[fieldProp(sdef)] = v;
     }
-    const errs = validateSearchFields(searchDefs, values, m);
+    const errs = validateSearchFields(visible, values, m);
     if (Object.keys(errs).length) {
       searchErrors.value = errs;
       return;
@@ -2040,6 +2343,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
   function resetSearch(): void {
     for (const sdef of searchDefs) {
       sfields[fieldProp(sdef)].value = "";
+      smfields[fieldProp(sdef)].value = [];
     }
     searchErrors.value = {};
     // 只清搜索表单字段，保留 tab 等非搜索条件
@@ -2052,105 +2356,299 @@ export function DataPanel(props: PanelProps): JSXRenderable {
       page: 1,
     });
   }
-  const searchBody = () => (
-    <form
-      class={useFieldGrid(searchDefs)
-        ? "grid grid-cols-12 gap-3"
-        : "grid gap-3"}
-      data-testid="dp-search"
-      method="dialog"
-      action="#"
-      onSubmit={(e: Event) => {
-        e.preventDefault();
-        applySearch();
-      }}
-    >
-      {searchDefs.map((sdef) => {
-        const sig = sfields[fieldProp(sdef)];
-        const err = searchErrors.value[fieldProp(sdef)];
-        const lay = fieldLayoutStyle(sdef);
-        return (
-          <div style={lay} class={lay?.width ? undefined : "min-w-0"}>
-            <FormItem
-              label={sdef.label ?? fieldProp(sdef)}
-              required={fieldRequired(sdef)}
-              error={err}
-            >
-              {sdef.type === "select"
-                ? (
-                  <div class="w-full" data-testid={`dp-f-${fieldProp(sdef)}`}>
-                    <Select
-                      name={fieldProp(sdef)}
-                      size="sm"
-                      value={sig}
-                      placeholder={sdef.placeholder ?? m.all}
-                      options={(sdef.options ?? []).map((o) => ({
-                        value: o.value,
-                        label: o.label,
-                      }))}
-                    />
-                  </div>
-                )
-                : (
-                  <div class="w-full" data-testid={`dp-f-${fieldProp(sdef)}`}>
-                    <Input
-                      name={fieldProp(sdef)}
-                      type={sdef.type === "date" ? "date" : "text"}
-                      value={sig}
-                      placeholder={sdef.placeholder}
-                      onInput={(e: Event) => {
-                        let v =
-                          (e.target as unknown as { value: string }).value;
-                        if (
-                          sdef.maxlength != null && v.length > sdef.maxlength
-                        ) {
-                          v = v.slice(0, sdef.maxlength);
-                        }
-                        sig.value = v;
-                      }}
-                    />
-                  </div>
-                )}
-            </FormItem>
-            {sdef.hint && !err && (
-              <p
-                class="m-0 -mt-1 text-xs text-slate-500 dark:text-slate-400"
-                data-testid={`dp-hint-${fieldProp(sdef)}`}
-              >
-                {sdef.hint}
-              </p>
-            )}
-          </div>
-        );
-      })}
-    </form>
-  );
-
-  const searchFooter = () => (
-    <>
-      <Btn
-        type="button"
-        variant="primary"
-        data-testid="dp-search-submit"
-        onClick={applySearch}
+  const searchBody = () => {
+    const values = currentSearchValues();
+    const cond = searchFieldCtx();
+    const bodyRender = props.search?.render;
+    if (bodyRender) {
+      const ctx: SearchRenderCtx = {
+        values,
+        errors: searchErrors.value,
+        close: closeSearch,
+        submit: applySearch,
+        reset: resetSearch,
+      };
+      return (
+        <div data-testid="dp-search" data-dp-search-custom="1">
+          {bodyRender(ctx)}
+        </div>
+      );
+    }
+    const visible = visibleSearchDefs();
+    return (
+      <form
+        class={useFieldGrid(visible) ? "grid grid-cols-12 gap-3" : "grid gap-3"}
+        data-testid="dp-search"
+        method="dialog"
+        action="#"
+        onSubmit={(e: Event) => {
+          e.preventDefault();
+          applySearch();
+        }}
       >
-        {m.searchSubmit}
-      </Btn>
-      <Btn type="button" data-testid="dp-search-reset" onClick={resetSearch}>
-        {m.reset}
-      </Btn>
-    </>
-  );
+        {visible.map((sdef) => {
+          const prop = fieldProp(sdef);
+          const sig = sfields[prop];
+          const err = searchErrors.value[prop];
+          const lay = fieldLayoutStyle(sdef);
+          const disabled = evalFlag(sdef.disabled, false, cond);
+          const opts = resolveOptions(sdef.options, cond);
+          const type = sdef.type ?? "text";
+          let control: unknown;
+          if (typeof sdef.render === "function") {
+            const fieldCtx: SearchFieldRenderCtx = {
+              field: sdef,
+              prop,
+              value: sig,
+              multiValue: smfields[prop],
+              values,
+              disabled,
+              error: err,
+            };
+            control = (
+              <div class="w-full" data-testid={`dp-f-${prop}`}>
+                {sdef.render(fieldCtx)}
+              </div>
+            );
+          } else if (type === "select") {
+            control = (
+              <div class="w-full" data-testid={`dp-f-${prop}`}>
+                <Select
+                  name={prop}
+                  size="sm"
+                  value={sig}
+                  disabled={disabled}
+                  placeholder={sdef.placeholder ?? m.all}
+                  options={opts.map((o) => ({
+                    value: o.value,
+                    label: o.label,
+                  }))}
+                />
+              </div>
+            );
+          } else if (type === "multiselect") {
+            control = (
+              <div class="w-full" data-testid={`dp-f-${prop}`}>
+                <MultiSelect
+                  size="sm"
+                  value={smfields[prop]}
+                  disabled={disabled}
+                  options={opts.map((o) => ({
+                    value: o.value,
+                    label: o.label,
+                  }))}
+                  onChange={(e: Event) => {
+                    const v = (e.target as unknown as { value: unknown }).value;
+                    if (Array.isArray(v)) {
+                      sig.value = v.join(",");
+                    }
+                  }}
+                />
+              </div>
+            );
+          } else if (type === "number") {
+            control = (
+              <div class="w-full" data-testid={`dp-f-${prop}`}>
+                <InputNumber
+                  name={prop}
+                  size="sm"
+                  value={sig}
+                  disabled={disabled}
+                  placeholder={sdef.placeholder}
+                />
+              </div>
+            );
+          } else if (type === "date") {
+            control = (
+              <div class="w-full" data-testid={`dp-f-${prop}`}>
+                <DatePicker
+                  size="sm"
+                  value={sig}
+                  disabled={disabled}
+                  placeholder={sdef.placeholder}
+                />
+              </div>
+            );
+          } else if (type === "datetime") {
+            control = (
+              <div class="w-full" data-testid={`dp-f-${prop}`}>
+                <DateTimePicker
+                  size="sm"
+                  value={sig}
+                  format="YYYY-MM-DD HH:mm"
+                  disabled={disabled}
+                  placeholder={sdef.placeholder}
+                />
+              </div>
+            );
+          } else {
+            control = (
+              <div class="w-full" data-testid={`dp-f-${prop}`}>
+                <Input
+                  name={prop}
+                  type="text"
+                  value={sig}
+                  disabled={disabled}
+                  placeholder={sdef.placeholder}
+                  onInput={(e: Event) => {
+                    let v = (e.target as unknown as { value: string }).value;
+                    if (sdef.maxlength != null && v.length > sdef.maxlength) {
+                      v = v.slice(0, sdef.maxlength);
+                    }
+                    sig.value = v;
+                  }}
+                />
+              </div>
+            );
+          }
+          return (
+            <div style={lay} class={lay?.width ? undefined : "min-w-0"}>
+              <FormItem
+                label={sdef.label ?? prop}
+                required={fieldRequired(sdef)}
+                error={err}
+              >
+                {control}
+              </FormItem>
+              {sdef.hint && !err && (
+                <p
+                  class="m-0 -mt-1 text-xs text-slate-500 dark:text-slate-400"
+                  data-testid={`dp-hint-${prop}`}
+                >
+                  {sdef.hint}
+                </p>
+              )}
+            </div>
+          );
+        })}
+      </form>
+    );
+  };
 
-  // ---- 批量条（显隐跟 caps.batchStatus；数据来自 column.batch:true）
+  const searchFooter = () => {
+    if (props.search?.footer === false) return null;
+    const ctx = searchActionCtx();
+    const slots = resolveFooterActions(
+      props.search?.actions,
+      ctx,
+      [
+        { key: "submit", label: m.searchSubmit, fallbackShow: true },
+        { key: "reset", label: m.reset, fallbackShow: true },
+      ],
+      "reset",
+    );
+    return (
+      <>
+        {slots.map((s) => {
+          const isSubmit = s.key === "submit";
+          const isReset = s.key === "reset";
+          const testid = isSubmit
+            ? "dp-search-submit"
+            : isReset
+            ? "dp-search-reset"
+            : `dp-search-action-${s.key}`;
+          const onClick = () => {
+            if (s.disable) return;
+            if (isSubmit && !s.action) {
+              applySearch();
+              return;
+            }
+            if (isReset && !s.action) {
+              resetSearch();
+              return;
+            }
+            s.action?.(ctx);
+          };
+          return (
+            <Btn
+              type="button"
+              variant={s.tone ?? (isSubmit ? "primary" : "default")}
+              disabled={s.disable}
+              data-testid={testid}
+              onClick={onClick}
+            >
+              {s.label}
+            </Btn>
+          );
+        })}
+      </>
+    );
+  };
+
+  // ---- 批量条（Record 配置；内置 remove／clear，自定义键可 confirm）
   const batchBar = () => {
+    if (batchBarHidden) return null;
     const ids = selected.value.filter((id) => {
       const row = rows.value.find((r) => idOf(r) === id);
       return row ? !isSelectDisabled(row) : false;
     });
     if (!ids.length) return null;
-    const sv = statusValues;
-    const bs = { show: batchStatusOn, disable: false };
+    const ctx = panelActionCtx();
+    const declared = new Set(Object.keys(bbCfg));
+    type BatchSlot = {
+      key: string;
+      kind: "remove" | "clear" | "custom";
+      show: boolean;
+      disable: boolean;
+      label: string;
+      title?: string;
+      tone?: ActionTone;
+      icon?: unknown;
+      confirm?: string;
+      action?: (c: PanelActionContext) => void;
+    };
+    const slots: BatchSlot[] = [];
+    const pushBuiltin = (key: BatchBuiltin, fallback: boolean): void => {
+      const res = resolveBatchActionCtrl(bbCfg[key], fallback, ctx);
+      if (!res.show) return;
+      const defaultLabel = key === "remove" ? m.batchDelete : m.clearSelection;
+      slots.push({
+        key,
+        kind: key,
+        show: true,
+        disable: res.disable,
+        label: actionDisplayText(key, res.label, res.title) === key
+          ? (res.label || res.title || defaultLabel)
+          : actionDisplayText(key, res.label, res.title),
+        title: res.title,
+        tone: res.tone ??
+          (key === "remove" ? "danger" : key === "clear" ? "ghost" : undefined),
+        icon: res.icon,
+        confirm: res.confirm,
+        action: res.action,
+      });
+    };
+    const pushCustom = (key: string): void => {
+      const raw = bbCfg[key];
+      if (typeof raw !== "object" || raw === null) return;
+      const res = resolveBatchActionCtrl(raw, true, ctx);
+      if (!res.show) return;
+      slots.push({
+        key,
+        kind: "custom",
+        show: true,
+        disable: res.disable,
+        label: actionDisplayText(key, res.label, res.title),
+        title: res.title,
+        tone: res.tone,
+        icon: res.icon,
+        confirm: res.confirm,
+        action: res.action,
+      });
+    };
+    for (const key of Object.keys(bbCfg)) {
+      if (key === "clear") continue;
+      if (isBatchBuiltin(key)) {
+        pushBuiltin(key, key === "remove" ? caps.remove : true);
+      } else pushCustom(key);
+    }
+    for (const name of BATCH_BUILTINS) {
+      if (name === "clear") continue;
+      if (declared.has(name)) continue;
+      pushBuiltin(name, name === "remove" ? caps.remove : true);
+    }
+    pushBuiltin("clear", true);
+
     return (
       <div
         class="flex flex-wrap items-center gap-2 border-t border-slate-200 bg-sky-50 px-4 py-2 text-sm dark:border-slate-700 dark:bg-slate-800/80"
@@ -2159,69 +2657,99 @@ export function DataPanel(props: PanelProps): JSXRenderable {
         <span data-testid="dp-selected-count">
           {tr(m.selected, { n: ids.length })}
         </span>
-        {bs.show &&
-          sv.map((s) => (
+        {slots.map((s) => {
+          if (s.kind === "remove" && !s.action) {
+            return (
+              <Popconfirm
+                open={() => popBatch.value}
+                placement="auto"
+                danger
+                title={s.confirm ?? tr(m.deleteMany, { n: ids.length })}
+                okText={m.delete}
+                cancelText={m.cancel}
+                overlayClass={POP_OVERLAY_CLS}
+                onOpenChange={(o: boolean) => {
+                  if (!o) popBatch.value = false;
+                }}
+                onConfirm={() => void doRemove(ids, "batch")}
+              >
+                <Btn
+                  type="button"
+                  size="sm"
+                  variant={s.tone ?? "danger"}
+                  data-testid="dp-batch-delete"
+                  disabled={s.disable}
+                  onClick={() => {
+                    if (!s.disable) popBatch.value = true;
+                  }}
+                >
+                  {s.label}
+                </Btn>
+              </Popconfirm>
+            );
+          }
+          if (s.kind === "clear" && !s.action) {
+            return (
+              <Btn
+                type="button"
+                size="sm"
+                variant={s.tone ?? "ghost"}
+                data-testid="dp-batch-clear"
+                disabled={s.disable}
+                onClick={() => {
+                  popBatch.value = false;
+                  setSelected([]);
+                }}
+              >
+                {s.label}
+              </Btn>
+            );
+          }
+          const tok = `batch:${s.key}`;
+          const run = () => {
+            if (s.disable) return;
+            if (s.kind === "remove") void doRemove(ids, "batch");
+            else s.action?.(ctx);
+          };
+          const btn = (
+            <Btn
+              type="button"
+              size="sm"
+              variant={s.tone ?? (s.kind === "remove" ? "danger" : "default")}
+              disabled={s.disable}
+              data-testid={s.kind === "remove"
+                ? "dp-batch-delete"
+                : s.kind === "clear"
+                ? "dp-batch-clear"
+                : `dp-batch-action-${s.key}`}
+              onClick={() => {
+                if (s.disable) return;
+                if (s.confirm) popAct.value = tok;
+                else run();
+              }}
+            >
+              {s.icon ?? s.label}
+            </Btn>
+          );
+          if (!s.confirm) return btn;
+          return (
             <Popconfirm
-              open={() => popStatus.value === s.value}
+              open={() => popAct.value === tok}
               placement="auto"
-              title={tr(m.batchStatusAsk, { n: ids.length, status: s.label })}
+              danger={s.kind === "remove" || s.tone === "danger"}
+              title={s.confirm}
               okText={m.confirm}
               cancelText={m.cancel}
               overlayClass={POP_OVERLAY_CLS}
               onOpenChange={(o: boolean) => {
-                if (!o) popStatus.value = null;
+                if (!o && popAct.value === tok) popAct.value = null;
               }}
-              onConfirm={() => void doSetStatus(ids, s.value)}
+              onConfirm={run}
             >
-              <Btn
-                type="button"
-                size="sm"
-                data-testid={`dp-batch-status-${s.value}`}
-                disabled={bs.disable}
-                onClick={() => (popStatus.value = s.value)}
-              >
-                {tr(m.batchSet, { status: s.label })}
-              </Btn>
+              {btn}
             </Popconfirm>
-          ))}
-        {caps.remove && (
-          <Popconfirm
-            open={() => popBatch.value}
-            placement="auto"
-            danger
-            title={tr(m.deleteMany, { n: ids.length })}
-            okText={m.delete}
-            cancelText={m.cancel}
-            overlayClass={POP_OVERLAY_CLS}
-            onOpenChange={(o: boolean) => {
-              if (!o) popBatch.value = false;
-            }}
-            onConfirm={() => void doRemove(ids)}
-          >
-            <Btn
-              type="button"
-              size="sm"
-              variant="danger"
-              data-testid="dp-batch-delete"
-              onClick={() => (popBatch.value = true)}
-            >
-              {m.batchDelete}
-            </Btn>
-          </Popconfirm>
-        )}
-        <Btn
-          type="button"
-          size="sm"
-          variant="ghost"
-          data-testid="dp-batch-clear"
-          onClick={() => {
-            popBatch.value = false;
-            popStatus.value = null;
-            selected.value = [];
-          }}
-        >
-          {m.clearSelection}
-        </Btn>
+          );
+        })}
       </div>
     );
   };
@@ -2744,6 +3272,25 @@ export function DataPanel(props: PanelProps): JSXRenderable {
     });
   }
 
+  /**
+   * 页脚合计用的行：本地源（含 getRows，即只传 data）对当前过滤结果全集求和；
+   * 分页接口／自定义源只对当前已加载的 `rows` 求和，不偷偷拉全量，也不读服务端 totals。
+   */
+  function rowsForColumnTotals(): Row[] {
+    const local = ds as Partial<LocalDataSource>;
+    // data+baseRoute 时 ds 是 API（失败回落的空本地源 getRows 是空的），合计须用已种子的 rows。
+    if (typeof local.getRows === "function" && !seedDataWithApi) {
+      const q = query.value;
+      const filters = { ...q.filters, ...(props.fixed ?? {}) };
+      return filterRows(local.getRows(), filters, searchDefs);
+    }
+    return rows.value;
+  }
+  /** 列 `total: true` 的页脚合计：面板按行数据自算。 */
+  function footerTotals(): Record<string, number> {
+    return sumColumnTotals(rowsForColumnTotals(), dataInputColumns);
+  }
+
   const table = () => {
     const displayCols = columnsVisible();
     const cols = displayCols.filter((c) => !isSystemColumn(c));
@@ -2752,7 +3299,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
     const selectableRows = data.filter((r) => !isSelectDisabled(r));
     const allSel = selectableRows.length > 0 &&
       selectableRows.every((r) => sel.includes(idOf(r)));
-    const t = totals.value;
+    const t = footerTotals();
     const hasTotals = cols.some((c) => c.total) && data.length > 0;
     return (
       <div
@@ -2778,12 +3325,12 @@ export function DataPanel(props: PanelProps): JSXRenderable {
                     <th class="w-10 border border-slate-200 px-2 py-2 text-center dark:border-slate-700">
                       <input
                         type="checkbox"
+                        class={SELECT_CB_CLS}
                         {...bool("checked", allSel)}
                         {...bool("disabled", selectableRows.length === 0)}
                         data-testid="dp-select-all"
-                        onChange={() => (selected.value = allSel
-                          ? []
-                          : selectableRows.map(idOf))}
+                        onChange={() =>
+                          setSelected(allSel ? [] : selectableRows.map(idOf))}
                       />
                     </th>
                   );
@@ -2872,7 +3419,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
                       props.onRowClick(r);
                       return;
                     }
-                    if (caps.view) doView(r);
+                    if (props.openViewOnRowClick && caps.view) doView(r);
                   }}
                 >
                   {displayCols.map((c) => {
@@ -2881,15 +3428,18 @@ export function DataPanel(props: PanelProps): JSXRenderable {
                         <td class="border border-slate-200 px-2 py-1.5 text-center dark:border-slate-700">
                           <input
                             type="checkbox"
+                            class={SELECT_CB_CLS}
                             {...bool("disabled", isSelectDisabled(r))}
                             {...bool("checked", sel.includes(idOf(r)))}
                             data-testid={`dp-select-${idOf(r)}`}
                             onChange={() => {
                               if (isSelectDisabled(r)) return;
                               const cur = selected.value;
-                              selected.value = cur.includes(idOf(r))
-                                ? cur.filter((x) => x !== idOf(r))
-                                : [...cur, idOf(r)];
+                              setSelected(
+                                cur.includes(idOf(r))
+                                  ? cur.filter((x) => x !== idOf(r))
+                                  : [...cur, idOf(r)],
+                              );
                             }}
                           />
                         </td>
@@ -3187,109 +3737,106 @@ export function DataPanel(props: PanelProps): JSXRenderable {
     const last = Math.max(1, Math.ceil(n / q.pageSize));
     const from = n === 0 ? 0 : (q.page - 1) * q.pageSize + 1;
     const to = Math.min(n, q.page * q.pageSize);
-    const go = (p: number) => {
+    const go = (p: number, pageSize?: number) => {
+      if (pageSize != null) {
+        setQuery({ pageSize, page: 1 });
+        return;
+      }
       if (p < 1 || p > last || p === q.page) return;
       setQuery({ page: p });
     };
-    /** 移动端 xs、桌面 md（与 Pagination.size 口径一致） */
-    const pgSize = isNarrow.value ? "xs" : "md";
-    const pbtn = pgSize === "xs"
-      ? "min-w-6 rounded border px-1 py-0.5 text-xs disabled:opacity-40"
-      : "min-w-8 rounded border px-2 py-1 text-sm disabled:opacity-40";
+    const tier = viewportTier.value;
+    const autoPg = dataPanelPaginationForTier(tier);
+    const preset: PaginationPreset = props.paginationPreset ?? autoPg.preset;
+    const pgSize = autoPg.size;
+    const showPageSize = preset !== "simple";
     return (
       <div
         class={PG_CLS}
         data-testid="dp-pagination"
         data-dp-pg-size={pgSize}
+        data-dp-pg-preset={preset}
       >
         <span class={RANGE_CLS} data-testid="dp-range">
           {n === 0 ? m.rangeEmpty : tr(m.range, { from, to, total: n })}
         </span>
         <div class={PG_CTRLS_CLS}>
-          <div
-            class={PGSIZE_WRAP_CLS}
-            data-testid="dp-pagesize"
-            data-size={pgSize}
-          >
-            <Select
-              size={pgSize}
-              class={PGSIZE_SELECT_CLS}
-              value={createSignal(String(q.pageSize))}
-              options={pageSizes.map((sz) => ({
-                value: String(sz),
-                label: tr(m.perPage, { n: sz }),
-              }))}
-              onChange={(e: Event) =>
-                setQuery({
-                  pageSize: Number(
-                    (e.target as unknown as { value: string }).value,
-                  ),
-                  page: 1,
-                })}
-            />
-          </div>
-          <button
-            type="button"
-            class={`${pbtn} border-slate-300`}
-            {...bool("disabled", q.page <= 1)}
-            data-testid="dp-prev"
-            onClick={() => go(q.page - 1)}
-          >
-            ‹
-          </button>
-          {pageList(q.page, last).map((p) =>
-            // deno-lint-ignore jsx-key
-            p === "…" ? <span class="px-1">…</span> : (
-              <button
-                type="button"
-                class={`${pbtn} ${
-                  p === q.page
-                    ? "border-blue-600 bg-blue-600 text-white"
-                    : "border-slate-300"
-                }`}
-                data-testid={`dp-page-${p}`}
-                onClick={() => go(p)}
-              >
-                {p}
-              </button>
-            )
-          )}
-          <button
-            type="button"
-            class={`${pbtn} border-slate-300`}
-            {...bool("disabled", q.page >= last)}
-            data-testid="dp-next"
-            onClick={() => go(q.page + 1)}
-          >
-            ›
-          </button>
-          <label class="flex items-center gap-1">
-            {m.jump}
-            <div class={JUMP_CLS} data-testid="dp-jump">
-              <Input
+          {showPageSize && (
+            <div
+              class={PGSIZE_WRAP_CLS}
+              data-testid="dp-pagesize"
+              data-size={pgSize}
+            >
+              <Select
                 size={pgSize}
-                type="text"
-                value={jump}
-                onInput={(e: Event) => {
-                  const el = e.target as unknown as { value: string };
-                  const v = el.value.replace(/\D+/g, "").slice(0, 7);
-                  if (v !== el.value) el.value = v;
-                  jump.value = v;
-                }}
-                onKeyDown={(e: Event) => {
-                  if ((e as KeyboardEvent).key === "Enter") {
-                    const p = Math.min(
-                      last,
-                      Math.max(1, Number.parseInt(jump.value, 10) || 1),
-                    );
-                    jump.value = "";
-                    go(p);
-                  }
-                }}
+                class={PGSIZE_SELECT_CLS}
+                value={createSignal(String(q.pageSize))}
+                options={pageSizes.map((sz) => ({
+                  value: String(sz),
+                  label: tr(m.perPage, { n: sz }),
+                }))}
+                onChange={(e: Event) =>
+                  setQuery({
+                    pageSize: Number(
+                      (e.target as unknown as { value: string }).value,
+                    ),
+                    page: 1,
+                  })}
               />
             </div>
-            {m.page}
-          </label>
+          )}
+          <Pagination
+            current={() => query.value.page}
+            pageSize={() => query.value.pageSize}
+            total={n}
+            totalPages={last}
+            preset={preset}
+            size={pgSize}
+            testIdPrefix="dp"
+            showTotal={false}
+            showQuickJumper={false}
+            messages={{
+              first: m.firstPage,
+              prev: m.prevPage,
+              next: m.nextPage,
+              last: m.lastPage,
+              jumpTo: m.jump,
+              pageUnit: m.page,
+              pageSizeUnit: (sz) => tr(m.perPage, { n: sz }),
+              simpleCurrent: (page, totalPages) =>
+                tr(m.simpleCurrent, { page, totalPages }),
+            }}
+            onChange={go}
+          />
+          {preset === "full" && (
+            <label class="flex items-center gap-1">
+              {m.jump}
+              <div class={JUMP_CLS} data-testid="dp-jump">
+                <Input
+                  size={pgSize}
+                  type="text"
+                  value={jump}
+                  onInput={(e: Event) => {
+                    const el = e.target as unknown as { value: string };
+                    const v = el.value.replace(/\D+/g, "").slice(0, 7);
+                    if (v !== el.value) el.value = v;
+                    jump.value = v;
+                  }}
+                  onKeyDown={(e: Event) => {
+                    if ((e as KeyboardEvent).key === "Enter") {
+                      const p = Math.min(
+                        last,
+                        Math.max(1, Number.parseInt(jump.value, 10) || 1),
+                      );
+                      jump.value = "";
+                      go(p);
+                    }
+                  }}
+                />
+              </div>
+              {m.page}
+            </label>
+          )}
         </div>
       </div>
     );
@@ -3331,7 +3878,9 @@ export function DataPanel(props: PanelProps): JSXRenderable {
         </div>
       );
     }
-    const formGrid = useFieldGrid(formDefs);
+    const cond = formConditionCtx();
+    const visibleForm = formDefs.filter((f) => isFormFieldVisible(f, cond));
+    const formGrid = useFieldGrid(visibleForm);
     return (
       <form
         class={formGrid ? "grid grid-cols-12 gap-3" : "grid gap-3"}
@@ -3343,15 +3892,13 @@ export function DataPanel(props: PanelProps): JSXRenderable {
           void submitForm();
         }}
       >
-        {formDefs.filter((f) => {
-          // 新建隐藏 editOnly；编辑隐藏 createOnly
-          if (!id) return !f.editOnly;
-          return !f.createOnly;
-        }).map((f) => {
+        {visibleForm.map((f) => {
           const prop = fieldProp(f);
           const sig = fields[prop];
           const type = f.type ?? "text";
           const lay = fieldLayoutStyle(f);
+          const disabled = evalFlag(f.disabled, false, cond);
+          const opts = resolveOptions(f.options, cond);
           let control: unknown;
           /** 字段级 render：替换单个控件；有 form.render 时已在上方 return */
           if (typeof f.render === "function") {
@@ -3362,7 +3909,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
               multiValue: mfields[prop],
               mode,
               row: formRow.value,
-              disabled: false,
+              disabled,
               error: errs[prop],
             };
             control = (
@@ -3376,6 +3923,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
                 <Textarea
                   rows={f.rows ?? 4}
                   value={sig}
+                  disabled={disabled}
                   maxLength={f.maxlength}
                   placeholder={f.placeholder}
                   onInput={(
@@ -3391,13 +3939,14 @@ export function DataPanel(props: PanelProps): JSXRenderable {
                 <Select
                   size="sm"
                   value={sig}
+                  disabled={disabled}
                   placeholder={!f.required &&
-                      !(f.options ?? []).some((o) =>
+                      !opts.some((o) =>
                         o.value === ""
                       )
                     ? "—"
                     : undefined}
-                  options={(f.options ?? []).map((o) => ({
+                  options={opts.map((o) => ({
                     value: o.value,
                     label: o.label,
                   }))}
@@ -3410,7 +3959,8 @@ export function DataPanel(props: PanelProps): JSXRenderable {
                 <MultiSelect
                   size="sm"
                   value={mfields[fieldProp(f)]}
-                  options={(f.options ?? []).map((o) => ({
+                  disabled={disabled}
+                  options={opts.map((o) => ({
                     value: o.value,
                     label: o.label,
                   }))}
@@ -3430,6 +3980,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
               <span data-testid={`dp-fld-${fieldProp(f)}`}>
                 <Switch
                   checked={() => sig.value === on}
+                  disabled={disabled}
                   onChange={(e: Event) => {
                     sig.value =
                       (e.target as unknown as { checked: boolean }).checked
@@ -3445,6 +3996,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
                 <InputNumber
                   size="sm"
                   value={sig}
+                  disabled={disabled}
                   placeholder={f.placeholder}
                 />
               </div>
@@ -3455,6 +4007,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
                 <DatePicker
                   size="sm"
                   value={sig}
+                  disabled={disabled}
                   placeholder={f.placeholder}
                 />
               </div>
@@ -3466,6 +4019,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
                   size="sm"
                   value={sig}
                   format="YYYY-MM-DD HH:mm"
+                  disabled={disabled}
                   placeholder={f.placeholder}
                 />
               </div>
@@ -3476,6 +4030,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
                 <Input
                   type={type === "password" ? "password" : "text"}
                   value={sig}
+                  disabled={disabled}
                   autoComplete={type === "password" ? "new-password" : "off"}
                   placeholder={f.placeholder}
                   onInput={(e: Event) => {
@@ -3520,25 +4075,66 @@ export function DataPanel(props: PanelProps): JSXRenderable {
   };
 
   const formFooter = () => {
-    if (props.form?.render) return null;
+    if (props.form?.footer === false) return null;
+    if (props.form?.render && !props.form?.actions) return null;
+    const isEdit = !!formId.value;
+    const ctx: FormActionContext = {
+      values: collectValues(isEdit),
+      mode: isEdit ? "edit" : "create",
+      row: formRow.value,
+      busy: formBusy.value,
+      submit: submitForm,
+      close: () => {
+        formOpen.value = false;
+      },
+    };
+    const slots = resolveFooterActions(
+      props.form?.actions,
+      ctx,
+      [
+        {
+          key: "submit",
+          label: isEdit ? m.update : m.save,
+          fallbackShow: true,
+        },
+        { key: "cancel", label: m.cancel, fallbackShow: true },
+      ],
+      "cancel",
+    );
     return (
       <>
-        <Btn
-          type="button"
-          variant="primary"
-          loading={formBusy.value}
-          data-testid="dp-form-submit"
-          onClick={() => void submitForm()}
-        >
-          {formId.value ? m.update : m.save}
-        </Btn>
-        <Btn
-          type="button"
-          onClick={() => (formOpen.value = false)}
-          data-testid="dp-form-cancel"
-        >
-          {m.cancel}
-        </Btn>
+        {slots.map((s) => {
+          const isSubmit = s.key === "submit";
+          const isCancel = s.key === "cancel";
+          const testid = isSubmit
+            ? "dp-form-submit"
+            : isCancel
+            ? "dp-form-cancel"
+            : `dp-form-action-${s.key}`;
+          return (
+            <Btn
+              type="button"
+              variant={s.tone ?? (isSubmit ? "primary" : "default")}
+              loading={isSubmit && !s.action ? formBusy.value : undefined}
+              disabled={s.disable || (isSubmit && formBusy.value)}
+              data-testid={testid}
+              onClick={() => {
+                if (s.disable) return;
+                if (isSubmit && !s.action) {
+                  void submitForm();
+                  return;
+                }
+                if (isCancel && !s.action) {
+                  formOpen.value = false;
+                  return;
+                }
+                s.action?.(ctx);
+              }}
+            >
+              {s.label}
+            </Btn>
+          );
+        })}
       </>
     );
   };
@@ -3787,15 +4383,30 @@ export function DataPanel(props: PanelProps): JSXRenderable {
               const defaultBody = (
                 <>
                   {/* 固定插槽：响应式子节点插在静态兄弟之后会落到卡片底部；批量条在表格下方，选中行不会把表格顶下去 */}
-                  <div class={TABLE_WRAP_CLS}>{table}</div>
+                  <div
+                    class={() =>
+                      alertState.visible(props.alert)
+                        ? TABLE_WRAP_BELOW_ALERT_CLS
+                        : TABLE_WRAP_CLS}
+                  >
+                    {table}
+                  </div>
                   <div data-testid="dp-batch-slot">{batchBar}</div>
                   {pagination}
                 </>
+              );
+              const pageAlert = (
+                <DataChromeAlert
+                  alert={props.alert}
+                  testId="dp-alert"
+                  state={alertState}
+                />
               );
               if (!props.tabs?.length) {
                 return (
                   <>
                     {toolbar}
+                    {pageAlert}
                     {defaultBody}
                   </>
                 );
@@ -3829,6 +4440,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
                       type={props.tabType}
                     />,
                   )}
+                  {pageAlert}
                   <DataChromeTabBody
                     tabs={props.tabs}
                     activeTab={tabKey.value}

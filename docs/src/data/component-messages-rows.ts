@@ -490,8 +490,20 @@ export const MESSAGES_PAGINATION: DocsApiTableRow[] = [
     default: `"分页"`,
     description: "nav aria-label",
   },
+  {
+    name: "first",
+    type: "string",
+    default: `"第一页"`,
+    description: "第一页按钮 aria-label",
+  },
   { name: "prev", type: "string", default: `"上一页"`, description: "上一页" },
   { name: "next", type: "string", default: `"下一页"`, description: "下一页" },
+  {
+    name: "last",
+    type: "string",
+    default: `"最后一页"`,
+    description: "最后一页按钮 aria-label",
+  },
   {
     name: "pageLabel",
     type: "(page: number) => string",
@@ -527,6 +539,12 @@ export const MESSAGES_PAGINATION: DocsApiTableRow[] = [
     type: "(total: number) => string",
     default: "`(t) => \\`共 ${t} 条\\``",
     description: "showTotal 默认",
+  },
+  {
+    name: "simpleCurrent",
+    type: "(page: number, totalPages: number) => string",
+    default: "`(page, totalPages) => \`第 ${page} / ${totalPages} 页\``",
+    description: 'preset="simple" 时上一页／下一页之间的当前页文案',
   },
 ];
 
@@ -1429,16 +1447,40 @@ export const MESSAGES_DATA_PANEL: DocsApiTableRow[] = [
     description: "页（跳页后缀）",
   },
   {
+    name: "firstPage",
+    type: "string",
+    default: `"第一页"`,
+    description: "第一页按钮 aria-label",
+  },
+  {
+    name: "prevPage",
+    type: "string",
+    default: `"上一页"`,
+    description: "上一页按钮 aria-label",
+  },
+  {
+    name: "nextPage",
+    type: "string",
+    default: `"下一页"`,
+    description: "下一页按钮 aria-label",
+  },
+  {
+    name: "lastPage",
+    type: "string",
+    default: `"最后一页"`,
+    description: "最后一页按钮 aria-label",
+  },
+  {
+    name: "simpleCurrent",
+    type: "string",
+    default: `"第 {page} / {totalPages} 页"`,
+    description: "极简分页当前页；占位 {page}/{totalPages}",
+  },
+  {
     name: "selected",
     type: "string",
     default: `"已选 {n} 项"`,
     description: "已选 N 项；占位 {n}",
-  },
-  {
-    name: "batchSet",
-    type: "string",
-    default: `"批量设为「{status}」"`,
-    description: "批量设为；占位 {status}",
   },
   {
     name: "batchDelete",
@@ -1449,8 +1491,8 @@ export const MESSAGES_DATA_PANEL: DocsApiTableRow[] = [
   {
     name: "clearSelection",
     type: "string",
-    default: `"取消选择"`,
-    description: "取消选择",
+    default: `"取消勾选"`,
+    description: "取消勾选",
   },
   {
     name: "deleteTitle",
@@ -1475,12 +1517,6 @@ export const MESSAGES_DATA_PANEL: DocsApiTableRow[] = [
     type: "string",
     default: `"确认批量操作"`,
     description: "批量确认标题（历史／兼容）",
-  },
-  {
-    name: "batchStatusAsk",
-    type: "string",
-    default: `"确定将选中的 {n} 项设为「{status}」吗？"`,
-    description: "批量设为问句；占位 {n}/{status}",
   },
   {
     name: "partial",

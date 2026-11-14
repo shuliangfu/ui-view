@@ -34,7 +34,7 @@ function q(patch: Partial<Query> = {}): Query {
   };
 }
 
-function jsonOk(body: unknown = { items: [], total: 0 }): Promise<Response> {
+function jsonOk(body: unknown = { rows: [], total: 0 }): Promise<Response> {
   return Promise.resolve(
     new Response(JSON.stringify(body), {
       headers: { "Content-Type": "application/json" },
@@ -130,7 +130,7 @@ describe("wrapFetchWithTabParam", () => {
     let current = "12";
     const fetchImpl = ((input: RequestInfo | URL) => {
       urls.push(typeof input === "string" ? input : String(input));
-      return jsonOk({ items: [{ id: "1", name: "张三" }], total: 1, ok: true });
+      return jsonOk({ rows: [{ id: "1", name: "张三" }], total: 1, ok: true });
     }) as typeof fetch;
     const ds = createApiDataSource({
       baseRoute: "/api/users/worn",
@@ -183,7 +183,7 @@ describe("wrapFetchWithTabParam", () => {
       baseRoute: "/api/users/worn",
       fetch: wrapFetchWithTabParam(((input: RequestInfo | URL) => {
         urls.push(String(input));
-        return jsonOk({ items: [{ id: "1", name: "张三" }], total: 1, ok: true });
+        return jsonOk({ rows: [{ id: "1", name: "张三" }], total: 1, ok: true });
       }) as typeof fetch, () => resolveTabQuery(TABS, "tab", "")),
     });
     await ds.list(q());
@@ -197,7 +197,7 @@ describe("wrapFetchWithTabParam", () => {
       baseRoute: "/api/users/worn",
       fetch: wrapFetchWithTabParam(((input: RequestInfo | URL) => {
         urls.push(String(input));
-        return jsonOk({ items: [{ id: "1", name: "张三" }], total: 1, ok: true });
+        return jsonOk({ rows: [{ id: "1", name: "张三" }], total: 1, ok: true });
       }) as typeof fetch, () => resolveTabQuery(TABS, "tab", "")),
     });
     await ds.list(q());
@@ -221,7 +221,7 @@ describe("wrapFetchWithTabParam", () => {
       baseRoute: "/api/users/worn",
       fetch: wrapFetchWithTabParam(((input: RequestInfo | URL) => {
         urls.push(String(input));
-        return jsonOk({ items: [{ id: "1", name: "张三" }], total: 1, ok: true });
+        return jsonOk({ rows: [{ id: "1", name: "张三" }], total: 1, ok: true });
       }) as typeof fetch, () => resolveTabQuery(tabs, "tab", "")),
     });
     await ds.list(q());
@@ -236,7 +236,7 @@ describe("wrapFetchWithTabParam", () => {
       baseRoute: "/api/users/worn",
       fetch: wrapFetchWithTabParam(((input: RequestInfo | URL) => {
         urls.push(String(input));
-        return jsonOk({ items: [{ id: "1", name: "张三" }], total: 1, ok: true });
+        return jsonOk({ rows: [{ id: "1", name: "张三" }], total: 1, ok: true });
       }) as typeof fetch, () => resolveTabQuery(TABS, "tab", filters.tab ?? "")),
     });
     await ds.list(q({ filters }));
@@ -300,7 +300,7 @@ describe("wrapFetchWithTabParam", () => {
       baseRoute: "/api/users/worn",
       fetch: wrapFetchWithTabParam(((input: RequestInfo | URL) => {
         urls.push(String(input));
-        return jsonOk({ items: [{ id: "1", name: "张三" }], total: 1 });
+        return jsonOk({ rows: [{ id: "1", name: "张三" }], total: 1 });
       }) as typeof fetch, () => initial),
     });
     await ds.list(q());
@@ -321,7 +321,7 @@ describe("tab list cache", () => {
         list: () => {
           calls.push(tabKey);
           return Promise.resolve({
-            items: [{ id: tabKey, name: tabKey === "3" ? "张三" : "李四" }],
+            rows: [{ id: tabKey, name: tabKey === "3" ? "张三" : "李四" }],
             total: 1,
           });
         },
@@ -337,7 +337,7 @@ describe("tab list cache", () => {
 
     const back = await list("3", q());
     expect(back.fromCache).toBe(true);
-    expect(back.result.items[0]?.name).toBe("张三");
+    expect(back.result.rows[0]?.name).toBe("张三");
     expect(calls).toEqual(["3", "12"]);
   });
 
@@ -351,7 +351,7 @@ describe("tab list cache", () => {
         query,
         list: () => {
           calls.push(`${query.page}:${query.filters.q ?? ""}`);
-          return Promise.resolve({ items: [], total: 0 });
+          return Promise.resolve({ rows: [], total: 0 });
         },
       });
 
@@ -374,7 +374,7 @@ describe("tab list cache", () => {
         list: () => {
           calls.push(tabKey);
           return Promise.resolve({
-            items: [{ id: tabKey, name: "张三" }],
+            rows: [{ id: tabKey, name: "张三" }],
             total: 1,
           });
         },

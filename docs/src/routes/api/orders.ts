@@ -5,8 +5,10 @@
  * - GET    /api/orders
  * - POST   /api/orders
  * - PUT    /api/orders/:id
- * - DELETE /api/orders/:id
+ * - DELETE /api/orders/:id（单条删除）
+ * - POST   /api/orders/remote-batch（批量删除，body `{ ids }`）
  * - POST   /api/orders/import（importRows）
+ * - POST   /api/orders/setField（body `{ ids, field, value }`）
  * - GET    /api/orders/:id（明细，可选）
  */
 import { json } from "@dreamer/router";
@@ -108,7 +110,7 @@ function list(req: Request) {
   const balance = rows.reduce((s, r) => s + (Number(r.balance) || 0), 0);
   const start = (page - 1) * pageSize;
   return json({
-    items: rows.slice(start, start + pageSize),
+    rows: rows.slice(start, start + pageSize),
     total,
     totals: { balance: Math.round(balance * 100) / 100 },
   });
@@ -133,7 +135,9 @@ export function GET(request: Request): Response {
   const path = pathOf(request);
   if (path === "/api/orders") return list(request);
   const id = idSeg(path);
-  if (!id || id === "import") return json({ error: "not_found" }, 404);
+  if (!id || id === "import" || id === "setField") {
+    return json({ error: "not_found" }, 404);
+  }
   const row = store.find((r) => r.id === id);
   if (!row) return json({ error: "not_found", id }, 404);
   return json(row);
@@ -163,6 +167,50 @@ export async function POST(request: Request): Promise<Response> {
       }
     }
     return json({ ok: true, created, failed });
+  }
+  if (path === "/api/orders/setField" || path.endsWith("/setField")) {
+    const ids = Array.isArray(body.ids) ? body.ids.map(String) : [];
+    const field = String(body.field ?? "").trim();
+    const allowed = new Set(["name", "email", "role", "status", "balance"]);
+    if (!ids.length || !allowed.has(field)) {
+      return json({
+        removed: 0,
+        failed: ids.map((id) => ({
+          id,
+          error: !ids.length ? "缺少 id" : "unknown field",
+        })),
+      }, 400);
+    }
+    const failed: { id: string; error: string }[] = [];
+    let removed = 0;
+    for (const id of ids) {
+      const i = store.findIndex((r) => r.id === id);
+      if (i < 0) {
+        failed.push({ id, error: "not found" });
+        continue;
+      }
+      const prev = store[i]!;
+      const next: Order = { ...prev };
+      if (field === "balance") next.balance = Number(body.value) || 0;
+      else {(next as unknown as Record<string, unknown>)[field] = String(
+          body.value ?? "",
+        );}
+      store = [...store.slice(0, i), next, ...store.slice(i + 1)];
+      removed++;
+    }
+    return json({ removed, failed });
+  }
+  if (path === "/api/orders/remote-batch" || path.endsWith("/remote-batch")) {
+    const ids = Array.isArray(body.ids) ? body.ids.map(String) : [];
+    if (!ids.length) return json({ removed: 0, failed: [] }, 400);
+    const set = new Set(ids);
+    const next = store.filter((r) => !set.has(r.id));
+    const removed = store.length - next.length;
+    const failed = ids
+      .filter((id) => !store.some((r) => r.id === id))
+      .map((id) => ({ id, error: "not found" }));
+    store = next;
+    return json({ removed, failed });
   }
   if (path === "/api/orders") {
     if (!body.name) {

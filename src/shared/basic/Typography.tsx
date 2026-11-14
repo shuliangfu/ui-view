@@ -7,6 +7,8 @@ import type { JSXRenderable } from "@dreamer/view";
 export interface TitleProps {
   level?: 1 | 2 | 3 | 4 | 5 | 6;
   class?: string;
+  /** 透传到标题标签，便于文档锚点 */
+  id?: string;
   children?: unknown;
 }
 
@@ -22,15 +24,16 @@ const titleSizeClasses: Record<number, string> = {
 
 /** 标题，默认 h2 */
 export function Title(props: TitleProps): JSXRenderable {
-  const { level = 2, class: className, children } = props;
+  const { level = 2, class: className, id, children } = props;
   const base = titleSizeClasses[level];
   const cls = twMerge(base, className);
-  if (level === 1) return <h1 class={cls}>{children}</h1>;
-  if (level === 2) return <h2 class={cls}>{children}</h2>;
-  if (level === 3) return <h3 class={cls}>{children}</h3>;
-  if (level === 4) return <h4 class={cls}>{children}</h4>;
-  if (level === 5) return <h5 class={cls}>{children}</h5>;
-  return <h6 class={cls}>{children}</h6>;
+  const headingProps = id ? { class: cls, id } : { class: cls };
+  if (level === 1) return <h1 {...headingProps}>{children}</h1>;
+  if (level === 2) return <h2 {...headingProps}>{children}</h2>;
+  if (level === 3) return <h3 {...headingProps}>{children}</h3>;
+  if (level === 4) return <h4 {...headingProps}>{children}</h4>;
+  if (level === 5) return <h5 {...headingProps}>{children}</h5>;
+  return <h6 {...headingProps}>{children}</h6>;
 }
 
 export interface TextProps {

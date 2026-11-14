@@ -770,6 +770,8 @@ export {
   Menu,
   PageHeader,
   Pagination,
+  defaultPaginationMessages,
+  resolvePaginationPreset,
   Sidebar,
   Steps,
 } from "./navigation/mod.ts";
@@ -784,6 +786,8 @@ export type {
   MenuItem,
   MenuProps,
   PageHeaderProps,
+  PaginationMessages,
+  PaginationPreset,
   PaginationProps,
   PaginationSize,
   SidebarItem,

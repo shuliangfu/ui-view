@@ -4,6 +4,7 @@
  */
 import { formatMessage } from "./data-panel-messages.ts";
 import type {
+  ActionCtrl,
   ActionTone,
   BulkResult,
   Column,
@@ -23,7 +24,11 @@ import type {
   ViewItem,
   WriteResult,
 } from "./data-panel-types.ts";
-import { actionDisplayText, resolveRowActionCtrl } from "./data-panel-types.ts";
+import {
+  actionDisplayText,
+  resolveActionCtrl,
+  resolveRowActionCtrl,
+} from "./data-panel-types.ts";
 import {
   buildXlsx,
   neutralizeFormula,
@@ -263,6 +268,12 @@ export function pageList(cur: number, last: number): (number | "…")[] {
 export const DEFAULT_DATA_PANEL_PAGE_SIZE = 20;
 
 /** 查询 → URLSearchParams（`forUrl` 时省略默认值，用于地址栏同步） */
+/** 给查询参数加可选前缀（`p1` → `p1_page`）。空／未传则原名。 */
+export function queryParamKey(name: string, prefix?: string): string {
+  const p = prefix?.trim();
+  return p ? `${p}_${name}` : name;
+}
+
 export function queryToParams(
   q: Query,
   opts: {
@@ -270,25 +281,31 @@ export function queryToParams(
     defaultPageSize?: number;
     defaultSort?: { prop: string; order: "asc" | "desc" };
     fixed?: Record<string, string>;
+    /** 参数前缀，如 `"p1"` → `p1_page`、`p1_name`。同页多面板用不同前缀避免抢参数。 */
+    prefix?: string;
   },
 ): URLSearchParams {
   const p = new URLSearchParams();
-  if (q.page > 1) p.set("page", String(q.page));
-  if (!opts.forUrl || q.pageSize !== (opts.defaultPageSize ?? DEFAULT_DATA_PANEL_PAGE_SIZE)) {
-    p.set("pageSize", String(q.pageSize));
+  const key = (name: string) => queryParamKey(name, opts.prefix);
+  if (q.page > 1) p.set(key("page"), String(q.page));
+  if (
+    !opts.forUrl ||
+    q.pageSize !== (opts.defaultPageSize ?? DEFAULT_DATA_PANEL_PAGE_SIZE)
+  ) {
+    p.set(key("pageSize"), String(q.pageSize));
   }
   const ds = opts.defaultSort;
   const isDefault = (!q.sort && !ds) ||
     (ds && q.sort === ds.prop && q.order === ds.order);
   if (q.sort && (!opts.forUrl || !isDefault)) {
-    p.set("sort", q.sort);
-    p.set("order", q.order === "desc" ? "desc" : "asc");
+    p.set(key("sort"), q.sort);
+    p.set(key("order"), q.order === "desc" ? "desc" : "asc");
   }
   for (const [k, v] of Object.entries(q.filters)) {
-    if (v !== "" && !(opts.fixed && k in opts.fixed)) p.set(k, v);
+    if (v !== "" && !(opts.fixed && k in opts.fixed)) p.set(key(k), v);
   }
   if (!opts.forUrl && opts.fixed) {
-    for (const [k, v] of Object.entries(opts.fixed)) p.set(k, v);
+    for (const [k, v] of Object.entries(opts.fixed)) p.set(key(k), v);
   }
   return p;
 }
@@ -305,29 +322,32 @@ export function queryFromParams(
   opts: {
     searchNames: readonly string[];
     fixed?: Record<string, string>;
+    /** 与 {@link queryToParams} 相同的参数前缀 */
+    prefix?: string;
   },
 ): Partial<Query> {
   const out: Partial<Query> = {};
-  const pageRaw = params.get("page");
+  const key = (name: string) => queryParamKey(name, opts.prefix);
+  const pageRaw = params.get(key("page"));
   if (pageRaw != null && pageRaw !== "") {
     const page = Number.parseInt(pageRaw, 10);
     if (Number.isFinite(page) && page >= 1) out.page = page;
   }
-  const psRaw = params.get("pageSize");
+  const psRaw = params.get(key("pageSize"));
   if (psRaw != null && psRaw !== "") {
     const pageSize = Number.parseInt(psRaw, 10);
     if (Number.isFinite(pageSize) && pageSize >= 1) out.pageSize = pageSize;
   }
-  const sort = params.get("sort");
+  const sort = params.get(key("sort"));
   if (sort) {
     out.sort = sort;
-    out.order = params.get("order") === "desc" ? "desc" : "asc";
+    out.order = params.get(key("order")) === "desc" ? "desc" : "asc";
   }
   const filters: Record<string, string> = {};
   const fixed = opts.fixed ?? {};
   for (const name of opts.searchNames) {
     if (name in fixed) continue;
-    const v = params.get(name);
+    const v = params.get(key(name));
     if (v != null && v !== "") filters[name] = v;
   }
   if (Object.keys(filters).length > 0) out.filters = filters;
@@ -500,7 +520,7 @@ export type ResolvePanelColumnsOptions = {
   selectable?: boolean;
   /**
    * @deprecated 已忽略。勾选列只由 columns 里的 `{ type:"selection" }` 决定，
-   * caps.remove／batchStatus 不再自动前置多选列。
+   * caps.remove 不再自动前置多选列。
    */
   needSelection?: boolean;
   /**
@@ -701,27 +721,6 @@ export function enrichFormFields(
   }).filter((f) => fieldProp(f) !== "");
 }
 
-/**
- * 批量「设为…」目标列：须显式 `batch: true`，且 `inline:"switch"`＋恰好两档 options。
- * - field ← column.prop
- * - values ← options 的 {value,label}
- */
-export function resolveBatchStatusColumn(
-  columns: readonly Column[],
-): { field: string; values: { value: string; label: string }[] } | null {
-  const col = columns.find(
-    (c) =>
-      c.batch === true &&
-      c.inline === "switch" &&
-      (c.options?.length ?? 0) === 2,
-  );
-  if (!col?.options) return null;
-  return {
-    field: colProp(col),
-    values: col.options.map((o) => ({ value: o.value, label: o.label })),
-  };
-}
-
 // ------------------------------------------------------------------ local data source
 
 /** `createLocalDataSource` 选项 */
@@ -753,6 +752,8 @@ export interface LocalDataSource extends DataSource {
   list(query: Query): ListResult;
   /** 按主键取单条（副本）；没有则 null */
   view(id: string): Row | null;
+  /** {@link LocalDataSource.view} 的别名 */
+  get(id: string): Row | null;
   /** 当前全部行（副本） */
   getRows(): Row[];
   /** 整体替换数据 */
@@ -773,6 +774,28 @@ function cmp(a: unknown, b: unknown): number {
   return String(a).localeCompare(String(b), undefined, { numeric: true });
 }
 
+/**
+ * 对配置了 `total: true` 的列，按给定行数据求和。
+ * 非数值计为 0；结果四舍五入到 6 位小数，消除浮点累加误差。
+ * DataPanel 页脚只用此函数，不读取 `list()`／接口返回的 `totals`。
+ *
+ * 传入哪些行由调用方决定：本地 data 传当前过滤结果全集，分页接口传当前已加载页。
+ */
+export function sumColumnTotals(
+  rows: Row[],
+  columns: Column[],
+): Record<string, number> {
+  const totals: Record<string, number> = {};
+  for (const c of columns) {
+    if (!c.total) continue;
+    const prop = colProp(c);
+    if (!prop) continue;
+    const sum = rows.reduce((s, r) => s + (Number(r[prop]) || 0), 0);
+    totals[prop] = Math.round(sum * 1e6) / 1e6;
+  }
+  return totals;
+}
+
 /** 本地过滤：按搜索项逐个匹配 */
 export function filterRows(
   rows: Row[],
@@ -787,16 +810,26 @@ export function filterRows(
       const field = def?.field ?? name;
       const raw = row[field];
       const text = raw == null ? "" : String(raw);
+      if (def?.type === "multiselect" && !def.match) {
+        const want = val.split(",").map((s) => s.trim()).filter(Boolean);
+        const have = (Array.isArray(raw) ? raw.map(String) : text.split(","))
+          .map((s) => s.trim());
+        return want.every((w) => have.includes(w));
+      }
       const match = def?.match ??
-        (def?.type === "select"
+        (def?.type === "select" || def?.type === "date" ||
+            def?.type === "datetime"
           ? "eq"
-          : def?.type === "date"
-          ? "eq"
+          : def?.type === "number"
+          ? "num"
           : "contains");
       switch (match) {
         case "eq":
           if (def?.type === "date") {
             return text.slice(0, 10) === val.slice(0, 10);
+          }
+          if (def?.type === "datetime") {
+            return text.slice(0, val.length) === val;
           }
           return text === val;
         case "num":
@@ -1120,25 +1153,20 @@ export function createLocalDataSource(
         const dir = q.order === "desc" ? -1 : 1;
         rows = [...rows].sort((a, b) => dir * cmp(a[q.sort], b[q.sort]));
       }
-      const totals: Record<string, number> = {};
-      for (const c of opts.columns) {
-        if (c.total) {
-          const sum = rows.reduce(
-            (s, r) => s + (Number(r[colProp(c)]) || 0),
-            0,
-          );
-          // 去掉浮点累加误差（12769.800000000001 → 12769.8）
-          totals[colProp(c)] = Math.round(sum * 1e6) / 1e6;
-        }
-      }
+      const totals = sumColumnTotals(rows, opts.columns);
       const start = (q.page - 1) * q.pageSize;
       return {
-        items: rows.slice(start, start + q.pageSize).map((r) => ({ ...r })),
+        rows: rows.slice(start, start + q.pageSize).map((r) => ({ ...r })),
         total: rows.length,
+        // 本地源仍给出全集合计，便于单独调用 list()；面板页脚会自行再算，不依赖此字段。
         totals: Object.keys(totals).length ? totals : undefined,
       };
     },
     view(id) {
+      const row = store.find((r) => idOf(r) === id);
+      return row ? { ...row } : null;
+    },
+    get(id) {
       const row = store.find((r) => idOf(r) === id);
       return row ? { ...row } : null;
     },
@@ -1461,6 +1489,73 @@ export function resolveViewFooterActions(
   return slots;
 }
 
+export interface FooterActionSlot<Ctx = unknown> {
+  key: string;
+  label: string;
+  disable: boolean;
+  title?: string;
+  tone?: ActionTone;
+  icon?: unknown;
+  action?: (ctx: Ctx) => void;
+  builtin?: boolean;
+}
+
+/**
+ * 表单／搜索官方底部按钮：声明键按写入序；未声明的内置键追加；
+ * `trailingKey`（cancel／reset）若显示则始终靠右最后。
+ */
+export function resolveFooterActions<Ctx>(
+  cfg: Record<string, ActionCtrl<Ctx>> | undefined,
+  ctx: Ctx,
+  builtins: readonly { key: string; label: string; fallbackShow?: boolean }[],
+  trailingKey?: string,
+): FooterActionSlot<Ctx>[] {
+  const actions = cfg ?? {};
+  const builtinMap = new Map(builtins.map((b) => [b.key, b]));
+  const declared = new Set(Object.keys(actions));
+  const slots: FooterActionSlot<Ctx>[] = [];
+  const push = (
+    key: string,
+    raw: ActionCtrl<Ctx> | undefined,
+    fallback: boolean,
+  ): void => {
+    const res = resolveActionCtrl(raw, fallback, ctx);
+    if (!res.show) return;
+    const b = builtinMap.get(key);
+    const display = actionDisplayText(key, res.label, res.title);
+    slots.push({
+      key,
+      label: display === key && b
+        ? (res.label || res.title || b.label)
+        : display,
+      disable: res.disable,
+      title: res.title,
+      tone: res.tone,
+      icon: res.icon,
+      action: res.action,
+      builtin: !!b,
+    });
+  };
+  for (const key of Object.keys(actions)) {
+    if (trailingKey && key === trailingKey) continue;
+    const b = builtinMap.get(key);
+    push(key, actions[key], b ? (b.fallbackShow ?? true) : true);
+  }
+  for (const b of builtins) {
+    if (trailingKey && b.key === trailingKey) continue;
+    if (declared.has(b.key)) continue;
+    push(b.key, undefined, b.fallbackShow ?? true);
+  }
+  if (trailingKey) {
+    const b = builtinMap.get(trailingKey);
+    if (declared.has(trailingKey)) {
+      push(trailingKey, actions[trailingKey], true);
+    } else {
+      push(trailingKey, undefined, b?.fallbackShow ?? true);
+    }
+  }
+  return slots;
+}
 
 /**
  * 解析 form / search / view 的弹层宽度；未配置时用 fallback（默认 md）。

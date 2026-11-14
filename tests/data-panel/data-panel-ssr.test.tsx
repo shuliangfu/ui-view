@@ -12,6 +12,11 @@ import {
   type PanelProps,
   type RowActionsConfig,
 } from "../../src/desktop/data-display/DataPanel.tsx";
+import {
+  panelHandles,
+  refreshDataPanel,
+  setDataPanelQuery,
+} from "../../src/desktop/data-display/data-panel-chrome.tsx";
 
 const COLUMNS: Column[] = [
   { type: "index" },
@@ -21,7 +26,6 @@ const COLUMNS: Column[] = [
     label: "状态",
     type: "tag",
     inline: "switch",
-    batch: true,
     options: [{ value: "on", label: "启用", tone: "success" }, {
       value: "off",
       label: "停用",
@@ -86,9 +90,94 @@ describe("DataPanel SSR：首帧内容", () => {
     expect(h).toContain("启用");
     expect(h).toContain("停用");
     expect(h).toContain("100.00");
-    // 1..25 → 100*(25*26/2) = 32500
+    // 本地 data：合计当前过滤结果全集。1..25 → 100*(25*26/2) = 32500（不是当前页 20 行）
     expect(h).toContain('data-testid="dp-total-balance"');
     expect(h).toMatch(/dp-total-balance[^>]*>\s*32,500\.00/);
+  });
+
+  it("本地 data 分页后合计仍是过滤结果全集，不是当前页", async () => {
+    const h = await html({ pageSize: 5 });
+    // 当前页 1..5 → 1500；全集仍是 32,500.00
+    expect(h).toMatch(/dp-total-balance[^>]*>\s*32,500\.00/);
+    expect(h).not.toMatch(/dp-total-balance[^>]*>\s*1,500\.00/);
+  });
+
+  it("分页数据源合计当前已加载页，即使服务端 totals 是另一个数", async () => {
+    const all = data(25);
+    const h = await html({
+      data: undefined,
+      dataSource: {
+        sync: true,
+        list(q) {
+          const start = (q.page - 1) * q.pageSize;
+          return {
+            rows: all.slice(start, start + q.pageSize),
+            total: all.length,
+            totals: { balance: 8968.6 },
+          };
+        },
+      },
+    });
+    // 当前页 20 行：100*(20*21/2)=21000，不能用服务端 8,968.60，也不能用全集 32,500.00
+    expect(h).toMatch(/dp-total-balance[^>]*>\s*21,000\.00/);
+    expect(h).not.toContain("8,968.60");
+    expect(h).not.toMatch(/dp-total-balance[^>]*>\s*32,500\.00/);
+  });
+
+  it("initial.totals 不影响页脚：按 initial.rows 自算", async () => {
+    const page = data(20);
+    const h = await html({
+      data: undefined,
+      initial: { rows: page, total: 25, totals: { balance: 8968.6 } },
+      dataSource: {
+        list() {
+          return Promise.resolve({
+            rows: page,
+            total: 25,
+            totals: { balance: 8968.6 },
+          });
+        },
+      },
+    });
+    expect(h).toMatch(/dp-total-balance[^>]*>\s*21,000\.00/);
+    expect(h).not.toContain("8,968.60");
+  });
+
+  it("data + baseRoute 首屏按传入 data 自算合计，忽略 initial.totals", async () => {
+    const rows = [
+      {
+        id: "1",
+        name: "张三",
+        status: "on",
+        balance: 120,
+        secret: "",
+        locked: false,
+      },
+      {
+        id: "2",
+        name: "李四",
+        status: "on",
+        balance: 80,
+        secret: "",
+        locked: false,
+      },
+      {
+        id: "3",
+        name: "王五",
+        status: "off",
+        balance: 40,
+        secret: "",
+        locked: false,
+      },
+    ];
+    const h = await html({
+      data: rows,
+      baseRoute: "/api/users",
+      initial: { rows, total: 3, totals: { balance: 8968.6 } },
+      syncUrl: false,
+    });
+    expect(h).toMatch(/dp-total-balance[^>]*>\s*240\.00/);
+    expect(h).not.toContain("8,968.60");
   });
 
   it("hidden 列默认不渲染", async () => {
@@ -146,6 +235,14 @@ describe("DataPanel SSR：首帧内容", () => {
   });
 });
 
+/** 原生 disabled 属性，避开 class 里的 Tailwind `disabled:` */
+const CHECKBOX_ATTR_DISABLED_RE =
+  /<input\b[^>]*\stype="checkbox"[^>]*\sdisabled(?:=""|\s|\/?>)|<input\b[^>]*\sdisabled(?:=""|\s)[^>]*\stype="checkbox"/;
+const selectDisabledRe = (id: string) =>
+  new RegExp(
+    `data-testid="${id}"[^>]*\\sdisabled(?:=""|\\s|\\/?>)|\\sdisabled(?:=""|\\s)[^>]*data-testid="${id}"`,
+  );
+
 describe("DataPanel SSR：布尔属性与转义", () => {
   it('不会输出 checked/disabled/selected="false"', async () => {
     const h = await html();
@@ -161,14 +258,12 @@ describe("DataPanel SSR：布尔属性与转义", () => {
       h.indexOf('data-testid="dp-row-1"'),
       h.indexOf('data-testid="dp-row-2"'),
     );
-    expect(row1).toMatch(
-      /<input[^>]*type="checkbox"[^>]*disabled|<input[^>]*disabled[^>]*type="checkbox"/,
-    );
+    expect(row1).toMatch(CHECKBOX_ATTR_DISABLED_RE);
     const row2 = h.slice(
       h.indexOf('data-testid="dp-row-2"'),
       h.indexOf('data-testid="dp-row-3"'),
     );
-    expect(row2).not.toMatch(/<input[^>]*type="checkbox"[^>]*disabled/);
+    expect(row2).not.toMatch(CHECKBOX_ATTR_DISABLED_RE);
   });
 
   it("selection 列 disable 函数：按行禁用勾选，不影响未命中行", async () => {
@@ -182,14 +277,12 @@ describe("DataPanel SSR：布尔属性与转义", () => {
       h.indexOf('data-testid="dp-row-2"'),
       h.indexOf('data-testid="dp-row-3"'),
     );
-    expect(row2).toMatch(
-      /<input[^>]*type="checkbox"[^>]*disabled|<input[^>]*disabled[^>]*type="checkbox"/,
-    );
+    expect(row2).toMatch(CHECKBOX_ATTR_DISABLED_RE);
     const row3 = h.slice(
       h.indexOf('data-testid="dp-row-3"'),
       h.indexOf('data-testid="dp-row-4"'),
     );
-    expect(row3).not.toMatch(/<input[^>]*type="checkbox"[^>]*disabled/);
+    expect(row3).not.toMatch(CHECKBOX_ATTR_DISABLED_RE);
   });
 
   it("actions 列 disable 函数：按行禁用查看／编辑／删除", async () => {
@@ -270,15 +363,49 @@ describe("DataPanel SSR：布尔属性与转义", () => {
         ...COLUMNS,
       ],
     });
-    expect(h).toMatch(
-      /data-testid="dp-select-all"[^>]*disabled|disabled[^>]*data-testid="dp-select-all"/,
+    expect(h).toMatch(selectDisabledRe("dp-select-all"));
+    expect(h).toMatch(selectDisabledRe("dp-select-2"));
+    expect(h).toMatch(selectDisabledRe("dp-select-3"));
+  });
+
+  it("禁用的选择框带有更明显的灰色样式类（深浅色）", async () => {
+    const h = await html({
+      columns: [
+        { type: "selection", disable: (row) => row.id === "2" },
+        ...COLUMNS,
+      ],
+    });
+    const row2 = h.slice(
+      h.indexOf('data-testid="dp-row-2"'),
+      h.indexOf('data-testid="dp-row-3"'),
     );
-    expect(h).toMatch(
-      /data-testid="dp-select-2"[^>]*disabled|disabled[^>]*data-testid="dp-select-2"/,
+    const row3 = h.slice(
+      h.indexOf('data-testid="dp-row-3"'),
+      h.indexOf('data-testid="dp-row-4"'),
     );
-    expect(h).toMatch(
-      /data-testid="dp-select-3"[^>]*disabled|disabled[^>]*data-testid="dp-select-3"/,
-    );
+    expect(row2).toContain("dp-select-cb");
+    expect(row2).toContain("appearance-none");
+    expect(row2).toContain("disabled:bg-slate-300");
+    expect(row2).toContain("dark:disabled:bg-slate-600");
+    expect(row2).toContain("disabled:border-slate-300");
+    expect(row2).toContain("dark:disabled:border-slate-500");
+    expect(row2).toMatch(CHECKBOX_ATTR_DISABLED_RE);
+    expect(row3).toContain("dp-select-cb");
+    expect(row3).toContain("disabled:bg-slate-300");
+    expect(row3).not.toMatch(CHECKBOX_ATTR_DISABLED_RE);
+    // 全部禁用时表头全选同样带灰底类
+    const hall = await html({
+      columns: [
+        { type: "selection", disable: true },
+        ...COLUMNS,
+      ],
+    });
+    const allIdx = hall.indexOf('data-testid="dp-select-all"');
+    const allOpen = hall.slice(Math.max(0, allIdx - 2500), allIdx + 40);
+    expect(allOpen).toContain("dp-select-cb");
+    expect(allOpen).toContain("disabled:bg-slate-300");
+    expect(allOpen).toContain("dark:disabled:bg-slate-600");
+    expect(allOpen).toMatch(selectDisabledRe("dp-select-all"));
   });
 
   it("selection 列仅部分行 disable 时，表头全选仍可用", async () => {
@@ -288,10 +415,7 @@ describe("DataPanel SSR：布尔属性与转义", () => {
         ...COLUMNS,
       ],
     });
-    expect(h).not.toMatch(/data-testid="dp-select-all"[^>]*disabled/);
-    expect(h).not.toMatch(
-      /<input[^>]*disabled[^>]*data-testid="dp-select-all"/,
-    );
+    expect(h).not.toMatch(selectDisabledRe("dp-select-all"));
   });
 
   it("单元格内容被转义", async () => {
@@ -311,7 +435,7 @@ describe("DataPanel SSR：布尔属性与转义", () => {
     expect(DATA_PANEL_CSS).toBe("");
   });
 
-  it("移动端断点：卡片贴边但表格内边距始终保留；分页居中且条数在下（Tailwind max-sm）", async () => {
+  it("移动端断点：卡片贴边但表格内边距始终保留；分页与各端一样左右一行（Tailwind max-sm）", async () => {
     const h = await html();
     // 卡片外边距可在移动端清掉；体内边距始终保留
     expect(h).toContain("max-sm:!mx-0");
@@ -321,12 +445,13 @@ describe("DataPanel SSR：布尔属性与转义", () => {
     expect(h).toContain("!py-2.5");
     expect(h).not.toContain("max-sm:!px-0");
     expect(h).not.toContain("max-sm:!pt-0");
-    // 分页：列布局、控件 order1、条数 order2 居中
+    // 分页：各端同一行，条数在左、控件在右，不再列布局
     expect(h).toContain("dp-pg-ctrls");
     expect(h).toContain("dp-range");
-    expect(h).toContain("max-sm:!flex-col");
-    expect(h).toContain("max-sm:!order-1");
-    expect(h).toContain("max-sm:!order-2");
+    expect(h).toContain("justify-between");
+    expect(h).not.toContain("max-sm:!flex-col");
+    expect(h).not.toContain("max-sm:!order-1");
+    expect(h).not.toContain("max-sm:!order-2");
   });
 
   it("SSR 不再注入 DataPanel 面板 CSS；工具栏类为 Tailwind", async () => {
@@ -357,9 +482,8 @@ describe("DataPanel SSR：能力开关", () => {
   });
 
   it("caps 可以关闭 remove / view / update", async () => {
-    // 关 remove 后若仍有 column.batch:true，默认仍开 batchStatus → 选择列还在；一并关掉才无选择列
     const h = await html({
-      caps: { remove: false, view: false, update: false, batchStatus: false },
+      caps: { remove: false, view: false, update: false },
     });
     expect(h).not.toContain('data-testid="dp-delete-2"');
     expect(h).not.toContain('data-testid="dp-view-2"');
@@ -392,7 +516,7 @@ describe("DataPanel SSR：能力开关", () => {
     const ds: DataSource = {
       list() {
         calls++;
-        return Promise.resolve({ items: data(3), total: 3 });
+        return Promise.resolve({ rows: data(3), total: 3 });
       },
     };
     const h = await html({ data: undefined, dataSource: ds, form: undefined });
@@ -405,13 +529,13 @@ describe("DataPanel SSR：能力开关", () => {
     const ds: DataSource = {
       list() {
         calls++;
-        return Promise.resolve({ items: [], total: 0 });
+        return Promise.resolve({ rows: [], total: 0 });
       },
     };
     const h = await html({
       data: undefined,
       dataSource: ds,
-      initial: { items: data(2), total: 2 },
+      initial: { rows: data(2), total: 2 },
       form: undefined,
     });
     expect(calls).toBe(0);
@@ -422,10 +546,121 @@ describe("DataPanel SSR：能力开关", () => {
   it("同步数据源（sync: true）首帧直出", async () => {
     const ds: DataSource = {
       sync: true,
-      list: () => ({ items: data(4), total: 4 }),
+      list: () => ({ rows: data(4), total: 4 }),
     };
     const h = await html({ data: undefined, dataSource: ds, form: undefined });
     expect(h).toContain("共 4 条记录");
+  });
+
+  it("同时传 data 与 baseRoute：首帧用 data 渲染且不请求 list", async () => {
+    const calls: string[] = [];
+    const orig = globalThis.fetch;
+    globalThis.fetch = ((input: RequestInfo | URL) => {
+      calls.push(String(input));
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({ rows: [{ id: "9", name: "API" }], total: 99 }),
+          {
+            headers: { "content-type": "application/json" },
+          },
+        ),
+      );
+    }) as typeof fetch;
+    try {
+      const h = await html({
+        panelKey: "seed-users",
+        data: [
+          { id: "1", name: "张三", status: "on", balance: 10 },
+          { id: "2", name: "李四", status: "off", balance: 20 },
+        ],
+        baseRoute: "/api/users",
+        syncUrl: false,
+      });
+      expect(calls).toEqual([]);
+      expect(h).toContain("张三");
+      expect(h).toContain("李四");
+      expect(h).toContain("共 2 条记录");
+      expect(h).not.toContain("API");
+    } finally {
+      globalThis.fetch = orig;
+      panelHandles.delete("seed-users");
+    }
+  });
+
+  it("data + baseRoute：initial.total 作为首屏总数，不按 data.length 臆造", async () => {
+    const orig = globalThis.fetch;
+    globalThis.fetch = ((() => {
+      throw new Error("list should not run on first paint");
+    }) as unknown) as typeof fetch;
+    try {
+      const h = await html({
+        panelKey: "seed-total",
+        data: [
+          { id: "1", name: "张三", status: "on", balance: 10 },
+          { id: "2", name: "李四", status: "off", balance: 20 },
+        ],
+        baseRoute: "/api/users",
+        initial: { rows: [], total: 128 },
+        syncUrl: false,
+        pageSize: 20,
+      });
+      expect(h).toContain("张三");
+      expect(h).toContain("李四");
+      expect(h).toContain("共 128 条记录");
+      expect(h).toContain("第 1-20 条，共 128 条");
+    } finally {
+      globalThis.fetch = orig;
+      panelHandles.delete("seed-total");
+    }
+  });
+
+  it("data + baseRoute：刷新与翻页才请求 list", async () => {
+    const calls: string[] = [];
+    const orig = globalThis.fetch;
+    globalThis.fetch = ((input: RequestInfo | URL) => {
+      calls.push(String(input));
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({
+            rows: [{ id: "9", name: "API", status: "on", balance: 1 }],
+            total: 40,
+          }),
+          { headers: { "content-type": "application/json" } },
+        ),
+      );
+    }) as typeof fetch;
+    const origSet = panelHandles.set.bind(panelHandles);
+    let handle: {
+      reload: () => Promise<void>;
+      setQuery: (patch: { page?: number }) => void;
+    } | undefined;
+    panelHandles.set = ((key, value) => {
+      if (key === "seed-reload") handle = value;
+      return origSet(key, value);
+    }) as typeof panelHandles.set;
+    try {
+      await html({
+        panelKey: "seed-reload",
+        data: [{ id: "1", name: "王五", status: "on", balance: 10 }],
+        baseRoute: "/api/users",
+        syncUrl: false,
+        pageSize: 20,
+      });
+      expect(calls).toEqual([]);
+      expect(Boolean(handle)).toBe(true);
+      await handle!.reload();
+      expect(calls.length).toBe(1);
+      expect(calls[0].includes("/api/users")).toBe(true);
+      calls.length = 0;
+      handle!.setQuery({ page: 2 });
+      await new Promise((r) => setTimeout(r, 50));
+      expect(calls.length).toBe(1);
+      expect(calls[0].includes("page=2")).toBe(true);
+    } finally {
+      panelHandles.set = origSet;
+      globalThis.fetch = orig;
+      panelHandles.delete("seed-reload");
+    }
   });
 });
 
@@ -592,7 +827,7 @@ describe("DataPanel SSR：文案与自定义", () => {
     expect(h).toContain("dp-act-del"); // tone=danger
   });
 
-  it("title／label 互落 tip；batchStatus 不在工具栏（caps＋column.batch）", async () => {
+  it("title／label 互落 tip；工具栏没有批量设为按钮", async () => {
     const h = await html({
       columns: withSelection(withActions({
         view: false,
@@ -602,7 +837,6 @@ describe("DataPanel SSR：文案与自定义", () => {
       })),
 
       caps: {
-        batchStatus: true,
         create: false,
         print: false,
         import: false,
@@ -621,7 +855,7 @@ describe("DataPanel SSR：文案与自定义", () => {
       dataSource: {
         sync: true,
         list: () => ({
-          items: [{ id: "1", name: "A", status: "active" }],
+          rows: [{ id: "1", name: "A", status: "active" }],
           total: 1,
         }),
         setField: async () => ({ removed: 0, failed: [] }),
@@ -635,7 +869,7 @@ describe("DataPanel SSR：文案与自定义", () => {
     expect(h).toContain("仅标题"); // 无 label 有 title → 显示 title
     expect(h).toContain('data-testid="dp-tb-extra-bare"');
     expect(h).toContain('aria-label="分配"');
-    // batchStatus 不在 toolbar builtins；UI 仅在选中批量条
+    // 不再提供内置批量「设为…」按钮
     expect(h).not.toContain('data-testid="dp-batch-status"');
     expect(h).not.toContain('data-testid="dp-batch-status-');
     // 选择列因 columns 声明 type:selection 出现；批量条仅选中后出现（SSR 无选中 → 无 batch-bar 内容）
@@ -664,12 +898,11 @@ describe("DataPanel SSR：文案与自定义", () => {
     expect(rec).toContain('data-testid="dp-refresh"');
   });
 
-  it("未声明 selection 列时即使 caps.remove／batchStatus 为 true 也不出现勾选列", async () => {
+  it("未声明 selection 列时即使 caps.remove 为 true 也不出现勾选列", async () => {
     const h = await html({
       columns: withActions({ view: false, edit: false, remove: false }),
 
       caps: {
-        batchStatus: true,
         remove: true,
         create: false,
         print: false,
@@ -684,7 +917,7 @@ describe("DataPanel SSR：文案与自定义", () => {
       dataSource: {
         sync: true,
         list: () => ({
-          items: [{ id: "1", name: "A", status: "active" }],
+          rows: [{ id: "1", name: "A", status: "active" }],
           total: 1,
         }),
         setField: async () => ({ removed: 0, failed: [] }),
@@ -959,12 +1192,136 @@ describe("DataPanel SSR：勾选列只由 columns 的 type:selection 决定", ()
     expect(h).toContain('data-testid="dp-select-2"');
   });
 
-  it("声明了 selection 后即使 caps.remove／batchStatus 为 false 仍显示勾选列", async () => {
+  it("声明了 selection 后即使 caps.remove 为 false 仍显示勾选列", async () => {
     const h = await html({
       columns: withSelection(),
-      caps: { remove: false, batchStatus: false },
+      caps: { remove: false },
     });
     expect(h).toContain('data-testid="dp-select-all"');
     expect(h).toContain('data-testid="dp-select-2"');
+  });
+});
+
+describe("DataPanel SSR：工具栏上下文与 syncUrl", () => {
+  it("工具栏 show／disable 接收 { selected, rows, query }；零参函数仍可用", async () => {
+    const h = await html({
+      initialQuery: { page: 2, pageSize: 10 },
+      caps: {
+        create: false,
+        print: false,
+        import: false,
+        export: false,
+        columns: false,
+        density: false,
+        fullscreen: false,
+        copy: false,
+      },
+      toolbar: {
+        refresh: true,
+        zeroHide: { label: "零参藏", show: () => false, action: () => {} },
+        zeroShow: { label: "零参显", show: () => true, action: () => {} },
+        ctxHide: {
+          label: "次页藏",
+          show: (ctx) => ctx.query.page !== 2,
+          action: () => {},
+        },
+        ctxShow: {
+          label: "次页显",
+          show: (ctx) => ctx.query.page === 2 && ctx.rows.length > 0,
+          action: () => {},
+        },
+        ctxDisable: {
+          label: "有行禁",
+          disable: (ctx) => ctx.rows.length > 0 && ctx.selected.length === 0,
+          action: () => {},
+        },
+      },
+    });
+    expect(h.includes("零参藏")).toBe(false);
+    expect(h.includes('data-testid="dp-tb-extra-zeroHide"')).toBe(false);
+    expect(h.includes("零参显")).toBe(true);
+    expect(h.includes('data-testid="dp-tb-extra-zeroShow"')).toBe(true);
+    expect(h.includes("次页藏")).toBe(false);
+    expect(h.includes("次页显")).toBe(true);
+    expect(h.includes('data-testid="dp-tb-extra-ctxShow"')).toBe(true);
+    const i = h.indexOf('data-testid="dp-tb-extra-ctxDisable"');
+    expect(i).toBeGreaterThan(-1);
+    // testid 在包裹 span 上，button 在其后；disabled 属性在超长 class 之后
+    const start = h.indexOf("<button", i);
+    const open = h.slice(start, h.indexOf(">", start) + 1);
+    expect(/\sdisabled(?:=""|\s|>)/.test(open)).toBe(true);
+  });
+
+  function rowOpenTag(h: string, id = "2"): string {
+    const marker = `data-testid="dp-row-${id}"`;
+    const at = h.indexOf(marker);
+    expect(at).toBeGreaterThan(-1);
+    const start = h.lastIndexOf("<tr", at);
+    expect(start).toBeGreaterThan(-1);
+    return h.slice(start, h.indexOf(">", at) + 1);
+  }
+
+  it("默认点击行不打开详情：行上无 cursor-pointer，操作列仍有眼睛", async () => {
+    const h = await html({
+      columns: withActions({ view: true, edit: false, remove: false }),
+    });
+    expect(rowOpenTag(h).includes("cursor-pointer")).toBe(false);
+    expect(h).toContain('data-testid="dp-view-2"');
+  });
+
+  it("openViewOnRowClick 开启且 caps.view 时行可点；caps.view=false 时仍不可点", async () => {
+    const on = await html({
+      openViewOnRowClick: true,
+      columns: withActions({ view: true, edit: false, remove: false }),
+    });
+    expect(rowOpenTag(on).includes("cursor-pointer")).toBe(true);
+    expect(on).toContain('data-testid="dp-view-2"');
+
+    const offCaps = await html({
+      openViewOnRowClick: true,
+      caps: { view: false },
+      autoActions: false,
+    });
+    expect(rowOpenTag(offCaps).includes("cursor-pointer")).toBe(false);
+  });
+
+  it("传入 onRowClick 时行可点（只走回调，不依赖 openViewOnRowClick）", async () => {
+    const h = await html({
+      onRowClick: () => {},
+      caps: { view: false },
+      autoActions: false,
+    });
+    expect(rowOpenTag(h).includes("cursor-pointer")).toBe(true);
+  });
+
+  it("syncUrl=false 不读地址栏；默认与前缀会读对应参数", async () => {
+    const g = globalThis as { location?: { search?: string } };
+    const prev = Object.getOwnPropertyDescriptor(globalThis, "location");
+    const setSearch = (search: string) => {
+      Object.defineProperty(globalThis, "location", {
+        configurable: true,
+        writable: true,
+        value: { search },
+      });
+    };
+    try {
+      setSearch("?page=2&pageSize=10");
+      const on = await html();
+      expect(on).toContain("第 11-20 条，共 25 条");
+      expect(on).toContain("User 11");
+      const off = await html({ syncUrl: false, initialQuery: { page: 1 } });
+      expect(off).toContain("第 1-20 条，共 25 条");
+      expect(off).toContain("User 1");
+      const ignoredPrefix = await html({ syncUrl: { prefix: "p1" } });
+      expect(ignoredPrefix).toContain("第 1-20 条，共 25 条");
+      setSearch("?p1_page=2&p1_pageSize=10");
+      const prefixed = await html({ syncUrl: { prefix: "p1" } });
+      expect(prefixed).toContain("第 11-20 条，共 25 条");
+      const unprefixed = await html();
+      expect(unprefixed).toContain("第 1-20 条，共 25 条");
+    } finally {
+      if (prev) Object.defineProperty(globalThis, "location", prev);
+      else delete g.location;
+    }
   });
 });

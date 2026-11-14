@@ -557,4 +557,47 @@ describe("文档页 E2E：/desktop/data-display/data-view（DataView 数据明�
     expect(r.hash).toBe("#tab");
     expect(r.extraVisible).toBe(true);
   }, DOCS_BROWSER_CONFIG);
+
+  it(
+    "页面提示条：工具栏下方可见，关闭后隐藏",
+    async (t) => {
+      if (!t?.browser?.goto) return;
+      await open(t);
+      const r = await t.browser!.evaluate(async () => {
+        const root = document.querySelector(
+          '[data-testid="panel-demo-data-view-alert"]',
+        ) as HTMLElement | null;
+        if (!root) return { ok: false, reason: "missing panel" };
+        const tb = root.querySelector('[data-testid="data-view-toolbar"]');
+        const alert = root.querySelector('[data-testid="dv-alert"]');
+        const body = root.querySelector('[data-testid="dv-body"]');
+        const close = alert?.querySelector(
+          'button[aria-label="关闭"]',
+        ) as HTMLButtonElement | null;
+        const afterToolbar = !!(tb && alert && body &&
+          (tb.compareDocumentPosition(alert) &
+            Node.DOCUMENT_POSITION_FOLLOWING) &&
+          (alert.compareDocumentPosition(body) &
+            Node.DOCUMENT_POSITION_FOLLOWING));
+        const text = alert?.textContent ?? "";
+        close?.click();
+        await new Promise((r) => setTimeout(r, 100));
+        return {
+          ok: true,
+          hasAlert: !!alert,
+          afterToolbar,
+          text,
+          hasClose: !!close,
+          hidden: !root.querySelector('[data-testid="dv-alert"]'),
+        };
+      });
+      expect(r.ok).toBe(true);
+      expect(r.hasAlert).toBe(true);
+      expect(r.afterToolbar).toBe(true);
+      expect(String(r.text).includes("请先完成实名认证")).toBe(true);
+      expect(r.hasClose).toBe(true);
+      expect(r.hidden).toBe(true);
+    },
+    DOCS_BROWSER_CONFIG,
+  );
 });
