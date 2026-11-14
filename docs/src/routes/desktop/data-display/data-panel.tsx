@@ -3596,7 +3596,7 @@ const rows = makeDemoRows(8);
             <code class="text-xs">bordered</code>（缺省 true）。标签与内容比例用{" "}
             <code class="text-xs">labelColPercent</code>
             （12～85，缺省 38）和 <code class="text-xs">labelMinWidth</code>
-            （缺省 13.5rem）设置。<code class="text-xs">title</code>{" "}
+            （电脑端缺省 13.5rem，移动端容器缺省 7rem）设置。<code class="text-xs">title</code>{" "}
             是查看弹窗标题（
             <code class="text-xs">string</code> 或{" "}
             <code class="text-xs">(row)=&gt;string</code>，如{" "}
@@ -4475,7 +4475,7 @@ function DataPanelTabsDemo() {
           （仅移动端打开即全屏，缺省 false）。标签与内容的宽度比例用{" "}
           <code class="text-xs">labelColPercent</code>
           （12～85，缺省 38）和 <code class="text-xs">labelMinWidth</code>
-          （缺省 13.5rem）控制。
+          （电脑端缺省 13.5rem，移动端容器缺省 7rem）控制。
         </Paragraph>
         <Title level={3} id="api-type-ViewConfig">ViewConfig</Title>
         <DocsApiTable rows={VIEW_CONFIG_API} />

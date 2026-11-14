@@ -129,7 +129,8 @@ export interface DescriptionsProps {
   labelColPercent?: number;
   /**
    * 仅 `layout="horizontal"`：标签列最小宽度（CSS 长度或像素数字），偏大可减少长标签换行。
-   * 默认 `13.5rem`。
+   * 默认电脑端／宽度未知为 `13.5rem`；容器宽度 ≤639.98px 且未指定本属性时为 `7rem`，
+   * 避免窄屏左侧留白、右侧内容被挤换行。一旦传入本属性，所有宽度都尊重该值。
    */
   labelMinWidth?: string | number;
   /**
@@ -146,8 +147,11 @@ const sizeClasses: Record<SizeVariant, string> = {
   lg: "text-base py-3 px-4",
 };
 
-/** 横向布局标签列默认最小宽度（CSS 长度） */
-const DESCRIPTIONS_LABEL_MIN_WIDTH_DEFAULT = "13.5rem";
+/** 横向布局标签列默认最小宽度（CSS 长度）；电脑端／宽度未知时使用 */
+export const DESCRIPTIONS_LABEL_MIN_WIDTH_DEFAULT = "13.5rem";
+
+/** 横向布局在移动端容器（≤639.98px）上的默认最小宽度，避免标签列把内容挤没 */
+export const DESCRIPTIONS_LABEL_MIN_WIDTH_MOBILE_DEFAULT = "7rem";
 
 /** 横向布局标签列默认占当前描述项格子的宽度百分比 */
 const DESCRIPTIONS_LABEL_COL_PERCENT_DEFAULT = 38;
@@ -287,6 +291,33 @@ export function resolveDescriptionsColumnCount(
   return max;
 }
 
+/**
+ * 未指定 `labelMinWidth` 时：移动端容器用较短的默认最小宽，电脑端／宽度未知仍用 13.5rem。
+ * 调用方一旦传入 `labelMinWidth`，所有宽度都尊重该值。
+ *
+ * @param containerWidthPx - 描述列表容器宽度（像素）；未知时按电脑端默认
+ * @param labelMinWidth - 调用方传入值；未传则按容器宽度选择默认
+ */
+export function resolveDescriptionsLabelMinWidthCss(
+  containerWidthPx: number | undefined,
+  labelMinWidth?: string | number,
+): string {
+  if (labelMinWidth !== undefined) {
+    return descriptionsLabelMinWidthCss(
+      labelMinWidth,
+      DESCRIPTIONS_LABEL_MIN_WIDTH_DEFAULT,
+    );
+  }
+  if (
+    containerWidthPx != null &&
+    Number.isFinite(containerWidthPx) &&
+    containerWidthPx <= DESCRIPTIONS_MOBILE_MAX_PX
+  ) {
+    return DESCRIPTIONS_LABEL_MIN_WIDTH_MOBILE_DEFAULT;
+  }
+  return DESCRIPTIONS_LABEL_MIN_WIDTH_DEFAULT;
+}
+
 export function Descriptions(props: DescriptionsProps): JSXRenderable {
   const {
     items,
@@ -307,9 +338,9 @@ export function Descriptions(props: DescriptionsProps): JSXRenderable {
   const labelColPercent = descriptionsLabelColPercentClamped(
     labelColPercentProp,
   );
-  const labelMinWidthCss = descriptionsLabelMinWidthCss(
-    labelMinWidthProp,
-    DESCRIPTIONS_LABEL_MIN_WIDTH_DEFAULT,
+  /** 实际标签最小宽；SSR／未测量用电脑端默认，客户端按容器宽度收敛 */
+  const labelMinWidthCss = createSignal(
+    resolveDescriptionsLabelMinWidthCss(undefined, labelMinWidthProp),
   );
 
   /** 调用方声明的列数上限（规范化后） */
@@ -337,6 +368,11 @@ export function Descriptions(props: DescriptionsProps): JSXRenderable {
       if (!(Number.isFinite(width) && width > 0)) return;
       const next = resolveDescriptionsColumnCount(width, maxColumn);
       if (columnCount.value !== next) columnCount.value = next;
+      const nextMin = resolveDescriptionsLabelMinWidthCss(
+        width,
+        labelMinWidthProp,
+      );
+      if (labelMinWidthCss.value !== nextMin) labelMinWidthCss.value = nextMin;
     };
     apply(readContainerWidthPx(el));
     if (typeof ResizeObserver === "undefined") return;
@@ -378,6 +414,7 @@ export function Descriptions(props: DescriptionsProps): JSXRenderable {
       )}
       {() => {
         const cols = columnCount.value;
+        const minWidthCss = labelMinWidthCss.value;
         const placements = computeDescriptionsPlacements(items, cols);
         return (
           <div
@@ -429,7 +466,7 @@ export function Descriptions(props: DescriptionsProps): JSXRenderable {
                          * `minmax(最小宽, 占比%)`：占比相对**本项**宽度；有效 span>1 时用 `labelColPercent/span` 保证与单列项首列对齐。
                          */
                         gridTemplateColumns:
-                          `minmax(${labelMinWidthCss}, ${labelPercentInCell}%) minmax(0, 1fr)`,
+                          `minmax(${minWidthCss}, ${labelPercentInCell}%) minmax(0, 1fr)`,
                       }
                       : {}),
                     ...(bordered && touchesRightEdge

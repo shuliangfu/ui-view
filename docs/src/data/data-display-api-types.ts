@@ -685,7 +685,7 @@ export const VIEW_CONFIG_API: DocsApiTableRow[] = [
     type: "string | number",
     default: '"13.5rem"',
     description:
-      "详情 Descriptions 标签列最小宽度（CSS 长度或像素数字）；适当减小可让内容区更宽。可直接写在 view 上。有 render 时不生效",
+      "详情 Descriptions 标签列最小宽度（CSS 长度或像素数字）；适当减小可让内容区更宽。未指定时，容器宽度 ≤639.98px 自动改为 7rem。可直接写在 view 上。有 render 时不生效",
   },
 ];
 

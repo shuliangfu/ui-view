@@ -8,6 +8,7 @@ import {
   Descriptions,
   type DescriptionsProps,
   resolveDescriptionsColumnCount,
+  resolveDescriptionsLabelMinWidthCss,
 } from "../../src/shared/data-display/Descriptions.tsx";
 
 async function html(props: DescriptionsProps): Promise<string> {
@@ -213,5 +214,25 @@ describe("Descriptions 按容器宽度收敛列数", () => {
     });
     expect(h).toContain("repeat(3, minmax(0, 1fr))");
     expect(h).toContain('data-descriptions-columns="3"');
+  });
+});
+
+describe("Descriptions 按容器宽度收敛标签最小宽", () => {
+  it("宽度未知（SSR）时保持 13.5rem", () => {
+    expect(resolveDescriptionsLabelMinWidthCss(undefined)).toBe("13.5rem");
+    expect(resolveDescriptionsLabelMinWidthCss(Number.NaN)).toBe("13.5rem");
+  });
+
+  it("未指定时移动端容器用 7rem，平板和电脑端仍为 13.5rem", () => {
+    expect(resolveDescriptionsLabelMinWidthCss(390)).toBe("7rem");
+    expect(resolveDescriptionsLabelMinWidthCss(639.98)).toBe("7rem");
+    expect(resolveDescriptionsLabelMinWidthCss(640)).toBe("13.5rem");
+    expect(resolveDescriptionsLabelMinWidthCss(1280)).toBe("13.5rem");
+  });
+
+  it("一旦传入 labelMinWidth，移动端也尊重该值", () => {
+    expect(resolveDescriptionsLabelMinWidthCss(390, "10rem")).toBe("10rem");
+    expect(resolveDescriptionsLabelMinWidthCss(1280, 112)).toBe("112px");
+    expect(resolveDescriptionsLabelMinWidthCss(undefined, "6rem")).toBe("6rem");
   });
 });

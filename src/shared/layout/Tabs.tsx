@@ -5,9 +5,14 @@
  * 内部维护 fallback state，保证点击切换在受控/非受控下均生效。
  */
 
-import { createSignal } from "@dreamer/view";
+import { createEffect, createMemo, createSignal } from "@dreamer/view";
 import type { JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
+import { isHtmlElement } from "../dom-guards.ts";
+import {
+  type ControlledStringInput,
+  readControlledStringInput,
+} from "../feedback/controlled-open.ts";
 
 export type TabsType = "line" | "card";
 
@@ -25,8 +30,12 @@ export interface TabItem {
 export interface TabsProps {
   /** 标签项列表 */
   items: TabItem[];
-  /** 当前激活 key（受控） */
-  activeKey?: string;
+  /**
+   * 当前激活 key（受控）。可传字符串、零参 getter 或 `Signal<string>`。
+   * 请把 getter／Signal 传进来，不要在外层用 `{() => <Tabs activeKey={sig.value} />}` 整棵重挂，
+   * 否则横向滚动的标签栏会被重建、滚动位置回到最左。
+   */
+  activeKey?: ControlledStringInput;
   /** 切换回调（受控时由父级更新 activeKey） */
   onChange?: (key: string) => void;
   /** 样式类型：`line` 为文件夹式贴线标签，`card` 为槽内卡片，默认 `line` */
@@ -49,10 +58,46 @@ export interface TabsProps {
   hidePanel?: boolean;
 }
 
+/**
+ * 把激活标签滚进标签栏可视区，只改 tablist 的 `scrollLeft`，不带动页面或弹层竖向滚动。
+ *
+ * @param tablist - 带横向滚动的标签栏
+ * @param activeKey - 当前激活项的 `data-tab-key`
+ */
+export function scrollTabListToActive(
+  tablist: HTMLElement,
+  activeKey: string,
+): void {
+  let tab: HTMLElement | null = null;
+  const nodes = tablist.querySelectorAll("[data-tab-key]");
+  for (let i = 0; i < nodes.length; i++) {
+    const el = nodes[i];
+    if (isHtmlElement(el) && el.getAttribute("data-tab-key") === activeKey) {
+      tab = el;
+      break;
+    }
+  }
+  if (tab == null) return;
+  tablist.scrollLeft += tabListScrollDelta(
+    tablist.getBoundingClientRect(),
+    tab.getBoundingClientRect(),
+  );
+}
+
+/**
+ * 为把激活标签完全露出，tablist 的 `scrollLeft` 需要增减的量；已完全可见则为 0。
+ */
+export function tabListScrollDelta(
+  list: Pick<DOMRect, "left" | "right">,
+  tab: Pick<DOMRect, "left" | "right">,
+): number {
+  if (tab.left < list.left) return tab.left - list.left;
+  if (tab.right > list.right) return tab.right - list.right;
+  return 0;
+}
+
 export function Tabs(props: TabsProps): JSXRenderable {
   const {
-    items,
-    activeKey: controlledKey,
     onChange,
     type = "line",
     fullWidth = false,
@@ -65,19 +110,46 @@ export function Tabs(props: TabsProps): JSXRenderable {
     hidePanel,
   } = props;
 
-  const initialKey = controlledKey ?? items[0]?.key ?? "";
+  const initialKey = readControlledStringInput(props.activeKey) ??
+    props.items[0]?.key ?? "";
   const internalKeyRef = createSignal(initialKey);
-  /** 用普通对象存「上次同步的受控 key」，不参与响应式，避免读 `Signal` 触发重跑导致卡死 */
-  const lastSyncedRef: { value: string | undefined } = { value: undefined };
-  const c = controlledKey !== undefined && controlledKey !== ""
-    ? controlledKey
-    : undefined;
-  if (c != null && c !== lastSyncedRef.value) {
-    lastSyncedRef.value = c;
-    internalKeyRef.value = c;
-  }
-  /** 展示用内部 state，点击即更新；受控时仅当 prop 变化才从上面同步到 internal */
-  const getActiveKey = () => internalKeyRef.value;
+
+  /**
+   * 受控时从 `props.activeKey`（字符串／getter／Signal）读取，非受控读内部 Signal。
+   * 放在 memo 里，按钮的 `class`／`data-active` 用函数订阅，切换时只改属性、不重建 DOM。
+   */
+  const activeKeyResolved = createMemo(() => {
+    const ck = readControlledStringInput(props.activeKey);
+    if (ck !== undefined && ck !== "") return ck;
+    return internalKeyRef.value;
+  });
+  const getActiveKey = (): string => activeKeyResolved();
+
+  let tabListEl: HTMLElement | null = null;
+
+  const scheduleScrollActiveIntoView = () => {
+    const key = getActiveKey();
+    const run = () => {
+      if (tabListEl == null) return;
+      scrollTabListToActive(tabListEl, key);
+    };
+    if (typeof requestAnimationFrame === "function") {
+      requestAnimationFrame(run);
+    } else {
+      run();
+    }
+  };
+
+  const setTabListRef = (el: unknown) => {
+    tabListEl = isHtmlElement(el) ? el : null;
+    if (tabListEl != null) scheduleScrollActiveIntoView();
+  };
+
+  /** 激活项变化或标签栏挂载后，把当前项滚进可视区（不重建标签栏） */
+  createEffect(() => {
+    activeKeyResolved();
+    scheduleScrollActiveIntoView();
+  });
 
   /**
    * `line` 标签栏：`items-end` 底对齐；`border-b` 为分隔线；`bg-inherit` 与根容器同色，激活项再 inherit 以盖住线下那一段。
@@ -105,72 +177,79 @@ export function Tabs(props: TabsProps): JSXRenderable {
     : "";
 
   const handleTabClick = (key: string) => {
-    const item = items.find((i) => i.key === key);
+    const item = props.items.find((i) => i.key === key);
     if (item?.disabled) return;
     internalKeyRef.value = key;
     onChange?.(key);
+    scheduleScrollActiveIntoView();
   };
 
   /**
-   * 渲染 getter：读 `internalKeyRef.value`，点击切换后触发细粒度更新。
+   * 外层与 tablist 保持稳定节点，只在按钮和面板上用 getter 读激活项。
+   * 若整段 `return () => { ... }`，切换时标签栏 DOM 会被重建，横向滚动会回到最左。
    */
-  return () => {
-    const activeKey = getActiveKey();
-    return (
+  return (
+    <div
+      class={twMerge(
+        hidePanel ? "inline-flex w-fit max-w-full shrink-0" : "w-full",
+        /**
+         * `line` 时给根容器默认与常见主内容区一致的底色，激活标签 `bg-inherit` 后与下方面板视觉上同色；嵌入卡片时请传 `class` 覆盖（如 `bg-white`）。
+         */
+        type === "line" && !hidePanel && "bg-slate-50 dark:bg-slate-950",
+        className,
+      )}
+    >
       <div
+        ref={setTabListRef}
+        role="tablist"
         class={twMerge(
-          hidePanel ? "inline-flex w-fit max-w-full shrink-0" : "w-full",
-          /**
-           * `line` 时给根容器默认与常见主内容区一致的底色，激活标签 `bg-inherit` 后与下方面板视觉上同色；嵌入卡片时请传 `class` 覆盖（如 `bg-white`）。
-           */
-          type === "line" && !hidePanel && "bg-slate-50 dark:bg-slate-950",
-          className,
+          type === "line" ? lineCls : cardCls,
+          fullWidth && "w-full",
+          tabListClass,
         )}
       >
-        <div
-          role="tablist"
-          class={twMerge(
-            type === "line" ? lineCls : cardCls,
-            fullWidth && "w-full",
-            tabListClass,
-          )}
-        >
-          {items.map((item) => (
-            <button
-              key={item.key}
-              type="button"
-              role="tab"
-              aria-selected={activeKey === item.key}
-              aria-controls={`tabpanel-${item.key}`}
-              id={`tab-${item.key}`}
-              disabled={item.disabled}
-              data-tab-key={item.key}
-              data-active={activeKey === item.key ? "" : undefined}
-              class={twMerge(
+        {props.items.map((item) => (
+          <button
+            key={item.key}
+            type="button"
+            role="tab"
+            aria-selected={() => activeKeyResolved() === item.key}
+            aria-controls={`tabpanel-${item.key}`}
+            id={`tab-${item.key}`}
+            disabled={item.disabled}
+            data-tab-key={item.key}
+            data-active={() =>
+              activeKeyResolved() === item.key ? "" : undefined}
+            class={() =>
+              twMerge(
                 tabBtnBase,
                 type === "line" ? tabBtnLine : tabBtnCard,
                 fullWidth && "flex-1",
                 tabClass,
-                activeKey === item.key ? activeClass : undefined,
+                activeKeyResolved() === item.key ? activeClass : undefined,
               )}
-              onClick={() => handleTabClick(item.key)}
-            >
-              {item.label}
-            </button>
-          ))}
-        </div>
-        {!hidePanel && extra}
-        {!hidePanel && (
-        <div
-          role="tabpanel"
-          id={`tabpanel-${activeKey}`}
-          aria-labelledby={`tab-${activeKey}`}
-          class={twMerge("mt-4", panelClass)}
-        >
-          {items.find((i) => i.key === activeKey)?.children}
-        </div>
-        )}
+            onClick={() => handleTabClick(item.key)}
+          >
+            {item.label}
+          </button>
+        ))}
       </div>
-    );
-  };
+      {!hidePanel && extra}
+      {!hidePanel && (
+        () => {
+          const activeKey = getActiveKey();
+          return (
+            <div
+              role="tabpanel"
+              id={`tabpanel-${activeKey}`}
+              aria-labelledby={`tab-${activeKey}`}
+              class={twMerge("mt-4", panelClass)}
+            >
+              {props.items.find((i) => i.key === activeKey)?.children}
+            </div>
+          );
+        }
+      )}
+    </div>
+  );
 }
