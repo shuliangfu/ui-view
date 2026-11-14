@@ -2494,6 +2494,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
                   value={sig}
                   disabled={disabled}
                   placeholder={sdef.placeholder}
+                  panelAttach="viewport"
                 />
               </div>
             );
@@ -2506,6 +2507,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
                   format="YYYY-MM-DD HH:mm"
                   disabled={disabled}
                   placeholder={sdef.placeholder}
+                  panelAttach="viewport"
                 />
               </div>
             );
@@ -4061,6 +4063,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
                   value={sig}
                   disabled={disabled}
                   placeholder={f.placeholder}
+                  panelAttach="viewport"
                 />
               </div>
             );
@@ -4073,6 +4076,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
                   format="YYYY-MM-DD HH:mm"
                   disabled={disabled}
                   placeholder={f.placeholder}
+                  panelAttach="viewport"
                 />
               </div>
             );
@@ -4528,6 +4532,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
           return `${formId.value ? m.edit : m.add} · ${props.title}`;
         }}
         width={() => resolveModalWidth(props.form?.width)}
+        maxHeight={() => props.form?.maxHeight}
         fullscreen={() => resolveModalStartFullscreen(props.form)}
         fullscreenable={props.form?.fullscreenable}
         keyboard
@@ -4546,6 +4551,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
           return `${m.search} · ${props.title}`;
         }}
         width={() => resolveModalWidth(props.search?.width)}
+        maxHeight={() => props.search?.maxHeight}
         fullscreen={() => resolveModalStartFullscreen(props.search)}
         fullscreenable={props.search?.fullscreenable}
         keyboard
@@ -4567,6 +4573,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
           return `${m.view} · ${props.title}`;
         }}
         width={() => resolveModalWidth(props.view?.width)}
+        maxHeight={() => props.view?.maxHeight}
         fullscreen={() => resolveModalStartFullscreen(props.view)}
         fullscreenable={props.view?.fullscreenable}
         keyboard

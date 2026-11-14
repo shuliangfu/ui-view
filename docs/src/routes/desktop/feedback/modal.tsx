@@ -88,6 +88,13 @@ const MODAL_API: ApiRow[] = [
       "弹层宽度；随 signal 变时请用 `width={() => sig.value.preset}`（Modal 内订阅），勿只写 `width={sig.value}`",
   },
   {
+    name: "maxHeight",
+    type: "string | number | (() => 同上)",
+    default: "90vh",
+    description:
+      "弹层最大高度；数字为像素，字符串为 CSS（如 80vh）。随 signal 变时用 `maxHeight={() => …}`。全屏时忽略，仍为 100vh",
+  },
+  {
     name: "centered",
     type: "boolean",
     default: "true",

@@ -207,6 +207,13 @@ export const SEARCH_CONFIG_API: DocsApiTableRow[] = [
       "弹层宽度，传给 Modal。预设名 xs／sm／md／lg／xl，或 CSS 长度／数字像素，也可零参 getter",
   },
   {
+    name: "maxHeight",
+    type: "string | number | (() => string | number | undefined)",
+    default: "90vh",
+    description:
+      "弹层最大高度，传给 Modal。数字为像素，字符串为 CSS（如 80vh／600px），也可零参 getter。全屏时忽略，仍为 100vh",
+  },
+  {
     name: "fullscreenable",
     type: "boolean",
     default: "false",
@@ -543,6 +550,13 @@ export const FORM_CONFIG_API: DocsApiTableRow[] = [
       "弹层宽度，传给 Modal。预设名 xs／sm／md／lg／xl，或 CSS 长度／数字像素，也可零参 getter",
   },
   {
+    name: "maxHeight",
+    type: "string | number | (() => string | number | undefined)",
+    default: "90vh",
+    description:
+      "弹层最大高度，传给 Modal。数字为像素，字符串为 CSS（如 80vh／600px），也可零参 getter。全屏时忽略，仍为 100vh",
+  },
+  {
     name: "fullscreenable",
     type: "boolean",
     default: "false",
@@ -598,6 +612,13 @@ export const VIEW_CONFIG_API: DocsApiTableRow[] = [
     default: '"md"',
     description:
       "弹层宽度，传给 Modal。预设名 xs／sm／md／lg／xl，或 CSS 长度／数字像素，也可零参 getter",
+  },
+  {
+    name: "maxHeight",
+    type: "string | number | (() => string | number | undefined)",
+    default: "90vh",
+    description:
+      "弹层最大高度，传给 Modal。数字为像素，字符串为 CSS（如 80vh／600px），也可零参 getter。全屏时忽略，仍为 100vh",
   },
   {
     name: "fullscreenable",

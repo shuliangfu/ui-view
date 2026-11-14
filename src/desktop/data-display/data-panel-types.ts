@@ -560,6 +560,11 @@ export interface FormConfig {
   render?: (ctx: FormRenderCtx) => unknown;
   /** 增改弹层宽度，传给 Modal；缺省 md */
   width?: ModalShellWidth;
+  /**
+   * 增改弹层最大高度，传给 Modal；数字为 px，字符串为 CSS（如 `80vh`）。
+   * 未传时沿用 Modal 默认 `90vh`；全屏时忽略。
+   */
+  maxHeight?: string | number;
   /** 增改弹层是否显示全屏切换，传给 Modal */
   fullscreenable?: boolean;
   /** 打开增改弹层时所有端自动全屏，传给 Modal 的 fullscreen；默认 false */
@@ -588,6 +593,11 @@ export interface SearchConfig {
   render?: (ctx: SearchRenderCtx) => unknown;
   /** 搜索弹层宽度，传给 Modal；缺省 md */
   width?: ModalShellWidth;
+  /**
+   * 搜索弹层最大高度，传给 Modal；数字为 px，字符串为 CSS（如 `80vh`）。
+   * 未传时沿用 Modal 默认 `90vh`；全屏时忽略。
+   */
+  maxHeight?: string | number;
   /** 搜索弹层是否显示全屏切换，传给 Modal */
   fullscreenable?: boolean;
   /** 打开搜索弹层时所有端自动全屏，传给 Modal 的 fullscreen；默认 false */
@@ -622,6 +632,11 @@ export interface ViewConfig extends ViewDescriptionsProps {
   render?: (ctx: ViewRenderCtx) => unknown;
   /** 详情弹层宽度，传给 Modal；缺省 md */
   width?: ModalShellWidth;
+  /**
+   * 详情弹层最大高度，传给 Modal；数字为 px，字符串为 CSS（如 `80vh`）。
+   * 未传时沿用 Modal 默认 `90vh`；全屏时忽略。
+   */
+  maxHeight?: string | number;
   /** 详情弹层是否显示全屏切换，传给 Modal */
   fullscreenable?: boolean;
   /** 打开详情弹层时所有端自动全屏，传给 Modal 的 fullscreen；默认 false */

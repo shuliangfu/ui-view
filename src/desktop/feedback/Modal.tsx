@@ -72,6 +72,16 @@ export type ModalWidthInput =
   | ModalWidthPrimitive
   | (() => ModalWidthPrimitive | undefined);
 
+/** `maxHeight` 的静态值：CSS 字符串或数字（px）。 */
+export type ModalMaxHeightPrimitive = string | number;
+
+/**
+ * `maxHeight` 可与 `width` 一样传零参 getter。
+ */
+export type ModalMaxHeightInput =
+  | ModalMaxHeightPrimitive
+  | (() => ModalMaxHeightPrimitive | undefined);
+
 /**
  * `title` 支持零参 getter；`false` 与 `null` 均不展示标题栏。
  */
@@ -134,6 +144,11 @@ export interface ModalProps {
   mask?: boolean;
   /** 弹层宽度：预设或 CSS 字符串、数字（px）；默认 "520px"（等同 sm）；可传 `() => 同上` */
   width?: ModalWidthInput;
+  /**
+   * 弹层最大高度：CSS 字符串或数字（px）；未传时非全屏默认 `90vh`。
+   * 可传 `() => 同上`。全屏时忽略，仍为 `100vh`。
+   */
+  maxHeight?: ModalMaxHeightInput;
   /**
    * 是否在视口内垂直居中；`false` 时靠上并留顶距（与 Ant Design 顶部对齐相近）。
    * 与 {@link placement} 同传时，以 `placement` 为准（`placement="bottom"` 时不再使用本项的垂直方向）。
@@ -201,10 +216,23 @@ export const MODAL_VIEWPORT_MAX_WIDTH =
  * 弹层盒子尺寸：给出 width 的同时用 maxWidth 卡住视口，并用 minWidth:0
  * 避免作为 flex 子项时被内部固定宽表单撑破。
  */
+/**
+ * 把 `maxHeight` 写成 CSS 长度：数字视为 px，空值返回 undefined。
+ *
+ * @param value - 字符串、数字或空
+ */
+export function normalizeModalMaxHeight(
+  value: string | number | undefined,
+): string | undefined {
+  if (value == null || value === "") return undefined;
+  return typeof value === "number" ? `${value}px` : String(value);
+}
+
 export function modalShellSizeStyle(opts: {
   fullscreen: boolean;
   width: string;
   placement?: string;
+  maxHeight?: string | number;
 }): Record<string, string> {
   if (opts.fullscreen) {
     return {
@@ -219,6 +247,7 @@ export function modalShellSizeStyle(opts: {
     maxWidth: opts.placement === "bottom" ? "100%" : MODAL_VIEWPORT_MAX_WIDTH,
     minWidth: "0",
     boxSizing: "border-box",
+    maxHeight: normalizeModalMaxHeight(opts.maxHeight) ?? "90vh",
   };
 }
 
@@ -254,6 +283,24 @@ function readModalWidthInput(
     return inner === undefined ? defaultWidth : inner;
   }
   return v;
+}
+
+/**
+ * 解析 `maxHeight`：支持零参 getter；数字转为 px。未传时返回 undefined，由 {@link modalShellSizeStyle} 回落 90vh。
+ *
+ * @param v - `ModalProps.maxHeight`
+ */
+function readModalMaxHeightInput(
+  v: ModalMaxHeightInput | undefined,
+): string | undefined {
+  if (v === undefined) return undefined;
+  if (typeof v === "function") {
+    if ((v as () => unknown).length !== 0) return undefined;
+    return normalizeModalMaxHeight(
+      (v as () => ModalMaxHeightPrimitive | undefined)(),
+    );
+  }
+  return normalizeModalMaxHeight(v);
 }
 
 /**
@@ -544,6 +591,9 @@ export function Modal(props: ModalProps): JSXRenderable {
    * Portal 的 insert getter 重跑时能订阅零参 getter 内的 signal（compileSource 首帧 props 快照不再卡宽度）。
    */
   const resolvedWidth = createMemo(() => readModalWidthInput(props.width));
+  const resolvedMaxHeight = createMemo(() =>
+    readModalMaxHeightInput(props.maxHeight)
+  );
   const resolvedTitle = createMemo(() => readModalTitleInput(props.title));
   const resolvedChildren = createMemo(() =>
     readModalChildrenInput(props.children)
@@ -685,6 +735,7 @@ export function Modal(props: ModalProps): JSXRenderable {
         fullscreen: isFullscreen,
         width: widthStyle,
         placement,
+        maxHeight: resolvedMaxHeight(),
       }),
       ...(!isFullscreen && draggable
         ? {
@@ -695,7 +746,7 @@ export function Modal(props: ModalProps): JSXRenderable {
     };
     const modalClass = isFullscreen
       ? "rounded-none"
-      : "rounded-xl max-h-[90vh] min-w-0";
+      : "rounded-xl min-w-0";
     const showHeaderActions = fullscreenable || closable;
     const wrapZ = isFullscreen ? 9999 : 300;
 

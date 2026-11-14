@@ -4466,7 +4466,9 @@ function DataPanelTabsDemo() {
           ，垂直方向 top／center／bottom，水平方向
           left／center／right；未写则标签上对齐、右对齐。弹层可用{" "}
           <code class="text-xs">width</code>
-          （xs／sm／md／lg／xl 或 CSS 长度／像素／getter，缺省 md）和{" "}
+          （xs／sm／md／lg／xl 或 CSS 长度／像素／getter，缺省 md）、
+          <code class="text-xs">maxHeight</code>
+          （最大高度，数字为像素或 CSS，缺省 90vh）和{" "}
           <code class="text-xs">fullscreenable</code>
           （是否显示全屏切换，缺省 false）、
           <code class="text-xs">autoFullscreen</code>

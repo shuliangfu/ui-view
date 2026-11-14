@@ -14,6 +14,22 @@ describe("modalShellSizeStyle", () => {
     expect(s.maxWidth).toBe(MODAL_VIEWPORT_MAX_WIDTH);
     expect(s.minWidth).toBe("0");
     expect(s.boxSizing).toBe("border-box");
+    expect(s.maxHeight).toBe("90vh");
+  });
+
+  it("uses a custom maxHeight and treats numbers as pixels", () => {
+    const css = modalShellSizeStyle({
+      fullscreen: false,
+      width: "520px",
+      maxHeight: "80vh",
+    });
+    expect(css.maxHeight).toBe("80vh");
+    const px = modalShellSizeStyle({
+      fullscreen: false,
+      width: "520px",
+      maxHeight: 600,
+    });
+    expect(px.maxHeight).toBe("600px");
   });
 
   it("lets a bottom sheet use the full wrap width", () => {
@@ -27,9 +43,14 @@ describe("modalShellSizeStyle", () => {
   });
 
   it("fullscreen still fills the viewport", () => {
-    const s = modalShellSizeStyle({ fullscreen: true, width: "520px" });
+    const s = modalShellSizeStyle({
+      fullscreen: true,
+      width: "520px",
+      maxHeight: "80vh",
+    });
     expect(s.width).toBe("100%");
     expect(s.maxWidth).toBe("100vw");
     expect(s.height).toBe("100%");
+    expect(s.maxHeight).toBe("100vh");
   });
 });

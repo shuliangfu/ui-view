@@ -1727,6 +1727,7 @@ export function DataView(props: DataViewProps): JSXRenderable {
                   value={sig}
                   disabled={disabled}
                   placeholder={f.placeholder}
+                  panelAttach="viewport"
                 />
               </div>
             );
@@ -1739,6 +1740,7 @@ export function DataView(props: DataViewProps): JSXRenderable {
                   format="YYYY-MM-DD HH:mm"
                   disabled={disabled}
                   placeholder={f.placeholder}
+                  panelAttach="viewport"
                 />
               </div>
             );
@@ -2079,6 +2081,7 @@ export function DataView(props: DataViewProps): JSXRenderable {
           return `${m.edit} · ${props.title}`;
         }}
         width={() => resolveModalWidth(props.form?.width)}
+        maxHeight={() => props.form?.maxHeight}
         fullscreen={() => resolveModalStartFullscreen(props.form)}
         fullscreenable={props.form?.fullscreenable}
         keyboard

@@ -103,6 +103,7 @@ describe("文档 API 含自动全屏参数", () => {
       expect(names).toContain("fullscreenable");
       expect(names).toContain("autoFullscreen");
       expect(names).toContain("mobileAutoFullscreen");
+      expect(names).toContain("maxHeight");
     }
   });
 });
