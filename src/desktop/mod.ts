@@ -933,7 +933,6 @@ export type {
   BulkResult,
   Caps,
   Column,
-  ColumnTableConfig,
   DataAlertConfig,
   DataAlertProp,
   DataChromeModalConfig,

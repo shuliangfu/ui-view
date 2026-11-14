@@ -334,10 +334,10 @@ describe("DataPanel view / form / search 配置", () => {
       "width:100px;min-width:60px;max-width:200px",
     );
     expect(columnTableClass({})).toBe("");
-    expect(columnTableClass({ table: { ellipsis: true } })).toContain(
+    expect(columnTableClass({ ellipsis: true })).toContain(
       "text-ellipsis",
     );
-    expect(columnTableClass({ table: { fixed: "left" } })).toContain("sticky");
+    expect(columnTableClass({ fixed: "left" })).toContain("sticky");
   });
 
   it("enrichViewField 保留 ViewItem.labelAlign，不丢字段", () => {

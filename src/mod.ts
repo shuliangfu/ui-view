@@ -768,7 +768,6 @@ export type {
   ColorPickerHandle,
   ColorPickerProps,
   Column,
-  ColumnTableConfig,
   CommentProps,
   ConfigProviderBatchConfig,
   ConfigProviderConfig,

@@ -10,7 +10,6 @@ import type {
 } from "./Descriptions.tsx";
 import type { PaginationProps } from "../navigation/Pagination.tsx";
 import type { ModalProps } from "../feedback/Modal.tsx";
-import type { TableColumn } from "./table-types.ts";
 
 /**
  * 可写在 {@link ViewConfig.descriptions} 上的 Descriptions 参数。
@@ -198,11 +197,12 @@ export interface Column {
    * 覆盖默认展示与 `value`；导出／打印／详情只取可转文本的结果，节点／HTML 回落字段原文。
    */
   formatter?: (row: Row, raw: unknown) => unknown;
-  /**
-   * 透传给表格列的参数（如 `fixed`、`ellipsis`）。
-   * `title`／`width`／`align`／`headerAlign`／`sortable` 仍写在 Column 上。
-   */
-  table?: ColumnTableConfig;
+  /** 将列固定在表格左侧，横向滚动时保持可见 */
+  fixed?: "left";
+  /** 单元格超出宽度时截断并显示省略号；宜同时给出 width 或 maxWidth */
+  ellipsis?: boolean;
+  /** 该列的默认排序方向 */
+  defaultSortOrder?: "ascend" | "descend";
 }
 
 /**
@@ -558,23 +558,6 @@ export type ModalShellWidth =
 export type DataChromeModalConfig = Omit<
   ModalProps,
   "open" | "onClose" | "title" | "children" | "footer" | "fullscreen"
->;
-
-/**
- * 列上的 `table`：透传给表格列、且未在 Column 上单独声明的参数。
- * `title`／`width`／`align`／`headerAlign`／`sortable` 仍写在 Column 上，不要重复写进本对象。
- */
-export type ColumnTableConfig = Omit<
-  TableColumn,
-  | "key"
-  | "title"
-  | "dataIndex"
-  | "width"
-  | "align"
-  | "headerAlign"
-  | "sorter"
-  | "render"
-  | "editable"
 >;
 
 export interface FormConfig {

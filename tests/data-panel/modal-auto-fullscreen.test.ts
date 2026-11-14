@@ -7,7 +7,6 @@ import {
   MESSAGES_MODAL,
 } from "../../docs/src/data/component-messages-rows.ts";
 import {
-  COLUMN_TABLE_CONFIG_API,
   COLUMNS_API,
   DATA_CHROME_MODAL_CONFIG_API,
   DATA_PANEL_EXTRA_TYPE_IDS,
@@ -126,12 +125,12 @@ describe("文档 API 含自动全屏参数", () => {
     expect(modal).not.toContain("fullscreen");
   });
 
-  it("Column 配置表有 table，并展开表格列透传参数", () => {
-    expect(COLUMNS_API.map((r) => r.name)).toContain("table");
-    const names = COLUMN_TABLE_CONFIG_API.map((r) => r.name);
+  it("Column 配置表直接写 fixed、ellipsis 和 defaultSortOrder", () => {
+    const names = COLUMNS_API.map((r) => r.name);
     expect(names).toContain("fixed");
     expect(names).toContain("ellipsis");
     expect(names).toContain("defaultSortOrder");
+    expect(names).not.toContain("table");
   });
 
   it("View 配置表有 descriptions，并展开描述列表透传参数", () => {

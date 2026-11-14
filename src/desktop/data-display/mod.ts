@@ -95,7 +95,6 @@ export {
   type BulkResult,
   type Caps,
   type Column,
-  type ColumnTableConfig,
   DATA_PANEL_CSS,
   type DataAlertConfig,
   type DataAlertProp,

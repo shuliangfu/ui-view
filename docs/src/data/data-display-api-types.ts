@@ -165,11 +165,23 @@ export const COLUMNS_API: DocsApiTableRow[] = [
       "统一格式化，覆盖默认展示与 value。导出／打印／详情只取可转文本结果；节点／HTML 回落字段原文。比 format 字段更自由，复杂节点用本字段。",
   },
   {
-    name: "table",
-    type: "ColumnTableConfig",
+    name: "fixed",
+    type: '"left"',
     default: "-",
+    description: "将列固定在表格左侧，横向滚动时保持可见",
+  },
+  {
+    name: "ellipsis",
+    type: "boolean",
+    default: "false",
     description:
-      "透传给表格列、且未在 Column 上单独声明的参数（如 fixed、ellipsis）。title／width／align／headerAlign／sortable 仍写在 Column 上。类型定义见 ColumnTableConfig 表。",
+      "单元格超出宽度时截断并显示省略号；宜同时给出 width 或 maxWidth",
+  },
+  {
+    name: "defaultSortOrder",
+    type: '"ascend" | "descend"',
+    default: "-",
+    description: "该列的默认排序方向",
   },
 ];
 
@@ -2249,43 +2261,13 @@ export const DATA_CHROME_MODAL_CONFIG_API: DocsApiTableRow[] = [
   },
 ];
 
-/** Column.table 可写的表格列透传参数 */
-export const COLUMN_TABLE_CONFIG_API: DocsApiTableRow[] = [
-  {
-    name: "fixed",
-    type: '"left"',
-    default: "-",
-    description: "将列固定在表格左侧，横向滚动时保持可见",
-  },
-  {
-    name: "ellipsis",
-    type: "boolean",
-    default: "false",
-    description:
-      "单元格超出宽度时截断并显示省略号；宜同时给出 width 或 maxWidth",
-  },
-  {
-    name: "defaultSortOrder",
-    type: '"ascend" | "descend"',
-    default: "-",
-    description: "该列的默认排序方向，透传 TableColumn",
-  },
-];
-
 export const DATA_DISPLAY_TYPE_SECTIONS: DataDisplayTypeSection[] = [
   {
     id: "Column",
     title: "Column",
     rows: COLUMNS_API,
     lead:
-      '列定义。系统列写 type:"selection"／"index"／"actions" 即可。表格列透传参数写在 table 上，见 ColumnTableConfig。',
-  },
-  {
-    id: "ColumnTableConfig",
-    title: "ColumnTableConfig",
-    rows: COLUMN_TABLE_CONFIG_API,
-    lead:
-      "Column.table 的表格列透传参数。title／width／align／headerAlign／sortable 仍写在 Column 上。",
+      '列定义。系统列写 type:"selection"／"index"／"actions" 即可。固定列、省略号和默认排序直接写在 Column 上。',
   },
   {
     id: "SearchConfig",
@@ -2641,7 +2623,6 @@ export const DATA_PANEL_EXTRA_TYPE_IDS: string[] = [
   "DataChromeModalConfig",
   "ModalMessages",
   "ViewDescriptionsProps",
-  "ColumnTableConfig",
   "SearchFieldConditionCtx",
   "SearchFieldRenderCtx",
   "SearchRenderCtx",
@@ -2684,7 +2665,6 @@ export const DATA_VIEW_TYPE_IDS: string[] = [
   "DataChromeModalConfig",
   "ModalMessages",
   "ViewDescriptionsProps",
-  "ColumnTableConfig",
   "FormFieldConditionCtx",
   "FormFieldRenderCtx",
   "FormRenderCtx",

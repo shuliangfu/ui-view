@@ -473,14 +473,16 @@ export function columnWidthStyle(
 }
 
 /**
- * 列上 `table` 透传：ellipsis 截断，fixed:"left" 左侧粘滞。
+ * 列上 ellipsis 截断，fixed:"left" 左侧粘滞。
  */
-export function columnTableClass(c: Pick<Column, "table">): string {
+export function columnTableClass(
+  c: Pick<Column, "ellipsis" | "fixed">,
+): string {
   const parts: string[] = [];
-  if (c.table?.ellipsis) {
+  if (c.ellipsis) {
     parts.push("overflow-hidden text-ellipsis whitespace-nowrap");
   }
-  if (c.table?.fixed === "left") {
+  if (c.fixed === "left") {
     parts.push("sticky left-0 z-[2] bg-white dark:bg-slate-900");
   }
   return parts.join(" ");
