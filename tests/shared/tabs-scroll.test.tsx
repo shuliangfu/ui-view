@@ -52,3 +52,24 @@ describe("Tabs SSR", () => {
     expect(html).toContain("登录记录");
   });
 });
+
+describe("Tabs fullWidth", () => {
+  it("hidePanel 且 fullWidth 时根节点撑满宽度，标签不换行", async () => {
+    const html = String(
+      await renderToString(() => (
+        <Tabs
+          hidePanel
+          fullWidth
+          items={[
+            { key: "mine", label: "我的", children: null },
+            { key: "pending", label: "待认领", children: null },
+          ]}
+        />
+      )),
+    );
+    expect(html).toContain("w-full");
+    expect(html).not.toContain("w-fit");
+    expect(html).toContain("whitespace-nowrap");
+    expect(html).toContain("待认领");
+  });
+});

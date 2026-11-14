@@ -162,7 +162,7 @@ export function Tabs(props: TabsProps): JSXRenderable {
    * 使用 `focus-visible` 而非 `focus:ring`，避免鼠标点击后焦点留在按钮上时一直显示粗蓝环（看起来像「激活边框」）；键盘 Tab 聚焦时仍显示环。
    */
   const tabBtnBase =
-    "relative px-4 py-2 text-sm font-medium transition-colors motion-reduce:transition-none rounded-md focus:outline-hidden focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 disabled:opacity-50 disabled:cursor-not-allowed";
+    "relative px-4 py-2 text-sm font-medium whitespace-nowrap transition-colors motion-reduce:transition-none rounded-md focus:outline-hidden focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 disabled:opacity-50 disabled:cursor-not-allowed";
   /**
    * `line`：未激活透明边框占位；激活/悬停均为左/上/右边框、`border-b-0`，`-mb-px` 与父级底边重叠。
    * 悬停/激活用 `bg-inherit` 与根容器同色且**不透明**；暗色下勿用带透明度后缀的 hover 背景（如 slate-800/50），否则父级 `border-b` 会透出成底横线。
@@ -191,7 +191,9 @@ export function Tabs(props: TabsProps): JSXRenderable {
   return (
     <div
       class={twMerge(
-        hidePanel ? "inline-flex w-fit max-w-full shrink-0" : "w-full",
+        hidePanel && !fullWidth
+          ? "inline-flex w-fit max-w-full shrink-0"
+          : "w-full",
         /**
          * `line` 时给根容器默认与常见主内容区一致的底色，激活标签 `bg-inherit` 后与下方面板视觉上同色；嵌入卡片时请传 `class` 覆盖（如 `bg-white`）。
          */
