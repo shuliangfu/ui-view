@@ -21,6 +21,7 @@ import {
   type JSXRenderable,
   onCleanup,
   onMount,
+  untrack,
 } from "@dreamer/view";
 import { Button, ButtonGroup } from "../basic/Button.tsx";
 import { IconChevronDown } from "../../shared/basic/icons/ChevronDown.tsx";
@@ -2384,12 +2385,10 @@ export function DataPanel(props: PanelProps): JSXRenderable {
   const setFormGridRef = bindContainerWidth(formGridWidth);
 
   const searchBody = () => {
-    const values = currentSearchValues();
-    const cond = searchFieldCtx();
     const bodyRender = props.search?.render;
     if (bodyRender) {
       const ctx: SearchRenderCtx = {
-        values,
+        values: currentSearchValues(),
         errors: searchErrors.value,
         close: closeSearch,
         submit: applySearch,
@@ -2401,8 +2400,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
         </div>
       );
     }
-    const visible = visibleSearchDefs();
-    const searchGrid = useFieldGrid(visible);
+    const searchGrid = useFieldGrid(searchDefs);
     return (
       <form
         ref={setSearchGridRef}
@@ -2415,14 +2413,12 @@ export function DataPanel(props: PanelProps): JSXRenderable {
           applySearch();
         }}
       >
-        {visible.map((sdef) => {
+        {searchDefs.map((sdef) => {
           const prop = fieldProp(sdef);
           const sig = sfields[prop];
           const err = searchErrors.value[prop];
-          const lay = fieldLayoutStyle(sdef, {
-            grid: searchGrid,
-            containerWidth: searchGridWidth.value,
-          });
+          const cond = untrack(() => searchFieldCtx());
+          const values = untrack(() => currentSearchValues());
           const disabled = evalFlag(sdef.disabled, false, cond);
           const opts = resolveOptions(sdef.options, cond);
           const type = sdef.type ?? "text";
@@ -2534,7 +2530,18 @@ export function DataPanel(props: PanelProps): JSXRenderable {
             );
           }
           return (
-            <div style={lay} class={lay?.width ? undefined : "min-w-0"}>
+            <div
+              style={() => {
+                if (!isSearchFieldVisible(sdef, searchFieldCtx())) {
+                  return { display: "none" };
+                }
+                return fieldLayoutStyle(sdef, {
+                  grid: searchGrid,
+                  containerWidth: searchGridWidth.value,
+                }) ?? {};
+              }}
+              class="min-w-0"
+            >
               <FormItem
                 label={sdef.label ?? prop}
                 required={fieldRequired(sdef)}
@@ -3924,9 +3931,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
         </div>
       );
     }
-    const cond = formConditionCtx();
-    const visibleForm = formDefs.filter((f) => isFormFieldVisible(f, cond));
-    const formGrid = useFieldGrid(visibleForm);
+    const formGrid = useFieldGrid(formDefs);
     return (
       <form
         ref={setFormGridRef}
@@ -3939,14 +3944,11 @@ export function DataPanel(props: PanelProps): JSXRenderable {
           void submitForm();
         }}
       >
-        {visibleForm.map((f) => {
+        {formDefs.map((f) => {
           const prop = fieldProp(f);
           const sig = fields[prop];
           const type = f.type ?? "text";
-          const lay = fieldLayoutStyle(f, {
-            grid: formGrid,
-            containerWidth: formGridWidth.value,
-          });
+          const cond = untrack(() => formConditionCtx());
           const disabled = evalFlag(f.disabled, false, cond);
           const opts = resolveOptions(f.options, cond);
           let control: unknown;
@@ -4096,7 +4098,18 @@ export function DataPanel(props: PanelProps): JSXRenderable {
           }
           const err = errs[fieldProp(f)];
           return (
-            <div style={lay} class={lay?.width ? undefined : "min-w-0"}>
+            <div
+              style={() => {
+                if (!isFormFieldVisible(f, formConditionCtx())) {
+                  return { display: "none" };
+                }
+                return fieldLayoutStyle(f, {
+                  grid: formGrid,
+                  containerWidth: formGridWidth.value,
+                }) ?? {};
+              }}
+              class="min-w-0"
+            >
               <FormItem
                 label={f.label ?? fieldProp(f)}
                 required={fieldRequired(f) && !(f.type === "password" && !!id)}

@@ -238,6 +238,106 @@ describe("文档页 E2E：/desktop/data-display/data-view（DataView 数据明�
     expect(r.keptEmail).toBe(true);
   }, DOCS_BROWSER_CONFIG);
 
+  it("表单 Modal 连续输入时保持焦点，不会整段重绘失焦", async (t) => {
+    if (!t?.browser?.goto) return;
+    await open(t);
+    const r = await t.browser!.evaluate(async () => {
+      const sleep = (ms: number) => new Promise((res) => setTimeout(res, ms));
+      const until = async (fn: () => boolean, ms = 6000) => {
+        const t0 = Date.now();
+        while (Date.now() - t0 < ms) {
+          try {
+            if (fn()) return true;
+          } catch {
+            /* ignore */
+          }
+          await sleep(40);
+        }
+        return false;
+      };
+      const click = (el: Element | null) => {
+        if (!el) throw new Error("missing element");
+        const inner = el.tagName === "SPAN" ? el.querySelector("button") : null;
+        ((inner || el) as HTMLElement).click();
+      };
+      const root = document.querySelector(
+        '[data-testid="panel-demo-data-view"]',
+      ) as HTMLElement | null;
+      const update = root?.querySelector(
+        '[data-testid="dv-update"]',
+      ) as HTMLButtonElement | null;
+      if (!update || update.disabled) {
+        return { ok: false, reason: "no update", remounted: false, lostAt: -1, value: "" };
+      }
+      click(update);
+      const opened = await until(() =>
+        !!document.querySelector('[role="dialog"] [data-testid="dv-form"]')
+      );
+      if (!opened) {
+        return { ok: false, reason: "form not opened", remounted: false, lostAt: -1, value: "" };
+      }
+      const sel = '[role="dialog"] [data-testid="dv-fld-name"] input';
+      const first = document.querySelector(sel) as HTMLInputElement | null;
+      if (!first) {
+        return { ok: false, reason: "missing name input", remounted: false, lostAt: -1, value: "" };
+      }
+      first.focus();
+      if (document.activeElement !== first) {
+        return { ok: false, reason: "no initial focus", remounted: false, lostAt: -1, value: first.value };
+      }
+      const typed = "HelloFocus";
+      let remounted = false;
+      let lostAt = -1;
+      let prev: HTMLInputElement = first;
+      for (let i = 0; i < typed.length; i++) {
+        const el = document.querySelector(sel) as HTMLInputElement | null;
+        if (!el) {
+          return { ok: false, reason: "input gone", remounted, lostAt: i, value: prev.value };
+        }
+        if (el !== prev) remounted = true;
+        if (document.activeElement !== el) {
+          lostAt = i;
+          return {
+            ok: false,
+            reason: "lost focus",
+            remounted,
+            lostAt,
+            value: el.value,
+            activeTag: document.activeElement ? (document.activeElement as HTMLElement).tagName : "",
+          };
+        }
+        el.value = typed.slice(0, i + 1);
+        el.dispatchEvent(
+          new InputEvent("input", { bubbles: true, data: typed[i], inputType: "insertText" }),
+        );
+        await sleep(20);
+        prev = el;
+      }
+      const last = document.querySelector(sel) as HTMLInputElement | null;
+      const focused = !!(last && document.activeElement === last);
+      return {
+        ok: !!(focused && last && last.value === typed && !remounted),
+        reason: focused ? undefined : "lost focus after typing",
+        remounted,
+        lostAt,
+        value: last?.value ?? "",
+        activeTag: document.activeElement ? (document.activeElement as HTMLElement).tagName : "",
+      };
+    }) as {
+      ok: boolean;
+      reason?: string;
+      remounted: boolean;
+      lostAt: number;
+      value: string;
+      activeTag?: string;
+    };
+    expect(r.ok).toBe(true);
+    expect(r.remounted).toBe(false);
+    expect(r.lostAt).toBe(-1);
+    expect(r.value).toBe("HelloFocus");
+    // 单独跑此例时要冷启文档站，60s 不够
+  }, { ...DOCS_BROWSER_CONFIG, timeout: 180_000 });
+
   it("刷新、打印、导入、导出、全屏、复制", async (t) => {
     if (!t?.browser?.goto) return;
     await open(t);

@@ -288,18 +288,51 @@ describe("createApiDataSource action", () => {
     }
   });
 
-  it("缺 baseRoute 抛错；1 段且当前路由为空时缺 resource 抛错；≥2 段可不传 resource", () => {
+  it("缺 baseRoute 抛错；1 段且当前路由为空时创建不抛，读 root／请求才抛；≥2 段可不传 resource", () => {
     expect(() => createApiDataSource({ baseRoute: "", resource: "u" }))
       .toThrow();
-    expect(() => createApiDataSource({ baseRoute: "/api", resource: "" }))
-      .toThrow();
-    // Deno 测试环境无 location.pathname，等价于当前路由为空
-    expect(() => createApiDataSource({ baseRoute: "/api" })).toThrow();
+    // SSR／无 location 时允许先创建（页面也会 ...source 展开），不在此时抛错
+    const pending = createApiDataSource({ baseRoute: "/api", resource: "" });
+    expect(() => ({ ...pending })).not.toThrow();
+    expect(() => pending.root).toThrow();
+    expect(() => createApiDataSource({ baseRoute: "/api" })).not.toThrow();
+    const bare = createApiDataSource({ baseRoute: "/api" });
+    expect(() => bare.root).toThrow();
     const ds = createApiDataSource({
       baseRoute: "/api/users",
       fetch: (async () => new Response("{}", { status: 200 })) as typeof fetch,
     });
     expect(ds.root).toBe("/api/users");
+  });
+
+  it("无 location 时先创建，客户端补上页面路由后再请求", async () => {
+    const g = globalThis as { location?: { pathname?: string } };
+    const prev = Object.getOwnPropertyDescriptor(globalThis, "location");
+    try {
+      if (prev) delete g.location;
+      const calls: { url: string }[] = [];
+      const ds = createApiDataSource({
+        baseRoute: "/api",
+        fetch: (async (input: RequestInfo | URL) => {
+          calls.push({ url: String(input) });
+          return new Response(JSON.stringify({ rows: [], total: 0 }), {
+            status: 200,
+          });
+        }) as typeof fetch,
+      });
+      expect(() => ds.root).toThrow();
+      Object.defineProperty(globalThis, "location", {
+        configurable: true,
+        writable: true,
+        value: { pathname: "/cgm/devices" },
+      });
+      expect(ds.root).toBe("/api/cgm/devices");
+      await ds.list({ ...Q, pageSize: 20 });
+      expect(calls[0]?.url.startsWith("/api/cgm/devices?")).toBe(true);
+    } finally {
+      if (prev) Object.defineProperty(globalThis, "location", prev);
+      else delete g.location;
+    }
   });
 });
 

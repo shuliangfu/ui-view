@@ -22,6 +22,8 @@
  * **`children`** 仅当不关弹窗、正文也要随同一 signal 变时再传 `children={() => …}`；普通静态子节点即可。
  *
  * **拖动**：`position` 只经 DOM `transform` 更新，**不**订入 Portal `buildModalMarkup`，避免整树重插／子树 remount。
+ **正文／底栏**：`children` 与 `footer` 在内容槽与底栏槽内各自订阅，**不**订入 `buildModalMarkup`，
+ 避免底栏随表单值重算时拆掉重建输入框、输入失焦。
  * `onPositionChange` 仅在拖拽结束回调（便于宿主持久化），拖动过程不回写宿主。
  * **标题状态挂点**：`#modal-title` 旁固定空 `[data-modal-title-status]`，宿主／子树可 DOM patch 绿点文案；勿用 `title` signal 驱动状态。
  */
@@ -662,6 +664,8 @@ export function Modal(props: ModalProps): JSXRenderable {
   /**
    * 弹层 DOM：Portal 的 `insert` getter 订阅 `fullscreen` / {@link resolvedWidth} 等。
    * **不**订阅 `position`（拖动只改 DOM transform，见 {@link applyModalBoxTransform}）。
+   * **不**订阅 {@link resolvedChildren}／{@link resolvedFooter}：二者在槽内以 thunk 插入，
+   * 底栏随表单值更新时只替换底栏，不重建正文输入框。
    * `style` 须为 **camelCase 对象**：compileSource 下模板字符串 style 会误生成 `Object.assign(el.style, string)` 导致浏览器抛错。
    */
   const buildModalMarkup = () => {
@@ -670,8 +674,6 @@ export function Modal(props: ModalProps): JSXRenderable {
       ? `${w}px`
       : (WIDTH_PRESETS[w as string] ?? String(w));
     const title = resolvedTitle();
-    const children = resolvedChildren();
-    const footer = resolvedFooter();
     const isFullscreen = fullscreen.value;
     // untrack：首帧带上位移，但不把 position 订进 Portal effect
     const pos = untrack(() => position.value);
@@ -879,19 +881,23 @@ export function Modal(props: ModalProps): JSXRenderable {
               bodyClass,
             )}
           >
-            {children}
+            {() => resolvedChildren()}
           </div>
-          {footer != null && (
-            <div
-              class={twMerge(
-                "shrink-0 flex min-w-0 flex-wrap items-center justify-end gap-2 px-6 py-4 border-t border-slate-200 dark:border-slate-600",
-                !isFullscreen && "rounded-b-xl",
-                footerClass,
-              )}
-            >
-              {footer}
-            </div>
-          )}
+          {() => {
+            const footer = resolvedFooter();
+            if (footer == null) return null;
+            return (
+              <div
+                class={twMerge(
+                  "shrink-0 flex min-w-0 flex-wrap items-center justify-end gap-2 px-6 py-4 border-t border-slate-200 dark:border-slate-600",
+                  !isFullscreen && "rounded-b-xl",
+                  footerClass,
+                )}
+              >
+                {footer}
+              </div>
+            );
+          }}
         </div>
       </div>
     );

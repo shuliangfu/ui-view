@@ -349,6 +349,8 @@ async function readBody(res: Response): Promise<unknown> {
 
 /**
  * 创建基于 `baseRoute`（＋可选 `resource`）的远程 {@link DataSource}。
+ * 创建时不读取当前页面路由；服务端渲染没有 `location` 也不会抛错，
+ * 真正请求或读取 {@link ApiDataSource.root} 时再解析。
  *
  * ```ts
  * // 推荐：baseRoute 只传 "/api"，自动拼当前页面路由
@@ -372,7 +374,11 @@ export function createApiDataSource(
 ): ApiDataSource {
   const mode: ApiMode = opts.apiMode === "restful" ? "restful" : "action";
   const rowKey = opts.rowKey ?? "id";
-  const root = resolveApiRoot(opts.baseRoute, opts.resource);
+  if (!String(opts.baseRoute ?? "").trim()) {
+    throw new Error('createApiDataSource: "baseRoute" is required');
+  }
+  /** 请求或读取 `root` 时再解析，避免 SSR 尚无 location 时在创建阶段抛错。 */
+  const apiRoot = (): string => resolveApiRoot(opts.baseRoute, opts.resource);
   const doFetch = opts.fetch ?? globalThis.fetch.bind(globalThis);
   const writable = opts.writable !== false;
   const pageSizeDefault = (() => {
@@ -429,8 +435,7 @@ export function createApiDataSource(
     return s ? `${url}?${s}` : url;
   }
 
-  const src: ApiDataSource = {
-    root,
+  const src = {
     apiMode: mode,
     pageSize: pageSizeDefault,
     async list(query) {
@@ -440,6 +445,7 @@ export function createApiDataSource(
         : pageSizeDefault;
       const listQuery = { ...query, pageSize: size };
       const qs = apiQueryParams(listQuery).toString();
+      const root = apiRoot();
       const url = qs ? `${root}?${qs}` : root;
       const r = await request(
         "GET",
@@ -451,6 +457,7 @@ export function createApiDataSource(
       return normalizeListPayload(r.body);
     },
     async view(id: string) {
+      const root = apiRoot();
       const url = mode === "action"
         ? withItemIds(joinApiPath(root, "view"), [id])
         : joinApiPath(root, id);
@@ -467,13 +474,20 @@ export function createApiDataSource(
       }
       return null;
     },
-  };
+  } as ApiDataSource;
+
+  Object.defineProperty(src, "root", {
+    configurable: true,
+    enumerable: false,
+    get: apiRoot,
+  });
 
   src.get = (id) => src.view(id);
 
   if (!writable) return src;
 
   src.create = async (values) => {
+    const root = apiRoot();
     const url = mode === "action" ? joinApiPath(root, "create") : root;
     const r = await request("POST", url, values);
     return writeFromResponse(r.ok, r.body);
@@ -483,7 +497,7 @@ export function createApiDataSource(
     if (mode === "action") {
       const r = await request(
         "POST",
-        withItemIds(joinApiPath(root, "update"), [id]),
+        withItemIds(joinApiPath(apiRoot(), "update"), [id]),
         {
           [rowKey]: id,
           id,
@@ -492,13 +506,13 @@ export function createApiDataSource(
       );
       return writeFromResponse(r.ok, r.body);
     }
-    const r = await request("PUT", joinApiPath(root, id), values);
+    const r = await request("PUT", joinApiPath(apiRoot(), id), values);
     return writeFromResponse(r.ok, r.body);
   };
 
   const removeActionPath = (raw: string | undefined, fallback: string) => {
     const seg = (raw ?? "").trim() || fallback;
-    return seg.startsWith("/") ? seg : joinApiPath(root, seg);
+    return seg.startsWith("/") ? seg : joinApiPath(apiRoot(), seg);
   };
 
   const postRemove = async (path: string, ids: string[]) => {
@@ -515,7 +529,7 @@ export function createApiDataSource(
     let removed = 0;
     for (const id of ids) {
       try {
-        const r = await request("DELETE", joinApiPath(root, id));
+        const r = await request("DELETE", joinApiPath(apiRoot(), id));
         if (r.ok) removed++;
         else {
           failed.push({
@@ -553,7 +567,7 @@ export function createApiDataSource(
     );
 
   src.setField = async (ids, field, value) => {
-    const url = joinApiPath(root, "setField");
+    const url = joinApiPath(apiRoot(), "setField");
     if (mode === "action") {
       const r = await request(
         "POST",
@@ -569,10 +583,10 @@ export function createApiDataSource(
   src.importRows = async (rows) => {
     if (mode === "action") {
       // 无单独 import：走 create，body 用 { rows } 与单条对象区分
-      const r = await request("POST", joinApiPath(root, "create"), { rows });
+      const r = await request("POST", joinApiPath(apiRoot(), "create"), { rows });
       return importFromBody(r.body, rows.length, r.ok);
     }
-    const r = await request("POST", joinApiPath(root, "import"), { rows });
+    const r = await request("POST", joinApiPath(apiRoot(), "import"), { rows });
     return importFromBody(r.body, rows.length, r.ok);
   };
 

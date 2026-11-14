@@ -180,3 +180,30 @@ describe("uiViewTailwindPlugin onInit 写入时机", () => {
     }
   });
 });
+
+
+describe("uiViewTailwindPlugin 跟随内部相对导入", () => {
+  it("引用 DataPanel 时会连带扫到 DatePicker 与 Calendar", async () => {
+    const fx = await makeFixture();
+    try {
+      await writeTextFile(
+        join(cwd(), fx.scanDir, "page.tsx"),
+        `import { DataPanel } from "@dreamer/ui-view";\nexport const Page = () => <DataPanel title="t" columns={[]} />;\n`,
+      );
+      const plugin = uiViewTailwindPlugin({
+        outputPath: fx.outputPath,
+        scanPath: fx.scanDir,
+        packageRoot: UI_VIEW_ROOT,
+      });
+      await withRuntimeEnv("dev", async () => {
+        await plugin.onInit?.(stubContainer() as never);
+      });
+      const css = await readTextFile(fx.outputPath);
+      expect(css.includes("DatePicker.tsx")).toBe(true);
+      expect(css.includes("Calendar.tsx")).toBe(true);
+      expect(css.includes("data-display/Calendar.tsx")).toBe(true);
+    } finally {
+      await fx.cleanup();
+    }
+  });
+});

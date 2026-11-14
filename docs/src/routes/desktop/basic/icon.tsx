@@ -179,6 +179,7 @@ import {
   IconCrop,
   IconCrosshair,
   IconCrown,
+  IconCustomerService,
   IconDatabase,
   IconDiamond,
   IconDisc,
@@ -250,6 +251,11 @@ import {
   IconHash,
   IconHeading,
   IconHeadphones,
+  IconHeadset,
+  IconHeadsetCircle,
+  IconHeadsetFace,
+  IconHeadsetHelp,
+  IconHeadsetMessage,
   IconHeart,
   IconHeartPulse,
   IconHelpCircle,
@@ -635,6 +641,7 @@ const exampleThemeIcons = `{/* 浅色 / 自动 / 深色 主题图标 */}
 <IconAutoTheme size="md" />
 <IconDarkTheme size="md" />`;
 
+
 /** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
 export const metadata = {
   title: "Icon 图标 · ui-view",
@@ -839,6 +846,7 @@ export default function BasicIcon() {
     { Component: IconVolumeOff, name: "VolumeOff" },
     { Component: IconSpeaker, name: "Speaker" },
     { Component: IconHeadphones, name: "Headphones" },
+    { Component: IconHeadset, name: "Headset" },
     { Component: IconMusic, name: "Music" },
     { Component: IconMic, name: "Mic" },
     { Component: IconMicOff, name: "MicOff" },
@@ -1123,6 +1131,7 @@ export default function BasicIcon() {
   const 音乐音频 = [
     { Component: IconMusic, name: "Music" },
     { Component: IconHeadphones, name: "Headphones" },
+    { Component: IconHeadset, name: "Headset" },
     { Component: IconMic, name: "Mic" },
     { Component: IconVolume, name: "Volume" },
     { Component: IconSpeaker, name: "Speaker" },
@@ -1190,10 +1199,21 @@ export default function BasicIcon() {
     { Component: IconBellOff, name: "BellOff" },
     { Component: IconMail, name: "Mail" },
     { Component: IconMessageCircle, name: "MessageCircle" },
+    { Component: IconHeadset, name: "Headset" },
     { Component: IconInbox, name: "Inbox" },
     { Component: IconMailOpen, name: "MailOpen" },
     { Component: IconMessageSquare, name: "MessageSquare" },
   ];
+
+  const 客服支持 = [
+    { Component: IconHeadsetFace, name: "头戴耳麦" },
+    { Component: IconHeadset, name: "耳麦" },
+    { Component: IconCustomerService, name: "人物耳麦" },
+    { Component: IconHeadsetCircle, name: "圆形耳麦" },
+    { Component: IconHeadsetMessage, name: "在线客服" },
+    { Component: IconHeadsetHelp, name: "客服帮助" },
+  ];
+
   const 设置账户 = [
     { Component: IconSettings, name: "Settings" },
     { Component: IconKey, name: "Key" },
@@ -1417,6 +1437,7 @@ import { IconFlagCN } from "@dreamer/ui-view/icons/flags/standalone/IconFlagCN.t
             maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
+
       </section>
 
       <section class="space-y-3">
@@ -1553,6 +1574,7 @@ import { IconFlagCN } from "@dreamer/ui-view/icons/flags/standalone/IconFlagCN.t
           <IconGroup title="搜索 / 发现" items={搜索发现} level={4} />
           <IconGroup title="用户 / 会员" items={用户会员} level={4} />
           <IconGroup title="通知 / 消息" items={通知消息} level={4} />
+          <IconGroup title="客服 / 支持" items={客服支持} level={4} />
           <IconGroup title="设置 / 账户" items={设置账户} level={4} />
         </div>
 

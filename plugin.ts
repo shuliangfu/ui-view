@@ -262,6 +262,82 @@ async function gatherResolvedContentPaths(
 }
 
 /**
+ * 解析源码里的相对路径 import／export（含多行 `from` 与副作用 import）。
+ *
+ * @param source - 文件文本
+ * @returns 形如 `../form/DatePicker.tsx` 的说明符
+ */
+function collectRelativeImportSpecifiers(source: string): string[] {
+  const out: string[] = [];
+  const re = /(?:from\s+|import\s+|export\s+)["'](\.[^"']+)["']/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(source)) !== null) {
+    out.push(m[1]);
+  }
+  return out;
+}
+
+/**
+ * 把相对说明符解析成包内存在的 `.ts`／`.tsx` 文件。
+ *
+ * @param fromFile - 发起 import 的绝对路径
+ * @param spec - 相对说明符
+ * @param packageRoot - ui-view 包根
+ */
+function resolveLocalImportFile(
+  fromFile: string,
+  spec: string,
+  packageRoot: string,
+): string | null {
+  const base = join(dirname(fromFile), spec);
+  const candidates = /\.(?:ts|tsx|js|jsx)$/.test(spec)
+    ? [base]
+    : [base + ".tsx", base + ".ts", join(base, "index.tsx"), join(base, "index.ts")];
+  const root = packageRoot.replace(/\/+$/, "");
+  for (const c of candidates) {
+    if (!existsSync(c)) continue;
+    const rel = relative(root, c);
+    if (!rel || rel.startsWith("..") || rel.startsWith("/")) continue;
+    return c;
+  }
+  return null;
+}
+
+/**
+ * 从已收录的 ui-view 源文件出发，递归补上它们的相对导入。
+ * DataPanel／DataView 会内部引用 DatePicker、Calendar 等，业务代码只 import 面板时，
+ * 若不跟随这些文件，Tailwind 会漏掉 `grid-cols-7` 等日历样式。
+ *
+ * @param paths - 已解析的绝对路径（会被复制，不原地改）
+ * @param packageRoot - ui-view 包根
+ * @returns 去重排序后的完整路径列表
+ */
+async function expandLocalImportSources(
+  paths: readonly string[],
+  packageRoot: string,
+): Promise<string[]> {
+  const seen = new Set<string>(paths);
+  const queue = [...paths];
+  while (queue.length) {
+    const file = queue.pop();
+    if (!file) continue;
+    let content: string;
+    try {
+      content = await readTextFile(file);
+    } catch {
+      continue;
+    }
+    for (const spec of collectRelativeImportSpecifiers(content)) {
+      const resolved = resolveLocalImportFile(file, spec, packageRoot);
+      if (!resolved || seen.has(resolved)) continue;
+      seen.add(resolved);
+      queue.push(resolved);
+    }
+  }
+  return Array.from(seen).sort();
+}
+
+/**
  * 从本插件的 `import.meta.url`（如 `https://jsr.io/@dreamer/ui-view/1.0.2-beta.1/plugin.ts`）解析出版本号，
  * 用于拼接 Deno 在 `node_modules/.deno` 下常见的目录名（如 `dreamer__ui-view@1.0.2-beta.1`）。
  *
@@ -1687,8 +1763,9 @@ export function uiViewTailwindPlugin(
           return;
         }
         await mergeIntrinsicIconSources(names, pkgRoot, paths);
+        const withLocalImports = await expandLocalImportSources(paths, pkgRoot);
         /** 与 gatherResolvedContentPaths / mergeIntrinsicIconSources 内去重双保险，保证写入的 @source 路径唯一 */
-        const uniqueSortedPaths = Array.from(new Set(paths)).sort();
+        const uniqueSortedPaths = Array.from(new Set(withLocalImports)).sort();
 
         const outAbs = outputPath.startsWith("/")
           ? outputPath

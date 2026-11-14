@@ -3472,6 +3472,72 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
     expect(afterReset.input).toBe("");
   }, DOCS_BROWSER_CONFIG);
 
+  it("表单 Modal 连续输入时保持焦点，不会整段重绘失焦", async (t) => {
+    if (!t?.browser?.goto) return;
+    await open(t, "demo-crud");
+    const r = await ev<{
+      ok: boolean;
+      reason?: string;
+      remounted: boolean;
+      lostAt: number;
+      value: string;
+      activeTag?: string;
+    }>(
+      t,
+      `
+      const k = ${P("demo-crud")};
+      D.click(D.q(k, '[data-testid="dp-create"]'));
+      const opened = await D.until(() => document.querySelector('[role="dialog"] [data-testid="dp-form"]'));
+      if (!opened) return { ok: false, reason: "form not opened", remounted: false, lostAt: -1, value: "" };
+      const sel = '[role="dialog"] [data-testid="dp-fld-name"] input';
+      const first = document.querySelector(sel);
+      if (!first) return { ok: false, reason: "missing name input", remounted: false, lostAt: -1, value: "" };
+      first.focus();
+      if (document.activeElement !== first) {
+        return { ok: false, reason: "no initial focus", remounted: false, lostAt: -1, value: first.value };
+      }
+      const typed = "HelloFocus";
+      let remounted = false;
+      let lostAt = -1;
+      let prev = first;
+      for (let i = 0; i < typed.length; i++) {
+        const el = document.querySelector(sel);
+        if (!el) return { ok: false, reason: "input gone", remounted, lostAt: i, value: prev.value };
+        if (el !== prev) remounted = true;
+        if (document.activeElement !== el) {
+          lostAt = i;
+          return {
+            ok: false,
+            reason: "lost focus",
+            remounted,
+            lostAt,
+            value: el.value,
+            activeTag: document.activeElement ? document.activeElement.tagName : "",
+          };
+        }
+        el.value = typed.slice(0, i + 1);
+        el.dispatchEvent(new InputEvent("input", { bubbles: true, data: typed[i], inputType: "insertText" }));
+        await D.sleep(20);
+        prev = el;
+      }
+      const last = document.querySelector(sel);
+      const focused = last && document.activeElement === last;
+      return {
+        ok: !!(focused && last.value === typed && !remounted),
+        reason: focused ? undefined : "lost focus after typing",
+        remounted,
+        lostAt,
+        value: last ? last.value : "",
+        activeTag: document.activeElement ? document.activeElement.tagName : "",
+      };`,
+    );
+    expect(r.ok).toBe(true);
+    expect(r.remounted).toBe(false);
+    expect(r.lostAt).toBe(-1);
+    expect(r.value).toBe("HelloFocus");
+    // 单独跑此例时要冷启文档站，60s 不够
+  }, { ...DOCS_BROWSER_CONFIG, timeout: 180_000 });
+
   /**
    * UI·示例区主内容可见且有尺寸。
    */

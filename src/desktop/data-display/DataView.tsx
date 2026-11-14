@@ -21,6 +21,7 @@ import {
   type JSXRenderable,
   onCleanup,
   onMount,
+  untrack,
 } from "@dreamer/view";
 import { Button, ButtonGroup } from "../basic/Button.tsx";
 import { IconCopy } from "../../shared/basic/icons/Copy.tsx";
@@ -1601,9 +1602,7 @@ export function DataView(props: DataViewProps): JSXRenderable {
         </div>
       );
     }
-    const cond = formConditionCtx();
-    const visibleForm = formDefs.filter((f) => isFormFieldVisible(f, cond));
-    const formGrid = useFieldGrid(visibleForm);
+    const formGrid = useFieldGrid(formDefs);
     return (
       <form
         ref={setFormGridRef}
@@ -1616,14 +1615,11 @@ export function DataView(props: DataViewProps): JSXRenderable {
           void submitForm();
         }}
       >
-        {visibleForm.map((f) => {
+        {formDefs.map((f) => {
           const prop = fieldProp(f);
           const sig = fields[prop];
           const type = f.type ?? "text";
-          const lay = fieldLayoutStyle(f, {
-            grid: formGrid,
-            containerWidth: formGridWidth.value,
-          });
+          const cond = untrack(() => formConditionCtx());
           const disabled = evalFlag(f.disabled, false, cond);
           const opts = resolveOptions(f.options, cond);
           let control: unknown;
@@ -1768,7 +1764,18 @@ export function DataView(props: DataViewProps): JSXRenderable {
           }
           const err = errs[prop];
           return (
-            <div style={lay} class={lay?.width ? undefined : "min-w-0"}>
+            <div
+              style={() => {
+                if (!isFormFieldVisible(f, formConditionCtx())) {
+                  return { display: "none" };
+                }
+                return fieldLayoutStyle(f, {
+                  grid: formGrid,
+                  containerWidth: formGridWidth.value,
+                }) ?? {};
+              }}
+              class="min-w-0"
+            >
               <FormItem
                 label={f.label ?? prop}
                 required={fieldRequired(f) && f.type !== "password"}
