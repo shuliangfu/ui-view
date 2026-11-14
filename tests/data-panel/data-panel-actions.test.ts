@@ -7,6 +7,7 @@ import {
   actionTipText,
   assertRowActionsConfig,
   assertToolbarConfig,
+  evalColumnDisable,
   isRowBuiltin,
   isToolbarBuiltin,
   type PanelToolbarConfig,
@@ -376,5 +377,17 @@ describe("DataPanel ActionCtrl unified Record", () => {
       icon: undefined,
       action: undefined,
     });
+  });
+});
+
+describe("evalColumnDisable", () => {
+  const row = { id: "2", status: "off" };
+
+  it("undefined → false；boolean 原样；函数接收行数据", () => {
+    expect(evalColumnDisable(undefined, row)).toBe(false);
+    expect(evalColumnDisable(true, row)).toBe(true);
+    expect(evalColumnDisable(false, row)).toBe(false);
+    expect(evalColumnDisable((r) => r.status === "off", row)).toBe(true);
+    expect(evalColumnDisable((r) => r.status === "on", row)).toBe(false);
   });
 });

@@ -878,6 +878,7 @@ export {
   DataView,
   defaultDataPanelMessages,
   enDataPanelMessages,
+  evalColumnDisable,
   isDataViewToolbarBuiltin,
   isRowBuiltin,
   isToolbarBuiltin,

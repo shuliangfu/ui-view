@@ -93,6 +93,7 @@ export {
   DataPanel,
   type DataSource,
   type Density,
+  evalColumnDisable,
   type ExportContext,
   type ExportFormat,
   type FieldRule,

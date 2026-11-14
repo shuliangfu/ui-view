@@ -959,7 +959,7 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
   );
 
   it(
-    "批量条：选中行后出现在表格下方，表格位置不动；locked 行不可选",
+    "批量条：选中行后出现在表格下方，表格位置不动；locked 行与 disable 的 David／Eve 不可选",
     async (t) => {
       if (!t?.browser?.goto) return;
       await open(t, "demo-batch");
@@ -974,6 +974,8 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
       const box0 = box();
       out.noBarBefore = !D.q(k, '[data-testid="dp-batch-bar"]');
       out.lockedDisabled = D.q(k, '[data-testid="dp-select-1"]').disabled === true;
+      out.disable4 = D.q(k, '[data-testid="dp-select-4"]').disabled === true;
+      out.disable5 = D.q(k, '[data-testid="dp-select-5"]').disabled === true;
       // DEMO 默认 remove:false：无行删按钮；locked 仅约束多选
       out.noRowDelete = !D.q(k, '[data-testid="dp-delete-1"]');
       D.click(D.q(k, '[data-testid="dp-select-all"]'));
@@ -986,6 +988,8 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
       out.barAbovePagination = D.q(k, '[data-testid="dp-pagination"]').getBoundingClientRect().top >= bar.bottom - 0.5;
       out.count = D.text(D.q(k, '[data-testid="dp-selected-count"]'));
       out.lockedNotSelected = !D.q(k, '[data-testid="dp-select-1"]').checked;
+      out.disable4NotSelected = !D.q(k, '[data-testid="dp-select-4"]').checked;
+      out.disable5NotSelected = !D.q(k, '[data-testid="dp-select-5"]').checked;
       out.buttons = [...D.qa(k, '[data-testid="dp-batch-bar"] [data-testid]')].map((e) => e.getAttribute("data-testid"));
       D.click(D.q(k, '[data-testid="dp-batch-clear"]'));
       await D.until(() => !D.q(k, '[data-testid="dp-batch-bar"]'));
@@ -996,14 +1000,18 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
       );
       expect(r.noBarBefore).toBe(true);
       expect(r.lockedDisabled).toBe(true);
+      expect(r.disable4).toBe(true);
+      expect(r.disable5).toBe(true);
       expect(r.noRowDelete).toBe(true);
       expect(r.sameTop).toBe(true);
       expect(r.sameBoxOnSelect).toBe(true);
       expect(r.sameBoxAfterClear).toBe(true);
       expect(r.barBelowTable).toBe(true);
       expect(r.barAbovePagination).toBe(true);
-      expect(r.count).toBe("已选 9 项");
+      expect(r.count).toBe("已选 7 项");
       expect(r.lockedNotSelected).toBe(true);
+      expect(r.disable4NotSelected).toBe(true);
+      expect(r.disable5NotSelected).toBe(true);
       expect(r.buttons).toEqual([
         "dp-selected-count",
         "dp-batch-status-active",

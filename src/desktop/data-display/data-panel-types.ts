@@ -133,6 +133,14 @@ export interface Column {
    */
   batch?: boolean;
   /**
+   * 按行禁用。可写 `true`，或 `(row) => boolean`（传入当前行数据）。
+   * - `type:"selection"`：该行不可勾选（表头全选会跳过），也不能进入批量处理；
+   * - `type:"actions"`：该行操作按钮全部禁用（仍可与各 `actions[key].disable` 叠加）；
+   * - 数据列：禁用该行列内编辑。
+   * 与面板级 `isRowDisabled`／`row.locked` 叠加（任一为真即禁用对应能力）。
+   */
+  disable?: boolean | ((row: Row) => boolean);
+  /**
    * 仅 `type:"actions"`：行操作 Record（原顶层 rowActions）。
    * 内置 view／edit／remove＋自定义 key；写入序＝显示序；自定义必须 `action(item)`。
    * 省略键回落 caps；声明键请写明确 true｜false｜object。
@@ -743,6 +751,18 @@ function evalFlag(
 ): boolean {
   if (val === undefined) return fallback;
   return typeof val === "function" ? val() : val;
+}
+
+/**
+ * Evaluate column `disable`: boolean | ((row) => boolean).
+ * `undefined` → false.
+ */
+export function evalColumnDisable(
+  val: boolean | ((row: Row) => boolean) | undefined,
+  row: Row,
+): boolean {
+  if (val === undefined) return false;
+  return typeof val === "function" ? !!val(row) : !!val;
 }
 
 /** Evaluate boolean | ((item) => boolean); undefined → fallback. */

@@ -461,6 +461,13 @@ const COLUMNS_API: DocsApiTableRow[] = [
       '批量「设为…」目标列；须 `inline:"switch"`＋恰好两档 options。caps.batchStatus 默认据此推断。',
   },
   {
+    name: "disable",
+    type: "boolean | ((row) => boolean)",
+    default: "false",
+    description:
+      '按行禁用，函数接收当前行数据。写在 type:"selection" 上时该行不可勾选（表头全选会跳过），也不能进入批量处理；写在 type:"actions" 上时该行操作按钮全部禁用（可与各 action.disable 叠加）；写在数据列上时禁用该行列内编辑。与面板 isRowDisabled／row.locked 叠加。',
+  },
+  {
     name: "value",
     type: "(row) => unknown",
     default: "-",
@@ -1438,9 +1445,11 @@ const columns: Column[] = [
 const basicCode = `const rows = [
   { id: "1", name: "Alice", email: "alice@example.com", role: "admin", status: "active", balance: 120 },
   { id: "2", name: "Bob", email: "bob@example.com", role: "editor", status: "disabled", balance: 80 },
+  { id: "4", name: "David", email: "david@example.com", role: "admin", status: "disabled", balance: 70 },
+  { id: "5", name: "Eve", email: "eve@example.com", role: "editor", status: "active", balance: 60 },
 ];
 const columns: Column[] = [
-  { type: "selection" },
+  { type: "selection", disable: (row) => row.id === "4" || row.id === "5" },
   { type: "index" },
   { prop: "name", label: "姓名", sortable: true, inline: "text" },
   { prop: "email", label: "邮箱", sortable: true },
@@ -1697,13 +1706,13 @@ const form = {
 />`;
 
 const tableCode =
-  `// 排序／合计／行内编辑／隐藏列；禁用行优先 isRowDisabled（兼容 row.locked）
+  `// 排序／合计／行内编辑／隐藏列；按行禁用用列上的 disable(row)，整行仍可用 isRowDisabled（兼容 row.locked）
 const rows = [
   { id: "1", name: "Alice", email: "alice@example.com", role: "admin", status: "active", balance: 120, locked: true },
   { id: "2", name: "Bob", email: "bob@example.com", role: "editor", status: "disabled", balance: 80 },
 ];
 const columns: Column[] = [
-  { type: "selection" },
+  { type: "selection", disable: (row) => row.status === "disabled" },
   { type: "index" },
   { prop: "name", label: "姓名", sortable: true, inline: "text" },
   { prop: "email", label: "邮箱", sortable: true },
@@ -1754,7 +1763,7 @@ const columns: Column[] = [
     sortable: true,
     hidden: true,
   },
-  { type: "actions", actions: {
+  { type: "actions", disable: (row) => row.status === "disabled", actions: {
     view: true,
     edit: true,
     remove: false,
@@ -1866,12 +1875,15 @@ const form = {
 
 const batchCode =
   `// 勾选 → 批量条。设为… 来自 column.batch:true（非首个 switch 隐式推导）
+// selection.disable：David、Eve 禁止勾选（全选跳过，不能进批量栏）
 const rows = [
   { id: "1", name: "Alice", email: "alice@example.com", role: "admin", status: "active", balance: 120 },
   { id: "2", name: "Bob", email: "bob@example.com", role: "editor", status: "disabled", balance: 80 },
+  { id: "4", name: "David", email: "david@example.com", role: "admin", status: "disabled", balance: 70 },
+  { id: "5", name: "Eve", email: "eve@example.com", role: "editor", status: "active", balance: 60 },
 ];
 const columns: Column[] = [
-  { type: "selection" },
+  { type: "selection", disable: (row) => row.id === "4" || row.id === "5" },
   { type: "index" },
   { prop: "name", label: "姓名", sortable: true, inline: "text" },
   { prop: "email", label: "邮箱", sortable: true },

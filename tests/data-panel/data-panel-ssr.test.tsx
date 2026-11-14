@@ -171,6 +171,129 @@ describe("DataPanel SSR：布尔属性与转义", () => {
     expect(row2).not.toMatch(/<input[^>]*type="checkbox"[^>]*disabled/);
   });
 
+  it("selection 列 disable 函数：按行禁用勾选，不影响未命中行", async () => {
+    const h = await html({
+      columns: [
+        { type: "selection", disable: (row) => row.id === "2" },
+        ...COLUMNS,
+      ],
+    });
+    const row2 = h.slice(
+      h.indexOf('data-testid="dp-row-2"'),
+      h.indexOf('data-testid="dp-row-3"'),
+    );
+    expect(row2).toMatch(
+      /<input[^>]*type="checkbox"[^>]*disabled|<input[^>]*disabled[^>]*type="checkbox"/,
+    );
+    const row3 = h.slice(
+      h.indexOf('data-testid="dp-row-3"'),
+      h.indexOf('data-testid="dp-row-4"'),
+    );
+    expect(row3).not.toMatch(/<input[^>]*type="checkbox"[^>]*disabled/);
+  });
+
+  it("actions 列 disable 函数：按行禁用查看／编辑／删除", async () => {
+    const h = await html({
+      columns: [
+        { type: "selection" },
+        ...COLUMNS,
+        {
+          type: "actions",
+          disable: (row) => row.id === "2",
+        },
+      ],
+    });
+    const row2 = h.slice(
+      h.indexOf('data-testid="dp-row-2"'),
+      h.indexOf('data-testid="dp-row-3"'),
+    );
+    // data-testid 在包裹 span 上，disabled 在内部 button 上
+    expect(row2).toMatch(
+      /data-testid="dp-view-2"[\s\S]*?<button[^>]*\sdisabled(?:=""|\s|>)/,
+    );
+    expect(row2).toMatch(
+      /data-testid="dp-edit-2"[\s\S]*?<button[^>]*\sdisabled(?:=""|\s|>)/,
+    );
+    expect(row2).toMatch(
+      /data-testid="dp-delete-2"[\s\S]*?<button[^>]*\sdisabled(?:=""|\s|>)/,
+    );
+    const row3 = h.slice(
+      h.indexOf('data-testid="dp-row-3"'),
+      h.indexOf('data-testid="dp-row-4"'),
+    );
+    expect(row3).not.toMatch(
+      /data-testid="dp-view-3"[\s\S]*?<button[^>]*\sdisabled(?:=""|\s|>)/,
+    );
+    expect(row3).not.toMatch(
+      /data-testid="dp-edit-3"[\s\S]*?<button[^>]*\sdisabled(?:=""|\s|>)/,
+    );
+    expect(row3).not.toMatch(
+      /data-testid="dp-delete-3"[\s\S]*?<button[^>]*\sdisabled(?:=""|\s|>)/,
+    );
+  });
+
+  it("数据列 disable 函数：按行禁止行内编辑；locked 行同样没有编辑壳", async () => {
+    const h = await html({
+      columns: [
+        { type: "selection" },
+        { type: "index" },
+        {
+          prop: "name",
+          label: "姓名",
+          inline: "text",
+          disable: (row) => row.id === "2",
+        },
+        ...COLUMNS.filter((c) => c.prop !== "name" && c.type !== "index"),
+      ],
+    });
+    const row1 = h.slice(
+      h.indexOf('data-testid="dp-row-1"'),
+      h.indexOf('data-testid="dp-row-2"'),
+    );
+    const row2 = h.slice(
+      h.indexOf('data-testid="dp-row-2"'),
+      h.indexOf('data-testid="dp-row-3"'),
+    );
+    const row3 = h.slice(
+      h.indexOf('data-testid="dp-row-3"'),
+      h.indexOf('data-testid="dp-row-4"'),
+    );
+    expect(row1).not.toContain('data-testid="dp-edit-name-1"');
+    expect(row2).not.toContain('data-testid="dp-edit-name-2"');
+    expect(row3).toContain('data-testid="dp-edit-name-3"');
+  });
+
+  it("selection 列 disable:true：所有行勾选与表头全选都禁用", async () => {
+    const h = await html({
+      columns: [
+        { type: "selection", disable: true },
+        ...COLUMNS,
+      ],
+    });
+    expect(h).toMatch(
+      /data-testid="dp-select-all"[^>]*disabled|disabled[^>]*data-testid="dp-select-all"/,
+    );
+    expect(h).toMatch(
+      /data-testid="dp-select-2"[^>]*disabled|disabled[^>]*data-testid="dp-select-2"/,
+    );
+    expect(h).toMatch(
+      /data-testid="dp-select-3"[^>]*disabled|disabled[^>]*data-testid="dp-select-3"/,
+    );
+  });
+
+  it("selection 列仅部分行 disable 时，表头全选仍可用", async () => {
+    const h = await html({
+      columns: [
+        { type: "selection", disable: (row) => row.id === "2" },
+        ...COLUMNS,
+      ],
+    });
+    expect(h).not.toMatch(/data-testid="dp-select-all"[^>]*disabled/);
+    expect(h).not.toMatch(
+      /<input[^>]*disabled[^>]*data-testid="dp-select-all"/,
+    );
+  });
+
   it("单元格内容被转义", async () => {
     const h = await html({
       data: [{
@@ -246,10 +369,12 @@ describe("DataPanel SSR：能力开关", () => {
   });
 
   it("selectable=false 去掉选择列", async () => {
-    expect(await html({
-      columns: withSelection(),
-      selectable: false,
-    })).not.toContain(
+    expect(
+      await html({
+        columns: withSelection(),
+        selectable: false,
+      }),
+    ).not.toContain(
       'data-testid="dp-select-all"',
     );
   });
@@ -827,7 +952,7 @@ describe("DataPanel SSR：勾选列只由 columns 的 type:selection 决定", ()
     expect(h).not.toContain('data-testid="dp-select-2"');
   });
 
-  it("columns 声明 { type:\"selection\" } 时出现勾选列", async () => {
+  it('columns 声明 { type:"selection" } 时出现勾选列', async () => {
     const h = await html({ columns: withSelection() });
     expect(h).toContain('data-testid="dp-select-all"');
     expect(h).toContain('data-testid="dp-select-1"');

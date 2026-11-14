@@ -92,6 +92,7 @@ export {
   Dropdown,
   Empty,
   enDataPanelMessages,
+  evalColumnDisable,
   fileMatchesAccept,
   Form,
   formatUploadFileSize,

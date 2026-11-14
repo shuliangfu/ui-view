@@ -61,7 +61,11 @@ export const DEMO_ROW_ACTIONS: RowActionsConfig = {
 };
 
 export const DEMO_COLUMNS: Column[] = [
-  { type: "selection" },
+  {
+    type: "selection",
+    // David、Eve 两行禁止勾选（全选会跳过，也不能进批量栏）
+    disable: (row) => row.id === "4" || row.id === "5",
+  },
   { type: "index" },
   { prop: "name", label: "姓名", sortable: true, inline: "text" },
   { prop: "email", label: "邮箱", sortable: true },
@@ -179,7 +183,10 @@ export const ALIGN_DEMO_COLUMNS_CODE = `const columns: Column[] = [
 
 /** 与 {@link DEMO_COLUMNS} 同步的文档 code 片段（系统列短写法） */
 export const DEMO_COLUMNS_CODE = `const columns: Column[] = [
-  { type: "selection" },
+  {
+    type: "selection",
+    disable: (row) => row.id === "4" || row.id === "5", // David、Eve 禁止勾选
+  },
   { type: "index" },
   { prop: "name", label: "姓名", sortable: true, inline: "text" },
   { prop: "email", label: "邮箱", sortable: true },

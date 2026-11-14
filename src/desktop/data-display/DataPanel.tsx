@@ -140,6 +140,7 @@ import {
   type Column,
   type DataSource,
   type Density,
+  evalColumnDisable,
   type ExportFormat,
   type FieldRule,
   type FormConfig,
@@ -217,6 +218,7 @@ export {
   actionTipText,
   assertRowActionsConfig,
   assertToolbarConfig,
+  evalColumnDisable,
   isRowBuiltin,
   isToolbarBuiltin,
   resolveActionCtrl,
@@ -407,11 +409,11 @@ import {
   CELL_EDIT_CLS,
   densityTableCls,
   ED_WRAP_CLS,
-  inlineEditorInputWidthStyle,
   FS_CLS,
   g,
   HEADER_BAR_CLS,
   ICON_BTN,
+  inlineEditorInputWidthStyle,
   JUMP_CLS,
   onServer,
   PG_CLS,
@@ -645,8 +647,19 @@ export function DataPanel(props: PanelProps): JSXRenderable {
   });
   /** 数据列（解析后，不含系统列） */
   const columns = panelColumns.filter((c) => !isSystemColumn(c));
+  const selectionColumn = panelColumns.find(isSelectionColumn);
+  const actionsColumn = panelColumns.find(isActionsColumn);
   const isLocked = (r: Row) =>
     props.isRowDisabled ? !!props.isRowDisabled(r) : !!r.locked;
+  /** 勾选禁用：面板 isRowDisabled／row.locked，或 selection 列 disable。 */
+  const isSelectDisabled = (r: Row) =>
+    isLocked(r) || evalColumnDisable(selectionColumn?.disable, r);
+  /** 操作列整行禁用：叠加到各按钮的 disable（不含 isLocked，以免改变查看／编辑的既有锁定行为）。 */
+  const isActionsColDisabled = (r: Row) =>
+    evalColumnDisable(actionsColumn?.disable, r);
+  /** 数据行列内编辑禁用。 */
+  const isInlineDisabled = (c: Column, r: Row) =>
+    isLocked(r) || evalColumnDisable(c.disable, r);
 
   /**
    * 分页（page／pageSize）与排序默认与地址栏双向同步——无开关（对齐工具栏搜索）。
@@ -2131,7 +2144,10 @@ export function DataPanel(props: PanelProps): JSXRenderable {
 
   // ---- 批量条（显隐跟 caps.batchStatus；数据来自 column.batch:true）
   const batchBar = () => {
-    const ids = selected.value;
+    const ids = selected.value.filter((id) => {
+      const row = rows.value.find((r) => idOf(r) === id);
+      return row ? !isSelectDisabled(row) : false;
+    });
     if (!ids.length) return null;
     const sv = statusValues;
     const bs = { show: batchStatusOn, disable: false };
@@ -2225,7 +2241,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
       // locked 行为禁用态（半透明 + not-allowed）。先让旋钮滑动，动画结束后再提交数据
       const [on, off] = c.options!;
       const isOn = String(raw) === on.value;
-      const locked = isLocked(row);
+      const locked = isInlineDisabled(c, row);
       return (
         <span
           class="dp-sw-wrap"
@@ -2249,7 +2265,9 @@ export function DataPanel(props: PanelProps): JSXRenderable {
         </span>
       );
     }
-    if (c.inline && c.inline !== "switch" && canEdit && !isLocked(row)) {
+    if (
+      c.inline && c.inline !== "switch" && canEdit && !isInlineDisabled(c, row)
+    ) {
       const ed = editing.value;
       if (ed && ed.id === idOf(row) && ed.prop === c.prop) {
         return renderEditor(c, row, raw);
@@ -2662,7 +2680,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
         slots.push({
           kind: "builtin",
           name: key,
-          disable: res.disable,
+          disable: res.disable || isActionsColDisabled(r),
           title: res.title,
           label: res.label,
           tone: res.tone,
@@ -2677,7 +2695,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
       slots.push({
         kind: "custom",
         key,
-        disable: res.disable,
+        disable: res.disable || isActionsColDisabled(r),
         label: actionDisplayText(key, res.label, res.title),
         icon: res.icon,
         title: res.title,
@@ -2693,7 +2711,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
       slots.push({
         kind: "builtin",
         name,
-        disable: res.disable,
+        disable: res.disable || isActionsColDisabled(r),
         title: res.title,
         label: res.label,
         tone: res.tone,
@@ -2731,7 +2749,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
     const cols = displayCols.filter((c) => !isSystemColumn(c));
     const data = rows.value;
     const sel = selected.value;
-    const selectableRows = data.filter((r) => !isLocked(r));
+    const selectableRows = data.filter((r) => !isSelectDisabled(r));
     const allSel = selectableRows.length > 0 &&
       selectableRows.every((r) => sel.includes(idOf(r)));
     const t = totals.value;
@@ -2761,6 +2779,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
                       <input
                         type="checkbox"
                         {...bool("checked", allSel)}
+                        {...bool("disabled", selectableRows.length === 0)}
                         data-testid="dp-select-all"
                         onChange={() => (selected.value = allSel
                           ? []
@@ -2862,10 +2881,11 @@ export function DataPanel(props: PanelProps): JSXRenderable {
                         <td class="border border-slate-200 px-2 py-1.5 text-center dark:border-slate-700">
                           <input
                             type="checkbox"
-                            {...bool("disabled", isLocked(r))}
+                            {...bool("disabled", isSelectDisabled(r))}
                             {...bool("checked", sel.includes(idOf(r)))}
                             data-testid={`dp-select-${idOf(r)}`}
                             onChange={() => {
+                              if (isSelectDisabled(r)) return;
                               const cur = selected.value;
                               selected.value = cur.includes(idOf(r))
                                 ? cur.filter((x) => x !== idOf(r))
