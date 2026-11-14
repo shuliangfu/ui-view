@@ -1076,6 +1076,18 @@ describe("validateForm rules／search／layout", () => {
       width: "50%",
     });
     expect(fieldLayoutStyle({ width: 200 })).toEqual({ width: "200px" });
+    expect(fieldSpan({})).toBeUndefined();
+    expect(fieldLayoutStyle({})).toBeUndefined();
+    expect(fieldLayoutStyle({}, { grid: true })).toEqual({
+      gridColumn: "span 12 / span 12",
+    });
+    expect(fieldLayoutStyle({ width: 200 }, { grid: true })).toEqual({
+      gridColumn: "span 12 / span 12",
+      width: "200px",
+    });
+    expect(fieldLayoutStyle({ span: 6 }, { grid: true })).toEqual({
+      gridColumn: "span 6 / span 6",
+    });
     expect(useFieldGrid([{}])).toBe(false);
     expect(useFieldGrid([{ span: 6 }])).toBe(true);
     expect(useFieldGrid([{ width: "50%" }])).toBe(true);

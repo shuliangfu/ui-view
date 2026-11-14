@@ -2375,9 +2375,10 @@ export function DataPanel(props: PanelProps): JSXRenderable {
       );
     }
     const visible = visibleSearchDefs();
+    const searchGrid = useFieldGrid(visible);
     return (
       <form
-        class={useFieldGrid(visible) ? "grid grid-cols-12 gap-3" : "grid gap-3"}
+        class={searchGrid ? "grid grid-cols-12 gap-3" : "grid gap-3"}
         data-testid="dp-search"
         method="dialog"
         action="#"
@@ -2390,7 +2391,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
           const prop = fieldProp(sdef);
           const sig = sfields[prop];
           const err = searchErrors.value[prop];
-          const lay = fieldLayoutStyle(sdef);
+          const lay = fieldLayoutStyle(sdef, { grid: searchGrid });
           const disabled = evalFlag(sdef.disabled, false, cond);
           const opts = resolveOptions(sdef.options, cond);
           const type = sdef.type ?? "text";
@@ -3896,7 +3897,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
           const prop = fieldProp(f);
           const sig = fields[prop];
           const type = f.type ?? "text";
-          const lay = fieldLayoutStyle(f);
+          const lay = fieldLayoutStyle(f, { grid: formGrid });
           const disabled = evalFlag(f.disabled, false, cond);
           const opts = resolveOptions(f.options, cond);
           let control: unknown;

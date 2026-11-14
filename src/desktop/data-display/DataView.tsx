@@ -1611,7 +1611,7 @@ export function DataView(props: DataViewProps): JSXRenderable {
           const prop = fieldProp(f);
           const sig = fields[prop];
           const type = f.type ?? "text";
-          const lay = fieldLayoutStyle(f);
+          const lay = fieldLayoutStyle(f, { grid: formGrid });
           const disabled = evalFlag(f.disabled, false, cond);
           const opts = resolveOptions(f.options, cond);
           let control: unknown;

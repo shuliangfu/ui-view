@@ -1093,12 +1093,13 @@ export function fieldSpan(
   return Math.min(12, Math.max(1, Math.round(raw)));
 }
 
-/** 表单／搜索项布局 style（width＋gridColumn） */
+/** 表单／搜索项布局 style（width＋gridColumn）。grid 开启时未写 span／cols 默认占满一行（12）。 */
 export function fieldLayoutStyle(
   f: { span?: number; cols?: number; width?: string | number },
+  opts?: { grid?: boolean },
 ): Record<string, string> | undefined {
   const style: Record<string, string> = {};
-  const sp = fieldSpan(f);
+  const sp = fieldSpan(f) ?? (opts?.grid ? 12 : undefined);
   if (sp != null) style.gridColumn = `span ${sp} / span ${sp}`;
   if (f.width != null && f.width !== "") {
     style.width = typeof f.width === "number"

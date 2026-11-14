@@ -319,7 +319,7 @@ export const SEARCH_API: DocsApiTableRow[] = [
     name: "span / cols",
     type: "number",
     default: "12",
-    description: "栅格跨列 1–12；同写以 span 为准",
+    description: "栅格跨列 1–12；任一字段写 span／cols／width 时容器切 12 列，未写时缺省整行（12）；同写以 span 为准",
   },
   {
     name: "width",
@@ -448,7 +448,7 @@ export const FORM_API: DocsApiTableRow[] = [
     name: "span / cols",
     type: "number",
     default: "12",
-    description: "栅格跨列 1–12；任一字段写 span／cols／width 时容器切 12 列",
+    description: "栅格跨列 1–12；任一字段写 span／cols／width 时容器切 12 列，未写时缺省整行（12）",
   },
   {
     name: "width",

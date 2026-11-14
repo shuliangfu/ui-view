@@ -322,7 +322,8 @@ export interface SearchField {
   /** 搜索正则简写 */
   pattern?: string;
   /**
-   * 栅格跨列（1–12）。表单／搜索容器为 12 列时生效；与 `cols` 同义，二者同写以 `span` 为准。
+   * 栅格跨列（1–12）。有任一字段写 span／cols／width 时容器切 12 列；缺省整行（12）。
+   * 与 `cols` 同义，同写以 `span` 为准。
    */
   span?: number;
   /** @see span */
