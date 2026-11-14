@@ -324,6 +324,7 @@ export interface SearchField {
   /**
    * 栅格跨列（1–12）。有任一字段写 span／cols／width 时容器切 12 列；缺省整行（12）。
    * 与 `cols` 同义，同写以 `span` 为准。
+   * 容器宽度 ≤639.98px（移动端，按表单／搜索自身宽度而非视口）时一律整行，避免并排挤窄。
    */
   span?: number;
   /** @see span */
@@ -420,6 +421,7 @@ export interface FormField {
   /**
    * 栅格跨列（1–12）。有任一字段写 span／cols／width 时容器切 12 列；缺省整行（12）。
    * 与 `cols` 同义，同写以 `span` 为准。
+   * 容器宽度 ≤639.98px（移动端，按表单／搜索自身宽度而非视口）时一律整行，避免并排挤窄。
    */
   span?: number;
   /** @see span */

@@ -6,9 +6,9 @@
  * 否则手写 JSX 只快照首帧，onChange 更新后步骤条不重渲。
  */
 
-import { type Signal } from "@dreamer/view";
+import { createSignal, type JSXRenderable, type Signal } from "@dreamer/view";
 import { readSignalValue, safeIsSignal } from "../safe-signal.ts";
-import type { JSXRenderable } from "@dreamer/view";
+import { bindContainerWidth } from "../container-width.ts";
 import { twMerge } from "tailwind-merge";
 /** 按需：单文件图标，避免经 icons/mod 拉入全表 */
 import { IconCheck } from "../basic/icons/Check.tsx";
@@ -32,7 +32,10 @@ export interface StepsProps {
    * 推荐 `current={stepRef}`，勿 `current={stepRef.value}`。
    */
   current?: number | (() => number) | Signal<number>;
-  /** 方向：水平 或 垂直，默认 "horizontal" */
+  /**
+   * 方向：水平 或 垂直，默认 "horizontal"。
+   * 声明为水平时，容器宽度 ≤639.98px 会自动改为垂直，避免步骤挤成一团；显式 `vertical` 始终垂直。
+   */
   direction?: "horizontal" | "vertical";
   /** 点击某步时回调（可选，用于可点击跳转的步骤条） */
   onChange?: (current: number) => void;
@@ -85,10 +88,31 @@ function readStepsCurrent(
   return Number(v);
 }
 
+/** 与 DataPanel 分页相同的移动端上限（含）。 */
+export const STEPS_MOBILE_MAX_PX = 639.98;
+
+/**
+ * 按容器宽度决定实际方向：显式垂直始终垂直；水平在宽度未知（SSR）时保持水平，
+ * 测得 ≤639.98px 时改为垂直。
+ */
+export function resolveStepsDirection(
+  containerWidthPx: number | undefined,
+  requested: "horizontal" | "vertical" = "horizontal",
+): "horizontal" | "vertical" {
+  if (requested === "vertical") return "vertical";
+  if (
+    containerWidthPx != null &&
+    Number.isFinite(containerWidthPx) &&
+    containerWidthPx <= STEPS_MOBILE_MAX_PX
+  ) {
+    return "vertical";
+  }
+  return "horizontal";
+}
+
 export function Steps(props: StepsProps): JSXRenderable {
   const {
     items,
-    direction = "horizontal",
     onChange,
     class: className,
   } = props;
@@ -98,12 +122,21 @@ export function Steps(props: StepsProps): JSXRenderable {
     ...(props.messages ?? {}),
   };
 
+  const containerWidth = createSignal<number | undefined>(undefined);
+  const setRootRef = bindContainerWidth(containerWidth);
+
   /** 渲染 getter：内联读 `readStepsCurrent`，随 `Signal` / 零参 getter 更新 */
   return () => {
     const currentVal = readStepsCurrent(props.current);
+    const direction = resolveStepsDirection(
+      containerWidth.value,
+      props.direction ?? "horizontal",
+    );
 
     return (
       <div
+        ref={setRootRef}
+        data-steps-direction={direction}
         class={twMerge(
           "flex w-full min-w-0 max-w-full",
           direction === "horizontal" ? "flex-row items-flex-start" : "flex-col",

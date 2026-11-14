@@ -8,6 +8,7 @@
 export type { BreadcrumbItem } from "./breadcrumb-types.ts";
 export {
   Sidebar,
+  type SidebarDrawerBreakpoint,
   type SidebarItem,
   type SidebarProps,
   type SidebarSubItem,
@@ -15,11 +16,11 @@ export {
 export {
   defaultPaginationMessages,
   Pagination,
+  PAGINATION_PRESET_FLAGS,
   type PaginationMessages,
   type PaginationPreset,
   type PaginationProps,
   type PaginationSize,
-  PAGINATION_PRESET_FLAGS,
   resolvePaginationPreset,
 } from "./Pagination.tsx";
 export { Menu, type MenuItem, type MenuProps } from "./Menu.tsx";
@@ -44,10 +45,10 @@ export type { BackTopProps, BackTopTarget } from "./BackTop.tsx";
 export { TabBar, type TabBarItem, type TabBarProps } from "./TabBar.tsx";
 export { NavBar, type NavBarProps } from "./NavBar.tsx";
 
-export { IndexBar, defaultIndexBarMessages } from "./IndexBar.tsx";
+export { defaultIndexBarMessages, IndexBar } from "./IndexBar.tsx";
 export type { IndexBarMessages } from "./IndexBar.tsx";
 export type { IndexBarItem, IndexBarProps } from "./IndexBar.tsx";
-export { DropdownMenu, defaultDropdownMenuMessages } from "./DropdownMenu.tsx";
+export { defaultDropdownMenuMessages, DropdownMenu } from "./DropdownMenu.tsx";
 export type { DropdownMenuMessages } from "./DropdownMenu.tsx";
 export type {
   DropdownMenuItem,

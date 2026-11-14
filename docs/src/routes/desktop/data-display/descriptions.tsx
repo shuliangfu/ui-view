@@ -33,7 +33,7 @@ const DESCRIPTIONS_API: ApiRow[] = [
     type: "number",
     default: "3",
     description:
-      "栅格列数：每行排几个描述项；要「整行一组 label+内容」用 1，要一行并排多组用 2/3",
+      "栅格列数上限：每行最多排几个描述项；要「整行一组 label+内容」用 1，要一行并排多组用 2/3。实际列数按容器宽度收敛：移动端（≤639.98px）1 列，平板（640px–1279.98px）最多 2 列，电脑端（≥1280px）用本值。弹层内按自身宽度计算，避免窄屏把内容挤成竖排。",
   },
   {
     name: "bordered",
@@ -381,9 +381,10 @@ export default function DataDisplayDescriptions() {
         <Paragraph class="mt-2">
           描述列表：items、title、column、bordered、size、layout、colon、labelColPercent、labelMinWidth、labelAlign、labelClass、contentClass。
           使用 Tailwind v4，支持 light/dark 主题。`column` 表示<strong>
-            每行排几个描述项
+            每行最多排几个描述项
           </strong>，不是「标签列数 + 内容列数」：要整行只展示一组 label +
-          数据请用 `column={1}`。标签对齐用 `labelAlign`：垂直方向
+          数据请用 `column={1}`。窄屏会按容器宽度自动降列：移动端 1 列、平板最多
+          2 列，避免多列把内容挤成竖排。标签对齐用 `labelAlign`：垂直方向
           top／center／bottom，水平方向
           left／center／right；可写在组件上作为默认，也可在单项上覆盖。
         </Paragraph>

@@ -1088,6 +1088,24 @@ describe("validateForm rules／search／layout", () => {
     expect(fieldLayoutStyle({ span: 6 }, { grid: true })).toEqual({
       gridColumn: "span 6 / span 6",
     });
+    expect(fieldLayoutStyle({ span: 6 }, { grid: true, containerWidth: 640 }))
+      .toEqual({
+        gridColumn: "span 6 / span 6",
+      });
+    expect(
+      fieldLayoutStyle({ span: 6 }, { grid: true, containerWidth: 639.98 }),
+    ).toEqual({
+      gridColumn: "span 12 / span 12",
+    });
+    expect(
+      fieldLayoutStyle({ span: 6 }, { grid: true, containerWidth: 390 }),
+    ).toEqual({
+      gridColumn: "span 12 / span 12",
+    });
+    expect(fieldLayoutStyle({ span: 6 }, { grid: true, containerWidth: 1280 }))
+      .toEqual({
+        gridColumn: "span 6 / span 6",
+      });
     expect(useFieldGrid([{}])).toBe(false);
     expect(useFieldGrid([{ span: 6 }])).toBe(true);
     expect(useFieldGrid([{ width: "50%" }])).toBe(true);

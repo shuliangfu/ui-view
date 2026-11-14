@@ -144,6 +144,7 @@ import {
   dataPanelPaginationForTier,
   viewportTierFromMedia,
 } from "./data-panel-viewport.ts";
+import { bindContainerWidth } from "../../shared/container-width.ts";
 import {
   type ApiDataSource,
   type ApiMode,
@@ -2356,6 +2357,11 @@ export function DataPanel(props: PanelProps): JSXRenderable {
       page: 1,
     });
   }
+  const searchGridWidth = createSignal<number | undefined>(undefined);
+  const formGridWidth = createSignal<number | undefined>(undefined);
+  const setSearchGridRef = bindContainerWidth(searchGridWidth);
+  const setFormGridRef = bindContainerWidth(formGridWidth);
+
   const searchBody = () => {
     const values = currentSearchValues();
     const cond = searchFieldCtx();
@@ -2378,6 +2384,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
     const searchGrid = useFieldGrid(visible);
     return (
       <form
+        ref={setSearchGridRef}
         class={searchGrid ? "grid grid-cols-12 gap-3" : "grid gap-3"}
         data-testid="dp-search"
         method="dialog"
@@ -2391,7 +2398,10 @@ export function DataPanel(props: PanelProps): JSXRenderable {
           const prop = fieldProp(sdef);
           const sig = sfields[prop];
           const err = searchErrors.value[prop];
-          const lay = fieldLayoutStyle(sdef, { grid: searchGrid });
+          const lay = fieldLayoutStyle(sdef, {
+            grid: searchGrid,
+            containerWidth: searchGridWidth.value,
+          });
           const disabled = evalFlag(sdef.disabled, false, cond);
           const opts = resolveOptions(sdef.options, cond);
           const type = sdef.type ?? "text";
@@ -3884,6 +3894,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
     const formGrid = useFieldGrid(visibleForm);
     return (
       <form
+        ref={setFormGridRef}
         class={formGrid ? "grid grid-cols-12 gap-3" : "grid gap-3"}
         data-testid="dp-form"
         method="dialog"
@@ -3897,7 +3908,10 @@ export function DataPanel(props: PanelProps): JSXRenderable {
           const prop = fieldProp(f);
           const sig = fields[prop];
           const type = f.type ?? "text";
-          const lay = fieldLayoutStyle(f, { grid: formGrid });
+          const lay = fieldLayoutStyle(f, {
+            grid: formGrid,
+            containerWidth: formGridWidth.value,
+          });
           const disabled = evalFlag(f.disabled, false, cond);
           const opts = resolveOptions(f.options, cond);
           let control: unknown;
@@ -4269,6 +4283,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
             return (
               <Btn
                 type="button"
+                variant={s.tone ?? "default"}
                 disabled={s.disable}
                 data-testid="dp-view-close"
                 onClick={() => {

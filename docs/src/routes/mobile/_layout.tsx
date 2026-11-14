@@ -189,19 +189,22 @@ export default function MobileDocsLayout({ children }: LayoutProps) {
     <div class="relative mx-auto flex h-full min-h-0 w-full max-w-[1800px] flex-1 overflow-hidden">
       {
         /*
-         * 侧栏仅菜单；回首页见顶栏，与 desktop/_layout 一致；小屏抽屉与顶栏共用 docsNavDrawerOpen。
+         * 侧栏仅菜单；回首页见顶栏，与 desktop/_layout 一致；低于 xl（含平板）的抽屉与顶栏共用 docsNavDrawerOpen。
          */
       }
-      <Sidebar
-        overview={{ path: "/mobile", label: "移动版概览" }}
-        sectionTitle="移动端组件"
-        items={MENU}
-        accordionGroupName="docs-mobile-sidebar"
-        drawerOpen={docsNavDrawerOpen}
-        drawerTitle="移动端组件"
-        drawerAccordionGroupName="docs-mobile-drawer"
-        class="min-h-0 overscroll-y-contain"
-      />
+      <div class="docs-sidebar-shell">
+        <Sidebar
+          overview={{ path: "/mobile", label: "移动版概览" }}
+          sectionTitle="移动端组件"
+          items={MENU}
+          accordionGroupName="docs-mobile-sidebar"
+          drawerOpen={docsNavDrawerOpen}
+          drawerBreakpoint="xl"
+          drawerTitle="移动端组件"
+          drawerAccordionGroupName="docs-mobile-drawer"
+          class="min-h-0 overscroll-y-contain"
+        />
+      </div>
       {
         /*
          * main：flex-col + overflow-y-auto。正文外包 flex-auto（勿用 flex-1 钉死高度；勿给该外包层加 min-h-0，

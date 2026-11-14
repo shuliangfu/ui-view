@@ -322,19 +322,22 @@ export default function Layout({ children }: LayoutProps) {
       {
         /*
          * 侧栏仅菜单：回首页见根布局顶栏 DocsSiteBrand，避免与顶栏重复。
-         * drawerOpen 与根布局顶栏 `start` 内按钮共用，小屏为 Drawer + 顶栏汉堡。
+         * drawerOpen 与根布局顶栏 `start` 内按钮共用，低于 xl（含平板）为 Drawer + 顶栏汉堡。
          */
       }
-      <Sidebar
-        overview={{ path: "/desktop", label: "组件概览" }}
-        sectionTitle="组件"
-        items={MENU}
-        accordionGroupName="docs-desktop-sidebar"
-        drawerOpen={docsNavDrawerOpen}
-        drawerTitle="组件导航"
-        drawerAccordionGroupName="docs-desktop-drawer"
-        className="min-h-0 overscroll-y-contain"
-      />
+      <div class="docs-sidebar-shell">
+        <Sidebar
+          overview={{ path: "/desktop", label: "组件概览" }}
+          sectionTitle="组件"
+          items={MENU}
+          accordionGroupName="docs-desktop-sidebar"
+          drawerOpen={docsNavDrawerOpen}
+          drawerBreakpoint="xl"
+          drawerTitle="组件导航"
+          drawerAccordionGroupName="docs-desktop-drawer"
+          className="min-h-0 overscroll-y-contain"
+        />
+      </div>
       {
         /*
          * main：flex-col + overflow-y-auto。正文外包 flex-auto（勿用 flex-1 的 0% basis）：

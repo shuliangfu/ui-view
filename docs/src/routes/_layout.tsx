@@ -46,11 +46,11 @@ interface RootLayoutProps {
  * **整棵根布局**重渲染，子布局可能被卸掉并执行 onCleanup（写 `false`），再挂载 onMount（写 `true`），
  * 形成 true/false 震荡直至卡死。顶栏隔离后，路由子树不因该 signal 被整段重建。
  *
- * **仅小屏（max-md）**：徽标用 NavBar `center` 在**容器宽度内**绝对居中（`left-1/2` + `-translate-x-1/2`，不传 `centerNudgeX`）；
- * `nav` 占位区设 `max-md:pointer-events-none`，避免透明 flex 层压在徽标上挡点击。右侧「更多」打开全宽顶栏菜单。
- * **宽屏（md+）**：`nav` 内平铺分区链接；`end` 内竖线 + 三图标平铺。
+ * **小屏与平板（max-xl，<1280px）**：徽标用 NavBar `center` 在**容器宽度内**绝对居中（`left-1/2` + `-translate-x-1/2`，不传 `centerNudgeX`）；
+ * `nav` 占位区设 `max-xl:pointer-events-none`，避免透明 flex 层压在徽标上挡点击。右侧「更多」打开全宽顶栏菜单；左侧汉堡展开侧栏抽屉。
+ * **宽屏（xl+，≥1280px）**：`nav` 内平铺分区链接；`end` 内竖线 + 三图标平铺；左侧菜单固定展开。
  * 桌面顶栏 `Container` 使用 `!px-0` 去掉默认水平 padding，与下方文档 `max-w-[1800px]` 主行左缘对齐；`brand` 使用与侧栏同宽 `w-72` 并
- * 桌面 `brand` 使用 `md:-translate-x-8`，在 `w-72` 内把徽标再往左移，对齐相对左侧菜单的视觉居中（仅 `translate-x-2` 仍偏右）。
+ * 桌面 `brand` 使用 `xl:-translate-x-8`，在 `w-72` 内把徽标再往左移，对齐相对左侧菜单的视觉居中（仅 `translate-x-2` 仍偏右）。
  */
 /** 宽屏顶栏分区链接（与历史文档站一致：平铺在 nav 右侧） */
 const docsNavPartitionLinkClass =
@@ -67,7 +67,7 @@ const docsMobileSheetIconLinkClass =
 /**
  * 小屏专用：横向三点打开**视口全宽**顶栏菜单（`fixed` 贴顶栏下缘），内含桌面、移动分区；其下为主题与外链**仅图标**一行居中。
  * 菜单层经 {@link Portal} 挂到 `document.body`，避免落在顶栏 `z-50` 子树内导致正文区仍抢点击；点击下方半透明区关闭。
- * 宽屏不展示（根节点 `md:hidden`）。
+ * 宽屏（xl+）不展示（根节点 `xl:hidden`）。
  */
 function DocsMobileTopSheet() {
   /** 菜单是否展开 */
@@ -93,7 +93,7 @@ function DocsMobileTopSheet() {
   });
 
   return (
-    <div class="relative md:hidden">
+    <div class="relative xl:hidden">
       <button
         type="button"
         class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-slate-600 transition-colors hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
@@ -190,12 +190,12 @@ function DocsSiteTopBar() {
         containerClass="max-w-[1800px] mx-auto !px-0 sm:!px-0 lg:!px-0 pr-3 sm:pr-6 lg:pr-8"
         class="border-0 bg-transparent shadow-none backdrop-blur-none dark:bg-transparent dark:shadow-none"
         center={
-          <div class="md:hidden">
+          <div class="xl:hidden">
             <DocsSiteBrand />
           </div>
         }
         brand={
-          <div class="hidden w-72 shrink-0 items-center justify-center md:flex md:-translate-x-8">
+          <div class="hidden w-72 shrink-0 items-center justify-center xl:flex xl:-translate-x-8">
             <DocsSiteBrand />
           </div>
         }
@@ -203,7 +203,7 @@ function DocsSiteTopBar() {
           <Show when={() => docsNavSidebarAttached.value}>
             <button
               type="button"
-              class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-slate-700 transition-colors hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800 md:hidden"
+              class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-slate-700 transition-colors hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800 xl:hidden"
               onClick={() => {
                 docsNavDrawerOpen.value = true;
               }}
@@ -214,8 +214,8 @@ function DocsSiteTopBar() {
           </Show>
         }
         nav={
-          <div class="flex min-h-0 min-w-0 w-full flex-1 items-center max-md:pointer-events-none md:justify-end">
-            <div class="hidden shrink-0 items-center gap-0.5 sm:gap-1 md:flex">
+          <div class="flex min-h-0 min-w-0 w-full flex-1 items-center max-xl:pointer-events-none xl:justify-end">
+            <div class="hidden shrink-0 items-center gap-0.5 sm:gap-1 xl:flex">
               <Link href="/desktop" className={docsNavPartitionLinkClass}>
                 桌面版
               </Link>
@@ -228,7 +228,7 @@ function DocsSiteTopBar() {
         end={
           <>
             <DocsMobileTopSheet />
-            <div class="hidden md:contents">
+            <div class="hidden xl:contents">
               <Divider type="vertical" class="h-6 self-center" />
               <ThemeToggle />
               <Link
@@ -260,6 +260,19 @@ function DocsSiteTopBar() {
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <div class="h-full min-h-0 flex flex-col overflow-hidden bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
+      {
+        /*
+         * 首屏内联样式：1280px 以下立即收起侧栏。
+         * 当前 docs 进程对 ../src 里 Sidebar 的 SSR 仍可能输出 md:block，
+         * 仅靠组件类名的话，平板刷新会先展开再被客户端收起。
+         */
+      }
+      <style>
+        {`@media (max-width: 1279.98px) {
+  .docs-sidebar-shell { width: 0 !important; min-width: 0 !important; overflow: hidden; }
+  .docs-sidebar-shell aside { display: none !important; }
+}`}
+      </style>
       <DocsSiteTopBar />
 
       <div class="flex-1 min-h-0 flex flex-col overflow-hidden">{children}</div>

@@ -171,6 +171,7 @@ describe("DataPanel view / form / search 配置", () => {
     expect(slots[1].href).toBe("/u/7");
     expect(slots[2].builtinClose).toBe(true);
     expect(slots[2].label).toBe("关闭");
+    expect(slots[2].tone).toBe("default");
   });
 
   it("close 写在 Record 中间仍靠右最后；close:false 隐藏", () => {
@@ -196,6 +197,14 @@ describe("DataPanel view / form / search 配置", () => {
     const fallback = resolveViewFooterActions(undefined, row, "关闭");
     expect(fallback.map((s) => s.key)).toEqual(["close"]);
     expect(fallback[0].builtinClose).toBe(true);
+    expect(fallback[0].tone).toBe("default");
+
+    const primaryClose = resolveViewFooterActions(
+      { close: { tone: "primary" } },
+      row,
+      "关闭",
+    );
+    expect(primaryClose[0].tone).toBe("primary");
   });
 
   it("edit: true 会出现在关闭按钮前面，并用传入的编辑文案", () => {
@@ -208,6 +217,27 @@ describe("DataPanel view / form / search 配置", () => {
     expect(slots.map((s) => s.key)).toEqual(["edit", "close"]);
     expect(slots[0].label).toBe("编辑");
     expect(slots[1].builtinClose).toBe(true);
+  });
+
+  it("edit 写成对象且未指定文案时，仍用传入的编辑文案，而不是键名 edit", () => {
+    const slots = resolveViewFooterActions(
+      { edit: { show: () => true }, close: true },
+      { id: "1" },
+      "关闭",
+      { edit: "编辑" },
+    );
+    expect(slots.map((s) => s.key)).toEqual(["edit", "close"]);
+    expect(slots[0].label).toBe("编辑");
+  });
+
+  it("edit 对象若自带 title，优先生效", () => {
+    const slots = resolveViewFooterActions(
+      { edit: { show: true, title: "改资料" }, close: true },
+      { id: "1" },
+      "关闭",
+      { edit: "编辑" },
+    );
+    expect(slots[0].label).toBe("改资料");
   });
 
   it("click toggle 在两档 options 间切换", () => {

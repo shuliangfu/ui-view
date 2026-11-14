@@ -38,7 +38,8 @@ const STEPS_API: ApiRow[] = [
     name: "direction",
     type: "horizontal | vertical",
     default: "horizontal",
-    description: "方向",
+    description:
+      "方向。默认水平；容器宽 ≤639.98px 时水平会自动改为垂直，避免步骤挤在一行。显式 vertical 始终垂直。",
   },
   {
     name: "onChange",
@@ -151,7 +152,7 @@ export default function NavigationSteps() {
       <section>
         <Title level={1}>Steps 步骤条</Title>
         <Paragraph class="mt-2">
-          步骤条：items（title、description、status）、current、onChange、direction（horizontal/vertical）、class。
+          步骤条：items（title、description、status）、current、onChange、direction（horizontal/vertical）、class。默认水平时，窄容器（≤639.98px）会自动改为垂直。
           <code class="text-xs">current</code>
           须传 <code class="text-xs">createSignal</code> 返回值（如{" "}
           <code class="text-xs">current={"{"}step{"}"}</code>

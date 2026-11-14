@@ -89,7 +89,14 @@ const SIDEBAR_API: DocsApiTableRow[] = [
     name: "drawerOpen",
     type: "Signal<boolean>",
     default: "-",
-    description: "小屏抽屉开关，与顶栏按钮联动",
+    description: "抽屉开关，与顶栏按钮联动；低于 drawerBreakpoint 时收入抽屉",
+  },
+  {
+    name: "drawerBreakpoint",
+    type: '"md" | "xl"',
+    default: '"md"',
+    description:
+      "收起固定侧栏的断点；md 为 768px，xl 为 1280px（文档站用 xl，平板与移动端一样收起）",
   },
   {
     name: "drawerTitle",
@@ -145,8 +152,10 @@ export default function NavigationSidebarDoc() {
         <Title level={1}>Sidebar 侧栏</Title>
         <Paragraph class="mt-2">
           文档站同款侧栏：分组、<code class="text-sm">details</code>{" "}
-          手风琴、当前路由高亮；小屏可配合{" "}
-          <code class="text-sm">drawerOpen</code> 收入抽屉。
+          手风琴、当前路由高亮；窄屏可配合{" "}
+          <code class="text-sm">drawerOpen</code> 收入抽屉，并用{" "}
+          <code class="text-sm">drawerBreakpoint</code> 指定断点（文档站为{" "}
+          <code class="text-sm">xl</code>，平板与移动端一样默认收起）。
         </Paragraph>
       </section>
 

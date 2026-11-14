@@ -7,6 +7,7 @@ import { renderToString } from "@dreamer/view/ssr";
 import {
   Descriptions,
   type DescriptionsProps,
+  resolveDescriptionsColumnCount,
 } from "../../src/shared/data-display/Descriptions.tsx";
 
 async function html(props: DescriptionsProps): Promise<string> {
@@ -180,5 +181,37 @@ describe("Descriptions 标签列宽与对齐", () => {
     expect(kept).toContain("text-left");
     expect(kept).not.toContain("items-middle");
     expect(kept).not.toContain("justify-justify");
+  });
+});
+
+describe("Descriptions 按容器宽度收敛列数", () => {
+  it("宽度未知（SSR）时保持上限", () => {
+    expect(resolveDescriptionsColumnCount(undefined, 3)).toBe(3);
+    expect(resolveDescriptionsColumnCount(Number.NaN, 3)).toBe(3);
+    expect(resolveDescriptionsColumnCount(undefined, 0)).toBe(1);
+  });
+
+  it("移动端 ≤639.98 为 1 列，平板最多 2 列，电脑端用上限", () => {
+    expect(resolveDescriptionsColumnCount(390, 3)).toBe(1);
+    expect(resolveDescriptionsColumnCount(639.98, 3)).toBe(1);
+    expect(resolveDescriptionsColumnCount(640, 3)).toBe(2);
+    expect(resolveDescriptionsColumnCount(1032, 3)).toBe(2);
+    expect(resolveDescriptionsColumnCount(1279.98, 3)).toBe(2);
+    expect(resolveDescriptionsColumnCount(1280, 3)).toBe(3);
+    expect(resolveDescriptionsColumnCount(800, 1)).toBe(1);
+    expect(resolveDescriptionsColumnCount(1440, 2)).toBe(2);
+  });
+
+  it("SSR 仍按 column 上限写出栅格（未测量不降列）", async () => {
+    const h = await html({
+      column: 3,
+      items: [
+        { label: "编码", children: "SKU-9281" },
+        { label: "名称", children: "张三" },
+        { label: "单价", children: "10" },
+      ],
+    });
+    expect(h).toContain("repeat(3, minmax(0, 1fr))");
+    expect(h).toContain('data-descriptions-columns="3"');
   });
 });

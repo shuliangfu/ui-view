@@ -11,6 +11,7 @@
 export type { BreadcrumbItem } from "./breadcrumb-types.ts";
 export {
   Sidebar,
+  type SidebarDrawerBreakpoint,
   type SidebarItem,
   type SidebarProps,
   type SidebarSubItem,
@@ -18,11 +19,11 @@ export {
 export {
   defaultPaginationMessages,
   Pagination,
+  PAGINATION_PRESET_FLAGS,
   type PaginationMessages,
   type PaginationPreset,
   type PaginationProps,
   type PaginationSize,
-  PAGINATION_PRESET_FLAGS,
   resolvePaginationPreset,
 } from "./Pagination.tsx";
 export { Menu, type MenuItem, type MenuProps } from "./Menu.tsx";

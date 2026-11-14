@@ -302,6 +302,7 @@ export interface DataViewProps {
 }
 
 export type { DataAlertConfig, DataAlertProp } from "./data-panel-alert.tsx";
+import { bindContainerWidth } from "../../shared/container-width.ts";
 
 /** 本地源没有 view/get 时补一个按 id 查找，刷新／写回后能读到源里的当前行。 */
 function withLocalRecordGet(ds: DataSource, rowKey: string): DataSource {
@@ -1561,6 +1562,9 @@ export function DataView(props: DataViewProps): JSXRenderable {
     f: { required?: boolean; rules?: { required?: boolean }[] },
   ) => !!f.required || !!(f.rules && f.rules.some((r) => r.required));
 
+  const formGridWidth = createSignal<number | undefined>(undefined);
+  const setFormGridRef = bindContainerWidth(formGridWidth);
+
   const formBody = () => {
     const errs = formErrors.value;
     const bodyRender = props.form?.render;
@@ -1598,6 +1602,7 @@ export function DataView(props: DataViewProps): JSXRenderable {
     const formGrid = useFieldGrid(visibleForm);
     return (
       <form
+        ref={setFormGridRef}
         class={formGrid ? "grid grid-cols-12 gap-3" : "grid gap-3"}
         data-testid="dv-form"
         method="dialog"
@@ -1611,7 +1616,10 @@ export function DataView(props: DataViewProps): JSXRenderable {
           const prop = fieldProp(f);
           const sig = fields[prop];
           const type = f.type ?? "text";
-          const lay = fieldLayoutStyle(f, { grid: formGrid });
+          const lay = fieldLayoutStyle(f, {
+            grid: formGrid,
+            containerWidth: formGridWidth.value,
+          });
           const disabled = evalFlag(f.disabled, false, cond);
           const opts = resolveOptions(f.options, cond);
           let control: unknown;

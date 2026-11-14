@@ -98,28 +98,32 @@ const TRANSFER_API: ApiRow[] = [
   },
   {
     name: "listStyle",
-    type: "{ width?: number; height?: number | string; minHeight?: number | string; maxHeight?: number | string; itemHeight?: number }",
+    type:
+      "{ width?: number; height?: number | string; minHeight?: number | string; maxHeight?: number | string; itemHeight?: number }",
     default: "-",
     description:
-      "列表样式：width 为列宽基准（窄容器内可收缩），height / minHeight / maxHeight 为整列高度，含标题、搜索和计数（像素数字或 CSS 值，如 \"70vh\"、\"calc(100vh - 340px)\"；与顶层同名数字参数同时存在时顶层优先；height 默认 200），itemHeight 为每一项行高（像素）；不传 itemHeight 时按 size 默认为 xs 16 / sm 18 / md 18 / lg 20",
+      '列表样式：width 为列宽基准（窄容器内可收缩），height / minHeight / maxHeight 为整列高度，含标题、搜索和计数（像素数字或 CSS 值，如 "70vh"、"calc(100vh - 340px)"；与顶层同名数字参数同时存在时顶层优先；height 默认 200），itemHeight 为每一项行高（像素）；不传 itemHeight 时按 size 默认为 xs 16 / sm 18 / md 18 / lg 20',
   },
   {
     name: "height",
     type: "number",
     default: "200",
-    description: "整列高度（含标题、搜索和计数；像素数字）；优先于 listStyle.height。CSS 值请写在 listStyle.height",
+    description:
+      "整列高度（含标题、搜索和计数；像素数字）；优先于 listStyle.height。CSS 值请写在 listStyle.height",
   },
   {
     name: "minHeight",
     type: "number",
     default: "-",
-    description: "整列最小高度（像素数字）；优先于 listStyle.minHeight。CSS 值请写在 listStyle.minHeight",
+    description:
+      "整列最小高度（像素数字）；优先于 listStyle.minHeight。CSS 值请写在 listStyle.minHeight",
   },
   {
     name: "maxHeight",
     type: "number",
     default: "-",
-    description: "整列最大高度（像素数字）；优先于 listStyle.maxHeight。CSS 值请写在 listStyle.maxHeight",
+    description:
+      "整列最大高度（像素数字）；优先于 listStyle.maxHeight。CSS 值请写在 listStyle.maxHeight",
   },
   {
     name: "disabled",
@@ -239,12 +243,11 @@ export default function FormTransfer() {
         <Paragraph class="mt-2">
           左右列表使用原生多选 select：单击只选一项，Ctrl /
           Command+单击多选，点中列表后 Ctrl / Command+A
-          全选当前列（不会选中整页）。列宽可随容器收缩，聚焦时只在列表内侧显示淡色细线。可用
-          height、minHeight、maxHeight
-          只接受像素数字；要写 CSS 值请放在 listStyle 的同名字段里，height
-          默认 200。可用
-          listStyle.itemHeight 控制每一项行高（像素），不传则按 size
-          使用默认行高。render
+          全选当前列（不会选中整页）。列宽可随容器收缩；容器不足 640px
+          时改为上下排列，中间箭头旋成向下／向上。聚焦时只在列表内侧显示淡色细线。可用
+          height、minHeight、maxHeight 只接受像素数字；要写 CSS 值请放在
+          listStyle 的同名字段里，height 默认 200。可用 listStyle.itemHeight
+          控制每一项行高（像素），不传则按 size 使用默认行高。render
           若返回非文本则回退为标题。dataSource、targetKeys、onChange、titles、showSearch、searchPlaceholder、可选
           searchValue（仅初始文案）、onSearch（输入通知）、filterOption、render、listStyle、disabled。宽度由
           class 控制，表单中需占满一列时传 class="w-full"。Tailwind v4 +

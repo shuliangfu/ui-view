@@ -37,6 +37,7 @@ import {
   xmlEscape,
   xmlUnescape,
 } from "./data-panel-xlsx.ts";
+import { DATA_PANEL_MOBILE_MAX_PX } from "./data-panel-viewport.ts";
 
 const p2 = (n: number) => String(n).padStart(2, "0");
 
@@ -1093,13 +1094,27 @@ export function fieldSpan(
   return Math.min(12, Math.max(1, Math.round(raw)));
 }
 
-/** 表单／搜索项布局 style（width＋gridColumn）。grid 开启时未写 span／cols 默认占满一行（12）。 */
+/**
+ * 表单／搜索项布局 style（width＋gridColumn）。
+ * grid 开启时未写 span／cols 默认占满一行（12）。
+ * 传入容器宽度且 ≤ {@link DATA_PANEL_MOBILE_MAX_PX} 时，无论声明 span 多少都整行（12），
+ * 避免手机弹层里两列并排被挤窄。宽度未知（SSR／尚未测量）时保持声明值。
+ */
 export function fieldLayoutStyle(
   f: { span?: number; cols?: number; width?: string | number },
-  opts?: { grid?: boolean },
+  opts?: { grid?: boolean; containerWidth?: number },
 ): Record<string, string> | undefined {
   const style: Record<string, string> = {};
-  const sp = fieldSpan(f) ?? (opts?.grid ? 12 : undefined);
+  let sp = fieldSpan(f) ?? (opts?.grid ? 12 : undefined);
+  if (
+    sp != null &&
+    opts?.grid &&
+    opts.containerWidth != null &&
+    Number.isFinite(opts.containerWidth) &&
+    opts.containerWidth <= DATA_PANEL_MOBILE_MAX_PX
+  ) {
+    sp = 12;
+  }
   if (sp != null) style.gridColumn = `span ${sp} / span ${sp}`;
   if (f.width != null && f.width !== "") {
     style.width = typeof f.width === "number"
@@ -1465,9 +1480,12 @@ export function resolveViewFooterActions(
     if (typeof raw !== "object" || raw === null) continue;
     const res = resolveRowActionCtrl(raw, row, true);
     if (!res.show) continue;
+    const display = actionDisplayText(key, res.label, res.title);
     slots.push({
       key,
-      label: actionDisplayText(key, res.label, res.title),
+      label: display === key && key === "edit" && labels?.edit
+        ? labels.edit
+        : display,
       disable: res.disable,
       title: res.title,
       tone: res.tone,
@@ -1482,7 +1500,7 @@ export function resolveViewFooterActions(
       label: closeRes.label || closeRes.title || closeLabel,
       disable: closeRes.disable,
       title: closeRes.title,
-      tone: closeRes.tone,
+      tone: closeRes.tone ?? "default",
       action: closeRes.action,
       builtinClose: true,
     });

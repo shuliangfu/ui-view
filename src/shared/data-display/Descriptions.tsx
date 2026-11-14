@@ -4,7 +4,8 @@
  */
 
 import { twMerge } from "tailwind-merge";
-import type { JSXRenderable } from "@dreamer/view";
+import { createSignal, type JSXRenderable, onCleanup } from "@dreamer/view";
+import { isHtmlElement } from "../dom-guards.ts";
 import type { SizeVariant } from "../types.ts";
 
 /** 标签垂直对齐：上、中、下。 */
@@ -98,8 +99,11 @@ export interface DescriptionsProps {
   /** 标题 */
   title?: string | unknown;
   /**
-   * 栅格列数：每行排几个描述项（每个项内仍是「标签 | 内容」横向）。
+   * 栅格列数上限：每行最多排几个描述项（每个项内仍是「标签 | 内容」横向）。
    * 要整行只展示一组键值用 `1`；要一行并排多组用 `2`、`3` 等。默认 3。
+   * 实际列数按**容器宽度**收敛（与 DataPanel 分页同一套 Tailwind sm／xl 断点）：
+   * 移动端（≤639.98px）为 1 列，平板（640px–1279.98px）最多 2 列，电脑端（≥1280px）用本值。
+   * 量的是描述列表自身宽度，弹层里窄于视口时也会降列，避免字被挤成竖排。
    */
   column?: number;
   /** 是否带边框 */
@@ -256,6 +260,32 @@ function computeDescriptionsPlacements(
   return placements;
 }
 
+/** 与 DataPanel 分页相同的移动端上限（含），对应 `max-sm`。 */
+export const DESCRIPTIONS_MOBILE_MAX_PX = 639.98;
+/** 与 DataPanel 分页相同的平板上限（含），对应 `xl` 以下。 */
+export const DESCRIPTIONS_TABLET_MAX_PX = 1279.98;
+
+/**
+ * 按容器宽度收敛列数：`maxColumn` 为上限。
+ * 宽度未知（SSR／尚未测量）时保持上限，避免服务端 HTML 与历史单测被改掉。
+ * 移动端 1 列，平板最多 2 列，电脑端用上限。
+ */
+export function resolveDescriptionsColumnCount(
+  containerWidthPx: number | undefined,
+  maxColumn: number,
+): number {
+  const max = Math.max(
+    1,
+    Number.isFinite(maxColumn) ? Math.floor(maxColumn) : 1,
+  );
+  if (containerWidthPx == null || !Number.isFinite(containerWidthPx)) {
+    return max;
+  }
+  if (containerWidthPx <= DESCRIPTIONS_MOBILE_MAX_PX) return 1;
+  if (containerWidthPx <= DESCRIPTIONS_TABLET_MAX_PX) return Math.min(2, max);
+  return max;
+}
+
 export function Descriptions(props: DescriptionsProps): JSXRenderable {
   const {
     items,
@@ -281,14 +311,35 @@ export function Descriptions(props: DescriptionsProps): JSXRenderable {
     DESCRIPTIONS_LABEL_MIN_WIDTH_DEFAULT,
   );
 
-  /** 外层栅格列数（规范化后，与轨道 repeat 一致） */
-  const columnCount = Math.max(
+  /** 调用方声明的列数上限（规范化后） */
+  const maxColumn = Math.max(
     1,
     Number.isFinite(column) ? Math.floor(column) : 1,
   );
+  /** 实际列数；SSR／未测量时用上限，客户端按容器宽度收敛 */
+  const columnCount = createSignal(maxColumn);
 
-  /** 每项在外层栅格中的行、列与有效 span（行尾空列会并入最右项） */
-  const placements = computeDescriptionsPlacements(items, columnCount);
+  let resizeObserver: ResizeObserver | null = null;
+  const setGridRef = (el: unknown) => {
+    resizeObserver?.disconnect();
+    resizeObserver = null;
+    if (!isHtmlElement(el)) return;
+    const apply = (width: number) => {
+      const next = resolveDescriptionsColumnCount(width, maxColumn);
+      if (columnCount.value !== next) columnCount.value = next;
+    };
+    apply(el.getBoundingClientRect().width);
+    if (typeof ResizeObserver === "undefined") return;
+    resizeObserver = new ResizeObserver((entries) => {
+      const w = entries[0]?.contentRect.width;
+      if (w != null) apply(w);
+    });
+    resizeObserver.observe(el);
+  };
+  onCleanup(() => {
+    resizeObserver?.disconnect();
+    resizeObserver = null;
+  });
 
   const cellCls = sizeClasses[size];
   /**
@@ -315,74 +366,88 @@ export function Descriptions(props: DescriptionsProps): JSXRenderable {
           {title}
         </div>
       )}
-      <div
-        class={twMerge(
-          "grid gap-0",
-          bordered &&
-            "border border-slate-200 dark:border-slate-600 rounded-lg overflow-hidden",
-        )}
-        style={{
-          gridTemplateColumns: `repeat(${columnCount}, minmax(0, 1fr))`,
-        }}
-      >
-        {items.map((item, index) => {
-          const placement = placements[index]!;
-          const effectiveSpan = placement.span;
-          // 内层占比：按**有效**占位宽度换算，含行尾自动扩展后的 span
-          const labelPercentInCell = descriptionsHorizontalLabelPercentInCell(
-            labelColPercent,
-            effectiveSpan,
-          );
-          const touchesRightEdge =
-            placement.startCol + effectiveSpan >= columnCount;
-          const labelAlign = resolveLabelAlign(labelAlignProp, item.labelAlign);
-          return (
-            <div
-              key={index}
-              class={twMerge(
-                "min-w-0",
-                rowZebraCls(placement.row),
-                layout === "horizontal" && "grid w-full gap-0",
-                layout === "vertical" && "flex flex-col",
-                bordered &&
-                  "border-b border-r border-slate-200 dark:border-slate-600",
-              )}
-              style={{
-                gridRow: placement.row + 1,
-                gridColumn: `${placement.startCol + 1} / span ${effectiveSpan}`,
-                ...(layout === "horizontal"
-                  ? {
-                    /**
-                     * `minmax(最小宽, 占比%)`：占比相对**本项**宽度；有效 span>1 时用 `labelColPercent/span` 保证与单列项首列对齐。
-                     */
-                    gridTemplateColumns:
-                      `minmax(${labelMinWidthCss}, ${labelPercentInCell}%) minmax(0, 1fr)`,
-                  }
-                  : {}),
-                ...(bordered && touchesRightEdge
-                  ? { borderRight: "none" }
-                  : {}),
-              }}
-            >
-              <div
-                class={twMerge(
-                  labelCls,
-                  "flex",
-                  LABEL_VERTICAL_CLASS[labelAlign.vertical],
-                  LABEL_HORIZONTAL_JUSTIFY[labelAlign.horizontal],
-                  LABEL_HORIZONTAL_TEXT[labelAlign.horizontal],
-                )}
-              >
-                {item.label}
-                {colon ? "：" : null}
-              </div>
-              <div class={twMerge(contentCls, "min-w-0 wrap-break-word")}>
-                {item.children}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+      {() => {
+        const cols = columnCount.value;
+        const placements = computeDescriptionsPlacements(items, cols);
+        return (
+          <div
+            ref={setGridRef}
+            data-descriptions-columns={String(cols)}
+            class={twMerge(
+              "grid gap-0",
+              bordered &&
+                "border border-slate-200 dark:border-slate-600 rounded-lg overflow-hidden",
+            )}
+            style={{
+              gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
+            }}
+          >
+            {items.map((item, index) => {
+              const placement = placements[index]!;
+              const effectiveSpan = placement.span;
+              // 内层占比：按**有效**占位宽度换算，含行尾自动扩展后的 span
+              const labelPercentInCell =
+                descriptionsHorizontalLabelPercentInCell(
+                  labelColPercent,
+                  effectiveSpan,
+                );
+              const touchesRightEdge =
+                placement.startCol + effectiveSpan >= cols;
+              const labelAlign = resolveLabelAlign(
+                labelAlignProp,
+                item.labelAlign,
+              );
+              return (
+                <div
+                  key={index}
+                  class={twMerge(
+                    "min-w-0",
+                    rowZebraCls(placement.row),
+                    layout === "horizontal" && "grid w-full gap-0",
+                    layout === "vertical" && "flex flex-col",
+                    bordered &&
+                      "border-b border-r border-slate-200 dark:border-slate-600",
+                  )}
+                  style={{
+                    gridRow: placement.row + 1,
+                    gridColumn: `${
+                      placement.startCol + 1
+                    } / span ${effectiveSpan}`,
+                    ...(layout === "horizontal"
+                      ? {
+                        /**
+                         * `minmax(最小宽, 占比%)`：占比相对**本项**宽度；有效 span>1 时用 `labelColPercent/span` 保证与单列项首列对齐。
+                         */
+                        gridTemplateColumns:
+                          `minmax(${labelMinWidthCss}, ${labelPercentInCell}%) minmax(0, 1fr)`,
+                      }
+                      : {}),
+                    ...(bordered && touchesRightEdge
+                      ? { borderRight: "none" }
+                      : {}),
+                  }}
+                >
+                  <div
+                    class={twMerge(
+                      labelCls,
+                      "flex",
+                      LABEL_VERTICAL_CLASS[labelAlign.vertical],
+                      LABEL_HORIZONTAL_JUSTIFY[labelAlign.horizontal],
+                      LABEL_HORIZONTAL_TEXT[labelAlign.horizontal],
+                    )}
+                  >
+                    {item.label}
+                    {colon ? "：" : null}
+                  </div>
+                  <div class={twMerge(contentCls, "min-w-0 wrap-break-word")}>
+                    {item.children}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        );
+      }}
     </div>
   );
 }

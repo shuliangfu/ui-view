@@ -8,8 +8,8 @@
  *
  * **路径**：在组件函数体内同步调用 `getCurrentPath()`；dweb 客户端路由切换会重建布局树，侧栏会重新执行，高亮与 `open` 会与 URL 对齐。
  *
- * **小屏适配**：传入 `drawerOpen`（与顶栏按钮共用 `Signal`）时，max-md 下隐藏固定侧栏，导航移入左侧 {@link Drawer}；
- * 大屏仍为固定 `aside`；抽屉内 `accordionGroupName` 与侧栏不同，避免两处 DOM 手风琴串线。
+ * **窄屏适配**：传入 `drawerOpen`（与顶栏按钮共用 `Signal`）时，低于 {@link SidebarDrawerBreakpoint}（默认 max-md）隐藏固定侧栏，导航移入左侧 {@link Drawer}；
+ * 大屏仍为固定 `aside`；抽屉内 `accordionGroupName` 与侧栏不同，避免两处 DOM 手风琴串线。文档站传 `xl`，使平板与移动端一样默认收起。
  */
 
 import type { Signal } from "@dreamer/view";
@@ -34,6 +34,9 @@ export interface SidebarItem {
   children?: ReadonlyArray<SidebarSubItem>;
 }
 
+/** 传入 `drawerOpen` 时收起固定侧栏的 Tailwind 断点。默认 `md`。 */
+export type SidebarDrawerBreakpoint = "md" | "xl";
+
 export interface SidebarProps {
   /** 顶部概览链接（如「组件概览」-> /desktop） */
   overview?: { path: string; label: string };
@@ -52,9 +55,15 @@ export interface SidebarProps {
    */
   accordionGroupName?: string;
   /**
-   * 与顶栏「菜单」等共用：为真时 max-md 下将导航收入左侧 Drawer，固定侧栏仅 md+ 显示。
+   * 与顶栏「菜单」等共用：为真时低于 {@link drawerBreakpoint} 将导航收入左侧 Drawer，
+   * 固定侧栏仅在该断点及以上显示。
    */
   drawerOpen?: Signal<boolean>;
+  /**
+   * 传入 `drawerOpen` 时，低于该断点隐藏固定侧栏、改用左侧 Drawer。
+   * 默认 `md`（768px）；文档站用 `xl`（1280px），使平板与移动端一样默认收起、可手动展开。
+   */
+  drawerBreakpoint?: SidebarDrawerBreakpoint;
   /** Drawer 标题；不传则用 `overview.label`，再无则「导航」 */
   drawerTitle?: string;
   /**
@@ -279,7 +288,34 @@ function SidebarNavigation(props: {
 }
 
 /**
- * 侧栏：概览链接、分组标题、可折叠分类（details）与叶子链接；可选小屏 Drawer。
+ * 抽屉布局类名必须是完整字面量，供 Tailwind 扫描；勿拼接断点前缀。
+ * `md`：<768px 收起；`xl`：<1280px 收起（含平板）。
+ */
+const drawerLayoutByBreakpoint = {
+  md: {
+    shell:
+      "relative h-full min-h-0 w-0 shrink-0 overflow-visible md:w-72 md:shrink-0",
+    aside:
+      "hidden h-full min-h-0 overflow-y-auto overscroll-y-contain md:block",
+    drawerHost: "md:hidden",
+  },
+  xl: {
+    shell:
+      "relative h-full min-h-0 w-0 shrink-0 overflow-visible xl:w-72 xl:shrink-0",
+    aside:
+      "hidden h-full min-h-0 overflow-y-auto overscroll-y-contain xl:block",
+    drawerHost: "xl:hidden",
+  },
+} as const;
+
+export function resolveSidebarDrawerLayout(
+  breakpoint: SidebarDrawerBreakpoint = "md",
+): { shell: string; aside: string; drawerHost: string } {
+  return drawerLayoutByBreakpoint[breakpoint];
+}
+
+/**
+ * 侧栏：概览链接、分组标题、可折叠分类（details）与叶子链接；可选窄屏 Drawer。
  */
 export function Sidebar(props: SidebarProps): JSXRenderable {
   const {
@@ -293,6 +329,7 @@ export function Sidebar(props: SidebarProps): JSXRenderable {
     drawerOpen,
     drawerTitle: drawerTitleProp,
     drawerAccordionGroupName,
+    drawerBreakpoint = "md",
   } = props;
   /** 合并默认中文文案与外部传入 messages */
   const m: SidebarMessages = {
@@ -314,6 +351,7 @@ export function Sidebar(props: SidebarProps): JSXRenderable {
   };
 
   if (drawerOpen != null) {
+    const layout = resolveSidebarDrawerLayout(drawerBreakpoint);
     const drawerTitle = drawerTitleProp ?? overview?.label ??
       m.drawerTitleFallback;
     const drawerGroup = drawerAccordionGroupName ??
@@ -329,16 +367,16 @@ export function Sidebar(props: SidebarProps): JSXRenderable {
     };
 
     return (
-      <div class="relative h-full min-h-0 w-0 shrink-0 overflow-visible md:w-72 md:shrink-0">
+      <div class={layout.shell} data-sidebar-drawer={drawerBreakpoint}>
         {
           /*
-           * 大屏固定侧栏；小屏不占横向宽度（w-0），避免与正文并排挤压。
+           * 大屏固定侧栏；窄屏不占横向宽度（w-0），避免与正文并排挤压。
            */
         }
         <aside
           class={twMerge(
             asideClass,
-            "hidden h-full min-h-0 overflow-y-auto overscroll-y-contain md:block",
+            layout.aside,
           )}
         >
           <SidebarNavigation
@@ -352,10 +390,11 @@ export function Sidebar(props: SidebarProps): JSXRenderable {
            * 小屏：Drawer 挂在此节点（通常不占布局流宽度）；面板经 Portal 挂到 body。
            */
         }
-        <div class="md:hidden">
+        <div class={layout.drawerHost}>
           {
             /*
-             * 宽度 `calc(100vw - 3rem)`：右侧留一条缝见遮罩后正文；背景与固定侧栏同为 `sidebarChromeBg`。
+             * 宽度不超过固定侧栏的 18rem；手机上再按 `100vw - 8rem` 收一截，右侧留出遮罩与正文。
+             * 平板若只用 `100vw - 8rem` 会铺得太宽。
              */
           }
           <Drawer
@@ -364,7 +403,7 @@ export function Sidebar(props: SidebarProps): JSXRenderable {
               drawerOpen.value = false;
             }}
             placement="left"
-            width="calc(100vw - 8rem)"
+            width="min(18rem, calc(100vw - 8rem))"
             title={drawerTitle}
             destroyOnClose
             class={twMerge(

@@ -89,8 +89,8 @@ export function PageHeader(props: PageHeaderProps): JSXRenderable {
           ))}
         </nav>
       )}
-      <div class="flex items-start justify-between gap-4">
-        <div class="flex items-center gap-3 min-w-0">
+      <div class="flex flex-col items-stretch gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+        <div class="flex min-w-0 items-center gap-3">
           {onBack != null && (
             <button
               type="button"
@@ -112,7 +112,7 @@ export function PageHeader(props: PageHeaderProps): JSXRenderable {
             )}
           </div>
         </div>
-        {extra != null && <div class="shrink-0">{extra}</div>}
+        {extra != null && <div class="shrink-0 sm:self-start">{extra}</div>}
       </div>
       {footer != null && <div class="mt-4">{footer}</div>}
     </header>
