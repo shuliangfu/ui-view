@@ -7,6 +7,8 @@ import { createRenderEffect, createSignal, onCleanup } from "@dreamer/view";
 import { Button, Paragraph, Title } from "@dreamer/ui-view/basic";
 import { CodeBlock } from "@dreamer/ui-view/data-display";
 import { Progress } from "@dreamer/ui-view/feedback";
+import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
+
 /** API 属性行类型 */
 interface ApiRow {
   name: string;
@@ -125,6 +127,7 @@ const exampleDynamic = `import {
   onCleanup,
 } from "@dreamer/view";
 import { Button } from "@dreamer/ui-view/basic";
+
 export function Demo() {
   const dynamicPercent = createSignal(0);
   const replayKey = createSignal(0);
@@ -215,6 +218,7 @@ export default function FeedbackProgress() {
           language="tsx"
           showLineNumbers
           wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
         />
       </section>
 
@@ -263,6 +267,7 @@ export default function FeedbackProgress() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -281,6 +286,7 @@ export default function FeedbackProgress() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -296,6 +302,7 @@ export default function FeedbackProgress() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -314,6 +321,7 @@ export default function FeedbackProgress() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -336,6 +344,7 @@ export default function FeedbackProgress() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -359,6 +368,7 @@ export default function FeedbackProgress() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
       </section>

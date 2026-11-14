@@ -32,6 +32,8 @@ import {
 } from "./form-item-api.ts";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_FORM_LIST } from "../../../data/component-messages-rows.ts";
+import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
+
 
 /** FormList 动态列表属性说明 */
 const FORM_LIST_API: FormDocsApiRow[] = [
@@ -365,6 +367,7 @@ export default function FormContainersDoc() {
           showLineNumbers
           title="代码示例"
           wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
         />
       </section>
 
@@ -475,6 +478,7 @@ export default function FormContainersDoc() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -553,6 +557,7 @@ export default function FormContainersDoc() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -619,6 +624,7 @@ export default function FormContainersDoc() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -672,6 +678,7 @@ export default function FormContainersDoc() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -735,6 +742,7 @@ function renderRow(index: number, { removeButton }: { removeButton: unknown }) {
             copyable
             title="代码示例"
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
       </section>

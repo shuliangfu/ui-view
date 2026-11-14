@@ -8,6 +8,8 @@ import { Paragraph, Title } from "@dreamer/ui-view/basic";
 import { CodeBlock } from "@dreamer/ui-view/data-display";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_CODE_BLOCK } from "../../../data/component-messages-rows.ts";
+import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
+
 
 const sampleJS = `function hello(name) {
   console.log("Hello, " + name);
@@ -170,6 +172,7 @@ export default function DataDisplayCodeBlock() {
           language="tsx"
           showLineNumbers
           wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
         />
       </section>
 
@@ -187,6 +190,7 @@ export default function DataDisplayCodeBlock() {
               copied.value = true;
               setTimeout(() => copied.value = false, 1500);
             }}
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
           {copied.value && <p class="text-sm text-green-600">已复制到剪贴板</p>}
           <CodeBlock
@@ -196,6 +200,7 @@ export default function DataDisplayCodeBlock() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -215,6 +220,7 @@ export default function DataDisplayCodeBlock() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -226,11 +232,13 @@ export default function DataDisplayCodeBlock() {
             title="CodeBlock.tsx"
             showLineNumbers
             copyable={false}
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
           <CodeBlock
             code="echo 'no highlight'"
             language="plaintext"
             title="plaintext"
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
           <CodeBlock
             title="代码示例"
@@ -239,6 +247,7 @@ export default function DataDisplayCodeBlock() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
       </section>

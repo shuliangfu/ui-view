@@ -18,6 +18,8 @@ import {
 import { MobileDocDemo } from "../../../components/MobileDocDemo.tsx";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_CASCADER } from "../../../data/component-messages-rows.ts";
+import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
+
 
 /** createForm 演示字段（onChange(value) → bindValue） */
 type CascaderCreateFormValues = { region: string[] };
@@ -176,6 +178,7 @@ export default function MobileCascaderDoc() {
           language="tsx"
           showLineNumbers
           wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
         />
       </section>
 
@@ -227,6 +230,7 @@ const form = createForm({
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -246,6 +250,7 @@ const form = createForm({
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
         <div class="space-y-4">
@@ -288,6 +293,7 @@ const form = createForm({
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
       </section>

@@ -94,4 +94,49 @@ describe("DataPanel pagination presets", () => {
     expect(h).not.toContain('data-testid="dp-jump"');
     expect(h).not.toContain('data-testid="dp-pagesize"');
   });
+
+  it("pagination.preset 与 paginationPreset 等价，并可覆盖 size", async () => {
+    const h = await html({
+      pagination: { preset: "simple", size: "lg" },
+    });
+    expect(h).toContain('data-dp-pg-preset="simple"');
+    expect(h).toContain('data-dp-pg-size="lg"');
+    expect(h).toContain('data-testid="dp-simple-current"');
+    expect(h).not.toContain('data-testid="dp-pagesize"');
+    expect(h).not.toContain('data-testid="dp-page-1"');
+  });
+
+  it("pagination.preset 优先于 paginationPreset", async () => {
+    const h = await html({
+      paginationPreset: "simple",
+      pagination: { preset: "default" },
+    });
+    expect(h).toContain('data-dp-pg-preset="default"');
+    expect(h).toContain('data-testid="dp-page-1"');
+    expect(h).toContain('data-testid="dp-pagesize"');
+    expect(h).not.toContain('data-testid="dp-simple-current"');
+  });
+
+  it("pagination 透传 showFirstLast／class／disabled／showTotal／showQuickJumper", async () => {
+    const h = await html({
+      paginationPreset: "default",
+      pagination: {
+        showFirstLast: true,
+        showQuickJumper: true,
+        showTotal: () => "CUSTOM_PG_TOTAL",
+        disabled: true,
+        class: "pg-extra-class",
+      },
+    });
+    expect(h).toContain('data-dp-pg-preset="default"');
+    expect(h).toContain('data-testid="dp-first"');
+    expect(h).toContain('data-testid="dp-last"');
+    expect(h).toContain('data-testid="dp-jump"');
+    expect(h).toContain("CUSTOM_PG_TOTAL");
+    expect(h).toContain("pg-extra-class");
+    expect(isDisabled(h, "dp-first")).toBe(true);
+    expect(isDisabled(h, "dp-prev")).toBe(true);
+    expect(isDisabled(h, "dp-next")).toBe(true);
+    expect(isDisabled(h, "dp-last")).toBe(true);
+  });
 });

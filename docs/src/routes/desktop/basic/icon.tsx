@@ -507,6 +507,8 @@ import { CodeBlock } from "@dreamer/ui-view/data-display";
 import { toast } from "@dreamer/ui-view/feedback";
 import type { IconComponentProps } from "@dreamer/ui-view/basic";
 import type { JSXRenderable } from "@dreamer/view";
+import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
+
 
 /** 图标组件类型：与内置图标签名一致（与 ui-view 图标返回类型一致） */
 type IconComponentType = (props?: IconComponentProps) => JSXRenderable;
@@ -1306,6 +1308,7 @@ import { IconFlagCN } from "@dreamer/ui-view/icons/flags/standalone/IconFlagCN.t
           language="tsx"
           showLineNumbers
           wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
         />
       </section>
 
@@ -1335,6 +1338,7 @@ import { IconFlagCN } from "@dreamer/ui-view/icons/flags/standalone/IconFlagCN.t
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -1357,6 +1361,7 @@ import { IconFlagCN } from "@dreamer/ui-view/icons/flags/standalone/IconFlagCN.t
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -1409,6 +1414,7 @@ import { IconFlagCN } from "@dreamer/ui-view/icons/flags/standalone/IconFlagCN.t
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
       </section>

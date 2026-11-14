@@ -8,6 +8,8 @@ import { Paragraph, Spinner, Title } from "@dreamer/ui-view/basic";
 import { CodeBlock } from "@dreamer/ui-view/data-display";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_SPINNER } from "../../../data/component-messages-rows.ts";
+import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
+
 interface ApiRow {
   name: string;
   type: string;
@@ -74,6 +76,7 @@ export default function BasicSpinner() {
           language="tsx"
           showLineNumbers
           wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
         />
       </section>
 
@@ -95,6 +98,7 @@ export default function BasicSpinner() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -111,6 +115,7 @@ export default function BasicSpinner() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
       </section>

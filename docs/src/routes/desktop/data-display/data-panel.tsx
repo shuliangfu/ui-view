@@ -30,6 +30,10 @@ import { Password } from "@dreamer/ui-view/form/password";
 import { Modal, toast } from "@dreamer/ui-view/feedback";
 import { IconCheck } from "@dreamer/ui-view/icons/Check.tsx";
 import { IconBan } from "@dreamer/ui-view/icons/Ban.tsx";
+import { IconBell } from "@dreamer/ui-view/icons/Bell.tsx";
+import { IconFileSearch } from "@dreamer/ui-view/icons/FileSearch.tsx";
+import { IconLock } from "@dreamer/ui-view/icons/Lock.tsx";
+import { IconUserPlus } from "@dreamer/ui-view/icons/UserPlus.tsx";
 import {
   DocsApiTable,
   type DocsApiTableRow,
@@ -168,7 +172,7 @@ const DATA_PANEL_API: DocsApiTableRow[] = [
     type: "ViewConfig",
     default: "columns＋form",
     description:
-      "详情弹层：title、props、render、actions，以及 width／fullscreenable（弹层宽度与全屏切换，缺省 md／false）、labelColPercent／labelMinWidth（标签与内容比例）。不写时回落列＋表单。详见 View 表。",
+      "详情弹层：title、props、render、actions，以及 width／fullscreenable（弹层宽度与全屏切换，缺省 md／false）。Descriptions 的参数（除 items、title）可直接写在 view 上，与这些字段混在一起，例如 column（本插槽缺省 1）、size（缺省 sm）、bordered（缺省 true）、layout、colon、labelAlign、labelColPercent、labelMinWidth。title 仍是弹层标题。有 render 时这些参数不生效。不写时回落列＋表单。详见 View 表。",
   },
   {
     name: "panelKey",
@@ -189,7 +193,14 @@ const DATA_PANEL_API: DocsApiTableRow[] = [
     type: '"full" | "default" | "simple"',
     default: "随断点",
     description:
-      "底栏分页能力档，与 Pagination 的 preset 相同：full 全部能力（第一页／上一页／页码／下一页／最后一页、每页条数、跳转）；default 一般能力（上一页／下一页＋页码＋每页条数，无第一页／最后一页／跳转）；simple 极简（上一页／下一页＋「第 n / m 页」，无页码／跳转／每页条数）。不传时按现有断点自动选择并带上对应 size：电脑端（min-width: 1280px，Tailwind xl）为 preset=full、size=md；平板（640px–1279.98px，sm 至 xl 以下）为 preset=default、size=sm；移动端（max-width: 639.98px，max-sm）为 preset=simple、size=xs。",
+      "底栏分页能力档的简写，等价于 pagination.preset。与 pagination.preset 同时写时以 pagination.preset 为准。不传时按断点自动选择并带上对应 size：电脑端（min-width: 1280px）full／md，平板（640px–1279.98px）default／sm，移动端（max-width: 639.98px）simple／xs。",
+  },
+  {
+    name: "pagination",
+    type: "PanelPaginationConfig",
+    default: "随断点",
+    description:
+      "底栏分页配置，透传 Pagination 的展示参数（preset、size、showFirstLast、showPrevNext、showPageNumbers、showQuickJumper、showTotal、disabled、class、testIdPrefix、messages）。页码、每页条数、总数和 onChange 由面板托管；地址栏同步用 syncUrl，每页条数选项用 pageSizes。未写的键走断点缺省（或 paginationPreset）。本插槽默认关掉 Pagination 自带总条数和跳转（左侧条数文案和 full 档右侧跳转由面板渲染）；显式 showQuickJumper: true 时改用 Pagination 自带跳转。详见 PanelPaginationConfig 表。",
   },
   {
     name: "defaultSort",
@@ -343,7 +354,7 @@ const DATA_PANEL_API: DocsApiTableRow[] = [
     type: "string",
     default: "-",
     description:
-      "额外 class（加在卡片上）。移动端（max-width: 639.98px）自带：卡片 margin-top/left/right=0，.dp-table-wrap padding-top/left/right=0（表格贴边）；底栏分页各端均为左右一行（左侧条数文案，右侧分页控件）；底栏分页预设与尺寸随断点：电脑端（≥1280px）full／md，平板（640px–1279.98px）default／sm，移动端（≤639.98px）simple／xs；可用 paginationPreset 覆盖",
+      "额外 class（加在卡片上）。移动端（max-width: 639.98px）自带：卡片 margin-top/left/right=0，.dp-table-wrap padding-top/left/right=0（表格贴边）；底栏分页各端均为左右一行（左侧条数文案，右侧分页控件）；底栏分页预设与尺寸随断点：电脑端（≥1280px）full／md，平板（640px–1279.98px）default／sm，移动端（≤639.98px）simple／xs；可用 pagination 或 paginationPreset 覆盖",
   },
   {
     name: "children",
@@ -1158,7 +1169,7 @@ const rows = makeDemoRows(5);
   data-testid="demo-toolbar-off-hint"
 >
   toolbar=false
-  时整栏工具栏不出现；表格／分页仍渲染。移动端（≤639.98px）表格卡上／左／右贴边；底栏分页各端均为左右一行（左侧条数、右侧控件）；底栏分页预设与尺寸随断点：电脑端（≥1280px）full／md，平板（640px–1279.98px）default／sm，移动端（≤639.98px）simple／xs，也可用 paginationPreset 覆盖。
+  时整栏工具栏不出现；表格／分页仍渲染。移动端（≤639.98px）表格卡上／左／右贴边；底栏分页各端均为左右一行（左侧条数、右侧控件）；底栏分页预设与尺寸随断点：电脑端（≥1280px）full／md，平板（640px–1279.98px）default／sm，移动端（≤639.98px）simple／xs，也可用 pagination 或 paginationPreset 覆盖。
 </p>
 `;
 
@@ -1239,6 +1250,7 @@ const tbFnCode = `import { createSignal } from "@dreamer/view";
 import { Button } from "@dreamer/ui-view/basic";
 import { DataPanel } from "@dreamer/ui-view/data-display";
 import type { Column, FormField, Row, SearchField } from "@dreamer/ui-view/data-display";
+import { IconFileSearch } from "@dreamer/ui-view/icons/FileSearch.tsx";
 
 ${DEMO_COMMON_SETUP_CODE}
 
@@ -1274,6 +1286,8 @@ const pageAllowAudit = createSignal(true);
   toolbar={{
     create: true,
     audit: {
+      icon: <IconFileSearch />,
+      title: "审计",
       label: "审计",
       show: () => true,
       disable: () => !pageAllowAudit.value,
@@ -1331,6 +1345,7 @@ const actionHint = createSignal("");
 const tbCustomCode = `import { createSignal } from "@dreamer/view";
 import { DataPanel } from "@dreamer/ui-view/data-display";
 import type { Column, FormField, Row, SearchField } from "@dreamer/ui-view/data-display";
+import { IconUserPlus } from "@dreamer/ui-view/icons/UserPlus.tsx";
 
 ${DEMO_COMMON_SETUP_CODE}
 
@@ -1348,6 +1363,8 @@ const actionHint = createSignal("");
   toolbar={{
     create: true,
     invite: {
+      icon: <IconUserPlus />,
+      title: "邀请",
       label: "邀请",
       action: () => {
         actionHint.value = "toolbar:invite";
@@ -1405,6 +1422,7 @@ const actionHint = createSignal("");
 const keyOrderCode = `import { createSignal } from "@dreamer/view";
 import { DataPanel } from "@dreamer/ui-view/data-display";
 import type { Column, FormField, Row, SearchField } from "@dreamer/ui-view/data-display";
+import { IconFileSearch } from "@dreamer/ui-view/icons/FileSearch.tsx";
 
 ${DEMO_COMMON_SETUP_CODE}
 
@@ -1420,6 +1438,8 @@ const actionHint = createSignal("");
   toolbar={{
     create: true,
     audit: {
+      icon: <IconFileSearch />,
+      title: "审计",
       label: "审计",
       action: () => {
         actionHint.value = "order:audit";
@@ -1446,6 +1466,7 @@ const actionHint = createSignal("");
 const enabledCode = `import { createSignal } from "@dreamer/view";
 import { DataPanel } from "@dreamer/ui-view/data-display";
 import type { Column, FormField, Row, SearchField } from "@dreamer/ui-view/data-display";
+import { IconLock } from "@dreamer/ui-view/icons/Lock.tsx";
 
 ${DEMO_COMMON_SETUP_CODE}
 
@@ -1474,6 +1495,8 @@ const actionHint = createSignal("");
   toolbar={{
     create: { disable: true },
     freeze: {
+      icon: <IconLock />,
+      title: "冻结",
       label: "冻结",
       disable: () => true,
       action: () => {
@@ -1502,6 +1525,7 @@ const actionHint = createSignal("");
 const titleCode = `import { createSignal } from "@dreamer/view";
 import { DataPanel } from "@dreamer/ui-view/data-display";
 import type { Column, FormField, Row, SearchField } from "@dreamer/ui-view/data-display";
+import { IconLock } from "@dreamer/ui-view/icons/Lock.tsx";
 
 ${DEMO_COMMON_SETUP_CODE}
 
@@ -1530,6 +1554,8 @@ const actionHint = createSignal("");
     create: true,
     refresh: { title: "立刻刷新" },
     freeze: {
+      icon: <IconLock />,
+      title: "冻结",
       label: "冻结",
       action: () => {
         actionHint.value = "title:freeze";
@@ -1655,6 +1681,7 @@ const can = (code: keyof DemoPerms) => demoCan(perms.value, code);
 const customCode = `import { createSignal } from "@dreamer/view";
 import { DataPanel } from "@dreamer/ui-view/data-display";
 import type { Column, FormField, Row, SearchField } from "@dreamer/ui-view/data-display";
+import { IconBell } from "@dreamer/ui-view/icons/Bell.tsx";
 
 ${DEMO_COMMON_SETUP_CODE}
 
@@ -1694,6 +1721,8 @@ const actionHint = createSignal("");
     }}
     toolbar={{
       notify: {
+        icon: <IconBell />,
+        title: "通知",
         label: "通知",
         tone: "primary",
         action: () => {
@@ -1704,7 +1733,7 @@ const actionHint = createSignal("");
   />
   <p class="text-xs text-slate-500" data-testid="demo-custom-hint">
     {() => actionHint.value ||
-      "点「通知」／「冻结」直接跑 action（确认请在 action 自管）"}
+      "点工具栏通知图标或行内「冻结」直接跑 action（确认请在 action 自管）"}
   </p>
 </div>
 `;
@@ -3092,7 +3121,7 @@ const rows = makeDemoRows(8);
           >
             toolbar=false
             时整栏工具栏不出现；表格／分页仍渲染。移动端（≤639.98px）表格卡上／左／右贴边；底栏分页各端均为左右一行（左侧条数、右侧控件）；底栏分页预设与尺寸随断点：电脑端（≥1280px）full／md，平板（640px–1279.98px）default／sm，移动端（≤639.98px）simple／xs，也可用
-            paginationPreset 覆盖。
+            pagination 或 paginationPreset 覆盖。
           </p>
         </DocsDemo>
 
@@ -3186,6 +3215,8 @@ const rows = makeDemoRows(8);
             toolbar={{
               create: true,
               audit: {
+                icon: <IconFileSearch />,
+                title: "审计",
                 label: "审计",
                 show: () => true,
                 disable: () => !pageAllowAudit.value,
@@ -3243,6 +3274,8 @@ const rows = makeDemoRows(8);
             toolbar={{
               create: true,
               invite: {
+                icon: <IconUserPlus />,
+                title: "邀请",
                 label: "邀请",
                 action: () => {
                   actionHint.value = "toolbar:invite";
@@ -3300,6 +3333,8 @@ const rows = makeDemoRows(8);
             toolbar={{
               create: true,
               audit: {
+                icon: <IconFileSearch />,
+                title: "审计",
                 label: "审计",
                 action: () => {
                   actionHint.value = "order:audit";
@@ -3347,6 +3382,8 @@ const rows = makeDemoRows(8);
             toolbar={{
               create: { disable: true },
               freeze: {
+                icon: <IconLock />,
+                title: "冻结",
                 label: "冻结",
                 disable: () => true,
                 action: () => {
@@ -3396,6 +3433,8 @@ const rows = makeDemoRows(8);
               create: true,
               refresh: { title: "立刻刷新" },
               freeze: {
+                icon: <IconLock />,
+                title: "冻结",
                 label: "冻结",
                 action: () => {
                   actionHint.value = "title:freeze";
@@ -3526,6 +3565,8 @@ const rows = makeDemoRows(8);
               }}
               toolbar={{
                 notify: {
+                  icon: <IconBell />,
+                  title: "通知",
                   label: "通知",
                   tone: "primary",
                   action: () => {
@@ -3536,7 +3577,7 @@ const rows = makeDemoRows(8);
             />
             <p class="text-xs text-slate-500" data-testid="demo-custom-hint">
               {() => actionHint.value ||
-                "点「通知」／「冻结」直接跑 action（确认请在 action 自管）"}
+                "点工具栏通知图标或行内「冻结」直接跑 action（确认请在 action 自管）"}
             </p>
           </div>
         </DocsDemo>
@@ -3547,9 +3588,13 @@ const rows = makeDemoRows(8);
             <code class="text-xs">form</code>／
             <code class="text-xs">search</code> 一样写成{" "}
             <code class="text-xs">
-              {"{ title, props, actions?, width?, fullscreenable?, labelColPercent?, labelMinWidth? }"}
+              {"{ title, props, actions?, width?, fullscreenable?, column?, size?, bordered?, ... }"}
             </code>
-            。标签与内容比例用 <code class="text-xs">labelColPercent</code>
+            。Descriptions 的参数（除 items、title）可直接写在 view 上，例如{" "}
+            <code class="text-xs">column</code>（本插槽缺省 1）、
+            <code class="text-xs">size</code>（缺省 sm）、
+            <code class="text-xs">bordered</code>（缺省 true）。标签与内容比例用{" "}
+            <code class="text-xs">labelColPercent</code>
             （12～85，缺省 38）和 <code class="text-xs">labelMinWidth</code>
             （缺省 13.5rem）设置。<code class="text-xs">title</code>{" "}
             是查看弹窗标题（
@@ -4399,7 +4444,16 @@ function DataPanelTabsDemo() {
           View（ViewConfig / ViewItem）
         </Title>
         <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
-          详情字段区用 Descriptions 展示。单项可写{" "}
+          详情字段区用 Descriptions 展示。Descriptions 的参数（除 items、title）可直接写在{" "}
+          <code class="text-xs">view</code> 上，与 title／props／actions 混在一起，例如{" "}
+          <code class="text-xs">column</code>（本插槽缺省 1）、
+          <code class="text-xs">size</code>（缺省 sm）、
+          <code class="text-xs">bordered</code>（缺省 true）、
+          <code class="text-xs">layout</code>、
+          <code class="text-xs">colon</code>、
+          <code class="text-xs">labelAlign</code>。
+          <code class="text-xs">title</code> 仍是弹层标题，不会传给 Descriptions；有{" "}
+          <code class="text-xs">render</code> 时这些参数不生效。单项可写{" "}
           <code class="text-xs">labelAlign</code>
           ，垂直方向 top／center／bottom，水平方向
           left／center／right；未写则标签上对齐、右对齐。弹层可用{" "}

@@ -12,6 +12,8 @@ import {
   type DocsApiTableRow,
 } from "../../../components/DocsApiTable.tsx";
 import { MobileDocDemo } from "../../../components/MobileDocDemo.tsx";
+import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
+
 
 const SCOPE_API: DocsApiTableRow[] = [
   {
@@ -72,6 +74,7 @@ export default function MobilePortalHostScopeDoc() {
           language="tsx"
           showLineNumbers
           wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
         />
       </section>
 
@@ -104,6 +107,7 @@ export default function MobilePortalHostScopeDoc() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
       </section>

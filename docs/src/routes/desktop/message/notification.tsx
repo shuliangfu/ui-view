@@ -10,6 +10,8 @@ import { CodeBlock } from "@dreamer/ui-view/data-display";
 import { notification, toast } from "@dreamer/ui-view/feedback";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_NOTIFICATION } from "../../../data/component-messages-rows.ts";
+import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
+
 /** API 方法/选项行类型 */
 interface ApiRow {
   name: string;
@@ -198,6 +200,7 @@ export default function MessageNotification() {
           language="tsx"
           showLineNumbers
           wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
         />
       </section>
 
@@ -255,6 +258,7 @@ export default function MessageNotification() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -286,6 +290,7 @@ export default function MessageNotification() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -316,6 +321,7 @@ export default function MessageNotification() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -357,6 +363,7 @@ export default function MessageNotification() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -411,6 +418,7 @@ export default function MessageNotification() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
           <CodeBlock
             title="代码示例（不自动关闭，duration=0）"
@@ -419,6 +427,7 @@ export default function MessageNotification() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
       </section>

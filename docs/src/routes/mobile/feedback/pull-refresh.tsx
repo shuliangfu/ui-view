@@ -13,6 +13,8 @@ import {
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MobileDocDemo } from "../../../components/MobileDocDemo.tsx";
 import { MESSAGES_PULL_REFRESH } from "../../../data/component-messages-rows.ts";
+import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
+
 
 const PULL_REFRESH_API: DocsApiTableRow[] = [
   {
@@ -177,6 +179,7 @@ export default function MobilePullRefreshDoc() {
           language="tsx"
           showLineNumbers
           wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
         />
       </section>
 
@@ -265,6 +268,7 @@ export default function MobilePullRefreshDoc() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
       </section>

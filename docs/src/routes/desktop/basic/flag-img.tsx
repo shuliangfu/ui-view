@@ -13,6 +13,8 @@ import {
 } from "../../../components/DocsApiTable.tsx";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_FLAG_IMG } from "../../../data/component-messages-rows.ts";
+import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
+
 
 /** 文档示例用极简矩形 SVG（非真实国旗，仅演示 data URL 路径） */
 const DEMO_FLAG_SVG =
@@ -99,6 +101,7 @@ export default function BasicFlagImgDoc() {
           language="tsx"
           showLineNumbers
           wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
         />
       </section>
 
@@ -116,6 +119,7 @@ export default function BasicFlagImgDoc() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
         <div class="space-y-3">
@@ -130,6 +134,7 @@ export default function BasicFlagImgDoc() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
       </section>

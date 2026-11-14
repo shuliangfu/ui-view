@@ -4,6 +4,10 @@
  */
 import { formatMessage } from "./data-panel-messages.ts";
 import type {
+  PaginationPreset,
+  PaginationSize,
+} from "../navigation/Pagination.tsx";
+import type {
   ActionCtrl,
   ActionTone,
   BulkResult,
@@ -20,7 +24,9 @@ import type {
   Row,
   RowActionsConfig,
   SearchField,
+  PanelPaginationConfig,
   ViewConfig,
+  ViewDescriptionsProps,
   ViewItem,
   WriteResult,
 } from "./data-panel-types.ts";
@@ -1403,6 +1409,89 @@ export function resolveViewActionsCfg(
   view: ViewConfig | undefined,
 ): RowActionsConfig | undefined {
   return view?.actions;
+}
+
+/** 从 view 上挑出可透传给 Descriptions 的参数（不含弹层 title／props／actions／render／width）。 */
+const VIEW_DESCRIPTIONS_KEYS = [
+  "column",
+  "bordered",
+  "size",
+  "layout",
+  "colon",
+  "class",
+  "labelClass",
+  "contentClass",
+  "labelColPercent",
+  "labelMinWidth",
+  "labelAlign",
+] as const;
+
+/**
+ * 抽出写在 {@link ViewConfig} 上的 Descriptions 参数。未写的键不出现，便于调用方保留内置缺省。
+ */
+export function pickViewDescriptionsProps(
+  view?: ViewConfig,
+): ViewDescriptionsProps {
+  if (!view) return {};
+  const out: ViewDescriptionsProps = {};
+  for (const key of VIEW_DESCRIPTIONS_KEYS) {
+    const value = view[key];
+    if (value !== undefined) {
+      (out as Record<string, unknown>)[key] = value;
+    }
+  }
+  return out;
+}
+
+const PANEL_PAGINATION_KEYS = [
+  "preset",
+  "size",
+  "showFirstLast",
+  "showPrevNext",
+  "showPageNumbers",
+  "showQuickJumper",
+  "showTotal",
+  "disabled",
+  "class",
+  "testIdPrefix",
+  "messages",
+] as const;
+
+/**
+ * 抽出写在 DataPanel `pagination` 上的 Pagination 参数。未写的键不出现，便于保留断点缺省。
+ */
+export function pickPanelPaginationProps(
+  cfg?: PanelPaginationConfig,
+): PanelPaginationConfig {
+  if (!cfg) return {};
+  const out: PanelPaginationConfig = {};
+  for (const key of PANEL_PAGINATION_KEYS) {
+    const value = cfg[key];
+    if (value !== undefined) {
+      (out as Record<string, unknown>)[key] = value;
+    }
+  }
+  return out;
+}
+
+/**
+ * 合并 `pagination`、`paginationPreset` 与断点缺省。
+ * `pagination.preset` 优先于 `paginationPreset`，再回落断点；`size` 未写时走断点。
+ */
+export function resolvePanelPagination(
+  cfg: PanelPaginationConfig | undefined,
+  paginationPreset: PaginationPreset | undefined,
+  auto: { preset: PaginationPreset; size: PaginationSize },
+): {
+  preset: PaginationPreset;
+  size: PaginationSize;
+  rest: Omit<PanelPaginationConfig, "preset" | "size">;
+} {
+  const picked = pickPanelPaginationProps(cfg);
+  const preset = picked.preset ?? paginationPreset ?? auto.preset;
+  const size = picked.size ?? auto.size;
+  const { preset: _preset, size: _size, ...rest } = picked;
+  return { preset, size, rest };
 }
 
 /** click:"toggle"：在恰好两档 options 之间切换；否则返回 undefined。 */

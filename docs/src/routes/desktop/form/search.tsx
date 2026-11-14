@@ -16,6 +16,8 @@ import { message } from "@dreamer/ui-view/feedback";
 import { createSignal } from "@dreamer/view";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_SEARCH } from "../../../data/component-messages-rows.ts";
+import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
+
 
 interface ApiRow {
   name: string;
@@ -195,6 +197,7 @@ export default function FormSearch() {
           language="tsx"
           showLineNumbers
           wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
         />
       </section>
 
@@ -248,6 +251,7 @@ export default function FormSearch() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </section>
 
@@ -275,6 +279,7 @@ export default function FormSearch() {
               showLineNumbers
               copyable
               wrapLongLines
+              maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
             />
           </section>
 
@@ -296,6 +301,7 @@ export default function FormSearch() {
               showLineNumbers
               copyable
               wrapLongLines
+              maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
             />
           </section>
 
@@ -327,6 +333,7 @@ export default function FormSearch() {
               showLineNumbers
               copyable
               wrapLongLines
+              maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
             />
           </section>
 
@@ -346,6 +353,7 @@ export default function FormSearch() {
               showLineNumbers
               copyable
               wrapLongLines
+              maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
             />
           </section>
 
@@ -389,6 +397,7 @@ export default function FormSearch() {
               showLineNumbers
               copyable
               wrapLongLines
+              maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
             />
           </section>
         </Form>

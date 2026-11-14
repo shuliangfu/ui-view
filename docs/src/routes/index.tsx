@@ -15,6 +15,8 @@ import { Card, CodeBlock } from "@dreamer/ui-view/data-display";
 
 import { Container, Grid, GridItem, Hero } from "@dreamer/ui-view/layout";
 import SiteFooter from "../components/SiteFooter.tsx";
+import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../components/DocsDemo.tsx";
+
 
 /** Hero 背景：渐变 + 细网格，提升层次且不抢眼 */
 function HeroBackground() {
@@ -234,10 +236,12 @@ import { Table } from "@dreamer/ui-view/data-display";
 
 import { Modal } from "@dreamer/ui-view/feedback";
 import { BottomSheet } from "@dreamer/ui-view/mobile/feedback";
-import { TabBar, NavBar } from "@dreamer/ui-view/mobile/navigation";`}
+import { TabBar, NavBar } from "@dreamer/ui-view/mobile/navigation";
+`}
               language="typescript"
               copyable
               class="rounded-xl text-left bg-slate-900 dark:bg-slate-950 border border-slate-700"
+              maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
             />
             <Text class="mt-6 text-sm text-slate-500 dark:text-slate-400 block">
               本站点由 @dreamer/dweb + hybrid 渲染构建；侧栏可浏览全部组件示例。

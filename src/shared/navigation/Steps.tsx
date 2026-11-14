@@ -6,9 +6,10 @@
  * 否则手写 JSX 只快照首帧，onChange 更新后步骤条不重渲。
  */
 
-import { createSignal, type JSXRenderable, type Signal } from "@dreamer/view";
+import { onCleanup, type JSXRenderable, type Signal } from "@dreamer/view";
 import { readSignalValue, safeIsSignal } from "../safe-signal.ts";
-import { bindContainerWidth } from "../container-width.ts";
+import { readContainerWidthPx } from "../container-width.ts";
+import { isHtmlElement } from "../dom-guards.ts";
 import { twMerge } from "tailwind-merge";
 /** 按需：单文件图标，避免经 icons/mod 拉入全表 */
 import { IconCheck } from "../basic/icons/Check.tsx";
@@ -110,6 +111,50 @@ export function resolveStepsDirection(
   return "horizontal";
 }
 
+/**
+ * 把实际方向写到根节点 `data-steps-direction`，只用 DOM，不写 signal。
+ * 在 ref／微任务里写宽度 signal 会让父级把步骤条整棵卸掉再挂，死循环占满主线程。
+ */
+function bindStepsDirectionAttr(
+  getRequested: () => "horizontal" | "vertical",
+): (el: unknown) => void {
+  let observer: ResizeObserver | null = null;
+  let observed: Element | null = null;
+  const apply = (el: HTMLElement) => {
+    const dir = resolveStepsDirection(readContainerWidthPx(el), getRequested());
+    if (el.getAttribute("data-steps-direction") !== dir) {
+      el.setAttribute("data-steps-direction", dir);
+    }
+  };
+  onCleanup(() => {
+    observer?.disconnect();
+    observer = null;
+    observed = null;
+  });
+  return (el: unknown) => {
+    if (!isHtmlElement(el)) {
+      observer?.disconnect();
+      observer = null;
+      observed = null;
+      return;
+    }
+    if (observed === el && observer != null) {
+      apply(el);
+      return;
+    }
+    observer?.disconnect();
+    observer = null;
+    observed = el;
+    apply(el);
+    if (typeof ResizeObserver === "undefined") return;
+    observer = new ResizeObserver((entries) => {
+      const target = entries[0]?.target ?? el;
+      if (isHtmlElement(target)) apply(target);
+    });
+    observer.observe(el);
+  };
+}
+
 export function Steps(props: StepsProps): JSXRenderable {
   const {
     items,
@@ -122,24 +167,24 @@ export function Steps(props: StepsProps): JSXRenderable {
     ...(props.messages ?? {}),
   };
 
-  const containerWidth = createSignal<number | undefined>(undefined);
-  const setRootRef = bindContainerWidth(containerWidth);
+  const setRootRef = bindStepsDirectionAttr(
+    () => props.direction ?? "horizontal",
+  );
 
   /** 渲染 getter：内联读 `readStepsCurrent`，随 `Signal` / 零参 getter 更新 */
   return () => {
     const currentVal = readStepsCurrent(props.current);
-    const direction = resolveStepsDirection(
-      containerWidth.value,
-      props.direction ?? "horizontal",
-    );
+    /** SSR／首帧：未测宽时保持声明方向（水平则水平）；窄屏由 ref 改 data-steps-direction，样式走 group-data */
+    const initialDirection = props.direction ?? "horizontal";
 
     return (
       <div
         ref={setRootRef}
-        data-steps-direction={direction}
+        data-steps-direction={initialDirection}
         class={twMerge(
-          "flex w-full min-w-0 max-w-full",
-          direction === "horizontal" ? "flex-row items-flex-start" : "flex-col",
+          "group flex w-full min-w-0 max-w-full",
+          "data-[steps-direction=horizontal]:flex-row data-[steps-direction=horizontal]:items-start",
+          "data-[steps-direction=vertical]:flex-col",
           className,
         )}
         role="list"
@@ -187,9 +232,8 @@ export function Steps(props: StepsProps): JSXRenderable {
               role="listitem"
               class={twMerge(
                 "flex",
-                direction === "horizontal" &&
-                  "flex-1 flex-col items-center min-w-20",
-                direction === "vertical" && "flex-row gap-3",
+                "group-data-[steps-direction=horizontal]:flex-1 group-data-[steps-direction=horizontal]:flex-col group-data-[steps-direction=horizontal]:items-center group-data-[steps-direction=horizontal]:min-w-20",
+                "group-data-[steps-direction=vertical]:flex-row group-data-[steps-direction=vertical]:gap-3",
                 canClick && "cursor-pointer",
               )}
               onClick={canClick ? () => onChange?.(index) : undefined}
@@ -198,16 +242,15 @@ export function Steps(props: StepsProps): JSXRenderable {
               <div
                 class={twMerge(
                   "flex relative",
-                  direction === "horizontal"
-                    ? "flex-col items-center w-full min-h-12.5"
-                    : "flex-row gap-3",
+                  "group-data-[steps-direction=horizontal]:flex-col group-data-[steps-direction=horizontal]:items-center group-data-[steps-direction=horizontal]:w-full group-data-[steps-direction=horizontal]:min-h-12.5",
+                  "group-data-[steps-direction=vertical]:flex-row group-data-[steps-direction=vertical]:gap-3",
                 )}
               >
                 {/* 垂直模式下图标需置于连接线之上，避免上一步的连接线穿过当前图标 */}
                 <span
                   class={twMerge(
                     iconCls,
-                    direction === "vertical" && "relative z-10",
+                    "group-data-[steps-direction=vertical]:relative group-data-[steps-direction=vertical]:z-10",
                   )}
                 >
                   {isFinish
@@ -218,56 +261,26 @@ export function Steps(props: StepsProps): JSXRenderable {
                       index + 1
                     )}
                 </span>
-                {direction === "horizontal" && (
-                  <>
-                    {!isLast
-                      ? (
-                        <div
-                          class={twMerge(
-                            "w-full min-w-[24px] h-0.5 mt-4 shrink-0",
-                            isFinish
-                              ? "bg-green-500 dark:bg-green-400"
-                              : "bg-slate-200 dark:bg-slate-600",
-                          )}
-                        />
-                      )
-                      : (
-                        /* 最后一步的线：已完成时也变绿，与前面步骤一致 */
-                        <div
-                          class={twMerge(
-                            "mt-4 h-0.5 w-full min-w-[24px] shrink-0",
-                            isFinish
-                              ? "bg-green-500 dark:bg-green-400"
-                              : "bg-slate-200 dark:bg-slate-600",
-                          )}
-                          aria-hidden
-                        />
-                      )}
-                  </>
-                )}
-                {direction === "vertical" && !isLast && (
+                <div
+                  class={twMerge(
+                    "hidden w-full min-w-[24px] h-0.5 mt-4 shrink-0 group-data-[steps-direction=horizontal]:block",
+                    isFinish
+                      ? "bg-green-500 dark:bg-green-400"
+                      : "bg-slate-200 dark:bg-slate-600",
+                  )}
+                  aria-hidden={isLast ? true : undefined}
+                />
+                {!isLast && (
                   <div
                     class={twMerge(
-                      "absolute left-4 top-8 z-0 w-0.5 bg-slate-200 dark:bg-slate-600",
+                      "absolute left-4 top-8 z-0 hidden w-0.5 bg-slate-200 dark:bg-slate-600 group-data-[steps-direction=vertical]:block",
                       isFinish && "bg-green-500 dark:bg-green-400",
                     )}
                     style={{ height: "calc(100% - 2rem)" }}
                     aria-hidden
                   />
                 )}
-                {direction === "vertical" && (
-                  <div class="flex-1 pb-6">
-                    <div class={titleCls}>{item.title}</div>
-                    {item.description != null && (
-                      <div class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                        {item.description}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-              {direction === "horizontal" && (
-                <div class="mt-2 w-full text-center px-1">
+                <div class="hidden flex-1 pb-6 group-data-[steps-direction=vertical]:block">
                   <div class={titleCls}>{item.title}</div>
                   {item.description != null && (
                     <div class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
@@ -275,7 +288,15 @@ export function Steps(props: StepsProps): JSXRenderable {
                     </div>
                   )}
                 </div>
-              )}
+              </div>
+              <div class="mt-2 hidden w-full text-center px-1 group-data-[steps-direction=horizontal]:block">
+                <div class={titleCls}>{item.title}</div>
+                {item.description != null && (
+                  <div class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    {item.description}
+                  </div>
+                )}
+              </div>
             </div>
           );
         })}

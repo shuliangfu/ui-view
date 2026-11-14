@@ -13,6 +13,8 @@ import {
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MOBILE_DOC_DEMO_SHELL_BASE } from "../../../components/MobileDocDemo.tsx";
 import { MESSAGES_SCROLL_LIST } from "../../../data/component-messages-rows.ts";
+import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
+
 
 const SCROLL_LIST_API: DocsApiTableRow[] = [
   {
@@ -225,6 +227,7 @@ export default function MobileScrollListDoc() {
           language="tsx"
           showLineNumbers
           wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
         />
       </section>
 
@@ -251,6 +254,7 @@ export default function MobileScrollListDoc() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
       </section>

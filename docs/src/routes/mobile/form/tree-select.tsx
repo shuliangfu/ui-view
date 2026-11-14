@@ -18,6 +18,8 @@ import {
 import { MobileDocDemo } from "../../../components/MobileDocDemo.tsx";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_TREE_SELECT } from "../../../data/component-messages-rows.ts";
+import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
+
 
 /** createForm 演示字段 */
 type TreeSelectCreateFormValues = { dept: string };
@@ -164,6 +166,7 @@ export default function MobileTreeSelectDoc() {
           language="tsx"
           showLineNumbers
           wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
         />
       </section>
 
@@ -216,6 +219,7 @@ const form = createForm({
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -236,6 +240,7 @@ const form = createForm({
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
         <div class="space-y-4">
@@ -278,6 +283,7 @@ const form = createForm({
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
       </section>

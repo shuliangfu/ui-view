@@ -303,6 +303,71 @@ describe("DataView", () => {
     expect(h).toContain("justify-end");
     expect(h).toContain("text-right");
   });
+
+  it("未写 Descriptions 参数时内置详情缺省 bordered、column=1、size=sm", async () => {
+    const h = await html({
+      data: {
+        id: "1",
+        name: "张三",
+        email: "zhangsan@example.com",
+      },
+      view: {
+        props: [
+          { prop: "name", label: "姓名" },
+          { prop: "email", label: "邮箱" },
+        ],
+      },
+    });
+    expect(h).toContain('data-descriptions-columns="1"');
+    expect(h).toContain("repeat(1, minmax(0, 1fr))");
+    expect(h).toMatch(
+      /data-descriptions-columns="1"[^>]*border border-slate-200/,
+    );
+    expect(h).toContain("text-sm py-2 px-3");
+    expect(h).toContain("：");
+  });
+
+  it("view 上的 Descriptions 参数会透传到内置详情", async () => {
+    const h = await html({
+      data: {
+        id: "1",
+        name: "张三",
+        email: "zhangsan@example.com",
+      },
+      view: {
+        title: "详情 · 张三",
+        column: 3,
+        size: "lg",
+        bordered: false,
+        layout: "vertical",
+        colon: false,
+        class: "view-desc-extra",
+        labelClass: "view-desc-label",
+        contentClass: "view-desc-content",
+        labelAlign: { vertical: "center", horizontal: "left" },
+        props: [
+          { prop: "name", label: "姓名" },
+          { prop: "email", label: "邮箱" },
+        ],
+      },
+    });
+    expect(h).toContain('data-descriptions-columns="3"');
+    expect(h).toContain("repeat(3, minmax(0, 1fr))");
+    expect(h).toContain("view-desc-extra");
+    expect(h).toContain("view-desc-label");
+    expect(h).toContain("view-desc-content");
+    expect(h).toContain("flex flex-col");
+    expect(h).toContain("text-base py-3 px-4");
+    expect(h).not.toContain("：");
+    expect(h).not.toMatch(
+      /data-descriptions-columns="3"[^>]*border border-slate-200/,
+    );
+    expect(h).toContain("items-center");
+    expect(h).toContain("justify-start");
+    expect(h).toContain("text-left");
+    // title 是详情标题，不应作为 Descriptions 标题再渲染一遍
+    expect(h).not.toContain('详情 · 张三</div>');
+  });
 });
 
 describe("buildViewDescriptionItems", () => {

@@ -20,6 +20,8 @@ import {
   MESSAGES_DATE_PICKER,
   MESSAGES_PICKER_CALENDAR_NAV,
 } from "../../../data/component-messages-rows.ts";
+import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
+
 
 /**
  * 文档示例用：当前本地日期的 YYYY-MM-DD（与 DatePicker 的 value 格式一致）。
@@ -257,6 +259,7 @@ export default function FormDatePicker() {
           language="tsx"
           showLineNumbers
           wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
         />
       </section>
 
@@ -287,6 +290,7 @@ export default function FormDatePicker() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </section>
 
@@ -307,6 +311,7 @@ export default function FormDatePicker() {
               showLineNumbers
               copyable
               wrapLongLines
+              maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
             />
           </section>
 
@@ -330,6 +335,7 @@ export default function FormDatePicker() {
               showLineNumbers
               copyable
               wrapLongLines
+              maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
             />
           </section>
 
@@ -388,6 +394,7 @@ const valLg = createSignal(today);
               showLineNumbers
               copyable
               wrapLongLines
+              maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
             />
           </section>
 
@@ -436,6 +443,7 @@ const valLg = createSignal(today);
               showLineNumbers
               copyable
               wrapLongLines
+              maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
             />
           </section>
 
@@ -465,6 +473,7 @@ const valLg = createSignal(today);
               showLineNumbers
               copyable
               wrapLongLines
+              maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
             />
           </section>
 
@@ -491,6 +500,7 @@ const valLg = createSignal(today);
               showLineNumbers
               copyable
               wrapLongLines
+              maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
             />
           </section>
         </Form>
@@ -529,6 +539,7 @@ const valLg = createSignal(today);
           showLineNumbers
           copyable
           wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
         />
 
         <Title level={2}>API</Title>

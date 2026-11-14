@@ -10,6 +10,8 @@ import {
   type DocsApiTableRow,
 } from "../../../components/DocsApiTable.tsx";
 import { MobileDocDemo } from "../../../components/MobileDocDemo.tsx";
+import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
+
 
 const SWIPE_CELL_API: DocsApiTableRow[] = [
   {
@@ -124,6 +126,7 @@ export default function MobileSwipeCellDoc() {
           language="tsx"
           showLineNumbers
           wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
         />
       </section>
 
@@ -151,6 +154,7 @@ export default function MobileSwipeCellDoc() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -179,6 +183,7 @@ export default function MobileSwipeCellDoc() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
       </section>

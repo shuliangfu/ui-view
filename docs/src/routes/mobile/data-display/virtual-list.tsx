@@ -8,6 +8,8 @@ import {
   type DocsApiTableRow,
 } from "../../../components/DocsApiTable.tsx";
 import { MobileDocDemo } from "../../../components/MobileDocDemo.tsx";
+import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
+
 
 const TOTAL = 2000;
 const API: DocsApiTableRow[] = [
@@ -69,7 +71,7 @@ export default function Page() {
       </div>
       <section class="space-y-3">
         <Title level={2}>引入</Title>
-        <CodeBlock code={importCode} language="tsx" />
+        <CodeBlock code={importCode} language="tsx" maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT} />
       </section>
       <section class="space-y-6">
         <Title level={2}>示例</Title>
@@ -94,6 +96,7 @@ export default function Page() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
         <div class="space-y-2">
@@ -118,6 +121,7 @@ export default function Page() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
         <div class="space-y-2">
@@ -138,6 +142,7 @@ export default function Page() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
       </section>

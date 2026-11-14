@@ -10,6 +10,8 @@ import {
   DocsApiTable,
   type DocsApiTableRow,
 } from "../../../components/DocsApiTable.tsx";
+import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
+
 
 const API: DocsApiTableRow[] = [
   { name: "title", type: "unknown", default: "-", description: "主标题" },
@@ -53,6 +55,7 @@ const API: DocsApiTableRow[] = [
 
 const importCode = `import { createSignal } from "@dreamer/view";
 import { Cell, CellGroup } from "@dreamer/ui-view/data-display";
+
 const tip = createSignal("");
 const notifyOn = createSignal(true);
 
@@ -112,7 +115,7 @@ export default function Page() {
       </div>
       <section class="space-y-3">
         <Title level={2}>引入</Title>
-        <CodeBlock code={importCode} language="tsx" />
+        <CodeBlock code={importCode} language="tsx" maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT} />
       </section>
       <section class="space-y-6">
         <Title level={2}>示例</Title>
@@ -161,6 +164,7 @@ export default function Page() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -191,6 +195,7 @@ export default function Page() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -209,6 +214,7 @@ export default function Page() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
       </section>

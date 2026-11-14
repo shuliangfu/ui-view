@@ -10,6 +10,8 @@ import { CodeBlock } from "@dreamer/ui-view/data-display";
 import { message } from "@dreamer/ui-view/feedback";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_MESSAGE } from "../../../data/component-messages-rows.ts";
+import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
+
 /** API 方法/属性行类型 */
 interface ApiRow {
   name: string;
@@ -112,6 +114,7 @@ export default function MessageMessage() {
           language="tsx"
           showLineNumbers
           wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
         />
       </section>
 
@@ -161,6 +164,7 @@ export default function MessageMessage() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -193,6 +197,7 @@ export default function MessageMessage() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -217,6 +222,7 @@ export default function MessageMessage() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -241,6 +247,7 @@ export default function MessageMessage() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
       </section>

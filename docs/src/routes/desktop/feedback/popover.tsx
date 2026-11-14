@@ -8,6 +8,8 @@ import { Paragraph, Title } from "@dreamer/ui-view/basic";
 import { CodeBlock } from "@dreamer/ui-view/data-display";
 
 import { Popover } from "@dreamer/ui-view/feedback";
+import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
+
 /** API 属性行类型 */
 interface ApiRow {
   name: string;
@@ -119,6 +121,7 @@ export default function FeedbackPopover() {
           language="tsx"
           showLineNumbers
           wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
         />
       </section>
 
@@ -171,6 +174,7 @@ export default function FeedbackPopover() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
           <CodeBlock
             title="代码示例（无标题）"
@@ -179,6 +183,7 @@ export default function FeedbackPopover() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -198,6 +203,7 @@ export default function FeedbackPopover() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
         <div class="space-y-4" data-demo="auto-flip-right">
@@ -232,6 +238,7 @@ export default function FeedbackPopover() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
       </section>

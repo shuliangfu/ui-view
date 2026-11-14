@@ -10,6 +10,7 @@ import {
   DataView,
 } from "@dreamer/ui-view/data-display";
 import { toast } from "@dreamer/ui-view/feedback";
+import { IconUser } from "@dreamer/ui-view/icons/User.tsx";
 import {
   DocsApiTable,
   type DocsApiTableRow,
@@ -35,7 +36,7 @@ const DATA_VIEW_API: DocsApiTableRow[] = [
     type: "ViewConfig",
     default: "-",
     description:
-      "明细配置，写法同 DataPanel view（含 width／fullscreenable，以及 labelColPercent／labelMinWidth 控制标签与内容比例）。props 用 Descriptions 展示字段；render(ctx) 替换字段区。字段级 ViewItem.render 仅在无 view.render 且无 children 时生效。props 也可不写 prop，用 formatter／value 拼接字段。ViewItem.labelAlign 控制该行标签对齐（vertical：top／center／bottom，horizontal：left／center／right），透传 Descriptions。",
+      "明细配置，写法同 DataPanel view（含 width／fullscreenable）。Descriptions 的参数（除 items、title）可直接写在 view 上，例如 column（本插槽缺省 1）、size（缺省 sm）、bordered（缺省 true）、layout、colon、labelAlign、labelColPercent、labelMinWidth。title 仍是标题。有 render 或 children 时这些参数不生效。props 用 Descriptions 展示字段；render(ctx) 替换字段区。字段级 ViewItem.render 仅在无 view.render 且无 children 时生效。props 也可不写 prop，用 formatter／value 拼接字段。ViewItem.labelAlign 控制该行标签对齐（vertical：top／center／bottom，horizontal：left／center／right），透传 Descriptions。",
   },
   {
     name: "children",
@@ -419,6 +420,7 @@ const removeDemoSource = createLocalDataSource({
 const removeDemoCode =
   `import { createLocalDataSource, DataView } from "@dreamer/ui-view/data-display";
 import { toast } from "@dreamer/ui-view/feedback";
+import { IconUser } from "@dreamer/ui-view/icons/User.tsx";
 
 const user = {
   id: "1",
@@ -472,6 +474,8 @@ const source = createLocalDataSource({
   }}
   toolbar={{
     sayName: {
+      icon: <IconUser />,
+      title: "读当前记录",
       label: "读当前记录",
       action: ({ record }) => {
         toast.info(record?.name ? \`当前：\${record.name}\` : "暂无记录");
@@ -668,6 +672,8 @@ export default function DataDisplayDataView() {
             }}
             toolbar={{
               sayName: {
+                icon: <IconUser />,
+                title: "读当前记录",
                 label: "读当前记录",
                 action: ({ record }) => {
                   toast.info(

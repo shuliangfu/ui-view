@@ -8,6 +8,8 @@ import { Paragraph, Title } from "@dreamer/ui-view/basic";
 import { CodeBlock } from "@dreamer/ui-view/data-display";
 
 import { ChartBar } from "@dreamer/ui-view/charts";
+import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
+
 const sampleData = {
   labels: ["红", "绿", "蓝", "黄", "紫", "橙"],
   datasets: [{
@@ -98,6 +100,7 @@ export default function ChartsBar() {
           language="tsx"
           showLineNumbers
           wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
         />
       </section>
 
@@ -115,6 +118,7 @@ export default function ChartsBar() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
       </section>

@@ -22,6 +22,8 @@ import { IconUser } from "@dreamer/ui-view/icons/User.tsx";
 import { createSignal } from "@dreamer/view";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_INPUT } from "../../../data/component-messages-rows.ts";
+import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
+
 
 /** 本页 API 表行（与其它表单文档页结构一致） */
 interface ApiRow {
@@ -261,6 +263,7 @@ export default function FormInput() {
             showLineNumbers
             title="代码示例"
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
       </section>
@@ -317,6 +320,7 @@ export default function FormInput() {
                 copyable
                 title="代码示例"
                 wrapLongLines
+                maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
               />
             </div>
           </section>
@@ -344,6 +348,7 @@ export default function FormInput() {
                 copyable
                 title="代码示例"
                 wrapLongLines
+                maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
               />
             </div>
           </section>
@@ -372,6 +377,7 @@ export default function FormInput() {
                 copyable
                 title="代码示例"
                 wrapLongLines
+                maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
               />
             </div>
           </section>
@@ -418,6 +424,7 @@ export default function FormInput() {
                 copyable
                 title="代码示例"
                 wrapLongLines
+                maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
               />
             </div>
           </section>
@@ -450,6 +457,7 @@ export default function FormInput() {
                 copyable
                 title="代码示例"
                 wrapLongLines
+                maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
               />
             </div>
           </section>
@@ -476,6 +484,7 @@ export default function FormInput() {
                 copyable
                 title="代码示例"
                 wrapLongLines
+                maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
               />
             </div>
           </section>
@@ -504,6 +513,7 @@ export default function FormInput() {
                 copyable
                 title="代码示例"
                 wrapLongLines
+                maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
               />
             </div>
           </section>
@@ -531,6 +541,7 @@ export default function FormInput() {
                 copyable
                 title="代码示例"
                 wrapLongLines
+                maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
               />
             </div>
           </section>
@@ -658,6 +669,7 @@ export default function FormInput() {
                 copyable
                 title="代码示例"
                 wrapLongLines
+                maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
               />
             </div>
           </section>
@@ -757,6 +769,7 @@ export default function FormInput() {
                 copyable
                 title="代码示例"
                 wrapLongLines
+                maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
               />
             </div>
           </section>
@@ -819,6 +832,7 @@ export default function FormInput() {
 import { Form } from "@dreamer/ui-view/form/form";
 import { FormItem } from "@dreamer/ui-view/form/form-item";
 import { Input } from "@dreamer/ui-view/form/input";
+
 const email = createSignal("");
 const password = createSignal("");
 
@@ -845,6 +859,7 @@ const password = createSignal("");
                 copyable
                 title="代码示例（与自动填充/暗色底对齐的推荐写法）"
                 wrapLongLines
+                maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
               />
             </div>
           </section>
@@ -932,6 +947,7 @@ const password = createSignal("");
                 copyable
                 title="代码示例"
                 wrapLongLines
+                maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
               />
             </div>
           </section>
@@ -963,6 +979,7 @@ const password = createSignal("");
                 copyable
                 title="代码示例"
                 wrapLongLines
+                maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
               />
             </div>
           </section>

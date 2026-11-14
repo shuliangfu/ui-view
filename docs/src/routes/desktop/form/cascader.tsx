@@ -17,6 +17,8 @@ import { message } from "@dreamer/ui-view/feedback";
 import { createSignal } from "@dreamer/view";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_CASCADER } from "../../../data/component-messages-rows.ts";
+import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
+
 
 /** 与文档 API 表行结构一致 */
 interface ApiRow {
@@ -380,6 +382,7 @@ export default function FormCascaderDoc() {
           showLineNumbers
           copyable
           wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
         />
       </section>
 
@@ -392,6 +395,7 @@ export default function FormCascaderDoc() {
           showLineNumbers
           copyable
           wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
         />
       </section>
 
@@ -432,6 +436,7 @@ export default function FormCascaderDoc() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </section>
 
@@ -476,6 +481,7 @@ export default function FormCascaderDoc() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </section>
 
@@ -526,6 +532,7 @@ export default function FormCascaderDoc() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </section>
 
@@ -560,6 +567,7 @@ export default function FormCascaderDoc() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </section>
 
@@ -642,6 +650,7 @@ export default function FormCascaderDoc() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </section>
 
@@ -695,6 +704,7 @@ export default function FormCascaderDoc() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </section>
       </section>

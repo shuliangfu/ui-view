@@ -17,6 +17,8 @@ import type { MentionOption } from "@dreamer/ui-view/form/mentions";
 import { createSignal } from "@dreamer/view";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_MENTIONS } from "../../../data/component-messages-rows.ts";
+import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
+
 
 interface ApiRow {
   name: string;
@@ -260,6 +262,7 @@ export default function FormMentions() {
           language="tsx"
           showLineNumbers
           wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
         />
       </section>
 
@@ -310,6 +313,7 @@ export default function FormMentions() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </section>
 
@@ -339,6 +343,7 @@ export default function FormMentions() {
               showLineNumbers
               copyable
               wrapLongLines
+              maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
             />
           </section>
 
@@ -362,6 +367,7 @@ export default function FormMentions() {
               showLineNumbers
               copyable
               wrapLongLines
+              maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
             />
           </section>
 
@@ -380,6 +386,7 @@ export default function FormMentions() {
               showLineNumbers
               copyable
               wrapLongLines
+              maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
             />
           </section>
           <section class="space-y-4">
@@ -406,6 +413,7 @@ export default function FormMentions() {
               showLineNumbers
               copyable
               wrapLongLines
+              maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
             />
           </section>
         </Form>

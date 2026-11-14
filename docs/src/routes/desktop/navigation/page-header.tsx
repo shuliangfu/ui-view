@@ -10,6 +10,8 @@ import { CodeBlock } from "@dreamer/ui-view/data-display";
 import { PageHeader } from "@dreamer/ui-view/navigation";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_PAGE_HEADER } from "../../../data/component-messages-rows.ts";
+import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
+
 
 /** API 属性行类型 */
 interface ApiRow {
@@ -99,6 +101,7 @@ export default function NavigationPageHeader() {
           language="tsx"
           showLineNumbers
           wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
         />
       </section>
 
@@ -127,6 +130,7 @@ export default function NavigationPageHeader() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
       </section>

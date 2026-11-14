@@ -7,6 +7,8 @@ import { Paragraph, Title } from "@dreamer/ui-view/basic";
 
 import { CodeBlock, Collapse } from "@dreamer/ui-view/data-display";
 import { createSignal } from "@dreamer/view";
+import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
+
 
 /** API 属性行类型 */
 interface ApiRow {
@@ -84,6 +86,7 @@ const COLLAPSE_API: ApiRow[] = [
 
 const importCode = `import { createSignal } from "@dreamer/view";
 import { Collapse } from "@dreamer/ui-view/data-display";
+
 const activeKey = createSignal<string[]>(["1"]);
 const items = [{ key: "1", header: "面板 1", children: <p>内容一</p> }, ...];
 <Collapse
@@ -175,6 +178,7 @@ export default function DataDisplayCollapse() {
           language="tsx"
           showLineNumbers
           wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
         />
       </section>
 
@@ -211,6 +215,7 @@ export default function DataDisplayCollapse() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -229,6 +234,7 @@ export default function DataDisplayCollapse() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -243,6 +249,7 @@ export default function DataDisplayCollapse() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
       </section>

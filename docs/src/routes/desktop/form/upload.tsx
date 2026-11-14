@@ -17,6 +17,8 @@ import { message } from "@dreamer/ui-view/feedback";
 import { createSignal } from "@dreamer/view";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_UPLOAD } from "../../../data/component-messages-rows.ts";
+import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
+
 
 interface ApiRow {
   name: string;
@@ -342,6 +344,7 @@ export default function FormUpload() {
           showLineNumbers
           copyable
           wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
         />
         <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
           <strong>走上传的组件</strong>（路由须对齐插件{" "}
@@ -377,6 +380,7 @@ export default function FormUpload() {
           language="tsx"
           showLineNumbers
           wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
         />
       </section>
 
@@ -411,6 +415,7 @@ export default function FormUpload() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </section>
 
@@ -449,6 +454,7 @@ export default function FormUpload() {
               showLineNumbers
               copyable
               wrapLongLines
+              maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
             />
           </section>
 
@@ -499,6 +505,7 @@ export default function FormUpload() {
               showLineNumbers
               copyable
               wrapLongLines
+              maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
             />
           </section>
 
@@ -527,6 +534,7 @@ export default function FormUpload() {
               showLineNumbers
               copyable
               wrapLongLines
+              maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
             />
           </section>
 
@@ -588,6 +596,7 @@ export default function FormUpload() {
               showLineNumbers
               copyable
               wrapLongLines
+              maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
             />
           </section>
         </Form>
@@ -618,6 +627,7 @@ await runChunkedUpload({
           showLineNumbers
           copyable
           wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
         />
       </section>
 

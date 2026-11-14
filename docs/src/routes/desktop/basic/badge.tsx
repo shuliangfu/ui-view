@@ -6,6 +6,8 @@
 import { Badge, Paragraph, Title } from "@dreamer/ui-view/basic";
 
 import { CodeBlock } from "@dreamer/ui-view/data-display";
+import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
+
 interface ApiRow {
   name: string;
   type: string;
@@ -105,6 +107,7 @@ export default function BasicBadge() {
           language="tsx"
           showLineNumbers
           wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
         />
       </section>
 
@@ -129,6 +132,7 @@ export default function BasicBadge() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -148,6 +152,7 @@ export default function BasicBadge() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -164,6 +169,7 @@ export default function BasicBadge() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -182,6 +188,7 @@ export default function BasicBadge() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -202,6 +209,7 @@ export default function BasicBadge() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
       </section>

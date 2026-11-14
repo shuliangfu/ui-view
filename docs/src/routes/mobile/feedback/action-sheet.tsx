@@ -13,6 +13,8 @@ import {
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MobileDocDemo } from "../../../components/MobileDocDemo.tsx";
 import { MESSAGES_ACTION_SHEET } from "../../../data/component-messages-rows.ts";
+import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
+
 
 const ACTION_SHEET_API: DocsApiTableRow[] = [
   {
@@ -163,6 +165,7 @@ export default function MobileActionSheetDoc() {
           language="tsx"
           showLineNumbers
           wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
         />
       </section>
 
@@ -193,6 +196,7 @@ export default function MobileActionSheetDoc() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -217,6 +221,7 @@ export default function MobileActionSheetDoc() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
       </section>

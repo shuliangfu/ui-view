@@ -13,6 +13,8 @@ import { CodeBlock } from "@dreamer/ui-view/data-display";
 import { Dialog } from "@dreamer/ui-view/feedback";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_DIALOG } from "../../../data/component-messages-rows.ts";
+import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
+
 
 /** API 属性行类型 */
 interface ApiRow {
@@ -131,6 +133,7 @@ const DIALOG_API: ApiRow[] = [
 
 const importCode = `import { createSignal } from "@dreamer/view";
 import { Button } from "@dreamer/ui-view/basic";
+
 const open = createSignal(false);
 
 <Button type="button" variant="primary" onClick={() => open.value = true}>
@@ -230,6 +233,7 @@ export default function FeedbackDialog() {
           language="tsx"
           showLineNumbers
           wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
         />
       </section>
 
@@ -268,6 +272,7 @@ export default function FeedbackDialog() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -308,6 +313,7 @@ export default function FeedbackDialog() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -344,6 +350,7 @@ export default function FeedbackDialog() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -383,6 +390,7 @@ export default function FeedbackDialog() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
       </section>

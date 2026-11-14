@@ -21,6 +21,8 @@ import {
   MESSAGES_DATETIME_PICKER,
   MESSAGES_PICKER_CALENDAR_NAV,
 } from "../../../data/component-messages-rows.ts";
+import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
+
 
 /** createForm 演示字段 */
 type DateTimePickerCreateFormValues = { when: string };
@@ -186,6 +188,7 @@ export default function MobileDateTimePickerDoc() {
           language="tsx"
           showLineNumbers
           wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
         />
       </section>
 
@@ -236,6 +239,7 @@ const form = createForm({
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -251,6 +255,7 @@ const form = createForm({
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
         <div class="space-y-4">
@@ -273,6 +278,7 @@ const form = createForm({
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
       </section>
@@ -306,6 +312,7 @@ const form = createForm({
           showLineNumbers
           copyable
           wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
         />
 
         <Title level={2}>API</Title>

@@ -20,6 +20,8 @@ import {
   MESSAGES_DATETIME_PICKER,
   MESSAGES_PICKER_CALENDAR_NAV,
 } from "../../../data/component-messages-rows.ts";
+import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
+
 
 /**
  * 文档示例：当前本地日期时间，格式 `YYYY-MM-DD HH:mm`（与默认 format 一致）。
@@ -271,6 +273,7 @@ export default function FormDateTimePickerDoc() {
           language="tsx"
           showLineNumbers
           wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
         />
       </section>
 
@@ -301,6 +304,7 @@ export default function FormDateTimePickerDoc() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </section>
 
@@ -319,6 +323,7 @@ export default function FormDateTimePickerDoc() {
               showLineNumbers
               copyable
               wrapLongLines
+              maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
             />
           </section>
 
@@ -360,6 +365,7 @@ export default function FormDateTimePickerDoc() {
               showLineNumbers
               copyable
               wrapLongLines
+              maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
             />
           </section>
 
@@ -383,6 +389,7 @@ export default function FormDateTimePickerDoc() {
               showLineNumbers
               copyable
               wrapLongLines
+              maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
             />
           </section>
 
@@ -431,6 +438,7 @@ export default function FormDateTimePickerDoc() {
               showLineNumbers
               copyable
               wrapLongLines
+              maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
             />
           </section>
 
@@ -461,6 +469,7 @@ export default function FormDateTimePickerDoc() {
               showLineNumbers
               copyable
               wrapLongLines
+              maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
             />
           </section>
 
@@ -488,6 +497,7 @@ export default function FormDateTimePickerDoc() {
               showLineNumbers
               copyable
               wrapLongLines
+              maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
             />
           </section>
         </Form>
@@ -526,6 +536,7 @@ export default function FormDateTimePickerDoc() {
           showLineNumbers
           copyable
           wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
         />
 
         <Title level={2}>API</Title>

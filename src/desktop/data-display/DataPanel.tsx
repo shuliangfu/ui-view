@@ -127,8 +127,10 @@ import {
   resolveColumnFn,
   resolveColumnHeaderAlign,
   resolveFooterActions,
+  pickViewDescriptionsProps,
   resolveModalWidth,
   resolvePanelColumns,
+  resolvePanelPagination,
   resolveViewActionsCfg,
   resolveViewFields,
   resolveViewFooterActions,
@@ -212,9 +214,11 @@ import {
   type Tone,
   TOOLBAR_BUILTINS,
   type ToolbarBuiltin,
+  type PanelPaginationConfig,
   type ViewActionContext,
   type ViewClick,
   type ViewConfig,
+  type ViewDescriptionsProps,
   type ViewItem,
   type ViewItemRenderCtx,
   type ViewRenderCtx,
@@ -262,6 +266,7 @@ export type {
   SearchFieldConditionCtx,
   SearchFieldRenderCtx,
   SearchRenderCtx,
+  PanelPaginationConfig,
   SearchType,
   SyncUrl,
   Tone,
@@ -269,6 +274,7 @@ export type {
   ViewActionContext,
   ViewClick,
   ViewConfig,
+  ViewDescriptionsProps,
   ViewItem,
   ViewItemRenderCtx,
   ViewRenderCtx,
@@ -341,6 +347,9 @@ export interface PanelProps {
    * 如 `` `详情 · ${row.name}` ``；缺省 `${view} · ${title}`）。
    * `props` 只放字段，与列同一套配置：prop／label／type／format／options／value／formatter／click。
    * 缺省展示从同 prop 的列继承。`render` 替换 Descriptions 字段区；`actions` 底脚仍由面板渲染。
+   * Descriptions 的参数（除 `items`、`title`）可直接写在本对象上，与 title／props／actions 混在一起，
+   * 例如 `column`、`size`、`bordered`、`layout`、`colon`、`labelAlign`、`labelColPercent`。
+   * `title` 仍是弹层标题，不会传给 Descriptions。有 `render` 时这些参数不再生效。
    * 字段级 `ViewItem.render` 仅在无 `view.render` 时生效。
    * `actions` 与 title 平级（内置 close 默认靠右最后）。自定义按钮：`action(row)` 开另一个 Modal（放在 children），
    * 或 `href`。字段 `click:"toggle"` 或 `click:(row)=>…`。不写时回落 columns＋form，底部只留关闭。
@@ -410,8 +419,19 @@ export interface PanelProps {
    * 电脑端（`min-width: 1280px`，Tailwind `xl`）为 `preset="full"`、`size="md"`，
    * 平板（`640px`–`1279.98px`，`sm` 至 `xl` 以下）为 `preset="default"`、`size="sm"`，
    * 移动端（`max-width: 639.98px`，`max-sm`）为 `preset="simple"`、`size="xs"`。
+   * 也可写在 {@link PanelProps.pagination}.preset；两者同时写时 `pagination.preset` 优先。
    */
   paginationPreset?: PaginationPreset;
+  /**
+   * 底栏分页配置。可把 {@link Pagination} 的参数直接写在这里（与 alert 一样透传），
+   * 例如 `preset`、`size`、`showFirstLast`、`showQuickJumper`、`showTotal`、`disabled`、`class`、`messages`。
+   * 页码、每页条数、总数和 `onChange` 由面板托管，不必也不应在此写。
+   * 地址栏同步用根上的 `syncUrl`，每页条数选项用根上的 `pageSizes`。
+   * 未写的键走断点缺省（或 `paginationPreset`）。内置仍默认关掉 Pagination 自带的总条数和跳转
+   * （左侧条数文案和 `full` 档右侧跳转由面板自己渲染）；显式传入时按传入值透传。
+   * 若显式 `showQuickJumper: true`，使用 Pagination 自带跳转，不再另画面板跳转框。
+   */
+  pagination?: PanelPaginationConfig;
   /** 默认排序 */
   defaultSort?: { prop: string; order: "asc" | "desc" };
   /** 固定过滤（并入每次查询，不出现在 URL） */
@@ -3758,9 +3778,19 @@ export function DataPanel(props: PanelProps): JSXRenderable {
     };
     const tier = viewportTier.value;
     const autoPg = dataPanelPaginationForTier(tier);
-    const preset: PaginationPreset = props.paginationPreset ?? autoPg.preset;
-    const pgSize = autoPg.size;
+    const {
+      preset,
+      size: pgSize,
+      rest: pgRest,
+    } = resolvePanelPagination(
+      props.pagination,
+      props.paginationPreset,
+      autoPg,
+    );
     const showPageSize = preset !== "simple";
+    const showPanelJumper = pgRest.showQuickJumper === undefined &&
+      preset === "full";
+    const { messages: pgMessages, ...pgPass } = pgRest;
     return (
       <div
         class={PG_CLS}
@@ -3781,6 +3811,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
               <Select
                 size={pgSize}
                 class={PGSIZE_SELECT_CLS}
+                disabled={pgRest.disabled}
                 value={createSignal(String(q.pageSize))}
                 options={pageSizes.map((sz) => ({
                   value: String(sz),
@@ -3816,15 +3847,18 @@ export function DataPanel(props: PanelProps): JSXRenderable {
               pageSizeUnit: (sz) => tr(m.perPage, { n: sz }),
               simpleCurrent: (page, totalPages) =>
                 tr(m.simpleCurrent, { page, totalPages }),
+              ...pgMessages,
             }}
             onChange={go}
+            {...pgPass}
           />
-          {preset === "full" && (
+          {showPanelJumper && (
             <label class="flex items-center gap-1">
               {m.jump}
               <div class={JUMP_CLS} data-testid="dp-jump">
                 <Input
                   size={pgSize}
+                  disabled={pgRest.disabled}
                   type="text"
                   value={jump}
                   onInput={(e: Event) => {
@@ -4249,12 +4283,9 @@ export function DataPanel(props: PanelProps): JSXRenderable {
           )
           : (
             <Descriptions
-              bordered
-              column={1}
-              size="sm"
               items={items}
-              labelColPercent={props.view?.labelColPercent}
-              labelMinWidth={props.view?.labelMinWidth}
+              {...{ bordered: true, column: 1, size: "sm" as const }}
+              {...pickViewDescriptionsProps(props.view)}
             />
           )}
       </div>

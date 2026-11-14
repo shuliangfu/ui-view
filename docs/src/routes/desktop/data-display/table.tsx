@@ -13,6 +13,8 @@ import {
 import { createSignal } from "@dreamer/view";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_TABLE } from "../../../data/component-messages-rows.ts";
+import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
+
 
 type Row = { key: string; name: string; age: number; address: string };
 
@@ -335,6 +337,7 @@ type EditableDocRow = {
 const exampleEditable =
   `import type { TableColumn } from "@dreamer/ui-view/data-display";
 import { Table } from "@dreamer/ui-view/data-display";
+
 type EditableRow = {
   key: string;
   name: string;
@@ -650,6 +653,7 @@ export default function DataDisplayTable() {
           language="tsx"
           showLineNumbers
           wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
         />
       </section>
 
@@ -682,6 +686,7 @@ export default function DataDisplayTable() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -705,6 +710,7 @@ export default function DataDisplayTable() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -732,6 +738,7 @@ export default function DataDisplayTable() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -754,6 +761,7 @@ export default function DataDisplayTable() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -789,6 +797,7 @@ export default function DataDisplayTable() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -802,6 +811,7 @@ export default function DataDisplayTable() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -840,6 +850,7 @@ export default function DataDisplayTable() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -864,6 +875,7 @@ export default function DataDisplayTable() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
       </section>

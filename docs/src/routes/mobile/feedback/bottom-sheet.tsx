@@ -14,6 +14,8 @@ import {
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MobileDocDemo } from "../../../components/MobileDocDemo.tsx";
 import { MESSAGES_BOTTOM_SHEET } from "../../../data/component-messages-rows.ts";
+import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
+
 
 /** BottomSheet 主 props API */
 const BOTTOM_SHEET_API: DocsApiTableRow[] = [
@@ -159,6 +161,7 @@ export default function MobileBottomSheetDoc() {
           language="tsx"
           showLineNumbers
           wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
         />
       </section>
 
@@ -190,6 +193,7 @@ export default function MobileBottomSheetDoc() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -217,6 +221,7 @@ export default function MobileBottomSheetDoc() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -248,6 +253,7 @@ export default function MobileBottomSheetDoc() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
       </section>

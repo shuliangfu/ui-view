@@ -12,6 +12,8 @@ import {
 } from "@dreamer/ui-view/data-display";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_IMAGE_VIEWER } from "../../../data/component-messages-rows.ts";
+import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
+
 
 const DEMO_IMAGES = [
   "https://picsum.photos/id/1/800/600",
@@ -103,6 +105,7 @@ const IMAGE_VIEWER_API: ApiRow[] = [
 const importCode = `import { createSignal } from "@dreamer/view";
 import { Button } from "@dreamer/ui-view/basic";
 import { ImageViewer } from "@dreamer/ui-view/data-display";
+
 const open = createSignal(false);
 const index = createSignal(0);
 <ImageViewer
@@ -193,6 +196,7 @@ export default function DataDisplayImageViewer() {
           language="tsx"
           showLineNumbers
           wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
         />
       </section>
 
@@ -274,6 +278,7 @@ export default function DataDisplayImageViewer() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
           <CodeBlock
             title="代码示例（按 transition 打开）"
@@ -282,6 +287,7 @@ export default function DataDisplayImageViewer() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
       </section>

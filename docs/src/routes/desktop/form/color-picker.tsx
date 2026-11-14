@@ -16,6 +16,8 @@ import { message } from "@dreamer/ui-view/feedback";
 import { createSignal } from "@dreamer/view";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_COLOR_PICKER } from "../../../data/component-messages-rows.ts";
+import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
+
 
 interface ApiRow {
   name: string;
@@ -222,6 +224,7 @@ const hex = createSignal("#3b82f6");
           language="tsx"
           showLineNumbers
           wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
         />
       </section>
 
@@ -252,6 +255,7 @@ const hex = createSignal("#3b82f6");
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </section>
 
@@ -283,6 +287,7 @@ const hex = createSignal("#3b82f6");
             language="tsx"
             showLineNumbers
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -316,6 +321,7 @@ const hex = createSignal("#3b82f6");
             language="tsx"
             showLineNumbers
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -349,6 +355,7 @@ const hex = createSignal("#3b82f6");
             language="tsx"
             showLineNumbers
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -380,6 +387,7 @@ const hex = createSignal("#3b82f6");
             language="tsx"
             showLineNumbers
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -415,6 +423,7 @@ const hex = createSignal("#3b82f6");
             language="tsx"
             showLineNumbers
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -445,6 +454,7 @@ const hex = createSignal("#3b82f6");
             language="tsx"
             showLineNumbers
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -475,6 +485,7 @@ const hex = createSignal("#3b82f6");
             language="tsx"
             showLineNumbers
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -511,6 +522,7 @@ const hex = createSignal("#3b82f6");
             language="tsx"
             showLineNumbers
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -539,6 +551,7 @@ const hex = createSignal("#3b82f6");
             language="tsx"
             showLineNumbers
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </section>
       </section>

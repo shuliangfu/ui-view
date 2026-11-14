@@ -581,18 +581,74 @@ export const VIEW_CONFIG_API: DocsApiTableRow[] = [
     description: "是否在弹层标题栏显示全屏切换，传给 Modal",
   },
   {
+    name: "column",
+    type: "number",
+    default: "1（本插槽）",
+    description:
+      "内置详情 Descriptions 的栅格列数上限，直接写在 view 上。本插槽缺省 1（整行一组标签+内容）；单独使用 Descriptions 时缺省 3。实际列数仍按容器宽度收敛：移动端 1 列，平板最多 2 列，电脑端用本值。有 render 时不生效",
+  },
+  {
+    name: "bordered",
+    type: "boolean",
+    default: "true（本插槽）",
+    description: "内置详情是否带边框。本插槽缺省 true；有 render 时不生效",
+  },
+  {
+    name: "size",
+    type: '"xs" | "sm" | "md" | "lg"',
+    default: '"sm"（本插槽）',
+    description: "内置详情尺寸。本插槽缺省 sm；有 render 时不生效",
+  },
+  {
+    name: "layout",
+    type: '"horizontal" | "vertical"',
+    default: '"horizontal"',
+    description: "内置详情布局。有 render 时不生效",
+  },
+  {
+    name: "colon",
+    type: "boolean",
+    default: "true",
+    description: "内置详情标签后是否显示冒号。有 render 时不生效",
+  },
+  {
+    name: "class",
+    type: "string",
+    default: "-",
+    description: "加在内置详情 Descriptions 根节点上的额外 class。有 render 时不生效",
+  },
+  {
+    name: "labelClass",
+    type: "string",
+    default: "-",
+    description: "内置详情标签列 class。有 render 时不生效",
+  },
+  {
+    name: "contentClass",
+    type: "string",
+    default: "-",
+    description: "内置详情内容列 class。有 render 时不生效",
+  },
+  {
+    name: "labelAlign",
+    type: "DescriptionsLabelAlign",
+    default: '{ vertical: "top", horizontal: "right" }',
+    description:
+      "内置详情各行标签的默认对齐，透传 Descriptions。vertical：top／center／bottom；horizontal：left／center／right。单项可用 ViewItem.labelAlign 覆盖。有 render 时不生效",
+  },
+  {
     name: "labelColPercent",
     type: "number",
     default: "38",
     description:
-      "详情 Descriptions 标签列占单列槽位宽度的百分比（12～85），与 labelMinWidth 一起决定左侧标签与右侧内容的比例",
+      "详情 Descriptions 标签列占单列槽位宽度的百分比（12～85），与 labelMinWidth 一起决定左侧标签与右侧内容的比例。可直接写在 view 上。有 render 时不生效",
   },
   {
     name: "labelMinWidth",
     type: "string | number",
     default: '"13.5rem"',
     description:
-      "详情 Descriptions 标签列最小宽度（CSS 长度或像素数字）；适当减小可让内容区更宽",
+      "详情 Descriptions 标签列最小宽度（CSS 长度或像素数字）；适当减小可让内容区更宽。可直接写在 view 上。有 render 时不生效",
   },
 ];
 
@@ -1960,6 +2016,80 @@ export const DATA_ALERT_CONFIG_API: DocsApiTableRow[] = [
   },
 ];
 
+/** DataPanel 底栏 pagination 配置（透传 Pagination，不含由面板托管的页码／条数／总数／onChange） */
+export const PANEL_PAGINATION_CONFIG_API: DocsApiTableRow[] = [
+  {
+    name: "preset",
+    type: '"full" | "default" | "simple"',
+    default: "随断点",
+    description:
+      "能力档，与 Pagination.preset 相同。不写时走 paginationPreset，再回落断点：电脑端 full，平板 default，移动端 simple。与 paginationPreset 同时写时以本值为准",
+  },
+  {
+    name: "size",
+    type: '"xs" | "sm" | "md" | "lg"',
+    default: "随断点",
+    description:
+      "分页尺寸。不写时随断点：电脑端 md，平板 sm，移动端 xs",
+  },
+  {
+    name: "showFirstLast",
+    type: "boolean",
+    default: "随 preset",
+    description: "是否显示第一页／最后一页。不传时跟随 preset：仅 full 为 true",
+  },
+  {
+    name: "showPrevNext",
+    type: "boolean",
+    default: "随 preset",
+    description: "是否显示上一页／下一页。不传时三档均为 true",
+  },
+  {
+    name: "showPageNumbers",
+    type: "boolean",
+    default: "随 preset",
+    description: "是否显示页码。不传时跟随 preset：simple 为 false，其余为 true",
+  },
+  {
+    name: "showQuickJumper",
+    type: "boolean",
+    default: "false（本插槽）",
+    description:
+      "是否使用 Pagination 自带快速跳转。本插槽缺省 false（full 档由面板在右侧另画跳转框）。显式传 true 时改用 Pagination 自带跳转，不再另画面板跳转框",
+  },
+  {
+    name: "showTotal",
+    type: "boolean | (total, range) => unknown",
+    default: "false（本插槽）",
+    description:
+      "是否显示 Pagination 自带总条数。本插槽缺省 false（左侧条数文案由面板自己渲染）；显式传入时按传入值透传",
+  },
+  {
+    name: "disabled",
+    type: "boolean",
+    default: "false",
+    description: "是否禁用分页控件（含每页条数与跳转）",
+  },
+  {
+    name: "class",
+    type: "string",
+    default: "-",
+    description: "加在 Pagination 根节点上的额外 class",
+  },
+  {
+    name: "testIdPrefix",
+    type: "string",
+    default: '"dp"',
+    description: "测试 id 前缀。本插槽缺省 dp",
+  },
+  {
+    name: "messages",
+    type: "Partial<PaginationMessages>",
+    default: "面板文案",
+    description: "覆盖分页文案；未写的字段仍走面板 messages",
+  },
+];
+
 export const DATA_DISPLAY_TYPE_SECTIONS: DataDisplayTypeSection[] = [
   {
     id: "Column",
@@ -1995,7 +2125,8 @@ export const DATA_DISPLAY_TYPE_SECTIONS: DataDisplayTypeSection[] = [
     id: "ViewConfig",
     title: "ViewConfig",
     rows: VIEW_CONFIG_API,
-    lead: "详情配置（DataPanel 弹层与 DataView 正文共用）。",
+    lead:
+      "详情配置（DataPanel 弹层与 DataView 正文共用）。Descriptions 的参数（除 items、title）可直接写在本对象上，与 title／props／actions 混在一起；title 仍是弹层标题。有 render 时这些参数不生效。",
   },
   {
     id: "ViewItem",
@@ -2173,6 +2304,13 @@ export const DATA_DISPLAY_TYPE_SECTIONS: DataDisplayTypeSection[] = [
       "DataPanel／DataView 的 alert 对象配置：完整透传 Alert 的全部参数，另加 show／key。字符串简写只表示 message。",
   },
   {
+    id: "PanelPaginationConfig",
+    title: "PanelPaginationConfig",
+    rows: PANEL_PAGINATION_CONFIG_API,
+    lead:
+      "DataPanel 的 pagination 对象配置：透传 Pagination 的展示参数。页码、每页条数、总数和 onChange 由面板托管；地址栏同步用根上的 syncUrl，每页条数选项用根上的 pageSizes。",
+  },
+  {
     id: "DataChromeTab",
     title: "DataChromeTab",
     rows: DATA_CHROME_TAB_API,
@@ -2274,6 +2412,7 @@ export const DATA_PANEL_EXTRA_TYPE_IDS: string[] = [
   "ImportResult",
   "SyncUrl",
   "DataAlertConfig",
+  "PanelPaginationConfig",
   "DataChromeTab",
   "DataPanelHandle",
   "DataViewHandle",

@@ -4,7 +4,34 @@
  */
 
 import type { Signal } from "@dreamer/view";
-import type { DescriptionsLabelAlign } from "./Descriptions.tsx";
+import type {
+  DescriptionsLabelAlign,
+  DescriptionsProps,
+} from "./Descriptions.tsx";
+import type { PaginationProps } from "../navigation/Pagination.tsx";
+
+/**
+ * 可写在 {@link ViewConfig} 上的 Descriptions 参数。
+ * 不含 `items`（由 view.props 生成）和 `title`（那是弹层标题，不会传给 Descriptions）。
+ */
+export type ViewDescriptionsProps = Omit<DescriptionsProps, "items" | "title">;
+
+/**
+ * 可写在 DataPanel `pagination` 上的 Pagination 参数。
+ * 不含由面板托管的页码／条数／总数／onChange，以及与根上 `syncUrl`／`pageSizes` 重复的 `syncUrl`／`pageSizeOptions`。
+ */
+export type PanelPaginationConfig = Omit<
+  PaginationProps,
+  | "current"
+  | "defaultCurrent"
+  | "pageSize"
+  | "defaultPageSize"
+  | "total"
+  | "totalPages"
+  | "onChange"
+  | "syncUrl"
+  | "pageSizeOptions"
+>;
 
 /** 数据行：键值对；主键字段默认为 `id`（见 `PanelProps.rowKey`）。 */
 export type Row = Record<string, unknown>;
@@ -561,7 +588,13 @@ export interface SearchConfig {
   fullscreenable?: boolean;
 }
 
-export interface ViewConfig {
+/**
+ * 详情弹层配置。内置字段区用 Descriptions 时，可把 Descriptions 的参数
+ *（除 `items`、`title`）直接写在本对象上，与 title／props／actions 混在一起，
+ * 例如 `column`、`size`、`bordered`、`layout`、`colon`、`labelAlign`、`labelColPercent`。
+ * `title` 仍是弹层标题，不会传给 Descriptions。有 `render` 时这些参数不再生效。
+ */
+export interface ViewConfig extends ViewDescriptionsProps {
   /** 详情弹层标题；支持 `(row)=>string`，如 `` `详情 · ${row.name}` `` */
   title?: string | ((row: Row) => string);
   /**
@@ -583,15 +616,6 @@ export interface ViewConfig {
   width?: ModalShellWidth;
   /** 详情弹层是否显示全屏切换，传给 Modal */
   fullscreenable?: boolean;
-  /**
-   * 详情 Descriptions 标签列占「单列槽位」宽度的百分比（12～85），缺省 38。
-   * 与 {@link ViewConfig.labelMinWidth} 组成标签／内容比例。
-   */
-  labelColPercent?: number;
-  /**
-   * 详情 Descriptions 标签列最小宽度（CSS 长度或像素数字），缺省 `"13.5rem"`。
-   */
-  labelMinWidth?: string | number;
 }
 
 /** 列表查询（page 从 1 起；order 对外统一 asc｜desc） */

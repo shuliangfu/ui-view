@@ -92,6 +92,7 @@ import {
   parseJsonRows,
   parseXmlRows,
   resolveFooterActions,
+  pickViewDescriptionsProps,
   resolveModalWidth,
   resolveViewActionsCfg,
   resolveViewFields,
@@ -211,6 +212,8 @@ export interface DataViewProps {
   title: string;
   /**
    * 明细配置：`props` 用 Descriptions 展示（同 DataPanel view）；
+   * Descriptions 的参数（除 `items`、`title`）可直接写在本对象上，与 title／props／actions 混在一起。
+   * `title` 仍是标题，不会传给 Descriptions。有 `render` 或 `children` 时这些参数不再生效。
    * `render` 是推荐扩展点，替换字段区。字段级 `ViewItem.render` 仅在无 `view.render` 且无 `children` 时生效。
    */
   view?: ViewConfig;
@@ -1907,12 +1910,9 @@ export function DataView(props: DataViewProps): JSXRenderable {
       );
       fieldArea = (
         <Descriptions
-          bordered
-          column={1}
-          size="sm"
           items={items}
-          labelColPercent={props.view?.labelColPercent}
-          labelMinWidth={props.view?.labelMinWidth}
+          {...{ bordered: true, column: 1, size: "sm" as const }}
+          {...pickViewDescriptionsProps(props.view)}
         />
       );
     }

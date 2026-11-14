@@ -8,6 +8,8 @@ import { Paragraph, Title } from "@dreamer/ui-view/basic";
 import { Calendar, CodeBlock } from "@dreamer/ui-view/data-display";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_CALENDAR } from "../../../data/component-messages-rows.ts";
+import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
+
 
 /** API 属性行类型 */
 interface ApiRow {
@@ -72,6 +74,7 @@ const CALENDAR_API: ApiRow[] = [
 
 const importCode = `import { createSignal } from "@dreamer/view";
 import { Calendar } from "@dreamer/ui-view/data-display";
+
 const value = createSignal(new Date());
 <Calendar value={value} />`;
 
@@ -112,6 +115,7 @@ export default function DataDisplayCalendar() {
           language="tsx"
           showLineNumbers
           wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
         />
       </section>
 
@@ -130,6 +134,7 @@ export default function DataDisplayCalendar() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -145,6 +150,7 @@ export default function DataDisplayCalendar() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -160,6 +166,7 @@ export default function DataDisplayCalendar() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
       </section>

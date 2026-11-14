@@ -8,6 +8,8 @@ import { Paragraph, Title } from "@dreamer/ui-view/basic";
 import { CodeBlock } from "@dreamer/ui-view/data-display";
 
 import { ChartPolarArea } from "@dreamer/ui-view/charts";
+import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
+
 const sampleData = {
   labels: ["红", "绿", "蓝", "黄", "紫"],
   datasets: [{
@@ -95,6 +97,7 @@ export default function ChartsPolarArea() {
           language="tsx"
           showLineNumbers
           wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
         />
       </section>
 
@@ -116,6 +119,7 @@ export default function ChartsPolarArea() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
       </section>

@@ -9,6 +9,8 @@ import { Carousel, CodeBlock } from "@dreamer/ui-view/data-display";
 import { createSignal } from "@dreamer/view";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_CAROUSEL } from "../../../data/component-messages-rows.ts";
+import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
+
 
 /** API 属性行类型 */
 interface ApiRow {
@@ -163,6 +165,7 @@ const DEMO_IMAGES = [
 
 const importCode = `import { createSignal } from "@dreamer/view";
 import { Carousel } from "@dreamer/ui-view/data-display";
+
 const current = createSignal(0);
 const images = [
   "https://placehold.co/800x320/1e3a5f/fff?text=1",
@@ -297,6 +300,7 @@ export default function DataDisplayCarousel() {
           language="tsx"
           showLineNumbers
           wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
         />
       </section>
 
@@ -323,6 +327,7 @@ export default function DataDisplayCarousel() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -346,6 +351,7 @@ export default function DataDisplayCarousel() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -484,6 +490,7 @@ export default function DataDisplayCarousel() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
       </section>

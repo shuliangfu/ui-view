@@ -5,7 +5,7 @@
 import { Title } from "@dreamer/ui-view/basic";
 import { CodeBlock } from "@dreamer/ui-view/data-display";
 
-/** 数据面板／数据详情文档代码示例的默认最大高度，超出滚动 */
+/** 文档站示例代码的默认最大高度，超出滚动 */
 export const DOCS_DEMO_CODE_MAX_HEIGHT = "24rem";
 
 export interface DocsDemoProps {

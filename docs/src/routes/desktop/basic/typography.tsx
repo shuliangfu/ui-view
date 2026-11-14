@@ -6,6 +6,8 @@
 import { Paragraph, Text, Title } from "@dreamer/ui-view/basic";
 
 import { CodeBlock } from "@dreamer/ui-view/data-display";
+import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
+
 interface ApiRow {
   name: string;
   type: string;
@@ -96,6 +98,7 @@ export default function BasicTypography() {
           language="tsx"
           showLineNumbers
           wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
         />
       </section>
 
@@ -114,6 +117,7 @@ export default function BasicTypography() {
               showLineNumbers
               copyable
               wrapLongLines
+              maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
             />
 
             <Title level={3}>标题 level 3</Title>
@@ -128,6 +132,7 @@ export default function BasicTypography() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -148,6 +153,7 @@ export default function BasicTypography() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -166,6 +172,7 @@ export default function BasicTypography() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
       </section>

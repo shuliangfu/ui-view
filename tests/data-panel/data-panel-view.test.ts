@@ -13,6 +13,9 @@ import {
   resolveColumnHeaderAlign,
   resolveViewActionsCfg,
   resolveViewFields,
+  pickPanelPaginationProps,
+  pickViewDescriptionsProps,
+  resolvePanelPagination,
   resolveViewFooterActions,
   toggleOptionValue,
 } from "../../src/desktop/data-display/data-panel-utils.ts";
@@ -383,5 +386,81 @@ describe("DataPanel view / form / search 配置", () => {
     expect(fields[1].labelAlign).toBe(undefined);
     expect(fields[0].label).toBe("姓名");
     expect(fields[1].label).toBe("邮箱");
+  });
+});
+
+describe("pickViewDescriptionsProps", () => {
+  it("只抽出已写的 Descriptions 参数，不带上弹层 title", () => {
+    const picked = pickViewDescriptionsProps({
+      title: "详情 · 张三",
+      column: 3,
+      size: "md",
+      bordered: false,
+      layout: "vertical",
+      colon: false,
+      class: "view-desc",
+      labelClass: "lbl",
+      contentClass: "cnt",
+      labelColPercent: 28,
+      labelMinWidth: "7rem",
+      labelAlign: { vertical: "center", horizontal: "left" },
+      props: [{ prop: "name", label: "姓名" }],
+    });
+    expect(picked).toEqual({
+      column: 3,
+      size: "md",
+      bordered: false,
+      layout: "vertical",
+      colon: false,
+      class: "view-desc",
+      labelClass: "lbl",
+      contentClass: "cnt",
+      labelColPercent: 28,
+      labelMinWidth: "7rem",
+      labelAlign: { vertical: "center", horizontal: "left" },
+    });
+    expect("title" in picked).toBe(false);
+  });
+
+  it("未写的键不出现，空 view 返回空对象", () => {
+    expect(pickViewDescriptionsProps()).toEqual({});
+    expect(pickViewDescriptionsProps({ title: "详情" })).toEqual({});
+    expect(pickViewDescriptionsProps({ column: 2 })).toEqual({ column: 2 });
+  });
+});
+
+describe("resolvePanelPagination", () => {
+  const auto = { preset: "full" as const, size: "md" as const };
+
+  it("未写配置时走断点缺省", () => {
+    const r = resolvePanelPagination(undefined, undefined, auto);
+    expect(r.preset).toBe("full");
+    expect(r.size).toBe("md");
+    expect(r.rest).toEqual({});
+  });
+
+  it("pagination.preset 优先于 paginationPreset，未写 size 仍走断点", () => {
+    const r = resolvePanelPagination(
+      { preset: "simple", showFirstLast: true },
+      "default",
+      auto,
+    );
+    expect(r.preset).toBe("simple");
+    expect(r.size).toBe("md");
+    expect(r.rest).toEqual({ showFirstLast: true });
+  });
+
+  it("只写 paginationPreset 时用它作 preset", () => {
+    const r = resolvePanelPagination(undefined, "default", auto);
+    expect(r.preset).toBe("default");
+    expect(r.size).toBe("md");
+  });
+
+  it("pickPanelPaginationProps 丢掉未写的键", () => {
+    expect(pickPanelPaginationProps()).toEqual({});
+    expect(pickPanelPaginationProps({ size: "lg", disabled: true })).toEqual({
+      size: "lg",
+      disabled: true,
+    });
   });
 });

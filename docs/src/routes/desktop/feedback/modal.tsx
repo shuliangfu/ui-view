@@ -10,6 +10,8 @@ import { Modal } from "@dreamer/ui-view/feedback";
 import { createSignal } from "@dreamer/view";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_MODAL } from "../../../data/component-messages-rows.ts";
+import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
+
 
 /** API 属性行类型 */
 interface ApiRow {
@@ -165,6 +167,7 @@ const MODAL_API: ApiRow[] = [
 
 const importCode = `import { createSignal } from "@dreamer/view";
 import { Button } from "@dreamer/ui-view/basic";
+
 const open = createSignal(false);
 
 <Button type="button" variant="primary" onClick={() => open.value = true}>
@@ -250,6 +253,7 @@ export default function FeedbackModal() {
           language="tsx"
           showLineNumbers
           wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
         />
       </section>
 
@@ -322,6 +326,7 @@ export default function FeedbackModal() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -361,6 +366,7 @@ export default function FeedbackModal() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -401,6 +407,7 @@ export default function FeedbackModal() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -467,6 +474,7 @@ export default function FeedbackModal() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -522,6 +530,7 @@ export default function FeedbackModal() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -631,6 +640,7 @@ demo.value = { open: true, preset: "lg" };
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
           <CodeBlock
             title="代码示例（百分比）"
@@ -646,6 +656,7 @@ demo.value = { open: true, preset: "lg" };
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -695,6 +706,7 @@ demo.value = { open: true, preset: "lg" };
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -782,6 +794,7 @@ demo.value = { open: true, preset: "lg" };
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -831,6 +844,7 @@ demo.value = { open: true, preset: "lg" };
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -897,6 +911,7 @@ demo.value = { open: true, preset: "lg" };
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -939,6 +954,7 @@ demo.value = { open: true, preset: "lg" };
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
       </section>

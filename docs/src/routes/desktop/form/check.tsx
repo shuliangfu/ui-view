@@ -17,6 +17,8 @@ import { Switch } from "@dreamer/ui-view/form/switch";
 import { CodeBlock } from "@dreamer/ui-view/data-display";
 import { message } from "@dreamer/ui-view/feedback";
 import { createSignal } from "@dreamer/view";
+import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
+
 
 interface ApiRow {
   name: string;
@@ -340,6 +342,7 @@ export default function FormCheck() {
           language="tsx"
           showLineNumbers
           wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
         />
       </section>
 
@@ -403,6 +406,7 @@ export default function FormCheck() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </section>
 
@@ -419,6 +423,7 @@ export default function FormCheck() {
               showLineNumbers
               copyable
               wrapLongLines
+              maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
             />
           </section>
 
@@ -437,6 +442,7 @@ export default function FormCheck() {
               showLineNumbers
               copyable
               wrapLongLines
+              maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
             />
           </section>
 
@@ -456,6 +462,7 @@ export default function FormCheck() {
               showLineNumbers
               copyable
               wrapLongLines
+              maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
             />
           </section>
 
@@ -482,6 +489,7 @@ export default function FormCheck() {
               showLineNumbers
               copyable
               wrapLongLines
+              maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
             />
           </section>
 
@@ -498,6 +506,7 @@ export default function FormCheck() {
               showLineNumbers
               copyable
               wrapLongLines
+              maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
             />
           </section>
           <section class="space-y-4">
@@ -528,6 +537,7 @@ export default function FormCheck() {
               showLineNumbers
               copyable
               wrapLongLines
+              maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
             />
           </section>
         </Form>

@@ -8,6 +8,8 @@ import { Paragraph, Title } from "@dreamer/ui-view/basic";
 import { CodeBlock } from "@dreamer/ui-view/data-display";
 
 import { ChartRadar } from "@dreamer/ui-view/charts";
+import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
+
 const sampleData = {
   labels: ["速度", "力量", "耐力", "技巧", "防守", "进攻"],
   datasets: [
@@ -101,6 +103,7 @@ export default function ChartsRadar() {
           language="tsx"
           showLineNumbers
           wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
         />
       </section>
 
@@ -122,6 +125,7 @@ export default function ChartsRadar() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
       </section>

@@ -9,6 +9,8 @@ import { CodeBlock } from "@dreamer/ui-view/data-display";
 import { Popconfirm } from "@dreamer/ui-view/feedback";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_POPCONFIRM } from "../../../data/component-messages-rows.ts";
+import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
+
 
 /** API 属性行类型 */
 interface ApiRow {
@@ -108,6 +110,7 @@ const POPCONFIRM_API: ApiRow[] = [
 
 const importCode = `import { createSignal } from "@dreamer/view";
 import { Button } from "@dreamer/ui-view/basic";
+
 const open = createSignal(false);
 
 <Popconfirm
@@ -251,6 +254,7 @@ export default function FeedbackPopconfirm() {
           language="tsx"
           showLineNumbers
           wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
         />
       </section>
 
@@ -363,6 +367,7 @@ export default function FeedbackPopconfirm() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
           <CodeBlock
             title="代码示例（warning）"
@@ -371,6 +376,7 @@ export default function FeedbackPopconfirm() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
           <CodeBlock
             title="代码示例（danger）"
@@ -379,6 +385,7 @@ export default function FeedbackPopconfirm() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
         <div class="space-y-4" data-demo="auto-flip-right">
@@ -427,6 +434,7 @@ export default function FeedbackPopconfirm() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
       </section>

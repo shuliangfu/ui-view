@@ -12,6 +12,8 @@ import {
 } from "../../../components/DocsApiTable.tsx";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_OVERLAY } from "../../../data/component-messages-rows.ts";
+import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
+
 
 const API: DocsApiTableRow[] = [
   {
@@ -121,7 +123,7 @@ export default function Page() {
       </div>
       <section class="space-y-3">
         <Title level={2}>引入</Title>
-        <CodeBlock code={importCode} language="tsx" />
+        <CodeBlock code={importCode} language="tsx" maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT} />
       </section>
       <section class="space-y-6">
         <Title level={2}>示例</Title>
@@ -145,6 +147,7 @@ export default function Page() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -177,6 +180,7 @@ export default function Page() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -214,6 +218,7 @@ export default function Page() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
       </section>

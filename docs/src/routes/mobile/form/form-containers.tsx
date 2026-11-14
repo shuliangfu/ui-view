@@ -13,6 +13,8 @@ import { Password } from "@dreamer/ui-view/mobile/form/password";
 import { PasscodeInput } from "@dreamer/ui-view/mobile/form/passcode-input";
 import { CodeBlock } from "@dreamer/ui-view/data-display";
 import { message } from "@dreamer/ui-view/feedback";
+import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
+
 
 type MobileDemoValues = {
   account: string;
@@ -135,6 +137,7 @@ const form = createForm({
           showLineNumbers
           copyable
           wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
         />
       </section>
     </div>

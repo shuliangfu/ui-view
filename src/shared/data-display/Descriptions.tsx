@@ -7,6 +7,7 @@ import { twMerge } from "tailwind-merge";
 import { createSignal, type JSXRenderable, onCleanup } from "@dreamer/view";
 import { isHtmlElement } from "../dom-guards.ts";
 import type { SizeVariant } from "../types.ts";
+import { readContainerWidthPx } from "../container-width.ts";
 
 /** 标签垂直对齐：上、中、下。 */
 export type DescriptionsLabelVerticalAlign = "top" | "center" | "bottom";
@@ -320,19 +321,28 @@ export function Descriptions(props: DescriptionsProps): JSXRenderable {
   const columnCount = createSignal(maxColumn);
 
   let resizeObserver: ResizeObserver | null = null;
+  let observed: Element | null = null;
   const setGridRef = (el: unknown) => {
+    if (!isHtmlElement(el)) {
+      resizeObserver?.disconnect();
+      resizeObserver = null;
+      observed = null;
+      return;
+    }
+    if (observed === el && resizeObserver != null) return;
     resizeObserver?.disconnect();
     resizeObserver = null;
-    if (!isHtmlElement(el)) return;
+    observed = el;
     const apply = (width: number) => {
+      if (!(Number.isFinite(width) && width > 0)) return;
       const next = resolveDescriptionsColumnCount(width, maxColumn);
       if (columnCount.value !== next) columnCount.value = next;
     };
-    apply(el.getBoundingClientRect().width);
+    apply(readContainerWidthPx(el));
     if (typeof ResizeObserver === "undefined") return;
     resizeObserver = new ResizeObserver((entries) => {
-      const w = entries[0]?.contentRect.width;
-      if (w != null) apply(w);
+      const target = entries[0]?.target ?? el;
+      if (isHtmlElement(target)) apply(readContainerWidthPx(target));
     });
     resizeObserver.observe(el);
   };

@@ -18,6 +18,8 @@ import {
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MobileDocDemo } from "../../../components/MobileDocDemo.tsx";
 import { MESSAGES_SELECT } from "../../../data/component-messages-rows.ts";
+import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
+
 
 /** createForm 演示字段（模块级，避免文档页重跑丢失状态） */
 type SelectCreateFormValues = { city: string };
@@ -171,6 +173,7 @@ export default function MobileSelectDoc() {
           language="tsx"
           showLineNumbers
           wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
         />
       </section>
 
@@ -223,6 +226,7 @@ const form = createForm({
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -249,6 +253,7 @@ const form = createForm({
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -280,6 +285,7 @@ const form = createForm({
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
         <div class="space-y-4">
@@ -326,6 +332,7 @@ const form = createForm({
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
       </section>

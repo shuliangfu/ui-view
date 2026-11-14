@@ -8,6 +8,8 @@ import { Paragraph, Title } from "@dreamer/ui-view/basic";
 import { CodeBlock, Segmented } from "@dreamer/ui-view/data-display";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_SEGMENTED } from "../../../data/component-messages-rows.ts";
+import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
+
 
 /** API 属性行类型 */
 interface ApiRow {
@@ -68,6 +70,7 @@ const SEGMENTED_API: ApiRow[] = [
 
 const importCode = `import { createSignal } from "@dreamer/view";
 import { Segmented } from "@dreamer/ui-view/data-display";
+
 const value = createSignal("列表");
 const options = [{ value: "列表", label: "列表" }, { value: "网格", label: "网格" }];
 {() => (
@@ -147,6 +150,7 @@ export default function DataDisplaySegmented() {
           language="tsx"
           showLineNumbers
           wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
         />
       </section>
 
@@ -175,6 +179,7 @@ export default function DataDisplaySegmented() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -195,6 +200,7 @@ export default function DataDisplaySegmented() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -217,6 +223,7 @@ export default function DataDisplaySegmented() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
       </section>

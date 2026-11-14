@@ -11,6 +11,8 @@ import { Steps } from "@dreamer/ui-view/navigation";
 import { createMemo, createSignal } from "@dreamer/view";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_STEPS } from "../../../data/component-messages-rows.ts";
+import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
+
 
 /** API 属性行类型 */
 interface ApiRow {
@@ -127,7 +129,7 @@ export default function NavigationSteps() {
   ];
 
   /** 末步索引（第 n 步对应 n-1）；到达该步时主按钮直接「已完成」，无中间「完成」态 */
-  const lastStepIndex = items.length;
+  const lastStepIndex = items.length - 1;
 
   /**
    * 主按钮文案 / disabled：须走 {@link createMemo}。仅在 JSX 里写 `{current.value …}` 时，
@@ -135,11 +137,8 @@ export default function NavigationSteps() {
    */
   const primaryLabel = createMemo(() => {
     const v = current.value;
-
-    console.log(v, lastStepIndex);
-
-    // 已在末步或更大（如点击步骤条等将 current 推到 n）：统一「已完成」，不再出现「完成」
-    if (v > lastStepIndex) return "已完成";
+    // 已在末步或更大：统一「已完成」
+    if (v >= lastStepIndex) return "已完成";
     return "下一步";
   });
 
@@ -169,6 +168,7 @@ export default function NavigationSteps() {
           language="tsx"
           showLineNumbers
           wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
         />
       </section>
 
@@ -218,6 +218,7 @@ export default function NavigationSteps() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -233,6 +234,7 @@ export default function NavigationSteps() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -255,6 +257,7 @@ export default function NavigationSteps() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
       </section>

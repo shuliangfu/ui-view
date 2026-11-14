@@ -20,6 +20,8 @@ import { CodeBlock } from "@dreamer/ui-view/data-display";
 import { Divider } from "@dreamer/ui-view/layout";
 
 import { Dropdown } from "@dreamer/ui-view/navigation";
+import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
+
 /** API 属性行类型 */
 interface ApiRow {
   name: string;
@@ -333,6 +335,7 @@ export default function NavigationDropdown() {
           language="tsx"
           showLineNumbers
           wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
         />
       </section>
 
@@ -429,6 +432,7 @@ export default function NavigationDropdown() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
           <CodeBlock
             title="代码示例（bottomRight + 箭头）"
@@ -437,6 +441,7 @@ export default function NavigationDropdown() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
           <CodeBlock
             title="代码示例（仅图标触发 + 箭头，需引入 IconMoon）"
@@ -445,6 +450,7 @@ export default function NavigationDropdown() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -510,6 +516,7 @@ export default function NavigationDropdown() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -531,6 +538,7 @@ export default function NavigationDropdown() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -546,6 +554,7 @@ export default function NavigationDropdown() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -579,6 +588,7 @@ export default function NavigationDropdown() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
       </section>

@@ -6,6 +6,8 @@
 import { Paragraph, Title } from "@dreamer/ui-view/basic";
 
 import { CodeBlock } from "@dreamer/ui-view/data-display";
+import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
+
 /** 与 tailwind.css @theme 中各阶梯一致 */
 const SHADES = [
   50,
@@ -175,6 +177,7 @@ background: var(--color-default-500);
 class="bg-default-500"`}
           language="css"
           copyable
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
         />
       </section>
 

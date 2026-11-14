@@ -6,6 +6,8 @@
 import { Link, Paragraph, Title } from "@dreamer/ui-view/mobile/basic";
 
 import { CodeBlock } from "@dreamer/ui-view/mobile/data-display";
+import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../components/DocsDemo.tsx";
+
 /** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
 export const metadata = {
   title: "移动端组件 · ui-view",
@@ -46,7 +48,9 @@ export default function MobileIndex() {
           copyable
           code={`import { BottomSheet } from "@dreamer/ui-view/mobile/feedback";
 import { TabBar, NavBar } from "@dreamer/ui-view/mobile/navigation";
-import { Button } from "@dreamer/ui-view/mobile/basic"; // shared 也可从此入口`}
+import { Button } from "@dreamer/ui-view/mobile/basic";
+ // shared 也可从此入口`}
+ maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
         />
       </section>
 

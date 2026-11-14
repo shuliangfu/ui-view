@@ -10,6 +10,8 @@ import { CodeBlock } from "@dreamer/ui-view/data-display";
 import { Tooltip } from "@dreamer/ui-view/feedback";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_TOOLTIP } from "../../../data/component-messages-rows.ts";
+import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
+
 /** API 属性行类型 */
 interface ApiRow {
   name: string;
@@ -128,6 +130,7 @@ export default function FeedbackTooltip() {
           language="tsx"
           showLineNumbers
           wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
         />
       </section>
 
@@ -165,6 +168,7 @@ export default function FeedbackTooltip() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -184,6 +188,7 @@ export default function FeedbackTooltip() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
 
@@ -203,6 +208,7 @@ export default function FeedbackTooltip() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
         <div class="space-y-4" data-demo="auto-flip-right">
@@ -236,6 +242,7 @@ export default function FeedbackTooltip() {
             showLineNumbers
             copyable
             wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
       </section>
