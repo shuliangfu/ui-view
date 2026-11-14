@@ -103,6 +103,7 @@
     "@dreamer/runtime-adapter": "npm:@jsr/dreamer__runtime-adapter@^1.2.2",
     "@dreamer/service": "npm:@jsr/dreamer__service@^1.1.0",
     "@dreamer/storage": "npm:@jsr/dreamer__storage@^1.1.0",
+    "@dreamer/upload": "npm:@jsr/dreamer__upload@^2.0.1",
     "@dreamer/view": "npm:@jsr/dreamer__view@^3.0.6",
     "chart.js": "npm:chart.js@4.6.1",
     "prismjs": "npm:prismjs@1.30.0",
@@ -124,7 +125,7 @@
     "components"
   ],
   "peerDependencies": {
-    "@dreamer/upload": "^2.0.1",
+    "@dreamer/upload": "npm:@jsr/dreamer__upload@^2.0.1",
     "@dreamer/image": "^1.1.0",
     "@dreamer/plugin": "^1.1.0"
   },
