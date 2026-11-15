@@ -201,7 +201,8 @@ async function tryResolveUiViewRelViaDenoInfo(
 }
 
 /**
- * 根据用到的组件名，得到应加入 @source 的**已解析**绝对路径列表（去重排序）。
+ * 根据用到的组件名，得到应加入 @source 的**已解析**绝对路径（去重排序），
+ * 以及路径到包内相对路径的对照，供后续在 JSR 哈希缓存中跟随相对导入。
  * 优先使用「显式 packageRoot / 自动探测包根」下 `join(rel)` **且文件存在**的路径；
  * 否则在 Deno 下通过 {@link tryResolveUiViewRelViaDenoInfo} 解析哈希缓存路径。
  *
@@ -216,9 +217,10 @@ async function gatherResolvedContentPaths(
     resolvedPackageRoot: string;
     jsrVersion: string | null;
   },
-): Promise<string[]> {
+): Promise<{ paths: string[]; relByPath: Map<string, string> }> {
   const seen = new Set<string>();
   const out: string[] = [];
+  const relByPath = new Map<string, string>();
 
   const tryJoinIfExists = (root: string, rel: string): string | null => {
     const trimmed = root.replace(/\/+$/, "");
@@ -256,9 +258,10 @@ async function gatherResolvedContentPaths(
       if (seen.has(abs)) continue;
       seen.add(abs);
       out.push(abs);
+      relByPath.set(abs, rel);
     }
   }
-  return out.sort();
+  return { paths: out.sort(), relByPath };
 }
 
 /**
@@ -307,17 +310,49 @@ function resolveLocalImportFile(
 }
 
 /**
+ * 把 `fromRel` 里的相对说明符收成包内候选路径（`src/...`）。
+ * JSR 缓存文件是内容哈希名，不能按磁盘上的 `../form/DatePicker.tsx` 去拼。
+ *
+ * @param fromRel - 发起 import 的包内相对路径，如 `src/desktop/data-display/DataPanel.tsx`
+ * @param spec - 相对说明符，如 `../form/DatePicker.tsx`
+ */
+function packageRelCandidates(fromRel: string, spec: string): string[] {
+  const dirParts = fromRel.replace(/\\/g, "/").split("/").slice(0, -1);
+  for (const part of spec.replace(/\\/g, "/").split("/")) {
+    if (part === "." || part === "") continue;
+    if (part === "..") {
+      if (dirParts.length === 0) return [];
+      dirParts.pop();
+      continue;
+    }
+    dirParts.push(part);
+  }
+  const rel = dirParts.join("/");
+  if (!rel || rel.startsWith("/")) return [];
+  if (/\.(?:ts|tsx|js|jsx)$/.test(rel)) return [rel];
+  return [`${rel}.tsx`, `${rel}.ts`, `${rel}/index.tsx`, `${rel}/index.ts`];
+}
+
+/**
  * 从已收录的 ui-view 源文件出发，递归补上它们的相对导入。
  * DataPanel／DataView 会内部引用 DatePicker、Calendar 等，业务代码只 import 面板时，
  * 若不跟随这些文件，Tailwind 会漏掉 `grid-cols-7` 等日历样式。
  *
+ * 本地源码树走磁盘相对路径；纯 JSR 场景下文件落在哈希缓存里，必须用
+ * {@link packageRelCandidates} + {@link tryResolveUiViewRelViaDenoInfo} 解析。
+ *
  * @param paths - 已解析的绝对路径（会被复制，不原地改）
- * @param packageRoot - ui-view 包根
+ * @param ctx - 包根、应用根、JSR 版本，以及路径到包内相对路径的对照
  * @returns 去重排序后的完整路径列表
  */
 async function expandLocalImportSources(
   paths: readonly string[],
-  packageRoot: string,
+  ctx: {
+    packageRoot: string;
+    projectRoot: string;
+    jsrVersion: string | null;
+    relByPath: Map<string, string>;
+  },
 ): Promise<string[]> {
   const seen = new Set<string>(paths);
   const queue = [...paths];
@@ -331,7 +366,28 @@ async function expandLocalImportSources(
       continue;
     }
     for (const spec of collectRelativeImportSpecifiers(content)) {
-      const resolved = resolveLocalImportFile(file, spec, packageRoot);
+      let resolved = resolveLocalImportFile(file, spec, ctx.packageRoot);
+      if (resolved) {
+        const rel = relative(ctx.packageRoot.replace(/\/+$/, ""), resolved);
+        if (rel && !rel.startsWith("..") && !rel.startsWith("/")) {
+          ctx.relByPath.set(resolved, rel);
+        }
+      } else {
+        const fromRel = ctx.relByPath.get(file);
+        if (fromRel && ctx.jsrVersion) {
+          for (const rel of packageRelCandidates(fromRel, spec)) {
+            const abs = await tryResolveUiViewRelViaDenoInfo(
+              ctx.projectRoot,
+              rel,
+              ctx.jsrVersion,
+            );
+            if (!abs) continue;
+            ctx.relByPath.set(abs, rel);
+            resolved = abs;
+            break;
+          }
+        }
+      }
       if (!resolved || seen.has(resolved)) continue;
       seen.add(resolved);
       queue.push(resolved);
@@ -1752,12 +1808,13 @@ export function uiViewTailwindPlugin(
 
         const pkgRoot = resolvePackageRoot();
 
-        const paths = await gatherResolvedContentPaths(names, {
+        const gathered = await gatherResolvedContentPaths(names, {
           projectRoot: root,
           optionPackageRoot: optionPackageRoot,
           resolvedPackageRoot: pkgRoot,
           jsrVersion,
         });
+        const paths = gathered.paths;
         if (paths.length === 0) {
           log.debug(
             "未解析到任何可扫描的 ui-view 源文件路径，跳过写入 ui-view-sources.css（请检查 deno.json、deno cache 与组件映射）",
@@ -1765,7 +1822,12 @@ export function uiViewTailwindPlugin(
           return;
         }
         await mergeIntrinsicIconSources(names, pkgRoot, paths);
-        const withLocalImports = await expandLocalImportSources(paths, pkgRoot);
+        const withLocalImports = await expandLocalImportSources(paths, {
+          packageRoot: pkgRoot,
+          projectRoot: root,
+          jsrVersion,
+          relByPath: gathered.relByPath,
+        });
         /** 与 gatherResolvedContentPaths / mergeIntrinsicIconSources 内去重双保险，保证写入的 @source 路径唯一 */
         const uniqueSortedPaths = Array.from(new Set(withLocalImports)).sort();
 

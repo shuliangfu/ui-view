@@ -13,12 +13,12 @@ export function getDaysInMonth(year: number, month: number): Date[] {
   const first = new Date(year, month, 1);
   const last = new Date(year, month + 1, 0);
   const days: Date[] = [];
-  for (let d = 1; d <= last.getDate(); d++) {
-    days.push(new Date(year, month, d));
-  }
   const startPad = first.getDay();
   for (let i = 0; i < startPad; i++) {
-    days.unshift(new Date(year, month, -startPad + i + 1));
+    days.push(new Date(year, month, -startPad + i + 1));
+  }
+  for (let d = 1; d <= last.getDate(); d++) {
+    days.push(new Date(year, month, d));
   }
   /** 月末补足到整行，避免日历网格最后一行缺格导致底边线与左侧 border 错位 */
   const remainder = days.length % 7;
