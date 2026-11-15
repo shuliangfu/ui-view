@@ -11,7 +11,7 @@
  * - `dataSource`：自定义 {@link DataSource}，`list(query)` 返回当前页，其余写操作按需提供。
  * - `baseRoute`：未传 `dataSource` 时 {@link createApiDataSource} 作为远程源（1 段时拼显式 `resource`，未传则自动取当前页面路由；≥2 段直接作根）。
  * - 拉数优先级：显式 `dataSource` ＞ `baseRoute`（API）＞ 只传 `data`（本地源）。
- * - 同时传 `data` 和 `baseRoute`：首屏（含 SSR／水合）用传入的 `data` 渲染，挂载时不请求 list；工具栏刷新、翻页、搜索、排序、切 Tab 再走 API。总数优先用 `initial.total`，未传则用 `data.length`（不会臆造更大的总数）。
+ * - 同时传 `data` 和 `baseRoute`：首屏（含 SSR／水合）用传入的 `data` 渲染，挂载时不请求 list；工具栏刷新、翻页、搜索、排序、切 Tab 再走 API。总数优先用 `pagination.total`，未传则用 `data.length`（不会臆造更大的总数）。只传 `baseRoute`、不传 `data` 时，即使写了 `pagination.total` 也会在挂载后请求 list。
  * - 列 `{ total: true }` 的页脚合计由面板根据行数据自动求和，不使用 `list()`／接口返回的 `totals`。只传 `data`（本地源，含 `getRows`）时对当前过滤结果全集求和；分页接口／自定义源只对当前已加载的行求和，不会为合计偷偷拉全量。
  *
  * **SSR / 水合**：布尔属性只在为 true 时输出；`sync` 数据源（含只传 `data`）以及 `data`+`baseRoute` 的首屏数据都同步渲染，水合前后 DOM 一致。
@@ -69,6 +69,10 @@ import { Descriptions } from "./Descriptions.tsx";
 import type { DescriptionsLabelAlign } from "./Descriptions.tsx";
 import { Dropdown } from "../navigation/Dropdown.tsx";
 import { Pagination } from "../navigation/Pagination.tsx";
+import {
+  readPageSizeCookie,
+  writePageSizeCookie,
+} from "../../shared/navigation/page-size-cookie.ts";
 import { checkboxInputSurface } from "../form/Checkbox.tsx";
 import { FormItem } from "../form/FormItem.tsx";
 import { Input } from "../form/Input.tsx";
@@ -397,16 +401,6 @@ export interface PanelProps {
   apiCredentials?: RequestCredentials;
   /** `data` 模式下数据变化时回调（新增 / 编辑 / 删除 / 批量 / 导入） */
   onDataChange?: (rows: Row[]) => void;
-  /**
-   * 首屏预取（`ListResult`）。只配远程源时提供后挂载不再请求 list。
-   * 与 `data` + `baseRoute` 同时使用时：行仍用 `data`，`initial.total` 作为首屏条数
-   * （只传一页 `data` 时务必给出真实 `total`，否则用 `data.length`，不会臆造）。
-   * `initial.totals` 仅为兼容字段，页脚合计由面板按行数据自算，不读取它。
-   * 传入的 `data` 应与当前 `initialQuery`／地址栏页码一致（与只传 `initial` 相同约定）。
-   */
-  initial?: ListResult;
-  /** 初始查询（page / pageSize / sort / order / filters） */
-  initialQuery?: Partial<Query>;
   /** 主键字段，默认 id */
   rowKey?: string;
   /**
@@ -414,8 +408,11 @@ export interface PanelProps {
    * 例如 `preset`、`size`、`pageSize`、`pageSizeOptions`、`showFirstLast`、
    * `showQuickJumper`、`showTotal`、`disabled`、`class`、`messages`。
    * 运行时的页码、当前每页条数、总数和 `onChange` 由面板托管，不必也不应写
-   * `current`／`total`／`onChange`。初始每页条数写 `pageSize`（默认 20），
-   * 下拉选项写 `pageSizeOptions`（默认 [10, 20, 50, 100]）；未写的 `preset`／`size`
+   * `current`／`onChange`，也不要把 `page`／`total` 写成受控值或 getter。
+   * 初始页码写 `page`（默认 1），初始每页条数写 `pageSize`（默认 20），
+   * 首屏总条数种子写 `total`（与 `data` + `baseRoute` 同时用时作为首屏条数，
+   * 未写则用 `data.length`；只传当前页 `data` 时务必给出真实总数），
+   * 下拉选项写 `pageSizeOptions`（默认 [10, 20, 30, 40, 50, 100]）；未写的 `preset`／`size`
    * 按断点缺省：电脑端（`min-width: 1280px`）`full`／`md`，平板（`640px`–`1279.98px`）
    * `default`／`sm`，移动端（`max-width: 639.98px`）`simple`／`xs`。
    * 地址栏同步仍用根上的 `syncUrl`。内置仍默认关掉 Pagination 自带的总条数和跳转
@@ -471,12 +468,6 @@ export interface PanelProps {
   /** 任一写操作成功后回调 */
   onChanged?: () => void;
   /**
-   * @deprecated 改由 columns 驱动：写入 `{ type:"selection" }` 才显示多选勾选列。
-   * - `false`：仍强制去掉 selection 列（兼容）
-   * - 省略／`true`：不再自动前置勾选列；caps.remove 不足够单独打开
-   */
-  selectable?: boolean;
-  /**
    * 行是否禁用选择／删除／行内编辑（对齐旧清晰禁用；替代魔字段 `row.locked`）。
    * 缺省时回落 `!!row.locked` 以兼容旧数据。
    */
@@ -510,6 +501,12 @@ export interface PanelProps {
    * `{ prefix: "p1" }` 把参数写成 `p1_page`、`p1_sort`、`p1_name` 等。
    */
   syncUrl?: SyncUrl;
+  /**
+   * 选择每页条数时是否写入 cookie `pageSize`，默认 `true`。
+   * 初始条数：地址栏 `pageSize` 优先，其次读该 cookie，再才是
+   * `pagination.pageSize`。传 `false` 关闭读写。
+   */
+  pageSizeCookie?: boolean;
   /** 额外 class（加在卡片上） */
   class?: string;
   /**
@@ -813,7 +810,6 @@ export function DataPanel(props: PanelProps): JSXRenderable {
     (!!props.openViewOnRowClick && caps.view);
   /** 含 selection／index／actions 的完整列（selection 只在 columns 声明时出现；actions 缺省可兼容自动补） */
   const panelColumns = resolvePanelColumns(inputColumns, {
-    selectable: props.selectable,
     needActions,
   });
   /** 数据列（解析后，不含系统列） */
@@ -852,39 +848,42 @@ export function DataPanel(props: PanelProps): JSXRenderable {
       },
     )
     : {};
-  const iq = props.initialQuery ?? {};
+  const cookiePageSize = props.pageSizeCookie === false
+    ? undefined
+    : readPageSizeCookie();
+  const pag = props.pagination;
   let initialQuery: Query = {
-    page: urlPartial.page ?? iq.page ?? 1,
-    pageSize: urlPartial.pageSize ?? iq.pageSize ?? defaultPageSize,
-    sort: urlPartial.sort ?? iq.sort ?? (props.defaultSort?.prop ?? ""),
+    page: urlPartial.page ?? pag?.page ?? 1,
+    pageSize: urlPartial.pageSize ?? cookiePageSize ?? pag?.pageSize ??
+      defaultPageSize,
+    sort: urlPartial.sort ?? (props.defaultSort?.prop ?? ""),
     order: urlPartial.order ??
-      iq.order ??
       (props.defaultSort?.order === "desc" ? "desc" : "asc"),
     filters: {
-      ...(iq.filters ?? {}),
       ...(urlPartial.filters ?? {}),
       ...(props.fixed ?? {}),
     },
   };
 
-  // 首帧数据：data+baseRoute 用传入的 data；否则显式 initial，或同步数据源直接计算。
+  // 首帧数据：data+baseRoute 用传入的 data，总数用 pagination.total；否则同步数据源直接计算。
+  // 只传 baseRoute、不传 data 时不要因写了 pagination.total 就跳过请求（没有行）。
   // 同页多面板共用 URL page 时，小数据集易出现 page 越界 → rows=[] 且 total>0
   // （「暂无数据」+「第 11-6 条」）。load() 内已夹页，但有 first 时 onMount 不调 load，须在此夹。
   let first: ListResult | undefined = seedDataWithApi
     ? {
       rows: props.data ?? [],
-      total: typeof props.initial?.total === "number"
-        ? props.initial.total
+      total: typeof pag?.total === "number"
+        ? pag.total
         : (props.data ?? []).length,
     }
-    : props.initial;
+    : undefined;
   if (!first && ds.sync) first = ds.list(initialQuery) as ListResult;
   if (first) {
     const ps = Math.max(1, initialQuery.pageSize || defaultPageSize);
     const last = Math.max(1, Math.ceil(first.total / ps));
     if (initialQuery.page > last) {
       initialQuery = { ...initialQuery, page: last };
-      // 同步源按夹页后的 query 重算；纯 async+initial 等 onMount/load 再夹
+      // 同步源按夹页后的 query 重算；纯 async 源等 onMount/load 再夹
       if (ds.sync) first = ds.list(initialQuery) as ListResult;
     }
   }
@@ -1118,6 +1117,9 @@ export function DataPanel(props: PanelProps): JSXRenderable {
   };
 
   function setQuery(patch: Partial<Query>): void {
+    if (patch.pageSize != null && props.pageSizeCookie !== false) {
+      writePageSizeCookie(patch.pageSize);
+    }
     query.value = { ...query.value, ...patch };
     void load();
   }

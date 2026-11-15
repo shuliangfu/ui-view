@@ -126,6 +126,13 @@ const PAGINATION_API: ApiRow[] = [
       "为 true 时，页码/每页条数变化会写入 URL（?page=1&pageSize=10），不刷新页面。初始值需由调用方从 URL 读取后传入 current / pageSize 或 defaultCurrent / defaultPageSize",
   },
   {
+    name: "pageSizeCookie",
+    type: "boolean",
+    default: "true",
+    description:
+      "选择每页条数时写入 cookie pageSize（Path=/，一年，SameSite=Lax）。非受控时初始条数优先读该 cookie，没有再用 defaultPageSize。传 false 关闭读写。只改页码不写 cookie。",
+  },
+  {
     name: "size",
     type: '"xs" | "sm" | "md" | "lg"',
     default: '"md"',

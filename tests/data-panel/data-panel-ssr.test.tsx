@@ -122,26 +122,29 @@ describe("DataPanel SSR：首帧内容", () => {
     expect(h).not.toMatch(/dp-total-balance[^>]*>\s*32,500\.00/);
   });
 
-  it("initial.totals 不影响页脚：按 initial.rows 自算", async () => {
+  it("data + baseRoute 首屏按传入 data 自算合计", async () => {
     const page = data(20);
-    const h = await html({
-      data: undefined,
-      initial: { rows: page, total: 25, totals: { balance: 8968.6 } },
-      dataSource: {
-        list() {
-          return Promise.resolve({
-            rows: page,
-            total: 25,
-            totals: { balance: 8968.6 },
-          });
-        },
-      },
-    });
-    expect(h).toMatch(/dp-total-balance[^>]*>\s*21,000\.00/);
-    expect(h).not.toContain("8,968.60");
+    const orig = globalThis.fetch;
+    globalThis.fetch = ((() => {
+      throw new Error("list should not run on first paint");
+    }) as unknown) as typeof fetch;
+    try {
+      const h = await html({
+        panelKey: "seed-footer",
+        data: page,
+        baseRoute: "/api/users",
+        pagination: { total: 25 },
+        syncUrl: false,
+      });
+      expect(h).toMatch(/dp-total-balance[^>]*>\s*21,000\.00/);
+      expect(h).not.toContain("8,968.60");
+    } finally {
+      globalThis.fetch = orig;
+      panelHandles.delete("seed-footer");
+    }
   });
 
-  it("data + baseRoute 首屏按传入 data 自算合计，忽略 initial.totals", async () => {
+  it("data + baseRoute 首屏按传入 data 自算合计（短列表）", async () => {
     const rows = [
       {
         id: "1",
@@ -171,7 +174,7 @@ describe("DataPanel SSR：首帧内容", () => {
     const h = await html({
       data: rows,
       baseRoute: "/api/users",
-      initial: { rows, total: 3, totals: { balance: 8968.6 } },
+      pagination: { total: 3 },
       syncUrl: false,
     });
     expect(h).toMatch(/dp-total-balance[^>]*>\s*240\.00/);
@@ -197,14 +200,14 @@ describe("DataPanel SSR：首帧内容", () => {
     expect(h).not.toContain('data-testid="dp-page-3"');
   });
 
-  it("pageSize / defaultSort / initialQuery 影响首帧", async () => {
+  it("pageSize / defaultSort / pagination.page 影响首帧", async () => {
     const h = await html({
       pagination: { pageSize: 5, pageSizeOptions: [5, 10] },
       defaultSort: { prop: "balance", order: "desc" },
     });
     expect((h.match(/data-testid="dp-row-/g) ?? []).length).toBe(5);
     expect(h.indexOf("User 25")).toBeLessThan(h.indexOf("User 24"));
-    const h2 = await html({ initialQuery: { page: 2, pageSize: 10 } });
+    const h2 = await html({ pagination: { page: 2, pageSize: 10 } });
     expect(h2).toContain("第 11-20 条，共 25 条");
     expect(h2).toContain("User 11");
   });
@@ -213,7 +216,7 @@ describe("DataPanel SSR：首帧内容", () => {
     // 复现：共 6 条、pageSize 10、page=2 → 旧行为 rows=[]、「第 11-6 条」
     const h = await html({
       data: data(6),
-      initialQuery: { page: 2, pageSize: 10 },
+      pagination: { page: 2, pageSize: 10 },
     });
     expect(h).not.toContain('data-testid="dp-empty"');
     expect((h.match(/data-testid="dp-row-/g) ?? []).length).toBe(6);
@@ -222,13 +225,24 @@ describe("DataPanel SSR：首帧内容", () => {
     expect(h).toContain("User 1");
   });
 
-  it("initialQuery.filters 在首帧生效", async () => {
-    const h = await html({
-      search: { props: [{ name: "name", label: "姓名" }] },
-      initialQuery: { filters: { name: "User 2" } },
+  it("地址栏 filters 在首帧生效", async () => {
+    const g = globalThis as { location?: { search?: string } };
+    const prev = Object.getOwnPropertyDescriptor(globalThis, "location");
+    Object.defineProperty(globalThis, "location", {
+      configurable: true,
+      writable: true,
+      value: { search: "?name=User%202" },
     });
-    // User 2, User 20-25
-    expect(h).toContain("共 7 条记录");
+    try {
+      const h = await html({
+        search: { props: [{ name: "name", label: "姓名" }] },
+      });
+      // User 2, User 20-25
+      expect(h).toContain("共 7 条记录");
+    } finally {
+      if (prev) Object.defineProperty(globalThis, "location", prev);
+      else delete g.location;
+    }
   });
 });
 
@@ -489,17 +503,6 @@ describe("DataPanel SSR：能力开关", () => {
     expect(h).not.toContain(">操作</th>");
   });
 
-  it("selectable=false 去掉选择列", async () => {
-    expect(
-      await html({
-        columns: withSelection(),
-        selectable: false,
-      }),
-    ).not.toContain(
-      'data-testid="dp-select-all"',
-    );
-  });
-
   it("空数据显示空状态且没有合计行", async () => {
     const h = await html({ data: [] });
     expect(h).toContain('data-testid="dp-empty"');
@@ -521,23 +524,33 @@ describe("DataPanel SSR：能力开关", () => {
     expect(h).toContain('data-testid="dp-empty"');
   });
 
-  it("initial 预取数据直接渲染，且不调用 list", async () => {
-    let calls = 0;
-    const ds: DataSource = {
-      list() {
-        calls++;
-        return Promise.resolve({ rows: [], total: 0 });
-      },
-    };
-    const h = await html({
-      data: undefined,
-      dataSource: ds,
-      initial: { rows: data(2), total: 2 },
-      form: undefined,
-    });
-    expect(calls).toBe(0);
-    expect(h).toContain("共 2 条记录");
-    expect(h).toContain("User 2");
+  it("data + baseRoute + pagination.total 首屏直接渲染，且不调用 list", async () => {
+    const calls: string[] = [];
+    const orig = globalThis.fetch;
+    globalThis.fetch = ((input: RequestInfo | URL) => {
+      calls.push(String(input));
+      return Promise.resolve(
+        new Response(JSON.stringify({ rows: [], total: 0 }), {
+          headers: { "content-type": "application/json" },
+        }),
+      );
+    }) as typeof fetch;
+    try {
+      const h = await html({
+        panelKey: "seed-prefetch",
+        data: data(2),
+        baseRoute: "/api/users",
+        pagination: { total: 2 },
+        form: undefined,
+        syncUrl: false,
+      });
+      expect(calls).toEqual([]);
+      expect(h).toContain("共 2 条记录");
+      expect(h).toContain("User 2");
+    } finally {
+      globalThis.fetch = orig;
+      panelHandles.delete("seed-prefetch");
+    }
   });
 
   it("同步数据源（sync: true）首帧直出", async () => {
@@ -584,7 +597,7 @@ describe("DataPanel SSR：能力开关", () => {
     }
   });
 
-  it("data + baseRoute：initial.total 作为首屏总数，不按 data.length 臆造", async () => {
+  it("data + baseRoute：pagination.total 作为首屏总数，不按 data.length 臆造", async () => {
     const orig = globalThis.fetch;
     globalThis.fetch = ((() => {
       throw new Error("list should not run on first paint");
@@ -597,7 +610,7 @@ describe("DataPanel SSR：能力开关", () => {
           { id: "2", name: "李四", status: "off", balance: 20 },
         ],
         baseRoute: "/api/users",
-        initial: { rows: [], total: 128 },
+        pagination: { total: 128 },
         syncUrl: false,
       });
       expect(h).toContain("张三");
@@ -607,6 +620,29 @@ describe("DataPanel SSR：能力开关", () => {
     } finally {
       globalThis.fetch = orig;
       panelHandles.delete("seed-total");
+    }
+  });
+
+  it("只传 baseRoute + pagination.total 不跳过空首屏", async () => {
+    const orig = globalThis.fetch;
+    globalThis.fetch = ((() => {
+      throw new Error("ssr should not request list");
+    }) as unknown) as typeof fetch;
+    try {
+      const h = await html({
+        panelKey: "seed-total-only",
+        data: undefined,
+        baseRoute: "/api/users",
+        pagination: { total: 128 },
+        syncUrl: false,
+        form: undefined,
+      });
+      expect(h).toContain('data-testid="dp-empty"');
+      expect(h).toContain("共 0 条记录");
+      expect(h).not.toContain("共 128 条记录");
+    } finally {
+      globalThis.fetch = orig;
+      panelHandles.delete("seed-total-only");
     }
   });
 
@@ -1202,7 +1238,7 @@ describe("DataPanel SSR：勾选列只由 columns 的 type:selection 决定", ()
 describe("DataPanel SSR：工具栏上下文与 syncUrl", () => {
   it("工具栏 show／disable 接收 { selected, rows, query }；零参函数仍可用", async () => {
     const h = await html({
-      initialQuery: { page: 2, pageSize: 10 },
+      pagination: { page: 2, pageSize: 10 },
       caps: {
         create: false,
         print: false,
@@ -1306,7 +1342,7 @@ describe("DataPanel SSR：工具栏上下文与 syncUrl", () => {
       const on = await html();
       expect(on).toContain("第 11-20 条，共 25 条");
       expect(on).toContain("User 11");
-      const off = await html({ syncUrl: false, initialQuery: { page: 1 } });
+      const off = await html({ syncUrl: false });
       expect(off).toContain("第 1-20 条，共 25 条");
       expect(off).toContain("User 1");
       const ignoredPrefix = await html({ syncUrl: { prefix: "p1" } });

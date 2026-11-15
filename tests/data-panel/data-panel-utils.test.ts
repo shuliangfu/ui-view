@@ -182,7 +182,7 @@ describe("展示值", () => {
     // 无显式 selection 时不自动前置（needSelection 已忽略）；actions 仍可末尾兼容补
     const auto = resolvePanelColumns(
       [{ prop: "name", label: "姓名" }],
-      { needSelection: true, needActions: true, selectable: true },
+      { needSelection: true, needActions: true },
     );
     expect(auto.map((c) => c.type)).toEqual([
       undefined,
@@ -196,20 +196,20 @@ describe("展示值", () => {
     );
     expect(withIdx.map((c) => c.type)).toEqual(["index", undefined]);
     expect(withIdx[0].label).toBe("#");
-    // selectable:false 去掉显式 selection；未声明 index 则没有序号列
-    const noSel = resolvePanelColumns(
+    // 未声明 index 则没有序号列；声明了 selection 就会保留勾选列
+    const noIdx = resolvePanelColumns(
       [{ type: "selection" }, { prop: "name", label: "姓名" }],
-      { needSelection: true, selectable: false, needActions: false },
+      { needSelection: true, needActions: false },
     );
-    expect(noSel.some(isSelectionColumn)).toBe(false);
-    expect(noSel.some((c) => c.type === "index")).toBe(false);
-    expect(noSel[0].prop).toBe("name");
+    expect(noIdx.some(isSelectionColumn)).toBe(true);
+    expect(noIdx.some((c) => c.type === "index")).toBe(false);
+    expect(noIdx[1].prop).toBe("name");
   });
 
   it("resolvePanelColumns：勾选列只由 columns 的 type:selection 决定", () => {
     const absent = resolvePanelColumns(
       [{ prop: "name", label: "姓名" }],
-      { needSelection: true, selectable: true, needActions: false },
+      { needSelection: true, needActions: false },
     );
     expect(absent.some(isSelectionColumn)).toBe(false);
 

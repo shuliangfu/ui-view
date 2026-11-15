@@ -449,7 +449,7 @@ describe("resolvePanelPagination", () => {
     expect(r.preset).toBe("full");
     expect(r.size).toBe("md");
     expect(r.pageSize).toBe(20);
-    expect(r.pageSizeOptions).toEqual([10, 20, 50, 100]);
+    expect(r.pageSizeOptions).toEqual([10, 20, 30, 40, 50, 100]);
     expect(r.rest).toEqual({});
   });
 
@@ -479,5 +479,16 @@ describe("resolvePanelPagination", () => {
       size: "lg",
       disabled: true,
     });
+  });
+
+  it("pagination.page／total 不进入 rest，避免钉死底栏", () => {
+    const r = resolvePanelPagination(
+      { page: 3, pageSize: 10, total: 128, showFirstLast: true },
+      auto,
+    );
+    expect(r.pageSize).toBe(10);
+    expect(r.rest).toEqual({ showFirstLast: true });
+    expect("page" in r.rest).toBe(false);
+    expect("total" in r.rest).toBe(false);
   });
 });

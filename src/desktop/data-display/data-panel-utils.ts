@@ -275,7 +275,7 @@ export function pageList(cur: number, last: number): (number | "…")[] {
 export const DEFAULT_DATA_PANEL_PAGE_SIZE = 20;
 
 /** 每页条数下拉缺省选项 */
-export const DEFAULT_DATA_PANEL_PAGE_SIZES = [10, 20, 50, 100];
+export const DEFAULT_DATA_PANEL_PAGE_SIZES = [10, 20, 30, 40, 50, 100];
 
 /** 查询 → URLSearchParams（`forUrl` 时省略默认值，用于地址栏同步） */
 /** 给查询参数加可选前缀（`p1` → `p1_page`）。空／未传则原名。 */
@@ -542,8 +542,6 @@ export function isSystemColumn(c: Column): boolean {
 }
 
 export type ResolvePanelColumnsOptions = {
-  /** @deprecated 顶层 selectable：false 强制去掉 selection 列；true／省略不会再自动补勾选列 */
-  selectable?: boolean;
   /**
    * @deprecated 已忽略。勾选列只由 columns 里的 `{ type:"selection" }` 决定，
    * caps.remove 不再自动前置多选列。
@@ -564,11 +562,11 @@ export type ResolvePanelColumnsOptions = {
 
 /**
  * 解析面板列：规范化 selection／index／actions，并按需兼容补系统列。
- * - `{ type:"selection" }`：prop／label 可省（默认 `__select`／`""`）；有则显示勾选列。`selectable:false` 时仍剔除（兼容）
+ * - `{ type:"selection" }`：prop／label 可省（默认 `__select`／`""`）；有则显示勾选列。
  * - `{ type:"index" }`：prop／label 可省（默认 `__index`／`"#"`）；位置随 columns 写入序
  * - `{ type:"actions" }`：prop／label 可省（默认 `__actions`／`""`，表头回落 messages.actions）
  * - 未声明 index 且 autoIndex===true：前置默认序号列（旧行为，需显式打开）
- * - 未声明 selection：不自动补勾选列（needSelection／selectable:true 均不足够）
+ * - 未声明 selection：不自动补勾选列（needSelection 已忽略，不足够单独打开）
  * - 未声明 actions 且 needActions：末尾追加操作列（兼容旧「有钮即出列」）
  */
 
@@ -673,9 +671,6 @@ export function resolvePanelColumns(
       prop: PANEL_COL_ACTIONS,
       label: "",
     }];
-  }
-  if (opts.selectable === false) {
-    out = out.filter((c) => !isSelectionColumn(c));
   }
   return out;
 }
@@ -1498,8 +1493,9 @@ export function pickPanelPaginationProps(
 
 /**
  * 合并 `pagination` 与断点缺省。
- * `preset`／`size` 未写时走断点；`pageSize` 默认 20，`pageSizeOptions` 默认 [10, 20, 50, 100]。
- * preset／size／pageSize／pageSizeOptions 从 rest 里拿掉，避免再传给 Pagination（运行时页码和条数由面板托管）。
+ * `preset`／`size` 未写时走断点；`pageSize` 默认 20，`pageSizeOptions` 默认 [10, 20, 30, 40, 50, 100]。
+ * preset／size／pageSize／pageSizeOptions／page／total 从 rest 里拿掉，避免再传给
+ * Pagination（运行时页码、条数和总数由面板托管；page／total 只作首屏种子）。
  */
 export function resolvePanelPagination(
   cfg: PanelPaginationConfig | undefined,
@@ -1511,7 +1507,7 @@ export function resolvePanelPagination(
   pageSizeOptions: number[];
   rest: Omit<
     PanelPaginationConfig,
-    "preset" | "size" | "pageSize" | "pageSizeOptions"
+    "preset" | "size" | "pageSize" | "pageSizeOptions" | "page" | "total"
   >;
 } {
   const picked = pickPanelPaginationProps(cfg);
@@ -1525,6 +1521,8 @@ export function resolvePanelPagination(
     size: _size,
     pageSize: _pageSize,
     pageSizeOptions: _pageSizeOptions,
+    page: _page,
+    total: _total,
     ...rest
   } = picked;
   return { preset, size, pageSize, pageSizeOptions, rest };

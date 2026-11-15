@@ -15,13 +15,18 @@ export {
 } from "./Sidebar.tsx";
 export {
   defaultPaginationMessages,
+  PAGE_SIZE_COOKIE,
   Pagination,
   PAGINATION_PRESET_FLAGS,
   type PaginationMessages,
   type PaginationPreset,
   type PaginationProps,
   type PaginationSize,
+  parsePageSize,
+  readPageSizeCookie,
+  resolvePageSize,
   resolvePaginationPreset,
+  writePageSizeCookie,
 } from "./Pagination.tsx";
 export { Menu, type MenuItem, type MenuProps } from "./Menu.tsx";
 export {

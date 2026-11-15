@@ -187,7 +187,7 @@ const DATA_PANEL_API: DocsApiTableRow[] = [
     type: "PanelPaginationConfig",
     default: "随断点",
     description:
-      "底栏分页配置，透传 Pagination 的展示参数（preset、size、pageSize、pageSizeOptions、showFirstLast、showPrevNext、showPageNumbers、showQuickJumper、showTotal、disabled、class、testIdPrefix、messages）。运行时的页码、当前每页条数、总数和 onChange 由面板托管，不必写 current／total／onChange。初始每页条数写 pageSize（默认 20），下拉选项写 pageSizeOptions（默认 [10, 20, 50, 100]）；未写的 preset／size 按断点缺省：电脑端（min-width: 1280px）full／md，平板（640px–1279.98px）default／sm，移动端（max-width: 639.98px）simple／xs。地址栏同步仍用根上的 syncUrl。本插槽默认关掉 Pagination 自带总条数和跳转（左侧条数文案和 full 档右侧跳转由面板渲染）；显式 showQuickJumper: true 时改用 Pagination 自带跳转。详见 PanelPaginationConfig 表。",
+      "底栏分页配置，透传 Pagination 的展示参数（preset、size、showFirstLast、showPrevNext、showPageNumbers、showQuickJumper、showTotal、disabled、class、testIdPrefix、messages）。运行时的页码、当前每页条数、总数和 onChange 由面板托管，不必写 current／onChange，也不要把 page／total 写成受控值。初始页码写 page（默认 1），初始每页条数写 pageSize（默认 20），首屏总条数种子写 total（与 data + baseRoute 同时用时作为首屏条数，未写则用 data.length），下拉选项写 pageSizeOptions（默认 [10, 20, 30, 40, 50, 100]）；未写的 preset／size 按断点缺省：电脑端（min-width: 1280px）full／md，平板（640px–1279.98px）default／sm，移动端（max-width: 639.98px）simple／xs。地址栏同步仍用根上的 syncUrl。本插槽默认关掉 Pagination 自带总条数和跳转（左侧条数文案和 full 档右侧跳转由面板渲染）；显式 showQuickJumper: true 时改用 Pagination 自带跳转。详见 PanelPaginationConfig 表。",
   },
   {
     name: "defaultSort",
@@ -200,13 +200,6 @@ const DATA_PANEL_API: DocsApiTableRow[] = [
     type: "Record<string,string>",
     default: "-",
     description: "固定过滤，并入每次查询",
-  },
-  {
-    name: "initial / initialQuery",
-    type: "ListResult / Partial<Query>",
-    default: "-",
-    description:
-      "服务端预取首屏（ListResult）／初始查询。只配远程源时有 initial 则挂载后不再请求。与 data + baseRoute 同时用时：行仍用 data；initial.total 作为首屏条数。只传当前页 data 时请给出真实 total，否则用 data.length，不会臆造更大的总数。initial.totals 仅为兼容字段，页脚合计由面板按行数据自算，不读取它。data 应与当前页码／查询一致",
   },
   {
     name: "caps",
@@ -317,13 +310,6 @@ const DATA_PANEL_API: DocsApiTableRow[] = [
       "点击行是否打开详情。默认 false，只能通过操作列眼睛打开。为 true 且 caps.view 时，点击行（避开勾选、按钮、链接）打开详情。若同时传了 onRowClick，只走回调",
   },
   {
-    name: "selectable",
-    type: "boolean",
-    default: "（按需）",
-    description:
-      '@deprecated 顶层开关。多选勾选列只由 columns 里的 `{ type:"selection" }` 决定（prop／label 可省）。false＝仍强制去掉 selection（兼容）；省略／true 以及 caps.remove 都不会再自动前置勾选列。',
-  },
-  {
     name: "onChanged",
     type: "() => void",
     default: "-",
@@ -335,6 +321,13 @@ const DATA_PANEL_API: DocsApiTableRow[] = [
     default: "true",
     description:
       '分页、排序默认与地址栏双向同步；配置了 search 时搜索字段一并同步。传 false 关闭（抽屉／同页多面板互不抢参数）。传 { prefix: "p1" } 把 page／pageSize／sort／order／搜索字段写成 p1_page 等',
+  },
+  {
+    name: "pageSizeCookie",
+    type: "boolean",
+    default: "true",
+    description:
+      "选择每页条数时写入 cookie pageSize（Path=/，一年，SameSite=Lax）。初始条数：地址栏 pageSize 优先，其次读该 cookie，再才是 pagination.pageSize。传 false 关闭读写。只改页码不写 cookie。",
   },
   {
     name: "class",
@@ -484,7 +477,7 @@ import type { Column, FormField, Row, SearchField } from "@dreamer/ui-view/data-
 ${DEMO_COMMON_SETUP_CODE}
 
 // 首屏用这 3 行（刷新浏览器也不会先出空表）。
-// 总数 3；若 data 只是当前页、真实总数更大，请再传 initial={{ total: 128 }}。
+// 总数 3；若 data 只是当前页、真实总数更大，请再传 pagination={{ total: 128 }}。
 const rows: Row[] = [
   {
     id: "1",
@@ -797,7 +790,7 @@ const columnsWithoutInlineStatus = columns.map((c) =>
   data={rows}
   columns={columnsWithoutInlineStatus}
   search={{ title: "筛选条件", props: search }}
-  initialQuery={{ filters: { role: "admin" } }}
+  // 搜索条件从地址栏回填（如 ?role=admin）；不进地址栏的条件请用 fixed。
   caps={{ create: false }}
 />
 `;
@@ -2626,7 +2619,6 @@ const rows = makeDemoRows(8);
               c.prop === "status" ? { ...c, inline: undefined } : c
             )}
             search={{ title: "筛选条件", props: DEMO_SEARCH }}
-            initialQuery={{ filters: { role: "admin" } }}
             caps={{ create: false }}
           />
         </DocsDemo>
@@ -2968,7 +2960,7 @@ const rows = makeDemoRows(8);
             时，首屏用传入的张三、李四、王五渲染，挂载时不请求接口，刷新浏览器也不会先闪空表。工具栏刷新、翻页、搜索、排序再走
             {" "}
             <code class="text-xs">/api/users</code>
-            。总数优先用 <code class="text-xs">initial.total</code>
+            。总数优先用 <code class="text-xs">pagination.total</code>
             ，未传则用 <code class="text-xs">data.length</code>
             ；只传当前页数据时请给出真实总数，不要让面板去猜。
           </Paragraph>
@@ -3967,8 +3959,10 @@ const rows = makeDemoRows(8);
           <code class="text-xs">actions</code>） 写在同一份本地定义里（含{" "}
           <code class="text-xs">rows</code>）。服务端场景可去掉{" "}
           <code class="text-xs">data</code>，改用{" "}
-          <code class="text-xs">dataSource</code>＋
-          <code class="text-xs">initial</code>。
+          <code class="text-xs">dataSource</code> 或{" "}
+          <code class="text-xs">baseRoute</code>
+          ；首屏有行时传 <code class="text-xs">data</code>，总数写在{" "}
+          <code class="text-xs">pagination.total</code>。
         </Paragraph>
         <CodeBlock
           title="完整本地示例（含 rows）"
@@ -4483,7 +4477,7 @@ function DataPanelTabsDemo() {
           <code class="text-xs">data</code>
           渲染，挂载时不请求
           list，避免空表闪动；工具栏刷新、翻页、搜索、排序、切 Tab 再走
-          API。总数优先用 <code class="text-xs">initial.total</code>
+          API。总数优先用 <code class="text-xs">pagination.total</code>
           ，未传则用 <code class="text-xs">data.length</code>
           ，不会臆造更大的总数（只传当前页数据时请给出真实 total）。
           <code class="text-xs">baseRoute</code>

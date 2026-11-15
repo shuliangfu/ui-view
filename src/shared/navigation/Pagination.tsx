@@ -4,6 +4,7 @@
  * `full` 含第一页／最后一页（双箭头《》）、页码、每页条数、跳转、总条数；
  * `default` 为上一页／下一页＋页码；`simple` 为上一页／下一页＋「第 n / m 页」。
  * pageSize 选择器用库内 {@link Select}（自绘下拉），不渲染原生 `<select>`。
+ * 选择每页条数时默认写入 cookie `pageSize`（可用 `pageSizeCookie={false}` 关闭）。
  */
 
 import { createSignal } from "@dreamer/view";
@@ -20,6 +21,15 @@ import {
   type PaginationPreset,
   resolvePaginationPreset,
 } from "./pagination-utils.ts";
+import { readPageSizeCookie, writePageSizeCookie } from "./page-size-cookie.ts";
+
+export {
+  PAGE_SIZE_COOKIE,
+  parsePageSize,
+  readPageSizeCookie,
+  resolvePageSize,
+  writePageSizeCookie,
+} from "./page-size-cookie.ts";
 
 export type { PaginationPreset } from "./pagination-utils.ts";
 export {
@@ -122,6 +132,12 @@ export interface PaginationProps {
    */
   syncUrl?: boolean;
   /**
+   * 选择每页条数时是否写入 cookie `pageSize`，默认 `true`。
+   * 非受控时，初始条数优先读该 cookie，没有再用 `defaultPageSize`。
+   * 传 `false` 关闭读写。
+   */
+  pageSizeCookie?: boolean;
+  /**
    * 尺寸：`xs`｜`sm`｜`md`｜`lg`；默认 `md`（与改造前视觉一致）。
    * 同步作用于页码按钮、每页条数 Select、快速跳转输入框。
    */
@@ -218,6 +234,7 @@ export function Pagination(props: PaginationProps): JSXRenderable {
     onChange: onChangeProp,
     disabled = false,
     syncUrl = false,
+    pageSizeCookie = true,
     size = "md",
     class: className,
     messages,
@@ -232,7 +249,10 @@ export function Pagination(props: PaginationProps): JSXRenderable {
   const iconCls = sizeIconCls[size];
 
   const internalCurrentRef = createSignal(defaultCurrent);
-  const internalPageSizeRef = createSignal(defaultPageSize);
+  const cookieSize = pageSizeCookie !== false
+    ? readPageSizeCookie()
+    : undefined;
+  const internalPageSizeRef = createSignal(cookieSize ?? defaultPageSize);
 
   const activeCls =
     "border-blue-600 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 pointer-events-none";
@@ -246,6 +266,9 @@ export function Pagination(props: PaginationProps): JSXRenderable {
     if (props.current === undefined) internalCurrentRef.value = page;
     if (pageSize != null && props.pageSize === undefined) {
       internalPageSizeRef.value = pageSize;
+    }
+    if (pageSize != null && pageSizeCookie !== false) {
+      writePageSizeCookie(pageSize);
     }
     if (syncUrl) {
       const ps = pageSize ??

@@ -647,9 +647,11 @@ export {
   openDataPanelView,
   openDataViewForm,
   openNotification,
+  PAGE_SIZE_COOKIE,
   PageHeader,
   Pagination,
   Paragraph,
+  parsePageSize,
   Password,
   Popconfirm,
   Popover,
@@ -658,6 +660,7 @@ export {
   RadioGroup,
   Rate,
   readMaybeSignal,
+  readPageSizeCookie,
   refreshDataPanel,
   removeMessage,
   removeToast,
@@ -665,6 +668,7 @@ export {
   resolveBatchActionCtrl,
   resolveModalWidth,
   resolveOptions,
+  resolvePageSize,
   resolvePaginationPreset,
   resolveRowActionCtrl,
   resolveUiViewUploadAction,
@@ -710,6 +714,7 @@ export {
   uploadFileSimple,
   uploadFileViaUiViewBase,
   useFormStore,
+  writePageSizeCookie,
 } from "./desktop/mod.ts";
 /**
  * 各国家/地区 1:1 国旗（`build-country-flags` 生成，`IconFlag`+两字母 ISO 大写，如 `IconFlagCN`）

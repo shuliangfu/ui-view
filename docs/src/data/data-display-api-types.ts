@@ -2037,7 +2037,7 @@ export const DATA_ALERT_CONFIG_API: DocsApiTableRow[] = [
   },
 ];
 
-/** DataPanel 底栏 pagination 配置（透传 Pagination，不含由面板托管的页码／条数／总数／onChange） */
+/** DataPanel 底栏 pagination 配置（透传 Pagination 展示参数；page／pageSize／total 仅为首屏种子，运行时页码／条数／总数／onChange 由面板托管） */
 export const PANEL_PAGINATION_CONFIG_API: DocsApiTableRow[] = [
   {
     name: "preset",
@@ -2053,16 +2053,30 @@ export const PANEL_PAGINATION_CONFIG_API: DocsApiTableRow[] = [
     description: "分页尺寸。不写时随断点：电脑端 md，平板 sm，移动端 xs",
   },
   {
+    name: "page",
+    type: "number",
+    default: "1",
+    description:
+      "初始页码。运行时页码由面板托管，不要写成 getter，不要当受控 current 传给底栏 Pagination。地址栏 page 优先于本字段",
+  },
+  {
     name: "pageSize",
     type: "number",
     default: "20",
     description:
-      "初始每页条数。运行时当前条数由面板托管，不要把 Pagination 的 current／onChange 写在这里。也可由 createApiDataSource({ pageSize }) 或 initialQuery.pageSize 给出",
+      "初始每页条数。运行时当前条数由面板托管，不要写成 getter，不要把 Pagination 的 current／onChange 写在这里。也可由 createApiDataSource({ pageSize }) 给出。初始条数：地址栏 pageSize 优先，其次 cookie，再才是本字段",
+  },
+  {
+    name: "total",
+    type: "number",
+    default: "-",
+    description:
+      "首屏总条数种子。与 data + baseRoute 同时用时作为首屏总数；未写则用 data.length。只传当前页 data 时务必给出真实总数。运行时 total 由面板托管，不要把这个值当受控 total 一直传给 Pagination。只传 baseRoute、不传 data 时写了本字段也不会跳过首屏请求",
   },
   {
     name: "pageSizeOptions",
     type: "number[]",
-    default: "[10, 20, 50, 100]",
+    default: "[10, 20, 30, 40, 50, 100]",
     description: "每页条数下拉选项",
   },
   {
@@ -2503,7 +2517,7 @@ export const DATA_DISPLAY_TYPE_SECTIONS: DataDisplayTypeSection[] = [
     title: "PanelPaginationConfig",
     rows: PANEL_PAGINATION_CONFIG_API,
     lead:
-      "DataPanel 的 pagination 对象配置：透传 Pagination 的展示参数。运行时的页码、当前每页条数、总数和 onChange 由面板托管；初始 pageSize 默认 20，pageSizeOptions 默认 [10, 20, 50, 100]；未写的 preset／size 走断点。地址栏同步仍用根上的 syncUrl。messages 的字段见 PaginationMessages 表。",
+      "DataPanel 的 pagination 对象配置：透传 Pagination 的展示参数。运行时的页码、当前每页条数、总数和 onChange 由面板托管；初始 pageSize 默认 20，pageSizeOptions 默认 [10, 20, 30, 40, 50, 100]；未写的 preset／size 走断点。地址栏同步仍用根上的 syncUrl。messages 的字段见 PaginationMessages 表。",
   },
   {
     id: "PaginationMessages",

@@ -775,11 +775,16 @@ export {
   defaultPaginationMessages,
   initAnchorSpy,
   Menu,
+  PAGE_SIZE_COOKIE,
   PageHeader,
   Pagination,
+  parsePageSize,
+  readPageSizeCookie,
+  resolvePageSize,
   resolvePaginationPreset,
   Sidebar,
   Steps,
+  writePageSizeCookie,
 } from "./navigation/mod.ts";
 export type {
   AffixProps,

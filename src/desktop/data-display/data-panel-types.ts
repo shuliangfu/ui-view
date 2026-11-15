@@ -20,8 +20,11 @@ export type ViewDescriptionsProps = Omit<DescriptionsProps, "items" | "title">;
 /**
  * 可写在 DataPanel `pagination` 上的 Pagination 参数。
  * 运行时的页码、当前每页条数、总数和 onChange 由面板托管，不必也不应在此写
- * current／total／onChange／syncUrl。初始每页条数写 `pageSize`（默认 20），
- * 下拉选项写 `pageSizeOptions`（默认 [10, 20, 50, 100]）。地址栏同步仍用根上的 `syncUrl`。
+ * current／onChange／syncUrl，也不要把 `page`／`total` 写成受控值或 getter。
+ * 初始页码写 `page`（默认 1），初始每页条数写 `pageSize`（默认 20），
+ * 首屏总条数种子写 `total`（与 `data` + `baseRoute` 同时用时作为首屏条数，
+ * 未写则用 `data.length`），下拉选项写 `pageSizeOptions`（默认 [10, 20, 30, 40, 50, 100]）。
+ * 地址栏同步仍用根上的 `syncUrl`。
  */
 export type PanelPaginationConfig =
   & Omit<
@@ -36,8 +39,20 @@ export type PanelPaginationConfig =
     | "pageSize"
   >
   & {
+    /**
+     * 初始页码，默认 1。运行时页码仍由面板托管，不要写成 getter，
+     * 不要当受控 current 传给底栏 Pagination（否则翻页会被钉死）。
+     */
+    page?: number;
     /** 初始每页条数，默认 20。运行时当前条数由面板托管，不要写成 getter。 */
     pageSize?: number;
+    /**
+     * 首屏总条数种子。运行时 total 仍由面板托管，不要把这个值当受控 total
+     * 一直传给 Pagination。与 `data` + `baseRoute` 同时用时作为首屏条数；
+     * 未写则用 `data.length`。只传 `baseRoute`、不传 `data` 时写了本字段
+     * 也不会跳过首屏请求。
+     */
+    total?: number;
   };
 
 /** 数据行：键值对；主键字段默认为 `id`（见 `PanelProps.rowKey`）。 */
@@ -62,7 +77,7 @@ export type ColumnType =
   | "bool"
   | "image"
   | "link"
-  /** 多选勾选列（只由 columns 声明驱动；旧顶层 selectable／caps 不再单独打开） */
+  /** 多选勾选列（只由 columns 声明 `{ type:"selection" }` 打开） */
   | "selection"
   /** 行号／序号列（columns 驱动；label 可省，默认 "#"） */
   | "index"
