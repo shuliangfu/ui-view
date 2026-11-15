@@ -4471,9 +4471,11 @@ function DataPanelTabsDemo() {
           <code class="text-xs">baseRoute</code>
           （API 源）＞ 只传 <code class="text-xs">data</code>
           （本地源、不请求接口）。同时传 <code class="text-xs">data</code>
-          {" 和 "}
+          {" 和远程源（"}
           <code class="text-xs">baseRoute</code>
-          时，首屏（含 SSR／刷新浏览器）用传入的{" "}
+          {" 或自定义 "}
+          <code class="text-xs">dataSource</code>
+          ）时，首屏（含 SSR／刷新浏览器）用传入的{" "}
           <code class="text-xs">data</code>
           渲染，挂载时不请求
           list，避免空表闪动；工具栏刷新、翻页、搜索、排序、切 Tab 再走

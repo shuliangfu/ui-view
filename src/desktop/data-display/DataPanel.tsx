@@ -11,7 +11,7 @@
  * - `dataSource`：自定义 {@link DataSource}，`list(query)` 返回当前页，其余写操作按需提供。
  * - `baseRoute`：未传 `dataSource` 时 {@link createApiDataSource} 作为远程源（1 段时拼显式 `resource`，未传则自动取当前页面路由；≥2 段直接作根）。
  * - 拉数优先级：显式 `dataSource` ＞ `baseRoute`（API）＞ 只传 `data`（本地源）。
- * - 同时传 `data` 和 `baseRoute`：首屏（含 SSR／水合）用传入的 `data` 渲染，挂载时不请求 list；工具栏刷新、翻页、搜索、排序、切 Tab 再走 API。总数优先用 `pagination.total`，未传则用 `data.length`（不会臆造更大的总数）。只传 `baseRoute`、不传 `data` 时，即使写了 `pagination.total` 也会在挂载后请求 list。
+ * - 同时传 `data` 和远程源（`baseRoute` 或自定义 `dataSource`）：首屏（含 SSR／水合）用传入的 `data` 渲染，挂载时不请求 list；工具栏刷新、翻页、搜索、排序、切 Tab 再走 API。总数优先用 `pagination.total`，未传则用 `data.length`（不会臆造更大的总数）。只传远程源、不传 `data` 时，即使写了 `pagination.total` 也会在挂载后请求 list。同步 `dataSource` 仍按自身 `list` 出首屏，不以 `data` 做种子。
  * - 列 `{ total: true }` 的页脚合计由面板根据行数据自动求和，不使用 `list()`／接口返回的 `totals`。只传 `data`（本地源，含 `getRows`）时对当前过滤结果全集求和；分页接口／自定义源只对当前已加载的行求和，不会为合计偷偷拉全量。
  *
  * **SSR / 水合**：布尔属性只在为 true 时输出；`sync` 数据源（含只传 `data`）以及 `data`+`baseRoute` 的首屏数据都同步渲染，水合前后 DOM 一致。
@@ -364,16 +364,19 @@ export interface PanelProps {
   view?: ViewConfig;
   /**
    * 行数据。只传 `data` 时用内置本地数据源，不请求接口。
-   * 与 `baseRoute` 同时传入时：首屏用这份数据渲染（挂载不请求 list），
-   * 刷新／翻页／搜索／排序／切 Tab 再走 API。优先级低于显式 `dataSource`。
+   * 与 `baseRoute` 或自定义异步 `dataSource` 同时传入时：首屏用这份数据渲染（挂载不请求 list），
+   * 刷新／翻页／搜索／排序／切 Tab 再走远程源。后续拉数仍优先走显式 `dataSource`。
    */
   data?: Row[];
-  /** 自定义数据源；若传入则走它，勿再自造拉数（优先于 `data`／`baseRoute`） */
+  /**
+   * 自定义数据源；若传入则后续拉数走它，勿再自造拉数（优先于 `baseRoute`）。
+   * 与 `data` 同时传入时，异步源的首屏仍用 `data`，挂载不请求 list。
+   */
   dataSource?: DataSource;
   /**
    * 路由前缀或完整资源根（如 `"/api"` 或 `"/api/users"`）。
    * 未传 `dataSource` 时调用 {@link createApiDataSource}。
-   * 只传 `baseRoute` 时首屏后会拉 list；与 `data` 同时传入时首屏不请求，后续刷新／翻页再请求。
+   * 只传远程源、不传 `data` 时首屏后会拉 list；与 `data` 同时传入时首屏不请求，后续刷新／翻页再请求。
    * 去首尾 `/` 分段：≥2 段直接作根；仅 1 段再拼 {@link PanelProps.resource}，
    * 未传 `resource` 时自动取当前页面路由（如打开 `/rbac/admins` 且 `baseRoute="/api"` → `/api/rbac/admins`）。
    * 不要把 `index` 拼进路径。
@@ -713,8 +716,6 @@ export function DataPanel(props: PanelProps): JSXRenderable {
       throw e;
     }
   }
-  const seedDataWithApi = props.data !== undefined && !!props.baseRoute &&
-    !props.dataSource;
   const ds: DataSource = props.dataSource
     ? withTabOnList(props.dataSource)
     : props.baseRoute
@@ -731,6 +732,11 @@ export function DataPanel(props: PanelProps): JSXRenderable {
       writable: canWriteLocal,
     })
     : emptyLocalSource();
+  // 传入 data 且源是远程异步时，首屏用 data，挂载不请求 list。
+  // 同步 dataSource 仍按自身 list 出首屏（例如本地分页演示）。
+  const seedDataWithApi = props.data !== undefined &&
+    (!!props.baseRoute || !!props.dataSource) &&
+    !ds.sync;
 
   const sourcePageSize = (() => {
     const n = (ds as ApiDataSource).pageSize;

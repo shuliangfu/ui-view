@@ -597,6 +597,36 @@ describe("DataPanel SSR：能力开关", () => {
     }
   });
 
+  it("同时传 data、baseRoute 与自定义异步 dataSource：首帧用 data 渲染且不请求 list", async () => {
+    let listed = 0;
+    const dataSource: DataSource = {
+      list() {
+        listed++;
+        return Promise.resolve({
+          rows: [{ id: "9", name: "API", status: "on", balance: 1 }],
+          total: 99,
+        });
+      },
+    };
+    const h = await html({
+      panelKey: "seed-ds",
+      data: [
+        { id: "1", name: "张三", status: "on", balance: 10 },
+        { id: "2", name: "李四", status: "off", balance: 20 },
+      ],
+      baseRoute: "/api/users",
+      dataSource,
+      pagination: { total: 128 },
+      syncUrl: false,
+    });
+    expect(listed).toBe(0);
+    expect(h).toContain("张三");
+    expect(h).toContain("李四");
+    expect(h).toContain("共 128 条记录");
+    expect(h).not.toContain("API");
+    panelHandles.delete("seed-ds");
+  });
+
   it("data + baseRoute：pagination.total 作为首屏总数，不按 data.length 臆造", async () => {
     const orig = globalThis.fetch;
     globalThis.fetch = ((() => {
