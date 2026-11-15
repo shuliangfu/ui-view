@@ -42,7 +42,8 @@ export const COLUMNS_API: DocsApiTableRow[] = [
   {
     name: "format",
     type: "string",
-    default: '面板 dateFormat／dateTimeFormat，再缺省 YYYY-MM-DD／YYYY-MM-DD HH:mm:ss',
+    default:
+      "面板 dateFormat／dateTimeFormat，再缺省 YYYY-MM-DD／YYYY-MM-DD HH:mm:ss",
     description:
       '日期／时间展示格式，仅 `type:"date"`／`"datetime"`。令牌：`YYYY` `MM` `DD` `HH` `mm` `ss`。例：`"YYYY-MM-DD HH:mm"` → `2026-11-10 10:30`（不要秒）。未写时用面板 `dateFormat`／`dateTimeFormat`。不覆盖 `formatter`／`value`／`renderCell`。不改变选择器。',
   },

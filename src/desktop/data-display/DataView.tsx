@@ -80,17 +80,17 @@ import {
 import { parseXlsx } from "./data-panel-xlsx.ts";
 import { resolveModalStartFullscreen } from "./data-panel-viewport.ts";
 import {
+  applyDateFormats,
   buildExportFile,
   colProp,
   createLocalDataSource,
+  DEFAULT_PANEL_DATE_FORMAT,
+  DEFAULT_PANEL_DATETIME_FORMAT,
   displayValue,
   enrichFormFields,
   fieldLayoutStyle,
   fieldProp,
   fieldsOf,
-  applyDateFormats,
-  DEFAULT_PANEL_DATE_FORMAT,
-  DEFAULT_PANEL_DATETIME_FORMAT,
   formatDateTime,
   itemRowId,
   parseCsv,
