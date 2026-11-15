@@ -1876,11 +1876,6 @@ export function uiViewTailwindPlugin(
           if (json) {
             const ingested = ingestDenoInfoJsonModules(json);
             jsrVersion = ingested.version;
-            if (ingested.count > 0) {
-              log.debug(
-                `已用一次 deno info --json 预解析 ${ingested.count} 个 ui-view 模块路径`,
-              );
-            }
           }
         }
         if (!jsrVersion) {
@@ -1922,12 +1917,8 @@ export function uiViewTailwindPlugin(
           .map((p) => `@source "${toAtSourceSpecifier(sourcesCssDir, p)}";`)
           .join("\n") + "\n";
 
-        /** 与历史版本一致：写入前后各一条 debug（相对路径，避免绝对路径刷屏） */
-        const outRel = relative(root, outAbs);
-        log.debug(`准备写入 ${outRel}（${cssContent.length} 字节）`);
         await mkdir(sourcesCssDir, { recursive: true });
         await writeTextFile(outAbs, cssContent);
-        log.debug(`已写入 ${outRel}`);
       } catch (e) {
         logInitFailure("onInit 失败", e, {
           cwd: root,
