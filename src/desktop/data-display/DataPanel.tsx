@@ -1849,6 +1849,17 @@ export function DataPanel(props: PanelProps): JSXRenderable {
         tone: r.tone,
       });
     }
+    const importAt = slots.findIndex((s) =>
+      s.kind === "builtin" && s.name === "import"
+    );
+    const exportAt = slots.findIndex((s) =>
+      s.kind === "builtin" && s.name === "export"
+    );
+    if (importAt >= 0 && exportAt >= 0 && exportAt < importAt) {
+      const tmp = slots[exportAt];
+      slots[exportAt] = slots[importAt];
+      slots[importAt] = tmp;
+    }
     return slots;
   };
 
@@ -2105,7 +2116,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
             "dp-import",
             m.import,
             action,
-            <IconUpload size="sm" />,
+            <IconDownload size="sm" />,
             disable,
             title,
             label,
@@ -2126,7 +2137,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
               data-testid="dp-import"
               aria-label={actionTipText("import", title, label, m.import)}
             >
-              <IconUpload size="sm" />
+              <IconDownload size="sm" />
             </Button>
           </Dropdown>,
         );
@@ -2146,7 +2157,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
               data-testid="dp-export"
               aria-label={actionTipText("export", title, label, m.export)}
             >
-              <IconDownload size="sm" />
+              <IconUpload size="sm" />
             </Button>
           </Dropdown>,
         );

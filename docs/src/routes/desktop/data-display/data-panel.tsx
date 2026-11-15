@@ -258,7 +258,7 @@ const DATA_PANEL_API: DocsApiTableRow[] = [
     type: "false | PanelToolbarConfig (Record)",
     default: "{}",
     description:
-      "`false`＝整栏不渲染；省略／{}／Record＝统合 Record。声明项写明确 true｜false｜object（省略键才回落 caps）；对象可 show／disable／icon／label／title／tone／action。show／disable／action 接收 { selected, rows, query }（零参函数仍可用）。写入序＝显示序",
+      "`false`＝整栏不渲染；省略／{}／Record＝统合 Record。声明项写明确 true｜false｜object（省略键才回落 caps）；对象可 show／disable／icon／label／title／tone／action。show／disable／action 接收 { selected, rows, query }（零参函数仍可用）。写入序＝显示序；导入、导出同时出现时导入在前",
   },
 
   {

@@ -1125,7 +1125,7 @@ export const PANEL_TOOLBAR_CONFIG_API: DocsApiTableRow[] = [
     type: "string",
     default: "-",
     description:
-      "按钮键。写入序＝显示序。内置：create、search、refresh、print、import、export、columns、density、fullscreen、copy。省略的内置键回落 caps",
+      "按钮键。写入序＝显示序。内置：create、search、refresh、print、import、export、columns、density、fullscreen、copy。导入、导出同时出现时导入在前。省略的内置键回落 caps",
   },
   {
     name: "(值)",
@@ -1142,7 +1142,7 @@ export const VIEW_TOOLBAR_CONFIG_API: DocsApiTableRow[] = [
     type: "string",
     default: "-",
     description:
-      "按钮键。写入序＝显示序。内置：update（可用 edit 别名）、remove、refresh、print、import、export、fullscreen、copy。省略的内置键回落 DataViewCaps",
+      "按钮键。写入序＝显示序。内置：update（可用 edit 别名）、remove、refresh、print、import、export、fullscreen、copy。导入、导出同时出现时导入在前。省略的内置键回落 DataViewCaps",
   },
   {
     name: "(值)",

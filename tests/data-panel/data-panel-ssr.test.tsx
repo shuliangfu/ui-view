@@ -1132,6 +1132,16 @@ describe("DataPanel SSR：文案与自定义", () => {
     ).toBe(2);
   });
 
+  it("toolbar 先写 export 再写 import 时，导入仍排在导出前面", async () => {
+    const h = await html({
+      toolbar: { export: true, import: true },
+    });
+    const ids = [...h.matchAll(/data-testid="(dp-import|dp-export)"/g)].map(
+      (m) => m[1],
+    );
+    expect(ids).toEqual(["dp-import", "dp-export"]);
+  });
+
   it("form.render / view.render 配置可 SSR（关闭态不抛错）", async () => {
     const h = await html({
       form: {

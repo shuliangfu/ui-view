@@ -154,7 +154,7 @@ const DATA_VIEW_API: DocsApiTableRow[] = [
     type: "false | ViewToolbarConfig (Record)",
     default: "-",
     description:
-      "false 隐藏整栏。默认键与顺序：update、remove、refresh、print、import、export、fullscreen、copy。update 可用 edit 别名。省略键回落 caps；自定义键必须提供 action。show／disable／action 接收 { record }（零参函数仍可用）",
+      "false 隐藏整栏。默认键与顺序：update、remove、refresh、print、import、export、fullscreen、copy。导入、导出同时出现时导入在前。update 可用 edit 别名。省略键回落 caps；自定义键必须提供 action。show／disable／action 接收 { record }（零参函数仍可用）",
   },
   {
     name: "caps",

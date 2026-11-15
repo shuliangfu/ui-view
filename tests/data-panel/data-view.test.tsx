@@ -159,6 +159,16 @@ describe("DataView", () => {
     }
   });
 
+  it("toolbar 先写 export 再写 import 时，导入仍排在导出前面", async () => {
+    const h = await html({
+      toolbar: { export: true, import: true },
+    });
+    const ids = [...h.matchAll(/data-testid="(dv-import|dv-export)"/g)].map(
+      (m) => m[1],
+    );
+    expect(ids).toEqual(["dv-import", "dv-export"]);
+  });
+
   it("toolbar={false} 隐藏工具栏", async () => {
     const h = await html({ toolbar: false });
     expect(h).not.toContain('data-testid="data-view-toolbar"');
