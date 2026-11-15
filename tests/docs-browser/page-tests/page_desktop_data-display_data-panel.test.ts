@@ -184,8 +184,8 @@ async function ev<R = unknown>(t: T, body: string): Promise<R> {
 }
 
 /** 打开文档页并等待指定面板水合（工具栏按钮已打上 data-testid） */
-async function open(t: T, panel: string): Promise<void> {
-  await sharedEnv.goto(t, DOC_PATH);
+async function open(t: T, panel: string, search = ""): Promise<void> {
+  await sharedEnv.goto(t, DOC_PATH + search);
   await sharedEnv.waitDocMainReady(t);
   const ok = await ev<boolean>(
     t,
@@ -673,7 +673,7 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
 
   it("搜索：select 条件与初始筛选（带出初始值）", async (t) => {
     if (!t?.browser?.goto) return;
-    await open(t, "demo-search");
+    await open(t, "demo-search", "?role=admin");
     const r = await ev<Record<string, unknown>>(
       t,
       `
@@ -690,7 +690,7 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
       out.allDisabledAdmins = D.rows(k).every((r) => r.textContent.includes("管理员") && r.textContent.includes("停用"));
       return out;`,
     );
-    expect(r.initialTotal).toBe(9); // 25 行里 i%3==0 → 9 个管理员
+    expect(r.initialTotal).toBe(9); // 地址栏 ?role=admin 回填；25 行里 i%3==0 → 9 个管理员
     expect(r.roleValue).toBe("admin");
     expect((r.after as number) < 9).toBe(true);
     expect(r.allDisabledAdmins).toBe(true);
