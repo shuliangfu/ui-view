@@ -4420,20 +4420,14 @@ export function DataPanel(props: PanelProps): JSXRenderable {
               g.open?.(s.href, "_self");
               return;
             }
-            const run = () => {
-              if (s.key === "edit" && !s.action) {
-                doEdit(r);
-                return;
-              }
+            // Open the follow-up first, then close the view in the same
+            // turn so the mask never disappears between the two modals.
+            if (s.key === "edit" && !s.action) {
+              doEdit(r);
+            } else {
               s.action?.(r);
-            };
-            // Close the view first so a follow-up modal does not stack backdrops.
+            }
             viewRow.value = null;
-            const later = (globalThis as unknown as {
-              setTimeout?: (fn: () => void, ms: number) => number;
-            }).setTimeout;
-            if (later) later(run, 0);
-            else run();
           };
           return (
             <Btn

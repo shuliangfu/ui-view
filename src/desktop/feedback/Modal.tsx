@@ -337,21 +337,66 @@ function readModalChildrenInput(v: unknown): unknown {
 }
 
 /**
+ * 读取页面 `body.style`；无 `document`／`body` 或非元素时返回 `null`。
+ *
+ * @returns 可写的 `body.style`，否则 `null`
+ */
+function getDocumentBodyStyle(): CSSStyleDeclaration | null {
+  try {
+    if (typeof globalThis.document === "undefined") return null;
+    const b = globalThis.document.body;
+    if (b == null || b.nodeType !== 1) return null;
+    const st = b.style;
+    if (st == null) return null;
+    return st;
+  } catch {
+    return null;
+  }
+}
+
+/** 当前已打开、持有滚动锁定的弹层数。 */
+let modalBodyOverflowLocks = 0;
+/** 第一次锁定前的 `body.style.overflow`，计数归零时写回。 */
+let previousBodyOverflow: string | undefined;
+
+/**
+ * 打开弹层时锁定 `body` 滚动。多个弹层共用引用计数，切换时不会短暂解锁。
+ *
+ * @returns 是否成功占用一次锁定（须与 {@link releaseModalBodyOverflowLock} 成对）
+ */
+function acquireModalBodyOverflowLock(): boolean {
+  const st = getDocumentBodyStyle();
+  if (st == null) return false;
+  if (modalBodyOverflowLocks === 0) {
+    previousBodyOverflow = st.overflow;
+    st.overflow = "hidden";
+  }
+  modalBodyOverflowLocks += 1;
+  return true;
+}
+
+/**
+ * 释放一次 {@link acquireModalBodyOverflowLock}。计数归零时恢复原先 `overflow`。
+ */
+function releaseModalBodyOverflowLock(): void {
+  if (modalBodyOverflowLocks <= 0) return;
+  modalBodyOverflowLocks -= 1;
+  if (modalBodyOverflowLocks > 0) return;
+  const st = getDocumentBodyStyle();
+  if (st != null) st.overflow = previousBodyOverflow ?? "";
+  previousBodyOverflow = undefined;
+}
+
+/**
  * 仅当 `globalThis.document` 与 `body` 存在且为元素节点时设置 `body.style.overflow`。
+ * 用于无 Portal 的 SSR 回退路径；浏览器 Portal 路径请用引用计数锁定。
  *
  * @param overflow - 写入 `overflow` 的 CSS 值
  */
 function trySetDocumentBodyOverflow(overflow: string): void {
-  try {
-    if (typeof globalThis.document === "undefined") return;
-    const b = globalThis.document.body;
-    if (b == null || b.nodeType !== 1) return;
-    const st = b.style;
-    if (st == null) return;
-    st.overflow = overflow;
-  } catch {
-    /* 非浏览器或受限环境 */
-  }
+  const st = getDocumentBodyStyle();
+  if (st == null) return;
+  st.overflow = overflow;
 }
 
 /**
@@ -962,22 +1007,32 @@ export function Modal(props: ModalProps): JSXRenderable {
   createRenderEffect(() => {
     const openNow = isOpen();
     const showShell = openNow || !destroyOnClose;
+    let locked = false;
+    const lock = () => {
+      if (!locked) locked = acquireModalBodyOverflowLock();
+    };
+    const unlock = () => {
+      if (locked) {
+        releaseModalBodyOverflowLock();
+        locked = false;
+      }
+    };
     if (!showShell) {
-      trySetDocumentBodyOverflow("");
+      unlock();
       return;
     }
     const portalHost = getBrowserBodyPortalHost();
     if (openNow && portalHost != null) {
-      trySetDocumentBodyOverflow("hidden");
+      lock();
       const root = createPortal(() => buildModalMarkup(), portalHost);
       onCleanup(() => {
         root.unmount();
-        trySetDocumentBodyOverflow("");
+        unlock();
       });
       return;
     }
     if (!openNow) {
-      trySetDocumentBodyOverflow("");
+      unlock();
     }
   });
 
