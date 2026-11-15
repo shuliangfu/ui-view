@@ -89,6 +89,30 @@ export function formatDateTime(
   return format.replace(/YYYY|MM|DD|HH|mm|ss/g, (tok) => map[tok] ?? tok);
 }
 
+/** 列表／详情日期展示缺省格式（选择器不受影响） */
+export const DEFAULT_PANEL_DATE_FORMAT = "YYYY-MM-DD";
+/** 列表／详情日期时间展示缺省格式（选择器不受影响） */
+export const DEFAULT_PANEL_DATETIME_FORMAT = "YYYY-MM-DD HH:mm:ss";
+
+/**
+ * 给未写 `format` 的 date／datetime 项填上面板级展示格式。
+ * 已有 `format` 的项保持不变。不改选择器。
+ */
+export function applyDateFormats<T extends { type?: string; format?: string }>(
+  items: readonly T[],
+  dateFormat = DEFAULT_PANEL_DATE_FORMAT,
+  dateTimeFormat = DEFAULT_PANEL_DATETIME_FORMAT,
+): T[] {
+  const dateFmt = dateFormat.trim() || DEFAULT_PANEL_DATE_FORMAT;
+  const dateTimeFmt = dateTimeFormat.trim() || DEFAULT_PANEL_DATETIME_FORMAT;
+  return items.map((item) => {
+    if (item.format && item.format.trim()) return item;
+    if (item.type === "date") return { ...item, format: dateFmt };
+    if (item.type === "datetime") return { ...item, format: dateTimeFmt };
+    return item;
+  });
+}
+
 /** 金额：千分位 + 两位小数；非数字返回 "" */
 export function formatMoney(v: unknown): string {
   const n = Number(v);

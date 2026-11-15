@@ -177,6 +177,20 @@ const DATA_VIEW_API: DocsApiTableRow[] = [
     description: "主键字段",
   },
   {
+    name: "dateFormat",
+    type: "string",
+    default: '"YYYY-MM-DD"',
+    description:
+      "日期详情项的展示格式。只影响详情显示，不改变日期选择器。字段上的 format 优先。",
+  },
+  {
+    name: "dateTimeFormat",
+    type: "string",
+    default: '"YYYY-MM-DD HH:mm:ss"',
+    description:
+      "日期时间详情项的展示格式。只影响详情显示，不改变日期时间选择器。字段上的 format 优先。",
+  },
+  {
     name: "locale",
     type: '"zh-CN" | "en-US"',
     default: '"zh-CN"',

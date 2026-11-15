@@ -88,6 +88,9 @@ import {
   fieldLayoutStyle,
   fieldProp,
   fieldsOf,
+  applyDateFormats,
+  DEFAULT_PANEL_DATE_FORMAT,
+  DEFAULT_PANEL_DATETIME_FORMAT,
   formatDateTime,
   itemRowId,
   parseCsv,
@@ -304,6 +307,16 @@ export interface DataViewProps {
    * (purely visual tabs).
    */
   tabParam?: string | false;
+  /**
+   * 日期详情项的展示格式，缺省 `YYYY-MM-DD`。
+   * 只影响详情的时间显示，不改变日期选择器。字段上的 `format` 优先。
+   */
+  dateFormat?: string;
+  /**
+   * 日期时间详情项的展示格式，缺省 `YYYY-MM-DD HH:mm:ss`。
+   * 只影响详情的时间显示，不改变日期时间选择器。字段上的 `format` 优先。
+   */
+  dateTimeFormat?: string;
 }
 
 export type { DataAlertConfig, DataAlertProp } from "./data-panel-alert.tsx";
@@ -445,7 +458,14 @@ export function DataView(props: DataViewProps): JSXRenderable {
   const tr = (tpl: string, vars: Record<string, string | number>) =>
     formatMessage(tpl, vars);
 
-  const viewItems = fieldsOf(props.view);
+  const dateFormat = props.dateFormat?.trim() || DEFAULT_PANEL_DATE_FORMAT;
+  const dateTimeFormat = props.dateTimeFormat?.trim() ||
+    DEFAULT_PANEL_DATETIME_FORMAT;
+  const viewItems = applyDateFormats(
+    fieldsOf(props.view),
+    dateFormat,
+    dateTimeFormat,
+  );
   const formFields = fieldsOf(props.form);
   const formDefs = enrichFormFields(formFields, viewItems);
   const canWriteLocal = formDefs.length > 0 || !!props.form?.render ||

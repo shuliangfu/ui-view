@@ -112,6 +112,9 @@ import {
   filterRows,
   filtersAfterSearchApply,
   filtersAfterSearchReset,
+  applyDateFormats,
+  DEFAULT_PANEL_DATE_FORMAT,
+  DEFAULT_PANEL_DATETIME_FORMAT,
   formatDateTime,
   formatMoney,
   isActionsColumn,
@@ -540,6 +543,16 @@ export interface PanelProps {
    * (purely visual tabs).
    */
   tabParam?: string | false;
+  /**
+   * 日期列／详情项的展示格式，缺省 `YYYY-MM-DD`。
+   * 只影响列表和详情的时间显示，不改变日期选择器。列／字段上的 `format` 优先。
+   */
+  dateFormat?: string;
+  /**
+   * 日期时间列／详情项的展示格式，缺省 `YYYY-MM-DD HH:mm:ss`。
+   * 只影响列表和详情的时间显示，不改变日期时间选择器。列／字段上的 `format` 优先。
+   */
+  dateTimeFormat?: string;
 }
 
 import {
@@ -650,7 +663,14 @@ export function DataPanel(props: PanelProps): JSXRenderable {
   }
   const rowKey = props.rowKey ?? "id";
   const idOf = (r: Row): string => itemRowId(r, rowKey);
-  const inputColumns = normalizeColumns(props.columns);
+  const dateFormat = props.dateFormat?.trim() || DEFAULT_PANEL_DATE_FORMAT;
+  const dateTimeFormat = props.dateTimeFormat?.trim() ||
+    DEFAULT_PANEL_DATETIME_FORMAT;
+  const inputColumns = applyDateFormats(
+    normalizeColumns(props.columns),
+    dateFormat,
+    dateTimeFormat,
+  );
   /** 数据列（不含 selection／index 系统列）——数据源／导出／合计用 */
   const dataInputColumns = inputColumns.filter(
     (c) => !isSelectionColumn(c) && !isIndexColumn(c),
@@ -4229,7 +4249,10 @@ export function DataPanel(props: PanelProps): JSXRenderable {
       span?: number;
       labelAlign?: DescriptionsLabelAlign;
     }[] = [];
-    const viewFields = resolveViewFields(props.view, columns);
+    const resolvedView = resolveViewFields(props.view, columns);
+    const viewFields = resolvedView
+      ? applyDateFormats(resolvedView, dateFormat, dateTimeFormat)
+      : undefined;
     const viewBodyRender = props.view?.render;
     /** 无 view.render 时按 props／回落列构建 Descriptions items */
     if (!viewBodyRender) {
@@ -4327,7 +4350,10 @@ export function DataPanel(props: PanelProps): JSXRenderable {
   const viewFooter = () => {
     const r = viewRow.value;
     if (!r) return null;
-    const viewFields = resolveViewFields(props.view, columns);
+    const resolvedView = resolveViewFields(props.view, columns);
+    const viewFields = resolvedView
+      ? applyDateFormats(resolvedView, dateFormat, dateTimeFormat)
+      : undefined;
     const slots = resolveViewFooterActions(
       viewFields || props.view?.render
         ? resolveViewActionsCfg(props.view)

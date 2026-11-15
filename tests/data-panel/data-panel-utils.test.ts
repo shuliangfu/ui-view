@@ -14,6 +14,7 @@ import {
   filterRows,
   filtersAfterSearchApply,
   filtersAfterSearchReset,
+  applyDateFormats,
   formatDateTime,
   formatMoney,
   isSelectionColumn,
@@ -157,6 +158,23 @@ describe("展示值", () => {
       { id: "1", at: "2026-11-10" },
       { yes: "是", no: "否" },
     )).toBe("2026/11/10");
+  });
+
+  it("applyDateFormats：给未写 format 的 date／datetime 填面板格式，已有的不动", () => {
+    const cols = applyDateFormats(
+      [
+        { prop: "day", type: "date" },
+        { prop: "at", type: "datetime" },
+        { prop: "named", type: "date", format: "YYYY/MM/DD" },
+        { prop: "name", type: "text" },
+      ],
+      "DD-MM-YYYY",
+      "YYYY/MM/DD HH:mm:ss",
+    );
+    expect(cols[0].format).toBe("DD-MM-YYYY");
+    expect(cols[1].format).toBe("YYYY/MM/DD HH:mm:ss");
+    expect(cols[2].format).toBe("YYYY/MM/DD");
+    expect(cols[3].format).toBeUndefined();
   });
 
   it("resolvePanelColumns：index／selection／actions 由 columns 驱动；label 默认 #", () => {

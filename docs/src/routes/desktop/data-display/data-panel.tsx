@@ -190,6 +190,20 @@ const DATA_PANEL_API: DocsApiTableRow[] = [
       "底栏分页配置，透传 Pagination 的展示参数（preset、size、showFirstLast、showPrevNext、showPageNumbers、showQuickJumper、showTotal、disabled、class、testIdPrefix、messages）。运行时的页码、当前每页条数、总数和 onChange 由面板托管，不必写 current／onChange，也不要把 page／total 写成受控值。初始页码写 page（默认 1），初始每页条数写 pageSize（默认 20），首屏总条数种子写 total（与 data + baseRoute 同时用时作为首屏条数，未写则用 data.length），下拉选项写 pageSizeOptions（默认 [10, 20, 30, 40, 50, 100]）；未写的 preset／size 按断点缺省：电脑端（min-width: 1280px）full／md，平板（640px–1279.98px）default／sm，移动端（max-width: 639.98px）simple／xs。地址栏同步仍用根上的 syncUrl。本插槽默认关掉 Pagination 自带总条数和跳转（左侧条数文案和 full 档右侧跳转由面板渲染）；显式 showQuickJumper: true 时改用 Pagination 自带跳转。详见 PanelPaginationConfig 表。",
   },
   {
+    name: "dateFormat",
+    type: "string",
+    default: '"YYYY-MM-DD"',
+    description:
+      "日期列和详情项的展示格式。只影响列表／详情显示，不改变日期选择器。列或字段上的 format 优先。",
+  },
+  {
+    name: "dateTimeFormat",
+    type: "string",
+    default: '"YYYY-MM-DD HH:mm:ss"',
+    description:
+      "日期时间列和详情项的展示格式。只影响列表／详情显示，不改变日期时间选择器。列或字段上的 format 优先。",
+  },
+  {
     name: "defaultSort",
     type: "{ prop; order: 'asc'|'desc' }",
     default: "-",

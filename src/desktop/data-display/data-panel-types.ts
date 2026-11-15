@@ -110,7 +110,8 @@ export interface Column {
    * 日期／时间展示格式（优先于默认切片）。
    * 仅对 `type:"date"`／`type:"datetime"`（及未声明 type 但 raw 为日期时经 formatter 除外）生效。
    * 支持令牌：`YYYY` `MM` `DD` `HH` `mm` `ss`。
-   * 例：`"YYYY-MM-DD HH:mm"` → `2026-11-10 10:30`（不要秒）；date 缺省等同 `YYYY-MM-DD`，datetime 缺省 `YYYY-MM-DD HH:mm:ss`。
+   * 例：`"YYYY-MM-DD HH:mm"` → `2026-11-10 10:30`（不要秒）。
+   * 未写时回落面板的 `dateFormat`／`dateTimeFormat`，再缺省 `YYYY-MM-DD`／`YYYY-MM-DD HH:mm:ss`。
    * 更复杂节点请用 `formatter`／`value`（本字段不覆盖它们）。
    */
   format?: string;
