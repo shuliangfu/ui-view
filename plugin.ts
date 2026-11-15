@@ -124,6 +124,64 @@ function parseUiViewVersionFromDenoInfoStdout(text: string): string | null {
 const denoInfoHttpsToLocalCache = new Map<string, string>();
 
 /**
+ * `deno info --json jsr:@dreamer/ui-view` 预解析出的包内相对路径 → 本地缓存文件。
+ * 纯 JSR 场景下每个文件再跑一次 `deno info` 会把开发启动拖成数秒。
+ */
+const jsrRelToLocalCache = new Map<string, string>();
+
+/** {@link ingestDenoInfoJsonModules} 的解析结果 */
+export interface IngestDenoInfoJsonModulesResult {
+  /** 从模块 specifier 解析到的版本；没有 ui-view 模块时为 null */
+  version: string | null;
+  /** 成功写入缓存的 ui-view 模块数量 */
+  count: number;
+}
+
+/**
+ * 把 `deno info --json` 里 ui-view 模块的 `specifier`/`local` 灌进查找表，
+ * 后续 {@link tryResolveUiViewRelViaDenoInfo} 即可 O(1) 命中，不必再起进程。
+ *
+ * @param text - `deno info --json` 的 stdout
+ * @returns 解析到的版本与写入条数
+ */
+export function ingestDenoInfoJsonModules(
+  text: string,
+): IngestDenoInfoJsonModulesResult {
+  let parsed: {
+    modules?: Array<{ specifier?: string; local?: string }>;
+  };
+  try {
+    parsed = JSON.parse(text) as typeof parsed;
+  } catch {
+    return { version: null, count: 0 };
+  }
+  let version: string | null = null;
+  let count = 0;
+  for (const mod of parsed.modules ?? []) {
+    const spec = mod.specifier;
+    const local = mod.local;
+    if (!spec || !local) continue;
+    const m = spec.match(
+      /^https:\/\/jsr\.io\/@dreamer\/ui-view\/([^/]+)\/(.+)$/,
+    );
+    if (!m) continue;
+    if (!existsSync(local)) continue;
+    version ??= m[1];
+    const httpsUrl = `https://jsr.io/@dreamer/ui-view/${m[1]}/${m[2]}`;
+    denoInfoHttpsToLocalCache.set(httpsUrl, local);
+    jsrRelToLocalCache.set(`${m[1]}/${m[2]}`, local);
+    count++;
+  }
+  return { version, count };
+}
+
+/** 测试用：清空预解析表（与 onInit 开头同一套缓存） */
+export function clearUiViewDenoInfoCachesForTests(): void {
+  denoInfoHttpsToLocalCache.clear();
+  jsrRelToLocalCache.clear();
+}
+
+/**
  * 在应用根目录下执行 `deno info`，供解析 JSR 模块在 `$DENO_DIR` 中的真实路径。
  *
  * @param projectRoot - `cwd()` 应用根（须能加载该应用的 deno.json）
@@ -186,7 +244,8 @@ async function tryResolveUiViewRelViaDenoInfo(
 ): Promise<string | null> {
   if (!version) return null;
   const httpsUrl = `https://jsr.io/@dreamer/ui-view/${version}/${rel}`;
-  const cached = denoInfoHttpsToLocalCache.get(httpsUrl);
+  const cached = denoInfoHttpsToLocalCache.get(httpsUrl) ??
+    jsrRelToLocalCache.get(`${version}/${rel}`);
   if (cached && existsSync(cached)) {
     return cached;
   }
@@ -1800,13 +1859,36 @@ export function uiViewTailwindPlugin(
 
         /** 每次 onInit 清空，避免跨应用/版本误用缓存 */
         denoInfoHttpsToLocalCache.clear();
-
-        const jsrVersion = await getUiViewJsrVersionResolvedByApp(
-          root,
-          import.meta.url,
-        );
+        jsrRelToLocalCache.clear();
 
         const pkgRoot = resolvePackageRoot();
+        const hasSourceTree = looksLikeUiViewSourceRoot(pkgRoot) ||
+          looksLikeUiViewTailwindContentRoot(pkgRoot);
+
+        let jsrVersion: string | null = null;
+        /** 纯 JSR、磁盘上没有源码树时：一次 `--json` 预解析全部本地路径，避免每个文件再起 `deno info` */
+        if (!hasSourceTree && IS_DENO) {
+          const json = await runDenoInfo(root, [
+            "info",
+            "--json",
+            "jsr:@dreamer/ui-view",
+          ]);
+          if (json) {
+            const ingested = ingestDenoInfoJsonModules(json);
+            jsrVersion = ingested.version;
+            if (ingested.count > 0) {
+              log.debug(
+                `已用一次 deno info --json 预解析 ${ingested.count} 个 ui-view 模块路径`,
+              );
+            }
+          }
+        }
+        if (!jsrVersion) {
+          jsrVersion = await getUiViewJsrVersionResolvedByApp(
+            root,
+            import.meta.url,
+          );
+        }
 
         const gathered = await gatherResolvedContentPaths(names, {
           projectRoot: root,
