@@ -254,8 +254,7 @@ export default function FormTransfer() {
         <Paragraph class="mt-2">
           左右列表使用原生多选 select：单击只选一项，Ctrl /
           Command+单击多选，点中列表后 Ctrl / Command+A
-          全选当前列（不会选中整页）。列宽可随容器收缩；容器不足 640px
-          时改为上下排列，中间箭头旋成向下／向上。聚焦时只在列表内侧显示淡色细线。可用
+          全选当前列（不会选中整页）。列宽可随容器收缩；视口不足 640px（移动端）时改为上下排列，中间箭头旋成向下／向上；默认 md 弹层在桌面上仍左右排列。聚焦时只在列表内侧显示淡色细线。可用
           height、minHeight、maxHeight 只接受像素数字；要写 CSS 值请放在
           listStyle 的同名字段里，height 默认 200。可用 listStyle.itemHeight
           控制每一项行高（像素），不传则按 size 使用默认行高。render

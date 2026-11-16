@@ -115,13 +115,14 @@ const DATA_VIEW_API: DocsApiTableRow[] = [
     type: "DataSource",
     default: "-",
     description:
-      "自定义数据源（优先于 data／baseRoute）。首次进入与刷新都走源上的 view(id)／get(id)，失败或返回空则回落 data",
+      "自定义数据源（优先于 data／baseRoute）。首次进入与刷新都走源上的 view(id)／get(id)，失败或返回空则回落 data。API 源解析详情时 data 与 row 都接受（return { data } 或 return { row }），也可直接返回行对象",
   },
   {
     name: "baseRoute",
     type: "string",
     default: "-",
-    description: "未传 data 且未传 dataSource 时创建 API 数据源，同 DataPanel",
+    description:
+      "未传 data 且未传 dataSource 时创建 API 数据源，同 DataPanel。详情接口返回 { data } 或 { row } 均可，也可直接返回行对象",
   },
   {
     name: "resource",

@@ -164,6 +164,7 @@ describe("DataPanel ActionCtrl unified Record", () => {
 
   it("assertRowActionsConfig throws when custom key lacks action", () => {
     expect(() => assertRowActionsConfig({ view: false })).not.toThrow();
+    expect(() => assertRowActionsConfig({ password: false })).not.toThrow();
     expect(() => assertRowActionsConfig({ assign: { label: "A" } })).toThrow(
       /assign/,
     );

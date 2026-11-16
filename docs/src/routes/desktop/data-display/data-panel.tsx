@@ -2931,7 +2931,10 @@ const rows = makeDemoRows(8);
           <Paragraph class="mb-2 text-sm text-slate-600 dark:text-slate-400">
             前端：<code class="text-xs">list</code>+
             <code class="text-xs">fetch</code> 拼 query，返回{" "}
-            <code class="text-xs">{"{ rows, total }"}</code>，
+            <code class="text-xs">{"{ rows, total }"}</code>
+            {" 或 "}
+            <code class="text-xs">{"{ items, total }"}</code>
+            ，
             <code class="text-xs">sync: false</code>。 下方面板为内存异步模拟。
           </Paragraph>
           <DataPanel
@@ -4575,6 +4578,26 @@ function DataPanelTabsDemo() {
           <code class="text-xs">GET 根/:id</code> 明细；
           <code class="text-xs">importRows</code>→
           <code class="text-xs">POST 根/import</code>。
+        </Paragraph>
+        <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+          <strong>列表返回</strong>：
+          <code class="text-xs">{"return { rows: [], total }"}</code>
+          {" 或 "}
+          <code class="text-xs">{"return { items: [], total }"}</code>{" "}
+          均可，例如 <code class="text-xs">{"return { rows: [] }"}</code>
+          、
+          <code class="text-xs">{"return { items: [] }"}</code>
+          。未传 <code class="text-xs">total</code> 时用数组长度。两者都有时以
+          {" "}
+          <code class="text-xs">rows</code> 为准。
+        </Paragraph>
+        <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+          <strong>详情返回</strong>：
+          <code class="text-xs">{"return { data: item }"}</code>
+          {" 或 "}
+          <code class="text-xs">{"return { row: item }"}</code>{" "}
+          均可，也可以直接返回行对象。两者都有时以{" "}
+          <code class="text-xs">data</code> 为准。
         </Paragraph>
         <DocsApiTable rows={SOURCE_API} nameColumnHeader="方法" />
         <Title level={3} id="api-type-createApiDataSource">

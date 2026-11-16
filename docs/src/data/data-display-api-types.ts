@@ -717,14 +717,14 @@ export const SOURCE_API: DocsApiTableRow[] = [
     type: "ListResult | Promise<…>",
     default: "-",
     description:
-      "返回当前页 { rows, total, totals? }；query = { page, pageSize, sort, order: asc|desc, filters }。解析接口时若无 rows 但有 items，仍接受 items。totals 仅为兼容字段：列配置 total: true 时，页脚由面板按行数据自算，不读取此字段",
+      "返回当前页 { rows, total, totals? }；query = { page, pageSize, sort, order: asc|desc, filters }。解析接口时 rows 与 items 都接受（return { rows: [] } 或 return { items: [] }），两者都有时以 rows 为准。totals 仅为兼容字段：列配置 total: true 时，页脚由面板按行数据自算，不读取此字段",
   },
   {
     name: "view(id) / get(id)",
     type: "Promise<Row | null> | Row | null",
     default: "-",
     description:
-      "按主键取单条。打开详情时优先 view，其次 get；失败或空则回落当前行。get 为 view 的别名（API 源二者等价）",
+      "按主键取单条。打开详情时优先 view，其次 get；失败或空则回落当前行。解析接口时 data 与 row 都接受（return { data } 或 return { row }），两者都有时以 data 为准；也可直接返回行对象。get 为 view 的别名（API 源二者等价）",
   },
   {
     name: "sync",
@@ -1426,13 +1426,14 @@ export const LIST_RESULT_API: DocsApiTableRow[] = [
     type: "Row[]",
     default: "-",
     description:
-      "当前页行。解析接口时若无 rows 但有 items，仍接受 items；写出只用 rows",
+      "当前页行。解析接口时 rows 与 items 都接受（return { rows: [] } 或 return { items: [] }），两者都有时以 rows 为准；写出只用 rows",
   },
   {
     name: "total",
     type: "number",
     default: "-",
-    description: "过滤后的总条数（不是当前页长度）",
+    description:
+      "过滤后的总条数（不是当前页长度）。接口未返回 total 时用当前页数组长度",
   },
   {
     name: "totals",
@@ -2479,7 +2480,8 @@ export const DATA_DISPLAY_TYPE_SECTIONS: DataDisplayTypeSection[] = [
     id: "ListResult",
     title: "ListResult",
     rows: LIST_RESULT_API,
-    lead: "list() 的返回值。",
+    lead:
+      "list() 的返回值。数据源内部字段为 rows。解析接口时 rows 与 items 都接受（如 return { rows: [] } 或 return { items: [] }），两者都有时以 rows 为准；未传 total 时用数组长度。",
   },
   {
     id: "WriteResult",

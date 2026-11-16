@@ -222,7 +222,7 @@ function isRecord(v: unknown): v is Record<string, unknown> {
   return v !== null && typeof v === "object" && !Array.isArray(v);
 }
 
-/** 从常见响应壳里取出 list 载荷 */
+/** 从响应体取出 list 载荷。`rows` 与 `items` 都接受，两者都有时以 `rows` 为准。 */
 export function normalizeListPayload(body: unknown): ListResult {
   if (!isRecord(body)) return { rows: [], total: 0 };
   const inner = isRecord(body.data) &&
@@ -230,7 +230,6 @@ export function normalizeListPayload(body: unknown): ListResult {
         typeof body.data.total === "number")
     ? body.data
     : body;
-  // 官方键为 rows；没有 rows 时再接受 items（已部署接口过渡兼容）
   const rowsRaw = Array.isArray(inner.rows)
     ? inner.rows
     : Array.isArray(inner.items)
@@ -249,6 +248,18 @@ export function normalizeListPayload(body: unknown): ListResult {
   return totals && Object.keys(totals).length
     ? { rows, total, totals }
     : { rows, total };
+}
+
+/** 从响应体取出详情行。`data` 与 `row` 都接受，两者都有时以 `data` 为准；也可直接返回行对象。 */
+export function normalizeViewPayload(body: unknown): Row | null {
+  if (!isRecord(body)) return null;
+  if (isRecord(body.data)) return body.data as Row;
+  if (isRecord(body.row)) return body.row as Row;
+  // 整包当行（排除明显的列表壳）
+  if (!Array.isArray(body.items) && !Array.isArray(body.rows)) {
+    return body as Row;
+  }
+  return null;
 }
 
 /**
@@ -290,7 +301,16 @@ function writeFromResponse(
   if (!okHttp) {
     return { ok: false, message: messageFromBody(body, "request failed") };
   }
-  if (isRecord(body) && body.ok === true) return { ok: true };
+  if (isRecord(body)) {
+    const item = isRecord(body.item)
+      ? body.item as Row
+      : isRecord(body.data)
+      ? body.data as Row
+      : isRecord(body.row)
+      ? body.row as Row
+      : undefined;
+    return item ? { ok: true, item } : { ok: true };
+  }
   return { ok: true };
 }
 
@@ -463,16 +483,7 @@ export function createApiDataSource(
         : joinApiPath(root, id);
       const r = await request("GET", url);
       if (!r.ok) return null;
-      const body = r.body;
-      if (isRecord(body)) {
-        if (isRecord(body.data)) return body.data as Row;
-        if (isRecord(body.row)) return body.row as Row;
-        // 整包当行（排除明显的列表壳）
-        if (!Array.isArray(body.items) && !Array.isArray(body.rows)) {
-          return body as Row;
-        }
-      }
-      return null;
+      return normalizeViewPayload(r.body);
     },
   } as ApiDataSource;
 

@@ -744,8 +744,12 @@ describe("createLocalDataSource：写操作", () => {
       form: FORM,
       onChange: () => changed++,
     });
-    s.create!({ name: "New", balance: "12.5" });
+    const created = s.create!({ name: "New", balance: "12.5" });
     const first = s.list(Q).rows[0];
+    expect(created).toEqual({
+      ok: true,
+      item: { id: "4", name: "New", balance: 12.5 },
+    });
     expect(first.id).toBe("4");
     expect(first.name).toBe("New");
     expect(first.balance).toBe(12.5);

@@ -837,7 +837,7 @@ export function DataView(props: DataViewProps): JSXRenderable {
       r = await ds.update?.(id, values);
     } catch (e) {
       formBusy.value = false;
-      formTop.value = (e as Error)?.message || m.networkError;
+      message.error((e as Error)?.message || m.networkError);
       return;
     }
     formBusy.value = false;
@@ -851,8 +851,11 @@ export function DataView(props: DataViewProps): JSXRenderable {
     }
     const msgs = { ...(r.messages ?? {}) };
     for (const f of r.fields ?? []) if (!msgs[f]) msgs[f] = m.invalid;
-    formErrors.value = msgs;
-    formTop.value = r.message ?? m.invalid;
+    if (Object.keys(msgs).length) {
+      formErrors.value = msgs;
+      return;
+    }
+    message.error(r.message ?? m.invalid);
   }
 
   const viewColumns = (): Column[] => {

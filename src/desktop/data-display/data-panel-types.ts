@@ -691,8 +691,8 @@ export interface Query {
 }
 
 /**
- * `list()` 返回。官方列表字段为 `rows`。
- * 解析接口响应时，若无 `rows` 但有 `items`，仍接受 `items`（过渡兼容）；类型与写出只用 `rows`。
+ * `list()` 返回。数据源内部字段为 `rows`。
+ * 解析接口响应时，`rows` 与 `items` 都接受（如 `return { rows: [] }` 或 `return { items: [] }`）；两者都有时以 `rows` 为准。类型与写出只用 `rows`。
  */
 export interface ListResult {
   rows: Row[];
@@ -707,10 +707,10 @@ export interface ListResult {
 /** 新增 / 编辑结果；失败时可带整体或字段级错误 */
 export type WriteResult =
   | void
-  | { ok: true }
+  | { ok: true; item?: Row }
   | {
     ok: false;
-    /** 顶部错误文案 */
+    /** 整体错误文案；无字段错误时以轻提示展示，不写在弹窗底部 */
     message?: string;
     /** 出错的字段名 */
     fields?: string[];
@@ -770,6 +770,7 @@ export interface DataSource {
   /**
    * 拉取单条明细。打开详情或 DataView 刷新时调用；失败或返回空则回落当前行。
    * 与 {@link DataSource.get} 二选一即可（优先 view）。
+   * API 源解析接口时，`data` 与 `row` 都接受（如 `return { data }` 或 `return { row }`）；两者都有时以 `data` 为准。也可直接返回行对象。
    */
   view?(id: string): MaybePromise<Row | null>;
   /**
@@ -843,7 +844,7 @@ export interface SearchActionContext {
  *   DataView：`{ record }`）。零参函数仍然有效（调用时传入 ctx，不使用即可）。
  * - `disable: true` (or fn→true) = still visible, button disabled — NOT the same as show:false
  * - 未声明的内置键 → 回落 caps（一层真相）；声明则须明确 true｜false｜object（勿用 undefined 绕）
- * - unknown keys are custom; custom keys MUST provide `action` (asserted at mount)
+ * - unknown keys are custom; custom keys MUST provide `action` (asserted at mount), or `false` to hide
  * - object literal key order = display order; undeclared builtins append after, in default order
  * - toolbar 无 `confirm` 字段：需要确认时在 `action` 内打开 Popconfirm／对话框
  */
@@ -1325,6 +1326,7 @@ export function assertRowActionsConfig(
   if (!cfg) return;
   for (const [key, val] of Object.entries(cfg)) {
     if (isRowBuiltin(key) || key === "close") continue;
+    if (val === false) continue;
     if (
       typeof val === "object" && val !== null &&
       (typeof val.action === "function" || val.href != null)

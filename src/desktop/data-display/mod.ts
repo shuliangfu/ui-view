@@ -227,6 +227,7 @@ export {
   joinApiPath,
   normalizeListPayload,
   normalizePageRoute,
+  normalizeViewPayload,
   resolveApiRoot,
 } from "./data-panel-api-source.ts";
 export { buildXlsx, parseXlsx, type XlsxSheet } from "./data-panel-xlsx.ts";

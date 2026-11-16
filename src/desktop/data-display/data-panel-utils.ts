@@ -1239,8 +1239,10 @@ export function createLocalDataSource(
 
   src.create = (values): WriteResult => {
     seq += 1;
-    store = [{ ...convert(values), [key]: String(seq) }, ...store];
+    const item: Row = { ...convert(values), [key]: String(seq) };
+    store = [item, ...store];
     changed();
+    return { ok: true, item: { ...item } };
   };
   src.update = (id, values): WriteResult => {
     const i = store.findIndex((r) => idOf(r) === id);

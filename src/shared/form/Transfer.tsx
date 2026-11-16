@@ -5,7 +5,7 @@
  * **避免整块重挂载：**
  * 1. 外层 `return ()` **不读取** `leftSearchRef` / `rightSearchRef`，也**不读取** `selectedKeysRef.value`，
  *    仅追踪 `targetKeys`（及 dataSource 等），否则每点选一项或每键入一字都会重建整棵 `div.transfer`（含中间箭头区），导致失焦。
- * 2. 左右列 + 中间箭头为**同级 JSX**（宽容器 flex 一行，窄容器上下排列并由 CSS 把箭头旋成向下／向上），避免「两列各包一层 **函数子响应式插入**、中间是本征 div」时浏览器分段绘制。布局用容器查询，不读宽度 signal，以免重挂载失焦。
+ * 2. 左右列 + 中间箭头为**同级 JSX**（视口 ≥640px 时 flex 一行，移动端上下排列并由 CSS 把箭头旋成向下／向上），避免「两列各包一层 **函数子响应式插入**、中间是本征 div」时浏览器分段绘制。布局用视口媒体查询，不读宽度 signal，以免重挂载失焦。
  * 3. 列表区用 **JSX 函数子** `{() => …}` + `listVersion`（在 {@link Transfer} 顶层 `createSignal`，勿在列函数内新建）作刷新节拍；
  *    搜索文案只用传入的 `searchRef`（与 {@link Transfer} 同源），列内**禁止** `createSignal` 否则父级 getter 重跑会新建信号、输入框重挂载失焦。
  *    `onSearch` 用 `queueMicrotask` 推迟。
@@ -513,12 +513,12 @@ export function Transfer(props: TransferProps): JSXRenderable {
     const rightRaw = dataSource.filter((i) => targetSet.has(i.key));
 
     return (
-      <div class="@container w-full min-w-0 max-w-full">
+      <div class="w-full min-w-0 max-w-full">
         <div
           id={resolvedId}
           class={twMerge(
             "transfer flex w-full max-w-full min-w-0 items-stretch gap-2 rounded-lg",
-            "flex-col @min-[640px]:flex-row @min-[640px]:gap-4",
+            "flex-col sm:flex-row sm:gap-4",
             disabled && "opacity-60 pointer-events-none",
             error &&
               twMerge(
@@ -551,7 +551,7 @@ export function Transfer(props: TransferProps): JSXRenderable {
           <div class="flex shrink-0 flex-col items-center justify-center gap-1 md:gap-2">
             <button
               type="button"
-              class={twMerge(btnCls, "@max-[639.98px]:rotate-90")}
+              class={twMerge(btnCls, "max-sm:rotate-90")}
               disabled={disabled}
               aria-label={m.moveRight}
               onClick={() => {
@@ -573,7 +573,7 @@ export function Transfer(props: TransferProps): JSXRenderable {
             </button>
             <button
               type="button"
-              class={twMerge(btnCls, "@max-[639.98px]:rotate-90")}
+              class={twMerge(btnCls, "max-sm:rotate-90")}
               disabled={disabled}
               aria-label={m.moveLeft}
               onClick={() => {

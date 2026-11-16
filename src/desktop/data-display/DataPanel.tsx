@@ -500,6 +500,11 @@ export interface PanelProps {
    * 若同时传了 `onRowClick`，只走回调，不自动打开详情。
    */
   openViewOnRowClick?: boolean;
+  /**
+   * 新增保存成功后是否打开该条详情。默认 `false`。
+   * 为 `true` 且创建结果带 `item`（或可解析出新建行）时，关表单并刷新列表后打开详情。
+   */
+  openViewAfterCreate?: boolean;
   /** 接管导入：收到解析后的行（xlsx／csv／json／xml；缺省时走 dataSource.importRows） */
   onImportRows?: (rows: Record<string, string>[]) => void;
   /** 接管导出：缺省时面板自行拉取全部行并生成文件下载 */
@@ -1429,11 +1434,17 @@ export function DataPanel(props: PanelProps): JSXRenderable {
       r = id ? await ds.update?.(id, values) : await ds.create?.(values);
     } catch (e) {
       formBusy.value = false;
-      formTop.value = (e as Error)?.message || m.networkError;
+      message.error((e as Error)?.message || m.networkError);
       return;
     }
     formBusy.value = false;
     if (!r || r.ok) {
+      const item = !id && props.openViewAfterCreate && r && "item" in r
+        ? r.item
+        : undefined;
+      // Open the follow-up first, then close the form in the same
+      // turn so the mask never disappears between the two modals.
+      if (item) doView(item);
       formOpen.value = false;
       message.success(m.saved);
       invalidateCurrentTabCache();
@@ -1443,8 +1454,11 @@ export function DataPanel(props: PanelProps): JSXRenderable {
     }
     const msgs = { ...(r.messages ?? {}) };
     for (const f of r.fields ?? []) if (!msgs[f]) msgs[f] = m.invalid;
-    formErrors.value = msgs;
-    formTop.value = r.message ?? m.invalid;
+    if (Object.keys(msgs).length) {
+      formErrors.value = msgs;
+      return;
+    }
+    message.error(r.message ?? m.invalid);
   }
 
   // ---- 查看 Modal
@@ -1473,10 +1487,10 @@ export function DataPanel(props: PanelProps): JSXRenderable {
       message.error((e as Error)?.message || m.networkError);
     });
   }
-  const doView = (r: Row) => {
+  function doView(r: Row): void {
     viewRow.value = r;
     refreshOpenView(idOf(r));
-  };
+  }
 
   panelHandles.set(key, {
     reload: () => {

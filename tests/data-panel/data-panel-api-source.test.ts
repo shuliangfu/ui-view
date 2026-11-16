@@ -10,6 +10,7 @@ import {
   joinApiPath,
   normalizeListPayload,
   normalizePageRoute,
+  normalizeViewPayload,
   resolveApiRoot,
 } from "../../src/desktop/data-display/data-panel-api-source.ts";
 import type { Query } from "../../src/desktop/data-display/data-panel-types.ts";
@@ -113,7 +114,15 @@ describe("joinApiPath / apiQueryParams / normalizeListPayload", () => {
         data: { rows: [{ id: "2" }], total: 3, totals: { a: 1 } },
       }),
     ).toEqual({ rows: [{ id: "2" }], total: 3, totals: { a: 1 } });
-    // 兼容：没有 rows 时仍接受 items（输出仍为 rows）
+    // 后台 return { rows: [] } / return { items: [] }（无 total 时用长度）
+    expect(normalizeListPayload({ rows: [] })).toEqual({
+      rows: [],
+      total: 0,
+    });
+    expect(normalizeListPayload({ items: [] })).toEqual({
+      rows: [],
+      total: 0,
+    });
     expect(normalizeListPayload({ items: [{ id: "3" }], total: 1 })).toEqual({
       rows: [{ id: "3" }],
       total: 1,
@@ -126,6 +135,21 @@ describe("joinApiPath / apiQueryParams / normalizeListPayload", () => {
         total: 1,
       }),
     ).toEqual({ rows: [{ id: "r" }], total: 1 });
+  });
+
+  it("normalizeViewPayload 接受 data 与 row", () => {
+    const row = { id: "9", name: "A" };
+    expect(normalizeViewPayload({ data: row })).toEqual(row);
+    expect(normalizeViewPayload({ row })).toEqual(row);
+    expect(normalizeViewPayload({ ok: true, data: row })).toEqual(row);
+    expect(normalizeViewPayload({ ok: true, row })).toEqual(row);
+    // 两者都有时以 data 为准
+    expect(normalizeViewPayload({ data: { id: "d" }, row: { id: "r" } }))
+      .toEqual({ id: "d" });
+    // 直接返回行对象
+    expect(normalizeViewPayload(row)).toEqual(row);
+    expect(normalizeViewPayload({ items: [] })).toBeNull();
+    expect(normalizeViewPayload({ rows: [] })).toBeNull();
   });
 });
 
@@ -487,6 +511,56 @@ describe("createApiDataSource 删除路径默认与覆盖", () => {
     expect(calls.map((c) => `${c.method} ${c.url}`)).toEqual([
       "POST /api/users/remove?id=9",
     ]);
+  });
+
+  it("list 接受 rows 与 items，view 接受 data 与 row", async () => {
+    const row = { id: "9", name: "A" };
+    const listRows = createApiDataSource({
+      baseRoute: "/api/users",
+      fetch: mockFetch([], () => ({ json: { rows: [row] } })),
+    });
+    expect(await listRows.list(Q)).toEqual({ rows: [row], total: 1 });
+    const listItems = createApiDataSource({
+      baseRoute: "/api/users",
+      fetch: mockFetch([], () => ({ json: { items: [row] } })),
+    });
+    expect(await listItems.list(Q)).toEqual({ rows: [row], total: 1 });
+    const viewData = createApiDataSource({
+      baseRoute: "/api/users",
+      apiMode: "restful",
+      fetch: mockFetch([], () => ({ json: { data: row } })),
+    });
+    expect(await viewData.view("9")).toEqual(row);
+    const viewRow = createApiDataSource({
+      baseRoute: "/api/users",
+      apiMode: "restful",
+      fetch: mockFetch([], () => ({ json: { row } })),
+    });
+    expect(await viewRow.view("9")).toEqual(row);
+  });
+
+  it("create 成功时带回 body.item／data／row", async () => {
+    const item = { id: "9", name: "A" };
+    const dsItem = createApiDataSource({
+      baseRoute: "/api/users",
+      fetch: mockFetch([], () => ({ json: { ok: true, item } })),
+    });
+    expect(await dsItem.create!({ name: "A" })).toEqual({ ok: true, item });
+    const dsData = createApiDataSource({
+      baseRoute: "/api/users",
+      fetch: mockFetch([], () => ({ json: { ok: true, data: item } })),
+    });
+    expect(await dsData.create!({ name: "A" })).toEqual({ ok: true, item });
+    const dsRow = createApiDataSource({
+      baseRoute: "/api/users",
+      fetch: mockFetch([], () => ({ json: { ok: true, row: item } })),
+    });
+    expect(await dsRow.create!({ name: "A" })).toEqual({ ok: true, item });
+    const dsPlain = createApiDataSource({
+      baseRoute: "/api/users",
+      fetch: mockFetch([], () => ({ json: { ok: true } })),
+    });
+    expect(await dsPlain.create!({ name: "A" })).toEqual({ ok: true });
   });
 
   it("writable:false 不挂 remove／removeBatch", () => {
