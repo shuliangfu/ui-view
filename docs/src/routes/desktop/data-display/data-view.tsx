@@ -366,13 +366,14 @@ const user = {
 
 const typeCode = `import { DataView } from "@dreamer/ui-view/data-display";
 
-// 省略 type 时默认 info
-<DataView title="默认（info）" data={user} view={view} toolbar={false} />
-
-<DataView title="success" type="success" data={user} view={view} toolbar={false} />
-<DataView title="info" type="info" data={user} view={view} toolbar={false} />
-<DataView title="warning" type="warning" data={user} view={view} toolbar={false} />
-<DataView title="danger" type="danger" data={user} view={view} toolbar={false} />
+<div class="flex flex-col gap-4">
+  {/* 省略 type 时默认 info */}
+  <DataView title="默认（info）" data={user} view={view} toolbar={false} />
+  <DataView title="success" type="success" data={user} view={view} toolbar={false} />
+  <DataView title="info" type="info" data={user} view={view} toolbar={false} />
+  <DataView title="warning" type="warning" data={user} view={view} toolbar={false} />
+  <DataView title="danger" type="danger" data={user} view={view} toolbar={false} />
+</div>
 `;
 
 const alertCode = `import { DataView } from "@dreamer/ui-view/data-display";
@@ -620,7 +621,7 @@ export default function DataDisplayDataView() {
             <code>danger</code>。省略时默认{" "}
             <code>info</code>。浅色与深色主题均适用。
           </Paragraph>
-          <div class="space-y-4">
+          <div class="flex flex-col gap-4">
             {([
               ["demo-dv-title-type-default", "默认（info）", undefined],
               ["demo-dv-title-type-success", "success", "success"],
@@ -628,23 +629,25 @@ export default function DataDisplayDataView() {
               ["demo-dv-title-type-warning", "warning", "warning"],
               ["demo-dv-title-type-danger", "danger", "danger"],
             ] as const).map(([panelKey, title, type]) => (
-              <DataView
-                panelKey={panelKey}
-                title={title}
-                type={type}
-                data={DEMO_USER}
-                toolbar={false}
-                view={{
-                  descriptions: {
-                    labelColPercent: 28,
-                    labelMinWidth: "7rem",
-                  },
-                  props: [
-                    { prop: "name", label: "姓名" },
-                    { prop: "email", label: "邮箱" },
-                  ],
-                }}
-              />
+              <div>
+                <DataView
+                  panelKey={panelKey}
+                  title={title}
+                  type={type}
+                  data={DEMO_USER}
+                  toolbar={false}
+                  view={{
+                    descriptions: {
+                      labelColPercent: 28,
+                      labelMinWidth: "7rem",
+                    },
+                    props: [
+                      { prop: "name", label: "姓名" },
+                      { prop: "email", label: "邮箱" },
+                    ],
+                  }}
+                />
+              </div>
             ))}
           </div>
         </DocsDemo>

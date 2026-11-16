@@ -797,13 +797,14 @@ const rows = makeDemoRows(25);
 
 const typeCode = `import { DataPanel } from "@dreamer/ui-view/data-display";
 
-// 省略 type 时默认 info
-<DataPanel title="默认（info）" data={rows} columns={columns} toolbar={false} />
-
-<DataPanel title="success" type="success" data={rows} columns={columns} toolbar={false} />
-<DataPanel title="info" type="info" data={rows} columns={columns} toolbar={false} />
-<DataPanel title="warning" type="warning" data={rows} columns={columns} toolbar={false} />
-<DataPanel title="danger" type="danger" data={rows} columns={columns} toolbar={false} />
+<div class="flex flex-col gap-4">
+  {/* 省略 type 时默认 info */}
+  <DataPanel title="默认（info）" data={rows} columns={columns} toolbar={false} />
+  <DataPanel title="success" type="success" data={rows} columns={columns} toolbar={false} />
+  <DataPanel title="info" type="info" data={rows} columns={columns} toolbar={false} />
+  <DataPanel title="warning" type="warning" data={rows} columns={columns} toolbar={false} />
+  <DataPanel title="danger" type="danger" data={rows} columns={columns} toolbar={false} />
+</div>
 `;
 
 const searchCode = `import { DataPanel } from "@dreamer/ui-view/data-display";
@@ -2568,7 +2569,7 @@ export default function DataDisplayDataPanel() {
             <code>danger</code>。省略时默认{" "}
             <code>info</code>。浅色与深色主题均适用。
           </Paragraph>
-          <div class="space-y-4">
+          <div class="flex flex-col gap-4">
             {([
               ["demo-title-type-default", "默认（info）", undefined],
               ["demo-title-type-success", "success", "success"],
@@ -2576,14 +2577,16 @@ export default function DataDisplayDataPanel() {
               ["demo-title-type-warning", "warning", "warning"],
               ["demo-title-type-danger", "danger", "danger"],
             ] as const).map(([panelKey, title, type]) => (
-              <DataPanel
-                panelKey={panelKey}
-                title={title}
-                type={type}
-                data={makeDemoRows(2)}
-                columns={DEMO_COLUMNS}
-                toolbar={false}
-              />
+              <div>
+                <DataPanel
+                  panelKey={panelKey}
+                  title={title}
+                  type={type}
+                  data={makeDemoRows(2)}
+                  columns={DEMO_COLUMNS}
+                  toolbar={false}
+                />
+              </div>
             ))}
           </div>
         </DocsDemo>
