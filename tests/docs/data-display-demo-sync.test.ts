@@ -218,8 +218,8 @@ async function loadFixture(): Promise<Fixture> {
 describe("文档示例与现场演示同步（定义可见）", () => {
   it("读入文档页与 demo 模块", async () => {
     const { panelDemos, viewDemos, panelCodes, codes } = await loadFixture();
-    expect(panelDemos.length).toBe(41);
-    expect(viewDemos.length).toBe(5);
+    expect(panelDemos.length).toBe(42);
+    expect(viewDemos.length).toBe(6);
     expect(Object.keys(panelCodes).length >= 30).toBe(true);
     expect(Boolean(codes["DEMO_COMMON_SETUP_CODE"])).toBe(true);
   });
