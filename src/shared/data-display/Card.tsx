@@ -84,12 +84,12 @@ export function Card(props: CardProps): JSXRenderable {
       {(title != null || extra != null) && (
         <div
           class={twMerge(
-            "flex items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-600",
+            "flex items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-600 text-slate-900 dark:text-white",
             paddingCls,
             headerClass,
           )}
         >
-          <div class="font-semibold text-slate-900 dark:text-white truncate min-w-0">
+          <div class="font-semibold truncate min-w-0">
             {title}
           </div>
           {extra != null && <div class="shrink-0">{extra}</div>}

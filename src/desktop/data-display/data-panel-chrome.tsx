@@ -416,20 +416,42 @@ export const TABLE_WRAP_BELOW_ALERT_CLS =
   "dp-table-wrap bg-white !px-2.5 !pb-2.5 !pt-0 dark:bg-transparent";
 
 /**
- * DataPanel／DataView 工具栏底色：比标题浅、比原先工具栏深的中间值。
- * 浅色：标题 `bg-slate-200/80` 与原工具栏 `bg-slate-100/80` 的中间色；
- * 深色：标题 `bg-slate-900`（约 rgb(14,22,44)）与原透明底透出的面板色
- * （约 rgb(24,33,53)）的中间色 rgb(19,28,49)。
+ * DataPanel／DataView 工具栏底色：比标题浅一档。
+ * 浅色 rgb(244,246,250)，深色 rgb(22,31,52)。
  */
 export const TOOLBAR_BAR_CLS =
-  "flex w-full flex-wrap items-center justify-end gap-2 border-y border-slate-300 bg-[rgb(240_243_248)] px-3 py-2 dark:border-slate-600/40 dark:bg-[rgb(19_28_49)]";
+  "flex w-full flex-wrap items-center justify-end gap-2 border-y border-slate-300 bg-[rgb(244_246_250)] px-3 py-2 dark:border-slate-600/40 dark:bg-[rgb(22_31_52)]";
 
 /**
- * DataPanel／DataView 标题栏：取消 Card 自带底边，改由工具栏用相同的
- * `border-y` 画出上下两条同样淡的分隔线（浅色 slate-300，深色 slate-600/40）。
- * 浅色不用 slate-200：它和标题 rgb(230,235,243)、工具栏 rgb(240,243,248) 太近，几乎看不见。
+ * 标题栏背景类型。取值与 {@link Tone} 中的语义色一致（无 default）；
+ * 配色与 Alert 提示条相同（`danger` 对应 Alert 的 `error`）。
  */
-export const HEADER_BAR_CLS = "!border-b-0 bg-slate-200/80 dark:bg-slate-900";
+export type DataTitleType = Exclude<Tone, "default">;
+
+/**
+ * DataPanel／DataView 标题栏底色／标题色。取消 Card 自带底边，改由工具栏用相同的
+ * `border-y` 画出上下两条同样淡的分隔线（浅色 slate-300，深色 slate-600/40）。
+ * 背景与文字色复用 Alert 的 success／info／warning／error token。
+ */
+export const HEADER_BAR_TYPE_CLS: Record<DataTitleType, string> = {
+  success:
+    "!border-b-0 bg-green-50 dark:bg-green-950/40 text-green-800 dark:text-green-200",
+  info:
+    "!border-b-0 bg-blue-50 dark:bg-blue-950/40 text-blue-800 dark:text-blue-200",
+  warning:
+    "!border-b-0 bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-200",
+  danger:
+    "!border-b-0 bg-red-50 dark:bg-red-950/40 text-red-800 dark:text-red-200",
+};
+
+/** 标题栏默认（info）class，等同 `headerBarCls()`。 */
+export const HEADER_BAR_CLS = HEADER_BAR_TYPE_CLS.info;
+
+/** 按 `type` 取标题栏 class；省略或无法识别时回落 info。 */
+export function headerBarCls(type?: DataTitleType): string {
+  if (type && type in HEADER_BAR_TYPE_CLS) return HEADER_BAR_TYPE_CLS[type];
+  return HEADER_BAR_TYPE_CLS.info;
+}
 
 /** 分页条（原 `.dp-pg`；条数在左、控件在右，各端同一行） */
 export const PG_CLS =

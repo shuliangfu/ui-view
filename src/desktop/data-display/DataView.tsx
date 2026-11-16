@@ -29,7 +29,7 @@ import { IconDownload } from "../../shared/basic/icons/Download.tsx";
 import { IconEdit } from "../../shared/basic/icons/Edit.tsx";
 import { IconTrash } from "../../shared/basic/icons/Trash.tsx";
 import { IconExitFullscreen } from "../../shared/basic/icons/ExitFullscreen.tsx";
-import { IconList } from "../../shared/basic/icons/List.tsx";
+import { IconGrid } from "../../shared/basic/icons/Grid.tsx";
 import { IconMaximize2 } from "../../shared/basic/icons/Maximize2.tsx";
 import { IconPrinter } from "../../shared/basic/icons/Printer.tsx";
 import { IconRefresh } from "../../shared/basic/icons/Refresh.tsx";
@@ -139,9 +139,10 @@ import {
 import {
   Btn,
   CARD_STYLE,
+  type DataTitleType,
   FS_CLS,
   g,
-  HEADER_BAR_CLS,
+  headerBarCls,
   onServer,
   POP_OVERLAY_CLS,
   printHtml,
@@ -215,6 +216,11 @@ export interface DataViewProps {
   panelKey?: string;
   /** 卡片标题 */
   title: string;
+  /**
+   * 标题栏背景类型：`success` / `info` / `warning` / `danger`。
+   * 配色与 Alert 提示条一致（`danger` 对应 Alert 的 `error`）。省略时默认 `info`。
+   */
+  type?: DataTitleType;
   /**
    * 明细配置：`props` 用 Descriptions 展示（同 DataPanel view）。
    * Descriptions 的参数写在 `view.descriptions`（除 `items`、`title`）；DataView 的 view 不是弹层，`modal` 不生效。
@@ -320,6 +326,7 @@ export interface DataViewProps {
 }
 
 export type { DataAlertConfig, DataAlertProp } from "./data-panel-alert.tsx";
+export type { DataTitleType } from "./data-panel-chrome.tsx";
 import { bindContainerWidth } from "../../shared/container-width.ts";
 
 /** 本地源没有 view/get 时补一个按 id 查找，刷新／写回后能读到源里的当前行。 */
@@ -2006,7 +2013,7 @@ export function DataView(props: DataViewProps): JSXRenderable {
         class="inline-flex min-w-0 items-center gap-2"
         data-testid="data-view"
       >
-        <IconList size="sm" />
+        <IconGrid class="h-[1.15em] w-[1.15em] text-current dark:text-current [&_svg]:[stroke-width:2.75]" />
         <span class="truncate">{text}</span>
       </span>
     );
@@ -2027,7 +2034,7 @@ export function DataView(props: DataViewProps): JSXRenderable {
             class={`dp-card${
               props.class ? ` ${props.class}` : ""
             } ${CARD_STYLE}`}
-            headerClass={HEADER_BAR_CLS}
+            headerClass={headerBarCls(props.type)}
             title={cardTitle()}
             bodyClass="p-0"
           >

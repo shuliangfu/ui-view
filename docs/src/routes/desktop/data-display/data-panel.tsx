@@ -93,6 +93,13 @@ const DATA_PANEL_API: DocsApiTableRow[] = [
     description: "卡片标题（必填）",
   },
   {
+    name: "type",
+    type: '"success" | "info" | "warning" | "danger"',
+    default: '"info"',
+    description:
+      "标题栏背景类型。配色与 Alert 提示条一致（浅色／深色均适用；danger 对应 Alert 的 error）。省略时默认 info。",
+  },
+  {
     name: "columns",
     type: "Column[]",
     default: "-",
@@ -786,6 +793,17 @@ const rows = makeDemoRows(25);
   form={{ props: form }}
   exportName="users"
 />
+`;
+
+const typeCode = `import { DataPanel } from "@dreamer/ui-view/data-display";
+
+// 省略 type 时默认 info
+<DataPanel title="默认（info）" data={rows} columns={columns} toolbar={false} />
+
+<DataPanel title="success" type="success" data={rows} columns={columns} toolbar={false} />
+<DataPanel title="info" type="info" data={rows} columns={columns} toolbar={false} />
+<DataPanel title="warning" type="warning" data={rows} columns={columns} toolbar={false} />
+<DataPanel title="danger" type="danger" data={rows} columns={columns} toolbar={false} />
 `;
 
 const searchCode = `import { DataPanel } from "@dreamer/ui-view/data-display";
@@ -2541,6 +2559,33 @@ export default function DataDisplayDataPanel() {
             form={{ props: DEMO_FORM }}
             exportName="users"
           />
+        </DocsDemo>
+
+        <DocsDemo title="标题栏背景" code={typeCode}>
+          <Paragraph class="mb-3 text-sm text-slate-600 dark:text-slate-400">
+            用 <code>type</code> 设置标题栏背景：
+            <code>success</code>／<code>info</code>／<code>warning</code>／
+            <code>danger</code>。省略时默认{" "}
+            <code>info</code>。浅色与深色主题均适用。
+          </Paragraph>
+          <div class="space-y-4">
+            {([
+              ["demo-title-type-default", "默认（info）", undefined],
+              ["demo-title-type-success", "success", "success"],
+              ["demo-title-type-info", "info", "info"],
+              ["demo-title-type-warning", "warning", "warning"],
+              ["demo-title-type-danger", "danger", "danger"],
+            ] as const).map(([panelKey, title, type]) => (
+              <DataPanel
+                panelKey={panelKey}
+                title={title}
+                type={type}
+                data={makeDemoRows(2)}
+                columns={DEMO_COLUMNS}
+                toolbar={false}
+              />
+            ))}
+          </div>
         </DocsDemo>
 
         <DocsDemo title="页面提示条" code={alertCode}>

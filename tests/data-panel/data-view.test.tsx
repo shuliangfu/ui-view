@@ -39,6 +39,7 @@ const VIEW = {
 };
 
 const ICON_LIST_PATH = 'd="M8 6h13M8 12h13M8 18h13"';
+const ICON_GRID_MARK = 'x="14" y="14" width="7" height="7"';
 const ICON_EYE_PATH = 'd="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"';
 
 const TB_IDS = [
@@ -125,23 +126,27 @@ describe("DataView", () => {
     expect(h).toContain("张三");
   });
 
-  it("首帧渲染标题、IconList、view.props 字段，且无分页", async () => {
+  it("首帧渲染标题、IconGrid、view.props 字段，且无分页", async () => {
     const h = await html();
     expect(h).toContain("用户详情");
     expect(h).toContain('data-testid="data-view"');
-    expect(h).toContain(ICON_LIST_PATH);
+    expect(h).toContain(ICON_GRID_MARK);
+    expect(h).not.toContain(ICON_LIST_PATH);
+    expect(h).toContain("text-current dark:text-current");
     expect(h).not.toContain(ICON_EYE_PATH);
     expect(h).toContain('data-testid="data-view-toolbar"');
-    expect(h).toContain("bg-[rgb(240_243_248)]");
-    expect(h).toContain("dark:bg-[rgb(19_28_49)]");
+    expect(h).toContain("bg-[rgb(244_246_250)]");
+    expect(h).toContain("dark:bg-[rgb(22_31_52)]");
     expect(h).toContain('data-testid="dv-view"');
     expect(h).toContain("姓名");
     expect(h).toContain("Ada");
     expect(h).toContain("邮箱");
     expect(h).toContain("ada@example.com");
     expect(h).toContain("启用");
-    expect(h).toContain("bg-slate-200/80");
-    expect(h).toContain("dark:bg-slate-900");
+    expect(h).toContain("bg-blue-50");
+    expect(h).toContain("dark:bg-blue-950/40");
+    expect(h).toContain("text-blue-800");
+    expect(h).toContain("dark:text-blue-200");
     expect(h).toContain("!border-b-0");
     expect(h).toContain("border-y");
     expect(h).toContain("border-slate-300");
@@ -150,6 +155,19 @@ describe("DataView", () => {
     expect(h).not.toContain("data-panel-toolbar");
     expect(h).not.toContain('data-testid="dp-create"');
     expect(h).not.toContain('data-testid="dp-search-toggle"');
+  });
+
+  it("type 可切换标题栏色，省略时为 info", async () => {
+    const info = await html();
+    expect(info).toContain("bg-blue-50 dark:bg-blue-950/40");
+    expect(info).not.toContain("bg-green-50 dark:bg-green-950/40");
+    const success = await html({ type: "success" });
+    expect(success).toContain("bg-green-50 dark:bg-green-950/40");
+    expect(success).not.toContain("bg-blue-50 dark:bg-blue-950/40");
+    const danger = await html({ type: "danger" });
+    expect(danger).toContain("bg-red-50 dark:bg-red-950/40");
+    const warning = await html({ type: "warning" });
+    expect(warning).toContain("bg-amber-50 dark:bg-amber-950/40");
   });
 
   it("默认工具栏渲染全部内置按钮", async () => {

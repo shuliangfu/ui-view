@@ -236,6 +236,7 @@ import {
 } from "./data-panel-types.ts";
 
 export type { DataAlertConfig, DataAlertProp } from "./data-panel-alert.tsx";
+export type { DataTitleType } from "./data-panel-chrome.tsx";
 
 export type {
   ActionCtrl,
@@ -333,6 +334,11 @@ export interface PanelProps {
   panelKey?: string;
   /** 卡片标题 */
   title: string;
+  /**
+   * 标题栏背景类型：`success` / `info` / `warning` / `danger`。
+   * 配色与 Alert 提示条一致（`danger` 对应 Alert 的 `error`）。省略时默认 `info`。
+   */
+  type?: DataTitleType;
   /** 列定义 */
   columns: Column[];
   /**
@@ -562,11 +568,12 @@ import {
   Btn,
   CARD_STYLE,
   CELL_EDIT_CLS,
+  type DataTitleType,
   densityTableCls,
   ED_WRAP_CLS,
   FS_CLS,
   g,
-  HEADER_BAR_CLS,
+  headerBarCls,
   ICON_BTN,
   inlineEditorInputWidthStyle,
   JUMP_CLS,
@@ -4460,13 +4467,13 @@ export function DataPanel(props: PanelProps): JSXRenderable {
             class={`dp-card${
               props.class ? ` ${props.class}` : ""
             } ${CARD_STYLE}`}
-            headerClass={HEADER_BAR_CLS}
+            headerClass={headerBarCls(props.type)}
             title={
               <span
                 class="inline-flex min-w-0 items-center gap-2"
                 data-testid="data-panel"
               >
-                <IconList size="sm" />
+                <IconList class="h-[1.45em] w-[1.45em] text-current dark:text-current [&_svg]:[stroke-width:2.75]" />
                 <span class="truncate">{props.title}</span>
               </span>
             }

@@ -32,6 +32,13 @@ const DATA_VIEW_API: DocsApiTableRow[] = [
     description: "卡片标题；若未写 view.title 则同时作为标题栏文案",
   },
   {
+    name: "type",
+    type: '"success" | "info" | "warning" | "danger"',
+    default: '"info"',
+    description:
+      "标题栏背景类型。配色与 Alert 提示条一致（浅色／深色均适用；danger 对应 Alert 的 error）。省略时默认 info。",
+  },
+  {
     name: "view",
     type: "ViewConfig",
     default: "-",
@@ -357,6 +364,17 @@ const user = {
 />
 `;
 
+const typeCode = `import { DataView } from "@dreamer/ui-view/data-display";
+
+// 省略 type 时默认 info
+<DataView title="默认（info）" data={user} view={view} toolbar={false} />
+
+<DataView title="success" type="success" data={user} view={view} toolbar={false} />
+<DataView title="info" type="info" data={user} view={view} toolbar={false} />
+<DataView title="warning" type="warning" data={user} view={view} toolbar={false} />
+<DataView title="danger" type="danger" data={user} view={view} toolbar={false} />
+`;
+
 const alertCode = `import { DataView } from "@dreamer/ui-view/data-display";
 import { toast } from "@dreamer/ui-view/feedback";
 
@@ -593,6 +611,42 @@ export default function DataDisplayDataView() {
               ],
             }}
           />
+        </DocsDemo>
+
+        <DocsDemo title="标题栏背景" code={typeCode}>
+          <Paragraph class="mb-3 text-sm text-slate-600 dark:text-slate-400">
+            用 <code>type</code> 设置标题栏背景：
+            <code>success</code>／<code>info</code>／<code>warning</code>／
+            <code>danger</code>。省略时默认{" "}
+            <code>info</code>。浅色与深色主题均适用。
+          </Paragraph>
+          <div class="space-y-4">
+            {([
+              ["demo-dv-title-type-default", "默认（info）", undefined],
+              ["demo-dv-title-type-success", "success", "success"],
+              ["demo-dv-title-type-info", "info", "info"],
+              ["demo-dv-title-type-warning", "warning", "warning"],
+              ["demo-dv-title-type-danger", "danger", "danger"],
+            ] as const).map(([panelKey, title, type]) => (
+              <DataView
+                panelKey={panelKey}
+                title={title}
+                type={type}
+                data={DEMO_USER}
+                toolbar={false}
+                view={{
+                  descriptions: {
+                    labelColPercent: 28,
+                    labelMinWidth: "7rem",
+                  },
+                  props: [
+                    { prop: "name", label: "姓名" },
+                    { prop: "email", label: "邮箱" },
+                  ],
+                }}
+              />
+            ))}
+          </div>
         </DocsDemo>
 
         <DocsDemo title="页面提示条" code={alertCode}>

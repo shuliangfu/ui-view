@@ -139,7 +139,7 @@
     "@dreamer/i18n": "jsr:@dreamer/i18n@^1.1.2",
     "@dreamer/markdown": "jsr:@dreamer/markdown@^1.1.1",
     "@dreamer/plugin": "jsr:@dreamer/plugin@^1.1.0",
-    "@dreamer/logger": "jsr:@dreamer/logger@^1.1.0",
+    "@dreamer/logger": "jsr:@dreamer/logger@^1.1.1",
     "@dreamer/runtime-adapter": "jsr:@dreamer/runtime-adapter@^1.2.2",
     "@dreamer/service": "jsr:@dreamer/service@^1.1.0",
     "@dreamer/storage/client": "jsr:@dreamer/storage@^1.1.0/client",

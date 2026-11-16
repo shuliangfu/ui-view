@@ -945,6 +945,7 @@ export type {
   DataChromeTabType,
   DataPanelHandle,
   DataSource,
+  DataTitleType,
   DataViewCaps,
   DataViewHandle,
   DataViewProps,

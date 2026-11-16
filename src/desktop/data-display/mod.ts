@@ -102,6 +102,7 @@ export {
   DataPanel,
   type DataPanelHandle,
   type DataSource,
+  type DataTitleType,
   type DataViewHandle,
   type Density,
   evalColumnDisable,

@@ -948,15 +948,26 @@ describe("DataPanel SSR：文案与自定义", () => {
     expect(off).toContain("dp-range");
     const on = await html({});
     expect(on).toContain('data-testid="data-panel-toolbar"');
-    expect(on).toContain("bg-[rgb(240_243_248)]");
-    expect(on).toContain("dark:bg-[rgb(19_28_49)]");
+    expect(on).toContain("bg-[rgb(244_246_250)]");
+    expect(on).toContain("dark:bg-[rgb(22_31_52)]");
     expect(on).toContain("!border-b-0");
+    expect(on).toContain("bg-blue-50");
+    expect(on).toContain("dark:bg-blue-950/40");
     expect(on).toContain("border-y");
     expect(on).toContain("border-slate-300");
     expect(on).toContain("dark:border-slate-600/40");
     const rec = await html({ toolbar: { refresh: true, print: false } });
     expect(rec).toContain('data-testid="data-panel-toolbar"');
     expect(rec).toContain('data-testid="dp-refresh"');
+  });
+
+  it("type 可切换标题栏色，省略时为 info", async () => {
+    const info = await html({});
+    expect(info).toContain("bg-blue-50 dark:bg-blue-950/40");
+    expect(info).not.toContain("bg-red-50 dark:bg-red-950/40");
+    const danger = await html({ type: "danger" });
+    expect(danger).toContain("bg-red-50 dark:bg-red-950/40");
+    expect(danger).not.toContain("bg-blue-50 dark:bg-blue-950/40");
   });
 
   it("未声明 selection 列时即使 caps.remove 为 true 也不出现勾选列", async () => {
