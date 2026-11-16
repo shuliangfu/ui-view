@@ -35,9 +35,9 @@ const TRANSFER_API: ApiRow[] = [
 
   {
     name: "dataSource",
-    type: "Array<{key, title, disabled?}>",
+    type: "Array<{key, title, disabled?, group?}>",
     default: "-",
-    description: "数据源",
+    description: "数据源；同 group 的项以 optgroup 分组显示，搜索默认也匹配分组名",
   },
   {
     name: "targetKeys",
@@ -163,6 +163,15 @@ const data = [
   { key: "6", title: "草莓", disabled: true },
 ];
 
+const groupedData = [
+  { key: "r1", title: "管理员", group: "角色" },
+  { key: "r2", title: "只读", group: "角色" },
+  { key: "p1", title: "用户查看", group: "权限" },
+  { key: "p2", title: "用户编辑", group: "权限" },
+  { key: "u1", title: "/settings", group: "路由" },
+  { key: "u2", title: "/dashboard", group: "路由" },
+];
+
 const importCode = `import { Form } from "@dreamer/ui-view/form/form";
 import { FormItem } from "@dreamer/ui-view/form/form-item";
 import { Transfer } from "@dreamer/ui-view/form/transfer";
@@ -236,6 +245,7 @@ export default function FormTransfer() {
   const targetKeys2 = createSignal<string[]>(["2", "4"]);
   /** 含 disabled 项示例：受控请传 Signal；勿写死 targetKeys 否则无法穿梭 */
   const targetKeysWithDisabled = createSignal<string[]>(["1"]);
+  const targetKeysGrouped = createSignal<string[]>(["r2"]);
 
   return (
     <div class="space-y-10">
@@ -249,7 +259,7 @@ export default function FormTransfer() {
           height、minHeight、maxHeight 只接受像素数字；要写 CSS 值请放在
           listStyle 的同名字段里，height 默认 200。可用 listStyle.itemHeight
           控制每一项行高（像素），不传则按 size 使用默认行高。render
-          若返回非文本则回退为标题。dataSource、targetKeys、onChange、titles、showSearch、searchPlaceholder、可选
+          若返回非文本则回退为标题。dataSource 项可设 group，同组以 optgroup 显示，搜索也匹配分组名。dataSource、targetKeys、onChange、titles、showSearch、searchPlaceholder、可选
           searchValue（仅初始文案）、onSearch（输入通知）、filterOption、render、listStyle、disabled。宽度由
           class 控制，表单中需占满一列时传 class="w-full"。Tailwind v4 +
           light/dark。与{" "}
@@ -366,6 +376,31 @@ export default function FormTransfer() {
             />
           </section>
 
+          <section class="space-y-4">
+            <Title level={3}>按 group 分组</Title>
+            <FormItem label="角色 / 权限 / 路由">
+              <Transfer
+                dataSource={groupedData}
+                targetKeys={targetKeysGrouped}
+                titles={["可选", "已选"]}
+                showSearch
+              />
+            </FormItem>
+            <CodeBlock
+              title="代码示例"
+              code={`const data = [
+  { key: "r1", title: "管理员", group: "角色" },
+  { key: "p1", title: "用户查看", group: "权限" },
+  { key: "u1", title: "/settings", group: "路由" },
+];
+<Transfer dataSource={data} targetKeys={targetKeys} showSearch />`}
+              language="tsx"
+              showLineNumbers
+              copyable
+              wrapLongLines
+              maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
+            />
+          </section>
           <section class="space-y-4">
             <Title level={3}>dataSource 含 disabled 项 / 整组 disabled</Title>
             <FormItem label="草莓为 disabled">

@@ -1,6 +1,6 @@
 /**
  * Transfer 穿梭框（View，归类为表单组件）。
- * 双列选择；支持搜索、禁用项、方向。左右列表用原生 `select multiple`：单击只选一项，Ctrl／Command+单击多选，Ctrl／Command+A 全选当前列。选中后通过中间按钮穿梭。自定义 `render` 若返回非文本，则回退为标题。
+ * 双列选择；支持搜索、禁用项、方向。左右列表用原生 `select multiple`：单击只选一项，Ctrl／Command+单击多选，Ctrl／Command+A 全选当前列。选中后通过中间按钮穿梭。自定义 `render` 若返回非文本，则回退为标题。`dataSource` 项可设 `group`，同组以 `optgroup` 显示；搜索默认也匹配分组名。
  *
  * **避免整块重挂载：**
  * 1. 外层 `return ()` **不读取** `leftSearchRef` / `rightSearchRef`，也**不读取** `selectedKeysRef.value`，
@@ -37,6 +37,8 @@ export interface TransferItem {
   title: string | unknown;
   /** 是否禁用 */
   disabled?: boolean;
+  /** 分组名；相同值的项在列表里归入同一个 `optgroup` */
+  group?: string;
 }
 
 /**
@@ -138,9 +140,39 @@ function filterTransferItems(
 ): TransferItem[] {
   if (!q.trim()) return items;
   const fn = filterOption ??
-    ((input: string, item: TransferItem) =>
-      String(item.title).toLowerCase().includes(input.toLowerCase()));
+    ((input: string, item: TransferItem) => {
+      const needle = input.toLowerCase();
+      return String(item.title).toLowerCase().includes(needle) ||
+        (item.group != null && item.group.toLowerCase().includes(needle));
+    });
   return items.filter((i) => fn(q, i));
+}
+
+/** 按 `group` 保序分组；无分组的项排在前面，不包 `optgroup`。 */
+export function groupTransferItems(
+  items: TransferItem[],
+): Array<{ group?: string; items: TransferItem[] }> {
+  const ungrouped: TransferItem[] = [];
+  const map = new Map<string, TransferItem[]>();
+  const order: string[] = [];
+  for (const item of items) {
+    const name = item.group?.trim();
+    if (!name) {
+      ungrouped.push(item);
+      continue;
+    }
+    let list = map.get(name);
+    if (!list) {
+      list = [];
+      map.set(name, list);
+      order.push(name);
+    }
+    list.push(item);
+  }
+  const out: Array<{ group?: string; items: TransferItem[] }> = [];
+  if (ungrouped.length) out.push({ items: ungrouped });
+  for (const group of order) out.push({ group, items: map.get(group)! });
+  return out;
 }
 
 /** Option label for the native select: prefer a string `render` result, else title. */
@@ -352,24 +384,33 @@ function TransferColumn(props: TransferColumnProps) {
             const itemHeight = resolveItemHeight(listStyle, size);
             const fontSize = optionFontSize[size];
             const pad = Math.max(0, (itemHeight - fontSize) / 2);
-            return filtered.map((item) => (
-              <option
-                key={item.key}
-                value={item.key}
-                disabled={item.disabled || disabled}
-                selected={selectedKeys.includes(item.key)}
-                style={{
-                  boxSizing: "border-box",
-                  fontSize,
-                  lineHeight: `${fontSize}px`,
-                  paddingTop: pad,
-                  paddingBottom: pad,
-                  verticalAlign: "middle",
-                }}
-              >
-                {transferOptionLabel(item, render)}
-              </option>
-            ));
+            const optionStyle = {
+              boxSizing: "border-box",
+              fontSize,
+              lineHeight: `${fontSize}px`,
+              paddingTop: pad,
+              paddingBottom: pad,
+              verticalAlign: "middle",
+            };
+            return groupTransferItems(filtered).flatMap((block) => {
+              const options = block.items.map((item) => (
+                <option
+                  key={item.key}
+                  value={item.key}
+                  disabled={item.disabled || disabled}
+                  selected={selectedKeys.includes(item.key)}
+                  style={optionStyle}
+                >
+                  {transferOptionLabel(item, render)}
+                </option>
+              ));
+              if (!block.group) return options;
+              return [
+                <optgroup key={block.group} label={block.group}>
+                  {options}
+                </optgroup>,
+              ];
+            });
           }}
         </select>
         {() => {
