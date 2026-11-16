@@ -293,6 +293,7 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
         "搜索字段类型与自定义底栏",
         "表单底栏与字段条件",
         "命令式 API 与 syncUrl",
+        "标题栏背景",
       ]
     ) {
       expect(heads.some((h) => h.includes(need))).toBe(true);
@@ -301,7 +302,7 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
       t,
       `return document.querySelectorAll('[data-testid^="panel-demo-"]').length;`,
     );
-    expect(panels).toBe(41);
+    expect(panels).toBe(46);
   }, DOCS_BROWSER_CONFIG);
 
   it(
@@ -1876,14 +1877,14 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
     DOCS_BROWSER_CONFIG,
   );
   it(
-    "41 个示例：40 个有工具栏；toolbar:false 示例无工具栏，表格／分页齐全",
+    "46 个示例：40 个有工具栏；toolbar:false 示例无工具栏，表格／分页齐全",
     async (t) => {
       if (!t?.browser?.goto) return;
       await open(t, "demo-basic");
       const r = await ev<Record<string, unknown>>(
         t,
         `
-      const keys = ["demo-basic","demo-alert","demo-align","demo-search","demo-sync-url","demo-table","demo-col-fn","demo-join-name","demo-crud","demo-batch","demo-page","demo-export","demo-remote","demo-api-users-action","demo-api-orders-restful","demo-data-base-route","demo-dark","demo-locale","demo-toolbar-off","demo-defaults","demo-bool","demo-tb-fn","demo-ra-fn","demo-tb-custom","demo-ra-custom","demo-key-order","demo-enabled","demo-title","demo-can","demo-custom","demo-cell","demo-schemas-full","demo-view","demo-row-click-view","demo-form-view-render","demo-field-render","demo-tabs","demo-batch-bar","demo-search-adv","demo-form-cond","demo-handles"];
+      const keys = ["demo-basic","demo-alert","demo-align","demo-search","demo-sync-url","demo-table","demo-col-fn","demo-join-name","demo-crud","demo-batch","demo-page","demo-export","demo-remote","demo-api-users-action","demo-api-orders-restful","demo-data-base-route","demo-dark","demo-locale","demo-toolbar-off","demo-defaults","demo-bool","demo-tb-fn","demo-ra-fn","demo-tb-custom","demo-ra-custom","demo-key-order","demo-enabled","demo-title","demo-can","demo-custom","demo-cell","demo-schemas-full","demo-view","demo-row-click-view","demo-form-view-render","demo-field-render","demo-tabs","demo-batch-bar","demo-search-adv","demo-form-cond","demo-handles","demo-title-type-default","demo-title-type-success","demo-title-type-info","demo-title-type-warning","demo-title-type-danger"];
       await D.until(() => D.total("demo-remote") > 0, 10000);
       await D.until(() => D.total("demo-api-users-action") > 0, 10000);
       await D.until(() => D.total("demo-api-orders-restful") > 0, 10000);
@@ -1891,7 +1892,7 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
       for (const k of keys) {
         const hasTb = !!D.q(k, '[data-testid="data-panel-toolbar"]');
         // toolbar:false／demo-align（refresh:false）无刷新钮：用表格存在作 hydrated 代理
-        const noRefresh = k === "demo-toolbar-off" || k === "demo-align";
+        const noRefresh = k === "demo-toolbar-off" || k === "demo-align" || k.startsWith("demo-title-type-");
         out[k] = {
           toolbar: hasTb,
           table: !!D.q(k, '[data-testid="dp-table"]'),
@@ -1905,10 +1906,11 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
       }
       return out;`,
       );
-      expect(Object.keys(r).length).toBe(41);
+      expect(Object.keys(r).length).toBe(46);
       for (const [k, v] of Object.entries(r)) {
         const o = v as Record<string, unknown>;
-        const expectTb = k !== "demo-toolbar-off";
+        const expectTb = k !== "demo-toolbar-off" &&
+          !k.startsWith("demo-title-type-");
         expect([k, o.toolbar, o.table, o.pagination, o.hydrated, o.visible])
           .toEqual([k, expectTb, true, true, true, true]);
         expect((o.rows as number) > 0).toBe(true);

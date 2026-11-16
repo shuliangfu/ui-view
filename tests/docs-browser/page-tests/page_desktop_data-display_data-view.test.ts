@@ -52,7 +52,7 @@ describe("文档页 E2E：/desktop/data-display/data-view（DataView 数据明�
   }, DOCS_BROWSER_CONFIG);
 
   it(
-    "基础示例：标题、IconList、Descriptions、默认工具栏、无分页",
+    "基础示例：标题、IconGrid、Descriptions、默认工具栏、无分页",
     async (t) => {
       if (!t?.browser?.goto) return;
       await open(t);
@@ -80,6 +80,8 @@ describe("文档页 E2E：/desktop/data-display/data-view（DataView 数据明�
         return {
           ok: true,
           title: (title?.textContent ?? "").trim(),
+          hasGridIcon: titleHtml.includes('width="7" height="7"') &&
+            titleHtml.includes('x="14"'),
           hasListIcon: titleHtml.includes('d="M8 6h13M8 12h13M8 18h13"'),
           hasEyeIcon: titleHtml.includes(
             'd="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"',
@@ -101,6 +103,7 @@ describe("文档页 E2E：/desktop/data-display/data-view（DataView 数据明�
         ok: boolean;
         reason?: string;
         title: string;
+        hasGridIcon: boolean;
         hasListIcon: boolean;
         hasEyeIcon: boolean;
         hasName: boolean;
@@ -114,7 +117,8 @@ describe("文档页 E2E：/desktop/data-display/data-view（DataView 数据明�
       };
       expect(r.ok).toBe(true);
       expect(r.title).toContain("用户详情");
-      expect(r.hasListIcon).toBe(true);
+      expect(r.hasGridIcon).toBe(true);
+      expect(r.hasListIcon).toBe(false);
       expect(r.hasEyeIcon).toBe(false);
       expect(r.hasName).toBe(true);
       expect(r.hasEmail).toBe(true);
