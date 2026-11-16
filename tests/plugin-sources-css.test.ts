@@ -20,7 +20,11 @@ import {
 } from "@dreamer/runtime-adapter";
 import { describe, expect, it } from "@dreamer/test";
 import {
+  collectFollowedModuleFiles,
+  extractFollowedPackageSpecifiers,
+  localFilesFromDenoInfoJson,
   shouldWriteUiViewSourcesCss,
+  tryResolveViaImportMap,
   uiViewTailwindPlugin,
 } from "../plugin.ts";
 
@@ -203,6 +207,217 @@ describe("uiViewTailwindPlugin 跟随内部相对导入", () => {
       expect(css.includes("data-display/Calendar.tsx")).toBe(true);
     } finally {
       await fx.cleanup();
+    }
+  });
+});
+
+
+describe("跟随 @dreamer/plugins 扫描", () => {
+  it("从宿主源码抽出 plugins 说明符，忽略 ui-view", () => {
+    const specs = extractFollowedPackageSpecifiers(`
+      import { RoutesPage } from "@dreamer/plugins/rbac/pages";
+      import { Button } from "@dreamer/ui-view";
+      export { load } from "jsr:@dreamer/plugins@1.2.2/rbac/pages/load";
+    `);
+    expect(specs.includes("@dreamer/plugins/rbac/pages")).toBe(true);
+    expect(specs.includes("jsr:@dreamer/plugins@1.2.2/rbac/pages/load")).toBe(
+      true,
+    );
+    expect(specs.includes("@dreamer/ui-view")).toBe(false);
+  });
+
+  it("用 deno.json 映射和包 exports 解析子路径，不必跑 deno info", async () => {
+    const root = await makeTempDir({ prefix: "follow-map-" });
+    try {
+      const pkg = join(root, "vendor", "plugins");
+      await mkdir(join(pkg, "src", "rbac", "pages"), { recursive: true });
+      await writeTextFile(
+        join(pkg, "deno.json"),
+        `${JSON.stringify({
+          name: "@dreamer/plugins",
+          exports: {
+            ".": "./src/mod.ts",
+            "./rbac/pages": "./src/rbac/pages/mod.ts",
+          },
+        }, null, 2)}\n`,
+      );
+      await writeTextFile(join(pkg, "src", "mod.ts"), "export {};\n");
+      await writeTextFile(
+        join(pkg, "src", "rbac", "pages", "mod.ts"),
+        "export {};\n",
+      );
+      await writeTextFile(
+        join(root, "deno.json"),
+        `${JSON.stringify({
+          imports: { "@dreamer/plugins": "./vendor/plugins/src/mod.ts" },
+        }, null, 2)}\n`,
+      );
+      const hit = await tryResolveViaImportMap(
+        root,
+        "@dreamer/plugins/rbac/pages",
+      );
+      expect(hit).toBe(join(pkg, "src", "rbac", "pages", "mod.ts"));
+    } finally {
+      await remove(root, { recursive: true });
+    }
+  });
+
+  it("deno info --json 只收下跟随包自己的文件，不收入 ui-view", async () => {
+    const root = await makeTempDir({ prefix: "follow-info-" });
+    try {
+      const dir = join(root, "pages");
+      await mkdir(dir, { recursive: true });
+      const mod = join(dir, "mod.ts");
+      const routes = join(dir, "routes.tsx");
+      const uiView = join(root, "ui-view-mod.ts");
+      await writeTextFile(mod, "export {};\n");
+      await writeTextFile(routes, "export {};\n");
+      await writeTextFile(uiView, "export {};\n");
+      const json = JSON.stringify({
+        roots: ["@dreamer/plugins/rbac/pages"],
+        modules: [
+          {
+            specifier: "@dreamer/plugins/rbac/pages",
+            local: mod,
+            dependencies: [
+              { specifier: "./routes.tsx" },
+              { specifier: "@dreamer/ui-view" },
+            ],
+          },
+          {
+            specifier: `file://${routes}`,
+            local: routes,
+          },
+          {
+            specifier: "@dreamer/ui-view",
+            local: uiView,
+          },
+        ],
+      });
+      const files = localFilesFromDenoInfoJson(json, ["@dreamer/plugins"]);
+      expect(files.includes(mod)).toBe(true);
+      expect(files.includes(routes)).toBe(true);
+      expect(files.includes(uiView)).toBe(false);
+    } finally {
+      await remove(root, { recursive: true });
+    }
+  });
+
+  it("本地源码树会跟随相对导入", async () => {
+    const root = await makeTempDir({ prefix: "follow-pkg-" });
+    try {
+      const dir = join(root, "pages");
+      await mkdir(dir, { recursive: true });
+      await writeTextFile(
+        join(dir, "mod.ts"),
+        `export { RoutesPage } from "./routes.tsx";\n`,
+      );
+      await writeTextFile(
+        join(dir, "routes.tsx"),
+        `import { Transfer } from "@dreamer/ui-view";\nexport function RoutesPage() { return <Transfer dataSource={[]} />; }\n`,
+      );
+      const files = await collectFollowedModuleFiles(join(dir, "mod.ts"));
+      expect(files.some((f) => f.endsWith("mod.ts"))).toBe(true);
+      expect(files.some((f) => f.endsWith("routes.tsx"))).toBe(true);
+    } finally {
+      await remove(root, { recursive: true });
+    }
+  });
+
+  it("宿主只 import 插件页时，清单仍包含 Transfer", async () => {
+    const appRoot = await makeTempDir({ prefix: "follow-app-" });
+    const prevCwd = Deno.cwd();
+    try {
+      const pluginDir = join(appRoot, "vendor", "plugins", "pages");
+      await mkdir(pluginDir, { recursive: true });
+      await mkdir(join(appRoot, "src"), { recursive: true });
+      await writeTextFile(
+        join(appRoot, "vendor", "plugins", "deno.json"),
+        `${JSON.stringify({ name: "@dreamer/plugins", exports: {} }, null, 2)}\n`,
+      );
+      await writeTextFile(
+        join(pluginDir, "mod.ts"),
+        `export { RoutesPage } from "./routes.tsx";\n`,
+      );
+      await writeTextFile(
+        join(pluginDir, "routes.tsx"),
+        `import { Transfer } from "@dreamer/ui-view";\nexport function RoutesPage() { return <Transfer dataSource={[]} />; }\n`,
+      );
+      await writeTextFile(
+        join(appRoot, "src", "page.tsx"),
+        `import { RoutesPage } from "@dreamer/plugins/rbac/pages";\nexport const Page = () => <RoutesPage />;\n`,
+      );
+      await writeTextFile(
+        join(appRoot, "deno.json"),
+        `${JSON.stringify({
+          imports: {
+            "@dreamer/plugins/rbac/pages": "./vendor/plugins/pages/mod.ts",
+            "@dreamer/ui-view": UI_VIEW_ROOT + "/src/mod.ts",
+          },
+        }, null, 2)}\n`,
+      );
+      Deno.chdir(appRoot);
+      const outputPath = join(appRoot, "assets", "ui-view-sources.css");
+      const plugin = uiViewTailwindPlugin({
+        outputPath,
+        scanPath: "src",
+        packageRoot: UI_VIEW_ROOT,
+      });
+      await withRuntimeEnv("dev", async () => {
+        await plugin.onInit?.(stubContainer() as never);
+      });
+      expect(existsSync(outputPath)).toBe(true);
+      const css = await readTextFile(outputPath);
+      expect(css.includes("Transfer.tsx")).toBe(true);
+      expect(css.includes("routes.tsx")).toBe(true);
+    } finally {
+      Deno.chdir(prevCwd);
+      await remove(appRoot, { recursive: true });
+    }
+  });
+
+  it("followPackages 为空时不跟随插件页", async () => {
+    const appRoot = await makeTempDir({ prefix: "follow-off-" });
+    const prevCwd = Deno.cwd();
+    try {
+      const pluginDir = join(appRoot, "vendor", "plugins", "pages");
+      await mkdir(pluginDir, { recursive: true });
+      await mkdir(join(appRoot, "src"), { recursive: true });
+      await writeTextFile(
+        join(pluginDir, "mod.ts"),
+        `export { RoutesPage } from "./routes.tsx";\n`,
+      );
+      await writeTextFile(
+        join(pluginDir, "routes.tsx"),
+        `import { Transfer } from "@dreamer/ui-view";\nexport function RoutesPage() { return <Transfer dataSource={[]} />; }\n`,
+      );
+      await writeTextFile(
+        join(appRoot, "src", "page.tsx"),
+        `import { RoutesPage } from "@dreamer/plugins/rbac/pages";\nexport const Page = () => <RoutesPage />;\n`,
+      );
+      await writeTextFile(
+        join(appRoot, "deno.json"),
+        `${JSON.stringify({
+          imports: {
+            "@dreamer/plugins/rbac/pages": "./vendor/plugins/pages/mod.ts",
+          },
+        }, null, 2)}\n`,
+      );
+      Deno.chdir(appRoot);
+      const outputPath = join(appRoot, "assets", "ui-view-sources.css");
+      const plugin = uiViewTailwindPlugin({
+        outputPath,
+        scanPath: "src",
+        packageRoot: UI_VIEW_ROOT,
+        followPackages: [],
+      });
+      await withRuntimeEnv("dev", async () => {
+        await plugin.onInit?.(stubContainer() as never);
+      });
+      expect(existsSync(outputPath)).toBe(false);
+    } finally {
+      Deno.chdir(prevCwd);
+      await remove(appRoot, { recursive: true });
     }
   });
 });

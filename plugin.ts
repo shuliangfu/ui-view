@@ -8,6 +8,7 @@
  * ### 行为概要
  * - 输出文件路径由 **`outputPath`** 指定；业务在 `tailwind.css` 中 `@import` 该文件即可让 Tailwind 扫描实际用到的组件源路径。
  * - **`scanPath`** 可为单个目录或目录数组（相对 cwd），按需只扫 `frontend`、`common` 等子树，避免扫 backend/mobile。
+ * - 宿主源码里对 **`@dreamer/plugins`**（及子路径）的 import，会按 deno.json 映射或 `deno info` 解析到本地源码／JSR 缓存后再扫一遍，因而插件页用到的 ui-view 组件也会写入 `@source`。可用 **`followPackages`** 增删包名前缀（默认 `["@dreamer/plugins"]`，空数组关闭）。
  * - `@source` 路径相对于生成文件所在目录书写，避免把本机绝对路径写入仓库。
  * - **写入时机**：`--dev`（`RUNTIME_ENV=dev`）与 `--build`（`RUNTIME_ENV=build`）在 `onInit` 中生成并写入该清单，供 Tailwind 扫描 / 打包；`--start`（`RUNTIME_ENV=start`）为生产启动，**不写回源码树**，只消费构建阶段已编译进产物目录的 CSS。
  * - 插件入口：**{@link uiViewTailwindPlugin}**（返回 `Plugin`，含 `onInit`）。
@@ -455,6 +456,531 @@ async function expandLocalImportSources(
   return Array.from(seen).sort();
 }
 
+/** 默认跟随扫描的包名前缀：宿主 import 这些包时，再解析其源码里的 `@dreamer/ui-view` 引用。 */
+export const DEFAULT_FOLLOW_PACKAGES = ["@dreamer/plugins"] as const;
+
+/**
+ * 说明符是否属于要跟随扫描的包（裸名、子路径、`jsr:`、jsr.io URL）。
+ *
+ * @param specifier - import 说明符或 `deno info` 模块 specifier
+ * @param prefixes - 包名前缀，如 `@dreamer/plugins`
+ */
+export function specifierMatchesPackagePrefixes(
+  specifier: string,
+  prefixes: readonly string[],
+): boolean {
+  for (const prefix of prefixes) {
+    if (!prefix) continue;
+    if (specifier === prefix || specifier.startsWith(`${prefix}/`)) return true;
+    if (specifier.startsWith(`jsr:${prefix}`)) return true;
+    if (specifier.includes(`jsr.io/${prefix}/`)) return true;
+  }
+  return false;
+}
+
+/**
+ * 从源码中提取属于 `prefixes` 的包 import 说明符（from／import／export）。
+ *
+ * @param content - 文件文本
+ * @param prefixes - 包名前缀，默认 {@link DEFAULT_FOLLOW_PACKAGES}
+ */
+export function extractFollowedPackageSpecifiers(
+  content: string,
+  prefixes: readonly string[] = DEFAULT_FOLLOW_PACKAGES,
+): string[] {
+  const out = new Set<string>();
+  const re = /(?:from\s+|import\s+|export\s+)["']([^"']+)["']/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(content)) !== null) {
+    const spec = m[1];
+    if (specifierMatchesPackagePrefixes(spec, prefixes)) out.add(spec);
+  }
+  return Array.from(out);
+}
+
+/**
+ * 把 `deno info` 的 `local` 字段收成存在的本地路径。
+ *
+ * @param local - `local:` 行或 JSON 的 `local`
+ */
+function normalizeDenoInfoLocal(local: string): string | null {
+  const trimmed = local.trim();
+  if (!trimmed) return null;
+  let path = trimmed;
+  if (path.startsWith("file:")) {
+    try {
+      path = fromFileUrl(path);
+    } catch {
+      return null;
+    }
+  }
+  return existsSync(path) ? path : null;
+}
+
+/**
+ * 向上查找最近的 `deno.json`／`package.json`，作为相对 import 的包根。
+ *
+ * @param file - 已解析的本地文件
+ */
+function findNearestPackageRoot(file: string): string {
+  let dir = dirname(file);
+  for (let i = 0; i < 20; i++) {
+    if (
+      existsSync(join(dir, "deno.json")) ||
+      existsSync(join(dir, "package.json"))
+    ) {
+      return dir;
+    }
+    const parent = dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return dirname(file);
+}
+
+/**
+ * 从入口文件出发，在同一包根下递归跟随相对 import（本地源码树；JSR 哈希缓存则只收得到磁盘上能拼到的文件）。
+ *
+ * @param entry - 入口绝对路径
+ */
+export async function collectFollowedModuleFiles(
+  entry: string,
+): Promise<string[]> {
+  const { files } = await walkFollowedModules([entry]);
+  return files;
+}
+
+/**
+ * 从多个入口一次走完相对导入（共享 seen），避免 RBAC 等多个子路径重复遍历同一棵源码树。
+ *
+ * @param entries - 入口绝对路径
+ */
+async function walkFollowedModules(
+  entries: readonly string[],
+): Promise<{ files: string[]; unresolvedRel: boolean }> {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  const rootByDir = new Map<string, string>();
+  let unresolvedRel = false;
+  const queue = [...entries];
+  while (queue.length) {
+    const file = queue.pop();
+    if (!file || seen.has(file) || !existsSync(file)) continue;
+    seen.add(file);
+    out.push(file);
+    const dir = dirname(file);
+    let packageRoot = rootByDir.get(dir);
+    if (!packageRoot) {
+      packageRoot = findNearestPackageRoot(file);
+      rootByDir.set(dir, packageRoot);
+    }
+    let content: string;
+    try {
+      content = await readTextFile(file);
+    } catch {
+      continue;
+    }
+    for (const spec of collectRelativeImportSpecifiers(content)) {
+      const resolved = resolveLocalImportFile(file, spec, packageRoot);
+      if (resolved) queue.push(resolved);
+      else unresolvedRel = true;
+    }
+  }
+  return { files: out, unresolvedRel };
+}
+
+type DenoInfoJsonModule = {
+  specifier?: string;
+  local?: string;
+  dependencies?: Array<{ specifier?: string }>;
+};
+
+function pathToFileUrl(path: string): string {
+  if (path.startsWith("file:")) return path;
+  if (path.startsWith("/")) return new URL(`file://${path}`).href;
+  return new URL(path, "file://").href;
+}
+
+/**
+ * 把相对依赖说明符接到父模块 specifier 或本地路径上（file:／https: 均可）。
+ *
+ * @param fromSpec - 父模块 specifier
+ * @param dep - 依赖说明符
+ * @param fromLocal - 父模块本地路径（裸说明符无法作为 URL 基址时使用）
+ */
+function resolveInfoDepSpecifier(
+  fromSpec: string,
+  dep: string,
+  fromLocal?: string,
+): string {
+  if (!dep.startsWith(".")) return dep;
+  const bases = [fromSpec];
+  if (fromLocal) bases.push(pathToFileUrl(fromLocal));
+  for (const base of bases) {
+    try {
+      return new URL(dep, base).href;
+    } catch {
+      /* 试下一个基址 */
+    }
+  }
+  return dep;
+}
+
+/**
+ * 从 `deno info --json` 取出跟随包自己的本地模块（不把 `@dreamer/ui-view` 等依赖算进去）。
+ * 以命中前缀或 `roots` 的模块为种子，只沿相对／同包依赖往下走。
+ *
+ * @param text - `deno info --json` 的 stdout
+ * @param prefixes - 要跟随的包名前缀
+ */
+export function localFilesFromDenoInfoJson(
+  text: string,
+  prefixes: readonly string[],
+): string[] {
+  let parsed: { roots?: string[]; modules?: DenoInfoJsonModule[] };
+  try {
+    parsed = JSON.parse(text) as typeof parsed;
+  } catch {
+    return [];
+  }
+  const modules = parsed.modules ?? [];
+  const bySpec = new Map<string, DenoInfoJsonModule>();
+  const byLocal = new Map<string, DenoInfoJsonModule>();
+  const rootSet = new Set(parsed.roots ?? []);
+  const seeds: DenoInfoJsonModule[] = [];
+  for (const mod of modules) {
+    if (mod.specifier) bySpec.set(mod.specifier, mod);
+    if (mod.local) {
+      byLocal.set(mod.local, mod);
+      const normalized = normalizeDenoInfoLocal(mod.local);
+      if (normalized) byLocal.set(normalized, mod);
+    }
+    const spec = mod.specifier ?? "";
+    if (
+      specifierMatchesPackagePrefixes(spec, prefixes) ||
+      rootSet.has(spec)
+    ) {
+      seeds.push(mod);
+    }
+  }
+  const seen = new Set<string>();
+  const out: string[] = [];
+  const queue = [...seeds];
+  while (queue.length) {
+    const mod = queue.pop();
+    if (!mod) continue;
+    const id = mod.specifier ?? mod.local ?? "";
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    if (mod.local) {
+      const path = normalizeDenoInfoLocal(mod.local);
+      if (path && (path.endsWith(".ts") || path.endsWith(".tsx"))) {
+        out.push(path);
+      }
+    }
+    const fromSpec = mod.specifier ?? "";
+    for (const dep of mod.dependencies ?? []) {
+      const raw = dep.specifier;
+      if (!raw) continue;
+      if (
+        !raw.startsWith(".") &&
+        !specifierMatchesPackagePrefixes(raw, prefixes)
+      ) {
+        continue;
+      }
+      const resolved = resolveInfoDepSpecifier(fromSpec, raw, mod.local);
+      let next = bySpec.get(resolved) ?? bySpec.get(raw);
+      if (!next && resolved.startsWith("file:")) {
+        let path: string | null = null;
+        try {
+          path = fromFileUrl(resolved);
+        } catch {
+          path = null;
+        }
+        if (path) next = byLocal.get(path);
+      }
+      if (next) queue.push(next);
+    }
+  }
+  return out;
+}
+
+/**
+ * 粗略去掉 JSONC 注释和尾逗号，失败则返回 null。
+ *
+ * @param text - deno.json／deno.jsonc 文本
+ */
+function parseJsoncObject(text: string): Record<string, unknown> | null {
+  const stripped = text
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/^\s*\/\/.*$/gm, "")
+    .replace(/,\s*([}\]])/g, "$1");
+  try {
+    const parsed = JSON.parse(stripped) as unknown;
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? parsed as Record<string, unknown>
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+async function readJsoncFile(
+  path: string,
+): Promise<Record<string, unknown> | null> {
+  try {
+    return parseJsoncObject(await readTextFile(path));
+  } catch {
+    return null;
+  }
+}
+
+function firstExistingFile(candidates: string[]): string | null {
+  for (const c of candidates) {
+    if (existsSync(c)) return c;
+  }
+  return null;
+}
+
+function fileCandidates(path: string): string[] {
+  if (/\.(?:ts|tsx|js|jsx|mjs|cjs)$/.test(path)) return [path];
+  return [
+    path,
+    `${path}.tsx`,
+    `${path}.ts`,
+    join(path, "index.tsx"),
+    join(path, "index.ts"),
+    join(path, "mod.ts"),
+    join(path, "mod.tsx"),
+  ];
+}
+
+function resolveMaybeRelativePath(baseDir: string, target: string): string | null {
+  if (target.startsWith("file:")) {
+    try {
+      return fromFileUrl(target);
+    } catch {
+      return null;
+    }
+  }
+  if (target.includes(":") && !target.startsWith(".")) return null;
+  return target.startsWith("/") ? target : join(baseDir, target);
+}
+
+function exportEntryToPath(entry: unknown): string | null {
+  if (typeof entry === "string") return entry;
+  if (!entry || typeof entry !== "object" || Array.isArray(entry)) return null;
+  const rec = entry as Record<string, unknown>;
+  return exportEntryToPath(rec.import ?? rec.default ?? rec.require ?? null);
+}
+
+/**
+ * 宿主 import map 索引：精确键查表，说明符按路径段向上探测（O(段数)），不扫全部 imports。
+ */
+type ImportMapIndex = {
+  projectRoot: string;
+  exact: Map<string, string>;
+  exportFiles: Map<string, Map<string, string>>;
+};
+
+async function loadImportMapIndex(
+  projectRoot: string,
+): Promise<ImportMapIndex | null> {
+  const configPath = firstExistingFile([
+    join(projectRoot, "deno.json"),
+    join(projectRoot, "deno.jsonc"),
+  ]);
+  if (!configPath) return null;
+  const cfg = await readJsoncFile(configPath);
+  if (!cfg) return null;
+  const exact = new Map<string, string>();
+  const takeImports = (raw: unknown, onlyIfAbsent: boolean): void => {
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) return;
+    for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
+      if (typeof value !== "string") continue;
+      if (onlyIfAbsent && exact.has(key)) continue;
+      exact.set(key, value);
+    }
+  };
+  takeImports(cfg.imports, false);
+  if (typeof cfg.importMap === "string") {
+    const mapPath = resolveMaybeRelativePath(projectRoot, cfg.importMap);
+    if (mapPath && existsSync(mapPath)) {
+      const extra = await readJsoncFile(mapPath);
+      takeImports(extra?.imports, true);
+    }
+  }
+  return { projectRoot, exact, exportFiles: new Map() };
+}
+
+function mappedTargetForSpecifier(
+  exact: Map<string, string>,
+  specifier: string,
+): { key: string; target: string } | null {
+  let cur = specifier;
+  while (cur) {
+    const direct = exact.get(cur);
+    if (direct !== undefined) return { key: cur, target: direct };
+    const slashKey = `${cur}/`;
+    const slash = exact.get(slashKey);
+    if (slash !== undefined) return { key: slashKey, target: slash };
+    const i = cur.lastIndexOf("/");
+    if (i <= 0) return null;
+    cur = cur.slice(0, i);
+  }
+  return null;
+}
+
+async function loadPackageExportFiles(
+  index: ImportMapIndex,
+  pkgRoot: string,
+): Promise<Map<string, string>> {
+  const cached = index.exportFiles.get(pkgRoot);
+  if (cached) return cached;
+  const map = new Map<string, string>();
+  const pkgCfg = await readJsoncFile(join(pkgRoot, "deno.json")) ??
+    await readJsoncFile(join(pkgRoot, "deno.jsonc")) ??
+    await readJsoncFile(join(pkgRoot, "package.json"));
+  const exports = pkgCfg?.exports;
+  const add = (subpath: string, rel: string | null): void => {
+    if (!rel) return;
+    const abs = resolveMaybeRelativePath(pkgRoot, rel);
+    const file = abs ? firstExistingFile(fileCandidates(abs)) : null;
+    if (file) map.set(subpath, file);
+  };
+  if (typeof exports === "string") {
+    add(".", exports);
+  } else if (exports && typeof exports === "object" && !Array.isArray(exports)) {
+    for (const [subpath, entry] of Object.entries(exports as Record<string, unknown>)) {
+      add(subpath, exportEntryToPath(entry));
+    }
+  }
+  index.exportFiles.set(pkgRoot, map);
+  return map;
+}
+
+async function resolveFromImportMap(
+  index: ImportMapIndex,
+  specifier: string,
+): Promise<string | null> {
+  const mapped = mappedTargetForSpecifier(index.exact, specifier);
+  if (!mapped) return null;
+  const localTarget = resolveMaybeRelativePath(index.projectRoot, mapped.target);
+  if (!localTarget) return null;
+  if (specifier === mapped.key) {
+    return firstExistingFile(fileCandidates(localTarget));
+  }
+  if (mapped.key.endsWith("/") && specifier.startsWith(mapped.key)) {
+    return firstExistingFile(
+      fileCandidates(join(localTarget, specifier.slice(mapped.key.length))),
+    );
+  }
+  if (!specifier.startsWith(`${mapped.key}/`) || !existsSync(localTarget)) {
+    return null;
+  }
+  const pkgRoot = findNearestPackageRoot(localTarget);
+  const subpath = `.${specifier.slice(mapped.key.length)}`;
+  const exports = await loadPackageExportFiles(index, pkgRoot);
+  return exports.get(subpath) ??
+    firstExistingFile(fileCandidates(join(pkgRoot, subpath)));
+}
+
+/**
+ * 用宿主 deno.json 的 import map，以及被映射包的 exports，把说明符解析成本地文件。
+ * 不启动 `deno info`，本地源码映射（及带源码树的缓存）可在进程内完成。
+ *
+ * @param projectRoot - 应用根
+ * @param specifier - 如 `@dreamer/plugins/rbac/pages`
+ */
+export async function tryResolveViaImportMap(
+  projectRoot: string,
+  specifier: string,
+): Promise<string | null> {
+  const index = await loadImportMapIndex(projectRoot);
+  return index ? await resolveFromImportMap(index, specifier) : null;
+}
+
+/**
+ * 一次 `deno eval` 解析多个说明符（只做 resolve，不展开整棵依赖图）。
+ *
+ * @param projectRoot - 应用根
+ * @param specs - 尚未由 import map 解析到的说明符
+ */
+async function resolveSpecifiersViaDenoEval(
+  projectRoot: string,
+  specs: readonly string[],
+): Promise<(string | null)[]> {
+  if (specs.length === 0) return [];
+  const code =
+    `const specs=${JSON.stringify(specs)};` +
+    `for (const s of specs) { try { console.log(import.meta.resolve(s)); }` +
+    ` catch { console.log(""); } }`;
+  const stdout = await runDenoInfo(projectRoot, ["eval", "--quiet", code]);
+  if (!stdout) return specs.map(() => null);
+  const lines = stdout.split(/\r?\n/);
+  return specs.map((_, i) => {
+    const line = lines[i]?.trim() ?? "";
+    return line.length > 0 ? line : null;
+  });
+}
+
+/**
+ * 把宿主里出现的跟随包说明符解析成本地源文件（import map 或 JSR 缓存），并补上相对导入。
+ * 优先读一次 deno.json／包 exports（O(1) 查表），其次最多一次 `import.meta.resolve`；
+ * 只有磁盘跟不住相对导入时才最多再跑一次 `deno info --json`。
+ *
+ * @param projectRoot - 应用根（跑 `deno info` 的 cwd）
+ * @param specs - 宿主源码里的包说明符
+ * @param prefixes - 跟随包前缀
+ */
+async function collectImportedPackageSources(
+  projectRoot: string,
+  specs: Iterable<string>,
+  prefixes: readonly string[],
+): Promise<string[]> {
+  const index = await loadImportMapIndex(projectRoot);
+  const resolved: Array<{ spec: string; local: string }> = [];
+  const pending: string[] = [];
+  for (const spec of specs) {
+    const mapped = index ? await resolveFromImportMap(index, spec) : null;
+    if (mapped) resolved.push({ spec, local: mapped });
+    else pending.push(spec);
+  }
+  if (pending.length > 0) {
+    const urls = await resolveSpecifiersViaDenoEval(projectRoot, pending);
+    const still: string[] = [];
+    for (let i = 0; i < pending.length; i++) {
+      const local = urls[i] ? normalizeDenoInfoLocal(urls[i] as string) : null;
+      if (local) resolved.push({ spec: pending[i], local });
+      else still.push(pending[i]);
+    }
+    pending.length = 0;
+    pending.push(...still);
+  }
+  const locals = resolved.map((item) => item.local);
+  const walked = await walkFollowedModules(locals);
+  const out = new Set(walked.files);
+  if (walked.unresolvedRel && pending.length === 0 && resolved.length > 0) {
+    pending.push(resolved[0].spec);
+  }
+  if (pending.length === 0) return Array.from(out);
+  const json = await runDenoInfo(projectRoot, ["info", "--json", pending[0]]);
+  if (json) {
+    const fromJson = localFilesFromDenoInfoJson(json, prefixes);
+    const extra = await walkFollowedModules(fromJson);
+    for (const file of extra.files) out.add(file);
+    return Array.from(out);
+  }
+  const plain = await runDenoInfo(projectRoot, ["info", pending[0]]);
+  const localLine = plain ? parseFirstLocalLineFromDenoInfo(plain) : null;
+  const local = localLine ? normalizeDenoInfoLocal(localLine) : null;
+  if (local) {
+    const extra = await walkFollowedModules([local]);
+    for (const file of extra.files) out.add(file);
+  }
+  return Array.from(out);
+}
+
 /**
  * 从本插件的 `import.meta.url`（如 `https://jsr.io/@dreamer/ui-view/1.0.2-beta.1/plugin.ts`）解析出版本号，
  * 用于拼接 Deno 在 `node_modules/.deno` 下常见的目录名（如 `dreamer__ui-view@1.0.2-beta.1`）。
@@ -757,6 +1283,11 @@ export interface UiViewTailwindContentPluginOptions {
   scanPath?: string | readonly string[];
   /** @dreamer/ui-view 包根目录（可选；不传则用插件所在包根） */
   packageRoot?: string;
+  /**
+   * 宿主源码里对这些包（及子路径）的 import，会按 deno.json／`deno info` 解析到本地或 JSR 缓存后再扫，
+   * 以便插件页里的 `@dreamer/ui-view` 组件进入 `@source`。默认 `["@dreamer/plugins"]`；传空数组可关闭。
+   */
+  followPackages?: readonly string[];
 }
 
 /**
@@ -1700,7 +2231,7 @@ export function shouldWriteUiViewSourcesCss(
 /**
  * 创建 ui-view Tailwind 按需 content 插件
  *
- * 参数：outputPath（生成文件路径）、scanPath（单个或数组扫描目录）、packageRoot（可选）。
+ * 参数：outputPath（生成文件路径）、scanPath（单个或数组扫描目录）、packageRoot（可选）、followPackages（可选，默认跟随 `@dreamer/plugins`）。
  * 在 onInit 时即扫描导入的 ui-view 组件，生成只含 @source 的 CSS，Tailwind 扫描该文件即可收集 class。
  * `RUNTIME_ENV=start` 时跳过扫描与写入，见 {@link shouldWriteUiViewSourcesCss}。
  */
@@ -1711,7 +2242,9 @@ export function uiViewTailwindPlugin(
     outputPath,
     scanPath: scanPathOpt,
     packageRoot: optionPackageRoot,
+    followPackages: followPackagesOpt,
   } = options;
+  const followPrefixes = followPackagesOpt ?? [...DEFAULT_FOLLOW_PACKAGES];
 
   /**
    * 解析 @dreamer/ui-view 包根：本地 file → cwd 向上找仓库 → `node_modules/@jsr/dreamer__ui-view`（JSR 安装树）。
@@ -1834,23 +2367,52 @@ export function uiViewTailwindPlugin(
         }
 
         const usedNames = new Set<string>();
+        const followedSpecs = new Set<string>();
         let readFailCount = 0;
-        for (const filePath of files) {
+        const absorbFile = async (filePath: string): Promise<void> => {
           try {
             const content = await readTextFile(filePath);
             for (const name of extractUsedNames(content)) {
               usedNames.add(name);
             }
+            if (followPrefixes.length > 0) {
+              for (const spec of extractFollowedPackageSpecifiers(
+                content,
+                followPrefixes,
+              )) {
+                followedSpecs.add(spec);
+              }
+            }
           } catch {
             readFailCount++;
           }
+        };
+        for (const filePath of files) {
+          await absorbFile(filePath);
+        }
+        const followedFiles = followPrefixes.length > 0
+          ? await collectImportedPackageSources(
+            root,
+            followedSpecs,
+            followPrefixes,
+          )
+          : [];
+        const hostFileSet = new Set(files);
+        for (const filePath of followedFiles) {
+          if (hostFileSet.has(filePath)) continue;
+          await absorbFile(filePath);
         }
         if (readFailCount > 0) {
           log.debug(`解析导入时共有 ${readFailCount} 个文件读取失败（已忽略）`);
         }
+        if (followedFiles.length > 0) {
+          log.debug(
+            `已跟随扫描 ${followedSpecs.size} 个包说明符，解析到 ${followedFiles.length} 个源文件`,
+          );
+        }
 
         const names = Array.from(usedNames).sort();
-        if (names.length === 0) {
+        if (names.length === 0 && followedFiles.length === 0) {
           log.debug(
             `未发现从 @dreamer/ui-view 解析出的已映射组件名，跳过生成（请确认业务代码使用 import { X } from "@dreamer/ui-view/..." 且 X 在插件映射表中）`,
           );
@@ -1885,28 +2447,34 @@ export function uiViewTailwindPlugin(
           );
         }
 
-        const gathered = await gatherResolvedContentPaths(names, {
-          projectRoot: root,
-          optionPackageRoot: optionPackageRoot,
-          resolvedPackageRoot: pkgRoot,
-          jsrVersion,
-        });
-        const paths = gathered.paths;
-        if (paths.length === 0) {
+        const uniquePathSet = new Set<string>(followedFiles);
+        if (names.length > 0) {
+          const gathered = await gatherResolvedContentPaths(names, {
+            projectRoot: root,
+            optionPackageRoot: optionPackageRoot,
+            resolvedPackageRoot: pkgRoot,
+            jsrVersion,
+          });
+          const paths = gathered.paths;
+          if (paths.length > 0) {
+            await mergeIntrinsicIconSources(names, pkgRoot, paths);
+            const withLocalImports = await expandLocalImportSources(paths, {
+              packageRoot: pkgRoot,
+              projectRoot: root,
+              jsrVersion,
+              relByPath: gathered.relByPath,
+            });
+            for (const p of withLocalImports) uniquePathSet.add(p);
+          }
+        }
+        /** 与 gatherResolvedContentPaths / mergeIntrinsicIconSources 内去重双保险，保证写入的 @source 路径唯一 */
+        const uniqueSortedPaths = Array.from(uniquePathSet).sort();
+        if (uniqueSortedPaths.length === 0) {
           log.debug(
             "未解析到任何可扫描的 ui-view 源文件路径，跳过写入 ui-view-sources.css（请检查 deno.json、deno cache 与组件映射）",
           );
           return;
         }
-        await mergeIntrinsicIconSources(names, pkgRoot, paths);
-        const withLocalImports = await expandLocalImportSources(paths, {
-          packageRoot: pkgRoot,
-          projectRoot: root,
-          jsrVersion,
-          relByPath: gathered.relByPath,
-        });
-        /** 与 gatherResolvedContentPaths / mergeIntrinsicIconSources 内去重双保险，保证写入的 @source 路径唯一 */
-        const uniqueSortedPaths = Array.from(new Set(withLocalImports)).sort();
 
         const outAbs = outputPath.startsWith("/")
           ? outputPath

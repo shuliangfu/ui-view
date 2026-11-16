@@ -158,7 +158,11 @@ The plugin scans all `.ts`/`.tsx` under `scanPath` for named imports from
 `@dreamer/ui-view` (or `jsr:@dreamer/ui-view`), collects component names, and
 writes a CSS file that only contains `@source "path";`. Tailwind then scans only
 those paths, so the final CSS includes only the classes you use and the theme
-appears once.
+appears once. Imports of `@dreamer/plugins` (and subpaths) in the host are
+resolved via the app's deno.json or `deno info` (local checkout or JSR cache)
+and scanned too, so you do not need to put the plugin source directory in
+`scanPath`. Use `followPackages` to add or remove package prefixes, or pass an
+empty array to turn this off.
 
 ## 📤 Server upload plugin
 

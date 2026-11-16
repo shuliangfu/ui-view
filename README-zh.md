@@ -151,7 +151,9 @@ app.start();
 插件在 onInit 时扫描 `scanPath` 下所有 `.ts`/`.tsx` 中从 `@dreamer/ui-view`（或
 `jsr:@dreamer/ui-view`）的命名导入，收集组件名，生成只含 `@source "path";` 的
 CSS；Tailwind 编译时只会扫描这些路径，最终 CSS 只包含用到的 class，且 theme
-只出现一次。
+只出现一次。宿主里对 `@dreamer/plugins`（及子路径）的 import 会再按 deno.json
+或 `deno info` 解析到本地源码／JSR 缓存并跟随扫描，不必把插件源码目录写进
+`scanPath`。可用 `followPackages` 增删包名前缀，传空数组可关闭。
 
 ## 📤 服务端上传插件
 
