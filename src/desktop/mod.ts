@@ -30,6 +30,7 @@ export {
   Carousel,
   Checkbox,
   CheckboxGroup,
+  clearAlertCloseCookie,
   clearMessages,
   clearToasts,
   closeNotification,
@@ -579,6 +580,7 @@ export {
   injectUiViewUploadBasePathHtml,
   Input,
   InputNumber,
+  isAlertClosed,
   Link,
   List,
   MarkdownEditor,
@@ -640,6 +642,7 @@ export {
   uploadFileSimple,
   uploadFileViaUiViewBase,
   useFormStore,
+  writeAlertCloseCookie,
   writePageSizeCookie,
 } from "../shared/mod.ts";
 export type {

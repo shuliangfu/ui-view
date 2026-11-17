@@ -64,6 +64,7 @@ export {
   Cascader,
   Checkbox,
   CheckboxGroup,
+  clearAlertCloseCookie,
   clearMessages,
   clearToasts,
   closeNotification,
@@ -624,6 +625,7 @@ export {
   injectUiViewUploadBasePathHtml,
   Input,
   InputNumber,
+  isAlertClosed,
   isBatchBuiltin,
   isDataViewToolbarBuiltin,
   isFormFieldVisible,
@@ -714,6 +716,7 @@ export {
   uploadFileSimple,
   uploadFileViaUiViewBase,
   useFormStore,
+  writeAlertCloseCookie,
   writePageSizeCookie,
 } from "./desktop/mod.ts";
 /**

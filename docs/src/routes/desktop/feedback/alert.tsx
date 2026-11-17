@@ -6,7 +6,11 @@
 import { createSignal } from "@dreamer/view";
 import { Button, Paragraph, Title } from "@dreamer/ui-view/basic";
 import { CodeBlock } from "@dreamer/ui-view/data-display";
-import { Alert } from "@dreamer/ui-view/feedback";
+import {
+  Alert,
+  clearAlertCloseCookie,
+  isAlertClosed,
+} from "@dreamer/ui-view/feedback";
 import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx";
 import { MESSAGES_ALERT } from "../../../data/component-messages-rows.ts";
 import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
@@ -48,14 +52,28 @@ const ALERT_API: ApiRow[] = [
     name: "closable",
     type: "boolean",
     default: "false",
-    description: "是否显示关闭按钮",
+    description: "是否显示关闭按钮。传入 closeConfirm 或 closeKey 时默认显示",
   },
   {
     name: "onClose",
     type: "() => void",
     default: "-",
     description:
-      "关闭回调。点击后 Alert 会自行隐藏并调用本回调。若还要用父级 signal 再次显示，请把 signal 放在模块作用域，并在 {() => ...} 里读取",
+      "关闭回调。点击后 Alert 会自行隐藏并调用本回调。若设置了 closeConfirm，需在确认后才会隐藏并调用。若还要用父级 signal 再次显示，请把 signal 放在模块作用域，并在 {() => ...} 里读取",
+  },
+  {
+    name: "closeConfirm",
+    type: "string",
+    default: "-",
+    description:
+      "关闭前的确认文案。传入后点击关闭会先弹出气泡，取消不关闭，确认后才隐藏并调用 onClose",
+  },
+  {
+    name: "closeKey",
+    type: "string",
+    default: "-",
+    description:
+      "Cookie 名。关闭后写入该 cookie（值 1，有效期一年，Path=/，SameSite=Lax），之后刷新或 SSR 都不再显示。调用方不必再自己管显隐",
   },
   {
     name: "banner",
@@ -146,6 +164,27 @@ const visible = createSignal(true);
   />
 )}`;
 
+const exampleClosePrompt = `import { createSignal } from "@dreamer/view";
+
+/** 显隐 signal 放模块级；读取必须包在 {() => ...} 里，否则页面重跑会新建 Alert，确认关闭后还会再显示。 */
+const visible = createSignal(true);
+
+{() => visible.value && (
+  <Alert
+    type="info"
+    message="这是一条可关闭的提示"
+    closeConfirm="你确认要关闭吗？"
+    onClose={() => { visible.value = false; }}
+  />
+)}`;
+
+const exampleCloseConfirm = `<Alert
+  type="info"
+  message="默认只显示顶级菜单，点击标题进入下级。"
+  closeConfirm="关闭后将不再提示"
+  closeKey="rbac-menus-top-hint"
+/>`;
+
 const exampleAction = `<Alert
   type="info"
   message="有新版本可用"
@@ -171,6 +210,9 @@ const exampleBanner = `<Alert
  * 关闭钮仍闭包旧 signal → 点击无视觉反馈；与 Upload / MarkdownEditor tabs 同类问题。
  */
 const closableAlertDemoVisible = createSignal(true);
+const closePromptAlertDemoVisible = createSignal(true);
+const closeConfirmAlertDemoTick = createSignal(0);
+const CLOSE_CONFIRM_DEMO_KEY = "docs-alert-close-confirm";
 
 /** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
 export const metadata = {
@@ -292,6 +334,106 @@ export default function FeedbackAlert() {
           <CodeBlock
             title="代码示例"
             code={exampleClosable}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
+          />
+        </div>
+
+        <div class="space-y-4">
+          <Title level={3}>关闭提示</Title>
+          <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+            传入{" "}
+            <code class="rounded bg-slate-200/80 px-1 font-mono text-xs dark:bg-slate-600/80">
+              closeConfirm
+            </code>{" "}
+            后，点击关闭会先弹出气泡；取消则不关闭，确认后才隐藏。刷新后会再次显示。
+          </Paragraph>
+          <div
+            class="flex w-full flex-wrap items-stretch gap-2"
+            data-testid="alert-close-prompt-demo"
+          >
+            {() =>
+              closePromptAlertDemoVisible.value
+                ? (
+                  <Alert
+                    type="info"
+                    message="这是一条可关闭的提示"
+                    closeConfirm="你确认要关闭吗？"
+                    onClose={() => {
+                      closePromptAlertDemoVisible.value = false;
+                    }}
+                  />
+                )
+                : (
+                  <Button
+                    type="button"
+                    variant="default"
+                    onClick={() => {
+                      closePromptAlertDemoVisible.value = true;
+                    }}
+                  >
+                    重新显示提示
+                  </Button>
+                )}
+          </div>
+          <CodeBlock
+            title="代码示例"
+            code={exampleClosePrompt}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
+          />
+        </div>
+
+        <div class="space-y-4">
+          <Title level={3}>关闭确认</Title>
+          <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+            在关闭提示的基础上再传入{" "}
+            <code class="rounded bg-slate-200/80 px-1 font-mono text-xs dark:bg-slate-600/80">
+              closeKey
+            </code>
+            ，关闭状态会写入 cookie，刷新或 SSR 都不再显示。
+          </Paragraph>
+          <div
+            class="flex w-full flex-wrap items-stretch gap-2"
+            data-testid="alert-close-confirm-demo"
+          >
+            {() => {
+              closeConfirmAlertDemoTick.value;
+              return !isAlertClosed(CLOSE_CONFIRM_DEMO_KEY)
+                ? (
+                  <Alert
+                    type="info"
+                    message="默认只显示顶级菜单，点击标题进入下级。"
+                    closeConfirm="关闭后将不再提示"
+                    closeKey={CLOSE_CONFIRM_DEMO_KEY}
+                    onClose={() => {
+                      closeConfirmAlertDemoTick.value++;
+                    }}
+                  />
+                )
+                : (
+                  <Button
+                    type="button"
+                    variant="default"
+                    onClick={() => {
+                      clearAlertCloseCookie(CLOSE_CONFIRM_DEMO_KEY);
+                      closeConfirmAlertDemoTick.value++;
+                    }}
+                  >
+                    重新显示提示
+                  </Button>
+                );
+            }}
+          </div>
+          <CodeBlock
+            title="代码示例"
+            code={exampleCloseConfirm}
             language="tsx"
             showLineNumbers
             copyable

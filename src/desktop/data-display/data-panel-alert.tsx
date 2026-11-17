@@ -3,7 +3,7 @@
  * 关闭态用组件级稳定 signal 保存，勿在每次渲染里 createSignal。
  */
 import { createSignal, type JSXRenderable } from "@dreamer/view";
-import { Alert, type AlertProps } from "../feedback/Alert.tsx";
+import { Alert, type AlertProps, isAlertClosed } from "../feedback/Alert.tsx";
 import { ALERT_WRAP_CLS } from "./data-panel-chrome.tsx";
 
 /**
@@ -75,6 +75,7 @@ export function createDataAlertState(): DataAlertState {
       if (dismissed.value) dismissed.value = false;
     }
     if (!cfg || dismissed.value) return null;
+    if (cfg.closeKey && isAlertClosed(cfg.closeKey)) return null;
     return cfg;
   }
 

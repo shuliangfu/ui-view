@@ -51,6 +51,20 @@ describe("Alert", () => {
     expect(h).not.toContain('aria-label="关闭"');
   });
 
+  it("closeConfirm 时渲染关闭钮，并由 Popconfirm 包裹", async () => {
+    const h = await html({ closeConfirm: "关闭后将不再提示" });
+    expect(h).toContain('aria-label="关闭"');
+    expect(h).toContain("self-center");
+    expect(h).toContain("size-6");
+    expect(h).toContain("inline-flex");
+  });
+
+  it("closeKey 时默认渲染关闭钮", async () => {
+    const h = await html({ closeKey: "docs-alert-close-confirm" });
+    expect(h).toContain('role="alert"');
+    expect(h).toContain('aria-label="关闭"');
+  });
+
   it("单行时根节点 items-center，图标无 mt 偏移", async () => {
     const h = await html();
     const root = h.slice(h.indexOf("<div"), h.indexOf(">") + 1);

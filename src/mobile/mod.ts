@@ -26,6 +26,7 @@ export {
   Carousel,
   Checkbox,
   CheckboxGroup,
+  clearAlertCloseCookie,
   clearMessages,
   clearToasts,
   closeNotification,
@@ -571,6 +572,7 @@ export {
   initAnchorSpy,
   Input,
   InputNumber,
+  isAlertClosed,
   Link,
   List,
   MarkdownEditor,
@@ -628,6 +630,7 @@ export {
   uploadFilePhasedChunks,
   uploadFileSimple,
   useFormStore,
+  writeAlertCloseCookie,
   writePageSizeCookie,
 } from "../shared/mod.ts";
 export type {

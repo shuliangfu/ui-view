@@ -38,7 +38,12 @@ export {
   openNotification,
 } from "./notification-store.ts";
 
-export { Alert } from "./Alert.tsx";
+export {
+  Alert,
+  clearAlertCloseCookie,
+  isAlertClosed,
+  writeAlertCloseCookie,
+} from "./Alert.tsx";
 export type { AlertProps, AlertType } from "./Alert.tsx";
 
 export { Drawer } from "./Drawer.tsx";

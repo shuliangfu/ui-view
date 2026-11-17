@@ -673,6 +673,7 @@ export type {
 // feedback
 export {
   Alert,
+  clearAlertCloseCookie,
   clearMessages,
   clearToasts,
   closeNotification,
@@ -685,6 +686,7 @@ export {
   defaultTourMessages,
   destroyNotifications,
   Drawer,
+  isAlertClosed,
   message,
   MessageContainer,
   NoticeBar,
@@ -699,6 +701,7 @@ export {
   toast,
   ToastContainer,
   Tour,
+  writeAlertCloseCookie,
 } from "./feedback/mod.ts";
 export type {
   AlertProps,

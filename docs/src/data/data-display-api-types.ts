@@ -1989,7 +1989,21 @@ export const DATA_ALERT_CONFIG_API: DocsApiTableRow[] = [
     type: "() => void",
     default: "-",
     description:
-      "点击关闭时回调。Alert 会自行隐藏，面板／详情同时记下已关闭并卸载提示条，然后再调用本回调。只想关掉提示时不必再自己管显隐；若要受控，仍可传 alert={open ? config : false}，在 onClose 里把 open 设为 false",
+      "点击关闭时回调。Alert 会自行隐藏，面板／详情同时记下已关闭并卸载提示条，然后再调用本回调。若设置了 closeConfirm，需在确认后才会隐藏并调用。只想关掉提示时不必再自己管显隐；若要受控，仍可传 alert={open ? config : false}，在 onClose 里把 open 设为 false",
+  },
+  {
+    name: "closeConfirm",
+    type: "string",
+    default: "-",
+    description:
+      "关闭前的确认文案，透传给 Alert。传入后点击关闭会先弹出气泡，取消不关闭，确认后才隐藏并调用 onClose",
+  },
+  {
+    name: "closeKey",
+    type: "string",
+    default: "-",
+    description:
+      "Cookie 名，透传给 Alert。关闭后写入该 cookie（值 1，有效期一年），之后刷新或 SSR 都不再显示，调用方不必再自己管显隐",
   },
   {
     name: "banner",

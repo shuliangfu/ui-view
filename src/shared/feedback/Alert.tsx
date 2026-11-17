@@ -1,11 +1,19 @@
 /**
  * Alert 静态提示条（View）。
- * 成功/警告/错误/信息等，常驻于页面内；支持标题、描述、可关闭、自定义操作。
+ * 成功/警告/错误/信息等，常驻于页面内；支持标题、描述、可关闭、关闭前确认、自定义操作。
  * 根节点默认 `w-full`，在 flex 父级下仍占满一行；若需随内容收缩可传 `class="w-auto"` 等覆盖。
  */
 
 import { twMerge } from "tailwind-merge";
 import { createSignal, type JSXRenderable } from "@dreamer/view";
+import { Popconfirm } from "../../desktop/feedback/Popconfirm.tsx";
+import { isAlertClosed, writeAlertCloseCookie } from "./alert-close-cookie.ts";
+
+export {
+  clearAlertCloseCookie,
+  isAlertClosed,
+  writeAlertCloseCookie,
+} from "./alert-close-cookie.ts";
 /** 按需：单文件图标，避免经 icons/mod 拉入全表 */
 import { IconAlertCircle } from "../basic/icons/AlertCircle.tsx";
 import { IconCheckCircle } from "../basic/icons/CheckCircle.tsx";
@@ -28,10 +36,21 @@ export interface AlertProps {
   /**
    * 关闭回调（closable 时点击关闭触发）。
    * 点击后本组件会自行卸载／隐藏，并调用本回调。
+   * 若设置了 {@link closeConfirm}，需在确认后才会隐藏并调用本回调。
    * 若还要用父级 signal 控制「再次显示」等，请把 signal 放在模块作用域（或其它稳定位置），
    * 读值写在 `{() => ...}` 里；勿在会重跑的页面函数里每次 `createSignal(true)`，否则只更新旧实例。
    */
   onClose?: () => void;
+  /**
+   * 关闭前的确认文案。传入后点击关闭会先弹出气泡，取消则不关闭，
+   * 确认后才隐藏并调用 {@link onClose}。
+   */
+  closeConfirm?: string;
+  /**
+   * Cookie 名。传入后确认（或直接）关闭会写入该 cookie（值 `1`，有效期一年），
+   * 之后刷新或 SSR 都不再显示；调用方不必再自己管显隐。
+   */
+  closeKey?: string;
   /** 是否使用横幅样式（圆角更小、常作整行提示），默认 false */
   banner?: boolean;
   /** 自定义操作区（如「查看详情」链接或按钮），渲染在文案右侧或下方 */
@@ -76,16 +95,26 @@ const typeBorderClasses: Record<AlertType, string> = {
 export function Alert(props: AlertProps): JSXRenderable {
   /** 组件 setup 只跑一次，此 signal 稳定；渲染必须放在 thunk 里才能订阅关闭态。 */
   const dismissed = createSignal(false);
+  const confirmOpen = createSignal(false);
+
+  const persistAndDismiss = (): void => {
+    const key = props.closeKey?.trim();
+    if (key) writeAlertCloseCookie(key);
+    dismissed.value = true;
+    props.onClose?.();
+  };
 
   return () => {
     if (dismissed.value) return null;
+    const closeKey = props.closeKey?.trim() || undefined;
+    if (closeKey && isAlertClosed(closeKey)) return null;
 
     const type = props.type ?? "info";
     const message = props.message;
     const description = props.description;
     const showIcon = props.showIcon ?? true;
-    const closable = props.closable ?? false;
-    const onClose = props.onClose;
+    const closeConfirm = props.closeConfirm?.trim() || undefined;
+    const closable = props.closable ?? Boolean(closeConfirm || closeKey);
     const banner = props.banner ?? false;
     const action = props.action;
     const className = props.class;
@@ -114,6 +143,36 @@ export function Alert(props: AlertProps): JSXRenderable {
      */
     const closeBtnCls =
       "self-center inline-flex size-6 shrink-0 items-center justify-center rounded p-0 hover:bg-black/10 dark:hover:bg-white/10 opacity-70 hover:opacity-100";
+    const closeBtn = closable
+      ? (
+        <button
+          type="button"
+          aria-label={m.close}
+          class={closeBtnCls}
+          onClick={() => {
+            if (closeConfirm) {
+              confirmOpen.value = true;
+              return;
+            }
+            persistAndDismiss();
+          }}
+        >
+          <svg
+            class="w-4 h-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M6 18L18 6M6 6l12 12"
+            />
+          </svg>
+        </button>
+      )
+      : null;
 
     return (
       <div
@@ -133,31 +192,19 @@ export function Alert(props: AlertProps): JSXRenderable {
           {children != null && <div class="mt-2">{children}</div>}
         </div>
         {action != null && <div class="shrink-0">{action}</div>}
-        {closable && (
-          <button
-            type="button"
-            aria-label={m.close}
-            class={closeBtnCls}
-            onClick={() => {
-              dismissed.value = true;
-              onClose?.();
-            }}
-          >
-            <svg
-              class="w-4 h-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              stroke-width="2"
+        {closeConfirm && closeBtn
+          ? (
+            <Popconfirm
+              open={confirmOpen}
+              title={closeConfirm}
+              warning
+              class="self-center shrink-0"
+              onConfirm={persistAndDismiss}
             >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
-        )}
+              {closeBtn}
+            </Popconfirm>
+          )
+          : closeBtn}
       </div>
     );
   };

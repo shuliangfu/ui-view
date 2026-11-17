@@ -155,7 +155,7 @@ const DATA_VIEW_API: DocsApiTableRow[] = [
       "string | DataAlertConfig | false | null | (() => string | DataAlertConfig | false | null | undefined)",
     default: "-",
     description:
-      '页面提示条，位于工具栏（含工具栏左侧标签）下方、详情正文上方。字符串简写为 info 提示（如 alert="请先完成实名认证"）。对象为完整 DataAlertConfig：透传 Alert 的 type／message／description／showIcon／closable／onClose／banner／action／class／children／messages，另加 show／key。false／null／省略／show: false 不显示；函数在渲染时求值。本插槽 closable 默认 true，banner 默认 false。点击关闭会隐藏提示并调用 onClose；更换文案或先置空再传入会重新显示。详见下方 DataAlertConfig 表。',
+      '页面提示条，位于工具栏（含工具栏左侧标签）下方、详情正文上方。字符串简写为 info 提示（如 alert="请先完成实名认证"）。对象为完整 DataAlertConfig：透传 Alert 的 type／message／description／showIcon／closable／onClose／closeConfirm／closeKey／banner／action／class／children／messages，另加 show／key。false／null／省略／show: false 不显示；函数在渲染时求值。本插槽 closable 默认 true，banner 默认 false。点击关闭会隐藏提示并调用 onClose；更换文案或先置空再传入会重新显示。详见下方 DataAlertConfig 表。',
   },
   {
     name: "toolbar",
