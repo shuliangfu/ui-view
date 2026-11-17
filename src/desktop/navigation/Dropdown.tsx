@@ -89,7 +89,7 @@ const GAP_Y_COMPACT_PX = 4;
 /** 与 Tailwind `mt-2`/`mb-2` 默认间距一致（px），用于带箭头时间隙 */
 const GAP_Y_ARROW_PX = 8;
 
-/** 与 {@link getDropdownArrowProps} 内 `left`/`right` inset 一致（px）；`bottomLeft`/`bottomRight` 带箭头时用其锚定浮层，使箭头对准触发器左/右缘 */
+/** 与 {@link getDropdownArrowProps} 内 `left`/`right` inset 一致（px） */
 const ARROW_INSET_PX = 12;
 
 /**
@@ -116,7 +116,7 @@ function gapYPixels(
  * @param eff 解析后的 placement
  * @param arrowEnabled 是否带箭头（影响竖向间隙）
  */
-function computeDropdownFixedStyle(
+export function computeDropdownFixedStyle(
   triggerRect: DOMRect,
   eff: ResolvedPopPlacement,
   arrowEnabled: boolean,
@@ -149,19 +149,7 @@ function computeDropdownFixedStyle(
         transform: "translateX(-50%)",
       };
     case "bottomLeft":
-      /**
-       * 与 `bottomRight` 对称：箭头在面板**右侧** inset，`right: iw - tr.left - inset` 使尖角对准触发器**左缘**；无箭头时浮层左缘贴 `tr.left`。
-       */
-      if (arrowEnabled) {
-        return {
-          ...C,
-          top: `${tr.bottom + gap}px`,
-          right: `${iw - tr.left - ARROW_INSET_PX}px`,
-          left: "auto",
-          bottom: "auto",
-          transform: "none",
-        };
-      }
+      /** 浮层左缘贴触发器左缘；带箭头时尖角在面板顶边左侧，不改变展开方向。 */
       return {
         ...C,
         top: `${tr.bottom + gap}px`,
@@ -170,19 +158,7 @@ function computeDropdownFixedStyle(
         transform: "none",
       };
     case "bottomRight":
-      /**
-       * 箭头在面板**左侧** inset：`left: tr.right - inset` 使尖角对准触发器**右缘**；无箭头时浮层右缘贴 `tr.right`。
-       */
-      if (arrowEnabled) {
-        return {
-          ...C,
-          top: `${tr.bottom + gap}px`,
-          left: `${tr.right - ARROW_INSET_PX}px`,
-          right: "auto",
-          bottom: "auto",
-          transform: "none",
-        };
-      }
+      /** 浮层右缘贴触发器右缘；带箭头时尖角在面板顶边右侧，不改变展开方向。 */
       return {
         ...C,
         top: `${tr.bottom + gap}px`,
@@ -220,11 +196,11 @@ function resolvePlacement(
 
 /**
  * 菱形箭头：`rotate(45deg)` 与位移写在**同一条** `transform`，避免多段 Tailwind transform 互相覆盖。
- * 菜单仅在触发器**下方**，箭头始终在面板**顶边**；`bottomLeft` 为右侧 inset，`bottomRight` 为左侧 inset。
+ * 菜单仅在触发器**下方**，箭头始终在面板**顶边**；`bottomLeft` 为左侧 inset，`bottomRight` 为右侧 inset。
  *
  * @param eff - 解析后的 placement
  */
-function getDropdownArrowProps(
+export function getDropdownArrowProps(
   eff: ResolvedPopPlacement,
 ): { className: string; style: Record<string, string> } {
   const shell =
@@ -241,20 +217,21 @@ function getDropdownArrowProps(
       };
       break;
     case "bottomLeft":
-      /** 与 bottomRight 对称：尖角在面板顶边**右侧** */
-      style = {
-        top: "0",
-        left: "auto",
-        right: `${ARROW_INSET_PX}px`,
-        transform: "translate(50%, -50%) rotate(45deg)",
-      };
-      break;
-    case "bottomRight":
+      /** 尖角在面板顶边**左侧**，与左对齐的展开方向一致 */
       style = {
         top: "0",
         left: `${ARROW_INSET_PX}px`,
         right: "auto",
         transform: "translate(-50%, -50%) rotate(45deg)",
+      };
+      break;
+    case "bottomRight":
+      /** 尖角在面板顶边**右侧**，与右对齐的展开方向一致 */
+      style = {
+        top: "0",
+        left: "auto",
+        right: `${ARROW_INSET_PX}px`,
+        transform: "translate(50%, -50%) rotate(45deg)",
       };
       break;
     default:
