@@ -62,13 +62,6 @@ const typeIconMap = {
   info: IconInfo,
 } as const;
 
-const typeIconClasses: Record<AlertType, string> = {
-  success: "text-green-600 dark:text-green-400",
-  error: "text-red-600 dark:text-red-400",
-  warning: "text-amber-600 dark:text-amber-400",
-  info: "text-blue-600 dark:text-blue-400",
-};
-
 const typeBorderClasses: Record<AlertType, string> = {
   success:
     "border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-950/40 text-green-800 dark:text-green-200",
@@ -104,11 +97,15 @@ export function Alert(props: AlertProps): JSXRenderable {
     };
 
     const IconComponent = typeIconMap[type];
-    const iconCls = typeIconClasses[type];
     const borderCls = typeBorderClasses[type];
-    /** `w-full`：避免放在 `flex`/`inline-flex` 父级时随文案收缩成窄条 */
+    const hasBody = (description != null && description !== "") ||
+      children != null;
+    /** `w-full`：避免放在 `flex`/`inline-flex` 父级时随文案收缩成窄条。
+     * 单行：图标与文字垂直居中；有描述或子内容时图标与标题对齐。 */
     const baseCls =
-      "flex w-full max-w-full gap-3 p-4 rounded-lg border border-l-4 transition-colors box-border";
+      `flex w-full max-w-full gap-3 p-4 rounded-lg border border-l-4 transition-colors box-border ${
+        hasBody ? "items-start" : "items-center"
+      }`;
     const bannerCls = banner ? "rounded-none border-l-4" : "";
     /**
      * 关闭钮必须是正方形（宽=高），且 self-center，避免在 banner／多行描述的
@@ -124,8 +121,8 @@ export function Alert(props: AlertProps): JSXRenderable {
         class={twMerge(baseCls, borderCls, bannerCls, className)}
       >
         {showIcon && (
-          <span class={twMerge("shrink-0 w-5 h-5 mt-0.5", iconCls)}>
-            <IconComponent class="w-full h-full" />
+          <span class="shrink-0 w-5 h-5">
+            <IconComponent class="w-full h-full text-current" />
           </span>
         )}
         <div class="flex-1 min-w-0">

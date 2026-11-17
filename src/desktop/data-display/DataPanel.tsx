@@ -461,7 +461,7 @@ export interface PanelProps {
    * 页面提示条，渲染在工具栏（含工具栏左侧标签）下方、表格上方。
    * 字符串简写为 info 提示；对象为完整 {@link DataAlertConfig}（透传 Alert 全部参数，另加 show／key）。
    * `false`／`null`／省略／`show: false` 不显示。函数在渲染时求值。
-   * 本插槽默认可关闭（`closable` 默认 true）、通栏样式（`banner` 默认 true）。
+   * 本插槽默认可关闭（`closable` 默认 true）；`banner` 默认 false，与 Alert 一致。
    * 点击关闭会先隐藏提示，再调用 `onClose`；换一条提示（或先关掉再传入）会重新显示。
    */
   alert?: DataAlertProp;

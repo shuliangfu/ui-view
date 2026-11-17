@@ -1994,9 +1994,9 @@ export const DATA_ALERT_CONFIG_API: DocsApiTableRow[] = [
   {
     name: "banner",
     type: "boolean",
-    default: "true（本插槽）",
+    default: "false",
     description:
-      "横幅样式（圆角更小、通栏提示）。单独使用 Alert 时默认 false；在本插槽里默认 true，可传 false 改回普通卡片圆角",
+      "横幅样式（圆角更小、通栏提示）。默认 false，与单独使用 Alert 时一致；传 true 使用通栏样式",
   },
   {
     name: "action",

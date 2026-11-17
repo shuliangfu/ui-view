@@ -92,7 +92,7 @@ export interface DataAlertState {
 
 /**
  * 工具栏下方、表格／详情正文上方的提示条。
- * 本插槽默认 `closable`／`banner` 为 true（页面提示通常可关闭、通栏样式）；
+ * 本插槽默认 `closable` 为 true（页面提示通常可关闭），`banner` 默认 false；
  * 调用方可显式覆盖。关闭时先记下已关闭，再调用配置里的 `onClose`。
  */
 export function DataChromeAlert(props: {
@@ -109,7 +109,6 @@ export function DataChromeAlert(props: {
       show: _show,
       key: _key,
       closable,
-      banner,
       onClose,
       ...rest
     } = cfg;
@@ -118,7 +117,6 @@ export function DataChromeAlert(props: {
         <Alert
           {...rest}
           closable={closable ?? true}
-          banner={banner ?? true}
           onClose={() => {
             props.state.close();
             onClose?.();

@@ -106,6 +106,21 @@ describe("DataPanel alert 插槽", () => {
     expect(pinned).toContain("系统维护中");
   });
 
+  it("默认 banner 为 false；显式 banner: true 才用通栏样式", async () => {
+    const normal = await panelHtml({ alert: "请先完成实名认证" });
+    const a = normal.indexOf('data-testid="dp-alert"');
+    const b = normal.indexOf('data-testid="dp-table"');
+    const region = normal.slice(a, b);
+    expect(region).toContain("rounded-lg");
+    expect(region).not.toContain("rounded-none");
+    const bannered = await panelHtml({
+      alert: { message: "通栏提示", banner: true },
+    });
+    const c = bannered.indexOf('data-testid="dp-alert"');
+    const d = bannered.indexOf('data-testid="dp-table"');
+    expect(bannered.slice(c, d)).toContain("rounded-none");
+  });
+
   it("函数形式在渲染时求值", async () => {
     const h = await panelHtml({
       alert: () => ({
