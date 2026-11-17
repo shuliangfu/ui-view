@@ -6,7 +6,7 @@
  * - GET  /api/users/view?id=
  * - POST /api/users/create（单条对象；importRows 为 `{ rows }`）
  * - POST /api/users/update（body 含 id）
- * - POST /api/users/setField（query id=；body `{ ids, id, field, value }`）
+ * - POST /api/users/set-field（query id=；body `{ ids, id, field, value }`）
  * - POST /api/users/remove（单条删除，body `{ ids }`）
  * - POST /api/users/remote-batch（批量删除，body `{ ids }`）
  */
@@ -198,7 +198,7 @@ export async function POST(request: Request): Promise<Response> {
     store = [...store.slice(0, i), next, ...store.slice(i + 1)];
     return json({ ok: true, row: next });
   }
-  if (action === "setField") {
+  if (action === "set-field") {
     const ids = Array.isArray(body.ids)
       ? body.ids.map(String)
       : new URL(request.url).searchParams.getAll("id").filter(Boolean);

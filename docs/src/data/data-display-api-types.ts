@@ -765,7 +765,7 @@ export const SOURCE_API: DocsApiTableRow[] = [
     type: "{ removed, failed[] }",
     default: "-",
     description:
-      "行内编辑（也可在自定义批量操作里调用）。无 setField 时回落按 id 调用 update。API 源已实现 POST …/setField",
+      "行内编辑（也可在自定义批量操作里调用）。无 setField 时回落按 id 调用 update。API 源已实现 POST …/set-field",
   },
   {
     name: "importRows(rows)",
@@ -803,7 +803,7 @@ export const API_SOURCE_API: DocsApiTableRow[] = [
     type: '"action" | "restful"',
     default: '"action"',
     description:
-      "action：GET 根；POST 根/create；POST 根/update?id=；POST 根/setField?id=（body { ids, id, field, value }）；单条删除 POST 根/remove?id=；批量删除 POST 根/remote-batch?id=；GET 根/view?id=；importRows→POST 根/create 且 body { rows }。restful：GET/POST 根；PUT／单条 DELETE 根/:id；批量删除 POST 根/remote-batch；GET 根/:id；POST 根/setField（body { ids, field, value }）；importRows→POST 根/import。路径可用 opts.removeAction／opts.batchRemoveAction 覆盖",
+      "action：GET 根；POST 根/create；POST 根/update?id=；POST 根/set-field?id=（body { ids, id, field, value }）；单条删除 POST 根/remove?id=；批量删除 POST 根/remote-batch?id=；GET 根/view?id=；importRows→POST 根/create 且 body { rows }。restful：GET/POST 根；PUT／单条 DELETE 根/:id；批量删除 POST 根/remote-batch；GET 根/:id；POST 根/set-field（body { ids, field, value }）；importRows→POST 根/import。路径可用 opts.removeAction／opts.batchRemoveAction 覆盖",
   },
   {
     name: "opts.rowKey",
@@ -857,7 +857,7 @@ export const API_SOURCE_API: DocsApiTableRow[] = [
     type: "Promise<{ removed, failed[] }>",
     default: "-",
     description:
-      "writable 不为 false 时挂上。action：POST …/setField?id=，body { ids, id, field, value }；restful：POST …/setField，body { ids, field, value }",
+      "writable 不为 false 时挂上。action：POST …/set-field?id=，body { ids, id, field, value }；restful：POST …/set-field，body { ids, field, value }",
   },
   {
     name: "root / apiMode",

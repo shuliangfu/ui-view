@@ -208,7 +208,7 @@ describe("createApiDataSource action", () => {
         if (c.url.split("?")[0] === "/api/users/update") {
           return { json: { ok: true } };
         }
-        if (c.url.split("?")[0] === "/api/users/setField") {
+        if (c.url.split("?")[0] === "/api/users/set-field") {
           return { json: { removed: 2, failed: [] } };
         }
         if (c.url.split("?")[0] === "/api/users/remove") {
@@ -240,7 +240,7 @@ describe("createApiDataSource action", () => {
       "GET /api/users/view?id=1",
       "POST /api/users/create",
       "POST /api/users/update?id=1",
-      "POST /api/users/setField?id=1&id=2",
+      "POST /api/users/set-field?id=1&id=2",
       "POST /api/users/remove?id=1",
       "POST /api/users/create",
     ]);
@@ -396,7 +396,7 @@ describe("createApiDataSource restful", () => {
             json: { removed: 1, failed: [{ id: "8", error: "boom" }] },
           };
         }
-        if (c.url === "/api/users/setField") {
+        if (c.url === "/api/users/set-field") {
           return { json: { removed: 1, failed: [] } };
         }
         if (c.url === "/api/users/import") {
@@ -424,7 +424,7 @@ describe("createApiDataSource restful", () => {
       "GET /api/users/9",
       "POST /api/users",
       "PUT /api/users/9",
-      "POST /api/users/setField",
+      "POST /api/users/set-field",
       "DELETE /api/users/9",
       "POST /api/users/remote-batch",
       "POST /api/users/import",

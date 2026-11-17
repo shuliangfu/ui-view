@@ -11,12 +11,12 @@
  * - `apiMode: "action"`（默认）：list GET 资源根；create POST …/create；
  *   update POST …/update?id=；单条删除 POST …/remove?id=（body 亦含 id / ids）；
  *   批量删除 POST …/remote-batch?id=（body 亦含 id / ids）；
- *   view GET …/view?id=；setField POST …/setField?id=（body 含 ids／id／field／value）；
+ *   view GET …/view?id=；setField POST …/set-field?id=（body 含 ids／id／field／value）；
  *   importRows → 同一 create 端点，body `{ rows }`（与单条对象区分）。
  * - `apiMode: "restful"`：list GET 根；create POST 根；update PUT 根/:id；
  *   单条删除 DELETE 根/:id；批量删除 POST 根/remote-batch（body `{ ids }`）；
  *   view GET 根/:id；
- *   setField POST 根/setField（body `{ ids, field, value }`）；importRows POST 根/import。
+ *   setField POST 根/set-field（body `{ ids, field, value }`）；importRows POST 根/import。
  * 路径可用 {@link ApiDataSourceOptions.removeAction}／
  * {@link ApiDataSourceOptions.batchRemoveAction} 覆盖。
  *
@@ -578,7 +578,7 @@ export function createApiDataSource(
     );
 
   src.setField = async (ids, field, value) => {
-    const url = joinApiPath(apiRoot(), "setField");
+    const url = joinApiPath(apiRoot(), "set-field");
     if (mode === "action") {
       const r = await request(
         "POST",

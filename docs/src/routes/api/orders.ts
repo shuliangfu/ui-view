@@ -8,7 +8,7 @@
  * - DELETE /api/orders/:id（单条删除）
  * - POST   /api/orders/remote-batch（批量删除，body `{ ids }`）
  * - POST   /api/orders/import（importRows）
- * - POST   /api/orders/setField（body `{ ids, field, value }`）
+ * - POST   /api/orders/set-field（body `{ ids, field, value }`）
  * - GET    /api/orders/:id（明细，可选）
  */
 import { json } from "@dreamer/router";
@@ -135,7 +135,7 @@ export function GET(request: Request): Response {
   const path = pathOf(request);
   if (path === "/api/orders") return list(request);
   const id = idSeg(path);
-  if (!id || id === "import" || id === "setField") {
+  if (!id || id === "import" || id === "set-field") {
     return json({ error: "not_found" }, 404);
   }
   const row = store.find((r) => r.id === id);
@@ -168,7 +168,7 @@ export async function POST(request: Request): Promise<Response> {
     }
     return json({ ok: true, created, failed });
   }
-  if (path === "/api/orders/setField" || path.endsWith("/setField")) {
+  if (path === "/api/orders/set-field" || path.endsWith("/set-field")) {
     const ids = Array.isArray(body.ids) ? body.ids.map(String) : [];
     const field = String(body.field ?? "").trim();
     const allowed = new Set(["name", "email", "role", "status", "balance"]);
