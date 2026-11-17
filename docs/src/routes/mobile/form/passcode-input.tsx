@@ -32,6 +32,13 @@ const API: DocsApiTableRow[] = [
     default: "-",
     description: "受控值",
   },
+  {
+    name: "autoFocus",
+    type: "boolean",
+    default: "false",
+    description:
+      "挂载后自动聚焦。会写出原生 autofocus，并在插入 DOM 时调用 focus()，以便动态出现的输入框也能聚焦",
+  },
   { name: "length", type: "number", default: "6", description: "位数" },
   { name: "mask", type: "boolean", default: "false", description: "掩码" },
   {
@@ -206,6 +213,32 @@ const form = createForm({
           maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
         />
       </section>
+      <section class="space-y-4">
+        <Title level={3}>自动聚焦</Title>
+        <MobileDocDemo>
+          <div class="p-4 flex justify-center">
+            <PasscodeInput
+              id="docs-autofocus-passcode-input"
+              length={6}
+              autoFocus
+            />
+          </div>
+        </MobileDocDemo>
+        <CodeBlock
+          title="代码示例"
+          code={`<PasscodeInput
+  id="docs-autofocus-passcode-input"
+  length={6}
+  autoFocus
+/>`}
+          language="tsx"
+          showLineNumbers
+          copyable
+          wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
+        />
+      </section>
+
       <DocsMessagesSection
         interfaceName="PasscodeInputMessages"
         defaultExportName="defaultPasscodeInputMessages"

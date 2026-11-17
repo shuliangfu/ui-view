@@ -285,6 +285,11 @@ export interface RichTextEditorProps {
   name?: string;
   /** 原生 id（编辑区与隐藏 input 会使用）；未传时取 FormItemControlIdContext */
   id?: string;
+  /**
+   * 挂载后自动聚焦编辑区域。会写出原生 `autofocus`，并在插入 DOM 时调用 `focus()`，
+   * 以便动态出现的编辑器也能聚焦。
+   */
+  autoFocus?: boolean;
   /** 错误状态（外框红边）；可与 FormItem / createForm bindValue 联用 */
   error?: boolean;
   /** 插入图片 URL 时由调用方提供（如弹窗输入）；若返回 string 则插入，否则不插入 */

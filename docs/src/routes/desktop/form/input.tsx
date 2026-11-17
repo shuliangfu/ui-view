@@ -46,6 +46,13 @@ const INPUT_API: ApiRow[] = [
     description: "是否禁用",
   },
   {
+    name: "autoFocus",
+    type: "boolean",
+    default: "false",
+    description:
+      "挂载后自动聚焦。会写出原生 autofocus，并在插入 DOM 时调用 focus()，以便动态出现的输入框也能聚焦",
+  },
+  {
     name: "placeholder",
     type: "string",
     default: "-",
@@ -236,7 +243,7 @@ export default function FormInput() {
         <Title level={1}>Input 单行输入</Title>
         <Paragraph class="mt-2">
           单行输入框，支持
-          size、placeholder、label、floatingLabel、value、type、readOnly、required、error、disabled、prefix、suffix、allowClear。宽度由
+          size、placeholder、label、floatingLabel、value、type、readOnly、required、error、disabled、prefix、suffix、allowClear、autoFocus。宽度由
           class 控制，表单中需占满一列时传 class="w-full"。Tailwind v4 +
           light/dark。与{" "}
           <Link
@@ -983,6 +990,32 @@ const password = createSignal("");
             </div>
           </section>
         </div>
+      </section>
+
+      <section class="space-y-4">
+        <Title level={3}>自动聚焦</Title>
+        <Form layout="vertical" class="w-full">
+          <FormItem label="自动聚焦" id="docs-autofocus-input">
+            <Input
+              id="docs-autofocus-input"
+              placeholder="挂载后自动聚焦"
+              autoFocus
+            />
+          </FormItem>
+        </Form>
+        <CodeBlock
+          title="代码示例"
+          code={`<Input
+  id="docs-autofocus-input"
+  placeholder="挂载后自动聚焦"
+  autoFocus
+/>`}
+          language="tsx"
+          showLineNumbers
+          copyable
+          wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
+        />
       </section>
 
       <DocsMessagesSection

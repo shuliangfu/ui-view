@@ -42,6 +42,7 @@ import {
   uploadFileViaUiViewBase,
 } from "./upload-http.ts";
 import { isDomElement, isHtmlElementOf } from "../dom-guards.ts";
+import { autoFocusAttr, bindAutoFocusRef } from "./auto-focus.ts";
 
 /** 预览展示方式 */
 export type MarkdownEditorPreviewMode = "off" | "split" | "tabs";
@@ -88,6 +89,11 @@ export interface MarkdownEditorProps {
   name?: string;
   /** 原生 id */
   id?: string;
+  /**
+   * 挂载后自动聚焦编辑区域。会写出原生 `autofocus`，并在插入 DOM 时调用 `focus()`，
+   * 以便动态出现的编辑器也能聚焦。
+   */
+  autoFocus?: boolean;
   /** 可见标签缺失时的无障碍名称 */
   ariaLabel?: string;
   /** 是否必填 */
@@ -558,6 +564,7 @@ export function MarkdownEditor(props: MarkdownEditorProps): JSXRenderable {
     onMarkdownChange,
     name,
     id: idProp,
+    autoFocus = false,
     ariaLabel = m.textareaAriaLabel,
     required = false,
     maxLength,
@@ -855,8 +862,9 @@ export function MarkdownEditor(props: MarkdownEditorProps): JSXRenderable {
 
     const textareaNode = (
       <textarea
-        ref={textareaRef}
+        ref={bindAutoFocusRef(textareaRef, autoFocus)}
         id={id}
+        {...autoFocusAttr(autoFocus)}
         name={name}
         rows={rows}
         value={props.value}

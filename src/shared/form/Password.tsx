@@ -26,6 +26,7 @@ import {
   controlErrorFocusRing,
 } from "./input-focus-ring.ts";
 import { commitMaybeSignal, type MaybeSignal } from "./maybe-signal.ts";
+import { autoFocusAttr, bindAutoFocusRef } from "./auto-focus.ts";
 
 /**
  * Password 内置文案。
@@ -101,6 +102,11 @@ export interface PasswordProps {
   name?: string;
   /** 原生 id */
   id?: string;
+  /**
+   * 挂载后自动聚焦。会写出原生 `autofocus`，并在插入 DOM 时调用 `focus()`，
+   * 以便动态出现的输入框也能聚焦。
+   */
+  autoFocus?: boolean;
   /** 前缀：在输入框左侧、与框体相连（同一外边框） */
   prefix?: unknown;
   /**
@@ -216,6 +222,7 @@ export function Password(props: PasswordProps): JSXRenderable {
     onPaste,
     name,
     id,
+    autoFocus = false,
     autoComplete,
     newPassword = false,
     messages,
@@ -267,7 +274,9 @@ export function Password(props: PasswordProps): JSXRenderable {
 
   const inputProps = {
     type: showPassword ? "text" : "password",
+    ref: bindAutoFocusRef(undefined, autoFocus),
     id: resolvedId,
+    ...autoFocusAttr(autoFocus),
     name,
     autoComplete: nativeAutoComplete,
     value,

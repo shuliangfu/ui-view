@@ -72,6 +72,13 @@ const RICH_TEXT_EDITOR_API: ApiRow[] = [
     description: "是否禁用",
   },
   {
+    name: "autoFocus",
+    type: "boolean",
+    default: "false",
+    description:
+      "挂载后自动聚焦编辑区域。会写出原生 autofocus，并在插入 DOM 时调用 focus()，以便动态出现的编辑器也能聚焦",
+  },
+  {
     name: "hideFocusRing",
     type: "boolean",
     default: "false",
@@ -414,6 +421,30 @@ export default function FormRichTextEditor() {
             />
           </section>
         </Form>
+      </section>
+
+      <section class="space-y-4">
+        <Title level={3}>自动聚焦</Title>
+        <RichTextEditor
+          id="docs-autofocus-rich-text-editor"
+          autoFocus
+          minHeight="160px"
+          toolbarPreset="simple"
+        />
+        <CodeBlock
+          title="代码示例"
+          code={`<RichTextEditor
+  id="docs-autofocus-rich-text-editor"
+  autoFocus
+  minHeight="160px"
+  toolbarPreset="simple"
+/>`}
+          language="tsx"
+          showLineNumbers
+          copyable
+          wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
+        />
       </section>
 
       <DocsMessagesSection

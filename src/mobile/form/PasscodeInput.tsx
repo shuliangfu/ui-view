@@ -19,6 +19,10 @@ import {
   type MaybeSignal,
   readMaybeSignal,
 } from "../../shared/form/maybe-signal.ts";
+import {
+  autoFocusAttr,
+  bindAutoFocusRef,
+} from "../../shared/form/auto-focus.ts";
 
 export interface PasscodeInputMessages {
   /** 无障碍标签；显式 `aria-label` 优先 */
@@ -54,6 +58,11 @@ export interface PasscodeInputProps {
   name?: string;
   /** 控件 id；未传时取 FormItemControlIdContext */
   id?: string;
+  /**
+   * 挂载后自动聚焦。会写出原生 `autofocus`，并在插入 DOM 时调用 `focus()`，
+   * 以便动态出现的输入框也能聚焦。
+   */
+  autoFocus?: boolean;
   class?: string;
   /** 无障碍标签；优先于 messages.label */
   "aria-label"?: string;
@@ -77,6 +86,7 @@ export function PasscodeInput(props: PasscodeInputProps): JSXRenderable {
     error = false,
     name,
     id,
+    autoFocus = false,
     class: className,
     "aria-label": ariaLabelProp,
   } = props;
@@ -165,10 +175,11 @@ export function PasscodeInput(props: PasscodeInputProps): JSXRenderable {
       {cells()}
       {secludedInput && (
         <input
-          ref={(el: unknown) => {
-            inputRef.value = el as HTMLInputElement | null;
-          }}
+          ref={bindAutoFocusRef((el: HTMLInputElement | null) => {
+            inputRef.value = el;
+          }, autoFocus)}
           id={resolvedId}
+          {...autoFocusAttr(autoFocus)}
           name={name}
           class="absolute opacity-0 w-px h-px pointer-events-none"
           inputMode={digitsOnly ? "numeric" : "text"}

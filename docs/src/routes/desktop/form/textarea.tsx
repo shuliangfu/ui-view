@@ -72,6 +72,13 @@ const TEXTAREA_API: ApiRow[] = [
     description: "是否禁用",
   },
   {
+    name: "autoFocus",
+    type: "boolean",
+    default: "false",
+    description:
+      "挂载后自动聚焦。会写出原生 autofocus，并在插入 DOM 时调用 focus()，以便动态出现的输入框也能聚焦",
+  },
+  {
     name: "hideFocusRing",
     type: "boolean",
     default: "false",
@@ -426,6 +433,28 @@ export default function FormTextarea() {
             />
           </section>
         </Form>
+      </section>
+
+      <section class="space-y-4">
+        <Title level={3}>自动聚焦</Title>
+        <Textarea
+          id="docs-autofocus-textarea"
+          placeholder="挂载后自动聚焦"
+          autoFocus
+        />
+        <CodeBlock
+          title="代码示例"
+          code={`<Textarea
+  id="docs-autofocus-textarea"
+  placeholder="挂载后自动聚焦"
+  autoFocus
+/>`}
+          language="tsx"
+          showLineNumbers
+          copyable
+          wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
+        />
       </section>
 
       <DocsMessagesSection

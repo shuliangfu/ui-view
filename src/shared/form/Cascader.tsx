@@ -43,6 +43,7 @@ import {
   installInlineDropdownOutsideClickClose,
   syncInlineDropdownPanelVisibility,
 } from "./inline-dropdown-outside-click.ts";
+import { autoFocusAttr, bindAutoFocusRef } from "./auto-focus.ts";
 
 /**
  * 级联一层的节点；静态数据用 `children` 嵌套下一层（深度不限）。
@@ -119,6 +120,11 @@ export interface CascaderProps {
   class?: string;
   name?: string;
   id?: string;
+  /**
+   * 挂载后自动聚焦触发器或可输入框。会写出原生 `autofocus`，并在插入 DOM 时调用 `focus()`，
+   * 以便动态出现的控件也能聚焦。
+   */
+  autoFocus?: boolean;
   /** 错误状态（触发器红框）；可与 FormItem / createForm bindValue 联用 */
   error?: boolean;
   /** 为 true 时隐藏聚焦激活态边框；默认 false 显示 ring */
@@ -186,6 +192,7 @@ function CascaderNativeTwoLevel(props: CascaderProps) {
     class: className,
     name,
     id,
+    autoFocus = false,
     error = false,
     hideFocusRing = false,
     messages,
@@ -218,10 +225,12 @@ function CascaderNativeTwoLevel(props: CascaderProps) {
   return (
     <div class={twMerge("flex flex-wrap items-center gap-2", className)}>
       <select
+        ref={bindAutoFocusRef(undefined, autoFocus)}
         id={resolvedId}
         name={name}
         value={parentValue}
         disabled={disabled}
+        {...autoFocusAttr(autoFocus)}
         aria-invalid={error}
         class={twMerge(
           "touch-manipulation",
@@ -520,6 +529,7 @@ function CascaderDropdownPanel(props: CascaderProps) {
     class: className,
     name,
     id,
+    autoFocus = false,
     error = false,
     hideFocusRing = false,
     value,
@@ -900,10 +910,12 @@ function CascaderDropdownPanel(props: CascaderProps) {
       }}
       <button
         type="button"
+        ref={bindAutoFocusRef(undefined, autoFocus)}
         id={resolvedId}
         disabled={disabled}
         aria-invalid={error}
         aria-haspopup="dialog"
+        {...autoFocusAttr(autoFocus)}
         aria-expanded={() => openState.value}
         aria-label={() => {
           const { displayText } = getTriggerView();

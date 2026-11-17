@@ -6,6 +6,7 @@
 
 import { describe, expect, it } from "@dreamer/test";
 import {
+  assertAutoFocusSection,
   assertStrictDocSection,
   DOCS_BROWSER_CONFIG,
   runKeywordAndShallowHere,
@@ -48,5 +49,13 @@ describe("文档页 E2E：/desktop/form/input-number（InputNumber 数字）", (
       return { ok: r.width > 80 && r.height > 80 && text.length > 20 };
     }) as { ok: boolean };
     expect(got.ok).toBe(true);
+  }, DOCS_BROWSER_CONFIG);
+
+  /**
+   * 文档小节「自动聚焦」：挂载后主控件应为 document.activeElement。
+   */
+  it("严格·自动聚焦", async (t) => {
+    if (!t?.browser?.goto) return;
+    await assertAutoFocusSection(t, DOC_PATH, "docs-autofocus-input-number");
   }, DOCS_BROWSER_CONFIG);
 });

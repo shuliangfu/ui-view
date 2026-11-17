@@ -22,6 +22,7 @@ import {
   controlErrorFocusRing,
 } from "./input-focus-ring.ts";
 import { commitMaybeSignal, type MaybeSignal } from "./maybe-signal.ts";
+import { autoFocusAttr, bindAutoFocusRef } from "./auto-focus.ts";
 import type { SizeVariant } from "../types.ts";
 
 /**
@@ -89,6 +90,11 @@ export interface TextareaProps {
   id?: string;
   /** 内部 textarea ref，便于旧表单迁移后继续读取 DOM 值 */
   textareaRef?: ViewRefObject<HTMLTextAreaElement>;
+  /**
+   * 挂载后自动聚焦。会写出原生 `autofocus`，并在插入 DOM 时调用 `focus()`，
+   * 以便动态出现的输入框也能聚焦。
+   */
+  autoFocus?: boolean;
   /** 多语言/自定义文案；未传字段走 {@link defaultTextareaMessages} */
   messages?: Partial<TextareaMessages>;
 }
@@ -155,6 +161,7 @@ export function Textarea(props: TextareaProps): JSXRenderable {
     name,
     id,
     textareaRef,
+    autoFocus = false,
     messages,
   } = props;
   const m = { ...defaultTextareaMessages, ...messages };
@@ -201,8 +208,9 @@ export function Textarea(props: TextareaProps): JSXRenderable {
 
   const textareaProps = {
     id: resolvedId,
-    ref: textareaRef,
+    ref: bindAutoFocusRef(textareaRef, autoFocus),
     name,
+    ...autoFocusAttr(autoFocus),
     rows,
     value,
     placeholder: outlined?.nativePlaceholder ?? placeholder,

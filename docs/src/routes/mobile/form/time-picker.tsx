@@ -60,6 +60,13 @@ const TIMEPICKER_API: DocsApiTableRow[] = [
     description: "禁用",
   },
   {
+    name: "autoFocus",
+    type: "boolean",
+    default: "false",
+    description:
+      "挂载后自动聚焦触发器或可输入框。会写出原生 autofocus，并在插入 DOM 时调用 focus()，以便动态出现的控件也能聚焦",
+  },
+  {
     name: "hideFocusRing",
     type: "boolean",
     default: "false",
@@ -252,6 +259,31 @@ const form = createForm({
             maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
+      </section>
+
+      <section class="space-y-4">
+        <Title level={3}>自动聚焦</Title>
+        <MobileDocDemo>
+          <TimePicker
+            class="w-full"
+            id="docs-autofocus-mobile-time-picker"
+            placeholder="挂载后自动聚焦"
+            autoFocus
+          />
+        </MobileDocDemo>
+        <CodeBlock
+          title="代码示例"
+          code={`<TimePicker
+  id="docs-autofocus-mobile-time-picker"
+  placeholder="挂载后自动聚焦"
+  autoFocus
+/>`}
+          language="tsx"
+          showLineNumbers
+          copyable
+          wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
+        />
       </section>
 
       <DocsMessagesSection

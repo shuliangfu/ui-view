@@ -31,6 +31,7 @@ import {
   readMaybeSignal,
 } from "./maybe-signal.ts";
 import type { SizeVariant } from "../types.ts";
+import { autoFocusAttr, bindAutoFocusRef } from "./auto-focus.ts";
 
 /** 保留类型别名以便兼容导出；仅支持自绘下拉 */
 export type SelectAppearance = "dropdown";
@@ -71,6 +72,11 @@ export interface SelectProps {
   onBlur?: (e: Event) => void;
   name?: string;
   id?: string;
+  /**
+   * 挂载后自动聚焦触发器或可输入框。会写出原生 `autofocus`，并在插入 DOM 时调用 `focus()`，
+   * 以便动态出现的控件也能聚焦。
+   */
+  autoFocus?: boolean;
   /**
    * 已废弃：不再支持通过 children 挂载原生 `<option>`。
    * 请改用 {@link SelectProps.options}。
@@ -117,6 +123,7 @@ function SelectDropdownBranch(props: SelectProps) {
     onBlur,
     name,
     id,
+    autoFocus = false,
     error = false,
     children,
     hideFocusRing = false,
@@ -218,10 +225,12 @@ function SelectDropdownBranch(props: SelectProps) {
       />
       <button
         type="button"
+        ref={bindAutoFocusRef(undefined, autoFocus)}
         id={resolvedId}
         disabled={disabled}
         aria-invalid={error}
         aria-haspopup="listbox"
+        {...autoFocusAttr(autoFocus)}
         aria-expanded={() => openState.value}
         aria-label={() => {
           const rv = readMaybeSignal(value);

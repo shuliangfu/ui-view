@@ -40,6 +40,7 @@ import {
   readMaybeSignal,
 } from "./maybe-signal.ts";
 import type { SizeVariant } from "../types.ts";
+import { autoFocusAttr, bindAutoFocusRef } from "./auto-focus.ts";
 
 export interface TreeSelectOption {
   value: string;
@@ -80,6 +81,11 @@ export interface TreeSelectProps {
   class?: string;
   name?: string;
   id?: string;
+  /**
+   * 挂载后自动聚焦触发器或可输入框。会写出原生 `autofocus`，并在插入 DOM 时调用 `focus()`，
+   * 以便动态出现的控件也能聚焦。
+   */
+  autoFocus?: boolean;
   /** 为 true 时隐藏聚焦激活态边框；默认 false 显示 ring */
   hideFocusRing?: boolean;
   /** `native` 时用原生 select + 大触控区，选项文案为展平后的完整路径 */
@@ -163,6 +169,7 @@ function TreeSelectNativeBranch(props: Omit<TreeSelectProps, "appearance">) {
     class: className,
     name,
     id,
+    autoFocus = false,
     error = false,
     hideFocusRing = false,
     value,
@@ -189,10 +196,12 @@ function TreeSelectNativeBranch(props: Omit<TreeSelectProps, "appearance">) {
 
   return (
     <select
+      ref={bindAutoFocusRef(undefined, autoFocus)}
       id={resolvedId}
       name={name}
       value={value}
       disabled={disabled}
+      {...autoFocusAttr(autoFocus)}
       aria-invalid={error}
       class={twMerge(
         "w-full touch-manipulation",
@@ -230,6 +239,7 @@ function TreeSelectDropdownBranch(props: Omit<TreeSelectProps, "appearance">) {
     class: className,
     name,
     id,
+    autoFocus = false,
     error = false,
     hideFocusRing = false,
     value,
@@ -313,10 +323,12 @@ function TreeSelectDropdownBranch(props: Omit<TreeSelectProps, "appearance">) {
       />
       <button
         type="button"
+        ref={bindAutoFocusRef(undefined, autoFocus)}
         id={resolvedId}
         disabled={disabled}
         aria-invalid={error}
         aria-haspopup="listbox"
+        {...autoFocusAttr(autoFocus)}
         aria-expanded={() => openState.value}
         aria-label={() => {
           const rv = readMaybeSignal(value) ?? "";

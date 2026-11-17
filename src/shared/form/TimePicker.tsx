@@ -53,6 +53,7 @@ import {
 } from "./picker-portal-utils.ts";
 import { pickerCalendarIconProps } from "./picker-trigger-icon.ts";
 import { commitMaybeSignal, type MaybeSignal } from "./maybe-signal.ts";
+import { autoFocusAttr, bindAutoFocusRef } from "./auto-focus.ts";
 
 /** range 模式受控值 */
 export interface TimePickerRangeValue {
@@ -126,6 +127,11 @@ export interface TimePickerProps {
   class?: string;
   name?: string;
   id?: string;
+  /**
+   * 挂载后自动聚焦触发器或可输入框。会写出原生 `autofocus`，并在插入 DOM 时调用 `focus()`，
+   * 以便动态出现的控件也能聚焦。
+   */
+  autoFocus?: boolean;
   /** 错误状态（触发器红框）；可与 FormItem / createForm bind 联用 */
   error?: boolean;
   /** 占位文案 */
@@ -986,9 +992,10 @@ export function TimePicker(props: TimePickerProps): JSXRenderable {
         /**
          * 触发器 DOM：点外关闭与几何同步用；须用函数 ref，勿 `ref={triggerRef}` 对象。
          */
-        ref={(el: HTMLButtonElement | null) => {
+        ref={bindAutoFocusRef((el: HTMLButtonElement | null) => {
           triggerRef.current = el;
-        }}
+        }, props.autoFocus)}
+        {...autoFocusAttr(props.autoFocus)}
         disabled={() => props.disabled ?? false}
         aria-invalid={() => props.error}
         aria-haspopup="dialog"

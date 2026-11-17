@@ -17,6 +17,7 @@ import {
   controlErrorFocusRing,
 } from "./input-focus-ring.ts";
 import { commitMaybeSignal, type MaybeSignal } from "./maybe-signal.ts";
+import { autoFocusAttr, bindAutoFocusRef } from "./auto-focus.ts";
 
 /**
  * Search 内置文案。
@@ -74,6 +75,11 @@ export interface SearchProps {
   name?: string;
   /** 原生 id */
   id?: string;
+  /**
+   * 挂载后自动聚焦。会写出原生 `autofocus`，并在插入 DOM 时调用 `focus()`，
+   * 以便动态出现的输入框也能聚焦。
+   */
+  autoFocus?: boolean;
   /** 多语言/自定义文案；未传字段走 {@link defaultSearchMessages} */
   messages?: Partial<SearchMessages>;
 }
@@ -114,6 +120,7 @@ export function Search(props: SearchProps): JSXRenderable {
     onSearch,
     name,
     id,
+    autoFocus = false,
     error = false,
     hideFocusRing = false,
     messages,
@@ -182,7 +189,9 @@ export function Search(props: SearchProps): JSXRenderable {
       </span>
       <input
         type="search"
+        ref={bindAutoFocusRef(undefined, autoFocus)}
         id={resolvedId}
+        {...autoFocusAttr(autoFocus)}
         name={name}
         value={value}
         placeholder={placeholder}

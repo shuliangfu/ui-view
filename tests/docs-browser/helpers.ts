@@ -1459,3 +1459,96 @@ export async function assertStrictDocSection(
   ) as boolean;
   expect(ok).toBe(true);
 }
+
+/**
+ * 断言文档「自动聚焦」示例在挂载后把焦点放到主控件上。
+ * Playwright evaluate 不带回闭包；path 已在外部 goto，id / 标题经 JSON 注入。
+ *
+ * @param t - 浏览器测试上下文
+ * @param path - 文档路由，如 `/desktop/form/input`
+ * @param id - 示例中主控件的唯一 id（优先用它定位）
+ */
+export async function assertAutoFocusSection(
+  t: DocsBrowserTestContext,
+  path: string,
+  id?: string,
+): Promise<void> {
+  if (!t?.browser?.goto) return;
+  await sharedEnv.goto(t, path);
+  await sharedEnv.waitDocMainReady(t);
+  /** 等挂载后的 `focus()` 落到当前文档 */
+  await sharedEnv.delay(80);
+  const result = await t.browser.evaluate(
+    // deno-lint-ignore no-explicit-any
+    new Function(
+      `const id = ${JSON.stringify(id ?? "")};
+      const needle = "自动聚焦";
+      const main = document.querySelector("main");
+      if (!main) return { ok: false, reason: "no-main" };
+      const heads = main.querySelectorAll("h2, h3");
+      let section = null;
+      for (let i = 0; i < heads.length; i++) {
+        const h = heads[i];
+        if (!(h.textContent || "").includes(needle)) continue;
+        section = h.closest("section") || h.parentElement;
+        break;
+      }
+      if (!section) return { ok: false, reason: "no-section" };
+      function isFocusable(el) {
+        if (!el) return false;
+        const tag = el.tagName;
+        if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || tag === "BUTTON") {
+          return true;
+        }
+        if (el.isContentEditable) return true;
+        return false;
+      }
+      const focusSel = "input, textarea, select, button, [contenteditable]";
+      let target = null;
+      if (id) {
+        const all = section.querySelectorAll("[id]");
+        for (let i = 0; i < all.length; i++) {
+          if (all[i].id !== id) continue;
+          if (isFocusable(all[i])) {
+            target = all[i];
+            break;
+          }
+          if (!target) target = all[i];
+        }
+        if (!target) {
+          const el = document.getElementById(id);
+          if (el && main.contains(el)) target = el;
+        }
+      }
+      if (target && !isFocusable(target)) {
+        const inner = target.querySelector(focusSel);
+        if (inner) target = inner;
+      }
+      if (!target) {
+        target = section.querySelector(focusSel);
+      }
+      const ae = document.activeElement;
+      if (!ae || !target) {
+        return {
+          ok: false,
+          reason: "missing",
+          hasAe: !!ae,
+          hasTarget: !!target,
+          aeTag: ae && ae.tagName,
+          aeId: ae && ae.id,
+        };
+      }
+      const ok = ae === target || target.contains(ae) ||
+        (typeof ae.contains === "function" && ae.contains(target));
+      return {
+        ok,
+        reason: ok ? "ok" : "mismatch",
+        aeTag: ae.tagName,
+        aeId: ae.id,
+        tTag: target.tagName,
+        tId: target.id,
+      };`,
+    ) as () => { ok: boolean },
+  ) as { ok: boolean };
+  expect(result.ok).toBe(true);
+}

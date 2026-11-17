@@ -110,6 +110,13 @@ const MARKDOWN_EDITOR_API: ApiRow[] = [
     description: "禁用",
   },
   {
+    name: "autoFocus",
+    type: "boolean",
+    default: "false",
+    description:
+      "挂载后自动聚焦编辑区域。会写出原生 autofocus，并在插入 DOM 时调用 focus()，以便动态出现的编辑器也能聚焦",
+  },
+  {
     name: "readOnly",
     type: "boolean",
     default: "false",
@@ -487,6 +494,30 @@ export default function FormMarkdownEditor() {
             />
           </section>
         </Form>
+      </section>
+
+      <section class="space-y-4">
+        <Title level={3}>自动聚焦</Title>
+        <MarkdownEditor
+          id="docs-autofocus-markdown-editor"
+          autoFocus
+          editorMinHeightClass="min-h-[160px]"
+          preview="tabs"
+        />
+        <CodeBlock
+          title="代码示例"
+          code={`<MarkdownEditor
+  id="docs-autofocus-markdown-editor"
+  autoFocus
+  editorMinHeightClass="min-h-[160px]"
+  preview="tabs"
+/>`}
+          language="tsx"
+          showLineNumbers
+          copyable
+          wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
+        />
       </section>
 
       <DocsMessagesSection

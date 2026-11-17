@@ -36,6 +36,7 @@ import {
 } from "./input-focus-ring.ts";
 import { Input } from "./Input.tsx";
 import { commitMaybeSignal, readMaybeSignal } from "./maybe-signal.ts";
+import { autoFocusAttr, bindAutoFocusRef } from "./auto-focus.ts";
 import { resolveFormControlSize } from "./form-control-context.ts";
 import { FormItemControlIdContext } from "./form-item-control-id.ts";
 import {
@@ -1946,7 +1947,13 @@ export function RichTextEditor(props: RichTextEditorProps): JSXRenderable {
               rteEditorHasFocus = false;
               queueMicrotask(() => refreshHistoryNavState());
             }}
-            ref={editorHostRef}
+            ref={bindAutoFocusRef(
+              editorHostRef,
+              Boolean(props.autoFocus) && !disabled && !readOnly,
+            )}
+            {...autoFocusAttr(
+              Boolean(props.autoFocus) && !disabled && !readOnly,
+            )}
           />
           {
             /*

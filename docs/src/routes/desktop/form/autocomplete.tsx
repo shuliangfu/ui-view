@@ -53,6 +53,13 @@ const AUTOCOMPLETE_API: ApiRow[] = [
     description: "是否禁用",
   },
   {
+    name: "autoFocus",
+    type: "boolean",
+    default: "false",
+    description:
+      "挂载后自动聚焦。会写出原生 autofocus，并在插入 DOM 时调用 focus()，以便动态出现的输入框也能聚焦",
+  },
+  {
     name: "error",
     type: "boolean",
     default: "false",
@@ -344,6 +351,28 @@ const q = createSignal("");
 <AutoComplete size="sm" ... placeholder="sm" />
 <AutoComplete size="md" ... placeholder="md" />
 <AutoComplete size="lg" ... placeholder="lg" />`}
+          language="tsx"
+          showLineNumbers
+          copyable
+          wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
+        />
+      </section>
+
+      <section class="space-y-4">
+        <Title level={3}>自动聚焦</Title>
+        <AutoComplete
+          id="docs-autofocus-autocomplete"
+          placeholder="挂载后自动聚焦"
+          autoFocus
+        />
+        <CodeBlock
+          title="代码示例"
+          code={`<AutoComplete
+  id="docs-autofocus-autocomplete"
+  placeholder="挂载后自动聚焦"
+  autoFocus
+/>`}
           language="tsx"
           showLineNumbers
           copyable

@@ -58,6 +58,7 @@ import {
   type MaybeSignal,
   readMaybeSignal,
 } from "./maybe-signal.ts";
+import { autoFocusAttr, bindAutoFocusRef } from "./auto-focus.ts";
 
 /** 与 {@link DatePickerProps.mode} 中 `range` 对应的受控值形态 */
 export interface DatePickerRangeValue {
@@ -120,6 +121,11 @@ export interface DatePickerProps {
   class?: string;
   name?: string;
   id?: string;
+  /**
+   * 挂载后自动聚焦触发器或可输入框。会写出原生 `autofocus`，并在插入 DOM 时调用 `focus()`，
+   * 以便动态出现的控件也能聚焦。
+   */
+  autoFocus?: boolean;
   /** 错误状态（触发器红框）；可与 FormItem / createForm bind 联用 */
   error?: boolean;
   /** 占位文案 */
@@ -617,9 +623,10 @@ export function DatePicker(props: DatePickerProps): JSXRenderable {
         /**
          * 触发器 DOM：`fixed` 贴边与几何同步用；`compileSource` 路径须用函数 ref，勿 `ref={triggerRef}` 对象。
          */
-        ref={(el: HTMLButtonElement | null) => {
+        ref={bindAutoFocusRef((el: HTMLButtonElement | null) => {
           triggerRef.current = el;
-        }}
+        }, props.autoFocus)}
+        {...autoFocusAttr(props.autoFocus)}
         disabled={() => props.disabled ?? false}
         aria-invalid={() => props.error}
         aria-haspopup="dialog"

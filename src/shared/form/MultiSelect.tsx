@@ -38,6 +38,7 @@ import {
   toggleSelectAllKeys,
 } from "../select-all-hotkey.ts";
 import type { SizeVariant } from "../types.ts";
+import { autoFocusAttr, bindAutoFocusRef } from "./auto-focus.ts";
 
 /** 与 Select 共用 Esc 关闭注册键，需配合文档站 initDropdownEsc */
 const DROPDOWN_ESC_KEY = "__lastDropdownClose" as const;
@@ -93,6 +94,11 @@ export interface MultiSelectProps {
   class?: string;
   name?: string;
   id?: string;
+  /**
+   * 挂载后自动聚焦触发器或可输入框。会写出原生 `autofocus`，并在插入 DOM 时调用 `focus()`，
+   * 以便动态出现的控件也能聚焦。
+   */
+  autoFocus?: boolean;
   /** 未选任何项时触发器上显示的占位文案（仅 dropdown） */
   placeholder?: string;
   /** 为 true 时隐藏触发器聚焦 ring */
@@ -145,6 +151,7 @@ function MultiSelectNativeBranch(props: Omit<MultiSelectProps, "appearance">) {
     class: className,
     name,
     id,
+    autoFocus = false,
     hideFocusRing = false,
     messages,
   } = props;
@@ -214,9 +221,11 @@ function MultiSelectNativeBranch(props: Omit<MultiSelectProps, "appearance">) {
       }}
       <select
         multiple
+        ref={bindAutoFocusRef(undefined, autoFocus)}
         id={resolvedId}
         name={name}
         disabled={disabled}
+        {...autoFocusAttr(autoFocus)}
         aria-invalid={error}
         class={twMerge(
           "w-full touch-manipulation",
@@ -265,6 +274,7 @@ function MultiSelectDropdownBranch(
     class: className,
     name,
     id,
+    autoFocus = false,
     hideFocusRing = false,
     messages,
   } = props;
@@ -370,11 +380,13 @@ function MultiSelectDropdownBranch(
       }}
       <button
         type="button"
+        ref={bindAutoFocusRef(undefined, autoFocus)}
         id={resolvedId}
         disabled={disabled}
         aria-invalid={error}
         aria-haspopup="listbox"
         aria-expanded={() => openState.value}
+        {...autoFocusAttr(autoFocus)}
         aria-label={() => {
           const rv = readMaybeSignal(value) ?? [];
           const selectedLabels = rv

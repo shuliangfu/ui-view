@@ -33,6 +33,7 @@ import {
   type MaybeSignal,
   readMaybeSignal,
 } from "./maybe-signal.ts";
+import { autoFocusAttr, bindAutoFocusRef } from "./auto-focus.ts";
 
 /**
  * Input 内置文案。
@@ -111,6 +112,11 @@ export interface InputProps {
   multiple?: boolean;
   /** 内部 input ref，便于旧表单在迁移到 Input 后继续读取 DOM 值 */
   inputRef?: ViewRefObject<HTMLInputElement>;
+  /**
+   * 挂载后自动聚焦。会写出原生 `autofocus`，并在插入 DOM 时调用 `focus()`，
+   * 以便登录后才出现的输入框也能聚焦。
+   */
+  autoFocus?: boolean;
   /**
    * 自动完成与暗色 `:-webkit-autofill` 长 class：`true` 时合并长 class，并按 `type` 写原生 `autocomplete`（如 `email`→`email`）；`string` 时原样写出并（在非 `off`/`nope` 时）合并长 class；`false`/不传则二者皆无。
    */
@@ -242,7 +248,11 @@ function InputGroupShell(props: {
   type: string;
   id: string | undefined;
   name: string | undefined;
-  inputRef: ViewRefObject<HTMLInputElement> | undefined;
+  inputRef:
+    | ViewRefObject<HTMLInputElement>
+    | ((el: HTMLInputElement | null) => void)
+    | undefined;
+  autoFocus?: boolean;
   placeholder: string | undefined;
   disabled: boolean;
   readOnly: boolean;
@@ -279,6 +289,7 @@ function InputGroupShell(props: {
     id,
     name,
     inputRef,
+    autoFocus,
     placeholder,
     disabled,
     readOnly,
@@ -341,6 +352,7 @@ function InputGroupShell(props: {
         placeholder={placeholder}
         {...(disabled ? { disabled: true } : {})}
         {...(readOnly ? { readOnly: true } : {})}
+        {...autoFocusAttr(autoFocus)}
         aria-required={required}
         aria-invalid={error}
         {...(type !== "file" ? { value } : {})}
@@ -389,6 +401,7 @@ export function Input(props: InputProps): JSXRenderable {
     name,
     id,
     inputRef,
+    autoFocus = false,
     autoComplete,
     messages,
     accept,
@@ -403,6 +416,7 @@ export function Input(props: InputProps): JSXRenderable {
 
   const sizeCls = sizeClasses[size];
   const nativeAutoComplete = inputNativeAutoComplete(autoComplete, type);
+  const resolvedRef = bindAutoFocusRef(inputRef, autoFocus);
 
   /**
    * 受控 `value` 为 Signal 时由组件写回，再调用外部 `onInput`。
@@ -454,7 +468,7 @@ export function Input(props: InputProps): JSXRenderable {
 
   const inputSpreadProps = {
     type,
-    ref: inputRef,
+    ref: resolvedRef,
     id: resolvedId,
     name,
     autoComplete: nativeAutoComplete,
@@ -463,6 +477,7 @@ export function Input(props: InputProps): JSXRenderable {
     // 而 HTML 里只要写了该属性就为真（水合前输入框会被锁成只读 / 禁用）
     ...(disabled ? { disabled: true } : {}),
     ...(readOnly ? { readOnly: true } : {}),
+    ...autoFocusAttr(autoFocus),
     "aria-required": required,
     "aria-invalid": error,
     ...(outlined ? { "aria-label": outlined.text } : {}),
@@ -548,7 +563,8 @@ export function Input(props: InputProps): JSXRenderable {
       suffix={suffix}
       allowClear={allowClear}
       type={type}
-      inputRef={inputRef}
+      inputRef={resolvedRef}
+      autoFocus={autoFocus}
       id={resolvedId}
       name={name}
       nativeAutoComplete={nativeAutoComplete}

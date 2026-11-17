@@ -21,6 +21,7 @@ import {
   controlErrorFocusRing,
 } from "./input-focus-ring.ts";
 import { commitMaybeSignal, type MaybeSignal } from "./maybe-signal.ts";
+import { autoFocusAttr, bindAutoFocusRef } from "./auto-focus.ts";
 
 /**
  * AutoComplete 内置文案。
@@ -74,6 +75,11 @@ export interface AutoCompleteProps {
   name?: string;
   /** 原生 id */
   id?: string;
+  /**
+   * 挂载后自动聚焦。会写出原生 `autofocus`，并在插入 DOM 时调用 `focus()`，
+   * 以便动态出现的输入框也能聚焦。
+   */
+  autoFocus?: boolean;
   /** 多语言/自定义文案；未传字段走 {@link defaultAutoCompleteMessages} */
   messages?: Partial<AutoCompleteMessages>;
 }
@@ -204,6 +210,7 @@ export function AutoComplete(props: AutoCompleteProps): JSXRenderable {
     error = false,
     name,
     id,
+    autoFocus = false,
     messages,
   } = props;
   const m = { ...defaultAutoCompleteMessages, ...messages };
@@ -344,12 +351,14 @@ export function AutoComplete(props: AutoCompleteProps): JSXRenderable {
     return (
       <input
         type="text"
+        ref={bindAutoFocusRef(undefined, autoFocus)}
         id={resolvedId}
         name={name}
         value={value}
         placeholder={placeholder}
         disabled={disabled}
         aria-invalid={error}
+        {...autoFocusAttr(autoFocus)}
         class={twMerge(inputClass, className)}
         onChange={handleChange}
         onInput={handleInput}
@@ -396,7 +405,8 @@ export function AutoComplete(props: AutoCompleteProps): JSXRenderable {
         aria-autocomplete="list"
         autoComplete="off"
         class={inputClass}
-        ref={comboboxInputRef}
+        ref={bindAutoFocusRef(comboboxInputRef, autoFocus)}
+        {...autoFocusAttr(autoFocus)}
         onChange={handleChange}
         onInput={handleInput}
         onBlur={handleBlur}

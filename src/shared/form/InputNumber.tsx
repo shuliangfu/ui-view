@@ -18,6 +18,7 @@ import {
   controlErrorBorder,
 } from "./input-focus-ring.ts";
 import { commitMaybeSignal, type MaybeSignal } from "./maybe-signal.ts";
+import { autoFocusAttr, bindAutoFocusRef } from "./auto-focus.ts";
 
 /**
  * InputNumber 内置文案。
@@ -78,6 +79,11 @@ export interface InputNumberProps {
   id?: string;
   /** 内部 input ref，便于旧表单迁移后继续读取 DOM 值 */
   inputRef?: ViewRefObject<HTMLInputElement>;
+  /**
+   * 挂载后自动聚焦。会写出原生 `autofocus`，并在插入 DOM 时调用 `focus()`，
+   * 以便动态出现的输入框也能聚焦。
+   */
+  autoFocus?: boolean;
   /** 多语言/自定义文案；未传字段走 {@link defaultInputNumberMessages} */
   messages?: Partial<InputNumberMessages>;
 }
@@ -281,6 +287,7 @@ export function InputNumber(props: InputNumberProps): JSXRenderable {
     name,
     id,
     inputRef,
+    autoFocus = false,
     error = false,
     hideFocusRing = false,
     messages,
@@ -369,8 +376,9 @@ export function InputNumber(props: InputNumberProps): JSXRenderable {
   const inputSpreadProps = {
     type: "text" as const,
     inputMode: "decimal" as const,
-    ref: inputRef,
+    ref: bindAutoFocusRef(inputRef, autoFocus),
     id: resolvedId,
+    ...autoFocusAttr(autoFocus),
     name,
     placeholder,
     disabled,

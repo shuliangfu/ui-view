@@ -40,6 +40,7 @@ import {
   type MaybeSignal,
   readMaybeSignal,
 } from "./maybe-signal.ts";
+import { autoFocusAttr, bindAutoFocusRef } from "./auto-focus.ts";
 
 /**
  * 命令式打开/关闭取色面板（与 {@link ColorPickerProps.pickerRef} 配合）。
@@ -119,6 +120,11 @@ export interface ColorPickerProps {
   name?: string;
   /** 触发器 `id`（用于 label；隐藏域为 `${id}-value`） */
   id?: string;
+  /**
+   * 挂载后自动聚焦触发器或可输入框。会写出原生 `autofocus`，并在插入 DOM 时调用 `focus()`，
+   * 以便动态出现的控件也能聚焦。
+   */
+  autoFocus?: boolean;
   /** 错误状态（触发器红框）；可与 FormItem / createForm bind 联用 */
   error?: boolean;
   /** 为 true 时隐藏聚焦激活态边框；默认 false */
@@ -741,6 +747,7 @@ export function ColorPicker(props: ColorPickerProps): JSXRenderable {
     class: className,
     name,
     id: idProp,
+    autoFocus = false,
     error = false,
     hideFocusRing = false,
     showSuffixIcon = true,
@@ -1148,10 +1155,11 @@ export function ColorPicker(props: ColorPickerProps): JSXRenderable {
           /**
            * 触发器 DOM：点外关闭与几何同步用；须用函数 ref，勿对 `triggerRef` 使用对象式 `ref`。
            */
-          ref={(el: HTMLButtonElement | null) => {
+          ref={bindAutoFocusRef((el: HTMLButtonElement | null) => {
             triggerRef.current = el;
-          }}
+          }, autoFocus)}
           type="button"
+          {...autoFocusAttr(autoFocus)}
           id={id}
           disabled={() => disabled}
           aria-invalid={error}
