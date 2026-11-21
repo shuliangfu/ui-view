@@ -28,27 +28,28 @@ function visibleMenu(page: Page, id: string) {
 }
 
 async function openColumnMenu(page: Page, panel: Locator) {
-  const menu = visibleMenu(page, "dp-column-menu");
-  const columns = panel.getByTestId("dp-columns");
   let lastError: unknown;
   for (let i = 0; i < 5; i++) {
-    await page.keyboard.press("Escape");
-    await visible(menu, false);
-    await columns.scrollIntoViewIfNeeded();
-    const box = await columns.boundingBox();
-    if (box) {
-      const y = 220;
-      if (Math.abs(box.y - y) > 8) {
-        await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-        await page.mouse.wheel(0, box.y - y);
-        await eventually(async () => {
-          const r = await columns.boundingBox();
-          return r !== null && Math.abs(r.y - y) < 8;
-        });
-      }
-    }
-    await columns.click({ delay: 160 });
     try {
+      const menu = visibleMenu(page, "dp-column-menu");
+      const columns = panel.getByTestId("dp-columns");
+      await page.keyboard.press("Escape");
+      await visible(menu, false);
+      await columns.waitFor({ state: "attached" });
+      await columns.scrollIntoViewIfNeeded();
+      const box = await columns.boundingBox();
+      if (box) {
+        const y = 220;
+        if (Math.abs(box.y - y) > 8) {
+          await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+          await page.mouse.wheel(0, box.y - y);
+          await eventually(async () => {
+            const r = await columns.boundingBox();
+            return r !== null && Math.abs(r.y - y) < 8;
+          });
+        }
+      }
+      await columns.click({ delay: 160 });
       await visible(menu);
       const email = menu.getByTestId("dp-col-email");
       await email.waitFor({ state: "visible" });

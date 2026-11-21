@@ -1106,63 +1106,210 @@ async function recoverDocsBrowserPage(
     : new Error(String(lastErr ?? "recoverDocsBrowserPage failed"));
 }
 
-/** Contexts that already have the in-page clipboard init script. */
-const clipboardPatchedContexts = new WeakSet<object>();
+/**
+ * In-page hooks for docs-browser: clipboard bridge, identity `__name`,
+ * and neutralization of the View DevTools overlay backdrop.
+ *
+ * Must be a raw JS string (never a TS/JS function passed to addInitScript).
+ * Node + tsx keepNames rewrites function-form init scripts to `__name(...)`.
+ * Playwright then runs that source in the page, where `__name` is missing:
+ * the hook throws `pageerror: __name is not defined`, the clipboard shim
+ * never installs (Windows OS clipboard is unreliable), and zero-pageerror
+ * assertions fail on all Node OS.
+ */
+const DOCS_BROWSER_PAGE_HOOK = `(() => {
+  var g = globalThis;
+  if (typeof g.__name !== "function") {
+    g.__name = function (f) { return f; };
+  }
+  g.__uiViewClipboard = g.__uiViewClipboard || { text: "" };
+  function installClipboard() {
+    var nav = g.navigator;
+    if (!nav) return;
+    var native = nav.clipboard;
+    var api = {
+      writeText: function (text) {
+        g.__uiViewClipboard = g.__uiViewClipboard || { text: "" };
+        g.__uiViewClipboard.text = String(text == null ? "" : text);
+        if (native && typeof native.writeText === "function") {
+          return Promise.resolve(native.writeText(String(text == null ? "" : text))).then(
+            function () {},
+            function () {}
+          );
+        }
+        return Promise.resolve();
+      },
+      readText: function () {
+        return Promise.resolve(
+          (g.__uiViewClipboard && g.__uiViewClipboard.text) || ""
+        );
+      }
+    };
+    try {
+      Object.defineProperty(nav, "clipboard", {
+        configurable: true,
+        enumerable: true,
+        writable: true,
+        value: api
+      });
+    } catch (_e1) {
+      try {
+        nav.clipboard = api;
+      } catch (_e2) {
+        try {
+          var proto = Object.getPrototypeOf(nav);
+          if (proto) {
+            Object.defineProperty(proto, "clipboard", {
+              configurable: true,
+              get: function () { return api; }
+            });
+          }
+        } catch (_e3) {}
+      }
+    }
+  }
+  installClipboard();
+
+  var doc = g.document;
+  if (doc && typeof doc.execCommand === "function" && !doc.__uiViewExecPatched) {
+    doc.__uiViewExecPatched = true;
+    var orig = doc.execCommand.bind(doc);
+    doc.execCommand = function (command) {
+      var result = orig.apply(doc, arguments);
+      if (String(command || "").toLowerCase() !== "copy") return result;
+      var text = "";
+      var ae = doc.activeElement;
+      if (
+        ae &&
+        (ae.tagName === "TEXTAREA" || ae.tagName === "INPUT") &&
+        typeof ae.value === "string"
+      ) {
+        var start = typeof ae.selectionStart === "number" ? ae.selectionStart : 0;
+        var end = typeof ae.selectionEnd === "number"
+          ? ae.selectionEnd
+          : ae.value.length;
+        text = ae.value.slice(start, end);
+      }
+      if (!text && doc.getSelection) text = String(doc.getSelection());
+      if (text) {
+        g.__uiViewClipboard = g.__uiViewClipboard || { text: "" };
+        g.__uiViewClipboard.text = text;
+      }
+      return result;
+    };
+    doc.addEventListener("copy", function (e) {
+      try {
+        var data = e.clipboardData && e.clipboardData.getData("text/plain");
+        if (data) {
+          g.__uiViewClipboard = g.__uiViewClipboard || { text: "" };
+          g.__uiViewClipboard.text = data;
+        }
+      } catch (_err) {}
+    }, true);
+  }
+
+  function neutralizeDevtoolsOverlay() {
+    if (!doc || typeof doc.querySelectorAll !== "function") return;
+    var nodes = doc.querySelectorAll('[data-dreamer-view-devtools="overlay"]');
+    for (var i = 0; i < nodes.length; i++) {
+      var el = nodes[i];
+      el.style.setProperty("pointer-events", "none", "important");
+      el.style.setProperty("inset", "auto", "important");
+      el.style.setProperty("width", "0", "important");
+      el.style.setProperty("height", "0", "important");
+      el.style.setProperty("overflow", "hidden", "important");
+      try {
+        var shadow = el.shadowRoot;
+        if (shadow) {
+          var kids = shadow.querySelectorAll("*");
+          for (var j = 0; j < kids.length; j++) {
+            kids[j].style.setProperty("pointer-events", "none", "important");
+          }
+        }
+      } catch (_err) {}
+    }
+  }
+  if (doc) {
+    neutralizeDevtoolsOverlay();
+    if (!g.__uiViewOverlayObserver && typeof MutationObserver === "function") {
+      g.__uiViewOverlayObserver = new MutationObserver(function () {
+        neutralizeDevtoolsOverlay();
+      });
+      var startObs = function () {
+        if (doc.documentElement) {
+          g.__uiViewOverlayObserver.observe(doc.documentElement, {
+            childList: true,
+            subtree: true
+          });
+        }
+      };
+      if (doc.documentElement) startObs();
+      else doc.addEventListener("DOMContentLoaded", startObs, { once: true });
+    }
+    var injectOverlayStyle = function () {
+      if (doc.getElementById("__uiViewOverlayStyle")) return true;
+      var parent = doc.head;
+      if (
+        !parent &&
+        doc.documentElement &&
+        doc.documentElement.nodeName === "HTML"
+      ) {
+        parent = doc.documentElement;
+      }
+      // Never append to document itself: that becomes the root and aborts HTML parsing.
+      if (!parent) return false;
+      var style = doc.createElement("style");
+      style.id = "__uiViewOverlayStyle";
+      style.textContent =
+        '[data-dreamer-view-devtools="overlay"]{pointer-events:none!important;inset:auto!important;width:0!important;height:0!important;overflow:hidden!important;}';
+      parent.appendChild(style);
+      return true;
+    };
+    if (!injectOverlayStyle()) {
+      doc.addEventListener("DOMContentLoaded", injectOverlayStyle, { once: true });
+    }
+  }
+})();`;
+
+/** Contexts that already have the in-page docs-browser hook init script. */
+const docsBrowserHookedContexts = new WeakSet<object>();
 
 /**
- * Playwright's OS clipboard is unreliable on Windows CI (and sometimes Linux)
- * even after grantPermissions. Install a page-level navigator.clipboard that
- * records writeText bytes for assertions, and still forwards to the native API.
+ * Install docs-browser page hooks on this context and, if the page is already
+ * open, on the current document too. addInitScript alone does not run on an
+ * already-loaded document.
  */
-async function ensureDocsClipboard(page: unknown): Promise<void> {
+async function ensureDocsBrowserPageHooks(page: unknown): Promise<void> {
   if (!page || typeof page !== "object") return;
   const target = page as {
     context?: () => {
-      addInitScript?: (script: () => void) => Promise<void>;
+      addInitScript?: (
+        script: { content: string } | string | (() => void),
+      ) => Promise<void>;
       grantPermissions?: (
         permissions: string[],
         options?: { origin: string },
       ) => Promise<void>;
     };
     url?: () => string;
+    evaluate?: (script: string) => Promise<unknown>;
   };
   if (typeof target.context !== "function") return;
   const ctx = target.context();
   if (!ctx) return;
   if (
-    !clipboardPatchedContexts.has(ctx) &&
+    !docsBrowserHookedContexts.has(ctx) &&
     typeof ctx.addInitScript === "function"
   ) {
-    clipboardPatchedContexts.add(ctx);
-    await ctx.addInitScript(() => {
-      const g = globalThis as unknown as {
-        __uiViewClipboard?: { text: string };
-      };
-      g.__uiViewClipboard = g.__uiViewClipboard ?? { text: "" };
-      const native = globalThis.navigator?.clipboard;
-      const api = {
-        writeText: async (text: string) => {
-          g.__uiViewClipboard = g.__uiViewClipboard ?? { text: "" };
-          g.__uiViewClipboard.text = String(text ?? "");
-          try {
-            await native?.writeText?.(String(text ?? ""));
-          } catch {
-            /* OS clipboard may reject in headless CI */
-          }
-        },
-        readText: async () => {
-          return g.__uiViewClipboard?.text ?? "";
-        },
-      };
-      try {
-        Object.defineProperty(globalThis.navigator, "clipboard", {
-          configurable: true,
-          value: api,
-        });
-      } catch {
-        /* ignore if navigator is sealed */
-      }
-    });
+    docsBrowserHookedContexts.add(ctx);
+    await ctx.addInitScript({ content: DOCS_BROWSER_PAGE_HOOK });
+  }
+  if (typeof target.evaluate === "function") {
+    try {
+      await target.evaluate(DOCS_BROWSER_PAGE_HOOK);
+    } catch {
+      /* page may still be mid-navigation or closed */
+    }
   }
   if (typeof ctx.grantPermissions === "function") {
     try {
@@ -1190,12 +1337,12 @@ async function navigateDocsPage(
   const waitUntil = options?.waitUntil ?? "commit";
   const page = t.browser?.page;
   if (typeof page?.goto === "function") {
-    await ensureDocsClipboard(page);
+    await ensureDocsBrowserPageHooks(page);
     await page.goto(url, {
       waitUntil,
       timeout: navMs,
     });
-    await ensureDocsClipboard(page);
+    await ensureDocsBrowserPageHooks(page);
     return;
   }
   if (typeof t.browser?.goto !== "function") {
