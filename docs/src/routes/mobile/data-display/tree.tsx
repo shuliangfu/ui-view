@@ -260,6 +260,12 @@ export default function Page() {
                 checkedKeys={blockChecked}
                 onCheck={(keys) => (blockChecked.value = keys)}
               />
+              {() => (
+                <p class="text-xs text-slate-500" data-tree-keys-display="">
+                  已勾选: {blockChecked.value.join(", ") || "-"}（共{" "}
+                  {blockChecked.value.length}）
+                </p>
+              )}
             </MobileDocDemo>
           </div>
           <CodeBlock

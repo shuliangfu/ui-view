@@ -159,9 +159,11 @@ export default function BasicLink() {
 
         <div class="space-y-4">
           <Title level={3}>默认</Title>
-          <p>
-            <Link href="/desktop">返回桌面</Link>
-          </p>
+          <div>
+            <p>
+              <Link href="/desktop">返回桌面</Link>
+            </p>
+          </div>
           <CodeBlock
             title="代码示例"
             code={exampleDefault}
@@ -178,16 +180,18 @@ export default function BasicLink() {
           <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
             新窗口打开建议加 rel="noopener noreferrer"；title 为悬停提示。
           </Paragraph>
-          <p>
-            <Link
-              href="https://jsr.io"
-              target="_blank"
-              rel="noopener noreferrer"
-              title="打开 JSR 官网"
-            >
-              JSR 新窗口打开
-            </Link>
-          </p>
+          <div>
+            <p>
+              <Link
+                href="https://jsr.io"
+                target="_blank"
+                rel="noopener noreferrer"
+                title="打开 JSR 官网"
+              >
+                JSR 新窗口打开
+              </Link>
+            </p>
+          </div>
           <CodeBlock
             title="代码示例"
             code={exampleTarget}
@@ -201,11 +205,13 @@ export default function BasicLink() {
 
         <div class="space-y-4">
           <Title level={3}>自定义 class</Title>
-          <p>
-            <Link href="/desktop" class="text-green-600 font-semibold">
-              绿色加粗链接
-            </Link>
-          </p>
+          <div>
+            <p>
+              <Link href="/desktop" class="text-green-600 font-semibold">
+                绿色加粗链接
+              </Link>
+            </p>
+          </div>
           <CodeBlock
             title="代码示例"
             code={exampleClass}
@@ -225,12 +231,14 @@ export default function BasicLink() {
             后仅在鼠标移上时显示下划线（文字链与{" "}
             <code class="text-xs">button</code> 模式均适用）。
           </Paragraph>
-          <p class="flex flex-wrap items-center gap-4">
-            <Link href="/desktop">默认（无下划线）</Link>
-            <Link href="/desktop" underline>
-              underline
-            </Link>
-          </p>
+          <div>
+            <p class="flex flex-wrap items-center gap-4">
+              <Link href="/desktop">默认（无下划线）</Link>
+              <Link href="/desktop" underline>
+                underline
+              </Link>
+            </p>
+          </div>
           <CodeBlock
             title="代码示例"
             code={exampleUnderline}
@@ -248,14 +256,16 @@ export default function BasicLink() {
             与 Button 共用 ColorVariant / SizeVariant；可用 class
             覆盖配色（如品牌色）。
           </Paragraph>
-          <p class="flex flex-wrap items-center gap-3">
-            <Link href="/desktop" button variant="primary" size="md">
-              主色 md
-            </Link>
-            <Link href="/desktop" button variant="ghost" size="sm">
-              幽灵 sm
-            </Link>
-          </p>
+          <div>
+            <p class="space-x-3">
+              <Link href="/desktop" button variant="primary" size="md">
+                主色 md
+              </Link>
+              <Link href="/desktop" button variant="ghost" size="sm">
+                幽灵 sm
+              </Link>
+            </p>
+          </div>
           <CodeBlock
             title="代码示例"
             code={exampleLinkButton}

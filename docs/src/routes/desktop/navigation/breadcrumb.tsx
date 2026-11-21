@@ -145,7 +145,9 @@ export default function NavigationBreadcrumb() {
 
         <div class="space-y-4">
           <Title level={3}>默认</Title>
-          <Breadcrumb items={items} />
+          <div>
+            <Breadcrumb items={items} />
+          </div>
           <CodeBlock
             title="代码示例"
             code={exampleDefault}
@@ -159,10 +161,12 @@ export default function NavigationBreadcrumb() {
 
         <div class="space-y-4">
           <Title level={3}>自定义 separator</Title>
-          <Breadcrumb
-            items={items}
-            separator={<span class="mx-1.5 text-slate-400">/</span>}
-          />
+          <div>
+            <Breadcrumb
+              items={items}
+              separator={<span class="mx-1.5 text-slate-400">/</span>}
+            />
+          </div>
           <CodeBlock
             title="代码示例"
             code={exampleSeparator}
@@ -176,14 +180,16 @@ export default function NavigationBreadcrumb() {
 
         <div class="space-y-4">
           <Title level={3}>onItemClick（无 href 项点击）</Title>
-          <Breadcrumb
-            items={itemsWithClick}
-            onItemClick={(_item, index) => {
-              if (typeof globalThis.console !== "undefined") {
-                globalThis.console.log("clicked", index);
-              }
-            }}
-          />
+          <div>
+            <Breadcrumb
+              items={itemsWithClick}
+              onItemClick={(_item, index) => {
+                if (typeof globalThis.console !== "undefined") {
+                  globalThis.console.log("clicked", index);
+                }
+              }}
+            />
+          </div>
           <CodeBlock
             title="代码示例"
             code={exampleOnItemClick}

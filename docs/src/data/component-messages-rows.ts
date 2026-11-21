@@ -148,19 +148,19 @@ export const MESSAGES_PICKER_CALENDAR_NAV: DocsApiTableRow[] = [
   {
     name: "formatYearMonth",
     type: "(year, monthLabel) => string",
-    default: "`(y, l) => \\`${y}年 ${l}\\``",
+    default: "`(y, l) => `${y}年 ${l}``",
     description: "「年 + 月」标题",
   },
   {
     name: "formatYear",
     type: "(year) => string",
-    default: "`(y) => \\`${y}年\\``",
+    default: "`(y) => `${y}年``",
     description: "单年标题",
   },
   {
     name: "formatYearRange",
     type: "(start, end) => string",
-    default: "`(s,e) => \\`${s}年 — ${e}年\\``",
+    default: "`(s,e) => `${s}年 — ${e}年``",
     description: "年份区间标题",
   },
 ];
@@ -1230,7 +1230,7 @@ export const MESSAGES_BOTTOM_SHEET: DocsApiTableRow[] = [
     name: "close",
     type: "string",
     default: `"关闭"`,
-    description: "标题栏关闭按钮文案",
+    description: "标题栏关闭按钮 aria-label",
   },
   {
     name: "closeAriaLabel",

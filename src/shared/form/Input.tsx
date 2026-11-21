@@ -10,7 +10,10 @@ import {
   type ViewRefObject,
 } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
-import { resolveFormControlSize } from "./form-control-context.ts";
+import {
+  resolveFormControlDisabled,
+  resolveFormControlSize,
+} from "./form-control-context.ts";
 import { FormItemControlIdContext } from "./form-item-control-id.ts";
 import {
   outlinedControlClass,
@@ -29,7 +32,7 @@ import {
   inputNativeAutoComplete,
 } from "./input-autofill-classes.ts";
 import {
-  commitMaybeSignal,
+  createOptionalValueState,
   type MaybeSignal,
   readMaybeSignal,
 } from "./maybe-signal.ts";
@@ -376,7 +379,7 @@ function InputGroupShell(props: {
 export function Input(props: InputProps): JSXRenderable {
   const {
     size: sizeProp,
-    disabled = false,
+
     placeholder,
     value,
     type = "text",
@@ -407,6 +410,8 @@ export function Input(props: InputProps): JSXRenderable {
     accept,
     multiple,
   } = props;
+  const disabled = resolveFormControlDisabled(props.disabled);
+  const selected = createOptionalValueState(value, "");
   const m = { ...defaultInputMessages, ...messages };
   const size = resolveFormControlSize(sizeProp);
 
@@ -425,7 +430,7 @@ export function Input(props: InputProps): JSXRenderable {
    */
   const handleInput = (e: Event) => {
     if (type !== "file") {
-      commitMaybeSignal(value, (e.target as HTMLInputElement).value);
+      selected.commit((e.target as HTMLInputElement).value);
     }
     onInput?.(e);
   };
@@ -437,14 +442,14 @@ export function Input(props: InputProps): JSXRenderable {
    */
   const handleChange = (e: Event) => {
     if (type !== "file") {
-      commitMaybeSignal(value, (e.target as HTMLInputElement).value);
+      selected.commit((e.target as HTMLInputElement).value);
     }
     onChange?.(e);
   };
 
   const handleClear = () => {
     if (type === "file") return;
-    commitMaybeSignal(value, "");
+    selected.commit("");
     const doc = globalThis.document;
     if (!doc?.createElement) return;
     const el = doc.createElement("input");
@@ -507,7 +512,7 @@ export function Input(props: InputProps): JSXRenderable {
 
   const inputNode = type === "file"
     ? <input {...inputSpreadProps} />
-    : <input {...inputSpreadProps} value={value} />;
+    : <input {...inputSpreadProps} value={selected.bind} />;
 
   if (!hasAddon) {
     /**
@@ -574,7 +579,7 @@ export function Input(props: InputProps): JSXRenderable {
       readOnly={readOnly}
       required={required}
       error={error}
-      value={value}
+      value={selected.bind}
       onInput={handleInput}
       onChange={handleChange}
       onBlur={onBlur}

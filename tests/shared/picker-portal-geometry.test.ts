@@ -1,8 +1,12 @@
 /**
  * DatePicker viewport 浮层：相对 transform 包含块换算 left／top，超出视口下沿时翻到上方并夹紧。
  */
+import "./happy-dom-setup.ts";
 import { describe, expect, it } from "@dreamer/test";
-import { computePickerPortalOffset } from "../../src/shared/form/picker-portal-utils.ts";
+import {
+  computePickerPortalOffset,
+  computePickerPortalStyle,
+} from "../../src/shared/form/picker-portal-utils.ts";
 
 describe("computePickerPortalOffset", () => {
   it("无包含块时用视口坐标贴在触发器下方", () => {
@@ -70,5 +74,55 @@ describe("computePickerPortalOffset", () => {
     );
     expect(pos.left).toBe(120);
     expect(pos.top).toBe(120);
+  });
+});
+
+describe("picker viewport clamp", () => {
+  it("picker viewport clamps using measured calendar-plus-time width, not only minimum", () => {
+    const width = Object.getOwnPropertyDescriptor(globalThis, "innerWidth"),
+      height = Object.getOwnPropertyDescriptor(globalThis, "innerHeight");
+    Object.defineProperty(globalThis, "innerWidth", {
+      configurable: true,
+      value: 1280,
+    });
+    Object.defineProperty(globalThis, "innerHeight", {
+      configurable: true,
+      value: 720,
+    });
+    const trigger = document.createElement("button"),
+      panel = document.createElement("div");
+    Object.defineProperty(trigger, "getBoundingClientRect", {
+      value: () => ({
+        left: 1080,
+        top: 380,
+        bottom: 415,
+        width: 169,
+        height: 35,
+      }),
+    });
+    Object.defineProperty(panel, "getBoundingClientRect", {
+      value: () => ({
+        left: 984,
+        top: 419,
+        bottom: 692,
+        width: 435,
+        height: 273,
+      }),
+    });
+    try {
+      const style = computePickerPortalStyle(
+        trigger,
+        { panelMinWidth: 288 },
+        panel,
+      );
+      expect(style.left).toBe("837px");
+      expect(style.top).toBe("419px");
+      expect(Number.parseFloat(style.left) + 435).toBe(1272);
+    } finally {
+      if (width) Object.defineProperty(globalThis, "innerWidth", width);
+      else Reflect.deleteProperty(globalThis, "innerWidth");
+      if (height) Object.defineProperty(globalThis, "innerHeight", height);
+      else Reflect.deleteProperty(globalThis, "innerHeight");
+    }
   });
 });

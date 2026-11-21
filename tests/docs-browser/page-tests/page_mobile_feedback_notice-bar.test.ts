@@ -94,61 +94,78 @@ describe("文档页 E2E：/mobile/feedback/notice-bar（NoticeBar 通知栏）",
    */
   it("UI·点关闭后条隐藏", async (t) => {
     if (!t?.browser?.goto) return;
+    const browser = t.browser;
     await sharedEnv.goto(t, DOC_PATH);
     await sharedEnv.waitDocMainReady(t);
-    // 硬刷新，避免同文件前序用例点 × 后软导航未复位
-    await t.browser.evaluate(() => location.reload());
-    await sharedEnv.waitDocMainReady(t);
-    await sharedEnv.delay(100);
-    const before = await t.browser.evaluate(() => {
-      const bar = document.querySelector(
-        "[data-dreamer-notice-bar]",
-      ) as HTMLElement | null;
-      const close = document.querySelector(
-        "[data-dreamer-notice-bar-close]",
-      ) as (HTMLButtonElement & { __onclick?: (ev: Event) => void }) | null;
-      return {
-        hasBar: !!bar,
-        hasClose: !!close,
-        text: bar?.innerText?.slice(0, 40) ?? "",
-      };
-    }) as { hasBar: boolean; hasClose: boolean };
-    if (!before.hasBar || !before.hasClose) {
-      throw new Error(`NoticeBar 示例缺少可关闭条: ${JSON.stringify(before)}`);
-    }
-    // 文档可能有多条 closable，全部点掉
-    await t.browser.evaluate(() => {
-      const closes = Array.from(
-        document.querySelectorAll("[data-dreamer-notice-bar-close]"),
-      ) as (HTMLButtonElement & { __onclick?: (ev: Event) => void })[];
-      for (const close of closes) {
-        close.scrollIntoView({ block: "center" });
-        if (typeof close.__onclick === "function") {
-          close.__onclick(
-            new MouseEvent("click", { bubbles: true, cancelable: true }),
+    const page = browser.page as import("npm:playwright@1.59.1").Page;
+    // 仅在当前测试文档站页面定点清理 demo cookie，禁止动到其它源。
+    const expectedOrigin = new URL(sharedEnv.baseUrl).origin;
+    const clearDemoCookie = async () => {
+      await page.evaluate((origin) => {
+        if (location.origin !== origin) {
+          throw new Error(
+            "NoticeBar cookie 清理必须限定在当前测试页，当前为 " +
+              location.origin,
           );
-        } else {
-          close.click();
         }
-      }
-    });
-    await sharedEnv.delay(300);
-    const after = await t.browser.evaluate(() => {
-      const bars = document.querySelectorAll("[data-dreamer-notice-bar]");
-      const closes = document.querySelectorAll(
-        "[data-dreamer-notice-bar-close]",
+        document.cookie =
+          "docs-notice-bar-mobile-close-key=; Path=/; Max-Age=0; SameSite=Lax";
+      }, expectedOrigin);
+    };
+    await clearDemoCookie();
+    try {
+      // 硬刷新，复位前序浅层交互及 closeKey demo，确保每次都覆盖确认示例。
+      await page.reload();
+      await sharedEnv.waitDocMainReady(t);
+      await sharedEnv.delay(100);
+      const examples = await browser.evaluate(() => {
+        return Array.from(
+          document.querySelectorAll("main [data-dreamer-notice-bar-close]"),
+        ).map((close, i) => {
+          const bar = close.closest("[data-dreamer-notice-bar]")!;
+          const host = bar.closest("[data-dreamer-notice-bar-host]")!;
+          const id = `notice-close-${i}`;
+          host.setAttribute("data-e2e-notice-close", id);
+          const text = bar.textContent ?? "";
+          const confirmTitle =
+            text.includes("系统维护通知：关闭后刷新也不再显示")
+              ? "关闭后将不再提示"
+              : null;
+          return { id, confirmTitle };
+        });
+      }) as { id: string; confirmTitle: string | null }[];
+      expect(examples.filter((e) => e.confirmTitle !== null).length).toBe(1);
+      expect(examples.filter((e) => e.confirmTitle === null).length > 0).toBe(
+        true,
       );
-      return { barCount: bars.length, closeCount: closes.length };
-    }) as { barCount: number; closeCount: number };
-    // 至少原先那条 closable 已隐藏（mobile 还有一条不可关闭的滚动条）
-    if (
-      !(after.closeCount === 0 || after.barCount < 1 + (before.hasBar ? 0 : 0))
-    ) {
-      // close 按钮应全部消失；若页上另有不可关闭条，barCount 可 >0 但 closeCount 须为 0
+      for (const example of examples) {
+        const host = page.locator(`[data-e2e-notice-close="${example.id}"]`);
+        const bar = host.locator("[data-dreamer-notice-bar]");
+        await bar.waitFor({ state: "visible" });
+        await host.locator("[data-dreamer-notice-bar-close]").click();
+        if (example.confirmTitle) {
+          const panel = page.locator("[data-dreamer-popconfirm-panel]")
+            .filter({ hasText: example.confirmTitle });
+          await panel.waitFor({ state: "visible" });
+          // 打开确认气泡不能提前关闭通知条；必须点击真实确定按钮后才隐藏。
+          expect(await bar.isVisible()).toBe(true);
+          expect(await host.locator("[data-dreamer-notice-bar-close]").count())
+            .toBe(1);
+          await panel.getByRole("button", { name: "确定", exact: true })
+            .click();
+          await panel.waitFor({ state: "hidden" });
+        }
+        // 普通 closable 一次点击即消失；确认示例则在接受后消失。
+        await bar.waitFor({ state: "hidden" });
+        expect(await bar.count()).toBe(0);
+      }
+      const after = await browser.evaluate(() => ({
+        closeCount: document.querySelectorAll("[data-dreamer-notice-bar-close]")
+          .length,
+      })) as { closeCount: number };
+      expect(after.closeCount).toBe(0);
+    } finally {
+      await clearDemoCookie();
     }
-    if (after.closeCount !== 0) {
-      throw new Error(`NoticeBar 关闭失败: ${JSON.stringify(after)}`);
-    }
-    expect(after.closeCount).toBe(0);
   }, DOCS_BROWSER_CONFIG);
 });

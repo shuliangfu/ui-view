@@ -15,9 +15,8 @@ import { resolveFormControlSize } from "../../shared/form/form-control-context.t
 import { FormItemControlIdContext } from "../../shared/form/form-item-control-id.ts";
 import { controlErrorBorder } from "../../shared/form/input-focus-ring.ts";
 import {
-  commitMaybeSignal,
+  createOptionalValueState,
   type MaybeSignal,
-  readMaybeSignal,
 } from "../../shared/form/maybe-signal.ts";
 import {
   autoFocusAttr,
@@ -91,6 +90,7 @@ export function PasscodeInput(props: PasscodeInputProps): JSXRenderable {
     "aria-label": ariaLabelProp,
   } = props;
   const size = resolveFormControlSize(props.size);
+  const selected = createOptionalValueState(props.value, "");
   const fromFormItem = useContext(FormItemControlIdContext);
   const resolvedId = id ?? fromFormItem;
   const cellSizeCls: Record<SizeVariant, string> = {
@@ -111,7 +111,7 @@ export function PasscodeInput(props: PasscodeInputProps): JSXRenderable {
   const inputRef = createSignal<HTMLInputElement | null>(null);
 
   const valueNow = createMemo(() => {
-    const v = readMaybeSignal(props.value) ?? "";
+    const v = selected.read();
     return digitsOnly
       ? v.replace(/\D/g, "").slice(0, length)
       : v.slice(0, length);
@@ -125,7 +125,7 @@ export function PasscodeInput(props: PasscodeInputProps): JSXRenderable {
   const setValue = (next: string) => {
     let v = digitsOnly ? next.replace(/\D/g, "") : next;
     v = v.slice(0, length);
-    commitMaybeSignal(props.value, v);
+    selected.commit(v);
     onChange?.(v);
     if (v.length >= length) onFinish?.(v);
   };
@@ -156,7 +156,11 @@ export function PasscodeInput(props: PasscodeInputProps): JSXRenderable {
     return nodes;
   };
 
-  return () => (
+  /**
+   * 外层直接返回稳定容器，格子焦点环由 `{cells}` 订阅 `focused`。
+   * 若整段 `return () =>` 作为组件返回值，点击聚焦会重建 signal，表现为没有焦点环。
+   */
+  return (
     <div
       class={twMerge(
         "passcode-input relative inline-flex",
@@ -172,7 +176,7 @@ export function PasscodeInput(props: PasscodeInputProps): JSXRenderable {
         inputRef.value?.focus?.();
       }}
     >
-      {cells()}
+      {cells}
       {secludedInput && (
         <input
           ref={bindAutoFocusRef((el: HTMLInputElement | null) => {
@@ -186,7 +190,7 @@ export function PasscodeInput(props: PasscodeInputProps): JSXRenderable {
           autocomplete="one-time-code"
           maxlength={length}
           disabled={disabled}
-          value={valueNow()}
+          value={valueNow}
           aria-label={ariaLabel}
           aria-invalid={error}
           onFocus={() => {

@@ -99,7 +99,7 @@ export default function Page() {
       </section>
       <section class="space-y-3">
         <Title level={2}>示例</Title>
-        <MobileDocDemo class="flex min-h-[320px] flex-col p-4">
+        <MobileDocDemo class="flex min-h-[360px] flex-col p-4">
           <MobilePortalHostScope class="flex min-h-0 flex-1 flex-col">
             <Button type="button" onClick={() => (open.value = true)}>
               打开浮动面板

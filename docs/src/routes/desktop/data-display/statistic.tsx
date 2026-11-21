@@ -41,7 +41,7 @@ const STATISTIC_API: ApiRow[] = [
     type: "up | down",
     default: "-",
     description:
-      "可选；箭头与红绿配色。不传且 `value` 为数字时按正负自动推断（负 down，否则 up）；字符串等需手动传",
+      "可选；显式传入时显示箭头与红绿配色。不传则无趋势，不根据数字正负自动推断",
   },
   { name: "precision", type: "number", default: "-", description: "小数精度" },
   {
@@ -99,8 +99,9 @@ const exampleBasic = `<Statistic
   precision={1}
 />`;
 
-const exampleTrend = `<Statistic title="环比" value={12.5} suffix="%" />
-<Statistic title="同比" value={-3.2} suffix="%" />`;
+const exampleTrend =
+  `<Statistic title="环比" value={12.5} suffix="%" trend="up" />
+<Statistic title="同比" value={-3.2} suffix="%" trend="down" />`;
 
 /** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
 export const metadata = {
@@ -113,8 +114,7 @@ export default function DataDisplayStatistic() {
       <section>
         <Title level={1}>Statistic 统计数值</Title>
         <Paragraph class="mt-2">
-          统计数值：title、value、prefix、suffix、trend（可选，数字 value
-          可自动推断趋势）、precision、groupSeparator、valueStyle、valueClass。
+          统计数值：title、value、prefix、suffix、trend（可选，仅显式传入时显示趋势箭头）、precision、groupSeparator、valueStyle、valueClass。
           使用 Tailwind v4，支持 light/dark 主题。
         </Paragraph>
       </section>
@@ -163,14 +163,13 @@ export default function DataDisplayStatistic() {
         </div>
 
         <div class="space-y-4">
-          <Title level={3}>趋势箭头（数字正负自动判断）</Title>
+          <Title level={3}>趋势箭头（显式 trend）</Title>
           <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
-            `value` 为数字时无需传 `trend`：负数为红与 ↓，0 与正数为绿与
-            ↑；`trend` 仅用于覆盖或 `value` 为字符串时。
+            仅在传入 `trend` 时显示箭头与红绿配色；不根据数字正负自动推断。
           </Paragraph>
           <div class="flex gap-8 flex-wrap">
-            <Statistic title="环比" value={12.5} suffix="%" />
-            <Statistic title="同比" value={-3.2} suffix="%" />
+            <Statistic title="环比" value={12.5} suffix="%" trend="up" />
+            <Statistic title="同比" value={-3.2} suffix="%" trend="down" />
           </div>
           <CodeBlock
             title="代码示例"

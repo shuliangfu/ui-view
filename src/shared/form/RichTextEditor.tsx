@@ -37,7 +37,10 @@ import {
 import { Input } from "./Input.tsx";
 import { commitMaybeSignal, readMaybeSignal } from "./maybe-signal.ts";
 import { autoFocusAttr, bindAutoFocusRef } from "./auto-focus.ts";
-import { resolveFormControlSize } from "./form-control-context.ts";
+import {
+  resolveFormControlDisabled,
+  resolveFormControlSize,
+} from "./form-control-context.ts";
 import { FormItemControlIdContext } from "./form-item-control-id.ts";
 import {
   DEFAULT_UI_VIEW_UPLOAD_OBJECT_PATH,
@@ -156,7 +159,7 @@ export function RichTextEditor(props: RichTextEditorProps): JSXRenderable {
     toolbarPreset = "default",
     toolbar: customToolbar,
     placeholder = m.placeholder,
-    disabled = false,
+
     readOnly = false,
     minHeight = "200px",
     maxHeight,
@@ -170,6 +173,7 @@ export function RichTextEditor(props: RichTextEditorProps): JSXRenderable {
     onPasteImage,
     hideFocusRing = false,
   } = props;
+  const disabled = resolveFormControlDisabled(props.disabled);
   const size = resolveFormControlSize(props.size);
   const fromFormItem = useContext(FormItemControlIdContext);
   const id = idProp ?? fromFormItem;
@@ -1990,7 +1994,7 @@ export function RichTextEditor(props: RichTextEditorProps): JSXRenderable {
     };
   }
 
-  return () => (
+  return (
     <div
       id={`${editorId}-root`}
       aria-invalid={error}

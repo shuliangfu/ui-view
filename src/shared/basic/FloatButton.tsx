@@ -5,6 +5,10 @@
 
 import { createSignal, type JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
+import {
+  type ControlledOpenInput,
+  readControlledOpenInput,
+} from "../feedback/controlled-open.ts";
 
 export type FloatButtonShape = "circle" | "square";
 export type FloatButtonPlacement =
@@ -40,8 +44,8 @@ export interface FloatButtonProps {
   onClick?: () => void;
   /** 展开子项 */
   items?: FloatButtonItem[];
-  /** 受控展开 */
-  open?: boolean;
+  /** 是否展开（受控）；推荐 Signal 或 getter，勿只传 `open={sig.value}` 快照 */
+  open?: ControlledOpenInput;
   /** 展开变化 */
   onOpenChange?: (open: boolean) => void;
   shape?: FloatButtonShape;
@@ -114,7 +118,6 @@ export function FloatButton(props: FloatButtonProps): JSXRenderable {
     icon = "+",
     onClick,
     items,
-    open: openProp,
     onOpenChange,
     shape = "circle",
     placement = "bottom-right",
@@ -130,9 +133,13 @@ export function FloatButton(props: FloatButtonProps): JSXRenderable {
   const innerOpen = createSignal(false);
   const hasMenu = (items?.length ?? 0) > 0;
 
-  const isOpen = () => openProp ?? innerOpen.value;
+  /** 每次渲染再读 `props.open`，避免 setup 解构把受控值冻在首帧。 */
+  const isOpen = () =>
+    props.open === undefined
+      ? innerOpen.value
+      : readControlledOpenInput(props.open);
   const setOpen = (v: boolean) => {
-    if (openProp === undefined) innerOpen.value = v;
+    if (props.open === undefined) innerOpen.value = v;
     onOpenChange?.(v);
   };
 
@@ -146,7 +153,11 @@ export function FloatButton(props: FloatButtonProps): JSXRenderable {
     shapeCls,
   );
 
-  return () => (
+  /**
+   * 外层直接返回稳定容器，展开态放在子节点 `{() => ...}`。
+   * 若整段 `return () =>` 作为组件返回值，点击会重建 `innerOpen`，表现为展开后又合上。
+   */
+  return (
     <div
       class={twMerge(
         position === "absolute" ? "absolute" : "fixed",
@@ -159,33 +170,34 @@ export function FloatButton(props: FloatButtonProps): JSXRenderable {
         margin: `${offset}px`,
       }}
     >
-      {hasMenu && isOpen() && (
-        <div class="flex flex-col-reverse items-center gap-3">
-          {items!.map((it) => (
-            <button
-              type="button"
-              key={it.key}
-              class={twMerge(
-                btnBase,
-                "h-10 w-10 min-h-10 min-w-10 size-10 bg-slate-700 hover:bg-slate-600",
-              )}
-              aria-label={it["aria-label"] ?? it.key}
-              onClick={() => {
-                it.onClick?.();
-                setOpen(false);
-              }}
-            >
-              {it.icon ?? it.key}
-              <BadgeDot badge={it.badge} />
-            </button>
-          ))}
-        </div>
-      )}
+      {() =>
+        hasMenu && isOpen() && (
+          <div class="flex flex-col-reverse items-center gap-3">
+            {items!.map((it) => (
+              <button
+                type="button"
+                key={it.key}
+                class={twMerge(
+                  btnBase,
+                  "h-10 w-10 min-h-10 min-w-10 size-10 bg-slate-700 hover:bg-slate-600",
+                )}
+                aria-label={it["aria-label"] ?? it.key}
+                onClick={() => {
+                  it.onClick?.();
+                  setOpen(false);
+                }}
+              >
+                {it.icon ?? it.key}
+                <BadgeDot badge={it.badge} />
+              </button>
+            ))}
+          </div>
+        )}
       <button
         type="button"
         class={btnBase}
         aria-label={ariaLabel}
-        aria-expanded={hasMenu ? isOpen() : undefined}
+        aria-expanded={() => hasMenu ? isOpen() : undefined}
         onClick={() => {
           if (hasMenu) setOpen(!isOpen());
           onClick?.();

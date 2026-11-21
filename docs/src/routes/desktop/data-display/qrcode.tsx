@@ -46,6 +46,14 @@ const API: DocsApiTableRow[] = [
     default: "-",
     description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
   },
+  ,
+  {
+    name: "icon",
+    type: "string | unknown",
+    default: "-",
+    description:
+      "中心图标：字符串视为图片地址，其它节点直接渲染。纠错级别暂仅 M，未开放 errorLevel",
+  },
 ];
 
 const importCode = `import { QRCode } from "@dreamer/ui-view/data-display";
@@ -65,6 +73,11 @@ const exampleSize = `<QRCode value="size-96" size={96} aria-label="96px" />
 const exampleColor =
   `<QRCode value="brand" size={120} color="#1d4ed8" bgColor="#eff6ff" />
 <QRCode value="tight" size={120} includeMargin={false} />`;
+
+const exampleIcon = `<QRCode
+  value="https://example.com"
+  icon={<span class="text-xs font-bold">D</span>}
+/>`;
 
 /** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
 export const metadata = {
@@ -142,6 +155,25 @@ export default function Page() {
           <CodeBlock
             title="代码示例"
             code={exampleColor}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
+          />
+        </div>
+
+        <div class="space-y-2">
+          <Title level={3}>中心图标</Title>
+          <div class="rounded-xl border border-slate-200 dark:border-slate-700 p-4 bg-white dark:bg-slate-900 inline-flex">
+            <QRCode
+              value="https://example.com"
+              icon={<span class="text-xs font-bold">D</span>}
+            />
+          </div>
+          <CodeBlock
+            title="代码示例"
+            code={exampleIcon}
             language="tsx"
             showLineNumbers
             copyable

@@ -1,6 +1,6 @@
 /**
  * Sidebar 侧栏折叠菜单（View）。
- * 用于文档/后台：顶部可选「概览」链接、分组标题、可折叠的一级分类与二级链接；手风琴、基于当前路径的 active 高亮。
+ * 用于文档/后台：顶部可选「概览」链接、分组标题、可折叠的一级分类与二级链接；一级／二级均可选自定义 `icon`；手风琴、基于当前路径的 active 高亮。
  *
  * **为何不用 Signal 控制展开**：用 `button` + `createSignal` 时，只要在 `insert` 的任意 effect 里订阅了展开态，
  * 一次点击就会触发子树重插，整段 `aside` 在开发者工具里会像「整节点闪烁」；与是否把 `nav` 放进函数子无关（父链仍可能重跑）。
@@ -20,17 +20,21 @@ import { Link } from "../basic/Link.tsx";
 /** 按需：单文件图标，避免经 icons/mod 拉入全表 */
 import { IconChevronRight } from "../basic/icons/ChevronRight.tsx";
 
-/** 二级子项：path、label、desc（展示为 "label — desc"） */
+/** 二级子项：path、label、desc（展示为 "label — desc"），可选 icon */
 export interface SidebarSubItem {
   path: string;
   label: string;
   desc: string;
+  /** 自定义图标，显示在文案左侧；不传则只显示文字 */
+  icon?: unknown;
 }
 
-/** 一级项：无 children 为单链接，有 children 为可折叠分组 */
+/** 一级项：无 children 为单链接，有 children 为可折叠分组；均可自定义 icon */
 export interface SidebarItem {
   path: string;
   label: string;
+  /** 自定义图标，显示在文案左侧（分组项在展开箭头之后）；不传则只显示文字 */
+  icon?: unknown;
   children?: ReadonlyArray<SidebarSubItem>;
 }
 
@@ -117,6 +121,21 @@ const categoryBtnActive =
   "block w-full cursor-pointer list-none rounded-md py-1.5 pl-3 pr-3 text-left text-sm font-medium text-teal-700 dark:text-teal-300 [&::-webkit-details-marker]:hidden";
 /** 图标 + 文案的 flex 行（作为 summary 的唯一直接子元素） */
 const summaryInnerRow = "flex w-full min-w-0 items-center gap-1";
+/** 自定义菜单图标：固定 16px，继承当前文字色 */
+const itemIconWrap =
+  "inline-flex h-4 w-4 shrink-0 items-center justify-center [&_svg]:h-4 [&_svg]:w-4";
+
+function SidebarMenuIcon(icon: unknown) {
+  if (icon == null) return null;
+  return (
+    <span class={itemIconWrap} aria-hidden>
+      {icon}
+    </span>
+  );
+}
+
+/** 叶子链接：有图标时改为横向排列 */
+const leafLinkRow = "flex items-center gap-1.5";
 
 /**
  * 侧栏与文档主区常用底纹（与 docs 根布局 `bg-slate-50 dark:bg-slate-950` 一致），
@@ -243,6 +262,7 @@ function SidebarNavigation(props: {
                       >
                         <IconChevronRight class="w-4 h-4" />
                       </span>
+                      {SidebarMenuIcon(item.icon)}
                       <span class="min-w-0 truncate">{item.label}</span>
                     </span>
                   </summary>
@@ -259,10 +279,14 @@ function SidebarNavigation(props: {
                           href={sub.path}
                           class={twMerge(
                             isActiveExact(sub.path) ? linkActive : linkNormal,
+                            leafLinkRow,
                             d ? drawerNavExtras.leafLink : "",
                           )}
                         >
-                          {sub.label} — {sub.desc}
+                          {SidebarMenuIcon(sub.icon)}
+                          <span class="min-w-0 truncate">
+                            {sub.label} — {sub.desc}
+                          </span>
                         </Link>
                       </li>
                     ))}
@@ -274,10 +298,12 @@ function SidebarNavigation(props: {
                   href={item.path}
                   class={twMerge(
                     isActiveExact(item.path) ? linkActive : linkNormal,
+                    leafLinkRow,
                     d ? drawerNavExtras.leafLink : "",
                   )}
                 >
-                  {item.label}
+                  {SidebarMenuIcon(item.icon)}
+                  <span class="min-w-0 truncate">{item.label}</span>
                 </Link>
               )}
           </li>

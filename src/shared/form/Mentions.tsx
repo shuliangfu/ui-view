@@ -12,14 +12,17 @@ import {
   useContext,
 } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
-import { resolveFormControlSize } from "./form-control-context.ts";
+import {
+  resolveFormControlDisabled,
+  resolveFormControlSize,
+} from "./form-control-context.ts";
 import { FormItemControlIdContext } from "./form-item-control-id.ts";
 import {
   controlBlueFocusRing,
   controlErrorBorder,
   controlErrorFocusRing,
 } from "./input-focus-ring.ts";
-import { commitMaybeSignal, type MaybeSignal } from "./maybe-signal.ts";
+import { createOptionalValueState, type MaybeSignal } from "./maybe-signal.ts";
 import { autoFocusAttr, bindAutoFocusRef } from "./auto-focus.ts";
 import type { SizeVariant } from "../types.ts";
 
@@ -157,41 +160,52 @@ function MentionsDropdown(props: {
     listboxId,
     listboxLabel,
   } = props;
-  const show = typeof showDropdown === "function"
-    ? showDropdown()
-    : showDropdown;
-  const opts = typeof dropdownOptions === "function"
-    ? dropdownOptions()
-    : (dropdownOptions ?? []);
-  if (!show || opts.length === 0 || !onSelectOption) return null;
+  /**
+   * 组件函数只执行一次（与 Solid 相同）；必须在视图函数里读
+   * `showDropdown()` / `dropdownOptions()`，否则首次 `show===false` 后下拉永远不会出现。
+   * 用 `contents` 占位，避免与父级受控 textarea 叠用 `() =>` 根节点。
+   */
   return (
-    <div
-      id={listboxId}
-      class={dropdownCls}
-      role="listbox"
-      aria-label={listboxLabel}
-    >
-      {opts.map((opt, i) => (
-        <div
-          key={opt.value}
-          id={`${listboxId}-opt-${i}`}
-          role="option"
-          aria-selected={() => highlightIdx.value === i}
-          class={() =>
-            twMerge(
-              dropdownItemBaseCls,
-              dropdownItemHoverCls,
-              highlightIdx.value === i && dropdownItemActiveCls,
-            )}
-          onClick={() => onSelectOption(opt)}
-          onMouseEnter={() => {
-            highlightIdx.value = i;
-          }}
-          onMouseDown={(e: Event) => e.preventDefault()}
-        >
-          {opt.label}
-        </div>
-      ))}
+    <div class="contents">
+      {() => {
+        const show = typeof showDropdown === "function"
+          ? showDropdown()
+          : showDropdown;
+        const opts = typeof dropdownOptions === "function"
+          ? dropdownOptions()
+          : (dropdownOptions ?? []);
+        if (!show || opts.length === 0 || !onSelectOption) return null;
+        return (
+          <div
+            id={listboxId}
+            class={dropdownCls}
+            role="listbox"
+            aria-label={listboxLabel}
+          >
+            {opts.map((opt, i) => (
+              <div
+                key={opt.value}
+                id={`${listboxId}-opt-${i}`}
+                role="option"
+                aria-selected={() => highlightIdx.value === i}
+                class={() =>
+                  twMerge(
+                    dropdownItemBaseCls,
+                    dropdownItemHoverCls,
+                    highlightIdx.value === i && dropdownItemActiveCls,
+                  )}
+                onClick={() => onSelectOption(opt)}
+                onMouseEnter={() => {
+                  highlightIdx.value = i;
+                }}
+                onMouseDown={(e: Event) => e.preventDefault()}
+              >
+                {opt.label}
+              </div>
+            ))}
+          </div>
+        );
+      }}
     </div>
   );
 }
@@ -201,7 +215,7 @@ export function Mentions(props: MentionsProps): JSXRenderable {
     size: sizeProp,
     value,
     rows = 3,
-    disabled = false,
+
     onChange,
     onInput,
     onBlur,
@@ -221,6 +235,8 @@ export function Mentions(props: MentionsProps): JSXRenderable {
     autoFocus = false,
     messages,
   } = props;
+  const disabled = resolveFormControlDisabled(props.disabled);
+  const selected = createOptionalValueState(value, "");
   const m = { ...defaultMentionsMessages, ...messages };
   const size = resolveFormControlSize(sizeProp);
   const placeholder = props.placeholder ?? m.placeholder;
@@ -279,7 +295,7 @@ export function Mentions(props: MentionsProps): JSXRenderable {
    * @param e - 原生 input 事件
    */
   const handleInput = (e: Event) => {
-    commitMaybeSignal(value, (e.target as HTMLTextAreaElement).value);
+    selected.commit((e.target as HTMLTextAreaElement).value);
     onInput?.(e);
   };
 
@@ -289,7 +305,7 @@ export function Mentions(props: MentionsProps): JSXRenderable {
    * @param e - 原生 change 事件
    */
   const handleChange = (e: Event) => {
-    commitMaybeSignal(value, (e.target as HTMLTextAreaElement).value);
+    selected.commit((e.target as HTMLTextAreaElement).value);
     onChange?.(e);
   };
 
@@ -344,7 +360,7 @@ export function Mentions(props: MentionsProps): JSXRenderable {
     name,
     ...autoFocusAttr(autoFocus),
     rows,
-    value,
+    value: selected.bind,
     placeholder,
     disabled,
     "aria-invalid": error,

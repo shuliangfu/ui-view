@@ -7,7 +7,10 @@
 
 import { type JSXRenderable, useContext } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
-import { resolveFormControlSize } from "./form-control-context.ts";
+import {
+  resolveFormControlDisabled,
+  resolveFormControlSize,
+} from "./form-control-context.ts";
 import { FormItemControlIdContext } from "./form-item-control-id.ts";
 import {
   outlinedControlClass,
@@ -25,7 +28,11 @@ import {
   controlErrorBorder,
   controlErrorFocusRing,
 } from "./input-focus-ring.ts";
-import { commitMaybeSignal, type MaybeSignal } from "./maybe-signal.ts";
+import {
+  createOptionalValueState,
+  type MaybeSignal,
+  readMaybeSignal,
+} from "./maybe-signal.ts";
 import { autoFocusAttr, bindAutoFocusRef } from "./auto-focus.ts";
 
 /**
@@ -77,7 +84,7 @@ export interface PasswordProps {
   /** 错误状态（红框 + aria-invalid）；可与 FormItem / createForm bind 联用 */
   error?: boolean;
   /** 是否显示明文（由父组件控制，用于显隐切换） */
-  showPassword?: boolean;
+  showPassword?: MaybeSignal<boolean>;
   /** 点击显隐按钮时回调，父组件切换 showPassword */
   onToggleShow?: () => void;
   /** 额外 class（作用于包裹容器） */
@@ -201,7 +208,7 @@ function passwordStrengthMeta(
 export function Password(props: PasswordProps): JSXRenderable {
   const {
     size: sizeProp,
-    disabled = false,
+
     placeholder,
     value,
     showPassword = false,
@@ -228,6 +235,8 @@ export function Password(props: PasswordProps): JSXRenderable {
     messages,
     prefix,
   } = props;
+  const disabled = resolveFormControlDisabled(props.disabled);
+  const selected = createOptionalValueState(value, "");
   const m = { ...defaultPasswordMessages, ...messages };
   const size = resolveFormControlSize(sizeProp);
 
@@ -249,7 +258,7 @@ export function Password(props: PasswordProps): JSXRenderable {
    * @param e - 原生 input 事件
    */
   const handleInput = (e: Event) => {
-    commitMaybeSignal(value, (e.target as HTMLInputElement).value);
+    selected.commit((e.target as HTMLInputElement).value);
     onInput?.(e);
   };
 
@@ -259,7 +268,7 @@ export function Password(props: PasswordProps): JSXRenderable {
    * @param e - 原生 change 事件
    */
   const handleChange = (e: Event) => {
-    commitMaybeSignal(value, (e.target as HTMLInputElement).value);
+    selected.commit((e.target as HTMLInputElement).value);
     onChange?.(e);
   };
 
@@ -273,13 +282,13 @@ export function Password(props: PasswordProps): JSXRenderable {
   });
 
   const inputProps = {
-    type: showPassword ? "text" : "password",
+    type: () => readMaybeSignal(showPassword) ? "text" : "password",
     ref: bindAutoFocusRef(undefined, autoFocus),
     id: resolvedId,
     ...autoFocusAttr(autoFocus),
     name,
     autoComplete: nativeAutoComplete,
-    value,
+    value: selected.bind,
     placeholder: outlined?.nativePlaceholder ?? placeholder,
     disabled,
     "aria-invalid": error,
@@ -343,46 +352,47 @@ export function Password(props: PasswordProps): JSXRenderable {
           controlBlueFocusRing(!hideFocusRing),
         )}
         onClick={onToggleShow}
-        aria-label={showPassword ? m.hide : m.show}
+        aria-label={() => readMaybeSignal(showPassword) ? m.hide : m.show}
         tabIndex={-1}
       >
-        {showPassword
-          ? (
-            <svg
-              class="size-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
-              />
-            </svg>
-          )
-          : (
-            <svg
-              class="size-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-              />
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-              />
-            </svg>
-          )}
+        {() =>
+          readMaybeSignal(showPassword)
+            ? (
+              <svg
+                class="size-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
+                />
+              </svg>
+            )
+            : (
+              <svg
+                class="size-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                />
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                />
+              </svg>
+            )}
       </button>
     )
     : null;
@@ -419,7 +429,7 @@ export function Password(props: PasswordProps): JSXRenderable {
         {wrapField(shell)}
         {showStrength
           ? () => {
-            const s = typeof value === "function" ? value() : (value ?? "");
+            const s = selected.read();
             if (s.length === 0) return null;
             const { level, cls } = passwordStrengthMeta(s, m);
             return (
@@ -464,7 +474,7 @@ export function Password(props: PasswordProps): JSXRenderable {
          */
         showStrength
           ? () => {
-            const s = typeof value === "function" ? value() : (value ?? "");
+            const s = selected.read();
             if (s.length === 0) return null;
             const { level, cls } = passwordStrengthMeta(s, m);
             return (

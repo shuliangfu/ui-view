@@ -62,6 +62,19 @@ const TABS_API: ApiRow[] = [
     default: "-",
     description: "面板容器 class",
   },
+  ,
+  {
+    name: "defaultActiveKey",
+    type: "string",
+    default: "items[0].key",
+    description: "非受控时的初始激活项",
+  },
+  {
+    name: "tabPosition",
+    type: '"top" | "bottom" | "left" | "right"',
+    default: "top",
+    description: "标签栏位置",
+  },
 ];
 
 const importCode = `import { createSignal } from "@dreamer/view";
@@ -100,6 +113,15 @@ const exampleFullWidth = `<Tabs
 />`;
 
 const exampleDisabled = `items 中某项设置 disabled: true 即可禁用该标签`;
+
+const examplePosition = `<Tabs
+  defaultActiveKey="b"
+  tabPosition="left"
+  items={[
+    { key: "a", label: "标签 A", children: <p>内容 A</p> },
+    { key: "b", label: "标签 B", children: <p>内容 B</p> },
+  ]}
+/>`;
 
 /** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
 export const metadata = {
@@ -254,6 +276,27 @@ export default function LayoutTabs() {
           <CodeBlock
             title="代码示例"
             code={exampleDisabled}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
+          />
+        </div>
+
+        <div class="space-y-4">
+          <Title level={3}>位置与默认激活项</Title>
+          <Tabs
+            defaultActiveKey="b"
+            tabPosition="left"
+            items={[
+              { key: "a", label: "标签 A", children: <p>内容 A</p> },
+              { key: "b", label: "标签 B", children: <p>内容 B</p> },
+            ]}
+          />
+          <CodeBlock
+            title="代码示例"
+            code={examplePosition}
             language="tsx"
             showLineNumbers
             copyable

@@ -4,13 +4,14 @@
  * `checked` 为 `createSignal` 返回值时，变更会先写入 Signal，可不写 `onChange` 仅做同步。
  */
 
-import { type Signal } from "@dreamer/view";
-import { safeIsSignal, writeSignalValue } from "../safe-signal.ts";
-import type { JSXRenderable } from "@dreamer/view";
+import { type JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
-import { resolveFormControlSize } from "./form-control-context.ts";
+import {
+  resolveFormControlDisabled,
+  resolveFormControlSize,
+} from "./form-control-context.ts";
 import { controlBlueFocusRing } from "./input-focus-ring.ts";
-import type { MaybeSignal } from "./maybe-signal.ts";
+import { createOptionalValueState, type MaybeSignal } from "./maybe-signal.ts";
 import type { SizeVariant } from "../types.ts";
 
 export interface CheckboxMessages {
@@ -62,6 +63,11 @@ export interface CheckboxProps {
   hideFocusRing?: boolean;
   /** 多语言／自定义文案；未传字段走 {@link defaultCheckboxMessages}；标签请用 children */
   messages?: Partial<CheckboxMessages>;
+  /**
+   * 半选态（只写 DOM 的 `indeterminate` 属性，不是 HTML 属性）。
+   * 与 `checked` 独立：半选时仍可保留 checked 以表示“部分选中”。
+   */
+  indeterminate?: boolean;
 }
 
 /** 勾选框本体底纹（不含 ring）。
@@ -97,7 +103,7 @@ export function Checkbox(props: CheckboxProps): JSXRenderable {
   const {
     size: sizeProp,
     checked: checkedMaybe,
-    disabled = false,
+
     error = false,
     hideFocusRing = false,
     class: className,
@@ -112,25 +118,24 @@ export function Checkbox(props: CheckboxProps): JSXRenderable {
     value,
     id,
     children,
+    indeterminate = false,
   } = props;
+  const disabled = resolveFormControlDisabled(props.disabled);
   const size = resolveFormControlSize(sizeProp);
+  const selected = createOptionalValueState(checkedMaybe, false);
 
   /**
-   * 用户切换时：若 `checked` 为 Signal 则回写；再调用外部 `onChange`。
+   * 用户切换时写回受控 Signal / 非受控内部状态，再调用外部 `onChange`。
    *
    * @param e - 原生 change 事件
    */
   const handleChange = (e: Event) => {
     const el = e.target as HTMLInputElement;
-    const next = el.checked;
-    if (checkedMaybe !== undefined && safeIsSignal(checkedMaybe)) {
-      writeSignalValue(checkedMaybe as Signal<boolean>, next);
-    }
+    selected.commit(el.checked);
     onChangeProp?.(e);
   };
 
-  /** 未传 `checked` 时按 false 受控，与原先默认一致 */
-  const checkedForInput = checkedMaybe === undefined ? false : checkedMaybe;
+  const checkedForInput = selected.bind;
 
   return (
     <label
@@ -143,6 +148,9 @@ export function Checkbox(props: CheckboxProps): JSXRenderable {
     >
       <input
         type="checkbox"
+        ref={(el: HTMLInputElement | null) => {
+          if (el) el.indeterminate = indeterminate;
+        }}
         id={id}
         name={name}
         value={value}

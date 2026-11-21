@@ -22,10 +22,8 @@ import {
   createSignal,
   type JSXRenderable,
   onCleanup,
-  type Signal,
   useContext,
 } from "@dreamer/view";
-import { safeIsSignal, writeSignalValue } from "../safe-signal.ts";
 import { twMerge } from "tailwind-merge";
 import { IconChevronDown } from "../basic/icons/ChevronDown.tsx";
 import {
@@ -35,9 +33,13 @@ import {
   nativeSelectSurface,
   pickerTriggerSurface,
 } from "./input-focus-ring.ts";
-import { resolveFormControlSize } from "./form-control-context.ts";
+import {
+  resolveFormControlDisabled,
+  resolveFormControlSize,
+} from "./form-control-context.ts";
+import { FieldClearSlot } from "./field-clear-button.tsx";
 import { FormItemControlIdContext } from "./form-item-control-id.ts";
-import { type MaybeSignal, readMaybeSignal } from "./maybe-signal.ts";
+import { createOptionalValueState, type MaybeSignal } from "./maybe-signal.ts";
 import type { SizeVariant } from "../types.ts";
 import {
   installInlineDropdownOutsideClickClose,
@@ -85,6 +87,12 @@ export interface CascaderMessages {
   emptyFirst: string;
   /** 子级空数据提示 */
   emptyChild: string;
+  /** 清除按钮 `aria-label` */
+  clear: string;
+  /** 搜索框占位 */
+  searchPlaceholder: string;
+  /** 无匹配选项 */
+  noMatch: string;
 }
 
 /** 默认中文文案 */
@@ -95,6 +103,9 @@ export const defaultCascaderMessages: CascaderMessages = {
   loading: "加载中…",
   emptyFirst: "暂无选项",
   emptyChild: "无下级选项",
+  clear: "清除",
+  searchPlaceholder: "搜索",
+  noMatch: "无匹配选项",
 };
 
 /** 级联展示形态：`dropdown` 多列浮层；`native` 两级内双原生 select（无 `loadChildren`） */
@@ -143,6 +154,12 @@ export interface CascaderProps {
   appearance?: CascaderAppearance;
   /** 多语言/自定义文案；未传字段走 {@link defaultCascaderMessages} */
   messages?: Partial<CascaderMessages>;
+  /** 有选中路径时在触发器上显示清除按钮 */
+  allowClear?: boolean;
+  /** 在浮层顶部显示搜索，按已展开/静态树的完整路径过滤 */
+  showSearch?: boolean;
+  /** 触发器加载中（与列内 loadChildren 的加载态相互独立） */
+  loading?: boolean;
 }
 
 const sizeClasses: Record<SizeVariant, string> = {
@@ -186,7 +203,6 @@ function CascaderNativeTwoLevel(props: CascaderProps) {
     options,
     value: valueProp,
     size: sizeProp,
-    disabled = false,
     onChange,
     onBlur,
     class: className,
@@ -197,9 +213,11 @@ function CascaderNativeTwoLevel(props: CascaderProps) {
     hideFocusRing = false,
     messages,
   } = props;
+  const disabled = resolveFormControlDisabled(props.disabled);
+  const selected = createOptionalValueState(valueProp, [] as string[]);
   const m = { ...defaultCascaderMessages, ...messages };
   const placeholder = props.placeholder ?? m.placeholder;
-  const value = readMaybeSignal(valueProp) ?? [];
+  const value = selected.read();
   const size = resolveFormControlSize(sizeProp);
   const sizeCls = sizeClassesNative[size];
   const fromFormItem = useContext(FormItemControlIdContext);
@@ -211,10 +229,7 @@ function CascaderNativeTwoLevel(props: CascaderProps) {
    * @param newPath - 更新后的路径
    */
   const commitPath = (newPath: string[]) => {
-    const v = valueProp;
-    if (v !== undefined && safeIsSignal(v)) {
-      writeSignalValue(v as Signal<string[]>, newPath);
-    }
+    selected.commit(newPath);
     onChange?.(newPath);
   };
   const parentValue = value[0] ?? "";
@@ -520,10 +535,29 @@ function displayLabelsMerged(
  *
  * **浮层挂载**：始终挂载的 panel wrap + `syncInlineDropdownPanelVisibility`；内层 `{() => cascaderPanelThunk}` 由 `insert` 单独订阅 `pathInPanel` / `childCache`。
  */
+/** 展开静态（及已缓存）树为路径，供 showSearch 使用 */
+function flattenCascaderPaths(
+  options: CascaderOption[],
+  prefix: { values: string[]; labels: string[] } = { values: [], labels: [] },
+): { values: string[]; label: string }[] {
+  const out: { values: string[]; label: string }[] = [];
+  for (const opt of options) {
+    const values = [...prefix.values, opt.value];
+    const labels = [...prefix.labels, opt.label];
+    const kids = opt.children ?? [];
+    if (kids.length === 0 || opt.isLeaf) {
+      out.push({ values, label: labels.join(" / ") });
+    }
+    if (kids.length > 0) {
+      out.push(...flattenCascaderPaths(opt.children ?? [], { values, labels }));
+    }
+  }
+  return out;
+}
+
 function CascaderDropdownPanel(props: CascaderProps) {
   const {
     size: sizeProp,
-    disabled = false,
     onChange,
     onBlur,
     class: className,
@@ -534,7 +568,12 @@ function CascaderDropdownPanel(props: CascaderProps) {
     hideFocusRing = false,
     value,
     messages,
+    allowClear = false,
+    showSearch = false,
+    loading = false,
   } = props;
+  const disabled = resolveFormControlDisabled(props.disabled);
+  const selected = createOptionalValueState(value, [] as string[]);
   const m = { ...defaultCascaderMessages, ...messages };
   const placeholder = props.placeholder ?? m.placeholder;
   const size = resolveFormControlSize(sizeProp);
@@ -542,6 +581,7 @@ function CascaderDropdownPanel(props: CascaderProps) {
   const resolvedId = id ?? fromFormItem;
 
   const openState = createSignal(false);
+  const searchQuery = createSignal("");
   /** 组件根 DOM（触发条 + 内联 absolute 浮层），供「点外部」与 `elementsFromPoint` 兜底 */
   let rootEl: HTMLElement | null = null;
   /** 浮层包裹：始终挂载，用 hidden/inert 控制显隐（与 Select 一致） */
@@ -560,15 +600,13 @@ function CascaderDropdownPanel(props: CascaderProps) {
    * @param newPath - 更新后的路径（可为 `[]` 表示清空）
    */
   const commitPath = (newPath: string[]) => {
-    const v = value;
-    if (v !== undefined && safeIsSignal(v)) {
-      writeSignalValue(v as Signal<string[]>, newPath);
-    }
+    selected.commit(newPath);
     onChange?.(newPath);
   };
 
   const closePanel = () => {
     openState.value = false;
+    searchQuery.value = "";
   };
 
   /**
@@ -610,7 +648,7 @@ function CascaderDropdownPanel(props: CascaderProps) {
 
   const openPanel = () => {
     if (disabled) return;
-    const path = typeof value === "function" ? value() : (value ?? []);
+    const path = selected.read();
     pathInPanel.value = [...path];
     openState.value = true;
   };
@@ -646,6 +684,14 @@ function CascaderDropdownPanel(props: CascaderProps) {
       void load(prefix)
         .then((kids) => {
           childCache.value = { ...childCache.value, [key]: kids };
+          // 异步返回空列表才确认是叶子；只关闭仍指向该路径的会话，
+          // 不能让旧分支的迟到响应关闭用户已切换到的新分支。
+          if (
+            kids.length === 0 && openState.value &&
+            pathKey(pathInPanel.value) === key
+          ) {
+            scheduleClosePanel();
+          }
         })
         .catch((err) => {
           props.onLoadError?.(prefix, err);
@@ -666,7 +712,7 @@ function CascaderDropdownPanel(props: CascaderProps) {
   const getTriggerView = () => {
     const opts = props.options;
     const loadChildren = props.loadChildren;
-    const path = readMaybeSignal(value) ?? [];
+    const path = selected.read();
     const cache = childCache.value;
     const displayText =
       (loadChildren
@@ -772,7 +818,7 @@ function CascaderDropdownPanel(props: CascaderProps) {
     const cache = childCache.value;
     const panelPath = pathInPanel.value;
     const loadingKey = loadingPathKey.value;
-    const pathCommitted = readMaybeSignal(value) ?? [];
+    const pathCommitted = selected.read();
     const hasSelection = pathCommitted.length > 0 &&
       pathCommitted[0] !== "";
 
@@ -901,64 +947,85 @@ function CascaderDropdownPanel(props: CascaderProps) {
         if (!nm) {
           return null;
         }
-        const path = readMaybeSignal(value) ?? [];
+        const path = selected.read();
         return path
           .filter((x) => x !== "")
           .map((v, i) => (
             <input key={`${i}-${v}`} type="hidden" name={nm} value={v} />
           ));
       }}
-      <button
-        type="button"
-        ref={bindAutoFocusRef(undefined, autoFocus)}
-        id={resolvedId}
-        disabled={disabled}
-        aria-invalid={error}
-        aria-haspopup="dialog"
-        {...autoFocusAttr(autoFocus)}
-        aria-expanded={() => openState.value}
-        aria-label={() => {
-          const { displayText } = getTriggerView();
-          return displayText || placeholder || m.triggerFallback;
-        }}
-        class={twMerge(
-          "w-full min-w-0",
-          pickerTriggerSurface,
-          controlBlueFocusRing(!hideFocusRing && !error),
-          error && controlErrorBorder,
-          error && !hideFocusRing && controlErrorFocusRing(true),
-          sizeCls,
-        )}
-        onBlur={onBlur}
-        onClick={() => {
-          if (disabled) return;
-          if (openState.value) closePanel();
-          else openPanel();
-        }}
-      >
-        <span
-          class={() => {
-            const { hasSelection } = getTriggerView();
-            return twMerge(
-              "truncate min-w-0 text-left",
-              hasSelection
-                ? "text-slate-900 dark:text-slate-100"
-                : "text-slate-400 dark:text-slate-500",
-            );
+      <span class="relative block w-full">
+        <button
+          type="button"
+          ref={bindAutoFocusRef(undefined, autoFocus)}
+          id={resolvedId}
+          disabled={disabled || loading}
+          aria-busy={loading || undefined}
+          aria-invalid={error}
+          aria-haspopup="dialog"
+          {...autoFocusAttr(autoFocus)}
+          aria-expanded={() => openState.value}
+          aria-label={() => {
+            const { displayText } = getTriggerView();
+            return displayText || placeholder || m.triggerFallback;
+          }}
+          class={twMerge(
+            "w-full min-w-0",
+            pickerTriggerSurface,
+            controlBlueFocusRing(!hideFocusRing && !error),
+            error && controlErrorBorder,
+            error && !hideFocusRing && controlErrorFocusRing(true),
+            sizeCls,
+          )}
+          onBlur={onBlur}
+          onClick={() => {
+            if (disabled || loading) return;
+            if (openState.value) closePanel();
+            else openPanel();
           }}
         >
-          {() => getTriggerView().displayText}
-        </span>
-        <span
-          class={() =>
-            twMerge(
-              "inline-flex shrink-0 text-slate-400 dark:text-slate-500 transition-transform",
-              openState.value && "rotate-180",
-            )}
-        >
-          <IconChevronDown size="sm" />
-        </span>
-      </button>
+          <span
+            class={() => {
+              const { hasSelection } = getTriggerView();
+              return twMerge(
+                "truncate min-w-0 text-left",
+                hasSelection
+                  ? "text-slate-900 dark:text-slate-100"
+                  : "text-slate-400 dark:text-slate-500",
+              );
+            }}
+          >
+            {() => getTriggerView().displayText}
+          </span>
+          <span
+            class={() =>
+              twMerge(
+                "inline-flex shrink-0 text-slate-400 dark:text-slate-500 transition-transform",
+                !loading && openState.value && "rotate-180",
+              )}
+          >
+            {loading
+              ? (
+                <span
+                  class="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent"
+                  aria-hidden
+                />
+              )
+              : <IconChevronDown size="sm" />}
+          </span>
+        </button>
+        {allowClear && !disabled && (
+          <FieldClearSlot
+            class="absolute right-8 top-1/2 z-1 -translate-y-1/2"
+            visible={() => {
+              const path = selected.read();
+              return path.length > 0 && path[0] !== "" && !loading;
+            }}
+            label={m.clear}
+            onClear={() => commitPath([])}
+          />
+        )}
+      </span>
       <div
         ref={(el: HTMLElement | null) => {
           panelEl = el;
@@ -975,7 +1042,55 @@ function CascaderDropdownPanel(props: CascaderProps) {
             "absolute z-50 top-full left-0 mt-1 w-max max-h-72 min-w-0 max-w-[min(100vw-1rem,520px)] overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg dark:border-slate-600 dark:bg-slate-800",
           )}
         >
-          {() => cascaderPanelThunk}
+          {showSearch && (
+            <div
+              class="border-b border-slate-100 px-2 py-1 dark:border-slate-700"
+              onPointerDown={(e: Event) => e.stopPropagation()}
+            >
+              <input
+                type="search"
+                class="w-full rounded-md border border-slate-200 dark:border-slate-600 bg-transparent px-2 py-1 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400"
+                placeholder={m.searchPlaceholder}
+                value={() => searchQuery.value}
+                onInput={(e: Event) => {
+                  searchQuery.value = (e.target as HTMLInputElement).value;
+                }}
+              />
+            </div>
+          )}
+          {() => {
+            const q = searchQuery.value.trim().toLowerCase();
+            if (!showSearch || !q) return cascaderPanelThunk;
+            const flattened = flattenCascaderPaths(props.options);
+            const hits = flattened.filter((item) =>
+              item.label.toLowerCase().includes(q) ||
+              item.values.some((v) => v.toLowerCase().includes(q))
+            );
+            if (hits.length === 0) {
+              return (
+                <div class="px-3 py-2 text-sm text-slate-400 dark:text-slate-500">
+                  {m.noMatch}
+                </div>
+              );
+            }
+            return (
+              <div class="max-h-60 overflow-y-auto py-1">
+                {hits.map((item) => (
+                  <button
+                    type="button"
+                    key={item.values.join("/")}
+                    class="block w-full px-3 py-2 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-700"
+                    onClick={() => {
+                      commitPath(item.values);
+                      scheduleClosePanel();
+                    }}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            );
+          }}
         </div>
       </div>
     </div>

@@ -9,15 +9,19 @@ import { type JSXRenderable, useContext } from "@dreamer/view";
 /** 按需：单文件图标，避免经 icons/mod 拉入全表 */
 import { IconSearch } from "../basic/icons/Search.tsx";
 import type { SizeVariant } from "../types.ts";
-import { resolveFormControlSize } from "./form-control-context.ts";
+import {
+  resolveFormControlDisabled,
+  resolveFormControlSize,
+} from "./form-control-context.ts";
 import { FormItemControlIdContext } from "./form-item-control-id.ts";
 import {
   controlBlueFocusRing,
   controlErrorBorder,
   controlErrorFocusRing,
 } from "./input-focus-ring.ts";
-import { commitMaybeSignal, type MaybeSignal } from "./maybe-signal.ts";
+import { createOptionalValueState, type MaybeSignal } from "./maybe-signal.ts";
 import { autoFocusAttr, bindAutoFocusRef } from "./auto-focus.ts";
+import { bindNativeFocusEvents } from "./native-focus-events.ts";
 
 /**
  * Search 内置文案。
@@ -82,6 +86,11 @@ export interface SearchProps {
   autoFocus?: boolean;
   /** 多语言/自定义文案；未传字段走 {@link defaultSearchMessages} */
   messages?: Partial<SearchMessages>;
+  /**
+   * 有内容时显示清除按钮；默认 true，与原先 CSS 显隐行为一致。
+   * 设为 false 时隐藏清除按钮。
+   */
+  allowClear?: boolean;
 }
 
 const sizeClasses: Record<SizeVariant, string> = {
@@ -106,7 +115,7 @@ const clearBtnVisibleCls =
 export function Search(props: SearchProps): JSXRenderable {
   const {
     size: sizeProp,
-    disabled = false,
+
     value,
     class: className,
     onInput,
@@ -124,7 +133,10 @@ export function Search(props: SearchProps): JSXRenderable {
     error = false,
     hideFocusRing = false,
     messages,
+    allowClear = true,
   } = props;
+  const disabled = resolveFormControlDisabled(props.disabled);
+  const selected = createOptionalValueState(value, "");
   const m = { ...defaultSearchMessages, ...messages };
   const placeholder = props.placeholder ?? m.placeholder;
   const size = resolveFormControlSize(sizeProp);
@@ -133,7 +145,7 @@ export function Search(props: SearchProps): JSXRenderable {
 
   const sizeCls = sizeClasses[size];
   // 禁止在组件体内读 value()：会订阅 signal，导致根 effect 重跑、整树重建、input 被替换失焦。
-  // value 透传给 <input value={value} />，由 View applyProps 对 getter 做 createEffect 仅更新 .value。
+  // value 透传给 <input value={selected.bind} />，由 View applyProps 对 getter 做 createEffect 仅更新 .value。
 
   /**
    * 受控 `value` 为 Signal 时由组件写回，再调用外部 `onInput`。
@@ -141,7 +153,7 @@ export function Search(props: SearchProps): JSXRenderable {
    * @param e - 原生 input 事件
    */
   const handleInput = (e: Event) => {
-    commitMaybeSignal(value, (e.target as HTMLInputElement).value);
+    selected.commit((e.target as HTMLInputElement).value);
     onInput?.(e);
   };
 
@@ -151,12 +163,12 @@ export function Search(props: SearchProps): JSXRenderable {
    * @param e - 原生 change 事件
    */
   const handleChange = (e: Event) => {
-    commitMaybeSignal(value, (e.target as HTMLInputElement).value);
+    selected.commit((e.target as HTMLInputElement).value);
     onChange?.(e);
   };
 
   const handleClear = () => {
-    commitMaybeSignal(value, "");
+    selected.commit("");
     const synthetic = { target: { value: "" } } as unknown as Event;
     handleChange(synthetic);
     handleInput(synthetic);
@@ -189,11 +201,15 @@ export function Search(props: SearchProps): JSXRenderable {
       </span>
       <input
         type="search"
-        ref={bindAutoFocusRef(undefined, autoFocus)}
+        ref={bindNativeFocusEvents(
+          bindAutoFocusRef(undefined, autoFocus),
+          onFocus,
+          onBlur,
+        )}
         id={resolvedId}
         {...autoFocusAttr(autoFocus)}
         name={name}
-        value={value}
+        value={selected.bind}
         placeholder={placeholder}
         disabled={disabled}
         aria-invalid={error}
@@ -209,8 +225,6 @@ export function Search(props: SearchProps): JSXRenderable {
         )}
         onInput={handleInput}
         onChange={handleChange}
-        onBlur={onBlur}
-        onFocus={onFocus}
         onKeyUp={onKeyUp}
         onClick={onClick}
         onPaste={onPaste}
@@ -223,32 +237,34 @@ export function Search(props: SearchProps): JSXRenderable {
           }
         }}
       />
-      <button
-        type="button"
-        class={twMerge(
-          btnSurface,
-          controlBlueFocusRing(!hideFocusRing),
-          clearBtnVisibleCls,
-          onSearch ? "right-10" : "right-2",
-        )}
-        disabled={disabled}
-        aria-label={m.clear}
-        onClick={handleClear}
-      >
-        <svg
-          class="size-4"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
+      {allowClear && (
+        <button
+          type="button"
+          class={twMerge(
+            btnSurface,
+            controlBlueFocusRing(!hideFocusRing),
+            clearBtnVisibleCls,
+            onSearch ? "right-10" : "right-2",
+          )}
+          disabled={disabled}
+          aria-label={m.clear}
+          onClick={handleClear}
         >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M6 18L18 6M6 6l12 12"
-          />
-        </svg>
-      </button>
+          <svg
+            class="size-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M6 18L18 6M6 6l12 12"
+            />
+          </svg>
+        </button>
+      )}
       {onSearch && (
         <button
           type="button"

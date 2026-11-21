@@ -152,7 +152,7 @@ export interface ViewDescriptionItem {
   labelAlign?: DescriptionsLabelAlign;
 }
 
-/** 按 DataPanel view 字段区规则构建 Descriptions items（含字段级 render 与 click）。 */
+/** 按 DataPanel view 字段区规则构建 Descriptions rows（含字段级 render 与 click）。 */
 export function buildViewDescriptionItems(
   fields: readonly ViewItem[] | undefined,
   row: Row,

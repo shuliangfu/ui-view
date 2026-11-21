@@ -13,14 +13,17 @@ import {
 } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import type { SizeVariant } from "../types.ts";
-import { resolveFormControlSize } from "./form-control-context.ts";
+import {
+  resolveFormControlDisabled,
+  resolveFormControlSize,
+} from "./form-control-context.ts";
 import { FormItemControlIdContext } from "./form-item-control-id.ts";
 import {
   controlBlueFocusRing,
   controlErrorBorder,
   controlErrorFocusRing,
 } from "./input-focus-ring.ts";
-import { commitMaybeSignal, type MaybeSignal } from "./maybe-signal.ts";
+import { createOptionalValueState, type MaybeSignal } from "./maybe-signal.ts";
 import { autoFocusAttr, bindAutoFocusRef } from "./auto-focus.ts";
 
 /**
@@ -194,7 +197,7 @@ export function AutoComplete(props: AutoCompleteProps): JSXRenderable {
     options = [],
     value,
     size: sizeProp,
-    disabled = false,
+
     placeholder,
     onChange,
     onInput,
@@ -213,6 +216,8 @@ export function AutoComplete(props: AutoCompleteProps): JSXRenderable {
     autoFocus = false,
     messages,
   } = props;
+  const disabled = resolveFormControlDisabled(props.disabled);
+  const selected = createOptionalValueState(value, "");
   const m = { ...defaultAutoCompleteMessages, ...messages };
   const size = resolveFormControlSize(sizeProp);
   const fromFormItem = useContext(FormItemControlIdContext);
@@ -237,11 +242,11 @@ export function AutoComplete(props: AutoCompleteProps): JSXRenderable {
    * 受控 `value` 自外部变更时（如表单重置、代码改 q）与过滤串对齐；不在每次按键上依赖父 state 才能过滤。
    */
   createEffect(() => {
-    const v = typeof value === "function" ? value() : (value ?? "");
+    const v = selected.read();
     panelFilterQuery.value = String(v);
   });
 
-  // 禁止在组件体内读 value()：会订阅 signal，导致整树重跑、input 失焦。value 透传给 <input value={value} />。
+  // 禁止在组件体内读 value()：会订阅 signal，导致整树重跑、input 失焦。value 透传给 <input value={selected.bind} />。
 
   /**
    * 选中一项：写回受控值并关闭面板。
@@ -250,7 +255,7 @@ export function AutoComplete(props: AutoCompleteProps): JSXRenderable {
    */
   const pickOption = (opt: string) => {
     panelFilterQuery.value = opt;
-    commitMaybeSignal(value, opt);
+    selected.commit(opt);
     const synthetic = {
       target: { value: opt },
     } as unknown as Event;
@@ -267,7 +272,7 @@ export function AutoComplete(props: AutoCompleteProps): JSXRenderable {
     activeIndex.value = -1;
     panelOpen.value = true;
     const v = el?.value ?? "";
-    commitMaybeSignal(value, v);
+    selected.commit(v);
     onInput?.(e);
     if (onSelect && options.includes(v)) onSelect(v);
   };
@@ -277,7 +282,7 @@ export function AutoComplete(props: AutoCompleteProps): JSXRenderable {
     panelFilterQuery.value = el?.value ?? "";
     activeIndex.value = -1;
     const v = el?.value ?? "";
-    commitMaybeSignal(value, v);
+    selected.commit(v);
     onChange?.(e);
     if (onSelect && options.includes(v)) onSelect(v);
   };
@@ -285,11 +290,20 @@ export function AutoComplete(props: AutoCompleteProps): JSXRenderable {
   /**
    * 展开面板；失焦时由 blur 关闭（选项 mousedown 已 preventDefault，避免抢焦点）。
    */
+  const openPanelFromInput = (el: HTMLInputElement | null) => {
+    if (disabled || options.length === 0) return;
+    panelFilterQuery.value = el?.value ?? "";
+    panelOpen.value = true;
+  };
+
   const handleFocus = (e: Event) => {
-    const t = e.target as HTMLInputElement;
-    panelFilterQuery.value = t?.value ?? "";
-    if (!disabled && options.length > 0) panelOpen.value = true;
+    openPanelFromInput(e.target as HTMLInputElement);
     onFocus?.(e);
+  };
+
+  const handleClick = (e: Event) => {
+    openPanelFromInput(e.target as HTMLInputElement);
+    onClick?.(e);
   };
 
   const handleBlur = (e: Event) => {
@@ -354,7 +368,7 @@ export function AutoComplete(props: AutoCompleteProps): JSXRenderable {
         ref={bindAutoFocusRef(undefined, autoFocus)}
         id={resolvedId}
         name={name}
-        value={value}
+        value={selected.bind}
         placeholder={placeholder}
         disabled={disabled}
         aria-invalid={error}
@@ -366,7 +380,7 @@ export function AutoComplete(props: AutoCompleteProps): JSXRenderable {
         onFocus={handleFocus}
         onKeyDown={handleKeyDown}
         onKeyUp={onKeyUp}
-        onClick={onClick}
+        onClick={handleClick}
         onPaste={onPaste}
       />
     );
@@ -396,7 +410,7 @@ export function AutoComplete(props: AutoCompleteProps): JSXRenderable {
         type="text"
         id={resolvedId}
         name={name}
-        value={value}
+        value={selected.bind}
         placeholder={placeholder}
         disabled={disabled}
         aria-invalid={error}
@@ -405,7 +419,11 @@ export function AutoComplete(props: AutoCompleteProps): JSXRenderable {
         aria-autocomplete="list"
         autoComplete="off"
         class={inputClass}
-        ref={bindAutoFocusRef(comboboxInputRef, autoFocus)}
+        ref={(el: HTMLInputElement | null) => {
+          comboboxInputRef.current = el;
+          const af = bindAutoFocusRef(undefined, autoFocus);
+          if (typeof af === "function") af(el);
+        }}
         {...autoFocusAttr(autoFocus)}
         onChange={handleChange}
         onInput={handleInput}
@@ -413,7 +431,7 @@ export function AutoComplete(props: AutoCompleteProps): JSXRenderable {
         onFocus={handleFocus}
         onKeyDown={handleKeyDown}
         onKeyUp={onKeyUp}
-        onClick={onClick}
+        onClick={handleClick}
         onPaste={onPaste}
       />
       <AutoCompletePanel

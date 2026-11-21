@@ -191,7 +191,10 @@ export default function DataDisplayCodeBlock() {
             }}
             maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
-          {copied.value && <p class="text-sm text-green-600">已复制到剪贴板</p>}
+          {() =>
+            copied.value
+              ? <p class="text-sm text-green-600">已复制到剪贴板</p>
+              : null}
           <CodeBlock
             title="代码示例"
             code={exampleTitleCopyable}

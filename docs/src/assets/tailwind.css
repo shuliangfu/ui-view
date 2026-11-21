@@ -364,11 +364,22 @@
 }
 
 @keyframes notice-bar-marquee {
-  0% {
+  from {
     transform: translateX(0);
   }
-  100% {
-    transform: translateX(-50%);
+  to {
+    transform: translateX(-100%);
+  }
+}
+
+.animate-notice-bar-marquee {
+  padding-left: 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-notice-bar-marquee {
+    padding-left: 0;
+    animation: none;
   }
 }
 

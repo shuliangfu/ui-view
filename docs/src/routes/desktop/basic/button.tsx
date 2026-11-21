@@ -26,16 +26,22 @@ const BUTTON_API: ApiRow[] = [
   },
   {
     name: "variant",
-    type: "ColorVariant",
+    type: "ButtonVariant",
     default: "primary",
     description:
-      "语义变体：default、primary、secondary、success、warning、danger、ghost",
+      "语义变体：default、primary、secondary、success、warning、danger、ghost、link。link 为文字链外观，仍渲染为 button，需要跳转请用 Link。",
   },
   {
     name: "size",
     type: "SizeVariant",
     default: "md",
     description: "尺寸：xs、sm、md、lg",
+  },
+  {
+    name: "block",
+    type: "boolean",
+    default: "false",
+    description: "为 true 时宽度撑满父级",
   },
   {
     name: "disabled",
@@ -94,12 +100,16 @@ const exampleVariant = `<Button variant="default">default</Button>
 <Button variant="success">success</Button>
 <Button variant="warning">warning</Button>
 <Button variant="danger">danger</Button>
-<Button variant="ghost">ghost</Button>`;
+<Button variant="ghost">ghost</Button>
+<Button variant="link">link</Button>`;
 
 const exampleSize = `<Button size="xs">xs</Button>
 <Button size="sm">sm</Button>
 <Button size="md">md</Button>
 <Button size="lg">lg</Button>`;
+
+const exampleBlock = `<Button variant="primary" block>撑满宽度</Button>
+<Button variant="link" block>文字链也撑满</Button>`;
 
 const exampleDisabled = `<Button variant="default" disabled>default</Button>
 <Button variant="primary" disabled>primary</Button>
@@ -107,7 +117,8 @@ const exampleDisabled = `<Button variant="default" disabled>default</Button>
 <Button variant="success" disabled>success</Button>
 <Button variant="warning" disabled>warning</Button>
 <Button variant="danger" disabled>danger</Button>
-<Button variant="ghost" disabled>ghost</Button>`;
+<Button variant="ghost" disabled>ghost</Button>
+<Button variant="link" disabled>link</Button>`;
 
 const exampleLoading = `<Button variant="primary" loading>加载中</Button>
 <Button variant="secondary" loading>提交中</Button>`;
@@ -207,6 +218,7 @@ export default function BasicButton() {
             <Button variant="warning">warning</Button>
             <Button variant="danger">danger</Button>
             <Button variant="ghost">ghost</Button>
+            <Button variant="link">link</Button>
           </div>
           <CodeBlock
             title="代码示例"
@@ -239,6 +251,23 @@ export default function BasicButton() {
         </div>
 
         <div class="space-y-4">
+          <Title level={3}>block 撑满宽度</Title>
+          <div class="max-w-xs space-y-2">
+            <Button variant="primary" block>撑满宽度</Button>
+            <Button variant="link" block>文字链也撑满</Button>
+          </div>
+          <CodeBlock
+            title="代码示例"
+            code={exampleBlock}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
+          />
+        </div>
+
+        <div class="space-y-4">
           <Title level={3}>disabled</Title>
           <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
             各变体禁用态：opacity + grayscale，不可点击。
@@ -251,6 +280,7 @@ export default function BasicButton() {
             <Button variant="warning" disabled>warning</Button>
             <Button variant="danger" disabled>danger</Button>
             <Button variant="ghost" disabled>ghost</Button>
+            <Button variant="link" disabled>link</Button>
           </div>
           <CodeBlock
             title="代码示例"

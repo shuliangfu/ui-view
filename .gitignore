@@ -32,3 +32,8 @@ tests/data/
 tests/output/
 .snapshots/
 coverage/
+
+# Local browser logs
+.local-browser-logs
+.local-unit-logs
+.impeccable

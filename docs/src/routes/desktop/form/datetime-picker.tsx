@@ -161,6 +161,14 @@ const DATETIMEPICKER_API: ApiRow[] = [
     default: "-",
     description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
   },
+  ,
+  {
+    name: "allowClear",
+    type: "boolean",
+    default: "false",
+    description:
+      "有值时显示清除按钮，清空后按当前 mode 写出空字符串、空区间或空数组",
+  },
 ];
 
 const importCode =
@@ -218,6 +226,10 @@ const form = createForm({
 </Form>`;
 
 /** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+const datetimeClearVal = createSignal("2026-11-18 14:30");
+
+const exampleAllowClear = `<DateTimePicker value={val} allowClear />`;
+
 export const metadata = {
   title: "DateTimePicker 日期时间 · ui-view",
 };
@@ -431,7 +443,7 @@ export default function FormDateTimePickerDoc() {
               />
             </FormItem>
             <FormItem label="禁用">
-              <DateTimePicker value={now} disabled onChange={() => {}} />
+              <DateTimePicker value={now} disabled />
             </FormItem>
             <CodeBlock
               title="代码示例"
@@ -439,7 +451,7 @@ export default function FormDateTimePickerDoc() {
 <DateTimePicker value={valSm} size="sm" />
 <DateTimePicker value={valMd} size="md" />
 <DateTimePicker value={valLg} size="lg" />
-<DateTimePicker value={now} disabled onChange={() => {}} />`}
+<DateTimePicker value={now} disabled />`}
               language="tsx"
               showLineNumbers
               copyable
@@ -523,6 +535,25 @@ export default function FormDateTimePickerDoc() {
   placeholder="挂载后自动聚焦"
   autoFocus
 />`}
+          language="tsx"
+          showLineNumbers
+          copyable
+          wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
+        />
+      </section>
+
+      <section class="space-y-4">
+        <Title level={3}>允许清除</Title>
+        <div class="max-w-sm">
+          <DateTimePicker
+            value={datetimeClearVal}
+            allowClear
+          />
+        </div>
+        <CodeBlock
+          title="代码示例"
+          code={exampleAllowClear}
           language="tsx"
           showLineNumbers
           copyable

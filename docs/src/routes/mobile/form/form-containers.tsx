@@ -13,6 +13,7 @@ import { Password } from "@dreamer/ui-view/mobile/form/password";
 import { PasscodeInput } from "@dreamer/ui-view/mobile/form/passcode-input";
 import { CodeBlock } from "@dreamer/ui-view/data-display";
 import { message } from "@dreamer/ui-view/feedback";
+import { createSignal } from "@dreamer/view";
 import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
 
 type MobileDemoValues = {
@@ -34,6 +35,9 @@ const mobileForm = createForm<MobileDemoValues>({
     },
   },
 });
+
+/** 密码显隐（模块级，避免文档页重跑丢失状态） */
+const mobilePasswordVisible = createSignal(false);
 
 /** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
 export const metadata = {
@@ -103,6 +107,10 @@ export default function MobileFormContainersDoc() {
             <Password
               {...mobileForm.bind("password")}
               class="w-full"
+              showPassword={mobilePasswordVisible}
+              onToggleShow={() => {
+                mobilePasswordVisible.value = !mobilePasswordVisible.value;
+              }}
             />
           </FormItem>
           <FormItem name="code" label="验证码">
@@ -118,18 +126,29 @@ export default function MobileFormContainersDoc() {
 import { Form } from "@dreamer/ui-view/mobile/form/form";
 import { FormItem } from "@dreamer/ui-view/mobile/form/form-item";
 import { Input } from "@dreamer/ui-view/mobile/form/input";
+import { Password } from "@dreamer/ui-view/mobile/form/password";
 import { PasscodeInput } from "@dreamer/ui-view/mobile/form/passcode-input";
+import { createSignal } from "@dreamer/view";
 
 const form = createForm({
-  initialValues: { account: "", code: "" },
+  initialValues: { account: "", password: "", code: "" },
   fields: {
     account: { rules: [formRules.required()] },
-    code: { rules: [formRules.required(), formRules.pattern(/^\\d{6}$/)] },
+    password: { rules: [formRules.required(), formRules.min(6)] },
+    code: { rules: [formRules.required(), formRules.pattern(/^\\d{4,6}$/, "4～6 位数字")] },
   },
 });
+const showPassword = createSignal(false);
 
 <Form form={form} onFinish={…}>
   <FormItem name="account"><Input {...form.bind("account")} /></FormItem>
+  <FormItem name="password">
+    <Password
+      {...form.bind("password")}
+      showPassword={showPassword}
+      onToggleShow={() => { showPassword.value = !showPassword.value; }}
+    />
+  </FormItem>
   <FormItem name="code"><PasscodeInput {...form.bindValue("code")} length={6} /></FormItem>
 </Form>`}
           language="tsx"

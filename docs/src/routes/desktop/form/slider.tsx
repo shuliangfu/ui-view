@@ -91,6 +91,14 @@ const SLIDER_API: ApiRow[] = [
     default: "-",
     description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
   },
+  ,
+  {
+    name: "marks",
+    type:
+      "Record<number, string | { label: string; style?: Record<string, string> }>",
+    default: "-",
+    description: "横向轨道下方刻度；键为 min～max 内的数值",
+  },
 ];
 
 const importCode = `import { Form } from "@dreamer/ui-view/form/form";
@@ -148,6 +156,15 @@ const form = createForm({
 </Form>`;
 
 /** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+const sliderMarksVal = createSignal(40);
+
+const exampleMarks = `<Slider
+  value={val}
+  min={0}
+  max={100}
+  marks={{ 0: "0", 40: "40", 100: "100" }}
+/>`;
+
 export const metadata = {
   title: "Slider 滑块 · ui-view",
 };
@@ -417,6 +434,27 @@ const step = createSignal(30);
             />
           </section>
         </Form>
+      </section>
+
+      <section class="space-y-4">
+        <Title level={3}>刻度 marks</Title>
+        <div class="max-w-md">
+          <Slider
+            value={sliderMarksVal}
+            min={0}
+            max={100}
+            marks={{ 0: "0", 40: "40", 100: "100" }}
+          />
+        </div>
+        <CodeBlock
+          title="代码示例"
+          code={exampleMarks}
+          language="tsx"
+          showLineNumbers
+          copyable
+          wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
+        />
       </section>
 
       <DocsMessagesSection

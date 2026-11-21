@@ -223,7 +223,8 @@ function sniffMimeFromKey(key: string): string {
   if (ext === "avif") return "image/avif";
   if (ext === "pdf") return "application/pdf";
   if (ext === "webm") return "video/webm";
-  if (ext === "mp4" || ext === "m4a") return "video/mp4";
+  if (ext === "mp4" || ext === "m4v") return "video/mp4";
+  if (ext === "m4a") return "audio/mp4";
   if (ext === "mp3") return "audio/mpeg";
   if (ext === "ogg") return "audio/ogg";
   if (ext === "txt") return "text/plain";
@@ -263,9 +264,7 @@ function sniffImageMime(bytes: Uint8Array): string | undefined {
     bytes[7] === 0x70
   ) {
     const brand = new TextDecoder().decode(bytes.subarray(8, 12));
-    if (
-      brand.startsWith("avif") || brand.startsWith("avis") || brand === "mif1"
-    ) {
+    if (brand.startsWith("avif") || brand.startsWith("avis")) {
       return "image/avif";
     }
   }
@@ -276,6 +275,55 @@ function isImageMime(mime?: string): boolean {
   if (!mime) return false;
   const m = mime.toLowerCase().split(";")[0]!.trim();
   return m.startsWith("image/") && m !== "image/svg+xml";
+}
+
+/**
+ * Reject object keys that can escape the storage root (absolute, `..`,
+ * backslash, drive letter, control characters, empty segments).
+ */
+export function isSafeUiViewUploadObjectKey(key: string): boolean {
+  const k = key.trim();
+  if (!k) return false;
+  if (/[\x00-\x1f\x7f]/.test(k)) return false;
+  if (k.includes("\\") || k.startsWith("/") || k.startsWith("~")) {
+    return false;
+  }
+  if (/^[A-Za-z]:/.test(k)) return false;
+  const norm = k.normalize("NFKC");
+  for (const part of norm.split("/")) {
+    if (part === "" || part === "." || part === "..") return false;
+  }
+  if (norm.includes("..")) return false;
+  return true;
+}
+
+function clampInt(
+  n: number,
+  min: number,
+  max: number,
+  fallback: number,
+): number {
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(max, Math.max(min, Math.round(n)));
+}
+
+function guessImageMimeFromExt(ext: string): string | undefined {
+  if (ext === "png") return "image/png";
+  if (ext === "jpg" || ext === "jpeg") return "image/jpeg";
+  if (ext === "webp") return "image/webp";
+  if (ext === "gif") return "image/gif";
+  if (ext === "avif") return "image/avif";
+  if (ext === "bmp") return "image/bmp";
+  return undefined;
+}
+
+function contentDispositionForKey(key: string, mime: string): string {
+  const raw = key.split("/").pop() || "file";
+  const filename = raw.replace(/[\x00-\x1f\x7f"\\]/g, "_").slice(0, 200) ||
+    "file";
+  const kind = mime.split(";")[0]!.trim().toLowerCase();
+  const inline = kind.startsWith("image/") && kind !== "image/svg+xml";
+  return `${inline ? "inline" : "attachment"}; filename="${filename}"`;
 }
 
 /** 将对象键扩展名改为 .avif；thumb 则插 `.thumb` */
@@ -323,8 +371,18 @@ export function wrapUploadCompletePipeline(
   const basePath = opts.basePath.replace(/\/$/, "") ||
     DEFAULT_UI_VIEW_UPLOAD_BASE_PATH;
   const dual = opts.image?.dual === true;
-  const thumbSize = opts.image?.thumbSize ?? DEFAULT_THUMB_SIZE;
-  const quality = opts.image?.quality ?? DEFAULT_AVIF_QUALITY;
+  const thumbSize = clampInt(
+    opts.image?.thumbSize ?? DEFAULT_THUMB_SIZE,
+    16,
+    4096,
+    DEFAULT_THUMB_SIZE,
+  );
+  const quality = clampInt(
+    opts.image?.quality ?? DEFAULT_AVIF_QUALITY,
+    1,
+    100,
+    DEFAULT_AVIF_QUALITY,
+  );
 
   handler.handle = async (request: Request, bp = basePath) => {
     const url = new URL(request.url);
@@ -344,7 +402,30 @@ export function wrapUploadCompletePipeline(
       return result;
     }
     const key = String(body.fileId ?? "").trim();
-    if (!key) return result;
+    if (!key || !isSafeUiViewUploadObjectKey(key)) return result;
+
+    const mimeFromData = typeof body.data?.mimeType === "string"
+      ? body.data.mimeType
+      : undefined;
+    const ext = key.split(".").pop()?.toLowerCase() ?? "";
+    let mimeGuess = mimeFromData || guessImageMimeFromExt(ext);
+    if (!mimeGuess && ext && key.includes(".")) {
+      const fromKey = sniffMimeFromKey(key);
+      if (fromKey !== "application/octet-stream") mimeGuess = fromKey;
+    }
+    const needBytes = Boolean(opts.afterComplete) ||
+      (dual && (!mimeGuess || isImageMime(mimeGuess)));
+    if (!needBytes) {
+      if (body.thumbUrl || body.url) {
+        body.data = {
+          ...(body.data ?? {}),
+          ...(body.url ? { url: body.url } : {}),
+          ...(body.thumbUrl ? { thumbUrl: body.thumbUrl } : {}),
+        };
+        return jsonResponse(body, result.status);
+      }
+      return result;
+    }
 
     let bytes: Uint8Array;
     try {
@@ -352,27 +433,9 @@ export function wrapUploadCompletePipeline(
     } catch {
       return result;
     }
-
-    // Infer mime from body data or key extension (session mime not always in complete JSON)
-    const mimeFromData = typeof body.data?.mimeType === "string"
-      ? body.data.mimeType
-      : undefined;
-    const ext = key.split(".").pop()?.toLowerCase() ?? "";
-    const mimeGuess = mimeFromData ||
-      (ext === "png"
-        ? "image/png"
-        : ext === "jpg" || ext === "jpeg"
-        ? "image/jpeg"
-        : ext === "webp"
-        ? "image/webp"
-        : ext === "gif"
-        ? "image/gif"
-        : ext === "avif"
-        ? "image/avif"
-        : ext === "bmp"
-        ? "image/bmp"
-        : undefined) ||
-      sniffImageMime(bytes);
+    // Prefer magic bytes over client-supplied mime / extension.
+    mimeGuess = sniffImageMime(bytes) || guessImageMimeFromExt(ext) ||
+      mimeFromData;
 
     if (opts.afterComplete) {
       const hookResult = await opts.afterComplete({
@@ -571,10 +634,7 @@ export function uiViewUploadPlugin(
   }
 
   const pathOnMount = (path: string): boolean =>
-    path === basePath ||
-    path.startsWith(`${basePath}/`) ||
-    path.endsWith(basePath) ||
-    path.includes(`${basePath}/`);
+    path === basePath || path.startsWith(`${basePath}/`);
 
   return {
     name: pluginName,
@@ -609,10 +669,10 @@ export function uiViewUploadPlugin(
     async onRequest(ctx, _container) {
       const filePath = `${basePath}/file`;
       const isFileReq = (ctx.method === "GET" || ctx.method === "HEAD") &&
-        (ctx.path === filePath || ctx.path.endsWith(filePath));
+        ctx.path === filePath;
       if (serveFiles && isFileReq) {
         const key = (ctx.url.searchParams.get("key") ?? "").trim();
-        if (!key || key.includes("..")) {
+        if (!isSafeUiViewUploadObjectKey(key)) {
           return new Response("Bad key", { status: 400 });
         }
         // pathPrefix 只约束新写入的键；有 authorizeFile 时由它决定可读范围（含历史子目录）。
@@ -655,16 +715,25 @@ export function uiViewUploadPlugin(
             const ok = await storage.exists(key);
             if (!ok) return new Response("Not found", { status: 404 });
           }
-          const bytes = await storage.download(key);
           const mime = sniffMimeFromKey(key);
-          return new Response(new Uint8Array(bytes), {
-            status: 200,
-            headers: {
-              "content-type": mime,
-              "cache-control": "private, max-age=3600",
-              "x-content-type-options": "nosniff",
-            },
-          });
+          const headers = {
+            "content-type": mime,
+            "cache-control": "private, max-age=3600",
+            "x-content-type-options": "nosniff",
+            "content-disposition": contentDispositionForKey(key, mime),
+          };
+          if (ctx.method === "HEAD") {
+            if (!storage.exists) {
+              try {
+                await storage.download(key);
+              } catch {
+                return new Response("Not found", { status: 404 });
+              }
+            }
+            return new Response(null, { status: 200, headers });
+          }
+          const bytes = await storage.download(key);
+          return new Response(new Uint8Array(bytes), { status: 200, headers });
         } catch (e) {
           console.error("[ui-view-upload] file serve", e);
           return new Response("Error", { status: 500 });

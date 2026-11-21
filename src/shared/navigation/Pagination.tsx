@@ -110,8 +110,8 @@ export interface PaginationProps {
   defaultPageSize?: number;
   /** 每页条数选项（如 [10, 20, 50]）；传了则渲染条数切换器（库内 Select），onChange 会收到 (page, pageSize) */
   pageSizeOptions?: number[];
-  /** 页码/条数变化回调；当有 pageSizeOptions 时可能收到 (page, pageSize) */
-  onChange: (page: number, pageSize?: number) => void;
+  /** 页码/条数变化回调，可选；当有 pageSizeOptions 时可能收到 (page, pageSize) */
+  onChange?: (page: number, pageSize?: number) => void;
   /**
    * 是否显示第一页／最后一页（双箭头）。不传时跟随 `preset`：`full` 为 true，其余为 false。
    */
@@ -279,7 +279,7 @@ export function Pagination(props: PaginationProps): JSXRenderable {
             : pageSizeProp) ?? 10);
       updateUrlSearch(page, ps);
     }
-    onChangeProp(page, pageSize);
+    onChangeProp?.(page, pageSize);
   };
 
   const jumpTo = (raw: string, totalPages: number) => {

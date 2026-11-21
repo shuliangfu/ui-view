@@ -1358,7 +1358,9 @@ export async function runKeywordAndShallowHere(
 }
 
 /**
- * 文档「严格」小节：按 h2/h3 文案 needle 定位示例块，完成一次浅层交互（复制 / 输入 / 提交 / 开关等）。
+ * 历史命名「严格」并非组件行为覆盖：这里只定位 h2/h3 并做一次浅层探针。
+ * 不断言每个示例操作后的状态/数据，不能计入 operations.csv 的 verified；
+ * 保留此函数只用于 smoke 回归，完整行为请写 operations 下的物理输入测试。
  * 用于 createForm 升级后各控件页的「与 createForm」等标题。
  *
  * @param t - 浏览器测试上下文

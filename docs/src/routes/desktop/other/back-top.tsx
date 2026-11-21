@@ -34,9 +34,10 @@ const BACK_TOP_API: ApiRow[] = [
   },
   {
     name: "visible",
-    type: "boolean",
+    type: "boolean | Signal<boolean> | () => boolean",
     default: "-",
-    description: "是否显示（受控）",
+    description:
+      "是否显示（受控）；请传 Signal 或 getter，勿传 visible={sig.value} 快照",
   },
   {
     name: "onVisibilityChange",
@@ -81,7 +82,7 @@ const importCode = `import { createSignal } from "@dreamer/view";
 const visible = createSignal(false);
 <BackTop
   visibilityHeight={200}
-  visible={visible.value}
+  visible={visible}
   onVisibilityChange={(v) => visible.value = v}
   right={24}
   bottom={24}
@@ -89,7 +90,7 @@ const visible = createSignal(false);
 
 const exampleDefault = `<BackTop
   visibilityHeight={200}
-  visible={visible.value}
+  visible={visible}
   onVisibilityChange={(v) => visible.value = v}
   right={24}
   bottom={24}
@@ -153,7 +154,7 @@ export default function OtherBackTop() {
           </div>
           <BackTop
             visibilityHeight={200}
-            visible={visible.value}
+            visible={visible}
             onVisibilityChange={(v) => visible.value = v}
             right={24}
             bottom={24}

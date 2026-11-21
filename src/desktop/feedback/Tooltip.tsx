@@ -1,12 +1,16 @@
 /**
  * Tooltip 悬停提示（View）。
- * 桌面常用：触发器悬停时显示气泡；支持 placement、箭头。`placement="auto"` 时优选上方，边挡住则朝相反方向展开，箭头跟随实际方位。
+ * 桌面常用：默认悬停显示气泡，也可 `trigger="click"` / `"focus"`；支持 placement、箭头。
+ * `placement="auto"` 时优选上方，边挡住则朝相反方向展开，箭头跟随实际方位。
+ * 展开默认内部维护，也可传受控 `open` + `onOpenChange`。
  *
  * **布局**：有可用 `document.body` 时，气泡经 {@link createPortal} 挂到 body，`position:fixed` + 视口坐标，
  * 避免祖先 `overflow: hidden | auto` 裁切；否则回退为包裹层内 `absolute`（SSR / hybrid）。
  */
 
 import {
+  createEffect,
+  createMemo,
   createPortal,
   createRef,
   createRenderEffect,
@@ -15,6 +19,10 @@ import {
   onCleanup,
 } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
+import {
+  type ControlledOpenInput,
+  readControlledOpenInput,
+} from "../../shared/feedback/controlled-open.ts";
 import { getBrowserBodyPortalHost } from "../../shared/feedback/portal-host.ts";
 import {
   type AutoPopPlacement,
@@ -51,10 +59,33 @@ export interface TooltipProps {
   /** 气泡内容区 class（含 z-index 等，便于全屏编辑器等抬高） */
   overlayClass?: string;
   /**
-   * 为 true 时强制隐藏且不再响应悬停。
+   * 为 true 时强制隐藏且不再响应触发。
    * 传零参 getter 时可订阅 Signal（如 Popconfirm 打开时压掉同锚点 Tooltip）。
    */
   disabled?: boolean | (() => boolean);
+  /**
+   * 触发方式，默认 `"hover"`。
+   * `"click"` 时点击开关，再次点击、点击外部或按 Escape 关闭。
+   * `"focus"` 时焦点进入显示、离开关闭。
+   */
+  trigger?: "hover" | "click" | "focus";
+  /**
+   * 进入触发区后多少 ms 再显示，默认 0（保持立刻出现）。
+   * 仅 `trigger="hover"` 时生效。
+   */
+  hoverOpenDelay?: number;
+  /**
+   * 离开触发区后多少 ms 再收起，默认 0（保持立刻收起）。
+   * 仅 `trigger="hover"` 时生效。
+   */
+  hoverCloseDelay?: number;
+  /**
+   * 受控展开。不传则内部维护。
+   * 传 `createSignal` 返回值、`() => boolean` 或 boolean（与 Dropdown / Modal 一致；勿传 `sig.value` 快照）。
+   */
+  open?: ControlledOpenInput;
+  /** 打开/关闭时回调；受控时须在此写回 `open` 对应 signal */
+  onOpenChange?: (open: boolean) => void;
   /** 多语言／自定义文案；未传字段走 {@link defaultTooltipMessages}；正文请用 content */
   messages?: Partial<TooltipMessages>;
 }
@@ -244,7 +275,20 @@ export function Tooltip(props: TooltipProps): JSXRenderable {
   const popupSize = createSignal<PopSize>({ width: 0, height: 0 });
   const wrapRef = createRef<HTMLSpanElement>(null);
   let tooltipPanelEl: HTMLElement | null = null;
-  const visible = createSignal(false);
+  const triggerMode = props.trigger ?? "hover";
+  const hoverOpenDelay = props.hoverOpenDelay ?? 0;
+  const hoverCloseDelay = props.hoverCloseDelay ?? 0;
+  const { onOpenChange } = props;
+  const openState = createSignal(false);
+  const isControlled = () => props.open !== undefined;
+  const isOpen = createMemo(() =>
+    isControlled() ? readControlledOpenInput(props.open) : openState.value
+  );
+  const setOpen = (value: boolean) => {
+    if (readTooltipDisabled(props.disabled) && value) return;
+    if (!isControlled()) openState.value = value;
+    onOpenChange?.(value);
+  };
   const floatStyle = createSignal(
     getTooltipFixedStyle(
       initialResolved,
@@ -315,31 +359,128 @@ export function Tooltip(props: TooltipProps): JSXRenderable {
    * 否则 pointerdown 收起后，打开弹窗时触发器可能被重挂并再次 mouseenter，
    * 气泡 z-index 又高于 Modal，会飘在弹窗上面。
    */
+  const hoverTimers: {
+    open: ReturnType<typeof globalThis.setTimeout> | 0;
+    close: ReturnType<typeof globalThis.setTimeout> | 0;
+  } = { open: 0, close: 0 };
+  const clearHoverTimers = () => {
+    if (hoverTimers.open) {
+      globalThis.clearTimeout(hoverTimers.open);
+      hoverTimers.open = 0;
+    }
+    if (hoverTimers.close) {
+      globalThis.clearTimeout(hoverTimers.close);
+      hoverTimers.close = 0;
+    }
+  };
+
   let suppressUntilLeave = false;
   const onEnter = () => {
+    if (triggerMode !== "hover") return;
     if (suppressUntilLeave) return;
     if (readTooltipDisabled(props.disabled)) return;
-    syncFloatGeometry();
-    visible.value = true;
+    if (hoverTimers.close) {
+      globalThis.clearTimeout(hoverTimers.close);
+      hoverTimers.close = 0;
+    }
+    const show = () => {
+      syncFloatGeometry();
+      setOpen(true);
+      hoverTimers.open = 0;
+    };
+    if (hoverOpenDelay <= 0) show();
+    else {
+      hoverTimers.open = globalThis.setTimeout(show, hoverOpenDelay);
+    }
   };
   const onLeave = () => {
+    if (triggerMode !== "hover") return;
     suppressUntilLeave = false;
-    visible.value = false;
+    if (hoverTimers.open) {
+      globalThis.clearTimeout(hoverTimers.open);
+      hoverTimers.open = 0;
+    }
+    const hide = () => {
+      setOpen(false);
+      hoverTimers.close = 0;
+    };
+    if (hoverCloseDelay <= 0) hide();
+    else {
+      hoverTimers.close = globalThis.setTimeout(hide, hoverCloseDelay);
+    }
   };
-  /** 点击／按下触发器时收起，并抑制下一次进入，直到 mouseleave。 */
+  /** hover 时：点击／按下触发器收起，并抑制下一次进入，直到 mouseleave。 */
   const onPointerDown = () => {
+    if (triggerMode !== "hover") return;
     suppressUntilLeave = true;
-    visible.value = false;
+    clearHoverTimers();
+    setOpen(false);
+  };
+  const onTriggerClick = (e: Event) => {
+    if (triggerMode !== "click" || readTooltipDisabled(props.disabled)) return;
+    e.stopPropagation();
+    if (isOpen()) setOpen(false);
+    else {
+      syncFloatGeometry();
+      setOpen(true);
+    }
+  };
+  const onTriggerFocus = () => {
+    if (triggerMode !== "focus" || readTooltipDisabled(props.disabled)) return;
+    syncFloatGeometry();
+    setOpen(true);
+  };
+  const onTriggerBlur = () => {
+    if (triggerMode !== "focus") return;
+    setOpen(false);
   };
 
   // disabled 变为 true 时立刻收起（订阅 getter 内 Signal）
   createRenderEffect(() => {
-    if (readTooltipDisabled(props.disabled)) visible.value = false;
+    if (readTooltipDisabled(props.disabled) && isOpen()) setOpen(false);
+  });
+
+  /** 点击触发：打开后在 document 冒泡阶段关外部点击，并监听 Escape。 */
+  createEffect(() => {
+    if (
+      triggerMode !== "click" || !isOpen() ||
+      typeof globalThis.document === "undefined"
+    ) {
+      return;
+    }
+    const doc = globalThis.document;
+    let armed = false;
+    let armRaf0 = 0;
+    let armRaf1 = 0;
+    armRaf0 = globalThis.requestAnimationFrame(() => {
+      armRaf1 = globalThis.requestAnimationFrame(() => {
+        armed = true;
+      });
+    });
+    const onDocumentClickBubble = (e: Event) => {
+      if (!armed) return;
+      const t = e.target;
+      if (!(t instanceof globalThis.Node)) return;
+      const wrap = wrapRef.current;
+      if (wrap != null && wrap.contains(t)) return;
+      setOpen(false);
+    };
+    const onKeydown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    doc.addEventListener("click", onDocumentClickBubble, false);
+    doc.addEventListener("keydown", onKeydown);
+    return () => {
+      globalThis.cancelAnimationFrame(armRaf0);
+      globalThis.cancelAnimationFrame(armRaf1);
+      doc.removeEventListener("click", onDocumentClickBubble, false);
+      doc.removeEventListener("keydown", onKeydown);
+    };
   });
 
   createRenderEffect(() => {
-    /** View 的 {@link createSignal} 用 `.value` 读写，勿写成 `visible()`（不会订阅、条件恒错） */
-    if (!portalHostOk || !visible.value) return;
+    /** View 的 {@link createSignal} 用 `.value` 读写，勿写成 `isOpen()` 之外的未订阅条件 */
+    if (!portalHostOk || !isOpen()) return;
     const host = getBrowserBodyPortalHost();
     if (host == null) return;
 
@@ -446,10 +587,13 @@ export function Tooltip(props: TooltipProps): JSXRenderable {
     <span
       ref={wrapRef}
       class={twMerge("relative inline-flex", className)}
-      aria-describedby={() => (visible.value ? tooltipId : undefined)}
+      aria-describedby={() => (isOpen() ? tooltipId : undefined)}
       onMouseEnter={onEnter}
       onMouseLeave={onLeave}
       onPointerDown={onPointerDown}
+      onClick={onTriggerClick}
+      onFocus={onTriggerFocus}
+      onBlur={onTriggerBlur}
     >
       {children}
     </span>

@@ -109,6 +109,26 @@ const TREESELECT_API: ApiRow[] = [
     default: "-",
     description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
   },
+  ,
+  {
+    name: "allowClear",
+    type: "boolean",
+    default: "false",
+    description:
+      "有选中值时在触发器上显示清除按钮（与触发器并列，不是套在按钮里）",
+  },
+  {
+    name: "showSearch",
+    type: "boolean",
+    default: "false",
+    description: "在浮层顶部显示搜索框，按标签或值过滤",
+  },
+  {
+    name: "loading",
+    type: "boolean",
+    default: "false",
+    description: "触发器加载中：不可打开，右侧显示转圈",
+  },
 ];
 
 /** 文档基础示例树：二级部门 */
@@ -198,6 +218,16 @@ const form = createForm({
 </Form>`;
 
 /** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+const treeDocClear = createSignal("fe");
+
+const exampleClearSearch = `<TreeSelect
+  options={TREE_OPTIONS}
+  value={val}
+  allowClear
+  showSearch
+/>
+<TreeSelect options={TREE_OPTIONS} loading placeholder="加载中" />`;
+
 export const metadata = {
   title: "TreeSelect 树选择 · ui-view",
 };
@@ -465,13 +495,12 @@ export default function FormTreeSelectDoc() {
                 options={TREE_OPTIONS}
                 value="fe"
                 disabled
-                onChange={() => {}}
                 class="w-full"
               />
             </FormItem>
             <CodeBlock
               title="代码示例"
-              code={`<TreeSelect options={tree} value="fe" disabled onChange={() => {}} />`}
+              code={`<TreeSelect options={tree} value="fe" disabled />`}
               language="tsx"
               showLineNumbers
               copyable
@@ -489,46 +518,38 @@ export default function FormTreeSelectDoc() {
               <FormItem label="xs">
                 <TreeSelect
                   options={TREE_OPTIONS}
-                  value=""
                   size="xs"
-                  onChange={() => {}}
                   class="w-full"
                 />
               </FormItem>
               <FormItem label="sm">
                 <TreeSelect
                   options={TREE_OPTIONS}
-                  value=""
                   size="sm"
-                  onChange={() => {}}
                   class="w-full"
                 />
               </FormItem>
               <FormItem label="md（默认）">
                 <TreeSelect
                   options={TREE_OPTIONS}
-                  value=""
                   size="md"
-                  onChange={() => {}}
                   class="w-full"
                 />
               </FormItem>
               <FormItem label="lg">
                 <TreeSelect
                   options={TREE_OPTIONS}
-                  value=""
                   size="lg"
-                  onChange={() => {}}
                   class="w-full"
                 />
               </FormItem>
             </div>
             <CodeBlock
               title="代码示例"
-              code={`<TreeSelect options={tree} value="" size="xs" onChange={...} class="w-full" />
-<TreeSelect ... size="sm" />
-<TreeSelect ... size="md" />
-<TreeSelect ... size="lg" />`}
+              code={`<TreeSelect options={tree} size="xs" class="w-full" />
+<TreeSelect options={tree} size="sm" class="w-full" />
+<TreeSelect options={tree} size="md" class="w-full" />
+<TreeSelect options={tree} size="lg" class="w-full" />`}
               language="tsx"
               showLineNumbers
               copyable
@@ -555,6 +576,29 @@ export default function FormTreeSelectDoc() {
   placeholder="挂载后自动聚焦"
   autoFocus
 />`}
+          language="tsx"
+          showLineNumbers
+          copyable
+          wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
+        />
+      </section>
+
+      <section class="space-y-4">
+        <Title level={3}>清除、搜索与加载</Title>
+        <div class="flex flex-col gap-3 max-w-sm">
+          <TreeSelect
+            options={TREE_OPTIONS}
+            value={treeDocClear}
+            allowClear
+            showSearch
+            placeholder="可搜索并清除"
+          />
+          <TreeSelect options={TREE_OPTIONS} loading placeholder="加载中" />
+        </div>
+        <CodeBlock
+          title="代码示例"
+          code={exampleClearSearch}
           language="tsx"
           showLineNumbers
           copyable

@@ -4,13 +4,14 @@
  * `checked` 为 `createSignal` 返回值时，变更会先写入 Signal。
  */
 
-import { type Signal } from "@dreamer/view";
-import { safeIsSignal, writeSignalValue } from "../safe-signal.ts";
 import type { JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
-import { resolveFormControlSize } from "./form-control-context.ts";
+import {
+  resolveFormControlDisabled,
+  resolveFormControlSize,
+} from "./form-control-context.ts";
 import { controlBlueFocusRing } from "./input-focus-ring.ts";
-import type { MaybeSignal } from "./maybe-signal.ts";
+import { createOptionalValueState, type MaybeSignal } from "./maybe-signal.ts";
 import type { SizeVariant } from "../types.ts";
 
 export interface RadioProps {
@@ -73,7 +74,7 @@ export function Radio(props: RadioProps): JSXRenderable {
   const {
     size: sizeProp,
     checked: checkedMaybe,
-    disabled = false,
+
     error = false,
     hideFocusRing = false,
     name,
@@ -89,22 +90,22 @@ export function Radio(props: RadioProps): JSXRenderable {
     id,
     children,
   } = props;
+  const disabled = resolveFormControlDisabled(props.disabled);
   const size = resolveFormControlSize(sizeProp);
+  const selected = createOptionalValueState(checkedMaybe, false);
 
   /**
-   * 选中变化时：若 `checked` 为 Signal 则回写；再调用外部 `onChange`。
+   * 选中变化时写回受控 Signal / 非受控内部状态，再调用外部 `onChange`。
    *
    * @param e - 原生 change 事件
    */
   const handleChange = (e: Event) => {
     const next = (e.target as HTMLInputElement).checked;
-    if (checkedMaybe !== undefined && safeIsSignal(checkedMaybe)) {
-      writeSignalValue(checkedMaybe as Signal<boolean>, next);
-    }
+    selected.commit(next);
     onChangeProp?.(e);
   };
 
-  const checkedForInput = checkedMaybe === undefined ? false : checkedMaybe;
+  const checkedForInput = selected.bind;
 
   return (
     <label

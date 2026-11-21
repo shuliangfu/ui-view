@@ -1,3 +1,4 @@
+import type { ApiContext } from "@dreamer/dweb";
 /**
  * GET /api/upload/file?key=<相对 UPLOAD_ROOT 的路径>
  * 读取已上传文件（与 {@link createLocalCloudStorageAdapter} 的 getPresignedUrl 对应）
@@ -10,8 +11,8 @@ import { resolveSafeUploadPath } from "./_state.ts";
 /**
  * 按安全解析后的路径返回文件字节流
  */
-export async function GET(request: Request): Promise<Response> {
-  const key = new URL(request.url).searchParams.get("key");
+export async function GET(ctx: ApiContext): Promise<Response> {
+  const key = new URL(ctx.url).searchParams.get("key");
   if (!key) {
     return new Response("missing key", { status: 400 });
   }

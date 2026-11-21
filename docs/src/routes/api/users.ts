@@ -10,6 +10,7 @@
  * - POST /api/users/remove（单条删除，body `{ ids }`）
  * - POST /api/users/remote-batch（批量删除，body `{ ids }`）
  */
+import type { ApiContext } from "@dreamer/dweb";
 import { json } from "@dreamer/router";
 
 type User = {
@@ -78,7 +79,10 @@ function list(req: Request) {
   );
   const sort = u.searchParams.get("sort") || "";
   const order = u.searchParams.get("order") === "desc" ? "desc" : "asc";
-  let rows = [...store];
+  // 文档只读远程 Tab 示例：自定义 tabParam 与现有 role 过滤并存。
+  let rows = u.searchParams.get("remoteTab") === "admin"
+    ? store.filter((row) => row.role === "admin")
+    : [...store];
   for (const key of ["name", "email", "role", "status"]) {
     const v = u.searchParams.get(key);
     if (!v) continue;
@@ -130,7 +134,8 @@ function createOne(values: Record<string, unknown>): User {
 }
 
 /** GET /api/users 或 GET /api/users/view?id= */
-export function GET(request: Request): Response {
+export function GET(ctx: ApiContext): Response {
+  const request = ctx.req;
   const path = pathOf(request);
   if (path === "/api/users") return list(request);
   if (path === "/api/users/view" || lastSeg(path) === "view") {
@@ -144,9 +149,10 @@ export function GET(request: Request): Response {
 }
 
 /** POST /api/users/create|update|remove|remote-batch（同文件 :method） */
-export async function POST(request: Request): Promise<Response> {
+export function POST(ctx: ApiContext): Response {
+  const request = ctx.req;
   const action = lastSeg(pathOf(request));
-  const body = await request.json().catch(() => ({})) as Record<
+  const body = (ctx.body ?? {}) as Record<
     string,
     unknown
   >;

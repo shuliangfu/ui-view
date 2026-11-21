@@ -11,6 +11,7 @@
  * - POST   /api/orders/set-field（body `{ ids, field, value }`）
  * - GET    /api/orders/:id（明细，可选）
  */
+import type { ApiContext } from "@dreamer/dweb";
 import { json } from "@dreamer/router";
 
 type Order = {
@@ -131,7 +132,8 @@ function createOne(values: Record<string, unknown>): Order {
   return row;
 }
 
-export function GET(request: Request): Response {
+export function GET(ctx: ApiContext): Response {
+  const request = ctx.req;
   const path = pathOf(request);
   if (path === "/api/orders") return list(request);
   const id = idSeg(path);
@@ -143,9 +145,10 @@ export function GET(request: Request): Response {
   return json(row);
 }
 
-export async function POST(request: Request): Promise<Response> {
+export function POST(ctx: ApiContext): Response {
+  const request = ctx.req;
   const path = pathOf(request);
-  const body = await request.json().catch(() => ({})) as Record<
+  const body = (ctx.body ?? {}) as Record<
     string,
     unknown
   >;
@@ -226,9 +229,10 @@ export async function POST(request: Request): Promise<Response> {
   return json({ error: "not_found" }, 404);
 }
 
-export async function PUT(request: Request): Promise<Response> {
+export function PUT(ctx: ApiContext): Response {
+  const request = ctx.req;
   const id = idSeg(pathOf(request));
-  const body = await request.json().catch(() => ({})) as Record<
+  const body = (ctx.body ?? {}) as Record<
     string,
     unknown
   >;
@@ -249,7 +253,8 @@ export async function PUT(request: Request): Promise<Response> {
   return json({ ok: true, row: next });
 }
 
-export function DELETE(request: Request): Response {
+export function DELETE(ctx: ApiContext): Response {
+  const request = ctx.req;
   const id = idSeg(pathOf(request));
   const i = store.findIndex((r) => r.id === id);
   if (i < 0) {

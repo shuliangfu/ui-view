@@ -347,22 +347,24 @@ export default function FormRichTextEditor() {
 
           <section class="space-y-4">
             <Title level={3}>readOnly / disabled</Title>
-            <FormItem label="只读">
-              <RichTextEditor
-                value="<p>只读内容，不可编辑</p>"
-                readOnly
-                toolbarPreset="simple"
-                minHeight="120px"
-              />
-            </FormItem>
-            <FormItem label="禁用">
-              <RichTextEditor
-                value="<p>禁用</p>"
-                disabled
-                toolbarPreset="simple"
-                minHeight="120px"
-              />
-            </FormItem>
+            <div class="space-y-2">
+              <FormItem label="只读">
+                <RichTextEditor
+                  value="<p>只读内容，不可编辑</p>"
+                  readOnly
+                  toolbarPreset="simple"
+                  minHeight="120px"
+                />
+              </FormItem>
+              <FormItem label="禁用">
+                <RichTextEditor
+                  value="<p>禁用</p>"
+                  disabled
+                  toolbarPreset="simple"
+                  minHeight="120px"
+                />
+              </FormItem>
+            </div>
             <CodeBlock
               title="代码示例"
               code={`<RichTextEditor readOnly /> / <RichTextEditor disabled />`}
@@ -375,38 +377,40 @@ export default function FormRichTextEditor() {
           </section>
           <section class="space-y-4">
             <Title level={3}>size（xs / sm / md / lg）</Title>
-            <FormItem label="xs">
-              <RichTextEditor
-                size="xs"
-                toolbarPreset="simple"
-                placeholder="xs"
-                minHeight="120px"
-              />
-            </FormItem>
-            <FormItem label="sm">
-              <RichTextEditor
-                size="sm"
-                toolbarPreset="simple"
-                placeholder="sm"
-                minHeight="120px"
-              />
-            </FormItem>
-            <FormItem label="md（默认）">
-              <RichTextEditor
-                size="md"
-                toolbarPreset="simple"
-                placeholder="md"
-                minHeight="120px"
-              />
-            </FormItem>
-            <FormItem label="lg">
-              <RichTextEditor
-                size="lg"
-                toolbarPreset="simple"
-                placeholder="lg"
-                minHeight="120px"
-              />
-            </FormItem>
+            <div class="space-y-2">
+              <FormItem label="xs">
+                <RichTextEditor
+                  size="xs"
+                  toolbarPreset="simple"
+                  placeholder="xs"
+                  minHeight="120px"
+                />
+              </FormItem>
+              <FormItem label="sm">
+                <RichTextEditor
+                  size="sm"
+                  toolbarPreset="simple"
+                  placeholder="sm"
+                  minHeight="120px"
+                />
+              </FormItem>
+              <FormItem label="md（默认）">
+                <RichTextEditor
+                  size="md"
+                  toolbarPreset="simple"
+                  placeholder="md"
+                  minHeight="120px"
+                />
+              </FormItem>
+              <FormItem label="lg">
+                <RichTextEditor
+                  size="lg"
+                  toolbarPreset="simple"
+                  placeholder="lg"
+                  minHeight="120px"
+                />
+              </FormItem>
+            </div>
             <CodeBlock
               title="代码示例"
               code={`<RichTextEditor size="xs" toolbarPreset="simple" minHeight="120px" />

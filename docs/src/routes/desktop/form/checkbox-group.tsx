@@ -323,8 +323,6 @@ export default function FormCheckboxGroup() {
             <FormItem label="错误态">
               <CheckboxGroup
                 options={options}
-                value={[]}
-                onChange={() => {}}
                 error
               />
             </FormItem>
@@ -332,7 +330,6 @@ export default function FormCheckboxGroup() {
               <CheckboxGroup
                 options={options}
                 value={["x"]}
-                onChange={() => {}}
                 disabled
               />
             </FormItem>
@@ -340,14 +337,11 @@ export default function FormCheckboxGroup() {
               title="代码示例"
               code={`<CheckboxGroup
   options={options}
-  value={[]}
-  onChange={() => {}}
   error
 />
 <CheckboxGroup
   options={options}
   value={["x"]}
-  onChange={() => {}}
   disabled
 />`}
               language="tsx"

@@ -16,6 +16,7 @@ export {
 export {
   Descriptions,
   type DescriptionsItem,
+  type DescriptionsItemRenderCtx,
   type DescriptionsLabelAlign,
   type DescriptionsLabelHorizontalAlign,
   type DescriptionsLabelVerticalAlign,

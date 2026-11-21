@@ -76,6 +76,25 @@ export const IMAGE_BUILTIN_FALLBACK_SRC: string = "data:image/svg+xml," +
       "</svg>",
   );
 
+/**
+ * 用户 `fallbackSrc` 是否可直接写入 `img.src`。
+ * 内置 SVG data URI 不走此检查，由 {@link IMAGE_BUILTIN_FALLBACK_SRC} 受信写入。
+ */
+function isSafeFallbackSrc(url: string): boolean {
+  if (!url) return false;
+  const lower = url.toLowerCase();
+  if (lower.startsWith("javascript:") || lower.startsWith("vbscript:")) {
+    return false;
+  }
+  if (lower.startsWith("data:")) {
+    return /^data:image\/(png|jpeg|jpg|gif|webp|bmp|avif|x-icon|vnd\.microsoft\.icon)[;,]/
+      .test(
+        lower,
+      );
+  }
+  return true;
+}
+
 export function Image(props: ImageProps): JSXRenderable {
   const {
     key: keyProp,
@@ -96,11 +115,55 @@ export function Image(props: ImageProps): JSXRenderable {
   const statusRef = createSignal<"loading" | "loaded" | "error">("loading");
   const imgElRef = createSignal<HTMLImageElement | null>(null);
 
-  /** 卸载时清空 img.src 以释放解码位图内存，减轻轮播等多图场景占用 */
+  /**
+   * 失败占位地址：用户显式传入非空 `fallbackSrc` 时优先，否则用内置 SVG。
+   *
+   * 内置 `data:image/svg+xml` 不能走 JSX `src`：@dreamer/view 的 `sanitizeUrl`
+   * 会把它当作可执行 data MIME 丢掉（防 href／style XSS），结果 src 被摘掉，
+   * 只剩浏览器裂图图标。写入 DOM 属性与 Carousel 相同，仅用于这份受信内置图；
+   * 用户 `fallbackSrc` 仅接受相对地址、http(s)、blob 与栅格 data:image。
+   */
+  const userFallbackSrc =
+    typeof fallbackSrc === "string" && fallbackSrc.trim() !== ""
+      ? fallbackSrc.trim()
+      : "";
+  const errorPlaceholderSrc = isSafeFallbackSrc(userFallbackSrc)
+    ? userFallbackSrc
+    : IMAGE_BUILTIN_FALLBACK_SRC;
+
+  const applyErrorPlaceholder = (el: HTMLImageElement) => {
+    if (el.getAttribute("src") !== errorPlaceholderSrc) {
+      el.src = errorPlaceholderSrc;
+    }
+  };
+
+  /** 进入失败态并换上占位图；已在 error 时再触发则忽略，避免 onError 抖动。 */
+  const enterError = () => {
+    if (statusRef.value === "error") return;
+    statusRef.value = "error";
+    const el = imgElRef.value;
+    if (el) applyErrorPlaceholder(el);
+  };
+
+  /**
+   * 主资源成功解码为 `loaded`。失败态下主图已换成占位图，其 `load` 不得把状态改回 loaded。
+   */
+  const onImgLoad = (ev: Event) => {
+    if (statusRef.value === "error") return;
+    const el = ev.currentTarget as HTMLImageElement;
+    if (el.naturalWidth <= 0 && el.naturalHeight <= 0) return;
+    statusRef.value = "loaded";
+  };
+  const onImgError = () => enterError();
+
+  /** 卸载时摘掉监听并清空 img.src，释放解码位图内存 */
   createEffect(() => {
     onCleanup(() => {
       const el = imgElRef.value;
-      if (el && el.src) el.src = "";
+      if (!el) return;
+      el.removeEventListener("load", onImgLoad);
+      el.removeEventListener("error", onImgError);
+      if (el.src) el.src = "";
     });
   });
 
@@ -108,15 +171,18 @@ export function Image(props: ImageProps): JSXRenderable {
    * 重定向后 onLoad 可能不触发，定时检查 `complete` + `naturalWidth` 作为补救。
    * 破损图也会 `complete === true`，须用 `naturalWidth > 0` 区分，否则会误判为 loaded；
    * 且不可仅用 `complete`，否则与 onError 竞态时行为混乱。
+   * 已 complete 的破损图立即 enterError，不等 2 秒。
    */
   createEffect(() => {
     const el = imgElRef.value;
     if (!el || statusRef.value !== "loading") return;
-    const t = setTimeout(() => {
+    const settle = () => {
+      if (statusRef.value !== "loading") return;
       if (el.complete && el.naturalWidth > 0) statusRef.value = "loaded";
-      /** 少数环境错误 URL 不触发 onError，长期 loading + opacity-0 会像空白块 */
-      else if (el.complete && el.naturalWidth <= 0) statusRef.value = "error";
-    }, 2000);
+      else if (el.complete && el.naturalWidth <= 0) enterError();
+    };
+    settle();
+    const t = setTimeout(settle, 2000);
     return () => clearTimeout(t);
   });
 
@@ -131,35 +197,6 @@ export function Image(props: ImageProps): JSXRenderable {
   const roundedCls = typeof rounded === "boolean"
     ? rounded ? "rounded" : ""
     : roundedClasses[rounded] ?? "rounded";
-
-  /**
-   * 失败层展示用图片地址：用户显式传入非空 `fallbackSrc` 时优先，否则用内置 SVG。
-   */
-  const errorPlaceholderSrc =
-    typeof fallbackSrc === "string" && fallbackSrc.trim() !== ""
-      ? fallbackSrc.trim()
-      : IMAGE_BUILTIN_FALLBACK_SRC;
-
-  /**
-   * 主资源成功解码为 `loaded`。失败态下主图 `src` 已换成 {@link errorPlaceholderSrc}，其 `load` 不得把状态改回 loaded。
-   *
-   * @param ev - 原生 load 事件（取 `currentTarget` 读解码结果）
-   */
-  const handleLoad = (ev: Event) => {
-    if (statusRef.value === "error") return;
-    const el = ev.currentTarget as HTMLImageElement;
-    if (el.naturalWidth <= 0 && el.naturalHeight <= 0) return;
-    statusRef.value = "loaded";
-  };
-
-  /**
-   * 主 `src` 加载失败：随后由响应式绑定把主图 `src` 换成内置/自定义占位图（同一 `<img>`）。
-   * 已在 `error` 时再触发（例如用户 `fallbackSrc` 也无效）则不再写入，避免 onError 抖动循环。
-   */
-  const handleError = () => {
-    if (statusRef.value === "error") return;
-    statusRef.value = "error";
-  };
 
   const handleClick = () => {
     if (
@@ -188,18 +225,19 @@ export function Image(props: ImageProps): JSXRenderable {
   };
 
   /**
-   * 使用 `return () => (...)` 时：**勿在 JSX 顶层直接读 `statusRef.value`**（含 `{status && …}` 条件子节点）。
-   * 否则外层 `insert(parent, thunk)` 的 `createEffect` 会订阅 `statusRef`，每次 loading/error 切换都会
-   * `cleanNode` 并整段重建 DOM（与兄弟节点数组尾锚 `view:array-end` 一起闪）。
+   * 须返回稳定宿主，勿用 `return () =>` 包住整棵树。也**勿在 JSX 顶层直接读 `statusRef.value`**
+   * （含 `{status && …}` 条件子节点），否则外层 `insert` 的 effect 会订阅 `statusRef`，
+   * 每次 loading/error 切换都会 `cleanNode` 并整段重建 DOM（与兄弟节点数组尾锚一起闪）。
    *
-   * 状态只应在**原生节点**的函数型 props 内读取：`setProperty` 会为 `src`/`class` 单独挂 `createRenderEffect`，
+   * 状态只应在**原生节点**的函数型 props 内读取：`setProperty` 会为 `class` 等单独挂 `createRenderEffect`，
    * 只改属性、不换节点。`placeholder` 用常驻覆盖层 + `hidden` 切换，子节点个数不变。
    *
    * `<img>` 须保持为第一个子节点，避免先插覆盖层再挂 img 时协调器误换 img 实例（见历史 issue）。
    *
-   * 失败时主图 **`src` 改为** {@link errorPlaceholderSrc}（同一 `<img>`）。
+   * JSX `src` 只绑主资源，失败时由 {@link applyErrorPlaceholder} 直接改 DOM
+   * （同一 `<img>`），避免内置 SVG data URI 被 sanitizeUrl 摘掉。
    */
-  return () => (
+  return (
     <div
       key={keyProp}
       class={twMerge(
@@ -211,9 +249,18 @@ export function Image(props: ImageProps): JSXRenderable {
     >
       <img
         ref={(el: unknown) => {
-          imgElRef.value = el as HTMLImageElement | null;
+          const node = el as HTMLImageElement | null;
+          const prev = imgElRef.value;
+          if (prev && prev !== node) {
+            prev.removeEventListener("load", onImgLoad);
+            prev.removeEventListener("error", onImgError);
+          }
+          imgElRef.value = node;
+          if (!node) return;
+          node.addEventListener("load", onImgLoad);
+          node.addEventListener("error", onImgError);
         }}
-        src={() => statusRef.value === "error" ? errorPlaceholderSrc : src}
+        src={src}
         loading={() => statusRef.value === "error" || !lazy ? "eager" : "lazy"}
         referrerPolicy="no-referrer"
         aria-hidden={() => statusRef.value === "loading" ? true : undefined}
@@ -232,8 +279,8 @@ export function Image(props: ImageProps): JSXRenderable {
             preview && !previewDisabled && statusRef.value === "loaded" &&
               "cursor-zoom-in",
           )}
-        onLoad={handleLoad}
-        onError={handleError}
+        onLoad={onImgLoad}
+        onError={onImgError}
         onClick={handleClick}
       />
       {_placeholder

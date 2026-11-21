@@ -131,14 +131,14 @@ describe("文档页 E2E：/desktop/data-display/statistic（Statistic 统计）"
   }, DOCS_BROWSER_CONFIG);
 
   /**
-   * 文档小节「趋势箭头（数字正负自动判断）」：在 main 内定位对应 h3，于该示例区块内完成一次交互。
+   * 文档小节「趋势箭头（显式 trend）」：在 main 内定位对应 h3，于该示例区块内完成一次交互。
    */
-  it("严格·趋势箭头（数字正负自动判断）", async (t) => {
+  it("严格·趋势箭头（显式 trend）", async (t) => {
     if (!t?.browser?.goto) return;
     await sharedEnv.goto(t, DOC_PATH);
     await sharedEnv.waitDocMainReady(t);
     const ok = await t.browser.evaluate(() => {
-      const needle = "趋势箭头（数字正负自动判断）";
+      const needle = "趋势箭头（显式 trend）";
       const main = document.querySelector("main");
       if (!main) return false;
       const heads = main.querySelectorAll("h2, h3");

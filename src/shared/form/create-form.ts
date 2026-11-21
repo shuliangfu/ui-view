@@ -190,7 +190,9 @@ function readEventValue(e: Event): unknown {
   } | null;
   if (!t) return undefined;
   if (t.type === "checkbox") return !!t.checked;
-  if (t.type === "number") {
+  // 原生 range 同样提供 valueAsNumber；转成字符串会让 Slider 的受控数值
+  // 在输入后退回 min，破坏文档承诺的 form.bind("score") 联用。
+  if (t.type === "number" || t.type === "range") {
     return t.value === "" ? "" : t.valueAsNumber;
   }
   return t.value;

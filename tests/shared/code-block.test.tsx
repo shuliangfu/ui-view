@@ -21,7 +21,7 @@ describe("CodeBlock maxHeight", () => {
         />
       )),
     );
-    expect(h).toContain("max-height:384px");
+    expect(h.replace(/:\s+/g, ":")).toContain("max-height:384px");
     expect(h).toContain("overflow-auto");
     expect(h).toContain("overflow-visible");
   });
@@ -37,6 +37,6 @@ describe("CodeBlock maxHeight", () => {
         />
       )),
     );
-    expect(h).toContain("max-height:24rem");
+    expect(h.replace(/:\s+/g, ":")).toContain("max-height:24rem");
   });
 });

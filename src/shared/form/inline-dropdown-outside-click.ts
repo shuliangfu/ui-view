@@ -7,6 +7,10 @@ import { isDomElement } from "../dom-guards.ts";
  */
 
 import { createEffect, createRenderEffect, onCleanup } from "@dreamer/view";
+import {
+  type PickerOverlayDisposeSlot,
+  registerPickerFixedOverlayPositionAndOutsideClick,
+} from "./picker-portal-utils.ts";
 
 /** 浮层根节点：关闭时 `hidden` + `aria-hidden`，避免依赖 Show 卸载导致委托句柄丢失。 */
 export const inlineDropdownPanelHiddenClass = "hidden";
@@ -85,7 +89,7 @@ export function eventTargetInsideRoot(
 }
 
 /**
- * 用 `elementsFromPoint` 兜底：叠层导致 `target` 落在 root 外时仍视为内部点击。
+ * 用 `elementsFromPoint` 最上层命中兜底重绘后的目标判断；不穿透外部遮挡层。
  *
  * @param e 鼠标类事件。
  * @param root 组件根。
@@ -122,13 +126,9 @@ export function pressEventLikelyInsideRoot(
   }
   if (!stack || stack.length === 0) return false;
 
-  for (let i = 0; i < stack.length; i++) {
-    const el = stack[i]!;
-    if (isDomElement(el) && root.contains(el)) {
-      return true;
-    }
-  }
-  return false;
+  // 仅最上层实际命中有效；被页头等遮住的全屏下拉遮罩不能把外部点击算成内部。
+  const top = stack.find(isDomElement);
+  return top != null && root.contains(top);
 }
 
 /**
@@ -199,5 +199,64 @@ export function installInlineDropdownOutsideClickClose(
         doc.removeEventListener("click", onClickOutsideBubble, false);
       }
     });
+  });
+}
+
+/**
+ * 当 `panelAttach="viewport"` 且浮层打开时，把 listbox 改为视口 `fixed` 并跟随触发器，
+ * 避免被表格 `overflow-x-auto` / 单元格裁切。最小宽度取 `panelMinWidth` 与触发器宽度的较大值。
+ *
+ * @param isViewport 是否使用视口定位。
+ * @param isOpen 浮层是否打开。
+ * @param getPanel listbox 根节点。
+ * @param triggerRef 触发器。
+ * @param close 点外部时关闭。
+ * @param panelMinWidth 最小宽度（像素），多选顶栏按钮需要约 216。
+ */
+export function bindFixedDropdownPanelWhenOpen(
+  isViewport: () => boolean,
+  isOpen: () => boolean,
+  getPanel: () => HTMLElement | null,
+  triggerRef: { current: HTMLElement | null },
+  close: () => void,
+  panelMinWidth?: number,
+): void {
+  const outsideSlot: PickerOverlayDisposeSlot = { dispose: null };
+  const scrollSlot: PickerOverlayDisposeSlot = { dispose: null };
+
+  const clear = (panel?: HTMLElement | null): void => {
+    outsideSlot.dispose?.();
+    scrollSlot.dispose?.();
+    outsideSlot.dispose = null;
+    scrollSlot.dispose = null;
+    if (!panel) return;
+    panel.style.removeProperty("top");
+    panel.style.removeProperty("left");
+    panel.style.removeProperty("z-index");
+    panel.style.removeProperty("min-width");
+  };
+
+  createEffect(() => {
+    if (!isViewport() || !isOpen()) {
+      clear(getPanel());
+      return;
+    }
+    const panel = getPanel();
+    if (!panel) return;
+    queueMicrotask(() => {
+      if (!isViewport() || !isOpen() || getPanel() !== panel) return;
+      const tw = triggerRef.current?.getBoundingClientRect().width ?? 0;
+      const minW = Math.max(panelMinWidth ?? 0, tw);
+      if (minW > 0) panel.style.minWidth = `${Math.round(minW)}px`;
+      registerPickerFixedOverlayPositionAndOutsideClick(
+        panel,
+        triggerRef,
+        close,
+        outsideSlot,
+        scrollSlot,
+        { panelMinWidth: minW || undefined, marginBelow: 4 },
+      );
+    });
+    onCleanup(() => clear(panel));
   });
 }

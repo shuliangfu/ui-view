@@ -33,7 +33,7 @@ export interface CarouselProps {
   current?: number | (() => number);
   /** 切换回调 */
   onChange?: (index: number) => void;
-  /** 是否自动播放 */
+  /** 是否自动播放；悬停在轮播区域内时暂停，移出后重新计时 */
   autoplay?: boolean;
   /** 自动播放间隔（ms），默认 5000 */
   interval?: number;
@@ -119,9 +119,3 @@ export function carouselSlidesInfo(p: CarouselProps): {
   const slides = Array.isArray(ch) ? ch : ch != null ? [ch] : [];
   return { useImages: false, images: undefined, slides, count: slides.length };
 }
-
-/**
- * 计算到「下一 `period` 毫秒墙钟边界」的延时，供自动播链式 `setTimeout` 的下一拍调度（与 ui-preact 一致）。
- *
- * @param period - 已含 `Math.max(400, interval, speed+160)` 的周期（毫秒）
- */

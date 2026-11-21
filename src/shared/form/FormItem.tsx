@@ -203,6 +203,14 @@ export function FormItem(props: FormItemProps): JSXRenderable {
               el.className = twMerge(baseClass, hasErr && errorBorderCls);
               if (hasErr) el.setAttribute("role", "alert");
               else el.removeAttribute("role");
+              // bind() 的 error getter 经对象展开会成为初始快照。
+              // 与错误边框同一细粒度 effect 同步原生控件语义，不重挂载输入节点。
+              if ((formStore && name) || error != null) {
+                const control = el.ownerDocument.getElementById(controlId);
+                if (control && el.contains(control)) {
+                  control.setAttribute("aria-invalid", String(hasErr));
+                }
+              }
             });
           }}
         >

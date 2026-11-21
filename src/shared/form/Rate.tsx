@@ -5,21 +5,15 @@
  * 外壳稳定；星面与 aria-valuenow 由局部 getter / effect 订阅 value，避免整段重建。
  */
 
-import {
-  createEffect,
-  createRef,
-  type JSXRenderable,
-  useContext,
-} from "@dreamer/view";
+import { type JSXRenderable, useContext } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
-import { resolveFormControlSize } from "./form-control-context.ts";
+import {
+  resolveFormControlDisabled,
+  resolveFormControlSize,
+} from "./form-control-context.ts";
 import { FormItemControlIdContext } from "./form-item-control-id.ts";
 import { controlErrorBorder } from "./input-focus-ring.ts";
-import {
-  commitMaybeSignal,
-  type MaybeSignal,
-  readMaybeSignal,
-} from "./maybe-signal.ts";
+import { createOptionalValueState, type MaybeSignal } from "./maybe-signal.ts";
 import type { SizeVariant } from "../types.ts";
 
 /**
@@ -47,6 +41,8 @@ export interface RateProps {
    * 为 true 时：用鼠标点某颗星**左半边**选 `idx-0.5`、**右半边**选 `idx`；仅设 `value` 为 3.5 也会画出「半颗橙」。
    */
   allowHalf?: boolean;
+  /** 再次点击当前分数对应的星时清零；默认 false，以免改变既有点选行为 */
+  allowClear?: boolean;
   /** 是否禁用 */
   disabled?: boolean;
   /** 错误状态（容器红框 + aria-invalid）；可与 FormItem / createForm bindValue 联用 */
@@ -98,7 +94,8 @@ export function Rate(props: RateProps): JSXRenderable {
     count = 5,
     value,
     allowHalf = false,
-    disabled = false,
+    allowClear = false,
+
     error = false,
     onChange,
     class: className,
@@ -106,25 +103,16 @@ export function Rate(props: RateProps): JSXRenderable {
     id,
     messages,
   } = props;
+  const disabled = resolveFormControlDisabled(props.disabled);
+  const selected = createOptionalValueState(value, 0);
   const m = { ...defaultRateMessages, ...messages };
   const size = resolveFormControlSize(sizeProp);
   const starClsSized = twMerge(starCls, starSizeClasses[size]);
-  const rootRef = createRef<HTMLElement>();
   const fromFormItem = useContext(FormItemControlIdContext);
   const resolvedId = id ?? fromFormItem;
 
-  /** 与 {@link AutoComplete} 相同：aria 写回 DOM，勿把 value 绑进会重建外壳的 getter */
-  createEffect(() => {
-    const v = readMaybeSignal(value) ?? 0;
-    const node = rootRef.current;
-    if (node != null) {
-      node.setAttribute("aria-valuenow", String(v));
-    }
-  });
-
   return (
     <span
-      ref={rootRef}
       id={resolvedId}
       class={twMerge(
         "inline-flex gap-0.5 rounded-md",
@@ -134,6 +122,7 @@ export function Rate(props: RateProps): JSXRenderable {
         className,
       )}
       role="slider"
+      aria-valuenow={() => selected.read()}
       aria-valuemin={0}
       aria-valuemax={count}
       aria-readonly={disabled}
@@ -144,12 +133,12 @@ export function Rate(props: RateProps): JSXRenderable {
           <input
             type="hidden"
             name={name}
-            value={() => String(readMaybeSignal(value) ?? 0)}
+            value={() => String(selected.read())}
           />
         )
         : null}
       {() => {
-        const v = readMaybeSignal(value) ?? 0;
+        const v = selected.read();
         return Array.from({ length: count }, (_, i) => {
           const idx = i + 1;
           const full = v >= idx;
@@ -161,16 +150,20 @@ export function Rate(props: RateProps): JSXRenderable {
               onClick={(e: Event) => {
                 if (disabled) return;
                 const next = scoreFromStarClick(e, idx, allowHalf);
-                commitMaybeSignal(value, next);
-                onChange?.(next);
+                const cur = selected.read();
+                const written = allowClear && next === cur ? 0 : next;
+                selected.commit(written);
+                onChange?.(written);
               }}
               onKeyDown={(e: Event) => {
                 const ev = e as KeyboardEvent;
                 if (disabled) return;
                 /** 键盘仅选整星，与鼠标左/右半边语义一致的可读默认 */
                 if (ev.key === "Enter" || ev.key === " ") {
-                  commitMaybeSignal(value, idx);
-                  onChange?.(idx);
+                  const cur = selected.read();
+                  const written = allowClear && idx === cur ? 0 : idx;
+                  selected.commit(written);
+                  onChange?.(written);
                 }
               }}
               role="button"

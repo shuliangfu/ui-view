@@ -329,6 +329,13 @@ const exampleCreateForm = `const form = createForm({
 </Form>`;
 
 /** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+const exampleFormDisabled = `<Form disabled>
+  <FormItem label="姓名">
+    <Input placeholder="整表禁用后不可编辑" />
+  </FormItem>
+  <Button type="submit">提交</Button>
+</Form>`;
+
 export const metadata = {
   title: "Form · FormItem · FormList · createForm · ui-view",
 };
@@ -576,10 +583,10 @@ export default function FormContainersDoc() {
                 class="w-full max-w-md border border-dashed border-slate-200 dark:border-slate-600 rounded-lg p-4"
               >
                 <FormItem label="账号" id="fc-v1">
-                  <Input id="fc-v1" placeholder="vertical" value="" />
+                  <Input id="fc-v1" placeholder="vertical" />
                 </FormItem>
                 <FormItem label="备注" id="fc-v2">
-                  <Input id="fc-v2" placeholder="第二行" value="" />
+                  <Input id="fc-v2" placeholder="第二行" />
                 </FormItem>
               </Form>
             </div>
@@ -592,10 +599,10 @@ export default function FormContainersDoc() {
                 class="w-full max-w-md border border-dashed border-slate-200 dark:border-slate-600 rounded-lg p-4"
               >
                 <FormItem label="账号" id="fc-h1">
-                  <Input id="fc-h1" placeholder="horizontal" value="" />
+                  <Input id="fc-h1" placeholder="horizontal" />
                 </FormItem>
                 <FormItem label="备注" id="fc-h2">
-                  <Input id="fc-h2" placeholder="第二项" value="" />
+                  <Input id="fc-h2" placeholder="第二项" />
                 </FormItem>
               </Form>
             </div>
@@ -608,10 +615,10 @@ export default function FormContainersDoc() {
                 class="w-full border border-dashed border-slate-200 dark:border-slate-600 rounded-lg p-4"
               >
                 <FormItem label="关键词" id="fc-i1">
-                  <Input id="fc-i1" placeholder="inline" value="" />
+                  <Input id="fc-i1" placeholder="inline" />
                 </FormItem>
                 <FormItem label="类型" id="fc-i2">
-                  <Input id="fc-i2" placeholder="筛选" value="" />
+                  <Input id="fc-i2" placeholder="筛选" />
                 </FormItem>
               </Form>
             </div>
@@ -658,7 +665,6 @@ export default function FormContainersDoc() {
               <Input
                 id="fc-email"
                 placeholder="左侧标签 + 右对齐"
-                value=""
               />
             </FormItem>
             <FormItem
@@ -667,7 +673,7 @@ export default function FormContainersDoc() {
               labelPosition="outline"
               id="fc-outline"
             >
-              <Input id="fc-outline" value="" />
+              <Input id="fc-outline" />
             </FormItem>
           </Form>
           <CodeBlock
@@ -744,6 +750,27 @@ function renderRow(index: number, { removeButton }: { removeButton: unknown }) {
             maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
+      </section>
+
+      <section class="space-y-4">
+        <Title level={3}>整表禁用</Title>
+        <div class="max-w-sm">
+          <Form disabled>
+            <FormItem label="姓名">
+              <Input placeholder="整表禁用后不可编辑" />
+            </FormItem>
+            <Button type="submit">提交</Button>
+          </Form>
+        </div>
+        <CodeBlock
+          title="代码示例"
+          code={exampleFormDisabled}
+          language="tsx"
+          showLineNumbers
+          copyable
+          wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
+        />
       </section>
 
       <section class="space-y-6">

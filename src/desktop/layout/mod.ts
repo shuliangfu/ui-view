@@ -36,3 +36,11 @@ export type { AccordionItem, AccordionProps } from "./Accordion.tsx";
 
 export { Splitter } from "./Splitter.tsx";
 export type { SplitterProps } from "./Splitter.tsx";
+
+export {
+  formatSplitterSizes,
+  parseSplitterSizes,
+  parseSplitterSizesCookieName,
+  readSplitterSizesCookie,
+  writeSplitterSizesCookie,
+} from "./splitter-sizes-cookie.ts";

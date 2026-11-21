@@ -24,6 +24,30 @@ const TITLE_API: ApiRow[] = [
   },
   { name: "class", type: "string", default: "-", description: "额外 class" },
   { name: "children", type: "unknown", default: "-", description: "标题内容" },
+  {
+    name: "type",
+    type: '"secondary" | "success" | "warning" | "danger"',
+    default: "-",
+    description: "语义色，覆盖默认灰阶",
+  },
+  {
+    name: "strong",
+    type: "boolean",
+    default: "false",
+    description: "加粗",
+  },
+  {
+    name: "code",
+    type: "boolean",
+    default: "false",
+    description: "行内代码样式",
+  },
+  {
+    name: "copyable",
+    type: "boolean",
+    default: "false",
+    description: "文本子节点时可一键复制",
+  },
 ];
 
 const TEXT_API: ApiRow[] = [
@@ -35,11 +59,59 @@ const TEXT_API: ApiRow[] = [
   },
   { name: "class", type: "string", default: "-", description: "额外 class" },
   { name: "children", type: "unknown", default: "-", description: "正文内容" },
+  {
+    name: "type",
+    type: '"secondary" | "success" | "warning" | "danger"',
+    default: "-",
+    description: "语义色，覆盖默认灰阶",
+  },
+  {
+    name: "strong",
+    type: "boolean",
+    default: "false",
+    description: "加粗",
+  },
+  {
+    name: "code",
+    type: "boolean",
+    default: "false",
+    description: "行内代码样式",
+  },
+  {
+    name: "copyable",
+    type: "boolean",
+    default: "false",
+    description: "文本子节点时可一键复制",
+  },
 ];
 
 const PARAGRAPH_API: ApiRow[] = [
   { name: "class", type: "string", default: "-", description: "额外 class" },
   { name: "children", type: "unknown", default: "-", description: "段落内容" },
+  {
+    name: "type",
+    type: '"secondary" | "success" | "warning" | "danger"',
+    default: "-",
+    description: "语义色，覆盖默认灰阶",
+  },
+  {
+    name: "strong",
+    type: "boolean",
+    default: "false",
+    description: "加粗",
+  },
+  {
+    name: "code",
+    type: "boolean",
+    default: "false",
+    description: "行内代码样式",
+  },
+  {
+    name: "copyable",
+    type: "boolean",
+    default: "false",
+    description: "文本子节点时可一键复制",
+  },
 ];
 
 const importCode =
@@ -66,6 +138,11 @@ const exampleParagraph = `<Paragraph>
   多个 Paragraph 纵向堆叠时，可通过外层容器（如 space-y-*）控制段间距；需要首行缩进、
   两端对齐等版式时，请通过 class 传入 Tailwind 工具类覆盖默认样式。
 </Paragraph>`;
+
+const exampleExtras = `<Text type="success">成功</Text>
+<Text type="danger" strong>加粗警告</Text>
+<Text code>code</Text>
+<Text copyable>可复制文本</Text>`;
 
 const exampleTitleLevels = `<Title level={1}>一级标题</Title>
 <Title level={2}>二级标题</Title>
@@ -168,6 +245,25 @@ export default function BasicTypography() {
           <CodeBlock
             title="代码示例"
             code={exampleParagraph}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
+          />
+        </div>
+
+        <div class="space-y-4">
+          <Title level={3}>语义色、加粗、代码与复制</Title>
+          <p class="flex flex-wrap items-center gap-3">
+            <Text type="success">成功</Text>
+            <Text type="danger" strong>加粗警告</Text>
+            <Text code>code</Text>
+            <Text copyable>可复制文本</Text>
+          </p>
+          <CodeBlock
+            title="代码示例"
+            code={exampleExtras}
             language="tsx"
             showLineNumbers
             copyable

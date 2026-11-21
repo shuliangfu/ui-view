@@ -93,7 +93,6 @@ const typeBorderClasses: Record<AlertType, string> = {
 };
 
 export function Alert(props: AlertProps): JSXRenderable {
-  /** 组件 setup 只跑一次，此 signal 稳定；渲染必须放在 thunk 里才能订阅关闭态。 */
   const dismissed = createSignal(false);
   const confirmOpen = createSignal(false);
 
@@ -104,108 +103,117 @@ export function Alert(props: AlertProps): JSXRenderable {
     props.onClose?.();
   };
 
-  return () => {
-    if (dismissed.value) return null;
-    const closeKey = props.closeKey?.trim() || undefined;
-    if (closeKey && isAlertClosed(closeKey)) return null;
+  /**
+   * 外层直接返回稳定容器，仅在子节点 `{() => ...}` 里读 `dismissed`。
+   * 若整段 `return () =>` 作为组件返回值，会与挂载本组件的 `insert` effect
+   * 同层展平：关闭时重建 `createSignal`，提示条又出现（表现为关不掉）。
+   */
+  return (
+    <div class="contents">
+      {() => {
+        if (dismissed.value) return null;
+        const closeKey = props.closeKey?.trim() || undefined;
+        if (closeKey && isAlertClosed(closeKey)) return null;
 
-    const type = props.type ?? "info";
-    const message = props.message;
-    const description = props.description;
-    const showIcon = props.showIcon ?? true;
-    const closeConfirm = props.closeConfirm?.trim() || undefined;
-    const closable = props.closable ?? Boolean(closeConfirm || closeKey);
-    const banner = props.banner ?? false;
-    const action = props.action;
-    const className = props.class;
-    const children = props.children;
-    /** 合并默认中文文案与外部传入 messages */
-    const m: AlertMessages = {
-      ...defaultAlertMessages,
-      ...(props.messages ?? {}),
-    };
+        const type = props.type ?? "info";
+        const message = props.message;
+        const description = props.description;
+        const showIcon = props.showIcon ?? true;
+        const closeConfirm = props.closeConfirm?.trim() || undefined;
+        const closable = props.closable ?? Boolean(closeConfirm || closeKey);
+        const banner = props.banner ?? false;
+        const action = props.action;
+        const className = props.class;
+        const children = props.children;
+        /** 合并默认中文文案与外部传入 messages */
+        const m: AlertMessages = {
+          ...defaultAlertMessages,
+          ...(props.messages ?? {}),
+        };
 
-    const IconComponent = typeIconMap[type];
-    const borderCls = typeBorderClasses[type];
-    const hasBody = (description != null && description !== "") ||
-      children != null;
-    /** `w-full`：避免放在 `flex`/`inline-flex` 父级时随文案收缩成窄条。
-     * 单行：图标与文字垂直居中；有描述或子内容时图标与标题对齐。 */
-    const baseCls =
-      `flex w-full max-w-full gap-3 p-4 rounded-lg border border-l-4 transition-colors box-border ${
-        hasBody ? "items-start" : "items-center"
-      }`;
-    const bannerCls = banner ? "rounded-none border-l-4" : "";
-    /**
-     * 关闭钮必须是正方形（宽=高），且 self-center，避免在 banner／多行描述的
-     * flex 行里被 stretch 拉高。size-6（24px）与原先 p-1 + 16px 图标接近，
-     * 不放大单行提示里已经正常的关闭高度。
-     */
-    const closeBtnCls =
-      "self-center inline-flex size-6 shrink-0 items-center justify-center rounded p-0 hover:bg-black/10 dark:hover:bg-white/10 opacity-70 hover:opacity-100";
-    const closeBtn = closable
-      ? (
-        <button
-          type="button"
-          aria-label={m.close}
-          class={closeBtnCls}
-          onClick={() => {
-            if (closeConfirm) {
-              confirmOpen.value = true;
-              return;
-            }
-            persistAndDismiss();
-          }}
-        >
-          <svg
-            class="w-4 h-4"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            stroke-width="2"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="M6 18L18 6M6 6l12 12"
-            />
-          </svg>
-        </button>
-      )
-      : null;
-
-    return (
-      <div
-        role="alert"
-        class={twMerge(baseCls, borderCls, bannerCls, className)}
-      >
-        {showIcon && (
-          <span class="shrink-0 w-5 h-5">
-            <IconComponent class="w-full h-full text-current" />
-          </span>
-        )}
-        <div class="flex-1 min-w-0">
-          <div class="font-medium text-sm">{message}</div>
-          {description != null && description !== "" && (
-            <div class="mt-1 text-sm opacity-90">{description}</div>
-          )}
-          {children != null && <div class="mt-2">{children}</div>}
-        </div>
-        {action != null && <div class="shrink-0">{action}</div>}
-        {closeConfirm && closeBtn
+        const IconComponent = typeIconMap[type];
+        const borderCls = typeBorderClasses[type];
+        const hasBody = (description != null && description !== "") ||
+          children != null;
+        /** `w-full`：避免放在 `flex`/`inline-flex` 父级时随文案收缩成窄条。
+         * 单行：图标与文字垂直居中；有描述或子内容时图标与标题对齐。 */
+        const baseCls =
+          `flex w-full max-w-full gap-3 p-4 rounded-lg border border-l-4 transition-colors box-border ${
+            hasBody ? "items-start" : "items-center"
+          }`;
+        const bannerCls = banner ? "rounded-none border-l-4" : "";
+        /**
+         * 关闭钮必须是正方形（宽=高），且 self-center，避免在 banner／多行描述的
+         * flex 行里被 stretch 拉高。size-6（24px）与原先 p-1 + 16px 图标接近，
+         * 不放大单行提示里已经正常的关闭高度。
+         */
+        const closeBtnCls =
+          "self-center inline-flex size-6 shrink-0 items-center justify-center rounded p-0 hover:bg-black/10 dark:hover:bg-white/10 opacity-70 hover:opacity-100";
+        const closeBtn = closable
           ? (
-            <Popconfirm
-              open={confirmOpen}
-              title={closeConfirm}
-              warning
-              class="self-center shrink-0"
-              onConfirm={persistAndDismiss}
+            <button
+              type="button"
+              aria-label={m.close}
+              class={closeBtnCls}
+              onClick={() => {
+                if (closeConfirm) {
+                  confirmOpen.value = true;
+                  return;
+                }
+                persistAndDismiss();
+              }}
             >
-              {closeBtn}
-            </Popconfirm>
+              <svg
+                class="w-4 h-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
           )
-          : closeBtn}
-      </div>
-    );
-  };
+          : null;
+
+        return (
+          <div
+            role="alert"
+            class={twMerge(baseCls, borderCls, bannerCls, className)}
+          >
+            {showIcon && (
+              <span class="shrink-0 w-5 h-5">
+                <IconComponent class="w-full h-full text-current" />
+              </span>
+            )}
+            <div class="flex-1 min-w-0">
+              <div class="font-medium text-sm">{message}</div>
+              {description != null && description !== "" && (
+                <div class="mt-1 text-sm opacity-90">{description}</div>
+              )}
+              {children != null && <div class="mt-2">{children}</div>}
+            </div>
+            {action != null && <div class="shrink-0">{action}</div>}
+            {closeConfirm && closeBtn
+              ? (
+                <Popconfirm
+                  open={confirmOpen}
+                  title={closeConfirm}
+                  warning
+                  class="self-center shrink-0"
+                  onConfirm={persistAndDismiss}
+                >
+                  {closeBtn}
+                </Popconfirm>
+              )
+              : closeBtn}
+          </div>
+        );
+      }}
+    </div>
+  );
 }

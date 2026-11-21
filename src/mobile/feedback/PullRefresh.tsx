@@ -436,8 +436,22 @@ function acquirePullRefreshDomBridge(owner: Owner): PullRefreshDomBridge {
         }
       };
 
+      /**
+       * 已武装的鼠标/指针松手可能落在示意框外，且 `lostpointercapture` 目标是
+       * `setPointerCapture` 的 `scrollEl`：仅在 shell 上听有时收不到结束事件，
+       * 头区会停在「释放即可刷新」且 `onRefresh` 不触发。与 touchend 一样改挂 document。
+       */
+      const docPointerUp = (ev: Event) => {
+        if (!isPointerEventLike(ev)) return;
+        const tracking = refs.activePointerId != null &&
+          refs.activePointerId === (ev as PointerEvent).pointerId;
+        if (!tracking) return;
+        forwardPointerUp(ev);
+      };
+
       /** `touchmove`/`touchend` 优先挂 `document`，无 document 时退回 `shell`（SSR 等） */
       let touchMoveEndHost: "doc" | "shell" = "shell";
+      let pointerUpHost: "doc" | "shell" = "shell";
       if (typeof shell.addEventListener === "function") {
         shell.addEventListener("pointerdown", shellPointerDown, true);
         shell.addEventListener("pointermove", shellPointerMove, ptrMoveOpts);
@@ -453,7 +467,11 @@ function acquirePullRefreshDomBridge(owner: Owner): PullRefreshDomBridge {
         doc.addEventListener("touchmove", docTouchMove, touchMoveOpts);
         doc.addEventListener("touchend", docTouchEnd, touchEndOpts);
         doc.addEventListener("touchcancel", docTouchEnd, touchEndOpts);
+        doc.addEventListener("pointerup", docPointerUp, true);
+        doc.addEventListener("pointercancel", docPointerUp, true);
+        doc.addEventListener("lostpointercapture", docPointerUp, true);
         touchMoveEndHost = "doc";
+        pointerUpHost = "doc";
       } else {
         shell.addEventListener("touchmove", docTouchMove, touchMoveOpts);
         shell.addEventListener("touchend", docTouchEnd, touchEndOpts);
@@ -494,6 +512,15 @@ function acquirePullRefreshDomBridge(owner: Owner): PullRefreshDomBridge {
           doc.removeEventListener("touchmove", docTouchMove, touchMoveOpts);
           doc.removeEventListener("touchend", docTouchEnd, touchEndOpts);
           doc.removeEventListener("touchcancel", docTouchEnd, touchEndOpts);
+        }
+        if (
+          pointerUpHost === "doc" &&
+          doc != null &&
+          typeof doc.removeEventListener === "function"
+        ) {
+          doc.removeEventListener("pointerup", docPointerUp, true);
+          doc.removeEventListener("pointercancel", docPointerUp, true);
+          doc.removeEventListener("lostpointercapture", docPointerUp, true);
         }
       };
     },
@@ -633,59 +660,85 @@ function PullRefreshPullHead(props: PullRefreshPullHeadProps): JSXRenderable {
     <div
       ref={domBridge.setHeadRef}
       data-pull-refresh-head=""
-      class={twMerge(
-        "relative z-10 flex flex-col items-center justify-center gap-1 transition-all duration-200 ease-out",
-        isLoading() || pullDragPx() > 0
-          ? "shrink-0 border-b border-slate-200/90 bg-slate-50/95 px-2 py-1 text-sm shadow-sm dark:border-slate-600/80 dark:bg-slate-900/90 opacity-100"
-          : "pointer-events-none max-h-0 min-h-0 shrink-0 overflow-hidden border-0 bg-transparent p-0 opacity-0 shadow-none",
-      )}
-      style={isLoading() || pullDragPx() > 0
-        ? { minHeight: `${headHeight}px` }
-        : { minHeight: 0, maxHeight: 0 }}
+      class={() =>
+        twMerge(
+          "relative z-10 flex flex-col items-center justify-center gap-1 transition-all duration-200 ease-out",
+          isLoading() || pullDragPx() > 0
+            ? "shrink-0 border-b border-slate-200/90 bg-slate-50/95 px-2 py-1 text-sm shadow-sm dark:border-slate-600/80 dark:bg-slate-900/90 opacity-100"
+            : "pointer-events-none max-h-0 min-h-0 shrink-0 overflow-hidden border-0 bg-transparent p-0 opacity-0 shadow-none",
+        )}
+      style={() => {
+        const expanded = isLoading() || pullDragPx() > 0;
+        /**
+         * 指针路径会给头区写 `opacity: 1 !important` 等行内样式。
+         * 刷新开始时 `syncPullHeadUi` 因 `isLoading` 提前返回，不会清掉这些属性；
+         * 加载结束后若不移除，会压过 Tailwind `opacity-0`，头区无法收起。
+         */
+        if (!expanded) {
+          const el = domBridge.refs.head;
+          if (el) {
+            el.style.removeProperty("max-height");
+            el.style.removeProperty("min-height");
+            el.style.removeProperty("opacity");
+            el.style.removeProperty("overflow");
+            el.style.removeProperty("pointer-events");
+          }
+        }
+        return expanded
+          ? { minHeight: `${headHeight}px` }
+          : { minHeight: 0, maxHeight: 0 };
+      }}
     >
       <div class="flex min-h-0 w-full items-center justify-center gap-2">
-        {isLoading() && (
-          <span
-            class="inline-block h-4 w-4 shrink-0 rounded-full border-2 border-slate-300 border-t-blue-500 animate-spin"
-            aria-hidden="true"
-          />
-        )}
+        {() =>
+          isLoading()
+            ? (
+              <span
+                class="inline-block h-4 w-4 shrink-0 rounded-full border-2 border-slate-300 border-t-blue-500 animate-spin"
+                aria-hidden="true"
+              />
+            )
+            : null}
         <span
           data-pull-refresh-label=""
-          class={twMerge(
-            "truncate text-center font-medium transition-colors duration-150",
-            !isLoading() && pullDragPx() > 0 && pullDragPx() >= pullDistance
-              ? "text-teal-600 dark:text-teal-400"
-              : "text-slate-500 dark:text-slate-400",
-          )}
+          class={() =>
+            twMerge(
+              "truncate text-center font-medium transition-colors duration-150",
+              !isLoading() && pullDragPx() > 0 &&
+                pullDragPx() >= pullDistance
+                ? "text-teal-600 dark:text-teal-400"
+                : "text-slate-500 dark:text-slate-400",
+            )}
         >
-          {isLoading()
-            ? loadingText
-            : pullDragPx() > 0 && pullDragPx() >= pullDistance
-            ? loosingText
-            : pullingText}
+          {() =>
+            isLoading()
+              ? loadingText
+              : pullDragPx() > 0 && pullDragPx() >= pullDistance
+              ? loosingText
+              : pullingText}
         </span>
       </div>
       <div
         data-pull-refresh-progress-track=""
-        class={twMerge(
-          "h-1 w-[6.5rem] max-w-[85%] shrink-0 overflow-hidden rounded-full bg-slate-200/90 dark:bg-slate-600/80",
-          !isLoading() && pullDragPx() > 0
-            ? "opacity-100"
-            : "pointer-events-none h-0 opacity-0",
-        )}
+        class={() =>
+          twMerge(
+            "h-1 w-[6.5rem] max-w-[85%] shrink-0 overflow-hidden rounded-full bg-slate-200/90 dark:bg-slate-600/80",
+            !isLoading() && pullDragPx() > 0
+              ? "opacity-100"
+              : "pointer-events-none h-0 opacity-0",
+          )}
       >
         <div
           data-pull-refresh-progress-inner=""
           class="h-full rounded-full bg-teal-500 transition-[width] duration-75 ease-out dark:bg-teal-400"
-          style={{
+          style={() => ({
             width: `${
               Math.min(
                 100,
                 Math.round((pullDragPx() / pullDistance) * 100),
               )
             }%`,
-          }}
+          })}
         />
       </div>
     </div>
@@ -855,16 +908,11 @@ export function PullRefresh(props: PullRefreshProps): JSXRenderable {
       head.style.removeProperty("overflow");
       head.style.removeProperty("pointer-events");
     }
-    const lab = head.querySelector("[data-pull-refresh-label]");
-    if (!isHtmlElement(lab)) return;
-    const armed = delta >= pullDistance;
-    lab.textContent = armed ? loosingText : pullingText;
-    lab.className = twMerge(
-      "truncate text-center font-medium transition-colors duration-150",
-      armed
-        ? "text-teal-600 dark:text-teal-400"
-        : "text-slate-500 dark:text-slate-400",
-    );
+    /**
+     * 文案由 {@link PullRefreshChrome} 的 `{() => isLoading() ? loadingText : ...}` 负责。
+     * 若在此写 `label.textContent`，会拆掉该绑定：松手后 `loading` 已为 true、转圈已出现，
+     * 标签却仍停在拖动时写入的「释放即可刷新...」。
+     */
     const track = head.querySelector("[data-pull-refresh-progress-track]");
     const inner = head.querySelector("[data-pull-refresh-progress-inner]");
     if (isHtmlElement(track) && isHtmlElement(inner)) {
@@ -1034,19 +1082,12 @@ export function PullRefresh(props: PullRefreshProps): JSXRenderable {
   const handlePointerUp = (e: PointerEvent) => {
     if (e.pointerType === "touch") {
       /**
-       * 触摸以 `touchend`/`touchcancel` 为主结束；但浏览器常在触摸结束前派发 **`pointercancel`**，
-       * 原逻辑直接 `return` 导致从不 `resetPullDragPx`/`syncPullHeadUi(0)`，头区会卡在 imperative 写的「下拉即可刷新」展开态。
-       * `pointercancel`/`lostpointercapture` 时若仍武装触摸 id，按**手势被系统终止**清理（不触发 `onRefresh`）。
-       * 正常松手仍以 `touchend` → {@link handleTouchEnd} 为准；若已清理则此处 `activeTouchIdentifier` 已为 null。
+       * 触摸主线仍以 `touchend` / `touchcancel` 结束。Chromium 在 CDP 触摸或桌面触摸模拟里
+       * 常在 `touchend` **之前**派发 `pointerup` + `lostpointercapture`（有时还有 `pointercancel`）。
+       * 若在这里清掉 `activeTouchIdentifier`，随后的 `touchend` 会直接返回，`onRefresh` 永不触发
+       * （官方用例第二轮原生触摸即因此失败：拖动已到「释放即可刷新」，松手后文案回到「下拉即可刷新」）。
+       * 头区收起由 {@link handleTouchEnd} → {@link finishPullGesture} 负责。
        */
-      if (
-        (e.type === "pointercancel" || e.type === "lostpointercapture") &&
-        domBridge.refs.activeTouchIdentifier !== null
-      ) {
-        clearPullTransforms();
-        resetPullDragPx();
-        domBridge.refs.activeTouchIdentifier = null;
-      }
       return;
     }
     if (domBridge.refs.activePointerId === null) return;

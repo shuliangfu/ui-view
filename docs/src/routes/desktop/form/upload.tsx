@@ -430,7 +430,7 @@ export default function FormUpload() {
               <code class="text-xs">name="fileUrl"</code>
               ，当前值：
               <code class="ml-1 text-xs">
-                {hiddenPreview.value || "（空）"}
+                {() => hiddenPreview.value || "（空）"}
               </code>
             </Paragraph>
             <FormItem label="图片 ≤5MB（整文件 multipart + preview）">

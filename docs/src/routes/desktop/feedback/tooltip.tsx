@@ -4,6 +4,7 @@
  */
 
 import { Paragraph, Title } from "@dreamer/ui-view/basic";
+import { createSignal } from "@dreamer/view";
 
 import { CodeBlock } from "@dreamer/ui-view/data-display";
 
@@ -36,6 +37,38 @@ const TOOLTIP_API: ApiRow[] = [
   },
   { name: "children", type: "unknown", default: "-", description: "触发元素" },
   {
+    name: "trigger",
+    type: '"hover" | "click" | "focus"',
+    default: "hover",
+    description:
+      "触发方式。hover 为悬停显示；click 为点击开关，再次点击、点击外部或按 Escape 关闭；focus 为焦点进入显示。",
+  },
+  {
+    name: "hoverOpenDelay",
+    type: "number",
+    default: "0",
+    description: "trigger 为 hover 时，进入触发区后多少 ms 再显示",
+  },
+  {
+    name: "hoverCloseDelay",
+    type: "number",
+    default: "0",
+    description: "trigger 为 hover 时，离开触发区后多少 ms 再收起",
+  },
+  {
+    name: "open",
+    type: "boolean | Signal<boolean> | (() => boolean)",
+    default: "-",
+    description:
+      "受控展开。不传则内部维护。请传 signal 或 getter，不要传 sig.value 快照。",
+  },
+  {
+    name: "onOpenChange",
+    type: "(open: boolean) => void",
+    default: "-",
+    description: "打开或关闭时回调；受控时须在此写回 open",
+  },
+  {
     name: "arrow",
     type: "boolean",
     default: "true",
@@ -54,7 +87,7 @@ const TOOLTIP_API: ApiRow[] = [
     type: "boolean | (() => boolean)",
     default: "false",
     description:
-      "为 true 时强制隐藏且不响应悬停；可传 getter（如 Popconfirm 打开时压掉同锚点 tip）。按下触发器也会收起 tip。",
+      "为 true 时强制隐藏且不响应触发；可传 getter（如 Popconfirm 打开时压掉同锚点 tip）。hover 模式下按下触发器也会收起 tip。",
   },
   {
     name: "messages",
@@ -73,11 +106,29 @@ const importCode = `import { Tooltip } from "@dreamer/ui-view/feedback";
   <span>悬停我</span>
 </Tooltip>`;
 
+const tooltipDocOpen = createSignal(false);
+
+const exampleControlled = `<Tooltip
+  content="受控提示"
+  trigger="click"
+  open={open}
+  onOpenChange={(v) => open.value = v}
+>
+  <button type="button">点击开关</button>
+</Tooltip>
+<Tooltip content="延迟 400ms 后显示" hoverOpenDelay={400} hoverCloseDelay={200}>
+  <span>悬停我</span>
+</Tooltip>`;
+
 const examplePlacement =
   `<Tooltip content="上方提示" placement="top"><span>Top</span></Tooltip>
 <Tooltip content="右侧提示" placement="right"><span>Right</span></Tooltip>
 <Tooltip content="下方提示" placement="bottom"><span>Bottom</span></Tooltip>
 <Tooltip content="左侧提示" placement="left"><span>Left</span></Tooltip>`;
+
+const exampleClick = `<Tooltip content="点击后显示" trigger="click">
+  <button type="button">点击我</button>
+</Tooltip>`;
 
 const exampleLong =
   `<Tooltip content="这是一段较长的提示文案，用于说明当前操作的注意事项。">
@@ -92,7 +143,7 @@ const exampleNoArrow = `<Tooltip
 </Tooltip>`;
 
 const exampleAuto = `<div class="flex justify-end">
-  <Tooltip content="右边被挡时向左展开，箭头跟随实际方位" placement="auto">
+  <Tooltip content="优先上方，空间不足时选择其它方位，箭头跟随实际方位" placement="auto">
     <span>靠右悬停</span>
   </Tooltip>
 </div>`;
@@ -108,7 +159,8 @@ export default function FeedbackTooltip() {
       <section>
         <Title level={1}>Tooltip 悬停提示</Title>
         <Paragraph class="mt-2">
-          悬停提示：触发器悬停时显示气泡；支持 placement（含 auto
+          悬停提示：默认悬停显示气泡，也可 trigger=&quot;click&quot; 或
+          trigger=&quot;focus&quot;；支持 placement（含 auto
           贴边翻转）、箭头。有 <code class="text-xs">document.body</code>{" "}
           时气泡经 <code class="text-xs">createPortal</code> 挂到 body，
           <code class="text-xs">fixed</code> 对齐视口，避免父级{" "}
@@ -173,6 +225,29 @@ export default function FeedbackTooltip() {
         </div>
 
         <div class="space-y-4">
+          <Title level={3}>点击触发（trigger=click）</Title>
+          <div class="pt-4">
+            <Tooltip content="点击后显示" trigger="click">
+              <button
+                type="button"
+                class="px-3 py-1.5 rounded bg-slate-200 dark:bg-slate-600"
+              >
+                点击我
+              </button>
+            </Tooltip>
+          </div>
+          <CodeBlock
+            title="代码示例"
+            code={exampleClick}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
+          />
+        </div>
+
+        <div class="space-y-4">
           <Title level={3}>长文案</Title>
           <div class="pt-4">
             <Tooltip content="这是一段较长的提示文案，用于说明当前操作的注意事项。">
@@ -216,13 +291,13 @@ export default function FeedbackTooltip() {
           <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
             触发器贴在视口最右侧。{" "}
             <code class="text-xs">placement=&quot;auto&quot;</code>{" "}
-            时右边被挡会向左展开，箭头跟随实际方位。
+            时优先上方；空间不足时选择其它可用方位，并夹在视口内，箭头跟随实际方位。
           </Paragraph>
           <div class="-mr-3 sm:-mr-6 lg:-mr-10 pr-2">
             <div class="rounded-lg border border-dashed border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/40 px-3 py-3">
               <div class="flex justify-end">
                 <Tooltip
-                  content="右边被挡时向左展开，箭头跟随实际方位"
+                  content="优先上方，空间不足时选择其它方位，箭头跟随实际方位"
                   placement="auto"
                 >
                   <span
@@ -236,8 +311,40 @@ export default function FeedbackTooltip() {
             </div>
           </div>
           <CodeBlock
-            title="代码示例（贴右边，auto 向左展开）"
+            title="代码示例（贴右边，auto 自适应）"
             code={exampleAuto}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
+          />
+        </div>
+
+        <div class="space-y-4">
+          <Title level={3}>受控打开与延迟</Title>
+          <div class="flex flex-wrap items-center gap-4">
+            <Tooltip
+              content="受控提示"
+              trigger="click"
+              open={tooltipDocOpen}
+              onOpenChange={(v) => {
+                tooltipDocOpen.value = v;
+              }}
+            >
+              <button type="button">点击开关</button>
+            </Tooltip>
+            <Tooltip
+              content="延迟 400ms 后显示"
+              hoverOpenDelay={400}
+              hoverCloseDelay={200}
+            >
+              <span>悬停我</span>
+            </Tooltip>
+          </div>
+          <CodeBlock
+            title="代码示例"
+            code={exampleControlled}
             language="tsx"
             showLineNumbers
             copyable

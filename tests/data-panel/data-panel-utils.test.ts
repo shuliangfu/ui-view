@@ -796,7 +796,7 @@ describe("createLocalDataSource：写操作", () => {
     expect(s.list(Q).rows[0].name).toBe("I2");
   });
 
-  it("setRows 整体替换；writable=false 时没有写方法", () => {
+  it("setRows 整体替换；writable=false 时没有增删方法，仍可 setField", () => {
     const s = createLocalDataSource({ rows: rows(4), columns: COLUMNS });
     s.setRows([{ id: "9", name: "Only" }]);
     expect(s.list(Q).total).toBe(1);
@@ -806,8 +806,14 @@ describe("createLocalDataSource：写操作", () => {
       writable: false,
     });
     expect(ro.create).toBe(undefined);
+    expect(ro.update).toBe(undefined);
     expect(ro.remove).toBe(undefined);
-    expect(ro.setField).toBe(undefined);
+    expect(ro.importRows).toBe(undefined);
+    expect(ro.setField!(["1"], "role", "viewer")).toEqual({
+      removed: 1,
+      failed: [],
+    });
+    expect(ro.get("1")?.role).toBe("viewer");
     expect(ro.view("1")?.id).toBe("1");
     expect(ro.get("1")).toEqual(ro.view("1"));
     expect(ro.get("missing")).toBe(null);
@@ -1334,5 +1340,116 @@ describe("sumColumnTotals：面板页脚合计", () => {
       [],
       [{ prop: "balance", label: "余额", total: true }],
     )).toEqual({ balance: 0 });
+  });
+});
+
+describe("queryToParams owned URL keys", () => {
+  it("preserves unrelated/other-prefix parameters while clearing own empty/default/fixed keys", () => {
+    const current = new URLSearchParams(
+      "keep=a&keep=b&u_page=3&u_pageSize=20&u_sort=name&u_order=desc&u_name=old&u_role=admin&u_secret=old&v_page=4&v_name=other",
+    );
+    const next = queryToParams({
+      page: 1,
+      pageSize: 20,
+      sort: "",
+      order: "asc",
+      filters: {},
+    }, {
+      forUrl: true,
+      prefix: "u",
+      searchNames: ["name", "role"],
+      fixed: { secret: "fixed" },
+      currentParams: current,
+    });
+    expect([...next.entries()]).toEqual([["keep", "a"], ["keep", "b"], [
+      "v_page",
+      "4",
+    ], ["v_name", "other"]]);
+    expect(current.get("u_name")).toBe("old");
+    const changed = queryToParams({
+      page: 2,
+      pageSize: 5,
+      sort: "name",
+      order: "desc",
+      filters: { name: "new" },
+    }, {
+      forUrl: true,
+      prefix: "u",
+      searchNames: ["name", "role"],
+      currentParams: next,
+    });
+    expect(changed.get("u_name")).toBe("new");
+    expect(changed.get("u_page")).toBe("2");
+    expect(changed.get("v_page")).toBe("4");
+    expect(changed.getAll("keep")).toEqual(["a", "b"]);
+  });
+  it("does not send unrelated address-bar keys in API query parameters", () => {
+    const api = queryToParams({
+      page: 1,
+      pageSize: 20,
+      sort: "",
+      order: "asc",
+      filters: { name: "Alice" },
+    }, {
+      forUrl: false,
+      currentParams: new URLSearchParams("keep=private-ui-state"),
+    });
+    expect(api.get("keep")).toBe(null);
+    expect(api.get("name")).toBe("Alice");
+    expect(api.get("pageSize")).toBe("20");
+  });
+});
+
+describe("datetime local search boundaries", () => {
+  it("normalizes ISO Z records and space/T picker values before eq/from/to comparisons", () => {
+    const rows = [
+      { id: "before", when: new Date(2026, 0, 15, 8, 59).toISOString() },
+      { id: "boundary", when: new Date(2026, 0, 15, 9, 0, 30).toISOString() },
+      { id: "after", when: new Date(2026, 0, 15, 10, 0).toISOString() },
+    ];
+    for (const val of ["2026-01-15 09:00", "2026-01-15T09:00"]) {
+      for (
+        const [match, expected] of [
+          ["eq", ["boundary"]],
+          ["from", ["boundary", "after"]],
+          ["to", ["before", "boundary"]],
+        ] as const
+      ) {
+        expect(
+          filterRows(rows, { when: val }, [{
+            prop: "when",
+            type: "datetime",
+            match,
+          }]).map((r) => r.id),
+        ).toEqual(expected);
+      }
+    }
+  });
+});
+
+describe("datetime explicit matching", () => {
+  it("datetime explicit contains/num retain documented matching semantics", () => {
+    const rows = [{ id: "a", when: "2026-01-15T09:38:00Z" }, {
+      id: "b",
+      when: "2026-01-16T10:00:00Z",
+    }];
+    expect(
+      filterRows(rows, { when: "09:38" }, [{
+        prop: "when",
+        type: "datetime",
+        match: "contains",
+      }]).map((r) => r.id),
+    ).toEqual(["a"]);
+    expect(
+      filterRows(
+        [{ id: "n", when: 1700000000000 }],
+        { when: "1700000000000" },
+        [{
+          prop: "when",
+          type: "datetime",
+          match: "num",
+        }],
+      ).map((r) => r.id),
+    ).toEqual(["n"]);
   });
 });

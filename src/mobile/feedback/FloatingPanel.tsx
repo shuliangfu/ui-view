@@ -120,7 +120,7 @@ export function FloatingPanel(props: FloatingPanelProps): JSXRenderable {
     if (!isOpen()) return null;
     return (
       <div
-        class="fixed inset-0 z-300 flex flex-col justify-end"
+        class="fixed inset-0 z-300 flex flex-col justify-end pointer-events-auto"
         role="dialog"
         aria-modal="true"
       >

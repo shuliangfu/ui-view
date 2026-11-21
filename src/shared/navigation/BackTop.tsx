@@ -6,6 +6,7 @@
 
 import { twMerge } from "tailwind-merge";
 import type { JSXRenderable } from "@dreamer/view";
+import { type MaybeSignal, readMaybeSignal } from "../form/maybe-signal.ts";
 /** 按需：单文件图标，避免经 icons/mod 拉入全表 */
 import { IconChevronUp } from "../basic/icons/ChevronUp.tsx";
 import { isHtmlElement } from "../dom-guards.ts";
@@ -18,8 +19,8 @@ export interface BackTopProps {
   visibilityHeight?: number;
   /** 滚动容器；不传则使用 window */
   target?: BackTopTarget;
-  /** 是否显示（受控）；需配合 onVisibilityChange 由父级根据滚动更新 */
-  visible?: boolean;
+  /** 是否显示（受控）；需配合 onVisibilityChange 由父级根据滚动更新。请传 Signal 或 getter，勿传快照 */
+  visible?: MaybeSignal<boolean>;
   /** 显示/隐藏变化时回调 */
   onVisibilityChange?: (visible: boolean) => void;
   /** 点击时先调用；之后仍会平滑滚顶 */
@@ -150,7 +151,6 @@ export function BackTop(props: BackTopProps): JSXRenderable {
   const {
     visibilityHeight = 200,
     target: targetProp,
-    visible = true,
     onVisibilityChange,
     onClick,
     right = 24,
@@ -189,10 +189,12 @@ export function BackTop(props: BackTopProps): JSXRenderable {
   return (
     <div
       ref={setWrapperRef}
-      class={twMerge(
-        "back-top-host",
-        !visible && "pointer-events-none invisible opacity-0",
-      )}
+      class={() =>
+        twMerge(
+          "back-top-host",
+          !(readMaybeSignal(props.visible) ?? true) &&
+            "pointer-events-none invisible opacity-0",
+        )}
       style={{
         position: "fixed",
         right: `${right}px`,

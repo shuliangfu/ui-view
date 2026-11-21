@@ -107,7 +107,9 @@ export default function DataDisplayTimeline() {
 
         <div class="space-y-4">
           <Title level={3}>mode=left</Title>
-          <Timeline items={items} mode="left" />
+          <div>
+            <Timeline items={items} mode="left" />
+          </div>
           <CodeBlock
             title="代码示例"
             code={exampleLeft}
@@ -124,7 +126,9 @@ export default function DataDisplayTimeline() {
           <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
             轴线在右，文案左右对齐交替；整条时间轴靠右。
           </Paragraph>
-          <Timeline items={items.slice(0, 3)} mode="alternate" />
+          <div>
+            <Timeline items={items.slice(0, 3)} mode="alternate" />
+          </div>
           <CodeBlock
             title="代码示例"
             code={`<Timeline items={items} mode="alternate" />`}
@@ -141,7 +145,9 @@ export default function DataDisplayTimeline() {
           <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
             轴线在右，文案右对齐；整条时间轴靠右。
           </Paragraph>
-          <Timeline items={items.slice(0, 3)} mode="right" />
+          <div>
+            <Timeline items={items.slice(0, 3)} mode="right" />
+          </div>
           <CodeBlock
             title="代码示例"
             code={`<Timeline items={items} mode="right" />`}

@@ -238,6 +238,60 @@ describe("文档页 E2E：/desktop/feedback/popover（Popover 气泡卡片）", 
     expect(ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
 
+  it("严格·点击触发（trigger=click）", async (t) => {
+    if (!t?.browser?.goto) return;
+    await sharedEnv.goto(t, DOC_PATH);
+    await sharedEnv.waitDocMainReady(t);
+    const got = await t.browser.evaluate(async () => {
+      const main = document.querySelector("main");
+      if (!main) return { ok: false, step: "no-main" };
+      const heads = [...main.querySelectorAll("h2, h3")];
+      const heading = heads.find((el) =>
+        (el.textContent || "").includes("点击触发（trigger=click）")
+      );
+      if (!heading) return { ok: false, step: "no-heading" };
+      const root = heading.parentElement;
+      if (!root) return { ok: false, step: "no-root" };
+      const btn = [...root.querySelectorAll("button")].find((b) =>
+        (b.textContent || "").trim() === "点击我"
+      ) as HTMLButtonElement | undefined;
+      if (!btn) return { ok: false, step: "no-button" };
+      const panelOpen = () =>
+        [...document.querySelectorAll("[data-dreamer-placement]")].some((el) =>
+          (el.textContent || "").includes("点击触发器打开")
+        );
+      const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+      btn.click();
+      await wait(80);
+      if (!panelOpen()) return { ok: false, step: "not-open" };
+
+      btn.click();
+      await wait(80);
+      if (panelOpen()) return { ok: false, step: "toggle-still-open" };
+
+      btn.click();
+      await wait(80);
+      if (!panelOpen()) return { ok: false, step: "reopen-failed" };
+
+      document.body.click();
+      await wait(80);
+      if (panelOpen()) return { ok: false, step: "outside-still-open" };
+
+      btn.click();
+      await wait(80);
+      document.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+      );
+      await wait(80);
+      if (panelOpen()) return { ok: false, step: "escape-still-open" };
+
+      return { ok: true, step: "ok" };
+    }) as { ok: boolean; step: string };
+    expect(got.step).toBe("ok");
+    expect(got.ok).toBe(true);
+  }, DOCS_BROWSER_CONFIG);
+
   /**
    * UI·示例区主内容可见且有尺寸。
    */

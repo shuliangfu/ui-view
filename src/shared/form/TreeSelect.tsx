@@ -32,13 +32,13 @@ import {
   nativeSelectSurface,
   pickerTriggerSurface,
 } from "./input-focus-ring.ts";
-import { resolveFormControlSize } from "./form-control-context.ts";
-import { FormItemControlIdContext } from "./form-item-control-id.ts";
 import {
-  commitMaybeSignal,
-  type MaybeSignal,
-  readMaybeSignal,
-} from "./maybe-signal.ts";
+  resolveFormControlDisabled,
+  resolveFormControlSize,
+} from "./form-control-context.ts";
+import { FieldClearSlot } from "./field-clear-button.tsx";
+import { FormItemControlIdContext } from "./form-item-control-id.ts";
+import { createOptionalValueState, type MaybeSignal } from "./maybe-signal.ts";
 import type { SizeVariant } from "../types.ts";
 import { autoFocusAttr, bindAutoFocusRef } from "./auto-focus.ts";
 
@@ -58,6 +58,14 @@ export interface TreeSelectMessages {
   triggerFallback: string;
   /** 下拉列表 `aria-label` */
   listbox: string;
+  /** 清除按钮 `aria-label` */
+  clear: string;
+  /** 搜索框占位 */
+  searchPlaceholder: string;
+  /** 无匹配选项 */
+  noMatch: string;
+  /** 加载中文案 */
+  loading: string;
 }
 
 /** 默认中文文案 */
@@ -65,6 +73,10 @@ export const defaultTreeSelectMessages: TreeSelectMessages = {
   placeholder: "请选择",
   triggerFallback: "树形选择",
   listbox: "树形选项",
+  clear: "清除",
+  searchPlaceholder: "搜索",
+  noMatch: "无匹配选项",
+  loading: "加载中…",
 };
 
 export interface TreeSelectProps {
@@ -92,6 +104,12 @@ export interface TreeSelectProps {
   appearance?: TreeSelectAppearance;
   /** 多语言/自定义文案；未传字段走 {@link defaultTreeSelectMessages} */
   messages?: Partial<TreeSelectMessages>;
+  /** 有值时显示清除按钮 */
+  allowClear?: boolean;
+  /** 在浮层顶部显示搜索框，按路径或节点名过滤 */
+  showSearch?: boolean;
+  /** 加载中：触发器不可打开 */
+  loading?: boolean;
 }
 
 /** 展平后的每一项：下拉里用 nodeLabel + depth，触发条用 fullPath */
@@ -163,7 +181,6 @@ function TreeSelectNativeBranch(props: Omit<TreeSelectProps, "appearance">) {
   const {
     options,
     size: sizeProp,
-    disabled = false,
     onChange,
     onBlur,
     class: className,
@@ -175,6 +192,8 @@ function TreeSelectNativeBranch(props: Omit<TreeSelectProps, "appearance">) {
     value,
     messages,
   } = props;
+  const disabled = resolveFormControlDisabled(props.disabled);
+  const selected = createOptionalValueState(value, "");
   const m = { ...defaultTreeSelectMessages, ...messages };
   const placeholder = props.placeholder ?? m.placeholder;
   const flat = flattenTreeSelectOptions(options);
@@ -190,7 +209,7 @@ function TreeSelectNativeBranch(props: Omit<TreeSelectProps, "appearance">) {
    */
   const handleChange = (e: Event) => {
     const v = (e.target as HTMLSelectElement).value;
-    commitMaybeSignal(value, v);
+    selected.commit(v);
     onChange?.(e);
   };
 
@@ -233,7 +252,6 @@ function TreeSelectDropdownBranch(props: Omit<TreeSelectProps, "appearance">) {
   const {
     options,
     size: sizeProp,
-    disabled = false,
     onChange,
     onBlur,
     class: className,
@@ -244,7 +262,12 @@ function TreeSelectDropdownBranch(props: Omit<TreeSelectProps, "appearance">) {
     hideFocusRing = false,
     value,
     messages,
+    allowClear = false,
+    showSearch = false,
+    loading = false,
   } = props;
+  const disabled = resolveFormControlDisabled(props.disabled);
+  const selected = createOptionalValueState(value, "");
   const m = { ...defaultTreeSelectMessages, ...messages };
   const placeholder = props.placeholder ?? m.placeholder;
   const size = resolveFormControlSize(sizeProp);
@@ -252,6 +275,7 @@ function TreeSelectDropdownBranch(props: Omit<TreeSelectProps, "appearance">) {
   const resolvedId = id ?? fromFormItem;
 
   const openState = createSignal(false);
+  const searchQuery = createSignal("");
   const sizeCls = sizeClassesDropdown[size];
   let rootEl: HTMLElement | null = null;
   let panelEl: HTMLElement | null = null;
@@ -260,6 +284,7 @@ function TreeSelectDropdownBranch(props: Omit<TreeSelectProps, "appearance">) {
 
   const closePanel = () => {
     openState.value = false;
+    searchQuery.value = "";
   };
 
   const scheduleClosePanel = () => {
@@ -300,8 +325,8 @@ function TreeSelectDropdownBranch(props: Omit<TreeSelectProps, "appearance">) {
    * 选中某项。同值重复调用（pointerdown + click）只派发一次 onChange。
    */
   const triggerChange = (newValue: string) => {
-    const prev = readMaybeSignal(value) ?? "";
-    commitMaybeSignal(value, newValue);
+    const prev = selected.read();
+    selected.commit(newValue);
     if (prev !== newValue) {
       const synthetic = { target: { value: newValue } } as unknown as Event;
       onChange?.(synthetic);
@@ -319,73 +344,91 @@ function TreeSelectDropdownBranch(props: Omit<TreeSelectProps, "appearance">) {
       <input
         type="hidden"
         name={name}
-        value={() => readMaybeSignal(value) ?? ""}
+        value={selected.bind}
       />
-      <button
-        type="button"
-        ref={bindAutoFocusRef(undefined, autoFocus)}
-        id={resolvedId}
-        disabled={disabled}
-        aria-invalid={error}
-        aria-haspopup="listbox"
-        {...autoFocusAttr(autoFocus)}
-        aria-expanded={() => openState.value}
-        aria-label={() => {
-          const rv = readMaybeSignal(value) ?? "";
-          const selectedOption = flat.find((o) => o.value === rv);
-          const displayText = selectedOption?.fullPath ?? placeholder;
-          return displayText || placeholder || m.triggerFallback;
-        }}
-        class={twMerge(
-          "w-full min-w-0",
-          pickerTriggerSurface,
-          controlBlueFocusRing(!hideFocusRing && !error),
-          error && controlErrorBorder,
-          error && !hideFocusRing && controlErrorFocusRing(true),
-          sizeCls,
-        )}
-        onBlur={onBlur}
-        onClick={() => {
-          if (disabled) return;
-          if (openState.value) {
-            closePanel();
-            return;
-          }
-          queueMicrotask(() => {
-            if (!disabled && !openState.value) {
-              openState.value = true;
+      <span class="relative block w-full">
+        <button
+          type="button"
+          ref={bindAutoFocusRef(undefined, autoFocus)}
+          id={resolvedId}
+          disabled={disabled || loading}
+          aria-busy={loading || undefined}
+          aria-invalid={error}
+          aria-haspopup="listbox"
+          {...autoFocusAttr(autoFocus)}
+          aria-expanded={() => openState.value}
+          aria-label={() => {
+            const rv = selected.read();
+            const selectedOption = flat.find((o) => o.value === rv);
+            const displayText = selectedOption?.fullPath ?? placeholder;
+            return displayText || placeholder || m.triggerFallback;
+          }}
+          class={twMerge(
+            "w-full min-w-0",
+            pickerTriggerSurface,
+            controlBlueFocusRing(!hideFocusRing && !error),
+            error && controlErrorBorder,
+            error && !hideFocusRing && controlErrorFocusRing(true),
+            sizeCls,
+          )}
+          onBlur={onBlur}
+          onClick={() => {
+            if (disabled || loading) return;
+            if (openState.value) {
+              closePanel();
+              return;
             }
-          });
-        }}
-      >
-        <span
-          class={() => {
-            const rv = readMaybeSignal(value) ?? "";
-            const selectedOption = flat.find((o) => o.value === rv);
-            return twMerge(
-              "truncate min-w-0 text-left",
-              selectedOption
-                ? "text-slate-900 dark:text-slate-100"
-                : "text-slate-400 dark:text-slate-500",
-            );
+            queueMicrotask(() => {
+              if (!disabled && !loading && !openState.value) {
+                openState.value = true;
+              }
+            });
           }}
         >
-          {() => {
-            const rv = readMaybeSignal(value) ?? "";
-            const selectedOption = flat.find((o) => o.value === rv);
-            return selectedOption?.fullPath ?? placeholder;
-          }}
-        </span>
-        <span
-          class={() =>
-            twMerge(
-              "inline-flex shrink-0 text-slate-400 dark:text-slate-500 transition-transform",
-              openState.value && "rotate-180",
-            )}
-        >
-          <IconChevronDown size="sm" />
-        </span>
-      </button>
+          <span
+            class={() => {
+              const rv = selected.read();
+              const selectedOption = flat.find((o) => o.value === rv);
+              return twMerge(
+                "truncate min-w-0 text-left",
+                selectedOption
+                  ? "text-slate-900 dark:text-slate-100"
+                  : "text-slate-400 dark:text-slate-500",
+              );
+            }}
+          >
+            {() => {
+              const rv = selected.read();
+              const selectedOption = flat.find((o) => o.value === rv);
+              return selectedOption?.fullPath ?? placeholder;
+            }}
+          </span>
+          <span
+            class={() =>
+              twMerge(
+                "inline-flex shrink-0 text-slate-400 dark:text-slate-500 transition-transform",
+                !loading && openState.value && "rotate-180",
+              )}
+          >
+            {loading
+              ? (
+                <span
+                  class="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent"
+                  aria-hidden
+                />
+              )
+              : <IconChevronDown size="sm" />}
+          </span>
+        </button>
+        {allowClear && !disabled && (
+          <FieldClearSlot
+            class="absolute right-8 top-1/2 z-1 -translate-y-1/2"
+            visible={() => Boolean(selected.read()) && !loading}
+            label={m.clear}
+            onClear={() => triggerChange("")}
+          />
+        )}
+      </span>
       <div
         ref={(el: HTMLElement | null) => {
           panelEl = el;
@@ -404,15 +447,31 @@ function TreeSelectDropdownBranch(props: Omit<TreeSelectProps, "appearance">) {
           aria-label={m.listbox}
           class="absolute z-50 top-full left-0 right-0 mt-1 max-h-60 overflow-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg dark:border-slate-600 dark:bg-slate-800"
         >
+          {showSearch && (
+            <div
+              class="sticky top-0 z-1 px-2 py-1 bg-white dark:bg-slate-800"
+              onPointerDown={(e: Event) => e.stopPropagation()}
+            >
+              <input
+                type="search"
+                class="w-full rounded-md border border-slate-200 dark:border-slate-600 bg-transparent px-2 py-1 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400"
+                placeholder={m.searchPlaceholder}
+                value={() => searchQuery.value}
+                onInput={(e: Event) => {
+                  searchQuery.value = (e.target as HTMLInputElement).value;
+                }}
+              />
+            </div>
+          )}
           <button
             type="button"
             role="option"
-            aria-selected={() => (readMaybeSignal(value) ?? "") === ""}
+            aria-selected={() => (selected.read()) === ""}
             class={() =>
               twMerge(
                 optionRowCls,
                 "pl-3",
-                (readMaybeSignal(value) ?? "") === "" &&
+                (selected.read()) === "" &&
                   "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
               )}
             onPointerDown={(e: Event) => {
@@ -422,32 +481,49 @@ function TreeSelectDropdownBranch(props: Omit<TreeSelectProps, "appearance">) {
           >
             {placeholder}
           </button>
-          {flat.map((opt) => (
-            <button
-              type="button"
-              key={opt.value}
-              role="option"
-              aria-selected={() => (readMaybeSignal(value) ?? "") === opt.value}
-              aria-label={opt.fullPath}
-              title={opt.fullPath}
-              class={() =>
-                twMerge(
-                  optionRowCls,
-                  opt.depth === 0 && "pl-3",
-                  (readMaybeSignal(value) ?? "") === opt.value &&
-                    "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
-                )}
-              style={opt.depth > 0
-                ? { paddingLeft: `${0.75 + opt.depth * 0.75}rem` }
-                : undefined}
-              onPointerDown={(e: Event) => {
-                pickInlineDropdownOption(e, () => triggerChange(opt.value));
-              }}
-              onClick={() => triggerChange(opt.value)}
-            >
-              {opt.nodeLabel}
-            </button>
-          ))}
+          {() => {
+            const q = searchQuery.value.trim().toLowerCase();
+            const filtered = q
+              ? flat.filter((opt) =>
+                opt.fullPath.toLowerCase().includes(q) ||
+                opt.nodeLabel.toLowerCase().includes(q) ||
+                opt.value.toLowerCase().includes(q)
+              )
+              : flat;
+            if (filtered.length === 0) {
+              return (
+                <div class="px-3 py-2 text-sm text-slate-400 dark:text-slate-500">
+                  {loading ? m.loading : m.noMatch}
+                </div>
+              );
+            }
+            return filtered.map((opt) => (
+              <button
+                type="button"
+                key={opt.value}
+                role="option"
+                aria-selected={() => (selected.read()) === opt.value}
+                aria-label={opt.fullPath}
+                title={opt.fullPath}
+                class={() =>
+                  twMerge(
+                    optionRowCls,
+                    opt.depth === 0 && "pl-3",
+                    (selected.read()) === opt.value &&
+                      "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
+                  )}
+                style={opt.depth > 0
+                  ? { paddingLeft: `${0.75 + opt.depth * 0.75}rem` }
+                  : undefined}
+                onPointerDown={(e: Event) => {
+                  pickInlineDropdownOption(e, () => triggerChange(opt.value));
+                }}
+                onClick={() => triggerChange(opt.value)}
+              >
+                {opt.nodeLabel}
+              </button>
+            ));
+          }}
         </div>
       </div>
     </span>

@@ -6,9 +6,9 @@
  *
  * **打开态与 {@link Modal} 对齐**：`open` 支持 `boolean`、零参 getter 或 **`Signal<boolean>`**（`createSignal` 返回值，推荐 `open={sig}`），
  * 勿仅依赖 `open={sig.value}` 在 Hybrid/函数槽 patch 下可能不触发子树更新。
- * **全屏壳**：`fixed inset-0` **内联**挂在父级 VNode 树下（**不用** `createPortal`），避免与 `insert`/调度器叠床架屋导致卡死；若业务里父级带 `transform` 或强裁剪，请把本组件挪到不受裁切的容器（如布局根部）。
- * **关闭态**：有真实 `document.body` 时返回隐藏 `span` 占槽（与 {@link Modal}、Hybrid 约定一致）；无 `body`（纯 SSR）时关闭为 `null`。
- * 勿在组件顶层 `open === false` 时提前 `return` 跳过 `createEffect`/`createRenderEffect` 注册。
+ * **全屏壳**：有真实 `document.body` 时用 {@link createPortal} 挂到 `body`（`z-index` 1050，高于文档站顶栏 `z-50` 与主栏 `relative z-10` 叠层）；父级槽位返回隐藏 `span` 占位，避免被 `overflow` / 层叠上下文裁切或压住关闭钮与遮罩。
+ * **关闭态**：有 `body` 时占槽与 {@link Modal}、Hybrid 约定一致；无 `body`（纯 SSR）时内联 {@link Show}，关闭为 `null`。
+ * 勿在组件顶层 `open === false` 时提前 `return` 跳过 `createEffect`/`createRenderEffect` 注册；「是否挂 Portal」须无条件注册 `createRenderEffect`，在 effect 内再读 `isOpen()`。
  * **根返回值**：与 `view/examples` 相册一致，用 {@link Show} 包一层 `when={isOpen}`，勿再 `return () => …` 整段 getter（易与父级 `insert` 的响应式子叠出卡死）；缩放/平移用 {@link createMemo} + `style`（同相册 `previewStyle`），勿用 `createRenderEffect` 写 `ref.style`。
  * **勿在根 getter 里读 `currentIndex` / 主图 `src`**：否则每次切图整棵 `fixed` 壳重算，主图与缩略图会一起闪断；主图/缩略条/张数指示应挂在占位节点上，由 **JSX 函数子**（`{() => …}`，运行时与 `insert` 同源）单独订阅，避免与外壳同一渲染节拍。
  * **为何单 `img` 改 `src` 会「先空再出」**：浏览器在赋值新 URL 后会立刻释放旧位图，新图未 `load/decode` 前没有像素可画；主图用双缓冲预载到底层再切换叠放。缩略条若 getter 订阅了当前索引，会整行 DOM 重挂载，小图也会闪；结构只跟列表走、高亮单独改 `class`。
@@ -18,7 +18,9 @@
 import {
   createEffect,
   createMemo,
+  createPortal,
   createRef,
+  createRenderEffect,
   createSignal,
   type JSXRenderable,
   onCleanup,
@@ -1603,20 +1605,38 @@ export function ImageViewer(props: ImageViewerProps): JSXRenderable {
   };
 
   /**
-   * 与相册示例相同：`Show` 控制遮罩挂载，由控制流内部 `createEffect` 订阅 `open`，避免根级 `return () =>` 与文档站响应式子组件叠出死循环。
+   * **必须**无条件注册：`open` 从 false→true 时父级未必重跑本组件，
+   * 若首帧因 `!isOpen` 跳过则永远无法挂 Portal。
+   * 有 `document.body` 时把全屏壳挂到 `body`，以逃出文档主栏 `relative z-10` 叠层。
    */
-  const imageViewerClosedFallback = getBrowserBodyPortalHost() != null
-    ? (
-      <span
-        style="display:none;width:0;height:0;overflow:hidden;position:absolute;clip:rect(0,0,0,0)"
-        aria-hidden="true"
-        data-dreamer-image-viewer-anchor=""
-      />
-    )
-    : null;
+  createRenderEffect(() => {
+    const openNow = isOpen();
+    const portalHost = getBrowserBodyPortalHost();
+    if (!openNow || portalHost == null) return;
+    const root = createPortal(() => buildImageViewerShell(), portalHost);
+    onCleanup(() => {
+      root.unmount();
+    });
+  });
+
+  /**
+   * 客户端：真实弹层仅由上方 Portal 挂到 `body`，此处返回隐藏占位（勿 `null`，以免 Hybrid 更新链异常）。
+   * 无 `body`（纯 SSR）时内联 {@link Show}。
+   */
+  const imageViewerPortalAnchor = (
+    <span
+      style="display:none;width:0;height:0;overflow:hidden;position:absolute;clip:rect(0,0,0,0)"
+      aria-hidden="true"
+      data-dreamer-image-viewer-anchor=""
+    />
+  );
+
+  if (getBrowserBodyPortalHost() != null) {
+    return imageViewerPortalAnchor;
+  }
 
   return (
-    <Show when={isOpen} fallback={imageViewerClosedFallback}>
+    <Show when={isOpen} fallback={null}>
       {() => buildImageViewerShell()}
     </Show>
   );

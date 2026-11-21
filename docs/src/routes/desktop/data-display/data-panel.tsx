@@ -165,7 +165,7 @@ const DATA_PANEL_API: DocsApiTableRow[] = [
     type: "SearchConfig",
     default: "—",
     description:
-      "搜索弹层：title、props、actions、modal（透传 Modal 参数，width 缺省 md）、autoFullscreen（所有端打开即全屏，缺省 false）、mobileAutoFullscreen（仅移动端打开即全屏，缺省 false）。非空则工具栏搜索＋URL 同步。详见 Search 表。",
+      "搜索：title、props、mode（modal 默认弹窗，expand 为工具栏下方展开）、actions、modal（透传 Modal 参数，width 缺省 md）、autoFullscreen、mobileAutoFullscreen。非空则工具栏搜索＋URL 同步。详见 Search 表。",
   },
   {
     name: "form",
@@ -289,6 +289,14 @@ const DATA_PANEL_API: DocsApiTableRow[] = [
     default: "-",
     description:
       '页面提示条，位于工具栏（含工具栏左侧标签）下方、表格上方。字符串简写为 info 提示（如 alert="请先完成实名认证"）。对象为完整 DataAlertConfig：透传 Alert 的 type／message／description／showIcon／closable／onClose／closeConfirm／closeKey／banner／action／class／children／messages，另加 show／key。false／null／省略／show: false 不显示；函数在渲染时求值。本插槽 closable 默认 true，banner 默认 false。点击关闭会隐藏提示并调用 onClose；更换文案或先置空再传入会重新显示。详见下方 DataAlertConfig 表。',
+  },
+  {
+    name: "noticeBar",
+    type:
+      "string | DataNoticeBarConfig | false | null | (() => string | DataNoticeBarConfig | false | null | undefined)",
+    default: "-",
+    description:
+      '页面通知条，位置与 alert 相同：工具栏（含工具栏左侧标签）下方、表格上方。字符串简写为通知文案（如 noticeBar="系统将于今晚维护"）。对象为完整 DataNoticeBarConfig：透传 NoticeBar 的 content／children／tone／icon／closable／onClose／closeConfirm／closeKey／visible／onClick／scrollable／speed／direction／interval／rounded／class／messages，另加 show／key。false／null／省略／show: false 不显示；函数在渲染时求值。本插槽 closable 默认 true，rounded 默认 md。点击关闭会隐藏通知并调用 onClose；更换文案或先置空再传入会重新显示。详见下方 DataNoticeBarConfig 表。',
   },
   {
     name: "batchBar",
@@ -799,11 +807,11 @@ const typeCode = `import { DataPanel } from "@dreamer/ui-view/data-display";
 
 <div class="flex flex-col gap-4">
   {/* 省略 type 时默认 info */}
-  <DataPanel title="默认（info）" data={rows} columns={columns} toolbar={false} />
-  <DataPanel title="success" type="success" data={rows} columns={columns} toolbar={false} />
-  <DataPanel title="info" type="info" data={rows} columns={columns} toolbar={false} />
-  <DataPanel title="warning" type="warning" data={rows} columns={columns} toolbar={false} />
-  <DataPanel title="danger" type="danger" data={rows} columns={columns} toolbar={false} />
+  <DataPanel title="默认（info）" data={rows} columns={columns} form={{ props: form }} toolbar={false} />
+  <DataPanel title="success" type="success" data={rows} columns={columns} form={{ props: form }} toolbar={false} />
+  <DataPanel title="info" type="info" data={rows} columns={columns} form={{ props: form }} toolbar={false} />
+  <DataPanel title="warning" type="warning" data={rows} columns={columns} form={{ props: form }} toolbar={false} />
+  <DataPanel title="danger" type="danger" data={rows} columns={columns} form={{ props: form }} toolbar={false} />
 </div>
 `;
 
@@ -824,6 +832,27 @@ const columnsWithoutInlineStatus = columns.map((c) =>
   columns={columnsWithoutInlineStatus}
   search={{ title: "筛选条件", props: search }}
   // 搜索条件从地址栏回填（如 ?role=admin）；不进地址栏的条件请用 fixed。
+  caps={{ create: false }}
+/>
+`;
+
+const searchExpandCode =
+  `import { DataPanel } from "@dreamer/ui-view/data-display";
+import type { Column, FormField, Row, SearchField } from "@dreamer/ui-view/data-display";
+
+${DEMO_COMMON_SETUP_CODE}
+
+const rows = makeDemoRows(25);
+const columnsWithoutInlineStatus = columns.map((c) =>
+  c.prop === "status" ? { ...c, inline: undefined } : c
+);
+
+<DataPanel
+  panelKey="demo-search-expand"
+  title="展开搜索"
+  data={rows}
+  columns={columnsWithoutInlineStatus}
+  search={{ mode: "expand", props: search }}
   caps={{ create: false }}
 />
 `;
@@ -1309,8 +1338,10 @@ const pageAllowAudit = createSignal(true);
   }}
 />
 <p class="mt-2 text-xs text-slate-500" data-testid="demo-tb-fn-hint">
-  {() => actionHint.value ||
-    "pageAllowAudit=false 时审计仍可见但 disabled"}
+  {() =>
+              !pageAllowAudit.value
+                ? "pageAllowAudit=false 时审计仍可见但 disabled"
+                : (actionHint.value || "点击审计写回提示")}
 </p>
 `;
 
@@ -1647,40 +1678,42 @@ const can = (code: keyof DemoPerms) => demoCan(perms.value, code);
       } pageExport=\${String(pageExport.value)}\`}
   </span>
 </div>
-<DataPanel
-  panelKey="demo-can"
-  title="can()／页面变量"
-  data={rows}
-  columns={withRowActions({
-    view: demoCapGate(can("demo.view") || can("demo.write")),
-    edit: demoCapGate(can("demo.write")),
-    remove: demoCapGate(can("demo.write")),
-    assign: {
-      label: "分配",
-      show: () => can("demo.write"),
-      action: (item) => {
-        actionHint.value = \`can:assign:\${String(item.id)}\`;
+{() => (
+  <DataPanel
+    panelKey="demo-can"
+    title="can()／页面变量"
+    data={rows}
+    columns={withRowActions({
+      view: demoCapGate(can("demo.view") || can("demo.write")),
+      edit: demoCapGate(can("demo.write")),
+      remove: demoCapGate(can("demo.write")),
+      assign: {
+        label: "分配",
+        show: () => can("demo.write"),
+        action: (item) => {
+          actionHint.value = \`can:assign:\${String(item.id)}\`;
+        },
       },
-    },
-  })}
-  form={{ props: form }}
-  search={{ props: search }}
-  toolbar={{
-    create: demoCapGate(can("demo.write")),
-    search: true,
-    refresh: true,
-    import: demoCapGate(can("demo.write")),
-    export: {
-      show: () => can("demo.view"),
-      disable: () => !pageExport.value,
-    },
-    print: false,
-    columns: false,
-    density: false,
-    fullscreen: false,
-    copy: false,
-  }}
-/>
+    })}
+    form={{ props: form }}
+    search={{ props: search }}
+    toolbar={{
+      create: demoCapGate(can("demo.write")),
+      search: true,
+      refresh: true,
+      import: demoCapGate(can("demo.write")),
+      export: {
+        show: () => can("demo.view"),
+        disable: () => !pageExport.value,
+      },
+      print: false,
+      columns: false,
+      density: false,
+      fullscreen: false,
+      copy: false,
+    }}
+  />
+)}
 <p class="mt-2 text-xs text-slate-500" data-testid="demo-can-hint">
   {() => actionHint.value ||
     "默认 write=false：无创建／导入／编辑／删除／分配；export 受 pageExport＆view 控制"}
@@ -2211,44 +2244,102 @@ function readDemoTab() {
   }
 }
 
+function DataPanelSyncUrlDemo() {
+  const rows = createSignal(makeDemoRows(25));
+  return (
+    <div class="contents">
+      {() => (
+        <DataPanel
+          panelKey="demo-sync-url"
+          title="用户管理"
+          data={rows.value}
+          columns={DEMO_COLUMNS}
+          search={{ props: DEMO_SEARCH }}
+          form={{ props: DEMO_FORM }}
+          onDataChange={(next) => {
+            rows.value = next;
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function DataPanelExportDemo() {
+  const rows = createSignal(makeDemoRows(15));
+  return (
+    <div class="contents">
+      {() => (
+        <DataPanel
+          panelKey="demo-export"
+          title="导出导入"
+          data={rows.value}
+          columns={DEMO_COLUMNS}
+          form={{ props: DEMO_FORM }}
+          exportName="users"
+          onDataChange={(next) => {
+            rows.value = next;
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
 function DataPanelTabsDemo() {
   const tab = createSignal(readDemoTab());
-  const rows = makeDemoRows(8);
-  const adminCount = rows.filter((r) => r.role === "admin").length;
-  return () => {
-    const key = tab.value;
-    const data = key === "admin"
-      ? rows.filter((r) => r.role === "admin")
-      : rows;
-    return (
-      <DataPanel
-        panelKey="demo-tabs"
-        title="用户管理"
-        data={data}
-        columns={DEMO_COLUMNS}
-        search={{ props: DEMO_SEARCH }}
-        form={{ props: DEMO_FORM }}
-        exportName="users"
-        activeTab={key}
-        onTabChange={(k) => {
-          tab.value = k;
-        }}
-        tabs={[
-          { key: "all", label: "全部" },
-          { key: "admin", label: "管理员" },
-          {
-            key: "stats",
-            label: "统计",
-            children: (
-              <div class="px-3 py-4 text-sm text-slate-600 dark:text-slate-400">
-                当前共 {rows.length} 人，其中管理员 {adminCount} 人。
-              </div>
-            ),
-          },
-        ]}
-      />
-    );
-  };
+  const rows = createSignal(makeDemoRows(8));
+  /**
+   * 外层返回稳定容器，当前 tab 在子节点里读，避免点击切 tab 时重建 signal。
+   * 新增／编辑写回 rows，切 tab 重建面板时不会丢掉刚添加的行。
+   */
+  return (
+    <div class="contents">
+      {() => {
+        const key = tab.value;
+        const all = rows.value;
+        const adminCount = all.filter((r) => r.role === "admin").length;
+        return (
+          <DataPanel
+            panelKey="demo-tabs"
+            title="用户管理"
+            data={all}
+            fixed={key === "admin" ? { role: "admin" } : undefined}
+            columns={DEMO_COLUMNS}
+            search={{ props: DEMO_SEARCH }}
+            form={{
+              props: key === "admin"
+                ? DEMO_FORM.map((f) =>
+                  f.prop === "role" ? { ...f, initial: "admin" } : f
+                )
+                : DEMO_FORM,
+            }}
+            exportName="users"
+            onDataChange={(next) => {
+              rows.value = next;
+            }}
+            activeTab={key}
+            onTabChange={(k) => {
+              tab.value = k;
+            }}
+            tabs={[
+              { key: "all", label: "全部" },
+              { key: "admin", label: "管理员" },
+              {
+                key: "stats",
+                label: "统计",
+                children: (
+                  <div class="px-3 py-4 text-sm text-slate-600 dark:text-slate-400">
+                    当前共 {all.length} 人，其中管理员 {adminCount} 人。
+                  </div>
+                ),
+              },
+            ]}
+          />
+        );
+      }}
+    </div>
+  );
 }
 
 /** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
@@ -2276,6 +2367,47 @@ const columns: Column[] = [
     message: "请先完成实名认证",
     description: "未认证账号部分功能暂不可用。",
     onClose: () => toast.info("已关闭提示"),
+  }}
+  toolbar={{
+    create: false,
+    search: false,
+    print: false,
+    import: false,
+    export: false,
+    columns: false,
+    density: false,
+    fullscreen: false,
+    copy: false,
+  }}
+/>
+`;
+
+const noticeBarCode =
+  `import { DataPanel } from "@dreamer/ui-view/data-display";
+import type { Column, Row } from "@dreamer/ui-view/data-display";
+import { toast } from "@dreamer/ui-view/feedback";
+
+const rows: Row[] = [
+  { id: "1", name: "张三" },
+  { id: "2", name: "李四" },
+  { id: "3", name: "王五" },
+];
+
+const columns: Column[] = [
+  { prop: "name", label: "姓名" },
+];
+
+<DataPanel
+  panelKey="demo-notice-bar"
+  title="用户管理"
+  data={rows}
+  columns={columns}
+  noticeBar={{
+    tone: "warning",
+    icon: true,
+    scrollable: true,
+    content: "系统将于今晚 23:00 维护，请提前保存数据。",
+    onClose: () => toast.info("已关闭通知"),
   }}
   toolbar={{
     create: false,
@@ -2370,6 +2502,30 @@ const advancedSearch = {
 />
 `;
 
+const remoteTabCode = `<DataPanel
+  panelKey="demo-tabs-api"
+  caps={{ create: false, update: false, remove: false, view: false, import: false }}
+  title="远程用户（只读）"
+  baseRoute="/api/users"
+  syncUrl={false}
+  tabParam="remoteTab"
+  columns={[
+    { prop: "name", label: "姓名" },
+    { prop: "role", label: "角色" },
+  ]}
+  tabs={[{ key: "all", label: "全部" }, { key: "admin", label: "管理员" }]}
+  toolbar={{
+    create: false, search: false, refresh: true,
+    print: false, import: false, export: false, columns: false,
+    density: false, fullscreen: false, copy: false,
+  }}
+  pagination={{ pageSize: 50, pageSizeOptions: [50], preset: "simple" }}
+/>
+// 本站 /api/users 假后端按 ?remoteTab=admin 返回管理员；all 返回全部。
+// 首次请求各标签；切回同查询走内存缓存；刷新只作废当前标签。
+// syncUrl=false 仅关闭分页/排序/搜索同步；remoteTab 仍随标签写地址栏。
+// 示例关闭写入口，只读取隔离的文档演示数据。`;
+
 const formCondCode =
   `import { DataPanel, openDataPanelForm } from "@dreamer/ui-view/data-display";
 import type { Column, FormField, Row, SearchField } from "@dreamer/ui-view/data-display";
@@ -2401,6 +2557,16 @@ const form = {
       show: ({ values }) => values.role === "admin",
       hint: "仅管理员显示积分",
     },
+    {
+      prop: "scope", label: "管理范围", type: "select", initial: "self",
+      options: ({ values }) => [
+        { value: "self", label: "仅本人" },
+        ...(values.role === "admin" || values.role === "editor"
+          ? [{ value: "team", label: "本团队" }] : []),
+        ...(values.role === "admin" ? [{ value: "all", label: "所有用户" }] : []),
+      ],
+      hint: "管理员可管理所有用户，编辑可管理本团队，访客仅本人；切换角色前请选择仍有效的范围",
+    },
     { prop: "balance", type: "number", min: 0, initial: 0 },
     { prop: "status", type: "switch", initial: "active" },
   ],
@@ -2408,8 +2574,7 @@ const form = {
     saveMore: {
       label: "保存并继续",
       action: async (ctx) => {
-        await ctx.submit();
-        openDataPanelForm("demo-form-cond");
+        if (await ctx.submit()) openDataPanelForm("demo-form-cond");
       },
     },
     submit: true,
@@ -2513,7 +2678,11 @@ export default function DataDisplayDataPanel() {
           相邻按钮之间只有一条淡分割线）、搜索
           Modal（工具栏按钮打开）、表格下方的批量操作条、表格（排序、多选、行内编辑、合计、操作列）、
           分页，以及用 Modal 的新增 / 编辑 / 查看。可用 <code>alert</code>{" "}
-          在工具栏下方、表格上方放一条页面提示（支持关闭与 onClose）。<strong>
+          在工具栏下方、表格上方放一条页面提示（支持关闭与 onClose）；也可用
+          {" "}
+          <code>noticeBar</code>{" "}
+          在同一位置放一条通知（透传 NoticeBar 全部参数，含圆角
+          rounded）。<strong>
             任何删除都必须先确认：行内／批量删除均弹出小气泡
             Popconfirm（确定在左、取消在右；点外部也会关闭），不用 Modal
             确认对话框
@@ -2562,6 +2731,43 @@ export default function DataDisplayDataPanel() {
           />
         </DocsDemo>
 
+        <DocsDemo title="页面通知条" code={noticeBarCode}>
+          <Paragraph class="mb-3 text-sm text-slate-600 dark:text-slate-400">
+            通知条与提示条在同一位置：工具栏下方、表格上方。对象配置可写
+            NoticeBar 的全部参数（含圆角
+            rounded，默认 md）；默认可关闭，点关闭会隐藏并触发{" "}
+            <code>onClose</code>。
+          </Paragraph>
+          <DataPanel
+            panelKey="demo-notice-bar"
+            title="用户管理"
+            data={[
+              { id: "1", name: "张三" },
+              { id: "2", name: "李四" },
+              { id: "3", name: "王五" },
+            ]}
+            columns={[{ prop: "name", label: "姓名" }]}
+            noticeBar={{
+              tone: "warning",
+              icon: true,
+              scrollable: true,
+              content: "系统将于今晚 23:00 维护，请提前保存数据。",
+              onClose: () => toast.info("已关闭通知"),
+            }}
+            toolbar={{
+              create: false,
+              search: false,
+              print: false,
+              import: false,
+              export: false,
+              columns: false,
+              density: false,
+              fullscreen: false,
+              copy: false,
+            }}
+          />
+        </DocsDemo>
+
         <DocsDemo title="标题栏背景" code={typeCode}>
           <Paragraph class="mb-3 text-sm text-slate-600 dark:text-slate-400">
             用 <code>type</code> 设置标题栏背景：
@@ -2584,6 +2790,7 @@ export default function DataDisplayDataPanel() {
                   type={type}
                   data={makeDemoRows(2)}
                   columns={DEMO_COLUMNS}
+                  form={{ props: DEMO_FORM }}
                   toolbar={false}
                 />
               </div>
@@ -2685,6 +2892,19 @@ const rows = makeDemoRows(8);
           />
         </DocsDemo>
 
+        <DocsDemo title="工具栏下方展开搜索" code={searchExpandCode}>
+          <DataPanel
+            panelKey="demo-search-expand"
+            title="展开搜索"
+            data={makeDemoRows(25)}
+            columns={DEMO_COLUMNS.map((c) =>
+              c.prop === "status" ? { ...c, inline: undefined } : c
+            )}
+            search={{ mode: "expand", props: DEMO_SEARCH }}
+            caps={{ create: false }}
+          />
+        </DocsDemo>
+
         <DocsDemo title="工具栏搜索 ↔ 地址栏" code={syncUrlCode}>
           <Paragraph class="mb-3 text-sm text-slate-600 dark:text-slate-400">
             分页（<code class="text-xs">page</code>／<code class="text-xs">
@@ -2706,14 +2926,7 @@ const rows = makeDemoRows(8);
             <code class="text-xs">u_name</code> 等。
           </Paragraph>
           <div data-testid="demo-sync-url">
-            <DataPanel
-              panelKey="demo-sync-url"
-              title="用户管理"
-              data={makeDemoRows(25)}
-              columns={DEMO_COLUMNS}
-              search={{ props: DEMO_SEARCH }}
-              form={{ props: DEMO_FORM }}
-            />
+            <DataPanelSyncUrlDemo />
           </div>
         </DocsDemo>
 
@@ -2914,14 +3127,7 @@ const rows = makeDemoRows(8);
           title="导出 xlsx / csv / json / xml / html 与导入 xlsx / csv / json / xml"
           code={exportCode}
         >
-          <DataPanel
-            panelKey="demo-export"
-            title="导出导入"
-            data={makeDemoRows(15)}
-            columns={DEMO_COLUMNS}
-            form={{ props: DEMO_FORM }}
-            exportName="users"
-          />
+          <DataPanelExportDemo />
         </DocsDemo>
 
         <DocsDemo
@@ -3268,8 +3474,9 @@ const rows = makeDemoRows(8);
             }}
           />
           <p class="mt-2 text-xs text-slate-500" data-testid="demo-tb-fn-hint">
-            {() => actionHint.value ||
-              "pageAllowAudit=false 时审计仍可见但 disabled"}
+            {() => !pageAllowAudit.value
+              ? "pageAllowAudit=false 时审计仍可见但 disabled"
+              : (actionHint.value || "点击审计写回提示")}
           </p>
         </DocsDemo>
 
@@ -3528,40 +3735,42 @@ const rows = makeDemoRows(8);
                 } pageExport=${String(pageExport.value)}`}
             </span>
           </div>
-          <DataPanel
-            panelKey="demo-can"
-            title="can()／页面变量"
-            data={makeDemoRows(5)}
-            columns={withRowActions({
-              view: demoCapGate(can("demo.view") || can("demo.write")),
-              edit: demoCapGate(can("demo.write")),
-              remove: demoCapGate(can("demo.write")),
-              assign: {
-                label: "分配",
-                show: () => can("demo.write"),
-                action: (item) => {
-                  actionHint.value = `can:assign:${String(item.id)}`;
+          {() => (
+            <DataPanel
+              panelKey="demo-can"
+              title="can()／页面变量"
+              data={makeDemoRows(5)}
+              columns={withRowActions({
+                view: demoCapGate(can("demo.view") || can("demo.write")),
+                edit: demoCapGate(can("demo.write")),
+                remove: demoCapGate(can("demo.write")),
+                assign: {
+                  label: "分配",
+                  show: () => can("demo.write"),
+                  action: (item) => {
+                    actionHint.value = `can:assign:${String(item.id)}`;
+                  },
                 },
-              },
-            })}
-            form={{ props: DEMO_FORM }}
-            search={{ props: DEMO_SEARCH }}
-            toolbar={{
-              create: demoCapGate(can("demo.write")),
-              search: true,
-              refresh: true,
-              import: demoCapGate(can("demo.write")),
-              export: {
-                show: () => can("demo.view"),
-                disable: () => !pageExport.value,
-              },
-              print: false,
-              columns: false,
-              density: false,
-              fullscreen: false,
-              copy: false,
-            }}
-          />
+              })}
+              form={{ props: DEMO_FORM }}
+              search={{ props: DEMO_SEARCH }}
+              toolbar={{
+                create: demoCapGate(can("demo.write")),
+                search: true,
+                refresh: true,
+                import: demoCapGate(can("demo.write")),
+                export: {
+                  show: () => can("demo.view"),
+                  disable: () => !pageExport.value,
+                },
+                print: false,
+                columns: false,
+                density: false,
+                fullscreen: false,
+                copy: false,
+              }}
+            />
+          )}
           <p class="mt-2 text-xs text-slate-500" data-testid="demo-can-hint">
             {() => actionHint.value ||
               "默认 write=false：无创建／导入／编辑／删除／分配；export 受 pageExport＆view 控制"}
@@ -3631,7 +3840,7 @@ const rows = makeDemoRows(8);
             。view 透传两块：
             <code class="text-xs">modal</code> 给弹层，
             <code class="text-xs">descriptions</code>{" "}
-            给描述列表（除 items、title；本插槽缺省{" "}
+            给描述列表（除 rows、title；本插槽缺省{" "}
             <code class="text-xs">column</code> 1、
             <code class="text-xs">size</code> sm、
             <code class="text-xs">bordered</code> true）。标签与内容比例写在
@@ -4094,22 +4303,36 @@ function readDemoTab() {
 
 function DataPanelTabsDemo() {
   const tab = createSignal(readDemoTab());
-  const rows = makeDemoRows(8);
-  const adminCount = rows.filter((r) => r.role === "admin").length;
-  return () => {
+  const rows = createSignal(makeDemoRows(8));
+  /**
+   * 外层返回稳定容器，当前 tab 在子节点里读，避免点击切 tab 时重建 signal。
+   * 新增／编辑写回 rows，切 tab 重建面板时不会丢掉刚添加的行。
+   */
+  return (
+    <div class="contents">
+      {() => {
     const key = tab.value;
-    const data = key === "admin"
-      ? rows.filter((r) => r.role === "admin")
-      : rows;
+    const all = rows.value;
+    const adminCount = all.filter((r) => r.role === "admin").length;
     return (
       <DataPanel
         panelKey="demo-tabs"
         title="用户管理"
-        data={data}
+        data={all}
+        fixed={key === "admin" ? { role: "admin" } : undefined}
         columns={columns}
         search={{ props: search }}
-        form={{ props: form }}
+        form={{
+          props: key === "admin"
+            ? form.map((f) =>
+              f.prop === "role" ? { ...f, initial: "admin" } : f
+            )
+            : form,
+        }}
         exportName="users"
+        onDataChange={(next) => {
+          rows.value = next;
+        }}
         activeTab={key}
         onTabChange={(k) => {
           tab.value = k;
@@ -4122,14 +4345,16 @@ function DataPanelTabsDemo() {
             label: "统计",
             children: (
               <div class="px-3 py-4 text-sm text-slate-600 dark:text-slate-400">
-                当前共 {rows.length} 人，其中管理员 {adminCount} 人。
+                当前共 {all.length} 人，其中管理员 {adminCount} 人。
               </div>
             ),
           },
         ]}
       />
     );
-  };
+      }}
+    </div>
+  );
 }
 `}
           >
@@ -4140,6 +4365,48 @@ function DataPanelTabsDemo() {
               <code>?tab=</code>，用这个地址打开会激活对应标签。
             </Paragraph>
             <DataPanelTabsDemo />
+          </DocsDemo>
+          <DocsDemo title="远程 Tab 参数与缓存（只读）" code={remoteTabCode}>
+            <Paragraph class="mb-3 text-sm text-slate-600 dark:text-slate-400">
+              这个实例实际请求本站内存假后端，不是上面的本地数组过滤。
+              自定义参数 remoteTab=admin 返回管理员，all
+              返回全部；重复切回走缓存，
+              「刷新」只重新请求当前标签。syncUrl=false只关闭分页／排序／搜索同步，
+              标签仍按tabParam写入地址栏且保留其它参数。关闭所有写入口，每页50条以一次显示全部演示用户。
+            </Paragraph>
+            <DataPanel
+              panelKey="demo-tabs-api"
+              caps={{
+                create: false,
+                update: false,
+                remove: false,
+                view: false,
+                import: false,
+              }}
+              title="远程用户（只读）"
+              baseRoute="/api/users"
+              syncUrl={false}
+              tabParam="remoteTab"
+              columns={[
+                { prop: "name", label: "姓名" },
+                { prop: "role", label: "角色" },
+              ]}
+              tabs={[{ key: "all", label: "全部" }, {
+                key: "admin",
+                label: "管理员",
+              }]}
+              toolbar={{
+                ...DEMO_HIDE_CHROME,
+                create: false,
+                search: false,
+                refresh: true,
+              }}
+              pagination={{
+                pageSize: 50,
+                pageSizeOptions: [50],
+                preset: "simple",
+              }}
+            />
           </DocsDemo>
           <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
             配置了 <code>tabs</code> 且走 API（<code>baseRoute</code> 或远程
@@ -4283,7 +4550,7 @@ function DataPanelTabsDemo() {
             <code class="text-xs">show</code>／
             <code class="text-xs">disabled</code>／
             <code class="text-xs">options</code>{" "}
-            可按当前表单值计算：访客禁用邮箱，管理员才显示积分。
+            可按当前表单值计算：访客禁用邮箱，管理员才显示积分，管理范围选项随角色改变。
           </Paragraph>
           <DataPanel
             panelKey="demo-form-cond"
@@ -4313,6 +4580,23 @@ function DataPanelTabsDemo() {
                   show: ({ values }) => values.role === "admin",
                   hint: "仅管理员显示积分",
                 },
+                {
+                  prop: "scope",
+                  label: "管理范围",
+                  type: "select",
+                  initial: "self",
+                  options: ({ values }) => [
+                    { value: "self", label: "仅本人" },
+                    ...(values.role === "admin" || values.role === "editor"
+                      ? [{ value: "team", label: "本团队" }]
+                      : []),
+                    ...(values.role === "admin"
+                      ? [{ value: "all", label: "所有用户" }]
+                      : []),
+                  ],
+                  hint:
+                    "管理员可管理所有用户，编辑可管理本团队，访客仅本人；切换角色前请选择仍有效的范围",
+                },
                 { prop: "balance", type: "number", min: 0, initial: 0 },
                 { prop: "status", type: "switch", initial: "active" },
               ],
@@ -4320,8 +4604,9 @@ function DataPanelTabsDemo() {
                 saveMore: {
                   label: "保存并继续",
                   action: async (ctx) => {
-                    await ctx.submit();
-                    openDataPanelForm("demo-form-cond");
+                    if (await ctx.submit()) {
+                      openDataPanelForm("demo-form-cond");
+                    }
                   },
                 },
                 submit: true,
@@ -4447,14 +4732,19 @@ function DataPanelTabsDemo() {
           Search（SearchConfig / SearchField）
         </Title>
         <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
-          搜索弹层的 Modal 参数写在 <code class="text-xs">modal</code>
+          <code class="text-xs">search.mode</code> 默认{" "}
+          <code class="text-xs">modal</code>
+          （弹窗）；设为 <code class="text-xs">expand</code>{" "}
+          时，点击工具栏搜索会在工具栏下方展开或收起表单。 弹窗的 Modal 参数写在
+          {" "}
+          <code class="text-xs">modal</code>
           上（width 缺省 md、maxHeight、fullscreenable
           全屏按钮、centered、draggable 等）。{" "}
           <code class="text-xs">autoFullscreen</code>
           （打开即全屏，所有端，缺省 false）和{" "}
           <code class="text-xs">mobileAutoFullscreen</code>
-          （仅移动端打开即全屏，缺省 false）写在 search
-          上。字段类型对齐表单：date／datetime 用选择器，number
+          （仅移动端打开即全屏，缺省 false）写在 search 上，仅 modal
+          模式生效。字段类型对齐表单：date／datetime 用选择器，number
           为普通文本输入，并支持多选。<code class="text-xs">
             search.actions
           </code>{" "}
@@ -4502,7 +4792,7 @@ function DataPanelTabsDemo() {
           <code class="text-xs">modal</code>{" "}
           给弹层（width 缺省 md、maxHeight、fullscreenable 等），
           <code class="text-xs">descriptions</code>{" "}
-          给描述列表（除 items、title；本插槽缺省{" "}
+          给描述列表（除 rows、title；本插槽缺省{" "}
           <code class="text-xs">column</code> 1、
           <code class="text-xs">size</code> sm、
           <code class="text-xs">bordered</code> true）。

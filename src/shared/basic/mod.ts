@@ -2,7 +2,11 @@
  * View common/basic 基础组件入口（Button、Link、Icon、Typography、Badge、Avatar、Skeleton、Spinner）。
  */
 export { Button, ButtonGroup } from "./Button.tsx";
-export type { ButtonGroupProps, ButtonProps } from "./Button.tsx";
+export type {
+  ButtonGroupProps,
+  ButtonProps,
+  ButtonVariant,
+} from "./Button.tsx";
 export { Link } from "./Link.tsx";
 export type { LinkProps } from "./Link.tsx";
 export { Icon } from "./Icon.tsx";
@@ -512,13 +516,24 @@ export {
 } from "./icons/mod.ts";
 /** 各国独立国旗请走 `@dreamer/ui-view/icons/flags/…`，勿经本 barrel 全量 re-export。 */
 export { Paragraph, Text, Title } from "./Typography.tsx";
-export type { ParagraphProps, TextProps, TitleProps } from "./Typography.tsx";
+export type {
+  ParagraphProps,
+  TextProps,
+  TitleProps,
+  TypographyMessages,
+  TypographyType,
+} from "./Typography.tsx";
+export { defaultTypographyMessages } from "./Typography.tsx";
 export { Badge } from "./Badge.tsx";
 export type { BadgeProps } from "./Badge.tsx";
-export { Avatar } from "./Avatar.tsx";
-export type { AvatarProps, AvatarSize } from "./Avatar.tsx";
+export { Avatar, AvatarGroup } from "./Avatar.tsx";
+export type { AvatarGroupProps, AvatarProps, AvatarSize } from "./Avatar.tsx";
 export { defaultSkeletonMessages, Skeleton } from "./Skeleton.tsx";
-export type { SkeletonMessages, SkeletonProps } from "./Skeleton.tsx";
+export type {
+  SkeletonMessages,
+  SkeletonProps,
+  SkeletonVariant,
+} from "./Skeleton.tsx";
 export { defaultSpinnerMessages, Spinner } from "./Spinner.tsx";
 export type { SpinnerMessages, SpinnerProps } from "./Spinner.tsx";
 

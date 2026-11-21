@@ -91,7 +91,7 @@ export function isEditableConfig<T>(
 }
 
 /** 解析列 editable.disabled */
-export function resolveEditableDisabled<T extends Record<string, unknown>>(
+export function resolveEditableDisabled<T = unknown>(
   ed: TableColumnEditable<T>,
   record: T,
   rowIndex: number,
@@ -354,7 +354,7 @@ export function scheduleTableEditRefocus(
  * @param pendingEditRefocusCountRef - 与 Table 内 `pendingEditRefocusCount` 同一引用；在 `onCellChange` **之前**递增，
  *   使同步触发的 `focusout`（子 input 被摘掉）进入 `tryBlurExit` 时仍能识别「受控重挂中」，避免误清空 `editingCell`
  */
-export function renderEditableCell<T extends Record<string, unknown>>(
+export function renderEditableCell<T = unknown>(
   col: TableColumn<T>,
   record: T,
   rowIndex: number,
@@ -713,7 +713,7 @@ export function editableCellJustify(
  * @param size - 表格尺寸（与控件同高，避免切换闪动）
  * @param cellAlign - 列对齐
  */
-export function renderEditableCellDisplay<T extends Record<string, unknown>>(
+export function renderEditableCellDisplay<T = unknown>(
   _col: TableColumn<T>,
   raw: unknown,
   ed: TableColumnEditable<T>,

@@ -5,7 +5,7 @@
  * `createSignal` 返回值为零参可调用，运行时与显式 `() => T` 一致；透传至 JSX 时由 View 对「函数型」属性做细粒度绑定。
  */
 
-import type { Signal } from "@dreamer/view";
+import { createSignal, type Signal } from "@dreamer/view";
 import {
   readSignalValue,
   safeIsSignal,
@@ -52,4 +52,50 @@ export function commitMaybeSignal<T>(
   if (v !== undefined && safeIsSignal(v)) {
     writeSignalValue(v as Signal<T>, next);
   }
+}
+
+/**
+ * 判断 `value` 是否为受控源：`createSignal` 返回值或零参 getter。
+ * 字面量与 `undefined` 视为非受控（字面量作初始值）。
+ */
+export function isControlledMaybeSignal<T>(
+  value: MaybeSignal<T> | undefined,
+): value is Signal<T> | (() => T) {
+  if (value === undefined) return false;
+  if (safeIsSignal(value)) return true;
+  return typeof value === "function";
+}
+
+/** {@link createOptionalValueState} 的读写句柄 */
+export interface OptionalValueState<T> {
+  read: () => T;
+  commit: (next: T) => void;
+  /**
+   * 绑到原生 `value`：受控时沿用原 Signal/getter，非受控时为内部 Signal。
+   * 须直接透传，勿在组件体里调用 `read()`，以免订阅后整树重跑、输入失焦。
+   */
+  bind: MaybeSignal<T>;
+}
+
+/**
+ * 统一表单值状态：
+ * - 未传 `value`：内部 Signal，初始为 `fallback`（非受控）
+ * - 字面量：内部 Signal，初始为该字面量（当作 defaultValue，选择/输入可回写显示）
+ * - Signal / getter：仍按 {@link MaybeSignal} 受控读写（仅 Signal 可写回）
+ */
+export function createOptionalValueState<T>(
+  value: MaybeSignal<T> | undefined,
+  fallback: T,
+): OptionalValueState<T> {
+  const controlled = isControlledMaybeSignal(value);
+  const initial = !controlled && value !== undefined ? value as T : fallback;
+  const inner = createSignal(initial);
+  return {
+    read: () => controlled ? (readMaybeSignal(value) ?? fallback) : inner(),
+    commit: (next) => {
+      if (controlled) commitMaybeSignal(value, next);
+      else inner.value = next;
+    },
+    bind: controlled ? value : inner,
+  };
 }

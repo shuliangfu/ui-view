@@ -20,7 +20,11 @@ import { twMerge } from "tailwind-merge";
 /** 触发器右侧使用时钟图标 */
 import { IconClock } from "../basic/icons/Clock.tsx";
 import type { SizeVariant } from "../types.ts";
-import { resolveFormControlSize } from "./form-control-context.ts";
+import {
+  resolveFormControlDisabled,
+  resolveFormControlSize,
+} from "./form-control-context.ts";
+import { FieldClearSlot } from "./field-clear-button.tsx";
 import { FormItemControlIdContext } from "./form-item-control-id.ts";
 import {
   controlBlueFocusRing,
@@ -52,7 +56,8 @@ import {
   schedulePickerTimeDraftColumnsScroll,
 } from "./picker-portal-utils.ts";
 import { pickerCalendarIconProps } from "./picker-trigger-icon.ts";
-import { commitMaybeSignal, type MaybeSignal } from "./maybe-signal.ts";
+import { PickerTriggerText } from "./picker-trigger-text.tsx";
+import { createOptionalValueState, type MaybeSignal } from "./maybe-signal.ts";
 import { autoFocusAttr, bindAutoFocusRef } from "./auto-focus.ts";
 
 /** range 模式受控值 */
@@ -96,6 +101,8 @@ export interface TimePickerMessages {
   add: string;
   /** multiple 模式标签的「点击移除」title */
   removeTitle: string;
+  /** 清除按钮 `aria-label` */
+  clear: string;
 }
 
 /** 默认中文文案 */
@@ -113,6 +120,7 @@ export const defaultTimePickerMessages: TimePickerMessages = {
   end: "结束",
   add: "加入已选",
   removeTitle: "点击移除",
+  clear: "清除",
 };
 
 export interface TimePickerProps {
@@ -149,6 +157,8 @@ export interface TimePickerProps {
   panelAttach?: "anchored" | "viewport";
   /** 多语言/自定义文案；未传字段走 {@link defaultTimePickerMessages} */
   messages?: Partial<TimePickerMessages>;
+  /** 显示清除按钮（无值时也保留）；点击后清空并触发 onChange */
+  allowClear?: boolean;
 }
 
 const DROPDOWN_ESC_KEY = "__lastDropdownClose" as const;
@@ -211,11 +221,6 @@ function isTimeRangeValue(v: unknown): v is TimePickerRangeValue {
 
 function isHmStringArray(v: unknown): v is string[] {
   return Array.isArray(v) && v.every((x) => typeof x === "string");
-}
-
-function resolveTimePickerRaw(value: TimePickerProps["value"]): unknown {
-  if (value === undefined) return undefined;
-  return typeof value === "function" ? (value as () => unknown)() : value;
 }
 
 function timePickerDisplayText(
@@ -705,6 +710,7 @@ function TimePickerTimeStrip(props: TimePickerTimeStripProps) {
 }
 
 export function TimePicker(props: TimePickerProps): JSXRenderable {
+  const selected = createOptionalValueState<TimePickerValue>(props.value, "");
   /** 与 {@link Input} 一致：继承 Form 注入的控件尺寸 */
   const resolvedControlSize = resolveFormControlSize(props.size);
   const fromFormItem = useContext(FormItemControlIdContext);
@@ -719,7 +725,7 @@ export function TimePicker(props: TimePickerProps): JSXRenderable {
   const stripLabels = { hour: m.hour, minute: m.minute, second: m.second };
 
   /** 读受控值；打开 / 展示文案时在 getter 内调用，与 {@link MaybeSignal} 一致 */
-  const rawResolved = () => resolveTimePickerRaw(props.value);
+  const rawResolved = () => selected.read();
 
   const openState = createSignal(false);
   const draftHour = createSignal(0);
@@ -770,7 +776,7 @@ export function TimePicker(props: TimePickerProps): JSXRenderable {
         draftSecond.value,
         timeFormatSpec,
       );
-      commitMaybeSignal(props.value, str);
+      selected.commit(str);
       const synthetic = {
         target: { name: name ?? undefined, value: str },
       } as unknown as Event;
@@ -793,7 +799,7 @@ export function TimePicker(props: TimePickerProps): JSXRenderable {
           timeFormatSpec,
         ),
       };
-      commitMaybeSignal(props.value, rangeCommitted);
+      selected.commit(rangeCommitted);
       const synthetic = {
         target: {
           name: name ?? undefined,
@@ -805,7 +811,7 @@ export function TimePicker(props: TimePickerProps): JSXRenderable {
       return;
     }
     const multiCommitted = [...draftMultiple.value].sort();
-    commitMaybeSignal(props.value, multiCommitted);
+    selected.commit(multiCommitted);
     const synthetic = {
       target: {
         name: name ?? undefined,
@@ -817,6 +823,29 @@ export function TimePicker(props: TimePickerProps): JSXRenderable {
   };
 
   const handleCancel = () => {
+    closePickerOverlay();
+  };
+
+  const handleClear = () => {
+    if (resolveFormControlDisabled(props.disabled)) return;
+    const { name, onChange } = props;
+    if (mode === "single") {
+      selected.commit("");
+      onChange?.(
+        { target: { name: name ?? undefined, value: "" } } as unknown as Event,
+      );
+    } else if (mode === "range") {
+      const empty = { start: "", end: "" };
+      selected.commit(empty);
+      onChange?.({
+        target: { name: name ?? undefined, value: JSON.stringify(empty) },
+      } as unknown as Event);
+    } else {
+      selected.commit([]);
+      onChange?.({
+        target: { name: name ?? undefined, value: "[]" },
+      } as unknown as Event);
+    }
     closePickerOverlay();
   };
 
@@ -855,7 +884,7 @@ export function TimePicker(props: TimePickerProps): JSXRenderable {
       };
     }
     const list = draftMultiple.value;
-    return list.length > 0 ? [...list] : committed;
+    return [...list];
   };
 
   /**
@@ -887,9 +916,14 @@ export function TimePicker(props: TimePickerProps): JSXRenderable {
    * 之后的微任务，可避免同一次点击里其它同步监听器在刚打开瞬间误关浮层（闪一下或像点不开）。
    */
   const handleOpen = () => {
-    if (props.disabled) return;
+    if (resolveFormControlDisabled(props.disabled)) return;
+    // 再次激活触发器视为取消草稿并收起，不重新初始化打开态。
+    if (openState.value) {
+      closePickerOverlay();
+      return;
+    }
     globalThis.queueMicrotask(() => {
-      if (props.disabled) return;
+      if (resolveFormControlDisabled(props.disabled)) return;
       const raw = rawResolved();
 
       /** 合并打开时的多次 signal 写入，避免与浮层位置同步叠加后主线程过载 */
@@ -986,72 +1020,89 @@ export function TimePicker(props: TimePickerProps): JSXRenderable {
             rawResolved(),
           )}
       />
-      <button
-        type="button"
-        id={props.id ?? fromFormItem}
-        /**
-         * 触发器 DOM：点外关闭与几何同步用；须用函数 ref，勿 `ref={triggerRef}` 对象。
-         */
-        ref={bindAutoFocusRef((el: HTMLButtonElement | null) => {
-          triggerRef.current = el;
-        }, props.autoFocus)}
-        {...autoFocusAttr(props.autoFocus)}
-        disabled={() => props.disabled ?? false}
-        aria-invalid={() => props.error}
-        aria-haspopup="dialog"
-        aria-expanded={() => openState.value}
-        aria-label={() => {
-          const md = props.mode ?? "single";
-          const raw = rawForTriggerDisplay();
-          const ph = props.placeholder ?? m.placeholder;
-          return timePickerDisplayText(md, raw, ph, m);
-        }}
-        class={() =>
-          twMerge(
-            pickerTriggerSurface,
-            controlBlueFocusRing(!props.hideFocusRing && !props.error),
-            props.error && controlErrorBorder,
-            props.error && !props.hideFocusRing && controlErrorFocusRing(true),
-            pickerTriggerSizeClasses[resolvedControlSize],
-          )}
-        onBlur={props.onBlur}
-        onClick={handleOpen}
-      >
-        <span
-          class={() => {
-            const md = props.mode ?? "single";
-            const raw = rawForTriggerDisplay();
-            const has = timePickerHasValue(md, raw);
-            return has
-              ? "text-slate-900 dark:text-slate-100"
-              : "text-slate-400 dark:text-slate-500";
-          }}
-        >
-          {() => {
+      <span class="relative block w-full">
+        <button
+          type="button"
+          id={props.id ?? fromFormItem}
+          /**
+           * 触发器 DOM：点外关闭与几何同步用；须用函数 ref，勿 `ref={triggerRef}` 对象。
+           */
+          ref={bindAutoFocusRef((el: HTMLButtonElement | null) => {
+            triggerRef.current = el;
+          }, props.autoFocus)}
+          {...autoFocusAttr(props.autoFocus)}
+          disabled={() => resolveFormControlDisabled(props.disabled) ?? false}
+          aria-invalid={() => props.error}
+          aria-haspopup="dialog"
+          aria-expanded={() => openState.value}
+          aria-label={() => {
             const md = props.mode ?? "single";
             const raw = rawForTriggerDisplay();
             const ph = props.placeholder ?? m.placeholder;
             return timePickerDisplayText(md, raw, ph, m);
           }}
-        </span>
-        <span
           class={() =>
             twMerge(
-              "inline-flex shrink-0 items-center justify-center",
-              openState.value
-                ? "text-slate-600 dark:text-slate-300"
-                : "text-slate-400 dark:text-slate-500",
+              pickerTriggerSurface,
+              controlBlueFocusRing(!props.hideFocusRing && !props.error),
+              props.error && controlErrorBorder,
+              props.error && !props.hideFocusRing &&
+                controlErrorFocusRing(true),
+              pickerTriggerSizeClasses[resolvedControlSize],
             )}
+          onBlur={props.onBlur}
+          onClick={handleOpen}
         >
-          <IconClock
-            size={pickerCalendarIconProps(resolvedControlSize).size}
-            class={twMerge(
-              pickerCalendarIconProps(resolvedControlSize).class,
-              "shrink-0",
-            )}
+          <PickerTriggerText
+            filled={() => {
+              const md = props.mode ?? "single";
+              return timePickerHasValue(md, rawForTriggerDisplay());
+            }}
+            placeholder={() => props.placeholder ?? m.placeholder}
+            text={() => {
+              const md = props.mode ?? "single";
+              const raw = rawForTriggerDisplay();
+              const ph = props.placeholder ?? m.placeholder;
+              return timePickerDisplayText(md, raw, ph, m);
+            }}
           />
-        </span>
-      </button>
+          {() => {
+            if (
+              !props.allowClear || resolveFormControlDisabled(props.disabled)
+            ) return null;
+            const mm = { ...defaultTimePickerMessages, ...props.messages };
+            return (
+              <FieldClearSlot
+                reserve
+                as="span"
+                visible={() => {
+                  const md = props.mode ?? "single";
+                  return timePickerHasValue(md, rawForTriggerDisplay());
+                }}
+                label={mm.clear}
+                onClear={handleClear}
+              />
+            );
+          }}
+          <span
+            class={() =>
+              twMerge(
+                "inline-flex shrink-0 items-center justify-center",
+                openState.value
+                  ? "text-slate-600 dark:text-slate-300"
+                  : "text-slate-400 dark:text-slate-500",
+              )}
+          >
+            <IconClock
+              size={pickerCalendarIconProps(resolvedControlSize).size}
+              class={twMerge(
+                pickerCalendarIconProps(resolvedControlSize).class,
+                "shrink-0",
+              )}
+            />
+          </span>
+        </button>
+      </span>
       {/* 时间浮层：仅 Show 条件挂载，避免根树因 openState 整段 replace */}
       <Show when={openState}>
         {() => {

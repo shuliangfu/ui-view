@@ -72,7 +72,7 @@ describe("resolveModalStartFullscreen", () => {
 
 describe("isMobileViewport", () => {
   it("无 matchMedia 时视为电脑端", () => {
-    const g = globalThis as typeof globalThis & { matchMedia?: unknown };
+    const g = globalThis as unknown as { matchMedia?: unknown };
     const prev = g.matchMedia;
     try {
       g.matchMedia = undefined;
@@ -83,7 +83,7 @@ describe("isMobileViewport", () => {
   });
 
   it("matchMedia 命中移动端媒体查询时返回 true，否则 false", () => {
-    const g = globalThis as typeof globalThis & { matchMedia?: unknown };
+    const g = globalThis as unknown as { matchMedia?: unknown };
     const prev = g.matchMedia;
     try {
       g.matchMedia = (query: string) => ({

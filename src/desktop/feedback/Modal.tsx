@@ -44,6 +44,11 @@ import {
   type ControlledOpenInput,
   readControlledOpenInput,
 } from "../../shared/feedback/controlled-open.ts";
+import {
+  createRestoreFocusScheduler,
+  resolveRestoreFocusTarget,
+  retainOutsideFocusListener,
+} from "../../shared/feedback/restore-focus.ts";
 /** 按需：单文件图标，避免经 icons/mod 拉入全表 */
 import { IconClose } from "../../shared/basic/icons/Close.tsx";
 import { IconExitFullscreen } from "../../shared/basic/icons/ExitFullscreen.tsx";
@@ -670,6 +675,10 @@ export function Modal(props: ModalProps): JSXRenderable {
       : null;
     if (!doc) return;
     const handler = (e: KeyboardEvent) => {
+      // 必须实时判断：关闭后若监听未卸掉，也不能再拦截 Esc
+      //（Bun 下 createEffect 清理有时晚于关闭，会误伤后续组件）。
+      if (!isOpen()) return;
+      if (!modalBoxEl?.isConnected) return;
       if (keyboard && e.key === "Escape") {
         e.preventDefault();
         onClose?.();
@@ -682,14 +691,32 @@ export function Modal(props: ModalProps): JSXRenderable {
   /**
    * 打开时：记住触发焦点 → 聚焦弹层首个可聚焦控件；Tab 循环陷阱；
    * 关闭／卸载时恢复先前焦点（避免焦点落到 body 丢失键盘上下文）。
+   * 卸载当前焦点所在的弹层后，浏览器会把焦点异步收到 body，所以还焦必须排到那之后。
+   * 触发器记在组件实例上：打开后 effect 若重跑，不能用当时已在弹层内的焦点覆盖它。
    */
+  retainOutsideFocusListener(
+    typeof globalThis.document !== "undefined" ? globalThis.document : null,
+  );
+  const restoreFocus = createRestoreFocusScheduler();
+  let previouslyFocused: HTMLElement | null = null;
+
   createEffect(() => {
-    if (!isOpen()) return;
+    const open = isOpen();
     const doc = typeof globalThis.document !== "undefined"
       ? globalThis.document
       : null;
     if (!doc) return;
-    const previouslyFocused = doc.activeElement as HTMLElement | null;
+
+    if (!open) {
+      const target = previouslyFocused;
+      previouslyFocused = null;
+      restoreFocus.schedule(doc, target);
+      return;
+    }
+
+    restoreFocus.cancel();
+    const captured = resolveRestoreFocusTarget(doc);
+    if (captured) previouslyFocused = captured;
 
     const focusFirst = () => {
       const panel = doc.querySelector<HTMLElement>("[data-ui-modal-panel]");
@@ -713,13 +740,13 @@ export function Modal(props: ModalProps): JSXRenderable {
       }
       const first = list[0]!;
       const last = list[list.length - 1]!;
-      const active = doc.activeElement as HTMLElement | null;
+      const current = doc.activeElement as HTMLElement | null;
       if (e.shiftKey) {
-        if (active === first || !panel.contains(active)) {
+        if (current === first || !panel.contains(current)) {
           e.preventDefault();
           last.focus({ preventScroll: true });
         }
-      } else if (active === last) {
+      } else if (current === last) {
         e.preventDefault();
         first.focus({ preventScroll: true });
       }
@@ -728,13 +755,6 @@ export function Modal(props: ModalProps): JSXRenderable {
     return () => {
       doc.removeEventListener("keydown", onKeyDown as EventListener);
       if (raf != null) globalThis.cancelAnimationFrame?.(raf);
-      if (
-        previouslyFocused &&
-        typeof previouslyFocused.focus === "function" &&
-        doc.contains(previouslyFocused)
-      ) {
-        previouslyFocused.focus({ preventScroll: true });
-      }
     };
   });
 

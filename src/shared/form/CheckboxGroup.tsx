@@ -8,12 +8,11 @@
 
 import { type JSXRenderable, useContext } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
+import { createOptionalValueState, type MaybeSignal } from "./maybe-signal.ts";
 import {
-  commitMaybeSignal,
-  type MaybeSignal,
-  readMaybeSignal,
-} from "./maybe-signal.ts";
-import { resolveFormControlSize } from "./form-control-context.ts";
+  resolveFormControlDisabled,
+  resolveFormControlSize,
+} from "./form-control-context.ts";
 import { FormItemControlIdContext } from "./form-item-control-id.ts";
 import { Checkbox } from "./Checkbox.tsx";
 import type { SizeVariant } from "../types.ts";
@@ -64,7 +63,7 @@ export function CheckboxGroup(props: CheckboxGroupProps): JSXRenderable {
     options,
     name,
     value: valueProp,
-    disabled = false,
+
     error = false,
     onChange,
     direction = "horizontal",
@@ -72,6 +71,8 @@ export function CheckboxGroup(props: CheckboxGroupProps): JSXRenderable {
     size: sizeProp,
     id,
   } = props;
+  const disabled = resolveFormControlDisabled(props.disabled);
+  const selected = createOptionalValueState(valueProp, [] as string[]);
   const size = resolveFormControlSize(sizeProp);
   const fromFormItem = useContext(FormItemControlIdContext);
   const resolvedId = id ?? fromFormItem;
@@ -86,7 +87,7 @@ export function CheckboxGroup(props: CheckboxGroupProps): JSXRenderable {
    * @param next - 新的已选 value 列表
    */
   const commitValue = (next: string[]) => {
-    commitMaybeSignal(valueProp, next);
+    selected.commit(next);
     onChange?.(next);
   };
 
@@ -96,7 +97,7 @@ export function CheckboxGroup(props: CheckboxGroupProps): JSXRenderable {
     const all = options
       .filter((opt) => !opt.disabled)
       .map((opt) => opt.value);
-    const current = readMaybeSignal(valueProp) ?? [];
+    const current = selected.read();
     commitValue(toggleSelectAllKeys(current, all));
   };
 
@@ -108,7 +109,7 @@ export function CheckboxGroup(props: CheckboxGroupProps): JSXRenderable {
           const all = options
             .filter((opt) => !opt.disabled)
             .map((opt) => opt.value);
-          const current = readMaybeSignal(valueProp) ?? [];
+          const current = selected.read();
           commitValue(toggleSelectAllKeys(current, all));
         });
       }}
@@ -127,14 +128,13 @@ export function CheckboxGroup(props: CheckboxGroupProps): JSXRenderable {
           <Checkbox
             name={name}
             value={opt.value}
-            checked={() =>
-              (readMaybeSignal(valueProp) ?? []).includes(opt.value)}
+            checked={() => (selected.read()).includes(opt.value)}
             disabled={disabled || opt.disabled}
             error={error}
             size={size}
             onChange={(e: Event) => {
               const el = e.target as HTMLInputElement;
-              const resolved = readMaybeSignal(valueProp) ?? [];
+              const resolved = selected.read();
               const next = el.checked
                 ? [...resolved, opt.value]
                 : resolved.filter((v: string) => v !== opt.value);

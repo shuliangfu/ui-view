@@ -6,19 +6,25 @@
 
 import { twMerge } from "tailwind-merge";
 import {
+  createSignal,
   type JSXRenderable,
   useContext,
   type ViewRefObject,
 } from "@dreamer/view";
 import type { SizeVariant } from "../types.ts";
-import { resolveFormControlSize } from "./form-control-context.ts";
+import {
+  resolveFormControlDisabled,
+  resolveFormControlSize,
+} from "./form-control-context.ts";
+import { FieldClearSlot } from "./field-clear-button.tsx";
 import { FormItemControlIdContext } from "./form-item-control-id.ts";
 import {
   compositeShellFocusRingFromInput,
   controlErrorBorder,
 } from "./input-focus-ring.ts";
-import { commitMaybeSignal, type MaybeSignal } from "./maybe-signal.ts";
+import { createOptionalValueState, type MaybeSignal } from "./maybe-signal.ts";
 import { autoFocusAttr, bindAutoFocusRef } from "./auto-focus.ts";
+import { bindNativeFocusEvents } from "./native-focus-events.ts";
 
 /**
  * InputNumber 内置文案。
@@ -28,12 +34,15 @@ export interface InputNumberMessages {
   decrease: string;
   /** 增加按钮 `aria-label` */
   increase: string;
+  /** 清除按钮 `aria-label` */
+  clear: string;
 }
 
 /** 默认中文文案 */
 export const defaultInputNumberMessages: InputNumberMessages = {
   decrease: "减少",
   increase: "增加",
+  clear: "清除",
 };
 
 export interface InputNumberProps {
@@ -86,6 +95,16 @@ export interface InputNumberProps {
   autoFocus?: boolean;
   /** 多语言/自定义文案；未传字段走 {@link defaultInputNumberMessages} */
   messages?: Partial<InputNumberMessages>;
+  /** 输入框前缀（外壳内、输入左侧） */
+  prefix?: unknown;
+  /** 输入框后缀（外壳内、步进按钮左侧） */
+  suffix?: unknown;
+  /** 失焦后保留的小数位数 */
+  precision?: number;
+  /** 未聚焦时的展示格式化（聚焦时仍显示原始数字） */
+  formatter?: (value: number) => string;
+  /** 有值时显示清除按钮 */
+  allowClear?: boolean;
 }
 
 /**
@@ -269,7 +288,7 @@ function InputNumberButtons(props: {
 export function InputNumber(props: InputNumberProps): JSXRenderable {
   const {
     size: sizeProp,
-    disabled = false,
+
     placeholder,
     value,
     step = 1,
@@ -291,9 +310,17 @@ export function InputNumber(props: InputNumberProps): JSXRenderable {
     error = false,
     hideFocusRing = false,
     messages,
+    prefix,
+    suffix,
+    precision,
+    formatter,
+    allowClear = false,
   } = props;
+  const disabled = resolveFormControlDisabled(props.disabled);
+  const selected = createOptionalValueState(value, "" as number | string);
   const m = { ...defaultInputNumberMessages, ...messages };
   const size = resolveFormControlSize(sizeProp);
+  const focused = createSignal(false);
   const fromFormItem = useContext(FormItemControlIdContext);
   const resolvedId = id ?? fromFormItem;
 
@@ -303,7 +330,7 @@ export function InputNumber(props: InputNumberProps): JSXRenderable {
   const onTriggerChange = (newVal: number) => {
     const normalized = roundByStepPrecision(newVal, step);
     const str = String(normalized);
-    commitMaybeSignal(value, str);
+    selected.commit(str);
     const synthetic = {
       target: { value: str },
     } as unknown as Event;
@@ -319,11 +346,11 @@ export function InputNumber(props: InputNumberProps): JSXRenderable {
   const commitTypedValue = (e: Event, notify?: (e: Event) => void) => {
     const el = e.target as HTMLInputElement;
     if (!isPartialNumber(el.value)) {
-      const raw = typeof value === "function" ? value() : value;
+      const raw = selected.read();
       el.value = raw === undefined || raw === "" ? "" : String(raw);
       return;
     }
-    commitMaybeSignal(value, el.value);
+    selected.commit(el.value);
     notify?.(e);
   };
 
@@ -343,6 +370,62 @@ export function InputNumber(props: InputNumberProps): JSXRenderable {
    */
   const handleChange = (e: Event) => {
     commitTypedValue(e, onChange);
+  };
+
+  const readRaw = (): number | string | undefined => selected.read();
+
+  /**
+   * 未聚焦时按 precision / formatter 展示；聚焦时显示原始数字，避免格式化串写回 input 干扰输入。
+   */
+  const displayValue = () => {
+    const raw = readRaw();
+    if (focused.value) {
+      return raw === undefined || raw === "" ? "" : String(raw);
+    }
+    if (raw === undefined || raw === "") return "";
+    const n = typeof raw === "number" ? raw : Number(raw);
+    if (!Number.isFinite(n)) return String(raw);
+    const rounded = precision != null ? Number(n.toFixed(precision)) : n;
+    if (formatter) return formatter(rounded);
+    if (precision != null) return rounded.toFixed(precision);
+    return String(raw);
+  };
+
+  const handleFocus = (e: Event) => {
+    focused.value = true;
+    onFocus?.(e);
+  };
+
+  const handleBlur = (e: Event) => {
+    const el = e.target as HTMLInputElement;
+    const typed = el.value;
+    if (
+      typed !== "" &&
+      isPartialNumber(typed) &&
+      typed !== "+" &&
+      typed !== "-" &&
+      typed !== "." &&
+      typed !== "-." &&
+      typed !== "+."
+    ) {
+      let n = Number(typed);
+      if (Number.isFinite(n)) {
+        if (precision != null) n = Number(n.toFixed(precision));
+        if (min != null) n = Math.max(min, n);
+        if (max != null) n = Math.min(max, n);
+        selected.commit(String(n));
+      }
+    }
+    focused.value = false;
+    onBlur?.(e);
+  };
+
+  const handleClear = () => {
+    if (disabled) return;
+    selected.commit("");
+    const synthetic = { target: { value: "" } } as unknown as Event;
+    onChange?.(synthetic);
+    onInput?.(synthetic);
   };
 
   /**
@@ -376,7 +459,11 @@ export function InputNumber(props: InputNumberProps): JSXRenderable {
   const inputSpreadProps = {
     type: "text" as const,
     inputMode: "decimal" as const,
-    ref: bindAutoFocusRef(inputRef, autoFocus),
+    ref: bindNativeFocusEvents(
+      bindAutoFocusRef(inputRef, autoFocus),
+      handleFocus,
+      handleBlur,
+    ),
     id: resolvedId,
     ...autoFocusAttr(autoFocus),
     name,
@@ -389,8 +476,6 @@ export function InputNumber(props: InputNumberProps): JSXRenderable {
     ),
     onChange: handleChange,
     onInput: handleInput,
-    onBlur,
-    onFocus,
     onKeyDown: handleKeyDown,
     onKeyUp,
     onClick,
@@ -411,9 +496,33 @@ export function InputNumber(props: InputNumberProps): JSXRenderable {
         className,
       )}
     >
-      <input {...inputSpreadProps} value={value} />
+      {prefix != null && prefix !== false && (
+        <span class="inline-flex shrink-0 items-center px-2 text-slate-500 dark:text-slate-400">
+          {prefix}
+        </span>
+      )}
+      <input
+        {...inputSpreadProps}
+        value={displayValue}
+      />
+      {allowClear && !disabled && (
+        <FieldClearSlot
+          class="pr-1"
+          visible={() => {
+            const raw = readRaw();
+            return raw !== undefined && raw !== "";
+          }}
+          label={m.clear}
+          onClear={handleClear}
+        />
+      )}
+      {suffix != null && suffix !== false && (
+        <span class="inline-flex shrink-0 items-center px-2 text-slate-500 dark:text-slate-400">
+          {suffix}
+        </span>
+      )}
       <InputNumberButtons
-        value={value}
+        value={selected.bind}
         step={step}
         min={min}
         max={max}

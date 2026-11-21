@@ -71,13 +71,13 @@ export function MobilePortalHostScope(
         {props.children}
         {
           /*
-          叠在内容之上、不参与命中检测；浮层根节点自行 `pointer-events-auto`
+          叠在内容之上、不参与命中检测；浮层根节点自行 `pointer-events-auto`。
+          此容器承载可交互对话框，不可 aria-hidden，否则其全部 Portal 子树会从无障碍树消失。
         */
         }
         <div
           ref={setHostRef}
           class="pointer-events-none absolute inset-0 z-120"
-          aria-hidden="true"
           data-dreamer-mobile-portal-host=""
         />
       </div>

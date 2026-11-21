@@ -1,6 +1,6 @@
 /**
  * Dropdown 下拉菜单（View）。
- * 桌面点击/悬停展开；**仅向触发器下方**展开（`bottom` / `bottomLeft` / `bottomRight` / `bottomAuto`），不支持向上展开。
+ * 桌面点击/悬停展开。`bottom*` 始终向下；`top*` 向上；`bottomAuto` 只在下方做左右翻转；`auto` 按视口空间在上/下及左/中/右间选择。
  * Esc 关闭（需 initDropdownEsc）、hover 延迟防抖。展开默认内部维护；也可传受控 `open` + `onOpenChange`（点菜单项关菜单等场景）。
  * 浮层容器使用 **`p-1`**（四边等距）；展开时经 {@link Portal} 挂到 `document.body`，`fixed` 按视口定位，避免祖先 `overflow` 裁剪。
  */
@@ -9,6 +9,7 @@ import {
   createEffect,
   createMemo,
   createSignal,
+  onCleanup,
   Portal,
   Show,
 } from "@dreamer/view";
@@ -18,12 +19,17 @@ import {
   type ControlledOpenInput,
   readControlledOpenInput,
 } from "../../shared/feedback/controlled-open.ts";
+import { computeArrowAnchorStyle } from "../../shared/feedback/popFixedStyle.ts";
 
 export type DropdownPlacement =
   | "bottom"
   | "bottomLeft"
   | "bottomRight"
-  | "bottomAuto";
+  | "bottomAuto"
+  | "top"
+  | "topLeft"
+  | "topRight"
+  | "auto";
 
 export interface DropdownProps {
   /** 触发元素（子节点） */
@@ -43,7 +49,11 @@ export interface DropdownProps {
   hoverOpenDelay?: number;
   /** hover 时收起延迟（ms），默认 100 */
   hoverCloseDelay?: number;
-  /** 下拉位置（均在触发器下方）：默认 `bottom`（居中）；`bottomAuto` 根据左右空间在正下/偏左/偏右间切换 */
+  /**
+   * 下拉位置：默认 `bottom`（居中向下）；
+   * `bottomAuto` 只在下方根据左右空间切换；
+   * `auto` 按视口上下与左右空间选择。
+   */
   placement?: DropdownPlacement;
   /** 是否禁用，默认 false */
   disabled?: boolean;
@@ -54,8 +64,8 @@ export interface DropdownProps {
   /** 下拉层 id（无障碍：aria-describedby 等，可选） */
   overlayId?: string;
   /**
-   * 为 true 时在浮层**顶边**（靠向触发器一侧）绘制小尖角；左/中/右随 `placement`。
-   * 默认 false。
+   * 为 true 时在浮层靠向触发器的一侧绘制小尖角，尖角对准按钮中线
+   * （下拉在按钮正下方，上拉在按钮正上方）。默认 false。
    */
   arrow?: boolean;
   /**
@@ -76,12 +86,16 @@ export function initDropdownEsc(): (() => void) | undefined {
     if (e.key !== "Escape") return;
     const close = g[DROPDOWN_ESC_KEY];
     if (close) {
+      // 一次 Esc 只关闭最上层下拉，不能继续冒泡把承载它的 Modal 一并取消。
+      e.preventDefault();
+      e.stopImmediatePropagation();
       close();
       delete g[DROPDOWN_ESC_KEY];
     }
   };
-  globalThis.document.addEventListener("keydown", onKeyDown);
-  return () => globalThis.document.removeEventListener("keydown", onKeyDown);
+  globalThis.document.addEventListener("keydown", onKeyDown, true);
+  return () =>
+    globalThis.document.removeEventListener("keydown", onKeyDown, true);
 }
 
 /** 与 Tailwind `mt-1`/`mb-1` 默认间距一致（px） */
@@ -89,7 +103,7 @@ const GAP_Y_COMPACT_PX = 4;
 /** 与 Tailwind `mt-2`/`mb-2` 默认间距一致（px），用于带箭头时间隙 */
 const GAP_Y_ARROW_PX = 8;
 
-/** 与 {@link getDropdownArrowProps} 内 `left`/`right` inset 一致（px） */
+/** 未测得面板几何时，箭头距对齐边的回退 inset（px）；实测后对准按钮中线 */
 const ARROW_INSET_PX = 12;
 
 /**
@@ -167,6 +181,31 @@ export function computeDropdownFixedStyle(
         bottom: "auto",
         transform: "none",
       };
+    case "top":
+      return {
+        ...C,
+        top: "auto",
+        bottom: `${w.innerHeight - tr.top + gap}px`,
+        left: `${tr.left + tr.width / 2}px`,
+        transform: "translateX(-50%)",
+      };
+    case "topLeft":
+      return {
+        ...C,
+        top: "auto",
+        bottom: `${w.innerHeight - tr.top + gap}px`,
+        left: `${tr.left}px`,
+        transform: "none",
+      };
+    case "topRight":
+      return {
+        ...C,
+        top: "auto",
+        bottom: `${w.innerHeight - tr.top + gap}px`,
+        right: `${iw - tr.right}px`,
+        left: "auto",
+        transform: "none",
+      };
     default:
       return { ...C };
   }
@@ -175,7 +214,10 @@ export function computeDropdownFixedStyle(
 type ResolvedPopPlacement =
   | "bottom"
   | "bottomLeft"
-  | "bottomRight";
+  | "bottomRight"
+  | "top"
+  | "topLeft"
+  | "topRight";
 
 /**
  * 解析后用于箭头定位的 placement：bottomAuto 时使用 {@link autoPlacement}。
@@ -188,21 +230,82 @@ function resolvePlacement(
   if (isAuto) {
     return auto;
   }
-  if (placement === "bottomAuto") {
+  if (placement === "bottomAuto" || placement === "auto") {
     return "bottom";
   }
   return placement;
 }
 
 /**
+ * 由触发器、placement 与已测得的面板尺寸推算面板视口矩形。
+ * 只信任尺寸、不信任尚未刷新的 `left/top`，避免把箭头写到首帧未定位坐标上。
+ */
+export function panelBoxFromTrigger(
+  triggerRect: Pick<
+    DOMRect,
+    "left" | "top" | "width" | "height" | "right" | "bottom"
+  >,
+  eff: ResolvedPopPlacement,
+  size: Pick<DOMRect, "width" | "height">,
+  arrowEnabled: boolean,
+): Pick<DOMRect, "left" | "top" | "width" | "height"> {
+  const gap = gapYPixels(arrowEnabled, eff);
+  const w = size.width;
+  const h = size.height;
+  const tr = triggerRect;
+  switch (eff) {
+    case "bottom":
+      return {
+        left: tr.left + tr.width / 2 - w / 2,
+        top: tr.bottom + gap,
+        width: w,
+        height: h,
+      };
+    case "bottomLeft":
+      return { left: tr.left, top: tr.bottom + gap, width: w, height: h };
+    case "bottomRight":
+      return { left: tr.right - w, top: tr.bottom + gap, width: w, height: h };
+    case "top":
+      return {
+        left: tr.left + tr.width / 2 - w / 2,
+        top: tr.top - gap - h,
+        width: w,
+        height: h,
+      };
+    case "topLeft":
+      return { left: tr.left, top: tr.top - gap - h, width: w, height: h };
+    case "topRight":
+      return { left: tr.right - w, top: tr.top - gap - h, width: w, height: h };
+    default:
+      return { left: tr.left, top: tr.bottom + gap, width: w, height: h };
+  }
+}
+
+/**
  * 菱形箭头：`rotate(45deg)` 与位移写在**同一条** `transform`，避免多段 Tailwind transform 互相覆盖。
- * 菜单仅在触发器**下方**，箭头始终在面板**顶边**；`bottomLeft` 为左侧 inset，`bottomRight` 为右侧 inset。
+ * bottom 系列箭头在面板顶边，top 系列在底边。
+ * 传入触发器与面板矩形时，水平对准按钮中线；未传入时 Left/Right 退回距对齐边 {@link ARROW_INSET_PX}，居中方位仍为 50%。
  *
  * @param eff - 解析后的 placement
+ * @param trigger - 触发器视口矩形；与 `panel` 同时传入时对准其中线
+ * @param panel - 面板视口矩形
  */
 export function getDropdownArrowProps(
   eff: ResolvedPopPlacement,
+  trigger?: Pick<DOMRect, "left" | "top" | "width" | "height">,
+  panel?: Pick<DOMRect, "left" | "top" | "width" | "height">,
 ): { className: string; style: Record<string, string> } {
+  if (trigger && panel) {
+    const shell =
+      "absolute w-2 h-2 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800";
+    const cut = (eff === "top" || eff === "topLeft" || eff === "topRight")
+      ? twMerge(shell, "border-t-0 border-l-0")
+      : twMerge(shell, "border-b-0 border-r-0");
+    return {
+      className: cut,
+      style: computeArrowAnchorStyle(eff, trigger, panel),
+    };
+  }
   const shell =
     "absolute w-2 h-2 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800";
 
@@ -234,6 +337,32 @@ export function getDropdownArrowProps(
         transform: "translate(50%, -50%) rotate(45deg)",
       };
       break;
+    case "top":
+      style = {
+        top: "auto",
+        bottom: "0",
+        left: "50%",
+        transform: "translate(-50%, 50%) rotate(45deg)",
+      };
+      return { className: twMerge(shell, "border-t-0 border-l-0"), style };
+    case "topLeft":
+      style = {
+        top: "auto",
+        bottom: "0",
+        left: `${ARROW_INSET_PX}px`,
+        right: "auto",
+        transform: "translate(-50%, 50%) rotate(45deg)",
+      };
+      return { className: twMerge(shell, "border-t-0 border-l-0"), style };
+    case "topRight":
+      style = {
+        top: "auto",
+        bottom: "0",
+        left: "auto",
+        right: `${ARROW_INSET_PX}px`,
+        transform: "translate(50%, 50%) rotate(45deg)",
+      };
+      return { className: twMerge(shell, "border-t-0 border-l-0"), style };
     default:
       style = {
         top: "0",
@@ -274,13 +403,13 @@ export function Dropdown(props: DropdownProps): JSXRenderable {
   const isOpen = createMemo(() =>
     isControlled() ? readControlledOpenInput(props.open) : openState.value
   );
-  /** bottomAuto 时根据视口空间计算出的实际位置 */
-  const autoPlacement = createSignal<
-    "bottom" | "bottomLeft" | "bottomRight"
-  >("bottom");
+  /** `bottomAuto` / `auto` 时根据视口空间计算出的实际位置 */
+  const autoPlacement = createSignal<ResolvedPopPlacement>("bottom");
 
   /** Portal + `fixed` 浮层的内联样式（视口坐标），展开时由 {@link computeDropdownFixedStyle} 写入 */
   const portalFixedStyle = createSignal<Record<string, string>>({});
+  /** 箭头对准触发器中线的内联样式，展开且 `arrow` 时由 {@link computeArrowAnchorStyle} 写入 */
+  const arrowStyle = createSignal<Record<string, string>>({});
 
   /** 写展开态：非受控改内部 signal；始终通知 onOpenChange（受控方须写回） */
   const setOpen = (value: boolean) => {
@@ -288,8 +417,25 @@ export function Dropdown(props: DropdownProps): JSXRenderable {
     onOpenChange?.(value);
   };
 
+  // Show 的 children 会先构造；只能在实际展开时注册，避免后面的关闭菜单抢占 Esc。
+  const closeForEsc = () => setOpen(false);
+  const clearEsc = () => {
+    const g = globalThis as unknown as Record<string, (() => void) | undefined>;
+    if (g[DROPDOWN_ESC_KEY] === closeForEsc) delete g[DROPDOWN_ESC_KEY];
+  };
+  createEffect(() => {
+    if (!isOpen() || typeof globalThis.document === "undefined") {
+      clearEsc();
+      return;
+    }
+    const g = globalThis as unknown as Record<string, (() => void) | undefined>;
+    g[DROPDOWN_ESC_KEY] = closeForEsc;
+    return clearEsc;
+  });
+  onCleanup(clearEsc);
+
   const isHover = trigger === "hover";
-  const isAuto = placement === "bottomAuto";
+  const isAuto = placement === "bottomAuto" || placement === "auto";
 
   /** 用于 bottomAuto：测量触发元素与 overlay 后决定左/中/右 */
   let triggerEl: HTMLElement | null = null;
@@ -307,19 +453,65 @@ export function Dropdown(props: DropdownProps): JSXRenderable {
     const centerX = triggerRect.left + triggerRect.width / 2;
     const spaceLeft = centerX;
     const spaceRight = vw - centerX;
+    let horizontal: "Left" | "Right" | "" = "";
     if (spaceLeft < halfW && spaceRight >= halfW) {
-      autoPlacement.value = "bottomLeft";
+      horizontal = "Left";
     } else if (spaceRight < halfW && spaceLeft >= halfW) {
-      autoPlacement.value = "bottomRight";
-    } else {
-      autoPlacement.value = "bottom";
+      horizontal = "Right";
     }
+    if (placement === "auto") {
+      const vh = globalThis.document.documentElement.clientHeight;
+      const spaceBelow = vh - triggerRect.bottom;
+      const spaceAbove = triggerRect.top;
+      const goTop = spaceBelow <
+          overlayRect.height + gapYPixels(arrow, autoPlacement.value) &&
+        spaceAbove > spaceBelow;
+      autoPlacement.value =
+        ((goTop ? "top" : "bottom") + horizontal) as ResolvedPopPlacement;
+      return;
+    }
+    autoPlacement.value = ("bottom" + horizontal) as ResolvedPopPlacement;
   };
   const scheduleMeasure = () => {
     if (typeof globalThis.requestAnimationFrame === "undefined") return;
     globalThis.requestAnimationFrame(() => {
       measureAndSetAuto();
     });
+  };
+
+  /**
+   * 同步对齐浮层与箭头。箭头样式优先用触发器+面板尺寸推算中线；
+   * 面板尚未挂载或尺寸为 0 时先写入 placement 回退，避免首帧出现在 (0,0)。
+   */
+  const alignOverlay = () => {
+    if (!triggerEl || typeof globalThis.window === "undefined") return;
+    if (isAuto) measureAndSetAuto();
+    const tr = triggerEl.getBoundingClientRect();
+    const eff = resolvePlacement(
+      isAuto,
+      autoPlacement.value,
+      placement,
+    );
+    portalFixedStyle.value = computeDropdownFixedStyle(tr, eff, arrow);
+    if (!arrow) return;
+    const panelEl = overlayEl?.querySelector("[role='menu']") as
+      | HTMLElement
+      | null;
+    const measured = panelEl ?? overlayEl;
+    if (!measured) {
+      arrowStyle.value = getDropdownArrowProps(eff).style;
+      return;
+    }
+    const raw = measured.getBoundingClientRect();
+    if (!(raw.width > 0) || !(raw.height > 0)) {
+      arrowStyle.value = getDropdownArrowProps(eff).style;
+      return;
+    }
+    arrowStyle.value = computeArrowAnchorStyle(
+      eff,
+      tr,
+      panelBoxFromTrigger(tr, eff, raw, arrow),
+    );
   };
 
   /**
@@ -331,6 +523,7 @@ export function Dropdown(props: DropdownProps): JSXRenderable {
   createEffect(() => {
     if (!isOpen() || typeof globalThis.window === "undefined") {
       portalFixedStyle.value = {};
+      arrowStyle.value = {};
       return;
     }
     const effResolved = resolvePlacement(
@@ -343,25 +536,22 @@ export function Dropdown(props: DropdownProps): JSXRenderable {
       void autoPlacement.value;
     }
 
-    const run = () => {
-      if (!triggerEl) return;
-      const tr = triggerEl.getBoundingClientRect();
-      const eff = resolvePlacement(
+    if (arrow) {
+      const seed = resolvePlacement(
         isAuto,
         autoPlacement.value,
         placement,
       );
-      portalFixedStyle.value = computeDropdownFixedStyle(tr, eff, arrow);
-    };
-
-    run();
+      arrowStyle.value = getDropdownArrowProps(seed).style;
+    }
+    alignOverlay();
 
     let frameIndex = 0;
     let rafLoop = 0;
     let running = true;
     const keepAligned = () => {
       if (!running) return;
-      run();
+      alignOverlay();
       if (frameIndex === 1 && isAuto && overlayEl) {
         scheduleMeasure();
       }
@@ -373,7 +563,7 @@ export function Dropdown(props: DropdownProps): JSXRenderable {
     /**
      * 窗口/视口尺寸与 visualViewport 变化不保证落在两次 rAF 间，用事件**补一帧**避免偶发一帧空档。
      */
-    const onResize = () => run();
+    const onResize = () => alignOverlay();
     globalThis.window.addEventListener("resize", onResize);
     const vv = globalThis.visualViewport;
     if (vv) {
@@ -392,14 +582,25 @@ export function Dropdown(props: DropdownProps): JSXRenderable {
 
   /** click 模式下用 document 点击外部关闭；冒泡阶段且延迟关闭，避免拦截链接点击与路由导航、避免同步 setState 导致主内容区渲染异常 */
   let removeClickOutside: (() => void) | null = null;
+  const dropClickOutside = () => {
+    removeClickOutside?.();
+    removeClickOutside = null;
+  };
   createEffect(() => {
-    if (
-      typeof globalThis.document === "undefined" || isHover || !isOpen()
-    ) {
+    if (typeof globalThis.document === "undefined" || isHover) {
+      return;
+    }
+    if (!isOpen()) {
+      dropClickOutside();
       return;
     }
     const id = globalThis.setTimeout(() => {
       const onDocClick = (e: MouseEvent) => {
+        // 触发器已随全屏等重挂脱离 DOM 时，不可再写回受控 open（会立刻关掉新实例）
+        if (triggerEl && !triggerEl.isConnected) {
+          dropClickOutside();
+          return;
+        }
         // 浮层内点击若同步重绘卸掉目标节点，e.target 会脱离 DOM，
         // contains(target)===false 会被误判为“外部点击”。用 composedPath 认路径。
         const path = typeof e.composedPath === "function"
@@ -424,12 +625,11 @@ export function Dropdown(props: DropdownProps): JSXRenderable {
       globalThis.document.addEventListener("click", onDocClick, false);
       removeClickOutside = () => {
         globalThis.document.removeEventListener("click", onDocClick, false);
-        removeClickOutside = null;
       };
     }, 0);
     return () => {
       globalThis.clearTimeout(id);
-      removeClickOutside?.();
+      dropClickOutside();
     };
   });
 
@@ -516,23 +716,15 @@ export function Dropdown(props: DropdownProps): JSXRenderable {
       }
       <Show when={() => isOpen()}>
         {[
-          typeof globalThis !== "undefined" &&
-          (() => {
-            const g = globalThis as unknown as Record<
-              string,
-              (() => void) | undefined
-            >;
-            g[DROPDOWN_ESC_KEY] = () => setOpen(false);
-            return null;
-          })(),
           typeof globalThis.document !== "undefined" && (
             <Portal mount={globalThis.document.body}>
               <div
                 key="dropdown-overlay"
                 ref={(el: HTMLElement) => {
                   overlayEl = el;
-                  if (el && isAuto) {
-                    scheduleMeasure();
+                  if (el) {
+                    alignOverlay();
+                    if (isAuto) scheduleMeasure();
                   }
                 }}
                 class="fixed overflow-visible"
@@ -568,6 +760,11 @@ export function Dropdown(props: DropdownProps): JSXRenderable {
                       "relative z-10 min-w-[120px] rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-lg p-1",
                       overlayClass,
                     );
+                  const eff = resolvePlacement(
+                    isAuto,
+                    autoPlacement.value,
+                    placement,
+                  );
                   const panel = (
                     <div
                       key="dropdown-overlay-panel"
@@ -581,22 +778,19 @@ export function Dropdown(props: DropdownProps): JSXRenderable {
                   if (!arrow) {
                     return panel;
                   }
-                  const eff = resolvePlacement(
-                    isAuto,
-                    autoPlacement.value,
-                    placement,
-                  );
-                  const ap = getDropdownArrowProps(eff);
                   const arrowEl = (
                     <span
                       key="dropdown-arrow"
                       class={() =>
-                        twMerge("pointer-events-none z-20", ap.className)}
-                      style={ap.style}
+                        twMerge(
+                          "pointer-events-none z-20",
+                          getDropdownArrowProps(eff).className,
+                        )}
+                      style={() => arrowStyle.value}
                       aria-hidden
                     />
                   );
-                  /** 箭头在后便于叠在面板之上绘制 */
+                  /** 箭头在后便于叠在面板之上绘制，且作为外壳直接子节点供测试定位 */
                   return [panel, arrowEl];
                 }}
               </div>

@@ -21,7 +21,10 @@ import {
 import { twMerge } from "tailwind-merge";
 import { IconDroplet } from "../basic/icons/Droplet.tsx";
 import { IconPalette } from "../basic/icons/Palette.tsx";
-import { resolveFormControlSize } from "./form-control-context.ts";
+import {
+  resolveFormControlDisabled,
+  resolveFormControlSize,
+} from "./form-control-context.ts";
 import { FormItemControlIdContext } from "./form-item-control-id.ts";
 import {
   controlBlueFocusRing,
@@ -35,11 +38,7 @@ import {
   registerPickerFixedOverlayPositionAndOutsideClick,
   registerPointerDownOutside,
 } from "./picker-portal-utils.ts";
-import {
-  commitMaybeSignal,
-  type MaybeSignal,
-  readMaybeSignal,
-} from "./maybe-signal.ts";
+import { createOptionalValueState, type MaybeSignal } from "./maybe-signal.ts";
 import { autoFocusAttr, bindAutoFocusRef } from "./auto-focus.ts";
 
 /**
@@ -740,7 +739,7 @@ const colorChipSize: Record<SizeVariant, string> = {
 export function ColorPicker(props: ColorPickerProps): JSXRenderable {
   const {
     size: sizeProp,
-    disabled = false,
+
     onChange,
     onInput,
     onBlur,
@@ -756,6 +755,8 @@ export function ColorPicker(props: ColorPickerProps): JSXRenderable {
     hideTrigger = false,
     messages,
   } = props;
+  const disabled = resolveFormControlDisabled(props.disabled);
+  const selected = createOptionalValueState(props.value, "#000000");
   const m = { ...defaultColorPickerMessages, ...messages };
   const size = resolveFormControlSize(sizeProp);
   const fromFormItem = useContext(FormItemControlIdContext);
@@ -765,8 +766,7 @@ export function ColorPicker(props: ColorPickerProps): JSXRenderable {
    * 当前受控颜色（#rrggbb）。
    * **禁止**在组件 setup 里 `const { value } = props`：`value` 会变成一次性快照，父级 `signal` 更新后触发器仍显示旧色（与 `InputNumber` 等受控组件一致，须反复读 `props.value`）。
    */
-  const controlledHex = () =>
-    normalizeHex(readMaybeSignal(props.value) ?? "#000000");
+  const controlledHex = () => normalizeHex(selected.read());
 
   const panelOpen = createSignal(false);
   /**
@@ -881,7 +881,7 @@ export function ColorPicker(props: ColorPickerProps): JSXRenderable {
    */
   const commitColor = (fireChange: boolean) => {
     const hex = syncDraftsFromHsv();
-    commitMaybeSignal(props.value, hex);
+    selected.commit(hex);
     const el = hiddenRef.current;
     if (!el) return;
     dispatchColorInputEvent(el, hex, "input", onInput);
@@ -928,6 +928,8 @@ export function ColorPicker(props: ColorPickerProps): JSXRenderable {
     if (!panelOpen.value) return;
     clearOutsidePointerDismiss();
     clearDropdownEsc();
+    /** 确定时先把 HEX 草稿写入 HSV，避免未失焦时仍提交打开前的颜色 */
+    applyHexToHsv(hexDraft.value);
     commitColor(true);
     const appliedHex = syncDraftsFromHsv();
     closedOptimisticHexRef.current = appliedHex;
@@ -949,7 +951,7 @@ export function ColorPicker(props: ColorPickerProps): JSXRenderable {
     const origin = panelOriginHex.current;
     applyHexToHsv(origin);
     const n = normalizeHex(origin);
-    commitMaybeSignal(props.value, n);
+    selected.commit(n);
     const el = hiddenRef.current;
     if (el) {
       dispatchColorInputEvent(el, origin, "input", onInput);

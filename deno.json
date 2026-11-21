@@ -10,6 +10,17 @@
     "type": "git",
     "url": "https://github.com/shuliangfu/ui-view.git"
   },
+  "tasks": {
+    "check": "deno check src plugin.ts upload.ts",
+    "publish:jsr": "deno publish",
+    "publish:jsr:dry-run": "deno publish --dry-run --allow-dirty",
+
+    "test": "deno test -A",
+    "test:deno": "deno test -A",
+    "test:bun": "bun test --max-concurrency=1 tests",
+    "test:node": "node --import tsx test-node.mjs",
+    "test:unit": "deno test -A tests/docs-sidebar-reconcile.test.ts"
+  },
   "exports": {
     ".": "./src/mod.ts",
     "./basic": "./src/desktop/basic/mod.ts",
@@ -117,43 +128,26 @@
       "**/tests/**"
     ]
   },
-  "test": {
-    "include": [
-      "tests/**/*.ts",
-      "tests/**/*.tsx"
-    ],
-    "exclude": [
-      "docs/runtime/**",
-      "**/deno-cache/**"
-    ]
-  },
-  "tasks": {
-    "test": "deno test -A",
-    "test:unit": "deno test -A tests/docs-sidebar-reconcile.test.ts",
-    "check": "deno check src plugin.ts upload.ts",
-    "publish:jsr": "deno publish",
-    "publish:jsr:dry-run": "deno publish --dry-run --allow-dirty",
-    "test:node": "node --import tsx test-node.mjs"
-  },
   "imports": {
-    "@dreamer/i18n": "jsr:@dreamer/i18n@^1.1.2",
-    "@dreamer/markdown": "jsr:@dreamer/markdown@^1.1.1",
+    "@dreamer/i18n": "jsr:@dreamer/i18n@^1.1.3",
+    "@dreamer/markdown": "jsr:@dreamer/markdown@^1.1.2",
     "@dreamer/plugin": "jsr:@dreamer/plugin@^1.1.0",
     "@dreamer/logger": "jsr:@dreamer/logger@^1.1.1",
     "@dreamer/runtime-adapter": "jsr:@dreamer/runtime-adapter@^1.2.2",
     "@dreamer/service": "jsr:@dreamer/service@^1.1.0",
     "@dreamer/storage/client": "jsr:@dreamer/storage@^1.1.0/client",
-    "@dreamer/test": "jsr:@dreamer/test@^1.2.4",
-    "@dreamer/test/browser": "jsr:@dreamer/test@^1.2.4/browser",
-    "@dreamer/view": "jsr:@dreamer/view@^3.1.2",
+    "@dreamer/test": "jsr:@dreamer/test@^1.2.5",
+    "@dreamer/view": "jsr:@dreamer/view@^3.1.3",
+
     "@dreamer/upload": "jsr:@dreamer/upload@^2.0.1",
     "@dreamer/upload/adapters": "jsr:@dreamer/upload@^2.0.1/adapters",
     "@dreamer/upload/server": "jsr:@dreamer/upload@^2.0.1/server",
-    "@dreamer/image": "jsr:@dreamer/image@^1.1.0",
+    "@dreamer/image": "jsr:@dreamer/image@^1.1.1",
     "tailwindcss": "npm:tailwindcss@4.3.4",
     "tailwind-merge": "npm:tailwind-merge@3.7.0",
     "chart.js": "npm:chart.js@4.6.1",
-    "prismjs": "npm:prismjs@1.30.0"
+    "prismjs": "npm:prismjs@1.30.0",
+    "happy-dom": "npm:happy-dom@20.4.0"
   },
   "nodeModulesDir": "auto",
   "minimumDependencyAge": 0,
@@ -164,6 +158,31 @@
       "dom",
       "dom.iterable",
       "esnext"
+    ]
+  },
+  "exclude": [
+    "dist/",
+    "runtime/",
+    "scripts/",
+    "node_modules/",
+    "docs/"
+  ],
+  "test": {
+    "include": [
+      "tests/**/*.ts",
+      "tests/**/*.tsx"
+    ],
+    "exclude": [
+      "docs/runtime/**",
+      "**/deno-cache/**"
+    ]
+  },
+  "fmt": {
+    "exclude": [
+      "docs/",
+      "agents.md",
+      "docker-compose.yml",
+      "docker-compose.dev.yml"
     ]
   },
   "lint": {
@@ -181,11 +200,6 @@
         "no-explicit-any"
       ]
     }
-  },
-  "fmt": {
-    "exclude": [
-      "src/shared/data-display/CodeBlock.tsx"
-    ]
   },
   "scopes": {
     "https://jsr.io/@dreamer/server/": {

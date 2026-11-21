@@ -71,6 +71,22 @@ async function html(props: Partial<PanelProps> = {}): Promise<string> {
   );
 }
 
+const BTN_ATTR_DISABLED_RE = /\sdisabled(?:=""|\s|>)/;
+
+/** 承载 data-testid 的 button 开标签。testid 在按钮自身，disabled 写在 testid 之前。 */
+function buttonOpenByTestId(html: string, testId: string): string {
+  const marker = `data-testid="${testId}"`;
+  const at = html.indexOf(marker);
+  expect(at).toBeGreaterThan(-1);
+  const start = html.lastIndexOf("<button", at);
+  expect(start).toBeGreaterThan(-1);
+  return html.slice(start, html.indexOf(">", at) + 1);
+}
+
+function buttonHasDisabled(html: string, testId: string): boolean {
+  return BTN_ATTR_DISABLED_RE.test(buttonOpenByTestId(html, testId));
+}
+
 describe("DataPanel SSR：首帧内容", () => {
   it("标题、总数、第一页 20 行、序号与范围文案", async () => {
     const h = await html();
@@ -311,29 +327,17 @@ describe("DataPanel SSR：布尔属性与转义", () => {
       h.indexOf('data-testid="dp-row-2"'),
       h.indexOf('data-testid="dp-row-3"'),
     );
-    // data-testid 在包裹 span 上，disabled 在内部 button 上
-    expect(row2).toMatch(
-      /data-testid="dp-view-2"[\s\S]*?<button[^>]*\sdisabled(?:=""|\s|>)/,
-    );
-    expect(row2).toMatch(
-      /data-testid="dp-edit-2"[\s\S]*?<button[^>]*\sdisabled(?:=""|\s|>)/,
-    );
-    expect(row2).toMatch(
-      /data-testid="dp-delete-2"[\s\S]*?<button[^>]*\sdisabled(?:=""|\s|>)/,
-    );
+    // testid 在按钮自身，disabled 写在 data-testid 之前
+    expect(buttonHasDisabled(row2, "dp-view-2")).toBe(true);
+    expect(buttonHasDisabled(row2, "dp-edit-2")).toBe(true);
+    expect(buttonHasDisabled(row2, "dp-delete-2")).toBe(true);
     const row3 = h.slice(
       h.indexOf('data-testid="dp-row-3"'),
       h.indexOf('data-testid="dp-row-4"'),
     );
-    expect(row3).not.toMatch(
-      /data-testid="dp-view-3"[\s\S]*?<button[^>]*\sdisabled(?:=""|\s|>)/,
-    );
-    expect(row3).not.toMatch(
-      /data-testid="dp-edit-3"[\s\S]*?<button[^>]*\sdisabled(?:=""|\s|>)/,
-    );
-    expect(row3).not.toMatch(
-      /data-testid="dp-delete-3"[\s\S]*?<button[^>]*\sdisabled(?:=""|\s|>)/,
-    );
+    expect(buttonHasDisabled(row3, "dp-view-3")).toBe(false);
+    expect(buttonHasDisabled(row3, "dp-edit-3")).toBe(false);
+    expect(buttonHasDisabled(row3, "dp-delete-3")).toBe(false);
   });
 
   it("数据列 disable 函数：按行禁止行内编辑；locked 行同样没有编辑壳", async () => {
@@ -454,6 +458,9 @@ describe("DataPanel SSR：布尔属性与转义", () => {
     expect(h).toContain("dp-table-wrap");
     expect(h).toContain("!px-2.5");
     expect(h).toContain("!py-2.5");
+    expect(h).toContain("overflow-y-auto");
+    expect(h).toContain("min-h-0");
+    expect(h).toContain("flex-1");
     expect(h).not.toContain("max-sm:!px-0");
     expect(h).not.toContain("max-sm:!pt-0");
     // 分页：各端同一行，条数在左、控件在右，不再列布局
@@ -1054,21 +1061,10 @@ describe("DataPanel SSR：文案与自定义", () => {
     expect(h.includes("幽灵")).toBe(false);
     expect(hasDisabledAttr(h.slice(0, h.indexOf("冻结") + 50))).toBe(true); // create before freeze
     expect(h.includes('data-testid="dp-edit-1"')).toBe(true);
-    const afterEdit = h.slice(
-      h.indexOf('data-testid="dp-edit-1"'),
-      h.indexOf('data-testid="dp-edit-1"') + 900,
-    );
-    expect(hasDisabledAttr(afterEdit)).toBe(true);
-    const afterA1 = h.slice(
-      h.indexOf('data-testid="dp-row-extra-assign-1"'),
-      h.indexOf('data-testid="dp-row-extra-assign-1"') + 900,
-    );
-    expect(hasDisabledAttr(afterA1)).toBe(true);
-    const afterA2 = h.slice(
-      h.indexOf('data-testid="dp-row-extra-assign-2"'),
-      h.indexOf('data-testid="dp-row-extra-assign-2"') + 900,
-    );
-    expect(hasDisabledAttr(afterA2)).toBe(false);
+    // testid 在按钮自身，disabled 写在 data-testid 之前
+    expect(buttonHasDisabled(h, "dp-edit-1")).toBe(true);
+    expect(buttonHasDisabled(h, "dp-row-extra-assign-1")).toBe(true);
+    expect(buttonHasDisabled(h, "dp-row-extra-assign-2")).toBe(false);
   });
 
   it("toolbar／column.actions：无原生 HTML title 提示（仅 Tooltip）", async () => {
@@ -1238,26 +1234,26 @@ describe("DataPanel SSR：actions 列宽度", () => {
     expect(thOpen).toBeGreaterThanOrEqual(0);
     expect(thClose).toBeGreaterThan(thOpen);
     const head = h.slice(thOpen, thClose);
-    expect(head).toContain("width:150px");
-    expect(head).toContain("min-width:120px");
-    expect(head).toContain("max-width:200px");
+    expect(head.replace(/:\s+/g, ":")).toContain("width:150px");
+    expect(head.replace(/:\s+/g, ":")).toContain("min-width:120px");
+    expect(head.replace(/:\s+/g, ":")).toContain("max-width:200px");
 
     const viewBtn = h.indexOf('data-testid="dp-view-1"');
     expect(viewBtn).toBeGreaterThanOrEqual(0);
-    const cell = h.slice(Math.max(0, viewBtn - 500), viewBtn);
-    const tdOpen = cell.lastIndexOf("<td");
+    // 操作单元格开标签到按钮 testid 之间有超长 class，不能用固定前向窗口
+    const tdOpen = h.lastIndexOf("<td", viewBtn);
     expect(tdOpen).toBeGreaterThanOrEqual(0);
-    const tdTag = cell.slice(tdOpen, cell.indexOf(">", tdOpen) + 1);
-    expect(tdTag).toContain("width:150px");
-    expect(tdTag).toContain("min-width:120px");
-    expect(tdTag).toContain("max-width:200px");
+    const tdTag = h.slice(tdOpen, h.indexOf(">", tdOpen) + 1);
+    expect(tdTag.replace(/:\s+/g, ":")).toContain("width:150px");
+    expect(tdTag.replace(/:\s+/g, ":")).toContain("min-width:120px");
+    expect(tdTag.replace(/:\s+/g, ":")).toContain("max-width:200px");
 
     const totalsStart = h.indexOf('data-testid="dp-totals"');
     expect(totalsStart).toBeGreaterThanOrEqual(0);
     const totals = h.slice(totalsStart, totalsStart + 1200);
-    expect(totals).toContain("width:150px");
-    expect(totals).toContain("min-width:120px");
-    expect(totals).toContain("max-width:200px");
+    expect(totals.replace(/:\s+/g, ":")).toContain("width:150px");
+    expect(totals.replace(/:\s+/g, ":")).toContain("min-width:120px");
+    expect(totals.replace(/:\s+/g, ":")).toContain("max-width:200px");
   });
 });
 
@@ -1328,12 +1324,8 @@ describe("DataPanel SSR：工具栏上下文与 syncUrl", () => {
     expect(h.includes("次页藏")).toBe(false);
     expect(h.includes("次页显")).toBe(true);
     expect(h.includes('data-testid="dp-tb-extra-ctxShow"')).toBe(true);
-    const i = h.indexOf('data-testid="dp-tb-extra-ctxDisable"');
-    expect(i).toBeGreaterThan(-1);
-    // testid 在包裹 span 上，button 在其后；disabled 属性在超长 class 之后
-    const start = h.indexOf("<button", i);
-    const open = h.slice(start, h.indexOf(">", start) + 1);
-    expect(/\sdisabled(?:=""|\s|>)/.test(open)).toBe(true);
+    // testid 在按钮自身，disabled 写在 data-testid 之前
+    expect(buttonHasDisabled(h, "dp-tb-extra-ctxDisable")).toBe(true);
   });
 
   function rowOpenTag(h: string, id = "2"): string {

@@ -110,16 +110,7 @@ export function TabBar(props: TabBarProps): JSXRenderable {
             {(item.icon != null || item.badge != null) && (
               <span class="shrink-0 flex items-center justify-center w-6 h-6 relative">
                 {item.icon != null && (
-                  <span
-                    class={() =>
-                      /**
-                       * {@link ../../shared/basic/Icon.tsx} 根节点带默认 `text-gray-700`，会盖住
-                       * 父级 `button` 的选中色；用直接子 `span`（Icon 外壳）+ `!` 与选中/未选色对齐。
-                       */
-                      activeKeyResolved() === item.key
-                        ? "[&>span]:!text-blue-600 dark:[&>span]:!text-blue-400"
-                        : "[&>span]:!text-slate-500 dark:[&>span]:!text-slate-400"}
-                  >
+                  <span>
                     {item.icon}
                   </span>
                 )}

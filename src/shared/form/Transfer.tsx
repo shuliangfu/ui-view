@@ -21,10 +21,13 @@ import {
 import { readSignalValue, writeSignalValue } from "../safe-signal.ts";
 import { twMerge } from "tailwind-merge";
 import type { SizeVariant } from "../types.ts";
-import { resolveFormControlSize } from "./form-control-context.ts";
+import {
+  resolveFormControlDisabled,
+  resolveFormControlSize,
+} from "./form-control-context.ts";
 import { FormItemControlIdContext } from "./form-item-control-id.ts";
 import { controlErrorBorder } from "./input-focus-ring.ts";
-import { commitMaybeSignal, type MaybeSignal } from "./maybe-signal.ts";
+import { createOptionalValueState, type MaybeSignal } from "./maybe-signal.ts";
 import {
   resolveListBoxStyle,
   type TransferListBoxStyle,
@@ -245,7 +248,7 @@ function resolveItemHeight(
 /** 穿梭列参数 */
 type TransferColumnProps = {
   title: string;
-  items: TransferItem[];
+  items: TransferItem[] | (() => TransferItem[]);
   searchPlaceholder: string;
   showSearch: boolean;
   searchRef: Signal<string>;
@@ -290,17 +293,18 @@ function TransferColumn(props: TransferColumnProps) {
     listStyle,
     listBoxStyle,
     onTransfer,
-    disabled = false,
     countFormatter,
     selectedSuffixFormatter,
     size,
   } = props;
+  const disabled = resolveFormControlDisabled(props.disabled);
+  const getItems = () => typeof items === "function" ? items() : items;
 
   // 搜索框绑定上层 searchRef（非列内 createSignal），父级 getter 重跑时仍为同一信号，避免输入框重挂载失焦。
   const applySelectChange = (select: HTMLSelectElement) => {
     const visible = new Set(
       filterTransferItems(
-        items,
+        getItems(),
         readSignalValue(searchRef) ?? "",
         filterOption,
       ).map((item) => item.key),
@@ -376,7 +380,7 @@ function TransferColumn(props: TransferColumnProps) {
           {() => {
             readSignalValue(listVersion);
             const filtered = filterTransferItems(
-              items,
+              getItems(),
               readSignalValue(searchRef) ?? "",
               filterOption,
             );
@@ -416,7 +420,7 @@ function TransferColumn(props: TransferColumnProps) {
         {() => {
           readSignalValue(listVersion);
           const filtered = filterTransferItems(
-            items,
+            getItems(),
             readSignalValue(searchRef) ?? "",
             filterOption,
           );
@@ -448,12 +452,13 @@ export function Transfer(props: TransferProps): JSXRenderable {
     height,
     minHeight,
     maxHeight,
-    disabled = false,
     error = false,
     id,
     class: className,
     messages,
   } = props;
+  const disabled = resolveFormControlDisabled(props.disabled);
+  const selected = createOptionalValueState(targetKeys, [] as string[]);
   const size = resolveFormControlSize(props.size);
   const listBoxStyle = resolveListBoxStyle(listStyle, {
     height,
@@ -476,14 +481,13 @@ export function Transfer(props: TransferProps): JSXRenderable {
   const leftSelectedKeysRef = createSignal<string[]>([]);
   const rightSelectedKeysRef = createSignal<string[]>([]);
 
-  const getTargetKeys = () =>
-    typeof targetKeys === "function" ? targetKeys() : targetKeys;
+  const getTargetKeys = () => selected.read();
 
   const moveToRight = (keys: string[]) => {
     if (keys.length === 0) return;
     const current = getTargetKeys();
     const next = [...new Set([...current, ...keys])];
-    commitMaybeSignal(targetKeys, next);
+    selected.commit(next);
     onChange?.(next);
     writeSignalValue(leftSelectedKeysRef, []);
   };
@@ -492,7 +496,7 @@ export function Transfer(props: TransferProps): JSXRenderable {
     if (keys.length === 0) return;
     const current = getTargetKeys();
     const next = current.filter((k) => !keys.includes(k));
-    commitMaybeSignal(targetKeys, next);
+    selected.commit(next);
     onChange?.(next);
     writeSignalValue(rightSelectedKeysRef, []);
   };
@@ -507,10 +511,16 @@ export function Transfer(props: TransferProps): JSXRenderable {
       return <span class="hidden" aria-hidden="true" />;
     }
 
-    const currentTargetKeys = getTargetKeys();
-    const targetSet = new Set(currentTargetKeys);
-    const leftRaw = dataSource.filter((i) => !targetSet.has(i.key));
-    const rightRaw = dataSource.filter((i) => targetSet.has(i.key));
+    // Read selection only in the columns' local render effects, not this parent
+    // getter: otherwise an enclosing Form subscribes and remounts all its children.
+    const leftItems = () => {
+      const targetSet = new Set(getTargetKeys());
+      return dataSource.filter((i) => !targetSet.has(i.key));
+    };
+    const rightItems = () => {
+      const targetSet = new Set(getTargetKeys());
+      return dataSource.filter((i) => targetSet.has(i.key));
+    };
 
     return (
       <div class="w-full min-w-0 max-w-full">
@@ -531,7 +541,7 @@ export function Transfer(props: TransferProps): JSXRenderable {
         >
           <TransferColumn
             title={titles[0]}
-            items={leftRaw}
+            items={leftItems}
             searchPlaceholder={searchPlaceholder[0]}
             showSearch={showSearch}
             searchRef={leftSearchRef}
@@ -559,7 +569,7 @@ export function Transfer(props: TransferProps): JSXRenderable {
                   const selected = readSignalValue(leftSelectedKeysRef) ?? [];
                   moveToRight(
                     selected.length > 0 ? selected : filterTransferItems(
-                      leftRaw,
+                      leftItems(),
                       readSignalValue(leftSearchRef) ?? "",
                       filterOption,
                     )
@@ -581,7 +591,7 @@ export function Transfer(props: TransferProps): JSXRenderable {
                   const selected = readSignalValue(rightSelectedKeysRef) ?? [];
                   moveToLeft(
                     selected.length > 0 ? selected : filterTransferItems(
-                      rightRaw,
+                      rightItems(),
                       readSignalValue(rightSearchRef) ?? "",
                       filterOption,
                     )
@@ -596,7 +606,7 @@ export function Transfer(props: TransferProps): JSXRenderable {
           </div>
           <TransferColumn
             title={titles[1]}
-            items={rightRaw}
+            items={rightItems}
             searchPlaceholder={searchPlaceholder[1]}
             showSearch={showSearch}
             searchRef={rightSearchRef}

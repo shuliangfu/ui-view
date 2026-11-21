@@ -45,7 +45,12 @@ const API: DocsApiTableRow[] = [
     default: "-",
     description: "徽标",
   },
-  { name: "open", type: "boolean", default: "-", description: "受控展开" },
+  {
+    name: "open",
+    type: "boolean | Signal<boolean> | () => boolean",
+    default: "-",
+    description: "受控展开；传 Signal 或 getter，勿只传 open={sig.value} 快照",
+  },
   {
     name: "onOpenChange",
     type: "(open)=>void",
@@ -114,7 +119,7 @@ const exampleOpen = `const open = createSignal(false);
 <FloatButton
   position="absolute"
   aria-label="受控"
-  open={open.value}
+  open={() => open.value}
   onOpenChange={(v) => (open.value = v)}
   items={[
     { key: "a", icon: "A", "aria-label": "A" },
@@ -127,8 +132,9 @@ export const metadata = {
   title: "FloatButton · ui-view",
 };
 
+const open = createSignal(false);
+
 export default function Page() {
-  const open = createSignal(false);
   return (
     <div class="space-y-8">
       <div>
@@ -236,7 +242,7 @@ export default function Page() {
               <FloatButton
                 position="absolute"
                 aria-label="受控"
-                open={open.value}
+                open={() => open.value}
                 onOpenChange={(v) => (open.value = v)}
                 items={[
                   { key: "a", icon: "A", "aria-label": "A" },

@@ -167,11 +167,13 @@ export function computePickerPortalStyle(
       return { left: c.left, top: c.top };
     })()
     : { left: 0, top: 0 };
-  const panelH = panel
-    ? (panel.getBoundingClientRect().height || panel.offsetHeight)
-    : 0;
+  const panelRect = panel?.getBoundingClientRect();
+  const panelH = panelRect?.height || panel?.offsetHeight || 0;
+  const panelW = panelRect?.width || panel?.offsetWidth || 0;
   const pos = computePickerPortalOffset(r, vw, origin, {
     ...options,
+    // Calendar + time columns can be wider than the minimum-width fallback.
+    panelMinWidth: Math.max(options?.panelMinWidth ?? 288, panelW),
     panelHeight: panelH > 0 ? panelH : undefined,
     viewportHeight: vh,
   });
@@ -815,12 +817,6 @@ function resolvePickerTriggerForOutsideClick(
 }
 
 /**
- * 刚挂上 document 监听后的极短毫秒数：此窗口内忽略 `close`，减轻同一手势尾段或 flush 后误派的 pointer 事件误关浮层。
- * 与各 Picker 内「打开后拒绝非 forced 关闭」互补；数值过大拖慢用户「打开即点外关」的体验。
- */
-const POINTER_OUTSIDE_ARM_MS = 80;
-
-/**
  * 判断 `pointerdown` 等事件的**路径**是否落在 `root` 上或其子树内。
  * 优先用 {@link PointerEvent.composedPath}，再回退 {@link PointerEvent.target}；
  * 避免「路径非空但无一命中」时直接判假（部分环境下路径与 `contains` 组合会漏掉浮层内节点）。
@@ -939,7 +935,7 @@ function pointerCoordsInsidePickerChrome(
  * 与取色面板内点击不同步，导致 ColorPicker 内点选仍走 `close`；冒泡阶段在目标处理之后再判断，与 View 的
  * document 委托（默认冒泡）一致，更稳。
  * 用于替代「全屏 pointer-events-auto 遮罩」，避免挡住背后页面的滚轮滚动。
- * 注册后 {@link POINTER_OUTSIDE_ARM_MS} 毫秒内忽略回调，减轻误关。
+ * 立即处理下一次外部按下；内部/触发器以事件路径和几何判断，不用定时忽略真实操作。
  *
  * @param panel 弹层面板根节点（一般为 `role="dialog"` 容器）
  * @param close 关闭浮层（须幂等）
@@ -958,21 +954,7 @@ export function registerPointerDownOutside(
     (globalThis as { document?: Document }).document;
   if (doc == null) return () => {};
 
-  /** 本监听器生效时刻；仅用于首段防抖，不替代业务层 forced 关闭 */
-  const armUntil = typeof globalThis.performance !== "undefined" &&
-      typeof globalThis.performance.now === "function"
-    ? globalThis.performance.now() + POINTER_OUTSIDE_ARM_MS
-    : 0;
-
   const onDown = (ev: Event) => {
-    if (
-      armUntil !== 0 &&
-      typeof globalThis.performance !== "undefined" &&
-      typeof globalThis.performance.now === "function" &&
-      globalThis.performance.now() < armUntil
-    ) {
-      return;
-    }
     /**
      * flush 重绘瞬间浮层可能短暂脱离文档；此时不应 close，否则 openState 会 true→false、面板闪没。
      */
@@ -1041,7 +1023,7 @@ export type PickerOverlayLayoutOptions = {
 
 /**
  * 弹层挂载后：注册「点外部关闭」+ 可选的 `fixed` 视口几何贴 {@link triggerRef} 与滚动/视口同步。
- * 须在 **`queueMicrotask`** 中调用，并与 {@link registerPointerDownOutside} 的延后注册配合，减轻打开瞬间误关浮层。
+ * 须在 **`queueMicrotask`** 中调用；事件路径/几何已区分触发器和内部操作，不延时吞掉真实外部按下。
  *
  * @param panel - 浮层根（一般为 `role="dialog"`）
  * @param triggerRef - 触发器 ref；`hideTrigger` 场景可传空对象
@@ -1063,28 +1045,12 @@ export function registerPickerFixedOverlayPositionAndOutsideClick(
   outsideSlot.dispose?.();
   anchorScrollSlot.dispose?.();
 
-  /** 待取消的 rAF id；dispose 时一并清掉，避免卸载后仍注册监听 */
-  const pendingRaf = { id1: 0, id2: 0 };
   let removeOutsideListener: (() => void) | null = null;
 
   const raf = globalThis.requestAnimationFrame;
   const caf = globalThis.cancelAnimationFrame;
 
-  const cancelPendingOutsideRegistration = (): void => {
-    if (typeof caf === "function") {
-      if (pendingRaf.id1 !== 0) {
-        caf.call(globalThis, pendingRaf.id1);
-        pendingRaf.id1 = 0;
-      }
-      if (pendingRaf.id2 !== 0) {
-        caf.call(globalThis, pendingRaf.id2);
-        pendingRaf.id2 = 0;
-      }
-    }
-  };
-
   const disposeOutside = (): void => {
-    cancelPendingOutsideRegistration();
     removeOutsideListener?.();
     removeOutsideListener = null;
   };
@@ -1093,8 +1059,7 @@ export function registerPickerFixedOverlayPositionAndOutsideClick(
 
   if (fixedToViewport) {
     /**
-     * 几何与滚动同步立即挂上；点外 `pointerdown` 延后双 rAF 再注册，
-     * 让 View 把浮层/触发器插回文档后再监听，减少 flush 内误关。
+     * 几何与滚动同步立即挂上；下一帧仅校准高度，不延迟真实外部按下的监听。
      */
     const sync = (): void => {
       applyPickerPortalGeometryToElement(
@@ -1133,24 +1098,5 @@ export function registerPickerFixedOverlayPositionAndOutsideClick(
 
   outsideSlot.dispose = disposeOutside;
 
-  if (typeof raf === "function") {
-    pendingRaf.id1 = raf.call(globalThis, () => {
-      pendingRaf.id1 = 0;
-      pendingRaf.id2 = raf.call(globalThis, () => {
-        pendingRaf.id2 = 0;
-        if (!panel.isConnected) return;
-        removeOutsideListener = registerPointerDownOutside(
-          panel,
-          close,
-          triggerRef,
-        );
-      });
-    });
-  } else {
-    removeOutsideListener = registerPointerDownOutside(
-      panel,
-      close,
-      triggerRef,
-    );
-  }
+  removeOutsideListener = registerPointerDownOutside(panel, close, triggerRef);
 }

@@ -8,6 +8,12 @@ import { Link, Paragraph, Title } from "@dreamer/ui-view/basic";
 import { CodeBlock } from "@dreamer/ui-view/data-display";
 
 import { Sidebar } from "@dreamer/ui-view/navigation";
+import { IconBox } from "@dreamer/ui-view/icons/Box.tsx";
+import { IconFileText } from "@dreamer/ui-view/icons/FileText.tsx";
+import { IconPanelLeft } from "@dreamer/ui-view/icons/PanelLeft.tsx";
+import { IconLink } from "@dreamer/ui-view/icons/Link.tsx";
+import { IconMousePointer } from "@dreamer/ui-view/icons/MousePointer.tsx";
+import { IconType } from "@dreamer/ui-view/icons/Type.tsx";
 import {
   DocsApiTable,
   type DocsApiTableRow,
@@ -16,36 +22,46 @@ import { DocsMessagesSection } from "../../../components/DocsMessagesSection.tsx
 import { MESSAGES_SIDEBAR } from "../../../data/component-messages-rows.ts";
 import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
 
-/** 文档演示用菜单项（路径指向真实文档路由，便于高亮示意） */
+/** 文档演示用菜单项（路径指向真实文档路由，便于高亮示意）；一级／二级都带自定义 icon */
 const SIDEBAR_DEMO_ITEMS = [
+  {
+    path: "/desktop/navigation/sidebar",
+    label: "侧栏",
+    icon: <IconPanelLeft />,
+  },
   {
     path: "/desktop/basic/button",
     label: "基础",
+    icon: <IconBox />,
     children: [
       {
         path: "/desktop/basic/button",
         label: "Button",
         desc: "按钮",
+        icon: <IconMousePointer />,
       },
       {
         path: "/desktop/basic/link",
         label: "Link",
         desc: "链接",
+        icon: <IconLink />,
       },
     ],
   },
   {
     path: "/desktop/form/input",
     label: "表单",
+    icon: <IconFileText />,
     children: [
       {
         path: "/desktop/form/input",
         label: "Input",
         desc: "输入框",
+        icon: <IconType />,
       },
     ],
   },
-] as const;
+];
 
 /** Sidebar 组件 API 表行 */
 const SIDEBAR_API: DocsApiTableRow[] = [
@@ -65,7 +81,7 @@ const SIDEBAR_API: DocsApiTableRow[] = [
     name: "items",
     type: "SidebarItem[]",
     default: "-",
-    description: "一级项；含 children 时为折叠分组",
+    description: "一级菜单列表，类型为 SidebarItem[]，字段见下方 SidebarItem",
   },
   {
     name: "getCurrentPath",
@@ -119,7 +135,73 @@ const SIDEBAR_API: DocsApiTableRow[] = [
   },
 ];
 
+/** SidebarItem 字段 */
+const SIDEBAR_ITEM_API: DocsApiTableRow[] = [
+  {
+    name: "path",
+    type: "string",
+    default: "-",
+    description:
+      "路径。无 children 时作为链接地址；有 children 时用于判断当前分组是否展开和高亮",
+  },
+  {
+    name: "label",
+    type: "string",
+    default: "-",
+    description: "菜单文案",
+  },
+  {
+    name: "icon",
+    type: "unknown",
+    default: "-",
+    description:
+      "自定义图标，显示在文案左侧（有子项时在展开箭头之后）；不传则只显示文字，可传如 <IconHome />",
+  },
+  {
+    name: "children",
+    type: "SidebarSubItem[]",
+    default: "-",
+    description:
+      "二级菜单。传入则为可折叠分组，不传则为单链接。字段见下方 SidebarSubItem",
+  },
+];
+
+/** SidebarSubItem 字段 */
+const SIDEBAR_SUB_ITEM_API: DocsApiTableRow[] = [
+  {
+    name: "path",
+    type: "string",
+    default: "-",
+    description: "二级链接地址，并用于当前路由高亮",
+  },
+  {
+    name: "label",
+    type: "string",
+    default: "-",
+    description: "菜单文案",
+  },
+  {
+    name: "desc",
+    type: "string",
+    default: "-",
+    description: "补充说明，展示为「label — desc」",
+  },
+  {
+    name: "icon",
+    type: "unknown",
+    default: "-",
+    description:
+      "自定义图标，显示在文案左侧；不传则只显示文字，可传如 <IconHome />",
+  },
+];
+
 const importCode = `import { Sidebar } from "@dreamer/ui-view/navigation";
+import { IconBox } from "@dreamer/ui-view/icons/Box.tsx";
+import { IconFileText } from "@dreamer/ui-view/icons/FileText.tsx";
+import { IconPanelLeft } from "@dreamer/ui-view/icons/PanelLeft.tsx";
+import { IconLink } from "@dreamer/ui-view/icons/Link.tsx";
+import { IconMousePointer } from "@dreamer/ui-view/icons/MousePointer.tsx";
+import { IconType } from "@dreamer/ui-view/icons/Type.tsx";
 
 <Sidebar
   overview={{ path: "/desktop", label: "概览" }}
@@ -133,6 +215,26 @@ const importCode = `import { Sidebar } from "@dreamer/ui-view/navigation";
  */
 
 const exampleDemo = `import { Sidebar } from "@dreamer/ui-view/navigation";
+import { IconBox } from "@dreamer/ui-view/icons/Box.tsx";
+import { IconPanelLeft } from "@dreamer/ui-view/icons/PanelLeft.tsx";
+import { IconMousePointer } from "@dreamer/ui-view/icons/MousePointer.tsx";
+
+const items = [
+  { path: "/desktop/navigation/sidebar", label: "侧栏", icon: <IconPanelLeft /> },
+  {
+    path: "/desktop/basic/button",
+    label: "基础",
+    icon: <IconBox />,
+    children: [
+      {
+        path: "/desktop/basic/button",
+        label: "Button",
+        desc: "按钮",
+        icon: <IconMousePointer />,
+      },
+    ],
+  },
+];
 
 <Sidebar
   overview={{ path: "/desktop", label: "概览" }}
@@ -156,7 +258,11 @@ export default function NavigationSidebarDoc() {
           手风琴、当前路由高亮；窄屏可配合{" "}
           <code class="text-sm">drawerOpen</code> 收入抽屉，并用{" "}
           <code class="text-sm">drawerBreakpoint</code> 指定断点（文档站为{" "}
-          <code class="text-sm">xl</code>，平板与移动端一样默认收起）。
+          <code class="text-sm">
+            xl
+          </code>，平板与移动端一样默认收起）。一级、二级菜单都可传入{" "}
+          <code class="text-sm">icon</code>{" "}
+          自定义图标，显示在文案左侧；不传则只显示文字。
         </Paragraph>
       </section>
 
@@ -206,7 +312,19 @@ export default function NavigationSidebarDoc() {
 
       <section class="space-y-4">
         <Title level={2}>API</Title>
+        <Title level={3}>Sidebar</Title>
         <DocsApiTable rows={SIDEBAR_API} />
+        <Title level={3}>SidebarItem</Title>
+        <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+          一级菜单项。没有 <code class="text-sm">children</code>{" "}
+          时是单链接，有则是可折叠分组。
+        </Paragraph>
+        <DocsApiTable rows={SIDEBAR_ITEM_API} nameColumnHeader="字段" />
+        <Title level={3}>SidebarSubItem</Title>
+        <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+          二级菜单项，展示为「label — desc」。
+        </Paragraph>
+        <DocsApiTable rows={SIDEBAR_SUB_ITEM_API} nameColumnHeader="字段" />
       </section>
 
       <Paragraph class="text-sm text-slate-600 dark:text-slate-400">

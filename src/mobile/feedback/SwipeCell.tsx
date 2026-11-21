@@ -70,17 +70,50 @@ interface SwipeDragState {
   startX: number;
   offset: number;
   activePointerId: number | null;
+  /** 触摸主线与 Pointer 互斥；见 onNativeTouch* */
+  activeTouchIdentifier: number | null;
 }
 
 const swipeDragByRoot = new WeakMap<HTMLDivElement, SwipeDragState>();
 
+/** 当前由 document 级 touchmove/touchend 跟手的根；同一时刻只跟一条触摸 */
+let activeTouchRoot: HTMLDivElement | null = null;
+/** document 触摸监听引用计数，避免每个实例重复挂接 */
+let swipeTouchDocBindCount = 0;
+
 function getOrCreateState(root: HTMLDivElement): SwipeDragState {
   let s = swipeDragByRoot.get(root);
   if (!s) {
-    s = { inner: null, startX: 0, offset: 0, activePointerId: null };
+    s = {
+      inner: null,
+      startX: 0,
+      offset: 0,
+      activePointerId: null,
+      activeTouchIdentifier: null,
+    };
     swipeDragByRoot.set(root, s);
   }
   return s;
+}
+
+/**
+ * 将触点水平位移累加到 offset 并写 transform（鼠标 Pointer 与触摸共用）。
+ *
+ * @param root - 根节点
+ * @param clientX - 当前触点 X
+ */
+function applyHorizontalDrag(root: HTMLDivElement, clientX: number): void {
+  const { disabled, lw, rw } = readMetrics(root);
+  if (disabled) return;
+  const s = swipeDragByRoot.get(root);
+  if (s == null || !s.inner) return;
+  const delta = clientX - s.startX;
+  let next = s.offset + delta;
+  if (next > lw) next = lw + (next - lw) * 0.3;
+  if (next < -rw) next = -rw + (next + rw) * 0.3;
+  s.offset = next;
+  s.startX = clientX;
+  applyTransform(root, next);
 }
 
 /**
@@ -135,6 +168,24 @@ function applyTransform(root: HTMLDivElement, offset: number): void {
   const { lw } = readMetrics(root);
   if (!s?.inner) return;
   s.inner.style.transform = `translateX(${transformX(lw, offset)}px)`;
+  resetSwipeCellScroll(root);
+}
+
+/**
+ * `overflow-hidden` 仍是滚动容器。Playwright/`scrollIntoView` 点右侧操作按钮时，
+ * 会把根节点 `scrollLeft` 写成动作区宽度，与 `translateX` 叠加后按钮跑到单元格中线，
+ * 后续复位拖动的 pointerdown 会落在按钮上被忽略（390 宽复现）。
+ * 滑动位移只由 inner 的 transform 承担，根节点须保持 scrollLeft=0。
+ *
+ * @param root - 根节点
+ */
+function resetSwipeCellScroll(root: HTMLDivElement): void {
+  if (root.scrollLeft !== 0) root.scrollLeft = 0;
+  if (root.scrollTop !== 0) root.scrollTop = 0;
+}
+
+function onSwipeRootScroll(e: Event): void {
+  resetSwipeCellScroll(e.currentTarget as HTMLDivElement);
 }
 
 /**
@@ -169,11 +220,18 @@ function snap(root: HTMLDivElement): void {
 function onNativePointerDown(e: Event): void {
   const ev = e as PointerEvent;
   const root = ev.currentTarget as HTMLDivElement;
+  // 操作按钮必须收到完整的原生点击；在其 pointerdown 捕获到 root 会把 click 改投 root。
+  const interactive = ev.target instanceof Element
+    ? ev.target.closest("button, a, input, select, textarea, [role=button]")
+    : null;
+  if (interactive && root.contains(interactive)) return;
   const { disabled } = readMetrics(root);
   if (disabled) return;
   if (ev.isPrimary === false) return;
+  if (ev.pointerType === "touch") return;
   if (ev.pointerType === "mouse" && ev.button !== 0) return;
   const s = getOrCreateState(root);
+  if (s.activeTouchIdentifier !== null) return;
   s.startX = ev.clientX;
   s.activePointerId = ev.pointerId;
   if (s.inner) s.inner.style.transition = "";
@@ -191,19 +249,11 @@ function onNativePointerDown(e: Event): void {
  */
 function onNativePointerMove(e: Event): void {
   const ev = e as PointerEvent;
+  if (ev.pointerType === "touch") return;
   const root = ev.currentTarget as HTMLDivElement;
-  const { disabled, lw, rw } = readMetrics(root);
-  if (disabled) return;
   const s = swipeDragByRoot.get(root);
   if (s == null || s.activePointerId !== ev.pointerId || !s.inner) return;
-  const currentX = ev.clientX;
-  const delta = currentX - s.startX;
-  let next = s.offset + delta;
-  if (next > lw) next = lw + (next - lw) * 0.3;
-  if (next < -rw) next = -rw + (next + rw) * 0.3;
-  s.offset = next;
-  s.startX = currentX;
-  applyTransform(root, next);
+  applyHorizontalDrag(root, ev.clientX);
 }
 
 /**
@@ -213,6 +263,7 @@ function onNativePointerMove(e: Event): void {
  */
 function onNativePointerUp(e: Event): void {
   const ev = e as PointerEvent;
+  if (ev.pointerType === "touch") return;
   const root = ev.currentTarget as HTMLDivElement;
   const { disabled } = readMetrics(root);
   if (disabled) return;
@@ -229,6 +280,79 @@ function onNativePointerUp(e: Event): void {
 }
 
 /**
+ * 触摸开始：与 pointerdown 相同的武装条件；触摸不走 Pointer，避免 CDP 在中途
+ * `pointercancel` 后只剩 touchmove、位移被截成约 10px 并按阈值回弹。
+ *
+ * @param e - touchstart
+ */
+function onNativeTouchStart(e: TouchEvent): void {
+  const root = e.currentTarget as HTMLDivElement;
+  const interactive = e.target instanceof Element
+    ? e.target.closest("button, a, input, select, textarea, [role=button]")
+    : null;
+  if (interactive && root.contains(interactive)) return;
+  const { disabled } = readMetrics(root);
+  if (disabled) return;
+  if (e.touches.length < 1) return;
+  const touch = e.touches[0];
+  if (touch == null) return;
+  const s = getOrCreateState(root);
+  if (s.activePointerId !== null || s.activeTouchIdentifier !== null) return;
+  s.startX = touch.clientX;
+  s.activeTouchIdentifier = touch.identifier;
+  activeTouchRoot = root;
+  if (s.inner) s.inner.style.transition = "";
+}
+
+/**
+ * 文档捕获 touchmove（非 passive）：继续跟手并 preventDefault，防止浏览器取消手势。
+ *
+ * @param e - touchmove
+ */
+function onNativeTouchMove(e: TouchEvent): void {
+  const root = activeTouchRoot;
+  if (!root) return;
+  const s = swipeDragByRoot.get(root);
+  if (s == null || s.activeTouchIdentifier === null || !s.inner) return;
+  let touch: Touch | undefined = Array.from(e.touches).find((t) =>
+    t.identifier === s.activeTouchIdentifier
+  );
+  if (touch == null && e.touches.length === 1) {
+    touch = e.touches[0];
+    if (touch != null) s.activeTouchIdentifier = touch.identifier;
+  }
+  if (touch == null) return;
+  if (e.cancelable) e.preventDefault();
+  applyHorizontalDrag(root, touch.clientX);
+}
+
+/**
+ * 触摸结束 / 取消：吸附。
+ *
+ * @param e - touchend | touchcancel
+ */
+function onNativeTouchEnd(e: TouchEvent): void {
+  const root = activeTouchRoot;
+  if (!root) return;
+  const s = swipeDragByRoot.get(root);
+  if (s == null || s.activeTouchIdentifier === null) return;
+  const ended = Array.from(e.changedTouches).find((t) =>
+    t.identifier === s.activeTouchIdentifier
+  );
+  if (ended == null && e.touches.length > 0) return;
+  s.activeTouchIdentifier = null;
+  activeTouchRoot = null;
+  if (s.inner) s.inner.style.transition = "transform 0.2s ease-out";
+  snap(root);
+}
+
+const swipeTouchMoveOpts: AddEventListenerOptions = {
+  capture: true,
+  passive: false,
+};
+const swipeTouchEndOpts: AddEventListenerOptions = { capture: true };
+
+/**
  * 在根上挂一次监听；转发函数稳定，度量来自 `dataset`。
  *
  * @param root - 根节点
@@ -237,11 +361,21 @@ function attachNativePointerOnce(root: HTMLDivElement): void {
   const el = root as unknown as Record<string, unknown>;
   if (el[SWIPE_POINTER_KEY]) return;
   el[SWIPE_POINTER_KEY] = true;
+  root.addEventListener("scroll", onSwipeRootScroll);
   root.addEventListener("pointerdown", onNativePointerDown);
   root.addEventListener("pointermove", onNativePointerMove, { passive: false });
   root.addEventListener("pointerup", onNativePointerUp);
   root.addEventListener("pointercancel", onNativePointerUp);
   root.addEventListener("lostpointercapture", onNativePointerUp);
+  root.addEventListener("touchstart", onNativeTouchStart, { passive: true });
+  if (typeof document !== "undefined") {
+    if (swipeTouchDocBindCount === 0) {
+      document.addEventListener("touchmove", onNativeTouchMove, swipeTouchMoveOpts);
+      document.addEventListener("touchend", onNativeTouchEnd, swipeTouchEndOpts);
+      document.addEventListener("touchcancel", onNativeTouchEnd, swipeTouchEndOpts);
+    }
+    swipeTouchDocBindCount++;
+  }
 }
 
 /**
@@ -252,11 +386,22 @@ function attachNativePointerOnce(root: HTMLDivElement): void {
 function detachNativePointer(root: HTMLDivElement): void {
   const el = root as unknown as Record<string, unknown>;
   if (!el[SWIPE_POINTER_KEY]) return;
+  root.removeEventListener("scroll", onSwipeRootScroll);
   root.removeEventListener("pointerdown", onNativePointerDown);
   root.removeEventListener("pointermove", onNativePointerMove);
   root.removeEventListener("pointerup", onNativePointerUp);
   root.removeEventListener("pointercancel", onNativePointerUp);
   root.removeEventListener("lostpointercapture", onNativePointerUp);
+  root.removeEventListener("touchstart", onNativeTouchStart);
+  if (typeof document !== "undefined" && swipeTouchDocBindCount > 0) {
+    swipeTouchDocBindCount--;
+    if (swipeTouchDocBindCount === 0) {
+      document.removeEventListener("touchmove", onNativeTouchMove, swipeTouchMoveOpts);
+      document.removeEventListener("touchend", onNativeTouchEnd, swipeTouchEndOpts);
+      document.removeEventListener("touchcancel", onNativeTouchEnd, swipeTouchEndOpts);
+    }
+  }
+  if (activeTouchRoot === root) activeTouchRoot = null;
   delete el[SWIPE_POINTER_KEY];
   delete el.__swipeCb;
   swipeDragByRoot.delete(root);

@@ -119,7 +119,9 @@ export default function LayoutContainer() {
           </Container>
           <CodeBlock
             title="代码示例"
-            code={`<Container size="lg" class="...">\n  <p>内容</p>\n</Container>`}
+            code={`<Container size="lg" class="...">
+  <p>内容</p>
+</Container>`}
             language="tsx"
             showLineNumbers
             copyable
@@ -130,22 +132,24 @@ export default function LayoutContainer() {
 
         <div class="space-y-4">
           <Title level={3}>maxWidth（md / xl）</Title>
-          <Container
-            maxWidth="md"
-            class="bg-slate-100 dark:bg-slate-800 rounded-lg py-4"
-          >
-            <p class="text-sm text-slate-600 dark:text-slate-400">
-              maxWidth=md（768px）
-            </p>
-          </Container>
-          <Container
-            maxWidth="xl"
-            class="bg-slate-100 dark:bg-slate-800 rounded-lg py-4"
-          >
-            <p class="text-sm text-slate-600 dark:text-slate-400">
-              maxWidth=xl（1280px）
-            </p>
-          </Container>
+          <div class="space-y-4">
+            <Container
+              maxWidth="md"
+              class="bg-slate-100 dark:bg-slate-800 rounded-lg py-4"
+            >
+              <p class="text-sm text-slate-600 dark:text-slate-400">
+                maxWidth=md（768px）
+              </p>
+            </Container>
+            <Container
+              maxWidth="xl"
+              class="bg-slate-100 dark:bg-slate-800 rounded-lg py-4"
+            >
+              <p class="text-sm text-slate-600 dark:text-slate-400">
+                maxWidth=xl（1280px）
+              </p>
+            </Container>
+          </div>
           <CodeBlock
             title="代码示例"
             code={exampleMaxWidth}

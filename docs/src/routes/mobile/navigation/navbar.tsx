@@ -227,13 +227,13 @@ export default function MobileNavBarDoc() {
         </div>
       </section>
 
-      <section class="space-y-4">
-        <DocsMessagesSection
-          interfaceName="NavBarMessages"
-          defaultExportName="defaultNavBarMessages"
-          rows={MESSAGES_MOBILE_NAV_BAR}
-        />
+      <DocsMessagesSection
+        interfaceName="NavBarMessages"
+        defaultExportName="defaultNavBarMessages"
+        rows={MESSAGES_MOBILE_NAV_BAR}
+      />
 
+      <section class="space-y-4">
         <Title level={2}>API</Title>
         <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
           属性均为可选；无左右区时仅显示标题。

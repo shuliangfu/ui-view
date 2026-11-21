@@ -135,6 +135,14 @@ const SEARCH_API: ApiRow[] = [
     default: "-",
     description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
   },
+  ,
+  {
+    name: "allowClear",
+    type: "boolean",
+    default: "true",
+    description:
+      "有内容时显示清除按钮；设为 false 则隐藏。默认 true，与原先行为一致",
+  },
 ];
 
 /** createForm 演示字段形状（模块级，避免文档页重跑丢失状态） */
@@ -162,6 +170,10 @@ const val = createSignal("");
 </FormItem>`;
 
 /** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+const searchClearOff = createSignal("关闭清除");
+
+const exampleAllowClearOff = `<Search value={val} allowClear={false} />`;
+
 export const metadata = {
   title: "Search 搜索框 · ui-view",
 };
@@ -178,9 +190,10 @@ export default function FormSearch() {
         <Paragraph class="mt-2">
           搜索框，支持 value、onInput、onBlur、onKeyDown、onPaste、onSearch
           等（与 Input 对齐的输入事件均透传）；传 onSearch
-          时显示搜索与清除按钮。若不想在每次键入时调接口，可只在 onInput
-          更新受控值，在 onBlur（或 onSearch 回车/按钮）里再请求。宽度由 class
-          控制，表单中需占满一列时传 class="w-full"。与{" "}
+          时显示搜索按钮，allowClear
+          控制有内容时的清除按钮（默认开启）。若不想在每次键入时调接口，可只在
+          onInput 更新受控值，在 onBlur（或 onSearch 回车/按钮）里再请求。宽度由
+          class 控制，表单中需占满一列时传 class="w-full"。与{" "}
           <Link
             href="/desktop/form/form-containers"
             className="text-teal-600 hover:underline dark:text-teal-400"
@@ -294,6 +307,7 @@ export default function FormSearch() {
             <FormItem label="仅输入">
               <Search
                 value={val2}
+                allowClear={false}
                 placeholder="无搜索按钮"
               />
             </FormItem>
@@ -301,6 +315,7 @@ export default function FormSearch() {
               title="代码示例"
               code={`<Search
   value={val2}
+  allowClear={false}
   placeholder="无搜索按钮"
 />`}
               language="tsx"
@@ -366,38 +381,34 @@ export default function FormSearch() {
           <section class="space-y-4">
             <Title level={3}>size</Title>
             <FormItem label="xs">
-              <Search size="xs" placeholder="xs" value="" />
+              <Search size="xs" placeholder="xs" />
             </FormItem>
             <FormItem label="sm">
-              <Search size="sm" placeholder="sm" value="" />
+              <Search size="sm" placeholder="sm" />
             </FormItem>
             <FormItem label="md">
-              <Search size="md" placeholder="md" value="" />
+              <Search size="md" placeholder="md" />
             </FormItem>
             <FormItem label="lg">
-              <Search size="lg" placeholder="lg" value="" />
+              <Search size="lg" placeholder="lg" />
             </FormItem>
             <CodeBlock
               title="代码示例"
               code={`<Search
-  size="xs"
-  placeholder="xs"
-  value=""
+ size="xs"
+ placeholder="xs"
 />
 <Search
-  size="sm"
-  placeholder="sm"
-  value=""
+ size="sm"
+ placeholder="sm"
 />
 <Search
-  size="md"
-  placeholder="md"
-  value=""
+ size="md"
+ placeholder="md"
 />
 <Search
-  size="lg"
-  placeholder="lg"
-  value=""
+ size="lg"
+ placeholder="lg"
 />`}
               language="tsx"
               showLineNumbers
@@ -423,6 +434,25 @@ export default function FormSearch() {
   placeholder="挂载后自动聚焦"
   autoFocus
 />`}
+          language="tsx"
+          showLineNumbers
+          copyable
+          wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
+        />
+      </section>
+
+      <section class="space-y-4">
+        <Title level={3}>关闭清除按钮</Title>
+        <div class="max-w-sm">
+          <Search
+            value={searchClearOff}
+            allowClear={false}
+          />
+        </div>
+        <CodeBlock
+          title="代码示例"
+          code={exampleAllowClearOff}
           language="tsx"
           showLineNumbers
           copyable

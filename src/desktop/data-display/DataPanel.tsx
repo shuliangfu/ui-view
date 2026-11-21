@@ -17,6 +17,7 @@
  * **SSR / 水合**：布尔属性只在为 true 时输出；`sync` 数据源（含只传 `data`）以及 `data`+`baseRoute` 的首屏数据都同步渲染，水合前后 DOM 一致。
  */
 import {
+  createMemo,
   createSignal,
   type JSXRenderable,
   onCleanup,
@@ -57,6 +58,11 @@ import {
   type DataAlertProp,
   DataChromeAlert,
 } from "./data-panel-alert.tsx";
+import {
+  createDataNoticeBarState,
+  DataChromeNoticeBar,
+  type DataNoticeBarProp,
+} from "./data-panel-notice-bar.tsx";
 import {
   createTabListCache,
   loadTabListResult,
@@ -218,6 +224,7 @@ import {
   type SearchField,
   type SearchFieldConditionCtx,
   type SearchFieldRenderCtx,
+  type SearchMode,
   type SearchRenderCtx,
   type SearchType,
   type SyncUrl,
@@ -236,6 +243,10 @@ import {
 } from "./data-panel-types.ts";
 
 export type { DataAlertConfig, DataAlertProp } from "./data-panel-alert.tsx";
+export type {
+  DataNoticeBarConfig,
+  DataNoticeBarProp,
+} from "./data-panel-notice-bar.tsx";
 export type { DataTitleType } from "./data-panel-chrome.tsx";
 
 export type {
@@ -277,6 +288,7 @@ export type {
   SearchField,
   SearchFieldConditionCtx,
   SearchFieldRenderCtx,
+  SearchMode,
   SearchRenderCtx,
   SearchType,
   SyncUrl,
@@ -364,7 +376,7 @@ export interface PanelProps {
    * 如 `` `详情 · ${row.name}` ``；缺省 `${view} · ${title}`）。
    * `props` 只放字段，与列同一套配置：prop／label／type／format／options／value／formatter／click。
    * 缺省展示从同 prop 的列继承。`render` 替换 Descriptions 字段区；`actions` 底脚仍由面板渲染。
-   * Modal 参数写在 `modal`；Descriptions 参数写在 `descriptions`（除 `items`、`title`）。
+   * Modal 参数写在 `modal`；Descriptions 参数写在 `descriptions`（除 `rows`、`title`）。
    * `title` 仍是弹层标题，不会传给 Descriptions。有 `render` 时 descriptions 不再生效。
    * 字段级 `ViewItem.render` 仅在无 `view.render` 时生效。
    * `actions` 与 title 平级（内置 close 默认靠右最后）。自定义按钮：`action(row)` 开另一个 Modal（放在 children），
@@ -465,6 +477,14 @@ export interface PanelProps {
    * 点击关闭会先隐藏提示，再调用 `onClose`；换一条提示（或先关掉再传入）会重新显示。
    */
   alert?: DataAlertProp;
+  /**
+   * 页面通知条，渲染位置与 {@link alert} 相同：工具栏（含工具栏左侧标签）下方、表格上方。
+   * 字符串简写为通知文案；对象为完整 {@link DataNoticeBarConfig}（透传 NoticeBar 全部参数，另加 show／key）。
+   * `false`／`null`／省略／`show: false` 不显示。函数在渲染时求值。
+   * 本插槽默认可关闭（`closable` 默认 true），`rounded` 默认 `md`。
+   * 点击关闭会先隐藏通知条，再调用 `onClose`；换一条（或先关掉再传入）会重新显示。
+   */
+  noticeBar?: DataNoticeBarProp;
   /** 选中行变化时回调（含清空）。参数为当前页已选中的行对象。 */
   onSelectionChange?: (selected: Row[]) => void;
   /** 界面语言（内置 zh-CN / en-US），默认 zh-CN */
@@ -937,6 +957,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
   const densityOpen = createSignal(false);
   const panelFs = createSignal(false);
   const alertState = createDataAlertState();
+  const noticeBarState = createDataNoticeBarState();
   const selected = createSignal<string[]>([]);
   const viewRow = createSignal<Row | null>(null);
   const hidden = createSignal<Record<string, boolean>>(
@@ -944,8 +965,17 @@ export function DataPanel(props: PanelProps): JSXRenderable {
       columns.filter((c) => c.hidden).map((c) => [c.prop, true]),
     ),
   );
-  // 搜索表单在 Modal 里（工具栏按钮打开）；每个字段一个 signal，输入时不会重渲染输入框
-  const searchOpen = createSignal(false);
+  // 搜索默认弹窗；search.mode 为 expand 时在工具栏下方展开。每个字段一个 signal，输入时不会重渲染输入框
+  const searchMode = props.search?.mode === "expand" ? "expand" : "modal";
+  const searchOpen = createSignal(
+    searchMode === "expand" &&
+      searchDefs.some((s) => {
+        const k = fieldProp(s);
+        if (props.fixed && k in props.fixed) return false;
+        const v = initialQuery.filters[k];
+        return typeof v === "string" && v.trim() !== "";
+      }),
+  );
   const searchErrors = createSignal<Record<string, string>>({});
   const sfields: Record<string, ReturnType<typeof createSignal<string>>> = {};
   for (const sdef of searchDefs) {
@@ -1005,6 +1035,10 @@ export function DataPanel(props: PanelProps): JSXRenderable {
       defaultSort: props.defaultSort,
       fixed: props.fixed,
       prefix: urlPrefix,
+      currentParams: forUrl
+        ? new URLSearchParams(String(g.location?.search || ""))
+        : undefined,
+      searchNames: searchDefs.map(fieldProp),
     });
 
   // ---- data loading
@@ -1412,8 +1446,8 @@ export function DataPanel(props: PanelProps): JSXRenderable {
     return body;
   }
 
-  async function submitForm(): Promise<void> {
-    if (formBusy.value) return;
+  async function submitForm(): Promise<boolean> {
+    if (formBusy.value) return false;
     const id = formId.value;
     const values = collectValues(!!id);
     const visible = formDefs.filter((f) =>
@@ -1424,7 +1458,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
       /** 仅字段下红字；不再刷顶部「表单有误…」汇总 */
       formErrors.value = errs;
       formTop.value = "";
-      return;
+      return false;
     }
     formBusy.value = true;
     formErrors.value = {};
@@ -1435,7 +1469,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
     } catch (e) {
       formBusy.value = false;
       message.error((e as Error)?.message || m.networkError);
-      return;
+      return false;
     }
     formBusy.value = false;
     if (!r || r.ok) {
@@ -1450,15 +1484,16 @@ export function DataPanel(props: PanelProps): JSXRenderable {
       invalidateCurrentTabCache();
       await load(false);
       props.onChanged?.();
-      return;
+      return true;
     }
     const msgs = { ...(r.messages ?? {}) };
     for (const f of r.fields ?? []) if (!msgs[f]) msgs[f] = m.invalid;
     if (Object.keys(msgs).length) {
       formErrors.value = msgs;
-      return;
+      return false;
     }
     message.error(r.message ?? m.invalid);
+    return false;
   }
 
   // ---- 查看 Modal
@@ -1975,6 +2010,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
     disable = false,
     title?: string,
     ctrlLabel?: string,
+    expanded?: boolean | (() => boolean),
   ) => (
     <Tooltip
       content={actionTipText(id, title, ctrlLabel, messageLabel)}
@@ -1987,6 +2023,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
         disabled={disable}
         data-testid={id}
         aria-label={actionTipText(id, title, ctrlLabel, messageLabel)}
+        aria-expanded={expanded}
         onClick={onClick}
       >
         {icon}
@@ -2114,6 +2151,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
           disable,
           title,
           label,
+          searchMode === "expand" ? () => searchOpen.value : undefined,
         );
       case "refresh":
         return (
@@ -2305,7 +2343,9 @@ export function DataPanel(props: PanelProps): JSXRenderable {
         {leading}
         {!toolbarHidden && (
           <div
-            class={`ml-auto shrink-0 self-center${leading ? " pb-2" : ""}`}
+            class={`ml-auto min-w-0 max-w-full self-center overflow-x-auto${
+              leading ? " pb-2" : ""
+            }`}
             data-dp-tools={key}
           >
             <ButtonGroup attached class="dp-tool-group">
@@ -2318,21 +2358,17 @@ export function DataPanel(props: PanelProps): JSXRenderable {
                   );
                   const variant = s.tone; // full ColorVariant / ActionTone
                   const btn = (
-                    <span
-                      class="inline-flex"
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={variant}
+                      class={posCls(`dp-tb-extra-${s.key}`)}
+                      disabled={s.disable}
                       data-testid={`dp-tb-extra-${s.key}`}
+                      onClick={() => s.action()}
                     >
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant={variant}
-                        class={posCls(`dp-tb-extra-${s.key}`)}
-                        disabled={s.disable}
-                        onClick={() => s.action()}
-                      >
-                        {s.icon != null ? s.icon : s.label}
-                      </Button>
-                    </span>
+                      {s.icon != null ? s.icon : s.label}
+                    </Button>
                   );
                   return tipWrap(tip, btn);
                 }
@@ -2377,6 +2413,10 @@ export function DataPanel(props: PanelProps): JSXRenderable {
     return searchDefs.filter((s) => isSearchFieldVisible(s, ctx));
   }
   function openSearch(): void {
+    if (searchMode === "expand" && searchOpen.value) {
+      searchOpen.value = false;
+      return;
+    }
     for (const sdef of searchDefs) {
       const v = query.value.filters[fieldProp(sdef)] ?? "";
       sfields[fieldProp(sdef)].value = v;
@@ -2402,7 +2442,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
       return;
     }
     searchErrors.value = {};
-    searchOpen.value = false;
+    if (searchMode === "modal") searchOpen.value = false;
     setQuery({
       filters: filtersAfterSearchApply(
         query.value.filters,
@@ -2653,6 +2693,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
           return (
             <Btn
               type="button"
+              size={searchMode === "expand" ? "sm" : undefined}
               variant={s.tone ?? (isSubmit ? "primary" : "default")}
               disabled={s.disable}
               data-testid={testid}
@@ -2663,6 +2704,26 @@ export function DataPanel(props: PanelProps): JSXRenderable {
           );
         })}
       </>
+    );
+  };
+
+  const searchExpandBar = () => {
+    if (searchMode !== "expand" || searchDefs.length === 0) return null;
+    if (!searchOpen.value) return null;
+    return (
+      <div
+        class="border-b border-slate-200 px-4 py-3 dark:border-slate-700"
+        data-testid="dp-search-slot"
+      >
+        {searchBody}
+        {props.search?.footer === false
+          ? null
+          : (
+            <div class="mt-3 flex flex-wrap items-center gap-2">
+              {searchFooter}
+            </div>
+          )}
+      </div>
     );
   };
 
@@ -2846,7 +2907,51 @@ export function DataPanel(props: PanelProps): JSXRenderable {
   };
 
   // ---- 单元格
-  function cell(c: Column, row: Row): unknown {
+  /**
+   * 行内开关：setup 只跑一次，`checked` 用 getter 跟 `rows` 走。
+   * 若在 table 重绘里 `createSignal(isOn)`，一点击就会用旧值重建，开关弹回。
+   */
+  function InlineSwitch(p: { c: Column; row: Row }): JSXRenderable {
+    const [on, off] = p.c.options!;
+    const locked = isInlineDisabled(p.c, p.row);
+    const isOn = (): boolean => {
+      const live = rows.value.find((x) => idOf(x) === idOf(p.row)) ?? p.row;
+      return String(live[colProp(p.c)]) === on.value;
+    };
+    return (
+      <span
+        class="dp-sw-wrap"
+        data-testid={`dp-switch-${idOf(p.row)}`}
+        title={() => isOn() ? on.label : off.label}
+      >
+        <Switch
+          checked={isOn}
+          disabled={locked}
+          onChange={(e: Event) => {
+            if (locked) return;
+            const next = (e.target as unknown as { checked: boolean })
+              .checked;
+            setTimeout(
+              () =>
+                void setField(
+                  p.row,
+                  colProp(p.c),
+                  next ? on.value : off.value,
+                ),
+              SWITCH_ANIM_MS,
+            );
+          }}
+        />
+      </span>
+    );
+  }
+
+  /** 独立组件：setup untrack，内部再用 getter 订阅 editing，避免 table() 整表重绘时重建草稿。 */
+  function BodyCell(p: { c: Column; row: Row }): JSXRenderable {
+    return () => cellView(p.c, p.row);
+  }
+
+  function cellView(c: Column, row: Row): unknown {
     const custom = props.renderCell?.[colProp(c)];
     if (custom) return custom(row);
     const raw = row[colProp(c)];
@@ -2856,40 +2961,14 @@ export function DataPanel(props: PanelProps): JSXRenderable {
     const isSwitch = c.inline === "switch" && !!c.options &&
       c.options.length === 2;
     if (isSwitch && canEdit) {
-      // 使用 ui-view 自带 Switch：旋钮 ON 在右、OFF 在左，带过渡动画；
-      // locked 行为禁用态（半透明 + not-allowed）。先让旋钮滑动，动画结束后再提交数据
-      const [on, off] = c.options!;
-      const isOn = String(raw) === on.value;
-      const locked = isInlineDisabled(c, row);
-      return (
-        <span
-          class="dp-sw-wrap"
-          data-testid={`dp-switch-${idOf(row)}`}
-          title={isOn ? on.label : off.label}
-        >
-          <Switch
-            checked={createSignal(isOn)}
-            disabled={locked}
-            onChange={(e: Event) => {
-              if (locked) return;
-              const next = (e.target as unknown as { checked: boolean })
-                .checked;
-              setTimeout(
-                () =>
-                  void setField(row, colProp(c), next ? on.value : off.value),
-                SWITCH_ANIM_MS,
-              );
-            }}
-          />
-        </span>
-      );
+      return <InlineSwitch c={c} row={row} />;
     }
     if (
       c.inline && c.inline !== "switch" && canEdit && !isInlineDisabled(c, row)
     ) {
       const ed = editing.value;
       if (ed && ed.id === idOf(row) && ed.prop === c.prop) {
-        return renderEditor(c, row, raw);
+        return <InlineEditor c={c} row={row} raw={raw} />;
       }
       return (
         <span
@@ -2914,11 +2993,12 @@ export function DataPanel(props: PanelProps): JSXRenderable {
    * 失焦 / 点击外部 / Enter 保存，Esc 取消；浮层（下拉、日历）打开期间不会误触发保存，
    * 浮层关闭后焦点离开编辑器才保存。保存失败由 setField 提示并回滚到原值。
    */
-  function renderEditor(
-    c: Column,
-    row: Row,
-    raw: unknown,
-  ): unknown {
+  function InlineEditor(
+    p: { c: Column; row: Row; raw: unknown },
+  ): JSXRenderable {
+    const c = p.c;
+    const row = p.row;
+    const raw = p.raw;
     const kind = c.inline as string;
     const testid = `dp-inline-${c.prop}`;
     const asStr = (v: unknown): string => {
@@ -2944,6 +3024,11 @@ export function DataPanel(props: PanelProps): JSXRenderable {
     let done = false;
     let wrap: HTMLElement | null = null;
     let offPointer: (() => void) | null = null;
+    onCleanup(() => {
+      done = true;
+      offPointer?.();
+      offPointer = null;
+    });
     const popupOpen = (): boolean =>
       !!wrap?.querySelector('[aria-expanded="true"]');
     const finish = (save: boolean): void => {
@@ -3019,11 +3104,22 @@ export function DataPanel(props: PanelProps): JSXRenderable {
         if (!el.isConnected) return offPointer?.();
         if (!el.contains(e.target as Node)) finish(true);
       };
+      // A closing popup may leave focus on body until its delayed focusout
+      // recovery. Escape must still cancel that live editor in this interval.
+      const onKey = (e: KeyboardEvent) => {
+        if (e.key === "Escape" && !popupOpen()) {
+          e.preventDefault();
+          finish(false);
+        }
+      };
       setTimeout(() => {
         if (done) return;
         document.addEventListener("pointerdown", onDown, true);
-        offPointer = () =>
+        document.addEventListener("keydown", onKey, true);
+        offPointer = () => {
           document.removeEventListener("pointerdown", onDown, true);
+          document.removeEventListener("keydown", onKey, true);
+        };
       }, 0);
       setTimeout(() => focusMain(true), 0);
     };
@@ -3058,6 +3154,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
             value: o.value,
             label: o.label,
           }))}
+          panelAttach="viewport"
         />
       );
     } else if (kind === "multiselect") {
@@ -3069,6 +3166,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
             value: o.value,
             label: o.label,
           }))}
+          panelAttach="viewport"
           onChange={(e: Event) => {
             const v = (e.target as unknown as { value: unknown }).value;
             if (Array.isArray(v)) mv.value = v.map(String);
@@ -3382,31 +3480,80 @@ export function DataPanel(props: PanelProps): JSXRenderable {
     return sumColumnTotals(rowsForColumnTotals(), dataInputColumns);
   }
 
+  function SelectAllBox(p: { data: Row[] }): JSXRenderable {
+    return () => {
+      const sel = selected.value;
+      const selectableRows = p.data.filter((r) => !isSelectDisabled(r));
+      const allSel = selectableRows.length > 0 &&
+        selectableRows.every((r) => sel.includes(idOf(r)));
+      const mixed = !allSel &&
+        selectableRows.some((r) => sel.includes(idOf(r)));
+      return (
+        <input
+          type="checkbox"
+          class={SELECT_CB_CLS}
+          {...bool("checked", allSel)}
+          {...bool("disabled", selectableRows.length === 0)}
+          data-testid="dp-select-all"
+          aria-checked={mixed ? "mixed" : allSel ? "true" : "false"}
+          ref={(el: HTMLInputElement | null) => {
+            if (el) el.indeterminate = mixed;
+          }}
+          onChange={() => setSelected(allSel ? [] : selectableRows.map(idOf))}
+        />
+      );
+    };
+  }
+
+  function RowSelectBox(p: { row: Row }): JSXRenderable {
+    return () => {
+      const r = p.row;
+      const checked = selected.value.includes(idOf(r));
+      return (
+        <input
+          type="checkbox"
+          class={SELECT_CB_CLS}
+          {...bool("disabled", isSelectDisabled(r))}
+          {...bool("checked", checked)}
+          data-testid={`dp-select-${idOf(r)}`}
+          onChange={() => {
+            if (isSelectDisabled(r)) return;
+            const cur = selected.value;
+            setSelected(
+              cur.includes(idOf(r))
+                ? cur.filter((x) => x !== idOf(r))
+                : [...cur, idOf(r)],
+            );
+          }}
+        />
+      );
+    };
+  }
+
   const table = () => {
     const displayCols = columnsVisible();
     const cols = displayCols.filter((c) => !isSystemColumn(c));
     const data = rows.value;
-    const sel = selected.value;
-    const selectableRows = data.filter((r) => !isSelectDisabled(r));
-    const allSel = selectableRows.length > 0 &&
-      selectableRows.every((r) => sel.includes(idOf(r)));
     const t = footerTotals();
     const hasTotals = cols.some((c) => c.total) && data.length > 0;
     return (
       <div
-        class={densityTableCls(density.value)}
-        data-density={density.value}
+        class={() => densityTableCls(density.value)}
+        data-density={() => density.value}
       >
-        {loading.value && (
-          <div
-            class="absolute inset-0 z-10 flex items-center justify-center bg-white/60 dark:bg-slate-900/60"
-            data-testid="dp-loading"
-          >
-            <span class="animate-pulse text-sm text-slate-500">
-              {m.loading}
-            </span>
-          </div>
-        )}
+        {() =>
+          loading.value
+            ? (
+              <div
+                class="absolute inset-0 z-10 flex items-center justify-center bg-white/60 dark:bg-slate-900/60"
+                data-testid="dp-loading"
+              >
+                <span class="animate-pulse text-sm text-slate-500">
+                  {m.loading}
+                </span>
+              </div>
+            )
+            : null}
         <table class="w-full border-collapse text-sm" data-testid="dp-table">
           <thead>
             <tr class="bg-slate-100/80 text-left dark:bg-slate-800/80">
@@ -3414,15 +3561,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
                 if (isSelectionColumn(c)) {
                   return (
                     <th class="w-10 border border-slate-200 px-2 py-2 text-center dark:border-slate-700">
-                      <input
-                        type="checkbox"
-                        class={SELECT_CB_CLS}
-                        {...bool("checked", allSel)}
-                        {...bool("disabled", selectableRows.length === 0)}
-                        data-testid="dp-select-all"
-                        onChange={() =>
-                          setSelected(allSel ? [] : selectableRows.map(idOf))}
-                      />
+                      <SelectAllBox data={data} />
                     </th>
                   );
                 }
@@ -3521,22 +3660,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
                     if (isSelectionColumn(c)) {
                       return (
                         <td class="border border-slate-200 px-2 py-1.5 text-center dark:border-slate-700">
-                          <input
-                            type="checkbox"
-                            class={SELECT_CB_CLS}
-                            {...bool("disabled", isSelectDisabled(r))}
-                            {...bool("checked", sel.includes(idOf(r)))}
-                            data-testid={`dp-select-${idOf(r)}`}
-                            onChange={() => {
-                              if (isSelectDisabled(r)) return;
-                              const cur = selected.value;
-                              setSelected(
-                                cur.includes(idOf(r))
-                                  ? cur.filter((x) => x !== idOf(r))
-                                  : [...cur, idOf(r)],
-                              );
-                            }}
-                          />
+                          <RowSelectBox row={r} />
                         </td>
                       );
                     }
@@ -3759,7 +3883,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
                         }`}
                         style={columnWidthStyle(c)}
                       >
-                        {cell(c, r)}
+                        <BodyCell c={c} row={r} />
                       </td>
                     );
                   })}
@@ -4005,156 +4129,181 @@ export function DataPanel(props: PanelProps): JSXRenderable {
           const prop = fieldProp(f);
           const sig = fields[prop];
           const type = f.type ?? "text";
-          const cond = untrack(() => formConditionCtx());
-          const disabled = evalFlag(f.disabled, false, cond);
-          const opts = resolveOptions(f.options, cond);
-          let control: unknown;
-          /** 字段级 render：替换单个控件；有 form.render 时已在上方 return */
-          if (typeof f.render === "function") {
-            const fieldCtx: FormFieldRenderCtx = {
-              field: f,
-              prop,
-              value: sig,
-              multiValue: mfields[prop],
-              mode,
-              row: formRow.value,
-              disabled,
-              error: errs[prop],
-            };
-            control = (
-              <div class="w-full" data-testid={`dp-fld-${prop}`}>
-                {f.render(fieldCtx)}
-              </div>
-            );
-          } else if (type === "textarea") {
-            control = (
-              <div class="w-full" data-testid={`dp-fld-${fieldProp(f)}`}>
-                <Textarea
-                  rows={f.rows ?? 4}
-                  value={sig}
-                  disabled={disabled}
-                  maxLength={f.maxlength}
-                  placeholder={f.placeholder}
-                  onInput={(
-                    e: Event,
-                  ) => (sig.value =
-                    (e.target as unknown as { value: string }).value)}
-                />
-              </div>
-            );
-          } else if (type === "select") {
-            control = (
-              <div class="w-full" data-testid={`dp-fld-${fieldProp(f)}`}>
-                <Select
-                  size="sm"
-                  value={sig}
-                  disabled={disabled}
-                  placeholder={!f.required &&
-                      !opts.some((o) =>
-                        o.value === ""
-                      )
-                    ? "—"
-                    : undefined}
-                  options={opts.map((o) => ({
-                    value: o.value,
-                    label: o.label,
-                  }))}
-                />
-              </div>
-            );
-          } else if (type === "multiselect") {
-            control = (
-              <div class="w-full" data-testid={`dp-fld-${fieldProp(f)}`}>
-                <MultiSelect
-                  size="sm"
-                  value={mfields[fieldProp(f)]}
-                  disabled={disabled}
-                  options={opts.map((o) => ({
-                    value: o.value,
-                    label: o.label,
-                  }))}
-                  onChange={(e: Event) => {
-                    const v = (e.target as unknown as { value: unknown }).value;
-                    if (Array.isArray(v)) {
-                      sig.value = v.join(",");
-                    }
-                  }}
-                />
-              </div>
-            );
-          } else if (type === "switch") {
-            const on = f.onOff ? f.onOff[0] : "true";
-            const off = f.onOff ? f.onOff[1] : "false";
-            control = (
-              <span data-testid={`dp-fld-${fieldProp(f)}`}>
-                <Switch
-                  checked={() => sig.value === on}
-                  disabled={disabled}
-                  onChange={(e: Event) => {
-                    sig.value =
-                      (e.target as unknown as { checked: boolean }).checked
-                        ? on
-                        : off;
-                  }}
-                />
-              </span>
-            );
-          } else if (type === "number") {
-            control = (
-              <div class="w-full" data-testid={`dp-fld-${fieldProp(f)}`}>
-                <InputNumber
-                  size="sm"
-                  value={sig}
-                  disabled={disabled}
-                  placeholder={f.placeholder}
-                />
-              </div>
-            );
-          } else if (type === "date") {
-            control = (
-              <div class="w-full" data-testid={`dp-fld-${fieldProp(f)}`}>
-                <DatePicker
-                  size="sm"
-                  value={sig}
-                  disabled={disabled}
-                  placeholder={f.placeholder}
-                  panelAttach="viewport"
-                />
-              </div>
-            );
-          } else if (type === "datetime") {
-            control = (
-              <div class="w-full" data-testid={`dp-fld-${fieldProp(f)}`}>
-                <DateTimePicker
-                  size="sm"
-                  value={sig}
-                  format="YYYY-MM-DD HH:mm"
-                  disabled={disabled}
-                  placeholder={f.placeholder}
-                  panelAttach="viewport"
-                />
-              </div>
-            );
-          } else {
-            control = (
-              <div class="w-full" data-testid={`dp-fld-${fieldProp(f)}`}>
-                <Input
-                  type={type === "password" ? "password" : "text"}
-                  value={sig}
-                  disabled={disabled}
-                  autoComplete={type === "password" ? "new-password" : "off"}
-                  placeholder={f.placeholder}
-                  onInput={(e: Event) => {
-                    let v = (e.target as unknown as { value: string }).value;
-                    if (f.maxlength != null && v.length > f.maxlength) {
-                      v = v.slice(0, f.maxlength);
-                    }
-                    sig.value = v;
-                  }}
-                />
-              </div>
-            );
-          }
+          // 仅禁用条件或实际选项变化时重建此控件，不重挂整表单。
+          const disabledValue = createMemo(() =>
+            typeof f.disabled === "function"
+              ? f.disabled(formConditionCtx())
+              : (f.disabled ?? false)
+          );
+          // 保留等价选项数组的引用：无关字段逐字输入不应重挂此控件或丢失焦点。
+          let previousOptions: Option[] = [];
+          const optionsValue = createMemo(() => {
+            const next = typeof f.options === "function"
+              ? resolveOptions(f.options, formConditionCtx())
+              : (f.options ?? []);
+            if (
+              next.length === previousOptions.length && next.every((o, i) =>
+                o.value === previousOptions[i].value &&
+                o.label === previousOptions[i].label &&
+                o.tone === previousOptions[i].tone
+              )
+            ) return previousOptions;
+            previousOptions = next;
+            return next;
+          });
+          const renderControl = () => {
+            const disabled = disabledValue();
+            const opts = optionsValue();
+            let control: unknown;
+            /** 字段级 render：替换单个控件；有 form.render 时已在上方 return */
+            if (typeof f.render === "function") {
+              const fieldCtx: FormFieldRenderCtx = {
+                field: f,
+                prop,
+                value: sig,
+                multiValue: mfields[prop],
+                mode,
+                row: formRow.value,
+                disabled,
+                error: errs[prop],
+              };
+              control = (
+                <div class="w-full" data-testid={`dp-fld-${prop}`}>
+                  {f.render(fieldCtx)}
+                </div>
+              );
+            } else if (type === "textarea") {
+              control = (
+                <div class="w-full" data-testid={`dp-fld-${fieldProp(f)}`}>
+                  <Textarea
+                    rows={f.rows ?? 4}
+                    value={sig}
+                    disabled={disabled}
+                    maxLength={f.maxlength}
+                    placeholder={f.placeholder}
+                    onInput={(
+                      e: Event,
+                    ) => (sig.value =
+                      (e.target as unknown as { value: string }).value)}
+                  />
+                </div>
+              );
+            } else if (type === "select") {
+              control = (
+                <div class="w-full" data-testid={`dp-fld-${fieldProp(f)}`}>
+                  <Select
+                    size="sm"
+                    value={sig}
+                    disabled={disabled}
+                    placeholder={!f.required &&
+                        !opts.some((o) =>
+                          o.value === ""
+                        )
+                      ? "—"
+                      : undefined}
+                    options={opts.map((o) => ({
+                      value: o.value,
+                      label: o.label,
+                    }))}
+                  />
+                </div>
+              );
+            } else if (type === "multiselect") {
+              control = (
+                <div class="w-full" data-testid={`dp-fld-${fieldProp(f)}`}>
+                  <MultiSelect
+                    size="sm"
+                    value={mfields[fieldProp(f)]}
+                    disabled={disabled}
+                    options={opts.map((o) => ({
+                      value: o.value,
+                      label: o.label,
+                    }))}
+                    onChange={(e: Event) => {
+                      const v =
+                        (e.target as unknown as { value: unknown }).value;
+                      if (Array.isArray(v)) {
+                        sig.value = v.join(",");
+                      }
+                    }}
+                  />
+                </div>
+              );
+            } else if (type === "switch") {
+              const on = f.onOff ? f.onOff[0] : "true";
+              const off = f.onOff ? f.onOff[1] : "false";
+              control = (
+                <span data-testid={`dp-fld-${fieldProp(f)}`}>
+                  <Switch
+                    checked={() => sig.value === on}
+                    disabled={disabled}
+                    onChange={(e: Event) => {
+                      sig.value =
+                        (e.target as unknown as { checked: boolean }).checked
+                          ? on
+                          : off;
+                    }}
+                  />
+                </span>
+              );
+            } else if (type === "number") {
+              control = (
+                <div class="w-full" data-testid={`dp-fld-${fieldProp(f)}`}>
+                  <InputNumber
+                    size="sm"
+                    value={sig}
+                    disabled={disabled}
+                    placeholder={f.placeholder}
+                  />
+                </div>
+              );
+            } else if (type === "date") {
+              control = (
+                <div class="w-full" data-testid={`dp-fld-${fieldProp(f)}`}>
+                  <DatePicker
+                    size="sm"
+                    value={sig}
+                    disabled={disabled}
+                    placeholder={f.placeholder}
+                    panelAttach="viewport"
+                  />
+                </div>
+              );
+            } else if (type === "datetime") {
+              control = (
+                <div class="w-full" data-testid={`dp-fld-${fieldProp(f)}`}>
+                  <DateTimePicker
+                    size="sm"
+                    value={sig}
+                    format="YYYY-MM-DD HH:mm"
+                    disabled={disabled}
+                    placeholder={f.placeholder}
+                    panelAttach="viewport"
+                  />
+                </div>
+              );
+            } else {
+              control = (
+                <div class="w-full" data-testid={`dp-fld-${fieldProp(f)}`}>
+                  <Input
+                    type={type === "password" ? "password" : "text"}
+                    value={sig}
+                    disabled={disabled}
+                    autoComplete={type === "password" ? "new-password" : "off"}
+                    placeholder={f.placeholder}
+                    onInput={(e: Event) => {
+                      let v = (e.target as unknown as { value: string }).value;
+                      if (f.maxlength != null && v.length > f.maxlength) {
+                        v = v.slice(0, f.maxlength);
+                      }
+                      sig.value = v;
+                    }}
+                  />
+                </div>
+              );
+            }
+            return control;
+          };
           const err = errs[fieldProp(f)];
           return (
             <div
@@ -4174,7 +4323,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
                 required={fieldRequired(f) && !(f.type === "password" && !!id)}
                 error={err}
               >
-                {control}
+                {renderControl}
               </FormItem>
               {f.hint && !err && (
                 <p
@@ -4275,7 +4424,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
       ? applyDateFormats(resolvedView, dateFormat, dateTimeFormat)
       : undefined;
     const viewBodyRender = props.view?.render;
-    /** 无 view.render 时按 props／回落列构建 Descriptions items */
+    /** 无 view.render 时按 props／回落列构建 Descriptions rows */
     if (!viewBodyRender) {
       if (viewFields) {
         for (const f of viewFields) {
@@ -4359,7 +4508,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
           )
           : (
             <Descriptions
-              items={items}
+              rows={items}
               {...{ bordered: true, column: 1, size: "sm" as const }}
               {...pickViewDescriptionsProps(props.view)}
             />
@@ -4468,111 +4617,118 @@ export function DataPanel(props: PanelProps): JSXRenderable {
 
   return (
     <div class="contents" data-testid={`panel-${key}`}>
-      {() => (
-        <div
-          class={panelFs.value ? FS_CLS : undefined}
-          data-dp-shell={key}
-          data-testid="dp-shell"
-          data-fullscreen={panelFs.value ? "true" : undefined}
+      <div
+        class={() => (panelFs.value ? FS_CLS : "")}
+        data-dp-shell={key}
+        data-testid="dp-shell"
+        data-fullscreen={() => (panelFs.value ? "true" : undefined)}
+      >
+        <Card
+          bordered
+          size="sm"
+          class={`dp-card${props.class ? ` ${props.class}` : ""} ${CARD_STYLE}`}
+          headerClass={headerBarCls(props.type)}
+          title={
+            <span
+              class="inline-flex min-w-0 items-center gap-2"
+              data-testid="data-panel"
+            >
+              <IconList class="h-[1.45em] w-[1.45em] text-current dark:text-current [&_svg]:[stroke-width:2.75]" />
+              <span class="truncate">{props.title}</span>
+            </span>
+          }
+          extra={
+            <span class="text-sm font-normal" data-testid="dp-total-count">
+              {() => tr(m.totalCount, { total: total.value })}
+            </span>
+          }
+          bodyClass="p-0"
         >
-          <Card
-            bordered
-            size="sm"
-            class={`dp-card${
-              props.class ? ` ${props.class}` : ""
-            } ${CARD_STYLE}`}
-            headerClass={headerBarCls(props.type)}
-            title={
-              <span
-                class="inline-flex min-w-0 items-center gap-2"
-                data-testid="data-panel"
-              >
-                <IconList class="h-[1.45em] w-[1.45em] text-current dark:text-current [&_svg]:[stroke-width:2.75]" />
-                <span class="truncate">{props.title}</span>
-              </span>
-            }
-            extra={
-              <span class="text-sm font-normal" data-testid="dp-total-count">
-                {() =>
-                  tr(m.totalCount, { total: total.value })}
-              </span>
-            }
-            bodyClass="p-0"
-          >
-            {() => {
-              const defaultBody = (
-                <>
-                  {/* 固定插槽：响应式子节点插在静态兄弟之后会落到卡片底部；批量条在表格下方，选中行不会把表格顶下去 */}
-                  <div
-                    class={() =>
-                      alertState.visible(props.alert)
-                        ? TABLE_WRAP_BELOW_ALERT_CLS
-                        : TABLE_WRAP_CLS}
-                  >
-                    {table}
-                  </div>
-                  <div data-testid="dp-batch-slot">{batchBar}</div>
-                  {pagination}
-                </>
-              );
-              const pageAlert = (
-                <DataChromeAlert
-                  alert={props.alert}
-                  testId="dp-alert"
-                  state={alertState}
-                />
-              );
-              if (!props.tabs?.length) {
-                return (
-                  <>
-                    {toolbar}
-                    {pageAlert}
-                    {defaultBody}
-                  </>
-                );
-              }
-              const controlled = props.activeTab;
-              if (
-                controlled &&
-                controlled !== lastControlledTab.value
-              ) {
-                lastControlledTab.value = controlled;
-                const synced = resolveDataChromeTabKey(
-                  props.tabs,
-                  controlled,
-                  props.defaultActiveTab,
-                );
-                if (synced && synced !== tabKey.value) {
-                  tabKey.value = synced;
-                  rememberTabKey(key, synced);
-                  if (tabParam) writeTabToLocation(tabParam, synced);
-                  tabReload.run();
-                }
-              }
+          {() => {
+            const defaultBody = (
+              <>
+                {/* 固定插槽：响应式子节点插在静态兄弟之后会落到卡片底部；批量条在表格下方，选中行不会把表格顶下去 */}
+                <div
+                  class={() =>
+                    alertState.visible(props.alert) ||
+                      noticeBarState.visible(props.noticeBar)
+                      ? TABLE_WRAP_BELOW_ALERT_CLS
+                      : TABLE_WRAP_CLS}
+                >
+                  {table}
+                </div>
+                <div data-testid="dp-batch-slot">{batchBar}</div>
+                {pagination}
+              </>
+            );
+            const pageNoticeBar = (
+              <DataChromeNoticeBar
+                noticeBar={props.noticeBar}
+                testId="dp-notice-bar"
+                state={noticeBarState}
+              />
+            );
+            const pageAlert = (
+              <DataChromeAlert
+                alert={props.alert}
+                testId="dp-alert"
+                state={alertState}
+              />
+            );
+            if (!props.tabs?.length) {
               return (
                 <>
-                  {toolbar(
-                    <DataChromeTabList
-                      tabs={props.tabs}
-                      activeTab={tabKey.value}
-                      defaultActiveTab={props.defaultActiveTab}
-                      onTabChange={handleTabChange}
-                      type={props.tabType}
-                    />,
-                  )}
+                  {toolbar}
+                  {searchExpandBar}
+                  {pageNoticeBar}
                   {pageAlert}
-                  <DataChromeTabBody
+                  {defaultBody}
+                </>
+              );
+            }
+            const controlled = props.activeTab;
+            if (
+              controlled &&
+              controlled !== lastControlledTab.value
+            ) {
+              lastControlledTab.value = controlled;
+              const synced = resolveDataChromeTabKey(
+                props.tabs,
+                controlled,
+                props.defaultActiveTab,
+              );
+              if (synced && synced !== tabKey.value) {
+                tabKey.value = synced;
+                rememberTabKey(key, synced);
+                if (tabParam) writeTabToLocation(tabParam, synced);
+                tabReload.run();
+              }
+            }
+            return (
+              <>
+                {toolbar(
+                  <DataChromeTabList
                     tabs={props.tabs}
                     activeTab={tabKey.value}
                     defaultActiveTab={props.defaultActiveTab}
-                    defaultBody={defaultBody}
-                  />
-                </>
-              );
-            }}
-          </Card>
-        </div>
-      )}
+                    onTabChange={handleTabChange}
+                    type={props.tabType}
+                  />,
+                )}
+                {searchExpandBar}
+                {pageNoticeBar}
+                {pageAlert}
+                <DataChromeTabBody
+                  tabs={props.tabs}
+                  activeTab={tabKey.value}
+                  defaultActiveTab={props.defaultActiveTab}
+                  defaultBody={defaultBody}
+                />
+              </>
+            );
+          }}
+        </Card>
+      </div>
 
       {props.children}
 
@@ -4596,24 +4752,26 @@ export function DataPanel(props: PanelProps): JSXRenderable {
         children={formBody}
         footer={formFooter}
       />
-      <Modal
-        keyboard
-        destroyOnClose
-        {...props.search?.modal}
-        open={searchOpen}
-        title={() => {
-          const st = props.search?.title;
-          if (typeof st === "function") return st();
-          if (typeof st === "string") return st;
-          return `${m.search} · ${props.title}`;
-        }}
-        width={() => resolveModalWidth(props.search?.modal?.width)}
-        fullscreen={() => resolveModalStartFullscreen(props.search)}
-        onClose={() => (searchOpen.value = false)}
-        // deno-lint-ignore jsx-no-children-prop
-        children={searchBody}
-        footer={searchFooter}
-      />
+      {searchMode === "modal" && (
+        <Modal
+          keyboard
+          destroyOnClose
+          {...props.search?.modal}
+          open={searchOpen}
+          title={() => {
+            const st = props.search?.title;
+            if (typeof st === "function") return st();
+            if (typeof st === "string") return st;
+            return `${m.search} · ${props.title}`;
+          }}
+          width={() => resolveModalWidth(props.search?.modal?.width)}
+          fullscreen={() => resolveModalStartFullscreen(props.search)}
+          onClose={() => (searchOpen.value = false)}
+          // deno-lint-ignore jsx-no-children-prop
+          children={searchBody}
+          footer={searchFooter}
+        />
+      )}
       <Modal
         keyboard
         destroyOnClose

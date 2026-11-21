@@ -15,7 +15,12 @@ describe("InputNumber 使用 text input，不用 type=number", () => {
     const h = String(
       await renderToString(() => <InputNumber value={90} />),
     );
-    expect(h).toContain('type="text"');
+    const inputTag = h.match(/<input\b[^>]*>/)?.[0] ?? "";
+    expect(inputTag.length).toBeGreaterThan(0);
+    expect(inputTag).not.toContain('type="number"');
+    if (inputTag.includes("type=")) {
+      expect(inputTag).toContain('type="text"');
+    }
     expect(h).not.toContain('type="number"');
     expect(h).toContain("−");
     expect(h).toContain("+");

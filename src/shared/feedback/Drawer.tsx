@@ -21,6 +21,11 @@ import { twMerge } from "tailwind-merge";
 /** 按需：单文件图标，避免经 icons/mod 拉入全表 */
 import { IconClose } from "../basic/icons/Close.tsx";
 import { Overlay } from "./Overlay.tsx";
+import {
+  createRestoreFocusScheduler,
+  resolveRestoreFocusTarget,
+  retainOutsideFocusListener,
+} from "./restore-focus.ts";
 
 export type DrawerPlacement = "left" | "right";
 
@@ -235,15 +240,32 @@ export function Drawer(props: DrawerProps): JSXRenderable {
 
   /**
    * 打开时：记住触发焦点 → 聚焦抽屉首个可聚焦控件；Tab 循环陷阱；
-   * 关闭／卸载时恢复先前焦点。
+   * 关闭／卸载时恢复先前焦点（与 Modal 相同：触发器不能被打开后的 effect 重跑冲掉，
+   * 还焦须排在浏览器把焦点收到 body 之后）。
    */
+  retainOutsideFocusListener(
+    typeof globalThis.document !== "undefined" ? globalThis.document : null,
+  );
+  const restoreFocus = createRestoreFocusScheduler();
+  let previouslyFocused: HTMLElement | null = null;
+
   createEffect(() => {
-    if (!isOpen()) return;
+    const open = isOpen();
     const doc = typeof globalThis.document !== "undefined"
       ? globalThis.document
       : null;
     if (!doc) return;
-    const previouslyFocused = doc.activeElement as HTMLElement | null;
+
+    if (!open) {
+      const target = previouslyFocused;
+      previouslyFocused = null;
+      restoreFocus.schedule(doc, target);
+      return;
+    }
+
+    restoreFocus.cancel();
+    const captured = resolveRestoreFocusTarget(doc);
+    if (captured) previouslyFocused = captured;
 
     const focusFirst = () => {
       const panel = doc.querySelector<HTMLElement>("[data-ui-drawer-panel]");
@@ -281,13 +303,6 @@ export function Drawer(props: DrawerProps): JSXRenderable {
     return () => {
       doc.removeEventListener("keydown", onKeyDown as EventListener);
       if (raf != null) globalThis.cancelAnimationFrame?.(raf);
-      if (
-        previouslyFocused &&
-        typeof previouslyFocused.focus === "function" &&
-        doc.contains(previouslyFocused)
-      ) {
-        previouslyFocused.focus({ preventScroll: true });
-      }
     };
   });
 

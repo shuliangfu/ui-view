@@ -403,7 +403,7 @@ describe("DataView", () => {
 });
 
 describe("buildViewDescriptionItems", () => {
-  it("把 ViewItem.labelAlign 写进 Descriptions items", () => {
+  it("把 ViewItem.labelAlign 写进 Descriptions rows", () => {
     const items = buildViewDescriptionItems(
       [
         {
@@ -437,7 +437,7 @@ describe("Descriptions 整行斑马", () => {
           bordered
           column={1}
           size="sm"
-          items={[
+          rows={[
             { label: "姓名", children: "Ada" },
             { label: "邮箱", children: "ada@example.com" },
           ]}
@@ -487,5 +487,45 @@ describe("DataView：删除与表单增强", () => {
     expect(i).toBeGreaterThan(-1);
     const start = disabled.lastIndexOf("<button", i);
     expect(hasDisabledAttr(disabled.slice(start, i + 40))).toBe(true);
+  });
+});
+
+describe("DataView 明细布局", () => {
+  function bodyTag(h: string): string {
+    const i = h.indexOf('data-testid="dv-body"');
+    if (i < 0) return "";
+    return h.slice(h.lastIndexOf("<div", i), h.indexOf(">", i) + 1);
+  }
+
+  it("明细外包有四边内边距，高度受限时内部滚动", async () => {
+    const tag = bodyTag(await html());
+    expect(tag).toContain("overflow-y-auto");
+    expect(tag).toContain("min-h-0");
+    expect(tag).toContain("flex-1");
+    expect(tag).toContain("!px-2.5");
+    expect(tag).toContain("!py-2.5");
+  });
+
+  it("提示条可见时去掉上内边距、保留底边距和内部滚动", async () => {
+    const h = await html({
+      alert: "请先完成实名认证",
+    });
+    const tag = bodyTag(h);
+    expect(tag).toContain("overflow-y-auto");
+    expect(tag).toContain("min-h-0");
+    expect(tag).toContain("flex-1");
+    expect(tag).toContain("!px-2.5");
+    expect(tag).toContain("!pb-2.5");
+    expect(tag).toContain("!pt-0");
+  });
+
+  it("外壳与卡片是可撑满高度的纵向 flex，正文区可滚动", async () => {
+    const h = await html();
+    const i = h.indexOf('data-testid="dv-shell"');
+    const shell = h.slice(h.lastIndexOf("<div", i), h.indexOf(">", i) + 1);
+    expect(shell).toContain("flex");
+    expect(shell).toContain("h-full");
+    expect(shell).toContain("min-h-0");
+    expect(h).toContain("overflow-hidden p-0");
   });
 });

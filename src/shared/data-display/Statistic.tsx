@@ -15,10 +15,7 @@ export interface StatisticProps {
   prefix?: unknown;
   /** 后缀（如 元、%）、或趋势 up/down 节点 */
   suffix?: unknown;
-  /**
-   * 趋势箭头与红绿配色；不传时若 `value` 为有限数字则自动推断：负数 down，否则 up。
-   * 传入时可覆盖自动结果（如字符串 `value` 无法推断时需手动指定）。
-   */
+  /** 趋势箭头与红绿配色；仅在显式传入时显示，不根据数字正负自动推断 */
   trend?: "up" | "down";
   /** 小数精度（仅当 value 为 number 时生效） */
   precision?: number;
@@ -48,21 +45,6 @@ function formatNumber(
   return s;
 }
 
-/**
- * 解析最终趋势：显式 `trend` 优先；否则仅当 `value` 为有限数字时按正负推断（负数 down，0 与正数 up）。
- *
- * @param value - 展示用数值或字符串
- * @param trendProp - 调用方显式传入的趋势
- */
-function statisticResolvedTrend(
-  value: number | string,
-  trendProp: "up" | "down" | undefined,
-): "up" | "down" | undefined {
-  if (trendProp != null) return trendProp;
-  if (typeof value !== "number" || !Number.isFinite(value)) return undefined;
-  return value < 0 ? "down" : "up";
-}
-
 export function Statistic(props: StatisticProps): JSXRenderable {
   const {
     title,
@@ -77,8 +59,8 @@ export function Statistic(props: StatisticProps): JSXRenderable {
     class: className,
   } = props;
 
-  /** 用于配色与箭头：可由 `trend` 覆盖，或由数字 `value` 自动推断 */
-  const resolvedTrend = statisticResolvedTrend(value, trend);
+  /** 仅显式 `trend` 时显示箭头与红绿配色 */
+  const resolvedTrend = trend;
 
   const displayValue = typeof value === "number"
     ? formatNumber(value, precision, groupSeparator)

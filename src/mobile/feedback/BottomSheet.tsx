@@ -22,6 +22,7 @@ import {
 } from "../../shared/feedback/controlled-open.ts";
 import { getBrowserBodyPortalHost } from "../../shared/feedback/portal-host.ts";
 import { Overlay } from "../../shared/feedback/Overlay.tsx";
+import { IconClose } from "../../shared/basic/icons/Close.tsx";
 
 /** 高度模式：半屏、全屏、或自定义最大高度（px） */
 export type BottomSheetHeightMode = "half" | "full" | number;
@@ -51,7 +52,7 @@ export interface BottomSheetProps {
 
 /** BottomSheet 内置文案 */
 export interface BottomSheetMessages {
-  /** 标题栏右侧关闭按钮文本 */
+  /** 标题栏关闭按钮 `aria-label` */
   close: string;
   /** 遮罩按钮 `aria-label` */
   closeAriaLabel: string;
@@ -110,6 +111,7 @@ function trySetDocumentBodyOverflow(overflow: string): void {
  */
 export function BottomSheet(props: BottomSheetProps): JSXRenderable {
   const destroyOnClose = props.destroyOnClose === true;
+  const titleId = `bottom-sheet-${Math.random().toString(36).slice(2, 11)}`;
   /** 合并默认中文文案与外部传入 messages */
   const m: BottomSheetMessages = {
     ...defaultBottomSheetMessages,
@@ -178,7 +180,9 @@ export function BottomSheet(props: BottomSheetProps): JSXRenderable {
     <div
       class={twMerge(
         "fixed inset-0 flex flex-col justify-end transition-opacity duration-200",
-        visible() ? "opacity-100" : "opacity-0 pointer-events-none",
+        visible()
+          ? "opacity-100 pointer-events-auto"
+          : "opacity-0 pointer-events-none",
         props.class,
       )}
       style={{ zIndex: Z_INDEX }}
@@ -204,21 +208,22 @@ export function BottomSheet(props: BottomSheetProps): JSXRenderable {
         style={panelHeightStyle()}
         role="dialog"
         aria-modal="true"
-        aria-labelledby={props.title ? "bottom-sheet-title" : undefined}
+        aria-labelledby={props.title ? titleId : undefined}
         onClick={(e: MouseEvent) => e.stopPropagation()}
       >
         {props.title
           ? (
             <div class="flex items-center justify-between px-4 py-3 border-b border-black/6 shrink-0">
-              <div id="bottom-sheet-title" class="text-base font-semibold">
+              <div id={titleId} class="text-base font-semibold">
                 {props.title}
               </div>
               <button
                 type="button"
-                class="text-sm text-black/45 hover:text-black/75 px-2 py-1 rounded-md"
+                class="p-1.5 rounded-md text-black/45 hover:text-black/75 hover:bg-black/5"
+                aria-label={m.close}
                 onClick={() => props.onClose?.()}
               >
-                {m.close}
+                <IconClose class="w-5 h-5" />
               </button>
             </div>
           )
@@ -252,24 +257,28 @@ export function BottomSheet(props: BottomSheetProps): JSXRenderable {
     }
   });
 
-  const targetSync = portalTarget();
-  if (targetSync != null) {
-    if (destroyOnClose && !mounted()) {
-      return null;
-    }
-    return (
-      <span
-        style="display:none;width:0;height:0;overflow:hidden;position:absolute;clip:rect(0,0,0,0)"
-        aria-hidden="true"
-        data-dreamer-bottom-sheet-portal-anchor=""
-      />
-    );
-  }
-  if (!mounted()) {
-    return null;
-  }
-  if (isOpen()) {
-    if (lockDocumentBody()) trySetDocumentBodyOverflow("hidden");
-  }
-  return buildSheetMarkup();
+  // Scope ref 在子树之后挂载；host 就绪时移除内联回退，避免留下第二份隐藏对话框/标题。
+  /**
+   * 外层返回稳定容器，portal / mounted 的读放在子节点 `{() => ...}`。
+   * 若整段 `return () =>` 作为组件返回值，打开时会重建 visible/mounted。
+   */
+  return (
+    <div class="contents">
+      {() => {
+        const target = portalTarget();
+        if (target != null) {
+          if (destroyOnClose && !mounted()) return null;
+          return (
+            <span
+              style="display:none;width:0;height:0;overflow:hidden;position:absolute;clip:rect(0,0,0,0)"
+              aria-hidden="true"
+              data-dreamer-bottom-sheet-portal-anchor=""
+            />
+          );
+        }
+        if (!mounted()) return null;
+        return buildSheetMarkup();
+      }}
+    </div>
+  );
 }

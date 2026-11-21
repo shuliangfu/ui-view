@@ -3,6 +3,7 @@
  * RUNTIME_ENV=start（生产启动）不得把清单写回源码树。
  */
 import {
+  chdir,
   cwd,
   deleteEnv,
   dirname,
@@ -211,7 +212,6 @@ describe("uiViewTailwindPlugin 跟随内部相对导入", () => {
   });
 });
 
-
 describe("跟随 @dreamer/plugins 扫描", () => {
   it("从宿主源码抽出 plugins 说明符，忽略 ui-view", () => {
     const specs = extractFollowedPackageSpecifiers(`
@@ -233,13 +233,19 @@ describe("跟随 @dreamer/plugins 扫描", () => {
       await mkdir(join(pkg, "src", "rbac", "pages"), { recursive: true });
       await writeTextFile(
         join(pkg, "deno.json"),
-        `${JSON.stringify({
-          name: "@dreamer/plugins",
-          exports: {
-            ".": "./src/mod.ts",
-            "./rbac/pages": "./src/rbac/pages/mod.ts",
-          },
-        }, null, 2)}\n`,
+        `${
+          JSON.stringify(
+            {
+              name: "@dreamer/plugins",
+              exports: {
+                ".": "./src/mod.ts",
+                "./rbac/pages": "./src/rbac/pages/mod.ts",
+              },
+            },
+            null,
+            2,
+          )
+        }\n`,
       );
       await writeTextFile(join(pkg, "src", "mod.ts"), "export {};\n");
       await writeTextFile(
@@ -248,9 +254,15 @@ describe("跟随 @dreamer/plugins 扫描", () => {
       );
       await writeTextFile(
         join(root, "deno.json"),
-        `${JSON.stringify({
-          imports: { "@dreamer/plugins": "./vendor/plugins/src/mod.ts" },
-        }, null, 2)}\n`,
+        `${
+          JSON.stringify(
+            {
+              imports: { "@dreamer/plugins": "./vendor/plugins/src/mod.ts" },
+            },
+            null,
+            2,
+          )
+        }\n`,
       );
       const hit = await tryResolveViaImportMap(
         root,
@@ -326,14 +338,16 @@ describe("跟随 @dreamer/plugins 扫描", () => {
 
   it("宿主只 import 插件页时，清单仍包含 Transfer", async () => {
     const appRoot = await makeTempDir({ prefix: "follow-app-" });
-    const prevCwd = Deno.cwd();
+    const prevCwd = cwd();
     try {
       const pluginDir = join(appRoot, "vendor", "plugins", "pages");
       await mkdir(pluginDir, { recursive: true });
       await mkdir(join(appRoot, "src"), { recursive: true });
       await writeTextFile(
         join(appRoot, "vendor", "plugins", "deno.json"),
-        `${JSON.stringify({ name: "@dreamer/plugins", exports: {} }, null, 2)}\n`,
+        `${
+          JSON.stringify({ name: "@dreamer/plugins", exports: {} }, null, 2)
+        }\n`,
       );
       await writeTextFile(
         join(pluginDir, "mod.ts"),
@@ -349,14 +363,20 @@ describe("跟随 @dreamer/plugins 扫描", () => {
       );
       await writeTextFile(
         join(appRoot, "deno.json"),
-        `${JSON.stringify({
-          imports: {
-            "@dreamer/plugins/rbac/pages": "./vendor/plugins/pages/mod.ts",
-            "@dreamer/ui-view": UI_VIEW_ROOT + "/src/mod.ts",
-          },
-        }, null, 2)}\n`,
+        `${
+          JSON.stringify(
+            {
+              imports: {
+                "@dreamer/plugins/rbac/pages": "./vendor/plugins/pages/mod.ts",
+                "@dreamer/ui-view": UI_VIEW_ROOT + "/src/mod.ts",
+              },
+            },
+            null,
+            2,
+          )
+        }\n`,
       );
-      Deno.chdir(appRoot);
+      chdir(appRoot);
       const outputPath = join(appRoot, "assets", "ui-view-sources.css");
       const plugin = uiViewTailwindPlugin({
         outputPath,
@@ -371,14 +391,14 @@ describe("跟随 @dreamer/plugins 扫描", () => {
       expect(css.includes("Transfer.tsx")).toBe(true);
       expect(css.includes("routes.tsx")).toBe(true);
     } finally {
-      Deno.chdir(prevCwd);
+      chdir(prevCwd);
       await remove(appRoot, { recursive: true });
     }
   });
 
   it("followPackages 为空时不跟随插件页", async () => {
     const appRoot = await makeTempDir({ prefix: "follow-off-" });
-    const prevCwd = Deno.cwd();
+    const prevCwd = cwd();
     try {
       const pluginDir = join(appRoot, "vendor", "plugins", "pages");
       await mkdir(pluginDir, { recursive: true });
@@ -397,13 +417,19 @@ describe("跟随 @dreamer/plugins 扫描", () => {
       );
       await writeTextFile(
         join(appRoot, "deno.json"),
-        `${JSON.stringify({
-          imports: {
-            "@dreamer/plugins/rbac/pages": "./vendor/plugins/pages/mod.ts",
-          },
-        }, null, 2)}\n`,
+        `${
+          JSON.stringify(
+            {
+              imports: {
+                "@dreamer/plugins/rbac/pages": "./vendor/plugins/pages/mod.ts",
+              },
+            },
+            null,
+            2,
+          )
+        }\n`,
       );
-      Deno.chdir(appRoot);
+      chdir(appRoot);
       const outputPath = join(appRoot, "assets", "ui-view-sources.css");
       const plugin = uiViewTailwindPlugin({
         outputPath,
@@ -416,7 +442,7 @@ describe("跟随 @dreamer/plugins 扫描", () => {
       });
       expect(existsSync(outputPath)).toBe(false);
     } finally {
-      Deno.chdir(prevCwd);
+      chdir(prevCwd);
       await remove(appRoot, { recursive: true });
     }
   });

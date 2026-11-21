@@ -157,7 +157,9 @@ export default function DataDisplayList() {
 
         <div class="space-y-4">
           <Title level={3}>header / footer / bordered</Title>
-          <List header="列表标题" items={items} footer="共 3 条" bordered />
+          <div>
+            <List header="列表标题" items={items} footer="共 3 条" bordered />
+          </div>
           <CodeBlock
             title="代码示例"
             code={exampleHeaderFooter}
@@ -171,8 +173,10 @@ export default function DataDisplayList() {
 
         <div class="space-y-4">
           <Title level={3}>split=false / loading</Title>
-          <List items={items.slice(0, 2)} split={false} />
-          <List header="加载中" items={[]} loading />
+          <div>
+            <List items={items.slice(0, 2)} split={false} />
+            <List header="加载中" items={[]} loading />
+          </div>
           <CodeBlock
             title="代码示例"
             code={exampleSplitLoading}
@@ -190,12 +194,14 @@ export default function DataDisplayList() {
             小屏 2 列、md 及以上 3 列；栅格多列示例关闭
             split，避免与单列「行间分割线」语义混淆。
           </Paragraph>
-          <List
-            items={gridItems}
-            grid={{ column: 2, md: 3 }}
-            split={false}
-            bordered
-          />
+          <div>
+            <List
+              items={gridItems}
+              grid={{ column: 2, md: 3 }}
+              split={false}
+              bordered
+            />
+          </div>
           <CodeBlock
             title="代码示例"
             code={exampleGrid}

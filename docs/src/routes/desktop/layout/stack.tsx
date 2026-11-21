@@ -126,11 +126,13 @@ export default function LayoutStack() {
 
         <div class="space-y-4">
           <Title level={3}>direction=column</Title>
-          <Stack direction="column" gap={4} class="max-w-xs">
-            <div class="rounded bg-slate-200 dark:bg-slate-600 p-2">1</div>
-            <div class="rounded bg-slate-200 dark:bg-slate-600 p-2">2</div>
-            <div class="rounded bg-slate-200 dark:bg-slate-600 p-2">3</div>
-          </Stack>
+          <div>
+            <Stack direction="column" gap={4} class="max-w-xs">
+              <div class="rounded bg-slate-200 dark:bg-slate-600 p-2">1</div>
+              <div class="rounded bg-slate-200 dark:bg-slate-600 p-2">2</div>
+              <div class="rounded bg-slate-200 dark:bg-slate-600 p-2">3</div>
+            </Stack>
+          </div>
           <CodeBlock
             title="代码示例"
             code={exampleColumn}
@@ -144,11 +146,13 @@ export default function LayoutStack() {
 
         <div class="space-y-4">
           <Title level={3}>direction=row, align=center</Title>
-          <Stack direction="row" gap={2} align="center">
-            <div class="rounded bg-blue-200 dark:bg-blue-800 p-2">A</div>
-            <div class="rounded bg-blue-200 dark:bg-blue-800 p-2">B</div>
-            <div class="rounded bg-blue-200 dark:bg-blue-800 p-2">C</div>
-          </Stack>
+          <div>
+            <Stack direction="row" gap={2} align="center">
+              <div class="rounded bg-blue-200 dark:bg-blue-800 p-2">A</div>
+              <div class="rounded bg-blue-200 dark:bg-blue-800 p-2">B</div>
+              <div class="rounded bg-blue-200 dark:bg-blue-800 p-2">C</div>
+            </Stack>
+          </div>
           <CodeBlock
             title="代码示例"
             code={exampleRowAlign}
@@ -162,10 +166,12 @@ export default function LayoutStack() {
 
         <div class="space-y-4">
           <Title level={3}>justify=between</Title>
-          <Stack direction="row" gap={4} justify="between" class="max-w-md">
-            <span class="text-sm">左</span>
-            <span class="text-sm">右</span>
-          </Stack>
+          <div>
+            <Stack direction="row" gap={4} justify="between" class="max-w-md">
+              <span class="text-sm">左</span>
+              <span class="text-sm">右</span>
+            </Stack>
+          </div>
           <CodeBlock
             title="代码示例"
             code={exampleJustify}
@@ -179,12 +185,14 @@ export default function LayoutStack() {
 
         <div class="space-y-4">
           <Title level={3}>wrap</Title>
-          <Stack direction="row" gap={2} wrap class="max-w-48">
-            <div class="rounded bg-slate-200 dark:bg-slate-600 p-2">1</div>
-            <div class="rounded bg-slate-200 dark:bg-slate-600 p-2">2</div>
-            <div class="rounded bg-slate-200 dark:bg-slate-600 p-2">3</div>
-            <div class="rounded bg-slate-200 dark:bg-slate-600 p-2">4</div>
-          </Stack>
+          <div>
+            <Stack direction="row" gap={2} wrap class="max-w-48">
+              <div class="rounded bg-slate-200 dark:bg-slate-600 p-2">1</div>
+              <div class="rounded bg-slate-200 dark:bg-slate-600 p-2">2</div>
+              <div class="rounded bg-slate-200 dark:bg-slate-600 p-2">3</div>
+              <div class="rounded bg-slate-200 dark:bg-slate-600 p-2">4</div>
+            </Stack>
+          </div>
           <CodeBlock
             title="代码示例"
             code={exampleWrap}

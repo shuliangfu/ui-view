@@ -4,6 +4,9 @@
 
 import type { ColorVariant, SizeVariant } from "../types.ts";
 
+/** Button / 链接按钮模式的变体：在共用 ColorVariant 上增加 link（文字链外观） */
+export type ButtonVariant = ColorVariant | "link";
+
 /** 各尺寸：与 {@link Button} 一致 */
 export const BUTTON_SIZE_CLASSES: Record<SizeVariant, string> = {
   xs: "px-2.5 py-1 text-xs rounded-md",
@@ -13,7 +16,7 @@ export const BUTTON_SIZE_CLASSES: Record<SizeVariant, string> = {
 };
 
 /** 语义配色变体：与 {@link Button} 一致 */
-export const BUTTON_VARIANT_CLASSES: Record<ColorVariant, string> = {
+export const BUTTON_VARIANT_CLASSES: Record<ButtonVariant, string> = {
   default:
     "bg-gray-100 text-gray-900 hover:bg-gray-200 border border-gray-300 dark:bg-slate-700 dark:text-slate-100 dark:hover:bg-slate-600 dark:border-slate-600",
   primary:
@@ -28,25 +31,30 @@ export const BUTTON_VARIANT_CLASSES: Record<ColorVariant, string> = {
     "bg-red-600 text-white hover:bg-red-700 border border-transparent dark:bg-red-500 dark:hover:bg-red-600",
   ghost:
     "bg-transparent text-gray-800 hover:bg-gray-100 border border-gray-300 dark:border-transparent dark:text-slate-200 dark:hover:bg-slate-700 dark:border-slate-600",
+  link:
+    "bg-transparent text-blue-600 hover:text-blue-700 hover:underline border border-transparent dark:text-blue-400 dark:hover:text-blue-300",
 };
 
 /** 紧凑按钮组内 focus/active 背景，供 {@link Button} 使用 */
-export const BUTTON_VARIANT_GROUP_FOCUS_ACTIVE: Record<ColorVariant, string> = {
-  default:
-    "focus:bg-gray-200 active:bg-gray-200 dark:focus:bg-slate-600 dark:active:bg-slate-600",
-  primary:
-    "focus:bg-blue-700 active:bg-blue-700 dark:focus:bg-blue-600 dark:active:bg-blue-600",
-  secondary:
-    "focus:bg-gray-300 active:bg-gray-300 dark:focus:bg-slate-500 dark:active:bg-slate-500",
-  success:
-    "focus:bg-green-700 active:bg-green-700 dark:focus:bg-green-600 dark:active:bg-green-600",
-  warning:
-    "focus:bg-amber-600 active:bg-amber-600 dark:focus:bg-amber-600 dark:active:bg-amber-600",
-  danger:
-    "focus:bg-red-700 active:bg-red-700 dark:focus:bg-red-600 dark:active:bg-red-600",
-  ghost:
-    "focus:bg-gray-100 active:bg-gray-100 dark:focus:bg-slate-700 dark:active:bg-slate-700",
-};
+export const BUTTON_VARIANT_GROUP_FOCUS_ACTIVE: Record<ButtonVariant, string> =
+  {
+    default:
+      "focus:bg-gray-200 active:bg-gray-200 dark:focus:bg-slate-600 dark:active:bg-slate-600",
+    primary:
+      "focus:bg-blue-700 active:bg-blue-700 dark:focus:bg-blue-600 dark:active:bg-blue-600",
+    secondary:
+      "focus:bg-gray-300 active:bg-gray-300 dark:focus:bg-slate-500 dark:active:bg-slate-500",
+    success:
+      "focus:bg-green-700 active:bg-green-700 dark:focus:bg-green-600 dark:active:bg-green-600",
+    warning:
+      "focus:bg-amber-600 active:bg-amber-600 dark:focus:bg-amber-600 dark:active:bg-amber-600",
+    danger:
+      "focus:bg-red-700 active:bg-red-700 dark:focus:bg-red-600 dark:active:bg-red-600",
+    ghost:
+      "focus:bg-gray-100 active:bg-gray-100 dark:focus:bg-slate-700 dark:active:bg-slate-700",
+    link:
+      "focus:bg-blue-50 active:bg-blue-50 dark:focus:bg-slate-800 dark:active:bg-slate-800",
+  };
 
 /** 独立按钮 / 链接按钮的交互基底（非组内） */
 export const BUTTON_STANDALONE_INTERACTIVE_BASE =

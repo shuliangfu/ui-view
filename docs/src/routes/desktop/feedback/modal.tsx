@@ -609,12 +609,12 @@ export default function FeedbackModal() {
                 </Button>
               </>
             }
-          >
-            <p class="text-sm text-slate-600 dark:text-slate-400">
-              width="{widthPresetDemo.value.preset}"：xs 400px / sm 520px / md
-              640px / lg 800px / xl 960px。
-            </p>
-          </Modal>
+            children={() => (
+              <p class="text-sm text-slate-600 dark:text-slate-400">
+                {`width="${widthPresetDemo.value.preset}"：xs 400px / sm 520px / md 640px / lg 800px / xl 960px。`}
+              </p>
+            )}
+          />
           <Modal
             open={openWidth}
             onClose={() => openWidth.value = false}
@@ -736,11 +736,12 @@ demo.value = { open: true, preset: "lg" };
             onClose={() => openDestroy.value = false}
             title="关闭后销毁内容"
             destroyOnClose
-          >
-            <p class="text-sm text-slate-600 dark:text-slate-400">
-              关闭后此内容会被销毁，再次打开会重新挂载。
-            </p>
-          </Modal>
+            children={() => (
+              <p class="text-sm text-slate-600 dark:text-slate-400">
+                关闭后此内容会被销毁，再次打开会重新挂载。
+              </p>
+            )}
+          />
         </section>
 
         <div class="space-y-4">

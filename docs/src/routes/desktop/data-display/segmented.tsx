@@ -164,13 +164,15 @@ export default function DataDisplaySegmented() {
         }
         <div class="space-y-4">
           <Title level={3}>基础</Title>
-          <Segmented
-            options={options}
-            value={() => valueBasic.value}
-            onChange={(v) => valueBasic.value = v}
-            stateKey="segmented-doc-basic"
-          />
-          {() => <p class="text-sm text-slate-500">当前: {valueBasic.value}</p>}
+          <div class="space-y-2">
+            <Segmented
+              options={options}
+              value={() => valueBasic.value}
+              onChange={(v) => valueBasic.value = v}
+              stateKey="segmented-doc-basic"
+            />
+            {() => <p class="text-sm text-slate-500">当前: {valueBasic.value}</p>}
+          </div>
           <CodeBlock
             title="代码示例"
             code={exampleBasic}
@@ -184,14 +186,16 @@ export default function DataDisplaySegmented() {
 
         <div class="space-y-4">
           <Title level={3}>block / size=lg</Title>
-          <Segmented
-            options={options}
-            value={() => valueBlock.value}
-            onChange={(v) => valueBlock.value = v}
-            block
-            size="lg"
-            stateKey="segmented-doc-block"
-          />
+          <div class="w-full">
+            <Segmented
+              options={options}
+              value={() => valueBlock.value}
+              onChange={(v) => valueBlock.value = v}
+              block
+              size="lg"
+              stateKey="segmented-doc-block"
+            />
+          </div>
           <CodeBlock
             title="代码示例"
             code={exampleBlockSize}
@@ -205,16 +209,18 @@ export default function DataDisplaySegmented() {
 
         <div class="space-y-4">
           <Title level={3}>options 含 disabled</Title>
-          <Segmented
-            options={[...options, {
-              value: "禁用",
-              label: "禁用",
-              disabled: true,
-            }]}
-            value={() => valueDisabled.value}
-            onChange={(v) => valueDisabled.value = v}
-            stateKey="segmented-doc-disabled"
-          />
+          <div>
+            <Segmented
+              options={[...options, {
+                value: "禁用",
+                label: "禁用",
+                disabled: true,
+              }]}
+              value={() => valueDisabled.value}
+              onChange={(v) => valueDisabled.value = v}
+              stateKey="segmented-doc-disabled"
+            />
+          </div>
           <CodeBlock
             title="代码示例"
             code={exampleDisabled}

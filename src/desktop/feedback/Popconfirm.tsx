@@ -11,8 +11,9 @@
  *
  * 根层不挂全屏遮罩；点外部由 `document` 上 `click` 冒泡关闭。
  *
- * **返回值**：组件须 **`return () => VNode`**（零参 getter）。若直接 `return <span>…</span>`，
- * 运行时只做一次性 `mountVNodeTree`，`open` 的 Signal 变化不会重挂子树，表现为点击打不开。
+ * **返回值**：外层返回稳定容器，仅在子节点 `{() => …}` 里读 `isOpen()`。
+ * 不要把整段组件写成 `return () => …`：会与 `insert` 同层展平，重建 signal。
+ * 也不要直接 `return <span>…</span>` 且在 JSX 里写死 `isOpen()` 快照，否则 `open` 变化不会重挂子树。
  */
 
 import {
@@ -59,8 +60,16 @@ export interface PopconfirmProps {
   onOpenChange?: (open: boolean) => void;
   /** 确认标题/描述 */
   title: string;
-  /** 确定后业务回调；浮层关闭由组件在回调之后统一处理（`requestClose`），不必在回调里写 `open.value = false` */
-  onConfirm?: () => void;
+  /**
+   * 确定后业务回调。可返回 Promise：pending 期间确定钮 loading、取消与点外部不可关；
+   * 成功后再关气泡，失败则保持打开。同步回调仍在返回后立即关闭。
+   * 不必在回调里写 `open.value = false`。
+   */
+  onConfirm?: () => void | Promise<void>;
+  /**
+   * 确定按钮 loading（与 {@link Dialog} 同向）。也可不传，仅靠 `onConfirm` 返回的 Promise 自动进入 loading。
+   */
+  confirmLoading?: boolean;
   /** 取消后业务回调；浮层关闭由组件统一处理，不必在回调里再关 */
   onCancel?: () => void;
   /** 确定按钮文案，默认 "确定" */
@@ -142,6 +151,11 @@ function readPopconfirmOpenInput(v: PopconfirmOpenInput | undefined): boolean {
   return !!v;
 }
 
+/** `onConfirm` 是否返回了 thenable，据此等待完成后再关。 */
+function isConfirmThenable(v: unknown): v is PromiseLike<void> {
+  return v != null && typeof (v as { then?: unknown }).then === "function";
+}
+
 /**
  * 构建 Popconfirm 根结构：`relative` 包裹触发器，打开时经 Portal 在 body 上 `fixed` 画板。
  *
@@ -154,6 +168,7 @@ function readPopconfirmOpenInput(v: PopconfirmOpenInput | undefined): boolean {
  * @param iconToneCls - 图标颜色类
  * @param handleConfirm - 确定处理
  * @param handleCancel - 取消处理
+ * @param getBusy - 确定中（confirmLoading 或 Promise pending）
  * @param setTriggerRef - 触发器容器 ref
  * @param setFloatingRef - 面板根节点 ref（供点外部关闭判断）
  */
@@ -167,6 +182,7 @@ function buildPopconfirmTree(
   iconToneCls: string,
   handleConfirm: () => void,
   handleCancel: () => void,
+  getBusy: () => boolean,
   setTriggerRef: (el: unknown) => void,
   setFloatingRef: (el: unknown) => void,
 ) {
@@ -220,24 +236,28 @@ function buildPopconfirmTree(
                 <div class="flex-1">
                   <div class="text-sm mb-3">{title}</div>
                   {/* 脚序固定：确定在左、取消在右 */}
-                  <div class="flex justify-end gap-2">
-                    <Button
-                      type="button"
-                      variant={okVariant}
-                      size="sm"
-                      onClick={(_e: Event) => handleConfirm()}
-                    >
-                      {okText}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="default"
-                      size="sm"
-                      onClick={(_e: Event) => handleCancel()}
-                    >
-                      {cancelText}
-                    </Button>
-                  </div>
+                  {() => (
+                    <div class="flex justify-end gap-2">
+                      <Button
+                        type="button"
+                        variant={okVariant}
+                        size="sm"
+                        loading={getBusy()}
+                        onClick={(_e: Event) => handleConfirm()}
+                      >
+                        {okText}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="default"
+                        size="sm"
+                        disabled={getBusy()}
+                        onClick={(_e: Event) => handleCancel()}
+                      >
+                        {cancelText}
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </div>
               {arrow && (
@@ -275,20 +295,40 @@ export function Popconfirm(props: PopconfirmProps): JSXRenderable {
    * 关闭浮层：若 `open` 为 **`Signal<boolean>`**（`createSignal` 返回值）则写回 `false`（仅传 `open={sig}` 未配 `onOpenChange` 时也能关），
    * 再调用 `onOpenChange(false)`。
    */
+  /** `onConfirm` 返回的 Promise 尚未结束 */
+  const pending = createSignal(false);
+  const isBusy = () => pending.value || !!props.confirmLoading;
+
   const requestClose = () => {
+    pending.value = false;
     const o = props.open;
     if (safeIsSignal(o)) writeSignalValue(o as Signal<boolean>, false);
     onOpenChange?.(false);
   };
 
-  /** 确定：先业务回调再统一关闭 */
+  /** 确定：同步回调立即关；Promise 等成功后再关，失败保持打开。 */
   const handleConfirm = () => {
-    onConfirm?.();
+    if (isBusy()) return;
+    const result = onConfirm?.();
+    if (isConfirmThenable(result)) {
+      pending.value = true;
+      Promise.resolve(result).then(
+        () => {
+          pending.value = false;
+          requestClose();
+        },
+        () => {
+          pending.value = false;
+        },
+      );
+      return;
+    }
     requestClose();
   };
 
-  /** 取消：先业务回调再统一关闭 */
+  /** 取消：loading 中不可关；否则先业务回调再统一关闭 */
   const handleCancel = () => {
+    if (isBusy()) return;
     onCancel?.();
     requestClose();
   };
@@ -434,6 +474,7 @@ export function Popconfirm(props: PopconfirmProps): JSXRenderable {
       );
       if (inPanel) return;
       if (floatingEl != null && floatingEl.contains(t)) return;
+      if (isBusy()) return;
       requestClose();
     };
 
@@ -450,18 +491,27 @@ export function Popconfirm(props: PopconfirmProps): JSXRenderable {
    * 零参 getter：`mountVNodeTree` 对手写函数组件在返回值为 `() => unknown` 时走
    * View 对子树 getter 的响应式包裹下，须在 getter 内调用 `isOpen()`，`open` 变化时才会重渲面板。
    */
-  return () =>
-    buildPopconfirmTree(
-      props,
-      isOpen(),
-      () => portalFixedStyle.value,
-      () => resolvedPlacement.value,
-      () => arrowStyle.value,
-      okVariant,
-      iconToneCls,
-      handleConfirm,
-      handleCancel,
-      setTriggerRef,
-      setFloatingRef,
-    );
+  /**
+   * 外层返回稳定容器，`isOpen()` 只在子节点 getter 里读。
+   * 若整段 `return () =>` 作为组件返回值，开关会重建 pending 等 signal。
+   */
+  return (
+    <div class="contents">
+      {() =>
+        buildPopconfirmTree(
+          props,
+          isOpen(),
+          () => portalFixedStyle.value,
+          () => resolvedPlacement.value,
+          () => arrowStyle.value,
+          okVariant,
+          iconToneCls,
+          handleConfirm,
+          handleCancel,
+          isBusy,
+          setTriggerRef,
+          setFloatingRef,
+        )}
+    </div>
+  );
 }

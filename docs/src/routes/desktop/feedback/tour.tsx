@@ -370,7 +370,7 @@ export default function Page() {
         <div class="space-y-2">
           <Title level={3}>placement 方位</Title>
           <div class="rounded-xl border border-slate-200 dark:border-slate-700 p-4 bg-white dark:bg-slate-900 space-y-3">
-            <div class="flex justify-center py-10">
+            <div class="flex justify-start py-10">
               <div
                 id="tour-place-target"
                 class="rounded-lg border border-dashed px-4 py-6 text-sm"

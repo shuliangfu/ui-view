@@ -91,6 +91,33 @@ const SELECT_API: ApiRow[] = [
     default: "-",
     description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
   },
+  ,
+  {
+    name: "allowClear",
+    type: "boolean",
+    default: "false",
+    description:
+      "有选中值时在触发器上显示清除按钮（与触发器并列，不是套在按钮里）",
+  },
+  {
+    name: "showSearch",
+    type: "boolean",
+    default: "false",
+    description: "在浮层顶部显示搜索框，按标签或值过滤",
+  },
+  {
+    name: "loading",
+    type: "boolean",
+    default: "false",
+    description: "触发器加载中：不可打开，右侧显示转圈",
+  },
+  {
+    name: "panelAttach",
+    type: '"anchored" | "viewport"',
+    default: '"anchored"',
+    description:
+      "浮层挂载方式。默认相对触发器定位；viewport 改为视口 fixed，避免被表格 overflow 裁切。单元格编辑应传 viewport",
+  },
 ];
 
 const options = [
@@ -104,6 +131,20 @@ const options = [
  */
 const selectDocVal = createSignal("");
 const selectDocVal2 = createSignal("b");
+const selectSizeXs = createSignal("");
+const selectSizeSm = createSignal("");
+const selectSizeMd = createSignal("");
+const selectSizeLg = createSignal("");
+const selectAutoFocus = createSignal("");
+const selectDocClear = createSignal("b");
+
+const exampleClearSearch = `<Select
+  options={options}
+  value={val}
+  allowClear
+  showSearch
+/>
+<Select options={options} loading placeholder="加载中" />`;
 
 /** createForm 演示字段形状（模块级，避免文档页重跑丢失状态） */
 type SelectFormValues = { city: string };
@@ -326,23 +367,48 @@ export default function FormSelect() {
               <code class="text-xs">SizeVariant</code>。
             </Paragraph>
             <FormItem label="xs">
-              <Select options={options} value="" size="xs" placeholder="xs" />
+              <Select
+                options={options}
+                value={selectSizeXs}
+                size="xs"
+                placeholder="xs"
+              />
             </FormItem>
             <FormItem label="sm">
-              <Select options={options} value="" size="sm" placeholder="sm" />
+              <Select
+                options={options}
+                value={selectSizeSm}
+                size="sm"
+                placeholder="sm"
+              />
             </FormItem>
             <FormItem label="md（默认）">
-              <Select options={options} value="" size="md" placeholder="md" />
+              <Select
+                options={options}
+                value={selectSizeMd}
+                size="md"
+                placeholder="md"
+              />
             </FormItem>
             <FormItem label="lg">
-              <Select options={options} value="" size="lg" placeholder="lg" />
+              <Select
+                options={options}
+                value={selectSizeLg}
+                size="lg"
+                placeholder="lg"
+              />
             </FormItem>
             <CodeBlock
               title="代码示例"
-              code={`<Select options={options} value="" size="xs" placeholder="xs" />
-<Select options={options} value="" size="sm" placeholder="sm" />
-<Select options={options} value="" size="md" placeholder="md" />
-<Select options={options} value="" size="lg" placeholder="lg" />`}
+              code={`const sizeXs = createSignal("");
+const sizeSm = createSignal("");
+const sizeMd = createSignal("");
+const sizeLg = createSignal("");
+
+<Select options={options} value={sizeXs} size="xs" placeholder="xs" />
+<Select options={options} value={sizeSm} size="sm" placeholder="sm" />
+<Select options={options} value={sizeMd} size="md" placeholder="md" />
+<Select options={options} value={sizeLg} size="lg" placeholder="lg" />`}
               language="tsx"
               showLineNumbers
               copyable
@@ -358,6 +424,7 @@ export default function FormSelect() {
         <Select
           id="docs-autofocus-select"
           options={options}
+          value={selectAutoFocus}
           placeholder="挂载后自动聚焦"
           autoFocus
         />
@@ -366,9 +433,33 @@ export default function FormSelect() {
           code={`<Select
   id="docs-autofocus-select"
   options={options}
+  value={val}
   placeholder="挂载后自动聚焦"
   autoFocus
 />`}
+          language="tsx"
+          showLineNumbers
+          copyable
+          wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
+        />
+      </section>
+
+      <section class="space-y-4">
+        <Title level={3}>清除、搜索与加载</Title>
+        <div class="flex flex-col gap-3 max-w-sm">
+          <Select
+            options={options}
+            value={selectDocClear}
+            allowClear
+            showSearch
+            placeholder="可搜索并清除"
+          />
+          <Select options={options} loading placeholder="加载中" />
+        </div>
+        <CodeBlock
+          title="代码示例"
+          code={exampleClearSearch}
           language="tsx"
           showLineNumbers
           copyable

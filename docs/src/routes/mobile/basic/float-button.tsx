@@ -44,7 +44,7 @@ const exampleOpen = `const open = createSignal(false);
 <FloatButton
   position="absolute"
   aria-label="受控"
-  open={open.value}
+  open={() => open.value}
   onOpenChange={(v) => (open.value = v)}
   items={[{ key: "x", icon: "X", "aria-label": "X" }]}
 />`;
@@ -54,8 +54,9 @@ export const metadata = {
   title: "FloatButton · ui-view",
 };
 
+const open = createSignal(false);
+
 export default function Page() {
-  const open = createSignal(false);
   return (
     <div class="space-y-8">
       <div>
@@ -128,7 +129,7 @@ export default function Page() {
                 <FloatButton
                   position="absolute"
                   aria-label="受控"
-                  open={open.value}
+                  open={() => open.value}
                   onOpenChange={(v) => (open.value = v)}
                   items={[{ key: "x", icon: "X", "aria-label": "X" }]}
                 />

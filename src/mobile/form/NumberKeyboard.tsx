@@ -128,7 +128,7 @@ export function NumberKeyboard(props: NumberKeyboardProps): JSXRenderable {
     if (!isOpen()) return null;
     return (
       <div
-        class="fixed inset-0 z-300 flex flex-col justify-end"
+        class="fixed inset-0 z-300 flex flex-col justify-end pointer-events-auto"
         role="dialog"
         aria-label="数字键盘"
       >

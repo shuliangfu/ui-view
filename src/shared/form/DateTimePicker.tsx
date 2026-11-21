@@ -25,7 +25,11 @@ import {
   yearGridPageStart,
 } from "../data-display/calendar-utils.ts";
 import type { SizeVariant } from "../types.ts";
-import { resolveFormControlSize } from "./form-control-context.ts";
+import {
+  resolveFormControlDisabled,
+  resolveFormControlSize,
+} from "./form-control-context.ts";
+import { FieldClearSlot } from "./field-clear-button.tsx";
 import { FormItemControlIdContext } from "./form-item-control-id.ts";
 import {
   controlBlueFocusRing,
@@ -62,7 +66,8 @@ import {
   schedulePickerTimeDraftColumnsScroll,
 } from "./picker-portal-utils.ts";
 import { pickerCalendarIconProps } from "./picker-trigger-icon.ts";
-import { commitMaybeSignal, type MaybeSignal } from "./maybe-signal.ts";
+import { PickerTriggerText } from "./picker-trigger-text.tsx";
+import { createOptionalValueState, type MaybeSignal } from "./maybe-signal.ts";
 import { autoFocusAttr, bindAutoFocusRef } from "./auto-focus.ts";
 
 /** range 模式受控值（每项为 `YYYY-MM-DD HH:mm`） */
@@ -110,6 +115,8 @@ export interface DateTimePickerMessages {
   calendarNav: Partial<
     import("./picker-calendar-nav.tsx").PickerCalendarNavMessages
   >;
+  /** 清除按钮 `aria-label` */
+  clear: string;
 }
 
 /** 默认中文文案 */
@@ -128,6 +135,7 @@ export const defaultDateTimePickerMessages: DateTimePickerMessages = {
   startWithValue: (v) => `开始 · ${v}`,
   endWithValue: (v) => `结束 · ${v}`,
   calendarNav: {},
+  clear: "清除",
 };
 
 export interface DateTimePickerProps {
@@ -168,6 +176,8 @@ export interface DateTimePickerProps {
   panelAttach?: "anchored" | "viewport";
   /** 多语言/自定义文案；未传字段走 {@link defaultDateTimePickerMessages} */
   messages?: Partial<DateTimePickerMessages>;
+  /** 显示清除按钮（无值时也保留）；点击后清空并触发 onChange */
+  allowClear?: boolean;
 }
 
 const DROPDOWN_ESC_KEY = "__lastDropdownClose" as const;
@@ -264,13 +274,6 @@ function isDateTimeRangeValue(v: unknown): v is DateTimePickerRangeValue {
 
 function isDateTimeStringArray(v: unknown): v is string[] {
   return Array.isArray(v) && v.every((x) => typeof x === "string");
-}
-
-function resolveDateTimePickerRaw(
-  value: DateTimePickerProps["value"],
-): unknown {
-  if (value === undefined) return undefined;
-  return typeof value === "function" ? (value as () => unknown)() : value;
 }
 
 /** 两日是否为同一自然日 */
@@ -730,6 +733,10 @@ function DateTimePickerTimeStrip(props: DateTimePickerTimeStripProps) {
 }
 
 export function DateTimePicker(props: DateTimePickerProps): JSXRenderable {
+  const selected = createOptionalValueState<DateTimePickerValue>(
+    props.value,
+    "",
+  );
   /** 与 {@link Input} 一致：继承 Form 注入的控件尺寸 */
   const resolvedControlSize = resolveFormControlSize(props.size);
   const fromFormItem = useContext(FormItemControlIdContext);
@@ -818,7 +825,7 @@ export function DateTimePicker(props: DateTimePickerProps): JSXRenderable {
         draftSecond.value,
         dtFormatSpec,
       );
-      commitMaybeSignal(props.value, str);
+      selected.commit(str);
       const synthetic = {
         target: { name: name ?? undefined, value: str },
       } as unknown as Event;
@@ -852,7 +859,7 @@ export function DateTimePicker(props: DateTimePickerProps): JSXRenderable {
         start: startOut,
         end: endOut,
       };
-      commitMaybeSignal(props.value, rangeCommitted);
+      selected.commit(rangeCommitted);
       const payload = JSON.stringify({ start: startOut, end: endOut });
       const synthetic = {
         target: { name: name ?? undefined, value: payload },
@@ -862,7 +869,7 @@ export function DateTimePicker(props: DateTimePickerProps): JSXRenderable {
       return;
     }
     const multiCommitted = [...draftDtList.value].sort();
-    commitMaybeSignal(props.value, multiCommitted);
+    selected.commit(multiCommitted);
     const synthetic = {
       target: {
         name: name ?? undefined,
@@ -877,6 +884,30 @@ export function DateTimePicker(props: DateTimePickerProps): JSXRenderable {
     closePickerOverlay();
   };
 
+  const handleClear = () => {
+    if (resolveFormControlDisabled(props.disabled)) return;
+    const { mode } = getDateTimePickerDerivatives(props);
+    const { name, onChange } = props;
+    if (mode === "single") {
+      selected.commit("");
+      onChange?.(
+        { target: { name: name ?? undefined, value: "" } } as unknown as Event,
+      );
+    } else if (mode === "range") {
+      const empty = { start: "", end: "" };
+      selected.commit(empty);
+      onChange?.({
+        target: { name: name ?? undefined, value: JSON.stringify(empty) },
+      } as unknown as Event);
+    } else {
+      selected.commit([]);
+      onChange?.({
+        target: { name: name ?? undefined, value: "[]" },
+      } as unknown as Event);
+    }
+    closePickerOverlay();
+  };
+
   /**
    * 浮层打开时触发器展示草稿（选日与滚动时间即时可见）；关闭后与受控 `props.value` 一致。
    * 隐藏域始终为已提交值。
@@ -885,7 +916,7 @@ export function DateTimePicker(props: DateTimePickerProps): JSXRenderable {
    */
   const rawForTriggerDisplay = (): unknown => {
     const { mode, dtFormatSpec } = getDateTimePickerDerivatives(props);
-    const committed = resolveDateTimePickerRaw(props.value);
+    const committed = selected.read();
     if (!openState.value) return committed;
     if (mode === "single") {
       const day = dtFormatSpec.dateGranularity === "day"
@@ -926,7 +957,7 @@ export function DateTimePicker(props: DateTimePickerProps): JSXRenderable {
       };
     }
     const list = draftDtList.value;
-    return list.length > 0 ? [...list] : committed;
+    return [...list];
   };
 
   /**
@@ -965,13 +996,18 @@ export function DateTimePicker(props: DateTimePickerProps): JSXRenderable {
    * 之后的微任务，可避免同一次点击里其它同步监听器在刚打开瞬间误关浮层（闪一下或像点不开）。
    */
   const handleOpen = () => {
-    if (props.disabled) return;
+    if (resolveFormControlDisabled(props.disabled)) return;
+    // 再次激活触发器视为取消草稿并收起，不重新初始化打开态。
+    if (openState.value) {
+      closePickerOverlay();
+      return;
+    }
     globalThis.queueMicrotask(() => {
-      if (props.disabled) return;
+      if (resolveFormControlDisabled(props.disabled)) return;
       const { mode, dtFormatSpec, disabledDate } = getDateTimePickerDerivatives(
         props,
       );
-      const raw = resolveDateTimePickerRaw(props.value);
+      const raw = selected.read();
 
       /** 与 DatePicker 一致：合并 signal 写入，降低打开帧与浮层同步叠加时的调度压力 */
       batch(() => {
@@ -1105,77 +1141,94 @@ export function DateTimePicker(props: DateTimePickerProps): JSXRenderable {
         name={props.name}
         value={() => {
           const { mode } = getDateTimePickerDerivatives(props);
-          const raw = resolveDateTimePickerRaw(props.value);
+          const raw = selected.read();
           return dateTimePickerHiddenSerialized(mode, raw);
         }}
       />
-      <button
-        type="button"
-        id={props.id ?? fromFormItem}
-        /**
-         * 触发器 DOM：点外关闭与几何同步用；`compileSource` 路径须用函数 ref，勿 `ref={triggerRef}` 对象。
-         */
-        ref={bindAutoFocusRef((el: HTMLButtonElement | null) => {
-          triggerRef.current = el;
-        }, props.autoFocus)}
-        {...autoFocusAttr(props.autoFocus)}
-        disabled={() => props.disabled ?? false}
-        aria-invalid={() => props.error}
-        aria-haspopup="dialog"
-        aria-expanded={() => openState.value}
-        aria-label={() => {
-          const { mode } = getDateTimePickerDerivatives(props);
-          const raw = rawForTriggerDisplay();
-          const placeholder = props.placeholder ?? m.placeholder;
-          return dateTimePickerDisplayText(mode, raw, placeholder, m);
-        }}
-        class={() =>
-          twMerge(
-            pickerTriggerSurface,
-            controlBlueFocusRing(!props.hideFocusRing && !props.error),
-            props.error && controlErrorBorder,
-            props.error && !props.hideFocusRing && controlErrorFocusRing(true),
-            pickerTriggerSizeClasses[resolvedControlSize],
-          )}
-        onBlur={props.onBlur}
-        onClick={handleOpen}
-      >
-        <span
-          class={() => {
-            const { mode } = getDateTimePickerDerivatives(props);
-            const raw = rawForTriggerDisplay();
-            const has = dateTimePickerHasValue(mode, raw);
-            return has
-              ? "text-slate-900 dark:text-slate-100"
-              : "text-slate-400 dark:text-slate-500";
-          }}
-        >
-          {() => {
+      <span class="relative block w-full">
+        <button
+          type="button"
+          id={props.id ?? fromFormItem}
+          /**
+           * 触发器 DOM：点外关闭与几何同步用；`compileSource` 路径须用函数 ref，勿 `ref={triggerRef}` 对象。
+           */
+          ref={bindAutoFocusRef((el: HTMLButtonElement | null) => {
+            triggerRef.current = el;
+          }, props.autoFocus)}
+          {...autoFocusAttr(props.autoFocus)}
+          disabled={() => resolveFormControlDisabled(props.disabled) ?? false}
+          aria-invalid={() => props.error}
+          aria-haspopup="dialog"
+          aria-expanded={() => openState.value}
+          aria-label={() => {
             const { mode } = getDateTimePickerDerivatives(props);
             const raw = rawForTriggerDisplay();
             const placeholder = props.placeholder ?? m.placeholder;
             return dateTimePickerDisplayText(mode, raw, placeholder, m);
           }}
-        </span>
-        {/* 图标外包 span：打开态着色且不依赖整颗按钮因 openState 重建 */}
-        <span
           class={() =>
             twMerge(
-              "inline-flex shrink-0 items-center justify-center",
-              openState.value
-                ? "text-slate-600 dark:text-slate-300"
-                : "text-slate-400 dark:text-slate-500",
+              pickerTriggerSurface,
+              controlBlueFocusRing(!props.hideFocusRing && !props.error),
+              props.error && controlErrorBorder,
+              props.error && !props.hideFocusRing &&
+                controlErrorFocusRing(true),
+              pickerTriggerSizeClasses[resolvedControlSize],
             )}
+          onBlur={props.onBlur}
+          onClick={handleOpen}
         >
-          <IconCalendar
-            size={pickerCalendarIconProps(resolvedControlSize).size}
-            class={twMerge(
-              pickerCalendarIconProps(resolvedControlSize).class,
-              "shrink-0",
-            )}
+          <PickerTriggerText
+            filled={() => {
+              const { mode } = getDateTimePickerDerivatives(props);
+              return dateTimePickerHasValue(mode, rawForTriggerDisplay());
+            }}
+            placeholder={() => props.placeholder ?? m.placeholder}
+            text={() => {
+              const { mode } = getDateTimePickerDerivatives(props);
+              const raw = rawForTriggerDisplay();
+              const placeholder = props.placeholder ?? m.placeholder;
+              return dateTimePickerDisplayText(mode, raw, placeholder, m);
+            }}
           />
-        </span>
-      </button>
+          {() => {
+            if (
+              !props.allowClear || resolveFormControlDisabled(props.disabled)
+            ) return null;
+            const mm = { ...defaultDateTimePickerMessages, ...props.messages };
+            return (
+              <FieldClearSlot
+                reserve
+                as="span"
+                visible={() => {
+                  const { mode } = getDateTimePickerDerivatives(props);
+                  return dateTimePickerHasValue(mode, rawForTriggerDisplay());
+                }}
+                label={mm.clear}
+                onClear={handleClear}
+              />
+            );
+          }}
+          {/* 图标外包 span：打开态着色且不依赖整颗按钮因 openState 重建 */}
+          <span
+            class={() =>
+              twMerge(
+                "inline-flex shrink-0 items-center justify-center",
+                openState.value
+                  ? "text-slate-600 dark:text-slate-300"
+                  : "text-slate-400 dark:text-slate-500",
+              )}
+          >
+            <IconCalendar
+              size={pickerCalendarIconProps(resolvedControlSize).size}
+              class={twMerge(
+                pickerCalendarIconProps(resolvedControlSize).class,
+                "shrink-0",
+              )}
+            />
+          </span>
+        </button>
+      </span>
       {/* 日期时间浮层：仅 Show 条件挂载，避免根树因 openState 整段 replace */}
       <Show when={openState}>
         {() => {

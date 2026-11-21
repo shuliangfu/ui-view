@@ -230,11 +230,12 @@ export default function FormInput() {
   const valAutofillEmail = createSignal("");
   const valAutofillPassword = createSignal("");
   const valOutlineEmpty = createSignal("");
-  const valOutlineFilled = createSignal("梁扶");
+  const valOutlineFilled = createSignal("张三");
   const valOutlineFloat = createSignal("");
   const valOutlineItem = createSignal("");
   const valOutlineColor = createSignal("");
   const valOutlinePwd = createSignal("");
+  const showOutlinePwd = createSignal(false);
   const valOutlineArea = createSignal("");
 
   return (
@@ -411,7 +412,7 @@ export default function FormInput() {
                 <Input
                   id="input-hide-mark"
                   value={valHideMark}
-                  placeholder="标签无 *，原生仍可 required"
+                  placeholder="标签无 *，仍保留 aria-required"
                   required
                 />
               </FormItem>
@@ -688,7 +689,6 @@ export default function FormInput() {
                   id="input-email"
                   type="email"
                   placeholder="user@example.com"
-                  value=""
                 />
               </FormItem>
               <FormItem label="前缀 prefix" id="input-prefix">
@@ -700,7 +700,6 @@ export default function FormInput() {
                     </span>
                   }
                   placeholder="域名"
-                  value=""
                 />
               </FormItem>
               <FormItem label="后缀 suffix" id="input-suffix">
@@ -710,7 +709,6 @@ export default function FormInput() {
                     <span class="text-slate-500 dark:text-slate-400">.com</span>
                   }
                   placeholder="名称"
-                  value=""
                 />
               </FormItem>
               <FormItem label="前缀 IconUser" id="input-prefix-user">
@@ -723,7 +721,6 @@ export default function FormInput() {
                     />
                   }
                   placeholder="用户名"
-                  value=""
                 />
               </FormItem>
               <FormItem label="前缀 IconLock" id="input-prefix-lock">
@@ -737,7 +734,6 @@ export default function FormInput() {
                     />
                   }
                   placeholder="请输入密码"
-                  value=""
                 />
               </FormItem>
             </Form>
@@ -923,6 +919,10 @@ const password = createSignal("");
                 id="outline-pwd"
                 label="密码"
                 value={valOutlinePwd}
+                showPassword={showOutlinePwd}
+                onToggleShow={() => {
+                  showOutlinePwd.value = !showOutlinePwd.value;
+                }}
               />
               <Textarea
                 id="outline-area"
@@ -946,7 +946,14 @@ const password = createSignal("");
 <FormItem label="手机号" required labelPosition="outline">
   <Input value={phone} />
 </FormItem>
-<Password label="密码" value={pwd} />
+<Password
+  label="密码"
+  value={pwd}
+  showPassword={show}
+  onToggleShow={() => {
+    show.value = !show.value;
+  }}
+/>
 <Textarea label="简介" value={bio} />`}
                 language="tsx"
                 showLineNumbers
@@ -962,16 +969,16 @@ const password = createSignal("");
             <Title level={3}>size</Title>
             <Form layout="vertical" class="w-full">
               <FormItem label="xs" id="size-xs">
-                <Input id="size-xs" size="xs" placeholder="xs" value="" />
+                <Input id="size-xs" size="xs" placeholder="xs" />
               </FormItem>
               <FormItem label="sm" id="size-sm">
-                <Input id="size-sm" size="sm" placeholder="sm" value="" />
+                <Input id="size-sm" size="sm" placeholder="sm" />
               </FormItem>
               <FormItem label="md（默认）" id="size-md">
-                <Input id="size-md" size="md" placeholder="md" value="" />
+                <Input id="size-md" size="md" placeholder="md" />
               </FormItem>
               <FormItem label="lg" id="size-lg">
-                <Input id="size-lg" size="lg" placeholder="lg" value="" />
+                <Input id="size-lg" size="lg" placeholder="lg" />
               </FormItem>
             </Form>
             <div class="w-full">

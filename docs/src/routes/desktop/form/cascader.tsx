@@ -126,6 +126,26 @@ const CASCADER_API: ApiRow[] = [
     default: "-",
     description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
   },
+  ,
+  {
+    name: "allowClear",
+    type: "boolean",
+    default: "false",
+    description:
+      "有选中值时在触发器上显示清除按钮（与触发器并列，不是套在按钮里）",
+  },
+  {
+    name: "showSearch",
+    type: "boolean",
+    default: "false",
+    description: "在浮层顶部显示搜索框，按标签或值过滤",
+  },
+  {
+    name: "loading",
+    type: "boolean",
+    default: "false",
+    description: "触发器加载中：不可打开，右侧显示转圈",
+  },
 ];
 
 /** 三级示例：省 → 市 → 区（组件支持任意深度，浮层多列横向滚动） */
@@ -285,6 +305,20 @@ const form = createForm({
 </Form>`;
 
 /** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+const cascaderDocClear = createSignal<string[]>([
+  "zhejiang",
+  "hangzhou",
+  "xihu",
+]);
+
+const exampleClearSearch = `<Cascader
+  options={OPTIONS}
+  value={val}
+  allowClear
+  showSearch
+/>
+<Cascader options={OPTIONS} loading placeholder="加载中" />`;
+
 export const metadata = {
   title: "Cascader 级联选择 · ui-view",
 };
@@ -667,7 +701,6 @@ export default function FormCascaderDoc() {
               <Cascader
                 size="xs"
                 options={OPTIONS}
-                value={[]}
                 class="w-full"
                 placeholder="xs"
               />
@@ -676,7 +709,6 @@ export default function FormCascaderDoc() {
               <Cascader
                 size="sm"
                 options={OPTIONS}
-                value={[]}
                 class="w-full"
                 placeholder="sm"
               />
@@ -685,7 +717,6 @@ export default function FormCascaderDoc() {
               <Cascader
                 size="md"
                 options={OPTIONS}
-                value={[]}
                 class="w-full"
                 placeholder="md"
               />
@@ -694,7 +725,6 @@ export default function FormCascaderDoc() {
               <Cascader
                 size="lg"
                 options={OPTIONS}
-                value={[]}
                 class="w-full"
                 placeholder="lg"
               />
@@ -731,6 +761,29 @@ export default function FormCascaderDoc() {
   placeholder="挂载后自动聚焦"
   autoFocus
 />`}
+          language="tsx"
+          showLineNumbers
+          copyable
+          wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
+        />
+      </section>
+
+      <section class="space-y-4">
+        <Title level={3}>清除、搜索与加载</Title>
+        <div class="flex flex-col gap-3 max-w-sm">
+          <Cascader
+            options={OPTIONS}
+            value={cascaderDocClear}
+            allowClear
+            showSearch
+            placeholder="可搜索并清除"
+          />
+          <Cascader options={OPTIONS} loading placeholder="加载中" />
+        </div>
+        <CodeBlock
+          title="代码示例"
+          code={exampleClearSearch}
           language="tsx"
           showLineNumbers
           copyable

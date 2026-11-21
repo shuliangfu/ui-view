@@ -157,7 +157,6 @@ function bindStepsDirectionAttr(
 
 export function Steps(props: StepsProps): JSXRenderable {
   const {
-    items,
     onChange,
     class: className,
   } = props;
@@ -171,26 +170,27 @@ export function Steps(props: StepsProps): JSXRenderable {
     () => props.direction ?? "horizontal",
   );
 
-  /** 渲染 getter：内联读 `readStepsCurrent`，随 `Signal` / 零参 getter 更新 */
-  return () => {
-    const currentVal = readStepsCurrent(props.current);
-    /** SSR／首帧：未测宽时保持声明方向（水平则水平）；窄屏由 ref 改 data-steps-direction，样式走 group-data */
-    const initialDirection = props.direction ?? "horizontal";
-
-    return (
-      <div
-        ref={setRootRef}
-        data-steps-direction={initialDirection}
-        class={twMerge(
-          "group flex w-full min-w-0 max-w-full",
-          "data-[steps-direction=horizontal]:flex-row data-[steps-direction=horizontal]:items-start",
-          "data-[steps-direction=vertical]:flex-col",
-          className,
-        )}
-        role="list"
-        aria-label={m.ariaLabel}
-      >
-        {items.map((item, index) => {
+  /**
+   * 外层直接返回稳定容器，只在子节点 `{() => ...}` 里读 current。
+   * 若整段 `return () =>` 作为组件返回值，current 更新会拆掉整棵步骤条再挂。
+   */
+  return (
+    <div
+      ref={setRootRef}
+      data-steps-direction={props.direction ?? "horizontal"}
+      class={twMerge(
+        "group flex w-full min-w-0 max-w-full",
+        "data-[steps-direction=horizontal]:flex-row data-[steps-direction=horizontal]:items-start",
+        "data-[steps-direction=vertical]:flex-col",
+        className,
+      )}
+      role="list"
+      aria-label={m.ariaLabel}
+    >
+      {() => {
+        const currentVal = readStepsCurrent(props.current);
+        const items = props.items;
+        return items.map((item, index) => {
           const status = getStatus(
             index,
             currentVal,
@@ -230,6 +230,7 @@ export function Steps(props: StepsProps): JSXRenderable {
             <div
               key={index}
               role="listitem"
+              aria-current={isProcess ? "step" : undefined}
               class={twMerge(
                 "flex",
                 "group-data-[steps-direction=horizontal]:flex-1 group-data-[steps-direction=horizontal]:flex-col group-data-[steps-direction=horizontal]:items-center group-data-[steps-direction=horizontal]:min-w-20",
@@ -246,11 +247,11 @@ export function Steps(props: StepsProps): JSXRenderable {
                   "group-data-[steps-direction=vertical]:flex-row group-data-[steps-direction=vertical]:gap-3",
                 )}
               >
-                {/* 垂直模式下图标需置于连接线之上，避免上一步的连接线穿过当前图标 */}
+                {/* 图标压在连接线之上，避免线从圆点中间穿过可见 */}
                 <span
                   class={twMerge(
                     iconCls,
-                    "group-data-[steps-direction=vertical]:relative group-data-[steps-direction=vertical]:z-10",
+                    "relative z-10",
                   )}
                 >
                   {isFinish
@@ -261,15 +262,18 @@ export function Steps(props: StepsProps): JSXRenderable {
                       index + 1
                     )}
                 </span>
-                <div
-                  class={twMerge(
-                    "hidden w-full min-w-[24px] h-0.5 mt-4 shrink-0 group-data-[steps-direction=horizontal]:block",
-                    isFinish
-                      ? "bg-green-500 dark:bg-green-400"
-                      : "bg-slate-200 dark:bg-slate-600",
-                  )}
-                  aria-hidden={isLast ? true : undefined}
-                />
+                {!isLast && (
+                  <div
+                    class={twMerge(
+                      /* 从本圆点中心拉到下一圆点中心（left:50% + width:100%），末步不再需要一段线 */
+                      "pointer-events-none absolute top-4 left-1/2 z-0 hidden h-0.5 w-full -translate-y-1/2 group-data-[steps-direction=horizontal]:block",
+                      isFinish
+                        ? "bg-green-500 dark:bg-green-400"
+                        : "bg-slate-200 dark:bg-slate-600",
+                    )}
+                    aria-hidden
+                  />
+                )}
                 {!isLast && (
                   <div
                     class={twMerge(
@@ -299,8 +303,8 @@ export function Steps(props: StepsProps): JSXRenderable {
               </div>
             </div>
           );
-        })}
-      </div>
-    );
-  };
+        });
+      }}
+    </div>
+  );
 }

@@ -8,17 +8,17 @@
  * 否则 `sr-only`、`absolute` 等类未进产线 CSS 时，会出现原生方框+碎块/异常大的滑块等样式崩坏。
  */
 
-import { createSignal, type Signal } from "@dreamer/view";
 import {
-  readSignalValue,
-  safeIsSignal,
-  writeSignalValue,
-} from "../safe-signal.ts";
-import type { JSXRenderable } from "@dreamer/view";
+  createEffect,
+  createSignal,
+  type JSXRenderable,
+} from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
-import { resolveFormControlSize } from "./form-control-context.ts";
-import { commitMaybeSignal, readMaybeSignal } from "./maybe-signal.ts";
-import type { MaybeSignal } from "./maybe-signal.ts";
+import {
+  resolveFormControlDisabled,
+  resolveFormControlSize,
+} from "./form-control-context.ts";
+import { createOptionalValueState, type MaybeSignal } from "./maybe-signal.ts";
 import type { SizeVariant } from "../types.ts";
 
 export interface SwitchProps {
@@ -88,27 +88,11 @@ const switchLabelSize: Record<SizeVariant, string> = {
   lg: "text-base",
 };
 
-/**
- * 开/关视觉状态：由 Signal/非受控本地 Signal/字面量/ getter 解包，供轨道色与 `translate` 复用。
- * 滑块**放在轨道容器内** `absolute`，避免在宽 `label`（如带「开/关」文）中相对外框错位。
- */
-function getSwitchOn(
-  checkedMaybe: MaybeSignal<boolean> | undefined,
-  isUncontrolled: boolean,
-  local: Signal<boolean> | undefined,
-): boolean {
-  if (isUncontrolled && local) return local.value;
-  if (checkedMaybe !== undefined && safeIsSignal(checkedMaybe)) {
-    return readSignalValue(checkedMaybe as Signal<boolean>);
-  }
-  return readMaybeSignal(checkedMaybe) ?? false;
-}
-
 export function Switch(props: SwitchProps): JSXRenderable {
   const {
     size: sizeProp,
     checked: checkedMaybe,
-    disabled = false,
+
     error = false,
     class: className,
     onChange: onChangeProp,
@@ -124,32 +108,36 @@ export function Switch(props: SwitchProps): JSXRenderable {
     unCheckedChildren,
     hideFocusRing = false,
   } = props;
+  const disabled = resolveFormControlDisabled(props.disabled);
   const size = resolveFormControlSize(sizeProp);
-
-  /** 未传 `checked` 时用本地 Signal 模拟受控，以便滑块/轨道与 `input` 同相。 */
-  const isUncontrolled = checkedMaybe === undefined;
-  const localChecked = isUncontrolled ? createSignal(false) : undefined;
+  const selected = createOptionalValueState(checkedMaybe, false);
+  /**
+   * Getter 受控（如 DataPanel 行内 `checked={isOn}`）时 `commit()` 无法回写，
+   * 滑块会等到父级延后写值或整行重建才跳到终态，200ms 的 translateX 过渡播不出来。
+   * 点击后先记下乐观态，等受控值追上再放下，让同一节点上的过渡真正播放。
+   */
+  const optimistic = createSignal<boolean | null>(null);
+  createEffect(() => {
+    const committed = selected.read();
+    if (optimistic.value !== null && optimistic.value === committed) {
+      optimistic.value = null;
+    }
+  });
+  const isOn = (): boolean => optimistic.value ?? selected.read();
 
   /**
-   * 用户切换时写回 `Signal` / 非受控 `local` / 其它可提交的 `MaybeSignal`。
+   * 用户切换时写回受控 Signal / 非受控内部状态，并立刻更新乐观显示态。
    *
    * @param e - 原生 `change` 事件
    */
   const handleChange = (e: Event) => {
     const next = (e.target as HTMLInputElement).checked;
-    if (checkedMaybe !== undefined && safeIsSignal(checkedMaybe)) {
-      writeSignalValue(checkedMaybe as Signal<boolean>, next);
-    } else if (isUncontrolled && localChecked) {
-      localChecked.value = next;
-    } else {
-      commitMaybeSignal(checkedMaybe, next);
-    }
+    selected.commit(next);
+    optimistic.value = next;
     onChangeProp?.(e);
   };
 
-  const checkedForInput: MaybeSignal<boolean> | boolean = isUncontrolled
-    ? (localChecked as Signal<boolean>)
-    : (checkedMaybe as MaybeSignal<boolean>);
+  const checkedForInput = isOn;
 
   return (
     <label
@@ -196,7 +184,7 @@ export function Switch(props: SwitchProps): JSXRenderable {
       }
       <span
         class={() => {
-          const on = getSwitchOn(checkedMaybe, isUncontrolled, localChecked);
+          const on = isOn();
           return twMerge(
             "relative shrink-0 overflow-hidden rounded-full border transition-colors motion-reduce:transition-none",
             switchTrackSize[size],
@@ -227,7 +215,7 @@ export function Switch(props: SwitchProps): JSXRenderable {
           )}
           style={() => ({
             // 1.25rem 与 `translate-x-5` / 轨宽 `w-11` 下的行程一致
-            transform: getSwitchOn(checkedMaybe, isUncontrolled, localChecked)
+            transform: isOn()
               ? `translate(${switchThumbTravel[size]}, -50%)`
               : "translate(0, -50%)",
           })}

@@ -22,6 +22,15 @@ export interface IconProps {
    * 未传则保持装饰性（`aria-hidden`）。
    */
   "aria-label"?: string;
+  /**
+   * 显式覆盖默认装饰性 `aria-hidden`。包裹有意义的 `<img>` 时应传 `false`，
+   * 否则祖先隐藏会使读屏找不到内部图片。
+   */
+  "aria-hidden"?: boolean;
+  /**
+   * 覆盖默认 `role="img"`。包住真实 `<img>` 时请传 `"none"`，避免出现两个 img 角色。
+   */
+  role?: string;
   /** 子节点（SVG 或 span 等） */
   children?: unknown;
 }
@@ -39,8 +48,7 @@ const sizeClasses: Record<SizeVariant, string> = {
   lg: "w-8 h-8",
 };
 
-const base =
-  "inline-flex shrink-0 items-center justify-center text-current text-gray-700 dark:text-gray-300";
+const base = "inline-flex shrink-0 items-center justify-center text-current";
 
 /**
  * 图标外层容器：统一 `size` 对应的 Tailwind 宽高类、文本色与 flex 居中，并合并 `class` / `className`。
@@ -55,17 +63,22 @@ export function Icon(props: IconProps): JSXRenderable {
     className,
     children,
     "aria-label": ariaLabel,
+    "aria-hidden": ariaHiddenProp,
+    role: roleProp,
   } = props;
   /** class 优先于 className，与业务里混写两种属性时行为确定 */
   const extraClass = classProp ?? className;
   const meaningful = ariaLabel != null && ariaLabel !== "";
+  const hidden = ariaHiddenProp !== undefined ? ariaHiddenProp : !meaningful;
   return (
     <span
       class={twMerge(base, sizeClasses[size], extraClass)}
-      role="img"
-      {...(meaningful
+      role={roleProp ?? "img"}
+      {...(hidden
+        ? { "aria-hidden": true as const }
+        : meaningful
         ? { "aria-label": ariaLabel }
-        : { "aria-hidden": true as const })}
+        : {})}
     >
       {children}
     </span>

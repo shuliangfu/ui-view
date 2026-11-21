@@ -19,6 +19,13 @@ export interface AvatarProps {
   class?: string;
   /** 无 src 时显示内容（如首字） */
   children?: unknown;
+  /** 形状：默认圆形；`square` 为小圆角方形 */
+  shape?: "circle" | "square";
+}
+
+export interface AvatarGroupProps {
+  class?: string;
+  children?: unknown;
 }
 
 const sizeClasses: Record<AvatarSize, string> = {
@@ -31,11 +38,19 @@ const sizeClasses: Record<AvatarSize, string> = {
 };
 
 const base =
-  "inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-200 text-gray-600 dark:bg-gray-600 dark:text-gray-300 font-medium";
+  "inline-flex shrink-0 items-center justify-center overflow-hidden bg-gray-200 text-gray-600 dark:bg-gray-600 dark:text-gray-300 font-medium";
 
 export function Avatar(props: AvatarProps): JSXRenderable {
-  const { size = "md", src, alt = "", class: className, children } = props;
+  const {
+    size = "md",
+    src,
+    alt = "",
+    class: className,
+    children,
+    shape = "circle",
+  } = props;
   const sizeCls = sizeClasses[size];
+  const shapeCls = shape === "square" ? "rounded-md" : "rounded-full";
 
   /** 直接返回 VNode，与 Button/Typography 等基础组件一致，避免多余 getter 层 */
   if (src) {
@@ -43,14 +58,27 @@ export function Avatar(props: AvatarProps): JSXRenderable {
       <img
         src={src}
         alt={alt}
-        class={twMerge(base, sizeCls, "object-cover", className)}
+        class={twMerge(base, sizeCls, shapeCls, "object-cover", className)}
       />
     );
   }
 
   return (
-    <span class={twMerge(base, sizeCls, className)} role="img" aria-hidden>
+    <span
+      class={twMerge(base, sizeCls, shapeCls, className)}
+      role="img"
+      aria-hidden
+    >
       {children}
+    </span>
+  );
+}
+
+/** 头像组：子头像重叠排列 */
+export function AvatarGroup(props: AvatarGroupProps): JSXRenderable {
+  return (
+    <span class={twMerge("inline-flex items-center -space-x-2", props.class)}>
+      {props.children}
     </span>
   );
 }

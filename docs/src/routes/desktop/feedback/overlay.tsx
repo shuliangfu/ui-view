@@ -97,10 +97,18 @@ const exampleNoClick = `const openNoClick = createSignal(false);
 <Button type="button" size="sm" onClick={() => (openNoClick.value = true)}>
   打开（点遮罩不关）
 </Button>
-<Button type="button" size="sm" variant="ghost" onClick={() => (openNoClick.value = false)}>
-  强制关闭
-</Button>
-<Overlay open={openNoClick} clickable={false} zIndex={400} aria-label="不可点遮罩" />`;
+<Overlay open={openNoClick} clickable={false} zIndex={400} aria-label="不可点遮罩">
+  <div class="absolute top-8 left-1/2 -translate-x-1/2">
+    <Button
+      type="button"
+      size="sm"
+      variant="primary"
+      onClick={() => (openNoClick.value = false)}
+    >
+      强制关闭
+    </Button>
+  </div>
+</Overlay>`;
 
 /** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
 export const metadata = {
@@ -190,7 +198,7 @@ export default function Page() {
         <div class="space-y-2">
           <Title level={3}>clickable=false</Title>
           <div class="rounded-xl border border-slate-200 dark:border-slate-700 p-4 bg-white dark:bg-slate-900 space-y-3">
-            <div class="flex gap-2">
+            <div class="flex gap-2 items-center">
               <Button
                 type="button"
                 size="sm"
@@ -198,21 +206,27 @@ export default function Page() {
               >
                 打开（点遮罩不关）
               </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                onClick={() => (openNoClick.value = false)}
-              >
-                强制关闭
-              </Button>
+              <span class="text-sm text-slate-500">
+                点遮罩不会关闭，请点「强制关闭」
+              </span>
             </div>
             <Overlay
               open={openNoClick}
               clickable={false}
               zIndex={400}
               aria-label="不可点遮罩"
-            />
+            >
+              <div class="absolute top-8 left-1/2 -translate-x-1/2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="primary"
+                  onClick={() => (openNoClick.value = false)}
+                >
+                  强制关闭
+                </Button>
+              </div>
+            </Overlay>
           </div>
           <CodeBlock
             title="代码示例"

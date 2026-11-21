@@ -397,24 +397,26 @@ export default function FormMentions() {
           </section>
           <section class="space-y-4">
             <Title level={3}>size（xs / sm / md / lg）</Title>
-            <FormItem label="xs">
-              <Mentions size="xs" placeholder="xs" value="" rows={2} />
-            </FormItem>
-            <FormItem label="sm">
-              <Mentions size="sm" placeholder="sm" value="" rows={2} />
-            </FormItem>
-            <FormItem label="md（默认）">
-              <Mentions size="md" placeholder="md" value="" rows={2} />
-            </FormItem>
-            <FormItem label="lg">
-              <Mentions size="lg" placeholder="lg" value="" rows={2} />
-            </FormItem>
+            <div>
+              <FormItem label="xs">
+                <Mentions size="xs" placeholder="xs" rows={2} />
+              </FormItem>
+              <FormItem label="sm">
+                <Mentions size="sm" placeholder="sm" rows={2} />
+              </FormItem>
+              <FormItem label="md（默认）">
+                <Mentions size="md" placeholder="md" rows={2} />
+              </FormItem>
+              <FormItem label="lg">
+                <Mentions size="lg" placeholder="lg" rows={2} />
+              </FormItem>
+            </div>
             <CodeBlock
               title="代码示例"
-              code={`<Mentions size="xs" placeholder="xs" value="" rows={2} />
-<Mentions size="sm" placeholder="sm" value="" rows={2} />
-<Mentions size="md" placeholder="md" value="" rows={2} />
-<Mentions size="lg" placeholder="lg" value="" rows={2} />`}
+              code={`<Mentions size="xs" placeholder="xs" rows={2} />
+<Mentions size="sm" placeholder="sm" rows={2} />
+<Mentions size="md" placeholder="md" rows={2} />
+<Mentions size="lg" placeholder="lg" rows={2} />`}
               language="tsx"
               showLineNumbers
               copyable

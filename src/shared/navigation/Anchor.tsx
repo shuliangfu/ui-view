@@ -5,6 +5,7 @@
 
 import { twMerge } from "tailwind-merge";
 import type { JSXRenderable } from "@dreamer/view";
+import { type MaybeSignal, readMaybeSignal } from "../form/maybe-signal.ts";
 
 export interface AnchorLink {
   /** 唯一 key，与 activeKey 对应 */
@@ -18,8 +19,8 @@ export interface AnchorLink {
 export interface AnchorProps {
   /** 锚点项 */
   links: AnchorLink[];
-  /** 当前高亮的 key（受控） */
-  activeKey?: string;
+  /** 当前高亮的 key（受控）。请传 Signal 或 getter，勿传 `activeKey={sig.value}` 快照 */
+  activeKey?: MaybeSignal<string>;
   /** 点击或滚动导致高亮变化时回调 */
   onChange?: (key: string) => void;
   /** 额外 class */
@@ -47,7 +48,7 @@ function getAnchorHref(hashHref: string): string {
 }
 
 export function Anchor(props: AnchorProps): JSXRenderable {
-  const { links, activeKey, onChange, class: className } = props;
+  const { links, onChange, class: className } = props;
   /** 合并默认中文文案与外部传入 messages */
   const m: AnchorMessages = {
     ...defaultAnchorMessages,
@@ -71,24 +72,22 @@ export function Anchor(props: AnchorProps): JSXRenderable {
       class={twMerge("flex flex-col gap-1 text-sm", className)}
       aria-label={m.navAriaLabel}
     >
-      {links.map((link) => {
-        const isActive = activeKey === link.key;
-        return (
-          <a
-            key={link.key}
-            href={getAnchorHref(link.href)}
-            class={twMerge(
+      {links.map((link) => (
+        <a
+          key={link.key}
+          href={getAnchorHref(link.href)}
+          class={() =>
+            twMerge(
               "py-1 px-2 rounded truncate",
-              isActive
+              readMaybeSignal(props.activeKey) === link.key
                 ? "text-blue-600 dark:text-blue-400 font-medium bg-blue-50 dark:bg-blue-900/30"
                 : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100",
             )}
-            onClick={(e: Event) => handleClick(e, link.key, link.href)}
-          >
-            {link.title}
-          </a>
-        );
-      })}
+          onClick={(e: Event) => handleClick(e, link.key, link.href)}
+        >
+          {link.title}
+        </a>
+      ))}
     </nav>
   );
 }

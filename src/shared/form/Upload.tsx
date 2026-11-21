@@ -29,7 +29,10 @@ export {
   DEFAULT_UI_VIEW_UPLOAD_BASE_PATH,
   uploadFileViaUiViewBase,
 } from "./upload-http.ts";
-import { resolveFormControlSize } from "./form-control-context.ts";
+import {
+  resolveFormControlDisabled,
+  resolveFormControlSize,
+} from "./form-control-context.ts";
 import { FormItemControlIdContext } from "./form-item-control-id.ts";
 import { controlErrorBorder } from "./input-focus-ring.ts";
 import { commitMaybeSignal, type MaybeSignal } from "./maybe-signal.ts";
@@ -364,7 +367,7 @@ export function Upload(props: UploadProps): JSXRenderable {
     size: sizeProp,
     multiple = false,
     accept,
-    disabled = false,
+
     drag = true,
     showTriggerIcon = true,
     hideFocusRing = false,
@@ -393,6 +396,7 @@ export function Upload(props: UploadProps): JSXRenderable {
     onUploadError,
     messages,
   } = props;
+  const disabled = resolveFormControlDisabled(props.disabled);
   const m = { ...defaultUploadMessages, ...messages };
   const size = resolveFormControlSize(sizeProp);
   const fromFormItem = useContext(FormItemControlIdContext);
@@ -508,6 +512,9 @@ export function Upload(props: UploadProps): JSXRenderable {
             );
           }
         }
+        // Custom transports may ignore AbortSignal and resolve after removal/replacement.
+        // Their late success must not recreate a canceled row or overwrite its hidden value.
+        if (ac.signal.aborted) return;
         const cur = items.value;
         const hasRow = cur.some((it) => it.uid === uid);
         /**
@@ -617,7 +624,9 @@ export function Upload(props: UploadProps): JSXRenderable {
 
   const handleDrop = (e: DragEvent) => {
     e.preventDefault();
-    (e.currentTarget as HTMLElement).classList.remove(dropZoneActiveCls);
+    (e.currentTarget as HTMLElement).classList.remove(
+      ...dropZoneActiveCls.split(" "),
+    );
     if (disabled || !e.dataTransfer?.files?.length) return;
     const files = multiple
       ? Array.from(e.dataTransfer.files)
@@ -629,12 +638,16 @@ export function Upload(props: UploadProps): JSXRenderable {
     e.preventDefault();
     e.dataTransfer!.dropEffect = "copy";
     if (!disabled && drag) {
-      (e.currentTarget as HTMLElement).classList.add(dropZoneActiveCls);
+      (e.currentTarget as HTMLElement).classList.add(
+        ...dropZoneActiveCls.split(" "),
+      );
     }
   };
 
   const handleDragLeave = (e: DragEvent) => {
-    (e.currentTarget as HTMLElement).classList.remove(dropZoneActiveCls);
+    (e.currentTarget as HTMLElement).classList.remove(
+      ...dropZoneActiveCls.split(" "),
+    );
   };
 
   /**
@@ -850,7 +863,7 @@ export function Upload(props: UploadProps): JSXRenderable {
                     !
                   </span>
                 )}
-                {file.status === "error" && (
+                {file.status === "error" && fileByUid.has(file.uid) && (
                   <button
                     type="button"
                     class="shrink-0 text-xs text-blue-600 dark:text-blue-400 hover:underline disabled:opacity-50"

@@ -169,7 +169,17 @@ if (!window.__dp) {
     const track = label.querySelector('span[aria-hidden="true"]');
     return { w, input, label, track, knob: track.firstElementChild, on: input.checked, toggle: () => label.click() };
   };
-  const picked = (wrap) => wrap.querySelector("button[aria-haspopup]").textContent.trim();
+  const picked = (wrap) => {
+    const btn = wrap.querySelector("button[aria-haspopup]");
+    if (!btn) return "";
+    // PickerTriggerText stacks an invisible placeholder sizer; button textContent would be placeholder+value.
+    const ph = btn.querySelector("[data-ui-picker-placeholder]");
+    if (ph && ph.parentElement) {
+      const vis = [...ph.parentElement.children].find((el) => el !== ph);
+      if (vis) return vis.textContent.trim();
+    }
+    return btn.textContent.trim();
+  };
   const hidden = (wrap) => wrap.querySelector('input[type="hidden"]').value;
   window.__dp = { sw, pick, picked, hidden, pop, popBtn, rgba, effBg, contrast, g, cell, sleep, flush, root, q, qa, until, click, fill, dlg, text, total, rows, names };
 }
@@ -265,9 +275,11 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
     for (
       const need of [
         "基础用法",
+        "页面通知条",
         "页面提示条",
         "列对齐",
         "搜索表单（Modal）",
+        "工具栏下方展开搜索",
         "工具栏搜索 ↔ 地址栏",
         "表格",
         "列显示函数",
@@ -289,6 +301,7 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
         "自定义扩展：form.render / view.render",
         "自定义扩展：FormField.render",
         "Tab",
+        "远程 Tab 参数与缓存（只读）",
         "可配批量条",
         "搜索字段类型与自定义底栏",
         "表单底栏与字段条件",
@@ -302,7 +315,7 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
       t,
       `return document.querySelectorAll('[data-testid^="panel-demo-"]').length;`,
     );
-    expect(panels).toBe(46);
+    expect(panels).toBe(49);
   }, DOCS_BROWSER_CONFIG);
 
   it(
@@ -672,29 +685,81 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
     DOCS_BROWSER_CONFIG,
   );
 
-  it("搜索：select 条件与初始筛选（带出初始值）", async (t) => {
+  it("搜索：expand 模式在工具栏下方展开，不打开 Modal", async (t) => {
     if (!t?.browser?.goto) return;
-    await open(t, "demo-search", "?role=admin");
+    await open(t, "demo-search-expand");
     const r = await ev<Record<string, unknown>>(
       t,
       `
-      const k = ${P("demo-search")};
-      const out = { initialTotal: D.total(k) };
+      const k = ${P("demo-search-expand")};
+      const out = {};
+      out.inline0 = !!D.q(k, '[data-testid="dp-search"]');
+      out.dialog0 = !!document.querySelector('[role="dialog"] [data-testid="dp-search"]');
       D.click(D.q(k, '[data-testid="dp-search-toggle"]'));
-      await D.until(() => document.querySelector('[data-testid="dp-search"]'));
-      out.roleValue = D.hidden(document.querySelector('[data-testid="dp-f-role"]'));
-      const st = document.querySelector('[data-testid="dp-f-status"]');
-      await D.pick(st, "停用");
-      D.click(D.g('[data-testid="dp-search-submit"]'));
-      await D.until(() => D.total(k) < out.initialTotal);
-      out.after = D.total(k);
-      out.allDisabledAdmins = D.rows(k).every((r) => r.textContent.includes("管理员") && r.textContent.includes("停用"));
+      await D.until(() => D.q(k, '[data-testid="dp-search-slot"] [data-testid="dp-search"]'));
+      out.expanded = !!D.q(k, '[data-testid="dp-search-slot"] [data-testid="dp-search"]');
+      out.dialog1 = !!document.querySelector('[role="dialog"] [data-testid="dp-search"]');
+      out.aria = D.q(k, '[data-testid="dp-search-toggle"]').getAttribute("aria-expanded");
+      D.fill(D.q(k, '[data-testid="dp-f-name"] input'), "ali");
+      D.click(D.q(k, '[data-testid="dp-search-submit"]'));
+      await D.until(() => D.total(k) === 1);
+      out.afterSearch = D.total(k);
+      out.stillOpen = !!D.q(k, '[data-testid="dp-search-slot"] [data-testid="dp-search"]');
+      out.dialog2 = !!document.querySelector('[role="dialog"] [data-testid="dp-search"]');
+      D.click(D.q(k, '[data-testid="dp-search-toggle"]'));
+      out.collapsed = await D.until(() => !D.q(k, '[data-testid="dp-search"]'));
       return out;`,
     );
-    expect(r.initialTotal).toBe(9); // 地址栏 ?role=admin 回填；25 行里 i%3==0 → 9 个管理员
-    expect(r.roleValue).toBe("admin");
-    expect((r.after as number) < 9).toBe(true);
-    expect(r.allDisabledAdmins).toBe(true);
+    expect(r.inline0).toBe(false);
+    expect(r.dialog0).toBe(false);
+    expect(r.expanded).toBe(true);
+    expect(r.dialog1).toBe(false);
+    expect(r.aria).toBe("true");
+    expect(r.afterSearch).toBe(1);
+    expect(r.stillOpen).toBe(true);
+    expect(r.dialog2).toBe(false);
+    expect(r.collapsed).toBe(true);
+  }, DOCS_BROWSER_CONFIG);
+
+  it("搜索：select 条件与初始筛选（带出初始值）", async (t) => {
+    if (!t?.browser?.goto) return;
+    await open(t, "demo-search", "?role=admin");
+    const page = t.browser.page as import("npm:playwright@1.59.1").Page;
+    const panel = page.getByTestId("panel-demo-search");
+    const total = panel.getByTestId("dp-total-count");
+    expect((await total.textContent())?.match(/\d+/)?.[0]).toBe("9");
+    await panel.getByTestId("dp-search-toggle").click();
+    const dialog = page.getByRole("dialog");
+    expect(
+      await dialog.getByTestId("dp-f-role").locator('input[type="hidden"]')
+        .inputValue(),
+    ).toBe("admin");
+    await dialog.getByTestId("dp-f-status").locator(
+      'button[aria-haspopup="listbox"]',
+    ).click();
+    await page.getByRole("option", { name: "停用", exact: true }).click({
+      delay: 100,
+    });
+    expect(
+      await dialog.getByTestId("dp-f-status").locator('input[type="hidden"]')
+        .inputValue(),
+    ).toBe("disabled");
+    await dialog.getByTestId("dp-search-submit").click();
+    await page.waitForFunction(() => {
+      const total = document.querySelector(
+        '[data-testid="panel-demo-search"] [data-testid="dp-total-count"]',
+      );
+      return total?.textContent?.match(/\d+/)?.[0] === "2";
+    });
+    expect(await dialog.isVisible()).toBe(false);
+    const rows = panel.locator('[data-testid^="dp-row-"]');
+    expect(await rows.count()).toBe(2);
+    for (let i = 0; i < 2; i++) {
+      expect(await rows.nth(i).textContent()).toContain("管理员");
+      expect(await rows.nth(i).textContent()).toContain("停用");
+    }
+    expect(new URL(page.url()).searchParams.get("role")).toBe("admin");
+    expect(new URL(page.url()).searchParams.get("status")).toBe("disabled");
   }, DOCS_BROWSER_CONFIG);
 
   it(
@@ -1027,6 +1092,26 @@ describe("文档页 E2E：/desktop/data-display/data-panel（DataPanel 数据面
           P("demo-table")
         }, "thead").textContent.includes("姓名"));`,
       );
+      // Reload must restore an actual non-default preference, not just a JSON substring.
+      await page.mouse.click(2, 2);
+      await open(t, "demo-table");
+      const persisted = await ev<Record<string, boolean>>(
+        t,
+        `
+        const k = ${P("demo-table")};
+        return { nameHidden: !D.q(k, "thead").textContent.includes("姓名"),
+          createdHidden: !D.q(k, "thead").textContent.includes("创建时间") };
+      `,
+      );
+      expect(persisted).toEqual({ nameHidden: true, createdHidden: true });
+      await centerClick(
+        '[data-testid="panel-demo-table"] [data-testid="dp-columns"]',
+      );
+      const nameUnchecked = await ev<boolean>(
+        t,
+        `return document.querySelector('[data-testid="dp-col-name"]').checked === false;`,
+      );
+      expect(nameUnchecked).toBe(true);
       await centerClick('[data-testid="dp-col-reset"]');
       const afterReset = await ev<Record<string, unknown>>(
         t,
@@ -1648,7 +1733,7 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
         noCreate: !D.q(k, '[data-testid="dp-create"]'),
         hasFreeze: !!freezeBtn,
         hasNotify: !!notifyBtn,
-        freezeDelCls: !!(freezeBtn && freezeBtn.querySelector(".dp-act-del")),
+        freezeDelCls: !!(freezeBtn && (freezeBtn.classList.contains("dp-act-del") || freezeBtn.querySelector(".dp-act-del"))),
         freezeHint,
         hint,
         noPopconfirm: !pop,
@@ -1850,7 +1935,7 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
   );
 
   it(
-    "刷新按钮重新加载当前页；每个面板互不影响（同页 40 个带工具栏实例）",
+    "刷新按钮重新加载当前页；每个面板互不影响（同页 43 个带工具栏实例）",
     async (t) => {
       if (!t?.browser?.goto) return;
       await open(t, "demo-crud");
@@ -1872,19 +1957,19 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
       );
       expect(r.sameTotal).toBe(true);
       expect(r.otherNoBar).toBe(true);
-      expect(r.toolbars).toBe(40);
+      expect(r.toolbars).toBe(43);
     },
     DOCS_BROWSER_CONFIG,
   );
   it(
-    "46 个示例：40 个有工具栏；toolbar:false 示例无工具栏，表格／分页齐全",
+    "49 个示例：43 个有工具栏；toolbar:false 示例无工具栏，表格／分页齐全",
     async (t) => {
       if (!t?.browser?.goto) return;
       await open(t, "demo-basic");
       const r = await ev<Record<string, unknown>>(
         t,
         `
-      const keys = ["demo-basic","demo-alert","demo-align","demo-search","demo-sync-url","demo-table","demo-col-fn","demo-join-name","demo-crud","demo-batch","demo-page","demo-export","demo-remote","demo-api-users-action","demo-api-orders-restful","demo-data-base-route","demo-dark","demo-locale","demo-toolbar-off","demo-defaults","demo-bool","demo-tb-fn","demo-ra-fn","demo-tb-custom","demo-ra-custom","demo-key-order","demo-enabled","demo-title","demo-can","demo-custom","demo-cell","demo-schemas-full","demo-view","demo-row-click-view","demo-form-view-render","demo-field-render","demo-tabs","demo-batch-bar","demo-search-adv","demo-form-cond","demo-handles","demo-title-type-default","demo-title-type-success","demo-title-type-info","demo-title-type-warning","demo-title-type-danger"];
+      const keys = ["demo-basic","demo-notice-bar","demo-alert","demo-align","demo-search","demo-search-expand","demo-sync-url","demo-table","demo-col-fn","demo-join-name","demo-crud","demo-batch","demo-page","demo-export","demo-remote","demo-api-users-action","demo-api-orders-restful","demo-data-base-route","demo-dark","demo-locale","demo-toolbar-off","demo-defaults","demo-bool","demo-tb-fn","demo-ra-fn","demo-tb-custom","demo-ra-custom","demo-key-order","demo-enabled","demo-title","demo-can","demo-custom","demo-cell","demo-schemas-full","demo-view","demo-row-click-view","demo-form-view-render","demo-field-render","demo-tabs","demo-tabs-api","demo-batch-bar","demo-search-adv","demo-form-cond","demo-handles","demo-title-type-default","demo-title-type-success","demo-title-type-info","demo-title-type-warning","demo-title-type-danger"];
       await D.until(() => D.total("demo-remote") > 0, 10000);
       await D.until(() => D.total("demo-api-users-action") > 0, 10000);
       await D.until(() => D.total("demo-api-orders-restful") > 0, 10000);
@@ -1906,7 +1991,7 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
       }
       return out;`,
       );
-      expect(Object.keys(r).length).toBe(46);
+      expect(Object.keys(r).length).toBe(49);
       for (const [k, v] of Object.entries(r)) {
         const o = v as Record<string, unknown>;
         const expectTb = k !== "demo-toolbar-off" &&
@@ -2427,6 +2512,68 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
   );
 
   it(
+    "单元格编辑·多选：合成 pointerdown+click（非物理输入证明） 勾选保持选中，「完成」完整可见不被裁切",
+    async (t) => {
+      if (!t?.browser?.goto) return;
+      await open(t, "demo-cell");
+      const r = await ev<{
+        beforeVip: string | null;
+        afterVip: string | null;
+        afterNew: string | null;
+        editorSame: boolean;
+        doneVisible: boolean;
+        doneText: string;
+      }>(
+        t,
+        `
+      const k = ${P("demo-cell")};
+      const edit = D.q(k, '[data-testid="dp-edit-tags-1"]');
+      edit.dispatchEvent(new MouseEvent("dblclick", { bubbles: true }));
+      await D.until(() => D.q(k, '[data-testid="dp-inline-tags"]'));
+      const ed = D.q(k, '[data-testid="dp-inline-tags"]');
+      await D.until(() => ed.querySelector('[role="option"]'));
+      const option = (label) => [...ed.querySelectorAll('[role="option"]')].find((o) => (o.textContent || "").trim().includes(label));
+      const selected = (label) => option(label) && option(label).getAttribute("aria-selected") === "true";
+      const tap = async (el) => {
+        el.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true, cancelable: true, button: 0 }));
+        await Promise.resolve();
+        await Promise.resolve();
+        el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, detail: 1 }));
+      };
+      const beforeVip = selected("VIP") ? "true" : "false";
+      const target = option("新用户");
+      await tap(target);
+      await D.sleep(80);
+      const afterNew = selected("新用户") ? "true" : "false";
+      const afterVip = selected("VIP") ? "true" : "false";
+      const done = [...ed.querySelectorAll("button")].find((b) => (b.textContent || "").trim() === "完成");
+      const box = done.getBoundingClientRect();
+      const corners = [
+        [box.left + 2, box.top + 2],
+        [box.right - 2, box.top + 2],
+        [box.left + 2, box.bottom - 2],
+        [box.right - 2, box.bottom - 2],
+      ];
+      const doneVisible = box.width > 8 && box.height > 8 && corners.every(([x, y]) => {
+        if (x < 0 || y < 0 || x > innerWidth || y > innerHeight) return false;
+        const hit = document.elementFromPoint(x, y);
+        return !!hit && (done === hit || done.contains(hit) || hit.contains(done));
+      });
+      const editorSame = D.q(k, '[data-testid="dp-inline-tags"]') === ed;
+      return { beforeVip, afterVip, afterNew, editorSame, doneVisible, doneText: (done && done.textContent || "").trim() };
+        `,
+      );
+      expect(r.beforeVip).toBe("true");
+      expect(r.afterVip).toBe("true");
+      expect(r.afterNew).toBe("true");
+      expect(r.editorSame).toBe(true);
+      expect(r.doneText).toBe("完成");
+      expect(r.doneVisible).toBe(true);
+    },
+    DOCS_BROWSER_CONFIG,
+  );
+
+  it(
     "单元格编辑·Enter 保存：每种类型（textarea 也是 Enter 保存）",
     async (t) => {
       if (!t?.browser?.goto) return;
@@ -2674,7 +2821,11 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
       const style = (sel: string) =>
         ev<Record<string, string | number>>(
           t,
-          `const b = document.querySelector(${JSON.stringify(sel)} + " button");
+          `const el = document.querySelector(${JSON.stringify(sel)});
+         const b = el && (el.tagName === "BUTTON" ? el : el.querySelector("button"));
+         if (!b) throw new Error("missing action button: " + ${
+            JSON.stringify(sel)
+          });
          const cs = getComputedStyle(b);
          return { color: cs.color, bg: cs.backgroundColor, bw: [cs.borderTopWidth, cs.borderRightWidth, cs.borderBottomWidth, cs.borderLeftWidth].join(","),
            bs: cs.borderTopStyle, shadow: cs.boxShadow, opacity: cs.opacity, cursor: cs.cursor, disabled: b.disabled ? 1 : 0,
@@ -2712,7 +2863,7 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
           ]);
           expect(await colorsClose(t, [[String(s0.color), base]])).toBe(true);
           // 悬停：只变色，仍无边框 / 底色
-          await page.hover(`${sel} button`);
+          await page.hover(`${sel}:is(button), ${sel} button`);
           await ev(t, `await D.sleep(300);`);
           const s1 = await style(sel);
           expect(await colorsClose(t, [[String(s1.color), hover]])).toBe(true);

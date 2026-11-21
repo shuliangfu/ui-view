@@ -33,7 +33,7 @@ const STEPS_API: ApiRow[] = [
     type: "number | (() => number) | Signal<number>",
     default: "0",
     description:
-      "当前步骤（从 0 起）；推荐 current={sig}，勿 current={sig.value}（手写 JSX 快照）",
+      "当前步骤（从 0 起）；等于步骤总数时全部为已完成。推荐 current={sig}，勿 current={sig.value}（手写 JSX 快照）",
   },
   {
     name: "direction",
@@ -72,9 +72,10 @@ const STEP_ITEM_API: ApiRow[] = [
   },
   {
     name: "status",
-    type: "wait | process | finish",
+    type: "wait | process | finish | error",
     default: "-",
-    description: "状态（不传则根据 current 推导）",
+    description:
+      "状态（不传则根据 current 推导：未到为 wait，当前为 process，已过为 finish；current 等于步骤总数时全部为 finish）",
   },
 ];
 
@@ -112,7 +113,7 @@ const exampleStatus = `<Steps items={[
   { title: "待开始", description: "步骤三", status: "wait" },
 ]} current={1} />`;
 
-/** 模块级 signal：0/1/2 对应第 1/2/3 步；示例主按钮在末步直接「已完成」，不再写入 current=n */
+/** 模块级 signal：0/1/2 对应第 1/2/3 步进行中，3 表示三步全部完成 */
 const current = createSignal(0);
 
 /** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
@@ -127,25 +128,26 @@ export default function NavigationSteps() {
     { title: "步骤三", description: "完成支付" },
   ];
 
-  /** 末步索引（第 n 步对应 n-1）；到达该步时主按钮直接「已完成」，无中间「完成」态 */
+  /** 末步索引（第 n 步对应 n-1）。current === items.length 时全部完成。 */
   const lastStepIndex = items.length - 1;
+  const finishedIndex = items.length;
 
   /**
    * 主按钮文案 / disabled：须走 {@link createMemo}。仅在 JSX 里写 `{current.value …}` 时，
    * 部分路由/编译路径下文本节点不订阅 signal，会卡在首帧「下一步」。
+   * 走到末步（如第 3 步）时按钮为「完成」，点过后 current=n 才变为「已完成」。
    */
   const primaryLabel = createMemo(() => {
     const v = current.value;
-    // 已在末步或更大：统一「已完成」
-    if (v >= lastStepIndex) return "已完成";
+    if (v >= finishedIndex) return "已完成";
+    if (v >= lastStepIndex) return "完成";
     return "下一步";
   });
 
-  const primaryDisabled = createMemo(() => current.value >= lastStepIndex);
-  const prevDisabled = createMemo(() => current.value === 0);
+  const primaryDisabled = createMemo(() => current.value >= finishedIndex);
+  const prevDisabled = createMemo(() => current.value <= 0);
 
-  /** 零参 getter：与 Steps、上方 memo 同屏刷新 */
-  return () => (
+  return (
     <div class="space-y-10">
       <section>
         <Title level={1}>Steps 步骤条</Title>
@@ -176,39 +178,40 @@ export default function NavigationSteps() {
 
         <div class="space-y-4">
           <Title level={3}>direction=horizontal（可点击）</Title>
-          {/* 包裹层限制宽度；className + 内联 style 保证 SSR/CSR 一致输出 class 与 max-width */}
-          <div className="w-full max-w-3xl" style={{ maxWidth: "48rem" }}>
-            <Steps
-              items={items}
-              current={current}
-              onChange={(c) => current.value = c}
-              direction="horizontal"
-            />
-          </div>
-          <div class="flex gap-2">
-            <button
-              type="button"
-              class="px-3 py-1.5 text-sm rounded border border-slate-300 dark:border-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={() => prevDisabled()}
-              onClick={() => {
-                current.value = Math.max(0, current.value - 1);
-              }}
-            >
-              上一步
-            </button>
-            <button
-              type="button"
-              class="px-3 py-1.5 text-sm rounded font-medium text-white transition-colors bg-blue-600 hover:bg-blue-700 enabled:cursor-pointer disabled:cursor-not-allowed disabled:pointer-events-none disabled:bg-slate-500 disabled:text-slate-200 disabled:hover:bg-slate-500 dark:disabled:bg-slate-600 dark:disabled:text-slate-300 dark:disabled:hover:bg-slate-600"
-              disabled={() => primaryDisabled()}
-              onClick={() => {
-                const v = current.value;
-                // 末步仅展示「已完成」且 disabled，不再把 current 置为 n（避免出现全绿勾前的「完成」点击）
-                if (v >= lastStepIndex) return;
-                current.value = Math.min(lastStepIndex, v + 1);
-              }}
-            >
-              {() => primaryLabel()}
-            </button>
+          <div class="space-y-3">
+            {/* 包裹层限制宽度；className + 内联 style 保证 SSR/CSR 一致输出 class 与 max-width */}
+            <div className="w-full max-w-3xl" style={{ maxWidth: "48rem" }}>
+              <Steps
+                items={items}
+                current={current}
+                onChange={(c) => current.value = c}
+                direction="horizontal"
+              />
+            </div>
+            <div class="flex gap-2">
+              <button
+                type="button"
+                class="px-3 py-1.5 text-sm rounded border border-slate-300 dark:border-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={() => prevDisabled()}
+                onClick={() => {
+                  current.value = Math.max(0, current.value - 1);
+                }}
+              >
+                上一步
+              </button>
+              <button
+                type="button"
+                class="px-3 py-1.5 text-sm rounded font-medium text-white transition-colors bg-blue-600 hover:bg-blue-700 enabled:cursor-pointer disabled:cursor-not-allowed disabled:pointer-events-none disabled:bg-slate-500 disabled:text-slate-200 disabled:hover:bg-slate-500 dark:disabled:bg-slate-600 dark:disabled:text-slate-300 dark:disabled:hover:bg-slate-600"
+                disabled={() => primaryDisabled()}
+                onClick={() => {
+                  const v = current.value;
+                  if (v >= finishedIndex) return;
+                  current.value = v + 1;
+                }}
+              >
+                {() => primaryLabel()}
+              </button>
+            </div>
           </div>
           <CodeBlock
             title="代码示例"

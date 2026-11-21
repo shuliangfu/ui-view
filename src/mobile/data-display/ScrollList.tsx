@@ -145,6 +145,8 @@ type ScrollListRuntime = {
   lastSeenItemCount: number;
   restoreGuardUntil: number;
   restoreBaseline: { top: number; h: number; ch: number } | null;
+  /** 程序化纠偏写 `scrollTop` 期间为 true，避免把这次 scroll 当成用户回顶而撤销基线 */
+  applyingRestore: boolean;
   disconnectMutationObserver: (() => void) | null;
   loadMoreLayoutSnapshot: { top: number; h: number; ch: number } | null;
   wasLoadMoreLoading: boolean;
@@ -197,6 +199,7 @@ function acquireScrollListRuntime(owner: Owner): ScrollListRuntime {
     lastSeenItemCount: 0,
     restoreGuardUntil: 0,
     restoreBaseline: null,
+    applyingRestore: false,
     disconnectMutationObserver: null,
     loadMoreLayoutSnapshot: null,
     wasLoadMoreLoading: false,
@@ -612,7 +615,12 @@ export function ScrollList(props: ScrollListProps): JSXRenderable {
       st < 6 ||
       (base.top > 24 && Math.abs(st - target) > Math.max(20, ch * 0.15))
     ) {
-      el.scrollTop = target;
+      rt.applyingRestore = true;
+      try {
+        el.scrollTop = target;
+      } finally {
+        rt.applyingRestore = false;
+      }
       /**
        * 纠偏写入的 `scrollTop` 会派发 `scroll`，若此时把 `loadMoreConsumedUntilScroll` 清掉，
        * 用户仍贴在底部 + `reconnect` 的 `takeRecords` 会立刻再发一页，出现「第二次随便拉一点就刷完」。
@@ -753,6 +761,18 @@ export function ScrollList(props: ScrollListProps): JSXRenderable {
        */
       const onScroll = () => {
         const st = el.scrollTop;
+        /**
+         * 分页纠偏只应修复「追加后框架异常回顶」。用户（或测试）主动滚回顶部做下拉刷新时，
+         * 若仍在 720ms 窗口内把 scrollTop 写回加载前位置，列表会停在中部，「条目 20」无法被下拉清掉。
+         */
+        if (
+          !rt.applyingRestore &&
+          rt.restoreBaseline != null &&
+          st + 8 < rt.restoreBaseline.top
+        ) {
+          rt.restoreBaseline = null;
+          rt.restoreGuardUntil = 0;
+        }
         rt.scrollMetrics.lastH = el.scrollHeight;
         rt.scrollMetrics.lastCh = el.clientHeight;
         rt.loadMoreArmedByScroll = true;

@@ -130,6 +130,37 @@ const INPUT_NUMBER_API: ApiRow[] = [
     default: "-",
     description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
   },
+  ,
+  {
+    name: "prefix",
+    type: "unknown",
+    default: "-",
+    description: "输入框前缀（外壳内、输入左侧）",
+  },
+  {
+    name: "suffix",
+    type: "unknown",
+    default: "-",
+    description: "输入框后缀（外壳内、步进按钮左侧）",
+  },
+  {
+    name: "precision",
+    type: "number",
+    default: "-",
+    description: "失焦后保留的小数位数",
+  },
+  {
+    name: "formatter",
+    type: "(value: number) => string",
+    default: "-",
+    description: "未聚焦时的展示格式化；聚焦时仍显示原始数字",
+  },
+  {
+    name: "allowClear",
+    type: "boolean",
+    default: "false",
+    description: "有值时显示清除按钮",
+  },
 ];
 
 /**
@@ -172,6 +203,17 @@ const qty = createSignal("10");
 </FormItem>`;
 
 /** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+const qtyPrefixFmt = createSignal("1234.567");
+
+const examplePrefixFmt = `<InputNumber
+  value={val}
+  prefix="¥"
+  suffix="元"
+  precision={2}
+  formatter={(n) => n.toLocaleString("zh-CN")}
+  allowClear
+/>`;
+
 export const metadata = {
   title: "InputNumber 数字输入 · ui-view",
 };
@@ -440,6 +482,29 @@ export default function FormInputNumber() {
   placeholder="挂载后自动聚焦"
   autoFocus
 />`}
+          language="tsx"
+          showLineNumbers
+          copyable
+          wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
+        />
+      </section>
+
+      <section class="space-y-4">
+        <Title level={3}>前缀、精度与格式化</Title>
+        <div class="max-w-sm">
+          <InputNumber
+            value={qtyPrefixFmt}
+            prefix="¥"
+            suffix="元"
+            precision={2}
+            formatter={(n) => n.toLocaleString("zh-CN")}
+            allowClear
+          />
+        </div>
+        <CodeBlock
+          title="代码示例"
+          code={examplePrefixFmt}
           language="tsx"
           showLineNumbers
           copyable

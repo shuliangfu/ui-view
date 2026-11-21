@@ -4,7 +4,6 @@
  */
 
 import {
-  createEffect,
   createSignal,
   type JSXRenderable,
   onCleanup,
@@ -51,9 +50,31 @@ export function IndexBar(props: IndexBarProps): JSXRenderable {
   /** 点击触发的程序化滚动期间，跳过 scroll spy 以免抢焦点 */
   let suppressSpyUntil = 0;
 
+  let removeListScroll: (() => void) | null = null;
   const setListRef = (el: unknown) => {
-    if (isHtmlElement(el)) listEl = el;
+    removeListScroll?.();
+    removeListScroll = null;
+    listEl = isHtmlElement(el) ? el : null;
+    const root = listEl;
+    if (!root) return;
+    const onScroll = () => {
+      if (Date.now() < suppressSpyUntil) return;
+      let current = items[0]?.index ?? "";
+      for (const it of items) {
+        const sec = panelRefs.get(it.index);
+        if (!sec) continue;
+        if (sec.offsetTop - root.offsetTop - 8 <= root.scrollTop) current = it.index;
+        else break;
+      }
+      if (current && current !== active.value) {
+        active.value = current;
+        onSelect?.(current);
+      }
+    };
+    root.addEventListener("scroll", onScroll, { passive: true });
+    removeListScroll = () => root.removeEventListener("scroll", onScroll);
   };
+  onCleanup(() => removeListScroll?.());
 
   const setPanelRef = (index: string) => (el: unknown) => {
     if (isHtmlElement(el)) panelRefs.set(index, el);
@@ -74,30 +95,12 @@ export function IndexBar(props: IndexBarProps): JSXRenderable {
     root.scrollTo?.({ top, behavior: "smooth" });
   };
 
-  createEffect(() => {
-    const root = listEl;
-    if (!root) return;
-    const onScroll = () => {
-      if (Date.now() < suppressSpyUntil) return;
-      const scrollTop = root.scrollTop;
-      let current = items[0]?.index ?? "";
-      for (const it of items) {
-        const sec = panelRefs.get(it.index);
-        if (!sec) continue;
-        const top = sec.offsetTop - root.offsetTop;
-        if (top - 8 <= scrollTop) current = it.index;
-        else break;
-      }
-      if (current && current !== active.value) {
-        active.value = current;
-        onSelect?.(current);
-      }
-    };
-    root.addEventListener("scroll", onScroll, { passive: true });
-    onCleanup(() => root.removeEventListener("scroll", onScroll));
-  });
 
-  return () => (
+  /**
+   * 外层直接返回稳定容器，侧栏高亮放在子节点 `{() => ...}`。
+   * 若整段 `return () =>` 作为组件返回值，点击字母会重建 `active`，表现为点了没反应。
+   */
+  return (
     <div class={twMerge("index-bar relative flex min-h-0 flex-1", className)}>
       <div
         ref={setListRef}
@@ -119,7 +122,7 @@ export function IndexBar(props: IndexBarProps): JSXRenderable {
       </div>
       <div
         class={twMerge(
-          "absolute right-1 top-1/2 -translate-y-1/2 flex flex-col items-center gap-0.5 py-2 px-1 rounded-full",
+          "absolute z-20 right-1 top-1/2 -translate-y-1/2 flex flex-col items-center gap-0.5 py-2 px-1 rounded-full",
           "bg-slate-100/80 dark:bg-slate-800/80 text-[10px] leading-none select-none",
           sidebarClass,
         )}
@@ -130,12 +133,14 @@ export function IndexBar(props: IndexBarProps): JSXRenderable {
           <button
             type="button"
             key={it.index}
-            class={twMerge(
-              "size-4 flex items-center justify-center rounded-full",
-              active.value === it.index && "bg-blue-600 text-white",
-            )}
-            aria-current={active.value === it.index ? "true" : undefined}
-            onClick={() => scrollTo(it.index)}
+            class={() =>
+              twMerge(
+                "size-4 flex items-center justify-center rounded-full",
+                active.value === it.index && "bg-blue-600 text-white",
+              )}
+            aria-current={() => active.value === it.index ? "true" : undefined}
+            onClick={() =>
+              scrollTo(it.index)}
           >
             {it.index}
           </button>

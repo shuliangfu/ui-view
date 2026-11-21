@@ -408,23 +408,23 @@ export default function FormTextarea() {
           <section class="space-y-4">
             <Title level={3}>size（xs / sm / md / lg）</Title>
             <FormItem label="xs">
-              <Textarea size="xs" placeholder="xs" value="" rows={2} />
+              <Textarea size="xs" placeholder="xs" rows={2} />
             </FormItem>
             <FormItem label="sm">
-              <Textarea size="sm" placeholder="sm" value="" rows={2} />
+              <Textarea size="sm" placeholder="sm" rows={2} />
             </FormItem>
             <FormItem label="md（默认）">
-              <Textarea size="md" placeholder="md" value="" rows={2} />
+              <Textarea size="md" placeholder="md" rows={2} />
             </FormItem>
             <FormItem label="lg">
-              <Textarea size="lg" placeholder="lg" value="" rows={2} />
+              <Textarea size="lg" placeholder="lg" rows={2} />
             </FormItem>
             <CodeBlock
               title="代码示例"
-              code={`<Textarea size="xs" placeholder="xs" value="" rows={2} />
-<Textarea size="sm" placeholder="sm" value="" rows={2} />
-<Textarea size="md" placeholder="md" value="" rows={2} />
-<Textarea size="lg" placeholder="lg" value="" rows={2} />`}
+              code={`<Textarea size="xs" placeholder="xs" rows={2} />
+<Textarea size="sm" placeholder="sm" rows={2} />
+<Textarea size="md" placeholder="md" rows={2} />
+<Textarea size="lg" placeholder="lg" rows={2} />`}
               language="tsx"
               showLineNumbers
               copyable

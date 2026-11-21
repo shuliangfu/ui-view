@@ -171,13 +171,14 @@ export const metadata = {
   title: "ImageViewer 图片查看器 · ui-view",
 };
 
-export default function DataDisplayImageViewer() {
-  const open = createSignal(false);
-  const index = createSignal(0);
-  /** 当前示例使用的切图动画，与下方「按效果打开」按钮及缩略图共用同一查看器实例 */
-  const viewerTransition = createSignal<ImageViewerTransition>("fade");
+/** 模块级 signal：放在页面函数外，避免 `return () =>` 或路由重跑时被重建、点开后立刻关上。 */
+const open = createSignal(false);
+const index = createSignal(0);
+/** 当前示例使用的切图动画，与下方「按效果打开」按钮及缩略图共用同一查看器实例 */
+const viewerTransition = createSignal<ImageViewerTransition>("fade");
 
-  return () => (
+export default function DataDisplayImageViewer() {
+  return (
     <div class="space-y-10">
       <section>
         <Title level={1}>ImageViewer 图片查看器</Title>
@@ -204,6 +205,7 @@ export default function DataDisplayImageViewer() {
 
         <div class="space-y-4">
           <Title level={3}>多图切换 + 缩略图</Title>
+          <div class="space-y-4">
           <div class="flex flex-wrap gap-3">
             {DEMO_IMAGES.map((src, i) => (
               <button
@@ -270,6 +272,7 @@ export default function DataDisplayImageViewer() {
             keyboard
             showThumbnails
           />
+          </div>
           <CodeBlock
             title="代码示例（基础）"
             code={exampleBasic}

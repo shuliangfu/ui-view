@@ -76,7 +76,7 @@ const PAGINATION_API: ApiRow[] = [
     type: "(page: number, pageSize?: number) => void",
     default: "-",
     description:
-      "页码/条数变化回调；切换每页条数时第二个参数为新的 pageSize，并回到第 1 页",
+      "页码/条数变化回调，可不传；切换每页条数时第二个参数为新的 pageSize，并回到第 1 页",
   },
   {
     name: "showFirstLast",
@@ -164,7 +164,6 @@ const importCode = `import { Pagination } from "@dreamer/ui-view/navigation";
   defaultPageSize={10}
   total={120}
   pageSizeOptions={[10, 20, 50]}
-  onChange={() => {}}
 />`;
 
 const exampleFull = `<Pagination
@@ -195,14 +194,12 @@ const exampleSimple = `<Pagination
 const exampleTotalPages = `<Pagination
   defaultCurrent={1}
   totalPages={5}
-  onChange={() => {}}
 />`;
 
 const exampleDisabled = `<Pagination
   current={2}
   total={50}
   pageSize={10}
-  onChange={() => {}}
   disabled
 />`;
 
@@ -383,7 +380,6 @@ export default function NavigationPagination() {
           <Pagination
             defaultCurrent={1}
             totalPages={5}
-            onChange={() => {}}
           />
           <CodeBlock
             title="代码示例"
@@ -402,7 +398,6 @@ export default function NavigationPagination() {
             current={2}
             total={50}
             pageSize={10}
-            onChange={() => {}}
             disabled
           />
           <CodeBlock

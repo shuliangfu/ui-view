@@ -36,18 +36,23 @@ describe("page-size cookie", () => {
         if (eq > 0) bag.set(assign.slice(0, eq).trim(), assign.slice(eq + 1));
       },
     };
+    const prev = Object.getOwnPropertyDescriptor(globalThis, "document");
     Object.defineProperty(globalThis, "document", {
       configurable: true,
       value: doc,
     });
-    writePageSizeCookie(10);
-    expect(doc.cookie).toContain(`${PAGE_SIZE_COOKIE}=10`);
-    expect(readPageSizeCookie()).toBe(10);
-    writePageSizeCookie(50);
-    expect(readPageSizeCookie()).toBe(50);
-    writePageSizeCookie(0);
-    expect(readPageSizeCookie()).toBe(50);
-    Reflect.deleteProperty(globalThis, "document");
+    try {
+      writePageSizeCookie(10);
+      expect(doc.cookie).toContain(`${PAGE_SIZE_COOKIE}=10`);
+      expect(readPageSizeCookie()).toBe(10);
+      writePageSizeCookie(50);
+      expect(readPageSizeCookie()).toBe(50);
+      writePageSizeCookie(0);
+      expect(readPageSizeCookie()).toBe(50);
+    } finally {
+      if (prev) Object.defineProperty(globalThis, "document", prev);
+      else Reflect.deleteProperty(globalThis, "document");
+    }
   });
 
   it("resolvePageSize prefers URL, then cookie, then fallback", () => {

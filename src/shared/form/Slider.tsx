@@ -21,10 +21,13 @@ import {
 } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
 import type { SizeVariant } from "../types.ts";
-import { resolveFormControlSize } from "./form-control-context.ts";
+import {
+  resolveFormControlDisabled,
+  resolveFormControlSize,
+} from "./form-control-context.ts";
 import { FormItemControlIdContext } from "./form-item-control-id.ts";
 import { controlErrorBorder } from "./input-focus-ring.ts";
-import { commitMaybeSignal, type MaybeSignal } from "./maybe-signal.ts";
+import { createOptionalValueState, type MaybeSignal } from "./maybe-signal.ts";
 
 /**
  * Slider 内置文案。
@@ -77,6 +80,14 @@ export interface SliderProps {
   error?: boolean;
   /** 多语言/自定义文案；未传字段走 {@link defaultSliderMessages} */
   messages?: Partial<SliderMessages>;
+  /**
+   * 轨道下方刻度：键为落在 min～max 内的数值，值为文案或带可选 style 的对象。
+   * 仅横向滑块渲染。
+   */
+  marks?: Record<
+    number,
+    string | { label: string; style?: Record<string, string> }
+  >;
 }
 
 /**
@@ -191,7 +202,47 @@ function armPointerDragEnd(flag: { current: boolean }) {
   globalThis.addEventListener("pointercancel", end, true);
 }
 
+function sliderMarksRow(
+  marks: SliderProps["marks"],
+  min: number,
+  max: number,
+) {
+  if (marks == null) return null;
+  const span = max - min || 1;
+  const items = Object.keys(marks).map((key) => {
+    const n = Number(key);
+    const item = marks[n];
+    const label = typeof item === "string" ? item : item?.label;
+    const style = typeof item === "string" ? undefined : item?.style;
+    return { n, label, style, left: ((n - min) / span) * 100 };
+  }).filter((item) => Number.isFinite(item.n) && item.label != null);
+  if (items.length === 0) return null;
+  return (
+    <div class="relative mt-1 h-4 w-full text-xs text-slate-500 dark:text-slate-400">
+      {items.map((item) => (
+        <span
+          key={String(item.n)}
+          class="absolute top-0 -translate-x-1/2 whitespace-nowrap"
+          style={{ left: `${item.left}%`, ...(item.style ?? {}) }}
+        >
+          {item.label}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+/** 0 是有效滑块值；不可用 `parseFloat(value) || max/min` 将其吞成另一端。 */
+function parseSliderValue(value: string | undefined, fallback: number): number {
+  const number = Number.parseFloat(value ?? "");
+  return Number.isFinite(number) ? number : fallback;
+}
+
 export function Slider(props: SliderProps): JSXRenderable {
+  const selected = createOptionalValueState<number | [number, number]>(
+    props.value,
+    0,
+  );
   const size = resolveFormControlSize(props.size);
   const sizeTrack = twMerge(
     sliderThumbWh[size],
@@ -231,9 +282,9 @@ export function Slider(props: SliderProps): JSXRenderable {
         const max = props.max ?? 100;
         const clampN = (v: number) => Math.min(max, Math.max(min, v));
         const n = clampN(
-          parseFloat((ev.target as HTMLInputElement).value) || min,
+          parseSliderValue((ev.target as HTMLInputElement).value, min),
         );
-        commitMaybeSignal(props.value, n);
+        selected.commit(n);
         if (userOnInput) userOnInput(ev);
       }
     });
@@ -253,10 +304,12 @@ export function Slider(props: SliderProps): JSXRenderable {
       const max = props.max ?? 100;
       const clampN = (v: number) => Math.min(max, Math.max(min, v));
       const n = clampN(
-        parseFloat((pendingSingleEvent.target as HTMLInputElement).value) ||
+        parseSliderValue(
+          (pendingSingleEvent.target as HTMLInputElement).value,
           min,
+        ),
       );
-      commitMaybeSignal(props.value, n);
+      selected.commit(n);
       if (move) move(pendingSingleEvent);
       pendingSingleEvent = null;
     }
@@ -279,7 +332,7 @@ export function Slider(props: SliderProps): JSXRenderable {
       const p = pendingRangePayload;
       pendingRangePayload = null;
       if (p) {
-        commitMaybeSignal(props.value, p);
+        selected.commit(p);
         emitRangeTuple(p, userOnInput);
       }
     });
@@ -292,7 +345,7 @@ export function Slider(props: SliderProps): JSXRenderable {
     }
     const move = props.onInput;
     if (pendingRangePayload) {
-      commitMaybeSignal(props.value, pendingRangePayload);
+      selected.commit(pendingRangePayload);
       if (move) emitRangeTuple(pendingRangePayload, move);
       pendingRangePayload = null;
     }
@@ -307,8 +360,7 @@ export function Slider(props: SliderProps): JSXRenderable {
     const max = props.max ?? 100;
     const range = props.range ?? false;
     const vertical = props.vertical ?? false;
-    const raw = props.value;
-    const resolved = typeof raw === "function" ? raw() : (raw ?? 0);
+    const resolved = selected.read();
 
     const clampLocal = (v: number) => Math.min(max, Math.max(min, v));
 
@@ -373,7 +425,6 @@ export function Slider(props: SliderProps): JSXRenderable {
       min = 0,
       max = 100,
       step = 1,
-      disabled = false,
       vertical = false,
       range = false,
       onChange,
@@ -385,6 +436,8 @@ export function Slider(props: SliderProps): JSXRenderable {
       error = false,
       messages,
     } = props;
+    const disabled = resolveFormControlDisabled(props.disabled);
+    const marks = props.marks;
     const m = { ...defaultSliderMessages, ...messages };
     const resolvedId = id ?? fromFormItem;
     const errorRingCls = error
@@ -405,9 +458,9 @@ export function Slider(props: SliderProps): JSXRenderable {
        */
       const onLowInput = (e: Event) => {
         const el = e.target as HTMLInputElement;
-        const newLow = clamp(parseFloat(el.value) || min);
+        const newLow = clamp(parseSliderValue(el.value, min));
         const other = clamp(
-          parseFloat(rangeHighRef.current?.value ?? String(max)) || max,
+          parseSliderValue(rangeHighRef.current?.value, max),
         );
         const o0 = Math.min(newLow, other);
         const o1 = Math.max(newLow, other);
@@ -421,9 +474,9 @@ export function Slider(props: SliderProps): JSXRenderable {
         pointerDraggingRange.current = false;
         flushRangeRaf();
         const el = e.target as HTMLInputElement;
-        const newLow = clamp(parseFloat(el.value) || min);
+        const newLow = clamp(parseSliderValue(el.value, min));
         const other = clamp(
-          parseFloat(rangeHighRef.current?.value ?? String(max)) || max,
+          parseSliderValue(rangeHighRef.current?.value, max),
         );
         const o0 = Math.min(newLow, other);
         const o1 = Math.max(newLow, other);
@@ -431,15 +484,15 @@ export function Slider(props: SliderProps): JSXRenderable {
           paintRangeFillBar(rangeFillBarRef.current, o0, o1, min, max);
         }
         const tuple: [number, number] = [o0, o1];
-        commitMaybeSignal(props.value, tuple);
+        selected.commit(tuple);
         emitRangeTuple(tuple, onChange);
       };
 
       const onHighInput = (e: Event) => {
         const el = e.target as HTMLInputElement;
-        const newHigh = clamp(parseFloat(el.value) || max);
+        const newHigh = clamp(parseSliderValue(el.value, max));
         const other = clamp(
-          parseFloat(rangeLowRef.current?.value ?? String(min)) || min,
+          parseSliderValue(rangeLowRef.current?.value, min),
         );
         const o0 = Math.min(other, newHigh);
         const o1 = Math.max(other, newHigh);
@@ -453,9 +506,9 @@ export function Slider(props: SliderProps): JSXRenderable {
         pointerDraggingRange.current = false;
         flushRangeRaf();
         const el = e.target as HTMLInputElement;
-        const newHigh = clamp(parseFloat(el.value) || max);
+        const newHigh = clamp(parseSliderValue(el.value, max));
         const other = clamp(
-          parseFloat(rangeLowRef.current?.value ?? String(min)) || min,
+          parseSliderValue(rangeLowRef.current?.value, min),
         );
         const o0 = Math.min(other, newHigh);
         const o1 = Math.max(other, newHigh);
@@ -463,7 +516,7 @@ export function Slider(props: SliderProps): JSXRenderable {
           paintRangeFillBar(rangeFillBarRef.current, o0, o1, min, max);
         }
         const tupleH: [number, number] = [o0, o1];
-        commitMaybeSignal(props.value, tupleH);
+        selected.commit(tupleH);
         emitRangeTuple(tupleH, onChange);
       };
 
@@ -548,6 +601,7 @@ export function Slider(props: SliderProps): JSXRenderable {
                 onBlur={onBlur}
               />
             </div>
+            {sliderMarksRow(marks, min, max)}
           </div>
         );
       }
@@ -619,8 +673,8 @@ export function Slider(props: SliderProps): JSXRenderable {
       pointerDraggingSingle.current = false;
       flushSingleRaf();
       const el = e.target as HTMLInputElement;
-      const n = clamp(parseFloat(el.value) || min);
-      commitMaybeSignal(props.value, n);
+      const n = clamp(parseSliderValue(el.value, min));
+      selected.commit(n);
       if (onChange) onChange(e);
     };
 
@@ -664,6 +718,15 @@ export function Slider(props: SliderProps): JSXRenderable {
         </div>
       );
     }
-    return input;
+    if (marks == null) return input;
+    return (
+      <div
+        class={twMerge("relative w-full", className)}
+        aria-invalid={error}
+      >
+        {input}
+        {sliderMarksRow(marks, min, max)}
+      </div>
+    );
   };
 }

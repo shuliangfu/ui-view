@@ -108,8 +108,10 @@ export default function BasicFlagImgDoc() {
         <Title level={2}>示例</Title>
         <div class="space-y-3">
           <Title level={3}>有 SVG</Title>
-          <div class="flex items-center gap-4">
-            <FlagImg svg={DEMO_FLAG_SVG} size="lg" title="示例旗" />
+          <div class="rounded-xl border border-slate-200 dark:border-slate-700 p-4 bg-white dark:bg-slate-900">
+            <div class="flex items-center gap-4">
+              <FlagImg svg={DEMO_FLAG_SVG} size="lg" title="示例旗" />
+            </div>
           </div>
           <CodeBlock
             title="代码示例"
@@ -123,8 +125,10 @@ export default function BasicFlagImgDoc() {
         </div>
         <div class="space-y-3">
           <Title level={3}>空 SVG（占位与 messages.emptySvgTitle）</Title>
-          <div class="flex items-center gap-4">
-            <FlagImg svg="" size="md" />
+          <div class="rounded-xl border border-slate-200 dark:border-slate-700 p-4 bg-white dark:bg-slate-900">
+            <div class="flex items-center gap-4">
+              <FlagImg svg="" size="md" />
+            </div>
           </div>
           <CodeBlock
             title="代码示例"

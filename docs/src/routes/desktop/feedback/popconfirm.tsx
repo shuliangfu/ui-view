@@ -36,10 +36,17 @@ const POPCONFIRM_API: ApiRow[] = [
   { name: "title", type: "string", default: "-", description: "确认标题/描述" },
   {
     name: "onConfirm",
-    type: "() => void",
+    type: "() => void | Promise<void>",
     default: "-",
     description:
-      "确定后回调；关闭浮层由组件内部完成（写回 open / onOpenChange(false)），此处只写业务逻辑",
+      "确定后回调；可返回 Promise，成功后再关气泡，失败保持打开。同步回调仍立即关闭。不必再写 open.value = false",
+  },
+  {
+    name: "confirmLoading",
+    type: "boolean",
+    default: "false",
+    description:
+      "确定按钮 loading；不传时，onConfirm 返回的 Promise pending 期间也会自动进入 loading，此时取消与点外部不可关",
   },
   {
     name: "onCancel",
@@ -195,6 +202,19 @@ const exampleDanger = `<Popconfirm
   }}>删除</Button>
 </Popconfirm>`;
 
+const exampleAsync = `<Popconfirm
+  open={openAsync}
+  title="确认发送重置邮件？"
+  onConfirm={() => sendMail()}
+  onOpenChange={(o) => {
+    openAsync.value = o;
+  }}
+>
+  <Button type="button" onClick={() => (openAsync.value = true)}>
+    发送
+  </Button>
+</Popconfirm>`;
+
 const exampleAuto = `<Popconfirm
   open={openAuto}
   placement="auto"
@@ -221,6 +241,7 @@ export default function FeedbackPopconfirm() {
   const openWarning = createSignal(false);
   const openDanger = createSignal(false);
   const openAuto = createSignal(false);
+  const openAsync = createSignal(false);
 
   return (
     <div class="space-y-10">
@@ -229,7 +250,10 @@ export default function FeedbackPopconfirm() {
         <Paragraph class="mt-2">
           气泡确认框：title、onConfirm、onCancel、okText、cancelText；支持
           open/onOpenChange 受控、danger、warning、showIcon、placement（默认
-          auto，贴边自动翻转）、arrow。点击确定或取消后{" "}
+          auto，贴边自动翻转）、arrow、confirmLoading。
+          <code class="text-xs">onConfirm</code>{" "}
+          可返回 Promise，pending 期间确定钮
+          loading，成功后再关，失败保持打开。点击确定（同步）或取消后{" "}
           <strong>关闭浮层由组件内部完成</strong>（写回{" "}
           <code class="text-xs">open</code>
           与 <code class="text-xs">onOpenChange(false)</code>
@@ -436,6 +460,43 @@ export default function FeedbackPopconfirm() {
             maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
+        <div class="space-y-4">
+          <Title level={3}>异步确认（onConfirm 返回 Promise）</Title>
+          <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+            确定回调返回 Promise 时，完成前确定钮进入
+            loading，取消与点外部不会关闭；成功后再关气泡。也可另外传{" "}
+            <code class="text-xs">confirmLoading</code> 由外部控制。
+          </Paragraph>
+          <div class="pt-1">
+            <Popconfirm
+              open={openAsync}
+              title="确认发送重置邮件？"
+              onConfirm={() =>
+                new Promise((resolve) => setTimeout(resolve, 800))}
+              onOpenChange={(o) => {
+                openAsync.value = o;
+              }}
+            >
+              <Button
+                type="button"
+                onClick={() => {
+                  openAsync.value = true;
+                }}
+              >
+                发送
+              </Button>
+            </Popconfirm>
+          </div>
+          <CodeBlock
+            title="代码示例"
+            code={exampleAsync}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
+          />
+        </div>
       </section>
 
       <DocsMessagesSection
@@ -450,7 +511,7 @@ export default function FeedbackPopconfirm() {
           组件接收以下属性，title 为必填；触发器 onClick 中设置 signal 为 true
           或调用 onOpenChange(true)；open 请传 Signal（createSignal
           返回值），勿传 .value。确定/取消关闭 由组件处理，onConfirm、onCancel
-          仅作业务回调。
+          仅作业务回调。onConfirm 返回 Promise 时等完成后再关。
         </Paragraph>
         <div class="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-600">
           <table class="w-full min-w-lg text-sm">

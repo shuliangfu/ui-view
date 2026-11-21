@@ -241,10 +241,9 @@ export async function writeDataPanelPrefs(
  */
 // deno-lint-ignore no-explicit-any
 export function Btn(props: any) {
-  const { "data-testid": testid, "aria-label": label, ...rest } = props;
   return (
-    <span class="inline-flex" data-testid={testid} aria-label={label}>
-      <Button {...rest} />
+    <span class="inline-flex">
+      <Button {...props} />
     </span>
   );
 }
@@ -407,13 +406,16 @@ export const CARD_STYLE =
 /** 页面提示条外包：左右与上下内边距与表格外包一致（!px-2.5 !py-2.5）。 */
 export const ALERT_WRAP_CLS = "dp-alert-wrap !px-2.5 !py-2.5";
 
-/** 表格外包（原 `.dp-table-wrap`）。内边距始终保留，含移动端。 */
+/** 通知条外包：位置与内边距与 {@link ALERT_WRAP_CLS} 相同。 */
+export const NOTICE_BAR_WRAP_CLS = "dp-notice-bar-wrap !px-2.5 !py-2.5";
+
+/** 表格／明细外包（原 `.dp-table-wrap`）。四边内边距始终保留；在高度受限时内部滚动。 */
 export const TABLE_WRAP_CLS =
-  "dp-table-wrap bg-white !px-2.5 !py-2.5 dark:bg-transparent";
+  "dp-table-wrap min-h-0 flex-1 overflow-y-auto bg-white !px-2.5 !py-2.5 dark:bg-transparent";
 
 /** 提示条可见时去掉表格外包上内边距，避免与提示条下内边距叠成双倍间距。 */
 export const TABLE_WRAP_BELOW_ALERT_CLS =
-  "dp-table-wrap bg-white !px-2.5 !pb-2.5 !pt-0 dark:bg-transparent";
+  "dp-table-wrap min-h-0 flex-1 overflow-y-auto bg-white !px-2.5 !pb-2.5 !pt-0 dark:bg-transparent";
 
 /**
  * DataPanel／DataView 工具栏底色：比标题浅一档。

@@ -640,6 +640,16 @@ const exampleThemeIcons = `{/* 浅色 / 自动 / 深色 主题图标 */}
 <IconAutoTheme size="md" />
 <IconDarkTheme size="md" />`;
 
+const exampleCurrentColor =
+  `<span class="flex items-center gap-1 text-blue-600">
+  <IconCheck size="sm" />
+  保存
+</span>
+<span class="flex items-center gap-1 text-red-600">
+  <IconClose size="sm" />
+  删除
+</span>`;
+
 /** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
 export const metadata = {
   title: "Icon 图标 · ui-view",
@@ -1435,6 +1445,29 @@ import { IconFlagCN } from "@dreamer/ui-view/icons/flags/standalone/IconFlagCN.t
             maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
+
+        <div class="space-y-4">
+          <Title level={3}>继承文字颜色</Title>
+          <div class="flex flex-wrap items-center gap-6">
+            <span class="flex items-center gap-1 text-blue-600">
+              <IconCheck size="sm" />
+              保存
+            </span>
+            <span class="flex items-center gap-1 text-red-600">
+              <IconClose size="sm" />
+              删除
+            </span>
+          </div>
+          <CodeBlock
+            title="代码示例"
+            code={exampleCurrentColor}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
+          />
+        </div>
       </section>
 
       <section class="space-y-3">
@@ -1548,20 +1581,20 @@ import { IconFlagCN } from "@dreamer/ui-view/icons/flags/standalone/IconFlagCN.t
           等安全环境提供；成功或失败时顶部 Toast 轻提示（复制成功 / 复制失败）。
         </Paragraph>
 
-        <div class="space-y-6">
+        <section class="space-y-6">
           <Title level={3}>一、操作与导航</Title>
           <IconGroup title="操作" items={操作} level={4} />
           <IconGroup title="方向 / 导航" items={方向导航} level={4} />
-        </div>
+        </section>
 
-        <div class="space-y-6">
+        <section class="space-y-6">
           <Title level={3}>二、内容、媒体与表情</Title>
           <IconGroup title="内容 / 文件" items={内容} level={4} />
           <IconGroup title="媒体" items={媒体} level={4} />
           <IconGroup title="表情 / 情绪" items={表情情绪} level={4} />
-        </div>
+        </section>
 
-        <div class="space-y-6">
+        <section class="space-y-6">
           <Title level={3}>三、大型门户网站常见图标</Title>
           <IconGroup title="新闻 / 资讯" items={新闻资讯} level={4} />
           <IconGroup title="视频 / 影视" items={视频影视} level={4} />
@@ -1573,18 +1606,18 @@ import { IconFlagCN } from "@dreamer/ui-view/icons/flags/standalone/IconFlagCN.t
           <IconGroup title="通知 / 消息" items={通知消息} level={4} />
           <IconGroup title="客服 / 支持" items={客服支持} level={4} />
           <IconGroup title="设置 / 账户" items={设置账户} level={4} />
-        </div>
+        </section>
 
-        <div class="space-y-6">
+        <section class="space-y-6">
           <Title level={3}>四、用户、状态与视图</Title>
           <IconGroup title="状态 / 反馈" items={状态反馈} level={4} />
           <IconGroup title="用户 / 社交" items={用户社交} level={4} />
           <IconGroup title="时间 / 地点 / 出行" items={时间地点} level={4} />
           <IconGroup title="布局 / 视图 / 编辑" items={布局视图} level={4} />
           <IconGroup title="数据 / 图表 / 商务" items={数据图表} level={4} />
-        </div>
+        </section>
 
-        <div class="space-y-6">
+        <section class="space-y-6">
           <Title level={3}>五、设备、自然与其它场景</Title>
           <IconGroup title="设备 / 网络" items={设备网络} level={4} />
           <IconGroup title="天气 / 自然" items={天气自然} level={4} />
@@ -1592,9 +1625,9 @@ import { IconFlagCN } from "@dreamer/ui-view/icons/flags/standalone/IconFlagCN.t
           <IconGroup title="动物" items={动物} level={4} />
           <IconGroup title="工具 / 开发" items={工具开发} level={4} />
           <IconGroup title="其它" items={其它零散} level={4} />
-        </div>
+        </section>
 
-        <div class="space-y-6">
+        <section class="space-y-6">
           <Title level={3}>六、国家 / 地区国旗</Title>
           <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
             由 <code class="text-xs">scripts/build-country-flags.mts</code>{" "}
@@ -1612,9 +1645,9 @@ import { IconFlagCN } from "@dreamer/ui-view/icons/flags/standalone/IconFlagCN.t
             items={国家地区国旗}
             level={4}
           />
-        </div>
+        </section>
 
-        <div class="space-y-6">
+        <section class="space-y-6">
           <Title level={3}>七、品牌与 App Logo</Title>
           <IconGroup
             title="大公司 / 平台"
@@ -1766,12 +1799,12 @@ import { IconFlagCN } from "@dreamer/ui-view/icons/flags/standalone/IconFlagCN.t
             ]}
             level={4}
           />
-        </div>
+        </section>
 
-        <div class="space-y-6">
+        <section class="space-y-6">
           <Title level={3}>八、常见代币 Logo</Title>
           <IconGroup title="常见代币（品牌色）" items={代币Logo} level={4} />
-        </div>
+        </section>
       </section>
     </div>
   );

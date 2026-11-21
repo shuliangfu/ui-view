@@ -10,7 +10,10 @@ import { twMerge } from "tailwind-merge";
 import type { JSXRenderable } from "@dreamer/view";
 import type { SizeVariant } from "../types.ts";
 import type { FormStore } from "./create-form.ts";
-import { FormControlSizeContext } from "./form-control-context.ts";
+import {
+  FormControlDisabledContext,
+  FormControlSizeContext,
+} from "./form-control-context.ts";
 import { FormStoreContext } from "./form-context.ts";
 
 export type FormLayout = "vertical" | "horizontal" | "inline";
@@ -46,6 +49,8 @@ export interface FormProps {
   class?: string;
   /** 表单项等子节点 */
   children?: unknown;
+  /** 整表禁用：向下注入，子控件未显式 enabled 时一并禁用 */
+  disabled?: boolean;
 }
 
 const layoutClasses: Record<FormLayout, string> = {
@@ -69,6 +74,7 @@ export function Form(props: FormProps): JSXRenderable {
       onSubmit,
       class: className,
       children,
+      disabled = false,
     } = props;
     const layoutCls = layoutClasses[layout];
 
@@ -93,15 +99,17 @@ export function Form(props: FormProps): JSXRenderable {
 
     const body = (
       <FormControlSizeContext.Provider value={size}>
-        <form
-          class={twMerge(layoutCls, className)}
-          method="dialog"
-          action="#"
-          onSubmit={handleSubmit}
-          noValidate
-        >
-          {children}
-        </form>
+        <FormControlDisabledContext.Provider value={disabled}>
+          <form
+            class={twMerge(layoutCls, className)}
+            method="dialog"
+            action="#"
+            onSubmit={handleSubmit}
+            noValidate
+          >
+            {children}
+          </form>
+        </FormControlDisabledContext.Provider>
       </FormControlSizeContext.Provider>
     );
 

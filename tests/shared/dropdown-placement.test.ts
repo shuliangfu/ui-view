@@ -5,10 +5,37 @@ import { describe, expect, it } from "@dreamer/test";
 import {
   computeDropdownFixedStyle,
   getDropdownArrowProps,
+  panelBoxFromTrigger,
 } from "../../src/desktop/navigation/Dropdown.tsx";
 
-function triggerRect(left: number, width = 28, top = 8, height = 28): DOMRect {
-  return new DOMRect(left, top, width, height);
+function triggerRect(
+  left: number,
+  width = 28,
+  top = 8,
+  height = 28,
+): DOMRect {
+  const right = left + width;
+  const bottom = top + height;
+  return {
+    x: left,
+    y: top,
+    width,
+    height,
+    top,
+    left,
+    right,
+    bottom,
+    toJSON: () => ({
+      x: left,
+      y: top,
+      width,
+      height,
+      top,
+      left,
+      right,
+      bottom,
+    }),
+  } as DOMRect;
 }
 
 function withViewport(width: number, fn: () => void): void {
@@ -52,6 +79,56 @@ describe("Dropdown placement with arrow", () => {
       const arrow = getDropdownArrowProps("bottomLeft");
       expect(arrow.style.left).toEqual("12px");
       expect(arrow.style.right).toEqual("auto");
+    });
+  });
+
+  it("arrow points at the trigger mid-line when trigger and panel rects are given", () => {
+    withViewport(1280, () => {
+      const leftTrigger = triggerRect(16, 80);
+      const leftPanel = { left: 16, top: 44, width: 200, height: 80 };
+      const leftArrow = getDropdownArrowProps(
+        "bottomLeft",
+        leftTrigger,
+        leftPanel,
+      );
+      // 16 + 80/2 - 16 = 40
+      expect(leftArrow.style.left).toEqual("40px");
+      expect(leftArrow.style.right).toEqual("auto");
+
+      const rightTrigger = triggerRect(1200, 28);
+      const rightPanel = {
+        left: 1228 - 200,
+        top: 44,
+        width: 200,
+        height: 80,
+      };
+      const rightArrow = getDropdownArrowProps(
+        "bottomRight",
+        rightTrigger,
+        rightPanel,
+      );
+      // trigger center 1214 - panel.left 1028 = 186
+      expect(rightArrow.style.left).toEqual("186px");
+      expect(rightArrow.style.right).toEqual("auto");
+    });
+  });
+
+  it("panelBoxFromTrigger uses size plus placement, not a stale viewport origin", () => {
+    withViewport(1280, () => {
+      const tr = triggerRect(16, 80, 8, 28);
+      const stale = {
+        width: 200,
+        height: 80,
+        left: 0,
+        top: 0,
+        right: 200,
+        bottom: 80,
+      };
+      const box = panelBoxFromTrigger(tr, "bottomLeft", stale, true);
+      expect(box.left).toEqual(16);
+      expect(box.top).toEqual(8 + 28 + 8); // trigger bottom + arrow gap
+      const arrow = getDropdownArrowProps("bottomLeft", tr, box);
+      expect(arrow.style.left).toEqual("40px"); // 16+40-16
     });
   });
 });

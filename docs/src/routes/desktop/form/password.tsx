@@ -99,7 +99,7 @@ const PASSWORD_API: ApiRow[] = [
   },
   {
     name: "showPassword",
-    type: "boolean",
+    type: "MaybeSignal<boolean>",
     default: "-",
     description: "是否显示明文（显隐由父组件控制）",
   },
@@ -214,6 +214,7 @@ export const metadata = {
 export default function FormPassword() {
   const val = createSignal("");
   const valNoStrength = createSignal("");
+  const noStrengthShow = createSignal(false);
   const prefixVal = createSignal("");
   const prefixShow = createSignal(false);
 
@@ -334,17 +335,26 @@ export default function FormPassword() {
           <section class="space-y-4">
             <Title level={2}>无强度提示</Title>
             <FormItem label="密码">
-              <Password
-                value={valNoStrength}
-                placeholder="仅显隐切换"
-              />
+              {() => (
+                <Password
+                  value={valNoStrength}
+                  showPassword={noStrengthShow}
+                  onToggleShow={() => {
+                    noStrengthShow.value = !noStrengthShow.value;
+                  }}
+                  placeholder="仅显隐切换"
+                />
+              )}
             </FormItem>
             <CodeBlock
               title="代码示例"
-              code={`<Password
+              code={`const show = createSignal(false);
+{() => <Password
   value={valNoStrength}
+  showPassword={show}
+  onToggleShow={() => { show.value = !show.value; }}
   placeholder="仅显隐切换"
-/>`}
+/>}`}
               language="tsx"
               showLineNumbers
               copyable
@@ -360,27 +370,30 @@ export default function FormPassword() {
               渲染在输入框左侧，和框体共用同一外边框；可与右侧显隐按钮同时使用。
             </Paragraph>
             <FormItem label="带图标前缀" id="password-prefix">
-              <Password
-                id="password-prefix"
-                value={prefixVal}
-                showPassword={prefixShow.value}
-                onToggleShow={() => {
-                  prefixShow.value = !prefixShow.value;
-                }}
-                prefix={
-                  <IconLock
-                    size="sm"
-                    class="text-slate-500 dark:text-slate-400"
-                  />
-                }
-                placeholder="请输入密码"
-              />
+              {() => (
+                <Password
+                  id="password-prefix"
+                  value={prefixVal}
+                  showPassword={prefixShow}
+                  onToggleShow={() => {
+                    prefixShow.value = !prefixShow.value;
+                  }}
+                  prefix={
+                    <IconLock
+                      size="sm"
+                      class="text-slate-500 dark:text-slate-400"
+                    />
+                  }
+                  placeholder="请输入密码"
+                />
+              )}
             </FormItem>
             <CodeBlock
               title="代码示例"
               code={`import { IconLock } from "@dreamer/ui-view/icons/Lock.tsx";
 
-<Password
+const show = createSignal(false);
+{() => <Password
   value={val}
   showPassword={show}
   onToggleShow={() => { show.value = !show.value; }}
@@ -388,7 +401,7 @@ export default function FormPassword() {
     <IconLock size="sm" class="text-slate-500 dark:text-slate-400" />
   }
   placeholder="请输入密码"
-/>`}
+/>}`}
               language="tsx"
               showLineNumbers
               copyable
@@ -420,23 +433,23 @@ export default function FormPassword() {
           <section class="space-y-4">
             <Title level={2}>size（xs / sm / md / lg）</Title>
             <FormItem label="xs">
-              <Password size="xs" placeholder="xs" value="" />
+              <Password size="xs" placeholder="xs" />
             </FormItem>
             <FormItem label="sm">
-              <Password size="sm" placeholder="sm" value="" />
+              <Password size="sm" placeholder="sm" />
             </FormItem>
             <FormItem label="md（默认）">
-              <Password size="md" placeholder="md" value="" />
+              <Password size="md" placeholder="md" />
             </FormItem>
             <FormItem label="lg">
-              <Password size="lg" placeholder="lg" value="" />
+              <Password size="lg" placeholder="lg" />
             </FormItem>
             <CodeBlock
               title="代码示例"
-              code={`<Password size="xs" placeholder="xs" value="" />
-<Password size="sm" placeholder="sm" value="" />
-<Password size="md" placeholder="md" value="" />
-<Password size="lg" placeholder="lg" value="" />`}
+              code={`<Password size="xs" placeholder="xs" />
+<Password size="sm" placeholder="sm" />
+<Password size="md" placeholder="md" />
+<Password size="lg" placeholder="lg" />`}
               language="tsx"
               showLineNumbers
               copyable

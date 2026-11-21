@@ -33,7 +33,13 @@ const TABLE_API: ApiRow[] = [
     description:
       "列定义；列可设 editable（双击进入编辑；text/InputNumber 数字/email/url/tel/date/time/select/checkbox/radio），与 render 互斥",
   },
-  { name: "dataSource", type: "T[]", default: "-", description: "数据源" },
+  {
+    name: "dataSource",
+    type: "T[] | Signal<T[]> | () => T[]",
+    default: "-",
+    description:
+      "数据源；受控更新请传 Signal 或 getter，勿传 dataSource={rows.value} 快照",
+  },
   {
     name: "rowKey",
     type: "keyof T | string | ((record, index) => string)",
@@ -99,10 +105,18 @@ const TABLE_API: ApiRow[] = [
   },
   {
     name: "pagination",
-    type: "false | { current?, pageSize?, total?, onChange? }",
+    type:
+      "false | { current?, pageSize?, total?, onChange?, pageSizeOptions?, showTotal? }",
     default: "-",
     description:
-      "分页配置；false 不显示；对象时显示分页条并支持 current/pageSize/total/onChange",
+      "分页配置；false 不显示。对象时显示分页条；pageSizeOptions 显示每页条数切换，showTotal 控制或自定义「第 from–to 条 / 共 total 条」（默认显示）",
+  },
+  {
+    name: "scroll",
+    type: "{ x?: number | string; y?: number | string }",
+    default: "-",
+    description:
+      "滚动：x 设表最小宽度并横向滚动；y 限制高度并纵向滚动，表头吸顶。与固定列一起用时请给固定列设 width",
   },
   {
     name: "onSelectChange",
@@ -192,7 +206,12 @@ const TABLE_COLUMN_API: ApiRow[] = [
       '表头（th）标题对齐；可单独与 `align` 不同，例如 `headerAlign: "center"` 且 `align: "right"` 做表头居中、金额列右对齐',
   },
   { name: "width", type: "number | string", default: "-", description: "列宽" },
-  { name: "fixed", type: '"left"', default: "-", description: "左固定列" },
+  {
+    name: "fixed",
+    type: '"left" | "right"',
+    default: "-",
+    description: "固定列（左或右）；需配合横向溢出或 scroll.x，并设置 width",
+  },
   {
     name: "sorter",
     type: "boolean | 比较函数",
@@ -306,16 +325,22 @@ const exampleTitleExtra = `<Table
 const examplePagination = `<Table
   columns={columns}
   dataSource={dataSource}
-  pagination={{ pageSize: 5, onChange: (page) => console.log(page) }}
+  pagination={{
+    pageSize: 5,
+    pageSizeOptions: [5, 10, 20],
+    onChange: (page, pageSize) => console.log(page, pageSize),
+  }}
 />`;
 
 const exampleFixedColumn = `<Table
   columns={[
     { key: "name", title: "姓名", dataIndex: "name", width: 100, fixed: "left" },
     { key: "age", title: "年龄", dataIndex: "age" },
-    { key: "address", title: "地址", dataIndex: "address" },
+    { key: "address", title: "地址", dataIndex: "address", width: 180 },
+    { key: "action", title: "操作", dataIndex: "action", width: 80, fixed: "right" },
   ]}
   dataSource={dataSource}
+  scroll={{ x: 640 }}
 />`;
 
 /** 可编辑示例行：覆盖全部 editable 类型（无 textarea） */
@@ -425,7 +450,7 @@ const rows = createSignal<EditableRow[]>([
   striped
   size="sm"
   columns={editableColumns}
-  dataSource={rows.value}
+  dataSource={rows}
   onCellChange={({ dataIndex, value, rowIndex }) => {
     rows.value = rows.value.map((row, i) =>
       i === rowIndex ? { ...row, [dataIndex as keyof EditableRow]: value as never } : row,
@@ -593,8 +618,8 @@ function TableDocPaginationDemo() {
  * 若在 `DataDisplayTable` 根 getter 中读取，受控更新会触发根插入点整段替换，
  * `main.overflow-y-auto` 下子树闪动且 scrollTop 被重置（视口回顶）。
  *
- * **须用 `{() => <Table ... />}` 包裹：** `compileSource` 生成的子组件 MountFn 会在挂载时同步合并 props，
- * 直接写 `dataSource={editableRows.value}` 只取首帧快照，后续输入不订阅 signal，还会导致整页重挂异常。
+ * 向 Table 传 `dataSource={editableRows}`（Signal），由组件在渲染 getter 内读取。
+ * 勿写 `dataSource={editableRows.value}` 快照，也不要用 `{() => <Table />}` 整表重挂。
  */
 function TableDocEditableDemo() {
   const editableRows = createSignal<EditableDocRow[]>(
@@ -602,22 +627,20 @@ function TableDocEditableDemo() {
   );
   return (
     <div class="max-w-full overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-600">
-      {() => (
-        <Table<EditableDocRow>
-          bordered
-          striped
-          size="sm"
-          columns={editableDocColumns}
-          dataSource={editableRows.value}
-          stateKey="table-doc-editable"
-          onCellChange={({ dataIndex, value, rowIndex }) => {
-            const field = dataIndex as keyof EditableDocRow;
-            editableRows.value = editableRows.value.map((row, i) =>
-              i === rowIndex ? { ...row, [field]: value as never } : row
-            );
-          }}
-        />
-      )}
+      <Table<EditableDocRow>
+        bordered
+        striped
+        size="sm"
+        columns={editableDocColumns}
+        dataSource={editableRows}
+        stateKey="table-doc-editable"
+        onCellChange={({ dataIndex, value, rowIndex }) => {
+          const field = dataIndex as keyof EditableDocRow;
+          editableRows.value = editableRows.value.map((row, i) =>
+            i === rowIndex ? { ...row, [field]: value as never } : row
+          );
+        }}
+      />
     </div>
   );
 }
@@ -636,8 +659,10 @@ export default function DataDisplayTable() {
       <section>
         <Title level={1}>Table 表格</Title>
         <Paragraph class="mt-2">
-          表格：columns、dataSource、rowKey、bordered、size、striped、loading、onRow、expandable、summary、locale、renderEmpty、title、extra、pagination、onSelectChange、rowClassName、headerClass、固定列、列级
-          headerAlign fixed、列级可编辑 editable 与 onCellChange。传入
+          表格：columns、dataSource、rowKey、bordered、size、striped、loading、onRow、expandable、summary、locale、renderEmpty、title、extra、pagination（含
+          pageSizeOptions /
+          showTotal）、scroll、onSelectChange、rowClassName、headerClass、固定列（左
+          / 右）、列级 headerAlign、列级可编辑 editable 与 onCellChange。传入
           onSelectChange 时为多选行选择：焦点在表格上时，Ctrl / Command+A
           全选或取消全选当前页（selectionType 为 radio 时除外）。使用 Tailwind
           v4，支持 light/dark 主题。
@@ -691,17 +716,19 @@ export default function DataDisplayTable() {
 
         <div class="space-y-4">
           <Title level={3}>size / striped / loading</Title>
-          <Table<Row>
-            columns={DOC_TABLE_BASIC_COLUMNS}
-            dataSource={DOC_TABLE_DEMO_ROWS}
-            size="sm"
-            striped
-          />
-          <Table<Row>
-            columns={DOC_TABLE_BASIC_COLUMNS}
-            dataSource={[]}
-            loading
-          />
+          <div class="space-y-4">
+            <Table<Row>
+              columns={DOC_TABLE_BASIC_COLUMNS}
+              dataSource={DOC_TABLE_DEMO_ROWS}
+              size="sm"
+              striped
+            />
+            <Table<Row>
+              columns={DOC_TABLE_BASIC_COLUMNS}
+              dataSource={[]}
+              loading
+            />
+          </div>
           <CodeBlock
             title="代码示例"
             code={exampleSizeStripedLoading}
@@ -715,21 +742,21 @@ export default function DataDisplayTable() {
 
         <div class="space-y-4">
           <Title level={3}>行选择 onSelectChange</Title>
-          <div data-table-demo="row-selection">
+          <div class="space-y-2" data-table-demo="row-selection">
             <Table<Row>
               columns={DOC_TABLE_BASIC_COLUMNS}
               dataSource={DOC_TABLE_DEMO_ROWS}
               stateKey="table-doc-row-selection"
               onSelectChange={(rows) => selectedRows.value = rows}
             />
+            {() => (
+              <p class="text-sm text-slate-500">
+                已选行: {selectedRows.value.length
+                  ? selectedRows.value.map((r) => r.name).join("、")
+                  : "-"}
+              </p>
+            )}
           </div>
-          {() => (
-            <p class="text-sm text-slate-500">
-              已选行: {selectedRows.value.length
-                ? selectedRows.value.map((r) => r.name).join("、")
-                : "-"}
-            </p>
-          )}
           <CodeBlock
             title="代码示例"
             code={exampleRowSelection}
@@ -743,16 +770,18 @@ export default function DataDisplayTable() {
 
         <div class="space-y-4">
           <Title level={3}>空状态 locale / renderEmpty</Title>
-          <Table<Row>
-            columns={DOC_TABLE_BASIC_COLUMNS}
-            dataSource={[]}
-            locale={{ emptyText: "暂无数据" }}
-          />
-          <Table<Row>
-            columns={DOC_TABLE_BASIC_COLUMNS}
-            dataSource={[]}
-            renderEmpty={() => <span class="text-slate-500">自定义空状态</span>}
-          />
+          <div class="space-y-4">
+            <Table<Row>
+              columns={DOC_TABLE_BASIC_COLUMNS}
+              dataSource={[]}
+              locale={{ emptyText: "暂无数据" }}
+            />
+            <Table<Row>
+              columns={DOC_TABLE_BASIC_COLUMNS}
+              dataSource={[]}
+              renderEmpty={() => <span class="text-slate-500">自定义空状态</span>}
+            />
+          </div>
           <CodeBlock
             title="代码示例"
             code={exampleEmpty}
@@ -837,8 +866,16 @@ export default function DataDisplayTable() {
                   dataIndex: "address" as const,
                   width: 180,
                 },
+                {
+                  key: "action",
+                  title: "操作",
+                  width: 80,
+                  fixed: "right",
+                  render: () => "查看",
+                },
               ]}
               dataSource={DOC_TABLE_DEMO_ROWS}
+              scroll={{ x: 640 }}
               bordered
             />
           </div>

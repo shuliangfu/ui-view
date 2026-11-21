@@ -275,28 +275,24 @@ const form = createForm({
                 size="xs"
                 class="w-full"
                 options={OPTIONS}
-                value={[]}
                 placeholder="xs"
               />
               <MultiSelect
                 size="sm"
                 class="w-full"
                 options={OPTIONS}
-                value={[]}
                 placeholder="sm"
               />
               <MultiSelect
                 size="md"
                 class="w-full"
                 options={OPTIONS}
-                value={[]}
                 placeholder="md"
               />
               <MultiSelect
                 size="lg"
                 class="w-full"
                 options={OPTIONS}
-                value={[]}
                 placeholder="lg"
               />
             </div>

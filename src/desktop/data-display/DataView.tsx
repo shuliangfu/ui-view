@@ -17,11 +17,11 @@
  * 首次进入与刷新都走数据源 `view(id)` / `get(id)`（若有）；失败或返回空则回落当前 `data`。
  */
 import {
+  createMemo,
   createSignal,
   type JSXRenderable,
   onCleanup,
   onMount,
-  untrack,
 } from "@dreamer/view";
 import { Button, ButtonGroup } from "../basic/Button.tsx";
 import { IconCopy } from "../../shared/basic/icons/Copy.tsx";
@@ -51,6 +51,11 @@ import {
   type DataAlertProp,
   DataChromeAlert,
 } from "./data-panel-alert.tsx";
+import {
+  createDataNoticeBarState,
+  DataChromeNoticeBar,
+  type DataNoticeBarProp,
+} from "./data-panel-notice-bar.tsx";
 import {
   createTabRecordCache,
   loadTabRecord,
@@ -114,7 +119,6 @@ import {
   assertFooterActionsConfig,
   type Column,
   type DataSource,
-  evalFlag,
   type ExportFormat,
   type FormActionContext,
   type FormConfig,
@@ -127,6 +131,7 @@ import {
   type ListResult,
   type Locale,
   type Messages,
+  type Option,
   resolveActionCtrl,
   resolveOptions,
   type Row,
@@ -223,7 +228,7 @@ export interface DataViewProps {
   type?: DataTitleType;
   /**
    * 明细配置：`props` 用 Descriptions 展示（同 DataPanel view）。
-   * Descriptions 的参数写在 `view.descriptions`（除 `items`、`title`）；DataView 的 view 不是弹层，`modal` 不生效。
+   * Descriptions 的参数写在 `view.descriptions`（除 `rows`、`title`）；DataView 的 view 不是弹层，`modal` 不生效。
    * `title` 仍是标题，不会传给 Descriptions。有 `render` 或 `children` 时 descriptions 不再生效。
    * `render` 是推荐扩展点，替换字段区。字段级 `ViewItem.render` 仅在无 `view.render` 且无 `children` 时生效。
    */
@@ -271,6 +276,14 @@ export interface DataViewProps {
    * 点击关闭会先隐藏提示，再调用 `onClose`；换一条提示（或先关掉再传入）会重新显示。
    */
   alert?: DataAlertProp;
+  /**
+   * 页面通知条，渲染位置与 {@link alert} 相同：工具栏（含工具栏左侧标签）下方、详情正文上方。
+   * 字符串简写为通知文案；对象为完整 {@link DataNoticeBarConfig}（透传 NoticeBar 全部参数，另加 show／key）。
+   * `false`／`null`／省略／`show: false` 不显示。函数在渲染时求值。
+   * 本插槽默认可关闭（`closable` 默认 true），`rounded` 默认 `md`。
+   * 点击关闭会先隐藏通知条，再调用 `onClose`；换一条（或先关掉再传入）会重新显示。
+   */
+  noticeBar?: DataNoticeBarProp;
   locale?: Locale;
   messages?: Partial<Messages>;
   /** 导出文件名（不含扩展名），默认取 title */
@@ -326,6 +339,10 @@ export interface DataViewProps {
 }
 
 export type { DataAlertConfig, DataAlertProp } from "./data-panel-alert.tsx";
+export type {
+  DataNoticeBarConfig,
+  DataNoticeBarProp,
+} from "./data-panel-notice-bar.tsx";
 export type { DataTitleType } from "./data-panel-chrome.tsx";
 import { bindContainerWidth } from "../../shared/container-width.ts";
 
@@ -586,6 +603,7 @@ export function DataView(props: DataViewProps): JSXRenderable {
   const loading = createSignal(false);
   const panelFs = createSignal(false);
   const alertState = createDataAlertState();
+  const noticeBarState = createDataNoticeBarState();
   const formOpen = createSignal(false);
   const formBusy = createSignal(false);
   const formErrors = createSignal<Record<string, string>>({});
@@ -814,11 +832,11 @@ export function DataView(props: DataViewProps): JSXRenderable {
     return body;
   }
 
-  async function submitForm(): Promise<void> {
-    if (formBusy.value) return;
+  async function submitForm(): Promise<boolean> {
+    if (formBusy.value) return false;
     const row = formRow.value;
     const id = row ? idOf(row) : resolveId();
-    if (!id) return;
+    if (!id) return false;
     const values = collectValues();
     const visible = formDefs.filter((f) =>
       isFormFieldVisible(f, formConditionCtx())
@@ -827,7 +845,7 @@ export function DataView(props: DataViewProps): JSXRenderable {
     if (Object.keys(errs).length) {
       formErrors.value = errs;
       formTop.value = "";
-      return;
+      return false;
     }
     formBusy.value = true;
     formErrors.value = {};
@@ -838,7 +856,7 @@ export function DataView(props: DataViewProps): JSXRenderable {
     } catch (e) {
       formBusy.value = false;
       message.error((e as Error)?.message || m.networkError);
-      return;
+      return false;
     }
     formBusy.value = false;
     if (!r || r.ok) {
@@ -847,15 +865,16 @@ export function DataView(props: DataViewProps): JSXRenderable {
       invalidateCurrentTabCache();
       await load();
       props.onChanged?.();
-      return;
+      return true;
     }
     const msgs = { ...(r.messages ?? {}) };
     for (const f of r.fields ?? []) if (!msgs[f]) msgs[f] = m.invalid;
     if (Object.keys(msgs).length) {
       formErrors.value = msgs;
-      return;
+      return false;
     }
     message.error(r.message ?? m.invalid);
+    return false;
   }
 
   const viewColumns = (): Column[] => {
@@ -1561,7 +1580,9 @@ export function DataView(props: DataViewProps): JSXRenderable {
         {leading}
         {!toolbarHidden && (
           <div
-            class={`ml-auto shrink-0 self-center${leading ? " pb-2" : ""}`}
+            class={`ml-auto min-w-0 max-w-full self-center overflow-x-auto${
+              leading ? " pb-2" : ""
+            }`}
             data-dv-tools={key}
           >
             <ButtonGroup attached class="dp-tool-group">
@@ -1660,151 +1681,175 @@ export function DataView(props: DataViewProps): JSXRenderable {
           const prop = fieldProp(f);
           const sig = fields[prop];
           const type = f.type ?? "text";
-          const cond = untrack(() => formConditionCtx());
-          const disabled = evalFlag(f.disabled, false, cond);
-          const opts = resolveOptions(f.options, cond);
-          let control: unknown;
-          if (typeof f.render === "function") {
-            const fieldCtx: FormFieldRenderCtx = {
-              field: f,
-              prop,
-              value: sig,
-              multiValue: mfields[prop],
-              mode: "edit",
-              row: formRow.value,
-              disabled,
-              error: errs[prop],
-            };
-            control = (
-              <div class="w-full" data-testid={`dv-fld-${prop}`}>
-                {f.render(fieldCtx)}
-              </div>
-            );
-          } else if (type === "textarea") {
-            control = (
-              <div class="w-full" data-testid={`dv-fld-${prop}`}>
-                <Textarea
-                  rows={f.rows ?? 4}
-                  value={sig}
-                  disabled={disabled}
-                  maxLength={f.maxlength}
-                  placeholder={f.placeholder}
-                  onInput={(
-                    e: Event,
-                  ) => (sig.value =
-                    (e.target as unknown as { value: string }).value)}
-                />
-              </div>
-            );
-          } else if (type === "select") {
-            control = (
-              <div class="w-full" data-testid={`dv-fld-${prop}`}>
-                <Select
-                  size="sm"
-                  value={sig}
-                  disabled={disabled}
-                  placeholder={!f.required &&
-                      !opts.some((o) => o.value === "")
-                    ? "—"
-                    : undefined}
-                  options={opts.map((o) => ({
-                    value: o.value,
-                    label: o.label,
-                  }))}
-                />
-              </div>
-            );
-          } else if (type === "multiselect") {
-            control = (
-              <div class="w-full" data-testid={`dv-fld-${prop}`}>
-                <MultiSelect
-                  size="sm"
-                  value={mfields[prop]}
-                  disabled={disabled}
-                  options={opts.map((o) => ({
-                    value: o.value,
-                    label: o.label,
-                  }))}
-                  onChange={(e: Event) => {
-                    const v = (e.target as unknown as { value: unknown }).value;
-                    if (Array.isArray(v)) sig.value = v.join(",");
-                  }}
-                />
-              </div>
-            );
-          } else if (type === "switch") {
-            const on = f.onOff ? f.onOff[0] : "true";
-            const off = f.onOff ? f.onOff[1] : "false";
-            control = (
-              <span data-testid={`dv-fld-${prop}`}>
-                <Switch
-                  checked={() => sig.value === on}
-                  disabled={disabled}
-                  onChange={(e: Event) => {
-                    sig.value =
-                      (e.target as unknown as { checked: boolean }).checked
-                        ? on
-                        : off;
-                  }}
-                />
-              </span>
-            );
-          } else if (type === "number") {
-            control = (
-              <div class="w-full" data-testid={`dv-fld-${prop}`}>
-                <InputNumber
-                  size="sm"
-                  value={sig}
-                  disabled={disabled}
-                  placeholder={f.placeholder}
-                />
-              </div>
-            );
-          } else if (type === "date") {
-            control = (
-              <div class="w-full" data-testid={`dv-fld-${prop}`}>
-                <DatePicker
-                  size="sm"
-                  value={sig}
-                  disabled={disabled}
-                  placeholder={f.placeholder}
-                  panelAttach="viewport"
-                />
-              </div>
-            );
-          } else if (type === "datetime") {
-            control = (
-              <div class="w-full" data-testid={`dv-fld-${prop}`}>
-                <DateTimePicker
-                  size="sm"
-                  value={sig}
-                  format="YYYY-MM-DD HH:mm"
-                  disabled={disabled}
-                  placeholder={f.placeholder}
-                  panelAttach="viewport"
-                />
-              </div>
-            );
-          } else {
-            control = (
-              <div class="w-full" data-testid={`dv-fld-${prop}`}>
-                <Input
-                  type={type === "password" ? "password" : "text"}
-                  value={sig}
-                  disabled={disabled}
-                  autoComplete={type === "password" ? "new-password" : "off"}
-                  placeholder={f.placeholder}
-                  onInput={(e: Event) => {
-                    let v = (e.target as unknown as { value: string }).value;
-                    if (f.maxlength != null && v.length > f.maxlength) {
-                      v = v.slice(0, f.maxlength);
-                    }
-                    sig.value = v;
-                  }}
-                />
-              </div>
-            );
-          }
+          const disabledValue = createMemo(() =>
+            typeof f.disabled === "function"
+              ? f.disabled(formConditionCtx())
+              : (f.disabled ?? false)
+          );
+          // 保留等价选项数组的引用：无关字段逐字输入不应重挂此控件或丢失焦点。
+          let previousOptions: Option[] = [];
+          const optionsValue = createMemo(() => {
+            const next = typeof f.options === "function"
+              ? resolveOptions(f.options, formConditionCtx())
+              : (f.options ?? []);
+            if (
+              next.length === previousOptions.length && next.every((o, i) =>
+                o.value === previousOptions[i].value &&
+                o.label === previousOptions[i].label &&
+                o.tone === previousOptions[i].tone
+              )
+            ) return previousOptions;
+            previousOptions = next;
+            return next;
+          });
+          const renderControl = () => {
+            const disabled = disabledValue();
+            const opts = optionsValue();
+            let control: unknown;
+            if (typeof f.render === "function") {
+              const fieldCtx: FormFieldRenderCtx = {
+                field: f,
+                prop,
+                value: sig,
+                multiValue: mfields[prop],
+                mode: "edit",
+                row: formRow.value,
+                disabled,
+                error: errs[prop],
+              };
+              control = (
+                <div class="w-full" data-testid={`dv-fld-${prop}`}>
+                  {f.render(fieldCtx)}
+                </div>
+              );
+            } else if (type === "textarea") {
+              control = (
+                <div class="w-full" data-testid={`dv-fld-${prop}`}>
+                  <Textarea
+                    rows={f.rows ?? 4}
+                    value={sig}
+                    disabled={disabled}
+                    maxLength={f.maxlength}
+                    placeholder={f.placeholder}
+                    onInput={(
+                      e: Event,
+                    ) => (sig.value =
+                      (e.target as unknown as { value: string }).value)}
+                  />
+                </div>
+              );
+            } else if (type === "select") {
+              control = (
+                <div class="w-full" data-testid={`dv-fld-${prop}`}>
+                  <Select
+                    size="sm"
+                    value={sig}
+                    disabled={disabled}
+                    placeholder={!f.required &&
+                        !opts.some((o) => o.value === "")
+                      ? "—"
+                      : undefined}
+                    options={opts.map((o) => ({
+                      value: o.value,
+                      label: o.label,
+                    }))}
+                  />
+                </div>
+              );
+            } else if (type === "multiselect") {
+              control = (
+                <div class="w-full" data-testid={`dv-fld-${prop}`}>
+                  <MultiSelect
+                    size="sm"
+                    value={mfields[prop]}
+                    disabled={disabled}
+                    options={opts.map((o) => ({
+                      value: o.value,
+                      label: o.label,
+                    }))}
+                    onChange={(e: Event) => {
+                      const v =
+                        (e.target as unknown as { value: unknown }).value;
+                      if (Array.isArray(v)) sig.value = v.join(",");
+                    }}
+                  />
+                </div>
+              );
+            } else if (type === "switch") {
+              const on = f.onOff ? f.onOff[0] : "true";
+              const off = f.onOff ? f.onOff[1] : "false";
+              control = (
+                <span data-testid={`dv-fld-${prop}`}>
+                  <Switch
+                    checked={() => sig.value === on}
+                    disabled={disabled}
+                    onChange={(e: Event) => {
+                      sig.value =
+                        (e.target as unknown as { checked: boolean }).checked
+                          ? on
+                          : off;
+                    }}
+                  />
+                </span>
+              );
+            } else if (type === "number") {
+              control = (
+                <div class="w-full" data-testid={`dv-fld-${prop}`}>
+                  <InputNumber
+                    size="sm"
+                    value={sig}
+                    disabled={disabled}
+                    placeholder={f.placeholder}
+                  />
+                </div>
+              );
+            } else if (type === "date") {
+              control = (
+                <div class="w-full" data-testid={`dv-fld-${prop}`}>
+                  <DatePicker
+                    size="sm"
+                    value={sig}
+                    disabled={disabled}
+                    placeholder={f.placeholder}
+                    panelAttach="viewport"
+                  />
+                </div>
+              );
+            } else if (type === "datetime") {
+              control = (
+                <div class="w-full" data-testid={`dv-fld-${prop}`}>
+                  <DateTimePicker
+                    size="sm"
+                    value={sig}
+                    format="YYYY-MM-DD HH:mm"
+                    disabled={disabled}
+                    placeholder={f.placeholder}
+                    panelAttach="viewport"
+                  />
+                </div>
+              );
+            } else {
+              control = (
+                <div class="w-full" data-testid={`dv-fld-${prop}`}>
+                  <Input
+                    type={type === "password" ? "password" : "text"}
+                    value={sig}
+                    disabled={disabled}
+                    autoComplete={type === "password" ? "new-password" : "off"}
+                    placeholder={f.placeholder}
+                    onInput={(e: Event) => {
+                      let v = (e.target as unknown as { value: string }).value;
+                      if (f.maxlength != null && v.length > f.maxlength) {
+                        v = v.slice(0, f.maxlength);
+                      }
+                      sig.value = v;
+                    }}
+                  />
+                </div>
+              );
+            }
+            return control;
+          };
           const err = errs[prop];
           return (
             <div
@@ -1824,7 +1869,7 @@ export function DataView(props: DataViewProps): JSXRenderable {
                 required={fieldRequired(f) && f.type !== "password"}
                 error={err}
               >
-                {control}
+                {renderControl}
               </FormItem>
               {f.hint && !err && (
                 <p
@@ -1961,7 +2006,7 @@ export function DataView(props: DataViewProps): JSXRenderable {
       );
       fieldArea = (
         <Descriptions
-          items={items}
+          rows={items}
           {...{ bordered: true, column: 1, size: "sm" as const }}
           {...pickViewDescriptionsProps(props.view)}
         />
@@ -2024,93 +2069,101 @@ export function DataView(props: DataViewProps): JSXRenderable {
 
   return (
     <div class="contents" data-testid={`panel-${key}`}>
-      {() => (
-        <div
-          class={panelFs.value ? FS_CLS : undefined}
-          data-dv-shell={key}
-          data-testid="dv-shell"
-          data-fullscreen={panelFs.value ? "true" : undefined}
+      <div
+        class={() => (panelFs.value ? FS_CLS : "flex h-full min-h-0 flex-col")}
+        data-dv-shell={key}
+        data-testid="dv-shell"
+        data-fullscreen={() => (panelFs.value ? "true" : undefined)}
+      >
+        <Card
+          bordered
+          size="sm"
+          class={`dp-card flex h-full min-h-0 flex-col${
+            props.class ? ` ${props.class}` : ""
+          } ${CARD_STYLE}`}
+          headerClass={headerBarCls(props.type)}
+          title={cardTitle()}
+          bodyClass="flex min-h-0 flex-1 flex-col overflow-hidden p-0"
         >
-          <Card
-            bordered
-            size="sm"
-            class={`dp-card${
-              props.class ? ` ${props.class}` : ""
-            } ${CARD_STYLE}`}
-            headerClass={headerBarCls(props.type)}
-            title={cardTitle()}
-            bodyClass="p-0"
-          >
-            {() => {
-              const defaultBody = (
-                <div
-                  class={() =>
-                    alertState.visible(props.alert)
-                      ? TABLE_WRAP_BELOW_ALERT_CLS
-                      : TABLE_WRAP_CLS}
-                  data-testid="dv-body"
-                >
-                  {viewBody}
-                </div>
-              );
-              const pageAlert = (
-                <DataChromeAlert
-                  alert={props.alert}
-                  testId="dv-alert"
-                  state={alertState}
-                />
-              );
-              if (!props.tabs?.length) {
-                return (
-                  <>
-                    {toolbar}
-                    {pageAlert}
-                    {defaultBody}
-                  </>
-                );
-              }
-              const controlled = props.activeTab;
-              if (
-                controlled &&
-                controlled !== lastControlledTab.value
-              ) {
-                lastControlledTab.value = controlled;
-                const synced = resolveDataChromeTabKey(
-                  props.tabs,
-                  controlled,
-                  props.defaultActiveTab,
-                );
-                if (synced && synced !== tabKey.value) {
-                  tabKey.value = synced;
-                  rememberTabKey(key, synced);
-                  if (tabParam) writeTabToLocation(tabParam, synced);
-                  tabReload.run();
-                }
-              }
+          {() => {
+            const defaultBody = (
+              <div
+                class={() =>
+                  alertState.visible(props.alert) ||
+                    noticeBarState.visible(props.noticeBar)
+                    ? TABLE_WRAP_BELOW_ALERT_CLS
+                    : TABLE_WRAP_CLS}
+                data-testid="dv-body"
+              >
+                {viewBody}
+              </div>
+            );
+            const pageNoticeBar = (
+              <DataChromeNoticeBar
+                noticeBar={props.noticeBar}
+                testId="dv-notice-bar"
+                state={noticeBarState}
+              />
+            );
+            const pageAlert = (
+              <DataChromeAlert
+                alert={props.alert}
+                testId="dv-alert"
+                state={alertState}
+              />
+            );
+            if (!props.tabs?.length) {
               return (
                 <>
-                  {toolbar(
-                    <DataChromeTabList
-                      tabs={props.tabs}
-                      activeTab={tabKey.value}
-                      defaultActiveTab={props.defaultActiveTab}
-                      onTabChange={handleTabChange}
-                      type={props.tabType}
-                    />,
-                  )}
+                  {toolbar}
+                  {pageNoticeBar}
                   {pageAlert}
-                  <DataChromeTabBody
+                  {defaultBody}
+                </>
+              );
+            }
+            const controlled = props.activeTab;
+            if (
+              controlled &&
+              controlled !== lastControlledTab.value
+            ) {
+              lastControlledTab.value = controlled;
+              const synced = resolveDataChromeTabKey(
+                props.tabs,
+                controlled,
+                props.defaultActiveTab,
+              );
+              if (synced && synced !== tabKey.value) {
+                tabKey.value = synced;
+                rememberTabKey(key, synced);
+                if (tabParam) writeTabToLocation(tabParam, synced);
+                tabReload.run();
+              }
+            }
+            return (
+              <>
+                {toolbar(
+                  <DataChromeTabList
                     tabs={props.tabs}
                     activeTab={tabKey.value}
                     defaultActiveTab={props.defaultActiveTab}
-                    defaultBody={defaultBody}
-                  />
-                </>
-              );
-            }}
-          </Card>
-        </div>
-      )}
+                    onTabChange={handleTabChange}
+                    type={props.tabType}
+                  />,
+                )}
+                {pageNoticeBar}
+                {pageAlert}
+                <DataChromeTabBody
+                  tabs={props.tabs}
+                  activeTab={tabKey.value}
+                  defaultActiveTab={props.defaultActiveTab}
+                  defaultBody={defaultBody}
+                />
+              </>
+            );
+          }}
+        </Card>
+      </div>
 
       <Modal
         keyboard

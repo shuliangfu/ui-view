@@ -124,7 +124,7 @@ export default function Page() {
               itemHeight={36}
               data={rows}
               renderItem={(n) => (
-                <div class="px-3 leading-9 border-b border-slate-100 dark:border-slate-800">
+                <div class="box-border h-full px-3 leading-9 border-b border-slate-100 dark:border-slate-800">
                   Item {n}
                 </div>
               )}
@@ -151,7 +151,7 @@ export default function Page() {
               rowKey={(r) => r.id}
               getItemHeight={(r) => (r.text.includes("\n") ? 56 : 36)}
               renderItem={(r) => (
-                <div class="px-3 py-2 border-b border-slate-100 dark:border-slate-800 text-sm whitespace-pre-line">
+                <div class="box-border h-full px-3 py-2 border-b border-slate-100 dark:border-slate-800 text-sm whitespace-pre-line">
                   {r.text}
                 </div>
               )}

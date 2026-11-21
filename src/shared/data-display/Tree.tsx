@@ -331,6 +331,13 @@ function renderNode(
                 aria-checked={vcheck === "indeterminate"
                   ? "mixed"
                   : vcheck === "checked"}
+                ref={(el: HTMLInputElement | null) => {
+                  if (!el) return;
+                  // 半选只能写 DOM 属性；必须先写 checked，再写 indeterminate，
+                  // 否则浏览器会把半选清掉。行 thunk remount 时也要在新节点上补一次。
+                  el.checked = vcheck === "checked";
+                  el.indeterminate = vcheck === "indeterminate";
+                }}
                 onClick={(e: Event) => {
                   // 拦冒泡，避免行 onClick 写入 selected；同步触发勾选（兼容仅绑定 click 的运行时）
                   e.preventDefault();
@@ -536,7 +543,7 @@ export function Tree(props: TreeProps): JSXRenderable {
 
   // 同步原生 indeterminate（属性需 DOM 赋值）
   const rootElRef = createSignal<HTMLElement | null>(null);
-  createEffect(() => {
+  const syncCheckboxVisual = () => {
     const checked = new Set(readChecked());
     const root = rootElRef.value;
     if (!root || typeof root.querySelectorAll !== "function") return;
@@ -550,6 +557,12 @@ export function Tree(props: TreeProps): JSXRenderable {
         input.checked = v === "checked";
         input.indeterminate = v === "indeterminate";
       });
+  };
+  createEffect(() => {
+    // 同步追踪勾选与根节点；延后到子 checkbox remount 后再写，避免写到即将被替换的旧节点。
+    void readChecked();
+    void rootElRef.value;
+    queueMicrotask(syncCheckboxVisual);
   });
 
   const selectAllInTree = (event: KeyboardEvent) => {

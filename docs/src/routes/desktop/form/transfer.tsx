@@ -37,7 +37,8 @@ const TRANSFER_API: ApiRow[] = [
     name: "dataSource",
     type: "Array<{key, title, disabled?, group?}>",
     default: "-",
-    description: "数据源；同 group 的项以 optgroup 分组显示，搜索默认也匹配分组名",
+    description:
+      "数据源；同 group 的项以 optgroup 分组显示，搜索默认也匹配分组名",
   },
   {
     name: "targetKeys",
@@ -254,11 +255,14 @@ export default function FormTransfer() {
         <Paragraph class="mt-2">
           左右列表使用原生多选 select：单击只选一项，Ctrl /
           Command+单击多选，点中列表后 Ctrl / Command+A
-          全选当前列（不会选中整页）。列宽可随容器收缩；视口不足 640px（移动端）时改为上下排列，中间箭头旋成向下／向上；默认 md 弹层在桌面上仍左右排列。聚焦时只在列表内侧显示淡色细线。可用
+          全选当前列（不会选中整页）。列宽可随容器收缩；视口不足
+          640px（移动端）时改为上下排列，中间箭头旋成向下／向上；默认 md
+          弹层在桌面上仍左右排列。聚焦时只在列表内侧显示淡色细线。可用
           height、minHeight、maxHeight 只接受像素数字；要写 CSS 值请放在
           listStyle 的同名字段里，height 默认 200。可用 listStyle.itemHeight
           控制每一项行高（像素），不传则按 size 使用默认行高。render
-          若返回非文本则回退为标题。dataSource 项可设 group，同组以 optgroup 显示，搜索也匹配分组名。dataSource、targetKeys、onChange、titles、showSearch、searchPlaceholder、可选
+          若返回非文本则回退为标题。dataSource 项可设 group，同组以 optgroup
+          显示，搜索也匹配分组名。dataSource、targetKeys、onChange、titles、showSearch、searchPlaceholder、可选
           searchValue（仅初始文案）、onSearch（输入通知）、filterOption、render、listStyle、disabled。宽度由
           class 控制，表单中需占满一列时传 class="w-full"。Tailwind v4 +
           light/dark。与{" "}

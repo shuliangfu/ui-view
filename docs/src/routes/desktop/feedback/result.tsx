@@ -194,18 +194,20 @@ export default function FeedbackResult() {
 
         <div class="space-y-4">
           <Title level={3}>信息 / 警告</Title>
-          <Result
-            status="info"
-            title="提示"
-            subTitle="当前为信息类结果页。"
-            extra={<Button type="button" variant="primary">知道了</Button>}
-          />
-          <Result
-            status="warning"
-            title="注意"
-            subTitle="请确认后再继续操作。"
-            extra={<Button type="button" variant="primary">确认</Button>}
-          />
+          <div class="space-y-4">
+            <Result
+              status="info"
+              title="提示"
+              subTitle="当前为信息类结果页。"
+              extra={<Button type="button" variant="primary">知道了</Button>}
+            />
+            <Result
+              status="warning"
+              title="注意"
+              subTitle="请确认后再继续操作。"
+              extra={<Button type="button" variant="primary">确认</Button>}
+            />
+          </div>
           <CodeBlock
             title="代码示例"
             code={exampleInfoWarning}
@@ -219,18 +221,20 @@ export default function FeedbackResult() {
 
         <div class="space-y-4">
           <Title level={3}>403 / 404</Title>
-          <Result
-            status="403"
-            title="无权限"
-            subTitle="您没有权限访问该页面。"
-            extra={<Button type="button" variant="primary">返回首页</Button>}
-          />
-          <Result
-            status="404"
-            title="页面不存在"
-            subTitle="请检查链接或返回首页。"
-            extra={<Button type="button" variant="primary">返回首页</Button>}
-          />
+          <div class="space-y-4">
+            <Result
+              status="403"
+              title="无权限"
+              subTitle="您没有权限访问该页面。"
+              extra={<Button type="button" variant="primary">返回首页</Button>}
+            />
+            <Result
+              status="404"
+              title="页面不存在"
+              subTitle="请检查链接或返回首页。"
+              extra={<Button type="button" variant="primary">返回首页</Button>}
+            />
+          </div>
           <CodeBlock
             title="代码示例"
             code={example403404}

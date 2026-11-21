@@ -136,6 +136,29 @@ export default function Page() {
                 );
               })()}
             </FormItem>
+            {() => {
+              // 展示表单实际存储的 PNG，而非只提示已填写，便于核对签名回写与清空结果。
+              const dataUrl = String(
+                signatureCreateForm.getFieldValue("signature") ?? "",
+              );
+              return dataUrl
+                ? (
+                  <img
+                    data-testid="signature-form-preview"
+                    src={dataUrl}
+                    alt="当前表单签名"
+                    class="h-24 max-w-full object-contain"
+                  />
+                )
+                : (
+                  <p
+                    data-testid="signature-form-empty"
+                    class="text-sm text-slate-500"
+                  >
+                    尚未签名
+                  </p>
+                );
+            }}
             <Button type="submit" variant="primary" class="w-full">
               提交
             </Button>

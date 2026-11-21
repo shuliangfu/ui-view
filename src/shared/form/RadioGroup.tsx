@@ -8,12 +8,11 @@
 
 import { type JSXRenderable, useContext } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
+import { createOptionalValueState, type MaybeSignal } from "./maybe-signal.ts";
 import {
-  commitMaybeSignal,
-  type MaybeSignal,
-  readMaybeSignal,
-} from "./maybe-signal.ts";
-import { resolveFormControlSize } from "./form-control-context.ts";
+  resolveFormControlDisabled,
+  resolveFormControlSize,
+} from "./form-control-context.ts";
 import { FormItemControlIdContext } from "./form-item-control-id.ts";
 import { Radio } from "./Radio.tsx";
 import type { SizeVariant } from "../types.ts";
@@ -57,7 +56,7 @@ export function RadioGroup(props: RadioGroupProps): JSXRenderable {
     options,
     name,
     value: valueProp,
-    disabled = false,
+
     error = false,
     onChange,
     direction = "horizontal",
@@ -65,6 +64,8 @@ export function RadioGroup(props: RadioGroupProps): JSXRenderable {
     size: sizeProp,
     id,
   } = props;
+  const disabled = resolveFormControlDisabled(props.disabled);
+  const selected = createOptionalValueState(valueProp, "");
   const size = resolveFormControlSize(sizeProp);
   const fromFormItem = useContext(FormItemControlIdContext);
   const resolvedId = id ?? fromFormItem;
@@ -79,7 +80,7 @@ export function RadioGroup(props: RadioGroupProps): JSXRenderable {
    * @param next - 新选中的选项 value
    */
   const commitValue = (next: string) => {
-    commitMaybeSignal(valueProp, next);
+    selected.commit(next);
     onChange?.(next);
   };
 
@@ -96,7 +97,7 @@ export function RadioGroup(props: RadioGroupProps): JSXRenderable {
           <Radio
             name={name}
             value={opt.value}
-            checked={() => readMaybeSignal(valueProp) === opt.value}
+            checked={() => selected.read() === opt.value}
             disabled={disabled || opt.disabled}
             error={error}
             size={size}

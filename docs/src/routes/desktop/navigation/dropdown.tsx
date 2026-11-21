@@ -59,10 +59,11 @@ const DROPDOWN_API: ApiRow[] = [
   },
   {
     name: "placement",
-    type: "bottom | bottomLeft | bottomRight | bottomAuto",
+    type:
+      "bottom | bottomLeft | bottomRight | bottomAuto | top | topLeft | topRight | auto",
     default: "bottom",
     description:
-      "下拉位置（均在触发器下方）；bottom 为正下方居中，bottomAuto 为根据左右空间在正下/偏左/偏右间切换",
+      "下拉位置：bottom* 向下，top* 向上；bottomAuto 只在下方左右翻转；auto 按视口上下与左右空间选择",
   },
   {
     name: "disabled",
@@ -87,7 +88,7 @@ const DROPDOWN_API: ApiRow[] = [
     type: "boolean",
     default: "false",
     description:
-      "为 true 时在浮层顶边（靠向触发器）绘制双色小尖角；水平位置随 bottom / bottomLeft / bottomRight / bottomAuto 对齐",
+      "为 true 时在浮层靠向触发器的一侧绘制双色小尖角，尖角对准按钮中线（下拉在按钮正下方，上拉在按钮正上方）；面板本身仍按 placement 左/中/右对齐",
   },
   { name: "class", type: "string", default: "-", description: "包装器 class" },
 ];
@@ -143,7 +144,7 @@ const exampleArrow = `<Dropdown
   <Button type="button" variant="default">带箭头（正下方居中）</Button>
 </Dropdown>`;
 
-/** 尖角水平位置随 placement：贴右触发器时用 bottomRight */
+/** 贴右对齐面板；尖角仍对准按钮中线 */
 const exampleArrowBottomRight = `<Dropdown
   overlay={overlay}
   trigger="click"
@@ -198,28 +199,36 @@ const exampleOverlayRichCode = `const overlayRich = (
     <Divider class="my-1" />
     <ul class="list-none m-0">
       <li>
-        <a href="#" class="flex items-center gap-2 px-3 py-2 text-sm ...">
+        <button type="button" class="flex items-center gap-2 px-3 py-2 text-sm ...">
           <IconUserCog class="w-4 h-4 shrink-0" /> 个人设置
-        </a>
+        </button>
       </li>
       <li>
-        <a href="#" class="flex items-center gap-2 px-3 py-2 text-sm ...">
+        <button type="button" class="flex items-center gap-2 px-3 py-2 text-sm ...">
           <IconSettings class="w-4 h-4 shrink-0" /> 账户安全
-        </a>
+        </button>
       </li>
     </ul>
     <Divider class="my-1" />
     <ul class="list-none m-0">
       <li>
-        <a href="#" class="flex items-center gap-2 px-3 py-2 text-sm ...">
+        <button type="button" class="flex items-center gap-2 px-3 py-2 text-sm ...">
           <IconLogOut class="w-4 h-4 shrink-0" /> 退出登录
-        </a>
+        </button>
       </li>
     </ul>
   </div>
 );
 <Dropdown overlay={overlayRich} trigger="click" placement="bottom" arrow>
   <Button variant="default">用户菜单</Button>
+</Dropdown>`;
+
+const exampleUpAuto =
+  `<Dropdown overlay={overlay} trigger="click" placement="top">
+  <Button>向上展开</Button>
+</Dropdown>
+<Dropdown overlay={overlay} trigger="click" placement="auto">
+  <Button>自动定位</Button>
 </Dropdown>`;
 
 /**
@@ -232,11 +241,13 @@ const exampleOverlayRichCode = `const overlayRich = (
 const dropdownMenuItemInteractive =
   "rounded-md px-3 py-2 text-sm text-slate-700 dark:text-slate-300 transition-colors hover:bg-blue-50 dark:hover:bg-blue-800/50 hover:text-blue-600 dark:hover:text-blue-300 focus:outline-none focus-visible:bg-blue-50 dark:focus-visible:bg-blue-800/50 focus-visible:text-blue-600 dark:focus-visible:text-blue-300";
 
-/** 纯文案链（block） */
-const dropdownMenuItemLinkClass = `block w-full ${dropdownMenuItemInteractive}`;
+/** 纯文案动作按钮（block） */
+const dropdownMenuItemButtonClass =
+  `block w-full text-left ${dropdownMenuItemInteractive}`;
 
 /** 带图标的行（flex） */
-const itemClass = `flex items-center gap-2 ${dropdownMenuItemInteractive}`;
+const itemClass =
+  `flex w-full items-center gap-2 text-left ${dropdownMenuItemInteractive}`;
 
 /** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
 export const metadata = {
@@ -247,14 +258,20 @@ export default function NavigationDropdown() {
   const overlay = (
     <ul class="list-none m-0">
       <li>
-        <a href="#" class={dropdownMenuItemLinkClass}>
+        <button
+          type="button"
+          class={dropdownMenuItemButtonClass}
+        >
           操作一
-        </a>
+        </button>
       </li>
       <li>
-        <a href="#" class={dropdownMenuItemLinkClass}>
+        <button
+          type="button"
+          class={dropdownMenuItemButtonClass}
+        >
           操作二
-        </a>
+        </button>
       </li>
     </ul>
   );
@@ -278,25 +295,34 @@ export default function NavigationDropdown() {
       <Divider class="my-1" />
       <ul class="list-none m-0">
         <li>
-          <a href="#" class={itemClass}>
+          <button
+            type="button"
+            class={itemClass}
+          >
             <IconUserCog class="w-4 h-4 shrink-0" />
             个人设置
-          </a>
+          </button>
         </li>
         <li>
-          <a href="#" class={itemClass}>
+          <button
+            type="button"
+            class={itemClass}
+          >
             <IconSettings class="w-4 h-4 shrink-0" />
             账户安全
-          </a>
+          </button>
         </li>
       </ul>
       <Divider class="my-1" />
       <ul class="list-none m-0">
         <li>
-          <a href="#" class={itemClass}>
+          <button
+            type="button"
+            class={itemClass}
+          >
             <IconLogOut class="w-4 h-4 shrink-0" />
             退出登录
-          </a>
+          </button>
         </li>
       </ul>
     </div>
@@ -341,6 +367,11 @@ export default function NavigationDropdown() {
 
       <section class="space-y-8">
         <Title level={2}>示例</Title>
+        <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+          本页菜单项使用演示按钮，不执行真实设置或退出登录，也不离开当前文档。
+          click 菜单点选后关闭，hover
+          菜单在移出后关闭；实际业务可使用真实链接或处理函数。
+        </Paragraph>
 
         <div class="space-y-4">
           <Title level={3}>arrow（浮层与触发器之间的小尖角）</Title>
@@ -355,10 +386,9 @@ export default function NavigationDropdown() {
             <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs dark:bg-slate-700">
               false
             </code>
-            。下拉仅在触发器<strong>下方</strong>展开，尖角始终在浮层<strong>
-              上沿
-            </strong>
-            指向触发器。水平方向与 placement 一致（居中 / 贴左 / 贴右）；{" "}
+            。bottom 系列在触发器下方展开，top
+            系列在上方展开；尖角位于靠近触发器的一沿，并对准按钮中线（正下方或正上方）。
+            面板本身仍按 placement 左 / 中 / 右对齐；{" "}
             <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs dark:bg-slate-700">
               bottomAuto
             </code>{" "}
@@ -522,15 +552,17 @@ export default function NavigationDropdown() {
 
         <div class="space-y-4">
           <Title level={3}>trigger=hover</Title>
-          <Dropdown
-            overlay={overlay}
-            trigger="hover"
-            placement="bottom"
-          >
-            <span class="inline-block px-4 py-2 border border-slate-300 rounded cursor-pointer">
-              悬停展开
-            </span>
-          </Dropdown>
+          <div>
+            <Dropdown
+              overlay={overlay}
+              trigger="hover"
+              placement="bottom"
+            >
+              <span class="inline-block px-4 py-2 border border-slate-300 rounded cursor-pointer">
+                悬停展开
+              </span>
+            </Dropdown>
+          </div>
           <CodeBlock
             title="代码示例"
             code={exampleHover}
@@ -544,9 +576,11 @@ export default function NavigationDropdown() {
 
         <div class="space-y-4">
           <Title level={3}>disabled</Title>
-          <Dropdown overlay={overlay} trigger="click" disabled>
-            <Button type="button" variant="default" disabled>禁用下拉</Button>
-          </Dropdown>
+          <div>
+            <Dropdown overlay={overlay} trigger="click" disabled>
+              <Button type="button" variant="default" disabled>禁用下拉</Button>
+            </Dropdown>
+          </div>
           <CodeBlock
             title="代码示例"
             code={exampleDisabled}
@@ -570,20 +604,43 @@ export default function NavigationDropdown() {
             </code>{" "}
             在浮层与按钮间显示小尖角。
           </Paragraph>
-          <Dropdown
-            overlay={overlayRich}
-            trigger="click"
-            placement="bottom"
-            arrow
-          >
-            <Button type="button" variant="default">
-              <IconUser class="w-4 h-4 shrink-0 mr-1" />
-              用户菜单
-            </Button>
-          </Dropdown>
+          <div>
+            <Dropdown
+              overlay={overlayRich}
+              trigger="click"
+              placement="bottom"
+              arrow
+            >
+              <Button type="button" variant="default">
+                <IconUser class="w-4 h-4 shrink-0 mr-1" />
+                用户菜单
+              </Button>
+            </Dropdown>
+          </div>
           <CodeBlock
             title="代码示例"
             code={exampleOverlayRichCode}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
+          />
+        </div>
+
+        <div class="space-y-4">
+          <Title level={3}>向上展开与 auto</Title>
+          <div class="flex flex-wrap items-center gap-3">
+            <Dropdown overlay={overlay} trigger="click" placement="top">
+              <Button>向上展开</Button>
+            </Dropdown>
+            <Dropdown overlay={overlay} trigger="click" placement="auto">
+              <Button>自动定位</Button>
+            </Dropdown>
+          </div>
+          <CodeBlock
+            title="代码示例"
+            code={exampleUpAuto}
             language="tsx"
             showLineNumbers
             copyable

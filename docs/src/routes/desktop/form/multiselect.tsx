@@ -92,6 +92,33 @@ const MULTISELECT_API: ApiRow[] = [
     default: "-",
     description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
   },
+  ,
+  {
+    name: "allowClear",
+    type: "boolean",
+    default: "false",
+    description:
+      "有选中值时在触发器上显示清除按钮（与触发器并列，不是套在按钮里）",
+  },
+  {
+    name: "showSearch",
+    type: "boolean",
+    default: "false",
+    description: "在浮层顶部显示搜索框，按标签或值过滤",
+  },
+  {
+    name: "loading",
+    type: "boolean",
+    default: "false",
+    description: "触发器加载中：不可打开，右侧显示转圈",
+  },
+  {
+    name: "panelAttach",
+    type: '"anchored" | "viewport"',
+    default: '"anchored"',
+    description:
+      "浮层挂载方式。默认相对触发器定位；viewport 改为视口 fixed，避免被表格 overflow 裁切。单元格编辑应传 viewport",
+  },
 ];
 
 const options = [
@@ -155,6 +182,16 @@ const form = createForm({
 </Form>`;
 
 /** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+const multiDocClear = createSignal<string[]>(["a", "b"]);
+
+const exampleClearSearch = `<MultiSelect
+  options={options}
+  value={val}
+  allowClear
+  showSearch
+/>
+<MultiSelect options={options} loading placeholder="加载中" />`;
+
 export const metadata = {
   title: "MultiSelect 多选下拉 · ui-view",
 };
@@ -308,24 +345,24 @@ value={["a","b"]}`}
             </Paragraph>
             <div class="w-full max-w-lg space-y-3">
               <FormItem label="xs">
-                <MultiSelect options={options} value={[]} size="xs" />
+                <MultiSelect options={options} size="xs" />
               </FormItem>
               <FormItem label="sm">
-                <MultiSelect options={options} value={[]} size="sm" />
+                <MultiSelect options={options} size="sm" />
               </FormItem>
               <FormItem label="md（默认）">
-                <MultiSelect options={options} value={[]} size="md" />
+                <MultiSelect options={options} size="md" />
               </FormItem>
               <FormItem label="lg">
-                <MultiSelect options={options} value={[]} size="lg" />
+                <MultiSelect options={options} size="lg" />
               </FormItem>
             </div>
             <CodeBlock
               title="代码示例"
-              code={`<MultiSelect options={options} value={[]} size="xs" />
-<MultiSelect options={options} value={[]} size="sm" />
-<MultiSelect options={options} value={[]} size="md" />
-<MultiSelect options={options} value={[]} size="lg" />`}
+              code={`<MultiSelect options={options} size="xs" />
+<MultiSelect options={options} size="sm" />
+<MultiSelect options={options} size="md" />
+<MultiSelect options={options} size="lg" />`}
               language="tsx"
               showLineNumbers
               copyable
@@ -352,6 +389,29 @@ value={["a","b"]}`}
   placeholder="挂载后自动聚焦"
   autoFocus
 />`}
+          language="tsx"
+          showLineNumbers
+          copyable
+          wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
+        />
+      </section>
+
+      <section class="space-y-4">
+        <Title level={3}>清除、搜索与加载</Title>
+        <div class="flex flex-col gap-3 max-w-sm">
+          <MultiSelect
+            options={options}
+            value={multiDocClear}
+            allowClear
+            showSearch
+            placeholder="可搜索并清除"
+          />
+          <MultiSelect options={options} loading placeholder="加载中" />
+        </div>
+        <CodeBlock
+          title="代码示例"
+          code={exampleClearSearch}
           language="tsx"
           showLineNumbers
           copyable

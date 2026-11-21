@@ -36,6 +36,13 @@ const SKELETON_API: ApiRow[] = [
     default: "-",
     description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
   },
+  ,
+  {
+    name: "variant",
+    type: '"text" | "title" | "avatar" | "button" | "image" | "paragraph"',
+    default: "-",
+    description: "占位形态；不传时仍按 size 渲染一条圆角条；paragraph 为多行",
+  },
 ];
 
 const importCode = `import { Skeleton } from "@dreamer/ui-view/basic";
@@ -71,6 +78,11 @@ const examplePage =
     </div>
   </main>
 </div>`;
+
+const exampleVariant = `<Skeleton variant="title" />
+<Skeleton variant="paragraph" />
+<Skeleton variant="avatar" />
+<Skeleton variant="button" />`;
 
 /** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
 export const metadata = {
@@ -172,6 +184,27 @@ export default function BasicSkeleton() {
           <CodeBlock
             title="代码示例"
             code={examplePage}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
+          />
+        </div>
+
+        <div class="space-y-4">
+          <Title level={3}>占位形态 variant</Title>
+          <div class="flex flex-col gap-4 max-w-md">
+            <Skeleton variant="title" />
+            <Skeleton variant="paragraph" />
+            <div class="flex items-center gap-3">
+              <Skeleton variant="avatar" />
+              <Skeleton variant="button" />
+            </div>
+          </div>
+          <CodeBlock
+            title="代码示例"
+            code={exampleVariant}
             language="tsx"
             showLineNumbers
             copyable

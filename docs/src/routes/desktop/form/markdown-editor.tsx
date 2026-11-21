@@ -448,38 +448,40 @@ export default function FormMarkdownEditor() {
           </section>
           <section class="space-y-4">
             <Title level={3}>size（xs / sm / md / lg）</Title>
-            <FormItem label="xs">
-              <MarkdownEditor
-                size="xs"
-                preview="off"
-                editorMinHeightClass="min-h-[96px]"
-                placeholder="xs"
-              />
-            </FormItem>
-            <FormItem label="sm">
-              <MarkdownEditor
-                size="sm"
-                preview="off"
-                editorMinHeightClass="min-h-[96px]"
-                placeholder="sm"
-              />
-            </FormItem>
-            <FormItem label="md（默认）">
-              <MarkdownEditor
-                size="md"
-                preview="off"
-                editorMinHeightClass="min-h-[96px]"
-                placeholder="md"
-              />
-            </FormItem>
-            <FormItem label="lg">
-              <MarkdownEditor
-                size="lg"
-                preview="off"
-                editorMinHeightClass="min-h-[96px]"
-                placeholder="lg"
-              />
-            </FormItem>
+            <div>
+              <FormItem label="xs">
+                <MarkdownEditor
+                  size="xs"
+                  preview="off"
+                  editorMinHeightClass="min-h-[96px]"
+                  placeholder="xs"
+                />
+              </FormItem>
+              <FormItem label="sm">
+                <MarkdownEditor
+                  size="sm"
+                  preview="off"
+                  editorMinHeightClass="min-h-[96px]"
+                  placeholder="sm"
+                />
+              </FormItem>
+              <FormItem label="md（默认）">
+                <MarkdownEditor
+                  size="md"
+                  preview="off"
+                  editorMinHeightClass="min-h-[96px]"
+                  placeholder="md"
+                />
+              </FormItem>
+              <FormItem label="lg">
+                <MarkdownEditor
+                  size="lg"
+                  preview="off"
+                  editorMinHeightClass="min-h-[96px]"
+                  placeholder="lg"
+                />
+              </FormItem>
+            </div>
             <CodeBlock
               title="代码示例"
               code={`<MarkdownEditor size="xs" preview="off" editorMinHeightClass="min-h-[96px]" />

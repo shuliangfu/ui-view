@@ -245,7 +245,9 @@ export default function MobileScrollListDoc() {
             ，新行在下方需继续下滑查看；演示累计最多 {MAX}{" "}
             条，模拟真实分页而非首屏一次拉满。
           </Paragraph>
-          <ScrollListDocInteractiveDemo />
+          <div>
+            <ScrollListDocInteractiveDemo />
+          </div>
           <CodeBlock
             title="代码示例"
             code={importCode}

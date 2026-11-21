@@ -11,10 +11,12 @@ import {
   useContext,
 } from "@dreamer/view";
 import {
+  bindFixedDropdownPanelWhenOpen,
   installInlineDropdownOutsideClickClose,
   pickInlineDropdownOption,
   syncInlineDropdownPanelVisibility,
 } from "./inline-dropdown-outside-click.ts";
+import { pickerPortalZClass } from "./picker-portal-utils.ts";
 import { twMerge } from "tailwind-merge";
 import { IconChevronDown } from "../basic/icons/ChevronDown.tsx";
 import {
@@ -23,13 +25,14 @@ import {
   controlErrorFocusRing,
   pickerTriggerSurface,
 } from "./input-focus-ring.ts";
-import { resolveFormControlSize } from "./form-control-context.ts";
-import { FormItemControlIdContext } from "./form-item-control-id.ts";
 import {
-  commitMaybeSignal,
-  type MaybeSignal,
-  readMaybeSignal,
-} from "./maybe-signal.ts";
+  resolveFormControlDisabled,
+  resolveFormControlSize,
+} from "./form-control-context.ts";
+import { FieldClearSlot } from "./field-clear-button.tsx";
+
+import { FormItemControlIdContext } from "./form-item-control-id.ts";
+import { createOptionalValueState, type MaybeSignal } from "./maybe-signal.ts";
 import type { SizeVariant } from "../types.ts";
 import { autoFocusAttr, bindAutoFocusRef } from "./auto-focus.ts";
 
@@ -48,11 +51,23 @@ export interface SelectOption {
 export interface SelectMessages {
   /** 触发按钮 `aria-label` 的兜底文案（无选中、无 placeholder 时使用） */
   triggerFallback: string;
+  /** 清除按钮 `aria-label` */
+  clear: string;
+  /** 搜索框占位 */
+  searchPlaceholder: string;
+  /** 无匹配选项 */
+  noMatch: string;
+  /** 加载中文案 */
+  loading: string;
 }
 
 /** 默认中文文案 */
 export const defaultSelectMessages: SelectMessages = {
   triggerFallback: "选择",
+  clear: "清除",
+  searchPlaceholder: "搜索",
+  noMatch: "无匹配选项",
+  loading: "加载中…",
 };
 
 export interface SelectProps {
@@ -88,6 +103,17 @@ export interface SelectProps {
   appearance?: SelectAppearance;
   /** 多语言/自定义文案；未传字段走 {@link defaultSelectMessages} */
   messages?: Partial<SelectMessages>;
+  /** 有值时显示清除按钮 */
+  allowClear?: boolean;
+  /** 在浮层顶部显示搜索框，按 label / value 过滤 */
+  showSearch?: boolean;
+  /** 加载中：触发器不可打开，并显示忙碌状态 */
+  loading?: boolean;
+  /**
+   * 浮层挂载。默认 `anchored`（相对触发器 absolute）；
+   * `viewport` 时改为视口 `fixed`，避免被表格 overflow 裁切。单元格编辑应传 `viewport`。
+   */
+  panelAttach?: "anchored" | "viewport";
 }
 
 /** 浮层模式下的尺寸 */
@@ -114,7 +140,6 @@ const DROPDOWN_ESC_KEY = "__lastDropdownClose" as const;
 function SelectDropdownBranch(props: SelectProps) {
   const {
     size: sizeProp,
-    disabled = false,
     options,
     value,
     placeholder,
@@ -128,7 +153,13 @@ function SelectDropdownBranch(props: SelectProps) {
     children,
     hideFocusRing = false,
     messages,
+    allowClear = false,
+    showSearch = false,
+    loading = false,
+    panelAttach = "anchored",
   } = props;
+  const disabled = resolveFormControlDisabled(props.disabled);
+  const selected = createOptionalValueState(value, "");
 
   const resolvedOptions = options ?? [];
   if (
@@ -146,15 +177,20 @@ function SelectDropdownBranch(props: SelectProps) {
   const resolvedId = id ?? fromFormItem;
 
   const openState = createSignal(false);
+  const searchQuery = createSignal("");
   const sizeCls = sizeClassesDropdown[size];
   /** 根节点：触发器 + 内联 listbox，供点外部关闭判断 */
   let rootEl: HTMLElement | null = null;
   /** 浮层包裹（backdrop + listbox），用 hidden 控制显隐，避免 Show 卸载后选项 click 失效 */
   let panelEl: HTMLElement | null = null;
+  let listboxEl: HTMLElement | null = null;
+  const triggerRef: { current: HTMLElement | null } = { current: null };
+  const useViewportPanel = panelAttach === "viewport";
 
   /** 关闭下拉浮层 */
   const closePanel = () => {
     openState.value = false;
+    searchQuery.value = "";
   };
 
   /**
@@ -180,6 +216,14 @@ function SelectDropdownBranch(props: SelectProps) {
     () => panelEl,
   );
 
+  bindFixedDropdownPanelWhenOpen(
+    () => useViewportPanel,
+    () => openState.value,
+    () => listboxEl,
+    triggerRef,
+    closePanel,
+  );
+
   createEffect(() => {
     if (!openState.value) return;
     const g = globalThis as unknown as Record<
@@ -199,8 +243,8 @@ function SelectDropdownBranch(props: SelectProps) {
    * 同值重复调用（pointerdown + click 双路径）只派发一次 onChange。
    */
   const triggerChange = (newValue: string) => {
-    const prev = readMaybeSignal(value) ?? "";
-    commitMaybeSignal(value, newValue);
+    const prev = selected.read();
+    selected.commit(newValue);
     if (prev !== newValue) {
       const synthetic = { target: { value: newValue } } as unknown as Event;
       onChange?.(synthetic);
@@ -221,70 +265,92 @@ function SelectDropdownBranch(props: SelectProps) {
       <input
         type="hidden"
         name={name}
-        value={() => readMaybeSignal(value) ?? ""}
+        value={() => selected.read()}
       />
-      <button
-        type="button"
-        ref={bindAutoFocusRef(undefined, autoFocus)}
-        id={resolvedId}
-        disabled={disabled}
-        aria-invalid={error}
-        aria-haspopup="listbox"
-        {...autoFocusAttr(autoFocus)}
-        aria-expanded={() => openState.value}
-        aria-label={() => {
-          const rv = readMaybeSignal(value);
-          const opt = resolvedOptions.find((o) => o.value === rv);
-          const labelText = opt?.label ?? (placeholder ?? "");
-          return labelText || placeholder || m.triggerFallback;
-        }}
-        class={twMerge(
-          "w-full",
-          pickerTriggerSurface,
-          controlBlueFocusRing(!hideFocusRing && !error),
-          error && controlErrorBorder,
-          error && !hideFocusRing && controlErrorFocusRing(true),
-          sizeCls,
-        )}
-        onBlur={onBlur}
-        onClick={() => {
-          if (disabled) return;
-          if (openState.value) {
-            closePanel();
-            return;
-          }
-          queueMicrotask(() => {
-            if (!disabled && !openState.value) {
-              openState.value = true;
+      <span class="relative block w-full">
+        <button
+          type="button"
+          ref={(el: HTMLButtonElement | null) => {
+            triggerRef.current = el;
+            const af = bindAutoFocusRef(undefined, autoFocus);
+            if (typeof af === "function") af(el);
+          }}
+          id={resolvedId}
+          disabled={disabled || loading}
+          aria-busy={loading || undefined}
+          aria-invalid={error}
+          aria-haspopup="listbox"
+          {...autoFocusAttr(autoFocus)}
+          aria-expanded={() => openState.value}
+          aria-label={() => {
+            const rv = selected.read();
+            const opt = resolvedOptions.find((o) => o.value === rv);
+            const labelText = opt?.label ?? (placeholder ?? "");
+            return labelText || placeholder || m.triggerFallback;
+          }}
+          class={twMerge(
+            "w-full",
+            pickerTriggerSurface,
+            controlBlueFocusRing(!hideFocusRing && !error),
+            error && controlErrorBorder,
+            error && !hideFocusRing && controlErrorFocusRing(true),
+            sizeCls,
+          )}
+          onBlur={onBlur}
+          onClick={() => {
+            if (disabled || loading) return;
+            if (openState.value) {
+              closePanel();
+              return;
             }
-          });
-        }}
-      >
-        <span
-          class={() => {
-            const rv = readMaybeSignal(value);
-            const opt = resolvedOptions.find((o) => o.value === rv);
-            return opt
-              ? "text-slate-900 dark:text-slate-100"
-              : "text-slate-400 dark:text-slate-500";
+            queueMicrotask(() => {
+              if (!disabled && !loading && !openState.value) {
+                openState.value = true;
+              }
+            });
           }}
         >
-          {() => {
-            const rv = readMaybeSignal(value);
-            const opt = resolvedOptions.find((o) => o.value === rv);
-            return opt?.label ?? (placeholder ?? "");
-          }}
-        </span>
-        <span
-          class={() =>
-            twMerge(
-              "inline-flex shrink-0 text-slate-400 dark:text-slate-500 transition-transform motion-reduce:transition-none",
-              openState.value && "rotate-180",
-            )}
-        >
-          <IconChevronDown size="sm" />
-        </span>
-      </button>
+          <span
+            class={() => {
+              const rv = selected.read();
+              const opt = resolvedOptions.find((o) => o.value === rv);
+              return opt
+                ? "min-w-0 flex-1 truncate text-slate-900 dark:text-slate-100"
+                : "min-w-0 flex-1 truncate text-slate-400 dark:text-slate-500";
+            }}
+          >
+            {() => {
+              const rv = selected.read();
+              const opt = resolvedOptions.find((o) => o.value === rv);
+              return opt?.label ?? (placeholder ?? "");
+            }}
+          </span>
+          <span
+            class={() =>
+              twMerge(
+                "inline-flex shrink-0 text-slate-400 dark:text-slate-500 transition-transform motion-reduce:transition-none",
+                !loading && openState.value && "rotate-180",
+              )}
+          >
+            {loading
+              ? (
+                <span
+                  class="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent"
+                  aria-hidden
+                />
+              )
+              : <IconChevronDown size="sm" />}
+          </span>
+        </button>
+        {allowClear && !disabled && (
+          <FieldClearSlot
+            class="absolute right-8 top-1/2 z-1 -translate-y-1/2"
+            visible={() => Boolean(selected.read()) && !loading}
+            label={m.clear}
+            onClear={() => triggerChange("")}
+          />
+        )}
+      </span>
       <div
         ref={(el: HTMLElement | null) => {
           panelEl = el;
@@ -293,28 +359,54 @@ function SelectDropdownBranch(props: SelectProps) {
         aria-hidden="true"
         data-ui-select-panel=""
       >
+        {useViewportPanel ? null : (
+          <div
+            class="fixed inset-0 z-40"
+            aria-hidden="true"
+            onClick={closePanel}
+          />
+        )}
         <div
-          class="fixed inset-0 z-40"
-          aria-hidden="true"
-          onClick={closePanel}
-        />
-        <div
+          ref={(el: HTMLElement | null) => {
+            listboxEl = el;
+          }}
           role="listbox"
           aria-activedescendant={() => {
-            const rv = readMaybeSignal(value);
+            const rv = selected.read();
             return resolvedOptions.find((o) => o.value === rv)?.value;
           }}
-          class="absolute z-50 top-full left-0 right-0 mt-1 py-1 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-lg max-h-60 overflow-auto"
+          class={twMerge(
+            "w-max py-1 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-lg max-h-60 overflow-auto",
+            useViewportPanel
+              ? twMerge("fixed", pickerPortalZClass)
+              : "absolute z-50 top-full left-0 mt-1 min-w-full",
+          )}
         >
+          {showSearch && (
+            <div
+              class="sticky top-0 z-1 px-2 py-1 bg-white dark:bg-slate-800"
+              onPointerDown={(e: Event) => e.stopPropagation()}
+            >
+              <input
+                type="search"
+                class="w-full rounded-md border border-slate-200 dark:border-slate-600 bg-transparent px-2 py-1 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400"
+                placeholder={m.searchPlaceholder}
+                value={() => searchQuery.value}
+                onInput={(e: Event) => {
+                  searchQuery.value = (e.target as HTMLInputElement).value;
+                }}
+              />
+            </div>
+          )}
           {placeholder != null && (
             <button
               type="button"
               role="option"
-              aria-selected={() => !readMaybeSignal(value)}
+              aria-selected={() => !selected.read()}
               class={() =>
                 twMerge(
                   optionBase,
-                  !readMaybeSignal(value) &&
+                  !selected.read() &&
                     "bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300",
                 )}
               onPointerDown={(e: Event) => {
@@ -325,33 +417,49 @@ function SelectDropdownBranch(props: SelectProps) {
               {placeholder}
             </button>
           )}
-          {resolvedOptions.map((opt) => (
-            <button
-              key={opt.value}
-              type="button"
-              role="option"
-              aria-selected={() => readMaybeSignal(value) === opt.value}
-              disabled={opt.disabled}
-              class={() =>
-                twMerge(
-                  optionBase,
-                  readMaybeSignal(value) === opt.value &&
-                    "bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300",
-                )}
-              onPointerDown={(e: Event) => {
-                pickInlineDropdownOption(
-                  e,
-                  () => triggerChange(opt.value),
-                  opt.disabled,
-                );
-              }}
-              onClick={() => {
-                if (!opt.disabled) triggerChange(opt.value);
-              }}
-            >
-              {opt.label}
-            </button>
-          ))}
+          {() => {
+            const q = searchQuery.value.trim().toLowerCase();
+            const filtered = q
+              ? resolvedOptions.filter((opt) =>
+                opt.label.toLowerCase().includes(q) ||
+                opt.value.toLowerCase().includes(q)
+              )
+              : resolvedOptions;
+            if (filtered.length === 0) {
+              return (
+                <div class="px-3 py-2 text-sm text-slate-400 dark:text-slate-500">
+                  {loading ? m.loading : m.noMatch}
+                </div>
+              );
+            }
+            return filtered.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                role="option"
+                aria-selected={() => selected.read() === opt.value}
+                disabled={opt.disabled}
+                class={() =>
+                  twMerge(
+                    optionBase,
+                    selected.read() === opt.value &&
+                      "bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300",
+                  )}
+                onPointerDown={(e: Event) => {
+                  pickInlineDropdownOption(
+                    e,
+                    () => triggerChange(opt.value),
+                    opt.disabled,
+                  );
+                }}
+                onClick={() => {
+                  if (!opt.disabled) triggerChange(opt.value);
+                }}
+              >
+                {opt.label}
+              </button>
+            ));
+          }}
         </div>
       </div>
     </span>

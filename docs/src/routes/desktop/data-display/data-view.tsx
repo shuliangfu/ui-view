@@ -43,7 +43,7 @@ const DATA_VIEW_API: DocsApiTableRow[] = [
     type: "ViewConfig",
     default: "-",
     description:
-      "明细配置，写法同 DataPanel view。view 透传两块：modal 给弹层，descriptions 给描述列表。DataView 的 view 是页面本身而不是弹层，modal／autoFullscreen／mobileAutoFullscreen 只在 DataPanel 详情弹层上生效。descriptions 透传 Descriptions 参数（除 items、title；本插槽缺省 column=1、size=sm、bordered=true）。title 仍是标题，不会传给 Descriptions。有 render 或 children 时 descriptions 不生效。props 用 Descriptions 展示字段；render(ctx) 替换字段区。字段级 ViewItem.render 仅在无 view.render 且无 children 时生效。props 也可不写 prop，用 formatter／value 拼接字段。ViewItem.labelAlign 控制该行标签对齐（vertical：top／center／bottom，horizontal：left／center／right），透传 Descriptions。",
+      "明细配置，写法同 DataPanel view。view 透传两块：modal 给弹层，descriptions 给描述列表。DataView 的 view 是页面本身而不是弹层，modal／autoFullscreen／mobileAutoFullscreen 只在 DataPanel 详情弹层上生效。descriptions 透传 Descriptions 参数（除 rows、title；本插槽缺省 column=1、size=sm、bordered=true）。title 仍是标题，不会传给 Descriptions。有 render 或 children 时 descriptions 不生效。props 用 Descriptions 展示字段；render(ctx) 替换字段区。字段级 ViewItem.render 仅在无 view.render 且无 children 时生效。props 也可不写 prop，用 formatter／value 拼接字段。ViewItem.labelAlign 控制该行标签对齐（vertical：top／center／bottom，horizontal：left／center／right），透传 Descriptions。",
   },
   {
     name: "children",
@@ -156,6 +156,14 @@ const DATA_VIEW_API: DocsApiTableRow[] = [
     default: "-",
     description:
       '页面提示条，位于工具栏（含工具栏左侧标签）下方、详情正文上方。字符串简写为 info 提示（如 alert="请先完成实名认证"）。对象为完整 DataAlertConfig：透传 Alert 的 type／message／description／showIcon／closable／onClose／closeConfirm／closeKey／banner／action／class／children／messages，另加 show／key。false／null／省略／show: false 不显示；函数在渲染时求值。本插槽 closable 默认 true，banner 默认 false。点击关闭会隐藏提示并调用 onClose；更换文案或先置空再传入会重新显示。详见下方 DataAlertConfig 表。',
+  },
+  {
+    name: "noticeBar",
+    type:
+      "string | DataNoticeBarConfig | false | null | (() => string | DataNoticeBarConfig | false | null | undefined)",
+    default: "-",
+    description:
+      '页面通知条，位置与 alert 相同：工具栏（含工具栏左侧标签）下方、详情正文上方。字符串简写为通知文案（如 noticeBar="系统将于今晚维护"）。对象为完整 DataNoticeBarConfig：透传 NoticeBar 的 content／children／tone／icon／closable／onClose／closeConfirm／closeKey／visible／onClick／scrollable／speed／direction／interval／rounded／class／messages，另加 show／key。false／null／省略／show: false 不显示；函数在渲染时求值。本插槽 closable 默认 true，rounded 默认 md。点击关闭会隐藏通知并调用 onClose；更换文案或先置空再传入会重新显示。详见下方 DataNoticeBarConfig 表。',
   },
   {
     name: "toolbar",
@@ -414,6 +422,43 @@ const user = {
 />
 `;
 
+const noticeBarCode = `import { DataView } from "@dreamer/ui-view/data-display";
+import { toast } from "@dreamer/ui-view/feedback";
+
+const user = {
+  id: "1",
+  name: "张三",
+  email: "zhangsan@example.com",
+};
+
+<DataView
+  panelKey="demo-data-view-notice-bar"
+  title="用户详情"
+  data={user}
+  view={{
+    props: [
+      { prop: "name", label: "姓名" },
+      { prop: "email", label: "邮箱" },
+    ],
+  }}
+  noticeBar={{
+    tone: "warning",
+    icon: true,
+    content: "系统将于今晚 23:00 维护，请提前保存数据。",
+    onClose: () => toast.info("已关闭通知"),
+  }}
+  toolbar={{
+    update: false,
+    remove: false,
+    print: false,
+    import: false,
+    export: false,
+    fullscreen: false,
+    copy: false,
+  }}
+/>
+`;
+
 const JOIN_VIEW_CODE =
   `const user = { id: "1", lastName: "张", firstName: "三" };
 
@@ -551,13 +596,17 @@ export default function DataDisplayDataView() {
           <code>view.render</code>；这与 DataPanel 的 <code>children</code>
           （根上额外内容，不替换表格）不同）。
           没有分页、搜索、新建、列设置和行高。可用 <code>alert</code>{" "}
-          在工具栏下方、详情正文上方放一条页面提示（支持关闭与
-          onClose）。工具栏默认保留：更新、删除、刷新、打印、导入、导出、全屏、复制（有
+          在工具栏下方、详情正文上方放一条页面提示（支持关闭与 onClose）；也可用
+          {" "}
+          <code>noticeBar</code>{" "}
+          在同一位置放一条通知（透传 NoticeBar 全部参数，含圆角
+          rounded）。工具栏默认保留：更新、删除、刷新、打印、导入、导出、全屏、复制（有
           {" "}
           <code>dataSource.remove</code> 时显示删除，可用{" "}
           <code>caps.remove:false</code> 关掉）。 传入 <code>tabs</code>{" "}
           可在工具栏下切换明细分区（复用 layout Tabs）；有标签时 API
-          请求会带上当前 tab 参数。
+          请求会带上当前 tab
+          参数。明细正文四边内边距相同（含底部）；当外壳高度受限时，正文在内部滚动，滚到底仍保留底边距，工具栏和页面提示条留在滚动区上方。
         </Paragraph>
       </section>
 
@@ -611,6 +660,45 @@ export default function DataDisplayDataView() {
                 { prop: "name", label: "姓名", required: true },
                 { prop: "email", label: "邮箱" },
               ],
+            }}
+          />
+        </DocsDemo>
+
+        <DocsDemo title="页面通知条" code={noticeBarCode}>
+          <Paragraph class="mb-3 text-sm text-slate-600 dark:text-slate-400">
+            通知条与提示条在同一位置：工具栏下方、详情正文上方。对象配置可写
+            NoticeBar 的全部参数（含圆角
+            rounded，默认 md）；默认可关闭，点关闭会隐藏并触发{" "}
+            <code>onClose</code>。
+          </Paragraph>
+          <DataView
+            panelKey="demo-data-view-notice-bar"
+            title="用户详情"
+            data={{
+              id: "1",
+              name: "张三",
+              email: "zhangsan@example.com",
+            }}
+            view={{
+              props: [
+                { prop: "name", label: "姓名" },
+                { prop: "email", label: "邮箱" },
+              ],
+            }}
+            noticeBar={{
+              tone: "warning",
+              icon: true,
+              content: "系统将于今晚 23:00 维护，请提前保存数据。",
+              onClose: () => toast.info("已关闭通知"),
+            }}
+            toolbar={{
+              update: false,
+              remove: false,
+              print: false,
+              import: false,
+              export: false,
+              fullscreen: false,
+              copy: false,
             }}
           />
         </DocsDemo>

@@ -56,6 +56,10 @@ export interface TabsProps {
   tabClass?: string;
   /** If true, only the tab list is rendered (panel is owned by the parent). */
   hidePanel?: boolean;
+  /** 非受控时的初始激活项；未传则取 `items[0]` */
+  defaultActiveKey?: string;
+  /** 标签栏位置，默认 `top` */
+  tabPosition?: "top" | "bottom" | "left" | "right";
 }
 
 /**
@@ -78,10 +82,22 @@ export function scrollTabListToActive(
     }
   }
   if (tab == null) return;
-  tablist.scrollLeft += tabListScrollDelta(
-    tablist.getBoundingClientRect(),
-    tab.getBoundingClientRect(),
-  );
+  const listRect = tablist.getBoundingClientRect();
+  const tabRect = tab.getBoundingClientRect();
+  tablist.scrollLeft += tabListScrollDelta(listRect, tabRect);
+  tablist.scrollTop += tabListScrollDeltaY(listRect, tabRect);
+}
+
+/**
+ * 为把激活标签完全露出，tablist 的 `scrollTop` 需要增减的量；已完全可见则为 0。
+ */
+export function tabListScrollDeltaY(
+  list: Pick<DOMRect, "top" | "bottom">,
+  tab: Pick<DOMRect, "top" | "bottom">,
+): number {
+  if (tab.top < list.top) return tab.top - list.top;
+  if (tab.bottom > list.bottom) return tab.bottom - list.bottom;
+  return 0;
 }
 
 /**
@@ -108,9 +124,11 @@ export function Tabs(props: TabsProps): JSXRenderable {
     extra,
     tabClass,
     hidePanel,
+    tabPosition = "top",
   } = props;
 
   const initialKey = readControlledStringInput(props.activeKey) ??
+    props.defaultActiveKey ??
     props.items[0]?.key ?? "";
   const internalKeyRef = createSignal(initialKey);
 
@@ -154,9 +172,24 @@ export function Tabs(props: TabsProps): JSXRenderable {
   /**
    * `line` 标签栏：`items-end` 底对齐；`border-b` 为分隔线；`bg-inherit` 与根容器同色，激活项再 inherit 以盖住线下那一段。
    */
-  const lineCls =
-    "relative z-0 flex flex-wrap items-end gap-1 border-b border-slate-200 bg-inherit dark:border-slate-600";
-  const cardCls = "flex gap-1 p-1 rounded-lg bg-slate-100 dark:bg-slate-800";
+  const vertical = tabPosition === "left" || tabPosition === "right";
+  const lineCls = vertical
+    ? twMerge(
+      "relative z-0 flex flex-col items-stretch gap-1 bg-inherit",
+      tabPosition === "left"
+        ? "border-r border-slate-200 dark:border-slate-600"
+        : "border-l border-slate-200 dark:border-slate-600",
+    )
+    : twMerge(
+      "relative z-0 flex flex-wrap items-end gap-1 bg-inherit",
+      tabPosition === "bottom"
+        ? "border-t border-slate-200 dark:border-slate-600"
+        : "border-b border-slate-200 dark:border-slate-600",
+    );
+  const cardCls = twMerge(
+    "flex gap-1 p-1 rounded-lg bg-slate-100 dark:bg-slate-800",
+    vertical && "flex-col",
+  );
 
   /**
    * 使用 `focus-visible` 而非 `focus:ring`，避免鼠标点击后焦点留在按钮上时一直显示粗蓝环（看起来像「激活边框」）；键盘 Tab 聚焦时仍显示环。
@@ -168,10 +201,20 @@ export function Tabs(props: TabsProps): JSXRenderable {
    * 悬停/激活用 `bg-inherit` 与根容器同色且**不透明**；暗色下勿用带透明度后缀的 hover 背景（如 slate-800/50），否则父级 `border-b` 会透出成底横线。
    * `hover:z-10`：叠在分隔线上方，减轻叠层顺序导致的线段残留。
    */
-  const tabBtnLine =
-    "-mb-px rounded-t-md rounded-b-none border border-transparent text-slate-600 dark:text-slate-400 " +
-    "hover:z-10 hover:border-slate-200 hover:border-b-0 hover:bg-inherit hover:text-slate-900 dark:hover:border-slate-600 dark:hover:bg-inherit dark:hover:text-slate-100 " +
-    "data-[active]:z-10 data-[active]:border-slate-300 data-[active]:border-b-0 data-[active]:bg-inherit data-[active]:text-blue-600 dark:data-[active]:border-slate-600 dark:data-[active]:text-blue-400";
+  const tabBtnLine = vertical
+    ? twMerge(
+      "border border-transparent text-slate-600 dark:text-slate-400",
+      tabPosition === "left"
+        ? "-mr-px rounded-l-md rounded-r-none hover:z-10 hover:border-slate-200 hover:border-r-0 hover:bg-inherit hover:text-slate-900 dark:hover:border-slate-600 dark:hover:bg-inherit dark:hover:text-slate-100 data-[active]:z-10 data-[active]:border-slate-300 data-[active]:border-r-0 data-[active]:bg-inherit data-[active]:text-blue-600 dark:data-[active]:border-slate-600 dark:data-[active]:text-blue-400"
+        : "-ml-px rounded-r-md rounded-l-none hover:z-10 hover:border-slate-200 hover:border-l-0 hover:bg-inherit hover:text-slate-900 dark:hover:border-slate-600 dark:hover:bg-inherit dark:hover:text-slate-100 data-[active]:z-10 data-[active]:border-slate-300 data-[active]:border-l-0 data-[active]:bg-inherit data-[active]:text-blue-600 dark:data-[active]:border-slate-600 dark:data-[active]:text-blue-400",
+    )
+    : tabPosition === "bottom"
+    ? "-mt-px rounded-b-md rounded-t-none border border-transparent text-slate-600 dark:text-slate-400 " +
+      "hover:z-10 hover:border-slate-200 hover:border-t-0 hover:bg-inherit hover:text-slate-900 dark:hover:border-slate-600 dark:hover:bg-inherit dark:hover:text-slate-100 " +
+      "data-[active]:z-10 data-[active]:border-slate-300 data-[active]:border-t-0 data-[active]:bg-inherit data-[active]:text-blue-600 dark:data-[active]:border-slate-600 dark:data-[active]:text-blue-400"
+    : "-mb-px rounded-t-md rounded-b-none border border-transparent text-slate-600 dark:text-slate-400 " +
+      "hover:z-10 hover:border-slate-200 hover:border-b-0 hover:bg-inherit hover:text-slate-900 dark:hover:border-slate-600 dark:hover:bg-inherit dark:hover:text-slate-100 " +
+      "data-[active]:z-10 data-[active]:border-slate-300 data-[active]:border-b-0 data-[active]:bg-inherit data-[active]:text-blue-600 dark:data-[active]:border-slate-600 dark:data-[active]:text-blue-400";
   const tabBtnCard = type === "card"
     ? "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 data-[active]:bg-white data-[active]:text-slate-900 data-[active]:shadow dark:data-[active]:bg-slate-700 dark:data-[active]:text-slate-100"
     : "";
@@ -194,6 +237,9 @@ export function Tabs(props: TabsProps): JSXRenderable {
         hidePanel && !fullWidth
           ? "inline-flex w-fit max-w-full shrink-0"
           : "w-full",
+        tabPosition === "bottom" && "flex flex-col-reverse",
+        tabPosition === "left" && "flex flex-row items-start",
+        tabPosition === "right" && "flex flex-row-reverse items-start",
         /**
          * `line` 时给根容器默认与常见主内容区一致的底色，激活标签 `bg-inherit` 后与下方面板视觉上同色；嵌入卡片时请传 `class` 覆盖（如 `bg-white`）。
          */
@@ -245,7 +291,16 @@ export function Tabs(props: TabsProps): JSXRenderable {
               role="tabpanel"
               id={`tabpanel-${activeKey}`}
               aria-labelledby={`tab-${activeKey}`}
-              class={twMerge("mt-4", panelClass)}
+              class={twMerge(
+                tabPosition === "top"
+                  ? "mt-4"
+                  : tabPosition === "bottom"
+                  ? "mb-4"
+                  : tabPosition === "left"
+                  ? "ml-4 min-w-0 flex-1"
+                  : "mr-4 min-w-0 flex-1",
+                panelClass,
+              )}
             >
               {props.items.find((i) => i.key === activeKey)?.children}
             </div>

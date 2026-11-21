@@ -12,6 +12,7 @@ export type { ColorVariant, SizeVariant } from "./types.ts";
  */
 export {
   Avatar,
+  AvatarGroup,
   Badge,
   Button,
   ButtonGroup,
@@ -528,11 +529,13 @@ export {
   Title,
 } from "./basic/mod.ts";
 export type {
+  AvatarGroupProps,
   AvatarProps,
   AvatarSize,
   BadgeProps,
   ButtonGroupProps,
   ButtonProps,
+  ButtonVariant,
   FloatButtonItem,
   FloatButtonPlacement,
   FloatButtonProps,
@@ -543,10 +546,13 @@ export type {
   ParagraphProps,
   SkeletonMessages,
   SkeletonProps,
+  SkeletonVariant,
   SpinnerMessages,
   SpinnerProps,
   TextProps,
   TitleProps,
+  TypographyMessages,
+  TypographyType,
 } from "./basic/mod.ts";
 
 // form
@@ -715,8 +721,11 @@ export type {
   MessageItem,
   MessagePlacement,
   MessageType,
+  NoticeBarDirection,
   NoticeBarMessages,
   NoticeBarProps,
+  NoticeBarRounded,
+  NoticeBarSpeed,
   NoticeBarTone,
   NotificationItem,
   NotificationMessages,
@@ -859,6 +868,7 @@ export type {
   CountDownProps,
   CountDownTimeParts,
   DescriptionsItem,
+  DescriptionsItemRenderCtx,
   DescriptionsLabelAlign,
   DescriptionsLabelHorizontalAlign,
   DescriptionsLabelVerticalAlign,

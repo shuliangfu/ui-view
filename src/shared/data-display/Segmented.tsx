@@ -1,13 +1,16 @@
 /**
  * Segmented 分段控制器（View）。
  * 多选一紧凑展示；支持选项列表或子节点、尺寸、禁用、块级。
- * 支持受控（value + onChange）与非受控（内部状态）；传 stateKey 可避免整树渲染导致内部状态被清空。
- * 非受控时用 **`Signal`**（`createSignal`，`.value`）存选中值；受控且 `value` 为 getter 时由父级重渲染驱动展示。
+ * 支持受控（value 为 getter／Signal + onChange）与非受控（内部状态）；传 stateKey 可避免整树渲染导致内部状态被清空。
+ * 选中样式通过属性 getter 订阅当前值，避免 setup 一次性算死。
  */
 
-import { createSignal } from "@dreamer/view";
 import type { JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
+import {
+  createOptionalValueState,
+  type MaybeSignal,
+} from "../form/maybe-signal.ts";
 import type { SizeVariant } from "../types.ts";
 
 export interface SegmentedOption<T = string> {
@@ -22,8 +25,11 @@ export interface SegmentedOption<T = string> {
 export interface SegmentedProps<T = string> {
   /** 选项列表（与 children 二选一） */
   options?: SegmentedOption<T>[];
-  /** 当前选中的值（受控）；可传 getter，如 value={() => signal()}，便于在 View 中订阅更新 */
-  value?: T | (() => T);
+  /**
+   * 当前选中的值。可传字面量（作初始值）、getter 或 `createSignal` 返回值。
+   * 传 Signal 时点击会先写入 Signal，可不写 `onChange`。
+   */
+  value?: MaybeSignal<T>;
   /** 变更回调 */
   onChange?: (value: T) => void;
   /** 是否块级撑满 */
@@ -112,23 +118,11 @@ export function Segmented<T extends string = string>(
     return null;
   }
 
-  const uncontrolledValRef = createSignal<unknown>(
-    typeof valueProp === "function"
-      ? (valueProp as () => T)()
-      : valueProp ?? null,
-  );
+  const selected = createOptionalValueState<T | null>(valueProp, null);
 
-  /** 当前展示值：受控时用 prop（或 getter），非受控用内部 `Signal`。 */
-  const getDisplayValue = (): T | null => {
-    if (valueProp === undefined) return uncontrolledValRef.value as T | null;
-    return (typeof valueProp === "function"
-      ? (valueProp as () => T)()
-      : valueProp) as T | null;
-  };
-
-  /** 点击：受控时只回调；非受控时写 `.value` 并回调。 */
+  /** 点击：非受控写内部状态；value 为 Signal 时先写入，再回调 onChange。 */
   const handleSelect = (v: T) => {
-    if (valueProp === undefined) uncontrolledValRef.value = v;
+    selected.commit(v);
     onChange?.(v);
   };
 
@@ -145,7 +139,7 @@ export function Segmented<T extends string = string>(
       aria-label={m.ariaLabel}
     >
       {options.map((opt) => {
-        const isSelected = getDisplayValue() === opt.value;
+        const isSelected = () => selected.read() === opt.value;
         const isDisabled = disabled || opt.disabled;
         return (
           <button
@@ -156,13 +150,14 @@ export function Segmented<T extends string = string>(
             data-value={opt.value}
             data-disabled={isDisabled ? "true" : undefined}
             disabled={isDisabled}
-            class={twMerge(
-              "shrink-0 rounded-md font-medium transition-colors",
-              sizeClasses[size],
-              isSelected ? selectedCls : unselectedCls,
-              isDisabled && "cursor-not-allowed opacity-60",
-              block && "flex-1",
-            )}
+            class={() =>
+              twMerge(
+                "shrink-0 rounded-md font-medium transition-colors",
+                sizeClasses[size],
+                isSelected() ? selectedCls : unselectedCls,
+                isDisabled && "cursor-not-allowed opacity-60",
+                block && "flex-1",
+              )}
             onClick={() => {
               if (isDisabled) return;
               handleSelect(opt.value);

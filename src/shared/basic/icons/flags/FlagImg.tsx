@@ -73,6 +73,8 @@ export function FlagImg(props: FlagImgProps): JSXRenderable {
         "overflow-hidden rounded-sm p-0 items-stretch! justify-stretch!",
         props.class,
       )}
+      aria-hidden={false}
+      role="none"
     >
       {
         /*
@@ -88,6 +90,12 @@ export function FlagImg(props: FlagImgProps): JSXRenderable {
         decoding="async"
         aria-hidden={t == null || t.length === 0}
         draggable={false}
+        ref={(el: HTMLImageElement | null) => {
+          if (!el) return;
+          // @dreamer/view 的 URL 消毒会把 data:image/svg+xml 判为危险并去掉 src。
+          // FlagImg 的 svg 是组件入参里的完整旗帜 XML，需把约定的 data URL 写回 DOM。
+          if (el.getAttribute("src") !== src) el.setAttribute("src", src);
+        }}
       />
     </Icon>
   );

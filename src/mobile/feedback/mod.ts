@@ -89,8 +89,11 @@ export { defaultOverlayMessages, Overlay } from "./Overlay.tsx";
 export type { OverlayProps } from "./Overlay.tsx";
 export { NoticeBar } from "./NoticeBar.tsx";
 export type {
+  NoticeBarDirection,
   NoticeBarMessages,
   NoticeBarProps,
+  NoticeBarRounded,
+  NoticeBarSpeed,
   NoticeBarTone,
 } from "./NoticeBar.tsx";
 export { defaultNoticeBarMessages } from "./NoticeBar.tsx";

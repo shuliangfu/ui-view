@@ -19,7 +19,19 @@ interface ApiRow {
 }
 
 const GRID_API: ApiRow[] = [
-  { name: "cols", type: "6 | 12 | 24", default: "12", description: "列数" },
+  {
+    name: "cols",
+    type: "number",
+    default: "12",
+    description: "列数（1–24；兼容原先的 6 / 12 / 24）",
+  },
+  {
+    name: "xs / sm / md / lg",
+    type: "number",
+    default: "-",
+    description:
+      "响应式列数，移动优先。最小屏取 xs ?? cols ?? 12，较大屏仅在传入对应键时生效",
+  },
   {
     name: "gap",
     type: "number | string",
@@ -45,7 +57,14 @@ const GRID_ITEM_API: ApiRow[] = [
     name: "span",
     type: "number",
     default: "1",
-    description: "占据列数（1 到 cols）",
+    description:
+      "占据列数（1 到 cols）；与 xs 同时出现时作为未设 xs 时的最小屏回退",
+  },
+  {
+    name: "xs / sm / md / lg",
+    type: "number",
+    default: "-",
+    description: "响应式跨度，与 Grid 的断点同向",
   },
   { name: "class", type: "string", default: "-", description: "额外 class" },
   {
@@ -79,6 +98,11 @@ const exampleCols12 = `<Grid
   <GridItem span={4}>span 4</GridItem>
 </Grid>`;
 
+const exampleResponsive = `<Grid cols={4} xs={4} sm={8} md={12} lg={16} gap={4}>
+  <GridItem span={4} xs={4} sm={4} md={6} lg={8}>半宽（中屏起）</GridItem>
+  <GridItem span={4} xs={4} sm={4} md={6} lg={8}>半宽（中屏起）</GridItem>
+</Grid>`;
+
 const exampleCols24 = `<Grid
   cols={24}
   gap={2}
@@ -101,9 +125,10 @@ export default function LayoutGrid() {
       <section>
         <Title level={1}>Grid 栅格</Title>
         <Paragraph class="mt-2">
-          栅格：Grid 支持 cols（6/12/24）、gap、class、children；GridItem 支持
-          span、class、className、children。 使用 Tailwind v4，支持 light/dark
-          主题。
+          栅格：Grid 支持 cols（1–24，默认 12）、xs/sm/md/lg
+          响应式列数、gap、class、children；GridItem 支持 span
+          与同样的断点跨度、class、className、children。使用 Tailwind v4，支持
+          light/dark 主题。
         </Paragraph>
       </section>
 
@@ -124,6 +149,7 @@ export default function LayoutGrid() {
 
         <div class="space-y-4">
           <Title level={3}>cols=12</Title>
+          <div>
           <Grid cols={12} gap={4} class="max-w-2xl">
             <GridItem span={6}>
               <div class="rounded bg-slate-200 dark:bg-slate-600 p-3 text-sm">
@@ -151,6 +177,7 @@ export default function LayoutGrid() {
               </div>
             </GridItem>
           </Grid>
+          </div>
           <CodeBlock
             title="代码示例"
             code={exampleCols12}
@@ -164,6 +191,7 @@ export default function LayoutGrid() {
 
         <div class="space-y-4">
           <Title level={3}>cols=24</Title>
+          <div>
           <Grid cols={24} gap={2} class="max-w-2xl">
             <GridItem span={12}>
               <div class="rounded bg-slate-200 dark:bg-slate-600 p-3 text-sm">
@@ -186,9 +214,49 @@ export default function LayoutGrid() {
               </div>
             </GridItem>
           </Grid>
+          </div>
           <CodeBlock
             title="代码示例"
             code={exampleCols24}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
+          />
+        </div>
+
+        <div class="space-y-4">
+          <Title level={3}>响应式列与跨度</Title>
+          <div>
+          <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+            与 List 的栅格一样按移动优先：最小屏用 xs 或 cols /
+            span，较大屏再叠加 sm / md / lg。
+          </Paragraph>
+          <Grid
+            cols={4}
+            xs={4}
+            sm={8}
+            md={12}
+            lg={16}
+            gap={4}
+            class="max-w-2xl"
+          >
+            <GridItem span={4} xs={4} sm={4} md={6} lg={8}>
+              <div class="rounded bg-slate-200 dark:bg-slate-600 p-3 text-sm">
+                半宽（中屏起）
+              </div>
+            </GridItem>
+            <GridItem span={4} xs={4} sm={4} md={6} lg={8}>
+              <div class="rounded bg-slate-200 dark:bg-slate-600 p-3 text-sm">
+                半宽（中屏起）
+              </div>
+            </GridItem>
+          </Grid>
+          </div>
+          <CodeBlock
+            title="代码示例"
+            code={exampleResponsive}
             language="tsx"
             showLineNumbers
             copyable

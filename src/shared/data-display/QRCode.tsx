@@ -33,6 +33,8 @@ export interface QRCodeProps {
   /** 无障碍说明；优先于 messages.label */
   "aria-label"?: string;
   messages?: Partial<QRCodeMessages>;
+  /** 中心图标：字符串视为图片地址，其它节点直接渲染 */
+  icon?: string | unknown;
 }
 
 export function QRCode(props: QRCodeProps): JSXRenderable {
@@ -97,9 +99,14 @@ export function QRCode(props: QRCodeProps): JSXRenderable {
         );
       }
     }
-    return (
+    const icon = props.icon;
+    const iconSize = Math.round(size * 0.22);
+    const svg = (
       <svg
-        class={twMerge("inline-block", className)}
+        class={twMerge(
+          icon == null ? "inline-block" : "block",
+          icon == null ? className : undefined,
+        )}
         width={size}
         height={size}
         viewBox={`0 0 ${size} ${size}`}
@@ -110,6 +117,27 @@ export function QRCode(props: QRCodeProps): JSXRenderable {
         <rect width={size} height={size} fill={bgColor} />
         {rects}
       </svg>
+    );
+    if (icon == null) return svg;
+    return (
+      <span
+        class={twMerge("relative inline-block", className)}
+        style={{ width: `${size}px`, height: `${size}px` }}
+      >
+        {svg}
+        <span
+          class="absolute left-1/2 top-1/2 flex items-center justify-center overflow-hidden rounded-sm bg-white"
+          style={{
+            width: `${iconSize}px`,
+            height: `${iconSize}px`,
+            transform: "translate(-50%, -50%)",
+          }}
+        >
+          {typeof icon === "string"
+            ? <img src={icon} alt="" class="h-full w-full object-contain" />
+            : icon}
+        </span>
+      </span>
     );
   };
 }

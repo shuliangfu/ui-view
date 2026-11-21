@@ -100,6 +100,14 @@ const TIMEPICKER_API: ApiRow[] = [
     default: "-",
     description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
   },
+  ,
+  {
+    name: "allowClear",
+    type: "boolean",
+    default: "false",
+    description:
+      "有值时显示清除按钮，清空后按当前 mode 写出空字符串、空区间或空数组",
+  },
 ];
 
 const importCode = `import { Form } from "@dreamer/ui-view/form/form";
@@ -144,6 +152,10 @@ const form = createForm({
 </Form>`;
 
 /** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+const timeClearVal = createSignal("14:30");
+
+const exampleAllowClear = `<TimePicker value={val} allowClear />`;
+
 export const metadata = {
   title: "TimePicker 时间选择 · ui-view",
 };
@@ -347,27 +359,27 @@ export default function FormTimePicker() {
               <code class="text-xs">picker-trigger-icon</code> 规则）。
             </Paragraph>
             <FormItem label="xs">
-              <TimePicker value="" size="xs" onChange={() => {}} />
+              <TimePicker size="xs" />
             </FormItem>
             <FormItem label="sm">
-              <TimePicker value="" size="sm" onChange={() => {}} />
+              <TimePicker size="sm" />
             </FormItem>
             <FormItem label="md（默认）">
-              <TimePicker value="" size="md" onChange={() => {}} />
+              <TimePicker size="md" />
             </FormItem>
             <FormItem label="lg">
-              <TimePicker value="" size="lg" onChange={() => {}} />
+              <TimePicker size="lg" />
             </FormItem>
             <FormItem label="禁用">
-              <TimePicker value="09:00" disabled onChange={() => {}} />
+              <TimePicker value="09:00" disabled />
             </FormItem>
             <CodeBlock
               title="代码示例"
-              code={`<TimePicker value="" size="xs" onChange={() => {}} />
-<TimePicker value="" size="sm" onChange={() => {}} />
-<TimePicker value="" size="md" onChange={() => {}} />
-<TimePicker value="" size="lg" onChange={() => {}} />
-<TimePicker value="09:00" disabled onChange={() => {}} />`}
+              code={`<TimePicker size="xs" />
+<TimePicker size="sm" />
+<TimePicker size="md" />
+<TimePicker size="lg" />
+<TimePicker value="09:00" disabled />`}
               language="tsx"
               showLineNumbers
               copyable
@@ -436,6 +448,25 @@ export default function FormTimePicker() {
   placeholder="挂载后自动聚焦"
   autoFocus
 />`}
+          language="tsx"
+          showLineNumbers
+          copyable
+          wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
+        />
+      </section>
+
+      <section class="space-y-4">
+        <Title level={3}>允许清除</Title>
+        <div class="max-w-sm">
+          <TimePicker
+            value={timeClearVal}
+            allowClear
+          />
+        </div>
+        <CodeBlock
+          title="代码示例"
+          code={exampleAllowClear}
           language="tsx"
           showLineNumbers
           copyable

@@ -132,8 +132,11 @@ export function Cell(props: CellProps): JSXRenderable {
         onKeyDown={(e: KeyboardEvent) => {
           if (!canClick) return;
           if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            activate();
+            // 仅有 href 时 Enter 走浏览器默认跳转；若 preventDefault 则只调 onClick（常为空）导致无法导航。
+            if (onClick) {
+              e.preventDefault();
+              activate();
+            }
           }
         }}
       >

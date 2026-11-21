@@ -28,9 +28,10 @@ const ANCHOR_API: ApiRow[] = [
   },
   {
     name: "activeKey",
-    type: "string",
+    type: "string | Signal<string> | () => string",
     default: "-",
-    description: "当前高亮的 key（受控）",
+    description:
+      "当前高亮的 key（受控）；请传 Signal 或 getter，勿传 activeKey={sig.value} 快照",
   },
   {
     name: "onChange",
@@ -74,14 +75,14 @@ const links = [
   { key: "section1", href: "#section1", title: "第一节" },
   { key: "section2", href: "#section2", title: "第二节" },
 ];
-<Anchor links={links} activeKey={activeKey.value} onChange={(k) => activeKey.value = k} />`;
+<Anchor links={links} activeKey={activeKey} onChange={(k) => activeKey.value = k} />`;
 
 const exampleBasic = `const links = [
   { key: "section1", href: "#section1", title: "第一节" },
   { key: "section2", href: "#section2", title: "第二节" },
   { key: "section3", href: "#section3", title: "第三节" },
 ];
-<Anchor links={links} activeKey={activeKey.value} onChange={(k) => activeKey.value = k} />`;
+<Anchor links={links} activeKey={activeKey} onChange={(k) => activeKey.value = k} />`;
 
 /** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
 export const metadata = {
@@ -128,7 +129,7 @@ export default function NavigationAnchor() {
             <aside class="w-40 shrink-0">
               <Anchor
                 links={links}
-                activeKey={activeKey.value}
+                activeKey={activeKey}
                 onChange={(k) => activeKey.value = k}
               />
             </aside>

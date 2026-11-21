@@ -69,19 +69,19 @@ export default function User({ params }: UserProps) {
 
       <div className="mt-8 flex flex-wrap gap-4">
         <a
-          href="/user/1"
+          href="/desktop/user/1"
           className="rounded-md bg-gray-100 px-5 py-2.5 text-gray-800 no-underline transition-colors hover:bg-gray-200"
         >
           用户 1
         </a>
         <a
-          href="/user/2"
+          href="/desktop/user/2"
           className="rounded-md bg-gray-100 px-5 py-2.5 text-gray-800 no-underline transition-colors hover:bg-gray-200"
         >
           用户 2
         </a>
         <a
-          href="/user/3"
+          href="/desktop/user/3"
           className="rounded-md bg-gray-100 px-5 py-2.5 text-gray-800 no-underline transition-colors hover:bg-gray-200"
         >
           用户 3

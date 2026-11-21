@@ -332,6 +332,9 @@ export default function DataDisplayCarousel() {
 
         <div class="space-y-4">
           <Title level={3}>autoplay</Title>
+          <p class="text-sm text-slate-500 dark:text-slate-400">
+            悬停在轮播区域内会暂停，移开后重新等满一个间隔。
+          </p>
           <div class="w-full">
             <Carousel
               current={() => currentAutoplay.value}

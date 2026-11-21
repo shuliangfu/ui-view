@@ -31,7 +31,7 @@ describe("Descriptions 标签列宽与对齐", () => {
   it("缺省 minmax(13.5rem, 38%)，标签垂直 items-start、水平 justify-end 与 text-right", async () => {
     const h = await html({
       column: 1,
-      items: [{ label: "姓名", children: "张三" }],
+      rows: [{ label: "姓名", children: "张三" }],
     });
     expect(h).toContain("minmax(13.5rem, 38%)");
     expect(h).toContain("张三");
@@ -46,7 +46,7 @@ describe("Descriptions 标签列宽与对齐", () => {
       column: 1,
       labelColPercent: 28,
       labelMinWidth: "6rem",
-      items: [{ label: "姓名", children: "张三" }],
+      rows: [{ label: "姓名", children: "张三" }],
     });
     expect(h).toContain("minmax(6rem, 28%)");
     expect(h).not.toContain("minmax(13.5rem, 38%)");
@@ -56,21 +56,21 @@ describe("Descriptions 标签列宽与对齐", () => {
     const low = await html({
       column: 1,
       labelColPercent: 5,
-      items: [{ label: "姓名", children: "张三" }],
+      rows: [{ label: "姓名", children: "张三" }],
     });
     expect(low).toContain("minmax(13.5rem, 12%)");
 
     const high = await html({
       column: 1,
       labelColPercent: 90,
-      items: [{ label: "姓名", children: "李四" }],
+      rows: [{ label: "姓名", children: "李四" }],
     });
     expect(high).toContain("minmax(13.5rem, 85%)");
 
     const nan = await html({
       column: 1,
       labelColPercent: Number.NaN,
-      items: [{ label: "姓名", children: "王五" }],
+      rows: [{ label: "姓名", children: "王五" }],
     });
     expect(nan).toContain("minmax(13.5rem, 38%)");
   });
@@ -79,7 +79,7 @@ describe("Descriptions 标签列宽与对齐", () => {
     const h = await html({
       column: 1,
       labelMinWidth: 112,
-      items: [{ label: "姓名", children: "张三" }],
+      rows: [{ label: "姓名", children: "张三" }],
     });
     expect(h).toContain("minmax(112px, 38%)");
   });
@@ -89,7 +89,7 @@ describe("Descriptions 标签列宽与对齐", () => {
       column: 2,
       labelColPercent: 28,
       labelMinWidth: "6rem",
-      items: [
+      rows: [
         { label: "姓名", children: "张三" },
         { label: "同事", children: "李四" },
         { label: "备注", children: "王五推荐", span: 2 },
@@ -103,7 +103,7 @@ describe("Descriptions 标签列宽与对齐", () => {
     const h = await html({
       column: 1,
       labelAlign: { vertical: "center", horizontal: "left" },
-      items: [
+      rows: [
         { label: "姓名", children: "张三" },
         {
           label: "同事",
@@ -146,7 +146,7 @@ describe("Descriptions 标签列宽与对齐", () => {
         vertical: "middle" as never,
         horizontal: "justify" as never,
       } as DescriptionsProps["labelAlign"],
-      items: [
+      rows: [
         {
           label: "姓名",
           children: "张三",
@@ -165,7 +165,7 @@ describe("Descriptions 标签列宽与对齐", () => {
     const keepOuter = await html({
       column: 1,
       labelAlign: { vertical: "center", horizontal: "left" },
-      items: [
+      rows: [
         {
           label: "姓名",
           children: "张三",
@@ -206,7 +206,7 @@ describe("Descriptions 按容器宽度收敛列数", () => {
   it("SSR 仍按 column 上限写出栅格（未测量不降列）", async () => {
     const h = await html({
       column: 3,
-      items: [
+      rows: [
         { label: "编码", children: "SKU-9281" },
         { label: "名称", children: "张三" },
         { label: "单价", children: "10" },

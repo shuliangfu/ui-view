@@ -10,10 +10,12 @@ import {
   useContext,
 } from "@dreamer/view";
 import {
+  bindFixedDropdownPanelWhenOpen,
   installInlineDropdownOutsideClickClose,
   pickInlineDropdownOption,
   syncInlineDropdownPanelVisibility,
 } from "./inline-dropdown-outside-click.ts";
+import { pickerPortalZClass } from "./picker-portal-utils.ts";
 import { twMerge } from "tailwind-merge";
 import { IconChevronDown } from "../basic/icons/ChevronDown.tsx";
 import {
@@ -23,13 +25,13 @@ import {
   nativeSelectSurface,
   pickerTriggerSurface,
 } from "./input-focus-ring.ts";
-import { resolveFormControlSize } from "./form-control-context.ts";
-import { FormItemControlIdContext } from "./form-item-control-id.ts";
 import {
-  commitMaybeSignal,
-  type MaybeSignal,
-  readMaybeSignal,
-} from "./maybe-signal.ts";
+  resolveFormControlDisabled,
+  resolveFormControlSize,
+} from "./form-control-context.ts";
+import { FieldClearSlot } from "./field-clear-button.tsx";
+import { FormItemControlIdContext } from "./form-item-control-id.ts";
+import { createOptionalValueState, type MaybeSignal } from "./maybe-signal.ts";
 import {
   focusSelectAllHost,
   isSelectAllHotkey,
@@ -68,6 +70,12 @@ export interface MultiSelectMessages {
   selectedSummary: (summary: string) => string;
   /** 下拉列表 `aria-label` */
   listbox: string;
+  /** 搜索框占位 */
+  searchPlaceholder: string;
+  /** 无匹配选项 */
+  noMatch: string;
+  /** 加载中文案 */
+  loading: string;
 }
 
 /** 默认中文文案 */
@@ -78,6 +86,9 @@ export const defaultMultiSelectMessages: MultiSelectMessages = {
   done: "完成",
   selectedSummary: (summary) => `已选：${summary}`,
   listbox: "多选列表",
+  searchPlaceholder: "搜索",
+  noMatch: "无匹配选项",
+  loading: "加载中…",
 };
 
 export interface MultiSelectProps {
@@ -107,6 +118,17 @@ export interface MultiSelectProps {
   appearance?: MultiSelectAppearance;
   /** 多语言/自定义文案；未传字段走 {@link defaultMultiSelectMessages} */
   messages?: Partial<MultiSelectMessages>;
+  /** 有选中值时在触发器上显示清除按钮 */
+  allowClear?: boolean;
+  /** 在浮层中显示搜索框，按 label / value 过滤 */
+  showSearch?: boolean;
+  /** 加载中：触发器不可打开 */
+  loading?: boolean;
+  /**
+   * 浮层挂载。默认 `anchored`（相对触发器 absolute）；
+   * `viewport` 时改为视口 `fixed`，避免被表格 overflow 裁切。单元格编辑应传 `viewport`。
+   */
+  panelAttach?: "anchored" | "viewport";
 }
 
 const sizeClassesDropdown: Record<SizeVariant, string> = {
@@ -144,7 +166,6 @@ function MultiSelectNativeBranch(props: Omit<MultiSelectProps, "appearance">) {
     options,
     value: valueProp,
     size: sizeProp,
-    disabled = false,
     error = false,
     onChange,
     onBlur,
@@ -155,6 +176,8 @@ function MultiSelectNativeBranch(props: Omit<MultiSelectProps, "appearance">) {
     hideFocusRing = false,
     messages,
   } = props;
+  const disabled = resolveFormControlDisabled(props.disabled);
+  const selected = createOptionalValueState(valueProp, [] as string[]);
   const m = { ...defaultMultiSelectMessages, ...messages };
   const size = resolveFormControlSize(sizeProp);
   const sizeCls = sizeClassesNative[size];
@@ -163,7 +186,7 @@ function MultiSelectNativeBranch(props: Omit<MultiSelectProps, "appearance">) {
   const allValues = options.map((o) => o.value);
 
   const triggerChange = (newVal: string[]) => {
-    commitMaybeSignal(valueProp, newVal);
+    selected.commit(newVal);
     const synthetic = { target: { value: newVal } } as unknown as Event;
     onChange?.(synthetic);
   };
@@ -172,7 +195,7 @@ function MultiSelectNativeBranch(props: Omit<MultiSelectProps, "appearance">) {
     if (disabled || !isSelectAllHotkey(event)) return;
     preventSelectAllDefault(event);
     const all = options.filter((opt) => !opt.disabled).map((opt) => opt.value);
-    const current = readMaybeSignal(valueProp) ?? [];
+    const current = selected.read();
     triggerChange(toggleSelectAllKeys(current, all));
   };
 
@@ -184,7 +207,7 @@ function MultiSelectNativeBranch(props: Omit<MultiSelectProps, "appearance">) {
           const all = options.filter((opt) => !opt.disabled).map((opt) =>
             opt.value
           );
-          const current = readMaybeSignal(valueProp) ?? [];
+          const current = selected.read();
           triggerChange(toggleSelectAllKeys(current, all));
         });
       }}
@@ -195,7 +218,7 @@ function MultiSelectNativeBranch(props: Omit<MultiSelectProps, "appearance">) {
       onKeyDown={selectAllOptions}
     >
       {() => {
-        const value = readMaybeSignal(valueProp) ?? [];
+        const value = selected.read();
         const allSelected = allValues.length > 0 &&
           allValues.every((v) => value.includes(v));
         return (
@@ -240,7 +263,7 @@ function MultiSelectNativeBranch(props: Omit<MultiSelectProps, "appearance">) {
         onBlur={onBlur}
       >
         {() => {
-          const value = readMaybeSignal(valueProp) ?? [];
+          const value = selected.read();
           return options.map((opt) => (
             <option
               key={opt.value}
@@ -267,7 +290,6 @@ function MultiSelectDropdownBranch(
     options,
     value = [],
     size: sizeProp,
-    disabled = false,
     error = false,
     onChange,
     onBlur,
@@ -277,7 +299,13 @@ function MultiSelectDropdownBranch(
     autoFocus = false,
     hideFocusRing = false,
     messages,
+    allowClear = false,
+    showSearch = false,
+    loading = false,
+    panelAttach = "anchored",
   } = props;
+  const disabled = resolveFormControlDisabled(props.disabled);
+  const selected = createOptionalValueState(value, [] as string[]);
   const m = { ...defaultMultiSelectMessages, ...messages };
   const placeholder = props.placeholder ?? m.placeholder;
   const size = resolveFormControlSize(sizeProp);
@@ -285,14 +313,18 @@ function MultiSelectDropdownBranch(
   const resolvedId = id ?? fromFormItem;
 
   const openState = createSignal(false);
+  const searchQuery = createSignal("");
   const sizeCls = sizeClassesDropdown[size];
   let rootEl: HTMLElement | null = null;
   let panelEl: HTMLElement | null = null;
-  /** 抑制 pointerdown 选中后紧随的 click 再 toggle 一次 */
-  let skipFollowupClick = false;
+  let listboxEl: HTMLElement | null = null;
+  const triggerRef: { current: HTMLElement | null } = { current: null };
+  const useViewportPanel = panelAttach === "viewport";
+  /** 已在 pointerdown 提交的选项；直到对应 click 才消费，不能按时间过期。 */
+  let pointerPickedValue: string | undefined;
 
   const triggerChange = (newVal: string[]) => {
-    commitMaybeSignal(value, newVal);
+    selected.commit(newVal);
     const synthetic = { target: { value: newVal } } as unknown as Event;
     onChange?.(synthetic);
   };
@@ -310,7 +342,9 @@ function MultiSelectDropdownBranch(
   };
 
   const closePanel = () => {
+    pointerPickedValue = undefined;
     openState.value = false;
+    searchQuery.value = "";
   };
 
   installInlineDropdownOutsideClickClose(
@@ -322,6 +356,15 @@ function MultiSelectDropdownBranch(
   syncInlineDropdownPanelVisibility(
     () => openState.value,
     () => panelEl,
+  );
+
+  bindFixedDropdownPanelWhenOpen(
+    () => useViewportPanel,
+    () => openState.value,
+    () => listboxEl,
+    triggerRef,
+    closePanel,
+    216,
   );
 
   createEffect(() => {
@@ -345,7 +388,7 @@ function MultiSelectDropdownBranch(
   const selectAllOptions = (event: KeyboardEvent) => {
     if (disabled || !isSelectAllHotkey(event)) return;
     preventSelectAllDefault(event);
-    const current = readMaybeSignal(value) ?? [];
+    const current = selected.read();
     triggerChange(toggleSelectAllKeys(current, selectableValues));
   };
 
@@ -355,7 +398,7 @@ function MultiSelectDropdownBranch(
         rootEl = el;
         if (!el || disabled) return;
         setSelectAllHost(el, () => {
-          const current = readMaybeSignal(value) ?? [];
+          const current = selected.read();
           triggerChange(toggleSelectAllKeys(current, selectableValues));
         });
       }}
@@ -368,7 +411,7 @@ function MultiSelectDropdownBranch(
       {() => {
         const nm = name;
         if (!nm) return null;
-        const rv = readMaybeSignal(value) ?? [];
+        const rv = selected.read();
         return rv.map((v) => (
           <input
             key={v}
@@ -378,85 +421,107 @@ function MultiSelectDropdownBranch(
           />
         ));
       }}
-      <button
-        type="button"
-        ref={bindAutoFocusRef(undefined, autoFocus)}
-        id={resolvedId}
-        disabled={disabled}
-        aria-invalid={error}
-        aria-haspopup="listbox"
-        aria-expanded={() => openState.value}
-        {...autoFocusAttr(autoFocus)}
-        aria-label={() => {
-          const rv = readMaybeSignal(value) ?? [];
-          const selectedLabels = rv
-            .map((v) => options.find((o) => o.value === v)?.label ?? v)
-            .filter(Boolean);
-          const summaryText = selectedLabels.length > 0
-            ? selectedLabels.join("、")
-            : "";
-          return summaryText ? m.selectedSummary(summaryText) : placeholder;
-        }}
-        class={twMerge(
-          "w-full flex items-center justify-between gap-2 text-left min-w-0",
-          pickerTriggerSurface,
-          controlBlueFocusRing(!hideFocusRing && !error),
-          error && controlErrorBorder,
-          error && !hideFocusRing && controlErrorFocusRing(true),
-          sizeCls,
-        )}
-        onBlur={onBlur}
-        onClick={() => {
-          if (disabled) return;
-          if (openState.value) {
-            closePanel();
-            return;
-          }
-          queueMicrotask(() => {
-            if (!disabled && !openState.value) {
-              openState.value = true;
+      <span class="relative block w-full">
+        <button
+          type="button"
+          ref={(el: HTMLButtonElement | null) => {
+            triggerRef.current = el;
+            const af = bindAutoFocusRef(undefined, autoFocus);
+            if (typeof af === "function") af(el);
+          }}
+          id={resolvedId}
+          disabled={disabled || loading}
+          aria-busy={loading || undefined}
+          aria-invalid={error}
+          aria-haspopup="listbox"
+          aria-expanded={() => openState.value}
+          {...autoFocusAttr(autoFocus)}
+          aria-label={() => {
+            const rv = selected.read();
+            const selectedLabels = rv
+              .map((v) => options.find((o) => o.value === v)?.label ?? v)
+              .filter(Boolean);
+            const summaryText = selectedLabels.length > 0
+              ? selectedLabels.join("、")
+              : "";
+            return summaryText ? m.selectedSummary(summaryText) : placeholder;
+          }}
+          class={twMerge(
+            "w-full flex items-center justify-between gap-2 text-left min-w-0",
+            pickerTriggerSurface,
+            controlBlueFocusRing(!hideFocusRing && !error),
+            error && controlErrorBorder,
+            error && !hideFocusRing && controlErrorFocusRing(true),
+            sizeCls,
+          )}
+          onBlur={onBlur}
+          onClick={() => {
+            if (disabled || loading) return;
+            if (openState.value) {
+              closePanel();
+              return;
             }
-          });
-        }}
-      >
-        <span
-          class={() => {
-            const rv = readMaybeSignal(value) ?? [];
-            const selectedLabels = rv
-              .map((v) => options.find((o) => o.value === v)?.label ?? v)
-              .filter(Boolean);
-            const summaryText = selectedLabels.length > 0
-              ? selectedLabels.join("、")
-              : "";
-            return twMerge(
-              "truncate min-w-0",
-              summaryText
-                ? "text-slate-900 dark:text-slate-100"
-                : "text-slate-400 dark:text-slate-500",
-            );
+            queueMicrotask(() => {
+              if (!disabled && !loading && !openState.value) {
+                openState.value = true;
+              }
+            });
           }}
         >
-          {() => {
-            const rv = readMaybeSignal(value) ?? [];
-            const selectedLabels = rv
-              .map((v) => options.find((o) => o.value === v)?.label ?? v)
-              .filter(Boolean);
-            const summaryText = selectedLabels.length > 0
-              ? selectedLabels.join("、")
-              : "";
-            return summaryText || placeholder;
-          }}
-        </span>
-        <span
-          class={() =>
-            twMerge(
-              "inline-flex shrink-0 text-slate-400 dark:text-slate-500 transition-transform",
-              openState.value && "rotate-180",
-            )}
-        >
-          <IconChevronDown size="sm" />
-        </span>
-      </button>
+          <span
+            class={() => {
+              const rv = selected.read();
+              const selectedLabels = rv
+                .map((v) => options.find((o) => o.value === v)?.label ?? v)
+                .filter(Boolean);
+              const summaryText = selectedLabels.length > 0
+                ? selectedLabels.join("、")
+                : "";
+              return twMerge(
+                "truncate min-w-0",
+                summaryText
+                  ? "text-slate-900 dark:text-slate-100"
+                  : "text-slate-400 dark:text-slate-500",
+              );
+            }}
+          >
+            {() => {
+              const rv = selected.read();
+              const selectedLabels = rv
+                .map((v) => options.find((o) => o.value === v)?.label ?? v)
+                .filter(Boolean);
+              const summaryText = selectedLabels.length > 0
+                ? selectedLabels.join("、")
+                : "";
+              return summaryText || placeholder;
+            }}
+          </span>
+          <span
+            class={() =>
+              twMerge(
+                "inline-flex shrink-0 text-slate-400 dark:text-slate-500 transition-transform",
+                !loading && openState.value && "rotate-180",
+              )}
+          >
+            {loading
+              ? (
+                <span
+                  class="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent"
+                  aria-hidden
+                />
+              )
+              : <IconChevronDown size="sm" />}
+          </span>
+        </button>
+        {allowClear && !disabled && (
+          <FieldClearSlot
+            class="absolute right-8 top-1/2 z-1 -translate-y-1/2"
+            visible={() => selected.read().length > 0 && !loading}
+            label={m.clear}
+            onClear={() => triggerChange([])}
+          />
+        )}
+      </span>
       <div
         ref={(el: HTMLElement | null) => {
           panelEl = el;
@@ -465,24 +530,34 @@ function MultiSelectDropdownBranch(
         aria-hidden="true"
         data-ui-multiselect-panel=""
       >
+        {useViewportPanel ? null : (
+          <div
+            class="fixed inset-0 z-40"
+            aria-hidden="true"
+            onClick={closePanel}
+          />
+        )}
         <div
-          class="fixed inset-0 z-40"
-          aria-hidden="true"
-          onClick={closePanel}
-        />
-        <div
+          ref={(el: HTMLElement | null) => {
+            listboxEl = el;
+          }}
           role="listbox"
           aria-label={m.listbox}
           aria-multiselectable="true"
-          class="absolute z-50 top-full left-0 right-0 mt-1 flex max-h-72 flex-col overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg dark:border-slate-600 dark:bg-slate-800"
+          class={twMerge(
+            "flex max-h-72 w-max flex-col overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg dark:border-slate-600 dark:bg-slate-800",
+            useViewportPanel
+              ? twMerge("fixed", pickerPortalZClass)
+              : "absolute top-full left-0 z-50 mt-1 min-w-[max(100%,13.5rem)]",
+          )}
         >
           <div class="flex w-full shrink-0 items-center justify-between gap-2 border-b border-slate-100 p-2 dark:border-slate-700">
-            <div class="flex flex-wrap gap-1">
+            <div class="flex gap-1">
               <button
                 type="button"
                 class={btnCls}
                 disabled={() => {
-                  const rv = readMaybeSignal(value) ?? [];
+                  const rv = selected.read();
                   const allSelected = selectableValues.length > 0 &&
                     selectableValues.every((v) => rv.includes(v));
                   return disabled || allSelected;
@@ -495,7 +570,7 @@ function MultiSelectDropdownBranch(
                 type="button"
                 class={btnCls}
                 disabled={() => {
-                  const rv = readMaybeSignal(value) ?? [];
+                  const rv = selected.read();
                   return disabled || rv.length === 0;
                 }}
                 onClick={() => triggerChange([])}
@@ -512,91 +587,127 @@ function MultiSelectDropdownBranch(
               {m.done}
             </button>
           </div>
+          {showSearch && (
+            <div
+              class="shrink-0 border-b border-slate-100 px-2 py-1 dark:border-slate-700"
+              onPointerDown={(e: Event) => e.stopPropagation()}
+            >
+              <input
+                type="search"
+                class="w-full rounded-md border border-slate-200 dark:border-slate-600 bg-transparent px-2 py-1 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400"
+                placeholder={m.searchPlaceholder}
+                value={() => searchQuery.value}
+                onInput={(e: Event) => {
+                  searchQuery.value = (e.target as HTMLInputElement).value;
+                }}
+              />
+            </div>
+          )}
           <div
             class={twMerge(
               "max-h-60 overflow-y-auto",
               disabled && "pointer-events-none opacity-50",
             )}
           >
-            {options.map((opt) => (
-              <div
-                key={opt.value}
-                role="option"
-                aria-selected={() =>
-                  (readMaybeSignal(value) ?? []).includes(opt.value)}
-                aria-disabled={opt.disabled}
-                class={() => {
-                  const rv = readMaybeSignal(value) ?? [];
-                  const selected = rv.includes(opt.value);
-                  return twMerge(
-                    optionRowBase,
-                    selected &&
-                      "bg-blue-50 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200",
-                    opt.disabled &&
-                      "cursor-not-allowed opacity-50 hover:bg-transparent dark:hover:bg-transparent",
-                  );
-                }}
-                onPointerDown={(e: Event) => {
-                  pickInlineDropdownOption(e, () => {
-                    skipFollowupClick = true;
+            {() => {
+              const q = searchQuery.value.trim().toLowerCase();
+              const filtered = q
+                ? options.filter((opt) =>
+                  opt.label.toLowerCase().includes(q) ||
+                  opt.value.toLowerCase().includes(q)
+                )
+                : options;
+              if (filtered.length === 0) {
+                return (
+                  <div class="px-3 py-2 text-sm text-slate-400 dark:text-slate-500">
+                    {loading ? m.loading : m.noMatch}
+                  </div>
+                );
+              }
+              return filtered.map((opt) => (
+                <div
+                  key={opt.value}
+                  role="option"
+                  aria-selected={() => (selected.read()).includes(opt.value)}
+                  aria-disabled={opt.disabled}
+                  class={() => {
+                    const rv = selected.read();
+                    const isSelected = rv.includes(opt.value);
+                    return twMerge(
+                      optionRowBase,
+                      isSelected &&
+                        "bg-blue-50 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200",
+                      opt.disabled &&
+                        "cursor-not-allowed opacity-50 hover:bg-transparent dark:hover:bg-transparent",
+                    );
+                  }}
+                  onPointerDown={(e: Event) => {
+                    pickInlineDropdownOption(e, () => {
+                      pointerPickedValue = opt.value;
+                      toggleOption(
+                        opt.value,
+                        opt.disabled,
+                        selected.read(),
+                      );
+                    }, opt.disabled);
+                  }}
+                  onPointerCancel={() => {
+                    pointerPickedValue = undefined;
+                  }}
+                  onClick={(e: Event) => {
+                    // 物理 click 的 detail > 0；键盘/辅助技术的 detail=0 仍可独立激活。
+                    // 按住鼠标可以跨任意多个 task，绝不能用 timer 或 microtask 清旗。
+                    const alreadyPicked = pointerPickedValue === opt.value &&
+                      (e as MouseEvent).detail > 0;
+                    pointerPickedValue = undefined;
+                    if (alreadyPicked) return;
                     toggleOption(
                       opt.value,
                       opt.disabled,
-                      readMaybeSignal(value) ?? [],
-                    );
-                    queueMicrotask(() => {
-                      skipFollowupClick = false;
-                    });
-                  }, opt.disabled);
-                }}
-                onClick={() => {
-                  if (skipFollowupClick) return;
-                  toggleOption(
-                    opt.value,
-                    opt.disabled,
-                    readMaybeSignal(value) ?? [],
-                  );
-                }}
-              >
-                <span
-                  class={() => {
-                    const rv = readMaybeSignal(value) ?? [];
-                    const selected = rv.includes(opt.value);
-                    return twMerge(
-                      "flex size-4 shrink-0 items-center justify-center rounded border",
-                      selected
-                        ? "border-blue-600 bg-blue-600 text-white dark:border-blue-500 dark:bg-blue-500"
-                        : "border-slate-300 dark:border-slate-500",
-                      opt.disabled && "opacity-50",
+                      selected.read(),
                     );
                   }}
-                  aria-hidden="true"
                 >
-                  {() => {
-                    const rv = readMaybeSignal(value) ?? [];
-                    const selected = rv.includes(opt.value);
-                    return selected
-                      ? (
-                        <svg
-                          class="size-3"
-                          fill="none"
-                          stroke="currentColor"
-                          stroke-width="2.5"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            d="M5 13l4 4L19 7"
-                          />
-                        </svg>
-                      )
-                      : null;
-                  }}
-                </span>
-                <span class="flex-1">{opt.label}</span>
-              </div>
-            ))}
+                  <span
+                    class={() => {
+                      const rv = selected.read();
+                      const isSelected = rv.includes(opt.value);
+                      return twMerge(
+                        "flex size-4 shrink-0 items-center justify-center rounded border",
+                        isSelected
+                          ? "border-blue-600 bg-blue-600 text-white dark:border-blue-500 dark:bg-blue-500"
+                          : "border-slate-300 dark:border-slate-500",
+                        opt.disabled && "opacity-50",
+                      );
+                    }}
+                    aria-hidden="true"
+                  >
+                    {() => {
+                      const rv = selected.read();
+                      const isSelected = rv.includes(opt.value);
+                      return isSelected
+                        ? (
+                          <svg
+                            class="size-3"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2.5"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              d="M5 13l4 4L19 7"
+                            />
+                          </svg>
+                        )
+                        : null;
+                    }}
+                  </span>
+                  <span class="flex-1">{opt.label}</span>
+                </div>
+              ));
+            }}
           </div>
         </div>
       </div>

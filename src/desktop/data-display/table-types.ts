@@ -3,6 +3,7 @@
  * @description Table 列／编辑／文案类型与分页按钮样式常量。
  */
 
+import type { MaybeSignal } from "../../shared/form/maybe-signal.ts";
 import type { SizeVariant } from "../../shared/types.ts";
 
 /** Table 底部分页：与 {@link ../../shared/navigation/Pagination.tsx} 视觉对齐 */
@@ -93,8 +94,8 @@ export interface TableColumn<T = unknown> {
    * 用于「表头居中、单元格仍左/右对齐」等布局。
    */
   headerAlign?: "left" | "center" | "right";
-  /** 是否固定左侧 */
-  fixed?: "left";
+  /** 固定列：左侧或右侧（需配合 `scroll` 或表格横向溢出） */
+  fixed?: "left" | "right";
   /** 是否可排序 */
   sorter?: boolean | ((a: T, b: T) => number);
   /** 默认排序 */
@@ -106,8 +107,8 @@ export interface TableColumn<T = unknown> {
 export interface TableProps<T = unknown> {
   /** 列定义 */
   columns: TableColumn<T>[];
-  /** 数据源 */
-  dataSource: T[];
+  /** 数据源；受控更新时请传 Signal 或 getter，勿传 `dataSource={rows.value}` 快照 */
+  dataSource: MaybeSignal<T[]>;
   /** 行 key 的字段名或函数 */
   rowKey?: keyof T | string | ((record: T, index: number) => string);
   /** 是否显示边框 */
@@ -145,7 +146,19 @@ export interface TableProps<T = unknown> {
     pageSize?: number;
     total?: number;
     onChange?: (page: number, pageSize: number) => void;
+    /** 每页条数选项；传入后显示条数切换，变更时 `onChange` 收到新的 pageSize（通常回到第 1 页） */
+    pageSizeOptions?: number[];
+    /**
+     * 是否显示「第 from–to 条 / 共 total 条」。默认显示；可传渲染函数自定义。
+     * `false` 时仍保留「第 n / m 页」。
+     */
+    showTotal?: boolean | ((total: number, range: [number, number]) => unknown);
   };
+  /**
+   * 表格滚动。`x` 设置表最小宽度并横向滚动；`y` 限制高度并纵向滚动，表头吸顶。
+   * 与 `fixed` 列一起用时，请给固定列设 `width`。
+   */
+  scroll?: { x?: number | string; y?: number | string };
   /** 选中变化时回调当前选中的整行数据；传了则显示选择列 */
   onSelectChange?: (selectedRows: T[]) => void;
   /** 受控时的选中行 key 列表 */
@@ -202,6 +215,10 @@ export interface TableMessages {
   paginationTotalZero: (total: number) => string;
   /** 「第 N / M 页」摘要 */
   paginationOfPages: (current: number, total: number) => string;
+  /** 每页条数选择器 `aria-label` */
+  pageSize: string;
+  /** 每页条数选项文案 */
+  pageSizeUnit: (n: number) => string;
 }
 
 /** 默认中文文案 */
@@ -218,6 +235,8 @@ export const defaultTableMessages: TableMessages = {
   paginationRange: (from, to, total) => `第 ${from}–${to} 条 / 共 ${total} 条`,
   paginationTotalZero: (total) => `共 ${total} 条`,
   paginationOfPages: (current, total) => `第 ${current} / ${total} 页`,
+  pageSize: "每页条数",
+  pageSizeUnit: (n) => `${n} 条/页`,
 };
 
 /** 当前编辑中的单元格（与 editingCell signal 存值一致） */

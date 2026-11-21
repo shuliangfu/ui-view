@@ -86,9 +86,13 @@ export const metadata = {
   title: "Tag 标签 · ui-view",
 };
 
-export default function DataDisplayTag() {
-  const closed = createSignal(false);
+/**
+ * 「可关闭」演示用状态：必须模块级，并在 `{() => ...}` 里读取。
+ * 若写在页面函数里且直接插值 `closed.value`，父级重跑会换新 signal，界面也不会随关闭更新。
+ */
+const closableTagDemoClosed = createSignal(false);
 
+export default function DataDisplayTag() {
   return (
     <div class="space-y-10">
       <section>
@@ -137,15 +141,25 @@ export default function DataDisplayTag() {
 
         <div class="space-y-4">
           <Title level={3}>size / closable</Title>
-          <div class="flex flex-wrap gap-2">
-            <Tag size="xs">xs</Tag>
-            <Tag size="sm">sm</Tag>
-            <Tag size="md">md</Tag>
-            <Tag size="lg">lg</Tag>
+          <div class="space-y-2">
+            <div class="flex flex-wrap gap-2">
+              <Tag size="xs">xs</Tag>
+              <Tag size="sm">sm</Tag>
+              <Tag size="md">md</Tag>
+              <Tag size="lg">lg</Tag>
+            </div>
+            {() =>
+              !closableTagDemoClosed.value && (
+                <Tag
+                  closable
+                  onClose={() => {
+                    closableTagDemoClosed.value = true;
+                  }}
+                >
+                  可关闭
+                </Tag>
+              )}
           </div>
-          {!closed.value && (
-            <Tag closable onClose={() => closed.value = true}>可关闭</Tag>
-          )}
           <CodeBlock
             title="代码示例"
             code={exampleSizeClosable}

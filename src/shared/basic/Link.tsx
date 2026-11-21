@@ -7,11 +7,12 @@
 
 import { twMerge } from "tailwind-merge";
 import type { JSXRenderable } from "@dreamer/view";
-import type { ColorVariant, SizeVariant } from "../types.ts";
+import type { SizeVariant } from "../types.ts";
 import {
   BUTTON_SIZE_CLASSES,
   BUTTON_STANDALONE_INTERACTIVE_BASE,
   BUTTON_VARIANT_CLASSES,
+  type ButtonVariant,
 } from "./button-variants.ts";
 
 export interface LinkProps {
@@ -31,8 +32,8 @@ export interface LinkProps {
    * 为 false 或未传时保持默认文字链接；此时传入的 `variant` / `size` 不参与合并。
    */
   button?: boolean;
-  /** 链接按钮语义配色；仅 `button === true` 时生效，默认 `primary` */
-  variant?: ColorVariant;
+  /** 链接按钮语义配色；仅 `button === true` 时生效，默认 `primary`，可与 Button 一样使用 link */
+  variant?: ButtonVariant;
   /** 链接按钮尺寸；仅 `button === true` 时生效，默认 `md` */
   size?: SizeVariant;
   /**
@@ -80,7 +81,7 @@ export function Link(props: LinkProps): JSXRenderable {
 
   const className = classProp ?? classNameProp;
   const isLinkButton = button === true;
-  const variant: ColorVariant = variantProp ?? "primary";
+  const variant: ButtonVariant = variantProp ?? "primary";
   const size: SizeVariant = sizeProp ?? "md";
 
   /** 下划线：`underline === true` 时仅 `hover` 显示；否则常态与悬停均无 */
@@ -116,6 +117,8 @@ export function Link(props: LinkProps): JSXRenderable {
   /**
    * 未传的 target/rel/title/aria-label 为 undefined 时，@dreamer/view compileSource 会生成
    * setIntrinsicDomAttribute（removeAttribute），不再出现 target="undefined" 字面量。
+   * `href` 以 `#` 开头的同页片段必须标 data-native：文档站路由用 `new URL(href, origin)`
+   * 解析，会把 `#` 当成站点根路径，拦截后跳到 `/`。交给浏览器按当前页解析。
    */
   return (
     <a
@@ -127,6 +130,7 @@ export function Link(props: LinkProps): JSXRenderable {
       aria-label={ariaLabel}
       aria-disabled={disabled ? "true" : undefined}
       tabIndex={disabled ? -1 : undefined}
+      data-native={href.startsWith("#") ? "" : undefined}
       data-variant={isLinkButton ? variant : undefined}
       data-size={isLinkButton ? size : undefined}
       onClick={handleClick}

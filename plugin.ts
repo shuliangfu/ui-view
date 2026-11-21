@@ -755,7 +755,10 @@ function fileCandidates(path: string): string[] {
   ];
 }
 
-function resolveMaybeRelativePath(baseDir: string, target: string): string | null {
+function resolveMaybeRelativePath(
+  baseDir: string,
+  target: string,
+): string | null {
   if (target.startsWith("file:")) {
     try {
       return fromFileUrl(target);
@@ -850,8 +853,14 @@ async function loadPackageExportFiles(
   };
   if (typeof exports === "string") {
     add(".", exports);
-  } else if (exports && typeof exports === "object" && !Array.isArray(exports)) {
-    for (const [subpath, entry] of Object.entries(exports as Record<string, unknown>)) {
+  } else if (
+    exports && typeof exports === "object" && !Array.isArray(exports)
+  ) {
+    for (
+      const [subpath, entry] of Object.entries(
+        exports as Record<string, unknown>,
+      )
+    ) {
       add(subpath, exportEntryToPath(entry));
     }
   }
@@ -865,7 +874,10 @@ async function resolveFromImportMap(
 ): Promise<string | null> {
   const mapped = mappedTargetForSpecifier(index.exact, specifier);
   if (!mapped) return null;
-  const localTarget = resolveMaybeRelativePath(index.projectRoot, mapped.target);
+  const localTarget = resolveMaybeRelativePath(
+    index.projectRoot,
+    mapped.target,
+  );
   if (!localTarget) return null;
   if (specifier === mapped.key) {
     return firstExistingFile(fileCandidates(localTarget));
@@ -911,8 +923,7 @@ async function resolveSpecifiersViaDenoEval(
   specs: readonly string[],
 ): Promise<(string | null)[]> {
   if (specs.length === 0) return [];
-  const code =
-    `const specs=${JSON.stringify(specs)};` +
+  const code = `const specs=${JSON.stringify(specs)};` +
     `for (const s of specs) { try { console.log(import.meta.resolve(s)); }` +
     ` catch { console.log(""); } }`;
   const stdout = await runDenoInfo(projectRoot, ["eval", "--quiet", code]);
@@ -1316,6 +1327,7 @@ function normalizeTailwindScanPaths(
  * - Button / ButtonGroup / Link 依赖 `button-variants.ts` 中的类名字符串，映射中须同时列出该文件。
  * - Input、Select、DatePicker 等依赖 `input-focus-ring.ts` 中的 `focus:ring-*`、`has-[input:focus]:*`、`pickerTriggerSurface` 等类名字符串，映射中须同时列出该文件（与 button-variants 同理）。
  * - DatePicker / DateTimePicker / TimePicker 依赖 `picker-portal-utils.ts` 中的 `pickerTimeListScrollClass`（含隐藏滚动条、列宽等任意类），须一并扫描，否则按需构建会丢样式。
+ * - 上述三个选择器还依赖 `picker-trigger-text.tsx`（占位宽度与触发文案左对齐），须一并扫描。
  * - RichTextEditor 从同文件引用 `getFormPortalBodyHost`，若需该文件内其它类名亦须映射。
  * - MarkdownEditor 使用 `@dreamer/markdown` 的 `parse` 与桌面 `Tooltip`；须映射 `MarkdownEditor.tsx`、`Tooltip.tsx`、`input-focus-ring.ts`。
  * - 单文件图标（`icons/*.tsx`）、`Calendar.tsx`、`ChartBase.tsx` 等被组件 import 时须写入对应组件的路径列表；`gatherResolvedContentPaths` 会去重。
@@ -1331,6 +1343,7 @@ const COMPONENT_PATHS: Record<string, string[]> = {
     "src/shared/form/TimePicker.tsx",
     "src/shared/form/picker-portal-utils.ts",
     "src/shared/form/picker-trigger-icon.ts",
+    "src/shared/form/picker-trigger-text.tsx",
     "src/shared/form/picker-calendar-nav.tsx",
     "src/shared/data-display/Calendar.tsx",
     "src/shared/data-display/calendar-utils.ts",
@@ -1389,6 +1402,7 @@ const COMPONENT_PATHS: Record<string, string[]> = {
     "src/shared/basic/Icon.tsx",
     "src/shared/form/picker-portal-utils.ts",
     "src/shared/form/picker-trigger-icon.ts",
+    "src/shared/form/picker-trigger-text.tsx",
     "src/shared/form/picker-calendar-nav.tsx",
     "src/shared/data-display/Calendar.tsx",
     "src/shared/data-display/calendar-utils.ts",
@@ -1402,6 +1416,7 @@ const COMPONENT_PATHS: Record<string, string[]> = {
     "src/shared/basic/Icon.tsx",
     "src/shared/form/picker-portal-utils.ts",
     "src/shared/form/picker-trigger-icon.ts",
+    "src/shared/form/picker-trigger-text.tsx",
     "src/shared/form/picker-calendar-nav.tsx",
     "src/shared/data-display/Calendar.tsx",
     "src/shared/data-display/calendar-utils.ts",
@@ -1808,6 +1823,7 @@ const COMPONENT_PATHS: Record<string, string[]> = {
     "src/shared/basic/Icon.tsx",
     "src/shared/form/picker-portal-utils.ts",
     "src/shared/form/picker-trigger-icon.ts",
+    "src/shared/form/picker-trigger-text.tsx",
     "src/shared/basic/icons/Clock.tsx",
     "src/shared/form/input-focus-ring.ts",
   ],
@@ -2028,6 +2044,17 @@ function parseNamedImportSpecifiers(specifiers: string): string[] {
     .filter(Boolean);
 }
 
+const SKIP_SCAN_DIRS = new Set([
+  "node_modules",
+  "dist",
+  ".git",
+  "coverage",
+  "vendor",
+  ".cache",
+  ".deno",
+  "tmp",
+]);
+
 async function collectTsTsx(
   dir: string,
   baseDir: string,
@@ -2037,7 +2064,7 @@ async function collectTsTsx(
   for (const entry of entries) {
     const full = join(dir, entry.name);
     if (entry.isDirectory) {
-      if (entry.name === "node_modules" || entry.name === "dist") continue;
+      if (SKIP_SCAN_DIRS.has(entry.name)) continue;
       await collectTsTsx(full, baseDir, out);
     } else if (
       entry.isFile &&
@@ -2062,7 +2089,7 @@ function extractUsedNames(content: string): string[] {
 
 /**
  * 内置图标以 `IconXxx` 单独导出、文件分散在 icons/ 子目录；不可能在 COMPONENT_PATHS 中逐一手写。
- * 若扫描结果中出现任意 `Icon` 前缀组件名，则递归加入 `src/shared/basic/icons` 下全部 `.tsx` 供 Tailwind 收集 class。
+ * 若扫描结果中出现任意 `Icon` 前缀组件名，则只把用到的图标文件（及 `Icon.tsx`）加入扫描，避免把整个 `icons/` 目录塞进 Tailwind。
  *
  * **注意**：仅当 `packageRoot` 下存在真实的 `src/shared/basic/Icon.tsx`
  * 与 `src/shared/basic/icons/`（可列目录）时才递归；JSR 哈希缓存下无「icons 目录」语义，
@@ -2098,13 +2125,27 @@ async function mergeIntrinsicIconSources(
   } catch {
     return;
   }
+
+  const wanted = new Set<string>();
+  for (const n of usedNames) {
+    if (/^Icon[A-Z]/.test(n)) wanted.add(n);
+  }
+
+  function iconFileMatches(filePath: string): boolean {
+    const base = filePath.replace(/\\/g, "/").split("/").pop() ?? "";
+    const stem = base.replace(/\.tsx?$/, "");
+    if (!stem) return false;
+    return wanted.has(stem) || wanted.has(`Icon${stem}`) ||
+      wanted.has(`IconBrand${stem}`);
+  }
+
   const seen = new Set(paths);
   if (!seen.has(iconEntry)) {
     seen.add(iconEntry);
     paths.push(iconEntry);
   }
   for (const f of iconFiles) {
-    if (seen.has(f)) continue;
+    if (seen.has(f) || !iconFileMatches(f)) continue;
     seen.add(f);
     paths.push(f);
   }
@@ -2376,10 +2417,12 @@ export function uiViewTailwindPlugin(
               usedNames.add(name);
             }
             if (followPrefixes.length > 0) {
-              for (const spec of extractFollowedPackageSpecifiers(
-                content,
-                followPrefixes,
-              )) {
+              for (
+                const spec of extractFollowedPackageSpecifiers(
+                  content,
+                  followPrefixes,
+                )
+              ) {
                 followedSpecs.add(spec);
               }
             }
@@ -2456,8 +2499,8 @@ export function uiViewTailwindPlugin(
             jsrVersion,
           });
           const paths = gathered.paths;
+          await mergeIntrinsicIconSources(names, pkgRoot, paths);
           if (paths.length > 0) {
-            await mergeIntrinsicIconSources(names, pkgRoot, paths);
             const withLocalImports = await expandLocalImportSources(paths, {
               packageRoot: pkgRoot,
               projectRoot: root,
@@ -2482,11 +2525,23 @@ export function uiViewTailwindPlugin(
         const sourcesCssDir = dirname(outAbs);
 
         const cssContent = uniqueSortedPaths
-          .map((p) => `@source "${toAtSourceSpecifier(sourcesCssDir, p)}";`)
+          .map((p) =>
+            `@source ${JSON.stringify(toAtSourceSpecifier(sourcesCssDir, p))};`
+          )
           .join("\n") + "\n";
 
-        await mkdir(sourcesCssDir, { recursive: true });
-        await writeTextFile(outAbs, cssContent);
+        let prev: string | undefined;
+        try {
+          prev = await readTextFile(outAbs);
+        } catch {
+          prev = undefined;
+        }
+        if (prev === cssContent) {
+          log.debug("ui-view-sources.css 内容未变，跳过写入");
+        } else {
+          await mkdir(sourcesCssDir, { recursive: true });
+          await writeTextFile(outAbs, cssContent);
+        }
       } catch (e) {
         logInitFailure("onInit 失败", e, {
           cwd: root,
@@ -2508,6 +2563,7 @@ export function uiViewTailwindPlugin(
 export {
   createUiViewUploadAppConfig,
   dualObjectKeys,
+  isSafeUiViewUploadObjectKey,
   uiViewUploadPlugin,
   wrapUploadCompletePipeline,
 } from "./upload.ts";

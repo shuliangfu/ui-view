@@ -40,6 +40,44 @@ const POPOVER_API: ApiRow[] = [
   },
   { name: "children", type: "unknown", default: "-", description: "触发元素" },
   {
+    name: "trigger",
+    type: '"hover" | "click"',
+    default: "hover",
+    description:
+      "触发方式。hover 为悬停显示；click 为点击开关，再次点击、点击外部或按 Escape 关闭。",
+  },
+  {
+    name: "open",
+    type: "boolean | Signal<boolean> | (() => boolean)",
+    default: "-",
+    description:
+      "受控展开。不传则内部维护。请传 signal 或 getter，不要传 sig.value 快照。",
+  },
+  {
+    name: "onOpenChange",
+    type: "(open: boolean) => void",
+    default: "-",
+    description: "打开或关闭时回调；受控时须在此写回 open",
+  },
+  {
+    name: "disabled",
+    type: "boolean | (() => boolean)",
+    default: "false",
+    description: "为 true 时不响应触发并收起面板；可传 getter",
+  },
+  {
+    name: "hoverOpenDelay",
+    type: "number",
+    default: "0",
+    description: "trigger 为 hover 时，进入触发区后多少 ms 再显示",
+  },
+  {
+    name: "hoverCloseDelay",
+    type: "number",
+    default: "100",
+    description: "trigger 为 hover 时，离开触发或浮层后多少 ms 再收起",
+  },
+  {
     name: "arrow",
     type: "boolean",
     default: "true",
@@ -87,10 +125,19 @@ const exampleNoArrow = `<Popover
   <span>无箭头</span>
 </Popover>`;
 
+const exampleClick = `<Popover
+  title="说明"
+  content="点击触发器打开，再点一次或点外部关闭。"
+  placement="top"
+  trigger="click"
+>
+  <button type="button">点击我</button>
+</Popover>`;
+
 const exampleAuto = `<div class="flex justify-end">
   <Popover
     title="贴边翻转"
-    content="右边被挡时向左展开，箭头跟随实际方位"
+    content="优先上方，空间不足时选择其它方位，箭头跟随实际方位"
     placement="auto"
   >
     <span>靠右悬停</span>
@@ -108,8 +155,10 @@ export default function FeedbackPopover() {
       <section>
         <Title level={1}>Popover 弹出面板</Title>
         <Paragraph class="mt-2">
-          弹出面板：悬停触发，带标题与内容；支持 placement（含 auto
-          贴边翻转）、箭头。使用 Tailwind v4，支持 light/dark 主题。
+          弹出面板：默认悬停触发，也可 trigger=&quot;click&quot;
+          点击开关；支持受控 open / onOpenChange 与 disabled；带标题与内容；支持
+          placement（含 auto 贴边翻转）、箭头。使用 Tailwind v4，支持 light/dark
+          主题。
         </Paragraph>
       </section>
 
@@ -206,19 +255,46 @@ export default function FeedbackPopover() {
             maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
+        <div class="space-y-4">
+          <Title level={3}>点击触发（trigger=click）</Title>
+          <div class="pt-4">
+            <Popover
+              title="说明"
+              content="点击触发器打开，再点一次或点外部关闭。"
+              placement="top"
+              trigger="click"
+            >
+              <button
+                type="button"
+                class="px-3 py-1.5 rounded bg-slate-200 dark:bg-slate-600"
+              >
+                点击我
+              </button>
+            </Popover>
+          </div>
+          <CodeBlock
+            title="代码示例（点击触发）"
+            code={exampleClick}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
+          />
+        </div>
         <div class="space-y-4" data-demo="auto-flip-right">
           <Title level={3}>贴边自动翻转（placement=auto）</Title>
           <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
             触发器贴在视口最右侧。{" "}
             <code class="text-xs">placement=&quot;auto&quot;</code>{" "}
-            时右边被挡会向左展开，箭头跟随实际方位。
+            时优先上方；空间不足时选择其它可用方位，并夹在视口内，箭头跟随实际方位。
           </Paragraph>
           <div class="-mr-3 sm:-mr-6 lg:-mr-10 pr-2">
             <div class="rounded-lg border border-dashed border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/40 px-3 py-3">
               <div class="flex justify-end">
                 <Popover
                   title="贴边翻转"
-                  content="右边被挡时向左展开，箭头跟随实际方位"
+                  content="优先上方，空间不足时选择其它方位，箭头跟随实际方位"
                   placement="auto"
                 >
                   <span
@@ -232,7 +308,7 @@ export default function FeedbackPopover() {
             </div>
           </div>
           <CodeBlock
-            title="代码示例（贴右边，auto 向左展开）"
+            title="代码示例（贴右边，auto 自适应）"
             code={exampleAuto}
             language="tsx"
             showLineNumbers

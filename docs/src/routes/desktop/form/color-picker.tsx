@@ -367,7 +367,7 @@ const hex = createSignal("#3b82f6");
 
         <div class="space-y-4">
           <Title level={3}>
-            <code class="text-base">showSuffixIcon={false}</code>{" "}
+            <code class="text-base">{"showSuffixIcon={false}"}</code>{" "}
             隐藏右侧调色板图标
           </Title>
           <Form layout="vertical" class="w-full max-w-xs">

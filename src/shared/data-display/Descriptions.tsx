@@ -41,6 +41,20 @@ export interface DescriptionsItem {
    * 垂直对齐在 `layout="horizontal"` 时相对内容列高度。
    */
   labelAlign?: DescriptionsLabelAlign;
+  /**
+   * 自定义内容区。有本函数时用其返回值作为内容，`children` 仍可通过 {@link DescriptionsItemRenderCtx.defaultNode} 使用。
+   */
+  render?: (ctx: DescriptionsItemRenderCtx) => unknown;
+}
+
+/** {@link DescriptionsItem.render} 的上下文。 */
+export interface DescriptionsItemRenderCtx {
+  /** 当前描述行 */
+  item: DescriptionsItem;
+  /** 在 `rows` 中的下标 */
+  index: number;
+  /** `children` 原值，便于包裹或回落 */
+  defaultNode: unknown;
 }
 
 const LABEL_VERTICAL_CLASS: Record<DescriptionsLabelVerticalAlign, string> = {
@@ -95,8 +109,8 @@ function resolveLabelAlign(
 }
 
 export interface DescriptionsProps {
-  /** 描述项列表 */
-  items: DescriptionsItem[];
+  /** 描述行列表 */
+  rows: DescriptionsItem[];
   /** 标题 */
   title?: string | unknown;
   /**
@@ -202,12 +216,12 @@ function descriptionsHorizontalLabelPercentInCell(
  * 按行优先规则模拟外层栅格占位，并消除行尾空轨道：某行最右端若未贴齐 `column`，
  * 则增大该行「结束列最靠右」的项的 span，避免 `span` 之和小于 `column` 时出现单独一列空白（如 3 列栅格只跨 2 列）。
  *
- * @param items - 描述项（读取 `span`）
+ * @param rows - 描述行（读取 `span`）
  * @param column - 外层列数（至少为 1）
- * @returns 与 `items` 等长的放置结果：行号、起始列（0-based）、有效 span（已含行尾扩展）
+ * @returns 与 `rows` 等长的放置结果：行号、起始列（0-based）、有效 span（已含行尾扩展）
  */
 function computeDescriptionsPlacements(
-  items: DescriptionsItem[],
+  rows: DescriptionsItem[],
   column: number,
 ): { row: number; startCol: number; span: number }[] {
   const colCount = Math.max(
@@ -219,8 +233,8 @@ function computeDescriptionsPlacements(
   let row = 0;
   let col = 0;
 
-  for (let i = 0; i < items.length; i++) {
-    let span = items[i].span ?? 1;
+  for (let i = 0; i < rows.length; i++) {
+    let span = rows[i].span ?? 1;
     if (!Number.isFinite(span) || span < 1) span = 1;
     span = Math.min(Math.floor(span), colCount);
 
@@ -320,7 +334,7 @@ export function resolveDescriptionsLabelMinWidthCss(
 
 export function Descriptions(props: DescriptionsProps): JSXRenderable {
   const {
-    items,
+    rows,
     title,
     column = 3,
     bordered = false,
@@ -415,7 +429,7 @@ export function Descriptions(props: DescriptionsProps): JSXRenderable {
       {() => {
         const cols = columnCount.value;
         const minWidthCss = labelMinWidthCss.value;
-        const placements = computeDescriptionsPlacements(items, cols);
+        const placements = computeDescriptionsPlacements(rows, cols);
         return (
           <div
             ref={setGridRef}
@@ -429,7 +443,7 @@ export function Descriptions(props: DescriptionsProps): JSXRenderable {
               gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
             }}
           >
-            {items.map((item, index) => {
+            {rows.map((item, index) => {
               const placement = placements[index]!;
               const effectiveSpan = placement.span;
               // 内层占比：按**有效**占位宽度换算，含行尾自动扩展后的 span
@@ -487,7 +501,13 @@ export function Descriptions(props: DescriptionsProps): JSXRenderable {
                     {colon ? "：" : null}
                   </div>
                   <div class={twMerge(contentCls, "min-w-0 wrap-break-word")}>
-                    {item.children}
+                    {typeof item.render === "function"
+                      ? item.render({
+                        item,
+                        index,
+                        defaultNode: item.children,
+                      })
+                      : item.children}
                   </div>
                 </div>
               );

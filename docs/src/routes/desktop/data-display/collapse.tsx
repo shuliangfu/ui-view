@@ -220,12 +220,14 @@ export default function DataDisplayCollapse() {
 
         <div class="space-y-4">
           <Title level={3}>accordion + bordered=false</Title>
-          <Collapse
-            items={items}
-            defaultActiveKey={["1"]}
-            accordion
-            bordered={false}
-          />
+          <div>
+            <Collapse
+              items={items}
+              defaultActiveKey={["1"]}
+              accordion
+              bordered={false}
+            />
+          </div>
           <CodeBlock
             title="代码示例"
             code={exampleAccordion}
@@ -239,8 +241,10 @@ export default function DataDisplayCollapse() {
 
         <div class="space-y-4">
           <Title level={3}>showArrow=false / size=sm</Title>
-          <Collapse items={items} defaultActiveKey={[]} showArrow={false} />
-          <Collapse items={items} defaultActiveKey={["1"]} size="sm" />
+          <div class="space-y-4">
+            <Collapse items={items} defaultActiveKey={[]} showArrow={false} />
+            <Collapse items={items} defaultActiveKey={["1"]} size="sm" />
+          </div>
           <CodeBlock
             title="代码示例"
             code={exampleShowArrowSize}

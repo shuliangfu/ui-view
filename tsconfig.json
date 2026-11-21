@@ -6,6 +6,8 @@
     "esModuleInterop": true,
     "strict": true,
     "skipLibCheck": true,
+    /** Deno 用源码直接跑，禁止 tsc 写出 .js，避免 message.ts / Message.tsx 等同名冲突 */
+    "noEmit": true,
     "jsx": "react-jsx",
     "jsxImportSource": "@dreamer/view",
     "lib": [

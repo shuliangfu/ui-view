@@ -115,7 +115,9 @@ export default function DataDisplayEmpty() {
 
         <div class="space-y-4">
           <Title level={3}>默认</Title>
-          <Empty description="暂无数据" />
+          <div>
+            <Empty description="暂无数据" />
+          </div>
           <CodeBlock
             title="代码示例"
             code={exampleDefault}
@@ -129,11 +131,13 @@ export default function DataDisplayEmpty() {
 
         <div class="space-y-4">
           <Title level={3}>simple + footer</Title>
-          <Empty
-            description="没有找到相关结果"
-            simple
-            footer={<Button type="button" variant="primary">新建</Button>}
-          />
+          <div>
+            <Empty
+              description="没有找到相关结果"
+              simple
+              footer={<Button type="button" variant="primary">新建</Button>}
+            />
+          </div>
           <CodeBlock
             title="代码示例"
             code={exampleSimpleFooter}
@@ -147,12 +151,14 @@ export default function DataDisplayEmpty() {
 
         <div class="space-y-4">
           <Title level={3}>自定义 footer</Title>
-          <Empty
-            description="自定义插图可通过 image 传入节点"
-            footer={
-              <Button type="button" variant="ghost" size="sm">刷新</Button>
-            }
-          />
+          <div>
+            <Empty
+              description="自定义插图可通过 image 传入节点"
+              footer={
+                <Button type="button" variant="ghost" size="sm">刷新</Button>
+              }
+            />
+          </div>
           <CodeBlock
             title="代码示例"
             code={exampleCustom}

@@ -73,6 +73,13 @@ const RATE_API: ApiRow[] = [
     default: "-",
     description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
   },
+  ,
+  {
+    name: "allowClear",
+    type: "boolean",
+    default: "false",
+    description: "再次点击当前分数对应的星时清零",
+  },
 ];
 
 const importCode = `import { Form } from "@dreamer/ui-view/form/form";
@@ -129,6 +136,11 @@ const form = createForm({
 </Form>`;
 
 /** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+const rateClearVal = createSignal(3);
+
+const exampleAllowClear =
+  `<Rate value={val} onChange={(v) => { val.value = v; }} allowClear />`;
+
 export const metadata = {
   title: "Rate 评分 · ui-view",
 };
@@ -313,6 +325,26 @@ export default function FormRate() {
             />
           </section>
         </Form>
+      </section>
+
+      <section class="space-y-4">
+        <Title level={3}>再次点击可清除</Title>
+        <Rate
+          value={rateClearVal}
+          onChange={(v) => {
+            rateClearVal.value = v;
+          }}
+          allowClear
+        />
+        <CodeBlock
+          title="代码示例"
+          code={exampleAllowClear}
+          language="tsx"
+          showLineNumbers
+          copyable
+          wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
+        />
       </section>
 
       <DocsMessagesSection

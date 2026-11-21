@@ -6,6 +6,12 @@ import { describe, expect, it } from "@dreamer/test";
 import { renderToString } from "@dreamer/view/ssr";
 import { Alert } from "../../src/shared/feedback/Alert.tsx";
 
+function alertRootTag(h: string): string {
+  const role = h.indexOf('role="alert"');
+  const start = h.lastIndexOf("<div", role);
+  return h.slice(start, h.indexOf(">", role) + 1);
+}
+
 async function html(
   props: Partial<Parameters<typeof Alert>[0]> = {},
 ): Promise<string> {
@@ -67,7 +73,7 @@ describe("Alert", () => {
 
   it("单行时根节点 items-center，图标无 mt 偏移", async () => {
     const h = await html();
-    const root = h.slice(h.indexOf("<div"), h.indexOf(">") + 1);
+    const root = alertRootTag(h);
     expect(root).toContain('role="alert"');
     expect(root).toContain("items-center");
     expect(root).not.toContain("items-start");
@@ -76,7 +82,7 @@ describe("Alert", () => {
 
   it("有描述时根节点 items-start，图标与标题顶对齐", async () => {
     const h = await html({ description: "补充说明" });
-    const root = h.slice(h.indexOf("<div"), h.indexOf(">") + 1);
+    const root = alertRootTag(h);
     expect(root).toContain('role="alert"');
     expect(root).toContain("items-start");
     expect(root).not.toContain("items-center");
@@ -101,7 +107,7 @@ describe("Alert", () => {
 
   it("图标用 text-current，跟随根节点文字色，不被 Icon 默认灰覆盖", async () => {
     const h = await html({ type: "info" });
-    const root = h.slice(h.indexOf("<div"), h.indexOf(">") + 1);
+    const root = alertRootTag(h);
     expect(root).toContain("text-blue-800");
     const img = h.slice(
       h.indexOf('role="img"') - 80,

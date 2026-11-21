@@ -98,13 +98,16 @@ export function CountDown(props: CountDownProps): JSXRenderable {
     });
   });
 
-  return () => {
-    const p = partsFromMs(left.value);
-    const node = render ? render(p) : defaultFormat(p);
-    return (
-      <span class={twMerge("countdown tabular-nums", className)} role="timer">
-        {node}
-      </span>
-    );
-  };
+  /**
+   * 外层直接返回稳定 <span>，仅在子节点读 `left`。
+   * 若整段 `return () =>` 作为组件返回值，每次 tick 会重建 signal 与 interval。
+   */
+  return (
+    <span class={twMerge("countdown tabular-nums", className)} role="timer">
+      {() => {
+        const p = partsFromMs(left.value);
+        return render ? render(p) : defaultFormat(p);
+      }}
+    </span>
+  );
 }

@@ -34,7 +34,10 @@ import {
   wrapMarkdownPreviewCodeBlocks,
 } from "./markdown-preview-prism.ts";
 import type { SizeVariant } from "../types.ts";
-import { resolveFormControlSize } from "./form-control-context.ts";
+import {
+  resolveFormControlDisabled,
+  resolveFormControlSize,
+} from "./form-control-context.ts";
 import { commitMaybeSignal, type MaybeSignal } from "./maybe-signal.ts";
 import {
   DEFAULT_UI_VIEW_UPLOAD_OBJECT_PATH,
@@ -547,7 +550,7 @@ export function MarkdownEditor(props: MarkdownEditorProps): JSXRenderable {
   };
   const {
     placeholder,
-    disabled = false,
+
     readOnly = false,
     error = false,
     hideFocusRing = false,
@@ -574,6 +577,7 @@ export function MarkdownEditor(props: MarkdownEditorProps): JSXRenderable {
     onUploadImage,
     onPasteImage,
   } = props;
+  const disabled = resolveFormControlDisabled(props.disabled);
   const size = resolveFormControlSize(props.size);
   const fromFormItem = useContext(FormItemControlIdContext);
   const id = idProp ?? fromFormItem;
@@ -682,6 +686,9 @@ export function MarkdownEditor(props: MarkdownEditorProps): JSXRenderable {
   const previewRef = createRef<HTMLDivElement>(null);
   /** 有 `maxLength` 时字数徽标 DOM，仅用 `textContent` 更新，勿在 `return` 里读 `markdownSource` 绑定子节点文案（会整段重算导致 textarea 失焦） */
   const charCountRef = createRef<HTMLSpanElement>(null);
+  /** tab / 断点会使内层视图重挂载预览与徽标节点；effect 只跟踪源码，需在 ref 回调里用这两份缓存补写 */
+  let lastMarkdownPreviewHtml = "";
+  let lastCharCountText = "";
   /**
    * 是否与 RichTextEditor 一致的 md 断点（≥768px）：`preview="split"` 时宽屏双栏、窄屏单栏切换；工具栏在宽屏仍显示全屏钮。
    */
@@ -730,6 +737,7 @@ export function MarkdownEditor(props: MarkdownEditorProps): JSXRenderable {
    * @param html - {@link safeParseMarkdown} 结果
    */
   const applyMarkdownPreviewHtml = (html: string) => {
+    lastMarkdownPreviewHtml = html;
     const el = previewRef.current;
     /** 开发服 / SSR 下 ref 偶为非 Element，避免写 innerHTML 与 Prism 遍历抛错 */
     if (!isMarkdownPreviewDomHost(el)) return;
@@ -738,6 +746,28 @@ export function MarkdownEditor(props: MarkdownEditorProps): JSXRenderable {
     ensureMarkdownPreviewPrismStyles(el);
     highlightMarkdownPreviewCodeBlocks(el);
     wrapMarkdownPreviewCodeBlocks(el);
+  };
+
+  const applyCharCountBadge = (text: string) => {
+    lastCharCountText = text;
+    const badge = charCountRef.current;
+    if (badge != null) {
+      badge.textContent = text;
+    }
+  };
+
+  const bindPreviewRef = (el: HTMLDivElement | null) => {
+    previewRef.current = el;
+    if (el != null) {
+      queueMicrotask(() => applyMarkdownPreviewHtml(lastMarkdownPreviewHtml));
+    }
+  };
+
+  const bindCharCountRef = (el: HTMLSpanElement | null) => {
+    charCountRef.current = el;
+    if (el != null) {
+      queueMicrotask(() => applyCharCountBadge(lastCharCountText));
+    }
   };
 
   createRenderEffect(() => {
@@ -749,15 +779,15 @@ export function MarkdownEditor(props: MarkdownEditorProps): JSXRenderable {
 
   /**
    * 订阅 `markdownSource` 仅更新字数 `span`，不触发含 textarea 的视图函数重跑，避免输入时失焦。
+   * 与预览相同：首次挂载 ref 可能尚未就绪，以及 tab/断点重挂载后 effect 不会再跑，故 microtask + ref 回调补写。
    */
   createRenderEffect(() => {
     if (maxLength == null) return;
     const len = markdownSource().length;
     const remaining = Math.max(0, maxLength - len);
-    const badge = charCountRef.current;
-    if (badge != null) {
-      badge.textContent = m.charCount(remaining, maxLength);
-    }
+    const text = m.charCount(remaining, maxLength);
+    applyCharCountBadge(text);
+    queueMicrotask(() => applyCharCountBadge(text));
   });
 
   const previewRegionId = id != null ? `${id}-md-preview` : undefined;
@@ -800,313 +830,333 @@ export function MarkdownEditor(props: MarkdownEditorProps): JSXRenderable {
     mdFullscreen.value = el.classList.contains("md-editor-fullscreen");
   };
 
-  return () => {
-    const tab = activeTab.value;
-    const wide = isMdUp.value;
-    const fs = mdFullscreen.value;
-    const showSplit = preview === "split";
-    const showPreviewPane = preview !== "off";
-    /**
-     * 宽屏且开启 split 并实际渲染预览栏时，才使用双栏等高 + 内部滚动；
-     * 避免 `preview="off"` 时仍套用分栏高度限制。
-     */
-    const showSplitDesktop = showSplit && wide && showPreviewPane;
-    /** 源码/预览图标组：`tabs` 与 split 窄屏显示；split 宽屏双栏时隐藏 */
-    const showModeToolbar = showPreviewPane &&
-      (preview === "tabs" || (showSplit && !wide));
-    /** 是否渲染整条工具栏（模式组或至少全屏） */
-    const showToolbar = showModeToolbar || allowFullscreen || canUploadImage;
-    const singlePaneMode = showPreviewPane &&
-      (preview === "tabs" || (showSplit && !wide));
-    const ariaDescribedBy = showPreviewPane && previewRegionId != null
-      ? previewRegionId
-      : undefined;
+  /**
+   * 外层返回稳定容器，tab / 全屏 / 断点只在子节点 `{() => ...}` 里读。
+   * 若整段 `return () =>` 作为组件返回值，会与 `insert` 同层展平，切换 tab 或全屏可能被重置。
+   */
+  return (
+    <div class="contents">
+      {() => {
+        const tab = activeTab.value;
+        const wide = isMdUp.value;
+        const fs = mdFullscreen.value;
+        const showSplit = preview === "split";
+        const showPreviewPane = preview !== "off";
+        /**
+         * 宽屏且开启 split 并实际渲染预览栏时，才使用双栏等高 + 内部滚动；
+         * 避免 `preview="off"` 时仍套用分栏高度限制。
+         */
+        const showSplitDesktop = showSplit && wide && showPreviewPane;
+        /** 源码/预览图标组：`tabs` 与 split 窄屏显示；split 宽屏双栏时隐藏 */
+        const showModeToolbar = showPreviewPane &&
+          (preview === "tabs" || (showSplit && !wide));
+        /** 是否渲染整条工具栏（模式组或至少全屏） */
+        const showToolbar = showModeToolbar || allowFullscreen ||
+          canUploadImage;
+        const singlePaneMode = showPreviewPane &&
+          (preview === "tabs" || (showSplit && !wide));
+        const ariaDescribedBy = showPreviewPane && previewRegionId != null
+          ? previewRegionId
+          : undefined;
 
-    /** 字数提示的 `id`，与 textarea `aria-describedby` 组合（有 `maxLength` 且存在编辑器 `id` 时） */
-    const charCountDescId = id != null && maxLength != null
-      ? `${id}-md-char-count`
-      : undefined;
-    const textareaAriaDescribedBy =
-      [ariaDescribedBy, charCountDescId].filter(Boolean).join(" ") ||
-      undefined;
+        /** 字数提示的 `id`，与 textarea `aria-describedby` 组合（有 `maxLength` 且存在编辑器 `id` 时） */
+        const charCountDescId = id != null && maxLength != null
+          ? `${id}-md-char-count`
+          : undefined;
+        const textareaAriaDescribedBy =
+          [ariaDescribedBy, charCountDescId].filter(Boolean).join(" ") ||
+          undefined;
 
-    /**
-     * 分栏宽屏：textarea 填满左栏并在内部滚动；单栏保持 min-height + 纵向 resize。
-     */
-    const textareaClass = twMerge(
-      textareaBase,
-      showSplitDesktop
-        ? twMerge(
-          editorMinHeightClass,
-          "md:min-h-0 md:h-full md:flex-1 md:basis-0 md:resize-none",
-          MD_SPLIT_SCROLL_HIDE,
-        )
-        : editorMinHeightClass,
-      controlBlueFocusRing(!hideFocusRing),
-      error && controlErrorBorder,
-      error && !hideFocusRing && controlErrorFocusRing(true),
-      readOnly && readOnlyTextareaCls,
-    );
-
-    /**
-     * 分栏宽屏：预览根节点参与 flex 等高，内容在内部滚动；单栏沿用 min-height + overflow-auto。
-     */
-    const previewShellClass = twMerge(
-      "code-block-prism rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800/50 p-3",
-      showSplitDesktop
-        ? twMerge("md:min-h-0 md:flex-1 md:basis-0", MD_SPLIT_SCROLL_HIDE)
-        : twMerge("overflow-auto", minPrev),
-      !showSplitDesktop && minPrev,
-      previewProseCls,
-    );
-
-    const textareaNode = (
-      <textarea
-        ref={bindAutoFocusRef(textareaRef, autoFocus)}
-        id={id}
-        {...autoFocusAttr(autoFocus)}
-        name={name}
-        rows={rows}
-        value={props.value}
-        placeholder={placeholder}
-        disabled={disabled}
-        readOnly={readOnly}
-        maxLength={maxLength}
-        spellcheck={false}
-        autocapitalize="off"
-        autocomplete="off"
-        aria-label={ariaLabel}
-        aria-required={required}
-        aria-invalid={error}
-        aria-describedby={textareaAriaDescribedBy}
-        class={twMerge(
-          textareaClass,
-          showToolbar && "rounded-t-none",
-          maxLength != null && "pb-9",
-        )}
-        onInput={handleInput}
-        onChange={handleChange}
-        onBlur={onBlur}
-        onFocus={onFocus}
-        onKeyDown={onKeyDown}
-        onPaste={handleMdPaste}
-      />
-    );
-
-    /**
-     * `relative` + 内叠字数：`textarea` 仍 `flex-1` 撑满，底部 `pb-9` 预留给字数条，避免正文与提示重叠。
-     */
-    const editorBody = maxLength != null
-      ? (
-        <div
-          class={twMerge(
-            "relative flex min-w-0 flex-col",
-            showSplitDesktop ? "min-h-0 flex-1 overflow-hidden" : "flex-1",
-          )}
-        >
-          {textareaNode}
-          <span
-            ref={charCountRef}
-            id={charCountDescId}
-            class={MD_CHAR_COUNT_BADGE_CLS}
-            aria-live="polite"
-          />
-        </div>
-      )
-      : textareaNode;
-
-    const editorPane = (
-      <div
-        class={showSplit
-          ? twMerge(
-            "min-w-0 flex flex-col",
-            showSplitDesktop ? "min-h-0 flex-1 overflow-hidden" : "flex-1",
-          )
-          : "min-w-0 flex flex-col"}
-        hidden={singlePaneMode && tab !== "edit" ? true : undefined}
-      >
-        {editorBody}
-      </div>
-    );
-
-    const previewPane = showPreviewPane
-      ? (
-        <div
-          class={showSplit
+        /**
+         * 分栏宽屏：textarea 填满左栏并在内部滚动；单栏保持 min-height + 纵向 resize。
+         */
+        const textareaClass = twMerge(
+          textareaBase,
+          showSplitDesktop
             ? twMerge(
-              "min-w-0 flex flex-col",
-              showSplitDesktop ? "min-h-0 flex-1 overflow-hidden" : "flex-1",
+              editorMinHeightClass,
+              "md:min-h-0 md:h-full md:flex-1 md:basis-0 md:resize-none",
+              MD_SPLIT_SCROLL_HIDE,
             )
-            : "min-w-0 flex flex-col"}
-          hidden={singlePaneMode && tab !== "preview" ? true : undefined}
-        >
-          <div
-            id={previewRegionId}
-            ref={previewRef}
-            class={twMerge(
-              previewShellClass,
-              showToolbar && "rounded-t-none",
-            )}
-            role="region"
-            aria-label={m.previewLabel}
-          />
-        </div>
-      )
-      : null;
+            : editorMinHeightClass,
+          /**
+           * 有工具栏时取消内层 2px ring 与顶边框：避免与工具栏 `border-b`、外壳 1px
+           * 聚焦边框叠成粗条。聚焦线只保留外壳与工具栏底部分隔的 1px。
+           */
+          showToolbar
+            ? "border-t-0 focus:ring-0"
+            : controlBlueFocusRing(!hideFocusRing),
+          error && controlErrorBorder,
+          error && !hideFocusRing && !showToolbar &&
+            controlErrorFocusRing(true),
+          readOnly && readOnlyTextareaCls,
+        );
 
-    return (
-      <div
-        ref={rootRef}
-        id={editorRootDomId}
-        class={twMerge(
-          "relative flex min-h-0 flex-col overflow-hidden rounded-lg border border-slate-300 dark:border-slate-600",
-          !hideFocusRing &&
-            "has-[textarea:focus]:border-blue-500 dark:has-[textarea:focus]:border-blue-400",
-          "[&.md-editor-fullscreen]:fixed [&.md-editor-fullscreen]:inset-0 [&.md-editor-fullscreen]:z-9999 [&.md-editor-fullscreen]:border-0 [&.md-editor-fullscreen]:bg-white [&.md-editor-fullscreen]:dark:bg-slate-900 [&.md-editor-fullscreen]:flex [&.md-editor-fullscreen]:flex-col",
-          mdSizeRoot[size],
-          className,
-        )}
-      >
-        {showToolbar && (
-          <div
+        /**
+         * 分栏宽屏：预览根节点参与 flex 等高，内容在内部滚动；单栏沿用 min-height + overflow-auto。
+         */
+        const previewShellClass = twMerge(
+          "code-block-prism rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800/50 p-3",
+          showSplitDesktop
+            ? twMerge("md:min-h-0 md:flex-1 md:basis-0", MD_SPLIT_SCROLL_HIDE)
+            : twMerge("overflow-auto", minPrev),
+          !showSplitDesktop && minPrev,
+          previewProseCls,
+        );
+
+        const textareaNode = (
+          <textarea
+            ref={bindAutoFocusRef(textareaRef, autoFocus)}
+            id={id}
+            {...autoFocusAttr(autoFocus)}
+            name={name}
+            rows={rows}
+            value={props.value}
+            placeholder={placeholder}
+            disabled={disabled}
+            readOnly={readOnly}
+            maxLength={maxLength}
+            spellcheck={false}
+            autocapitalize="off"
+            autocomplete="off"
+            aria-label={ariaLabel}
+            aria-required={required}
+            aria-invalid={error}
+            aria-describedby={textareaAriaDescribedBy}
             class={twMerge(
-              toolbarWrapCls,
-              "flex w-full min-h-10 shrink-0 items-center gap-2",
+              textareaClass,
+              showToolbar && "rounded-t-none",
+              maxLength != null && "pb-9",
             )}
-            role="toolbar"
-            aria-label={m.toolbarAriaLabel}
-            onMouseDown={(e: Event) => {
-              const t = e.target;
-              if (isDomElement(t) && t.closest("select")) return;
-              /**
-               * 点在 `button` 上时不 `preventDefault`：与 RichTextEditor 一样用于避免 textarea 失焦，
-               * 但部分环境下会阻断后续 `click`，表现为 tabs/全屏钮点击无响应。
-               */
-              if (isDomElement(t) && t.closest("button")) return;
-              e.preventDefault();
-            }}
-          >
-            {
-              /**
-               * 与 RichTextEditor 同款排布：左侧占满剩余宽度（避免图标挤在角落），右侧固定全屏组。
-               */
-            }
-            <div class="flex min-h-9 min-w-0 flex-1 flex-wrap items-center gap-1">
-              {showModeToolbar && (
-                <div class={toolbarGroupCls}>
-                  <MdToolbarItemTip content={m.sourceLabel}>
-                    <button
-                      type="button"
-                      class={mdToolbarToggleClass(
-                        tab === "edit",
-                        !hideFocusRing,
-                      )}
-                      disabled={disabled}
-                      aria-label={m.sourceLabel}
-                      aria-pressed={tab === "edit"}
-                      onClick={() => {
-                        activeTab.value = "edit";
-                      }}
-                    >
-                      <MdToolbarIconSource />
-                    </button>
-                  </MdToolbarItemTip>
-                  <MdToolbarItemTip content={m.renderPreview}>
-                    <button
-                      type="button"
-                      class={mdToolbarToggleClass(
-                        tab === "preview",
-                        !hideFocusRing,
-                      )}
-                      disabled={disabled}
-                      aria-label={m.previewLabel}
-                      aria-pressed={tab === "preview"}
-                      onClick={() => {
-                        activeTab.value = "preview";
-                      }}
-                    >
-                      <MdToolbarIconPreview />
-                    </button>
-                  </MdToolbarItemTip>
-                </div>
+            onInput={handleInput}
+            onChange={handleChange}
+            onBlur={onBlur}
+            onFocus={onFocus}
+            onKeyDown={onKeyDown}
+            onPaste={handleMdPaste}
+          />
+        );
+
+        /**
+         * `relative` + 内叠字数：`textarea` 仍 `flex-1` 撑满，底部 `pb-9` 预留给字数条，避免正文与提示重叠。
+         */
+        const editorBody = maxLength != null
+          ? (
+            <div
+              class={twMerge(
+                "relative flex min-w-0 flex-col",
+                showSplitDesktop ? "min-h-0 flex-1 overflow-hidden" : "flex-1",
               )}
-              {canUploadImage && !readOnly && (
-                <div class={toolbarGroupCls}>
-                  <MdToolbarItemTip content={m.insertImage}>
-                    <button
-                      type="button"
-                      class={twMerge(
-                        toolbarBtnBase,
-                        controlBlueFocusRing(!hideFocusRing),
-                      )}
-                      disabled={disabled}
-                      aria-label={m.insertImage}
-                      onClick={() => {
-                        const el = document.getElementById(mdUploadInputId);
-                        if (el instanceof HTMLInputElement) el.click();
-                      }}
-                    >
-                      <MdToolbarIconImage />
-                    </button>
-                  </MdToolbarItemTip>
-                  <input
-                    id={mdUploadInputId}
-                    type="file"
-                    accept="image/*"
-                    class="hidden"
-                    disabled={disabled}
-                    onChange={handleMdUploadChange}
-                  />
-                </div>
-              )}
+            >
+              {textareaNode}
+              <span
+                ref={bindCharCountRef}
+                id={charCountDescId}
+                class={MD_CHAR_COUNT_BADGE_CLS}
+                aria-live="polite"
+              />
             </div>
-            {allowFullscreen && (
+          )
+          : textareaNode;
+
+        const editorPane = (
+          <div
+            class={showSplit
+              ? twMerge(
+                "min-w-0 flex flex-col",
+                showSplitDesktop ? "min-h-0 flex-1 overflow-hidden" : "flex-1",
+              )
+              : "min-w-0 flex flex-col"}
+            hidden={singlePaneMode && tab !== "edit" ? true : undefined}
+          >
+            {editorBody}
+          </div>
+        );
+
+        const previewPane = showPreviewPane
+          ? (
+            <div
+              class={showSplit
+                ? twMerge(
+                  "min-w-0 flex flex-col",
+                  showSplitDesktop
+                    ? "min-h-0 flex-1 overflow-hidden"
+                    : "flex-1",
+                )
+                : "min-w-0 flex flex-col"}
+              hidden={singlePaneMode && tab !== "preview" ? true : undefined}
+            >
+              <div
+                id={previewRegionId}
+                ref={bindPreviewRef}
+                class={twMerge(
+                  previewShellClass,
+                  showToolbar && "rounded-t-none border-t-0",
+                )}
+                role="region"
+                aria-label={m.previewLabel}
+              />
+            </div>
+          )
+          : null;
+
+        return (
+          <div
+            ref={rootRef}
+            id={editorRootDomId}
+            class={twMerge(
+              "group/md-editor relative flex min-h-0 flex-col overflow-hidden rounded-lg border border-slate-300 dark:border-slate-600",
+              !hideFocusRing &&
+                "has-[textarea:focus]:border-blue-500 dark:has-[textarea:focus]:border-blue-400",
+              "[&.md-editor-fullscreen]:fixed [&.md-editor-fullscreen]:inset-0 [&.md-editor-fullscreen]:z-9999 [&.md-editor-fullscreen]:border-0 [&.md-editor-fullscreen]:bg-white [&.md-editor-fullscreen]:dark:bg-slate-900 [&.md-editor-fullscreen]:flex [&.md-editor-fullscreen]:flex-col",
+              mdSizeRoot[size],
+              className,
+            )}
+          >
+            {showToolbar && (
               <div
                 class={twMerge(
-                  toolbarGroupCls,
-                  "shrink-0 border-r-0 pr-0",
+                  toolbarWrapCls,
+                  "flex w-full min-h-10 shrink-0 items-center gap-2",
+                  !hideFocusRing &&
+                    "group-has-[textarea:focus]/md-editor:border-blue-500 dark:group-has-[textarea:focus]/md-editor:border-blue-400",
                 )}
+                role="toolbar"
+                aria-label={m.toolbarAriaLabel}
+                onMouseDown={(e: Event) => {
+                  const t = e.target;
+                  if (isDomElement(t) && t.closest("select")) return;
+                  /**
+                   * 点在 `button` 上时不 `preventDefault`：与 RichTextEditor 一样用于避免 textarea 失焦，
+                   * 但部分环境下会阻断后续 `click`，表现为 tabs/全屏钮点击无响应。
+                   */
+                  if (isDomElement(t) && t.closest("button")) return;
+                  e.preventDefault();
+                }}
               >
-                <MdToolbarItemTip
-                  content={fs ? m.fullscreenExit : m.fullscreen}
-                >
-                  <button
-                    type="button"
+                {
+                  /**
+                   * 与 RichTextEditor 同款排布：左侧占满剩余宽度（避免图标挤在角落），右侧固定全屏组。
+                   */
+                }
+                <div class="flex min-h-9 min-w-0 flex-1 flex-wrap items-center gap-1">
+                  {showModeToolbar && (
+                    <div class={toolbarGroupCls}>
+                      <MdToolbarItemTip content={m.sourceLabel}>
+                        <button
+                          type="button"
+                          class={mdToolbarToggleClass(
+                            tab === "edit",
+                            !hideFocusRing,
+                          )}
+                          disabled={disabled}
+                          aria-label={m.sourceLabel}
+                          aria-pressed={tab === "edit"}
+                          onClick={() => {
+                            activeTab.value = "edit";
+                          }}
+                        >
+                          <MdToolbarIconSource />
+                        </button>
+                      </MdToolbarItemTip>
+                      <MdToolbarItemTip content={m.renderPreview}>
+                        <button
+                          type="button"
+                          class={mdToolbarToggleClass(
+                            tab === "preview",
+                            !hideFocusRing,
+                          )}
+                          disabled={disabled}
+                          aria-label={m.previewLabel}
+                          aria-pressed={tab === "preview"}
+                          onClick={() => {
+                            activeTab.value = "preview";
+                          }}
+                        >
+                          <MdToolbarIconPreview />
+                        </button>
+                      </MdToolbarItemTip>
+                    </div>
+                  )}
+                  {canUploadImage && !readOnly && (
+                    <div class={toolbarGroupCls}>
+                      <MdToolbarItemTip content={m.insertImage}>
+                        <button
+                          type="button"
+                          class={twMerge(
+                            toolbarBtnBase,
+                            controlBlueFocusRing(!hideFocusRing),
+                          )}
+                          disabled={disabled}
+                          aria-label={m.insertImage}
+                          onClick={() => {
+                            const el = document.getElementById(mdUploadInputId);
+                            if (el instanceof HTMLInputElement) el.click();
+                          }}
+                        >
+                          <MdToolbarIconImage />
+                        </button>
+                      </MdToolbarItemTip>
+                      <input
+                        id={mdUploadInputId}
+                        type="file"
+                        accept="image/*"
+                        class="hidden"
+                        disabled={disabled}
+                        onChange={handleMdUploadChange}
+                      />
+                    </div>
+                  )}
+                </div>
+                {allowFullscreen && (
+                  <div
                     class={twMerge(
-                      toolbarBtnBase,
-                      controlBlueFocusRing(!hideFocusRing),
+                      toolbarGroupCls,
+                      "shrink-0 border-r-0 pr-0",
                     )}
-                    disabled={disabled}
-                    aria-label={fs ? m.fullscreenExit : m.fullscreen}
-                    onClick={toggleMdFullscreen}
                   >
-                    <MdToolbarIconFullscreen exit={fs} />
-                  </button>
-                </MdToolbarItemTip>
+                    <MdToolbarItemTip
+                      content={fs ? m.fullscreenExit : m.fullscreen}
+                    >
+                      <button
+                        type="button"
+                        class={twMerge(
+                          toolbarBtnBase,
+                          controlBlueFocusRing(!hideFocusRing),
+                        )}
+                        disabled={disabled}
+                        aria-label={fs ? m.fullscreenExit : m.fullscreen}
+                        onClick={toggleMdFullscreen}
+                      >
+                        <MdToolbarIconFullscreen exit={fs} />
+                      </button>
+                    </MdToolbarItemTip>
+                  </div>
+                )}
               </div>
             )}
-          </div>
-        )}
-        <div
-          class={twMerge(
-            "flex min-h-0 flex-1 flex-col gap-2",
-            showSplitDesktop &&
-              "md:flex-row md:items-stretch md:overflow-hidden",
-            showSplitDesktop &&
-              (fs ? "md:flex-1 md:min-h-0" : "md:max-h-[70vh]"),
-            showSplitDesktop && editorMinHeightClass,
-          )}
-        >
-          {editorPane}
-          {showSplitDesktop && (
             <div
-              class="w-px shrink-0 self-stretch bg-slate-200 dark:bg-slate-600"
-              aria-hidden="true"
-            />
-          )}
-          {previewPane}
-        </div>
-      </div>
-    );
-  };
+              class={twMerge(
+                "flex min-h-0 flex-1 flex-col gap-2",
+                showSplitDesktop &&
+                  "md:flex-row md:items-stretch md:overflow-hidden",
+                showSplitDesktop &&
+                  (fs ? "md:flex-1 md:min-h-0" : "md:max-h-[70vh]"),
+                showSplitDesktop && editorMinHeightClass,
+              )}
+            >
+              {editorPane}
+              {showSplitDesktop && (
+                <div
+                  class="w-px shrink-0 self-stretch bg-slate-200 dark:bg-slate-600"
+                  aria-hidden="true"
+                />
+              )}
+              {previewPane}
+            </div>
+          </div>
+        );
+      }}
+    </div>
+  );
 }

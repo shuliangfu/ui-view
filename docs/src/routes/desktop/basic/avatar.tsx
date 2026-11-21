@@ -3,7 +3,7 @@
  * 路由: /desktop/basic/avatar
  */
 
-import { Avatar, Paragraph, Title } from "@dreamer/ui-view/basic";
+import { Avatar, AvatarGroup, Paragraph, Title } from "@dreamer/ui-view/basic";
 
 import { CodeBlock } from "@dreamer/ui-view/data-display";
 import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
@@ -42,6 +42,13 @@ const AVATAR_API: ApiRow[] = [
     default: "-",
     description: "无 src 时显示内容（如首字）",
   },
+  ,
+  {
+    name: "shape",
+    type: '"circle" | "square"',
+    default: "circle",
+    description: "圆形或小圆角方形",
+  },
 ];
 
 const importCode = `import { Avatar } from "@dreamer/ui-view/basic";
@@ -78,6 +85,13 @@ const exampleClass = `<Avatar
 >
   B
 </Avatar>`;
+
+const exampleShape = `<Avatar shape="square">方</Avatar>
+<AvatarGroup>
+  <Avatar>A</Avatar>
+  <Avatar>B</Avatar>
+  <Avatar>C</Avatar>
+</AvatarGroup>`;
 
 /** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
 export const metadata = {
@@ -190,6 +204,27 @@ export default function BasicAvatar() {
           <CodeBlock
             title="代码示例"
             code={exampleClass}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
+          />
+        </div>
+
+        <div class="space-y-4">
+          <Title level={3}>形状与头像组</Title>
+          <div class="flex flex-wrap items-center gap-4">
+            <Avatar shape="square">方</Avatar>
+            <AvatarGroup>
+              <Avatar>A</Avatar>
+              <Avatar>B</Avatar>
+              <Avatar>C</Avatar>
+            </AvatarGroup>
+          </div>
+          <CodeBlock
+            title="代码示例"
+            code={exampleShape}
             language="tsx"
             showLineNumbers
             copyable

@@ -5,6 +5,7 @@
 
 import { twMerge } from "tailwind-merge";
 import type { JSXRenderable } from "@dreamer/view";
+import { type MaybeSignal, readMaybeSignal } from "../form/maybe-signal.ts";
 import type { SizeVariant } from "../types.ts";
 import { setConfig } from "./config-store.ts";
 import type { ConfigProviderConfig, ThemeMode } from "./config-store.ts";
@@ -28,8 +29,8 @@ export interface ConfigProviderProps {
    * 与顶层 `theme`、`locale` 等可同时使用：**顶层 props 优先**。
    */
   config?: ConfigProviderBatchConfig;
-  /** 主题：light / dark / system；system 时依 prefers-color-scheme，无则 light */
-  theme?: ThemeMode;
+  /** 主题：light / dark / system；system 时依 prefers-color-scheme，无则 light。请传 Signal 或 getter，勿传快照 */
+  theme?: MaybeSignal<ThemeMode>;
   /** 语言/地区，如 zh-CN、en-US */
   locale?: string;
   /** 组件默认尺寸（如 Button、Input 的 size） */
@@ -53,7 +54,7 @@ function resolveConfigProviderFields(props: ConfigProviderProps): {
 } {
   const batch = props.config;
   const themeFromBatch = batch?.theme ?? batch?.themeMode;
-  const theme = props.theme ?? themeFromBatch ?? "light";
+  const theme = readMaybeSignal(props.theme) ?? themeFromBatch ?? "light";
   return {
     theme,
     locale: props.locale ?? batch?.locale,
@@ -62,32 +63,41 @@ function resolveConfigProviderFields(props: ConfigProviderProps): {
   };
 }
 
-export function ConfigProvider(props: ConfigProviderProps): JSXRenderable {
-  const { children, class: className } = props;
+function readResolvedConfig(props: ConfigProviderProps): {
+  resolvedTheme: "light" | "dark";
+  locale: string | undefined;
+} {
   const { theme, locale, componentSize, prefixCls } =
     resolveConfigProviderFields(props);
-
   setConfig({
     theme,
     locale,
     componentSize,
     prefixCls,
   });
-
   const resolvedTheme = theme === "system"
     ? (typeof globalThis.matchMedia !== "undefined" &&
         globalThis.matchMedia("(prefers-color-scheme: dark)").matches
       ? "dark"
       : "light")
     : theme;
-  const themeClass = resolvedTheme === "dark" ? "dark" : "";
+  return { resolvedTheme, locale };
+}
 
-  /** 直接返回 VNode，与 @dreamer/view 及 shared/basic、charts 约定一致 */
+export function ConfigProvider(props: ConfigProviderProps): JSXRenderable {
+  const { children, class: className } = props;
+
+  /** 稳定根节点；theme / locale 用属性 getter 读，避免 setup 快照且不重挂子树 */
   return (
     <div
-      class={twMerge("config-provider", themeClass, className)}
-      data-theme={resolvedTheme}
-      data-locale={locale ?? undefined}
+      class={() =>
+        twMerge(
+          "config-provider",
+          readResolvedConfig(props).resolvedTheme === "dark" ? "dark" : "",
+          className,
+        )}
+      data-theme={() => readResolvedConfig(props).resolvedTheme}
+      data-locale={() => readResolvedConfig(props).locale ?? undefined}
     >
       {children}
     </div>

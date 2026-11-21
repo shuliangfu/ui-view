@@ -315,7 +315,6 @@ export default function FormRadioGroup() {
                 name="radio-err"
                 options={options}
                 value="r1"
-                onChange={() => {}}
                 error
               />
             </FormItem>
@@ -324,7 +323,6 @@ export default function FormRadioGroup() {
                 name="radio-dis"
                 options={options}
                 value="r1"
-                onChange={() => {}}
                 disabled
               />
             </FormItem>
@@ -334,14 +332,12 @@ export default function FormRadioGroup() {
   name="radio-err"
   options={options}
   value="r1"
-  onChange={() => {}}
   error
 />
 <RadioGroup
   name="radio-dis"
   options={options}
   value="r1"
-  onChange={() => {}}
   disabled
 />`}
               language="tsx"

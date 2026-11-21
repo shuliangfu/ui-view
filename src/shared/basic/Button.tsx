@@ -6,15 +6,21 @@
 import { createContext, useContext } from "@dreamer/view";
 import type { JSXRenderable } from "@dreamer/view";
 import { twMerge } from "tailwind-merge";
-import type { ColorVariant, SizeVariant } from "../../shared/types.ts";
-import { resolveFormControlSize } from "../form/form-control-context.ts";
+import type { SizeVariant } from "../../shared/types.ts";
+import {
+  resolveFormControlDisabled,
+  resolveFormControlSize,
+} from "../form/form-control-context.ts";
 import {
   BUTTON_GROUP_CHILD_BASE,
   BUTTON_SIZE_CLASSES,
   BUTTON_STANDALONE_INTERACTIVE_BASE,
   BUTTON_VARIANT_CLASSES,
   BUTTON_VARIANT_GROUP_FOCUS_ACTIVE,
+  type ButtonVariant,
 } from "./button-variants.ts";
+
+export type { ButtonVariant };
 
 export interface ButtonProps {
   /**
@@ -22,11 +28,13 @@ export interface ButtonProps {
    * 勿与 JSX 的 `key={...}` 混淆： reconciler 的 key 写在标签上即可，不必传本属性。
    */
   itemKey?: string | number;
-  /** 语义变体，对应 shared ColorVariant */
-  variant?: ColorVariant;
+  /** 语义变体；在 ColorVariant 上增加 link（文字链外观，仍渲染为 button） */
+  variant?: ButtonVariant;
   /** 尺寸，对应 shared SizeVariant */
   size?: SizeVariant;
-  /** 是否禁用 */
+  /** 为 true 时宽度撑满父级 */
+  block?: boolean;
+  /** 是否禁用；同时继承 Form 的整表禁用上下文 */
   disabled?: boolean;
   /** 是否加载中 */
   loading?: boolean;
@@ -38,6 +46,8 @@ export interface ButtonProps {
   "data-testid"?: string;
   /** 无障碍名称（图标按钮必填） */
   "aria-label"?: string;
+  /** 展开状态，写到原生 button */
+  "aria-expanded"?: boolean | (() => boolean);
   /** 点击回调 */
   onClick?: (e: Event) => void;
   /** 子节点（文案或图标等） */
@@ -89,6 +99,7 @@ export function Button(props: ButtonProps): JSXRenderable {
     itemKey,
     variant = "primary",
     size: sizeProp,
+    block = false,
     disabled = false,
     loading = false,
     type = "button",
@@ -97,8 +108,10 @@ export function Button(props: ButtonProps): JSXRenderable {
     children,
     "data-testid": dataTestId,
     "aria-label": ariaLabel,
+    "aria-expanded": ariaExpanded,
   } = props;
   const size = resolveFormControlSize(sizeProp);
+  const isDisabled = resolveFormControlDisabled(disabled);
 
   const { attached: inAttachedGroup } = useContext(ButtonGroupContext);
 
@@ -116,11 +129,15 @@ export function Button(props: ButtonProps): JSXRenderable {
   return (
     <button
       type={type}
+      ref={(el: HTMLButtonElement | null) => {
+        if (el) el.setAttribute("type", type);
+      }}
       class={twMerge(
         base,
         sizeCls,
         variantCls,
         groupFocusCls,
+        block && "w-full",
         /**
          * `loading` 时原生 `disabled` 会命中 `disabled:*` 灰阶样式；覆盖以保持 primary/danger 等主色，
          * 与「纯禁用」灰按钮区分（仍 `pointer-events-none` 不可点）。
@@ -129,9 +146,10 @@ export function Button(props: ButtonProps): JSXRenderable {
           "disabled:opacity-100 disabled:grayscale-0 disabled:saturate-100",
         className,
       )}
-      disabled={disabled || loading}
+      disabled={isDisabled || loading}
       aria-busy={loading ? true : undefined}
       aria-label={ariaLabel}
+      aria-expanded={ariaExpanded}
       onClick={onClick}
       data-testid={dataTestId}
       data-variant={variant}

@@ -4,6 +4,7 @@
  *
  * **SSR / 无 document：** 浏览器下根节点为静态 `div`，仅**内部**用函数子渲染轨道与控件，避免「整组件返回 `() => tree`」时与 `insert` 的 effect 同层订阅 `current`，重跑会再次执行 `Carousel(props)`、重复 `createSignal` 导致切页空白或乱跳。
  * {@link getDocument} 为 `null` 时同步展开内层，不注册 autoplay 定时器。
+ * **autoplay：** 指针悬停在轮播区域内时暂停，移出后重新等满一个 interval。
  *
  * **受控与父级结构：** `current` 请传 `() => sig.value` 等 getter 即可；勿在父级本征节点下再包一层
  * `{() => <Carousel …/>}`，否则子列表含动态 getter 时 View 无法 canPatch，轮播根会被整块重挂，切换动画失效。
@@ -72,13 +73,6 @@ export type {
   CarouselTransitionEffect,
 } from "./carousel-types.ts";
 export { defaultCarouselMessages } from "./carousel-types.ts";
-
-function carouselAutoplayDelayToWallBoundaryMs(period: number): number {
-  if (!Number.isFinite(period) || period < 1) return 1;
-  const now = Date.now();
-  const nextSlot = Math.floor(now / period) * period + period;
-  return Math.max(1, nextSlot - now);
-}
 
 /**
  * 将原始索引归一化到 `[0, count)`。
@@ -262,6 +256,14 @@ export function Carousel(props: CarouselProps): JSXRenderable {
   const resetAutoplayTokenRef = createSignal(0);
   const resetAutoplay = () => {
     resetAutoplayTokenRef((t) => t + 1);
+  };
+  /** 指针在轮播内时暂停自动播放，移出后重新等满一个 interval。 */
+  const autoplayHoverPausedRef = createSignal(false);
+  const onAutoplayHoverEnter = () => {
+    autoplayHoverPausedRef.value = true;
+  };
+  const onAutoplayHoverLeave = () => {
+    autoplayHoverPausedRef.value = false;
   };
 
   /**
@@ -634,7 +636,7 @@ export function Carousel(props: CarouselProps): JSXRenderable {
   };
 
   /**
-   * 自动播放：链式 `setTimeout` + 墙钟对齐（与 ui-preact 一致）；wrap 或层叠过渡中短延迟重试，避免与 `go` 内 abort 叠用。
+   * 自动播放：链式 `setTimeout`，从启动或手动切页后重新等满一个 interval；wrap 或层叠过渡中短延迟重试，避免与 `go` 内 abort 叠用。
    *
    * **勿在 effect 内直接追踪整条 `props`：** 父级每次渲染常传入新对象引用，会订阅到「整 props」导致本 effect
    * 每帧重跑、反复 `clearAutoplayTimer`，表现为自动播永不触发、子树反复 clean 连手动切页也失灵。
@@ -644,9 +646,11 @@ export function Carousel(props: CarouselProps): JSXRenderable {
     if (getDocument() == null) return;
     /** 手动切页 bump，用于重排计时；须保留订阅 */
     void resetAutoplayTokenRef.value;
+    void autoplayHoverPausedRef.value;
 
     const autoplayOn = untrack(() => props.autoplay === true);
     if (!autoplayOn) return;
+    if (autoplayHoverPausedRef.value) return;
 
     const { count } = untrack(() => carouselSlidesInfo(props));
     if (count <= 1) return;
@@ -708,12 +712,12 @@ export function Carousel(props: CarouselProps): JSXRenderable {
       }
       goRef.current(1);
       armAutoplay(
-        carouselAutoplayDelayToWallBoundaryMs(ms),
+        ms,
         autoplayStep,
       );
     };
 
-    armAutoplay(carouselAutoplayDelayToWallBoundaryMs(ms), autoplayStep);
+    armAutoplay(ms, autoplayStep);
 
     onCleanup(() => {
       autoplayLaneGenRef.current += 1;
@@ -2115,6 +2119,8 @@ export function Carousel(props: CarouselProps): JSXRenderable {
         class={rootDivClass}
         style={rootContainerStyle}
         ref={setCarouselRootRef}
+        onMouseEnter={onAutoplayHoverEnter}
+        onMouseLeave={onAutoplayHoverLeave}
       >
         {buildCarouselTrackElement(true)}
         {showArrows
@@ -2158,6 +2164,8 @@ export function Carousel(props: CarouselProps): JSXRenderable {
       class={rootDivClass}
       style={rootContainerStyle}
       ref={setCarouselRootRef}
+      onMouseEnter={onAutoplayHoverEnter}
+      onMouseLeave={onAutoplayHoverLeave}
     >
       {buildCarouselTrackElement(false)}
       {showArrows

@@ -317,10 +317,25 @@ export function queryToParams(
     fixed?: Record<string, string>;
     /** 参数前缀，如 `"p1"` → `p1_page`、`p1_name`。同页多面板用不同前缀避免抢参数。 */
     prefix?: string;
+    /** Existing address-bar parameters; URL sync replaces only this panel's keys. */
+    currentParams?: URLSearchParams;
+    /** Include empty/reset search fields so their old URL keys are removed. */
+    searchNames?: readonly string[];
   },
 ): URLSearchParams {
-  const p = new URLSearchParams();
+  const p = new URLSearchParams(opts.forUrl ? opts.currentParams : undefined);
   const key = (name: string) => queryParamKey(name, opts.prefix);
+  for (
+    const name of new Set([
+      "page",
+      "pageSize",
+      "sort",
+      "order",
+      ...(opts.searchNames ?? []),
+      ...Object.keys(q.filters),
+      ...Object.keys(opts.fixed ?? {}),
+    ])
+  ) p.delete(key(name));
   if (q.page > 1) p.set(key("page"), String(q.page));
   if (
     !opts.forUrl ||
@@ -854,9 +869,20 @@ export function filterRows(
       const def = search.find((s) => fieldProp(s) === name);
       const field = def?.field ?? name;
       const raw = row[field];
-      const text = raw == null ? "" : String(raw);
+      const normalizeDatetime = def?.type === "datetime" &&
+        (def.match === undefined || def.match === "eq" ||
+          def.match === "from" || def.match === "to");
+      // Picker 写本地时间（含空格），数据源常给 ISO/Z；统一显示时区和分隔符再按输入精度比较。
+      const text = raw == null
+        ? ""
+        : normalizeDatetime
+        ? formatDateTime(raw, "YYYY-MM-DDTHH:mm:ss")
+        : String(raw);
+      const needle = normalizeDatetime
+        ? formatDateTime(val, "YYYY-MM-DDTHH:mm:ss").slice(0, val.length)
+        : val;
       if (def?.type === "multiselect" && !def.match) {
-        const want = val.split(",").map((s) => s.trim()).filter(Boolean);
+        const want = needle.split(",").map((s) => s.trim()).filter(Boolean);
         const have = (Array.isArray(raw) ? raw.map(String) : text.split(","))
           .map((s) => s.trim());
         return want.every((w) => have.includes(w));
@@ -871,20 +897,20 @@ export function filterRows(
       switch (match) {
         case "eq":
           if (def?.type === "date") {
-            return text.slice(0, 10) === val.slice(0, 10);
+            return text.slice(0, 10) === needle.slice(0, 10);
           }
           if (def?.type === "datetime") {
-            return text.slice(0, val.length) === val;
+            return text.slice(0, needle.length) === needle;
           }
-          return text === val;
+          return text === needle;
         case "num":
-          return Number(raw) === Number(val);
+          return Number(raw) === Number(needle);
         case "from":
-          return text.slice(0, val.length) >= val;
+          return text.slice(0, needle.length) >= needle;
         case "to":
-          return text.slice(0, val.length) <= val;
+          return text.slice(0, needle.length) <= needle;
         default:
-          return text.toLowerCase().includes(val.toLowerCase());
+          return text.toLowerCase().includes(needle.toLowerCase());
       }
     })
   );
@@ -1235,6 +1261,24 @@ export function createLocalDataSource(
       store = rows.map((r) => ({ ...r }));
     },
   };
+  /**
+   * setField 始终提供：行内 switch／单元格编辑要写回本地数据。
+   * create／update／remove／import 仍受 writable 控制，避免无表单演示出现增删按钮。
+   */
+  src.setField = (ids, field, value): BulkResult => {
+    const failed: { id: string; error: string }[] = [];
+    let removed = 0;
+    for (const id of ids) {
+      const i = store.findIndex((r) => idOf(r) === id);
+      if (i < 0) failed.push({ id, error: "not found" });
+      else {
+        store[i] = { ...store[i], [field]: value };
+        removed++;
+      }
+    }
+    if (removed) changed();
+    return { removed, failed };
+  };
   if (opts.writable === false) return src;
 
   src.create = (values): WriteResult => {
@@ -1259,20 +1303,6 @@ export function createLocalDataSource(
       else if (store[i].locked) failed.push({ id, error: "locked" });
       else {
         store.splice(i, 1);
-        removed++;
-      }
-    }
-    if (removed) changed();
-    return { removed, failed };
-  };
-  src.setField = (ids, field, value): BulkResult => {
-    const failed: { id: string; error: string }[] = [];
-    let removed = 0;
-    for (const id of ids) {
-      const i = store.findIndex((r) => idOf(r) === id);
-      if (i < 0) failed.push({ id, error: "not found" });
-      else {
-        store[i] = { ...store[i], [field]: value };
         removed++;
       }
     }
@@ -1451,7 +1481,7 @@ export function resolveViewActionsCfg(
   return view?.actions;
 }
 
-/** 从 view.descriptions 上挑出可透传给 Descriptions 的参数（不含 items／title）。 */
+/** 从 view.descriptions 上挑出可透传给 Descriptions 的参数（不含 rows／title）。 */
 const VIEW_DESCRIPTIONS_KEYS = [
   "column",
   "bordered",

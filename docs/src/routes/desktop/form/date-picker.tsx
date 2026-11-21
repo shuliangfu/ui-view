@@ -137,6 +137,14 @@ const DATEPICKER_API: ApiRow[] = [
     description:
       "本地化文案；具体字段见上文「文案（messages）」独立表格，勿将字段摊入本表",
   },
+  ,
+  {
+    name: "allowClear",
+    type: "boolean",
+    default: "false",
+    description:
+      "有值时显示清除按钮，清空后按当前 mode 写出空字符串、空区间或空数组",
+  },
 ];
 
 const importCode =
@@ -194,6 +202,10 @@ const form = createForm({
 </Form>`;
 
 /** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+const dateClearVal = createSignal("2026-11-18");
+
+const exampleAllowClear = `<DatePicker value={val} allowClear />`;
+
 export const metadata = {
   title: "DatePicker 日期选择 · ui-view",
 };
@@ -377,7 +389,7 @@ export default function FormDatePicker() {
               />
             </FormItem>
             <FormItem label="禁用">
-              <DatePicker value={today} disabled onChange={() => {}} />
+              <DatePicker value={today} disabled />
             </FormItem>
             <CodeBlock
               title="代码示例"
@@ -395,7 +407,7 @@ const valLg = createSignal(today);
 <DatePicker value={valSm} size="sm" />
 <DatePicker value={valMd} size="md" />
 <DatePicker value={valLg} size="lg" />
-<DatePicker value={today} disabled onChange={() => {}} />`}
+<DatePicker value={today} disabled />`}
               language="tsx"
               showLineNumbers
               copyable
@@ -526,6 +538,25 @@ const valLg = createSignal(today);
   placeholder="挂载后自动聚焦"
   autoFocus
 />`}
+          language="tsx"
+          showLineNumbers
+          copyable
+          wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
+        />
+      </section>
+
+      <section class="space-y-4">
+        <Title level={3}>允许清除</Title>
+        <div class="max-w-sm">
+          <DatePicker
+            value={dateClearVal}
+            allowClear
+          />
+        </div>
+        <CodeBlock
+          title="代码示例"
+          code={exampleAllowClear}
           language="tsx"
           showLineNumbers
           copyable

@@ -15,13 +15,16 @@ import {
   OutlinedField,
   resolveOutlinedLabel,
 } from "./outlined-field.tsx";
-import { resolveFormControlSize } from "./form-control-context.ts";
+import {
+  resolveFormControlDisabled,
+  resolveFormControlSize,
+} from "./form-control-context.ts";
 import {
   controlBlueFocusRing,
   controlErrorBorder,
   controlErrorFocusRing,
 } from "./input-focus-ring.ts";
-import { commitMaybeSignal, type MaybeSignal } from "./maybe-signal.ts";
+import { createOptionalValueState, type MaybeSignal } from "./maybe-signal.ts";
 import { autoFocusAttr, bindAutoFocusRef } from "./auto-focus.ts";
 import type { SizeVariant } from "../types.ts";
 
@@ -122,15 +125,15 @@ function TextareaLengthDisplay(props: {
   remainingFormatter: (remaining: number, maxLength: number) => string;
 }) {
   const { value, maxLength, remainingFormatter } = props;
-  const s = typeof value === "function" ? value() : (value ?? "");
-  const len = s.length;
-  const remaining = Math.max(0, maxLength - len);
   return (
     <span
       class="mt-1 block text-left text-xs text-slate-500 dark:text-slate-400"
       aria-live="polite"
     >
-      {remainingFormatter(remaining, maxLength)}
+      {() => {
+        const s = typeof value === "function" ? value() : (value ?? "");
+        return remainingFormatter(Math.max(0, maxLength - s.length), maxLength);
+      }}
     </span>
   );
 }
@@ -138,7 +141,7 @@ function TextareaLengthDisplay(props: {
 export function Textarea(props: TextareaProps): JSXRenderable {
   const {
     size: sizeProp,
-    disabled = false,
+
     placeholder,
     label,
     floatingLabel = false,
@@ -164,6 +167,8 @@ export function Textarea(props: TextareaProps): JSXRenderable {
     autoFocus = false,
     messages,
   } = props;
+  const disabled = resolveFormControlDisabled(props.disabled);
+  const selected = createOptionalValueState(value, "");
   const m = { ...defaultTextareaMessages, ...messages };
   const size = resolveFormControlSize(sizeProp);
 
@@ -171,7 +176,7 @@ export function Textarea(props: TextareaProps): JSXRenderable {
   const fromFormItem = useContext(FormItemControlIdContext);
   const resolvedId = id ?? fromFormItem;
 
-  // 禁止在组件体内读 value()：会订阅 signal，导致整树重跑、textarea 失焦。value 透传给 <textarea value={value} />。
+  // 禁止在组件体内读 value()：会订阅 signal，导致整树重跑、textarea 失焦。value 透传给 <textarea value={selected.bind} />。
 
   /**
    * 受控 `value` 为 Signal 时由组件写回，再调用外部 `onInput`。
@@ -179,7 +184,7 @@ export function Textarea(props: TextareaProps): JSXRenderable {
    * @param e - 原生 input 事件
    */
   const handleInput = (e: Event) => {
-    commitMaybeSignal(value, (e.target as HTMLTextAreaElement).value);
+    selected.commit((e.target as HTMLTextAreaElement).value);
     onInput?.(e);
   };
 
@@ -189,7 +194,7 @@ export function Textarea(props: TextareaProps): JSXRenderable {
    * @param e - 原生 change 事件
    */
   const handleChange = (e: Event) => {
-    commitMaybeSignal(value, (e.target as HTMLTextAreaElement).value);
+    selected.commit((e.target as HTMLTextAreaElement).value);
     onChange?.(e);
   };
 
@@ -275,7 +280,7 @@ export function Textarea(props: TextareaProps): JSXRenderable {
       {field}
       {() => (
         <TextareaLengthDisplay
-          value={value}
+          value={selected.bind}
           maxLength={maxLength}
           remainingFormatter={m.remaining}
         />

@@ -218,7 +218,14 @@ export const SEARCH_CONFIG_API: DocsApiTableRow[] = [
     name: "title",
     type: "string | () => string",
     default: "-",
-    description: "搜索弹层标题",
+    description: "搜索弹层标题（仅 modal 模式）",
+  },
+  {
+    name: "mode",
+    type: '"modal" | "expand"',
+    default: '"modal"',
+    description:
+      "搜索展示方式。modal 为弹窗；expand 时点击工具栏搜索，在工具栏下方展开或收起表单。modal、autoFullscreen、mobileAutoFullscreen 仅在 modal 模式下生效",
   },
   {
     name: "props",
@@ -595,11 +602,11 @@ export const VIEW_CONFIG_API: DocsApiTableRow[] = [
     type: "ViewDescriptionsProps",
     default: "-",
     description:
-      "透传给内置详情 Descriptions 的参数（column、size、bordered、layout、colon、labelAlign、labelColPercent、labelMinWidth…）。items／title 由面板接管：items 由 view.props 生成，title 是弹层／页面标题。本插槽缺省 column=1、size=sm、bordered=true。有 render 或 DataView children 时不生效。详见 ViewDescriptionsProps 表",
+      "透传给内置详情 Descriptions 的参数（column、size、bordered、layout、colon、labelAlign、labelColPercent、labelMinWidth…）。rows／title 由面板接管：rows 由 view.props 生成，title 是弹层／页面标题。本插槽缺省 column=1、size=sm、bordered=true。有 render 或 DataView children 时不生效。详见 ViewDescriptionsProps 表",
   },
 ];
 
-/** view.descriptions 透传（不含 items／title） */
+/** view.descriptions 透传（不含 rows／title） */
 export const VIEW_DESCRIPTIONS_PROPS_API: DocsApiTableRow[] = [
   {
     name: "column",
@@ -1064,9 +1071,10 @@ export const FORM_ACTION_CONTEXT_API: DocsApiTableRow[] = [
   },
   {
     name: "submit",
-    type: "() => Promise<void>",
+    type: "() => Promise<boolean>",
     default: "-",
-    description: "走内置校验并提交（create／update）",
+    description:
+      "走内置校验并提交（create／update）；成功返回true，校验失败、忙碌或服务端拒绝返回false",
   },
   {
     name: "close",
@@ -1831,9 +1839,10 @@ export const FORM_RENDER_CTX_API: DocsApiTableRow[] = [
   },
   {
     name: "submit",
-    type: "() => Promise<void>",
+    type: "() => Promise<boolean>",
     default: "-",
-    description: "走内置校验 + ds.create／update。完全自管提交时可忽略",
+    description:
+      "走内置校验 + ds.create／update；成功返回true，失败返回false。完全自管提交时可忽略",
   },
   {
     name: "setBusy",
@@ -2050,6 +2059,134 @@ export const DATA_ALERT_CONFIG_API: DocsApiTableRow[] = [
     default: "-",
     description:
       "可选识别键，与 message／type／description 一起构成提示身份。身份变化，或先把 alert 置空再传入，已关闭的提示会再次显示",
+  },
+];
+
+/** DataPanel／DataView 的 noticeBar 对象配置（透传 NoticeBar 全部参数，另加 show／key） */
+export const DATA_NOTICE_BAR_CONFIG_API: DocsApiTableRow[] = [
+  {
+    name: "content",
+    type: "unknown | unknown[]",
+    default: "-",
+    description:
+      '通知文案。字符串／节点，或数组（一次一条）。也可用 noticeBar="……" 字符串简写，等价于只传 content',
+  },
+  {
+    name: "children",
+    type: "unknown",
+    default: "-",
+    description: "子节点，与 content 二选一，children 优先",
+  },
+  {
+    name: "tone",
+    type: '"info" | "success" | "warning" | "danger"',
+    default: '"info"',
+    description: "色调，决定背景、边框与默认图标颜色",
+  },
+  {
+    name: "icon",
+    type: "boolean | unknown",
+    default: "false",
+    description:
+      "默认不显示。写 icon 即用默认 info 图标，颜色随 tone；也可传入自定义节点",
+  },
+  {
+    name: "closable",
+    type: "boolean",
+    default: "true（本插槽）",
+    description:
+      "是否显示关闭按钮。单独使用 NoticeBar 时默认 false；在 DataPanel／DataView 的 noticeBar 插槽里默认 true。传 false 则固定展示、不可关闭",
+  },
+  {
+    name: "onClose",
+    type: "() => void",
+    default: "-",
+    description:
+      "点击关闭时回调。NoticeBar 会自行隐藏，面板／详情同时记下已关闭并卸载通知条，然后再调用本回调。若设置了 closeConfirm，需在确认后才会隐藏并调用",
+  },
+  {
+    name: "closeConfirm",
+    type: "string",
+    default: "-",
+    description:
+      "关闭前的确认文案，透传给 NoticeBar。传入后点击关闭会先弹出气泡，取消不关闭，确认后才隐藏并调用 onClose",
+  },
+  {
+    name: "closeKey",
+    type: "string",
+    default: "-",
+    description:
+      "Cookie 名，透传给 NoticeBar。关闭后写入该 cookie（值 1，有效期一年），之后刷新或 SSR 都不再显示",
+  },
+  {
+    name: "visible",
+    type: "boolean",
+    default: "-",
+    description: "受控可见，透传给 NoticeBar",
+  },
+  {
+    name: "onClick",
+    type: "() => void",
+    default: "-",
+    description: "整条点击",
+  },
+  {
+    name: "scrollable",
+    type: "boolean",
+    default: "false",
+    description: "开启滚动。水平从右向左循环；垂直从下往上；数组时一次一条",
+  },
+  {
+    name: "speed",
+    type: '"fast" | "medium" | "slow" | number',
+    default: "medium",
+    description:
+      "滚动速度。三档或数字（像素/秒）：fast 120、medium 60、slow 30",
+  },
+  {
+    name: "direction",
+    type: '"horizontal" | "vertical"',
+    default: "horizontal",
+    description: "滚动方向。horizontal 从右向左，vertical 从下往上",
+  },
+  {
+    name: "interval",
+    type: "number",
+    default: "3",
+    description: "当前条展示秒数，到时再滚下一条。仅多条或垂直滚动时生效",
+  },
+  {
+    name: "rounded",
+    type: 'boolean | "sm" | "md" | "lg" | "full"',
+    default: "false",
+    description:
+      "圆角，默认 false 为直角。写 rounded 即为 rounded-lg；也可写 sm／md／lg／full",
+  },
+  {
+    name: "class",
+    type: "string",
+    default: "-",
+    description: "加在 NoticeBar 根节点上的额外 class",
+  },
+  {
+    name: "messages",
+    type: "Partial<{ close: string }>",
+    default: '{ close: "关闭" }',
+    description: "覆盖关闭按钮的 aria-label 等内置文案",
+  },
+  {
+    name: "show",
+    type: "boolean | (() => boolean)",
+    default: "true",
+    description:
+      "为 false（或函数返回 false）时不渲染通知条，配置可保留。写法与字段／按钮的 show 一致。函数在渲染时求值",
+  },
+  {
+    name: "key",
+    type: "string",
+    default: "-",
+    description:
+      "可选识别键，与 tone／content 一起构成通知身份。身份变化，或先把 noticeBar 置空再传入，已关闭的通知会再次显示",
   },
 ];
 
@@ -2304,7 +2441,7 @@ export const DATA_DISPLAY_TYPE_SECTIONS: DataDisplayTypeSection[] = [
     title: "SearchConfig",
     rows: SEARCH_CONFIG_API,
     lead:
-      "搜索弹层配置。Modal 参数写在 modal 上（width 缺省 md、maxHeight、fullscreenable 全屏按钮等）。autoFullscreen 为打开即全屏（所有端）；mobileAutoFullscreen 为仅移动端打开即全屏；这两项写在 SearchConfig 上，缺省 false。",
+      "搜索配置。mode 默认 modal（弹窗）；expand 时点击工具栏搜索，在工具栏下方展开或收起表单。弹窗参数写在 modal 上（width 缺省 md、maxHeight、fullscreenable 全屏按钮等）。autoFullscreen 为打开即全屏（所有端）；mobileAutoFullscreen 为仅移动端打开即全屏；这两项以及 modal 仅在 mode 为 modal 时生效，缺省 false。",
   },
   {
     id: "SearchField",
@@ -2337,7 +2474,7 @@ export const DATA_DISPLAY_TYPE_SECTIONS: DataDisplayTypeSection[] = [
     title: "ViewDescriptionsProps",
     rows: VIEW_DESCRIPTIONS_PROPS_API,
     lead:
-      "view.descriptions 的透传对象：Descriptions 的全部参数，但 items／title 由面板接管。items 由 view.props 生成，title 是弹层／页面标题。本插槽缺省 column=1、size=sm、bordered=true。有 view.render 或 DataView children 时不生效。",
+      "view.descriptions 的透传对象：Descriptions 的全部参数，但 rows／title 由面板接管。rows 由 view.props 生成，title 是弹层／页面标题。本插槽缺省 column=1、size=sm、bordered=true。有 view.render 或 DataView children 时不生效。",
   },
   {
     id: "DataChromeModalConfig",
@@ -2530,6 +2667,13 @@ export const DATA_DISPLAY_TYPE_SECTIONS: DataDisplayTypeSection[] = [
       "DataPanel／DataView 的 alert 对象配置：完整透传 Alert 的全部参数，另加 show／key。字符串简写只表示 message。",
   },
   {
+    id: "DataNoticeBarConfig",
+    title: "DataNoticeBarConfig",
+    rows: DATA_NOTICE_BAR_CONFIG_API,
+    lead:
+      "DataPanel／DataView 的 noticeBar 对象配置：完整透传 NoticeBar 的全部参数，另加 show／key。字符串简写只表示 content。",
+  },
+  {
     id: "PanelPaginationConfig",
     title: "PanelPaginationConfig",
     rows: PANEL_PAGINATION_CONFIG_API,
@@ -2645,6 +2789,7 @@ export const DATA_PANEL_EXTRA_TYPE_IDS: string[] = [
   "ImportResult",
   "SyncUrl",
   "DataAlertConfig",
+  "DataNoticeBarConfig",
   "PanelPaginationConfig",
   "PaginationMessages",
   "DataChromeTab",
@@ -2690,6 +2835,7 @@ export const DATA_VIEW_TYPE_IDS: string[] = [
   "BulkResult",
   "ImportResult",
   "DataAlertConfig",
+  "DataNoticeBarConfig",
   "DataChromeTab",
   "DataViewHandle",
   "DescriptionsLabelAlign",

@@ -515,13 +515,24 @@ export {
   IconZoomOut,
 } from "./icons/mod.ts";
 export { Paragraph, Text, Title } from "./Typography.tsx";
-export type { ParagraphProps, TextProps, TitleProps } from "./Typography.tsx";
+export type {
+  ParagraphProps,
+  TextProps,
+  TitleProps,
+  TypographyMessages,
+  TypographyType,
+} from "./Typography.tsx";
+export { defaultTypographyMessages } from "./Typography.tsx";
 export { Badge } from "./Badge.tsx";
 export type { BadgeProps } from "./Badge.tsx";
-export { Avatar } from "./Avatar.tsx";
-export type { AvatarProps, AvatarSize } from "./Avatar.tsx";
+export { Avatar, AvatarGroup } from "./Avatar.tsx";
+export type { AvatarGroupProps, AvatarProps, AvatarSize } from "./Avatar.tsx";
 export { defaultSkeletonMessages, Skeleton } from "./Skeleton.tsx";
-export type { SkeletonMessages, SkeletonProps } from "./Skeleton.tsx";
+export type {
+  SkeletonMessages,
+  SkeletonProps,
+  SkeletonVariant,
+} from "./Skeleton.tsx";
 export { defaultSpinnerMessages, Spinner } from "./Spinner.tsx";
 export type { SpinnerMessages, SpinnerProps } from "./Spinner.tsx";
 

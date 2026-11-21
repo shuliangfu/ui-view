@@ -302,28 +302,24 @@ const form = createForm({
                 size="xs"
                 class="w-full"
                 options={OPTIONS}
-                value=""
                 placeholder="xs"
               />
               <Select
                 size="sm"
                 class="w-full"
                 options={OPTIONS}
-                value=""
                 placeholder="sm"
               />
               <Select
                 size="md"
                 class="w-full"
                 options={OPTIONS}
-                value=""
                 placeholder="md"
               />
               <Select
                 size="lg"
                 class="w-full"
                 options={OPTIONS}
-                value=""
                 placeholder="lg"
               />
             </div>

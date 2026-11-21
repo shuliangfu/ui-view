@@ -6,8 +6,8 @@
  *
  * **数据源与 View 函数槽 patch：** 首轮挂载后父级 VNode patch 只会 merge 同一 `liveProps` 对象并 bump 子树，
  * **不会再次调用** `Table()`；若在组件体顶层解构 `dataSource`，内层 `return () =>` 会永远读到首帧数组，
- * `onCellChange` 更新父级后表格仍展示旧数据。故 **`dataSource` 须在每次渲染 getter 内从 `props.dataSource` 读取**
- * （或行选择回调里读 `props.dataSource`）；运行时见 `@dreamer/view` 的 `reconcileIntrinsicFunctionChild`（`vnode-mount.ts`）。
+ * `onCellChange` 更新父级后表格仍展示旧数据。故 **`dataSource` 须在每次渲染 getter 内用 `readMaybeSignal(props.dataSource)` 读取**
+ * （或行选择回调里同样读取）；可传 `T[]`、Signal 或 getter。运行时见 `@dreamer/view` 的 `reconcileIntrinsicFunctionChild`（`vnode-mount.ts`）。
  */
 
 import { createEffect, createSignal, type Signal } from "@dreamer/view";
@@ -18,6 +18,7 @@ import { IconChevronDown } from "../../shared/basic/icons/ChevronDown.tsx";
 import { IconChevronLeft } from "../../shared/basic/icons/ChevronLeft.tsx";
 import { IconChevronRight } from "../../shared/basic/icons/ChevronRight.tsx";
 import { IconChevronUp } from "../../shared/basic/icons/ChevronUp.tsx";
+import { readMaybeSignal } from "../../shared/form/maybe-signal.ts";
 import { getPaginationState } from "../../shared/navigation/pagination-utils.ts";
 import {
   focusSelectAllHost,
@@ -62,9 +63,7 @@ export type {
 } from "./table-types.ts";
 export { defaultTableMessages } from "./table-types.ts";
 
-export function Table<
-  T extends Record<string, unknown> = Record<string, unknown>,
->(
+export function Table<T = unknown>(
   props: TableProps<T>,
 ): JSXRenderable {
   const {
@@ -82,6 +81,7 @@ export function Table<
     title,
     extra,
     pagination: paginationConfig,
+    scroll,
     onSelectChange,
     selectedRowKeys: selectedRowKeysProp,
     selectionType = "checkbox",
@@ -101,6 +101,12 @@ export function Table<
 
   /** 分页当前页（非受控时使用） */
   const internalPage = createSignal(1);
+  /** 每页条数（未传 `pagination.pageSize` 时使用） */
+  const internalPageSize = createSignal(
+    paginationConfig !== undefined && paginationConfig !== false
+      ? (paginationConfig.pageSize ?? 10)
+      : 10,
+  );
 
   /** 由扁平 props 合成的行选择配置，供内部逻辑复用 */
   const rowSelection = onSelectChange
@@ -196,7 +202,8 @@ export function Table<
 
   const getKey = (record: T, index: number): string => {
     if (typeof rowKey === "function") return rowKey(record, index);
-    const k = record[rowKey as keyof T];
+    const rec = record as Record<PropertyKey, unknown>;
+    const k = rec[rowKey as PropertyKey];
     return k != null ? String(k) : `row-${index}`;
   };
 
@@ -246,8 +253,8 @@ export function Table<
     }
 
     /** 须读 `props.dataSource`：函数槽 patch 会更新 `liveProps`，顶层解构的数组会停留在首帧 */
-    const selectedRows = props.dataSource.filter((record, index) =>
-      newSelected.has(getKey(record, index))
+    const selectedRows = (readMaybeSignal(props.dataSource) ?? []).filter(
+      (record, index) => newSelected.has(getKey(record, index)),
     );
     rowSelection.onChange?.(selectedRows);
   };
@@ -271,9 +278,10 @@ export function Table<
       selectedRef.value = newSelected;
     }
 
-    const selectedRows = props.dataSource.filter((r, i) =>
-      newSelected.has(getKey(r, i))
-    );
+    const selectedRows = (readMaybeSignal(props.dataSource) ?? []).filter((
+      r,
+      i,
+    ) => newSelected.has(getKey(r, i)));
     rowSelection.onChange?.(selectedRows);
   };
 
@@ -290,7 +298,7 @@ export function Table<
          * 每次子槽 bump 后重跑须从 `props` 取最新数据源（与运行时 `liveProps` 同一引用，patch 时会 assign 覆盖）。
          * 禁止依赖组件首次调用时在闭包内缓存的 `dataSource` 常量。
          */
-        const dataSource = props.dataSource;
+        const dataSource = readMaybeSignal(props.dataSource) ?? [];
         /**
          * 列定义须同步从 `props.columns` 读取：若仍用函数组件首帧解构的 `columns` 闭包，
          * patch 后表体仍渲染旧列（含 `render`/`onClick`），行内按钮等会表现为点击无响应。
@@ -331,7 +339,7 @@ export function Table<
         const paginationEnabled = paginationConfig !== undefined &&
           paginationConfig !== false;
         const pageSize = paginationEnabled
-          ? (paginationConfig?.pageSize ?? 10)
+          ? (paginationConfig.pageSize ?? internalPageSize.value)
           : data.length || 1;
         const currentPage = paginationEnabled
           ? (paginationConfig?.current ?? internalPage.value)
@@ -363,27 +371,47 @@ export function Table<
          * 导致勾选态永远不反映到 DOM（onSelectChange 仍会触发）。
          */
 
-        /** 固定列 left 偏移（仅 fixed === "left" 的列有值，用于 sticky 定位） */
+        /** 固定列 left / right 偏移（用于 sticky 定位） */
+        const colWidthPx = (width: number | string | undefined): number => {
+          if (typeof width === "number") return width;
+          if (typeof width === "string") return parseFloat(width) || 80;
+          return 80;
+        };
         const fixedLeftOffsets: (number | null)[] = [];
         let leftAcc = 0;
         for (const col of columns) {
           if (col.fixed === "left") {
             fixedLeftOffsets.push(leftAcc);
-            const w = col.width;
-            leftAcc += typeof w === "number"
-              ? w
-              : (typeof w === "string" ? parseFloat(w) || 80 : 80);
+            leftAcc += colWidthPx(col.width);
           } else {
             fixedLeftOffsets.push(null);
           }
         }
+        const fixedRightOffsets: (number | null)[] = columns.map(() => null);
+        let rightAcc = 0;
+        for (let i = columns.length - 1; i >= 0; i--) {
+          if (columns[i].fixed === "right") {
+            fixedRightOffsets[i] = rightAcc;
+            rightAcc += colWidthPx(columns[i].width);
+          }
+        }
+        const scrollY = scroll?.y;
+        const scrollX = scroll?.x;
+        const toCssSize = (v: number | string): string =>
+          typeof v === "number" ? `${v}px` : v;
 
-        const handlePageChange = (page: number) => {
+        const handlePageChange = (page: number, nextPageSize?: number) => {
           if (paginationConfig !== undefined && paginationConfig !== false) {
+            const size = nextPageSize ?? pageSize;
             if (paginationConfig.current === undefined) {
               internalPage.value = page;
             }
-            paginationConfig.onChange?.(page, pageSize);
+            if (
+              paginationConfig.pageSize === undefined && nextPageSize != null
+            ) {
+              internalPageSize.value = nextPageSize;
+            }
+            paginationConfig.onChange?.(page, size);
           }
         };
 
@@ -417,9 +445,13 @@ export function Table<
                 });
               }}
               class={twMerge(
-                "table-wrapper overflow-x-auto",
+                "table-wrapper",
+                scrollY != null ? "overflow-auto" : "overflow-x-auto",
                 className,
               )}
+              style={scrollY != null
+                ? { maxHeight: toCssSize(scrollY) }
+                : undefined}
               tabindex={rowSelection && rowSelection.type !== "radio"
                 ? "-1"
                 : undefined}
@@ -448,6 +480,9 @@ export function Table<
                   bordered &&
                     "box-border border-0.5 border-slate-200 dark:border-slate-600",
                 )}
+                style={scrollX != null
+                  ? { minWidth: toCssSize(scrollX) }
+                  : undefined}
               >
                 <thead>
                   <tr class="border-b border-slate-200 bg-slate-50 dark:border-slate-600 dark:bg-slate-800/50">
@@ -567,6 +602,10 @@ export function Table<
                             "font-medium text-slate-700 dark:text-slate-300 select-none",
                             col.fixed === "left" &&
                               "bg-slate-50 dark:bg-slate-800 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] dark:shadow-[2px_0_4px_-2px_rgba(0,0,0,0.3)]",
+                            col.fixed === "right" &&
+                              "bg-slate-50 dark:bg-slate-800 shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.1)] dark:shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.3)]",
+                            scrollY != null &&
+                              "bg-slate-50 dark:bg-slate-800",
                             paddingCls,
                             headerTextAlign === "left" && "text-left",
                             headerTextAlign === "center" && "text-center",
@@ -576,11 +615,24 @@ export function Table<
                             headerClass,
                           )}
                           style={{
-                            ...(fixedLeftOffsets[colIndex] != null
+                            ...(fixedLeftOffsets[colIndex] != null ||
+                                fixedRightOffsets[colIndex] != null ||
+                                scrollY != null
                               ? {
                                 position: "sticky" as const,
-                                left: `${fixedLeftOffsets[colIndex]}px`,
-                                zIndex: 2,
+                                ...(fixedLeftOffsets[colIndex] != null
+                                  ? { left: `${fixedLeftOffsets[colIndex]}px` }
+                                  : {}),
+                                ...(fixedRightOffsets[colIndex] != null
+                                  ? {
+                                    right: `${fixedRightOffsets[colIndex]}px`,
+                                  }
+                                  : {}),
+                                ...(scrollY != null ? { top: "0" } : {}),
+                                zIndex: fixedLeftOffsets[colIndex] != null ||
+                                    fixedRightOffsets[colIndex] != null
+                                  ? 3
+                                  : 2,
                               }
                               : {}),
                             ...(col.width != null
@@ -784,9 +836,11 @@ export function Table<
                                 </td>
                               )}
                               {columns.map((col, colIndex) => {
-                                const dataIndex =
-                                  (col.dataIndex ?? col.key) as keyof T;
-                                const value = record[dataIndex];
+                                const dataIndex = col.dataIndex ?? col.key;
+                                const value =
+                                  (record as Record<PropertyKey, unknown>)[
+                                    dataIndex as PropertyKey
+                                  ];
                                 const cellEditable = isEditableConfig(
                                   col.editable,
                                 );
@@ -1051,6 +1105,7 @@ export function Table<
                                     : value;
                                 }
                                 const isStickyLeft = col.fixed === "left";
+                                const isStickyRight = col.fixed === "right";
                                 return (
                                   <td
                                     key={col.key}
@@ -1065,15 +1120,30 @@ export function Table<
                                         "max-w-0 truncate",
                                       isStickyLeft &&
                                         "shadow-[2px_0_4px_-2px_rgba(0,0,0,0.08)] dark:shadow-[2px_0_4px_-2px_rgba(0,0,0,0.25)]",
+                                      isStickyRight &&
+                                        "shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] dark:shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.25)]",
                                       cellEditable && "align-middle",
                                     )}
                                     style={{
-                                      ...(fixedLeftOffsets[colIndex] != null
+                                      ...(fixedLeftOffsets[colIndex] != null ||
+                                          fixedRightOffsets[colIndex] != null
                                         ? {
                                           position: "sticky" as const,
-                                          left: `${
-                                            fixedLeftOffsets[colIndex]
-                                          }px`,
+                                          ...(fixedLeftOffsets[colIndex] != null
+                                            ? {
+                                              left: `${
+                                                fixedLeftOffsets[colIndex]
+                                              }px`,
+                                            }
+                                            : {}),
+                                          ...(fixedRightOffsets[colIndex] !=
+                                              null
+                                            ? {
+                                              right: `${
+                                                fixedRightOffsets[colIndex]
+                                              }px`,
+                                            }
+                                            : {}),
                                           zIndex: 1,
                                         }
                                         : {}),
@@ -1167,9 +1237,13 @@ export function Table<
                 total,
                 totalPages,
               );
-              const totalHint = total > 0
-                ? tableMessages.paginationRange(from, to, total)
-                : tableMessages.paginationTotalZero(total);
+              const showTotal = paginationConfig.showTotal ?? true;
+              const totalHint = typeof showTotal === "function"
+                ? showTotal(total, [from, to])
+                : (total > 0
+                  ? tableMessages.paginationRange(from, to, total)
+                  : tableMessages.paginationTotalZero(total));
+              const pageSizeOptions = paginationConfig.pageSizeOptions;
               return (
                 <nav
                   role="navigation"
@@ -1180,10 +1254,14 @@ export function Table<
                   )}
                 >
                   <span class="text-sm text-slate-600 dark:text-slate-400 tabular-nums shrink-0">
-                    {totalHint}
-                    <span class="text-slate-400 dark:text-slate-500 mx-1.5">
-                      ·
-                    </span>
+                    {showTotal !== false && (
+                      <>
+                        {totalHint}
+                        <span class="text-slate-400 dark:text-slate-500 mx-1.5">
+                          ·
+                        </span>
+                      </>
+                    )}
                     {tableMessages.paginationOfPages(safeCurrent, totalPages)}
                   </span>
                   <div class="flex flex-wrap items-center gap-1">
@@ -1233,6 +1311,33 @@ export function Table<
                     >
                       <IconChevronRight class="w-4 h-4" />
                     </button>
+                    {pageSizeOptions != null && pageSizeOptions.length > 0 && (
+                      <label class="ml-2 inline-flex items-center gap-1 text-sm text-slate-600 dark:text-slate-400 shrink-0">
+                        <span class="sr-only">{tableMessages.pageSize}</span>
+                        <select
+                          class="h-8 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-1.5 text-sm text-slate-700 dark:text-slate-300"
+                          value={String(pageSize)}
+                          aria-label={tableMessages.pageSize}
+                          onChange={(e: Event) => {
+                            const v = parseInt(
+                              (e.target as HTMLSelectElement).value,
+                              10,
+                            );
+                            if (!Number.isNaN(v)) handlePageChange(1, v);
+                          }}
+                        >
+                          {pageSizeOptions.map((n) => (
+                            <option
+                              key={n}
+                              value={String(n)}
+                              selected={n === pageSize}
+                            >
+                              {tableMessages.pageSizeUnit(n)}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    )}
                   </div>
                 </nav>
               );

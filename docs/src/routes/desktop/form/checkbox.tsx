@@ -115,6 +115,13 @@ const CHECKBOX_API: ApiRow[] = [
     default: "-",
     description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
   },
+  ,
+  {
+    name: "indeterminate",
+    type: "boolean",
+    default: "false",
+    description: "半选态，只写 DOM 的 indeterminate 属性，与 checked 相互独立",
+  },
 ];
 
 const importCode = `import { Checkbox } from "@dreamer/ui-view/form/checkbox";
@@ -167,6 +174,10 @@ const form = createForm({
 </Form>`;
 
 /** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
+const exampleIndeterminate = `<Checkbox indeterminate>半选</Checkbox>
+<Checkbox checked>已选</Checkbox>
+<Checkbox>未选</Checkbox>`;
+
 export const metadata = {
   title: "Checkbox 复选框 · ui-view",
 };
@@ -356,6 +367,24 @@ export default function FormCheckbox() {
             />
           </section>
         </Form>
+      </section>
+
+      <section class="space-y-4">
+        <Title level={3}>半选 indeterminate</Title>
+        <div class="flex flex-wrap items-center gap-4">
+          <Checkbox indeterminate>半选</Checkbox>
+          <Checkbox checked>已选</Checkbox>
+          <Checkbox>未选</Checkbox>
+        </div>
+        <CodeBlock
+          title="代码示例"
+          code={exampleIndeterminate}
+          language="tsx"
+          showLineNumbers
+          copyable
+          wrapLongLines
+          maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
+        />
       </section>
 
       <DocsMessagesSection

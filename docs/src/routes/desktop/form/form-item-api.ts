@@ -26,6 +26,12 @@ export const FORM_API: FormDocsApiRow[] = [
     description: "向下注入控件默认尺寸（FormControlSizeContext）",
   },
   {
+    name: "disabled",
+    type: "boolean",
+    default: "false",
+    description: "整表禁用，通过上下文与控件自身 disabled 取或",
+  },
+  {
     name: "form",
     type: "FormStore",
     default: "-",

@@ -399,14 +399,14 @@ describe("文档页 E2E：/desktop/form/color-picker（ColorPicker 颜色）", (
   }, DOCS_BROWSER_CONFIG);
 
   /**
-   * 文档小节「showSuffixIcon= 隐藏右侧调色板图标」：在 main 内定位对应 h3，于该示例区块内完成一次交互。
+   * 文档小节「showSuffixIcon={false} 隐藏右侧调色板图标」：在 main 内定位对应 h3，于该示例区块内完成一次交互。
    */
-  it("严格·showSuffixIcon= 隐藏右侧调色板图标", async (t) => {
+  it("严格·showSuffixIcon={false} 隐藏右侧调色板图标", async (t) => {
     if (!t?.browser?.goto) return;
     await sharedEnv.goto(t, DOC_PATH);
     await sharedEnv.waitDocMainReady(t);
     const ok = await t.browser.evaluate(() => {
-      const needle = "showSuffixIcon= 隐藏右侧调色板图标";
+      const needle = "showSuffixIcon={false} 隐藏右侧调色板图标";
       const main = document.querySelector("main");
       if (!main) return false;
       const heads = main.querySelectorAll("h2, h3");

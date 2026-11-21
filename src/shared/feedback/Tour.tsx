@@ -141,7 +141,18 @@ function computeBubbleStyle(
       TOUR_VIEW_PADDING,
     )
     : preferred;
-  const box = popBoxForPlacement(rect, resolved, popup, gap);
+  const isVertical = resolved.startsWith("top") || resolved.startsWith("bottom");
+  // 仅收窄写死的左右方位，让 390 宽视口仍能把气泡留在目标右侧；上下方位和 auto 仍用原宽度。
+  // 两轴 clamp 都保留，避免 bottom 气泡被顶出视口（勿再撤掉 top clamp）。
+  let usedW = bw;
+  if (placement !== "auto" && !isVertical) {
+    const sideSpace = resolved.startsWith("right")
+      ? vw - TOUR_VIEW_PADDING - (rect.right + gap)
+      : rect.left - gap - TOUR_VIEW_PADDING;
+    usedW = Math.max(1, Math.min(bw, Math.floor(sideSpace)));
+  }
+  const fitted = { width: usedW, height: bh };
+  const box = popBoxForPlacement(rect, resolved, fitted, gap);
   let top = box.top;
   let left = box.left;
   top = clamp(
@@ -152,13 +163,15 @@ function computeBubbleStyle(
   left = clamp(
     left,
     TOUR_VIEW_PADDING,
-    Math.max(TOUR_VIEW_PADDING, vw - bw - TOUR_VIEW_PADDING),
+    Math.max(TOUR_VIEW_PADDING, vw - usedW - TOUR_VIEW_PADDING),
   );
   return {
     style: {
       top: `${top}px`,
       left: `${left}px`,
-      width: `min(100% - 24px, ${TOUR_ESTIMATED_SIZE.width}px)`,
+      width: placement !== "auto" && !isVertical
+        ? `${usedW}px`
+        : `min(100% - 24px, ${TOUR_ESTIMATED_SIZE.width}px)`,
     },
     placement: resolved,
   };
@@ -179,6 +192,8 @@ export function Tour(props: TourProps): JSXRenderable {
   const rectSig = createSignal<DOMRect | null>(null);
   const panelRef = createSignal<HTMLElement | null>(null);
   const bubbleSize = createSignal<PopSize>({ width: 0, height: 0 });
+  /** 指针按下期间不要改 rect，以免重绘拆掉按钮导致 click 丢失 */
+  let pointerDownOnTour = false;
   /** 非受控步进：docs／多数用法不传 `current`，须有内部索引，否则「下一步」空操作 */
   const innerCurrent = createSignal(0);
 
@@ -213,27 +228,43 @@ export function Tour(props: TourProps): JSXRenderable {
     const step = steps[currentIndex()];
     if (!step) return;
 
+    const commitRect = (next: DOMRect | null) => {
+      if (pointerDownOnTour) return;
+      const prev = rectSig.value;
+      if (
+        prev && next &&
+        Math.abs(prev.top - next.top) < 1 &&
+        Math.abs(prev.left - next.left) < 1 &&
+        Math.abs(prev.width - next.width) < 1 &&
+        Math.abs(prev.height - next.height) < 1
+      ) {
+        return;
+      }
+      rectSig.value = next;
+    };
     const update = () => {
       const el = resolveTarget(step.target);
       if (el && typeof el.scrollIntoView === "function") {
         try {
+          // 用 auto 而非 smooth：平滑滚动期间气泡会跟着目标持续位移，
+          // 点「下一步／完成」的 mousedown/mouseup 可能落在遮罩上而丢点击。
           el.scrollIntoView({
             block: "center",
             inline: "nearest",
-            behavior: "smooth",
+            behavior: "auto",
           });
         } catch {
           el.scrollIntoView();
         }
       }
-      rectSig.value = el?.getBoundingClientRect?.() ?? null;
+      commitRect(el?.getBoundingClientRect?.() ?? null);
     };
     // 等滚动后再量一次
     update();
     const t = globalThis.setTimeout?.(update, 280);
     const onWin = () => {
       const el = resolveTarget(step.target);
-      rectSig.value = el?.getBoundingClientRect?.() ?? null;
+      commitRect(el?.getBoundingClientRect?.() ?? null);
     };
     globalThis.addEventListener?.("resize", onWin);
     globalThis.addEventListener?.("scroll", onWin, true);
@@ -243,7 +274,19 @@ export function Tour(props: TourProps): JSXRenderable {
       if (e.key === "Escape") {
         e.preventDefault();
         onClose?.();
-      } else if (e.key === "ArrowRight" || e.key === "Enter") {
+        return;
+      }
+      // Enter 在气泡按钮上只激活该按钮（如「上一步」），不要再走全局「下一步／完成」把最后一步关掉
+      const target = e.target as HTMLElement | null;
+      if (
+        e.key === "Enter" &&
+        target &&
+        panelRef.value?.contains(target) &&
+        target.closest("button")
+      ) {
+        return;
+      }
+      if (e.key === "ArrowRight" || e.key === "Enter") {
         const idx = currentIndex();
         if (idx >= steps.length - 1) {
           onFinish?.();
@@ -311,14 +354,23 @@ export function Tour(props: TourProps): JSXRenderable {
 
     return (
       <div
-        class={twMerge("fixed inset-0", className)}
-        style={{ zIndex: String(TOUR_Z_INDEX) }}
+        class={twMerge("fixed inset-0 z-[1100]", className)}
+        style={{ zIndex: TOUR_Z_INDEX }}
         role="dialog"
         aria-modal="true"
         aria-labelledby={step.title != null ? titleId : undefined}
         aria-describedby={step.description != null ? descId : undefined}
         aria-label={step.title == null ? m.guide : undefined}
         data-dreamer-tour="root"
+        onPointerDown={() => {
+          pointerDownOnTour = true;
+        }}
+        onPointerUp={() => {
+          pointerDownOnTour = false;
+        }}
+        onPointerCancel={() => {
+          pointerDownOnTour = false;
+        }}
       >
         {/* 全屏拦截：挡住页面触发钮；视觉变暗由高亮 box-shadow 承担 */}
         <div

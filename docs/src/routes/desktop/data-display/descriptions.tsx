@@ -5,7 +5,7 @@
 
 import { Avatar, Paragraph, Title } from "@dreamer/ui-view/basic";
 
-import { CodeBlock, Descriptions } from "@dreamer/ui-view/data-display";
+import { CodeBlock, Descriptions, Tag } from "@dreamer/ui-view/data-display";
 import { DOCS_DEMO_CODE_MAX_HEIGHT } from "../../../components/DocsDemo.tsx";
 
 /** API 属性行类型 */
@@ -18,11 +18,11 @@ interface ApiRow {
 
 const DESCRIPTIONS_API: ApiRow[] = [
   {
-    name: "items",
+    name: "rows",
     type: "DescriptionsItem[]",
     default: "-",
     description:
-      "描述项（label、children、span、labelAlign）；`span` 为跨列数，若本行末尾仍剩空列会自动并入该行最右项铺满，不留空白格",
+      "描述行（label、children、span、labelAlign、render）；`span` 为跨列数，若本行末尾仍剩空列会自动并入该行最右项铺满，不留空白格",
   },
   {
     name: "title",
@@ -75,7 +75,7 @@ const DESCRIPTIONS_API: ApiRow[] = [
     type: "DescriptionsLabelAlign",
     default: '{ vertical: "top", horizontal: "right" }',
     description:
-      "各行标签的默认对齐。vertical：top 上对齐、center 垂直居中、bottom 下对齐；horizontal：left 左对齐、center 居中、right 右对齐。单项可用 items[].labelAlign 覆盖",
+      "各行标签的默认对齐。vertical：top 上对齐、center 垂直居中、bottom 下对齐；horizontal：left 左对齐、center 居中、right 右对齐。单项可用 rows[].labelAlign 覆盖",
   },
   {
     name: "labelClass",
@@ -103,7 +103,8 @@ const DESCRIPTIONS_ITEM_API: ApiRow[] = [
     name: "children",
     type: "unknown",
     default: "-",
-    description: "内容（值）；可为文本或头像等自定义节点",
+    description:
+      "内容（值）；可为文本或自定义节点。有 render 时作为 defaultNode 传入",
   },
   {
     name: "span",
@@ -118,6 +119,13 @@ const DESCRIPTIONS_ITEM_API: ApiRow[] = [
     default: "继承外层 labelAlign",
     description:
       "该行标签对齐，覆盖 Descriptions.labelAlign。vertical：top／center／bottom；horizontal：left／center／right。未写的轴向沿用外层默认",
+  },
+  {
+    name: "render",
+    type: "(ctx: DescriptionsItemRenderCtx) => unknown",
+    default: "-",
+    description:
+      "自定义内容区。签名 (ctx) => 节点，ctx 含 item（当前行）、index（在 rows 中的下标）、defaultNode（children 原值，便于包裹或回落）。有本函数时用返回值作为内容，不再直接渲染 children",
   },
 ];
 
@@ -170,10 +178,10 @@ function ApiTable(props: { rows: ApiRow[] }) {
 const importCode =
   `import { Descriptions } from "@dreamer/ui-view/data-display";
 
-const items = [{ label: "姓名", children: "张三" }, { label: "年龄", children: "28" }, ...];
+const rows = [{ label: "姓名", children: "张三" }, { label: "年龄", children: "28" }, ...];
 <Descriptions
   title="用户信息"
-  items={items}
+  rows={rows}
   column={3}
   bordered
 />`;
@@ -181,7 +189,7 @@ const items = [{ label: "姓名", children: "张三" }, { label: "年龄", child
 /** 每行仅一组：左标签、右内容 → API 里用 column={1}（label 长短不一示例） */
 const exampleLabelValueOnePerRow = `<Descriptions
   title="用户信息"
-  items={[
+  rows={[
     { label: "ID", children: "U-1024-8573" },
     { label: "状态", children: "正常 · 已实名认证 · 企业账户" },
     {
@@ -211,7 +219,7 @@ const exampleLabelValueOnePerRow = `<Descriptions
 /** 每行并排两组描述项 → column={2}（label 长短混排） */
 const exampleTwoItemsPerRow = `<Descriptions
   title="用户信息"
-  items={[
+  rows={[
     { label: "工号", children: "E-00912" },
     { label: "入职日期", children: "2024-06-01" },
     { label: "直属上级（含虚线汇报）", children: "李四 / 王五（虚线）" },
@@ -228,26 +236,51 @@ const exampleTwoItemsPerRow = `<Descriptions
 
 const exampleBordered = `<Descriptions
   title="用户信息"
-  items={items}
+  rows={rows}
   column={3}
   bordered
 />`;
 
 const exampleLayout = `<Descriptions
-  items={items.slice(0, 3)}
+  rows={rows.slice(0, 3)}
   layout="vertical"
 />`;
 
 const exampleSizeColon = `<Descriptions
-  items={items}
+  rows={rows}
   size="sm"
   title="小尺寸"
 />
 <Descriptions
-  items={items}
+  rows={rows}
   colon={false}
   title="无冒号"
 />`;
+
+const exampleRender =
+  `import { Descriptions, Tag } from "@dreamer/ui-view/data-display";
+
+const rows = [
+  { label: "姓名", children: "张三" },
+  {
+    label: "状态",
+    children: "已启用",
+    render: ({ defaultNode }) => (
+      <Tag variant="success">{defaultNode}</Tag>
+    ),
+  },
+  {
+    label: "邮箱",
+    children: "zhangsan@example.com",
+    render: ({ defaultNode }) => (
+      <a href={\`mailto:\${defaultNode}\`} class="text-sky-600 hover:underline">
+        {defaultNode}
+      </a>
+    ),
+  },
+];
+
+<Descriptions title="用户信息" column={1} bordered rows={rows} />`;
 
 /** 标签对齐：垂直上／中／下，水平左／中／右；单项可覆盖外层默认 */
 const exampleLabelAlign =
@@ -260,7 +293,7 @@ const avatar = <Avatar size="lg">张</Avatar>;
   column={1}
   bordered
   labelAlign={{ vertical: "top", horizontal: "right" }}
-  items={[
+  rows={[
     { label: "上对齐 · 右", children: avatar },
     {
       label: "垂直居中 · 右",
@@ -293,7 +326,7 @@ const exampleLabelRatio = `// 标签列约占 28%，最小 6rem（内容区更�
   bordered
   labelColPercent={28}
   labelMinWidth="6rem"
-  items={[
+  rows={[
     { label: "用户名", children: "zhangsan" },
     { label: "姓名", children: "张三" },
     { label: "自动锁屏时间", children: "10 分钟" },
@@ -307,7 +340,7 @@ const exampleLabelRatio = `// 标签列约占 28%，最小 6rem（内容区更�
   bordered
   labelColPercent={50}
   labelMinWidth="10rem"
-  items={[
+  rows={[
     { label: "用户名", children: "lisi" },
     { label: "姓名", children: "李四" },
     { label: "自动锁屏时间", children: "10 分钟" },
@@ -321,7 +354,7 @@ export const metadata = {
 
 export default function DataDisplayDescriptions() {
   /** column=1：每行一组；label 故意长短不一，内容偏复杂 */
-  const itemsOneCol = [
+  const rowsOneCol = [
     { label: "ID", children: "U-1024-8573" },
     { label: "状态", children: "正常 · 已实名认证 · 企业账户" },
     {
@@ -346,7 +379,7 @@ export default function DataDisplayDescriptions() {
   ];
 
   /** column=2：每行两个描述项并排，label 长短混排 */
-  const itemsTwoCol = [
+  const rowsTwoCol = [
     { label: "工号", children: "E-00912" },
     { label: "入职日期", children: "2024-06-01" },
     {
@@ -361,7 +394,7 @@ export default function DataDisplayDescriptions() {
     },
   ];
 
-  const items = [
+  const rows = [
     { label: "编码", children: "SKU-9281" },
     {
       label: "商品全称（含规格）",
@@ -381,7 +414,7 @@ export default function DataDisplayDescriptions() {
       <section>
         <Title level={1}>Descriptions 描述列表</Title>
         <Paragraph class="mt-2">
-          描述列表：items、title、column、bordered、size、layout、colon、labelColPercent、labelMinWidth、labelAlign、labelClass、contentClass。
+          描述列表：rows、title、column、bordered、size、layout、colon、labelColPercent、labelMinWidth、labelAlign、labelClass、contentClass。
           使用 Tailwind v4，支持 light/dark 主题。`column` 表示<strong>
             每行最多排几个描述项
           </strong>，不是「标签列数 + 内容列数」：要整行只展示一组 label +
@@ -422,7 +455,7 @@ export default function DataDisplayDescriptions() {
           </Paragraph>
           <Descriptions
             title="用户信息"
-            items={itemsOneCol}
+            rows={rowsOneCol}
             column={1}
             labelColPercent={30}
             labelMinWidth="15rem"
@@ -451,7 +484,7 @@ export default function DataDisplayDescriptions() {
           </Paragraph>
           <Descriptions
             title="用户信息"
-            items={itemsTwoCol}
+            rows={rowsTwoCol}
             column={2}
             bordered
           />
@@ -468,7 +501,7 @@ export default function DataDisplayDescriptions() {
 
         <div class="space-y-4">
           <Title level={3}>标题 + 列数 + 边框</Title>
-          <Descriptions title="用户信息" items={items} column={3} bordered />
+          <Descriptions title="用户信息" rows={rows} column={3} bordered />
           <CodeBlock
             title="代码示例"
             code={exampleBordered}
@@ -482,7 +515,7 @@ export default function DataDisplayDescriptions() {
 
         <div class="space-y-4">
           <Title level={3}>layout=vertical</Title>
-          <Descriptions items={items.slice(0, 3)} layout="vertical" />
+          <Descriptions rows={rows.slice(0, 3)} layout="vertical" />
           <CodeBlock
             title="代码示例"
             code={exampleLayout}
@@ -513,7 +546,7 @@ export default function DataDisplayDescriptions() {
             bordered
             labelColPercent={28}
             labelMinWidth="6rem"
-            items={[
+            rows={[
               { label: "用户名", children: "zhangsan" },
               { label: "姓名", children: "张三" },
               { label: "自动锁屏时间", children: "10 分钟" },
@@ -525,7 +558,7 @@ export default function DataDisplayDescriptions() {
             bordered
             labelColPercent={50}
             labelMinWidth="10rem"
-            items={[
+            rows={[
               { label: "用户名", children: "lisi" },
               { label: "姓名", children: "李四" },
               { label: "自动锁屏时间", children: "10 分钟" },
@@ -548,7 +581,7 @@ export default function DataDisplayDescriptions() {
             内容比标签高时（例如头像），用 `labelAlign`
             控制标签在单元格里的位置。 垂直：`top` 上对齐、`center`
             垂直居中、`bottom` 下对齐；水平：`left` 左、`center` 中、`right`
-            右。 写在 `Descriptions` 上是默认值，写在 `items[]`
+            右。 写在 `Descriptions` 上是默认值，写在 `rows[]`
             上只覆盖该行；未写的轴向沿用默认（垂直 top、水平 right）。
           </Paragraph>
           <Descriptions
@@ -556,7 +589,7 @@ export default function DataDisplayDescriptions() {
             column={1}
             bordered
             labelAlign={{ vertical: "top", horizontal: "right" }}
-            items={[
+            rows={[
               { label: "上对齐 · 右", children: <Avatar size="lg">张</Avatar> },
               {
                 label: "垂直居中 · 右",
@@ -593,9 +626,9 @@ export default function DataDisplayDescriptions() {
 
         <div class="space-y-4">
           <Title level={3}>size=sm / colon=false</Title>
-          <Descriptions items={items.slice(0, 3)} size="sm" title="小尺寸" />
+          <Descriptions rows={rows.slice(0, 3)} size="sm" title="小尺寸" />
           <Descriptions
-            items={items.slice(0, 2)}
+            rows={rows.slice(0, 2)}
             colon={false}
             title="无冒号"
           />
@@ -609,12 +642,56 @@ export default function DataDisplayDescriptions() {
             maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
           />
         </div>
+
+        <div class="space-y-4">
+          <Title level={3}>自定义渲染（render）</Title>
+          <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+            内容区可用 `render` 自定义。`children` 仍会作为 `defaultNode`
+            传入，便于包裹成标签、链接等；有 `render` 时以返回值为准。
+          </Paragraph>
+          <Descriptions
+            title="用户信息"
+            column={1}
+            bordered
+            rows={[
+              { label: "姓名", children: "张三" },
+              {
+                label: "状态",
+                children: "已启用",
+                render: ({ defaultNode }) => (
+                  <Tag variant="success">{defaultNode}</Tag>
+                ),
+              },
+              {
+                label: "邮箱",
+                children: "zhangsan@example.com",
+                render: ({ defaultNode }) => (
+                  <a
+                    href={`mailto:${defaultNode}`}
+                    class="text-sky-600 hover:underline"
+                  >
+                    {defaultNode}
+                  </a>
+                ),
+              },
+            ]}
+          />
+          <CodeBlock
+            title="代码示例"
+            code={exampleRender}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
+          />
+        </div>
       </section>
 
       <section class="space-y-3">
         <Title level={2}>API</Title>
         <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
-          DescriptionsItem：label、children、span、labelAlign。Descriptions
+          DescriptionsItem：label、children、span、labelAlign、render。Descriptions
           另可写整表默认
           `labelAlign`（vertical：top／center／bottom，horizontal：left／center／right）。
         </Paragraph>

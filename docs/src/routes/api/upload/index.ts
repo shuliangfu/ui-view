@@ -5,6 +5,7 @@
  */
 
 import { json } from "@dreamer/router";
+import type { ApiContext } from "@dreamer/dweb";
 import {
   ensureUploaderReady,
   fileUrlForStoredPath,
@@ -14,7 +15,22 @@ import {
 /**
  * POST：分片或整文件上传入口
  */
-export async function POST(request: Request): Promise<Response> {
+export async function POST(ctx: ApiContext): Promise<Response> {
+  // RouterAdapter pre-parses JSON into ctx.body and consumes req; multipart stays raw.
+  let request = ctx.req;
+  if (
+    request.bodyUsed && request.headers.get("content-type")?.includes("json")
+  ) {
+    if (ctx.body === undefined) {
+      return json({ error: "Invalid JSON body" }, 400);
+    }
+    request = new Request(request.url, {
+      method: request.method,
+      headers: request.headers,
+      body: JSON.stringify(ctx.body),
+      signal: request.signal,
+    });
+  }
   const phase = new URL(request.url).searchParams.get("phase");
   if (phase === "init" || phase === "chunk" || phase === "complete") {
     const handler = getMultipartHandler();

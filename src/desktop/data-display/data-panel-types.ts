@@ -13,9 +13,9 @@ import type { ModalProps } from "../feedback/Modal.tsx";
 
 /**
  * 可写在 {@link ViewConfig.descriptions} 上的 Descriptions 参数。
- * 不含 `items`（由 view.props 生成）和 `title`（那是弹层／页面标题，不会传给 Descriptions）。
+ * 不含 `rows`（由 view.props 生成）和 `title`（那是弹层／页面标题，不会传给 Descriptions）。
  */
-export type ViewDescriptionsProps = Omit<DescriptionsProps, "items" | "title">;
+export type ViewDescriptionsProps = Omit<DescriptionsProps, "rows" | "title">;
 
 /**
  * 可写在 DataPanel `pagination` 上的 Pagination 参数。
@@ -332,7 +332,7 @@ export interface SearchRenderCtx {
   /** 当前搜索表单值 */
   values: Record<string, unknown>;
   errors: Record<string, string>;
-  /** 关闭弹窗 */
+  /** 关闭弹窗，或收起展开中的搜索表单 */
   close: () => void;
   /** 走内置校验＋提交筛选 */
   submit: () => void;
@@ -521,8 +521,9 @@ export interface FormRenderCtx {
   /**
    * 走内置 validateForm + ds.create／update（依赖 `form.props` 字段信号）。
    * 完全自管提交时可忽略，自行写数后 close／reload。
+   * true 仅表示校验与写入成功；校验失败、忙碌或服务端拒绝均为 false。
    */
-  submit: () => Promise<void>;
+  submit: () => Promise<boolean>;
   /** 设置提交中状态 */
   setBusy: (v: boolean) => void;
   /** 设置字段错误 */
@@ -609,8 +610,16 @@ export interface FormConfig {
   mobileAutoFullscreen?: boolean;
 }
 
+/** 搜索展示方式：弹窗或工具栏下方展开 */
+export type SearchMode = "modal" | "expand";
+
 export interface SearchConfig {
   title?: string | (() => string);
+  /**
+   * 搜索展示方式。默认 `modal`（弹窗）；`expand` 时点击工具栏搜索，
+   * 在工具栏下方展开或收起表单。`modal`／`autoFullscreen`／`mobileAutoFullscreen` 仅在 `modal` 模式下生效。
+   */
+  mode?: SearchMode;
   props: SearchField[];
   /**
    * 底部按钮 Record。内置键：`submit`（搜索）、`reset`（重置，默认靠右最后）。
@@ -670,7 +679,7 @@ export interface ViewConfig {
   modal?: DataChromeModalConfig;
   /**
    * 透传给内置详情 Descriptions 的参数（column、size、bordered、layout、colon、labelAlign、labelColPercent、labelMinWidth…）。
-   * items／title 由面板接管：items 由 view.props 生成，title 是弹层／页面标题，不会传给 Descriptions。
+   * rows／title 由面板接管：rows 由 view.props 生成，title 是弹层／页面标题，不会传给 Descriptions。
    * 本插槽缺省 column=1、size=sm、bordered=true。有 render 或 DataView children 时不生效。
    */
   descriptions?: ViewDescriptionsProps;
@@ -821,7 +830,8 @@ export interface FormActionContext {
   mode: "create" | "edit";
   row: Row | null;
   busy: boolean;
-  submit: () => Promise<void>;
+  /** true 仅表示校验与写入成功；校验失败、忙碌或服务端拒绝均为 false。 */
+  submit: () => Promise<boolean>;
   close: () => void;
 }
 

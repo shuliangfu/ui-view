@@ -26,8 +26,11 @@ export interface AccordionItem {
 export interface AccordionProps {
   /** 手风琴项列表 */
   items: AccordionItem[];
-  /** 当前展开的 key 列表（受控）；不传则使用 defaultExpandedKeys */
-  expandedKeys?: string[];
+  /**
+   * 当前展开的 key 列表（受控）。
+   * 在细粒度更新场景请传 getter（如 `() => sig.value`），避免只传 `sig.value` 快照导致拿不到最新展开态。
+   */
+  expandedKeys?: string[] | (() => string[]);
   /** 默认展开的 key 列表（非受控） */
   defaultExpandedKeys?: string[];
   /** 展开/收起变化回调（受控时由父级更新 expandedKeys） */
@@ -44,10 +47,12 @@ export interface AccordionProps {
   contentClass?: string;
 }
 
+/** 同一页多个实例时，header/content 的 id 必须互不重复（不可只用 item.key）。 */
+let accordionInstanceSeq = 0;
+
 export function Accordion(props: AccordionProps): JSXRenderable {
   const {
     items,
-    expandedKeys: controlledKeys,
     defaultExpandedKeys = [],
     onChange,
     allowMultiple = true,
@@ -56,24 +61,32 @@ export function Accordion(props: AccordionProps): JSXRenderable {
     headerClass,
     contentClass,
   } = props;
+  const instanceId = ++accordionInstanceSeq;
 
-  const initialKeys = controlledKeys ?? defaultExpandedKeys ?? [];
+  /**
+   * 初次内部 state：与首次 `props.expandedKeys` / `defaultExpandedKeys` 对齐（勿把受控 key 解构到闭包变量里）。
+   */
+  const initialKeys = (() => {
+    const ck = props.expandedKeys;
+    if (ck === undefined) return defaultExpandedKeys ?? [];
+    if (typeof ck === "function") return (ck as () => string[])();
+    return ck;
+  })();
   const internalKeysRef = createSignal<string[]>(initialKeys);
-  /** 用普通对象存「上次同步的受控 keys」，不参与响应式，避免读 `Signal` 触发重跑导致卡死/点不动 */
-  const lastSyncedRef: { value: string } = { value: "" };
-  const c = controlledKeys !== undefined ? controlledKeys : null;
-  if (c != null) {
-    const cStr = JSON.stringify(c.slice().sort());
-    if (cStr !== lastSyncedRef.value) {
-      lastSyncedRef.value = cStr;
-      internalKeysRef.value = [...c];
-    }
-  }
-  /** 展示用内部 state，点击即更新；受控时仅当 prop 变化才从上面同步到 internal */
-  const getExpandedKeys = (): string[] => internalKeysRef.value;
+
+  /**
+   * 当前展开 key 列表：非受控读内部 ref；受控时**每次**从 `props.expandedKeys`（或 getter）读取。
+   * 若在 setup 里解构 `expandedKeys`，返回的渲染 getter 重跑时仍会得到初值，受控表现为点不开。
+   */
+  const getExpandedKeys = (): string[] => {
+    const ck = props.expandedKeys;
+    if (ck === undefined) return internalKeysRef.value;
+    if (typeof ck === "function") return (ck as () => string[])();
+    return ck;
+  };
 
   const toggle = (key: string) => {
-    const current = internalKeysRef.value;
+    const current = getExpandedKeys();
     const next = new Set(current);
     if (next.has(key)) {
       next.delete(key);
@@ -87,18 +100,21 @@ export function Accordion(props: AccordionProps): JSXRenderable {
   };
 
   /**
-   * 渲染 getter：读 `internalKeysRef.value`，展开/收起后触发细粒度更新。
+   * 外层直接返回容器 div，仅在**子节点**上用 `{() => ...}` 读 `getExpandedKeys()`。
+   * 若整段 `return () => { ... }` 作为组件返回值，会与挂载本组件的 `insert` 的 effect
+   * 处于同一层同步展平链中：该 effect 会订阅 `internalKeysRef`，重跑时再次执行
+   * `Accordion(props)`，`createSignal` 被重复创建，展开态永远回到初值（表现为点不开）。
    */
-  return () => {
-    const expandedSet = new Set(getExpandedKeys());
-    return (
-      <div
-        class={twMerge(
-          "w-full divide-y divide-slate-200 dark:divide-slate-600 border border-slate-200 dark:border-slate-600 rounded-lg overflow-hidden",
-          className,
-        )}
-      >
-        {items.map((item) => {
+  return (
+    <div
+      class={twMerge(
+        "w-full divide-y divide-slate-200 dark:divide-slate-600 border border-slate-200 dark:border-slate-600 rounded-lg overflow-hidden",
+        className,
+      )}
+    >
+      {() => {
+        const expandedSet = new Set(getExpandedKeys());
+        return items.map((item) => {
           const isExpanded = expandedSet.has(item.key);
           return (
             <div
@@ -113,8 +129,8 @@ export function Accordion(props: AccordionProps): JSXRenderable {
                 )}
                 disabled={item.disabled}
                 aria-expanded={isExpanded}
-                aria-controls={`accordion-content-${item.key}`}
-                id={`accordion-header-${item.key}`}
+                aria-controls={`accordion-content-${instanceId}-${item.key}`}
+                id={`accordion-header-${instanceId}-${item.key}`}
                 onClick={() => !item.disabled && toggle(item.key)}
               >
                 <span>{item.header}</span>
@@ -128,9 +144,9 @@ export function Accordion(props: AccordionProps): JSXRenderable {
                 </span>
               </button>
               <div
-                id={`accordion-content-${item.key}`}
+                id={`accordion-content-${instanceId}-${item.key}`}
                 role="region"
-                aria-labelledby={`accordion-header-${item.key}`}
+                aria-labelledby={`accordion-header-${instanceId}-${item.key}`}
                 class={twMerge(
                   "grid overflow-hidden transition-[grid-template-rows] duration-200 ease-out motion-reduce:transition-none",
                   isExpanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
@@ -149,8 +165,8 @@ export function Accordion(props: AccordionProps): JSXRenderable {
               </div>
             </div>
           );
-        })}
-      </div>
-    );
-  };
+        });
+      }}
+    </div>
+  );
 }

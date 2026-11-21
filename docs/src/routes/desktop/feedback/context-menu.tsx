@@ -19,26 +19,66 @@ const API: DocsApiTableRow[] = [
     name: "items",
     type: "ContextMenuItem[]",
     default: "-",
-    description: "菜单项（label／icon／onClick／danger／divider／disabled）",
+    description: "菜单项，字段见下方 ContextMenuItem 表",
   },
   {
     name: "children",
     type: "unknown",
     default: "-",
-    description: "触发区（右键）",
+    description: "触发区（右键打开）",
   },
   {
-    name: "定位",
-    type: "（内置 auto）",
-    default: "auto",
-    description:
-      "无 placement 属性。菜单按点击坐标向右下展开；右边挡住则向左，下边挡住则向上，避免贴边被裁。",
+    name: "class",
+    type: "string",
+    default: "-",
+    description: "触发区包裹层 class",
+  },
+  {
+    name: "menuClass",
+    type: "string",
+    default: "-",
+    description: "菜单面板 class",
   },
   {
     name: "messages",
     type: "Partial<ContextMenuMessages>",
     default: "-",
     description: "本地化文案；字段见上文「文案（messages）」表，勿将键摊入本表",
+  },
+];
+
+const ITEM_API: DocsApiTableRow[] = [
+  { name: "key", type: "string", default: "-", description: "项的唯一键" },
+  { name: "label", type: "unknown", default: "-", description: "菜单项文案" },
+  {
+    name: "icon",
+    type: "unknown",
+    default: "-",
+    description: "可选图标节点，显示在文案左侧",
+  },
+  {
+    name: "disabled",
+    type: "boolean",
+    default: "false",
+    description: "是否禁用",
+  },
+  {
+    name: "danger",
+    type: "boolean",
+    default: "false",
+    description: "危险操作（红色文案）",
+  },
+  {
+    name: "onClick",
+    type: "() => void",
+    default: "-",
+    description: "点击回调",
+  },
+  {
+    name: "divider",
+    type: "boolean",
+    default: "false",
+    description: "为 true 时渲染为分割线",
   },
 ];
 
@@ -113,8 +153,8 @@ export default function Page() {
       <div>
         <Title level={1}>ContextMenu</Title>
         <Paragraph>
-          右键菜单：图标、分割线、危险项、禁用项；Portal
-          浮层。菜单默认向点击处右下展开，右边挡住则向左、下边挡住则向上。
+          右键菜单：图标、分割线、危险项、禁用项；Portal 浮层。定位内置
+          auto：菜单默认向点击处右下展开，右边挡住则向左、下边挡住则向上。
         </Paragraph>
         <Paragraph class="mt-2 text-sm text-slate-600 dark:text-slate-400">
           菜单项文案走{" "}
@@ -270,9 +310,16 @@ export default function Page() {
         rows={MESSAGES_CONTEXT_MENU}
       />
 
-      <section class="space-y-3">
+      <section class="space-y-6">
         <Title level={2}>API</Title>
-        <DocsApiTable rows={API} />
+        <div class="space-y-3">
+          <Title level={3}>ContextMenu</Title>
+          <DocsApiTable rows={API} />
+        </div>
+        <div class="space-y-3">
+          <Title level={3}>ContextMenuItem</Title>
+          <DocsApiTable rows={ITEM_API} />
+        </div>
       </section>
     </div>
   );

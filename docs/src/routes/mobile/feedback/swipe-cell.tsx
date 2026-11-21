@@ -2,6 +2,7 @@
  * SwipeCell 文档页（概述、引入、示例、API）。路由: /mobile/feedback/swipe-cell
  */
 
+import { createSignal } from "@dreamer/view";
 import { SwipeCell } from "@dreamer/ui-view/mobile/feedback";
 import { Paragraph, Title } from "@dreamer/ui-view/mobile/basic";
 import { CodeBlock } from "@dreamer/ui-view/mobile/data-display";
@@ -80,24 +81,30 @@ const ACTION_API: DocsApiTableRow[] = [
   },
 ];
 
-const importCode =
-  `import { SwipeCell } from "@dreamer/ui-view/mobile/feedback";
+const importCode = `import { createSignal } from "@dreamer/view";
+import { SwipeCell } from "@dreamer/ui-view/mobile/feedback";
+
+const lastAction = createSignal("无");
 
 <SwipeCell
   rightActions={[
-    { text: "删除", style: "danger", onClick: () => {} },
-    { text: "更多", style: "default", onClick: () => {} },
+    { text: "删除", style: "danger", onClick: () => (lastAction.value = "删除") },
+    { text: "更多", style: "default", onClick: () => (lastAction.value = "更多") },
   ]}
 >
   <div class="px-4 py-3">列表行内容</div>
-</SwipeCell>`;
+</SwipeCell>
+<p>{() => lastAction.value}</p>`;
 
-const exampleBothSides = `<SwipeCell
-  leftActions={[{ text: "标为已读", style: "primary", onClick: () => {} }]}
-  rightActions={[{ text: "删除", style: "danger", onClick: () => {} }]}
+const exampleBothSides = `const lastAction = createSignal("无");
+
+<SwipeCell
+  leftActions={[{ text: "标为已读", style: "primary", onClick: () => (lastAction.value = "标为已读") }]}
+  rightActions={[{ text: "删除", style: "danger", onClick: () => (lastAction.value = "删除") }]}
 >
   <div class="px-4 py-3">左滑或右滑</div>
-</SwipeCell>`;
+</SwipeCell>
+<p>{() => lastAction.value}</p>`;
 
 /** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
 export const metadata = {
@@ -105,6 +112,7 @@ export const metadata = {
 };
 
 export default function MobileSwipeCellDoc() {
+  const rightAction = createSignal("无"), bothAction = createSignal("无");
   return (
     <div class="w-full max-w-3xl space-y-10">
       <section>
@@ -113,7 +121,7 @@ export default function MobileSwipeCellDoc() {
           列表行左右滑动露出操作按钮，适用于消息列表、购物车等；支持左右两侧多按钮与禁用。
           实现为 Pointer Events，<strong>触摸</strong>与<strong>
             鼠标左键横向拖
-          </strong>均可；纯纵向滚动仍由外层列表处理。
+          </strong>均可；纯纵向滚动仍由外层列表处理。按钮只记录本地演示操作，不修改真实业务数据。
         </Paragraph>
       </section>
 
@@ -137,14 +145,29 @@ export default function MobileSwipeCellDoc() {
           <MobileDocDemo class="p-2">
             <SwipeCell
               rightActions={[
-                { text: "删除", style: "danger", onClick: () => {} },
-                { text: "更多", style: "default", onClick: () => {} },
+                {
+                  text: "删除",
+                  style: "danger",
+                  onClick: () => {
+                    rightAction.value = "删除";
+                  },
+                },
+                {
+                  text: "更多",
+                  style: "default",
+                  onClick: () => {
+                    rightAction.value = "更多";
+                  },
+                },
               ]}
             >
               <div class="px-4 py-3 text-slate-800 dark:text-slate-100">
                 向左滑动本条查看操作
               </div>
             </SwipeCell>
+            <p role="status" data-swipe-demo-result="">
+              演示操作：{() => rightAction.value}
+            </p>
           </MobileDocDemo>
           <CodeBlock
             title="代码示例"
@@ -162,18 +185,29 @@ export default function MobileSwipeCellDoc() {
           <MobileDocDemo class="p-2">
             <SwipeCell
               leftActions={[
-                { text: "标为已读", style: "primary", onClick: () => {} },
+                {
+                  text: "标为已读",
+                  style: "primary",
+                  onClick: () => {
+                    bothAction.value = "标为已读";
+                  },
+                },
               ]}
               rightActions={[{
                 text: "删除",
                 style: "danger",
-                onClick: () => {},
+                onClick: () => {
+                  bothAction.value = "删除";
+                },
               }]}
             >
               <div class="px-4 py-3 text-slate-800 dark:text-slate-100">
                 向右滑露出左侧，向左滑露出右侧
               </div>
             </SwipeCell>
+            <p role="status" data-swipe-demo-result="">
+              演示操作：{() => bothAction.value}
+            </p>
           </MobileDocDemo>
           <CodeBlock
             title="代码示例"

@@ -26,9 +26,10 @@ const ACCORDION_API: ApiRow[] = [
   },
   {
     name: "expandedKeys",
-    type: "string[]",
+    type: "string[] | () => string[]",
     default: "-",
-    description: "当前展开 key 列表（受控）",
+    description:
+      "当前展开 key 列表（受控）；推荐 `() => sig.value` 或 getter，细粒度更新下勿只传一次性快照",
   },
   {
     name: "defaultExpandedKeys",
@@ -70,34 +71,31 @@ const ACCORDION_API: ApiRow[] = [
 ];
 
 const importCode = `import { createSignal } from "@dreamer/view";
-export function Demo() {
-  const expandedKeys = createSignal<string[]>(["1"]);
-  const items = [
-    { key: "1", header: "第一项", children: <p>内容</p> },
-    { key: "2", header: "第二项", children: <p>内容</p> },
-  ];
-  void expandedKeys.value;
-  return (
-    <Accordion
-      items={items}
-      expandedKeys={expandedKeys.value}
-      onChange={(keys) => (expandedKeys.value = keys)}
-      allowMultiple
-    />
-  );
-}`;
+import { Accordion } from "@dreamer/ui-view/layout";
+
+const expandedKeys = createSignal<string[]>(["1"]);
+const items = [
+  { key: "1", header: "第一项", children: <p>内容</p> },
+  { key: "2", header: "第二项", children: <p>内容</p> },
+];
+<Accordion
+  items={items}
+  expandedKeys={() => expandedKeys.value}
+  onChange={(keys) => (expandedKeys.value = keys)}
+  allowMultiple
+/>`;
 
 const exampleMultiple = `<Accordion
   items={items}
-  expandedKeys={expandedKeys.value}
+  expandedKeys={() => expandedKeys.value}
   onChange={(keys) => (expandedKeys.value = keys)}
   allowMultiple
 />`;
 
 const exampleSingle = `<Accordion
   items={items}
-  expandedKeys={expandedKeys.value}
-  onChange={(keys) => (expandedKeys.value = keys)}
+  expandedKeys={() => singleKeys.value}
+  onChange={(keys) => (singleKeys.value = keys)}
   allowMultiple={false}
 />`;
 
@@ -106,8 +104,7 @@ const exampleDisabled = `<Accordion
     { key: "1", header: "可展开", children: <p>内容</p> },
     { key: "2", header: "禁用项", disabled: true, children: <p>不可点击</p> },
   ]}
-  expandedKeys={["1"]}
-  onChange={() => {}}
+  defaultExpandedKeys={["1"]}
 />`;
 
 /** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
@@ -115,9 +112,11 @@ export const metadata = {
   title: "Accordion 手风琴折叠 · ui-view",
 };
 
-export default function LayoutAccordion() {
-  const expandedKeys = createSignal<string[]>(["1"]);
+/** 受控示例的展开 key：提到模块级，避免页面重跑时 createSignal 被重新执行导致点不开 */
+const expandedKeysMultiple = createSignal<string[]>(["1"]);
+const expandedKeysSingle = createSignal<string[]>(["1"]);
 
+export default function LayoutAccordion() {
   const items = [
     {
       key: "1",
@@ -135,12 +134,6 @@ export default function LayoutAccordion() {
       children: <p class="text-sm">第三项展开内容。</p>,
     },
   ];
-
-  /**
-   * 受控时须在渲染中读 `expandedKeys`，父级随变更重绘；勿用 `{() => <Accordion/>}`，
-   * 在 Preact/常规 JSX 中函数子不会被执行，示例区会空白。
-   */
-  void expandedKeys.value;
 
   return (
     <div class="space-y-10">
@@ -169,10 +162,20 @@ export default function LayoutAccordion() {
 
         <div class="space-y-4">
           <Title level={3}>allowMultiple=true</Title>
+          <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+            受控时请使用{" "}
+            <code class="text-xs">
+              expandedKeys=&#123;() =&gt; sig.value&#125;
+            </code>
+            （或等价 getter），并在 <code class="text-xs">onChange</code>{" "}
+            里写回 signal；组件内已每次从{" "}
+            <code class="text-xs">props.expandedKeys</code>{" "}
+            解析，避免闭包快照导致点不开。
+          </Paragraph>
           <Accordion
             items={items}
-            expandedKeys={expandedKeys.value}
-            onChange={(keys) => (expandedKeys.value = keys)}
+            expandedKeys={() => expandedKeysMultiple.value}
+            onChange={(keys) => (expandedKeysMultiple.value = keys)}
             allowMultiple
           />
           <CodeBlock
@@ -190,8 +193,8 @@ export default function LayoutAccordion() {
           <Title level={3}>allowMultiple=false（单选）</Title>
           <Accordion
             items={items}
-            expandedKeys={expandedKeys.value}
-            onChange={(keys) => (expandedKeys.value = keys)}
+            expandedKeys={() => expandedKeysSingle.value}
+            onChange={(keys) => (expandedKeysSingle.value = keys)}
             allowMultiple={false}
           />
           <CodeBlock
@@ -221,8 +224,7 @@ export default function LayoutAccordion() {
                 children: <p class="text-sm">不可点击</p>,
               },
             ]}
-            expandedKeys={["1"]}
-            onChange={() => {}}
+            defaultExpandedKeys={["1"]}
           />
           <CodeBlock
             title="代码示例"

@@ -27,9 +27,10 @@ const CONFIG_PROVIDER_API: ApiRow[] = [
   },
   {
     name: "theme",
-    type: "light | dark | system",
+    type: "light | dark | system | Signal<ThemeMode> | () => ThemeMode",
     default: "light",
-    description: "主题；system 依 prefers-color-scheme",
+    description:
+      "主题；system 依 prefers-color-scheme。请传 Signal 或 getter，勿传 theme={sig.value} 快照",
   },
   {
     name: "locale",
@@ -80,7 +81,7 @@ const exampleConfigProp = `<ConfigProvider
 </ConfigProvider>`;
 
 const exampleThemeLocale = `<ConfigProvider
-  theme={theme.value}
+  theme={theme}
   locale="zh-CN"
   componentSize="md"
 >
@@ -159,17 +160,17 @@ export default function OtherConfigProvider() {
                 theme.value = t === "light" ? "dark" : "light";
               }}
             >
-              切换 theme（当前: {theme.value}）
+              切换 theme（当前: {() => theme.value}）
             </Button>
           </div>
-          <ConfigProvider theme={theme.value} locale="zh-CN" componentSize="md">
+          <ConfigProvider theme={theme} locale="zh-CN" componentSize="md">
             <div class="rounded-lg border border-slate-200 dark:border-slate-600 p-4 space-y-3">
               <p class="text-sm font-medium">
                 子树内（受 ConfigProvider 包裹）
               </p>
               <p class="text-sm text-slate-500">
-                当前 theme={theme
-                  .value}、locale=zh-CN、componentSize=md；子树内组件可
+                当前 theme={() =>
+                  theme.value}、locale=zh-CN、componentSize=md；子树内组件可
                 getConfig() 读取。
               </p>
               <Button type="button" size="sm">小按钮</Button>
@@ -190,9 +191,9 @@ export default function OtherConfigProvider() {
           <Title level={3}>getConfig()</Title>
           <div class="rounded-lg border border-slate-200 dark:border-slate-600 p-4">
             <p class="text-sm text-slate-500">
-              子树外 getConfig(): theme={getConfig().theme ?? "-"},
-              locale={getConfig().locale ?? "-"},
-              componentSize={getConfig().componentSize ?? "-"}
+              子树外 getConfig(): theme={() => getConfig().theme ?? "-"},
+              locale={() => getConfig().locale ?? "-"}, componentSize={() =>
+                getConfig().componentSize ?? "-"}
             </p>
           </div>
           <CodeBlock
