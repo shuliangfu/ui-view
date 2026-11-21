@@ -26,15 +26,52 @@ async function wheelTo(page: Page, target: Locator, y: number) {
     return r !== null && Math.abs(r.y - y) < 2;
   });
 }
-/** 点在触发器上方空白处关闭；避免 (2,2) 落在文档顶栏或侧栏。 */
+function inBox(
+  p: { x: number; y: number },
+  r: { x: number; y: number; width: number; height: number },
+) {
+  return p.x >= r.x && p.x <= r.x + r.width && p.y >= r.y &&
+    p.y <= r.y + r.height;
+}
+
+/** 指针移到元素中心，避免 locator.hover() 为可见而滚页、拖垮 100ms 关闭窗。 */
+async function pointerOn(page: Page, el: Locator) {
+  const box = await el.boundingBox();
+  if (!box) throw new Error("Missing rectangle");
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+}
+
+/** 离开触发器与面板；勿用 (2,2)，会落在文档顶栏或侧栏。 */
+async function pointerOff(page: Page, target: Locator, panel?: Locator) {
+  const t = await target.boundingBox();
+  if (!t) throw new Error("Missing trigger rectangle");
+  const b = panel ? await panel.boundingBox() : null;
+  const left = Math.min(t.x, b?.x ?? t.x);
+  const top = Math.min(t.y, b?.y ?? t.y);
+  await page.mouse.move(Math.max(80, left - 80), Math.max(80, top - 80));
+}
+
+async function isClearPoint(
+  page: Page,
+  c: { x: number; y: number },
+): Promise<boolean> {
+  return await page.evaluate(({ x, y }) => {
+    const stack = document.elementsFromPoint(x, y);
+    for (const el of stack) {
+      if (!(el instanceof Element)) continue;
+      if (getComputedStyle(el).pointerEvents === "none") continue;
+      return !el.closest(
+        "[data-dreamer-dropdown],[role='menu'],[data-dreamer-view-devtools],a,button,[role='button']",
+      );
+    }
+    return false;
+  }, c);
+}
+
+/** 点在空白处关闭；跳过仍会命中触发器、面板或其他控件的坐标。 */
 async function clickOutside(page: Page, target: Locator, panel: Locator) {
   const t = await target.boundingBox(), b = await panel.boundingBox();
   if (!t || !b) throw new Error("Missing trigger or panel for outside click");
-  const inBox = (
-    p: { x: number; y: number },
-    r: { x: number; y: number; width: number; height: number },
-  ) =>
-    p.x >= r.x && p.x <= r.x + r.width && p.y >= r.y && p.y <= r.y + r.height;
   const candidates = [
     { x: t.x + t.width / 2, y: Math.max(80, t.y - 40) },
     { x: Math.max(300, t.x - 40), y: Math.max(80, t.y - 40) },
@@ -42,9 +79,14 @@ async function clickOutside(page: Page, target: Locator, panel: Locator) {
       x: t.x + t.width / 2,
       y: t.y + t.height + 16 + (b.y + b.height < t.y ? 0 : b.height + 24),
     },
+    {
+      x: Math.max(80, Math.min(t.x, b.x) - 80),
+      y: Math.max(80, Math.min(t.y, b.y) - 80),
+    },
   ];
   for (const c of candidates) {
     if (c.y < 80 || inBox(c, t) || inBox(c, b)) continue;
+    if (!await isClearPoint(page, c)) continue;
     await page.mouse.click(c.x, c.y);
     return;
   }
@@ -255,23 +297,23 @@ describe("Dropdown physical", () => {
       await target.hover();
       await page.waitForTimeout(40);
       expect(await menu(page).count()).toBe(0);
-      await page.mouse.move(2, 2);
+      await pointerOff(page, target, menu(page));
       await page.waitForTimeout(180);
       expect(await menu(page).count()).toBe(0);
       await target.hover();
       await visible(menu(page));
       await geometry(target, menu(page), "bottom", "center", false);
       await plainActions(page);
-      await menu(page).hover();
+      await pointerOn(page, menu(page));
       await page.waitForTimeout(160);
       await visible(menu(page));
-      await page.mouse.move(2, 2);
+      await pointerOff(page, target, menu(page));
       await page.waitForTimeout(40);
       await visible(menu(page));
-      await menu(page).hover();
+      await pointerOn(page, menu(page));
       await page.waitForTimeout(160);
       await visible(menu(page));
-      await page.mouse.move(2, 2);
+      await pointerOff(page, target, menu(page));
       await visible(menu(page), false);
       await attr(target, "aria-expanded", "false");
       const stamps = await page.evaluate(() =>
@@ -299,7 +341,7 @@ describe("Dropdown physical", () => {
       for (const label of ["操作一", "操作二"]) {
         await target.hover();
         await visible(menu(page));
-        await menu(page).hover();
+        await pointerOn(page, menu(page));
         await attr(
           menu(page).getByRole("button", { name: label, exact: true }),
           "type",
@@ -311,7 +353,7 @@ describe("Dropdown physical", () => {
             delay: 180,
           });
         expect(page.url()).toBe(before);
-        await page.mouse.move(2, 2);
+        await pointerOff(page, target, menu(page));
         await visible(menu(page), false);
       }
       await target.hover();
