@@ -2,7 +2,11 @@
 import { fromFileUrl, readTextFileSync } from "@dreamer/runtime-adapter";
 import { describe, expect, it } from "@dreamer/test";
 import type { Locator, Page } from "npm:playwright@1.59.1";
-import { DOCS_BROWSER_CONFIG } from "../helpers.ts";
+import {
+  DOCS_BROWSER_CONFIG,
+  type DocsBrowserTestContext,
+  sharedEnv,
+} from "../helpers.ts";
 import { eventually, open, visible } from "./driver.ts";
 
 type TableFixture = {
@@ -118,10 +122,6 @@ async function headingReady(page: Page, name: string) {
   );
 }
 
-function originOf(page: Page): string {
-  return new URL(page.url()).origin;
-}
-
 describe("Public docs reference written", () => {
   for (const entry of bundle.fixtures) {
     it("公共文档操作：" + entry.route, async (t) => {
@@ -190,7 +190,7 @@ describe("Public docs reference written", () => {
         if (link.h1) {
           await headingReady(page, link.h1);
         }
-        await page.goto(originOf(page) + entry.route);
+        await sharedEnv.goto(t as DocsBrowserTestContext, entry.route);
         if (entry.h1) {
           await headingReady(page, entry.h1);
         }

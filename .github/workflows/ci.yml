@@ -137,7 +137,8 @@ jobs:
           windows-latest,
         ] # pin 24.04: ubuntu-latest is 26.04; Playwright 1.59.1 has no chromium for ubuntu26.04
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 120
+    # Playwright docs-browser is serialized (--max-concurrency=1); match Deno/Node headroom
+    timeout-minutes: 180
     steps:
       - uses: actions/checkout@v4
 
@@ -186,7 +187,7 @@ jobs:
 
       - name: Test (Bun — unit + docs-browser)
         if: matrix.os != 'windows-latest'
-        run: bun test tests/docs-sidebar-reconcile.test.ts tests/docs-browser/
+        run: bun test --max-concurrency=1 tests/docs-sidebar-reconcile.test.ts tests/docs-browser/
 
       - name: Test (Bun — unit only; docs-browser skipped on Windows)
         if: matrix.os == 'windows-latest'

@@ -341,11 +341,11 @@ describe("Table physical written", () => {
         expect(await input.inputValue()).toBe("张三");
         expect(await input.getAttribute("placeholder")).toBe("姓名");
         await input.fill("王小明");
-        // 受控重挂后原 input 节点可能已摘掉，对 locator.blur() 不一定能冒泡 focusout；点标题失焦更接近真实操作
-        await p.getByRole("heading", {
-          name: "可编辑列 editable + onCellChange",
-          exact: true,
-        }).click();
+        // 受控重挂后原 input 节点可能已摘掉，对 locator.blur() 不一定能冒泡 focusout。
+        // 点击同行以外的单元格失焦，避免窄视口下标题被顶栏挡住而点不中。
+        const otherCell = second.nth(nameIdx);
+        await otherCell.scrollIntoViewIfNeeded();
+        await otherCell.click();
         await eventually(async () =>
           (await nameCell.innerText()).trim() === "王小明" &&
           await nameCell.locator("input").count() === 0

@@ -29,7 +29,7 @@ async function selected(select: Locator, expected: string[]) {
 async function pick(select: Locator, key: string, meta = false) {
   await select.locator(`option[value="${key}"]`).click({
     delay: 180,
-    modifiers: meta ? ["Meta"] : [],
+    modifiers: meta ? ["ControlOrMeta"] : [],
   });
 }
 async function move(demo: Locator, right: boolean) {
@@ -87,7 +87,7 @@ describe("Transfer physical", () => {
       await right.locator('option[value="2"]').dblclick({ delay: 150 });
       await keys(right, []);
       await left.focus();
-      await page.keyboard.press("Meta+A");
+      await page.keyboard.press("ControlOrMeta+A");
       await selected(left, ["1", "2", "3", "4", "5"]);
       await move(demo, true);
       await keys(left, ["6"]);
@@ -95,7 +95,7 @@ describe("Transfer physical", () => {
       await move(demo, true);
       await keys(right, ["1", "2", "3", "4", "5"]);
       await right.focus();
-      await page.keyboard.press("Meta+A");
+      await page.keyboard.press("ControlOrMeta+A");
       await selected(right, ["1", "2", "3", "4", "5"]);
       await move(demo, false);
       await keys(left, ["1", "2", "3", "4", "5", "6"]);
@@ -177,7 +177,7 @@ describe("Transfer physical", () => {
       await searches.nth(0).fill("权限");
       await keys(left, ["p1", "p2"]);
       await left.focus();
-      await page.keyboard.press("Meta+A");
+      await page.keyboard.press("ControlOrMeta+A");
       await selected(left, ["p1", "p2"]);
       await move(demo, true);
       await keys(right, ["r2", "p1", "p2"]);

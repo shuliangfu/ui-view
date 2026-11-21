@@ -1106,6 +1106,79 @@ async function recoverDocsBrowserPage(
     : new Error(String(lastErr ?? "recoverDocsBrowserPage failed"));
 }
 
+/** Contexts that already have the in-page clipboard init script. */
+const clipboardPatchedContexts = new WeakSet<object>();
+
+/**
+ * Playwright's OS clipboard is unreliable on Windows CI (and sometimes Linux)
+ * even after grantPermissions. Install a page-level navigator.clipboard that
+ * records writeText bytes for assertions, and still forwards to the native API.
+ */
+async function ensureDocsClipboard(page: unknown): Promise<void> {
+  if (!page || typeof page !== "object") return;
+  const target = page as {
+    context?: () => {
+      addInitScript?: (script: () => void) => Promise<void>;
+      grantPermissions?: (
+        permissions: string[],
+        options?: { origin: string },
+      ) => Promise<void>;
+    };
+    url?: () => string;
+  };
+  if (typeof target.context !== "function") return;
+  const ctx = target.context();
+  if (!ctx) return;
+  if (
+    !clipboardPatchedContexts.has(ctx) &&
+    typeof ctx.addInitScript === "function"
+  ) {
+    clipboardPatchedContexts.add(ctx);
+    await ctx.addInitScript(() => {
+      const g = globalThis as unknown as {
+        __uiViewClipboard?: { text: string };
+      };
+      g.__uiViewClipboard = g.__uiViewClipboard ?? { text: "" };
+      const native = globalThis.navigator?.clipboard;
+      const api = {
+        writeText: async (text: string) => {
+          g.__uiViewClipboard = g.__uiViewClipboard ?? { text: "" };
+          g.__uiViewClipboard.text = String(text ?? "");
+          try {
+            await native?.writeText?.(String(text ?? ""));
+          } catch {
+            /* OS clipboard may reject in headless CI */
+          }
+        },
+        readText: async () => {
+          return g.__uiViewClipboard?.text ?? "";
+        },
+      };
+      try {
+        Object.defineProperty(globalThis.navigator, "clipboard", {
+          configurable: true,
+          value: api,
+        });
+      } catch {
+        /* ignore if navigator is sealed */
+      }
+    });
+  }
+  if (typeof ctx.grantPermissions === "function") {
+    try {
+      const href = typeof target.url === "function" ? target.url() : "";
+      const origin = href ? new URL(href).origin : "";
+      if (origin && origin !== "null" && !origin.startsWith("about:")) {
+        await ctx.grantPermissions(["clipboard-read", "clipboard-write"], {
+          origin,
+        });
+      }
+    } catch {
+      /* url may be unavailable before the first navigation */
+    }
+  }
+}
+
 async function navigateDocsPage(
   t: DocsBrowserTestContext,
   url: string,
@@ -1117,10 +1190,12 @@ async function navigateDocsPage(
   const waitUntil = options?.waitUntil ?? "commit";
   const page = t.browser?.page;
   if (typeof page?.goto === "function") {
+    await ensureDocsClipboard(page);
     await page.goto(url, {
       waitUntil,
       timeout: navMs,
     });
+    await ensureDocsClipboard(page);
     return;
   }
   if (typeof t.browser?.goto !== "function") {

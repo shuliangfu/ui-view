@@ -30,7 +30,8 @@ function visibleMenu(page: Page, id: string) {
 async function openColumnMenu(page: Page, panel: Locator) {
   const menu = visibleMenu(page, "dp-column-menu");
   const columns = panel.getByTestId("dp-columns");
-  for (let i = 0; i < 3; i++) {
+  let lastError: unknown;
+  for (let i = 0; i < 5; i++) {
     await page.keyboard.press("Escape");
     await visible(menu, false);
     await columns.scrollIntoViewIfNeeded();
@@ -51,13 +52,17 @@ async function openColumnMenu(page: Page, panel: Locator) {
       await visible(menu);
       const email = menu.getByTestId("dp-col-email");
       await email.waitFor({ state: "visible" });
-      await email.scrollIntoViewIfNeeded();
+      const emailBox = await email.boundingBox();
+      if (emailBox && (emailBox.y < 0 || emailBox.y + emailBox.height > 900)) {
+        await email.scrollIntoViewIfNeeded();
+        await email.waitFor({ state: "visible" });
+      }
       return menu;
     } catch (e) {
-      if (i === 2) throw e;
+      lastError = e;
     }
   }
-  return menu;
+  throw lastError ?? new Error("column menu did not stay attached");
 }
 
 async function hideEmailThenReset(page: Page, panel: Locator) {
