@@ -368,15 +368,22 @@ describe("Dropdown physical", () => {
     async (t) => {
       const page = await open(t, route),
         scope = example(page, "disabled"),
-        target = trigger(scope, "禁用下拉"),
-        button = target.locator("button");
-      expect(await button.isDisabled()).toBe(true);
+        root = scope.locator("[data-dreamer-dropdown]").filter({
+          hasText: "禁用下拉",
+        });
+      // 真实 DOM：[data-dreamer-dropdown] > span[role=button] > button[disabled]。
+      // 先等预览挂上；native button 从下拉根查询，避免 [role=button] 命中内层 button 后再找子 button 空匹配。
+      await root.waitFor({ state: "visible" });
+      const target = root.locator(':scope > [role="button"]'),
+        button = root.locator("button"),
+        control = (await button.count()) > 0 ? button : target;
+      await control.scrollIntoViewIfNeeded();
+      expect(await control.isDisabled()).toBe(true);
       await attr(target, "aria-disabled", "true");
       expect(await target.evaluate((el) => (el as HTMLElement).tabIndex)).toBe(
         -1,
       );
-      await button.scrollIntoViewIfNeeded();
-      const b = await button.boundingBox();
+      const b = await control.boundingBox();
       if (!b) throw new Error("Disabled trigger missing");
       await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2);
       await page.mouse.down();
