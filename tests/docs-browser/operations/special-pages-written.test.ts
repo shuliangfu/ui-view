@@ -170,10 +170,10 @@ const QUICK = [
 ] as const;
 
 async function headingReady(page: Page, name: string) {
-  await eventually(async () =>
-    await page.getByRole("heading", { level: 1, name, exact: true }).count() > 0
-  );
-  await visible(page.getByRole("heading", { level: 1, name, exact: true }));
+  // 用页面默认 8s 等待可见标题，而不是 eventually 的 4s：
+  // 客户端切页后主栏 H1 有时会晚于 pathname 出现，4s 在 @1280 会误伤。
+  const heading = page.getByRole("heading", { level: 1, name, exact: true });
+  await heading.waitFor({ state: "visible" });
 }
 
 async function copyIn(
@@ -407,7 +407,10 @@ describe("Special pages written", () => {
         for (const [href, label, title] of QUICK) {
           await page.goto(new URL("/desktop", page.url()).href);
           await headingReady(page, "桌面版组件");
-          await page.getByRole("link", { name: label, exact: true }).click();
+          await page.locator("header").getByRole("link", {
+            name: label,
+            exact: true,
+          }).click();
           await eventually(() => new URL(page.url()).pathname === href);
           await headingReady(page, title);
         }

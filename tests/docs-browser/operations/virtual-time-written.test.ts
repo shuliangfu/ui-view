@@ -118,21 +118,6 @@ async function scrollContract(
     await original.dispose();
   }
 }
-function readSeconds(text: string) {
-  if (!/^\d{2}:\d{2}:\d{2}$/.test(text)) {
-    throw Error("Exact HH:mm:ss required: " + text);
-  }
-  const [h, m, s] = text.split(":").map(Number);
-  expect(m >= 0 && m < 60 && s >= 0 && s < 60).toBe(true);
-  return h * 3600 + m * 60 + s;
-}
-function format(seconds: number) {
-  return [
-    Math.floor(seconds / 3600),
-    Math.floor(seconds % 3600 / 60),
-    seconds % 60,
-  ].map((n) => String(n).padStart(2, "0")).join(":");
-}
 describe("Virtual time written", () => {
   for (const platform of ["desktop", "mobile"]) {
     for (const width of [390, 1280]) {
@@ -238,28 +223,38 @@ describe("Virtual time written", () => {
           try {
             const p = await context.newPage();
             p.setDefaultTimeout(8000);
-            await p.clock.install();
-            await p.goto(host.url(), { waitUntil: "networkidle" });
+            // 固定原点并在导航前暂停，避免 Date.now()+3661000 的起步漂到非整秒。
+            // 之后用绝对时刻推进：interval 只在整秒回调，多出来的 16ms 仅用于刷 rAF。
+            const origin = 1_700_000_000_000;
+            await p.clock.install({ time: origin });
+            await p.clock.pauseAt(origin);
+            await p.goto(host.url(), { waitUntil: "domcontentloaded" });
             const timer = p.locator('main [role="timer"]');
             await eventually(async () =>
               await timer.count() === 1 &&
-              readSeconds((await timer.innerText()).trim()) > 0
+              (await timer.innerText()).trim() === "01:01:01"
             );
-            await p.clock.pauseAt(await p.evaluate(() => Date.now() + 1500));
-            const first = readSeconds((await timer.innerText()).trim()),
-              elapsed = await p.evaluate(() => performance.now());
-            expect(first > 61).toBe(true);
-            expect(
-              first <= 3661 &&
-                first >= Math.max(0, Math.floor((3_661_000 - elapsed) / 1000)),
-            ).toBe(true);
+            expect((await timer.innerText()).trim()).toBe("01:01:01");
             await p.clock.runFor(1000);
-            expect((await timer.innerText()).trim()).toBe(format(first - 1));
-            await p.clock.fastForward(60_000);
-            expect((await timer.innerText()).trim()).toBe(format(first - 61));
-            await p.clock.fastForward((first + 1) * 1000);
+            await p.clock.runFor(16);
+            await eventually(async () =>
+              (await timer.innerText()).trim() === "01:01:00"
+            );
+            expect((await timer.innerText()).trim()).toBe("01:01:00");
+            await p.clock.pauseAt(origin + 61_000);
+            await p.clock.runFor(16);
+            await eventually(async () =>
+              (await timer.innerText()).trim() === "01:00:00"
+            );
+            expect((await timer.innerText()).trim()).toBe("01:00:00");
+            await p.clock.pauseAt(origin + 3_661_000);
+            await p.clock.runFor(16);
+            await eventually(async () =>
+              (await timer.innerText()).trim() === "00:00:00"
+            );
             expect((await timer.innerText()).trim()).toBe("00:00:00");
-            await p.clock.fastForward(86_400_000);
+            await p.clock.pauseAt(origin + 3_661_000 + 86_400_000);
+            await p.clock.runFor(16);
             expect((await timer.innerText()).trim()).toBe("00:00:00");
             expect(await timer.count()).toBe(1);
             expect(

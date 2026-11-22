@@ -228,17 +228,27 @@ describe("Mobile data display physical written", () => {
             true,
           );
         // 先把示例滚进视口，再把内层 scrollTop 置 0：scrollIntoView 有时会带动内层滚动，
-        // 官方环境下曾出现触点落在「条目 5」、列表并不在顶部，PullRefresh 因此不武装。
+        // 且可能在 evaluate 返回后仍被浏览器滚动锚定改回去，PullRefresh 在 scrollTop>8 时不武装。
         await scroller.evaluate((el) => {
           const node = el as HTMLElement;
           node.scrollIntoView({ block: "center", inline: "nearest" });
           node.scrollTop = 0;
         });
+        await eventually(async () => {
+          await scroller.evaluate((el) => {
+            (el as HTMLElement).scrollTop = 0;
+          });
+          return await scroller.evaluate((el) =>
+            (el as HTMLElement).scrollTop <= 8
+          );
+        });
         const box = await scroller.boundingBox();
         if (!box) throw new Error("scroll list box missing");
-        await p.mouse.move(box.x + box.width / 2, box.y + 24);
+        const x = box.x + box.width / 2;
+        await p.mouse.move(x, box.y + 12);
         await p.mouse.down();
-        await p.mouse.move(box.x + box.width / 2, box.y + 160, { steps: 12 });
+        // 默认 pullDistance=headHeight=50；从顶部再下拉超过阈值即可。
+        await p.mouse.move(x, box.y + 12 + 80, { steps: 16 });
         await p.mouse.up();
         await eventually(async () =>
           await demo.getByText("条目 20", { exact: true }).count() === 0

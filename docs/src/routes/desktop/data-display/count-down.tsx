@@ -41,7 +41,11 @@ const importCode = `import { CountDown } from "@dreamer/ui-view/data-display";
 
 <CountDown target={Date.now() + 3_661_000} />`;
 
-const exampleDemo = `<CountDown target={Date.now() + 3_661_000} />`;
+const exampleDemo = `const target = Date.now() + 3_661_000;
+<CountDown target={target} />`;
+
+/** 一次取值，避免文档页重渲染时把 target 跟着 Date.now() 往后推、倒计时停在原地。 */
+const BASIC_TARGET = Date.now() + 3_661_000;
 
 /** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
 export const metadata = {
@@ -66,7 +70,7 @@ export default function Page() {
       <section class="space-y-3">
         <Title level={2}>示例</Title>
         <div class="rounded-xl border border-slate-200 dark:border-slate-700 p-4 bg-white dark:bg-slate-900">
-          <CountDown target={Date.now() + 3661000} />
+          <CountDown target={BASIC_TARGET} />
         </div>
         <CodeBlock
           title="代码示例"

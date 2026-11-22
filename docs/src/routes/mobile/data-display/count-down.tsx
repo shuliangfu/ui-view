@@ -43,7 +43,11 @@ const importCode =
 
 <CountDown target={Date.now() + 3_661_000} />`;
 
-const exampleDemo = `<CountDown target={Date.now() + 3_661_000} />`;
+const exampleDemo = `const target = Date.now() + 3_661_000;
+<CountDown target={target} />`;
+
+/** 一次取值，避免文档页重渲染时把 target 跟着 Date.now() 往后推、倒计时停在原地。 */
+const BASIC_TARGET = Date.now() + 3_661_000;
 
 /** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
 export const metadata = {
@@ -69,7 +73,7 @@ export default function Page() {
         <Title level={2}>示例</Title>
         <MobileDocDemo>
           <div class="p-4 text-center text-lg">
-            <CountDown target={Date.now() + 3661000} />
+            <CountDown target={BASIC_TARGET} />
           </div>
         </MobileDocDemo>
         <CodeBlock
