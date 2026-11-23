@@ -1,10 +1,10 @@
 /**
  * 日期/时间选择器浮层工具：点击外部关闭、时/分列表隐藏滚动条等。
  *
- * **DatePicker / TimePicker / DateTimePicker / ColorPicker（锚定触发器）**：弹层与触发器同处 **`relative` 子树**，用 `position:fixed` + {@link computePickerPortalStyle} 贴触发器，
- * 并由 {@link subscribePickerAnchorScrollAndResize} 跟随滚动（不用 `createPortal`，减轻与页面滚动不同步的延迟感）。
+ * **DatePicker / TimePicker / DateTimePicker / ColorPicker（锚定触发器）**：弹层默认与触发器同处 **`relative` 子树**，用 `position:fixed` + {@link computePickerPortalStyle} 贴触发器，
+ * 并由 {@link subscribePickerAnchorScrollAndResize} 跟随滚动。
+ * 视口定位时会把浮层挂到 `document.body`（见 {@link pinPickerPanelToViewport}），避免 Modal 的 `transform` 成为 `position:fixed` 包含块，拖动后坐标错位。
  * 注册点外关闭须与几何同步一并延后到 **`queueMicrotask`**（见 {@link registerPickerFixedOverlayPositionAndOutsideClick}）。
- * {@link getFormPortalBodyHost} 给仍需挂 `document.body` 的浮层（如富文本）用。
  */
 
 import { isDomElement, isHtmlElement } from "../dom-guards.ts";
@@ -172,6 +172,22 @@ export function findFixedContainingBlock(
 }
 
 /**
+ * 丢弃接近视口宽的浮层宽度读数。
+ * `position:fixed` 加上 `min-w-full`／未设宽时，测量值常等于视口宽；
+ * 若再用这个宽度去夹 left，会把下拉钉到屏幕左缘并铺满全屏。
+ */
+export function sanitizePickerPanelMinWidth(
+  width: number,
+  viewportWidth: number,
+  inset = 8,
+): number {
+  const usable = Math.max(0, viewportWidth - inset * 2);
+  if (!(width > 0)) return 0;
+  if (usable > 0 && width >= usable * 0.95) return 0;
+  return width;
+}
+
+/**
  * 把触发器的视口矩形换成相对 fixed 包含块的 left／top。
  * 用于 Modal 等写了 `transform` 的容器：直接用 `getBoundingClientRect` 会把浮层甩出视口。
  */
@@ -190,12 +206,18 @@ export function computePickerPortalOffset(
 ): { top: number; left: number } {
   const margin = options?.marginBelow ?? 4;
   const inset = options?.viewportInset ?? 8;
-  const minW = options?.panelMinWidth ?? 288;
+  const minW = sanitizePickerPanelMinWidth(
+    options?.panelMinWidth ?? 288,
+    viewportWidth,
+    inset,
+  );
   let left = trigger.left - origin.left;
-  const minLeft = inset - origin.left;
-  const maxLeft = viewportWidth - inset - minW - origin.left;
-  if (left > maxLeft) left = Math.max(minLeft, maxLeft);
-  if (left < minLeft) left = minLeft;
+  if (minW > 0) {
+    const minLeft = inset - origin.left;
+    const maxLeft = viewportWidth - inset - minW - origin.left;
+    if (left > maxLeft) left = Math.max(minLeft, maxLeft);
+    if (left < minLeft) left = minLeft;
+  }
 
   let top = trigger.bottom + margin - origin.top;
   const panelH = options?.panelHeight;
@@ -742,6 +764,48 @@ export function getFormPortalBodyHost(): HTMLElement | null {
   }
 }
 
+/** 视口定位浮层的标记，供点外部关闭把挂到 `body` 的面板仍视为内部。 */
+export const PICKER_OVERLAY_ATTR = "data-ui-picker-overlay";
+
+function isDocumentRootHost(
+  el: Element | null,
+  doc?: Document | null,
+): boolean {
+  if (el == null) return true;
+  const d = doc ?? el.ownerDocument;
+  return el === d.body || el === d.documentElement;
+}
+
+/**
+ * 把视口 `fixed` 浮层挂到 `document.body`，使坐标相对视口，不受 Modal `transform` 包含块影响。
+ * 关闭时把节点移回原位。
+ */
+export function pinPickerPanelToViewport(panel: HTMLElement): () => void {
+  const homeParent = panel.parentNode;
+  const homeNext = panel.nextSibling;
+  const host = getFormPortalBodyHost();
+  if (host && homeParent && homeParent !== host) {
+    host.appendChild(panel);
+  }
+  panel.setAttribute(PICKER_OVERLAY_ATTR, "");
+  panel.style.position = "fixed";
+  panel.style.marginTop = "0px";
+  panel.style.right = "auto";
+  return () => {
+    panel.removeAttribute(PICKER_OVERLAY_ATTR);
+    panel.style.removeProperty("position");
+    panel.style.removeProperty("margin-top");
+    panel.style.removeProperty("right");
+    if (homeParent && panel.parentNode !== homeParent) {
+      if (homeNext && homeNext.parentNode === homeParent) {
+        homeParent.insertBefore(panel, homeNext);
+      } else {
+        homeParent.appendChild(panel);
+      }
+    }
+  };
+}
+
 /** `scroll` / `resize`：`passive` 减少主线程滚动阻塞 */
 const pickerPassiveListenerOpts: AddEventListenerOptions = { passive: true };
 
@@ -907,7 +971,9 @@ function resolvePickerTriggerForOutsideClick(
   const refEl = triggerRef?.current;
   if (refEl?.isConnected) return refEl;
   const host = panel.parentElement;
-  if (!isHtmlElement(host)) return refEl ?? null;
+  if (!isHtmlElement(host) || isDocumentRootHost(host, panel.ownerDocument)) {
+    return refEl ?? null;
+  }
   /** DatePicker / DateTimePicker / TimePicker / ColorPicker：触发器为父级下带 dialog 语义的 button */
   const scoped = host.querySelector(":scope > button[aria-haspopup='dialog']");
   if (isHtmlElement(scoped)) return scoped;
@@ -1016,7 +1082,7 @@ function pointerCoordsInsidePickerChrome(
   if (clientPointInsideElementAabb(panel, clientX, clientY)) return true;
   if (clientPointHitsElementSubtree(panel, clientX, clientY)) return true;
   const host = panel.parentElement;
-  if (isHtmlElement(host)) {
+  if (isHtmlElement(host) && !isDocumentRootHost(host, panel.ownerDocument)) {
     if (clientPointInsideElementAabb(host, clientX, clientY)) return true;
     if (clientPointHitsElementSubtree(host, clientX, clientY)) return true;
   }
@@ -1092,7 +1158,11 @@ export function registerPointerDownOutside(
      * 比单独 `triggerRef` / querySelector 更稳：重排时 ref 可能 `isConnected: false`，但事件 target 仍在同一 host 子树内。
      */
     const host = panel.parentElement;
-    if (isHtmlElement(host) && pointerEventPathTouchesRoot(ev, host)) {
+    if (
+      isHtmlElement(host) &&
+      !isDocumentRootHost(host, doc) &&
+      pointerEventPathTouchesRoot(ev, host)
+    ) {
       return;
     }
     const trig = resolvePickerTriggerForOutsideClick(panel, triggerRef);
@@ -1158,8 +1228,9 @@ export function registerPickerFixedOverlayPositionAndOutsideClick(
 
   if (fixedToViewport) {
     /**
-     * 几何与滚动同步立即挂上；下一帧仅校准高度，不延迟真实外部按下的监听。
+     * 先挂到 body，再算视口坐标：Modal 拖动后的 transform 不会再变成 fixed 包含块。
      */
+    const unpin = pinPickerPanelToViewport(panel);
     const sync = (): void => {
       applyPickerPortalGeometryToElement(
         panel,
@@ -1186,6 +1257,7 @@ export function registerPickerFixedOverlayPositionAndOutsideClick(
         layoutRaf = 0;
       }
       unsubAnchor();
+      unpin();
     };
   } else {
     /** 避免上次 fixed 会话残留的 inline 覆盖 CSS 锚定 */

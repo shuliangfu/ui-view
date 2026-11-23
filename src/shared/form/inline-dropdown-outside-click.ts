@@ -8,6 +8,7 @@ import { isDomElement } from "../dom-guards.ts";
 
 import { createEffect, createRenderEffect, onCleanup } from "@dreamer/view";
 import {
+  PICKER_OVERLAY_ATTR,
   type PickerOverlayDisposeSlot,
   registerPickerFixedOverlayPositionAndOutsideClick,
   resolvePickerViewportAttach,
@@ -157,6 +158,17 @@ export function clickComposedPathIncludesRoot(
  * @param getRootEl 组件根 DOM。
  * @param close 关闭回调（应写 `openState.value = false`）。
  */
+function eventPathTouchesPickerOverlay(e: Event): boolean {
+  if (typeof e.composedPath !== "function") return false;
+  try {
+    return e.composedPath().some((n) =>
+      n instanceof Element && n.hasAttribute(PICKER_OVERLAY_ATTR)
+    );
+  } catch {
+    return false;
+  }
+}
+
 export function installInlineDropdownOutsideClickClose(
   isOpen: () => boolean,
   getRootEl: () => HTMLElement | null,
@@ -183,6 +195,7 @@ export function installInlineDropdownOutsideClickClose(
       if (!root) return;
       if (clickComposedPathIncludesRoot(e, root)) return;
       if (pressEventLikelyInsideRoot(e, root)) return;
+      if (eventPathTouchesPickerOverlay(e)) return;
       close();
     };
 
@@ -237,6 +250,9 @@ export function bindFixedDropdownPanelWhenOpen(
     panel.style.removeProperty("left");
     panel.style.removeProperty("z-index");
     panel.style.removeProperty("min-width");
+    panel.style.removeProperty("width");
+    panel.style.removeProperty("max-width");
+    panel.style.removeProperty("right");
     panel.style.removeProperty("position");
     panel.style.removeProperty("margin-top");
   };
@@ -262,7 +278,14 @@ export function bindFixedDropdownPanelWhenOpen(
       if (!isOpen() || getPanel() !== panel || !shouldViewport(panel)) return;
       const tw = triggerRef.current?.getBoundingClientRect().width ?? 0;
       const minW = Math.max(panelMinWidth ?? 0, tw);
-      if (minW > 0) panel.style.minWidth = `${Math.round(minW)}px`;
+      if (minW > 0) {
+        /** 锁成触发器宽度，避免 fixed + 百分宽度把下拉铺满视口 */
+        const w = `${Math.round(minW)}px`;
+        panel.style.minWidth = w;
+        panel.style.width = w;
+        panel.style.maxWidth = w;
+        panel.style.right = "auto";
+      }
       registerPickerFixedOverlayPositionAndOutsideClick(
         panel,
         triggerRef,
