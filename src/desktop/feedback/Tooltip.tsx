@@ -507,6 +507,7 @@ export function Tooltip(props: TooltipProps): JSXRenderable {
             left: st.left,
             top: st.top,
             transform: st.transform,
+            zIndex: "100000",
           }}
           ref={(node: HTMLElement | null) => {
             if (node == null) {

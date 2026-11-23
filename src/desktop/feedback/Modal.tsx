@@ -26,6 +26,20 @@
  避免底栏随表单值重算时拆掉重建输入框、输入失焦。
  * `onPositionChange` 仅在拖拽结束回调（便于宿主持久化），拖动过程不回写宿主。
  * **标题状态挂点**：`#modal-title` 旁固定空 `[data-modal-title-status]`，宿主／子树可 DOM patch 绿点文案；勿用 `title` signal 驱动状态。
+ *
+ * **`src`**：传入 URL 时，正文用 iframe 铺满内容区直接显示该地址；未传 `src` 时仍用 `children`。
+ * 同时传两者时以 `src` 为准。默认 iframe `sandbox` 为 {@link DEFAULT_MODAL_IFRAME_SANDBOX}
+ *（含 scripts／same-origin／forms，不含 popups／top-navigation），同域后台页可正常使用；跨域页无法读父页 DOM。
+ * 同域 iframe 每次 load 后会把 `target=_blank/_top/_parent`、修饰键／中键点击与 `window.open` 留在当前弹层内。
+ * 不信任的地址请收紧 `sandbox`；`sandbox={false}` 去掉该属性。
+ * `javascript:`／`vbscript:`／`data:text/html` 不会写入 iframe。
+ * 仅有 `src`、未指定 `height` 时，弹层高度回落为 `maxHeight`（默认 90vh），以便 iframe 有可铺满的高度。
+ *
+ * **`titleHeight` / `footerHeight`**：标题栏与底栏高度。预设 `xs`/`sm`/`md`/`lg`（40/48/56/72px），
+ * 或数字（px）、CSS 长度；可传零参 getter。无 `ms` 档（请用 `sm`）。未传时保持原内边距高度。
+ *
+ * **`width` / `height`**：`width` 支持预设与数字像素（以及 CSS 长度）；`height` 为弹层明确高度，
+ * 数字视为 px，亦可 CSS 字符串或零参 getter。全屏时忽略，仍铺满视口。
  */
 
 import {
@@ -53,6 +67,7 @@ import {
 import { IconClose } from "../../shared/basic/icons/Close.tsx";
 import { IconExitFullscreen } from "../../shared/basic/icons/ExitFullscreen.tsx";
 import { IconMaximize2 } from "../../shared/basic/icons/Maximize2.tsx";
+import { isDangerousUrl, sanitizeUrl } from "../../shared/sanitize-url.ts";
 
 /** `open` 合法形态：布尔快照、`createSignal` 容器，或返回 boolean 的零参 getter（嵌套 state 用 getter）。 */
 export type ModalOpenInput = ControlledOpenInput;
@@ -86,6 +101,40 @@ export type ModalMaxHeightPrimitive = string | number;
 export type ModalMaxHeightInput =
   | ModalMaxHeightPrimitive
   | (() => ModalMaxHeightPrimitive | undefined);
+
+/**
+ * 弹层 `height` 与 {@link ModalMaxHeightInput} 形态相同：CSS 或数字（px），可传零参 getter。
+ */
+export type ModalHeightPrimitive = ModalMaxHeightPrimitive;
+export type ModalHeightInput = ModalMaxHeightInput;
+
+/**
+ * 标题栏／底栏高度：预设 xs/sm/md/lg，或 CSS 字符串、数字（px）。
+ * 无 `ms` 档，请用 `sm`。
+ */
+export type ModalSlotHeightPrimitive =
+  | "xs"
+  | "sm"
+  | "md"
+  | "lg"
+  | string
+  | number;
+
+/**
+ * `titleHeight` / `footerHeight` 可与 `width` 一样传零参 getter。
+ */
+export type ModalSlotHeightInput =
+  | ModalSlotHeightPrimitive
+  | (() => ModalSlotHeightPrimitive | undefined);
+
+/**
+ * `src` 可为 URL 字符串或零参 getter；空值表示不使用 iframe。
+ */
+export type ModalSrcInput =
+  | string
+  | null
+  | undefined
+  | (() => string | null | undefined);
 
 /**
  * `title` 支持零参 getter；`false` 与 `null` 均不展示标题栏。
@@ -137,10 +186,31 @@ export interface ModalProps {
    * 标题主文案对齐：`center` 在弹层内水平居中（默认）；`left` 与右侧操作按钮两端排布。
    */
   titleAlign?: ModalTitleAlign;
+  /**
+   * 标题栏高度：`xs`/`sm`/`md`/`lg`（40/48/56/72px），或数字（px）、CSS 长度。
+   * 可传零参 getter。未传时保持默认内边距（约等于 `md`）。
+   */
+  titleHeight?: ModalSlotHeightInput;
   /** 弹层内容；可传 `() => VNode` 零参 getter 与宽度同步更新 */
   children?: unknown;
+  /**
+   * 在正文区用 iframe 展示该 URL。有有效 `src` 时忽略 `children`，标题栏与底栏仍照常显示。
+   * 可传零参 getter。危险协议（`javascript:` / `vbscript:` / `data:text/html`）会被丢弃。
+   */
+  src?: ModalSrcInput;
+  /**
+   * iframe `sandbox` 属性。默认 {@link DEFAULT_MODAL_IFRAME_SANDBOX}
+   * （含 scripts／same-origin／forms，不含 popups 与顶层导航，避免嵌入页跳出弹层）。
+   * 传 `false` 时不写 sandbox（完全信任该页）。传字符串则原样使用（空串为最严沙箱）。
+   * 仅在使用 `src` 时生效。
+   */
+  sandbox?: string | false;
   /** 底部区域：传 VNode 或 null 不显示；不传时默认无 footer。可传 `() => VNode` 零参 getter（与 children 相同，随 signal 更新）。自定义「确定／取消」脚时请 **确定在左、取消在右**（与 Dialog／Popconfirm 一致）。 */
   footer?: unknown;
+  /**
+   * 底栏高度，形态与 {@link ModalProps.titleHeight} 相同。未传时保持默认内边距。
+   */
+  footerHeight?: ModalSlotHeightInput;
   /** 是否显示右上角关闭按钮，默认 true */
   closable?: boolean;
   /** 点击遮罩是否关闭，默认 true；`mask={false}` 时不渲染遮罩，本项无实际点击目标 */
@@ -154,6 +224,13 @@ export interface ModalProps {
    * 可传 `() => 同上`。全屏时忽略，仍为 `100vh`。
    */
   maxHeight?: ModalMaxHeightInput;
+  /**
+   * 弹层高度：CSS 字符串或数字（px）；可传零参 getter。
+   * 未传时由内容撑开，并受 `maxHeight`（默认 90vh）限制。
+   * 传入 `src` 且未指定本项时，回落为 `maxHeight`（默认 90vh）。
+   * 全屏时忽略，仍为 `100%` / `100vh`。
+   */
+  height?: ModalHeightInput;
   /**
    * 是否在视口内垂直居中；`false` 时靠上并留顶距（与 Ant Design 顶部对齐相近）。
    * 与 {@link placement} 同传时，以 `placement` 为准（`placement="bottom"` 时不再使用本项的垂直方向）。
@@ -238,6 +315,7 @@ export function modalShellSizeStyle(opts: {
   width: string;
   placement?: string;
   maxHeight?: string | number;
+  height?: string | number;
 }): Record<string, string> {
   if (opts.fullscreen) {
     return {
@@ -247,13 +325,16 @@ export function modalShellSizeStyle(opts: {
       maxHeight: "100vh",
     };
   }
-  return {
+  const style: Record<string, string> = {
     width: opts.width,
     maxWidth: opts.placement === "bottom" ? "100%" : MODAL_VIEWPORT_MAX_WIDTH,
     minWidth: "0",
     boxSizing: "border-box",
     maxHeight: normalizeModalMaxHeight(opts.maxHeight) ?? "90vh",
   };
+  const height = normalizeModalMaxHeight(opts.height);
+  if (height) style.height = height;
+  return style;
 }
 
 /** 预设宽度：xs/sm/md/lg/xl 对应 400/520/640/800/960px */
@@ -264,6 +345,84 @@ const WIDTH_PRESETS: Record<string, string> = {
   lg: "800px",
   xl: "960px",
 };
+
+/**
+ * 把 `width` 写成 CSS 长度：数字视为 px；预设 xs/sm/md/lg/xl 映射为对应像素。
+ *
+ * @param width - `ModalProps.width` 解开后的静态值
+ */
+export function resolveModalWidthCss(width: ModalWidthPrimitive): string {
+  if (typeof width === "number") return `${width}px`;
+  return WIDTH_PRESETS[width] ?? String(width);
+}
+
+/** 标题栏／底栏高度预设：xs/sm/md/lg = 40/48/56/72px */
+export const MODAL_SLOT_HEIGHT_PRESETS: Record<
+  "xs" | "sm" | "md" | "lg",
+  string
+> = {
+  xs: "40px",
+  sm: "48px",
+  md: "56px",
+  lg: "72px",
+};
+
+/** iframe 默认 sandbox：允许脚本、同域与表单；不含弹窗与顶层导航，避免页面跳出弹层。 */
+export const DEFAULT_MODAL_IFRAME_SANDBOX =
+  "allow-scripts allow-same-origin allow-forms";
+
+/**
+ * 解析标题栏／底栏高度：预设、数字（px）或 CSS 长度。误传 `ms` 时按 `sm` 处理。
+ *
+ * @param value - `titleHeight` / `footerHeight` 的静态值
+ */
+export function resolveModalSlotHeight(
+  value: ModalSlotHeightPrimitive | undefined,
+): string | undefined {
+  if (value == null || value === "") return undefined;
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? `${value}px` : undefined;
+  }
+  const key = value === "ms" ? "sm" : value;
+  return MODAL_SLOT_HEIGHT_PRESETS[key as "xs" | "sm" | "md" | "lg"] ??
+    String(value);
+}
+
+/**
+ * 解析 `titleHeight` / `footerHeight`：支持零参 getter。
+ *
+ * @param v - 槽位高度输入
+ */
+function readModalSlotHeightInput(
+  v: ModalSlotHeightInput | undefined,
+): string | undefined {
+  if (v === undefined) return undefined;
+  if (typeof v === "function") {
+    if ((v as () => unknown).length !== 0) return undefined;
+    return resolveModalSlotHeight(
+      (v as () => ModalSlotHeightPrimitive | undefined)(),
+    );
+  }
+  return resolveModalSlotHeight(v);
+}
+
+/**
+ * 解析 `src`：支持零参 getter；危险 URL 返回 `null`。
+ *
+ * @param v - `ModalProps.src`
+ */
+function readModalSrcInput(v: ModalSrcInput | undefined): string | null {
+  if (v == null) return null;
+  if (typeof v === "function") {
+    if ((v as () => unknown).length !== 0) return null;
+    const inner = (v as () => string | null | undefined)();
+    if (inner == null) return null;
+    const s = String(inner).trim();
+    return s ? sanitizeUrl(s) : null;
+  }
+  const s = String(v).trim();
+  return s ? sanitizeUrl(s) : null;
+}
 
 /**
  * 解析 `width`：支持快照或零参 getter；getter 返回 `undefined` 时用默认宽度。
@@ -576,6 +735,124 @@ function listModalFocusable(root: HTMLElement): HTMLElement[] {
     });
 }
 
+function isEscapingTarget(target: string | null | undefined): boolean {
+  const t = (target ?? "").trim().toLowerCase();
+  return t !== "" && t !== "_self";
+}
+
+function readEffectiveTarget(el: Element, doc: Document): string {
+  const own = el.getAttribute("target");
+  if (own != null && own.trim() !== "") return own;
+  return doc.querySelector("base")?.getAttribute("target") ?? "";
+}
+
+function resolveFrameUrl(win: Window, href: string): string {
+  try {
+    return new URL(href, win.location.href).href;
+  } catch {
+    return href;
+  }
+}
+
+function navigateModalIframe(iframe: HTMLIFrameElement, href: string): void {
+  if (!href || isDangerousUrl(href)) return;
+  const win = iframe.contentWindow;
+  const url = win ? resolveFrameUrl(win, href) : href;
+  if (isDangerousUrl(url)) return;
+  try {
+    win?.location.assign(url);
+  } catch {
+    iframe.setAttribute("src", url);
+  }
+}
+
+function closestHrefAnchor(target: EventTarget | null): Element | null {
+  const node = target as Element | null;
+  if (node == null || typeof node.closest !== "function") return null;
+  return node.closest("a[href]");
+}
+
+function isModifiedOrMiddleClick(event: MouseEvent): boolean {
+  return event.metaKey || event.ctrlKey || event.shiftKey || event.altKey ||
+    event.button === 1;
+}
+
+function bindModalIframeStayInside(
+  iframe: HTMLIFrameElement,
+): (() => void) | undefined {
+  let doc: Document;
+  try {
+    const d = iframe.contentDocument;
+    if (d == null) return undefined;
+    doc = d;
+  } catch {
+    return undefined;
+  }
+  const win = iframe.contentWindow;
+  if (win == null) return undefined;
+
+  const onClick = (event: Event): void => {
+    const mouse = event as MouseEvent;
+    const anchor = closestHrefAnchor(event.target);
+    if (anchor == null) return;
+    const href = (anchor as HTMLAnchorElement).href ||
+      anchor.getAttribute("href") || "";
+    if (!href) return;
+    if (
+      isModifiedOrMiddleClick(mouse) ||
+      isEscapingTarget(readEffectiveTarget(anchor, doc))
+    ) {
+      mouse.preventDefault();
+      mouse.stopPropagation();
+      navigateModalIframe(iframe, href);
+    }
+  };
+
+  const onAuxClick = (event: Event): void => {
+    const mouse = event as MouseEvent;
+    if (mouse.button !== 1) return;
+    const anchor = closestHrefAnchor(event.target);
+    if (anchor == null) return;
+    const href = (anchor as HTMLAnchorElement).href ||
+      anchor.getAttribute("href") || "";
+    if (!href) return;
+    mouse.preventDefault();
+    mouse.stopPropagation();
+    navigateModalIframe(iframe, href);
+  };
+
+  const onSubmit = (event: Event): void => {
+    const form = event.target as Element | null;
+    if (form == null || form.tagName !== "FORM") return;
+    if (isEscapingTarget(readEffectiveTarget(form, doc))) {
+      form.setAttribute("target", "_self");
+    }
+  };
+
+  doc.addEventListener("click", onClick, true);
+  doc.addEventListener("auxclick", onAuxClick, true);
+  doc.addEventListener("submit", onSubmit, true);
+
+  const previousOpen = win.open;
+  win.open = ((url?: string | URL) => {
+    if (url != null && String(url) !== "") {
+      navigateModalIframe(iframe, String(url));
+    }
+    return win;
+  }) as typeof win.open;
+
+  return () => {
+    doc.removeEventListener("click", onClick, true);
+    doc.removeEventListener("auxclick", onAuxClick, true);
+    doc.removeEventListener("submit", onSubmit, true);
+    try {
+      win.open = previousOpen;
+    } catch {
+      // ignore
+    }
+  };
+}
+
 export function Modal(props: ModalProps): JSXRenderable {
   const {
     onClose,
@@ -646,13 +923,59 @@ export function Modal(props: ModalProps): JSXRenderable {
   const resolvedMaxHeight = createMemo(() =>
     readModalMaxHeightInput(props.maxHeight)
   );
+  const resolvedHeight = createMemo(() =>
+    readModalMaxHeightInput(props.height)
+  );
   const resolvedTitle = createMemo(() => readModalTitleInput(props.title));
+  const resolvedTitleHeight = createMemo(() =>
+    readModalSlotHeightInput(props.titleHeight)
+  );
+  const resolvedFooterHeight = createMemo(() =>
+    readModalSlotHeightInput(props.footerHeight)
+  );
+  const resolvedSrc = createMemo(() => readModalSrcInput(props.src));
   const resolvedChildren = createMemo(() =>
     readModalChildrenInput(props.children)
   );
 
   /** 底栏须随 `props.footer` patch 更新；零参 getter 与 `children` 一样在 memo 内解开，避免 loading 等卡在首帧。 */
   const resolvedFooter = createMemo(() => readModalChildrenInput(props.footer));
+
+  let stayInsideCleanup: (() => void) | undefined;
+  let stayInsideIframe: HTMLIFrameElement | null = null;
+  let stayInsideLoadListener: ((event: Event) => void) | undefined;
+  const attachModalIframeStayInside = (iframe: HTMLIFrameElement): void => {
+    stayInsideCleanup?.();
+    stayInsideCleanup = bindModalIframeStayInside(iframe);
+  };
+  const connectModalIframeStayInside = (
+    iframe: HTMLIFrameElement | null,
+  ): void => {
+    if (stayInsideIframe != null && stayInsideLoadListener) {
+      stayInsideIframe.removeEventListener("load", stayInsideLoadListener);
+    }
+    stayInsideIframe = iframe;
+    stayInsideLoadListener = undefined;
+    if (iframe == null) {
+      stayInsideCleanup?.();
+      stayInsideCleanup = undefined;
+      return;
+    }
+    stayInsideLoadListener = () => attachModalIframeStayInside(iframe);
+    iframe.addEventListener("load", stayInsideLoadListener);
+    if (iframe.contentDocument?.readyState === "complete") {
+      attachModalIframeStayInside(iframe);
+    }
+  };
+  onCleanup(() => {
+    if (stayInsideIframe != null && stayInsideLoadListener) {
+      stayInsideIframe.removeEventListener("load", stayInsideLoadListener);
+    }
+    stayInsideIframe = null;
+    stayInsideLoadListener = undefined;
+    stayInsideCleanup?.();
+    stayInsideCleanup = undefined;
+  });
 
   /**
    * `fullscreen` prop：每次打开时同步初始全屏态，关闭时清零，避免下次打开仍停留在上一档全屏。
@@ -787,10 +1110,10 @@ export function Modal(props: ModalProps): JSXRenderable {
    */
   const buildModalMarkup = () => {
     const w = resolvedWidth();
-    const widthStyle = typeof w === "number"
-      ? `${w}px`
-      : (WIDTH_PRESETS[w as string] ?? String(w));
+    const widthStyle = resolveModalWidthCss(w);
     const title = resolvedTitle();
+    const titleHeightCss = resolvedTitleHeight();
+    const frameSrc = resolvedSrc();
     const isFullscreen = fullscreen.value;
     // untrack：首帧带上位移，但不把 position 订进 Portal effect
     const pos = untrack(() => position.value);
@@ -803,6 +1126,8 @@ export function Modal(props: ModalProps): JSXRenderable {
         width: widthStyle,
         placement,
         maxHeight: resolvedMaxHeight(),
+        height: resolvedHeight() ??
+          (frameSrc ? (resolvedMaxHeight() ?? "90vh") : undefined),
       }),
       ...(!isFullscreen && draggable && hasOffset
         ? {
@@ -811,7 +1136,9 @@ export function Modal(props: ModalProps): JSXRenderable {
         }
         : {}),
     };
-    const modalClass = isFullscreen ? "rounded-none" : "rounded-xl min-w-0";
+    const modalClass = isFullscreen
+      ? "rounded-none"
+      : "rounded-xl min-w-0 overflow-hidden";
     const showHeaderActions = fullscreenable || closable;
     const wrapZ = isFullscreen ? 9999 : 300;
 
@@ -856,6 +1183,7 @@ export function Modal(props: ModalProps): JSXRenderable {
             modalClass,
             className,
           )}
+          data-ui-modal-shell=""
           style={modalBoxStyle}
           ref={(el: HTMLElement | null) => {
             modalBoxEl = el;
@@ -872,14 +1200,21 @@ export function Modal(props: ModalProps): JSXRenderable {
           {(title != null && title !== "")
             ? (
               <div
+                data-ui-modal-title=""
                 class={twMerge(
-                  "shrink-0 px-6 py-4 border-b border-slate-200 dark:border-slate-600 bg-slate-200/80 dark:bg-slate-900/70",
+                  "shrink-0 px-6 border-b border-slate-200 dark:border-slate-600 bg-slate-200/80 dark:bg-slate-900/70",
+                  titleHeightCss ? "box-border overflow-hidden" : "py-4",
                   !isFullscreen && "rounded-t-xl",
                   titleAlign === "center"
-                    ? "relative flex min-h-14 items-center justify-center"
+                    ? (titleHeightCss
+                      ? "relative flex items-center justify-center"
+                      : "relative flex min-h-14 items-center justify-center")
                     : "flex items-center justify-between gap-2",
                   draggable && "cursor-grab active:cursor-grabbing select-none",
                 )}
+                style={titleHeightCss
+                  ? { height: titleHeightCss, boxSizing: "border-box" }
+                  : undefined}
                 onMouseDown={handleTitleMouseDown as unknown as (
                   e: Event,
                 ) => void}
@@ -990,25 +1325,67 @@ export function Modal(props: ModalProps): JSXRenderable {
             )
             : null}
           <div
-            class={twMerge(
-              "flex-1 min-w-0 overflow-x-hidden overflow-y-auto px-6 py-4 min-h-0 [&>*]:box-border [&>*]:max-w-full [&>*]:min-w-0",
-              !(title != null && title !== "") && showHeaderActions &&
-                "pt-12 pr-12",
-              bodyClass,
-            )}
+            data-ui-modal-body=""
+            class={() => {
+              const hasTitle = title != null && title !== "";
+              const hasFooter = resolvedFooter() != null;
+              return twMerge(
+                "flex-1 min-w-0 min-h-0",
+                frameSrc
+                  ? "overflow-hidden p-0"
+                  : "overflow-x-hidden overflow-y-auto px-6 py-4 [&>*]:box-border [&>*]:max-w-full [&>*]:min-w-0",
+                !hasTitle && showHeaderActions && "pt-12 pr-12",
+                !isFullscreen && !hasTitle && "rounded-t-xl",
+                !isFullscreen && !hasFooter && "rounded-b-xl",
+                bodyClass,
+              );
+            }}
           >
-            {() => resolvedChildren()}
+            {() => {
+              const src = resolvedSrc();
+              if (src) {
+                const sandbox = props.sandbox;
+                return (
+                  <iframe
+                    data-ui-modal-iframe=""
+                    src={src}
+                    title={resolvedTitle() ?? "嵌入内容"}
+                    class={() =>
+                      twMerge(
+                        "block h-full w-full min-h-0 border-0",
+                        !isFullscreen && (title == null || title === "") &&
+                          "rounded-t-xl",
+                        !isFullscreen && resolvedFooter() == null &&
+                          "rounded-b-xl",
+                      )}
+                    sandbox={sandbox === false
+                      ? undefined
+                      : (sandbox ?? DEFAULT_MODAL_IFRAME_SANDBOX)}
+                    ref={(el: HTMLIFrameElement | null) => {
+                      connectModalIframeStayInside(el);
+                    }}
+                  />
+                );
+              }
+              return resolvedChildren();
+            }}
           </div>
           {() => {
             const footer = resolvedFooter();
             if (footer == null) return null;
+            const footerH = resolvedFooterHeight();
             return (
               <div
+                data-ui-modal-footer=""
                 class={twMerge(
-                  "shrink-0 flex min-w-0 flex-wrap items-center justify-end gap-2 px-6 py-4 border-t border-slate-200 dark:border-slate-600",
+                  "shrink-0 flex min-w-0 flex-wrap items-center justify-end gap-2 px-6 border-t border-slate-200 dark:border-slate-600",
+                  footerH ? "box-border overflow-hidden" : "py-4",
                   !isFullscreen && "rounded-b-xl",
                   footerClass,
                 )}
+                style={footerH
+                  ? { height: footerH, boxSizing: "border-box" }
+                  : undefined}
               >
                 {footer}
               </div>

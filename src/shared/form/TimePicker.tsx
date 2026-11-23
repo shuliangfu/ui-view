@@ -52,6 +52,7 @@ import {
   pickerTimeStripRowMultiClass,
   pickerTimeStripSingleCenterWrapClass,
   registerPickerFixedOverlayPositionAndOutsideClick,
+  resolvePickerViewportAttach,
   runTimeStripPrimaryPointerPick,
   schedulePickerTimeDraftColumnsScroll,
 } from "./picker-portal-utils.ts";
@@ -153,6 +154,7 @@ export interface TimePickerProps {
   format?: string;
   /**
    * 浮层挂载方式：`anchored`（默认）相对根 `absolute`；`viewport` 为视口 `fixed` + 几何同步，用于表格等 overflow 裁切场景。
+   * 位于 Modal 或其它会裁切的 overflow 祖先内时，即使保持默认 `anchored` 也会自动升级为视口 `fixed`，避免被 Modal 底栏挡住。
    */
   panelAttach?: "anchored" | "viewport";
   /** 多语言/自定义文案；未传字段走 {@link defaultTimePickerMessages} */
@@ -1107,8 +1109,10 @@ export function TimePicker(props: TimePickerProps): JSXRenderable {
       <Show when={openState}>
         {() => {
           /** 视口浮层：避开表格等滚动容器的 overflow 裁切 */
-          const useViewportPanel = (props.panelAttach ?? "anchored") ===
-            "viewport";
+          const useViewportPanel = resolvePickerViewportAttach(
+            props.panelAttach,
+            triggerRef.current,
+          );
           return (
             <div
               role="dialog"
@@ -1129,8 +1133,10 @@ export function TimePicker(props: TimePickerProps): JSXRenderable {
                 outsidePanelEl.current = el;
                 globalThis.queueMicrotask(() => {
                   if (outsidePanelEl.current !== el) return;
-                  const viewport = (props.panelAttach ?? "anchored") ===
-                    "viewport";
+                  const viewport = resolvePickerViewportAttach(
+                    props.panelAttach,
+                    triggerRef.current,
+                  );
                   registerPickerFixedOverlayPositionAndOutsideClick(
                     el,
                     triggerRef,

@@ -50,6 +50,7 @@ import {
 import {
   pickerPortalZClass,
   registerPickerFixedOverlayPositionAndOutsideClick,
+  resolvePickerViewportAttach,
 } from "./picker-portal-utils.ts";
 import { pickerCalendarIconProps } from "./picker-trigger-icon.ts";
 import { PickerTriggerText } from "./picker-trigger-text.tsx";
@@ -144,6 +145,7 @@ export interface DatePickerProps {
   /**
    * 浮层挂载方式：`anchored`（默认）相对根节点 `absolute`，与滚动容器一起走；
    * `viewport` 使用视口 `fixed` + 几何同步，避免被表格 `overflow-x-auto`、单元格 `overflow-hidden` 等裁切。
+   * 位于 Modal 或其它会裁切的 overflow 祖先内时，即使保持默认 `anchored` 也会自动升级为视口 `fixed`，避免被 Modal 底栏挡住。
    */
   panelAttach?: "anchored" | "viewport";
   /** 多语言/自定义文案；未传字段走 {@link defaultDatePickerMessages} */
@@ -713,8 +715,10 @@ export function DatePicker(props: DatePickerProps): JSXRenderable {
             getDatePickerDerivatives(props);
           const m = { ...defaultDatePickerMessages, ...props.messages };
           /** 视口浮层：避开表格等滚动容器的 overflow 裁切 */
-          const useViewportPanel = (props.panelAttach ?? "anchored") ===
-            "viewport";
+          const useViewportPanel = resolvePickerViewportAttach(
+            props.panelAttach,
+            triggerRef.current,
+          );
           return (
             <div
               role="dialog"
@@ -739,8 +743,10 @@ export function DatePicker(props: DatePickerProps): JSXRenderable {
                   if (outsidePanelEl.current !== el) {
                     return;
                   }
-                  const viewport = (props.panelAttach ?? "anchored") ===
-                    "viewport";
+                  const viewport = resolvePickerViewportAttach(
+                    props.panelAttach,
+                    triggerRef.current,
+                  );
                   registerPickerFixedOverlayPositionAndOutsideClick(
                     el,
                     triggerRef,

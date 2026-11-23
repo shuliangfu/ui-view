@@ -10,6 +10,7 @@ import { createEffect, createRenderEffect, onCleanup } from "@dreamer/view";
 import {
   type PickerOverlayDisposeSlot,
   registerPickerFixedOverlayPositionAndOutsideClick,
+  resolvePickerViewportAttach,
 } from "./picker-portal-utils.ts";
 
 /** 浮层根节点：关闭时 `hidden` + `aria-hidden`，避免依赖 Show 卸载导致委托句柄丢失。 */
@@ -203,10 +204,12 @@ export function installInlineDropdownOutsideClickClose(
 }
 
 /**
- * 当 `panelAttach="viewport"` 且浮层打开时，把 listbox 改为视口 `fixed` 并跟随触发器，
- * 避免被表格 `overflow-x-auto` / 单元格裁切。最小宽度取 `panelMinWidth` 与触发器宽度的较大值。
+ * 当应使用视口定位且浮层打开时，把 listbox 改为视口 `fixed` 并跟随触发器，
+ * 避免被表格 `overflow-x-auto`、Modal 正文 overflow、底栏等裁切或遮挡。
+ * `isViewport` 为 false 时仍会检测裁切祖先（含 Modal），自动升级为视口定位。
+ * 最小宽度取 `panelMinWidth` 与触发器宽度的较大值。
  *
- * @param isViewport 是否使用视口定位。
+ * @param isViewport 是否显式使用视口定位。
  * @param isOpen 浮层是否打开。
  * @param getPanel listbox 根节点。
  * @param triggerRef 触发器。
@@ -234,17 +237,29 @@ export function bindFixedDropdownPanelWhenOpen(
     panel.style.removeProperty("left");
     panel.style.removeProperty("z-index");
     panel.style.removeProperty("min-width");
+    panel.style.removeProperty("position");
+    panel.style.removeProperty("margin-top");
   };
 
+  const shouldViewport = (panel?: HTMLElement | null): boolean =>
+    resolvePickerViewportAttach(
+      isViewport() ? "viewport" : "anchored",
+      triggerRef.current ?? panel ?? null,
+    );
+
   createEffect(() => {
-    if (!isViewport() || !isOpen()) {
+    if (!isOpen()) {
       clear(getPanel());
       return;
     }
     const panel = getPanel();
     if (!panel) return;
+    if (!shouldViewport(panel)) {
+      clear(panel);
+      return;
+    }
     queueMicrotask(() => {
-      if (!isViewport() || !isOpen() || getPanel() !== panel) return;
+      if (!isOpen() || getPanel() !== panel || !shouldViewport(panel)) return;
       const tw = triggerRef.current?.getBoundingClientRect().width ?? 0;
       const minW = Math.max(panelMinWidth ?? 0, tw);
       if (minW > 0) panel.style.minWidth = `${Math.round(minW)}px`;

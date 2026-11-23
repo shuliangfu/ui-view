@@ -79,15 +79,17 @@ export function CountDown(props: CountDownProps): JSXRenderable {
   } = props;
 
   const left = createSignal(0);
-  const finished = createSignal(false);
 
   createEffect(() => {
-    finished.value = false;
+    // Completion is effect-local bookkeeping, not a reactive dependency.
+    // Reading/writing a signal here re-runs this effect forever for an
+    // initially expired target (including SSR after a long-lived docs target).
+    let finished = false;
     const tick = () => {
       const ms = resolveRemainingMs(props.target, props.remaining);
       left.value = ms;
-      if (ms <= 0 && !finished.value) {
-        finished.value = true;
+      if (ms <= 0 && !finished) {
+        finished = true;
         onFinish?.();
       }
     };

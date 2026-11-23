@@ -67,11 +67,27 @@ export type {
 export { defaultResultMessages, Result } from "./Result.tsx";
 export type { ResultProps, ResultStatus } from "./Result.tsx";
 
-export { clampModalTranslateToViewport, Modal } from "./Modal.tsx";
+export {
+  clampModalTranslateToViewport,
+  DEFAULT_MODAL_IFRAME_SANDBOX,
+  Modal,
+  MODAL_SLOT_HEIGHT_PRESETS,
+  modalShellSizeStyle,
+  normalizeModalMaxHeight,
+  resolveModalSlotHeight,
+  resolveModalWidthCss,
+} from "./Modal.tsx";
 export type {
+  ModalHeightInput,
+  ModalHeightPrimitive,
+  ModalMaxHeightInput,
+  ModalMaxHeightPrimitive,
   ModalOpenInput,
   ModalPlacement,
   ModalProps,
+  ModalSlotHeightInput,
+  ModalSlotHeightPrimitive,
+  ModalSrcInput,
   ModalTitleAlign,
   ModalTitleInput,
   ModalWidthInput,

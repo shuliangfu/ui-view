@@ -1,4 +1,4 @@
-/** WRITTEN-UNRUN: all 13 live Modal examples, native input only. No browser execution before inventory is written. */
+/** WRITTEN-UNRUN: all 16 live Modal examples, native input only. No browser execution before inventory is written. */
 import { describe, expect, it } from "@dreamer/test";
 import type { Locator, Page } from "npm:playwright@1.59.1";
 import { DOCS_BROWSER_CONFIG } from "../helpers.ts";
@@ -588,6 +588,113 @@ describe("Modal physical written", () => {
         );
         await mask(reopened.dialog);
         await ended(p, reopened);
+      },
+      DOCS_BROWSER_CONFIG,
+    );
+
+    it(
+      `Modal 指定宽高 @${width}：数字 width/height 与关闭`,
+      async (t) => {
+        const p = await open(t, "/desktop/feedback/modal");
+        await p.setViewportSize({ width, height: 900 });
+        const s = await begin(
+          p,
+          "数字宽高",
+          "720 × 480",
+          "width={720}、height={480}，数字均视为像素。",
+        );
+        const shell = s.dialog.locator("[data-ui-modal-shell]");
+        expect(await shell.evaluate((e) => (e as HTMLElement).style.width))
+          .toBe("720px");
+        expect(await shell.evaluate((e) => (e as HTMLElement).style.height))
+          .toBe("480px");
+        const r = await rect(shell);
+        near(r.height, 480);
+        if (width >= 1280) near(r.width, 720);
+        else expect(r.width).toBeLessThanOrEqual(720);
+        await close(p, s);
+      },
+      DOCS_BROWSER_CONFIG,
+    );
+
+    it(
+      `Modal 标题栏与底栏高度 @${width}：预设与数字槽位高度`,
+      async (t) => {
+        const p = await open(t, "/desktop/feedback/modal");
+        await p.setViewportSize({ width, height: 900 });
+        const preset = await begin(
+          p,
+          "标题栏 lg",
+          "标题栏 lg / 底栏 md",
+          "标题栏 lg（72px），底栏 md（56px）。",
+        );
+        near(
+          (await rect(preset.dialog.locator("[data-ui-modal-title]"))).height,
+          72,
+        );
+        near(
+          (await rect(preset.dialog.locator("[data-ui-modal-footer]"))).height,
+          56,
+        );
+        await close(p, preset);
+        const numeric = await begin(
+          p,
+          "底栏 64",
+          "标题栏 lg / 底栏 64",
+          "标题栏 lg（72px），底栏 64（64px）。",
+        );
+        near(
+          (await rect(numeric.dialog.locator("[data-ui-modal-title]"))).height,
+          72,
+        );
+        near(
+          (await rect(numeric.dialog.locator("[data-ui-modal-footer]"))).height,
+          64,
+        );
+        await close(p, numeric);
+      },
+      DOCS_BROWSER_CONFIG,
+    );
+
+    it(
+      `Modal 嵌入页面 @${width}：iframe src 与关闭`,
+      async (t) => {
+        const p = await open(t, "/desktop/feedback/modal");
+        await p.setViewportSize({ width, height: 900 });
+        const overflow = await p.evaluate(() => document.body.style.overflow);
+        const button = p.getByRole("button", {
+          name: "打开嵌入页",
+          exact: true,
+        });
+        await button.click({ delay: 180 });
+        const dialog = p.getByRole("dialog");
+        await dialog.waitFor({ state: "visible" });
+        expect(await dialog.count()).toBe(1);
+        expect(
+          await dialog.getByRole("heading", {
+            name: "嵌入页面",
+            exact: true,
+          }).count(),
+        ).toBe(1);
+        const iframe = dialog.locator("iframe[data-ui-modal-iframe]");
+        expect(await iframe.count()).toBe(1);
+        expect(await iframe.getAttribute("src")).toBe("/desktop");
+        const shell = dialog.locator("[data-ui-modal-shell]");
+        expect(await shell.evaluate((e) => (e as HTMLElement).style.width))
+          .toBe("440px");
+        expect(await shell.evaluate((e) => (e as HTMLElement).style.height))
+          .toBe("900px");
+        const r = await rect(shell);
+        if (width >= 1280) near(r.width, 440);
+        else expect(r.width).toBeLessThanOrEqual(440);
+        expect(await dialog.locator("[data-ui-modal-footer]").count()).toBe(0);
+        await dialog.getByRole("button", { name: "关闭", exact: true }).click({
+          delay: 180,
+        });
+        await eventually(async () => await p.getByRole("dialog").count() === 0);
+        expect(await p.evaluate(() => document.body.style.overflow)).toBe(
+          overflow,
+        );
       },
       DOCS_BROWSER_CONFIG,
     );

@@ -11,7 +11,8 @@
  * **层级与列数**：嵌套几层 `children`，交互上即可展开几列（从左到右逐级选）；**无需**传入「层数」配置。
  * 打开时先显示最左一列（根），每选一层在右侧多一列，直到叶子。
  *
- * **浮层与滚动**：下拉在根内 **`position:absolute`**（`top-full`），随滚动容器与触发条一起走；**不使用** {@link Portal}。
+ * **浮层与滚动**：下拉默认在根内 **`position:absolute`**（`top-full`），随滚动容器与触发条一起走；**不使用** {@link Portal}。
+ * 位于 Modal 等会裁切的 overflow 祖先内时改为视口 `fixed`，避免被底栏挡住。
  * 关外部用 {@link installInlineDropdownOutsideClickClose}（document 冒泡 `click` + composedPath）。
  * 若页面里 **`Form` 下方紧挨大块兄弟（如代码预览）**，后绘制的兄弟会盖住浮层，宜调整 **DOM 顺序**（代码块在前、表单项在后）或提高表单侧层叠上下文，勿改挂 body。
  */
@@ -42,9 +43,14 @@ import { FormItemControlIdContext } from "./form-item-control-id.ts";
 import { createOptionalValueState, type MaybeSignal } from "./maybe-signal.ts";
 import type { SizeVariant } from "../types.ts";
 import {
+  bindFixedDropdownPanelWhenOpen,
   installInlineDropdownOutsideClickClose,
   syncInlineDropdownPanelVisibility,
 } from "./inline-dropdown-outside-click.ts";
+import {
+  pickerPortalZClass,
+  resolvePickerViewportAttach,
+} from "./picker-portal-utils.ts";
 import { autoFocusAttr, bindAutoFocusRef } from "./auto-focus.ts";
 
 /**
@@ -160,6 +166,11 @@ export interface CascaderProps {
   showSearch?: boolean;
   /** 触发器加载中（与列内 loadChildren 的加载态相互独立） */
   loading?: boolean;
+  /**
+   * 浮层挂载。默认 `anchored`（相对触发器 absolute）。
+   * 位于 Modal 或其它会裁切的 overflow 祖先内时自动升级为视口 `fixed`，避免被底栏挡住。
+   */
+  panelAttach?: "anchored" | "viewport";
 }
 
 const sizeClasses: Record<SizeVariant, string> = {
@@ -571,6 +582,7 @@ function CascaderDropdownPanel(props: CascaderProps) {
     allowClear = false,
     showSearch = false,
     loading = false,
+    panelAttach = "anchored",
   } = props;
   const disabled = resolveFormControlDisabled(props.disabled);
   const selected = createOptionalValueState(value, [] as string[]);
@@ -586,6 +598,22 @@ function CascaderDropdownPanel(props: CascaderProps) {
   let rootEl: HTMLElement | null = null;
   /** 浮层包裹：始终挂载，用 hidden/inert 控制显隐（与 Select 一致） */
   let panelEl: HTMLElement | null = null;
+  let listboxEl: HTMLElement | null = null;
+  const triggerRef: { current: HTMLElement | null } = { current: null };
+  const viewportPanel = createSignal(panelAttach === "viewport");
+  const useViewportPanel = () =>
+    resolvePickerViewportAttach(
+      panelAttach === "viewport" || viewportPanel.value
+        ? "viewport"
+        : "anchored",
+      triggerRef.current ?? rootEl,
+    );
+  const refreshViewportAttach = () => {
+    viewportPanel.value = resolvePickerViewportAttach(
+      panelAttach,
+      triggerRef.current ?? rootEl,
+    );
+  };
   /** 浮层内当前路径，打开时从 value 拷贝，点击列内项时更新 */
   const pathInPanel = createSignal<string[]>([]);
   /** 懒加载子节点缓存：键为 pathKey(父路径) */
@@ -632,6 +660,14 @@ function CascaderDropdownPanel(props: CascaderProps) {
     () => panelEl,
   );
 
+  bindFixedDropdownPanelWhenOpen(
+    useViewportPanel,
+    () => openState.value,
+    () => listboxEl,
+    triggerRef,
+    closePanel,
+  );
+
   createEffect(() => {
     if (!openState.value) return;
     const g = globalThis as unknown as Record<
@@ -648,6 +684,7 @@ function CascaderDropdownPanel(props: CascaderProps) {
 
   const openPanel = () => {
     if (disabled) return;
+    refreshViewportAttach();
     const path = selected.read();
     pathInPanel.value = [...path];
     openState.value = true;
@@ -932,6 +969,7 @@ function CascaderDropdownPanel(props: CascaderProps) {
       ref={(el: HTMLElement | null) => {
         /** 卸载时传入 null，避免保留 Detached 节点引用 */
         rootEl = el;
+        if (el) refreshViewportAttach();
       }}
       data-ui-cascader-root=""
       class={() =>
@@ -957,7 +995,11 @@ function CascaderDropdownPanel(props: CascaderProps) {
       <span class="relative block w-full">
         <button
           type="button"
-          ref={bindAutoFocusRef(undefined, autoFocus)}
+          ref={(el: HTMLElement | null) => {
+            triggerRef.current = el;
+            const af = bindAutoFocusRef(undefined, autoFocus);
+            if (typeof af === "function") af(el);
+          }}
           id={resolvedId}
           disabled={disabled || loading}
           aria-busy={loading || undefined}
@@ -1035,12 +1077,19 @@ function CascaderDropdownPanel(props: CascaderProps) {
         data-ui-cascader-panel-wrap=""
       >
         <div
+          ref={(el: HTMLElement | null) => {
+            listboxEl = el;
+          }}
           role="dialog"
           aria-label={m.dialog}
           data-ui-cascader-panel=""
-          class={twMerge(
-            "absolute z-50 top-full left-0 mt-1 w-max max-h-72 min-w-0 max-w-[min(100vw-1rem,520px)] overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg dark:border-slate-600 dark:bg-slate-800",
-          )}
+          class={() =>
+            twMerge(
+              "w-max max-h-72 min-w-0 max-w-[min(100vw-1rem,520px)] overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg dark:border-slate-600 dark:bg-slate-800",
+              useViewportPanel()
+                ? twMerge("fixed", pickerPortalZClass)
+                : "absolute z-50 top-full left-0 mt-1",
+            )}
         >
           {showSearch && (
             <div

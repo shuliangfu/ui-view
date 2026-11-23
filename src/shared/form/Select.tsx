@@ -16,7 +16,10 @@ import {
   pickInlineDropdownOption,
   syncInlineDropdownPanelVisibility,
 } from "./inline-dropdown-outside-click.ts";
-import { pickerPortalZClass } from "./picker-portal-utils.ts";
+import {
+  pickerPortalZClass,
+  resolvePickerViewportAttach,
+} from "./picker-portal-utils.ts";
 import { twMerge } from "tailwind-merge";
 import { IconChevronDown } from "../basic/icons/ChevronDown.tsx";
 import {
@@ -112,6 +115,7 @@ export interface SelectProps {
   /**
    * 浮层挂载。默认 `anchored`（相对触发器 absolute）；
    * `viewport` 时改为视口 `fixed`，避免被表格 overflow 裁切。单元格编辑应传 `viewport`。
+   * 位于 Modal 正文或其它会裁切的 overflow 祖先内时，即使未传也会自动升级为 `viewport`，避免被底栏挡住。
    */
   panelAttach?: "anchored" | "viewport";
 }
@@ -185,7 +189,20 @@ function SelectDropdownBranch(props: SelectProps) {
   let panelEl: HTMLElement | null = null;
   let listboxEl: HTMLElement | null = null;
   const triggerRef: { current: HTMLElement | null } = { current: null };
-  const useViewportPanel = panelAttach === "viewport";
+  const viewportPanel = createSignal(panelAttach === "viewport");
+  const useViewportPanel = () =>
+    resolvePickerViewportAttach(
+      panelAttach === "viewport" || viewportPanel.value
+        ? "viewport"
+        : "anchored",
+      triggerRef.current ?? rootEl,
+    );
+  const refreshViewportAttach = () => {
+    viewportPanel.value = resolvePickerViewportAttach(
+      panelAttach,
+      triggerRef.current ?? rootEl,
+    );
+  };
 
   /** 关闭下拉浮层 */
   const closePanel = () => {
@@ -217,7 +234,7 @@ function SelectDropdownBranch(props: SelectProps) {
   );
 
   bindFixedDropdownPanelWhenOpen(
-    () => useViewportPanel,
+    useViewportPanel,
     () => openState.value,
     () => listboxEl,
     triggerRef,
@@ -256,6 +273,7 @@ function SelectDropdownBranch(props: SelectProps) {
     <span
       ref={(el: HTMLElement | null) => {
         rootEl = el;
+        if (el) refreshViewportAttach();
       }}
       class={twMerge(
         "relative block w-full min-w-0",
@@ -305,6 +323,7 @@ function SelectDropdownBranch(props: SelectProps) {
             }
             queueMicrotask(() => {
               if (!disabled && !loading && !openState.value) {
+                refreshViewportAttach();
                 openState.value = true;
               }
             });
@@ -359,13 +378,14 @@ function SelectDropdownBranch(props: SelectProps) {
         aria-hidden="true"
         data-ui-select-panel=""
       >
-        {useViewportPanel ? null : (
-          <div
-            class="fixed inset-0 z-40"
-            aria-hidden="true"
-            onClick={closePanel}
-          />
-        )}
+        {() =>
+          useViewportPanel() ? null : (
+            <div
+              class="fixed inset-0 z-40"
+              aria-hidden="true"
+              onClick={closePanel}
+            />
+          )}
         <div
           ref={(el: HTMLElement | null) => {
             listboxEl = el;
@@ -375,12 +395,13 @@ function SelectDropdownBranch(props: SelectProps) {
             const rv = selected.read();
             return resolvedOptions.find((o) => o.value === rv)?.value;
           }}
-          class={twMerge(
-            "w-max py-1 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-lg max-h-60 overflow-auto",
-            useViewportPanel
-              ? twMerge("fixed", pickerPortalZClass)
-              : "absolute z-50 top-full left-0 mt-1 min-w-full",
-          )}
+          class={() =>
+            twMerge(
+              "w-max py-1 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-lg max-h-60 overflow-auto",
+              useViewportPanel()
+                ? twMerge("fixed", pickerPortalZClass)
+                : "absolute z-50 top-full left-0 mt-1 min-w-full",
+            )}
         >
           {showSearch && (
             <div

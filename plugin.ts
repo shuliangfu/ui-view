@@ -31,8 +31,10 @@ import {
   fromFileUrl,
   getEnv,
   IS_DENO,
+  isAbsolute,
   join,
   mkdir,
+  pathToFileUrl as toFileUrl,
   readdir,
   readdirSync,
   readTextFile,
@@ -42,6 +44,15 @@ import {
 
 /** 用于判定「是否为 @dreamer/ui-view 包根」的标记文件（相对包根） */
 const PACKAGE_ROOT_MARKER = "src/mod.ts";
+
+/**
+ * 把相对路径接到基准目录上；已经是绝对路径（含 Windows 盘符）时不再拼接。
+ * runtime-adapter 的 `join` 在 POSIX 语义下不会把第二个绝对路径当作新根，
+ * `join(cwd, "C:/...")` 会得到 `cwd/C:/...`。
+ */
+export function resolvePathAgainstBase(base: string, target: string): string {
+  return isAbsolute(target) ? target : join(base, target);
+}
 
 /**
  * dweb `deno task build` 会把应用打进 `dist/server.js`，插件代码里的 `import.meta.url` 会落在 `…/dist/`，
@@ -289,9 +300,7 @@ async function gatherResolvedContentPaths(
   };
 
   const optRoot = ctx.optionPackageRoot
-    ? (ctx.optionPackageRoot.startsWith("/")
-      ? ctx.optionPackageRoot
-      : join(ctx.projectRoot, ctx.optionPackageRoot))
+    ? resolvePathAgainstBase(ctx.projectRoot, ctx.optionPackageRoot)
     : undefined;
 
   for (const name of usedNames) {
@@ -363,7 +372,7 @@ function resolveLocalImportFile(
   for (const c of candidates) {
     if (!existsSync(c)) continue;
     const rel = relative(root, c);
-    if (!rel || rel.startsWith("..") || rel.startsWith("/")) continue;
+    if (!rel || rel.startsWith("..") || isAbsolute(rel)) continue;
     return c;
   }
   return null;
@@ -429,7 +438,7 @@ async function expandLocalImportSources(
       let resolved = resolveLocalImportFile(file, spec, ctx.packageRoot);
       if (resolved) {
         const rel = relative(ctx.packageRoot.replace(/\/+$/, ""), resolved);
-        if (rel && !rel.startsWith("..") && !rel.startsWith("/")) {
+        if (rel && !rel.startsWith("..") && !isAbsolute(rel)) {
           ctx.relByPath.set(resolved, rel);
         }
       } else {
@@ -597,7 +606,7 @@ type DenoInfoJsonModule = {
 
 function pathToFileUrl(path: string): string {
   if (path.startsWith("file:")) return path;
-  if (path.startsWith("/")) return new URL(`file://${path}`).href;
+  if (isAbsolute(path)) return toFileUrl(path);
   return new URL(path, "file://").href;
 }
 
@@ -766,8 +775,9 @@ function resolveMaybeRelativePath(
       return null;
     }
   }
+  if (isAbsolute(target)) return target;
   if (target.includes(":") && !target.startsWith(".")) return null;
-  return target.startsWith("/") ? target : join(baseDir, target);
+  return join(baseDir, target);
 }
 
 function exportEntryToPath(entry: unknown): string | null {
@@ -2171,7 +2181,7 @@ function toAtSourceSpecifier(
   }
   rel = rel.replace(/\\/g, "/");
   /** Windows 跨盘符时 relative 可能返回 `D:/...` 绝对路径，勿再加 `./` 前缀 */
-  if (/^[A-Za-z]:\//.test(rel) || rel.startsWith("/")) {
+  if (isAbsolute(rel)) {
     return rel;
   }
   if (!rel.startsWith(".")) {
@@ -2294,9 +2304,7 @@ export function uiViewTailwindPlugin(
     const root = cwd();
 
     if (optionPackageRoot) {
-      return optionPackageRoot.startsWith("/")
-        ? optionPackageRoot
-        : join(root, optionPackageRoot);
+      return resolvePathAgainstBase(root, optionPackageRoot);
     }
     /** 本地 file 映射 / 工作区：`import.meta.url` 为 file:// */
     const fromFileDir = dirnameOfThisPluginIfFileUrl();
@@ -2519,9 +2527,7 @@ export function uiViewTailwindPlugin(
           return;
         }
 
-        const outAbs = outputPath.startsWith("/")
-          ? outputPath
-          : join(root, outputPath);
+        const outAbs = resolvePathAgainstBase(root, outputPath);
         const sourcesCssDir = dirname(outAbs);
 
         const cssContent = uniqueSortedPaths

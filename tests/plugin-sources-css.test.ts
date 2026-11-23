@@ -24,6 +24,7 @@ import {
   collectFollowedModuleFiles,
   extractFollowedPackageSpecifiers,
   localFilesFromDenoInfoJson,
+  resolvePathAgainstBase,
   shouldWriteUiViewSourcesCss,
   tryResolveViaImportMap,
   uiViewTailwindPlugin,
@@ -105,6 +106,33 @@ describe("shouldWriteUiViewSourcesCss", () => {
     await withRuntimeEnv("dev", () => {
       expect(shouldWriteUiViewSourcesCss()).toBe(true);
     });
+  });
+});
+
+describe("resolvePathAgainstBase", () => {
+  it("does not prefix an already-absolute Windows dest onto the base", () => {
+    const base = "C:/xlang_tmp/follow-app-XXXX";
+    const dest = "C:/xlang_tmp/follow-app-XXXX/assets/ui-view-sources.css";
+    expect(resolvePathAgainstBase(base, dest)).toBe(dest);
+    expect(resolvePathAgainstBase(base, dest).includes(`${base}/${dest}`)).toBe(
+      false,
+    );
+    const baseBs = "C:\\xlang_tmp\\follow-app-XXXX";
+    const destBs =
+      "C:\\xlang_tmp\\follow-app-XXXX\\assets\\ui-view-sources.css";
+    const resolved = resolvePathAgainstBase(baseBs, destBs).replace(
+      /\\/g,
+      "/",
+    );
+    expect(resolved).toBe(dest);
+    expect((resolved.match(/C:/g) ?? []).length).toBe(1);
+  });
+
+  it("still joins a relative dest onto the base", () => {
+    expect(resolvePathAgainstBase("/tmp/app", "assets/ui-view-sources.css"))
+      .toBe("/tmp/app/assets/ui-view-sources.css");
+    expect(resolvePathAgainstBase("/tmp/app", "/tmp/app/assets/x.css"))
+      .toBe("/tmp/app/assets/x.css");
   });
 });
 

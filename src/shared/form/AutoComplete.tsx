@@ -14,6 +14,13 @@ import {
 import { twMerge } from "tailwind-merge";
 import type { SizeVariant } from "../types.ts";
 import {
+  bindFixedDropdownPanelWhenOpen,
+} from "./inline-dropdown-outside-click.ts";
+import {
+  pickerPortalZClass,
+  resolvePickerViewportAttach,
+} from "./picker-portal-utils.ts";
+import {
   resolveFormControlDisabled,
   resolveFormControlSize,
 } from "./form-control-context.ts";
@@ -85,6 +92,11 @@ export interface AutoCompleteProps {
   autoFocus?: boolean;
   /** 多语言/自定义文案；未传字段走 {@link defaultAutoCompleteMessages} */
   messages?: Partial<AutoCompleteMessages>;
+  /**
+   * 浮层挂载。默认 `anchored`（相对输入框 absolute）。
+   * 位于 Modal 或其它会裁切的 overflow 祖先内时自动升级为视口 `fixed`，避免被底栏挡住。
+   */
+  panelAttach?: "anchored" | "viewport";
 }
 
 const sizeClasses: Record<SizeVariant, string> = {
@@ -97,10 +109,6 @@ const sizeClasses: Record<SizeVariant, string> = {
 /** 输入区底纹（不含 ring） */
 const inputSurface =
   "border bg-slate-100 shadow-inner dark:shadow-[inset_0_2px_5px_rgb(0_0_0_/_0.55),inset_0_-1px_0_rgb(255_255_255_/_0.06)] dark:bg-slate-900/70 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 border-slate-300 dark:border-slate-600 focus:outline-hidden disabled:opacity-50 disabled:cursor-not-allowed transition-colors";
-
-/** 与 Mentions / Select 浮层一致的联想列表样式 */
-const panelCls =
-  "absolute z-50 left-0 right-0 top-full mt-1 max-h-60 overflow-auto rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-lg py-1";
 
 const optionBase =
   "w-full text-left px-3 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer border-0 bg-transparent";
@@ -147,6 +155,9 @@ function AutoCompletePanel(props: {
   onPick: (opt: string) => void;
   /** 由父组件合并默认值后传入的 listbox `aria-label` */
   listboxLabel: string;
+  /** 视口定位时用 fixed，避免 Modal 底栏裁切 */
+  useViewport: () => boolean;
+  onPanelRef: (el: HTMLElement | null) => void;
 }) {
   const {
     open,
@@ -156,6 +167,8 @@ function AutoCompletePanel(props: {
     listboxId,
     onPick,
     listboxLabel,
+    useViewport,
+    onPanelRef,
   } = props;
 
   return () => {
@@ -165,8 +178,15 @@ function AutoCompletePanel(props: {
 
     return (
       <div
+        ref={(el: HTMLElement | null) => onPanelRef(el)}
         id={listboxId}
-        class={panelCls}
+        class={() =>
+          twMerge(
+            "max-h-60 overflow-auto rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-lg py-1",
+            useViewport()
+              ? twMerge("fixed", pickerPortalZClass)
+              : "absolute z-50 left-0 right-0 top-full mt-1",
+          )}
         role="listbox"
         aria-label={listboxLabel}
       >
@@ -215,6 +235,7 @@ export function AutoComplete(props: AutoCompleteProps): JSXRenderable {
     id,
     autoFocus = false,
     messages,
+    panelAttach = "anchored",
   } = props;
   const disabled = resolveFormControlDisabled(props.disabled);
   const selected = createOptionalValueState(value, "");
@@ -237,6 +258,20 @@ export function AutoComplete(props: AutoCompleteProps): JSXRenderable {
    * `value()` 仍为空串 → {@link filterOptions} 走「空串展示全部」分支，出现输入「杭」却列出所有城市的问题。
    */
   const panelFilterQuery = createSignal("");
+  let listboxEl: HTMLElement | null = null;
+  const triggerRef: { current: HTMLElement | null } = { current: null };
+  const useViewportPanel = () =>
+    resolvePickerViewportAttach(panelAttach, triggerRef.current);
+  bindFixedDropdownPanelWhenOpen(
+    useViewportPanel,
+    () => panelOpen.value,
+    () => listboxEl,
+    triggerRef,
+    () => {
+      panelOpen.value = false;
+      activeIndex.value = -1;
+    },
+  );
 
   /**
    * 受控 `value` 自外部变更时（如表单重置、代码改 q）与过滤串对齐；不在每次按键上依赖父 state 才能过滤。
@@ -421,6 +456,7 @@ export function AutoComplete(props: AutoCompleteProps): JSXRenderable {
         class={inputClass}
         ref={(el: HTMLInputElement | null) => {
           comboboxInputRef.current = el;
+          triggerRef.current = el;
           const af = bindAutoFocusRef(undefined, autoFocus);
           if (typeof af === "function") af(el);
         }}
@@ -442,6 +478,10 @@ export function AutoComplete(props: AutoCompleteProps): JSXRenderable {
         listboxId={listboxId}
         onPick={pickOption}
         listboxLabel={m.listbox}
+        useViewport={useViewportPanel}
+        onPanelRef={(el) => {
+          listboxEl = el;
+        }}
       />
     </div>
   );

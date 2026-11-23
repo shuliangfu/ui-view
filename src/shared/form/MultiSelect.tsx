@@ -15,7 +15,10 @@ import {
   pickInlineDropdownOption,
   syncInlineDropdownPanelVisibility,
 } from "./inline-dropdown-outside-click.ts";
-import { pickerPortalZClass } from "./picker-portal-utils.ts";
+import {
+  pickerPortalZClass,
+  resolvePickerViewportAttach,
+} from "./picker-portal-utils.ts";
 import { twMerge } from "tailwind-merge";
 import { IconChevronDown } from "../basic/icons/ChevronDown.tsx";
 import {
@@ -127,6 +130,7 @@ export interface MultiSelectProps {
   /**
    * 浮层挂载。默认 `anchored`（相对触发器 absolute）；
    * `viewport` 时改为视口 `fixed`，避免被表格 overflow 裁切。单元格编辑应传 `viewport`。
+   * 位于 Modal 正文或其它会裁切的 overflow 祖先内时，即使未传也会自动升级为 `viewport`，避免被底栏挡住。
    */
   panelAttach?: "anchored" | "viewport";
 }
@@ -319,7 +323,20 @@ function MultiSelectDropdownBranch(
   let panelEl: HTMLElement | null = null;
   let listboxEl: HTMLElement | null = null;
   const triggerRef: { current: HTMLElement | null } = { current: null };
-  const useViewportPanel = panelAttach === "viewport";
+  const viewportPanel = createSignal(panelAttach === "viewport");
+  const useViewportPanel = () =>
+    resolvePickerViewportAttach(
+      panelAttach === "viewport" || viewportPanel.value
+        ? "viewport"
+        : "anchored",
+      triggerRef.current ?? rootEl,
+    );
+  const refreshViewportAttach = () => {
+    viewportPanel.value = resolvePickerViewportAttach(
+      panelAttach,
+      triggerRef.current ?? rootEl,
+    );
+  };
   /** 已在 pointerdown 提交的选项；直到对应 click 才消费，不能按时间过期。 */
   let pointerPickedValue: string | undefined;
 
@@ -359,7 +376,7 @@ function MultiSelectDropdownBranch(
   );
 
   bindFixedDropdownPanelWhenOpen(
-    () => useViewportPanel,
+    useViewportPanel,
     () => openState.value,
     () => listboxEl,
     triggerRef,
@@ -396,6 +413,7 @@ function MultiSelectDropdownBranch(
     <span
       ref={(el: HTMLElement | null) => {
         rootEl = el;
+        if (el) refreshViewportAttach();
         if (!el || disabled) return;
         setSelectAllHost(el, () => {
           const current = selected.read();
@@ -463,6 +481,7 @@ function MultiSelectDropdownBranch(
             }
             queueMicrotask(() => {
               if (!disabled && !loading && !openState.value) {
+                refreshViewportAttach();
                 openState.value = true;
               }
             });
@@ -530,13 +549,14 @@ function MultiSelectDropdownBranch(
         aria-hidden="true"
         data-ui-multiselect-panel=""
       >
-        {useViewportPanel ? null : (
-          <div
-            class="fixed inset-0 z-40"
-            aria-hidden="true"
-            onClick={closePanel}
-          />
-        )}
+        {() =>
+          useViewportPanel() ? null : (
+            <div
+              class="fixed inset-0 z-40"
+              aria-hidden="true"
+              onClick={closePanel}
+            />
+          )}
         <div
           ref={(el: HTMLElement | null) => {
             listboxEl = el;
@@ -544,12 +564,13 @@ function MultiSelectDropdownBranch(
           role="listbox"
           aria-label={m.listbox}
           aria-multiselectable="true"
-          class={twMerge(
-            "flex max-h-72 w-max flex-col overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg dark:border-slate-600 dark:bg-slate-800",
-            useViewportPanel
-              ? twMerge("fixed", pickerPortalZClass)
-              : "absolute top-full left-0 z-50 mt-1 min-w-[max(100%,13.5rem)]",
-          )}
+          class={() =>
+            twMerge(
+              "flex max-h-72 w-max flex-col overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg dark:border-slate-600 dark:bg-slate-800",
+              useViewportPanel()
+                ? twMerge("fixed", pickerPortalZClass)
+                : "absolute top-full left-0 z-50 mt-1 min-w-[max(100%,13.5rem)]",
+            )}
         >
           <div class="flex w-full shrink-0 items-center justify-between gap-2 border-b border-slate-100 p-2 dark:border-slate-700">
             <div class="flex gap-1">

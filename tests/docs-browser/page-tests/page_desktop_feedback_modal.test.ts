@@ -1262,6 +1262,56 @@ describe("文档页 E2E：/desktop/feedback/modal（Modal 模态框）", () => {
     expect(ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
 
+  it("严格·指定宽高、标题栏与底栏高度、嵌入页面", async (t) => {
+    if (!t?.browser?.goto) return;
+    await sharedEnv.goto(t, DOC_PATH);
+    await sharedEnv.waitDocMainReady(t);
+    const got = await t.browser.evaluate(() => {
+      const needles = ["指定宽高", "标题栏与底栏高度", "嵌入页面"];
+      const main = document.querySelector("main");
+      if (!main) return { ok: false, missing: needles };
+      const missing: string[] = [];
+      for (const needle of needles) {
+        const heads = Array.from(main.querySelectorAll("h2, h3"));
+        let h: Element | undefined;
+        for (const el of heads) {
+          if ((el.textContent || "").includes(needle)) {
+            h = el;
+            break;
+          }
+        }
+        if (!h) {
+          missing.push(needle);
+          continue;
+        }
+        let root: Element | null = h.parentElement;
+        let hit = false;
+        for (let depth = 0; depth < 12 && root && root !== main; depth++) {
+          const copy = root.querySelector(
+            'button[type="button"][aria-label="复制"]',
+          ) as HTMLButtonElement | null;
+          if (copy && !copy.disabled) {
+            copy.click();
+            hit = true;
+            break;
+          }
+          const btn = root.querySelector(
+            'button[type="button"]:not([disabled])',
+          ) as HTMLButtonElement | null;
+          if (btn) {
+            btn.click();
+            hit = true;
+            break;
+          }
+          root = root.parentElement;
+        }
+        if (!hit) missing.push(needle);
+      }
+      return { ok: missing.length === 0, missing };
+    }) as { ok: boolean; missing: string[] };
+    expect(got).toEqual({ ok: true, missing: [] });
+  }, DOCS_BROWSER_CONFIG);
+
   /**
    * UI·示例区主内容可见且有尺寸。
    */

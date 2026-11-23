@@ -20,6 +20,105 @@ export const pickerPortalZClass = "z-1070";
  */
 export const pickerOverlayZIndexInline = "100000";
 
+/** 会裁切绝对定位子孙的 overflow 值（不含 visible）。 */
+const OVERFLOW_CLIP_VALUES = new Set([
+  "hidden",
+  "auto",
+  "scroll",
+  "clip",
+  "overlay",
+]);
+
+function overflowValueClips(value: string): boolean {
+  return OVERFLOW_CLIP_VALUES.has(value);
+}
+
+function classNameOf(el: Element): string {
+  const cls = el.className;
+  if (typeof cls === "string") return cls;
+  return (cls as { baseVal?: string } | null)?.baseVal ?? "";
+}
+
+/** `globalThis.getComputedStyle` 在部分测试运行时不存在，改走 document.defaultView 或行内 style。 */
+function readComputedStyle(el: Element): CSSStyleDeclaration | null {
+  const view = el.ownerDocument?.defaultView;
+  const fn = view && typeof view.getComputedStyle === "function"
+    ? view.getComputedStyle.bind(view)
+    : typeof globalThis.getComputedStyle === "function"
+    ? globalThis.getComputedStyle.bind(globalThis)
+    : null;
+  if (!fn) return null;
+  try {
+    return fn(el);
+  } catch {
+    return null;
+  }
+}
+
+function elementClipsAnchoredOverlay(el: HTMLElement): boolean {
+  if (
+    el.hasAttribute("data-ui-modal-panel") ||
+    el.hasAttribute("data-ui-modal-body")
+  ) {
+    return true;
+  }
+  if (
+    overflowValueClips(el.style.overflow) ||
+    overflowValueClips(el.style.overflowX) ||
+    overflowValueClips(el.style.overflowY)
+  ) {
+    return true;
+  }
+  const st = readComputedStyle(el);
+  if (
+    st &&
+    (overflowValueClips(st.overflow) ||
+      overflowValueClips(st.overflowX) ||
+      overflowValueClips(st.overflowY))
+  ) {
+    return true;
+  }
+  return /(?:^|\s)overflow-(?:x-|y-)?(?:hidden|auto|scroll|clip)(?:\s|$)/
+    .test(classNameOf(el));
+}
+
+/**
+ * 触发器是否位于会裁切 `position:absolute` 浮层的祖先内。
+ * 会跳过 `html`/`body`（页面滚动不应迫使所有下拉改视口定位）。
+ * 识别 {@link Modal} 的 `data-ui-modal-panel` / `data-ui-modal-body`，
+ * 以便在未解析 Tailwind overflow 类的测试环境里也能逃出底栏裁切。
+ *
+ * @param start - 通常为触发器或组件根；从**父级**开始向上走，避免把浮层自身的 `overflow-auto` 当成裁切祖先
+ */
+export function ancestorClipsAnchoredOverlay(
+  start: Element | null | undefined,
+): boolean {
+  if (start == null) return false;
+  const doc = start.ownerDocument;
+  const body = doc?.body ?? null;
+  const root = doc?.documentElement ?? null;
+  let cur: HTMLElement | null = start.parentElement;
+  while (cur && cur !== body && cur !== root) {
+    if (elementClipsAnchoredOverlay(cur)) return true;
+    cur = cur.parentElement;
+  }
+  return false;
+}
+
+/**
+ * 是否把选择器/日期等浮层改成视口 `fixed`。
+ * 显式 `viewport`，或默认 `anchored` 但祖先会裁切时，都返回 true。
+ *
+ * @param panelAttach - 组件 props，未传视为 `anchored`
+ * @param anchor - 触发器或根节点，供检测裁切祖先
+ */
+export function resolvePickerViewportAttach(
+  panelAttach: "anchored" | "viewport" | undefined,
+  anchor: Element | null | undefined,
+): boolean {
+  return panelAttach === "viewport" || ancestorClipsAnchoredOverlay(anchor);
+}
+
 /**
  * 根据触发器视口矩形计算 `position:fixed` 的 `top`/`left`/`zIndex`（默认贴在触发器下方，左右夹紧视口；下方溢出时翻到上方并夹紧）。
  *

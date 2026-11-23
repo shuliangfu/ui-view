@@ -25,6 +25,13 @@ import {
 import { createOptionalValueState, type MaybeSignal } from "./maybe-signal.ts";
 import { autoFocusAttr, bindAutoFocusRef } from "./auto-focus.ts";
 import type { SizeVariant } from "../types.ts";
+import {
+  bindFixedDropdownPanelWhenOpen,
+} from "./inline-dropdown-outside-click.ts";
+import {
+  pickerPortalZClass,
+  resolvePickerViewportAttach,
+} from "./picker-portal-utils.ts";
 
 /** 候选选项 */
 export interface MentionOption {
@@ -98,6 +105,11 @@ export interface MentionsProps {
   autoFocus?: boolean;
   /** 多语言/自定义文案；未传字段走 {@link defaultMentionsMessages} */
   messages?: Partial<MentionsMessages>;
+  /**
+   * 浮层挂载。默认 `anchored`（相对文本区 absolute）。
+   * 位于 Modal 或其它会裁切的 overflow 祖先内时自动升级为视口 `fixed`，避免被底栏挡住。
+   */
+  panelAttach?: "anchored" | "viewport";
 }
 
 /** 文本区底纹（不含 ring） */
@@ -110,8 +122,6 @@ const textareaSizeClasses: Record<SizeVariant, string> = {
   lg: "px-4 py-2.5 text-base rounded-lg min-h-[96px]",
 };
 
-const dropdownCls =
-  "absolute z-10 mt-1 w-full min-w-[160px] max-h-48 overflow-auto rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-lg py-1";
 const dropdownItemBaseCls =
   "px-3 py-2 text-sm text-slate-700 dark:text-slate-300 cursor-pointer";
 const dropdownItemHoverCls = "hover:bg-slate-100 dark:hover:bg-slate-700";
@@ -151,6 +161,8 @@ function MentionsDropdown(props: {
   listboxId: string;
   /** 由父组件合并默认值后传入的 listbox `aria-label` */
   listboxLabel: string;
+  useViewport: () => boolean;
+  onPanelRef: (el: HTMLElement | null) => void;
 }) {
   const {
     showDropdown = false,
@@ -159,6 +171,8 @@ function MentionsDropdown(props: {
     highlightIdx,
     listboxId,
     listboxLabel,
+    useViewport,
+    onPanelRef,
   } = props;
   /**
    * 组件函数只执行一次（与 Solid 相同）；必须在视图函数里读
@@ -177,8 +191,15 @@ function MentionsDropdown(props: {
         if (!show || opts.length === 0 || !onSelectOption) return null;
         return (
           <div
+            ref={(el: HTMLElement | null) => onPanelRef(el)}
             id={listboxId}
-            class={dropdownCls}
+            class={() =>
+              twMerge(
+                "w-full min-w-[160px] max-h-48 overflow-auto rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-lg py-1",
+                useViewport()
+                  ? twMerge("fixed", pickerPortalZClass)
+                  : "absolute z-10 mt-1",
+              )}
             role="listbox"
             aria-label={listboxLabel}
           >
@@ -234,6 +255,7 @@ export function Mentions(props: MentionsProps): JSXRenderable {
     id,
     autoFocus = false,
     messages,
+    panelAttach = "anchored",
   } = props;
   const disabled = resolveFormControlDisabled(props.disabled);
   const selected = createOptionalValueState(value, "");
@@ -247,6 +269,23 @@ export function Mentions(props: MentionsProps): JSXRenderable {
 
   /** 下拉内键盘高亮；勿在下拉子树外读 showDropdown 以免扩大订阅面 */
   const mentionHighlightIdx = createSignal(-1);
+  let listboxEl: HTMLElement | null = null;
+  const triggerRef: { current: HTMLElement | null } = { current: null };
+  const useViewportPanel = () =>
+    resolvePickerViewportAttach(panelAttach, triggerRef.current);
+  const mentionsDropdownOpen = () =>
+    typeof showDropdown === "function"
+      ? Boolean(showDropdown())
+      : Boolean(showDropdown);
+  bindFixedDropdownPanelWhenOpen(
+    useViewportPanel,
+    mentionsDropdownOpen,
+    () => listboxEl,
+    triggerRef,
+    () => {
+      /* 受控下拉由父级关闭；这里只提供点外部时的空操作占位。 */
+    },
+  );
 
   /** 与 textarea `id` 解耦，供 listbox / option 节点与 aria-activedescendant */
   const listboxStableId = `mentions-lb-${
@@ -356,7 +395,11 @@ export function Mentions(props: MentionsProps): JSXRenderable {
 
   const textareaProps = {
     id: resolvedId,
-    ref: bindAutoFocusRef(undefined, autoFocus),
+    ref: (el: HTMLElement | null) => {
+      triggerRef.current = el;
+      const af = bindAutoFocusRef(undefined, autoFocus);
+      if (typeof af === "function") af(el);
+    },
     name,
     ...autoFocusAttr(autoFocus),
     rows,
@@ -421,6 +464,10 @@ export function Mentions(props: MentionsProps): JSXRenderable {
         highlightIdx={mentionHighlightIdx}
         listboxId={listboxStableId}
         listboxLabel={m.listbox}
+        useViewport={useViewportPanel}
+        onPanelRef={(el) => {
+          listboxEl = el;
+        }}
       />
     </div>
   );

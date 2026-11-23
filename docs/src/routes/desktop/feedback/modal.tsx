@@ -48,6 +48,13 @@ const MODAL_API: ApiRow[] = [
       "标题对齐：center 相对弹层居中（关闭等仍贴右）；left 与操作区两端排布",
   },
   {
+    name: "titleHeight",
+    type: '"xs" | "sm" | "md" | "lg" | string | number | (() => 同上)',
+    default: "-",
+    description:
+      "标题栏高度；预设 xs/sm/md/lg 为 40/48/56/72px，数字视为 px，也可 CSS 长度。无 ms 档（请用 sm）。随 signal 变时用 `titleHeight={() => …}`。未传时保持默认内边距",
+  },
+  {
     name: "children",
     type: "unknown | (() => unknown)",
     default: "-",
@@ -55,10 +62,32 @@ const MODAL_API: ApiRow[] = [
       "弹层内容；通常直接写子节点即可；打开态下正文也要随 signal 变时用 `children={() => …}`",
   },
   {
+    name: "src",
+    type: "string | null | (() => string | null | undefined)",
+    default: "-",
+    description:
+      "传入 URL 时正文用 iframe 铺满该地址，并忽略 children；标题栏与底栏仍显示。危险协议（javascript: / vbscript: / data:text/html）会被丢弃。仅有 src、未指定 height 时，弹层高度回落为 maxHeight（默认 90vh）。同域页的链接会留在当前弹层内打开；跨域页无法拦截点击，但默认 sandbox 不允许跳出到顶层窗口",
+  },
+  {
+    name: "sandbox",
+    type: "string | false",
+    default:
+      "allow-scripts allow-same-origin allow-forms",
+    description:
+      "iframe sandbox；仅 src 时生效。传 false 不写 sandbox；传字符串则原样使用。默认不含 allow-popups 与顶层导航，避免嵌入页跳出弹层",
+  },
+  {
     name: "footer",
     type: "unknown",
     default: "-",
     description: "底部区域；不传则无 footer",
+  },
+  {
+    name: "footerHeight",
+    type: '"xs" | "sm" | "md" | "lg" | string | number | (() => 同上)',
+    default: "-",
+    description:
+      "底栏高度，形态与 titleHeight 相同。随 signal 变时用 `footerHeight={() => …}`。未传时保持默认内边距",
   },
   {
     name: "closable",
@@ -92,6 +121,13 @@ const MODAL_API: ApiRow[] = [
     default: "90vh",
     description:
       "弹层最大高度；数字为像素，字符串为 CSS（如 80vh）。随 signal 变时用 `maxHeight={() => …}`。全屏时忽略，仍为 100vh",
+  },
+  {
+    name: "height",
+    type: "string | number | (() => 同上)",
+    default: "-",
+    description:
+      "弹层高度；数字视为 px，也可 CSS 长度。随 signal 变时用 `height={() => …}`。未传时由内容撑开并受 maxHeight 限制；传入 src 且未指定本项时回落为 maxHeight。全屏时忽略，仍铺满窗口",
   },
   {
     name: "centered",
@@ -228,6 +264,31 @@ const openFullscreen = createSignal(false);
 const openFullscreenInitial = createSignal(false);
 const openKeyboard = createSignal(false);
 const openCustomClass = createSignal(false);
+/** 数字指定 width / height（px） */
+const openSizeNumber = createSignal(false);
+/**
+ * 标题栏／底栏高度：单一对象 signal，一次写入 open + 两档高度。
+ * 按钮文案用「标题栏 xs」「底栏 64」，避免与「自定义宽度」的 xs/sm/md/lg 重名。
+ */
+const slotHeightDemo = createSignal<{
+  open: boolean;
+  titleHeight: "xs" | "sm" | "md" | "lg" | 64;
+  footerHeight: "xs" | "sm" | "md" | "lg" | 64;
+}>({
+  open: false,
+  titleHeight: "sm",
+  footerHeight: "md",
+});
+/** 传入 src 时正文用 iframe 展示该 URL */
+const openSrc = createSignal(false);
+
+const SLOT_HEIGHT_PX: Record<"xs" | "sm" | "md" | "lg" | 64, number> = {
+  xs: 40,
+  sm: 48,
+  md: 56,
+  lg: 72,
+  64: 64,
+};
 
 /** 路由元数据：浏览器 <title> / SEO（dweb resolveMetadata） */
 export const metadata = {
@@ -242,8 +303,10 @@ export default function FeedbackModal() {
         <Paragraph class="mt-2">
           模态弹窗：遮罩、标题、内容、底部；支持关闭按钮、点击遮罩关闭；默认不按
           Esc 关闭，传 keyboard 可启用 Esc；自定义宽度与
-          footer、居中/顶部对齐、关闭后销毁、自定义样式。使用 Tailwind v4，支持
-          light/dark 主题。本页示例的{" "}
+          footer、居中/顶部对齐、关闭后销毁、自定义样式。也可传入 src 用 iframe
+          展示页面；width / height 支持数字（px），titleHeight / footerHeight
+          支持 xs/sm/md/lg 或数字。使用 Tailwind v4，支持 light/dark
+          主题。本页示例的{" "}
           <code class="rounded bg-slate-200/80 px-1 font-mono text-xs dark:bg-slate-600/80">
             open
           </code>{" "}
@@ -658,6 +721,252 @@ demo.value = { open: true, preset: "lg" };
 >
   <p>占视口宽度 80%</p>
 </Modal>`}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
+          />
+        </div>
+
+        <div class="space-y-4">
+          <Title level={3}>指定宽高</Title>
+          <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+            width 与 height 都可用数字指定像素（如 720、480），也可写 CSS
+            长度；width 仍支持预设 xs/sm/md/lg/xl。全屏时忽略自定义宽高。
+          </Paragraph>
+          <div class="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => openSizeNumber.value = true}
+            >
+              数字宽高
+            </Button>
+          </div>
+          <Modal
+            open={openSizeNumber}
+            onClose={() => openSizeNumber.value = false}
+            title="720 × 480"
+            width={720}
+            height={480}
+            footer={
+              <>
+                <Button
+                  type="button"
+                  variant="primary"
+                  onClick={() => openSizeNumber.value = false}
+                >
+                  确定
+                </Button>
+                <Button
+                  type="button"
+                  variant="default"
+                  onClick={() => openSizeNumber.value = false}
+                >
+                  取消
+                </Button>
+              </>
+            }
+          >
+            <p class="text-sm text-slate-600 dark:text-slate-400">
+              {"width={720}、height={480}，数字均视为像素。"}
+            </p>
+          </Modal>
+          <CodeBlock
+            title="代码示例"
+            code={`<Modal
+  open={open}
+  onClose={() => open.value = false}
+  title="720 × 480"
+  width={720}
+  height={480}
+>
+  <p>width 与 height 传入数字时均视为像素</p>
+</Modal>`}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
+          />
+        </div>
+
+        <div class="space-y-4">
+          <Title level={3}>标题栏与底栏高度</Title>
+          <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+            titleHeight / footerHeight 支持预设
+            xs/sm/md/lg（40/48/56/72px），也可用数字（px）或 CSS 长度。无 ms
+            档，请用 sm。
+          </Paragraph>
+          <div class="flex flex-wrap gap-2">
+            <span class="text-sm text-slate-600 dark:text-slate-400 self-center mr-1">
+              标题栏：
+            </span>
+            {(["xs", "sm", "md", "lg", 64] as const).map((h) => (
+              <Button
+                key={`title-${h}`}
+                type="button"
+                variant="secondary"
+                onClick={() => {
+                  slotHeightDemo.value = {
+                    ...slotHeightDemo.value,
+                    open: true,
+                    titleHeight: h,
+                  };
+                }}
+              >
+                {`标题栏 ${h}`}
+              </Button>
+            ))}
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <span class="text-sm text-slate-600 dark:text-slate-400 self-center mr-1">
+              底栏：
+            </span>
+            {(["xs", "sm", "md", "lg", 64] as const).map((h) => (
+              <Button
+                key={`footer-${h}`}
+                type="button"
+                variant="secondary"
+                onClick={() => {
+                  slotHeightDemo.value = {
+                    ...slotHeightDemo.value,
+                    open: true,
+                    footerHeight: h,
+                  };
+                }}
+              >
+                {`底栏 ${h}`}
+              </Button>
+            ))}
+          </div>
+          <Modal
+            open={() => slotHeightDemo.value.open}
+            onClose={() => {
+              slotHeightDemo.value = {
+                ...slotHeightDemo.value,
+                open: false,
+              };
+            }}
+            title={() =>
+              `标题栏 ${slotHeightDemo.value.titleHeight} / 底栏 ${slotHeightDemo.value.footerHeight}`}
+            titleHeight={() => slotHeightDemo.value.titleHeight}
+            footerHeight={() => slotHeightDemo.value.footerHeight}
+            footer={
+              <>
+                <Button
+                  type="button"
+                  variant="primary"
+                  onClick={() => {
+                    slotHeightDemo.value = {
+                      ...slotHeightDemo.value,
+                      open: false,
+                    };
+                  }}
+                >
+                  确定
+                </Button>
+                <Button
+                  type="button"
+                  variant="default"
+                  onClick={() => {
+                    slotHeightDemo.value = {
+                      ...slotHeightDemo.value,
+                      open: false,
+                    };
+                  }}
+                >
+                  取消
+                </Button>
+              </>
+            }
+            children={() => (
+              <p class="text-sm text-slate-600 dark:text-slate-400">
+                {`标题栏 ${slotHeightDemo.value.titleHeight}（${
+                  SLOT_HEIGHT_PX[slotHeightDemo.value.titleHeight]
+                }px），底栏 ${slotHeightDemo.value.footerHeight}（${
+                  SLOT_HEIGHT_PX[slotHeightDemo.value.footerHeight]
+                }px）。`}
+              </p>
+            )}
+          />
+          <CodeBlock
+            title="代码示例（预设）"
+            code={`<Modal
+  open={open}
+  onClose={...}
+  title="槽位高度"
+  titleHeight="xs"
+  footerHeight="lg"
+  footer={...}
+>
+  <p>标题栏 xs（40px），底栏 lg（72px）</p>
+</Modal>`}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
+          />
+          <CodeBlock
+            title="代码示例（数字）"
+            code={`<Modal
+  open={open}
+  onClose={...}
+  title="槽位高度"
+  titleHeight={40}
+  footerHeight={64}
+  footer={...}
+>
+  <p>数字视为像素</p>
+</Modal>`}
+            language="tsx"
+            showLineNumbers
+            copyable
+            wrapLongLines
+            maxHeight={DOCS_DEMO_CODE_MAX_HEIGHT}
+          />
+        </div>
+
+        <div class="space-y-4">
+          <Title level={3}>嵌入页面</Title>
+          <Paragraph class="text-sm text-slate-600 dark:text-slate-400">
+            传入 src（URL）时，正文用 iframe 铺满该地址，并忽略
+            children；标题栏与底栏仍照常显示。未指定 height 时，弹层高度回落为
+            maxHeight（默认 90vh）。下例嵌入本站「桌面版」目录；同域链接会留在当前弹层内打开。
+          </Paragraph>
+          <div class="flex gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => openSrc.value = true}
+            >
+              打开嵌入页
+            </Button>
+          </div>
+          <Modal
+            open={openSrc}
+            onClose={() => openSrc.value = false}
+            src="/desktop"
+            title="嵌入页面"
+            titleHeight="sm"
+            width={440}
+            height={900}
+            draggable
+          />
+          <CodeBlock
+            title="代码示例"
+            code={`<Modal
+  open={open}
+  onClose={() => openSrc.value = false}
+  src="/desktop"
+  title="嵌入页面"
+  titleHeight="sm"
+  width={440}
+  height={900}
+  draggable
+/>`}
             language="tsx"
             showLineNumbers
             copyable

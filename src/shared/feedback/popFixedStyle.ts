@@ -9,6 +9,12 @@
 /** 与 Tailwind `m-2` 竖向/横向与触发器外缘的默认间距（px）一致 */
 export const PORTAL_POP_GAP_PX = 8;
 
+/**
+ * 挂到 `document.body` 的 Popover / Popconfirm 浮层 z-index。
+ * 须高于 Modal 常驻 300 与全屏 9999，否则在弹层内打开时会落到遮罩/底栏下面。
+ */
+export const POP_OVERLAY_Z_INDEX = "100000";
+
 export type FullPopStylePlacement =
   | "top"
   | "topLeft"
@@ -408,7 +414,7 @@ export function computePopFixedStyle(
   placement: FullPopStylePlacement,
 ): Record<string, string> {
   if (typeof globalThis.window === "undefined") {
-    return {};
+    return { zIndex: POP_OVERLAY_Z_INDEX };
   }
   const w = globalThis.window;
   const ih = w.innerHeight;
@@ -420,67 +426,79 @@ export function computePopFixedStyle(
         bottom: `${ih - tr.top + g}px`,
         left: `${tr.left + tr.width / 2}px`,
         transform: "translateX(-50%)",
+        zIndex: POP_OVERLAY_Z_INDEX,
       };
     case "topLeft":
       return {
         bottom: `${ih - tr.top + g}px`,
         left: `${tr.left}px`,
+        zIndex: POP_OVERLAY_Z_INDEX,
       };
     case "topRight":
       return {
         bottom: `${ih - tr.top + g}px`,
         right: `${iw - tr.right}px`,
+        zIndex: POP_OVERLAY_Z_INDEX,
       };
     case "bottom":
       return {
         top: `${tr.bottom + g}px`,
         left: `${tr.left + tr.width / 2}px`,
         transform: "translateX(-50%)",
+        zIndex: POP_OVERLAY_Z_INDEX,
       };
     case "bottomLeft":
       return {
         top: `${tr.bottom + g}px`,
         left: `${tr.left}px`,
+        zIndex: POP_OVERLAY_Z_INDEX,
       };
     case "bottomRight":
       return {
         top: `${tr.bottom + g}px`,
         right: `${iw - tr.right}px`,
+        zIndex: POP_OVERLAY_Z_INDEX,
       };
     case "left":
       return {
         right: `${iw - tr.left + g}px`,
         top: `${tr.top + tr.height / 2}px`,
         transform: "translateY(-50%)",
+        zIndex: POP_OVERLAY_Z_INDEX,
       };
     case "leftTop":
       return {
         right: `${iw - tr.left + g}px`,
         top: `${tr.top}px`,
+        zIndex: POP_OVERLAY_Z_INDEX,
       };
     case "leftBottom":
       return {
         right: `${iw - tr.left + g}px`,
         bottom: `${ih - tr.bottom}px`,
+        zIndex: POP_OVERLAY_Z_INDEX,
       };
     case "right":
       return {
         top: `${tr.top + tr.height / 2}px`,
         left: `${tr.right + g}px`,
         transform: "translateY(-50%)",
+        zIndex: POP_OVERLAY_Z_INDEX,
       };
     case "rightTop":
       return {
         top: `${tr.top}px`,
         left: `${tr.right + g}px`,
+        zIndex: POP_OVERLAY_Z_INDEX,
       };
     case "rightBottom":
       return {
         bottom: `${ih - tr.bottom}px`,
         left: `${tr.right + g}px`,
+        zIndex: POP_OVERLAY_Z_INDEX,
       };
     default:
-      return {};
+      return { zIndex: POP_OVERLAY_Z_INDEX };
   }
 }
 

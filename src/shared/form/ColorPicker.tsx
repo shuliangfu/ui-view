@@ -37,6 +37,7 @@ import {
   pickerPortalZClass,
   registerPickerFixedOverlayPositionAndOutsideClick,
   registerPointerDownOutside,
+  resolvePickerViewportAttach,
 } from "./picker-portal-utils.ts";
 import { createOptionalValueState, type MaybeSignal } from "./maybe-signal.ts";
 import { autoFocusAttr, bindAutoFocusRef } from "./auto-focus.ts";
@@ -158,6 +159,7 @@ export interface ColorPickerProps {
   /**
    * 浮层挂载方式：`anchored`（默认）相对根 `absolute`；`viewport` 为触发器打开时视口 `fixed` + 几何同步，避免被 overflow 裁切。
    * 不影响 {@link ColorPickerHandle.openAtClientPoint} 等命令式打开（仍为独立坐标 `floating` 模式）。
+   * 位于 Modal 或其它会裁切的 overflow 祖先内时，即使保持默认 `anchored` 也会自动升级为视口 `fixed`，避免被 Modal 底栏挡住。
    */
   panelAttach?: "anchored" | "viewport";
   /** 多语言/自定义文案；未传字段走 {@link defaultColorPickerMessages} */
@@ -1002,7 +1004,10 @@ export function ColorPicker(props: ColorPickerProps): JSXRenderable {
       if (props.disabled) return;
       closedOptimisticHexRef.current = null;
       /** 与 DatePicker `panelAttach` 对齐：表格等场景避免 absolute 浮层被裁切 */
-      panelLayout.value = (props.panelAttach ?? "anchored") === "viewport"
+      panelLayout.value = resolvePickerViewportAttach(
+          props.panelAttach,
+          triggerRef.current,
+        )
         ? "viewport"
         : "anchored";
       const origin = controlledHex();

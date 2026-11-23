@@ -2312,7 +2312,7 @@
       "examples": [],
       "codes": [
         "import { CountDown } from \"@dreamer/ui-view/data-display\";\n\n<CountDown target={Date.now() + 3_661_000} />",
-        "<CountDown target={Date.now() + 3_661_000} />"
+        "const target = Date.now() + 3_661_000;\n<CountDown target={target} />"
       ],
       "api": [
         {
@@ -10872,6 +10872,9 @@
         "点击遮罩不关闭",
         "无遮罩",
         "自定义宽度",
+        "指定宽高",
+        "标题栏与底栏高度",
+        "嵌入页面",
         "不垂直居中",
         "可移动",
         "支持 ESC",
@@ -10887,6 +10890,10 @@
         "<Modal\n  open={open}\n  onClose={() => open.value = false}\n  title=\"无遮罩\"\n  mask={false}\n  keyboard\n>\n  <p>无暗色底，请用关闭按钮或 Esc</p>\n</Modal>",
         "import { createSignal } from \"@dreamer/view\";\n// 页面会重跑时请把 demo 放在模块级，勿在组件函数内每次 new\nconst demo = createSignal({\n  open: false,\n  preset: \"md\" as \"xs\" | \"sm\" | \"md\" | \"lg\" | \"xl\",\n});\ndemo.value = { open: true, preset: \"lg\" };\n<Modal\n  open={() => demo.value.open}\n  onClose={() => { demo.value = { ...demo.value, open: false }; }}\n  title={() => `宽度 ${demo.value.preset}`}\n  width={() => demo.value.preset}\n>\n  <p>正文可静态写；宽度与标题已由 getter 同步</p>\n</Modal>",
         "<Modal\n  open={open}\n  onClose={() => { open.value = false; }}\n  title=\"宽度 80%\"\n  width=\"80%\"\n>\n  <p>占视口宽度 80%</p>\n</Modal>",
+        "<Modal\n  open={open}\n  onClose={() => open.value = false}\n  title=\"720 × 480\"\n  width={720}\n  height={480}\n>\n  <p>width 与 height 传入数字时均视为像素</p>\n</Modal>",
+        "<Modal\n  open={open}\n  onClose={...}\n  title=\"槽位高度\"\n  titleHeight=\"xs\"\n  footerHeight=\"lg\"\n  footer={...}\n>\n  <p>标题栏 xs（40px），底栏 lg（72px）</p>\n</Modal>",
+        "<Modal\n  open={open}\n  onClose={...}\n  title=\"槽位高度\"\n  titleHeight={40}\n  footerHeight={64}\n  footer={...}\n>\n  <p>数字视为像素</p>\n</Modal>",
+        "<Modal\n  open={open}\n  onClose={() => openSrc.value = false}\n  src=\"/desktop\"\n  title=\"嵌入页面\"\n  titleHeight=\"sm\"\n  width={440}\n  height={900}\n  draggable\n/>",
         "<Modal\n  open={open}\n  onClose={() => open.value = false}\n  title=\"顶部对齐\"\n  centered={false}\n>\n  <p>靠上展示</p>\n</Modal>",
         "<Modal\n  open={open}\n  onClose={...}\n  title=\"可拖拽标题栏移动\"\n  draggable\n>\n  <p>拖拽上方标题栏可移动弹层位置。</p>\n</Modal>",
         "<Modal\n  open={open}\n  onClose={...}\n  title=\"按 Esc 可关闭\"\n  keyboard\n>\n  <p>打开后按键盘 Esc 可关闭此弹窗。</p>\n</Modal>",
@@ -10927,16 +10934,40 @@
               "标题对齐：center 相对弹层居中（关闭等仍贴右）；left 与操作区两端排布"
             ],
             [
+              "titleHeight",
+              "\"xs\" | \"sm\" | \"md\" | \"lg\" | string | number | (() => 同上)",
+              "-",
+              "标题栏高度；预设 xs/sm/md/lg 为 40/48/56/72px，数字视为 px，也可 CSS 长度。无 ms 档（请用 sm）。随 signal 变时用 `titleHeight={() => …}`。未传时保持默认内边距"
+            ],
+            [
               "children",
               "unknown | (() => unknown)",
               "-",
               "弹层内容；通常直接写子节点即可；打开态下正文也要随 signal 变时用 `children={() => …}`"
             ],
             [
+              "src",
+              "string | null | (() => string | null | undefined)",
+              "-",
+              "传入 URL 时正文用 iframe 铺满该地址，并忽略 children；标题栏与底栏仍显示。危险协议（javascript: / vbscript: / data:text/html）会被丢弃。仅有 src、未指定 height 时，弹层高度回落为 maxHeight（默认 90vh）。同域页的链接会留在当前弹层内打开；跨域页无法拦截点击，但默认 sandbox 不允许跳出到顶层窗口"
+            ],
+            [
+              "sandbox",
+              "string | false",
+              "allow-scripts allow-same-origin allow-forms",
+              "iframe sandbox；仅 src 时生效。传 false 不写 sandbox；传字符串则原样使用。默认不含 allow-popups 与顶层导航，避免嵌入页跳出弹层"
+            ],
+            [
               "footer",
               "unknown",
               "-",
               "底部区域；不传则无 footer"
+            ],
+            [
+              "footerHeight",
+              "\"xs\" | \"sm\" | \"md\" | \"lg\" | string | number | (() => 同上)",
+              "-",
+              "底栏高度，形态与 titleHeight 相同。随 signal 变时用 `footerHeight={() => …}`。未传时保持默认内边距"
             ],
             [
               "closable",
@@ -10967,6 +10998,12 @@
               "string | number | (() => 同上)",
               "90vh",
               "弹层最大高度；数字为像素，字符串为 CSS（如 80vh）。随 signal 变时用 `maxHeight={() => …}`。全屏时忽略，仍为 100vh"
+            ],
+            [
+              "height",
+              "string | number | (() => 同上)",
+              "-",
+              "弹层高度；数字视为 px，也可 CSS 长度。随 signal 变时用 `height={() => …}`。未传时由内容撑开并受 maxHeight 限制；传入 src 且未指定本项时回落为 maxHeight。全屏时忽略，仍铺满窗口"
             ],
             [
               "centered",
@@ -20036,7 +20073,7 @@
       "examples": [],
       "codes": [
         "import { CountDown } from \"@dreamer/ui-view/mobile/data-display\";\n\n<CountDown target={Date.now() + 3_661_000} />",
-        "<CountDown target={Date.now() + 3_661_000} />"
+        "const target = Date.now() + 3_661_000;\n<CountDown target={target} />"
       ],
       "api": [
         {

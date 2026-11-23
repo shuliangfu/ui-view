@@ -19,10 +19,15 @@ import {
   useContext,
 } from "@dreamer/view";
 import {
+  bindFixedDropdownPanelWhenOpen,
   installInlineDropdownOutsideClickClose,
   pickInlineDropdownOption,
   syncInlineDropdownPanelVisibility,
 } from "./inline-dropdown-outside-click.ts";
+import {
+  pickerPortalZClass,
+  resolvePickerViewportAttach,
+} from "./picker-portal-utils.ts";
 import { twMerge } from "tailwind-merge";
 import { IconChevronDown } from "../basic/icons/ChevronDown.tsx";
 import {
@@ -110,6 +115,11 @@ export interface TreeSelectProps {
   showSearch?: boolean;
   /** 加载中：触发器不可打开 */
   loading?: boolean;
+  /**
+   * 浮层挂载。默认 `anchored`（相对触发器 absolute）。
+   * 位于 Modal 或其它会裁切的 overflow 祖先内时自动升级为视口 `fixed`，避免被底栏挡住。
+   */
+  panelAttach?: "anchored" | "viewport";
 }
 
 /** 展平后的每一项：下拉里用 nodeLabel + depth，触发条用 fullPath */
@@ -265,6 +275,7 @@ function TreeSelectDropdownBranch(props: Omit<TreeSelectProps, "appearance">) {
     allowClear = false,
     showSearch = false,
     loading = false,
+    panelAttach = "anchored",
   } = props;
   const disabled = resolveFormControlDisabled(props.disabled);
   const selected = createOptionalValueState(value, "");
@@ -279,6 +290,22 @@ function TreeSelectDropdownBranch(props: Omit<TreeSelectProps, "appearance">) {
   const sizeCls = sizeClassesDropdown[size];
   let rootEl: HTMLElement | null = null;
   let panelEl: HTMLElement | null = null;
+  let listboxEl: HTMLElement | null = null;
+  const triggerRef: { current: HTMLElement | null } = { current: null };
+  const viewportPanel = createSignal(panelAttach === "viewport");
+  const useViewportPanel = () =>
+    resolvePickerViewportAttach(
+      panelAttach === "viewport" || viewportPanel.value
+        ? "viewport"
+        : "anchored",
+      triggerRef.current ?? rootEl,
+    );
+  const refreshViewportAttach = () => {
+    viewportPanel.value = resolvePickerViewportAttach(
+      panelAttach,
+      triggerRef.current ?? rootEl,
+    );
+  };
   /** 展平结果仅随 props.options 变；在同步体中计算即可 */
   const flat = flattenTreeSelectOptions(options);
 
@@ -305,6 +332,14 @@ function TreeSelectDropdownBranch(props: Omit<TreeSelectProps, "appearance">) {
   syncInlineDropdownPanelVisibility(
     () => openState.value,
     () => panelEl,
+  );
+
+  bindFixedDropdownPanelWhenOpen(
+    useViewportPanel,
+    () => openState.value,
+    () => listboxEl,
+    triggerRef,
+    closePanel,
   );
 
   createEffect(() => {
@@ -338,6 +373,7 @@ function TreeSelectDropdownBranch(props: Omit<TreeSelectProps, "appearance">) {
     <span
       ref={(el: HTMLElement | null) => {
         rootEl = el;
+        if (el) refreshViewportAttach();
       }}
       class={twMerge("relative block w-full min-w-0", className)}
     >
@@ -349,7 +385,11 @@ function TreeSelectDropdownBranch(props: Omit<TreeSelectProps, "appearance">) {
       <span class="relative block w-full">
         <button
           type="button"
-          ref={bindAutoFocusRef(undefined, autoFocus)}
+          ref={(el: HTMLElement | null) => {
+            triggerRef.current = el;
+            const af = bindAutoFocusRef(undefined, autoFocus);
+            if (typeof af === "function") af(el);
+          }}
           id={resolvedId}
           disabled={disabled || loading}
           aria-busy={loading || undefined}
@@ -380,6 +420,7 @@ function TreeSelectDropdownBranch(props: Omit<TreeSelectProps, "appearance">) {
             }
             queueMicrotask(() => {
               if (!disabled && !loading && !openState.value) {
+                refreshViewportAttach();
                 openState.value = true;
               }
             });
@@ -437,15 +478,27 @@ function TreeSelectDropdownBranch(props: Omit<TreeSelectProps, "appearance">) {
         aria-hidden="true"
         data-ui-treeselect-panel=""
       >
+        {() =>
+          useViewportPanel() ? null : (
+            <div
+              class="fixed inset-0 z-40"
+              aria-hidden="true"
+              onClick={closePanel}
+            />
+          )}
         <div
-          class="fixed inset-0 z-40"
-          aria-hidden="true"
-          onClick={closePanel}
-        />
-        <div
+          ref={(el: HTMLElement | null) => {
+            listboxEl = el;
+          }}
           role="listbox"
           aria-label={m.listbox}
-          class="absolute z-50 top-full left-0 right-0 mt-1 max-h-60 overflow-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg dark:border-slate-600 dark:bg-slate-800"
+          class={() =>
+            twMerge(
+              "max-h-60 overflow-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg dark:border-slate-600 dark:bg-slate-800",
+              useViewportPanel()
+                ? twMerge("fixed", pickerPortalZClass)
+                : "absolute z-50 top-full left-0 right-0 mt-1",
+            )}
         >
           {showSearch && (
             <div
