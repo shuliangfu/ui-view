@@ -1500,8 +1500,11 @@ export function DataPanel(props: PanelProps): JSXRenderable {
   const doCreate = () => openForm();
   const doEdit = (r: Row) => openForm(r);
   let viewSeq = 0;
+  /** 有自定义 view.render 时，详情由自定义内容自行拉数，面板不再请求 dataSource.view／get。 */
+  const hasCustomViewRender = () => typeof props.view?.render === "function";
   /** 重新请求当前打开的详情；失败或返回空则保留现有 viewRow，不用列表行覆盖。 */
   function refreshOpenView(id: string): void {
+    if (hasCustomViewRender()) return;
     const src = ds as {
       view?: (id: string) => Row | null | Promise<Row | null>;
       get?: (id: string) => Row | null | Promise<Row | null>;

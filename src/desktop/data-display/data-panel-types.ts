@@ -668,7 +668,8 @@ export interface ViewConfig {
   actions?: RowActionsConfig;
   /**
    * 替换详情 Descriptions 字段区；底部 actions 脚仍由面板渲染。
-   * 有本字段时忽略各 {@link ViewItem.render}。
+   * 有本字段时忽略各 {@link ViewItem.render}，且 DataPanel 不再请求
+   * {@link DataSource.view}／{@link DataSource.get}，由自定义内容自行拉数。
    */
   render?: (ctx: ViewRenderCtx) => unknown;
   /**

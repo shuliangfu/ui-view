@@ -1,11 +1,11 @@
 /**
  * Transfer 穿梭框（View，归类为表单组件）。
- * 双列选择；支持搜索、禁用项、方向。左右列表用原生 `select multiple`：单击只选一项，Ctrl／Command+单击多选，Ctrl／Command+A 全选当前列。选中后通过中间按钮穿梭。自定义 `render` 若返回非文本，则回退为标题。`dataSource` 项可设 `group`，同组以 `optgroup` 显示；搜索默认也匹配分组名。
+ * 双列选择；支持搜索、禁用项、方向。左右列表用原生 `select multiple`：单击只选一项，Ctrl／Command+单击多选，Ctrl／Command+A 全选当前列。选中后通过中间按钮穿梭。移动端两列仍上下排列，中间两个按钮左右并排并用上／下箭头；桌面端两列左右并排，按钮用左／右箭头。自定义 `render` 若返回非文本，则回退为标题。`dataSource` 项可设 `group`，同组以 `optgroup` 显示；搜索默认也匹配分组名。
  *
  * **避免整块重挂载：**
  * 1. 外层 `return ()` **不读取** `leftSearchRef` / `rightSearchRef`，也**不读取** `selectedKeysRef.value`，
  *    仅追踪 `targetKeys`（及 dataSource 等），否则每点选一项或每键入一字都会重建整棵 `div.transfer`（含中间箭头区），导致失焦。
- * 2. 左右列 + 中间箭头为**同级 JSX**（视口 ≥640px 时 flex 一行，移动端上下排列并由 CSS 把箭头旋成向下／向上），避免「两列各包一层 **函数子响应式插入**、中间是本征 div」时浏览器分段绘制。布局用视口媒体查询，不读宽度 signal，以免重挂载失焦。
+ * 2. 左右列 + 中间箭头为**同级 JSX**（视口 ≥640px 时 flex 一行，移动端上下排列；中间按钮在移动端左右并排并用上／下箭头，桌面端上下排列并用左／右箭头），避免「两列各包一层 **函数子响应式插入**、中间是本征 div」时浏览器分段绘制。布局用视口媒体查询，不读宽度 signal，以免重挂载失焦。
  * 3. 列表区用 **JSX 函数子** `{() => …}` + `listVersion`（在 {@link Transfer} 顶层 `createSignal`，勿在列函数内新建）作刷新节拍；
  *    搜索文案只用传入的 `searchRef`（与 {@link Transfer} 同源），列内**禁止** `createSignal` 否则父级 getter 重跑会新建信号、输入框重挂载失焦。
  *    `onSearch` 用 `queueMicrotask` 推迟。
@@ -220,6 +220,25 @@ const transferBtnCls: Record<SizeVariant, string> = {
   md: "px-2 py-1 text-sm",
   lg: "px-2.5 py-1.5 text-base",
 };
+
+const TRANSFER_ACTIONS_STYLE_ID = "dreamer-ui-view-transfer-actions";
+const TRANSFER_ACTIONS_CSS =
+  ".transfer-actions .transfer-icon-mobile{display:none}" +
+  ".transfer-actions .transfer-icon-desktop{display:inline}" +
+  "@media (max-width:639px){" +
+  ".transfer-actions{flex-direction:row}" +
+  ".transfer-actions .transfer-icon-mobile{display:inline}" +
+  ".transfer-actions .transfer-icon-desktop{display:none}" +
+  "}";
+
+function ensureTransferActionsStyle(): void {
+  const doc = getDocument() as Document | null;
+  if (!doc?.head || doc.getElementById(TRANSFER_ACTIONS_STYLE_ID)) return;
+  const el = doc.createElement("style");
+  el.id = TRANSFER_ACTIONS_STYLE_ID;
+  el.textContent = TRANSFER_ACTIONS_CSS;
+  doc.head.appendChild(el);
+}
 
 const defaultItemHeight: Record<SizeVariant, number> = {
   xs: 16,
@@ -510,6 +529,7 @@ export function Transfer(props: TransferProps): JSXRenderable {
     if (getDocument() == null) {
       return <span class="hidden" aria-hidden="true" />;
     }
+    ensureTransferActionsStyle();
 
     // Read selection only in the columns' local render effects, not this parent
     // getter: otherwise an enclosing Form subscribes and remounts all its children.
@@ -558,10 +578,10 @@ export function Transfer(props: TransferProps): JSXRenderable {
             countFormatter={m.count}
             selectedSuffixFormatter={m.selectedSuffix}
           />
-          <div class="flex shrink-0 flex-col items-center justify-center gap-1 md:gap-2">
+          <div class="transfer-actions flex shrink-0 flex-col items-center justify-center gap-1 md:gap-2">
             <button
               type="button"
-              class={twMerge(btnCls, "max-sm:rotate-90")}
+              class={btnCls}
               disabled={disabled}
               aria-label={m.moveRight}
               onClick={() => {
@@ -579,11 +599,12 @@ export function Transfer(props: TransferProps): JSXRenderable {
                 }
               }}
             >
-              →
+              <span class="transfer-icon-mobile" aria-hidden="true">↓</span>
+              <span class="transfer-icon-desktop" aria-hidden="true">→</span>
             </button>
             <button
               type="button"
-              class={twMerge(btnCls, "max-sm:rotate-90")}
+              class={btnCls}
               disabled={disabled}
               aria-label={m.moveLeft}
               onClick={() => {
@@ -601,7 +622,8 @@ export function Transfer(props: TransferProps): JSXRenderable {
                 }
               }}
             >
-              ←
+              <span class="transfer-icon-mobile" aria-hidden="true">↑</span>
+              <span class="transfer-icon-desktop" aria-hidden="true">←</span>
             </button>
           </div>
           <TransferColumn
