@@ -35,67 +35,82 @@ describe("文档页 E2E：/desktop/form/cascader（Cascader 级联）", () => {
       const root = document.querySelector("main [data-ui-cascader-root]");
       const btn = root?.querySelector(
         'button[type="button"][aria-haspopup="dialog"]',
-      );
+      ) as (HTMLButtonElement & { __onclick?: (ev: Event) => void }) | null;
       if (!btn) return false;
-      (btn as HTMLButtonElement).click();
+      btn.scrollIntoView({ block: "center" });
+      if (typeof btn.__onclick === "function") {
+        btn.__onclick(
+          new MouseEvent("click", {
+            bubbles: true,
+            cancelable: true,
+            detail: 1,
+          }),
+        );
+      } else btn.click();
       return true;
     }) as boolean;
     expect(openOk).toBe(true);
     await sharedEnv.delay(250);
-    /** 在浮层面板内点选，避免命中触发条（选中后 trigger 文案也会变成「浙江」）。 */
-    const step1 = await t.browser.evaluate(() => {
-      const panel = document.querySelector(
-        "main [data-ui-cascader-root] [data-ui-cascader-panel]",
-      );
-      if (!panel) return false;
-      const buttons = panel.querySelectorAll('button[type="button"]');
-      for (let i = 0; i < buttons.length; i++) {
-        const b = buttons[i] as HTMLButtonElement;
-        if (b.disabled) continue;
-        if ((b.textContent || "").trim() === "浙江") {
-          b.click();
-          return true;
+    /** 在可见浮层内点选，避免命中触发条或隐藏残留面板。 */
+    const picked = await t.browser.evaluate(async () => {
+      const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+      const visiblePanel = (): HTMLElement | null => {
+        const all = Array.from(
+          document.querySelectorAll("[data-ui-cascader-panel]"),
+        ) as HTMLElement[];
+        return all.find((el) => {
+          const r = el.getBoundingClientRect();
+          const s = getComputedStyle(el);
+          return r.width > 20 && r.height > 20 && s.visibility !== "hidden" &&
+            s.display !== "none";
+        }) ?? null;
+      };
+      const clickBtn = (b: HTMLElement) => {
+        const c = b as HTMLElement & { __onclick?: (ev: Event) => void };
+        c.dispatchEvent(
+          new MouseEvent("pointerdown", {
+            bubbles: true,
+            cancelable: true,
+            button: 0,
+          }),
+        );
+        if (typeof c.__onclick === "function") {
+          c.__onclick(
+            new MouseEvent("click", {
+              bubbles: true,
+              cancelable: true,
+              detail: 1,
+            }),
+          );
+        } else c.click();
+      };
+      const clickLevel = async (name: string) => {
+        for (let i = 0; i < 20; i++) {
+          const panel = visiblePanel();
+          const buttons = panel?.querySelectorAll("button[type=button]") ?? [];
+          for (let j = 0; j < buttons.length; j++) {
+            const b = buttons[j] as HTMLButtonElement;
+            if (b.disabled) continue;
+            if ((b.textContent || "").trim() === name) {
+              clickBtn(b);
+              return true;
+            }
+          }
+          await sleep(50);
         }
-      }
-      return false;
-    }) as boolean;
-    expect(step1).toBe(true);
-    await sharedEnv.delay(180);
-    const step2 = await t.browser.evaluate(() => {
-      const panel = document.querySelector(
-        "main [data-ui-cascader-root] [data-ui-cascader-panel]",
-      );
-      if (!panel) return false;
-      const buttons = panel.querySelectorAll('button[type="button"]');
-      for (let i = 0; i < buttons.length; i++) {
-        const b = buttons[i] as HTMLButtonElement;
-        if (b.disabled) continue;
-        if ((b.textContent || "").trim() === "杭州") {
-          b.click();
-          return true;
-        }
-      }
-      return false;
-    }) as boolean;
-    expect(step2).toBe(true);
-    await sharedEnv.delay(180);
-    const step3 = await t.browser.evaluate(() => {
-      const panel = document.querySelector(
-        "main [data-ui-cascader-root] [data-ui-cascader-panel]",
-      );
-      if (!panel) return false;
-      const buttons = panel.querySelectorAll('button[type="button"]');
-      for (let i = 0; i < buttons.length; i++) {
-        const b = buttons[i] as HTMLButtonElement;
-        if (b.disabled) continue;
-        if ((b.textContent || "").trim() === "西湖区") {
-          b.click();
-          return true;
-        }
-      }
-      return false;
-    }) as boolean;
-    expect(step3).toBe(true);
+        return false;
+      };
+      if (!await clickLevel("浙江")) return { ok: false, step: "浙江" };
+      await sleep(80);
+      if (!await clickLevel("杭州")) return { ok: false, step: "杭州" };
+      await sleep(80);
+      if (!await clickLevel("西湖区")) return { ok: false, step: "西湖区" };
+      return { ok: true, step: "ok" };
+    }) as { ok: boolean; step: string };
+    if (!picked.ok) {
+      throw new Error(`Cascader: ${JSON.stringify(picked)}`);
+    }
+    expect(picked.ok).toBe(true);
   }, DOCS_BROWSER_CONFIG);
 
   it("严格·静态数据（多级嵌套）", async (t) => {

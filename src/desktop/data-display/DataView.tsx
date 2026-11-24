@@ -201,18 +201,6 @@ export function isDataViewToolbarBuiltin(
   return DATA_VIEW_TOOLBAR_BUILTIN_SET.has(key);
 }
 
-/** 能力开关（缺省按数据源方法推断；refresh 始终可用，不在此列）。 */
-export interface DataViewCaps {
-  update: boolean;
-  /** 工具栏删除；默认在数据源提供 `remove` 时为 true。 */
-  remove: boolean;
-  import: boolean;
-  export: boolean;
-  print: boolean;
-  fullscreen: boolean;
-  copy: boolean;
-}
-
 export interface DataViewProps {
   /**
    * 面板标识：全屏偏好（`dp-prefs-${panelKey}`）与 `refreshDataPanel(key)`。
@@ -258,11 +246,9 @@ export interface DataViewProps {
   onDataChange?: (row: Row | null) => void;
   /** 主键字段，默认 id */
   rowKey?: string;
-  /** 能力开关；缺省按数据源方法推断。未在 toolbar 声明的钮回落于此。 */
-  caps?: Partial<DataViewCaps>;
   /**
    * 工具栏，或 `false` 隐藏整栏。
-   * 省略键 → 内置回落 caps；声明键请写明确 true｜false｜object。
+   * 省略键 → 内置按数据源方法推断（update／remove／import 看源上是否有对应方法；print／export／fullscreen／copy 默认开；refresh 始终可用）。声明键请写明确 true｜false｜object。
    * `update` 可用 `edit` 别名声明。自定义键必须提供 `action`。
    * `show`／`disable`／`action` 接收 `{ record }`；零参函数仍可用。
    */
@@ -576,7 +562,7 @@ export function DataView(props: DataViewProps): JSXRenderable {
       rowKey,
     );
 
-  const caps: DataViewCaps = {
+  const caps = {
     update: !!ds.update &&
       (formDefs.length > 0 || !!props.form?.render),
     remove: !!ds.remove,
@@ -585,7 +571,6 @@ export function DataView(props: DataViewProps): JSXRenderable {
     print: true,
     fullscreen: true,
     copy: true,
-    ...(props.caps ?? {}),
   };
 
   const toolbarHidden = props.toolbar === false;

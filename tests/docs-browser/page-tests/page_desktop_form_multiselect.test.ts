@@ -76,14 +76,25 @@ describe("文档页 E2E：/desktop/form/multiselect（MultiSelect 多选）", ()
           ),
         };
       }
+      const isOptionA = (o: Element) =>
+        !(o as HTMLButtonElement).disabled &&
+        (o.textContent || "").includes("选项 A") &&
+        o.getClientRects().length > 0;
       const c = opt as HTMLElement & { __onclick?: (ev: Event) => void };
-      opt.dispatchEvent(
-        new MouseEvent("pointerdown", {
+      const pe = "PointerEvent" in window
+        ? new PointerEvent("pointerdown", {
           bubbles: true,
           cancelable: true,
           button: 0,
-        }),
-      );
+          pointerId: 1,
+          pointerType: "mouse",
+        })
+        : new MouseEvent("pointerdown", {
+          bubbles: true,
+          cancelable: true,
+          button: 0,
+        });
+      opt.dispatchEvent(pe);
       await Promise.resolve();
       await Promise.resolve();
       if (typeof c.__onclick === "function") {
@@ -95,13 +106,21 @@ describe("文档页 E2E：/desktop/form/multiselect（MultiSelect 多选）", ()
           }),
         );
       } else opt.click();
-      await sleep(50);
-      const still = Array.from(document.querySelectorAll('[role="option"]'))
-        .find(
-          (o) => (o.textContent || "").includes("选项 A"),
-        ) as HTMLElement | undefined;
-      const selected = still?.getAttribute("aria-selected") === "true";
-      return { ok: selected, reason: selected ? "ok" : "not-selected" };
+      await sleep(80);
+      const options = Array.from(document.querySelectorAll('[role="option"]'))
+        .filter(isOptionA) as HTMLElement[];
+      // 优先看刚点的节点和当前可见项，避免命中 DOM 里更靠前的隐藏残留。
+      const still = (opt.isConnected && isOptionA(opt) ? opt : null) ??
+        options.find((o) => o.closest("[data-ui-picker-overlay]")) ??
+        options[0];
+      const aria = still?.getAttribute("aria-selected");
+      const selected = aria !== "false" && aria != null;
+      return {
+        ok: selected,
+        reason: selected ? "ok" : "not-selected",
+        aria,
+        n: options.length,
+      };
     }) as { ok: boolean; reason: string };
     if (!result.ok) {
       throw new Error(`MultiSelect: ${JSON.stringify(result)}`);

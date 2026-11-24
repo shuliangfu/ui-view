@@ -499,9 +499,10 @@ describe("DataPanel SSR：能力开关", () => {
     expect(h).toContain('data-testid="dp-view-2"');
   });
 
-  it("caps 可以关闭 remove / view / update", async () => {
+  it("显式关闭 view／edit／remove 后不出现行操作钮和操作列", async () => {
     const h = await html({
-      caps: { remove: false, view: false, update: false },
+      autoActions: false,
+      batchBar: { remove: false },
     });
     expect(h).not.toContain('data-testid="dp-delete-2"');
     expect(h).not.toContain('data-testid="dp-view-2"');
@@ -759,11 +760,7 @@ describe("DataPanel SSR：文案与自定义", () => {
         },
         { type: "actions", actions: { view: true, edit: true, remove: false } },
       ],
-      caps: {
-        create: true,
-        update: true,
-        view: true,
-        remove: false,
+      toolbar: {
         import: false,
         export: false,
         print: false,
@@ -772,6 +769,7 @@ describe("DataPanel SSR：文案与自定义", () => {
         fullscreen: false,
         copy: false,
       },
+      batchBar: { remove: false },
       search: {
         title: "查询",
         props: [{ prop: "name", label: "姓名" }],
@@ -837,11 +835,7 @@ describe("DataPanel SSR：文案与自定义", () => {
         title: (row) => `详情 · ${row.name}`,
         props: [{ prop: "name" }, { prop: "flag", label: "标记" }],
       },
-      caps: {
-        create: true,
-        update: true,
-        view: true,
-        remove: false,
+      toolbar: {
         import: false,
         export: false,
         print: false,
@@ -850,6 +844,7 @@ describe("DataPanel SSR：文案与自定义", () => {
         fullscreen: false,
         copy: false,
       },
+      batchBar: { remove: false },
     });
     expect(h).toContain("开启");
     expect(h).toContain("关闭");
@@ -904,7 +899,7 @@ describe("DataPanel SSR：文案与自定义", () => {
         assign: { label: "分配", action: () => {} },
       })),
 
-      caps: {
+      toolbar: {
         create: false,
         print: false,
         import: false,
@@ -913,8 +908,6 @@ describe("DataPanel SSR：文案与自定义", () => {
         density: false,
         fullscreen: false,
         copy: false,
-      },
-      toolbar: {
         refresh: true,
         assign: { label: "分配全部", action: () => {} },
         titled: { title: "仅标题", action: () => {} }, // 无 label → 显示用 title
@@ -977,12 +970,11 @@ describe("DataPanel SSR：文案与自定义", () => {
     expect(danger).not.toContain("bg-blue-50 dark:bg-blue-950/40");
   });
 
-  it("未声明 selection 列时即使 caps.remove 为 true 也不出现勾选列", async () => {
+  it("未声明 selection 列时即使数据源有 remove 也不出现勾选列", async () => {
     const h = await html({
       columns: withActions({ view: false, edit: false, remove: false }),
-
-      caps: {
-        remove: true,
+      toolbar: {
+        refresh: true,
         create: false,
         print: false,
         import: false,
@@ -992,7 +984,6 @@ describe("DataPanel SSR：文案与自定义", () => {
         fullscreen: false,
         copy: false,
       },
-      toolbar: { refresh: true },
       dataSource: {
         sync: true,
         list: () => ({
@@ -1036,8 +1027,7 @@ describe("DataPanel SSR：文案与自定义", () => {
         },
       }),
 
-      caps: {
-        create: false,
+      toolbar: {
         print: false,
         import: false,
         export: false,
@@ -1045,8 +1035,6 @@ describe("DataPanel SSR：文案与自定义", () => {
         density: false,
         fullscreen: false,
         copy: false,
-      },
-      toolbar: {
         create: { disable: true },
         freeze: { label: "冻结", disable: false, action: () => {} },
         ghost: { label: "幽灵", show: false, action: () => {} },
@@ -1076,18 +1064,16 @@ describe("DataPanel SSR：文案与自定义", () => {
         assign: { label: "分配", action: () => {} },
       }),
 
-      caps: {
+      toolbar: {
+        create: true,
+        print: true,
+        refresh: true,
         import: false,
         export: false,
         columns: false,
         density: false,
         fullscreen: false,
         copy: false,
-      },
-      toolbar: {
-        create: true,
-        print: true,
-        refresh: true,
         freeze: { label: "冻结", action: () => {} },
       },
     });
@@ -1125,7 +1111,7 @@ describe("DataPanel SSR：文案与自定义", () => {
     expect(
       count(
         await html({
-          caps: {
+          toolbar: {
             print: false,
             columns: false,
             export: false,
@@ -1272,10 +1258,10 @@ describe("DataPanel SSR：勾选列只由 columns 的 type:selection 决定", ()
     expect(h).toContain('data-testid="dp-select-2"');
   });
 
-  it("声明了 selection 后即使 caps.remove 为 false 仍显示勾选列", async () => {
+  it("声明了 selection 后即使关闭批量删除仍显示勾选列", async () => {
     const h = await html({
       columns: withSelection(),
-      caps: { remove: false },
+      batchBar: { remove: false },
     });
     expect(h).toContain('data-testid="dp-select-all"');
     expect(h).toContain('data-testid="dp-select-2"');
@@ -1286,7 +1272,7 @@ describe("DataPanel SSR：工具栏上下文与 syncUrl", () => {
   it("工具栏 show／disable 接收 { selected, rows, query }；零参函数仍可用", async () => {
     const h = await html({
       pagination: { page: 2, pageSize: 10 },
-      caps: {
+      toolbar: {
         create: false,
         print: false,
         import: false,
@@ -1295,8 +1281,6 @@ describe("DataPanel SSR：工具栏上下文与 syncUrl", () => {
         density: false,
         fullscreen: false,
         copy: false,
-      },
-      toolbar: {
         refresh: true,
         zeroHide: { label: "零参藏", show: () => false, action: () => {} },
         zeroShow: { label: "零参显", show: () => true, action: () => {} },
@@ -1345,7 +1329,7 @@ describe("DataPanel SSR：工具栏上下文与 syncUrl", () => {
     expect(h).toContain('data-testid="dp-view-2"');
   });
 
-  it("openViewOnRowClick 开启且 caps.view 时行可点；caps.view=false 时仍不可点", async () => {
+  it("openViewOnRowClick 开启且查看可用时行可点；column.actions.view 为 false 时仍不可点", async () => {
     const on = await html({
       openViewOnRowClick: true,
       columns: withActions({ view: true, edit: false, remove: false }),
@@ -1353,18 +1337,17 @@ describe("DataPanel SSR：工具栏上下文与 syncUrl", () => {
     expect(rowOpenTag(on).includes("cursor-pointer")).toBe(true);
     expect(on).toContain('data-testid="dp-view-2"');
 
-    const offCaps = await html({
+    const offView = await html({
       openViewOnRowClick: true,
-      caps: { view: false },
       autoActions: false,
+      columns: withActions({ view: false, edit: false, remove: false }),
     });
-    expect(rowOpenTag(offCaps).includes("cursor-pointer")).toBe(false);
+    expect(rowOpenTag(offView).includes("cursor-pointer")).toBe(false);
   });
 
   it("传入 onRowClick 时行可点（只走回调，不依赖 openViewOnRowClick）", async () => {
     const h = await html({
       onRowClick: () => {},
-      caps: { view: false },
       autoActions: false,
     });
     expect(rowOpenTag(h).includes("cursor-pointer")).toBe(true);

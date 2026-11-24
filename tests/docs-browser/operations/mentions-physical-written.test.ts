@@ -50,7 +50,7 @@ describe("Mentions physical written", () => {
         expect(await ta.getAttribute("placeholder")).toBe("输入 @ 提及");
         await ta.click();
         await ta.pressSequentially("@");
-        const list = root.getByRole("listbox", { name: "提及候选" });
+        const list = p.getByRole("listbox", { name: "提及候选" });
         await eventually(async () => await list.isVisible());
         expect(await list.getByRole("option").allInnerTexts()).toEqual([
           "张三",
@@ -79,7 +79,7 @@ describe("Mentions physical written", () => {
         await ta.press("End");
         await ta.pressSequentially(" 已阅");
         expect(await ta.inputValue()).toBe("你好 @张三 请查收 已阅");
-        expect(await root.getByRole("listbox", { name: "提及候选" }).count())
+        expect(await p.getByRole("listbox", { name: "提及候选" }).count())
           .toBe(0);
       },
       DOCS_BROWSER_CONFIG,
@@ -98,7 +98,9 @@ describe("Mentions physical written", () => {
         await p.mouse.click(box!.x + 8, box!.y + 8);
         await p.keyboard.type("不应写入");
         expect(await ta.inputValue()).toBe("");
-        expect(await root.getByRole("listbox").count()).toBe(0);
+        expect(await p.getByRole("listbox", { name: "提及候选" }).count()).toBe(
+          0,
+        );
       },
       DOCS_BROWSER_CONFIG,
     );

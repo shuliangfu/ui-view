@@ -583,7 +583,7 @@ export function isSystemColumn(c: Column): boolean {
 export type ResolvePanelColumnsOptions = {
   /**
    * @deprecated 已忽略。勾选列只由 columns 里的 `{ type:"selection" }` 决定，
-   * caps.remove 不再自动前置多选列。
+   * 不再因删除能力自动前置多选列。
    */
   needSelection?: boolean;
   /**
@@ -593,7 +593,7 @@ export type ResolvePanelColumnsOptions = {
    */
   autoIndex?: boolean;
   /**
-   * 是否需要操作列（column.actions／caps 可能出钮）——无显式 actions 列时兼容追加到末尾。
+   * 是否需要操作列（column.actions／数据源推断可能出钮）——无显式 actions 列时兼容追加到末尾。
    * 显式 `{ type:"actions" }` 时位置／label 完全由 columns 决定。
    */
   needActions?: boolean;

@@ -191,7 +191,7 @@ export interface Column {
   /**
    * 仅 `type:"actions"`：行操作 Record（原顶层 rowActions）。
    * 内置 view／edit／remove＋自定义 key；写入序＝显示序；自定义必须 `action(item)`。
-   * 省略键回落 caps；声明键请写明确 true｜false｜object。
+   * 省略键回落数据源推断的默认显隐；声明键请写明确 true｜false｜object。
    */
   actions?: RowActionsConfig;
   /**
@@ -789,24 +789,6 @@ export interface DataSource {
   get?(id: string): MaybePromise<Row | null>;
 }
 
-/** 能力开关（缺省按数据源方法是否存在推断） */
-export interface Caps {
-  create: boolean;
-  update: boolean;
-  view: boolean;
-  remove: boolean;
-  import: boolean;
-  export: boolean;
-  print: boolean;
-  columns: boolean;
-  /** 行高密度切换 */
-  density: boolean;
-  /** 面板全屏 */
-  fullscreen: boolean;
-  /** 复制选中行到剪贴板 */
-  copy: boolean;
-}
-
 /**
  * DataPanel 工具栏／批量条按钮上下文。
  * `selected` 为当前页已选中的行对象（不是 id）。
@@ -854,7 +836,7 @@ export interface SearchActionContext {
  * - show / disable / action / title 可接收上下文（DataPanel：`{ selected, rows, query }`；
  *   DataView：`{ record }`）。零参函数仍然有效（调用时传入 ctx，不使用即可）。
  * - `disable: true` (or fn→true) = still visible, button disabled — NOT the same as show:false
- * - 未声明的内置键 → 回落 caps（一层真相）；声明则须明确 true｜false｜object（勿用 undefined 绕）
+ * - 未声明的内置键 → 回落数据源推断的默认显隐（一层真相）；声明则须明确 true｜false｜object（勿用 undefined 走未声明回落）
  * - unknown keys are custom; custom keys MUST provide `action` (asserted at mount), or `false` to hide
  * - object literal key order = display order; undeclared builtins append after, in default order
  * - toolbar 无 `confirm` 字段：需要确认时在 `action` 内打开 Popconfirm／对话框
@@ -1004,7 +986,7 @@ export function isBatchBuiltin(key: string): key is BatchBuiltin {
  */
 /**
  * Unified Record config（对齐旧 tools 一眼 true｜false）。
- * 省略键 → 内置回落 caps；声明键请写明确 true｜false｜object（勿传 undefined 绕 caps）。
+ * 省略键 → 内置回落数据源推断的默认显隐；声明键请写明确 true｜false｜object（勿传 undefined 走未声明回落）。
  * Abolished: `extra` arrays and `order` mix fields.
  */
 export type PanelToolbarConfig = Record<string, ActionCtrl<PanelActionContext>>;
@@ -1022,7 +1004,7 @@ export type BatchActionCtrl =
   });
 
 /**
- * 批量条 Record。默认只显示 `remove`（批量删除，回落 caps.remove）和
+ * 批量条 Record。默认只显示 `remove`（批量删除；未声明时回落是否存在 dataSource.remove／removeBatch）和
  * `clear`（取消勾选，靠右最后），不必把这两项写进配置。
  * 自定义键必须提供 `action`；可按选中行 disable／confirm。
  */
@@ -1030,7 +1012,7 @@ export type BatchBarConfig = Record<string, BatchActionCtrl>;
 
 /**
  * 操作列按钮 Record（写在 `Column.actions`，`type:"actions"`）。
- * 同形：show／disable／action 可 (item)=>…；省略键 → 内置回落 caps；声明键请写明确 true｜false｜object。
+ * 同形：show／disable／action 可 (item)=>…；省略键 → 内置回落数据源推断的默认显隐；声明键请写明确 true｜false｜object。
  * Abolished: 顶层 `rowActions`、`extra` arrays、`order`。
  */
 export type RowActionsConfig = Record<string, RowActionCtrl>;
@@ -1153,9 +1135,9 @@ export function actionDisplayText(
 
 /**
  * Resolve toolbar／batch／footer ActionCtrl → { show, disable, action? }.
- * - 未声明（调用方传入 undefined／省略）→ show = fallbackShow（caps）；disable = false
+ * - 未声明（调用方传入 undefined／省略）→ show = fallbackShow（数据源推断）；disable = false
  * - boolean → show = that value; disable = false
- * - object → omit show defaults **true**；omit disable defaults false（声明即 caller 真相，不回落 caps）
+ * - object → omit show defaults **true**；omit disable defaults false（声明即 caller 真相，不回落数据源推断）
  * show／disable／title 函数接收可选 ctx；零参函数仍然有效。
  */
 export function resolveActionCtrl<Ctx = unknown>(
@@ -1215,7 +1197,7 @@ export function resolveBatchActionCtrl(
 /**
  * Resolve a row-action entry for one item (current row).
  * Same defaults: object omit show → true; omit disable → false;
- * 未声明 → fallbackShow (caps)。
+ * 未声明 → fallbackShow（数据源推断）。
  */
 export function resolveRowActionCtrl(
   ctrl: RowActionCtrl | undefined,

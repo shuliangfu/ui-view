@@ -53,7 +53,7 @@ export function makeDemoRows(n = 25): Row[] {
   }));
 }
 
-/** 文档 DEMO 默认操作列：多数仅 view＋edit（remove:false 与实机一致，避免 caps 补删除）；自定义／控显隐见专门示例 */
+/** 文档 DEMO 默认操作列：多数仅 view＋edit（remove:false 与实机一致，避免按数据源推断补删除）；自定义／控显隐见专门示例 */
 export const DEMO_ROW_ACTIONS: RowActionsConfig = {
   view: true,
   edit: true,
@@ -602,7 +602,7 @@ export const DEMO_HIDE_CHROME = {
   copy: false,
 } as const;
 
-/** 显式能力门：true 显示／false 隐藏（勿再返回 undefined 绕 caps）。 */
+/** 显式能力门：true 显示／false 隐藏（勿再返回 undefined 走未声明回落）。 */
 export function demoCapGate(allow: boolean): boolean {
   return allow;
 }

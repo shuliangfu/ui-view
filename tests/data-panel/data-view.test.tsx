@@ -193,9 +193,9 @@ describe("DataView", () => {
     expect(h).not.toContain('data-testid="dv-refresh"');
   });
 
-  it("caps 可隐藏或禁用工具栏动作", async () => {
+  it("toolbar 可隐藏或禁用工具栏动作", async () => {
     const hidden = await html({
-      caps: {
+      toolbar: {
         update: false,
         remove: false,
         import: false,
@@ -451,10 +451,10 @@ describe("Descriptions 整行斑马", () => {
 });
 
 describe("DataView：删除与表单增强", () => {
-  it("可写数据源默认渲染删除钮；caps.remove:false 隐藏", async () => {
+  it("可写数据源默认渲染删除钮；toolbar.remove:false 隐藏", async () => {
     const h = await html();
     expect(h).toContain('data-testid="dv-remove"');
-    const hidden = await html({ caps: { remove: false } });
+    const hidden = await html({ toolbar: { remove: false } });
     expect(hidden).not.toContain('data-testid="dv-remove"');
   });
 

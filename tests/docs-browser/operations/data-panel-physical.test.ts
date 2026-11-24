@@ -13,8 +13,8 @@ describe("DataPanel physical", () => {
       const editor = panel.getByTestId("dp-inline-tags");
       await visible(editor);
       const originalNode = await editor.elementHandle();
-      const vip = editor.getByRole("option", { name: "VIP", exact: true });
-      const newer = editor.getByRole("option", { name: "新用户", exact: true });
+      const vip = page.getByRole("option", { name: "VIP", exact: true });
+      const newer = page.getByRole("option", { name: "新用户", exact: true });
       await attr(vip, "aria-selected", "true");
       await attr(newer, "aria-selected", "false");
       await newer.click({ delay: 200 });
@@ -23,7 +23,7 @@ describe("DataPanel physical", () => {
       expect(
         await editor.evaluate((node, before) => node === before, originalNode),
       ).toBe(true);
-      const done = editor.getByRole("button", { name: "完成", exact: true });
+      const done = page.getByRole("button", { name: "完成", exact: true });
       expect(
         await done.evaluate((el) => {
           const b = el.getBoundingClientRect();
@@ -47,7 +47,7 @@ describe("DataPanel physical", () => {
       await attr(newer, "aria-selected", "true");
       await newer.click({ delay: 80 });
       await attr(newer, "aria-selected", "false");
-      await editor.getByRole("button", { name: "完成", exact: true }).click();
+      await page.getByRole("button", { name: "完成", exact: true }).click();
       await page.keyboard.press("Escape");
       await visible(editor, false);
       expect(await display.textContent()).toContain("新用户");

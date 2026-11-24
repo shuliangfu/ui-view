@@ -20,6 +20,12 @@ import {
 import type { SpawnedProcess } from "@dreamer/runtime-adapter";
 import { cleanupAllBrowsers, expect } from "@dreamer/test";
 import { createBrowserContext } from "@dreamer/test/browser";
+import {
+  installSyncProcessExitHook,
+  isReservedDocsE2EPort,
+  killOwnedDocsProcess,
+  startWithCleanupOnFailure,
+} from "./docs-process-guard.ts";
 
 /**
  * 文档页 E2E 用的浏览器上下文（与 `DOCS_BROWSER_CONFIG` 下 TestContext.browser 一致）。
@@ -630,6 +636,7 @@ async function findAvailablePort(
   const DenoRef = (globalThis as { Deno?: { listen: unknown } }).Deno;
   for (let i = 0; i < maxAttempts; i++) {
     const port = startPort + i;
+    if (isReservedDocsE2EPort(port)) continue;
     if (DenoRef?.listen) {
       if (canBindPortLocally(host, port)) return port;
       continue;
@@ -678,6 +685,8 @@ function entryPointForBrowser(): string {
  * 传给 `it(..., DOCS_BROWSER_CONFIG)` 的浏览器选项
  */
 export const DOCS_BROWSER_CONFIG = {
+  // 共享 docs 子进程与 Playwright 会在用例之间保持存活；Deno 资源检查会把它们判为泄漏。
+  // 仅此配置关闭，不作为单测或非浏览器用例的全局开关，也不用来掩盖进程泄漏。
   sanitizeOps: false,
   sanitizeResources: false,
   timeout: 60_000,
@@ -697,6 +706,7 @@ export const DOCS_BROWSER_CONFIG = {
 let _singletonPort = PREFERRED_DOCS_PORT;
 let _singletonBaseUrl = `http://127.0.0.1:${_singletonPort}`;
 let _singletonProcess: SpawnedProcess | null = null;
+let _singletonPid = 0;
 let _singletonStarted = false;
 let _singletonStartPromise: Promise<void> | null = null;
 /** 为 false 时表示由父进程（如 test-node.mjs）托管，cleanup 不得杀 */
@@ -706,35 +716,15 @@ let _exitHookInstalled = false;
 function installDocsServerExitHook(): void {
   if (_exitHookInstalled) return;
   _exitHookInstalled = true;
-  const kill = () => {
-    if (!_singletonOwnsProcess || !_singletonProcess) return;
-    try {
-      _singletonProcess.kill(9);
-    } catch {
-      /* ignore */
-    }
-  };
-  try {
-    const proc = (globalThis as {
-      process?: {
-        on?: (ev: string, fn: () => void) => void;
-      };
-    }).process;
-    proc?.on?.("exit", kill);
-    proc?.on?.("SIGTERM", kill);
-    proc?.on?.("SIGINT", kill);
-  } catch {
-    /* ignore */
-  }
-  try {
-    const DenoRef = (globalThis as {
-      Deno?: { addSignalListener?: (s: string, fn: () => void) => void };
-    }).Deno;
-    DenoRef?.addSignalListener?.("SIGTERM", kill);
-    DenoRef?.addSignalListener?.("SIGINT", kill);
-  } catch {
-    /* ignore */
-  }
+  // Deno 正常退出没有 process.on("exit")；必须同时挂 unload。杀进程树，避免 Bun 孤儿。
+  installSyncProcessExitHook(() => {
+    if (!_singletonOwnsProcess) return;
+    const proc = _singletonProcess;
+    const pid = _singletonPid;
+    _singletonProcess = null;
+    _singletonPid = 0;
+    killOwnedDocsProcess(proc, pid);
+  });
 }
 
 async function _probeDocsDevOk(timeoutMs: number): Promise<boolean> {
@@ -806,64 +796,68 @@ async function _startServer(): Promise<void> {
     stdout: "inherit",
     stderr: "inherit",
   });
-  _singletonProcess = cmd.spawn();
+  await startWithCleanupOnFailure(async () => {
+    _singletonProcess = cmd.spawn();
+    _singletonPid = _singletonProcess.pid ?? 0;
 
-  const deadlineMs = docsDevStartupDeadlineMs();
-  const deadline = Date.now() + deadlineMs;
-  let ready = false;
-  while (Date.now() < deadline) {
-    try {
-      const r = await hostFetch(_singletonBaseUrl + "/");
-      if (r.ok) {
-        ready = true;
-        break;
+    const deadlineMs = docsDevStartupDeadlineMs();
+    const deadline = Date.now() + deadlineMs;
+    let ready = false;
+    while (Date.now() < deadline) {
+      try {
+        const r = await hostFetch(_singletonBaseUrl + "/");
+        if (r.ok) {
+          ready = true;
+          break;
+        }
+      } catch {
+        // 服务尚未就绪
       }
-    } catch {
-      // 服务尚未就绪
+      await new Promise((r) => setTimeout(r, 300));
     }
-    await new Promise((r) => setTimeout(r, 300));
-  }
-  if (!ready) {
-    throw new Error(
-      `Docs dev server did not start within ${deadlineMs}ms (set UI_VIEW_DOCS_DEV_START_MS to override).`,
-    );
-  }
-  /** 根路径已通后再短暂 settle；过长会拖慢首测（健康检查已通过） */
-  const settleMs = platform() === "windows" ? 1200 : 1500;
-  await new Promise((r) => setTimeout(r, settleMs));
-  _singletonStarted = true;
+    if (!ready) {
+      throw new Error(
+        `Docs dev server did not start within ${deadlineMs}ms (set UI_VIEW_DOCS_DEV_START_MS to override).`,
+      );
+    }
+    /** 根路径已通后再短暂 settle；过长会拖慢首测（健康检查已通过） */
+    const settleMs = platform() === "windows" ? 1200 : 1500;
+    await new Promise((r) => setTimeout(r, settleMs));
+    _singletonStarted = true;
+  }, () => _killServer());
 }
 
 async function _killServer(): Promise<void> {
   if (!_singletonOwnsProcess) {
     _singletonStarted = false;
-    return;
-  }
-  if (!_singletonProcess) {
-    _singletonStarted = false;
+    _singletonPid = 0;
     return;
   }
   const child = _singletonProcess;
+  const pid = _singletonPid;
   _singletonProcess = null;
-  try {
-    child.kill(9);
-  } catch {
-    // ignore
+  _singletonPid = 0;
+  if (!child && !pid) {
+    _singletonStarted = false;
+    return;
   }
-  try {
-    await Promise.race([
-      child.status,
-      new Promise<never>((_, rej) =>
-        setTimeout(() => rej(new Error("timeout")), 15_000)
-      ),
-    ]);
-  } catch {
-    // ignore
-  }
-  try {
-    child.unref?.();
-  } catch {
-    // ignore
+  killOwnedDocsProcess(child, pid);
+  if (child) {
+    try {
+      await Promise.race([
+        child.status,
+        new Promise<never>((_, rej) =>
+          setTimeout(() => rej(new Error("timeout")), 15_000)
+        ),
+      ]);
+    } catch {
+      // ignore
+    }
+    try {
+      child.unref?.();
+    } catch {
+      // ignore
+    }
   }
   await new Promise((r) => setTimeout(r, 300));
   _singletonStarted = false;
@@ -1386,6 +1380,7 @@ export const sharedEnv = {
       await _singletonStartPromise;
     } catch (e) {
       _singletonStartPromise = null;
+      await _killServer();
       throw e;
     }
   },

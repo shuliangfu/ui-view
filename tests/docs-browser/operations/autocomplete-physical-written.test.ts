@@ -37,7 +37,7 @@ describe("AutoComplete physical written", () => {
         );
         await box.click();
         await box.pressSequentially("北");
-        const list = root.getByRole("listbox", { name: "建议列表" });
+        const list = p.getByRole("listbox", { name: "建议列表" });
         await eventually(async () => await list.isVisible());
         expect(await list.getByRole("option").allInnerTexts()).toEqual([
           "北京",

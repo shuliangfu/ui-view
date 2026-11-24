@@ -188,7 +188,11 @@ function MentionsDropdown(props: {
         const opts = typeof dropdownOptions === "function"
           ? dropdownOptions()
           : (dropdownOptions ?? []);
-        if (!show || opts.length === 0 || !onSelectOption) return null;
+        if (!show || opts.length === 0 || !onSelectOption) {
+          // 节点可能已被钉到 body，框架卸载槽位时不一定会再调 ref(null)。
+          onPanelRef(null);
+          return null;
+        }
         return (
           <div
             ref={(el: HTMLElement | null) => onPanelRef(el)}
@@ -269,7 +273,8 @@ export function Mentions(props: MentionsProps): JSXRenderable {
 
   /** 下拉内键盘高亮；勿在下拉子树外读 showDropdown 以免扩大订阅面 */
   const mentionHighlightIdx = createSignal(-1);
-  let listboxEl: HTMLElement | null = null;
+  /** 用 signal 记录 listbox：候选变化会换新节点，binder 才能追踪到，无需每帧轮询。 */
+  const listboxEl = createSignal<HTMLElement | null>(null);
   const triggerRef: { current: HTMLElement | null } = { current: null };
   const useViewportPanel = () =>
     resolvePickerViewportAttach(panelAttach, triggerRef.current);
@@ -280,7 +285,7 @@ export function Mentions(props: MentionsProps): JSXRenderable {
   bindFixedDropdownPanelWhenOpen(
     useViewportPanel,
     mentionsDropdownOpen,
-    () => listboxEl,
+    () => listboxEl.value,
     triggerRef,
     () => {
       /* 受控下拉由父级关闭；这里只提供点外部时的空操作占位。 */
@@ -466,7 +471,7 @@ export function Mentions(props: MentionsProps): JSXRenderable {
         listboxLabel={m.listbox}
         useViewport={useViewportPanel}
         onPanelRef={(el) => {
-          listboxEl = el;
+          listboxEl.value = el;
         }}
       />
     </div>

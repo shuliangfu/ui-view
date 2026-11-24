@@ -37,7 +37,7 @@ export const COLUMNS_API: DocsApiTableRow[] = [
     type: "RowActionsConfig",
     default: "-",
     description:
-      '仅 type:"actions"。行操作 Record（写在本列，勿再顶层配置）：内置 view／edit／remove＋自定义；写入序＝显示序；自定义必须 action(item)；省略键回落 caps。',
+      '仅 type:"actions"。行操作 Record（写在本列，勿再顶层配置）：内置 view／edit／remove＋自定义；写入序＝显示序；自定义必须 action(item)；省略键按数据源推断。',
   },
   {
     name: "format",
@@ -1134,7 +1134,7 @@ export const PANEL_TOOLBAR_CONFIG_API: DocsApiTableRow[] = [
     type: "string",
     default: "-",
     description:
-      "按钮键。写入序＝显示序。内置：create、search、refresh、print、import、export、columns、density、fullscreen、copy。导入、导出同时出现时导入在前。省略的内置键回落 caps",
+      "按钮键。写入序＝显示序。内置：create、search、refresh、print、import、export、columns、density、fullscreen、copy。导入、导出同时出现时导入在前。省略的内置键按数据源推断",
   },
   {
     name: "(值)",
@@ -1151,7 +1151,7 @@ export const VIEW_TOOLBAR_CONFIG_API: DocsApiTableRow[] = [
     type: "string",
     default: "-",
     description:
-      "按钮键。写入序＝显示序。内置：update（可用 edit 别名）、remove、refresh、print、import、export、fullscreen、copy。导入、导出同时出现时导入在前。省略的内置键回落 DataViewCaps",
+      "按钮键。写入序＝显示序。内置：update（可用 edit 别名）、remove、refresh、print、import、export、fullscreen、copy。导入、导出同时出现时导入在前。省略的内置键按数据源推断",
   },
   {
     name: "(值)",
@@ -1189,7 +1189,7 @@ export const BATCH_BAR_CONFIG_API: DocsApiTableRow[] = [
     type: "string",
     default: "-",
     description:
-      "按钮键。写入序＝显示序。默认显示 remove（批量删除，回落 caps.remove）和 clear（取消勾选，靠右最后），不必写入配置。自定义批量操作由用户以自定义键＋action 自行编写",
+      "按钮键。写入序＝显示序。默认显示 remove（批量删除；未声明时回落是否存在 dataSource.remove／removeBatch）和 clear（取消勾选，靠右最后），不必写入配置。自定义批量操作由用户以自定义键＋action 自行编写",
   },
   {
     name: "(值)",
@@ -1270,7 +1270,7 @@ export const ROW_ACTIONS_CONFIG_API: DocsApiTableRow[] = [
     type: "string",
     default: "-",
     description:
-      '写在 Column.actions（type:"actions"）上。写入序＝显示序。内置：view、edit、remove。省略的内置键回落 caps',
+      '写在 Column.actions（type:"actions"）上。写入序＝显示序。内置：view、edit、remove。省略的内置键按数据源推断',
   },
   {
     name: "(值)",
@@ -1281,119 +1281,7 @@ export const ROW_ACTIONS_CONFIG_API: DocsApiTableRow[] = [
   },
 ];
 
-export const CAPS_API: DocsApiTableRow[] = [
-  {
-    name: "create",
-    type: "boolean",
-    default: "按数据源推断",
-    description: "新增",
-  },
-  {
-    name: "update",
-    type: "boolean",
-    default: "按数据源推断",
-    description: "编辑",
-  },
-  {
-    name: "view",
-    type: "boolean",
-    default: "按数据源推断",
-    description: "查看详情",
-  },
-  {
-    name: "remove",
-    type: "boolean",
-    default: "按数据源推断",
-    description: "删除",
-  },
-  {
-    name: "import",
-    type: "boolean",
-    default: "按数据源推断",
-    description: "导入",
-  },
-  {
-    name: "export",
-    type: "boolean",
-    default: "按数据源推断",
-    description: "导出",
-  },
-  {
-    name: "print",
-    type: "boolean",
-    default: "按数据源推断",
-    description: "打印",
-  },
-  {
-    name: "columns",
-    type: "boolean",
-    default: "true",
-    description: "列设置",
-  },
-  {
-    name: "density",
-    type: "boolean",
-    default: "true",
-    description: "行高密度",
-  },
-  {
-    name: "fullscreen",
-    type: "boolean",
-    default: "true",
-    description: "面板全屏",
-  },
-  {
-    name: "copy",
-    type: "boolean",
-    default: "true",
-    description: "复制选中行",
-  },
-];
 
-export const DATA_VIEW_CAPS_API: DocsApiTableRow[] = [
-  {
-    name: "update",
-    type: "boolean",
-    default: "按数据源推断",
-    description: "工具栏更新／编辑",
-  },
-  {
-    name: "remove",
-    type: "boolean",
-    default: "存在 dataSource.remove 则为 true",
-    description: "工具栏删除当前记录（需确认）",
-  },
-  {
-    name: "import",
-    type: "boolean",
-    default: "按数据源推断",
-    description: "导入",
-  },
-  {
-    name: "export",
-    type: "boolean",
-    default: "按数据源推断",
-    description: "导出",
-  },
-  {
-    name: "print",
-    type: "boolean",
-    default: "按数据源推断",
-    description: "打印",
-  },
-  {
-    name: "fullscreen",
-    type: "boolean",
-    default: "true",
-    description: "全屏",
-  },
-  {
-    name: "copy",
-    type: "boolean",
-    default: "true",
-    description: "复制当前记录",
-  },
-];
 
 export const QUERY_API: DocsApiTableRow[] = [
   {
@@ -2609,19 +2497,6 @@ export const DATA_DISPLAY_TYPE_SECTIONS: DataDisplayTypeSection[] = [
     lead: "操作列按钮 Record，写在 Column.actions。",
   },
   {
-    id: "Caps",
-    title: "Caps",
-    rows: CAPS_API,
-    lead:
-      "DataPanel 能力开关。缺省按数据源方法是否存在推断；调用方可显式覆盖。",
-  },
-  {
-    id: "DataViewCaps",
-    title: "DataViewCaps",
-    rows: DATA_VIEW_CAPS_API,
-    lead: "DataView 能力开关。refresh 始终可用，不在此列。",
-  },
-  {
     id: "Query",
     title: "Query",
     rows: QUERY_API,
@@ -2780,8 +2655,6 @@ export const DATA_PANEL_EXTRA_TYPE_IDS: string[] = [
   "BatchBarConfig",
   "RowActionCtrl",
   "RowActionsConfig",
-  "Caps",
-  "DataViewCaps",
   "Query",
   "ListResult",
   "WriteResult",
@@ -2829,7 +2702,6 @@ export const DATA_VIEW_TYPE_IDS: string[] = [
   "ViewToolbarConfig",
   "RowActionCtrl",
   "RowActionsConfig",
-  "DataViewCaps",
   "ListResult",
   "WriteResult",
   "BulkResult",

@@ -314,7 +314,7 @@ describe("DataPanel pending physical written", () => {
     );
 
     it(
-      `DataPanel 默认声明 @${width}：caps 关闭后声明项仍显示，refresh/edit 禁用可见`,
+      `DataPanel 默认声明 @${width}：未声明项按数据源回落，声明项仍显示，refresh/edit 禁用可见`,
       async (t) => {
         const page = await openPage(t, width);
         const panel = panelOf(page, "demo-defaults");

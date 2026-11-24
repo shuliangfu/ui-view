@@ -172,9 +172,15 @@ function AutoCompletePanel(props: {
   } = props;
 
   return () => {
-    if (!open.value) return null;
+    if (!open.value) {
+      onPanelRef(null);
+      return null;
+    }
     const filtered = filterOptions(filterQuery.value, options);
-    if (filtered.length === 0) return null;
+    if (filtered.length === 0) {
+      onPanelRef(null);
+      return null;
+    }
 
     return (
       <div
@@ -258,14 +264,15 @@ export function AutoComplete(props: AutoCompleteProps): JSXRenderable {
    * `value()` 仍为空串 → {@link filterOptions} 走「空串展示全部」分支，出现输入「杭」却列出所有城市的问题。
    */
   const panelFilterQuery = createSignal("");
-  let listboxEl: HTMLElement | null = null;
+  /** 用 signal 记录 listbox：筛选会换新节点，binder 才能追踪到，无需每帧轮询。 */
+  const listboxEl = createSignal<HTMLElement | null>(null);
   const triggerRef: { current: HTMLElement | null } = { current: null };
   const useViewportPanel = () =>
     resolvePickerViewportAttach(panelAttach, triggerRef.current);
   bindFixedDropdownPanelWhenOpen(
     useViewportPanel,
     () => panelOpen.value,
-    () => listboxEl,
+    () => listboxEl.value,
     triggerRef,
     () => {
       panelOpen.value = false;
@@ -480,7 +487,7 @@ export function AutoComplete(props: AutoCompleteProps): JSXRenderable {
         listboxLabel={m.listbox}
         useViewport={useViewportPanel}
         onPanelRef={(el) => {
-          listboxEl = el;
+          listboxEl.value = el;
         }}
       />
     </div>

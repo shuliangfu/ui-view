@@ -35,7 +35,7 @@ const hiddenOf = (root: Locator) =>
   root.locator("input[type='hidden']").first();
 
 const dialogOf = (root: Locator) =>
-  root.getByRole("dialog", { name: "颜色选择" });
+  root.page().getByRole("dialog", { name: "颜色选择" });
 
 async function triggerHex(root: Locator) {
   const text = (await triggerOf(root).innerText()).trim().toLowerCase();

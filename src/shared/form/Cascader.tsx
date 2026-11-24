@@ -921,7 +921,9 @@ function CascaderDropdownPanel(props: CascaderProps) {
                     "text-slate-500 dark:text-slate-400",
                     !hasSelection && colBtnActive,
                   )}
-                  onClick={() => {
+                  onPointerDown={(e: Event) => e.stopPropagation()}
+                  onClick={(e: Event) => {
+                    e.stopPropagation();
                     pathInPanel.value = [];
                     commitPath([]);
                     closePanel();
@@ -951,7 +953,11 @@ function CascaderDropdownPanel(props: CascaderProps) {
                         colBtnBase,
                         col.selectedKey === opt.value && colBtnActive,
                       )}
-                      onClick={() => pickInColumn(col.colIndex, opt)}
+                      onPointerDown={(e: Event) => e.stopPropagation()}
+                      onClick={(e: Event) => {
+                        e.stopPropagation();
+                        pickInColumn(col.colIndex, opt);
+                      }}
                     >
                       {opt.label}
                     </button>

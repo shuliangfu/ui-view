@@ -170,14 +170,7 @@ const DATA_VIEW_API: DocsApiTableRow[] = [
     type: "false | ViewToolbarConfig (Record)",
     default: "-",
     description:
-      "false 隐藏整栏。默认键与顺序：update、remove、refresh、print、import、export、fullscreen、copy。导入、导出同时出现时导入在前。update 可用 edit 别名。省略键回落 caps；自定义键必须提供 action。show／disable／action 接收 { record }（零参函数仍可用）",
-  },
-  {
-    name: "caps",
-    type: "Partial<DataViewCaps>",
-    default: "-",
-    description:
-      "能力开关；缺省按数据源方法推断。remove 默认＝存在 dataSource.remove（确认后删除当前记录）。update／import 等同样按源推断",
+      "false 隐藏整栏。默认键与顺序：update、remove、refresh、print、import、export、fullscreen、copy。导入、导出同时出现时导入在前。update 可用 edit 别名。省略键按数据源方法推断（update／remove／import 看源上是否有对应方法；print／export／fullscreen／copy 默认开；refresh 始终可用）；自定义键必须提供 action。show／disable／action 接收 { record }（零参函数仍可用）",
   },
   {
     name: "panelKey",
@@ -603,7 +596,7 @@ export default function DataDisplayDataView() {
           rounded）。工具栏默认保留：更新、删除、刷新、打印、导入、导出、全屏、复制（有
           {" "}
           <code>dataSource.remove</code> 时显示删除，可用{" "}
-          <code>caps.remove:false</code> 关掉）。 传入 <code>tabs</code>{" "}
+          <code>toolbar.remove:false</code> 关掉）。 传入 <code>tabs</code>{" "}
           可在工具栏下切换明细分区（复用 layout Tabs）；有标签时 API
           请求会带上当前 tab
           参数。明细正文四边内边距相同（含底部）；当外壳高度受限时，正文在内部滚动，滚到底仍保留底边距，工具栏和页面提示条留在滚动区上方。

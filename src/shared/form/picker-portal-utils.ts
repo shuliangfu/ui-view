@@ -778,24 +778,40 @@ function isDocumentRootHost(
 
 /**
  * 把视口 `fixed` 浮层挂到 `document.body`，使坐标相对视口，不受 Modal `transform` 包含块影响。
- * 关闭时把节点移回原位。
+ * 原位留下注释占位；关闭时默认移回原位。筛选换新节点时传 `{ discard: true }`，
+ * 只拆除、不把旧节点塞回原父级（否则会留下一份视口外的旧 listbox）。
  */
-export function pinPickerPanelToViewport(panel: HTMLElement): () => void {
+export function pinPickerPanelToViewport(
+  panel: HTMLElement,
+): (opts?: { discard?: boolean }) => void {
   const homeParent = panel.parentNode;
   const homeNext = panel.nextSibling;
   const host = getFormPortalBodyHost();
+  const doc = panel.ownerDocument;
+  const placeholder = doc?.createComment("");
   if (host && homeParent && homeParent !== host) {
+    if (placeholder) homeParent.insertBefore(placeholder, panel);
     host.appendChild(panel);
   }
   panel.setAttribute(PICKER_OVERLAY_ATTR, "");
   panel.style.position = "fixed";
   panel.style.marginTop = "0px";
   panel.style.right = "auto";
-  return () => {
+  return (opts?: { discard?: boolean }) => {
     panel.removeAttribute(PICKER_OVERLAY_ATTR);
     panel.style.removeProperty("position");
     panel.style.removeProperty("margin-top");
     panel.style.removeProperty("right");
+    if (opts?.discard) {
+      placeholder?.parentNode?.removeChild(placeholder);
+      panel.remove();
+      return;
+    }
+    if (placeholder?.isConnected && placeholder.parentNode) {
+      placeholder.parentNode.insertBefore(panel, placeholder);
+      placeholder.parentNode.removeChild(placeholder);
+      return;
+    }
     if (homeParent && panel.parentNode !== homeParent) {
       if (homeNext && homeNext.parentNode === homeParent) {
         homeParent.insertBefore(panel, homeNext);
@@ -1176,7 +1192,9 @@ export function registerPointerDownOutside(
 }
 
 /** 与 {@link registerPickerFixedOverlayPositionAndOutsideClick} 配合：存 dispose 的槽位形态 */
-export type PickerOverlayDisposeSlot = { dispose: (() => void) | null };
+export type PickerOverlayDisposeSlot = {
+  dispose: ((opts?: { discard?: boolean }) => void) | null;
+};
 
 /**
  * {@link registerPickerFixedOverlayPositionAndOutsideClick} 的布局模式：视口 `fixed` 与「相对宿主」二选一。
@@ -1251,13 +1269,13 @@ export function registerPickerFixedOverlayPositionAndOutsideClick(
       triggerRef.current,
       sync,
     );
-    anchorScrollSlot.dispose = () => {
+    anchorScrollSlot.dispose = (opts?: { discard?: boolean }) => {
       if (layoutRaf !== 0 && typeof caf === "function") {
         caf.call(globalThis, layoutRaf);
         layoutRaf = 0;
       }
       unsubAnchor();
-      unpin();
+      unpin(opts);
     };
   } else {
     /** 避免上次 fixed 会话残留的 inline 覆盖 CSS 锚定 */

@@ -43,7 +43,9 @@ describe("DataPanel inline MultiSelect", () => {
             },
           ]}
           data={[{ id: "1", name: "Ada", tags: ["vip"] }]}
-          caps={{ create: false, remove: false, view: false, update: true }}
+          form={{ props: [{ prop: "name" }] }}
+          autoActions={false}
+          toolbar={{ create: false, import: false }}
         />
       ),
       host,
@@ -60,10 +62,20 @@ describe("DataPanel inline MultiSelect", () => {
     ) as HTMLElement;
     expect(editor).toBeTruthy();
     await flush();
-    const option = (label: string) =>
-      [...editor.querySelectorAll('[role="option"]')].find((o) =>
-        (o.textContent ?? "").includes(label)
-      ) as HTMLElement;
+    // 行内多选显式 panelAttach="viewport"，选项在 body 浮层，不在编辑器内。
+    const option = (label: string) => {
+      const roots: ParentNode[] = [
+        ...document.querySelectorAll("[data-ui-picker-overlay]"),
+        editor,
+      ];
+      for (const root of roots) {
+        const hit = [...root.querySelectorAll('[role="option"]')].find((o) =>
+          (o.textContent ?? "").includes(label)
+        );
+        if (hit) return hit as HTMLElement;
+      }
+      return undefined as unknown as HTMLElement;
+    };
     expect(option("VIP").getAttribute("aria-selected")).toBe("true");
     expect(option("新用户").getAttribute("aria-selected")).not.toBe("true");
     const newer = option("新用户");

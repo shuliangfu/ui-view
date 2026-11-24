@@ -17,6 +17,11 @@ const FIXTURE = join(
   "tests/docs-browser/operations/fixtures/public-docs-reference.json",
 );
 
+/** 按内容比较换行：Windows 检出的文档源可能是 CRLF，夹具为 LF。 */
+function normalizeNewlines(text: string): string {
+  return text.replace(/\r\n|\r/g, "\n");
+}
+
 function unescapeTemplate(raw: string): string {
   return raw
     .replace(/\\`/g, "`")
@@ -58,7 +63,7 @@ function extractCodes(src: string): string[] {
     codes.push(code);
     i = next;
   }
-  return codes;
+  return codes.map(normalizeNewlines);
 }
 
 function parseTsString(src: string, start: number): [string, number] {
@@ -149,15 +154,21 @@ describe("Modal docs examples stay in sync with public-docs-reference", () => {
     expect(entry != null).toBe(true);
     const examples = [...src.matchAll(/<Title level=\{3\}>([^<]+)<\/Title>/g)]
       .map((m) => m[1]!);
-    expect(examples).toEqual(entry!.examples);
-    expect(extractCodes(src)).toEqual(entry!.codes);
-    const apiRows = extractApiRows(src).map((r) => [
-      r.name,
-      r.type,
-      r.default,
-      r.description,
-    ]);
-    expect(apiRows).toEqual(entry!.api[0]!.rows);
+    expect(examples.map(normalizeNewlines)).toEqual(
+      entry!.examples.map(normalizeNewlines),
+    );
+    expect(extractCodes(src)).toEqual(entry!.codes.map(normalizeNewlines));
+    const apiRows = extractApiRows(src).map((r) =>
+      [
+        r.name,
+        r.type,
+        r.default,
+        r.description,
+      ].map(normalizeNewlines)
+    );
+    expect(apiRows).toEqual(
+      entry!.api[0]!.rows.map((row) => row.map(normalizeNewlines)),
+    );
     for (const title of ["指定宽高", "标题栏与底栏高度", "嵌入页面"]) {
       expect(examples.includes(title)).toBe(true);
     }
@@ -180,5 +191,22 @@ describe("Modal docs examples stay in sync with public-docs-reference", () => {
     ) {
       expect(names.includes(name)).toBe(true);
     }
+  });
+
+  it("文档源为 CRLF 时仍按内容与夹具一致", async () => {
+    const lfSrc = normalizeNewlines(await readTextFile(PAGE));
+    const crlfSrc = lfSrc.replace(/\n/g, "\r\n");
+    const bundle = JSON.parse(await readTextFile(FIXTURE)) as {
+      fixtures: PublicFixture[];
+    };
+    const entry = bundle.fixtures.find((f) =>
+      f.route === "/desktop/feedback/modal"
+    );
+    expect(entry != null).toBe(true);
+    const expected = entry!.codes.map(normalizeNewlines);
+    const fromCrlf = extractCodes(crlfSrc);
+    expect(fromCrlf).toEqual(expected);
+    expect(fromCrlf).toEqual(extractCodes(lfSrc));
+    expect(fromCrlf.some((code) => code.includes("\r"))).toBe(false);
   });
 });

@@ -15,24 +15,19 @@
  */
 import { spawn, spawnSync } from "node:child_process";
 import { createServer } from "node:net";
-import { existsSync, readdirSync, statSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import {
+  collectUiViewTestFiles,
+  isCollectableTestPort,
+  killProcessTreePortable,
+} from "./tests/test-runner-utils.ts";
 
 process.env.CI = "true";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)));
 const DOCS_ROOT = join(ROOT, "docs");
-
-function collectTestFiles(dir, out = []) {
-  for (const name of readdirSync(dir)) {
-    const full = join(dir, name);
-    const st = statSync(full);
-    if (st.isDirectory()) collectTestFiles(full, out);
-    else if (/\.test\.tsx?$/.test(name)) out.push(full);
-  }
-  return out;
-}
 
 /** Resolve tsx loader to an absolute file URL (Windows-safe). */
 function resolveTsxImport() {
@@ -70,6 +65,7 @@ async function findPort(start = 3000, maxAttempts = 200) {
   const base = start + offset;
   for (let i = 0; i < maxAttempts; i++) {
     const port = base + i;
+    if (!isCollectableTestPort(port)) continue;
     if (await canListen(port)) return port;
   }
   throw new Error(`test-node: no free port from ${base} (+${maxAttempts})`);
@@ -121,11 +117,9 @@ console.log(
   }`,
 );
 
-const unitFiles = ["tests/docs-sidebar-reconcile.test.ts"];
-const browserFiles = collectTestFiles(resolve("tests/docs-browser"))
-  .map((f) => relative(process.cwd(), f))
-  .sort();
-const testFiles = [...unitFiles, ...browserFiles];
+// 收集全部 tests 是为了官方 runner 不漏跑；收集本身不等于本任务要执行全量。
+const testFiles = collectUiViewTestFiles(ROOT)
+  .map((f) => relative(process.cwd(), f));
 
 const startMs = Number.parseInt(
   process.env.UI_VIEW_DOCS_DEV_START_MS || "180000",
@@ -149,7 +143,8 @@ const docsProc = spawn("deno", ["run", "-A", "src/main.ts"], {
 
 function shutdownDocs() {
   try {
-    if (docsProc && !docsProc.killed) docsProc.kill("SIGKILL");
+    if (docsProc?.pid) killProcessTreePortable(docsProc.pid, 9);
+    else if (docsProc && !docsProc.killed) docsProc.kill("SIGKILL");
   } catch {
     /* ignore */
   }
@@ -164,15 +159,6 @@ process.on("SIGINT", () => {
   process.exit(1);
 });
 
-try {
-  await waitHttpOk(baseUrl + "/", Number.isFinite(startMs) ? startMs : 180000);
-  console.log(`✓ docs server ready`);
-} catch (e) {
-  shutdownDocs();
-  console.error(e);
-  process.exit(1);
-}
-
 const childEnv = {
   ...process.env,
   CI: "true",
@@ -184,29 +170,43 @@ const childEnv = {
 };
 
 let failed = 0;
-for (const file of testFiles) {
-  const full = resolve(file);
-  const rel = relative(process.cwd(), full);
-  console.log(`▶ ${rel}`);
-  const result = spawnSync(
-    process.execPath,
-    TEST_FORCE_EXIT
-      ? ["--import", tsxImport, "--test-force-exit", full]
-      : ["--import", tsxImport, full],
-    {
-      stdio: "inherit",
-      env: childEnv,
-    },
-  );
-  if (result.status !== 0) {
-    failed++;
-    console.error(`✗ FAILED: ${rel}\n`);
-  } else {
-    console.log(`✓ ${rel}\n`);
+try {
+  try {
+    await waitHttpOk(
+      baseUrl + "/",
+      Number.isFinite(startMs) ? startMs : 180000,
+    );
+    console.log(`✓ docs server ready`);
+  } catch (e) {
+    console.error(e);
+    process.exitCode = 1;
+    throw e;
   }
-}
 
-shutdownDocs();
+  for (const file of testFiles) {
+    const full = resolve(file);
+    const rel = relative(process.cwd(), full);
+    console.log(`▶ ${rel}`);
+    const result = spawnSync(
+      process.execPath,
+      TEST_FORCE_EXIT
+        ? ["--import", tsxImport, "--test-force-exit", full]
+        : ["--import", tsxImport, full],
+      {
+        stdio: "inherit",
+        env: childEnv,
+      },
+    );
+    if (result.status !== 0) {
+      failed++;
+      console.error(`✗ FAILED: ${rel}\n`);
+    } else {
+      console.log(`✓ ${rel}\n`);
+    }
+  }
+} finally {
+  shutdownDocs();
+}
 
 console.log("=".repeat(60));
 if (failed > 0) {

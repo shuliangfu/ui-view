@@ -570,14 +570,15 @@ export function Dropdown(props: DropdownProps): JSXRenderable {
       vv.addEventListener("resize", onResize);
     }
 
-    return () => {
+    // createEffect 不会采用返回函数作清理，必须登记 onCleanup，否则关闭后 rAF 仍会空转。
+    onCleanup(() => {
       running = false;
       globalThis.cancelAnimationFrame(rafLoop);
       globalThis.window.removeEventListener("resize", onResize);
       if (vv) {
         vv.removeEventListener("resize", onResize);
       }
-    };
+    });
   });
 
   /** click 模式下用 document 点击外部关闭；冒泡阶段且延迟关闭，避免拦截链接点击与路由导航、避免同步 setState 导致主内容区渲染异常 */
@@ -594,43 +595,40 @@ export function Dropdown(props: DropdownProps): JSXRenderable {
       dropClickOutside();
       return;
     }
-    const id = globalThis.setTimeout(() => {
-      const onDocClick = (e: MouseEvent) => {
-        // 触发器已随全屏等重挂脱离 DOM 时，不可再写回受控 open（会立刻关掉新实例）
-        if (triggerEl && !triggerEl.isConnected) {
-          dropClickOutside();
-          return;
-        }
-        // 浮层内点击若同步重绘卸掉目标节点，e.target 会脱离 DOM，
-        // contains(target)===false 会被误判为“外部点击”。用 composedPath 认路径。
-        const path = typeof e.composedPath === "function"
-          ? e.composedPath()
-          : [];
-        if (
-          (triggerEl && path.includes(triggerEl)) ||
-          (overlayEl && path.includes(overlayEl))
-        ) {
-          return;
-        }
-        const target = e.target as Node | null;
-        if (target && !target.isConnected) return;
-        if (
-          target &&
-          triggerEl?.contains(target) === false &&
-          overlayEl?.contains(target) === false
-        ) {
-          globalThis.setTimeout(() => setOpen(false), 0);
-        }
-      };
-      globalThis.document.addEventListener("click", onDocClick, false);
-      removeClickOutside = () => {
-        globalThis.document.removeEventListener("click", onDocClick, false);
-      };
-    }, 0);
-    return () => {
-      globalThis.clearTimeout(id);
-      dropClickOutside();
+    // 若 effect 在打开当次 click 的派发中同步执行，只忽略这一次事件，避免冒泡到 document 又立刻关掉。
+    // 不能用 setTimeout 置 arm 标志：effect 若在展开期间重跑，会重新进入未 arm 空窗，随后的外部点击会被吞掉。
+    // createEffect 不会采用返回函数作清理，必须登记 onCleanup。
+    const openingEvent = (globalThis as unknown as { event?: Event }).event;
+    const onDocClick = (e: MouseEvent) => {
+      if (openingEvent && e === openingEvent) return;
+      // 触发器已随全屏等重挂脱离 DOM 时，不可再写回受控 open（会立刻关掉新实例）
+      if (triggerEl && !triggerEl.isConnected) {
+        dropClickOutside();
+        return;
+      }
+      // 浮层内点击若同步重绘卸掉目标节点，e.target 会脱离 DOM，
+      // contains(target)===false 会被误判为“外部点击”。用 composedPath 认路径。
+      const path = typeof e.composedPath === "function" ? e.composedPath() : [];
+      if (
+        (triggerEl && path.includes(triggerEl)) ||
+        (overlayEl && path.includes(overlayEl))
+      ) {
+        return;
+      }
+      const target = e.target as Node | null;
+      if (target && !target.isConnected) return;
+      const insideTrigger = !!triggerEl && target instanceof Node &&
+        triggerEl.contains(target);
+      const insideOverlay = !!overlayEl && target instanceof Node &&
+        overlayEl.contains(target);
+      if (insideTrigger || insideOverlay) return;
+      globalThis.setTimeout(() => setOpen(false), 0);
     };
+    globalThis.document.addEventListener("click", onDocClick, false);
+    removeClickOutside = () => {
+      globalThis.document.removeEventListener("click", onDocClick, false);
+    };
+    onCleanup(dropClickOutside);
   });
 
   const handleTriggerClick = (e: Event) => {
@@ -724,7 +722,9 @@ export function Dropdown(props: DropdownProps): JSXRenderable {
                   overlayEl = el;
                   if (el) {
                     alignOverlay();
-                    if (isAuto) scheduleMeasure();
+                    if (isAuto) {
+                      scheduleMeasure();
+                    }
                   }
                 }}
                 class="fixed overflow-visible"

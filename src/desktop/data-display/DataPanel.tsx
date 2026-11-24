@@ -180,7 +180,6 @@ import {
   type BatchBarConfig,
   type BatchBuiltin,
   type BulkResult,
-  type Caps,
   type Column,
   type DataChromeModalConfig,
   type DataSource,
@@ -256,7 +255,6 @@ export type {
   BatchBarConfig,
   BatchBuiltin,
   BulkResult,
-  Caps,
   Column,
   DataChromeModalConfig,
   DataSource,
@@ -448,14 +446,12 @@ export interface PanelProps {
   defaultSort?: { prop: string; order: "asc" | "desc" };
   /** 固定过滤（并入每次查询，不出现在 URL） */
   fixed?: Record<string, string>;
-  /** 能力开关；缺省按数据源方法推断。未在 toolbar／column.actions 声明的钮回落于此。 */
-  caps?: Partial<Caps>;
   /**
    * Toolbar config, or `false` to hide the entire toolbar bar.
    * - `false` → do not render the toolbar (`data-panel-toolbar`) at all
    * - omit / `{}` / Record → Unified toolbar Record (existing behavior)
    * Declared keys: omit show→true, omit disable→false (caller truth).
-   * 省略键 → 内置回落 caps；声明键请写明确 true｜false｜object。Undeclared builtins → caps, after declared.
+   * 省略键 → 内置按数据源方法推断（create／update／remove／import 看源上是否有对应方法；view／print／export／columns／density／fullscreen／copy 默认开）。声明键请写明确 true｜false｜object。Undeclared builtins append after declared.
    * Object key write order = display order. Custom keys require `action`.
    * `show`／`disable`／`action` 接收 `{ selected, rows, query }`；零参函数仍可用。
    * No `extra` / `order`.
@@ -463,7 +459,7 @@ export interface PanelProps {
   toolbar?: false | PanelToolbarConfig;
   /**
    * 批量条配置，或 `false` 隐藏整条（有选中时也不出现）。
-   * 默认只显示 `remove`（批量删除，回落 caps.remove）和 `clear`（取消勾选，靠右最后）。
+   * 默认只显示 `remove`（批量删除；未声明时回落是否存在 dataSource.remove／removeBatch）和 `clear`（取消勾选，靠右最后）。
    * 自定义键须提供 `action(ctx)`，可写 `confirm`。
    * 省略／`{}` 时即上述默认两项，不必再把默认按钮写进配置。
    */
@@ -505,7 +501,7 @@ export interface PanelProps {
    */
   isRowDisabled?: (row: Row) => boolean;
   /**
-   * 为 false 时不因 caps.view／update／remove 自动补操作列。
+   * 为 false 时不因数据源推断的查看／编辑／删除能力自动补操作列。
    * 仍可用 columns 声明 `type:"actions"`。默认 true（兼容旧行为）。
    */
   autoActions?: boolean;
@@ -516,7 +512,7 @@ export interface PanelProps {
   onRowClick?: (row: Row) => void;
   /**
    * 点击行是否打开详情。默认 `false`，只能通过操作列眼睛打开。
-   * 为 `true` 且 `caps.view` 时，点击行（避开勾选、按钮、链接）打开详情。
+   * 为 `true` 且行操作「查看」会显示时，点击行（避开勾选、按钮、链接）打开详情。
    * 若同时传了 `onRowClick`，只走回调，不自动打开详情。
    */
   openViewOnRowClick?: boolean;
@@ -799,7 +795,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
   const defaultPageSize = props.pagination?.pageSize ?? sourcePageSize ??
     DEFAULT_DATA_PANEL_PAGE_SIZE;
 
-  const caps: Caps = {
+  const caps = {
     create: !!ds.create,
     update: !!ds.update,
     view: true,
@@ -811,9 +807,8 @@ export function DataPanel(props: PanelProps): JSXRenderable {
     density: true,
     fullscreen: true,
     copy: true,
-    ...(props.caps ?? {}),
   };
-  // Caller overrides: show = resolve(caller, capsFallback). Handlers (action/on*) never imply visibility.
+  // Undeclared show = resolve(ctrl, data-source fallback). Handlers (action/on*) never imply visibility.
   const toolbarHidden = props.toolbar === false;
   const tbCfg: PanelToolbarConfig =
     props.toolbar && typeof props.toolbar === "object" ? props.toolbar : {};
@@ -849,7 +844,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
   /** Whether a builtin row action might appear for any row (drives actions column). */
   const rowMayShow = (name: RowBuiltin, fallback: boolean): boolean => {
     const raw = raCfg[name];
-    // Key absent → undeclared path uses fallback (caps). Key present with undefined → same.
+    // Key absent → undeclared path uses fallback (data-source inference). Key present with undefined → same.
     if (!(name in raCfg)) return fallback;
     if (raw === undefined) return fallback;
     if (typeof raw === "boolean") return raw;
@@ -864,8 +859,9 @@ export function DataPanel(props: PanelProps): JSXRenderable {
     rowMayShow("remove", caps.remove) ||
     hasCustomRowAction
   );
+  const viewAvailable = rowMayShow("view", caps.view);
   const rowOpensView = !!props.onRowClick ||
-    (!!props.openViewOnRowClick && caps.view);
+    (!!props.openViewOnRowClick && viewAvailable);
   /** 含 selection／index／actions 的完整列（selection 只在 columns 声明时出现；actions 缺省可兼容自动补） */
   const panelColumns = resolvePanelColumns(inputColumns, {
     needActions,
@@ -1881,7 +1877,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
     for (const key of Object.keys(tbCfg)) {
       declared.add(key);
       if (isToolbarBuiltin(key)) {
-        // Declared: object omit show→true（声明即真相；省略键才回落 caps）
+        // Declared: object omit show→true（声明即真相；省略键才回落数据源推断）
         const r = resolveActionCtrl(
           tbCfg[key],
           isToolbarBuiltin(key) ? TB_FALLBACK[key] : true,
@@ -2248,7 +2244,10 @@ export function DataPanel(props: PanelProps): JSXRenderable {
           actionTipText("columns", title, label, m.columns),
           <Dropdown
             overlay={columnMenu}
-            placement="bottomRight"
+            // bottomRight 在触发器靠近视口下沿时会整块落到视口外，
+            // 内部 overflow-auto 也无法让 Playwright/真实点击落到 checkbox。
+            // auto 在下方空间不足时翻到上方，保持面板落在视口内。
+            placement="auto"
             trigger="click"
             closeOnOverlayClick={false}
           >
@@ -2958,7 +2957,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
     const custom = props.renderCell?.[colProp(c)];
     if (custom) return custom(row);
     const raw = row[colProp(c)];
-    // Inline edit: column.actions.edit ?? caps.update；inline:switch 列本身可切换（不依赖 edit 能力）
+    // Inline edit: column.actions.edit ?? 数据源是否有 update；inline:switch 列本身可切换（不依赖 edit 能力）
     const canEdit = rowResolved("edit", row, caps.update).show ||
       c.inline === "switch";
     const isSwitch = c.inline === "switch" && !!c.options &&
@@ -3085,27 +3084,81 @@ export function DataPanel(props: PanelProps): JSXRenderable {
           finish(true);
         }
       });
-      el.addEventListener("focusout", (e) => {
-        const next = (e as FocusEvent).relatedTarget as Node | null;
-        if (next && el.contains(next)) return;
-        if (next) return finish(true); // Tab 到编辑器外
-        // 焦点丢失（点击不可聚焦处 / 浮层选项收起 / 调用 blur()）：稍后判定
-        const lost = e.target as HTMLElement;
+      const isPickerOverlay = (node: Node | null): boolean => {
+        const from = node instanceof Element ? node : node?.parentElement;
+        return !!(from && from.closest("[data-ui-picker-overlay]"));
+      };
+      const isEditorUi = (node: Node | null): boolean =>
+        !!node && (el.contains(node) || isPickerOverlay(node));
+      // 点浮层（完成／选项／日历）会先失焦触发器；焦点常落到浮层，关闭后落到 body，
+      // 编辑器收不到第二次 focusout，必须在浮层收起后把焦点收回，才能再靠失焦保存。
+      let ignoreBlurFromOverlay = false;
+      let leaveCheck = 0;
+      const scheduleLeaveCheck = (lost?: HTMLElement | null) => {
+        const id = ++leaveCheck;
         setTimeout(() => {
-          if (done) return;
-          if (el.contains(document.activeElement)) return;
-          if (popupOpen()) return;
+          if (done || id !== leaveCheck) return;
+          if (isEditorUi(document.activeElement) || popupOpen()) {
+            // 浮层已关且焦点已在编辑器内：清标志，让之后的 blur()/点外部走正常保存。
+            if (
+              ignoreBlurFromOverlay &&
+              document.activeElement &&
+              el.contains(document.activeElement) &&
+              !popupOpen()
+            ) {
+              ignoreBlurFromOverlay = false;
+              return;
+            }
+            if (ignoreBlurFromOverlay) scheduleLeaveCheck(lost);
+            return;
+          }
+          if (ignoreBlurFromOverlay) {
+            ignoreBlurFromOverlay = false;
+            const active = document.activeElement;
+            if (
+              !active ||
+              active === document.body ||
+              active === document.documentElement
+            ) {
+              focusMain();
+              return;
+            }
+            finish(true);
+            return;
+          }
           // 失焦元素已被收起 / 移除（如下拉选项选中后浮层关闭）：不是用户离开，焦点收回编辑器
-          if (!lost.isConnected || lost.getClientRects().length === 0) {
+          if (
+            lost && (!lost.isConnected || lost.getClientRects().length === 0)
+          ) {
             focusMain();
             return;
           }
           finish(true);
         }, 60);
+      };
+      el.addEventListener("focusout", (e) => {
+        const next = (e as FocusEvent).relatedTarget as Node | null;
+        if (next && el.contains(next)) return;
+        if (isPickerOverlay(next)) {
+          ignoreBlurFromOverlay = true;
+          scheduleLeaveCheck();
+          return;
+        }
+        if (next) return finish(true); // Tab 到编辑器外
+        // 焦点丢失（点击不可聚焦处 / 浮层选项收起 / 调用 blur()）：稍后判定
+        scheduleLeaveCheck(e.target as HTMLElement);
       });
       const onDown = (e: Event) => {
         if (!el.isConnected) return offPointer?.();
-        if (!el.contains(e.target as Node)) finish(true);
+        const node = e.target as Node | null;
+        if (node && el.contains(node)) return;
+        // 视口定位时浮层挂在 body，点选项/日历不能当成离开编辑器
+        if (isPickerOverlay(node)) {
+          ignoreBlurFromOverlay = true;
+          scheduleLeaveCheck();
+          return;
+        }
+        finish(true);
       };
       // A closing popup may leave focus on body until its delayed focusout
       // recovery. Escape must still cancel that live editor in this interval.
@@ -3357,7 +3410,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
 
   // ---- 表格
   const offset = () => (query.value.page - 1) * query.value.pageSize;
-  // Action buttons: column.actions ?? caps, plus custom Record keys.
+  // Action buttons: column.actions ?? data-source inference, plus custom Record keys.
   // 操作列出现与否／位置／表头／按钮由 columns 的 type:"actions"（及列上 actions）决定。
   const ROW_FALLBACK: Record<RowBuiltin, boolean> = {
     view: caps.view,
@@ -3394,7 +3447,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
     for (const key of Object.keys(raCfg)) {
       declared.add(key);
       if (isRowBuiltin(key)) {
-        // Declared: object omit show→true; undefined value → caps (capGate allow).
+        // Declared: object omit show→true; undefined value → data-source inference.
         const res = resolveRowActionCtrl(raCfg[key], r, ROW_FALLBACK[key]);
         if (!res.show) continue;
         slots.push({
@@ -3656,7 +3709,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
                       props.onRowClick(r);
                       return;
                     }
-                    if (props.openViewOnRowClick && caps.view) doView(r);
+                    if (props.openViewOnRowClick && viewAvailable) doView(r);
                   }}
                 >
                   {displayCols.map((c) => {
@@ -4636,7 +4689,7 @@ export function DataPanel(props: PanelProps): JSXRenderable {
               class="inline-flex min-w-0 items-center gap-2"
               data-testid="data-panel"
             >
-              <IconList class="h-[1.45em] w-[1.45em] text-current dark:text-current [&_svg]:[stroke-width:2.75]" />
+              <IconList class="h-[1.45em] w-[1.45em] text-current dark:text-current [&_svg]:stroke-[2.75]" />
               <span class="truncate">{props.title}</span>
             </span>
           }

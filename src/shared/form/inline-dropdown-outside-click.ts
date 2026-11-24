@@ -237,15 +237,21 @@ export function bindFixedDropdownPanelWhenOpen(
   close: () => void,
   panelMinWidth?: number,
 ): void {
+  const shouldViewport = (panel?: HTMLElement | null): boolean =>
+    resolvePickerViewportAttach(
+      isViewport() ? "viewport" : "anchored",
+      triggerRef.current ?? panel ?? null,
+    );
   const outsideSlot: PickerOverlayDisposeSlot = { dispose: null };
   const scrollSlot: PickerOverlayDisposeSlot = { dispose: null };
 
-  const clear = (panel?: HTMLElement | null): void => {
+  const clear = (panel?: HTMLElement | null, discard = false): void => {
     outsideSlot.dispose?.();
-    scrollSlot.dispose?.();
+    scrollSlot.dispose?.(discard ? { discard: true } : undefined);
     outsideSlot.dispose = null;
     scrollSlot.dispose = null;
     if (!panel) return;
+    if (discard) return;
     panel.style.removeProperty("top");
     panel.style.removeProperty("left");
     panel.style.removeProperty("z-index");
@@ -257,44 +263,99 @@ export function bindFixedDropdownPanelWhenOpen(
     panel.style.removeProperty("margin-top");
   };
 
-  const shouldViewport = (panel?: HTMLElement | null): boolean =>
-    resolvePickerViewportAttach(
-      isViewport() ? "viewport" : "anchored",
-      triggerRef.current ?? panel ?? null,
-    );
+  let attached: HTMLElement | null = null;
 
   createEffect(() => {
-    if (!isOpen()) {
-      clear(getPanel());
+    isViewport(); // 追踪显式视口模式，切换时重跑
+    const open = isOpen();
+    const panel = getPanel(); // 若调用方用 signal 记节点，筛选换新时本 effect 会重跑
+    if (!open) {
+      const current = panel ?? getPanel();
+      const el = current ?? attached;
+      // 受控关闭时槽位已卸载（getPanel 为 null）：拆除钉在 body 的节点，勿移回原位留下一份 listbox。
+      if (el) clear(el, !current);
+      attached = null;
       return;
     }
-    const panel = getPanel();
-    if (!panel) return;
-    if (!shouldViewport(panel)) {
-      clear(panel);
-      return;
-    }
-    queueMicrotask(() => {
-      if (!isOpen() || getPanel() !== panel || !shouldViewport(panel)) return;
+    /** 浮层 ref 常比 open signal 晚一拍才挂上；错过就不会再定位，选项会落在视口外。 */
+    let cancelled = false;
+    let waitFrames = 0;
+    const attachToViewport = (el: HTMLElement): void => {
+      if (cancelled || !isOpen() || getPanel() !== el) return;
       const tw = triggerRef.current?.getBoundingClientRect().width ?? 0;
       const minW = Math.max(panelMinWidth ?? 0, tw);
       if (minW > 0) {
         /** 锁成触发器宽度，避免 fixed + 百分宽度把下拉铺满视口 */
         const w = `${Math.round(minW)}px`;
-        panel.style.minWidth = w;
-        panel.style.width = w;
-        panel.style.maxWidth = w;
-        panel.style.right = "auto";
+        el.style.minWidth = w;
+        el.style.width = w;
+        el.style.maxWidth = w;
+        el.style.right = "auto";
       }
       registerPickerFixedOverlayPositionAndOutsideClick(
-        panel,
+        el,
         triggerRef,
         close,
         outsideSlot,
         scrollSlot,
         { panelMinWidth: minW || undefined, marginBelow: 4 },
       );
+    };
+    /** 同步当前 getPanel()；节点尚未挂上时不要拆除已钉住的旧层。 */
+    const sync = (): void => {
+      if (cancelled || !isOpen()) return;
+      const next = getPanel();
+      if (!next) return;
+      if (!shouldViewport(next)) {
+        // 默认 anchored：留在原位，供宿主查询选项；勿无条件挂到 body。
+        if (attached && attached !== next) clear(attached);
+        attached = next;
+        return;
+      }
+      if (next !== attached) {
+        if (attached) clear(attached, true);
+        attached = next;
+        attachToViewport(next);
+      }
+    };
+    /**
+     * 仅在首屏 ref 未到、且 getPanel 非响应式时做有上限的等待。
+     * 拿到节点后不再每帧轮询；换新节点靠调用方的 panel signal。
+     */
+    const waitForFirstPanel = (): void => {
+      if (cancelled || !isOpen()) return;
+      sync();
+      if (getPanel()) return;
+      if (waitFrames++ >= 30) return;
+      const raf = globalThis.requestAnimationFrame;
+      if (typeof raf === "function") raf.call(globalThis, waitForFirstPanel);
+      else queueMicrotask(waitForFirstPanel);
+    };
+    sync();
+    if (!getPanel()) waitForFirstPanel();
+    onCleanup(() => {
+      cancelled = true;
+      if (!isOpen()) {
+        const current = getPanel();
+        const el = current ?? attached ?? panel;
+        if (el) clear(el, !current);
+        attached = null;
+        return;
+      }
+      const current = getPanel();
+      // 换新节点时只拆除本轮旧层，勿把已经挂上的新层清掉。
+      if (panel && current && panel !== current) {
+        clear(panel, true);
+        if (attached === panel) attached = null;
+      }
     });
-    onCleanup(() => clear(panel));
+  });
+
+  // 组件卸载时拆除钉在 body 上的浮层与监听，不受内部 effect 重跑影响。
+  onCleanup(() => {
+    const current = getPanel();
+    const el = current ?? attached;
+    if (el) clear(el, !current);
+    attached = null;
   });
 }

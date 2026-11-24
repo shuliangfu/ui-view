@@ -41,7 +41,7 @@ async function html(search: SearchConfig = SEARCH): Promise<string> {
         columns={COLUMNS}
         data={ROWS}
         syncUrl={false}
-        caps={{ create: false }}
+        toolbar={{ create: false }}
         search={search}
       />
     )),
@@ -72,7 +72,7 @@ describe("DataPanel search mode", () => {
           columns={COLUMNS}
           data={ROWS}
           syncUrl={false}
-          caps={{ create: false }}
+          toolbar={{ create: false }}
           search={{ ...SEARCH, mode: "expand" }}
         />
       ),
@@ -110,7 +110,7 @@ describe("DataPanel search mode", () => {
           columns={COLUMNS}
           data={ROWS}
           syncUrl={false}
-          caps={{ create: false }}
+          toolbar={{ create: false }}
           search={SEARCH}
         />
       ),

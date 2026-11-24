@@ -223,13 +223,6 @@ const DATA_PANEL_API: DocsApiTableRow[] = [
     description: "固定过滤，并入每次查询",
   },
   {
-    name: "caps",
-    type: "Partial<Caps>",
-    default: "按数据源推断",
-    description:
-      "能力开关：create／update／view／remove／import／…。toolbar／column.actions 声明键请写明确 true｜false｜object",
-  },
-  {
     name: "locale",
     type: '"zh-CN" | "en-US"',
     default: '"zh-CN"',
@@ -279,7 +272,7 @@ const DATA_PANEL_API: DocsApiTableRow[] = [
     type: "false | PanelToolbarConfig (Record)",
     default: "{}",
     description:
-      "`false`＝整栏不渲染；省略／{}／Record＝统合 Record。声明项写明确 true｜false｜object（省略键才回落 caps）；对象可 show／disable／icon／label／title／tone／action。show／disable／action 接收 { selected, rows, query }（零参函数仍可用）。写入序＝显示序；导入、导出同时出现时导入在前",
+      "`false`＝整栏不渲染；省略／{}／Record＝统合 Record。声明项写明确 true｜false｜object（省略键按数据源方法推断：create／update／remove／import 看源上是否有对应方法；print／export／columns／density／fullscreen／copy 默认开）；对象可 show／disable／icon／label／title／tone／action。show／disable／action 接收 { selected, rows, query }（零参函数仍可用）。写入序＝显示序；导入、导出同时出现时导入在前",
   },
 
   {
@@ -322,7 +315,7 @@ const DATA_PANEL_API: DocsApiTableRow[] = [
     type: "boolean",
     default: "true",
     description:
-      '为 false 时不因 caps.view／update／remove 自动补操作列；仍可用 columns 声明 { type:"actions" }',
+      '为 false 时不因数据源推断的查看／编辑／删除能力自动补操作列；仍可用 columns 声明 { type:"actions" }',
   },
   {
     name: "onRowClick",
@@ -336,7 +329,7 @@ const DATA_PANEL_API: DocsApiTableRow[] = [
     type: "boolean",
     default: "false",
     description:
-      "点击行是否打开详情。默认 false，只能通过操作列眼睛打开。为 true 且 caps.view 时，点击行（避开勾选、按钮、链接）打开详情。若同时传了 onRowClick，只走回调",
+      "点击行是否打开详情。默认 false，只能通过操作列眼睛打开。为 true 且行操作「查看」会显示时，点击行（避开勾选、按钮、链接）打开详情。若同时传了 onRowClick，只走回调",
   },
   {
     name: "onChanged",
@@ -710,11 +703,8 @@ const columns: Column[] = [
       { prop: "level", label: "级别" },
     ],
   }}
-  caps={{
-    create: true,
-    update: true,
-    view: true,
-    remove: false,
+  batchBar={{ remove: false }}
+  toolbar={{
     import: false,
     export: false,
     print: false,
@@ -769,11 +759,10 @@ const columns: Column[] = [
   title="拼接列"
   data={rows}
   columns={columns}
-  caps={{
+  autoActions={false}
+  batchBar={{ remove: false }}
+  toolbar={{
     create: false,
-    update: false,
-    view: false,
-    remove: false,
     import: false,
     export: false,
     print: false,
@@ -832,7 +821,7 @@ const columnsWithoutInlineStatus = columns.map((c) =>
   columns={columnsWithoutInlineStatus}
   search={{ title: "筛选条件", props: search }}
   // 搜索条件从地址栏回填（如 ?role=admin）；不进地址栏的条件请用 fixed。
-  caps={{ create: false }}
+  toolbar={{ create: false }}
 />
 `;
 
@@ -853,7 +842,7 @@ const columnsWithoutInlineStatus = columns.map((c) =>
   data={rows}
   columns={columnsWithoutInlineStatus}
   search={{ mode: "expand", props: search }}
-  caps={{ create: false }}
+  toolbar={{ create: false }}
 />
 `;
 
@@ -891,7 +880,8 @@ const rows = makeDemoRows(8);
   columns={columns}
   defaultSort={{ prop: "balance", order: "desc" }}
   form={{ props: form }}
-  caps={{ create: false, remove: false }}
+  batchBar={{ remove: false }}
+  toolbar={{ create: false }}
 />
 `;
 
@@ -940,7 +930,7 @@ const rows = makeDemoRows(40);
   data={rows}
   columns={columns}
   pagination={{ pageSize: 5, pageSizeOptions: [5, 10, 20] }}
-  caps={{ create: false }}
+  toolbar={{ create: false }}
 />
 `;
 
@@ -1087,9 +1077,9 @@ const cellSource = createCellDemoSource();
   dataSource={cellSource}
   columns={columns}
   form={{ props: form }}
-  caps={{
+  batchBar={{ remove: false }}
+  toolbar={{
     create: false,
-    remove: false,
     import: false,
     export: false,
     print: false,
@@ -1222,24 +1212,20 @@ ${WITH_ROW_ACTIONS_CODE}
 
 <DataPanel
   panelKey="demo-defaults"
-  title="声明默认 vs caps"
+  title="声明默认 vs 未声明回落"
   data={rows}
   columns={withRowActions({
     edit: { disable: true },
   })}
   form={{ props: form }}
-  caps={{
-    create: false,
-    update: false,
-    print: false,
+  toolbar={{
     import: false,
     export: false,
+    print: false,
     columns: false,
     density: false,
     fullscreen: false,
     copy: false,
-  }}
-  toolbar={{
     create: {},
     refresh: { disable: true },
   }}
@@ -1248,8 +1234,8 @@ ${WITH_ROW_ACTIONS_CODE}
   class="mt-2 text-xs text-slate-500"
   data-testid="demo-defaults-hint"
 >
-  caps 关 create／update，但声明项 create 空对象、edit 仅 disable
-  仍显示；refresh 禁用仍可见；未声明 view／remove 按 caps。
+  工具栏关掉未声明的打印等；声明项 create 空对象、edit 仅 disable
+  仍显示；refresh 禁用仍可见；未声明 view／remove 按数据源推断。
 </p>
 `;
 
@@ -1373,7 +1359,8 @@ const actionHint = createSignal("");
       },
     },
   })}
-  caps={{ create: false, update: false, remove: false, view: false }}
+  batchBar={{ remove: false }}
+  toolbar={{ create: false }}
 />
 <p class="mt-2 text-xs text-slate-500" data-testid="demo-ra-fn-hint">
   {() =>
@@ -1755,13 +1742,13 @@ const actionHint = createSignal("");
         },
       },
     })}
-    caps={{ create: false }}
     renderCell={{
       name: (row) => (
         <b data-testid="demo-custom-name">{String(row.name)}</b>
       ),
     }}
     toolbar={{
+      create: false,
       notify: {
         icon: <IconBell />,
         title: "通知",
@@ -2020,10 +2007,9 @@ const submitPwd = () => {
         close: true,
       },
     }}
-    caps={{
+    batchBar={{ remove: false }}
+    toolbar={{
       create: false,
-      update: false,
-      remove: false,
       import: false,
       export: false,
       print: false,
@@ -2123,10 +2109,9 @@ const rows = makeDemoRows(8);
     remove: false,
   })}
   openViewOnRowClick
-  caps={{
+  batchBar={{ remove: false }}
+  toolbar={{
     create: false,
-    update: false,
-    remove: false,
     import: false,
     export: false,
     print: false,
@@ -2223,7 +2208,7 @@ const rows = makeDemoRows(8);
       { prop: "balance", label: "余额" },
     ],
   }}
-  caps={{
+  toolbar={{
     import: false,
     export: false,
     print: false,
@@ -2504,7 +2489,8 @@ const advancedSearch = {
 
 const remoteTabCode = `<DataPanel
   panelKey="demo-tabs-api"
-  caps={{ create: false, update: false, remove: false, view: false, import: false }}
+  autoActions={false}
+  batchBar={{ remove: false }}
   title="远程用户（只读）"
   baseRoute="/api/users"
   syncUrl={false}
@@ -2850,7 +2836,6 @@ const rows = makeDemoRows(8);
   title="列对齐"
   data={rows}
   columns={columns}
-  caps={{ create: false }}
   toolbar={{
     create: false,
     search: false,
@@ -2869,7 +2854,6 @@ const rows = makeDemoRows(8);
             title="列对齐"
             data={makeDemoRows(8)}
             columns={ALIGN_DEMO_COLUMNS}
-            caps={{ create: false }}
             toolbar={{
               create: false,
               search: false,
@@ -2888,7 +2872,7 @@ const rows = makeDemoRows(8);
               c.prop === "status" ? { ...c, inline: undefined } : c
             )}
             search={{ title: "筛选条件", props: DEMO_SEARCH }}
-            caps={{ create: false }}
+            toolbar={{ create: false }}
           />
         </DocsDemo>
 
@@ -2901,7 +2885,7 @@ const rows = makeDemoRows(8);
               c.prop === "status" ? { ...c, inline: undefined } : c
             )}
             search={{ mode: "expand", props: DEMO_SEARCH }}
-            caps={{ create: false }}
+            toolbar={{ create: false }}
           />
         </DocsDemo>
 
@@ -2941,7 +2925,8 @@ const rows = makeDemoRows(8);
             columns={DEMO_COLUMNS}
             defaultSort={{ prop: "balance", order: "desc" }}
             form={{ props: DEMO_FORM }}
-            caps={{ create: false, remove: false }}
+            batchBar={{ remove: false }}
+            toolbar={{ create: false }}
           />
         </DocsDemo>
 
@@ -3001,11 +2986,8 @@ const rows = makeDemoRows(8);
                 { prop: "level", label: "级别" },
               ],
             }}
-            caps={{
-              create: true,
-              update: true,
-              view: true,
-              remove: false,
+            batchBar={{ remove: false }}
+            toolbar={{
               import: false,
               export: false,
               print: false,
@@ -3029,11 +3011,10 @@ const rows = makeDemoRows(8);
             title="拼接列"
             data={joinNameRows}
             columns={joinNameColumns}
-            caps={{
+            autoActions={false}
+            batchBar={{ remove: false }}
+            toolbar={{
               create: false,
-              update: false,
-              view: false,
-              remove: false,
               import: false,
               export: false,
               print: false,
@@ -3070,9 +3051,9 @@ const rows = makeDemoRows(8);
             dataSource={cellSource}
             columns={CELL_COLUMNS}
             form={{ props: CELL_FORM }}
-            caps={{
+            batchBar={{ remove: false }}
+            toolbar={{
               create: false,
-              remove: false,
               import: false,
               export: false,
               print: false,
@@ -3119,7 +3100,7 @@ const rows = makeDemoRows(8);
             data={makeDemoRows(40)}
             columns={DEMO_COLUMNS}
             pagination={{ pageSize: 5, pageSizeOptions: [5, 10, 20] }}
-            caps={{ create: false }}
+            toolbar={{ create: false }}
           />
         </DocsDemo>
 
@@ -3327,8 +3308,8 @@ const rows = makeDemoRows(8);
             <code>show</code>／<code>disable</code>／<code>icon</code>／<code>
               label
             </code>／<code>title</code>／<code>tone</code>／<code>action</code>
-            （默认 show=true、disable=false）。声明项不再用 caps 藏钮；
-            <code>undefined</code>（如 capGate allow）才回落 caps。<code>
+            （默认 show=true、disable=false）。声明项不再走未声明回落藏钮；
+            <code>undefined</code>（如 capGate allow）才回落数据源推断。<code>
               title
             </code>{" "}
             可省：不传时内置用 messages、自定义用
@@ -3375,24 +3356,20 @@ const rows = makeDemoRows(8);
         >
           <DataPanel
             panelKey="demo-defaults"
-            title="声明默认 vs caps"
+            title="声明默认 vs 未声明回落"
             data={makeDemoRows(5)}
             columns={withRowActions({
               edit: { disable: true },
             })}
             form={{ props: DEMO_FORM }}
-            caps={{
-              create: false,
-              update: false,
-              print: false,
+            toolbar={{
               import: false,
               export: false,
+              print: false,
               columns: false,
               density: false,
               fullscreen: false,
               copy: false,
-            }}
-            toolbar={{
               create: {},
               refresh: { disable: true },
             }}
@@ -3401,8 +3378,8 @@ const rows = makeDemoRows(8);
             class="mt-2 text-xs text-slate-500"
             data-testid="demo-defaults-hint"
           >
-            caps 关 create／update，但声明项 create 空对象、edit 仅 disable
-            仍显示；refresh 禁用仍可见；未声明 view／remove 按 caps。
+            工具栏关掉未声明的打印等；声明项 create 空对象、edit 仅 disable
+            仍显示；refresh 禁用仍可见；未声明 view／remove 按数据源推断。
           </p>
         </DocsDemo>
 
@@ -3498,7 +3475,8 @@ const rows = makeDemoRows(8);
                 },
               },
             })}
-            caps={{ create: false, update: false, remove: false, view: false }}
+            batchBar={{ remove: false }}
+            toolbar={{ create: false }}
           />
           <p class="mt-2 text-xs text-slate-500" data-testid="demo-ra-fn-hint">
             {() => actionHint.value ||
@@ -3804,13 +3782,13 @@ const rows = makeDemoRows(8);
                   },
                 },
               })}
-              caps={{ create: false }}
               renderCell={{
                 name: (row) => (
                   <b data-testid="demo-custom-name">{String(row.name)}</b>
                 ),
               }}
               toolbar={{
+                create: false,
                 notify: {
                   icon: <IconBell />,
                   title: "通知",
@@ -3923,10 +3901,9 @@ const rows = makeDemoRows(8);
                   close: true,
                 },
               }}
-              caps={{
+              batchBar={{ remove: false }}
+              toolbar={{
                 create: false,
-                update: false,
-                remove: false,
                 import: false,
                 export: false,
                 print: false,
@@ -4025,10 +4002,9 @@ const rows = makeDemoRows(8);
               remove: false,
             })}
             openViewOnRowClick
-            caps={{
+            batchBar={{ remove: false }}
+            toolbar={{
               create: false,
-              update: false,
-              remove: false,
               import: false,
               export: false,
               print: false,
@@ -4102,10 +4078,8 @@ const rows = makeDemoRows(8);
                 ),
                 actions: { close: true },
               }}
-              caps={{
-                create: true,
-                update: true,
-                remove: false,
+              batchBar={{ remove: false }}
+              toolbar={{
                 import: false,
                 export: false,
                 print: false,
@@ -4182,10 +4156,9 @@ const rows = makeDemoRows(8);
                   },
                 ],
               }}
-              caps={{
+              batchBar={{ remove: false }}
+              toolbar={{
                 create: false,
-                update: true,
-                remove: false,
                 import: false,
                 export: false,
                 print: false,
@@ -4269,7 +4242,7 @@ const rows = makeDemoRows(8);
                 { prop: "balance", label: "余额" },
               ],
             }}
-            caps={{
+            toolbar={{
               import: false,
               export: false,
               print: false,
@@ -4376,13 +4349,8 @@ function DataPanelTabsDemo() {
             </Paragraph>
             <DataPanel
               panelKey="demo-tabs-api"
-              caps={{
-                create: false,
-                update: false,
-                remove: false,
-                view: false,
-                import: false,
-              }}
+              autoActions={false}
+              batchBar={{ remove: false }}
               title="远程用户（只读）"
               baseRoute="/api/users"
               syncUrl={false}
@@ -4396,6 +4364,7 @@ function DataPanelTabsDemo() {
                 label: "管理员",
               }]}
               toolbar={{
+                import: false,
                 ...DEMO_HIDE_CHROME,
                 create: false,
                 search: false,
@@ -4498,7 +4467,7 @@ function DataPanelTabsDemo() {
             columns={DEMO_COLUMNS.map((c) =>
               c.prop === "status" ? { ...c, inline: undefined } : c
             )}
-            caps={{ create: false }}
+            toolbar={{ create: false }}
             search={{
               title: "高级筛选",
               props: [

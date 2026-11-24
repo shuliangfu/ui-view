@@ -2374,7 +2374,7 @@
         "import { DataPanel } from \"@dreamer/ui-view/data-display\";\nimport type { Column, FormField, Row, SearchField } from \"@dreamer/ui-view/data-display\";\n\nconst NAMES = [\n  \"Alice\",\n  \"Bob\",\n  \"Carol\",\n  \"David\",\n  \"Eve\",\n  \"Frank\",\n  \"Grace\",\n  \"Heidi\",\n  \"Ivan\",\n  \"Judy\",\n  \"Mallory\",\n  \"Niaj\",\n  \"Olivia\",\n  \"Peggy\",\n  \"Rupert\",\n  \"Sybil\",\n  \"Trent\",\n  \"Victor\",\n  \"Walter\",\n  \"Zoe\",\n  \"Liang\",\n  \"Wei\",\n  \"Mei\",\n  \"Chen\",\n  \"Hao\",\n];\n\n/** 生成演示用户（可复现） */\nfunction makeDemoRows(n = 25): Row[] {\n  return Array.from({ length: n }, (_, i) => ({\n    id: String(i + 1),\n    name: NAMES[i % NAMES.length] + (i >= NAMES.length ? ` ${i}` : \"\"),\n    email: `${NAMES[i % NAMES.length].toLowerCase()}${i + 1}@example.com`,\n    role: [\"admin\", \"editor\", \"viewer\"][i % 3],\n    status: i % 4 === 3 ? \"disabled\" : \"active\",\n    balance: 100 + ((i * 137) % 900) + (i % 7) / 10,\n    score: (i * 7) % 100,\n    createdAt: new Date(2026, 0, 1 + i, 9, (i * 7) % 60).toISOString(),\n    locked: i === 0,\n  }));\n}\n\n\nconst columns: Column[] = [\n  {\n    type: \"selection\",\n    disable: (row) => row.id === \"4\" || row.id === \"5\", // David、Eve 禁止勾选\n  },\n  { type: \"index\" },\n  { prop: \"name\", label: \"姓名\", sortable: true, inline: \"text\" },\n  { prop: \"email\", label: \"邮箱\", sortable: true },\n  {\n    prop: \"role\",\n    label: \"角色\",\n    type: \"tag\",\n    align: \"center\",\n    options: [\n      { value: \"admin\", label: \"管理员\", tone: \"danger\" },\n      { value: \"editor\", label: \"编辑\", tone: \"info\" },\n      { value: \"viewer\", label: \"访客\", tone: \"default\" },\n    ],\n  },\n  {\n    prop: \"status\",\n    label: \"状态\",\n    type: \"tag\",\n    inline: \"switch\",\n    align: \"center\",\n    options: [\n      { value: \"active\", label: \"启用\", tone: \"success\" },\n      { value: \"disabled\", label: \"停用\", tone: \"warning\" },\n    ],\n  },\n  {\n    prop: \"balance\",\n    label: \"余额\",\n    type: \"money\",\n    sortable: true,\n    total: true,\n    align: \"right\",\n    headerAlign: \"center\",\n  },\n  {\n    prop: \"score\",\n    label: \"积分\",\n    type: \"number\",\n    sortable: true,\n    inline: \"number\",\n    align: \"right\",\n  },\n  {\n    prop: \"createdAt\",\n    label: \"创建时间\",\n    type: \"datetime\",\n    format: \"YYYY-MM-DD HH:mm\",\n    sortable: true,\n    hidden: true,\n  },\n  { type: \"actions\", actions: {\n    view: true,\n    edit: true,\n    remove: false,\n  } },\n];\n\nconst search: SearchField[] = [\n  {\n    prop: \"name\",\n    placeholder: \"姓名关键字\",\n    hint: \"支持模糊匹配\",\n    maxlength: 40,\n  },\n  { prop: \"role\", type: \"select\" },\n  { prop: \"status\", type: \"select\" },\n];\n\n\nconst form: FormField[] = [\n  { prop: \"name\", required: true, placeholder: \"请输入姓名\" },\n  {\n    prop: \"email\",\n    required: true,\n    pattern: \"^[^@\\\\s]+@[^@\\\\s]+$\",\n  },\n  { prop: \"role\", type: \"select\", required: true, initial: \"viewer\" },\n  { prop: \"balance\", type: \"number\", min: 0, initial: 0 },\n  // switch 开／关值从同 prop 列两档 options 继承，无需 onOff\n  { prop: \"status\", type: \"switch\", initial: \"active\" },\n];\n\n\nconst rows = makeDemoRows(25);\n\n<DataPanel\n  panelKey=\"demo-basic\"\n  title=\"用户管理\"\n  data={rows}\n  columns={columns}\n  search={{ props: search }}\n  form={{ props: form }}\n  exportName=\"users\"\n/>\n",
         "import type { Column, FormField, Row, SearchField } from \"@dreamer/ui-view/data-display\";\n\nconst NAMES = [\n  \"Alice\",\n  \"Bob\",\n  \"Carol\",\n  \"David\",\n  \"Eve\",\n  \"Frank\",\n  \"Grace\",\n  \"Heidi\",\n  \"Ivan\",\n  \"Judy\",\n  \"Mallory\",\n  \"Niaj\",\n  \"Olivia\",\n  \"Peggy\",\n  \"Rupert\",\n  \"Sybil\",\n  \"Trent\",\n  \"Victor\",\n  \"Walter\",\n  \"Zoe\",\n  \"Liang\",\n  \"Wei\",\n  \"Mei\",\n  \"Chen\",\n  \"Hao\",\n];\n\n/** 生成演示用户（可复现） */\nfunction makeDemoRows(n = 25): Row[] {\n  return Array.from({ length: n }, (_, i) => ({\n    id: String(i + 1),\n    name: NAMES[i % NAMES.length] + (i >= NAMES.length ? ` ${i}` : \"\"),\n    email: `${NAMES[i % NAMES.length].toLowerCase()}${i + 1}@example.com`,\n    role: [\"admin\", \"editor\", \"viewer\"][i % 3],\n    status: i % 4 === 3 ? \"disabled\" : \"active\",\n    balance: 100 + ((i * 137) % 900) + (i % 7) / 10,\n    score: (i * 7) % 100,\n    createdAt: new Date(2026, 0, 1 + i, 9, (i * 7) % 60).toISOString(),\n    locked: i === 0,\n  }));\n}\n\n\nconst columns: Column[] = [\n  {\n    type: \"selection\",\n    disable: (row) => row.id === \"4\" || row.id === \"5\", // David、Eve 禁止勾选\n  },\n  { type: \"index\" },\n  { prop: \"name\", label: \"姓名\", sortable: true, inline: \"text\" },\n  { prop: \"email\", label: \"邮箱\", sortable: true },\n  {\n    prop: \"role\",\n    label: \"角色\",\n    type: \"tag\",\n    align: \"center\",\n    options: [\n      { value: \"admin\", label: \"管理员\", tone: \"danger\" },\n      { value: \"editor\", label: \"编辑\", tone: \"info\" },\n      { value: \"viewer\", label: \"访客\", tone: \"default\" },\n    ],\n  },\n  {\n    prop: \"status\",\n    label: \"状态\",\n    type: \"tag\",\n    inline: \"switch\",\n    align: \"center\",\n    options: [\n      { value: \"active\", label: \"启用\", tone: \"success\" },\n      { value: \"disabled\", label: \"停用\", tone: \"warning\" },\n    ],\n  },\n  {\n    prop: \"balance\",\n    label: \"余额\",\n    type: \"money\",\n    sortable: true,\n    total: true,\n    align: \"right\",\n    headerAlign: \"center\",\n  },\n  {\n    prop: \"score\",\n    label: \"积分\",\n    type: \"number\",\n    sortable: true,\n    inline: \"number\",\n    align: \"right\",\n  },\n  {\n    prop: \"createdAt\",\n    label: \"创建时间\",\n    type: \"datetime\",\n    format: \"YYYY-MM-DD HH:mm\",\n    sortable: true,\n    hidden: true,\n  },\n  { type: \"actions\", actions: {\n    view: true,\n    edit: true,\n    remove: false,\n  } },\n];\n\nconst search: SearchField[] = [\n  {\n    prop: \"name\",\n    placeholder: \"姓名关键字\",\n    hint: \"支持模糊匹配\",\n    maxlength: 40,\n  },\n  { prop: \"role\", type: \"select\" },\n  { prop: \"status\", type: \"select\" },\n];\n\n\nconst form: FormField[] = [\n  { prop: \"name\", required: true, placeholder: \"请输入姓名\" },\n  {\n    prop: \"email\",\n    required: true,\n    pattern: \"^[^@\\\\s]+@[^@\\\\s]+$\",\n  },\n  { prop: \"role\", type: \"select\", required: true, initial: \"viewer\" },\n  { prop: \"balance\", type: \"number\", min: 0, initial: 0 },\n  // switch 开／关值从同 prop 列两档 options 继承，无需 onOff\n  { prop: \"status\", type: \"switch\", initial: \"active\" },\n];\n\n\n// 与下方各示例使用同一份定义。makeDemoRows(n) 按可复现规则生成 n 行。\nconst rows = makeDemoRows(25);\n",
         "import { DataPanel } from \"@dreamer/ui-view/data-display\";\n\nconst rows = [\n  { id: \"1\", name: \"Alice\", email: \"alice@example.com\", role: \"admin\", status: \"active\", balance: 120 },\n  { id: \"2\", name: \"Bob\", email: \"bob@example.com\", role: \"editor\", status: \"disabled\", balance: 80 },\n];\nconst columns: Column[] = [\n  { type: \"selection\" },\n  { type: \"index\" },\n  { prop: \"name\", label: \"姓名\", sortable: true, inline: \"text\" },\n  { prop: \"role\", label: \"角色\", type: \"tag\", align: \"center\", options: [\n    { value: \"admin\", label: \"管理员\", tone: \"danger\" },\n    { value: \"editor\", label: \"编辑\", tone: \"info\" },\n    { value: \"viewer\", label: \"访客\" },\n  ] },\n  { prop: \"status\", label: \"状态\", type: \"tag\", inline: \"switch\", align: \"center\", options: [\n    { value: \"active\", label: \"启用\", tone: \"success\" },\n    { value: \"disabled\", label: \"停用\", tone: \"warning\" },\n  ] },\n  { prop: \"balance\", label: \"余额\", type: \"money\", sortable: true, total: true, align: \"right\" },\n  { type: \"actions\", actions: {\n    view: true,\n    edit: true,\n    remove: false,\n  } },\n];\nconst search = {\n  props: [\n  { prop: \"name\" },\n  { prop: \"role\", type: \"select\" },\n  { prop: \"status\", type: \"select\" },\n  ],\n};\nconst form = {\n  props: [\n  { prop: \"name\", required: true },\n  { prop: \"email\", required: true, pattern: \"^[^@\\s]+@[^@\\s]+$\" },\n  { prop: \"role\", type: \"select\", required: true, initial: \"viewer\" },\n  { prop: \"balance\", type: \"number\", min: 0, initial: 0 },\n  { prop: \"status\", type: \"switch\", initial: \"active\" },\n  ],\n};\n\n<DataPanel\n  title=\"用户管理\"\n  panelKey=\"users\"\n  data={rows}\n  columns={columns}\n  search={search}\n  form={form}\n/>",
-        "import { DataPanel } from \"@dreamer/ui-view/data-display\";\nimport type { Column, FormField, Row, SearchField } from \"@dreamer/ui-view/data-display\";\n\nconst NAMES = [\n  \"Alice\",\n  \"Bob\",\n  \"Carol\",\n  \"David\",\n  \"Eve\",\n  \"Frank\",\n  \"Grace\",\n  \"Heidi\",\n  \"Ivan\",\n  \"Judy\",\n  \"Mallory\",\n  \"Niaj\",\n  \"Olivia\",\n  \"Peggy\",\n  \"Rupert\",\n  \"Sybil\",\n  \"Trent\",\n  \"Victor\",\n  \"Walter\",\n  \"Zoe\",\n  \"Liang\",\n  \"Wei\",\n  \"Mei\",\n  \"Chen\",\n  \"Hao\",\n];\n\n/** 生成演示用户（可复现） */\nfunction makeDemoRows(n = 25): Row[] {\n  return Array.from({ length: n }, (_, i) => ({\n    id: String(i + 1),\n    name: NAMES[i % NAMES.length] + (i >= NAMES.length ? ` ${i}` : \"\"),\n    email: `${NAMES[i % NAMES.length].toLowerCase()}${i + 1}@example.com`,\n    role: [\"admin\", \"editor\", \"viewer\"][i % 3],\n    status: i % 4 === 3 ? \"disabled\" : \"active\",\n    balance: 100 + ((i * 137) % 900) + (i % 7) / 10,\n    score: (i * 7) % 100,\n    createdAt: new Date(2026, 0, 1 + i, 9, (i * 7) % 60).toISOString(),\n    locked: i === 0,\n  }));\n}\n\n\nconst columns: Column[] = [\n  {\n    type: \"selection\",\n    disable: (row) => row.id === \"4\" || row.id === \"5\", // David、Eve 禁止勾选\n  },\n  { type: \"index\" },\n  { prop: \"name\", label: \"姓名\", sortable: true, inline: \"text\" },\n  { prop: \"email\", label: \"邮箱\", sortable: true },\n  {\n    prop: \"role\",\n    label: \"角色\",\n    type: \"tag\",\n    align: \"center\",\n    options: [\n      { value: \"admin\", label: \"管理员\", tone: \"danger\" },\n      { value: \"editor\", label: \"编辑\", tone: \"info\" },\n      { value: \"viewer\", label: \"访客\", tone: \"default\" },\n    ],\n  },\n  {\n    prop: \"status\",\n    label: \"状态\",\n    type: \"tag\",\n    inline: \"switch\",\n    align: \"center\",\n    options: [\n      { value: \"active\", label: \"启用\", tone: \"success\" },\n      { value: \"disabled\", label: \"停用\", tone: \"warning\" },\n    ],\n  },\n  {\n    prop: \"balance\",\n    label: \"余额\",\n    type: \"money\",\n    sortable: true,\n    total: true,\n    align: \"right\",\n    headerAlign: \"center\",\n  },\n  {\n    prop: \"score\",\n    label: \"积分\",\n    type: \"number\",\n    sortable: true,\n    inline: \"number\",\n    align: \"right\",\n  },\n  {\n    prop: \"createdAt\",\n    label: \"创建时间\",\n    type: \"datetime\",\n    format: \"YYYY-MM-DD HH:mm\",\n    sortable: true,\n    hidden: true,\n  },\n  { type: \"actions\", actions: {\n    view: true,\n    edit: true,\n    remove: false,\n  } },\n];\n\nconst search: SearchField[] = [\n  {\n    prop: \"name\",\n    placeholder: \"姓名关键字\",\n    hint: \"支持模糊匹配\",\n    maxlength: 40,\n  },\n  { prop: \"role\", type: \"select\" },\n  { prop: \"status\", type: \"select\" },\n];\n\n\nconst form: FormField[] = [\n  {\n    prop: \"name\",\n    placeholder: \"请输入姓名\",\n    hint: \"2–20 个字符\",\n    maxlength: 20,\n    span: 6,\n    rules: [\n      { required: true, message: \"姓名不能为空\" },\n      { min: 2, max: 20, message: \"姓名长度 2–20\" },\n    ],\n  },\n  {\n    prop: \"email\",\n    placeholder: \"name@example.com\",\n    span: 6,\n    rules: [\n      { required: true, message: \"邮箱不能为空\" },\n      { type: \"email\", message: \"邮箱格式不正确\" },\n    ],\n  },\n  { prop: \"role\", type: \"select\", required: true, initial: \"viewer\", span: 6 },\n  { prop: \"balance\", type: \"number\", min: 0, initial: 0, span: 6 },\n  {\n    prop: \"status\",\n    type: \"switch\",\n    initial: \"active\",\n    span: 12,\n    hint: \"行内亦可切换\",\n  },\n];\n\n\nconst rows = makeDemoRows(8);\n\n<DataPanel\n  panelKey=\"demo-schemas-full\"\n  title=\"用户管理\"\n  data={rows}\n  columns={columns}\n  search={{ title: \"筛选用户\", props: search }}\n  form={{\n    title: (row) =>\n      row.id ? `修改 · ${String(row.name ?? \"\")}` : \"添加用户\",\n    props: form,\n  }}\n  view={{\n    title: (row) => `详情 · ${String(row.name ?? \"\")}`,\n    props: [\n      { prop: \"name\", label: \"姓名\" },\n      { prop: \"email\", label: \"邮箱\" },\n      { prop: \"balance\", label: \"余额\" },\n    ],\n  }}\n  caps={{\n    import: false,\n    export: false,\n    print: false,\n    columns: false,\n    density: false,\n    fullscreen: false,\n    copy: false,\n  }}\n/>\n",
+        "import { DataPanel } from \"@dreamer/ui-view/data-display\";\nimport type { Column, FormField, Row, SearchField } from \"@dreamer/ui-view/data-display\";\n\nconst NAMES = [\n  \"Alice\",\n  \"Bob\",\n  \"Carol\",\n  \"David\",\n  \"Eve\",\n  \"Frank\",\n  \"Grace\",\n  \"Heidi\",\n  \"Ivan\",\n  \"Judy\",\n  \"Mallory\",\n  \"Niaj\",\n  \"Olivia\",\n  \"Peggy\",\n  \"Rupert\",\n  \"Sybil\",\n  \"Trent\",\n  \"Victor\",\n  \"Walter\",\n  \"Zoe\",\n  \"Liang\",\n  \"Wei\",\n  \"Mei\",\n  \"Chen\",\n  \"Hao\",\n];\n\n/** 生成演示用户（可复现） */\nfunction makeDemoRows(n = 25): Row[] {\n  return Array.from({ length: n }, (_, i) => ({\n    id: String(i + 1),\n    name: NAMES[i % NAMES.length] + (i >= NAMES.length ? ` ${i}` : \"\"),\n    email: `${NAMES[i % NAMES.length].toLowerCase()}${i + 1}@example.com`,\n    role: [\"admin\", \"editor\", \"viewer\"][i % 3],\n    status: i % 4 === 3 ? \"disabled\" : \"active\",\n    balance: 100 + ((i * 137) % 900) + (i % 7) / 10,\n    score: (i * 7) % 100,\n    createdAt: new Date(2026, 0, 1 + i, 9, (i * 7) % 60).toISOString(),\n    locked: i === 0,\n  }));\n}\n\n\nconst columns: Column[] = [\n  {\n    type: \"selection\",\n    disable: (row) => row.id === \"4\" || row.id === \"5\", // David、Eve 禁止勾选\n  },\n  { type: \"index\" },\n  { prop: \"name\", label: \"姓名\", sortable: true, inline: \"text\" },\n  { prop: \"email\", label: \"邮箱\", sortable: true },\n  {\n    prop: \"role\",\n    label: \"角色\",\n    type: \"tag\",\n    align: \"center\",\n    options: [\n      { value: \"admin\", label: \"管理员\", tone: \"danger\" },\n      { value: \"editor\", label: \"编辑\", tone: \"info\" },\n      { value: \"viewer\", label: \"访客\", tone: \"default\" },\n    ],\n  },\n  {\n    prop: \"status\",\n    label: \"状态\",\n    type: \"tag\",\n    inline: \"switch\",\n    align: \"center\",\n    options: [\n      { value: \"active\", label: \"启用\", tone: \"success\" },\n      { value: \"disabled\", label: \"停用\", tone: \"warning\" },\n    ],\n  },\n  {\n    prop: \"balance\",\n    label: \"余额\",\n    type: \"money\",\n    sortable: true,\n    total: true,\n    align: \"right\",\n    headerAlign: \"center\",\n  },\n  {\n    prop: \"score\",\n    label: \"积分\",\n    type: \"number\",\n    sortable: true,\n    inline: \"number\",\n    align: \"right\",\n  },\n  {\n    prop: \"createdAt\",\n    label: \"创建时间\",\n    type: \"datetime\",\n    format: \"YYYY-MM-DD HH:mm\",\n    sortable: true,\n    hidden: true,\n  },\n  { type: \"actions\", actions: {\n    view: true,\n    edit: true,\n    remove: false,\n  } },\n];\n\nconst search: SearchField[] = [\n  {\n    prop: \"name\",\n    placeholder: \"姓名关键字\",\n    hint: \"支持模糊匹配\",\n    maxlength: 40,\n  },\n  { prop: \"role\", type: \"select\" },\n  { prop: \"status\", type: \"select\" },\n];\n\n\nconst form: FormField[] = [\n  {\n    prop: \"name\",\n    placeholder: \"请输入姓名\",\n    hint: \"2–20 个字符\",\n    maxlength: 20,\n    span: 6,\n    rules: [\n      { required: true, message: \"姓名不能为空\" },\n      { min: 2, max: 20, message: \"姓名长度 2–20\" },\n    ],\n  },\n  {\n    prop: \"email\",\n    placeholder: \"name@example.com\",\n    span: 6,\n    rules: [\n      { required: true, message: \"邮箱不能为空\" },\n      { type: \"email\", message: \"邮箱格式不正确\" },\n    ],\n  },\n  { prop: \"role\", type: \"select\", required: true, initial: \"viewer\", span: 6 },\n  { prop: \"balance\", type: \"number\", min: 0, initial: 0, span: 6 },\n  {\n    prop: \"status\",\n    type: \"switch\",\n    initial: \"active\",\n    span: 12,\n    hint: \"行内亦可切换\",\n  },\n];\n\n\nconst rows = makeDemoRows(8);\n\n<DataPanel\n  panelKey=\"demo-schemas-full\"\n  title=\"用户管理\"\n  data={rows}\n  columns={columns}\n  search={{ title: \"筛选用户\", props: search }}\n  form={{\n    title: (row) =>\n      row.id ? `修改 · ${String(row.name ?? \"\")}` : \"添加用户\",\n    props: form,\n  }}\n  view={{\n    title: (row) => `详情 · ${String(row.name ?? \"\")}`,\n    props: [\n      { prop: \"name\", label: \"姓名\" },\n      { prop: \"email\", label: \"邮箱\" },\n      { prop: \"balance\", label: \"余额\" },\n    ],\n  }}\n  toolbar={{\n    import: false,\n    export: false,\n    print: false,\n    columns: false,\n    density: false,\n    fullscreen: false,\n    copy: false,\n  }}\n/>\n",
         "<DataPanel\n  title=\"佩戴过的用户\"\n  baseRoute=\"/api\"\n  tabs={[\n    { key: \"3\", label: \"最近 3 个月\" },\n    { key: \"6\", label: \"最近 6 个月\" },\n    { key: \"12\", label: \"最近 12 个月\" },\n  ]}\n/>\n// 列表、刷新、搜索、导入、导出、增删改、详情都会带 ?tab=3（或当前标签）\n// tabParam=\"months\" 可改参数名；tabParam={false} 则不带这个参数",
         "// 切换标签会回到第 1 页并重新请求。\n// 已经请求过的组合（标签 + page / pageSize / 排序 / 搜索）会直接用内存缓存。\n// 工具栏刷新、导入或增删改成功后，只作废当前标签的缓存并重新请求。"
       ],
@@ -2514,12 +2514,6 @@
               "固定过滤，并入每次查询"
             ],
             [
-              "caps",
-              "Partial<Caps>",
-              "按数据源推断",
-              "能力开关：create／update／view／remove／import／…。toolbar／column.actions 声明键请写明确 true｜false｜object"
-            ],
-            [
               "locale",
               "\"zh-CN\" | \"en-US\"",
               "\"zh-CN\"",
@@ -2565,7 +2559,7 @@
               "toolbar",
               "false | PanelToolbarConfig (Record)",
               "{}",
-              "`false`＝整栏不渲染；省略／{}／Record＝统合 Record。声明项写明确 true｜false｜object（省略键才回落 caps）；对象可 show／disable／icon／label／title／tone／action。show／disable／action 接收 { selected, rows, query }（零参函数仍可用）。写入序＝显示序；导入、导出同时出现时导入在前"
+              "`false`＝整栏不渲染；省略／{}／Record＝统合 Record。声明项写明确 true｜false｜object（省略键按数据源方法推断：create／update／remove／import 看源上是否有对应方法；print／export／columns／density／fullscreen／copy 默认开）；对象可 show／disable／icon／label／title／tone／action。show／disable／action 接收 { selected, rows, query }（零参函数仍可用）。写入序＝显示序；导入、导出同时出现时导入在前"
             ],
             [
               "alert",
@@ -2601,7 +2595,7 @@
               "autoActions",
               "boolean",
               "true",
-              "为 false 时不因 caps.view／update／remove 自动补操作列；仍可用 columns 声明 { type:\"actions\" }"
+              "为 false 时不因数据源推断的查看／编辑／删除能力自动补操作列；仍可用 columns 声明 { type:\"actions\" }"
             ],
             [
               "onRowClick",
@@ -2613,7 +2607,7 @@
               "openViewOnRowClick",
               "boolean",
               "false",
-              "点击行是否打开详情。默认 false，只能通过操作列眼睛打开。为 true 且 caps.view 时，点击行（避开勾选、按钮、链接）打开详情。若同时传了 onRowClick，只走回调"
+              "点击行是否打开详情。默认 false，只能通过操作列眼睛打开。为 true 且行操作「查看」会显示时，点击行（避开勾选、按钮、链接）打开详情。若同时传了 onRowClick，只走回调"
             ],
             [
               "onChanged",
@@ -2759,7 +2753,7 @@
               "actions",
               "RowActionsConfig",
               "-",
-              "仅 type:\"actions\"。行操作 Record（写在本列，勿再顶层配置）：内置 view／edit／remove＋自定义；写入序＝显示序；自定义必须 action(item)；省略键回落 caps。"
+              "仅 type:\"actions\"。行操作 Record（写在本列，勿再顶层配置）：内置 view／edit／remove＋自定义；写入序＝显示序；自定义必须 action(item)；省略键按数据源推断。"
             ],
             [
               "format",
@@ -4326,7 +4320,7 @@
               "(键)",
               "string",
               "-",
-              "按钮键。写入序＝显示序。内置：create、search、refresh、print、import、export、columns、density、fullscreen、copy。导入、导出同时出现时导入在前。省略的内置键回落 caps"
+              "按钮键。写入序＝显示序。内置：create、search、refresh、print、import、export、columns、density、fullscreen、copy。导入、导出同时出现时导入在前。省略的内置键按数据源推断"
             ],
             [
               "(值)",
@@ -4349,7 +4343,7 @@
               "(键)",
               "string",
               "-",
-              "按钮键。写入序＝显示序。内置：update（可用 edit 别名）、remove、refresh、print、import、export、fullscreen、copy。导入、导出同时出现时导入在前。省略的内置键回落 DataViewCaps"
+              "按钮键。写入序＝显示序。内置：update（可用 edit 别名）、remove、refresh、print、import、export、fullscreen、copy。导入、导出同时出现时导入在前。省略的内置键按数据源推断"
             ],
             [
               "(值)",
@@ -4401,7 +4395,7 @@
               "(键)",
               "string",
               "-",
-              "按钮键。写入序＝显示序。默认显示 remove（批量删除，回落 caps.remove）和 clear（取消勾选，靠右最后），不必写入配置。自定义批量操作由用户以自定义键＋action 自行编写"
+              "按钮键。写入序＝显示序。默认显示 remove（批量删除；未声明时回落是否存在 dataSource.remove／removeBatch）和 clear（取消勾选，靠右最后），不必写入配置。自定义批量操作由用户以自定义键＋action 自行编写"
             ],
             [
               "(值)",
@@ -4495,143 +4489,13 @@
               "(键)",
               "string",
               "-",
-              "写在 Column.actions（type:\"actions\"）上。写入序＝显示序。内置：view、edit、remove。省略的内置键回落 caps"
+              "写在 Column.actions（type:\"actions\"）上。写入序＝显示序。内置：view、edit、remove。省略的内置键按数据源推断"
             ],
             [
               "(值)",
               "RowActionCtrl",
               "-",
               "true／false 或对象。show／disable／action／title／confirm 均可 (item)=>…"
-            ]
-          ]
-        },
-        {
-          "title": "Caps",
-          "headers": [
-            "属性",
-            "类型",
-            "默认值",
-            "说明"
-          ],
-          "rows": [
-            [
-              "create",
-              "boolean",
-              "按数据源推断",
-              "新增"
-            ],
-            [
-              "update",
-              "boolean",
-              "按数据源推断",
-              "编辑"
-            ],
-            [
-              "view",
-              "boolean",
-              "按数据源推断",
-              "查看详情"
-            ],
-            [
-              "remove",
-              "boolean",
-              "按数据源推断",
-              "删除"
-            ],
-            [
-              "import",
-              "boolean",
-              "按数据源推断",
-              "导入"
-            ],
-            [
-              "export",
-              "boolean",
-              "按数据源推断",
-              "导出"
-            ],
-            [
-              "print",
-              "boolean",
-              "按数据源推断",
-              "打印"
-            ],
-            [
-              "columns",
-              "boolean",
-              "true",
-              "列设置"
-            ],
-            [
-              "density",
-              "boolean",
-              "true",
-              "行高密度"
-            ],
-            [
-              "fullscreen",
-              "boolean",
-              "true",
-              "面板全屏"
-            ],
-            [
-              "copy",
-              "boolean",
-              "true",
-              "复制选中行"
-            ]
-          ]
-        },
-        {
-          "title": "DataViewCaps",
-          "headers": [
-            "属性",
-            "类型",
-            "默认值",
-            "说明"
-          ],
-          "rows": [
-            [
-              "update",
-              "boolean",
-              "按数据源推断",
-              "工具栏更新／编辑"
-            ],
-            [
-              "remove",
-              "boolean",
-              "存在 dataSource.remove 则为 true",
-              "工具栏删除当前记录（需确认）"
-            ],
-            [
-              "import",
-              "boolean",
-              "按数据源推断",
-              "导入"
-            ],
-            [
-              "export",
-              "boolean",
-              "按数据源推断",
-              "导出"
-            ],
-            [
-              "print",
-              "boolean",
-              "按数据源推断",
-              "打印"
-            ],
-            [
-              "fullscreen",
-              "boolean",
-              "true",
-              "全屏"
-            ],
-            [
-              "copy",
-              "boolean",
-              "true",
-              "复制当前记录"
             ]
           ]
         },
@@ -6114,13 +5978,7 @@
               "toolbar",
               "false | ViewToolbarConfig (Record)",
               "-",
-              "false 隐藏整栏。默认键与顺序：update、remove、refresh、print、import、export、fullscreen、copy。导入、导出同时出现时导入在前。update 可用 edit 别名。省略键回落 caps；自定义键必须提供 action。show／disable／action 接收 { record }（零参函数仍可用）"
-            ],
-            [
-              "caps",
-              "Partial<DataViewCaps>",
-              "-",
-              "能力开关；缺省按数据源方法推断。remove 默认＝存在 dataSource.remove（确认后删除当前记录）。update／import 等同样按源推断"
+              "false 隐藏整栏。默认键与顺序：update、remove、refresh、print、import、export、fullscreen、copy。导入、导出同时出现时导入在前。update 可用 edit 别名。省略键按数据源方法推断（update／remove／import 看源上是否有对应方法；print／export／fullscreen／copy 默认开；refresh 始终可用）；自定义键必须提供 action。show／disable／action 接收 { record }（零参函数仍可用）"
             ],
             [
               "panelKey",
@@ -6999,7 +6857,7 @@
               "actions",
               "RowActionsConfig",
               "-",
-              "仅 type:\"actions\"。行操作 Record（写在本列，勿再顶层配置）：内置 view／edit／remove＋自定义；写入序＝显示序；自定义必须 action(item)；省略键回落 caps。"
+              "仅 type:\"actions\"。行操作 Record（写在本列，勿再顶层配置）：内置 view／edit／remove＋自定义；写入序＝显示序；自定义必须 action(item)；省略键按数据源推断。"
             ],
             [
               "format",
@@ -7617,7 +7475,7 @@
               "(键)",
               "string",
               "-",
-              "按钮键。写入序＝显示序。内置：update（可用 edit 别名）、remove、refresh、print、import、export、fullscreen、copy。导入、导出同时出现时导入在前。省略的内置键回落 DataViewCaps"
+              "按钮键。写入序＝显示序。内置：update（可用 edit 别名）、remove、refresh、print、import、export、fullscreen、copy。导入、导出同时出现时导入在前。省略的内置键按数据源推断"
             ],
             [
               "(值)",
@@ -7711,66 +7569,13 @@
               "(键)",
               "string",
               "-",
-              "写在 Column.actions（type:\"actions\"）上。写入序＝显示序。内置：view、edit、remove。省略的内置键回落 caps"
+              "写在 Column.actions（type:\"actions\"）上。写入序＝显示序。内置：view、edit、remove。省略的内置键按数据源推断"
             ],
             [
               "(值)",
               "RowActionCtrl",
               "-",
               "true／false 或对象。show／disable／action／title／confirm 均可 (item)=>…"
-            ]
-          ]
-        },
-        {
-          "title": "DataViewCaps",
-          "headers": [
-            "属性",
-            "类型",
-            "默认值",
-            "说明"
-          ],
-          "rows": [
-            [
-              "update",
-              "boolean",
-              "按数据源推断",
-              "工具栏更新／编辑"
-            ],
-            [
-              "remove",
-              "boolean",
-              "存在 dataSource.remove 则为 true",
-              "工具栏删除当前记录（需确认）"
-            ],
-            [
-              "import",
-              "boolean",
-              "按数据源推断",
-              "导入"
-            ],
-            [
-              "export",
-              "boolean",
-              "按数据源推断",
-              "导出"
-            ],
-            [
-              "print",
-              "boolean",
-              "按数据源推断",
-              "打印"
-            ],
-            [
-              "fullscreen",
-              "boolean",
-              "true",
-              "全屏"
-            ],
-            [
-              "copy",
-              "boolean",
-              "true",
-              "复制当前记录"
             ]
           ]
         },

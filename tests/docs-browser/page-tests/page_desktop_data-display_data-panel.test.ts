@@ -119,12 +119,65 @@ if (!window.__dp) {
     }
     return null;
   };
-  const liveOption = (wrap, label) => {
+  /** 视口定位时浮层会挂到 body（data-ui-picker-overlay），不能只在触发器包裹里找。 */
+  const pickerOverlays = () =>
+    [...document.querySelectorAll("[data-ui-picker-overlay]")].filter((el) => el.getClientRects().length > 0);
+  const pickerPanelOf = (wrap) => {
     const w = liveWrap(wrap);
-    if (!w) return null;
-    return [...w.querySelectorAll('[role="option"]')].find((b) =>
+    const trig = w && w.querySelector("button[aria-haspopup]");
+    const ctrl = trig && trig.getAttribute("aria-controls");
+    if (ctrl) {
+      const el = document.getElementById(ctrl);
+      if (el) return el;
+    }
+    const overlays = pickerOverlays();
+    if (overlays.length && trig) {
+      const tb = trig.getBoundingClientRect();
+      overlays.sort((a, b) => {
+        const da = Math.abs(a.getBoundingClientRect().top - tb.bottom);
+        const db = Math.abs(b.getBoundingClientRect().top - tb.bottom);
+        return da - db;
+      });
+      return overlays[0];
+    }
+    if (overlays.length) return overlays[0];
+    return w;
+  };
+  const listboxOf = (wrap) => {
+    const panel = pickerPanelOf(wrap);
+    if (!panel) return null;
+    if (panel.getAttribute("role") === "listbox") return panel;
+    return panel.querySelector('[role="listbox"]');
+  };
+  const optionsOf = (wrap) => {
+    const seen = new Set();
+    const out = [];
+    const addFrom = (root) => {
+      if (!root) return;
+      const nodes = root.getAttribute("role") === "option" ? [root] : [];
+      nodes.push(...root.querySelectorAll('[role="option"]'));
+      for (const o of nodes) {
+        if (seen.has(o) || o.closest("[inert]")) continue;
+        seen.add(o);
+        out.push(o);
+      }
+    };
+    addFrom(listboxOf(wrap));
+    if (!out.length) {
+      for (const ov of pickerOverlays()) addFrom(ov);
+      addFrom(liveWrap(wrap));
+    }
+    return out;
+  };
+  const doneBtn = (wrap) => {
+    const panel = pickerPanelOf(wrap);
+    if (!panel) return null;
+    return [...panel.querySelectorAll("button")].find((b) => b.textContent.trim() === "完成") || null;
+  };
+  const liveOption = (wrap, label) => {
+    return optionsOf(wrap).find((b) =>
       b.textContent.trim() === label && !b.closest("[inert]")
-    );
+    ) || null;
   };
   const fireOptionPick = (el) => {
     const pe = { bubbles: true, cancelable: true, button: 0, pointerId: 1, pointerType: "mouse" };
@@ -133,16 +186,23 @@ if (!window.__dp) {
   };
   const pick = async (wrap, label) => {
     await flush();
-    let w = liveWrap(wrap);
-    if (!w) throw new Error("missing select wrap for " + label);
-    const trig0 = w.querySelector("button[aria-haspopup]");
-    if (!trig0) throw new Error("missing select trigger for " + label);
-    if (trig0.getAttribute("aria-expanded") !== "true") trig0.click();
-    const opened = await until(() => {
+    const triggerOf = () => {
       const cur = liveWrap(wrap);
-      const trig = cur && cur.querySelector("button[aria-haspopup]");
+      return cur && cur.querySelector("button[aria-haspopup]");
+    };
+    if (!liveWrap(wrap)) throw new Error("missing select wrap for " + label);
+    if (!triggerOf()) throw new Error("missing select trigger for " + label);
+    const isOpen = () => {
+      const trig = triggerOf();
       return !!(trig && trig.getAttribute("aria-expanded") === "true" && liveOption(wrap, label));
-    });
+    };
+    // 单元格编辑会在挂载时自动展开；先短等，避免再点一次把浮层关掉
+    if (!isOpen()) await until(isOpen, 400);
+    if (!isOpen()) {
+      const trig0 = triggerOf();
+      if (trig0 && trig0.getAttribute("aria-expanded") !== "true") trig0.click();
+    }
+    const opened = await until(isOpen);
     if (!opened) throw new Error("select did not open for " + label);
     fireOptionPick(liveOption(wrap, label));
     const took = await until(() => {
@@ -181,7 +241,7 @@ if (!window.__dp) {
     return btn.textContent.trim();
   };
   const hidden = (wrap) => wrap.querySelector('input[type="hidden"]').value;
-  window.__dp = { sw, pick, picked, hidden, pop, popBtn, rgba, effBg, contrast, g, cell, sleep, flush, root, q, qa, until, click, fill, dlg, text, total, rows, names };
+  window.__dp = { sw, pick, picked, hidden, pop, popBtn, rgba, effBg, contrast, g, cell, sleep, flush, root, q, qa, until, click, fill, dlg, text, total, rows, names, pickerPanelOf, listboxOf, optionsOf, doneBtn };
 }
 `;
 
@@ -1401,7 +1461,7 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
       await D.pick(sz, "20 条/页");
       await D.until(() => range().startsWith("第 1-20"));
       out.size20 = [range(), D.rows(k).length];
-      out.sizeOptions = [...D.q(k, '[data-testid="dp-pagesize"]').querySelectorAll('[role="option"]')].map((o) => o.textContent.trim());
+      out.sizeOptions = [...D.optionsOf(D.q(k, '[data-testid="dp-pagesize"]'))].map((o) => o.textContent.trim());
       // 越界跳页被夹到最后一页
       const j2 = D.q(k, '[data-testid="dp-jump"] input');
       D.fill(j2, "99");
@@ -2413,21 +2473,24 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
         } else if (c.kind === "select") {
           await D.pick(ed, c.set);
         } else if (c.kind === "multi") {
-          await D.until(() => ed.querySelector('[role="option"]'));
-          for (const o of ed.querySelectorAll('[role="option"]')) {
+          await D.until(() => D.optionsOf(ed).length);
+          for (const o of D.optionsOf(ed)) {
             const want = c.set.includes(o.textContent.trim());
             if ((o.getAttribute("aria-selected") === "true") !== want) { o.click(); await D.sleep(60); }
           }
-          [...ed.querySelectorAll("button")].find((b) => b.textContent.trim() === "完成").click();
+          const done = D.doneBtn(ed); if (!done) throw new Error("missing MultiSelect done"); done.click();
         } else {
-          await D.until(() => ed.querySelector("[data-ui-calendar-day]"));
-          [...ed.querySelectorAll("[data-ui-calendar-day]")].find((b) => b.textContent.trim() === String(c.day)).click();
+          await D.until(() => D.pickerPanelOf(ed) && D.pickerPanelOf(ed).querySelector("[data-ui-calendar-day]"));
+          const pan = D.pickerPanelOf(ed);
+          [...pan.querySelectorAll("[data-ui-calendar-day]")].find((b) => b.textContent.trim() === String(c.day)).click();
           if (c.kind === "datetime") {
-            ed.querySelector('[data-picker-time-kind="hour"] [data-picker-cell-value="' + c.hour + '"]').click();
-            ed.querySelector('[data-picker-time-kind="minute"] [data-picker-cell-value="' + c.minute + '"]').click();
+            pan.querySelector('[data-picker-time-kind="hour"] [data-picker-cell-value="' + c.hour + '"]').click();
+            pan.querySelector('[data-picker-time-kind="minute"] [data-picker-cell-value="' + c.minute + '"]').click();
           }
           await D.sleep(60);
-          [...ed.querySelector('[role="dialog"]').querySelectorAll("button")].find((b) => b.textContent.trim() === "确定").click();
+          const confirm = [...pan.querySelectorAll("button")].find((b) => b.textContent.trim() === "确定");
+          if (!confirm) throw new Error("missing date confirm");
+          confirm.click();
         }
         await D.sleep(250);
       };
@@ -2531,8 +2594,8 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
       edit.dispatchEvent(new MouseEvent("dblclick", { bubbles: true }));
       await D.until(() => D.q(k, '[data-testid="dp-inline-tags"]'));
       const ed = D.q(k, '[data-testid="dp-inline-tags"]');
-      await D.until(() => ed.querySelector('[role="option"]'));
-      const option = (label) => [...ed.querySelectorAll('[role="option"]')].find((o) => (o.textContent || "").trim().includes(label));
+      await D.until(() => D.optionsOf(ed).length);
+      const option = (label) => D.optionsOf(ed).find((o) => (o.textContent || "").trim().includes(label));
       const selected = (label) => option(label) && option(label).getAttribute("aria-selected") === "true";
       const tap = async (el) => {
         el.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true, cancelable: true, button: 0 }));
@@ -2546,7 +2609,8 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
       await D.sleep(80);
       const afterNew = selected("新用户") ? "true" : "false";
       const afterVip = selected("VIP") ? "true" : "false";
-      const done = [...ed.querySelectorAll("button")].find((b) => (b.textContent || "").trim() === "完成");
+      const done = D.doneBtn(ed);
+      if (!done) throw new Error("missing MultiSelect done");
       const box = done.getBoundingClientRect();
       const corners = [
         [box.left + 2, box.top + 2],
@@ -3037,8 +3101,8 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
        const w = d.querySelector('[data-testid="dp-f-role"]');
        const out = { native: d.querySelectorAll("select").length, hasTrigger: !!w.querySelector("button[aria-haspopup]") };
        const trig = w.querySelector("button[aria-haspopup]");
-       trig.click(); await D.until(() => trig.getAttribute("aria-expanded") === "true");
-       const lb = w.querySelector('[role="listbox"]').getBoundingClientRect(), vp = innerHeight;
+       trig.click(); await D.until(() => trig.getAttribute("aria-expanded") === "true" && D.listboxOf(w));
+       const lb = D.listboxOf(w).getBoundingClientRect(), vp = innerHeight;
        out.listboxVisible = lb.height > 0 && lb.bottom <= vp + 1;
        trig.click(); await D.sleep(100);
        D.click(D.g('[data-testid="dp-search-reset"]')); await D.sleep(200);
@@ -3159,14 +3223,13 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
         D.fill(f("score").querySelector("input"), "77");
         await D.flush();
         await D.pick(f("role"), "管理员");
-        await D.until(() => f("tags").querySelector('[role="option"]'));
         const tg = f("tags"); tg.querySelector("button[aria-haspopup]").click();
-        await D.until(() => tg.querySelector('button[aria-haspopup]').getAttribute("aria-expanded") === "true");
-        for (const o of tg.querySelectorAll('[role="option"]')) {
+        await D.until(() => tg.querySelector('button[aria-haspopup]').getAttribute("aria-expanded") === "true" && D.optionsOf(tg).length);
+        for (const o of D.optionsOf(tg)) {
           const want = ["VIP", "内测"].includes(o.textContent.trim());
           if ((o.getAttribute("aria-selected") === "true") !== want) { o.click(); await D.sleep(60); }
         }
-        const done = [...tg.querySelectorAll("button")].find((b) => b.textContent.trim() === "完成");
+        const done = D.doneBtn(tg);
         if (!done) throw new Error("missing MultiSelect done");
         done.click();
         await D.flush();
@@ -3180,22 +3243,25 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
           let w = field();
           const trig = w.querySelector("button[aria-haspopup]");
           if (!trig) throw new Error("missing date trigger " + n);
-          trig.click();
-          const opened = await D.until(() => field().querySelector("[data-ui-calendar-day]"));
+          if (trig.getAttribute("aria-expanded") !== "true") trig.click();
+          const opened = await D.until(() => {
+            const pan = D.pickerPanelOf(field());
+            return !!(pan && pan.querySelector("[data-ui-calendar-day]"));
+          });
           if (!opened) throw new Error("date picker did not open for " + n);
-          w = field();
-          const dayBtn = [...w.querySelectorAll("[data-ui-calendar-day]")].find((b) => b.textContent.trim() === String(day));
+          const pan = D.pickerPanelOf(field());
+          const dayBtn = [...pan.querySelectorAll("[data-ui-calendar-day]")].find((b) => b.textContent.trim() === String(day));
           if (!dayBtn) throw new Error("missing day " + day + " in " + n);
           dayBtn.click();
           if (hm) {
-            const hour = w.querySelector('[data-picker-time-kind="hour"] [data-picker-cell-value="' + hm[0] + '"]');
-            const minute = w.querySelector('[data-picker-time-kind="minute"] [data-picker-cell-value="' + hm[1] + '"]');
+            const hour = pan.querySelector('[data-picker-time-kind="hour"] [data-picker-cell-value="' + hm[0] + '"]');
+            const minute = pan.querySelector('[data-picker-time-kind="minute"] [data-picker-cell-value="' + hm[1] + '"]');
             if (!hour || !minute) throw new Error("missing time cells in " + n);
             hour.click();
             minute.click();
           }
           await D.sleep(60);
-          const dlg = w.querySelector('[role="dialog"]');
+          const dlg = pan.getAttribute("role") === "dialog" ? pan : (pan.querySelector('[role="dialog"]') || pan);
           if (!dlg) throw new Error("missing picker dialog for " + n);
           // 弹窗内浮层随 Modal 内容滚动（absolute 锚定）：滚到可见后必须完整落在视口内
           dlg.scrollIntoView({ block: "nearest" });
@@ -3218,11 +3284,11 @@ const footerOrder = () => { const a = document.querySelector('[role="dialog"] [d
         if (roleTrig.getAttribute("aria-expanded") !== "true") roleTrig.click();
         const lbOpened = await D.until(() => {
           const t = f("role").querySelector("button[aria-haspopup]");
-          const box = f("role").querySelector('[role="listbox"]');
+          const box = D.listboxOf(f("role"));
           return !!(t && t.getAttribute("aria-expanded") === "true" && box && box.closest("[inert]") == null);
         });
         if (!lbOpened) throw new Error("role listbox did not open");
-        const box = f("role").querySelector('[role="listbox"]');
+        const box = D.listboxOf(f("role"));
         const lb = box.getBoundingClientRect();
         out.listboxVisible = lb.height > 0 && lb.bottom <= innerHeight + 1;
         const closeTrig = f("role").querySelector("button[aria-haspopup]");

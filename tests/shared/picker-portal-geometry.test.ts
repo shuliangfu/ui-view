@@ -246,4 +246,18 @@ describe("pinPickerPanelToViewport", () => {
     trigger.remove();
     modal.remove();
   });
+
+  it("discard 拆除旧浮层，不把它移回原父级", () => {
+    const home = document.createElement("div");
+    const panel = document.createElement("div");
+    home.appendChild(panel);
+    document.body.appendChild(home);
+    const unpin = pinPickerPanelToViewport(panel);
+    expect(panel.parentElement).toBe(document.body);
+    unpin({ discard: true });
+    expect(panel.parentElement).toBe(null);
+    expect(home.contains(panel)).toBe(false);
+    expect(home.childNodes.length).toBe(0);
+    home.remove();
+  });
 });

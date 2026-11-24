@@ -30,7 +30,7 @@ describe("DataPanel ActionCtrl unified Record", () => {
       show: true,
       disable: false,
     });
-    expect(resolveActionCtrl(undefined, false).show).toBe(false); // caps hide
+    expect(resolveActionCtrl(undefined, false).show).toBe(false); // undeclared fallback hide
     expect(resolveActionCtrl(false, true).show).toBe(false);
     expect(resolveActionCtrl(true, false).show).toBe(true);
     expect(resolveActionCtrl({ show: true, disable: true }, false)).toEqual({
@@ -44,8 +44,8 @@ describe("DataPanel ActionCtrl unified Record", () => {
     });
   });
 
-  it("declared object: omit show → true (not caps); omit disable → false", () => {
-    // even if caps fallback would be false, object without show stays visible
+  it("declared object: omit show → true (not fallback); omit disable → false", () => {
+    // even if undeclared fallback would be false, object without show stays visible
     expect(resolveActionCtrl({}, false)).toEqual({
       show: true,
       disable: false,
@@ -69,8 +69,8 @@ describe("DataPanel ActionCtrl unified Record", () => {
     expect(hid.disable).toBe(true);
   });
 
-  it("undeclared vs declared: undefined ctrl → caps; {} → show", () => {
-    // undeclared → caps fallback
+  it("undeclared vs declared: undefined ctrl → fallback; {} → show", () => {
+    // undeclared → data-source fallback
     expect(resolveActionCtrl(undefined, false).show).toBe(false);
     // declared empty object
     expect(resolveActionCtrl({}, false).show).toBe(true);
@@ -100,7 +100,7 @@ describe("DataPanel ActionCtrl unified Record", () => {
     expect(typeof r.action).toBe("function");
   });
 
-  it("resolveRowActionCtrl: omit show → true even when caps fallback false", () => {
+  it("resolveRowActionCtrl: omit show → true even when fallback is false", () => {
     const item = { id: "1" };
     expect(resolveRowActionCtrl({}, item, false).show).toBe(true);
     expect(resolveRowActionCtrl({ disable: true }, item, false)).toEqual({
@@ -372,7 +372,7 @@ describe("DataPanel ActionCtrl unified Record", () => {
   it("batchStatus 不是工具栏或批量条内置键", () => {
     expect(isToolbarBuiltin("batchStatus")).toBe(false);
     expect([...TOOLBAR_BUILTINS]).not.toContain("batchStatus");
-    // undeclared → caps; declared false hides
+    // undeclared → fallback; declared false hides
     expect(resolveActionCtrl(undefined, true).show).toBe(true);
     expect(resolveActionCtrl(false, true).show).toBe(false);
     expect(resolveActionCtrl({ disable: true }, false)).toEqual({
